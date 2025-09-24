@@ -1,19 +1,53 @@
-import { format } from "date-fns";
-import {
-  Activity,
-  AlertTriangle,
-  DollarSign,
-  FileText,
-  Shield,
-  Wrench,
-} from "lucide-react";
-import {useState } from "react";
-
+import React, { useState, useEffect } from "react";
 import { useSettings } from "../../context/SettingsContext";
+import { Card, CardHeader, CardContent } from "../ui/card";
+import { Button } from "../ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Checkbox } from "../ui/checkbox";
 import { cn } from "../../lib/utils";
+import {
+  FileText,
+  Download,
+  Calendar,
+  Filter,
+  Users,
+  Building,
+  Zap,
+  Droplets,
+  Thermometer,
+  Gauge,
+  AlertTriangle,
+  Wrench,
+  Activity,
+  Shield,
+  Clock,
+  Play,
+  Pause,
+  DollarSign,
+} from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { Calendar as CalendarComponent } from "../ui/calendar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "../ui/alert-dialog";
+import { format } from "date-fns";
 import playSound from "../../utils/audioPlayer";
-
-
 
 const ReportConfigurator = ({
   allowedScopes = ["single", "multiple", "client", "master"],

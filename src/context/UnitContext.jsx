@@ -1,10 +1,10 @@
-import { createContext, useCallback,useContext, useEffect, useMemo, useState } from "react";
-
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from "react";
 import {
   getAllUnits,
-  updateUnitGPS as serviceUpdateUnitGPS,
-  updateUnitLocation as serviceUpdateUnitLocation,
+  getUnitById,
   updateUnitName as serviceUpdateUnitName,
+  updateUnitLocation as serviceUpdateUnitLocation,
+  updateUnitGPS as serviceUpdateUnitGPS,
 } from "../services/unitService";
 
 const UnitContext = createContext();

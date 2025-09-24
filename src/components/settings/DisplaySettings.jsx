@@ -1,3 +1,6 @@
+import React from "react";
+import { Card, CardHeader, CardContent } from "../ui/card";
+import { Palette } from "lucide-react";
 
 const DisplaySettings = ({ settings, handleSettingChange }) => {
   return (

@@ -1,5 +1,10 @@
+import React from "react";
 import { render, screen } from "@testing-library/react";
-
+import { MemoryRouter, Routes, Route } from "react-router-dom";
+import ProtectedRoute from "../components/ProtectedRoute";
+import { AuthProvider } from "../context/AuthContext";
+import { ThemeProvider } from "../context/ThemeContext";
+import { SidebarProvider } from "../context/SidebarContext";
 
 describe("ProtectedRoute", () => {
   it("redirects unauthenticated user to login page", () => {

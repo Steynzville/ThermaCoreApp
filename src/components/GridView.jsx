@@ -1,9 +1,21 @@
-
-
-import { useEffect, useMemo,useState } from "react";
-import { useLocation,useNavigate } from "react-router-dom";
-
+import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Card, CardHeader, CardContent } from "./ui/card";
+import {
+  AlertTriangle,
+  CheckCircle,
+  Search,
+  Filter,
+  MapPin,
+  User,
+  Zap,
+} from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import PageHeader from "./PageHeader";
+import SearchBar from "./SearchBar";
+import PowerIcon3D from "./PowerIcon3D";
+import WaterIcon3D from "./WaterIcon3D";
+
 import { useUnits } from "../context/UnitContext";
 
 const GridView = ({ className }) => {

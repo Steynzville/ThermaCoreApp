@@ -1,8 +1,19 @@
-
-
-import { useEffect,useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-
+import { Card, CardHeader, CardContent } from "./ui/card";
+import {
+  RefreshCw,
+  CheckCircle,
+  AlertTriangle,
+  Clock,
+  Wifi,
+  WifiOff,
+  Database,
+  ArrowLeft,
+  Settings,
+  Download,
+  Upload,
+} from "lucide-react";
 import { units } from "../data/mockUnits";
 
 const SynchronizeUnitsOverview = ({ className }) => {

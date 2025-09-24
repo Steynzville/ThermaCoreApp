@@ -1,3 +1,6 @@
+import React from "react";
+import { Card, CardHeader, CardContent } from "../ui/card";
+import { Bell } from "lucide-react";
 
 const NotificationSettings = ({ settings, handleSettingChange }) => {
   return (

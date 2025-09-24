@@ -1,6 +1,15 @@
-import { useState } from "react";
-
+import React, { useState } from "react";
+import { Button } from "./ui/button";
+import PageHeader from "./PageHeader";
 import { useTheme } from "../context/ThemeContext";
+
+import ProfileSettings from "./settings/ProfileSettings";
+import NotificationSettings from "./settings/NotificationSettings";
+import DisplaySettings from "./settings/DisplaySettings";
+import DataRefreshSettings from "./settings/DataRefreshSettings";
+import AlertSettings from "./settings/AlertSettings";
+
+import AudioSettings from "./settings/AudioSettings";
 
 const SettingsView = ({ className }) => {
   const { theme, setTheme } = useTheme();

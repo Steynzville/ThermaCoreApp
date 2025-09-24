@@ -1,18 +1,21 @@
+import React, { useState } from "react";
 import {
-  Calendar,
-  Clock,
-  DollarSign,
+  Zap,
   Droplets,
   Fuel,
-  TrendingDown,
-  TrendingUp,
+  Leaf,
+  DollarSign,
+  Clock,
   Wrench,
-  Zap,
+  Calendar,
+  TrendingUp,
+  TrendingDown,
 } from "lucide-react";
-import { useState } from "react";
-
 import { useAuth } from "../context/AuthContext";
 import { units } from "../data/mockUnits";
+import FinancialAssumptions from "./FinancialAssumptions";
+import ROIAssumptions from "./ROIAssumptions";
+import EnvironmentalAssumptions from "./EnvironmentalAssumptions";
 import { formatCurrency } from "../utils/formatCurrency";
 
 const PerformanceCard = ({

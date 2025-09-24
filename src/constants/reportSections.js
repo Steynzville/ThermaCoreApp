@@ -1,10 +1,10 @@
 import {
-  Activity,
-  AlertTriangle,
-  DollarSign,
   FileText,
-  Shield,
+  AlertTriangle,
   Wrench,
+  Activity,
+  Shield,
+  DollarSign,
 } from "lucide-react";
 
 export const reportTypes = [

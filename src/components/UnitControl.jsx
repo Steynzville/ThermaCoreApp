@@ -1,9 +1,19 @@
-
-
-import { useEffect,useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
-
+import React, { useState, useEffect } from "react";
 import { useSettings } from "../context/SettingsContext";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { Card, CardHeader, CardContent } from "./ui/card";
+import {
+  Power,
+  Droplets,
+  Thermometer,
+  Gauge,
+  ArrowLeft,
+  Settings,
+  AlertTriangle,
+  CheckCircle,
+  Battery,
+  Zap,
+} from "lucide-react";
 import { getUnitById } from "../services/unitService";
 import playSound from "../utils/audioPlayer";
 
