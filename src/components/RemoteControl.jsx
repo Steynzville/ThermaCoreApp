@@ -54,6 +54,26 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [videoContainerRef, setVideoContainerRef] = useState(null);
 
+  // Listen for fullscreen changes (moved before early return to avoid conditional hook call)
+  React.useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isCurrentlyFullscreen = !!(document.fullscreenElement || 
+                                       document.webkitFullscreenElement || 
+                                       document.msFullscreenElement);
+      setIsFullscreen(isCurrentlyFullscreen);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('msfullscreenchange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('msfullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
   if (!unit) {
     return (
       <div className="min-h-screen bg-blue-50 dark:bg-gray-950 p-6 flex items-center justify-center">
@@ -172,26 +192,6 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
       console.error('Fullscreen error:', error);
     }
   };
-
-  // Listen for fullscreen changes
-  React.useEffect(() => {
-    const handleFullscreenChange = () => {
-      const isCurrentlyFullscreen = !!(document.fullscreenElement || 
-                                       document.webkitFullscreenElement || 
-                                       document.msFullscreenElement);
-      setIsFullscreen(isCurrentlyFullscreen);
-    };
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-    document.addEventListener('msfullscreenchange', handleFullscreenChange);
-
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
-      document.removeEventListener('msfullscreenchange', handleFullscreenChange);
-    };
-  }, []);
 
   const availableCameras = [
     { id: "cam1", name: "Main Unit Camera", position: "" },
