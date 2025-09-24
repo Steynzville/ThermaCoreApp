@@ -1,0 +1,206 @@
+/* Hover effects for clickable tiles across the entire app */
+
+/* Card hover effects */
+.card-hover {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Dark mode card hover effects */
+.dark .card-hover:hover {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+/* Button hover effects */
+.button-hover {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.button-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Navigation item hover effects */
+.nav-item-hover {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.nav-item-hover:hover {
+  transform: translateX(4px);
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+/* Dark mode navigation item hover effects */
+.dark .nav-item-hover:hover {
+  background-color: rgba(59, 130, 246, 0.2);
+}
+
+/* Status dial hover effects */
+.status-dial-hover {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.status-dial-hover:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Dark mode status dial hover effects */
+.dark .status-dial-hover:hover {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Alert/Alarm item hover effects */
+.alert-item-hover {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.alert-item-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* Dark mode alert item hover effects */
+.dark .alert-item-hover:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+}
+
+/* Grid unit card hover effects */
+.grid-unit-hover {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.grid-unit-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+/* Dark mode grid unit hover effects */
+.dark .grid-unit-hover:hover {
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
+  border-color: rgba(59, 130, 246, 0.7);
+}
+
+/* Quick action card hover effects */
+.quick-action-hover {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.quick-action-hover:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+/* Dark mode quick action hover effects */
+.dark .quick-action-hover:hover {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+
+/* System health summary hover effects */
+.system-health-hover {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.system-health-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.15);
+}
+
+/* Dark mode system health hover effects */
+.dark .system-health-hover:hover {
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.25);
+}
+
+/* Generic clickable tile hover effect */
+.clickable-tile {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.clickable-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+/* Dark mode generic clickable tile hover effect */
+.dark .clickable-tile:hover {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+
+/* Icon hover effects */
+.icon-hover {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.icon-hover:hover {
+  transform: scale(1.1);
+  color: rgba(59, 130, 246, 1);
+}
+
+/* Dark mode icon hover effects */
+.dark .icon-hover:hover {
+  color: rgba(96, 165, 250, 1);
+}
+
+/* Table row hover effects */
+.table-row-hover {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.table-row-hover:hover {
+  background-color: rgba(59, 130, 246, 0.05);
+  transform: translateX(2px);
+}
+
+/* Dark mode table row hover effects */
+.dark .table-row-hover:hover {
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+/* Search bar hover effects */
+.search-hover {
+  transition: all 0.3s ease;
+}
+
+.search-hover:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+/* Dark mode search bar hover effects */
+.dark .search-hover:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  border-color: rgba(59, 130, 246, 0.7);
+}
+
+/* Filter dropdown hover effects */
+.filter-hover {
+  transition: all 0.3s ease;
+}
+
+.filter-hover:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+/* Dark mode filter dropdown hover effects */
+.dark .filter-hover:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  border-color: rgba(59, 130, 246, 0.7);
+}

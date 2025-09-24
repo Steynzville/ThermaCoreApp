@@ -1,0 +1,702 @@
+/* ===== LOGIN SCREEN STYLES ===== */
+
+/* === PAGE LAYOUT === */
+.pageWrapper {
+  width: 100vw;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  font-family: "Inter", sans-serif;
+
+  /* Background image, stretched to fit */
+  background-image: url("../assets/background-texture.jpg");
+  background-size: 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  /* Center the login container */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow-y: auto;
+}
+
+.loginContainer {
+  width: 100%;
+  max-width: 380px;
+  padding: 20px;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+/* === BRANDING === */
+.logoContainer {
+  position: relative;
+  width: 78px;
+  height: 78px;
+  margin: 60px auto 8px auto;
+}
+
+.logo {
+  width: 78px;
+  height: 78px;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.titleContainer {
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.title {
+  color: #f8fafc;
+  font-size: 40px;
+  font-weight: 800;
+  margin: 0;
+  line-height: 1.1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  text-shadow: 
+    0.75px 0.75px 0 #000000,
+    1.5px 1.5px 0 #000000,
+    2.25px 2.25px 0 #000000,
+    3px 3px 0 #000000,
+    3.75px 3.75px 0 #000000,
+    4.5px 4.5px 8px rgba(0, 0, 0, 0.4),
+    5px 5px 12px rgba(0, 0, 0, 0.3);
+}
+
+.companySubtitle {
+  color: #a0aec0;
+  font-size: 16px;
+  font-weight: 400;
+  margin: 4px 0 80px 0;
+  line-height: 1.2;
+  letter-spacing: 0.2em; /* Adjust as needed */
+}
+
+/* Light mode company subtitle */
+:global(html:not(.dark)) .companySubtitle {
+  color: #a0aec0;
+}
+
+.subtitle {
+  color: #a0aec0;
+  margin-bottom: 0px; /* Removed margin as it's now empty */
+}
+
+/* === FORM ELEMENTS === */
+.formGroup {
+  margin-bottom: 8px;
+  text-align: left;
+}
+
+.formGroup label {
+  display: block;
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 3px;
+  color: #cbd5e0;
+}
+
+.formLabel {
+  display: block;
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 3px;
+  color: #cbd5e0;
+}
+
+.formGroup input {
+  width: 100%;
+  padding: 10px 16px;
+  background-color: #0d0f12;
+  border: 1px solid #3a4151;
+  border-radius: 12px;
+  color: #ffffff;
+  font-size: 16px;
+  box-sizing: border-box;
+  transition:
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.formInput {
+  width: 100%;
+  padding: 10px 16px;
+  background-color: #0d0f12;
+  border: 1px solid #3a4151;
+  border-radius: 12px;
+  color: #ffffff;
+  font-size: 16px;
+  box-sizing: border-box;
+  box-shadow: 
+    inset 0 1px 3px rgba(0, 0, 0, 0.3),
+    0 1px 0 rgba(255, 255, 255, 0.1);
+  transition:
+    border-color 0.3s ease,
+    box-shadow 0.3s ease,
+    transform 0.2s ease;
+}
+
+/* Focus states with yellow/gold rings */
+.formGroup input:focus,
+.formInput:focus,
+.inputFocused {
+  outline: none;
+  border: 2px solid #ffd700 !important;
+  box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.3) !important;
+}
+
+/* Error state with red border */
+.inputError {
+  border: 2px solid #ef4444 !important;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3) !important;
+}
+
+/* Password error message */
+.passwordError {
+  color: #ef4444;
+  font-size: 14px;
+  margin-top: 4px;
+  margin-bottom: 8px;
+}
+
+/* Light mode input styles with 3D effect */
+:global(html:not(.dark)) .formGroup input {
+  background-color: #d1d5db; /* Light grey background (halfway between white and medium grey) */
+  border: 1px solid #d1d5db;
+  color: #000000;
+  box-shadow: 
+    inset 0 1px 3px rgba(0, 0, 0, 0.12),
+    0 1px 0 rgba(255, 255, 255, 0.8);
+  transition: all 0.3s ease;
+}
+
+:global(html:not(.dark)) .formGroup input:-webkit-autofill,
+:global(html:not(.dark)) .formGroup input:-webkit-autofill:hover,
+:global(html:not(.dark)) .formGroup input:-webkit-autofill:focus,
+:global(html:not(.dark)) .formGroup input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px #d1d5db inset !important;
+  -webkit-text-fill-color: #000000 !important;
+}
+
+:global(html:not(.dark)) .formInput {
+  background-color: #d1d5db; /* Light grey background (halfway between white and medium grey) */
+  border: 1px solid #d1d5db;
+  color: #000000;
+  box-shadow: 
+    inset 0 1px 3px rgba(0, 0, 0, 0.12),
+    0 1px 0 rgba(255, 255, 255, 0.8);
+  transition: all 0.3s ease;
+}
+
+:global(html:not(.dark)) .formInput:-webkit-autofill,
+:global(html:not(.dark)) .formInput:-webkit-autofill:hover,
+:global(html:not(.dark)) .formInput:-webkit-autofill:focus,
+:global(html:not(.dark)) .formInput:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px #d1d5db inset !important;
+  -webkit-text-fill-color: #000000 !important;
+}
+
+/* Light mode focus states */
+:global(html:not(.dark)) .formGroup input:focus,
+:global(html:not(.dark)) .formInput:focus,
+:global(html:not(.dark)) .inputFocused {
+  border: 2px solid #00ff00 !important; /* Neon green color */
+  box-shadow: 0 0 0 2px rgba(0, 255, 0, 0.3) !important; /* Neon green with transparency */
+}
+
+/* Light mode error state */
+:global(html:not(.dark)) .inputError {
+  border: 2px solid #ef4444 !important;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3) !important;
+}
+
+.formGroup input::placeholder {
+  color: #4a5568;
+}
+
+.formInput::placeholder {
+  color: #4a5568;
+}
+
+/* Light mode placeholder styles */
+:global(html:not(.dark)) .formGroup input::placeholder {
+  color: #6b7280;
+}
+
+:global(html:not(.dark)) .formInput::placeholder {
+  color: #6b7280;
+}
+
+.passwordInputContainer {
+  position: relative;
+  width: 100%;
+}
+
+.passwordInputContainer input {
+  padding-right: 50px; /* Make space for the toggle button */
+}
+
+.passwordToggleButton {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: transparent; /* Ensure transparent background */
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: #a0aec0; /* Icon color */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.passwordToggleButton:hover {
+  opacity: 0.8;
+}
+
+/* === FORM OPTIONS === */
+.extraOptionsRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.checkboxContainer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #a0aec0;
+  cursor: pointer;
+}
+
+.checkboxContainer input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.checkboxContainer .checkboxLabel {
+  position: relative;
+  padding-left: 28px;
+  color: #a0aec0;
+  cursor: pointer;
+}
+
+.checkboxContainer .checkboxLabel::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  border: 2px solid #4a5568;
+  border-radius: 6px;
+  background-color: #0d0f12;
+  transition: all 0.2s ease;
+}
+
+.checkboxContainer input[type="checkbox"]:checked + .checkboxLabel::before {
+  background-color: #ffd700;
+  border-color: #ffd700;
+}
+
+.checkboxContainer input[type="checkbox"]:checked + .checkboxLabel::after {
+  content: "✓";
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #000000;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.forgotPasswordLink {
+  color: #a0aec0;
+  text-decoration: none;
+}
+
+.forgotPasswordLink:hover {
+  text-decoration: underline;
+}
+
+/* === BUTTONS === */
+/* Base button styles */
+.btn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 16px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.2s;
+}
+
+/* Primary button (Sign In) */
+.btnSignin {
+  width: 100%;
+  padding: 12.6px 0; /* 14px * 0.9 = 12.6px */
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 16px;
+}
+
+/* Light mode Sign In button with same style as dark mode */
+.btnSigninLight {
+  background: linear-gradient(90deg, #ffffff, #00008B);
+  color: #ffffff;
+  font-weight: bold;
+  box-shadow:
+    0 6px 12px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(30, 64, 175, 0.3);
+}
+
+/* Dark mode Sign In button */
+.btnSigninDark {
+  background: linear-gradient(90deg, oklch(0% 0 0), oklch(70% 0.18 75));
+  color: #ffffff;
+  font-weight: bold;
+}
+
+/* Social button base */
+.socialBtn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10.8px; /* 12px * 0.9 = 10.8px */
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.socialBtn img {
+  width: 24px;
+  height: 24px;
+}
+
+/* Google button styles */
+.googleBtn {
+  background-color: #ffffff;
+  color: #333333;
+  border: 1px solid #e0e0e0;
+}
+
+.googleBtn:hover {
+  background-color: #f5f5f5;
+}
+
+/* Apple button styles */
+.appleBtn {
+  background-color: #ffffff;
+  color: #000000;
+  border: 1px solid #e0e0e0;
+}
+
+.appleBtn:hover {
+  background-color: #f5f5f5;
+}
+
+/* Dark mode button styles */
+:global(html.dark) .googleBtn {
+  background-color: #000000;
+  color: #ffffff;
+  border: 1px solid #4a5568;
+}
+
+:global(html.dark) .googleBtn:hover {
+  background-color: #2d2d2d;
+}
+
+:global(html.dark) .appleBtn {
+  background-color: #000000;
+  color: #ffffff;
+  border: 1px solid #333333;
+}
+
+:global(html.dark) .appleBtn:hover {
+  background-color: #000000;
+}
+
+/* === DIVIDER === */
+.divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: #a0aec0;
+  margin: 24px 0;
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid #4a5568;
+}
+
+.dividerText {
+  padding: 0 1em;
+}
+
+/* === SOCIAL LOGIN === */
+.socialLoginContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* === LOADING OVERLAY === */
+.loadingOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(10, 25, 47, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+/* === UTILITY CLASSES === */
+.infoBox {
+  margin-top: 32px;
+  font-size: 14px;
+  color: #a0aec0;
+  line-height: 1.6;
+}
+
+.infoBox p {
+  margin: 0;
+}
+
+.loginPrompt {
+  color: #a0aec0; /* Matching biometric text color in dark mode */
+  font-family: "Inter", sans-serif; /* Clean, modern font */
+  font-size: 16px;
+  font-weight: 400;
+  margin: 10px 0 10px 0; /* Adjusted margin to move it closer to the text box */
+  letter-spacing: 0.025em;
+  text-align: center;
+}
+
+/* Light mode login prompt */
+:global(html:not(.dark)) .loginPrompt {
+  color: #a0aec0;
+}
+
+/* === BIOMETRIC AUTHENTICATION === */
+.biometricSection {
+  margin-top: 24px;
+}
+
+.biometricHeading {
+  color: #a0aec0;
+  font-size: 16px;
+  font-weight: 500;
+  margin: 0 0 16px 0;
+  text-align: center;
+}
+
+/* Light mode biometric heading */
+:global(html:not(.dark)) .biometricHeading {
+  color: #a0aec0;
+}
+
+.biometricContainer {
+  display: flex;
+  justify-content: center;
+}
+
+.biometricButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #00ccff, #0099cc);
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 204, 255, 0.3);
+}
+
+.biometricButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 204, 255, 0.4);
+}
+
+.biometricButton:active {
+  transform: translateY(0);
+}
+
+.biometricButton svg {
+  color: #ffffff;
+}
+
+/* Light mode input background color */
+:global(html:not(.dark)) .formGroup input,
+:global(html:not(.dark)) .formInput {
+  background-color: #d1d5db; /* Light grey background (halfway between white and medium grey) */
+  border: 1px solid #d1d5db;
+  color: #000000;
+}
+
+/* Login error message styling - Clean text only, no box */
+.loginError {
+  color: #ef4444;
+  background-color: transparent;
+  border: none;
+  padding: 0;
+  border-radius: 0;
+  margin-bottom: 16px;
+  font-size: 16.8px;
+  font-weight: 500;
+  text-align: center;
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+  transition:
+    opacity 0.3s ease-in-out,
+    max-height 0.3s ease-in-out,
+    padding 0.3s ease-in-out;
+}
+
+.loginError.visible {
+  opacity: 1 !important;
+  max-height: 100px !important;
+  padding: 10px 0 !important;
+}
+
+/* Dark mode styles for loginError */
+:global(html.dark) .loginError {
+  background-color: transparent;
+  border: none;
+  color: #fecaca;
+}
+
+/* Ensure error message is bright red for better contrast */
+.loginError,
+.loginError.visible {
+  color: #ff3333 !important; /* Bright red for better contrast */
+}
+
+
+/* Enhanced 3D input effects on focus */
+.inputFocused {
+  transform: translateY(-1px) !important;
+  box-shadow: 
+    0 0 0 2px rgba(255, 215, 0, 0.3),
+    inset 0 1px 3px rgba(0, 0, 0, 0.2),
+    0 4px 8px rgba(255, 215, 0, 0.2) !important;
+}
+
+:global(html:not(.dark)) .inputFocused {
+  transform: translateY(-1px) !important;
+  box-shadow: 
+    0 0 0 2px rgba(0, 255, 0, 0.3),
+    inset 0 1px 3px rgba(0, 0, 0, 0.15),
+    0 4px 8px rgba(0, 255, 0, 0.2) !important;
+}
+
+/* 3D Button Effects */
+.btnSignin {
+  position: relative;
+  overflow: hidden;
+  transform: translateY(0);
+  transition: all 0.2s ease-out;
+}
+
+.btnSignin::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(0, 0, 0, 0.15) 100%
+  );
+  border-radius: 12px;
+  opacity: 0;
+  transition: opacity 0.2s ease-out;
+}
+
+.btnSignin:hover::before {
+  opacity: 1;
+}
+
+.btnSignin:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+/* Dark mode 3D effects */
+.btnSigninDark {
+  box-shadow:
+    0 6px 12px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+}
+
+.btnSigninDark:hover {
+  box-shadow:
+    0 8px 16px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+}
+
+.btnSigninLight:hover {
+  box-shadow:
+    0 8px 16px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.15);
+}
+
+
+@keyframes logo-spin {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(360deg);
+  }
+}
+
+.logoSpin {
+  animation: logo-spin 2s ease-out forwards;
+}
+
+
