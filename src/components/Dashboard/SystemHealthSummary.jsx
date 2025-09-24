@@ -1,6 +1,4 @@
-import React from "react";
 import { units } from "../../data/mockUnits";
-import { TrendingUp } from "lucide-react";
 
 // System Health Summary
 const SystemHealthSummary = ({ userRole }) => {

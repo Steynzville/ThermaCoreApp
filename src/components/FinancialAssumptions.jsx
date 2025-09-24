@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from "react";
-import { X, Save } from "lucide-react";
+import { useEffect,useState } from "react";
 
 const FinancialAssumptions = ({
   isOpen,

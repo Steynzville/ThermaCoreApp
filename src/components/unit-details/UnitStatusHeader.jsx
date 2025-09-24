@@ -1,6 +1,4 @@
-import React from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, CheckCircle, AlertTriangle } from "lucide-react";
 
 const UnitStatusHeader = ({ unit, getStatusColor }) => {
   const navigate = useNavigate();

@@ -1,4 +1,3 @@
-import React from "react";
 
 const PowerIcon3D = ({ power, className = "" }) => {
   // Determine color based on power level

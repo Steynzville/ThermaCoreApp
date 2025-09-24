@@ -1,5 +1,6 @@
-import React, { useMemo, memo, useCallback } from "react";
+import { memo, useCallback,useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+
 import { useUnits } from "../context/UnitContext";
 
 const QuickActionTile = memo(({ action, handleQuickActionClick, userRole }) => {
@@ -39,7 +40,7 @@ const Dashboard = ({ userRole }) => {
     } else {
       return units.slice(0, 6);
     }
-  }, [userRole]);
+  }, [userRole, units]);
 
   const {
     onlineCount,

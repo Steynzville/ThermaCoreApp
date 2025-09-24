@@ -1,5 +1,3 @@
-import React from "react";
-import VitalSignGraph from "../VitalSignGraph";
 
 const UnitHistoryTab = ({ unit }) => {
   return (

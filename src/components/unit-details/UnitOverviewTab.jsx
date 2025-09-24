@@ -1,7 +1,3 @@
-import React from "react";
-import { Card, CardContent } from "../ui/card";
-import { Zap } from "lucide-react";
-import UnitVitals from "./UnitVitals";
 
 const UnitOverviewTab = ({ unit }) => {
   return (

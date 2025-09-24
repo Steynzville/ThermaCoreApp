@@ -1,14 +1,11 @@
 import * as React from "react";
-import { Slot } from "@radix-ui/react-slot";
 import {
-  Controller,
   FormProvider,
   useFormContext,
   useFormState,
 } from "react-hook-form";
 
 import { cn } from "@/lib/utils";
-import { Label } from "@/components/ui/label";
 
 const Form = FormProvider;
 
@@ -128,12 +125,12 @@ function FormMessage({ className, ...props }) {
 }
 
 export {
-  useFormField,
   Form,
-  FormItem,
-  FormLabel,
   FormControl,
   FormDescription,
-  FormMessage,
   FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  useFormField,
 };

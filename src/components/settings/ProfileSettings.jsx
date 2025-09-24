@@ -1,7 +1,3 @@
-import React from "react";
-import { Card, CardHeader, CardContent } from "../ui/card";
-import { User } from "lucide-react";
-import FormFieldGroup from "../common/FormFieldGroup";
 
 const ProfileSettings = () => {
   return (

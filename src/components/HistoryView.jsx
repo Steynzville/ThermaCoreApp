@@ -1,9 +1,7 @@
-import React, { useState, useEffect } from "react";
-import { Card, CardHeader, CardContent } from "./ui/card";
-import { Clock, TrendingUp, TrendingDown, Minus } from "lucide-react";
-import PageHeader from "./PageHeader";
-import { getEventHistory } from "../services/unitService";
+import { useEffect,useState } from "react";
+
 import { useAuth } from "../context/AuthContext";
+import { getEventHistory } from "../services/unitService";
 
 const getTrendIcon = (trend) => {
   switch (trend) {
