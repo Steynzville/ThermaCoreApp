@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import React, { useEffect,useState } from "react";
+
 import { Card, CardContent } from "./ui/card";
 
 const StatusDial = ({

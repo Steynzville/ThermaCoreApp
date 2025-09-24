@@ -1,20 +1,28 @@
+import {
+  ALERT_SEVERITIES,
+  CONTROL_ACTION_DESCRIPTIONS,
+  MAINTENANCE_DESCRIPTIONS,
+  MOCK_UNIT_COUNT,
+  TIME_CONSTANTS,
+  UNIT_STATUS_TYPES,
+} from "./constants/mockDataConstants.js";
+import { generateTimestamp } from "./utils/dateUtils.js";
+
 // Helper to generate alerts
 const generateAlerts = (count, unitName, unitId) => {
-  const severities = ["Critical", "Warning", "Info"];
   return Array.from({ length: count }, (_, i) => ({
     id: `${unitId}-${i + 1}`,
-    timestamp: new Date(Date.now() - i * 3600000 * ((i % 5) + 1)).toISOString(),
+    timestamp: generateTimestamp(i * TIME_CONSTANTS.HOUR * ((i % 5) + 1)),
     description: `Alert #${i + 1}: Fictional event for ${unitName}.`,
-    severity: severities[i % severities.length],
+    severity: ALERT_SEVERITIES[i % ALERT_SEVERITIES.length],
   }));
 };
 
 // Generate mock units, increasing the count to 12 for testing. [25]
-export const mockUnits = Array.from({ length: 12 }, (_, i) => {
-  const statusTypes = ["Operational", "Warning", "Offline", "Critical"];
+export const mockUnits = Array.from({ length: MOCK_UNIT_COUNT }, (_, i) => {
   const unitId = i + 1;
   const unitName = `Unit ${String.fromCharCode(65 + Math.floor(i / 4))}-${101 + (i % 4)}`;
-  const status = statusTypes[i % statusTypes.length];
+  const status = UNIT_STATUS_TYPES[i % UNIT_STATUS_TYPES.length];
 
   return {
     id: unitId,
@@ -58,32 +66,16 @@ export const mockUnitDetails = mockUnits.reduce((acc, unit) => {
 // Generate mock event history. [9]
 export const mockEventHistory = Array.from({ length: 50 }, (_, i) => ({
   id: `event-${i}`,
-  timestamp: new Date(Date.now() - 86400000 - i * 86400000).toISOString(),
+  timestamp: generateTimestamp(TIME_CONSTANTS.DAY + i * TIME_CONSTANTS.DAY),
   unitName: mockUnits[i % mockUnits.length].name,
-  description:
-    i % 4 === 0
-      ? "Routine maintenance completed successfully for Unit 001"
-      : i % 4 === 1
-        ? "System diagnostic check performed"
-        : i % 4 === 2
-          ? "Temperature calibration adjusted"
-          : "Routine check performed. System nominal.",
+  description: MAINTENANCE_DESCRIPTIONS[i % MAINTENANCE_DESCRIPTIONS.length],
 }));
 
 // Generate mock recent control actions. [19]
 export const mockRecentActions = Array.from({ length: 50 }, (_, i) => ({
   id: `action-${i}`,
-  timestamp: new Date(Date.now() - i * 60000 * 15).toISOString(),
-  description:
-    i % 5 === 0
-      ? "Machine Power toggled ON by Admin"
-      : i % 5 === 1
-        ? "Automatic Control set to OFF"
-        : i % 5 === 2
-          ? "Water Production started by User"
-          : i % 5 === 3
-            ? "System maintenance mode activated"
-            : "Temperature threshold adjusted by Admin",
+  timestamp: generateTimestamp(i * TIME_CONSTANTS.FIFTEEN_MINUTES),
+  description: CONTROL_ACTION_DESCRIPTIONS[i % CONTROL_ACTION_DESCRIPTIONS.length],
 }));
 
 

@@ -1,15 +1,16 @@
-import React from "react";
-import { Card, CardHeader, CardContent } from "./ui/card";
 import {
-  CheckCircle,
-  AlertTriangle,
-  XCircle,
   Activity,
-  Server,
+  AlertTriangle,
+  CheckCircle,
+  Cpu,
   Database,
   Globe,
-  Cpu,
+  Server,
+  XCircle,
 } from "lucide-react";
+import React from "react";
+
+import { Card, CardContent,CardHeader } from "./ui/card";
 
 const iconMap = {
   CheckCircle,
@@ -21,9 +22,8 @@ const iconMap = {
   Globe,
   Cpu,
 };
-import PageHeader from "./PageHeader";
-
 import systemHealthData from "../data/systemHealthData";
+import PageHeader from "./PageHeader";
 
 const COLORS = {
   Operational: "#28a745",

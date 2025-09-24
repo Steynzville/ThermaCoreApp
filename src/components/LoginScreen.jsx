@@ -1,28 +1,29 @@
-import React, { useState, useCallback, useEffect } from "react";
 import { Eye, EyeOff, Fingerprint, Volume2, VolumeX } from "lucide-react";
+import React, { useCallback, useEffect,useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import { useTheme } from "../context/ThemeContext";
-import { useSettings } from "../context/SettingsContext";
-import styles from "./LoginScreen.module.css";
-import thermaCoreLogo from "../assets/thermacore-logo-new.png";
-import googleLogo from "../assets/google-logo.svg";
+
 import appleLogoBlack from "../assets/apple-logo-black.svg";
 import appleLogoWhite from "../assets/apple-logo-white.svg";
-import FormFieldGroup from "./common/FormFieldGroup";
-import SocialButton from "./SocialButton";
+import googleLogo from "../assets/google-logo.svg";
+import thermaCoreLogo from "../assets/thermacore-logo-new.png";
+import { useAuth } from "../context/AuthContext";
+import { useSettings } from "../context/SettingsContext";
+import { useTheme } from "../context/ThemeContext";
 import playSound from "../utils/audioPlayer";
+import FormFieldGroup from "./common/FormFieldGroup";
+import styles from "./LoginScreen.module.css";
+import SocialButton from "./SocialButton";
+import { Button } from "./ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogClose,
 } from "./ui/dialog";
-import { Button } from "./ui/button";
 
 const LoginScreen = ({ error, setError }) => {
   const [formData, setFormData] = useState({

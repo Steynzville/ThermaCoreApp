@@ -4,9 +4,9 @@
 
 import { units as mockUnits } from "../data/mockUnits";
 import {
-  mockUnitDetails,
   mockEventHistory,
   mockRecentActions,
+  mockUnitDetails,
 } from "../mockData";
 
 /**

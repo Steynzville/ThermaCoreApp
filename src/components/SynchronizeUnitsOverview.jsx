@@ -1,20 +1,21 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Card, CardHeader, CardContent } from "./ui/card";
 import {
-  RefreshCw,
-  CheckCircle,
   AlertTriangle,
+  ArrowLeft,
+  CheckCircle,
   Clock,
+  Database,
+  Download,
+  RefreshCw,
+  Settings,
+  Upload,
   Wifi,
   WifiOff,
-  Database,
-  ArrowLeft,
-  Settings,
-  Download,
-  Upload,
 } from "lucide-react";
+import React, { useEffect,useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import { units } from "../data/mockUnits";
+import { Card, CardContent,CardHeader } from "./ui/card";
 
 const SynchronizeUnitsOverview = ({ className }) => {
   const navigate = useNavigate();
@@ -52,7 +53,7 @@ const SynchronizeUnitsOverview = ({ className }) => {
 
     // Set last sync time
     setLastSyncTime(new Date().toISOString());
-  }, [units]); // Re-run when units data changes
+  }, []); // Remove unnecessary dependency as 'units' is from outer scope
 
   const handleSyncAll = async () => {
     setSyncStatus("syncing");

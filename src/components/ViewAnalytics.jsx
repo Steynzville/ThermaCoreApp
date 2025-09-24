@@ -1,23 +1,24 @@
+import { Activity, BarChart3, TrendingUp, Zap } from "lucide-react";
 import React from "react";
 import {
-  LineChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
   Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
 } from "recharts";
-import { Card, CardHeader, CardContent } from "./ui/card";
-import { BarChart3, TrendingUp, Activity, Zap } from "lucide-react";
-import PageHeader from "./PageHeader";
+
 import { formatCurrency } from "../utils/formatCurrency";
+import PageHeader from "./PageHeader";
+import { Card, CardContent,CardHeader } from "./ui/card";
 
 const analyticsData = [
   { name: "Power-Box", sales: 4000, revenue: 2400 },

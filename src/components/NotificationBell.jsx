@@ -1,7 +1,8 @@
-import React, { useState } from "react";
 import { Bell, X } from "lucide-react";
-import { useAuth } from "../context/AuthContext";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+
+import { useAuth } from "../context/AuthContext";
 import { units } from "../data/mockUnits";
 
 const NotificationBell = ({ className = "" }) => {

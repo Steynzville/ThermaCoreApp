@@ -2,6 +2,12 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
+/**
+ * A flexible card container component with consistent styling.
+ * @param {Object} props - Component properties
+ * @param {string} [props.className] - Additional CSS classes to apply
+ * @returns {JSX.Element} A styled card container
+ */
 function Card({ className, ...props }) {
   return (
     <div
@@ -15,6 +21,12 @@ function Card({ className, ...props }) {
   );
 }
 
+/**
+ * Card header component with automatic grid layout support.
+ * @param {Object} props - Component properties
+ * @param {string} [props.className] - Additional CSS classes to apply
+ * @returns {JSX.Element} A styled card header
+ */
 function CardHeader({ className, ...props }) {
   return (
     <div
@@ -83,10 +95,10 @@ function CardFooter({ className, ...props }) {
 
 export {
   Card,
-  CardHeader,
-  CardFooter,
-  CardTitle,
   CardAction,
-  CardDescription,
   CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
 };

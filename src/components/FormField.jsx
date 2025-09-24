@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import styles from "./LoginScreen.module.css";
+
 import EyeIcon from "./EyeIcon";
 import EyeIconClosed from "./EyeIconClosed";
+import styles from "./LoginScreen.module.css";
 
 const FormField = ({
   id,

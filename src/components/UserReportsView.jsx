@@ -1,8 +1,9 @@
 import React from "react";
-import PageHeader from "./PageHeader";
-import ReportConfigurator from "./reports/ReportConfigurator";
+
 import { reportTypes } from "../constants/reportSections";
 import { units } from "../data/mockUnits";
+import PageHeader from "./PageHeader";
+import ReportConfigurator from "./reports/ReportConfigurator";
 
 const UserReportsView = ({ className }) => {
   const allowedScopes = ["single", "multiple", "master"];

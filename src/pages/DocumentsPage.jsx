@@ -1,7 +1,8 @@
 import React from "react";
-import { useSidebarMargin } from "../hooks/useSidebarMargin";
-import { useAuth } from "../context/AuthContext";
+
 import documentList from "../constants/documents";
+import { useAuth } from "../context/AuthContext";
+import { useSidebarMargin } from "../hooks/useSidebarMargin";
 
 const DocumentsPage = () => {
   const sidebarMargin = useSidebarMargin();
