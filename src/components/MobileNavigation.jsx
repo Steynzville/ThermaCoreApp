@@ -1,4 +1,5 @@
-import { History, Home, Settings,Users } from "lucide-react";
+import React from "react";
+import { Home, History, Users, Settings } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 const navItems = [

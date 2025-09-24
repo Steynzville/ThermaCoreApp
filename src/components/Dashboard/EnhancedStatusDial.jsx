@@ -1,4 +1,6 @@
-import { useEffect, useMemo,useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { motion } from "framer-motion";
+import { TrendingUp, TrendingDown, Clock, ChevronRight } from "lucide-react";
 
 // Enhanced Status Dial Component with animations
 const EnhancedStatusDial = ({

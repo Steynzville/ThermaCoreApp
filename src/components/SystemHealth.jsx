@@ -1,12 +1,14 @@
+import React from "react";
+import { Card, CardHeader, CardContent } from "./ui/card";
 import {
-  Activity,
-  AlertTriangle,
   CheckCircle,
-  Cpu,
+  AlertTriangle,
+  XCircle,
+  Activity,
+  Server,
   Database,
   Globe,
-  Server,
-  XCircle,
+  Cpu,
 } from "lucide-react";
 
 const iconMap = {
@@ -19,6 +21,7 @@ const iconMap = {
   Globe,
   Cpu,
 };
+import PageHeader from "./PageHeader";
 
 import systemHealthData from "../data/systemHealthData";
 

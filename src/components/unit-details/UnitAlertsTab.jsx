@@ -1,3 +1,6 @@
+import React from "react";
+import { Card, CardContent } from "../ui/card";
+import { AlertTriangle, CheckCircle, Clock } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { getAllCurrentNotificationsForUnit } from "../../utils/notifications";
 

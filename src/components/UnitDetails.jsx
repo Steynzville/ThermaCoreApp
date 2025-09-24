@@ -1,8 +1,16 @@
-import { useState } from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-
+import React, { useState } from "react";
 import { useSettings } from "../context/SettingsContext";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+
+import RemoteControl from "./RemoteControl";
 // Import subcomponents
+import UnitStatusHeader from "./unit-details/UnitStatusHeader";
+import UnitTabNavigation from "./unit-details/UnitTabNavigation";
+import UnitOverviewTab from "./unit-details/UnitOverviewTab";
+import UnitHistoryTab from "./unit-details/UnitHistoryTab";
+import UnitAlertsTab from "./unit-details/UnitAlertsTab";
+import UnitClientTab from "./unit-details/UnitClientTab";
 
 const UnitDetails = ({ className }) => {
   const { formatTemperature } = useSettings();

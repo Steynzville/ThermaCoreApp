@@ -1,4 +1,7 @@
+import React from "react";
 import { useAuth } from "../context/AuthContext";
+import ReportsView from "../components/ReportsView";
+import UserReportsView from "../components/UserReportsView";
 import { useSidebarMargin } from "../hooks/useSidebarMargin";
 
 const ReportsPage = () => {

@@ -1,9 +1,23 @@
-
-
-import { useState } from "react";
-
+import React, { useState } from "react";
 import { useSettings } from "../../context/SettingsContext";
 import { useUnits } from "../../context/UnitContext";
+import { Card, CardHeader, CardContent } from "../ui/card";
+import {
+  Power,
+  Droplets,
+  Gauge,
+  Calendar,
+  Wrench,
+  MapPin,
+  BatteryCharging,
+  ThermometerSnowflake,
+  ThermometerSun,
+  Cloud,
+  Edit2,
+  Check,
+  X,
+  Navigation,
+} from "lucide-react";
 
 const UnitVitals = ({ unit }) => {
   const { formatTemperature } = useSettings();
