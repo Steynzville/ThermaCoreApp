@@ -1,24 +1,24 @@
-import React, { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { useSettings } from "../context/SettingsContext";
-import { Card, CardHeader, CardContent } from "./ui/card";
-import { Switch } from "./ui/switch";
 import {
-  ArrowLeft,
-  Power,
-  Droplets,
-  Settings,
   AlertTriangle,
-  CheckCircle,
-  Zap,
-  WifiOff,
-  Wifi,
+  ArrowLeft,
   Camera,
-  Monitor,
-  RotateCcw,
+  CheckCircle,
+  Droplets,
   Maximize,
   Minimize,
+  Monitor,
+  Power,
+  RotateCcw,
+  Settings,
+  Wifi,
+  WifiOff,
+  Zap,
 } from "lucide-react";
+import React, { useEffect,useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+
+import { useSettings } from "../context/SettingsContext";
+import playSound from "../utils/audioPlayer";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,7 +30,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "./ui/alert-dialog";
-import playSound from "../utils/audioPlayer";
+import { Card, CardContent,CardHeader } from "./ui/card";
+import { Switch } from "./ui/switch";
 
 const RemoteControl = ({ className, unit: propUnit, details }) => {
   const navigate = useNavigate();

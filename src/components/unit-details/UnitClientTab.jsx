@@ -1,6 +1,7 @@
+import { Mail,Phone, User } from "lucide-react";
 import React from "react";
-import { Card, CardHeader, CardContent } from "../ui/card";
-import { User, Phone, Mail } from "lucide-react";
+
+import { Card, CardContent,CardHeader } from "../ui/card";
 
 const UnitClientTab = ({
   unit,

@@ -1,7 +1,8 @@
-import React from "react";
-import { Card, CardHeader, CardContent } from "../ui/card";
 import { Database } from "lucide-react";
+import React from "react";
+
 import FormFieldGroup from "../common/FormFieldGroup";
+import { Card, CardContent,CardHeader } from "../ui/card";
 
 const DataRefreshSettings = ({ settings, handleSettingChange }) => {
   return (

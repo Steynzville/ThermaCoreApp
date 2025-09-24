@@ -1,30 +1,31 @@
-import React, { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { useSidebar } from "../context/SidebarContext";
-import { useAuth } from "../context/AuthContext";
-import { useSettings } from "../context/SettingsContext";
-import playSound from "../utils/audioPlayer";
 import {
-  LayoutDashboard,
-  Grid3X3,
-  History,
-  Settings,
-  Shield,
-  LogOut,
+  AlertTriangle,
+  BarChart3,
   ChevronLeft,
   ChevronRight,
-  User,
-  Wrench,
-  BarChart3,
-  Search,
-  Wifi,
-  AlertTriangle,
-  Menu,
-  X,
-  Siren,
   FileText,
+  Grid3X3,
+  History,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Search,
+  Settings,
+  Shield,
+  Siren,
+  User,
+  Wifi,
+  Wrench,
+  X,
 } from "lucide-react";
+import React, { useEffect,useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+
+import { useAuth } from "../context/AuthContext";
+import { useSettings } from "../context/SettingsContext";
+import { useSidebar } from "../context/SidebarContext";
 import { units as mockUnits } from "../data/mockUnits";
+import playSound from "../utils/audioPlayer";
 
 const EnhancedSideNavigation = () => {
   const { isCollapsed, setIsCollapsed } = useSidebar();

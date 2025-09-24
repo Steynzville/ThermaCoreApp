@@ -1,4 +1,5 @@
 import React from "react";
+
 import styles from "./LoginScreen.module.css";
 
 const SocialButton = ({ provider, icon, onClick }) => {

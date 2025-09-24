@@ -1,13 +1,13 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
 import {
+  AlertTriangle,
   Package,
   Wifi,
   WifiOff,
   Wrench,
-  AlertTriangle,
   Zap,
 } from "lucide-react";
+import React from "react";
+import { useNavigate } from "react-router-dom";
 
 const UnitSummary = ({
   totalUnits,

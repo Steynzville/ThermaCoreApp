@@ -1,9 +1,10 @@
-import React, { useState, useEffect, memo } from "react";
+import React, { memo,useEffect, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
+
 import {
+  getUnitAlerts,
   getUnitById,
   getUnitDetails,
-  getUnitAlerts,
 } from "../services/unitService";
 
 const AlertListItem = memo(({ alert }) => (

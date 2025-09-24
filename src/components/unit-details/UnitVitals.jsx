@@ -1,23 +1,24 @@
-import React, { useState } from "react";
-import { useSettings } from "../../context/SettingsContext";
-import { useUnits } from "../../context/UnitContext";
-import { Card, CardHeader, CardContent } from "../ui/card";
 import {
-  Power,
-  Droplets,
-  Gauge,
-  Calendar,
-  Wrench,
-  MapPin,
   BatteryCharging,
+  Calendar,
+  Check,
+  Cloud,
+  Droplets,
+  Edit2,
+  Gauge,
+  MapPin,
+  Navigation,
+  Power,
   ThermometerSnowflake,
   ThermometerSun,
-  Cloud,
-  Edit2,
-  Check,
+  Wrench,
   X,
-  Navigation,
 } from "lucide-react";
+import React, { useState } from "react";
+
+import { useSettings } from "../../context/SettingsContext";
+import { useUnits } from "../../context/UnitContext";
+import { Card, CardContent,CardHeader } from "../ui/card";
 
 const UnitVitals = ({ unit }) => {
   const { formatTemperature } = useSettings();

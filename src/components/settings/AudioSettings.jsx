@@ -1,8 +1,9 @@
-import React from "react";
-import { Card, CardHeader, CardContent } from "../ui/card";
-import { Slider } from "../ui/slider";
 import { Volume2 } from "lucide-react";
+import React from "react";
+
 import { useSettings } from "../../context/SettingsContext";
+import { Card, CardContent,CardHeader } from "../ui/card";
+import { Slider } from "../ui/slider";
 
 const AudioSettings = () => {
   const { settings, toggleSound, setVolume } = useSettings();

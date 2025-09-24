@@ -1,15 +1,14 @@
 import React, { useState } from "react";
-import { Button } from "./ui/button";
-import PageHeader from "./PageHeader";
+
 import { useTheme } from "../context/ThemeContext";
-
-import ProfileSettings from "./settings/ProfileSettings";
-import NotificationSettings from "./settings/NotificationSettings";
-import DisplaySettings from "./settings/DisplaySettings";
-import DataRefreshSettings from "./settings/DataRefreshSettings";
+import PageHeader from "./PageHeader";
 import AlertSettings from "./settings/AlertSettings";
-
 import AudioSettings from "./settings/AudioSettings";
+import DataRefreshSettings from "./settings/DataRefreshSettings";
+import DisplaySettings from "./settings/DisplaySettings";
+import NotificationSettings from "./settings/NotificationSettings";
+import ProfileSettings from "./settings/ProfileSettings";
+import { Button } from "./ui/button";
 
 const SettingsView = ({ className }) => {
   const { theme, setTheme } = useTheme();
