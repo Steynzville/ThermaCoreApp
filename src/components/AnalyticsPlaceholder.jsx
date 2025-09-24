@@ -1,6 +1,3 @@
-import React from "react";
-import { BarChart3, TrendingUp, Activity, Zap } from "lucide-react";
-import PageHeader from "./PageHeader";
 
 const AnalyticsPlaceholder = () => {
   return (

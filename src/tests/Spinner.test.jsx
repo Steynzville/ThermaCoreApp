@@ -1,6 +1,4 @@
-import React from "react";
 import { render, screen } from "@testing-library/react";
-import Spinner from "../components/common/Spinner";
 
 describe("Spinner", () => {
   it("renders correctly with default srLabel", () => {

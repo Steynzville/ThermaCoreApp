@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import { useEffect,useState } from "react";
+
 import { useAuth } from "../context/AuthContext";
-import { X, Save } from "lucide-react";
 
 const ROIAssumptions = ({ isOpen, onClose, onSave, currentAssumptions }) => {
   const { userRole } = useAuth();

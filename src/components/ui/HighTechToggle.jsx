@@ -1,4 +1,3 @@
-import React from "react";
 
 const HighTechToggle = ({ isPerformance, onToggle, className = "" }) => {
   return (

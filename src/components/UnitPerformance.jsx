@@ -1,25 +1,20 @@
-import React, { useState, useEffect } from "react";
-import { useParams, useLocation, useNavigate } from "react-router-dom";
 import {
-  Zap,
+  Calendar,
+  Clock,
+  DollarSign,
   Droplets,
   Fuel,
-  Leaf,
-  DollarSign,
-  Clock,
-  Wrench,
-  Calendar,
-  TrendingUp,
   TrendingDown,
-  ArrowLeft,
+  TrendingUp,
+  Wrench,
+  Zap,
 } from "lucide-react";
+import { useEffect,useState } from "react";
+import { useLocation, useNavigate,useParams } from "react-router-dom";
+
 import { useAuth } from "../context/AuthContext";
 import { useUnits } from "../context/UnitContext";
-import FinancialAssumptions from "./FinancialAssumptions";
-import ROIAssumptions from "./ROIAssumptions";
-import EnvironmentalAssumptions from "./EnvironmentalAssumptions";
 import { formatCurrency } from "../utils/formatCurrency";
-import Spinner from "./common/Spinner";
 
 const PerformanceCard = ({
   icon: Icon,

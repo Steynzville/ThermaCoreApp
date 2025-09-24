@@ -1,22 +1,6 @@
-import React from "react";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
-import { Card, CardHeader, CardContent } from "./ui/card";
-import { BarChart3, TrendingUp, Activity, Zap } from "lucide-react";
-import PageHeader from "./PageHeader";
+
+
+
 import { formatCurrency } from "../utils/formatCurrency";
 
 const analyticsData = [

@@ -1,16 +1,11 @@
-import React, { useState } from "react";
-import { Card, CardHeader, CardContent } from "./ui/card";
-import { Button } from "./ui/button";
 import {
-  Users,
+  Database,
   Settings,
   Shield,
-  Database,
-  Plus,
-  Edit,
-  Trash2,
+  Users,
 } from "lucide-react";
-import PageHeader from "./PageHeader";
+import { useState } from "react";
+
 
 const initialUsers = [
   {

@@ -1,36 +1,12 @@
-import React, { useState, useEffect } from "react";
+
+
+import React, {useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+
 import { useSettings } from "../context/SettingsContext";
-import { Card, CardHeader, CardContent } from "./ui/card";
-import { Switch } from "./ui/switch";
-import {
-  ArrowLeft,
-  Power,
-  Droplets,
-  Settings,
-  AlertTriangle,
-  CheckCircle,
-  Zap,
-  WifiOff,
-  Wifi,
-  Camera,
-  Monitor,
-  RotateCcw,
-  Maximize,
-  Minimize,
-} from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "./ui/alert-dialog";
 import playSound from "../utils/audioPlayer";
+
+
 
 const RemoteControl = ({ className, unit: propUnit, details }) => {
   const navigate = useNavigate();
@@ -56,6 +32,11 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
 
   // Listen for fullscreen changes (moved before early return to avoid conditional hook call)
   React.useEffect(() => {
+    // Guard for SSR safety
+    if (typeof document === 'undefined') {
+      return;
+    }
+
     const handleFullscreenChange = () => {
       const isCurrentlyFullscreen = !!(document.fullscreenElement || 
                                        document.webkitFullscreenElement || 
@@ -64,13 +45,22 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
     };
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-    document.addEventListener('msfullscreenchange', handleFullscreenChange);
+    // Guard webkit and ms prefixed events only when necessary
+    if ('webkitFullscreenElement' in document) {
+      document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    }
+    if ('msFullscreenElement' in document) {
+      document.addEventListener('msfullscreenchange', handleFullscreenChange);
+    }
 
     return () => {
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
-      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
-      document.removeEventListener('msfullscreenchange', handleFullscreenChange);
+      if ('webkitFullscreenElement' in document) {
+        document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      }
+      if ('msFullscreenElement' in document) {
+        document.removeEventListener('msfullscreenchange', handleFullscreenChange);
+      }
     };
   }, []);
 
@@ -166,6 +156,11 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
   };
 
   const toggleFullscreen = async () => {
+    // Guard for SSR safety
+    if (typeof document === 'undefined') {
+      return;
+    }
+
     try {
       if (!isFullscreen) {
         // Enter fullscreen

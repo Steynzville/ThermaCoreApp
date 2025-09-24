@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-import { ChevronRight } from "lucide-react";
+import { useState } from "react";
 
 // Quick Action Card
 const QuickActionCard = ({

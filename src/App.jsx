@@ -1,24 +1,15 @@
+import "./App.css";
+
 import React, { useEffect, useRef, useState } from "react";
-import playSound from "./utils/audioPlayer";
 import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Navigate,
   useLocation,
 } from "react-router-dom";
-import { AuthProvider, useAuth } from "./context/AuthContext";
-import { ThemeProvider } from "./context/ThemeContext";
-import { SidebarProvider } from "./context/SidebarContext";
-import { SettingsProvider, useSettings } from "./context/SettingsContext";
-import { UnitProvider } from "./context/UnitContext";
-import LoginScreen from "./components/LoginScreen";
-import ProtectedRoute from "./components/ProtectedRoute";
+
 // Removed static imports for UnitControl, UnitDetails, UserUnitDetails
-import ThemeToggle from "./components/ThemeToggle";
-import Spinner from "./components/common/Spinner";
 import routes from "./config/routes";
-import "./App.css";
+import { useAuth } from "./context/AuthContext";
+import { useSettings } from "./context/SettingsContext";
+import playSound from "./utils/audioPlayer";
 
 // Component to handle scroll to top on route change
 const ScrollToTop = () => {
