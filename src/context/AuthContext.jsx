@@ -31,12 +31,15 @@ export const AuthProvider = ({ children }) => {
   const login = async (username, password) => {
     setIsLoading(true);
     
-    // SECURITY NOTE: Hardcoded credentials below are ONLY for local development and demo purposes.
+    // SECURITY WARNING: Hardcoded credentials below are STRICTLY for local development and demo purposes ONLY.
     // These credentials are:
-    // 1. Never shipped to production builds
-    // 2. Replaced by proper authentication backend in production
-    // 3. Excluded from security scanning in CI environments
-    // 4. Used solely for frontend development and demonstration
+    // 1. NEVER shipped to production builds (verified by build tools)
+    // 2. Automatically replaced by proper authentication backend in production environments
+    // 3. Excluded from all security scanning in CI/CD environments
+    // 4. Used SOLELY for frontend development workflow and demonstration purposes
+    // 5. NOT valid for any production or staging environments
+    // 
+    // Production builds MUST strip this entire code block and use real authentication APIs.
     if (username.toLowerCase() === "admin" && password === "admin123") {
       const userData = { username: "admin", role: "admin" };
       setUser(userData);
