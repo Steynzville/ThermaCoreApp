@@ -402,8 +402,8 @@ def get_unit_readings(unit_id):
     # Build query for sensor readings
     query = db.session.query(SensorReading).join(Sensor).filter(
         Sensor.unit_id == unit_id,
-        SensorReading.timestamp >= db.func.now() - db.text(f"INTERVAL '{hours_back} hours'")
-    )
+        SensorReading.timestamp >= db.func.now() - db.text("INTERVAL :hours_back HOUR")
+    ).params(hours_back=hours_back)
     
     if sensor_type:
         query = query.filter(Sensor.sensor_type == sensor_type)
@@ -517,32 +517,29 @@ def get_units_stats():
     security:
       - JWT: []
     """
-    total_units = Unit.query.count()
-    
-    # Status counts
-    online_units = Unit.query.filter(Unit.status == 'online').count()
-    offline_units = Unit.query.filter(Unit.status == 'offline').count()
-    maintenance_units = Unit.query.filter(Unit.status == 'maintenance').count()
-    error_units = Unit.query.filter(Unit.status == 'error').count()
-    
-    # Health status counts
-    critical_health = Unit.query.filter(Unit.health_status == 'critical').count()
-    warning_health = Unit.query.filter(Unit.health_status == 'warning').count()
-    optimal_health = Unit.query.filter(Unit.health_status == 'optimal').count()
-    
-    # Alert and alarm counts
-    units_with_alerts = Unit.query.filter(Unit.has_alert == True).count()
-    units_with_alarms = Unit.query.filter(Unit.has_alarm == True).count()
+    # Use single query with conditional aggregation for better performance
+    result = db.session.query(
+        db.func.count().label('total_units'),
+        db.func.sum(db.case((Unit.status == 'online', 1), else_=0)).label('online_units'),
+        db.func.sum(db.case((Unit.status == 'offline', 1), else_=0)).label('offline_units'),
+        db.func.sum(db.case((Unit.status == 'maintenance', 1), else_=0)).label('maintenance_units'),
+        db.func.sum(db.case((Unit.status == 'error', 1), else_=0)).label('error_units'),
+        db.func.sum(db.case((Unit.health_status == 'critical', 1), else_=0)).label('critical_health'),
+        db.func.sum(db.case((Unit.health_status == 'warning', 1), else_=0)).label('warning_health'),
+        db.func.sum(db.case((Unit.health_status == 'optimal', 1), else_=0)).label('optimal_health'),
+        db.func.sum(db.case((Unit.has_alert == True, 1), else_=0)).label('units_with_alerts'),
+        db.func.sum(db.case((Unit.has_alarm == True, 1), else_=0)).label('units_with_alarms')
+    ).first()
     
     return jsonify({
-        'total_units': total_units,
-        'online_units': online_units,
-        'offline_units': offline_units,
-        'maintenance_units': maintenance_units,
-        'error_units': error_units,
-        'critical_health': critical_health,
-        'warning_health': warning_health,
-        'optimal_health': optimal_health,
-        'units_with_alerts': units_with_alerts,
-        'units_with_alarms': units_with_alarms
+        'total_units': result.total_units or 0,
+        'online_units': result.online_units or 0,
+        'offline_units': result.offline_units or 0,
+        'maintenance_units': result.maintenance_units or 0,
+        'error_units': result.error_units or 0,
+        'critical_health': result.critical_health or 0,
+        'warning_health': result.warning_health or 0,
+        'optimal_health': result.optimal_health or 0,
+        'units_with_alerts': result.units_with_alerts or 0,
+        'units_with_alarms': result.units_with_alarms or 0
     }), 200

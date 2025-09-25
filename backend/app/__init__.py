@@ -45,7 +45,7 @@ else:
     jwt = None
 
 if swagger_available:
-    swagger = Swagger()
+    swagger = None  # Will be initialized in create_app
 else:
     swagger = None
 
@@ -76,18 +76,30 @@ def create_app(config_name=None):
         CORS(app, origins=app.config['CORS_ORIGINS'])
     
     # Initialize Swagger if available
-    if swagger:
-        swagger_config = {
+    if swagger_available:
+        swagger_template = {
             "swagger": "2.0",
             "info": {
                 "title": "ThermaCore SCADA API",
-                "description": "API for ThermaCore SCADA system integration",
-                "version": "1.0.0"
+                "description": "API for ThermaCore SCADA system integration and monitoring - Auto-generated from code docstrings",
+                "version": "1.0.0",
+                "contact": {
+                    "name": "ThermaCore API Team",
+                    "email": "api@thermacore.com"
+                }
             },
             "basePath": app.config['API_PREFIX'],
-            "schemes": ["http", "https"]
+            "schemes": ["http", "https"],
+            "securityDefinitions": {
+                "JWT": {
+                    "type": "apiKey",
+                    "name": "Authorization",
+                    "in": "header",
+                    "description": "JWT Authorization header using the Bearer scheme. Example: 'Authorization: Bearer {token}'"
+                }
+            }
         }
-        swagger.init_app(app, config=swagger_config)
+        swagger = Swagger(app, template=swagger_template)
     
     # Import models to ensure they are registered (only if db is configured)
     try:
