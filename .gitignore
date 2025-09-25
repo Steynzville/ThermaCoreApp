@@ -44,3 +44,6 @@ junit.xml
 # Temp files
 /tmp/
 .tmp/
+
+# Generated documentation (handled by workflow)
+docs-repo/
