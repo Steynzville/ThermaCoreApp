@@ -1,5 +1,6 @@
 """Utility functions for the ThermaCore SCADA API."""
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from dateutil import parser as dateutil_parser
 from functools import wraps
 from typing import Dict, Any, List
 
@@ -74,31 +75,39 @@ def format_timestamp(dt: datetime) -> str:
 
 def parse_timestamp(timestamp_str: str) -> datetime:
     """
-    Parse ISO timestamp string to datetime.
+    Parse ISO timestamp string to datetime using robust dateutil parser.
     
     Args:
         timestamp_str: ISO formatted timestamp string
         
     Returns:
-        datetime object
+        datetime object (timezone-aware when possible)
+    
+    Raises:
+        ValueError: If timestamp format is invalid
     """
     try:
-        return datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
-    except ValueError:
-        raise ValueError(f"Invalid timestamp format: {timestamp_str}")
+        parsed_dt = dateutil_parser.isoparse(timestamp_str)
+        # Ensure timezone-aware datetime - if naive, assume UTC
+        if parsed_dt.tzinfo is None:
+            parsed_dt = parsed_dt.replace(tzinfo=timezone.utc)
+        return parsed_dt
+    except (ValueError, TypeError) as e:
+        raise ValueError(f"Invalid timestamp format: {timestamp_str}") from e
 
 
 def calculate_time_range(hours_back: int = 24) -> tuple[datetime, datetime]:
     """
-    Calculate time range for queries.
+    Calculate timezone-aware UTC time range for queries.
     
     Args:
         hours_back: Number of hours to go back from now
         
     Returns:
-        Tuple of (start_time, end_time)
+        Tuple of (start_time, end_time) both in UTC
     """
-    end_time = datetime.utcnow()
+    # Use timezone-aware UTC datetime instead of deprecated utcnow()
+    end_time = datetime.now(timezone.utc)
     start_time = end_time - timedelta(hours=hours_back)
     return start_time, end_time
 
