@@ -97,8 +97,24 @@ class Role(db.Model):
         return f'<Role {self.name}>'
     
     def has_permission(self, permission):
-        """Check if role has a specific permission."""
-        return any(p.name.value == permission for p in self.permissions)
+        """Check if role has a specific permission.
+        
+        Args:
+            permission: Can be either a string (e.g., "read_users") or a PermissionEnum
+        
+        Returns:
+            bool: True if role has the permission, False otherwise
+        """
+        # Handle both string and enum types for permission argument
+        if isinstance(permission, PermissionEnum):
+            permission_value = permission.value
+        elif isinstance(permission, str):
+            permission_value = permission
+        else:
+            # Handle other types gracefully
+            permission_value = str(permission)
+        
+        return any(p.name.value == permission_value for p in self.permissions)
 
 
 class User(db.Model):
@@ -113,7 +129,7 @@ class User(db.Model):
     last_name = Column(String(100))
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
-    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)  # timezone-aware via utc_now() function
+    updated_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
     last_login = Column(DateTime)  # timezone-aware set via application logic
     
     # Foreign Keys
@@ -134,8 +150,17 @@ class User(db.Model):
         return check_password_hash(self.password_hash, password)
     
     def has_permission(self, permission):
-        """Check if user has a specific permission."""
-        return self.role and self.role.has_permission(permission)
+        """Check if user has a specific permission.
+        
+        Args:
+            permission: Can be either a string (e.g., "read_users") or a PermissionEnum
+        
+        Returns:
+            bool: True if user has the permission, False otherwise
+        """
+        if not self.role:
+            return False
+        return self.role.has_permission(permission)
 
 
 class Unit(db.Model):
@@ -173,7 +198,7 @@ class Unit(db.Model):
     user_load = Column(Float, default=0.0)
     
     created_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
-    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)  # timezone-aware via utc_now() function
+    updated_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
     
     # Relationships
     sensors = relationship('Sensor', back_populates='unit', cascade='all, delete-orphan')
@@ -196,7 +221,7 @@ class Sensor(db.Model):
     is_active = Column(Boolean, default=True)
     
     created_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
-    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)  # timezone-aware via utc_now() function
+    updated_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
     
     # Relationships
     unit = relationship('Unit', back_populates='sensors')
