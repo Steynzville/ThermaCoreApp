@@ -69,9 +69,9 @@ class TestEnhancedPermissionHandling:
             result = admin_role.has_permission(permission)
             assert isinstance(result, bool)
         
-        # Verify we're testing all expected permissions
+        # Verify we're testing all expected permissions - use exact count for precision
         expected_count = len(all_permission_enums)
-        assert expected_count >= 7, f"Expected at least 7 permissions, found {expected_count}"
+        assert expected_count == 7, f"Expected exactly 7 permissions, found {expected_count}. Update this test when permissions are added/removed."
     
     def test_string_permission_validation(self, client, db_session):
         """Test string permission validation against known values."""
@@ -86,9 +86,9 @@ class TestEnhancedPermissionHandling:
             result = admin_role.has_permission(permission)
             assert isinstance(result, bool)
             
-        # Verify we're testing all expected permissions  
+        # Verify we're testing all expected permissions - use exact count for precision
         expected_count = len(valid_string_permissions)
-        assert expected_count >= 7, f"Expected at least 7 permissions, found {expected_count}"
+        assert expected_count == 7, f"Expected exactly 7 permissions, found {expected_count}. Update this test when permissions are added/removed."
         
         # Invalid string permissions should return False (not raise error)
         invalid_permissions = [

@@ -26,8 +26,8 @@ def simulate_db_trigger_update(obj):
     Args:
         obj: SQLAlchemy model instance to update
     """
-    # Check if we're using PostgreSQL for tests
-    using_postgres = os.environ.get('USE_POSTGRES_TESTS', 'false').lower() in ('true', '1')
+    # Use runtime dialect detection for better portability
+    using_postgres = is_using_postgres_dialect()
     
     if hasattr(obj, 'updated_at'):
         if not using_postgres:
@@ -95,6 +95,54 @@ def is_using_postgres_tests():
     return os.environ.get('USE_POSTGRES_TESTS', 'false').lower() in ('true', '1')
 
 
+def detect_database_dialect():
+    """
+    Detect the database dialect at runtime by examining the current database connection.
+    
+    This provides a more robust alternative to relying solely on environment variables,
+    allowing for better database-agnostic testing patterns.
+    
+    Returns:
+        str: Database dialect name ('postgresql', 'sqlite', 'mysql', etc.) or 'unknown'
+    """
+    try:
+        from flask import current_app
+        from app import db
+        
+        # Get the database engine from SQLAlchemy
+        if hasattr(db, 'engine') and db.engine is not None:
+            dialect_name = db.engine.dialect.name.lower()
+            return dialect_name
+        
+        # Fallback: check database URL from config
+        db_url = current_app.config.get('SQLALCHEMY_DATABASE_URI', '').lower()
+        if 'postgresql' in db_url or 'postgres' in db_url:
+            return 'postgresql'
+        elif 'sqlite' in db_url:
+            return 'sqlite'
+        elif 'mysql' in db_url:
+            return 'mysql'
+        else:
+            return 'unknown'
+            
+    except Exception:
+        # If we can't detect, fall back to environment variable check
+        return 'postgresql' if is_using_postgres_tests() else 'sqlite'
+
+
+def is_using_postgres_dialect():
+    """
+    Check if the current database dialect is PostgreSQL using runtime detection.
+    
+    This is preferred over environment variable checks for better portability.
+    
+    Returns:
+        bool: True if using PostgreSQL dialect
+    """
+    dialect = detect_database_dialect()
+    return dialect == 'postgresql'
+
+
 def get_postgres_test_url():
     """
     Get the PostgreSQL test database URL from environment.
@@ -109,8 +157,10 @@ def sleep_for_sqlite_if_needed(seconds=0.01):
     """
     Add delay for SQLite tests to prevent race conditions.
     
+    Uses runtime dialect detection for better portability.
+    
     Args:
         seconds: Sleep duration (default 0.01)
     """
-    if not is_using_postgres_tests():
+    if not is_using_postgres_dialect():
         time.sleep(seconds)

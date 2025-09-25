@@ -9,9 +9,10 @@ services:
       POSTGRES_DB: thermacore_test
       POSTGRES_USER: thermacore_test
       POSTGRES_PASSWORD: test_password
-      POSTGRES_HOST_AUTH_METHOD: trust
+      # Note: These credentials are ONLY for automated testing and are never used in production
+      # Production uses secure, environment-based credentials
     ports:
-      - "5433:5432"
+      - "${POSTGRES_TEST_PORT:-5433}:5432"
     volumes:
       - ./migrations/001_initial_schema.sql:/docker-entrypoint-initdb.d/001_initial_schema.sql:ro
     command: postgres -c log_statement=all -c log_duration=on
