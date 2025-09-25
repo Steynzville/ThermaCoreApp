@@ -10,6 +10,9 @@ echo "🐘 Starting PostgreSQL test environment..."
 POSTGRES_TEST_PORT=${POSTGRES_TEST_PORT:-5433}
 DOCKER_COMPOSE_FILE=${DOCKER_COMPOSE_FILE:-docker-compose.test.yml}
 
+# Export port to be available for docker-compose environment substitution
+export POSTGRES_TEST_PORT
+
 echo "Using PostgreSQL test port: $POSTGRES_TEST_PORT"
 echo "Using docker-compose file: $DOCKER_COMPOSE_FILE"
 

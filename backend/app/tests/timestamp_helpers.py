@@ -102,10 +102,21 @@ def detect_database_dialect():
     This provides a more robust alternative to relying solely on environment variables,
     allowing for better database-agnostic testing patterns.
     
+    Safely handles cases where no Flask app context is available, such as when
+    called from utility scripts or isolation.
+    
     Returns:
         str: Database dialect name ('postgresql', 'sqlite', 'mysql', etc.) or 'unknown'
     """
     try:
+        # Import Flask components safely
+        from flask import has_app_context
+        
+        # Check if we're in a Flask app context before accessing current_app
+        if not has_app_context():
+            # If no app context, fall back to environment variable check
+            return 'postgresql' if is_using_postgres_tests() else 'sqlite'
+        
         from flask import current_app
         from app import db
         

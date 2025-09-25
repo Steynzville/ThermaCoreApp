@@ -1,7 +1,6 @@
 # Docker Compose configuration for PostgreSQL testing
 # Used by Batch 3 requirements to test database triggers directly
 
-version: '3.8'
 services:
   postgres-test:
     image: postgres:15
@@ -11,6 +10,7 @@ services:
       POSTGRES_PASSWORD: test_password
       # Note: These credentials are ONLY for automated testing and are never used in production
       # Production uses secure, environment-based credentials
+      # Removed POSTGRES_HOST_AUTH_METHOD=trust for improved security
     ports:
       - "${POSTGRES_TEST_PORT:-5433}:5432"
     volumes:
