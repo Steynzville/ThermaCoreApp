@@ -12,7 +12,16 @@ from app import db
 
 
 def utc_now():
-    """Get current UTC time as timezone-aware datetime."""
+    """Get current UTC time as timezone-aware datetime.
+    
+    This function enforces timezone-aware datetimes at the application level
+    by always returning UTC datetime objects. This approach works with both
+    PostgreSQL and SQLite, unlike using DateTime(timezone=True) which only
+    works with PostgreSQL.
+    
+    For production PostgreSQL deployments, consider adding database triggers
+    to automatically update timestamp fields and enforce timezone constraints.
+    """
     return datetime.now(timezone.utc)
 
 
@@ -65,7 +74,7 @@ class Permission(db.Model):
     id = Column(Integer, primary_key=True)
     name = Column(Enum(PermissionEnum), unique=True, nullable=False)
     description = Column(String(255))
-    created_at = Column(DateTime, default=utc_now)
+    created_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
     
     def __repr__(self):
         return f'<Permission {self.name}>'
@@ -78,7 +87,7 @@ class Role(db.Model):
     id = Column(Integer, primary_key=True)
     name = Column(Enum(RoleEnum), unique=True, nullable=False)
     description = Column(String(255))
-    created_at = Column(DateTime, default=utc_now)
+    created_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
     
     # Relationships
     permissions = relationship('Permission', secondary=role_permissions, backref='roles')
@@ -103,9 +112,9 @@ class User(db.Model):
     first_name = Column(String(100))
     last_name = Column(String(100))
     is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime, default=utc_now)
-    updated_at = Column(DateTime, default=utc_now)
-    last_login = Column(DateTime)
+    created_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
+    updated_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
+    last_login = Column(DateTime)  # timezone-aware set via application logic
     
     # Foreign Keys
     role_id = Column(Integer, ForeignKey('roles.id'), nullable=False)
@@ -136,8 +145,8 @@ class Unit(db.Model):
     id = Column(String(50), primary_key=True)  # TC001, TC002, etc.
     name = Column(String(200), nullable=False)
     serial_number = Column(String(100), unique=True, nullable=False)
-    install_date = Column(DateTime, nullable=False)
-    last_maintenance = Column(DateTime)
+    install_date = Column(DateTime, nullable=False)  # timezone-aware set via application logic
+    last_maintenance = Column(DateTime)  # timezone-aware set via application logic
     location = Column(String(200))
     status = Column(Enum(UnitStatusEnum), default=UnitStatusEnum.OFFLINE)
     health_status = Column(Enum(HealthStatusEnum), default=HealthStatusEnum.OPTIMAL)
@@ -163,8 +172,8 @@ class Unit(db.Model):
     parasitic_load = Column(Float, default=0.0)
     user_load = Column(Float, default=0.0)
     
-    created_at = Column(DateTime, default=utc_now)
-    updated_at = Column(DateTime, default=utc_now)
+    created_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
+    updated_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
     
     # Relationships
     sensors = relationship('Sensor', back_populates='unit', cascade='all, delete-orphan')
@@ -186,8 +195,8 @@ class Sensor(db.Model):
     max_value = Column(Float)
     is_active = Column(Boolean, default=True)
     
-    created_at = Column(DateTime, default=utc_now)
-    updated_at = Column(DateTime, default=utc_now)
+    created_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
+    updated_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
     
     # Relationships
     unit = relationship('Unit', back_populates='sensors')
@@ -203,7 +212,7 @@ class SensorReading(db.Model):
     
     id = Column(Integer, primary_key=True)
     sensor_id = Column(Integer, ForeignKey('sensors.id'), nullable=False)
-    timestamp = Column(DateTime, default=utc_now, nullable=False, index=True)
+    timestamp = Column(DateTime, default=utc_now, nullable=False, index=True)  # timezone-aware via utc_now() function
     value = Column(Float, nullable=False)
     quality = Column(String(20), default='GOOD')  # GOOD, BAD, UNCERTAIN
     

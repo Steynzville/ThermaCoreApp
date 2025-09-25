@@ -24,7 +24,7 @@ def permission_required(permission):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             verify_jwt_in_request()
-            user_id = get_jwt_identity()
+            user_id = int(get_jwt_identity())  # Convert JWT identity string back to int
             user = User.query.get(user_id)
             
             if not user or not user.is_active:
@@ -44,7 +44,7 @@ def role_required(*roles):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             verify_jwt_in_request()
-            user_id = get_jwt_identity()
+            user_id = int(get_jwt_identity())  # Convert JWT identity string back to int
             user = User.query.get(user_id)
             
             if not user or not user.is_active:
@@ -165,9 +165,9 @@ def login():
         # Refresh to get database-generated timestamp
         db.session.refresh(user)
         
-        # Create tokens
-        access_token = create_access_token(identity=user.id)
-        refresh_token = create_refresh_token(identity=user.id)
+        # Create tokens with string identity (JWT requirement)
+        access_token = create_access_token(identity=str(user.id))
+        refresh_token = create_refresh_token(identity=str(user.id))
         
         token_schema = TokenSchema()
         user_schema = UserSchema()
@@ -207,13 +207,13 @@ def refresh():
     security:
       - JWT: []
     """
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())  # Convert JWT identity string back to int
     user = User.query.get(user_id)
     
     if not user or not user.is_active:
         return jsonify({'error': 'User not found or inactive'}), 401
     
-    access_token = create_access_token(identity=user.id)
+    access_token = create_access_token(identity=str(user.id))
     
     return jsonify({
         'access_token': access_token,
@@ -239,7 +239,7 @@ def get_current_user():
     security:
       - JWT: []
     """
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())  # Convert JWT identity string back to int
     user = User.query.get(user_id)
     
     if not user or not user.is_active:
@@ -308,7 +308,7 @@ def change_password():
     if len(data['new_password']) < 6:
         return jsonify({'error': 'New password must be at least 6 characters long'}), 400
     
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())  # Convert JWT identity string back to int
     user = User.query.get(user_id)
     
     if not user or not user.is_active:
