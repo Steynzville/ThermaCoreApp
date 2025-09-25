@@ -98,7 +98,7 @@ class Role(db.Model):
     
     def has_permission(self, permission):
         """Check if role has a specific permission."""
-        return any(p.name == permission for p in self.permissions)
+        return any(p.name.value == permission for p in self.permissions)
 
 
 class User(db.Model):
@@ -113,7 +113,7 @@ class User(db.Model):
     last_name = Column(String(100))
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
-    updated_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)  # timezone-aware via utc_now() function
     last_login = Column(DateTime)  # timezone-aware set via application logic
     
     # Foreign Keys
@@ -173,7 +173,7 @@ class Unit(db.Model):
     user_load = Column(Float, default=0.0)
     
     created_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
-    updated_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)  # timezone-aware via utc_now() function
     
     # Relationships
     sensors = relationship('Sensor', back_populates='unit', cascade='all, delete-orphan')
@@ -196,7 +196,7 @@ class Sensor(db.Model):
     is_active = Column(Boolean, default=True)
     
     created_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
-    updated_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)  # timezone-aware via utc_now() function
     
     # Relationships
     unit = relationship('Unit', back_populates='sensors')

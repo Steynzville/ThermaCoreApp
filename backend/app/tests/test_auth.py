@@ -205,8 +205,8 @@ class TestUserRegistration:
         token = self.get_auth_token(client)
         
         # Get admin role ID
-        from app.models import Role
-        admin_role = Role.query.filter_by(name='admin').first()
+        from app.models import Role, RoleEnum
+        admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
         
         response = client.post('/api/v1/auth/register',
             json={
@@ -233,8 +233,8 @@ class TestUserRegistration:
         # Try to register as viewer (no write_users permission)
         token = self.get_auth_token(client, 'viewer', 'viewer123')
         
-        from app.models import Role
-        viewer_role = Role.query.filter_by(name='viewer').first()
+        from app.models import Role, RoleEnum
+        viewer_role = Role.query.filter_by(name=RoleEnum.VIEWER).first()
         
         response = client.post('/api/v1/auth/register',
             json={
@@ -255,8 +255,8 @@ class TestUserRegistration:
         """Test registration with duplicate username."""
         token = self.get_auth_token(client)
         
-        from app.models import Role
-        admin_role = Role.query.filter_by(name='admin').first()
+        from app.models import Role, RoleEnum
+        admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
         
         response = client.post('/api/v1/auth/register',
             json={
