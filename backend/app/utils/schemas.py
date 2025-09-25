@@ -11,6 +11,11 @@ from app.models import User, Role, Permission, Unit, Sensor, SensorReading, Perm
 logger = logging.getLogger(__name__)
 
 
+def _utc_now():
+    """Helper function to get current UTC datetime for field defaults."""
+    return datetime.now(timezone.utc)
+
+
 class DateTimeField(fields.DateTime):
     """Custom DateTime field that ensures robust datetime serialization.
     
@@ -36,6 +41,11 @@ class DateTimeField(fields.DateTime):
                 logger.warning(f"Invalid datetime string '{value}' in field '{attr}': {e}")
                 # Return None instead of malformed string to prevent client-side errors
                 return None
+        
+        # If value is not a string or datetime, try to handle gracefully
+        if not hasattr(value, 'isoformat') and not hasattr(value, 'strftime'):
+            logger.warning(f"Invalid datetime value type '{type(value).__name__}' in field '{attr}': {value}")
+            return None
         
         # If it's already a datetime object, use the parent method directly
         return super()._serialize(value, attr, obj, **kwargs)
@@ -261,7 +271,7 @@ class SensorReadingSchema(SQLAlchemyAutoSchema):
         model = SensorReading
         load_instance = True
         
-    timestamp = DateTimeField(dump_default=datetime.utcnow)
+    timestamp = DateTimeField(dump_default=_utc_now)
     value = fields.Float(required=True)
     quality = fields.Str(validate=validate.OneOf(['GOOD', 'BAD', 'UNCERTAIN']))
     sensor = fields.Nested(SensorSchema, dump_only=True)
@@ -271,7 +281,7 @@ class SensorReadingCreateSchema(Schema):
     """Schema for sensor reading creation."""
     sensor_id = fields.Int(required=True)
     value = fields.Float(required=True)
-    timestamp = DateTimeField(missing=datetime.utcnow)
+    timestamp = DateTimeField(missing=_utc_now)
     quality = fields.Str(missing='GOOD', validate=validate.OneOf(['GOOD', 'BAD', 'UNCERTAIN']))
 
 

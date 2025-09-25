@@ -310,7 +310,7 @@ def generate_health_score(unit_id: str) -> Dict[str, Any]:
     
     # Check maintenance schedule
     if unit.last_maintenance:
-        days_since_maintenance = (datetime.utcnow() - unit.last_maintenance).days
+        days_since_maintenance = (datetime.now(timezone.utc) - unit.last_maintenance).days
         if days_since_maintenance > 90:
             score -= 10
             factors.append('Overdue maintenance')
@@ -337,5 +337,5 @@ def generate_health_score(unit_id: str) -> Dict[str, Any]:
         'score': score,
         'health_level': health_level,
         'factors': factors,
-        'calculated_at': datetime.utcnow().isoformat()
+        'calculated_at': datetime.now(timezone.utc).isoformat()
     }
