@@ -110,6 +110,9 @@ def register():
         db.session.add(user)
         db.session.commit()
         
+        # Refresh to get database-generated timestamp
+        db.session.refresh(user)
+        
         user_schema = UserSchema()
         return jsonify(user_schema.dump(user)), 201
         
@@ -158,6 +161,9 @@ def login():
         # Update last login
         user.last_login = datetime.utcnow()
         db.session.commit()
+        
+        # Refresh to get database-generated timestamp
+        db.session.refresh(user)
         
         # Create tokens
         access_token = create_access_token(identity=user.id)
@@ -313,5 +319,8 @@ def change_password():
     
     user.set_password(data['new_password'])
     db.session.commit()
+    
+    # Refresh to get database-generated timestamp
+    db.session.refresh(user)
     
     return jsonify({'message': 'Password changed successfully'}), 200

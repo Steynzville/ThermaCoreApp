@@ -216,7 +216,7 @@ class TestUnitsAPI:
             id='DELETE_ME',
             name='Unit to Delete',
             serial_number='DELETE-2024-001',
-            install_date=datetime.now()
+            install_date=datetime.utcnow()
         )
         db_session.add(test_unit)
         db_session.commit()
