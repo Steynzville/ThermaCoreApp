@@ -25,7 +25,18 @@ Object.defineProperty(window, "scrollTo", {
 // Mock AudioContext for testing environment
 global.AudioContext = vi.fn().mockImplementation(() => ({
   createBuffer: vi.fn(),
-  decodeAudioData: vi.fn(),
+  decodeAudioData: vi.fn().mockImplementation(() => {
+    // Create a mock AudioBuffer object
+    const mockAudioBuffer = {
+      sampleRate: 44100,
+      length: 1024,
+      duration: 1024 / 44100,
+      numberOfChannels: 2,
+      getChannelData: vi.fn().mockReturnValue(new Float32Array(1024)),
+    };
+    // Return a resolved Promise with the mock AudioBuffer
+    return Promise.resolve(mockAudioBuffer);
+  }),
   createBufferSource: vi.fn(() => ({
     buffer: null,
     connect: vi.fn(),
