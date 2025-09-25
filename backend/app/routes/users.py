@@ -9,6 +9,7 @@ from app import db
 from app.models import User, Role
 from app.utils.schemas import UserSchema, UserCreateSchema, UserUpdateSchema, RoleSchema
 from app.routes.auth import permission_required, role_required
+from app.utils.helpers import get_current_user_id
 
 
 users_bp = Blueprint('users', __name__)
@@ -162,7 +163,10 @@ def update_user(user_id):
       - JWT: []
     """
     user = User.query.get_or_404(user_id)
-    current_user_id = int(get_jwt_identity())
+    current_user_id, success = get_current_user_id()
+    if not success or current_user_id is None:
+        return jsonify({'error': 'Invalid token format'}), 401
+        
     schema = UserUpdateSchema()
     
     try:
@@ -232,7 +236,9 @@ def delete_user(user_id):
       - JWT: []
     """
     user = User.query.get_or_404(user_id)
-    current_user_id = int(get_jwt_identity())
+    current_user_id, success = get_current_user_id()
+    if not success or current_user_id is None:
+        return jsonify({'error': 'Invalid token format'}), 401
     
     # Prevent users from deleting their own account
     if user_id == current_user_id:
@@ -307,7 +313,9 @@ def deactivate_user(user_id):
       - JWT: []
     """
     user = User.query.get_or_404(user_id)
-    current_user_id = int(get_jwt_identity())
+    current_user_id, success = get_current_user_id()
+    if not success or current_user_id is None:
+        return jsonify({'error': 'Invalid token format'}), 401
     
     # Prevent users from deactivating their own account
     if user_id == current_user_id:
