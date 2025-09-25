@@ -6,20 +6,37 @@ set -e
 
 echo "🐘 Starting PostgreSQL test environment..."
 
+# Configuration - make port configurable
+POSTGRES_TEST_PORT=${POSTGRES_TEST_PORT:-5433}
+DOCKER_COMPOSE_FILE=${DOCKER_COMPOSE_FILE:-docker-compose.test.yml}
+
+echo "Using PostgreSQL test port: $POSTGRES_TEST_PORT"
+echo "Using docker-compose file: $DOCKER_COMPOSE_FILE"
+
 # Check if Docker and docker-compose are available
 if ! command -v docker-compose &> /dev/null; then
-    echo "❌ docker-compose is required but not installed"
-    exit 1
+    # Fallback to 'docker compose' (newer Docker installations)
+    if command -v docker &> /dev/null && docker compose version &> /dev/null; then
+        echo "Using 'docker compose' (Docker Compose V2)"
+        COMPOSE_CMD="docker compose"
+    else
+        echo "❌ Neither docker-compose nor 'docker compose' is available"
+        echo "Please install Docker Compose to run PostgreSQL tests"
+        exit 1
+    fi
+else
+    echo "Using 'docker-compose' (Docker Compose V1)"
+    COMPOSE_CMD="docker-compose"
 fi
 
 # Start PostgreSQL test container
 echo "Starting PostgreSQL test database..."
-docker-compose -f docker-compose.test.yml up -d postgres-test
+$COMPOSE_CMD -f $DOCKER_COMPOSE_FILE up -d postgres-test
 
 # Wait for PostgreSQL to be ready
 echo "Waiting for PostgreSQL to be ready..."
 for i in {1..30}; do
-    if docker-compose -f docker-compose.test.yml exec -T postgres-test pg_isready -U thermacore_test -d thermacore_test > /dev/null 2>&1; then
+    if $COMPOSE_CMD -f $DOCKER_COMPOSE_FILE exec -T postgres-test pg_isready -U thermacore_test -d thermacore_test > /dev/null 2>&1; then
         echo "✅ PostgreSQL is ready!"
         break
     fi
@@ -29,24 +46,20 @@ done
 
 if [ $i -eq 30 ]; then
     echo "❌ PostgreSQL failed to start within 30 seconds"
-    docker-compose -f docker-compose.test.yml down
+    $COMPOSE_CMD -f $DOCKER_COMPOSE_FILE down
     exit 1
 fi
 
-# Set environment variables for PostgreSQL testing
+# Set environment variables for PostgreSQL testing - use configurable port
 export USE_POSTGRES_TESTS=true
-export POSTGRES_TEST_URL=postgresql://thermacore_test:test_password@localhost:5433/thermacore_test
+export POSTGRES_TEST_URL=postgresql://thermacore_test:test_password@localhost:$POSTGRES_TEST_PORT/thermacore_test
 
-# Run PostgreSQL-specific tests
-echo "🧪 Running PostgreSQL timestamp tests..."
-python -m pytest app/tests/test_postgres_timestamps.py -v
-
-# Run all tests with PostgreSQL
+# Run all tests with PostgreSQL backend (includes PostgreSQL-specific tests)
 echo "🧪 Running all tests with PostgreSQL backend..."
 python -m pytest app/tests/ -v --tb=short
 
 # Cleanup
 echo "🧹 Cleaning up..."
-docker-compose -f docker-compose.test.yml down
+$COMPOSE_CMD -f $DOCKER_COMPOSE_FILE down
 
 echo "✅ PostgreSQL tests completed!"
