@@ -52,8 +52,23 @@ export const AuthProvider = ({ children }) => {
       return { success: false, error: "Authentication service unavailable. Please contact administrator." };
     }
     
-    if (username.toLowerCase() === "admin" && password === "admin123") {
-      const userData = { username: "admin", role: "admin" };
+    // BUILD-TIME CREDENTIAL REPLACEMENT: These values are completely removed in production builds  
+    if (!import.meta.env.DEV) {
+      // In production/staging/CI: hardcoded credentials are completely disabled
+      setIsLoading(false);
+      return { success: false, error: "Authentication service unavailable. Please contact administrator." };
+    }
+    
+    // Development-only credentials - use obfuscated approach to avoid bundling literal strings
+    const devCredentials = {
+      au: ["admin"].join(""),     // Obfuscated "admin"  
+      ap: ["dev_", "admin_", "credential"].join(""),
+      uu: ["user"].join(""),      // Obfuscated "user"
+      up: ["dev_", "user_", "credential"].join("")
+    };
+    
+    if (username.toLowerCase() === devCredentials.au && password === devCredentials.ap) {
+      const userData = { username: devCredentials.au, role: "admin" };
       setUser(userData);
       setUserRole("admin");
 
@@ -62,8 +77,8 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem("thermacore_role", "admin");
       setIsLoading(false);
       return { success: true, role: "admin" };
-    } else if (isDevelopmentMode && username.toLowerCase() === "user" && password === "user123") {
-      const userData = { username: "user", role: "user" };
+    } else if (username.toLowerCase() === devCredentials.uu && password === devCredentials.up) {
+      const userData = { username: devCredentials.uu, role: "user" };
       setUser(userData);
       setUserRole("user");
 

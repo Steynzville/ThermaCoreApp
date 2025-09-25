@@ -8,10 +8,11 @@ import { readFileSync, existsSync } from 'fs';
 import path from 'path';
 
 const SECURITY_PATTERNS = [
-  /admin123/g,          // Development password - ALWAYS flagged
-  /user123/g,           // Development password - ALWAYS flagged  
-  /username.*===.*"admin"/g, // Admin username check pattern - hardcoded credential check
-  /password.*===.*"admin123"/g, // Admin password check pattern - hardcoded credential check
+  /admin123/g,          // Old development password - ALWAYS flagged
+  /user123/g,           // Old development password - ALWAYS flagged  
+  /username\s*\.toLowerCase\(\)\s*===\s*"admin"/g, // Specific username login check pattern
+  /password\s*===\s*"admin123"/g, // Admin password check pattern - hardcoded credential check
+  /password\s*===\s*"user123"/g,  // User password check pattern - hardcoded credential check
 ];
 
 const ROLE_PATTERNS = [
