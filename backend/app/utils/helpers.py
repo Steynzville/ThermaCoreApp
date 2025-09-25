@@ -84,8 +84,12 @@ def parse_timestamp(timestamp_str: str) -> datetime:
         datetime object (timezone-aware when possible)
     
     Raises:
-        ValueError: If timestamp format is invalid
+        ValueError: If timestamp format is invalid or if timestamp_str is None or empty
     """
+    # Validate input - raise ValueError for None or empty strings
+    if timestamp_str is None or timestamp_str == "":
+        raise ValueError("timestamp_str cannot be None or empty")
+    
     try:
         parsed_dt = dateutil_parser.isoparse(timestamp_str)
         # Ensure timezone-aware datetime - if naive, assume UTC
@@ -310,7 +314,12 @@ def generate_health_score(unit_id: str) -> Dict[str, Any]:
     
     # Check maintenance schedule
     if unit.last_maintenance:
-        days_since_maintenance = (datetime.now(timezone.utc) - unit.last_maintenance).days
+        # Ensure timezone-aware comparison - convert naive datetime to UTC if needed
+        last_maintenance = unit.last_maintenance
+        if last_maintenance.tzinfo is None:
+            last_maintenance = last_maintenance.replace(tzinfo=timezone.utc)
+        
+        days_since_maintenance = (datetime.now(timezone.utc) - last_maintenance).days
         if days_since_maintenance > 90:
             score -= 10
             factors.append('Overdue maintenance')

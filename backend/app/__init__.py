@@ -55,13 +55,12 @@ def create_app(config_name=None):
     app = Flask(__name__)
     
     # Load configuration with better environment selection
-    if config_name is None:
-        # Check for testing environment first
-        if os.environ.get('TESTING', 'false').lower() in ('true', '1'):
-            config_name = 'testing'
-        else:
-            # Use FLASK_ENV, APP_ENV, or default to production
-            config_name = os.environ.get('FLASK_ENV', os.environ.get('APP_ENV', 'production'))
+    # Check for TESTING environment first - this takes priority over everything
+    if os.environ.get('TESTING', 'false').lower() in ('true', '1'):
+        config_name = 'testing'
+    elif config_name is None:
+        # Use FLASK_ENV, APP_ENV, or default to production
+        config_name = os.environ.get('FLASK_ENV', os.environ.get('APP_ENV', 'production'))
         
         # Only use development if explicitly running in development AND FLASK_DEBUG is true/'1'
         if config_name == 'development':
