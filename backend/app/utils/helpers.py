@@ -2,13 +2,33 @@
 from datetime import datetime, timedelta, timezone
 from dateutil import parser as dateutil_parser
 from functools import wraps
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple
 
 from flask import request, jsonify, current_app
+from flask_jwt_extended import get_jwt_identity
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Query
 
 from app.models import User, SensorReading
+
+
+def get_current_user_id() -> Tuple[int, bool]:
+    """
+    Safely convert JWT identity to integer user ID with error handling.
+    
+    Returns:
+        Tuple[int, bool]: (user_id, success) where success indicates if conversion was successful
+        
+    Raises:
+        None: This function catches all exceptions and returns success flag instead
+    """
+    try:
+        identity = get_jwt_identity()
+        if identity is None:
+            return None, False
+        return int(identity), True
+    except (ValueError, TypeError, AttributeError):
+        return None, False
 
 
 def paginate_query(query: Query, page: int = 1, per_page: int = 50) -> Dict[str, Any]:
@@ -96,8 +116,8 @@ def parse_timestamp(timestamp_str: str) -> datetime:
         if parsed_dt.tzinfo is None:
             import logging
             logger = logging.getLogger(__name__)
-            logger.info(f"Converting naive datetime '{timestamp_str}' to UTC timezone. "
-                       f"Assuming original timestamp was UTC.")
+            logger.debug(f"Converting naive datetime '{timestamp_str}' to UTC timezone. "
+                        f"Assuming original timestamp was UTC.")
             parsed_dt = parsed_dt.replace(tzinfo=timezone.utc)
         return parsed_dt
     except (ValueError, TypeError) as e:
@@ -318,8 +338,16 @@ def generate_health_score(unit_id: str) -> Dict[str, Any]:
     
     # Check maintenance schedule
     if unit.last_maintenance:
-        # With timezone-aware datetimes enforced at ORM level, no need for manual conversion
-        days_since_maintenance = (datetime.now(timezone.utc) - unit.last_maintenance).days
+        # Defensive check for naive datetime from legacy/existing data
+        maintenance_datetime = unit.last_maintenance
+        if maintenance_datetime.tzinfo is None:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Naive datetime detected for unit {unit_id} last_maintenance: {maintenance_datetime}. "
+                          f"Converting to UTC for calculation.")
+            maintenance_datetime = maintenance_datetime.replace(tzinfo=timezone.utc)
+        
+        days_since_maintenance = (datetime.now(timezone.utc) - maintenance_datetime).days
         if days_since_maintenance > 90:
             score -= 10
             factors.append('Overdue maintenance')

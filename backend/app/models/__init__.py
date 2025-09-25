@@ -113,7 +113,7 @@ class User(db.Model):
     last_name = Column(String(100))
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
-    updated_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)  # auto-refresh on update
     last_login = Column(DateTime)  # timezone-aware set via application logic
     
     # Foreign Keys
@@ -173,7 +173,7 @@ class Unit(db.Model):
     user_load = Column(Float, default=0.0)
     
     created_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
-    updated_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)  # auto-refresh on update
     
     # Relationships
     sensors = relationship('Sensor', back_populates='unit', cascade='all, delete-orphan')
@@ -196,7 +196,7 @@ class Sensor(db.Model):
     is_active = Column(Boolean, default=True)
     
     created_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
-    updated_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)  # auto-refresh on update
     
     # Relationships
     unit = relationship('Unit', back_populates='sensors')

@@ -43,9 +43,9 @@ class TestParseTimestampImprovements:
         assert result.tzinfo == timezone.utc
         
     def test_parse_timestamp_logs_naive_datetime_assumption(self, caplog):
-        """Test that converting naive datetime to UTC is logged."""
+        """Test that converting naive datetime to UTC is logged at DEBUG level."""
         import logging
-        with caplog.at_level(logging.INFO):
+        with caplog.at_level(logging.DEBUG):
             parse_timestamp("2024-01-01T10:00:00")
         
         # Check that logging message was recorded

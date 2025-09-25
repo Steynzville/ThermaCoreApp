@@ -13,6 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from app import db
 from app.models import User, Role
 from app.utils.schemas import LoginSchema, UserCreateSchema, UserSchema, TokenSchema
+from app.utils.helpers import get_current_user_id
 
 
 auth_bp = Blueprint('auth', __name__)
@@ -24,7 +25,10 @@ def permission_required(permission):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             verify_jwt_in_request()
-            user_id = int(get_jwt_identity())  # Convert JWT identity string back to int
+            user_id, success = get_current_user_id()
+            if not success or user_id is None:
+                return jsonify({'error': 'Invalid token format'}), 401
+                
             user = User.query.get(user_id)
             
             if not user or not user.is_active:
@@ -44,7 +48,10 @@ def role_required(*roles):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             verify_jwt_in_request()
-            user_id = int(get_jwt_identity())  # Convert JWT identity string back to int
+            user_id, success = get_current_user_id()
+            if not success or user_id is None:
+                return jsonify({'error': 'Invalid token format'}), 401
+                
             user = User.query.get(user_id)
             
             if not user or not user.is_active:
@@ -207,7 +214,10 @@ def refresh():
     security:
       - JWT: []
     """
-    user_id = int(get_jwt_identity())  # Convert JWT identity string back to int
+    user_id, success = get_current_user_id()
+    if not success or user_id is None:
+        return jsonify({'error': 'Invalid token format'}), 401
+        
     user = User.query.get(user_id)
     
     if not user or not user.is_active:
@@ -239,7 +249,10 @@ def get_current_user():
     security:
       - JWT: []
     """
-    user_id = int(get_jwt_identity())  # Convert JWT identity string back to int
+    user_id, success = get_current_user_id()
+    if not success or user_id is None:
+        return jsonify({'error': 'Invalid token format'}), 401
+        
     user = User.query.get(user_id)
     
     if not user or not user.is_active:
@@ -308,7 +321,10 @@ def change_password():
     if len(data['new_password']) < 6:
         return jsonify({'error': 'New password must be at least 6 characters long'}), 400
     
-    user_id = int(get_jwt_identity())  # Convert JWT identity string back to int
+    user_id, success = get_current_user_id()
+    if not success or user_id is None:
+        return jsonify({'error': 'Invalid token format'}), 401
+        
     user = User.query.get(user_id)
     
     if not user or not user.is_active:
