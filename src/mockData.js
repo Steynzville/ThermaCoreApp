@@ -6,7 +6,7 @@ import {
   TIME_CONSTANTS,
   UNIT_STATUS_TYPES,
 } from "./constants/mockDataConstants.js";
-import { generateTimestamp } from "./utils/dateUtils.js";
+import { generateTimestamp } from "./utils/mockDataUtils.js";
 
 // Helper to generate alerts
 const generateAlerts = (count, unitName, unitId) => {
@@ -63,18 +63,18 @@ export const mockUnitDetails = mockUnits.reduce((acc, unit) => {
   return acc;
 }, {});
 
-// Generate mock event history. [9]
+// Generate mock event history with chronologically sorted timestamps (oldest to newest)
 export const mockEventHistory = Array.from({ length: 50 }, (_, i) => ({
   id: `event-${i}`,
-  timestamp: generateTimestamp(TIME_CONSTANTS.DAY + i * TIME_CONSTANTS.DAY),
+  timestamp: generateTimestamp((50 - i) * TIME_CONSTANTS.DAY), // Ensures chronological order: oldest first
   unitName: mockUnits[i % mockUnits.length].name,
   description: MAINTENANCE_DESCRIPTIONS[i % MAINTENANCE_DESCRIPTIONS.length],
 }));
 
-// Generate mock recent control actions. [19]
+// Generate mock recent control actions with chronologically sorted timestamps
 export const mockRecentActions = Array.from({ length: 50 }, (_, i) => ({
   id: `action-${i}`,
-  timestamp: generateTimestamp(i * TIME_CONSTANTS.FIFTEEN_MINUTES),
+  timestamp: generateTimestamp((50 - i) * TIME_CONSTANTS.FIFTEEN_MINUTES), // Ensures chronological order: oldest first
   description: CONTROL_ACTION_DESCRIPTIONS[i % CONTROL_ACTION_DESCRIPTIONS.length],
 }));
 

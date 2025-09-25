@@ -1,15 +1,8 @@
 /**
- * Date utility functions for consistent date handling across the application
+ * Date utility functions for consistent date handling across the application.
+ * These are generic utilities for production use in the application.
+ * For mock data generation, see mockDataUtils.js
  */
-
-/**
- * Generates a timestamp for a given offset from now
- * @param {number} offsetMs - Offset in milliseconds from current time
- * @returns {string} ISO timestamp string
- */
-export function generateTimestamp(offsetMs = 0) {
-  return new Date(Date.now() - offsetMs).toISOString();
-}
 
 /**
  * Formats a date for user display
