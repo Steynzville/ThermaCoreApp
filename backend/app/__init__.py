@@ -128,17 +128,50 @@ def create_app(config_name=None):
         from app.routes.auth import auth_bp
         from app.routes.units import units_bp
         from app.routes.users import users_bp
+        from app.routes.scada import scada_bp
         
         app.register_blueprint(auth_bp, url_prefix=app.config['API_PREFIX'])
         app.register_blueprint(units_bp, url_prefix=app.config['API_PREFIX'])
         app.register_blueprint(users_bp, url_prefix=app.config['API_PREFIX'])
+        app.register_blueprint(scada_bp, url_prefix=app.config['API_PREFIX'])
     except ImportError:
         pass  # Routes may not be importable without full dependencies
+    
+    # Initialize SCADA services (Phase 2)
+    if not app.config.get('TESTING', False):
+        try:
+            from app.services.mqtt_service import mqtt_client
+            from app.services.websocket_service import websocket_service
+            from app.services.realtime_processor import realtime_processor
+            
+            # Initialize services with app context
+            mqtt_client.init_app(app)
+            websocket_service.init_app(app)
+            realtime_processor.init_app(app)
+            
+            # Store references in app for easy access
+            app.mqtt_client = mqtt_client
+            app.websocket_service = websocket_service
+            app.realtime_processor = realtime_processor
+            
+        except ImportError as e:
+            import logging
+            logging.getLogger(__name__).warning(f"SCADA services not available: {e}")
     
     # Health check endpoint
     @app.route('/health')
     def health_check():
         """Health check endpoint."""
-        return {'status': 'healthy', 'version': '1.0.0'}
+        status = {'status': 'healthy', 'version': '1.0.0'}
+        
+        # Add SCADA services status if available
+        if hasattr(app, 'mqtt_client'):
+            status['mqtt'] = app.mqtt_client.get_status()
+        if hasattr(app, 'websocket_service'):
+            status['websocket'] = app.websocket_service.get_status()
+        if hasattr(app, 'realtime_processor'):
+            status['realtime_processor'] = app.realtime_processor.get_status()
+            
+        return status
     
     return app
