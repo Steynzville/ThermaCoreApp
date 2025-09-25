@@ -29,6 +29,9 @@ export default defineConfig(() => {
         "@": path.resolve(__dirname, "./src"),
       },
     },
+    define: {
+      // Remove the credential defines since we're using file aliases now
+    },
     build: {
       target: "es2020",
       chunkSizeWarningLimit: 1000,

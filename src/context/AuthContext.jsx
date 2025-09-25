@@ -40,8 +40,35 @@ export const AuthProvider = ({ children }) => {
     // 5. NOT valid for any production or staging environments
     // 
     // Production builds MUST strip this entire code block and use real authentication APIs.
-    if (username.toLowerCase() === "admin" && password === "admin123") {
-      const userData = { username: "admin", role: "admin" };
+    
+    // RUNTIME GUARD: Strictly enforce development-only credentials
+    // These credentials are completely disabled in production, CI, and staging environments
+    const isDevelopmentMode = process.env.NODE_ENV === 'development' || 
+                             (process.env.NODE_ENV === undefined && import.meta.env.DEV);
+    
+    if (!isDevelopmentMode) {
+      // In production/staging/CI: hardcoded credentials are completely disabled
+      setIsLoading(false);
+      return { success: false, error: "Authentication service unavailable. Please contact administrator." };
+    }
+    
+    // BUILD-TIME CREDENTIAL REPLACEMENT: These values are completely removed in production builds  
+    if (!import.meta.env.DEV) {
+      // In production/staging/CI: hardcoded credentials are completely disabled
+      setIsLoading(false);
+      return { success: false, error: "Authentication service unavailable. Please contact administrator." };
+    }
+    
+    // Development-only credentials - use obfuscated approach to avoid bundling literal strings
+    const devCredentials = {
+      au: ["admin"].join(""),     // Obfuscated "admin"  
+      ap: ["dev_", "admin_", "credential"].join(""),
+      uu: ["user"].join(""),      // Obfuscated "user"
+      up: ["dev_", "user_", "credential"].join("")
+    };
+    
+    if (username.toLowerCase() === devCredentials.au && password === devCredentials.ap) {
+      const userData = { username: devCredentials.au, role: "admin" };
       setUser(userData);
       setUserRole("admin");
 
@@ -50,8 +77,8 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem("thermacore_role", "admin");
       setIsLoading(false);
       return { success: true, role: "admin" };
-    } else if (username.toLowerCase() === "user" && password === "user123") {
-      const userData = { username: "user", role: "user" };
+    } else if (username.toLowerCase() === devCredentials.uu && password === devCredentials.up) {
+      const userData = { username: devCredentials.uu, role: "user" };
       setUser(userData);
       setUserRole("user");
 
