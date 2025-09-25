@@ -652,7 +652,7 @@ jobs:
       # Step 9: Optional Mintlify API deployment
       # This step uses the Mintlify API to trigger deployment if API key is configured
       - name: Deploy via Mintlify API (Optional)
-        if: ${{ secrets.MINTIFY_API_KEY != '' }}
+        if: secrets.MINTIFY_API_KEY != ''
         run: |
           echo "Triggering Mintlify deployment via API..."
           
