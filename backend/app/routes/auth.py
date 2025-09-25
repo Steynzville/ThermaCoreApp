@@ -320,7 +320,4 @@ def change_password():
     user.set_password(data['new_password'])
     db.session.commit()
     
-    # Refresh to get database-generated timestamp
-    db.session.refresh(user)
-    
     return jsonify({'message': 'Password changed successfully'}), 200

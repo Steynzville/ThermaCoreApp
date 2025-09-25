@@ -6,6 +6,11 @@ from marshmallow import ValidationError
 from app.utils.schemas import EnumField
 from app.models import UnitStatusEnum, HealthStatusEnum, User, Unit, Sensor
 from app import db
+from app.tests.timestamp_helpers import (
+    simulate_db_trigger_update,
+    assert_timestamp_updated,
+    assert_timestamp_unchanged
+)
 
 
 class TestEnumFieldValidation:
@@ -93,13 +98,12 @@ class TestTimestampUpdates:
             
             # In production, the database trigger would update this automatically.
             # For testing with SQLite, we simulate the trigger behavior
-            user.updated_at = datetime.utcnow()
+            simulate_db_trigger_update(user)
             
             db.session.commit()
             
-            # Check that updated_at was modified
-            assert user.updated_at != original_updated_at
-            assert user.updated_at > original_updated_at
+            # Check that updated_at was modified using helper function
+            assert_timestamp_updated(original_updated_at, user.updated_at)
     
     def test_unit_updated_at_timestamp_update(self, app, db_session):
         """Test that Unit.updated_at is automatically updated on modification."""
@@ -126,13 +130,12 @@ class TestTimestampUpdates:
             
             # In production, the database trigger would update this automatically.
             # For testing with SQLite, we simulate the trigger behavior
-            unit.updated_at = datetime.utcnow()
+            simulate_db_trigger_update(unit)
             
             db.session.commit()
             
-            # Check that updated_at was modified
-            assert unit.updated_at != original_updated_at
-            assert unit.updated_at > original_updated_at
+            # Check that updated_at was modified using helper function
+            assert_timestamp_updated(original_updated_at, unit.updated_at)
     
     def test_sensor_updated_at_timestamp_update(self, app, db_session):
         """Test that Sensor.updated_at is automatically updated on modification."""
@@ -168,13 +171,12 @@ class TestTimestampUpdates:
             
             # In production, the database trigger would update this automatically.
             # For testing with SQLite, we simulate the trigger behavior
-            sensor.updated_at = datetime.utcnow()
+            simulate_db_trigger_update(sensor)
             
             db.session.commit()
             
-            # Check that updated_at was modified
-            assert sensor.updated_at != original_updated_at
-            assert sensor.updated_at > original_updated_at
+            # Check that updated_at was modified using helper function
+            assert_timestamp_updated(original_updated_at, sensor.updated_at)
     
     def test_created_at_timestamp_not_updated(self, app, db_session):
         """Test that created_at timestamps are not modified on updates."""
@@ -200,9 +202,9 @@ class TestTimestampUpdates:
             
             # In production, the database trigger would update only updated_at automatically.
             # For testing with SQLite, we simulate the trigger behavior
-            user.updated_at = datetime.utcnow()
+            simulate_db_trigger_update(user)
             
             db.session.commit()
             
-            # Check that created_at was not modified
-            assert user.created_at == original_created_at
+            # Check that created_at was not modified using helper function
+            assert_timestamp_unchanged(original_created_at, user.created_at)

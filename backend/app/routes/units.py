@@ -184,6 +184,9 @@ def create_unit():
         db.session.add(unit)
         db.session.commit()
         
+        # Refresh to get database-generated timestamp
+        db.session.refresh(unit)
+        
         unit_schema = UnitSchema()
         return jsonify(unit_schema.dump(unit)), 201
         

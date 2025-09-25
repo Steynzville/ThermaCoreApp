@@ -242,9 +242,6 @@ def delete_user(user_id):
     user.is_active = False
     db.session.commit()
     
-    # Refresh to get database-generated timestamp
-    db.session.refresh(user)
-    
     return '', 204
 
 
@@ -449,8 +446,5 @@ def reset_user_password(user_id):
     
     user.set_password(data['new_password'])
     db.session.commit()
-    
-    # Refresh to get database-generated timestamp
-    db.session.refresh(user)
     
     return jsonify({'message': 'Password reset successfully'}), 200

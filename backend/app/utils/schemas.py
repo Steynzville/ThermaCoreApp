@@ -6,6 +6,27 @@ from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 from app.models import User, Role, Permission, Unit, Sensor, SensorReading, PermissionEnum, RoleEnum, UnitStatusEnum, HealthStatusEnum
 
 
+class DateTimeField(fields.DateTime):
+    """Custom DateTime field that can handle string values from SQLite."""
+    
+    def _serialize(self, value, attr, obj, **kwargs):
+        """Serialize datetime value, handling string inputs from SQLite."""
+        if value is None:
+            return None
+        
+        # If value is already a string, return it as-is for JSON serialization
+        if isinstance(value, str):
+            try:
+                # Try to parse the string as datetime to validate it
+                parsed = datetime.fromisoformat(value.replace('Z', '+00:00'))
+                return value  # Return original string if parsing succeeds
+            except (ValueError, AttributeError):
+                return value  # Return as-is if can't parse
+        
+        # If it's a datetime object, use the parent method
+        return super()._serialize(value, attr, obj, **kwargs)
+
+
 class EnumField(fields.Field):
     """Custom field for handling enum serialization."""
     
@@ -39,8 +60,8 @@ class EnumField(fields.Field):
 # Base schemas with common fields
 class TimestampSchema(Schema):
     """Base schema with timestamp fields."""
-    created_at = fields.DateTime(dump_only=True)
-    updated_at = fields.DateTime(dump_only=True)
+    created_at = DateTimeField(dump_only=True)
+    updated_at = DateTimeField(dump_only=True)
 
 
 # Permission schemas
@@ -49,7 +70,7 @@ class PermissionSchema(Schema):
     id = fields.Int(dump_only=True)
     name = EnumField(PermissionEnum, dump_only=True)
     description = fields.Str(dump_only=True)
-    created_at = fields.DateTime(dump_only=True)
+    created_at = DateTimeField(dump_only=True)
 
 
 # Role schemas
@@ -58,7 +79,7 @@ class RoleSchema(Schema):
     id = fields.Int(dump_only=True)
     name = EnumField(RoleEnum, dump_only=True)
     description = fields.Str(dump_only=True)
-    created_at = fields.DateTime(dump_only=True)
+    created_at = DateTimeField(dump_only=True)
     permissions = fields.Nested(PermissionSchema, many=True, dump_only=True)
 
 
@@ -74,6 +95,11 @@ class UserSchema(SQLAlchemyAutoSchema):
     username = fields.Str(required=True, validate=validate.Length(min=3, max=80))
     password = fields.Str(load_only=True, validate=validate.Length(min=6))
     role = fields.Nested(RoleSchema, dump_only=True)
+    
+    # Override datetime fields with custom field
+    created_at = DateTimeField(dump_only=True)
+    updated_at = DateTimeField(dump_only=True)
+    last_login = DateTimeField(dump_only=True)
     
     @post_load
     def make_user(self, data, **kwargs):
@@ -123,9 +149,14 @@ class UnitSchema(SQLAlchemyAutoSchema):
     id = fields.Str(required=True, validate=validate.Length(min=3, max=50))
     name = fields.Str(required=True, validate=validate.Length(min=1, max=200))
     serial_number = fields.Str(required=True, validate=validate.Length(min=1, max=100))
-    install_date = fields.DateTime(required=True)
+    install_date = DateTimeField(required=True)
     status = EnumField(UnitStatusEnum)
     health_status = EnumField(HealthStatusEnum)
+    
+    # Override timestamp fields
+    created_at = DateTimeField(dump_only=True)
+    updated_at = DateTimeField(dump_only=True)
+    last_maintenance = DateTimeField(dump_only=True)
     
     # Validation for numeric fields
     temp_outside = fields.Float(validate=validate.Range(min=-50.0, max=70.0))
@@ -147,7 +178,7 @@ class UnitCreateSchema(Schema):
     id = fields.Str(required=True, validate=validate.Length(min=3, max=50))
     name = fields.Str(required=True, validate=validate.Length(min=1, max=200))
     serial_number = fields.Str(required=True, validate=validate.Length(min=1, max=100))
-    install_date = fields.DateTime(required=True)
+    install_date = DateTimeField(required=True)
     location = fields.Str(validate=validate.Length(max=200))
     client_name = fields.Str(validate=validate.Length(max=200))
     client_contact = fields.Str(validate=validate.Length(max=200))
@@ -164,7 +195,7 @@ class UnitUpdateSchema(Schema):
     water_generation = fields.Bool()
     has_alert = fields.Bool()
     has_alarm = fields.Bool()
-    last_maintenance = fields.DateTime()
+    last_maintenance = DateTimeField()
     
     # Client information
     client_name = fields.Str(validate=validate.Length(max=200))
@@ -215,7 +246,7 @@ class SensorReadingSchema(SQLAlchemyAutoSchema):
         model = SensorReading
         load_instance = True
         
-    timestamp = fields.DateTime(dump_default=datetime.utcnow)
+    timestamp = DateTimeField(dump_default=datetime.utcnow)
     value = fields.Float(required=True)
     quality = fields.Str(validate=validate.OneOf(['GOOD', 'BAD', 'UNCERTAIN']))
     sensor = fields.Nested(SensorSchema, dump_only=True)
@@ -225,7 +256,7 @@ class SensorReadingCreateSchema(Schema):
     """Schema for sensor reading creation."""
     sensor_id = fields.Int(required=True)
     value = fields.Float(required=True)
-    timestamp = fields.DateTime(missing=datetime.utcnow)
+    timestamp = DateTimeField(missing=datetime.utcnow)
     quality = fields.Str(missing='GOOD', validate=validate.OneOf(['GOOD', 'BAD', 'UNCERTAIN']))
 
 
