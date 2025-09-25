@@ -3,7 +3,32 @@ from datetime import datetime
 from marshmallow import Schema, fields, validate, ValidationError, post_load
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 
-from app.models import User, Role, Permission, Unit, Sensor, SensorReading
+from app.models import User, Role, Permission, Unit, Sensor, SensorReading, PermissionEnum, RoleEnum, UnitStatusEnum, HealthStatusEnum
+
+
+class EnumField(fields.Field):
+    """Custom field for handling enum serialization."""
+    
+    def __init__(self, enum_class, *args, **kwargs):
+        self.enum_class = enum_class
+        super().__init__(*args, **kwargs)
+    
+    def serialize(self, attr, obj, accessor=None):
+        """Serialize enum to its value."""
+        value = getattr(obj, attr, None)
+        if value is None:
+            return None
+        # If it's already a string, return it
+        if isinstance(value, str):
+            return value
+        # If it's an enum, return its value
+        return value.value if hasattr(value, 'value') else str(value)
+    
+    def deserialize(self, value, attr=None, data=None, **kwargs):
+        """Deserialize string value to enum."""
+        if isinstance(value, str):
+            return self.enum_class(value)
+        return value
 
 
 # Base schemas with common fields
@@ -14,26 +39,21 @@ class TimestampSchema(Schema):
 
 
 # Permission schemas
-class PermissionSchema(SQLAlchemyAutoSchema):
+class PermissionSchema(Schema):
     """Permission serialization schema."""
-    class Meta:
-        model = Permission
-        load_instance = True
-        
-    name = fields.Str(validate=validate.OneOf(['read_units', 'write_units', 'delete_units', 
-                                               'read_users', 'write_users', 'delete_users', 
-                                               'admin_panel']))
+    id = fields.Int(dump_only=True)
+    name = EnumField(PermissionEnum, dump_only=True)
+    description = fields.Str(dump_only=True)
+    created_at = fields.DateTime(dump_only=True)
 
 
 # Role schemas
-class RoleSchema(SQLAlchemyAutoSchema):
+class RoleSchema(Schema):
     """Role serialization schema."""
-    class Meta:
-        model = Role
-        load_instance = True
-        include_relationships = True
-        
-    name = fields.Str(validate=validate.OneOf(['admin', 'operator', 'viewer']))
+    id = fields.Int(dump_only=True)
+    name = EnumField(RoleEnum, dump_only=True)
+    description = fields.Str(dump_only=True)
+    created_at = fields.DateTime(dump_only=True)
     permissions = fields.Nested(PermissionSchema, many=True, dump_only=True)
 
 
@@ -99,8 +119,8 @@ class UnitSchema(SQLAlchemyAutoSchema):
     name = fields.Str(required=True, validate=validate.Length(min=1, max=200))
     serial_number = fields.Str(required=True, validate=validate.Length(min=1, max=100))
     install_date = fields.DateTime(required=True)
-    status = fields.Str(validate=validate.OneOf(['online', 'offline', 'maintenance', 'error']))
-    health_status = fields.Str(validate=validate.OneOf(['optimal', 'warning', 'critical']))
+    status = EnumField(UnitStatusEnum)
+    health_status = EnumField(HealthStatusEnum)
     
     # Validation for numeric fields
     temp_outside = fields.Float(validate=validate.Range(min=-50.0, max=70.0))
@@ -134,8 +154,8 @@ class UnitUpdateSchema(Schema):
     """Schema for unit updates."""
     name = fields.Str(validate=validate.Length(min=1, max=200))
     location = fields.Str(validate=validate.Length(max=200))
-    status = fields.Str(validate=validate.OneOf(['online', 'offline', 'maintenance', 'error']))
-    health_status = fields.Str(validate=validate.OneOf(['optimal', 'warning', 'critical']))
+    status = EnumField(UnitStatusEnum)
+    health_status = EnumField(HealthStatusEnum)
     water_generation = fields.Bool()
     has_alert = fields.Bool()
     has_alarm = fields.Bool()
