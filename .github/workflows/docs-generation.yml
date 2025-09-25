@@ -27,13 +27,16 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '20.x'
           cache: 'npm'
       
       # Step 3: Install Mintlify CLI globally
       # Mintlify is a documentation platform that generates beautiful docs
       - name: Install Mintlify CLI
-        run: npm install -g mintlify
+        run: |
+          echo "Installing Mintlify CLI with Node.js $(node --version)..."
+          npm install -g mintlify@latest
+          mintlify --version
       
       # Step 4: Install project dependencies (if needed for doc generation)
       - name: Install project dependencies
@@ -587,9 +590,18 @@ jobs:
           # Create thermacore directory in docs repo if it doesn't exist
           mkdir -p docs-repo/thermacore
           
-          # Copy all generated documentation files
-          cp -r docs/* docs-repo/thermacore/
+          # Copy all generated documentation files (excluding .git directories)
+          find docs -type f -exec cp --parents {} docs-repo/thermacore/ \;
           cp mint.json docs-repo/thermacore/
+          
+          # Remove any .git directories that might have been copied accidentally
+          find docs-repo/thermacore -name ".git" -type d -exec rm -rf {} + 2>/dev/null || true
+          
+          # Remove any .gitmodules files
+          find docs-repo/thermacore -name ".gitmodules" -type f -delete 2>/dev/null || true
+          
+          # Remove any source-repo directories that might cause submodule issues
+          find docs-repo/thermacore -name "source-repo" -type d -exec rm -rf {} + 2>/dev/null || true
           
           # Copy any additional assets if they exist
           if [ -d "public/logo" ]; then
@@ -616,6 +628,18 @@ jobs:
           # Configure Git for the action
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
+          
+          # Final cleanup before committing: remove any remaining submodule references
+          echo "Performing final cleanup before commit..."
+          
+          # Remove any .gitmodules files in the entire docs-repo
+          find . -name ".gitmodules" -type f -delete 2>/dev/null || true
+          
+          # Remove any .git directories that might have been missed
+          find . -name ".git" -type d -exec rm -rf {} + 2>/dev/null || true
+          
+          # Remove any source-repo directories
+          find . -name "source-repo" -type d -exec rm -rf {} + 2>/dev/null || true
           
           # Add all changes
           git add .
