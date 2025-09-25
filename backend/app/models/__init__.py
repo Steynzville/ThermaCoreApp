@@ -1,5 +1,5 @@
 """Database models for ThermaCore SCADA system."""
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum as PyEnum
 
 from flask_sqlalchemy import SQLAlchemy
@@ -9,6 +9,11 @@ from sqlalchemy.ext.declarative import declarative_base
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app import db
+
+
+def utc_now():
+    """Get current UTC time as timezone-aware datetime."""
+    return datetime.now(timezone.utc)
 
 
 # Association table for many-to-many relationship between roles and permissions
@@ -60,7 +65,7 @@ class Permission(db.Model):
     id = Column(Integer, primary_key=True)
     name = Column(Enum(PermissionEnum), unique=True, nullable=False)
     description = Column(String(255))
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
     
     def __repr__(self):
         return f'<Permission {self.name}>'
@@ -73,7 +78,7 @@ class Role(db.Model):
     id = Column(Integer, primary_key=True)
     name = Column(Enum(RoleEnum), unique=True, nullable=False)
     description = Column(String(255))
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
     
     # Relationships
     permissions = relationship('Permission', secondary=role_permissions, backref='roles')
@@ -98,8 +103,8 @@ class User(db.Model):
     first_name = Column(String(100))
     last_name = Column(String(100))
     is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now)
     last_login = Column(DateTime)
     
     # Foreign Keys
@@ -158,8 +163,8 @@ class Unit(db.Model):
     parasitic_load = Column(Float, default=0.0)
     user_load = Column(Float, default=0.0)
     
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now)
     
     # Relationships
     sensors = relationship('Sensor', back_populates='unit', cascade='all, delete-orphan')
@@ -181,8 +186,8 @@ class Sensor(db.Model):
     max_value = Column(Float)
     is_active = Column(Boolean, default=True)
     
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now)
     
     # Relationships
     unit = relationship('Unit', back_populates='sensors')
@@ -198,7 +203,7 @@ class SensorReading(db.Model):
     
     id = Column(Integer, primary_key=True)
     sensor_id = Column(Integer, ForeignKey('sensors.id'), nullable=False)
-    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    timestamp = Column(DateTime, default=utc_now, nullable=False, index=True)
     value = Column(Float, nullable=False)
     quality = Column(String(20), default='GOOD')  # GOOD, BAD, UNCERTAIN
     

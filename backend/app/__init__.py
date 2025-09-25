@@ -54,9 +54,14 @@ def create_app(config_name=None):
     """Create Flask application using the application factory pattern."""
     app = Flask(__name__)
     
-    # Load configuration
+    # Load configuration with better environment selection
     if config_name is None:
-        config_name = os.environ.get('FLASK_ENV', 'development')
+        # Default to production for docs/app generation to avoid dev-only config
+        config_name = os.environ.get('FLASK_ENV', os.environ.get('APP_ENV', 'production'))
+        
+        # Only use development as default if explicitly running in development
+        if config_name == 'development' and not os.environ.get('FLASK_DEBUG'):
+            config_name = 'production'
     
     from config import config
     app.config.from_object(config[config_name])
@@ -75,8 +80,8 @@ def create_app(config_name=None):
     if cors_available:
         CORS(app, origins=app.config['CORS_ORIGINS'])
     
-    # Initialize Swagger if available
-    if swagger_available:
+    # Initialize Swagger if available and not in testing environment
+    if swagger_available and not app.config.get('TESTING', False):
         swagger_template = {
             "swagger": "2.0",
             "info": {
@@ -88,7 +93,7 @@ def create_app(config_name=None):
                     "email": "api@thermacore.com"
                 }
             },
-            "basePath": app.config['API_PREFIX'],
+            "basePath": app.config.get('API_PREFIX', '/api/v1'),
             "schemes": ["http", "https"],
             "securityDefinitions": {
                 "JWT": {
@@ -99,7 +104,13 @@ def create_app(config_name=None):
                 }
             }
         }
-        swagger = Swagger(app, template=swagger_template)
+        try:
+            swagger = Swagger(app, template=swagger_template)
+        except Exception as e:
+            # Log the error but don't fail app creation if Swagger fails
+            import logging
+            logging.getLogger(__name__).warning(f"Swagger initialization failed: {e}")
+            swagger = None
     
     # Import models to ensure they are registered (only if db is configured)
     try:

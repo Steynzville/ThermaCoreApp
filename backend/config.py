@@ -57,8 +57,21 @@ class TestingConfig(Config):
     """Testing configuration."""
     DEBUG = True
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'  # Use in-memory SQLite for testing
-    SQLALCHEMY_ENGINE_OPTIONS = {}  # SQLite doesn't support pool settings
+    
+    # Use PostgreSQL for testing to match production, with SQLite fallback
+    # This can be overridden with POSTGRES_TEST_URL environment variable
+    _postgres_test_url = os.environ.get('POSTGRES_TEST_URL', 
+                                       'postgresql://postgres:password@localhost:5432/thermacore_test_db')
+    _use_postgres_tests = os.environ.get('USE_POSTGRES_TESTS', 'false').lower() == 'true'
+    
+    SQLALCHEMY_DATABASE_URI = (_postgres_test_url if _use_postgres_tests 
+                               else 'sqlite:///:memory:')  # SQLite fallback for environments without PostgreSQL
+    
+    # SQLite doesn't support pool settings, only use them for PostgreSQL
+    SQLALCHEMY_ENGINE_OPTIONS = ({
+        'pool_size': 5,
+        'pool_pre_ping': True
+    } if _use_postgres_tests else {})
 
 
 # Configuration dictionary

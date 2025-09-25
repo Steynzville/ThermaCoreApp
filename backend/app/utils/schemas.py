@@ -1,5 +1,5 @@
 """Data serializers and validation schemas for ThermaCore SCADA API."""
-from datetime import datetime
+from datetime import datetime, timezone
 from marshmallow import Schema, fields, validate, ValidationError, post_load
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 
@@ -7,23 +7,34 @@ from app.models import User, Role, Permission, Unit, Sensor, SensorReading, Perm
 
 
 class DateTimeField(fields.DateTime):
-    """Custom DateTime field that can handle string values from SQLite."""
+    """Custom DateTime field that ensures robust datetime serialization.
+    
+    Always parses string values to datetime objects and validates them.
+    Returns None for invalid datetime strings instead of malformed strings.
+    Ensures timezone-aware datetimes are properly handled.
+    """
     
     def _serialize(self, value, attr, obj, **kwargs):
-        """Serialize datetime value, handling string inputs from SQLite."""
+        """Serialize datetime value with robust validation and parsing."""
         if value is None:
             return None
         
-        # If value is already a string, return it as-is for JSON serialization
+        # If value is a string, always parse it to datetime first
         if isinstance(value, str):
             try:
-                # Try to parse the string as datetime to validate it
-                parsed = datetime.fromisoformat(value.replace('Z', '+00:00'))
-                return value  # Return original string if parsing succeeds
-            except (ValueError, AttributeError):
-                return value  # Return as-is if can't parse
+                # Parse string to datetime object to ensure it's valid
+                parsed_dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
+                # Use the parent method to serialize the parsed datetime consistently
+                return super()._serialize(parsed_dt, attr, obj, **kwargs)
+            except (ValueError, AttributeError) as e:
+                # Log the error for debugging but don't expose malformed data to clients
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Invalid datetime string '{value}' in field '{attr}': {e}")
+                # Return None instead of malformed string to prevent client-side errors
+                return None
         
-        # If it's a datetime object, use the parent method
+        # If it's already a datetime object, use the parent method directly
         return super()._serialize(value, attr, obj, **kwargs)
 
 
@@ -46,14 +57,15 @@ class EnumField(fields.Field):
         return value.value if hasattr(value, 'value') else str(value)
     
     def deserialize(self, value, attr=None, data=None, **kwargs):
-        """Deserialize string value to enum."""
+        """Deserialize string value to enum with consistent error handling."""
         if isinstance(value, str):
             try:
                 return self.enum_class(value)
             except ValueError:
-                # Convert ValueError to Marshmallow ValidationError for proper error handling
-                valid_values = [e.value for e in self.enum_class]
-                raise ValidationError(f'Invalid value "{value}". Valid values are: {valid_values}')
+                # Convert ValueError to Marshmallow ValidationError for clean API errors
+                valid_values = sorted([e.value for e in self.enum_class])
+                error_msg = f'Invalid value "{value}". Valid values are: {", ".join(valid_values)}'
+                raise ValidationError(error_msg)
         return value
 
 
