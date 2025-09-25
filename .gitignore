@@ -47,3 +47,10 @@ junit.xml
 
 # Generated documentation (handled by workflow)
 docs-repo/
+
+# Submodule and git-related files that shouldn't be committed
+.gitmodules
+source-repo/
+
+# Git directories in documentation
+docs/**/.git/
