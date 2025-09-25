@@ -1,0 +1,102 @@
+{
+  "name": "ThermaCore SCADA API",
+  "logo": {
+    "dark": "/logo/dark.svg",
+    "light": "/logo/light.svg"
+  },
+  "favicon": "/favicon.svg",
+  "colors": {
+    "primary": "#0D9373",
+    "light": "#07C983",
+    "dark": "#0D9373",
+    "anchors": {
+      "from": "#0D9373",
+      "to": "#07C983"
+    }
+  },
+  "topbarLinks": [
+    {
+      "name": "GitHub",
+      "url": "https://github.com/Steynzville/ThermaCoreApp"
+    },
+    {
+      "name": "Support",
+      "url": "mailto:support@thermacore.com"
+    }
+  ],
+  "topbarCtaButton": {
+    "name": "Dashboard",
+    "url": "https://app.thermacore.com"
+  },
+  "tabs": [
+    {
+      "name": "API Reference",
+      "url": "api-reference"
+    },
+    {
+      "name": "Backend",
+      "url": "backend"
+    }
+  ],
+  "anchors": [
+    {
+      "name": "Documentation",
+      "icon": "book-open-cover",
+      "url": "https://docs.thermacore.com"
+    },
+    {
+      "name": "Community",
+      "icon": "slack",
+      "url": "https://join.slack.com/t/thermacore"
+    },
+    {
+      "name": "Blog",
+      "icon": "newspaper",
+      "url": "https://blog.thermacore.com"
+    }
+  ],
+  "navigation": [
+    {
+      "group": "Get Started",
+      "pages": [
+        "introduction",
+        "quickstart",
+        "installation"
+      ]
+    },
+    {
+      "group": "Guides",
+      "pages": [
+        "backend/overview",
+        "backend/setup",
+        "backend/testing"
+      ]
+    },
+    {
+      "group": "API Documentation",
+      "pages": [
+        "api-reference/authentication",
+        "api-reference/users",
+        "api-reference/units"
+      ]
+    }
+  ],
+  "footerSocials": {
+    "github": "https://github.com/Steynzville/ThermaCoreApp",
+    "linkedin": "https://www.linkedin.com/company/thermacore"
+  },
+  "analytics": {
+    "gtag": {
+      "measurementId": "G-XXXXXXXXXX"
+    }
+  },
+  "seo": {
+    "indexHiddenPages": false
+  },
+  "redirects": [
+    {
+      "source": "/old-docs/:path*",
+      "destination": "/:path*"
+    }
+  ]
+}
