@@ -44,13 +44,31 @@ class MQTTClient:
         self.password = app.config.get('MQTT_PASSWORD')
         self.client_id = app.config.get('MQTT_CLIENT_ID', 'thermacore_backend')
         self.keepalive = app.config.get('MQTT_KEEPALIVE', 60)
+        self.use_tls = app.config.get('MQTT_USE_TLS', False)
+        self.ca_certs = app.config.get('MQTT_CA_CERTS')
+        self.cert_file = app.config.get('MQTT_CERT_FILE')
+        self.key_file = app.config.get('MQTT_KEY_FILE')
         
         # Create MQTT client
         self.client = mqtt.Client(client_id=self.client_id)
         
-        # Set authentication if provided
+        # Configure TLS if enabled
+        if self.use_tls:
+            if self.ca_certs:
+                self.client.tls_set(ca_certs=self.ca_certs, 
+                                  certfile=self.cert_file, 
+                                  keyfile=self.key_file)
+                logger.info("MQTT TLS configured with certificates")
+            else:
+                self.client.tls_set()  # Use default system CA certificates
+                logger.info("MQTT TLS configured with system certificates")
+        
+        # Set authentication if provided (required for secure connections)
         if self.username and self.password:
             self.client.username_pw_set(self.username, self.password)
+            logger.info("MQTT authentication configured")
+        elif self.use_tls or app.config.get('FLASK_ENV') == 'production':
+            logger.warning("MQTT authentication not configured - this is insecure for production")
         
         # Set callbacks
         self.client.on_connect = self._on_connect
@@ -217,107 +235,36 @@ class MQTTClient:
             return None
     
     def _store_sensor_data(self, data: Dict[str, Any]):
-        """Store parsed sensor data in the database and process for real-time streaming.
+        """Store parsed sensor data using the dedicated data storage service.
         
         Args:
             data: Parsed sensor data
         """
+        # Use dedicated data storage service instead of direct database access
         try:
-            # Find or create sensor
-            sensor = self._find_or_create_sensor(
-                unit_id=data['unit_id'],
-                sensor_type=data['sensor_type']
-            )
+            from app.services.data_storage_service import data_storage_service
             
-            if not sensor:
-                logger.error(f"Could not create sensor for unit {data['unit_id']}, type {data['sensor_type']}")
-                return
+            # Store data using the dedicated service
+            success = data_storage_service.store_sensor_data(data)
             
-            # Create sensor reading
-            reading = SensorReading(
-                sensor_id=sensor.id,
-                timestamp=data['timestamp'],
-                value=data['value'],
-                quality=data['quality']
-            )
-            
-            db.session.add(reading)
-            db.session.commit()
-            
-            logger.debug(f"Stored sensor reading: {data['unit_id']}/{data['sensor_type']} = {data['value']}")
-            
-            # Process data for real-time streaming (import here to avoid circular imports)
-            try:
-                from app.services.realtime_processor import realtime_processor
-                realtime_processor.process_sensor_data(
-                    data['unit_id'], 
-                    data['sensor_type'], 
-                    data
-                )
-            except ImportError:
-                logger.warning("Real-time processor not available")
-            
-        except IntegrityError as e:
-            db.session.rollback()
-            logger.error(f"Database integrity error storing sensor data: {e}")
+            if success:
+                # Process data for real-time streaming after successful storage
+                try:
+                    from app.services.realtime_processor import realtime_processor
+                    realtime_processor.process_sensor_data(
+                        data['unit_id'], 
+                        data['sensor_type'], 
+                        data
+                    )
+                except ImportError:
+                    logger.warning("Real-time processor not available")
+            else:
+                logger.error(f"Failed to store sensor data: {data['unit_id']}/{data['sensor_type']}")
+                
+        except ImportError:
+            logger.error("Data storage service not available")
         except Exception as e:
-            db.session.rollback()
-            logger.error(f"Error storing sensor data: {e}")
-    
-    def _find_or_create_sensor(self, unit_id: str, sensor_type: str) -> Optional[Sensor]:
-        """Find existing sensor or create new one.
-        
-        Args:
-            unit_id: Unit identifier
-            sensor_type: Type of sensor
-            
-        Returns:
-            Sensor instance or None if unit not found
-        """
-        try:
-            # Check if unit exists
-            unit = Unit.query.filter_by(id=unit_id).first()
-            if not unit:
-                logger.warning(f"Unit {unit_id} not found, skipping sensor data")
-                return None
-            
-            # Find existing sensor
-            sensor = Sensor.query.filter_by(
-                unit_id=unit_id,
-                sensor_type=sensor_type
-            ).first()
-            
-            if sensor:
-                return sensor
-            
-            # Create new sensor
-            sensor_name = f"{sensor_type.title()} Sensor"
-            unit_mapping = {
-                'temperature': '°C',
-                'pressure': 'bar',
-                'flow_rate': 'L/min',
-                'power': 'kW',
-                'status': 'status'
-            }
-            
-            sensor = Sensor(
-                unit_id=unit_id,
-                name=sensor_name,
-                sensor_type=sensor_type,
-                unit_of_measurement=unit_mapping.get(sensor_type, ''),
-                is_active=True
-            )
-            
-            db.session.add(sensor)
-            db.session.commit()
-            
-            logger.info(f"Created new sensor: {unit_id}/{sensor_type}")
-            return sensor
-            
-        except Exception as e:
-            db.session.rollback()
-            logger.error(f"Error finding/creating sensor: {e}")
-            return None
+            logger.error(f"Unexpected error in data storage: {e}")
     
     def publish_message(self, topic: str, payload: str, qos: int = 0):
         """Publish message to MQTT topic.

@@ -145,8 +145,10 @@ def create_app(config_name=None):
             from app.services.realtime_processor import realtime_processor
             from app.services.opcua_service import opcua_client
             from app.services.protocol_gateway_simulator import ProtocolGatewaySimulator
+            from app.services.data_storage_service import data_storage_service
             
             # Initialize services with app context
+            data_storage_service.init_app(app)  # Initialize first as other services depend on it
             mqtt_client.init_app(app)
             websocket_service.init_app(app)
             realtime_processor.init_app(app)
@@ -164,6 +166,7 @@ def create_app(config_name=None):
             app.realtime_processor = realtime_processor
             app.opcua_client = opcua_client
             app.protocol_simulator = protocol_simulator
+            app.data_storage_service = data_storage_service
             
         except ImportError as e:
             import logging
@@ -186,6 +189,8 @@ def create_app(config_name=None):
             status['opcua'] = app.opcua_client.get_status()
         if hasattr(app, 'protocol_simulator'):
             status['protocol_simulator'] = app.protocol_simulator.get_status()
+        if hasattr(app, 'data_storage_service'):
+            status['data_storage'] = app.data_storage_service.get_status()
             
         return status
     

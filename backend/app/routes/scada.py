@@ -3,6 +3,7 @@ from flask import Blueprint, jsonify, request, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from app.routes.auth import permission_required
+from app.utils.error_handler import SecurityAwareErrorHandler
 
 # Create SCADA blueprint
 scada_bp = Blueprint('scada', __name__)
@@ -68,9 +69,9 @@ def mqtt_connect():
             current_app.mqtt_client.connect()
             return jsonify({'status': 'connected'})
         else:
-            return jsonify({'error': 'MQTT client not available'}), 500
+            return SecurityAwareErrorHandler.handle_service_unavailable('MQTT client')
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return SecurityAwareErrorHandler.handle_mqtt_error(e, 'connection')
 
 
 @scada_bp.route('/scada/mqtt/disconnect', methods=['POST'])
@@ -93,9 +94,9 @@ def mqtt_disconnect():
             current_app.mqtt_client.disconnect()
             return jsonify({'status': 'disconnected'})
         else:
-            return jsonify({'error': 'MQTT client not available'}), 500
+            return SecurityAwareErrorHandler.handle_service_unavailable('MQTT client')
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return SecurityAwareErrorHandler.handle_mqtt_error(e, 'disconnection')
 
 
 @scada_bp.route('/scada/mqtt/subscribe', methods=['POST'])
@@ -134,7 +135,9 @@ def mqtt_subscribe():
     try:
         data = request.get_json()
         if not data or 'topic' not in data:
-            return jsonify({'error': 'Topic is required'}), 400
+            return SecurityAwareErrorHandler.handle_validation_error(
+                ValueError("Topic is required"), 'MQTT subscription'
+            )
         
         topic = data['topic']
         qos = data.get('qos', 0)
@@ -143,10 +146,10 @@ def mqtt_subscribe():
             current_app.mqtt_client.subscribe_topic(topic, qos)
             return jsonify({'status': 'subscribed', 'topic': topic})
         else:
-            return jsonify({'error': 'MQTT client not available'}), 500
+            return SecurityAwareErrorHandler.handle_service_unavailable('MQTT client')
             
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return SecurityAwareErrorHandler.handle_mqtt_error(e, 'subscription')
 
 
 @scada_bp.route('/scada/mqtt/publish', methods=['POST'])
@@ -188,7 +191,9 @@ def mqtt_publish():
     try:
         data = request.get_json()
         if not data or 'topic' not in data or 'payload' not in data:
-            return jsonify({'error': 'Topic and payload are required'}), 400
+            return SecurityAwareErrorHandler.handle_validation_error(
+                ValueError("Topic and payload are required"), 'MQTT publish'
+            )
         
         topic = data['topic']
         payload = data['payload']
@@ -199,12 +204,14 @@ def mqtt_publish():
             if success:
                 return jsonify({'status': 'published', 'topic': topic})
             else:
-                return jsonify({'error': 'Failed to publish message'}), 500
+                return SecurityAwareErrorHandler.handle_mqtt_error(
+                    Exception("Publish failed"), 'message publishing'
+                )
         else:
-            return jsonify({'error': 'MQTT client not available'}), 500
+            return SecurityAwareErrorHandler.handle_service_unavailable('MQTT client')
             
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return SecurityAwareErrorHandler.handle_mqtt_error(e, 'message publishing')
 
 
 @scada_bp.route('/scada/alerts/rules', methods=['GET'])
@@ -230,7 +237,7 @@ def get_alert_rules():
         rules = current_app.realtime_processor.get_alert_rules()
         return jsonify(rules)
     else:
-        return jsonify({'error': 'Real-time processor not available'}), 500
+        return SecurityAwareErrorHandler.handle_service_unavailable('Real-time processor')
 
 
 @scada_bp.route('/scada/alerts/rules', methods=['POST'])
@@ -281,7 +288,9 @@ def add_alert_rule():
         required_fields = ['sensor_type', 'condition', 'threshold']
         
         if not data or not all(field in data for field in required_fields):
-            return jsonify({'error': 'Missing required fields'}), 400
+            return SecurityAwareErrorHandler.handle_validation_error(
+                ValueError("Missing required fields"), 'Alert rule creation'
+            )
         
         if hasattr(current_app, 'realtime_processor'):
             current_app.realtime_processor.add_alert_rule(
@@ -293,12 +302,12 @@ def add_alert_rule():
             )
             return jsonify({'status': 'rule_added'}), 201
         else:
-            return jsonify({'error': 'Real-time processor not available'}), 500
+            return SecurityAwareErrorHandler.handle_service_unavailable('Real-time processor')
             
     except ValueError as e:
-        return jsonify({'error': 'Invalid threshold value'}), 400
+        return SecurityAwareErrorHandler.handle_validation_error(e, 'Alert rule threshold parsing')
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return SecurityAwareErrorHandler.handle_service_error(e, 'internal_error', 'Alert rule creation', 500)
 
 
 @scada_bp.route('/scada/websocket/clients', methods=['GET'])
@@ -322,7 +331,7 @@ def get_websocket_clients():
         clients = current_app.websocket_service.get_connected_clients()
         return jsonify(clients)
     else:
-        return jsonify({'error': 'WebSocket service not available'}), 500
+        return SecurityAwareErrorHandler.handle_service_unavailable('WebSocket service')
 
 
 @scada_bp.route('/scada/opcua/connect', methods=['POST'])
@@ -343,13 +352,18 @@ def opcua_connect():
         description: Connection failed
     """
     if not hasattr(current_app, 'opcua_client'):
-        return jsonify({'error': 'OPC UA client not available'}), 500
+        return SecurityAwareErrorHandler.handle_service_unavailable('OPC UA client')
     
-    success = current_app.opcua_client.connect()
-    if success:
-        return jsonify({'status': 'connected'})
-    else:
-        return jsonify({'error': 'Failed to connect to OPC UA server'}), 500
+    try:
+        success = current_app.opcua_client.connect()
+        if success:
+            return jsonify({'status': 'connected'})
+        else:
+            return SecurityAwareErrorHandler.handle_opcua_error(
+                Exception("Connection failed"), 'server connection'
+            )
+    except Exception as e:
+        return SecurityAwareErrorHandler.handle_opcua_error(e, 'server connection')
 
 
 @scada_bp.route('/scada/opcua/disconnect', methods=['POST'])
@@ -371,7 +385,7 @@ def opcua_disconnect():
         current_app.opcua_client.disconnect()
         return jsonify({'status': 'disconnected'})
     else:
-        return jsonify({'error': 'OPC UA client not available'}), 500
+        return SecurityAwareErrorHandler.handle_service_unavailable('OPC UA client')
 
 
 @scada_bp.route('/scada/opcua/browse', methods=['GET'])
@@ -402,11 +416,14 @@ def opcua_browse():
         description: Browse failed
     """
     if not hasattr(current_app, 'opcua_client'):
-        return jsonify({'error': 'OPC UA client not available'}), 500
+        return SecurityAwareErrorHandler.handle_service_unavailable('OPC UA client')
     
-    root_node = request.args.get('root_node', 'i=85')
-    nodes = current_app.opcua_client.browse_server_nodes(root_node)
-    return jsonify(nodes)
+    try:
+        root_node = request.args.get('root_node', 'i=85')
+        nodes = current_app.opcua_client.browse_server_nodes(root_node)
+        return jsonify(nodes)
+    except Exception as e:
+        return SecurityAwareErrorHandler.handle_opcua_error(e, 'server browsing')
 
 
 @scada_bp.route('/scada/opcua/subscribe', methods=['POST'])
@@ -457,10 +474,12 @@ def opcua_subscribe():
         required_fields = ['node_id', 'unit_id', 'sensor_type']
         
         if not data or not all(field in data for field in required_fields):
-            return jsonify({'error': 'Missing required fields'}), 400
+            return SecurityAwareErrorHandler.handle_validation_error(
+                ValueError("Missing required fields"), 'OPC UA subscription'
+            )
         
         if not hasattr(current_app, 'opcua_client'):
-            return jsonify({'error': 'OPC UA client not available'}), 500
+            return SecurityAwareErrorHandler.handle_service_unavailable('OPC UA client')
         
         success = current_app.opcua_client.subscribe_to_node(
             node_id=data['node_id'],
@@ -473,10 +492,12 @@ def opcua_subscribe():
         if success:
             return jsonify({'status': 'subscribed', 'node_id': data['node_id']})
         else:
-            return jsonify({'error': 'Failed to subscribe to node'}), 500
+            return SecurityAwareErrorHandler.handle_opcua_error(
+                Exception("Subscription failed"), 'node subscription'
+            )
             
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return SecurityAwareErrorHandler.handle_opcua_error(e, 'node subscription')
 
 
 @scada_bp.route('/scada/opcua/read', methods=['POST'])
@@ -513,19 +534,23 @@ def opcua_read_node():
     try:
         data = request.get_json()
         if not data or 'node_id' not in data:
-            return jsonify({'error': 'node_id is required'}), 400
+            return SecurityAwareErrorHandler.handle_validation_error(
+                ValueError("node_id is required"), 'OPC UA node reading'
+            )
         
         if not hasattr(current_app, 'opcua_client'):
-            return jsonify({'error': 'OPC UA client not available'}), 500
+            return SecurityAwareErrorHandler.handle_service_unavailable('OPC UA client')
         
         result = current_app.opcua_client.read_node_value(data['node_id'])
         if result:
             return jsonify(result)
         else:
-            return jsonify({'error': 'Failed to read node value'}), 500
+            return SecurityAwareErrorHandler.handle_opcua_error(
+                Exception("Read failed"), 'node value reading'
+            )
             
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return SecurityAwareErrorHandler.handle_opcua_error(e, 'node value reading')
 
 
 @scada_bp.route('/scada/opcua/poll', methods=['POST'])
@@ -546,13 +571,13 @@ def opcua_poll():
         description: Polling failed
     """
     if not hasattr(current_app, 'opcua_client'):
-        return jsonify({'error': 'OPC UA client not available'}), 500
+        return SecurityAwareErrorHandler.handle_service_unavailable('OPC UA client')
     
     try:
         current_app.opcua_client.poll_subscribed_nodes()
         return jsonify({'status': 'poll_completed'})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return SecurityAwareErrorHandler.handle_opcua_error(e, 'node polling')
 
 
 # Protocol Gateway Simulator Routes
@@ -578,7 +603,7 @@ def get_simulator_status():
         status = current_app.protocol_simulator.get_status()
         return jsonify(status)
     else:
-        return jsonify({'error': 'Protocol simulator not available'}), 500
+        return SecurityAwareErrorHandler.handle_service_unavailable('Protocol simulator')
 
 
 @scada_bp.route('/scada/simulator/start', methods=['POST'])
@@ -599,18 +624,25 @@ def start_simulator():
         description: Failed to start simulator
     """
     if not hasattr(current_app, 'protocol_simulator'):
-        return jsonify({'error': 'Protocol simulator not available'}), 500
+        return SecurityAwareErrorHandler.handle_service_unavailable('Protocol simulator')
     
-    # Connect to MQTT first if not connected
-    if not current_app.protocol_simulator.connected:
-        if not current_app.protocol_simulator.connect_mqtt():
-            return jsonify({'error': 'Failed to connect to MQTT broker'}), 500
-    
-    success = current_app.protocol_simulator.start_simulation()
-    if success:
-        return jsonify({'status': 'started'})
-    else:
-        return jsonify({'error': 'Failed to start simulation'}), 500
+    try:
+        # Connect to MQTT first if not connected
+        if not current_app.protocol_simulator.connected:
+            if not current_app.protocol_simulator.connect_mqtt():
+                return SecurityAwareErrorHandler.handle_service_error(
+                    Exception("MQTT connection failed"), 'connection_error', 'Simulator MQTT connection', 500
+                )
+        
+        success = current_app.protocol_simulator.start_simulation()
+        if success:
+            return jsonify({'status': 'started'})
+        else:
+            return SecurityAwareErrorHandler.handle_service_error(
+                Exception("Start failed"), 'service_unavailable', 'Simulator start', 500
+            )
+    except Exception as e:
+        return SecurityAwareErrorHandler.handle_service_error(e, 'internal_error', 'Simulator start', 500)
 
 
 @scada_bp.route('/scada/simulator/stop', methods=['POST'])
@@ -632,7 +664,7 @@ def stop_simulator():
         current_app.protocol_simulator.stop_simulation()
         return jsonify({'status': 'stopped'})
     else:
-        return jsonify({'error': 'Protocol simulator not available'}), 500
+        return SecurityAwareErrorHandler.handle_service_unavailable('Protocol simulator')
 
 
 @scada_bp.route('/scada/simulator/inject', methods=['POST'])
@@ -671,14 +703,19 @@ def inject_test_scenario():
     try:
         data = request.get_json()
         if not data or 'scenario_type' not in data:
-            return jsonify({'error': 'scenario_type is required'}), 400
+            return SecurityAwareErrorHandler.handle_validation_error(
+                ValueError("scenario_type is required"), 'Scenario injection'
+            )
         
         valid_scenarios = ['high_temperature', 'sensor_failure', 'unit_offline']
         if data['scenario_type'] not in valid_scenarios:
-            return jsonify({'error': f'Invalid scenario type. Must be one of: {valid_scenarios}'}), 400
+            return SecurityAwareErrorHandler.handle_validation_error(
+                ValueError(f"Invalid scenario type. Must be one of: {valid_scenarios}"), 
+                'Scenario type validation'
+            )
         
         if not hasattr(current_app, 'protocol_simulator'):
-            return jsonify({'error': 'Protocol simulator not available'}), 500
+            return SecurityAwareErrorHandler.handle_service_unavailable('Protocol simulator')
         
         current_app.protocol_simulator.inject_test_scenario(
             scenario_type=data['scenario_type'],
@@ -688,4 +725,4 @@ def inject_test_scenario():
         return jsonify({'status': 'scenario_injected', 'scenario_type': data['scenario_type']})
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return SecurityAwareErrorHandler.handle_service_error(e, 'internal_error', 'Scenario injection', 500)

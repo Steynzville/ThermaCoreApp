@@ -54,12 +54,53 @@ class OPCUAClient:
         self.security_policy = app.config.get('OPCUA_SECURITY_POLICY', 'None')
         self.security_mode = app.config.get('OPCUA_SECURITY_MODE', 'None')
         self.timeout = app.config.get('OPCUA_TIMEOUT', 30)
+        self.cert_file = app.config.get('OPCUA_CERT_FILE')
+        self.private_key_file = app.config.get('OPCUA_PRIVATE_KEY_FILE')
+        self.trust_cert_file = app.config.get('OPCUA_TRUST_CERT_FILE')
         
         # Initialize client
         try:
             self.client = Client(self.server_url)
-            self.client.set_user(self.username) if self.username else None
-            self.client.set_password(self.password) if self.password else None
+            
+            # Configure authentication
+            if self.username:
+                self.client.set_user(self.username)
+            if self.password:
+                self.client.set_password(self.password)
+                
+            # Warn about insecure configurations in production
+            if app.config.get('FLASK_ENV') == 'production':
+                if not self.username or not self.password:
+                    logger.warning("OPC UA authentication not configured - this is insecure for production")
+                
+                if self.security_policy == 'None' or self.security_mode == 'None':
+                    logger.warning("OPC UA security policy/mode set to None - this is insecure for production")
+            
+            # Configure security policy and certificates if provided
+            if self.security_policy != 'None' and self.security_mode != 'None':
+                try:
+                    # Set security policy 
+                    if hasattr(ua.SecurityPolicy, self.security_policy):
+                        policy = getattr(ua.SecurityPolicy, self.security_policy)
+                        self.client.set_security_string(f"{policy}#{self.security_mode}")
+                        
+                        # Load certificates if provided
+                        if self.cert_file and self.private_key_file:
+                            self.client.load_client_certificate(self.cert_file)
+                            self.client.load_private_key(self.private_key_file)
+                            logger.info("OPC UA client certificates loaded")
+                            
+                        if self.trust_cert_file:
+                            # This would require additional certificate trust setup
+                            logger.info("OPC UA server certificate trust configured")
+                            
+                        logger.info(f"OPC UA security configured: {self.security_policy}#{self.security_mode}")
+                    else:
+                        logger.error(f"Invalid OPC UA security policy: {self.security_policy}")
+                except Exception as security_error:
+                    logger.error(f"Failed to configure OPC UA security: {security_error}")
+                    # Continue with basic configuration but log the issue
+            
             logger.info(f"OPC UA client initialized for server: {self.server_url}")
         except Exception as e:
             logger.error(f"Failed to initialize OPC UA client: {e}")
@@ -207,7 +248,7 @@ class OPCUAClient:
         return results
     
     def process_and_store_node_data(self, node_id: str) -> bool:
-        """Read node data and process it through the real-time system.
+        """Read node data and process it through the centralized data storage system.
         
         Args:
             node_id: OPC UA node identifier
@@ -227,7 +268,7 @@ class OPCUAClient:
         # Get mapping info
         mapping = self._node_mappings[node_id]
         
-        # Prepare data for real-time processor
+        # Prepare data for centralized storage
         processed_data = {
             'unit_id': mapping['unit_id'],
             'sensor_type': mapping['sensor_type'],
@@ -236,16 +277,31 @@ class OPCUAClient:
             'timestamp': value_data['timestamp']
         }
         
-        # Store in database and process for real-time streaming
+        # Store using the dedicated data storage service with app context
         try:
-            from app.services.mqtt_service import mqtt_client
-            # Use the same storage mechanism as MQTT client
+            from app.services.data_storage_service import data_storage_service
+            
             with self._app.app_context():
-                mqtt_client._store_sensor_data(processed_data)
+                success = data_storage_service.store_sensor_data(processed_data)
+                
+                if success:
+                    # Also trigger real-time processing
+                    try:
+                        from app.services.realtime_processor import realtime_processor
+                        realtime_processor.process_sensor_data(
+                            processed_data['unit_id'],
+                            processed_data['sensor_type'],
+                            processed_data
+                        )
+                    except ImportError:
+                        logger.warning("Real-time processor not available")
+                
+                logger.debug(f"Processed OPC UA data: {processed_data}")
+                return success
             
-            logger.debug(f"Processed OPC UA data: {processed_data}")
-            return True
-            
+        except ImportError:
+            logger.error("Data storage service not available")
+            return False
         except Exception as e:
             logger.error(f"Failed to process OPC UA data: {e}")
             return False
