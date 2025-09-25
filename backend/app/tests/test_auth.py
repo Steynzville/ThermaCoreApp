@@ -117,11 +117,14 @@ class TestAuthentication:
     def test_change_password(self, client):
         """Test password change."""
         token = self.get_auth_token(client)
+        original_password = 'admin123'
+        new_password = 'newpassword123'
         
+        # Change password
         response = client.post('/api/v1/auth/change-password',
             json={
-                'current_password': 'admin123',
-                'new_password': 'newpassword123'
+                'current_password': original_password,
+                'new_password': new_password
             },
             headers={
                 'Authorization': f'Bearer {token}',
@@ -131,26 +134,28 @@ class TestAuthentication:
         
         assert response.status_code == 200
         
-        # Verify can login with new password
-        new_login = client.post('/api/v1/auth/login',
-            json={'username': 'admin', 'password': 'newpassword123'},
-            headers={'Content-Type': 'application/json'}
-        )
-        
-        assert new_login.status_code == 200
-        
-        # Change back to original password
-        new_token = json.loads(new_login.data)['access_token']
-        client.post('/api/v1/auth/change-password',
-            json={
-                'current_password': 'newpassword123',
-                'new_password': 'admin123'
-            },
-            headers={
-                'Authorization': f'Bearer {new_token}',
-                'Content-Type': 'application/json'
-            }
-        )
+        try:
+            # Verify can login with new password
+            new_login = client.post('/api/v1/auth/login',
+                json={'username': 'admin', 'password': new_password},
+                headers={'Content-Type': 'application/json'}
+            )
+            
+            assert new_login.status_code == 200
+            
+        finally:
+            # Always revert password for test isolation
+            new_token = json.loads(new_login.data)['access_token'] if new_login.status_code == 200 else token
+            client.post('/api/v1/auth/change-password',
+                json={
+                    'current_password': new_password,
+                    'new_password': original_password
+                },
+                headers={
+                    'Authorization': f'Bearer {new_token}',
+                    'Content-Type': 'application/json'
+                }
+            )
     
     def test_change_password_wrong_current(self, client):
         """Test password change with wrong current password."""

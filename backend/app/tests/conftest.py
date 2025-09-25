@@ -46,15 +46,18 @@ def db_session(app):
 
 def _create_test_data():
     """Create test data for tests."""
+    from app.models import User, Role, Permission, Unit, Sensor, PermissionEnum, RoleEnum, UnitStatusEnum, HealthStatusEnum
+    from datetime import datetime
+    
     # Create permissions
     permissions = [
-        Permission(name='read_units', description='Read units'),
-        Permission(name='write_units', description='Write units'),
-        Permission(name='delete_units', description='Delete units'),
-        Permission(name='read_users', description='Read users'),
-        Permission(name='write_users', description='Write users'),
-        Permission(name='delete_users', description='Delete users'),
-        Permission(name='admin_panel', description='Admin panel access')
+        Permission(name=PermissionEnum.READ_UNITS, description='Read units'),
+        Permission(name=PermissionEnum.WRITE_UNITS, description='Write units'),
+        Permission(name=PermissionEnum.DELETE_UNITS, description='Delete units'),
+        Permission(name=PermissionEnum.READ_USERS, description='Read users'),
+        Permission(name=PermissionEnum.WRITE_USERS, description='Write users'),
+        Permission(name=PermissionEnum.DELETE_USERS, description='Delete users'),
+        Permission(name=PermissionEnum.ADMIN_PANEL, description='Admin panel access')
     ]
     
     for permission in permissions:
@@ -63,9 +66,9 @@ def _create_test_data():
     db.session.commit()
     
     # Create roles
-    admin_role = Role(name='admin', description='Administrator')
-    operator_role = Role(name='operator', description='Operator')
-    viewer_role = Role(name='viewer', description='Viewer')
+    admin_role = Role(name=RoleEnum.ADMIN, description='Administrator')
+    operator_role = Role(name=RoleEnum.OPERATOR, description='Operator')
+    viewer_role = Role(name=RoleEnum.VIEWER, description='Viewer')
     
     # Assign permissions to roles
     admin_role.permissions = permissions
@@ -118,10 +121,10 @@ def _create_test_data():
         id='TEST001',
         name='Test Unit 001',
         serial_number='TEST001-2024-001',
-        install_date='2024-01-15',
+        install_date=datetime(2024, 1, 15),
         location='Test Site',
-        status='online',
-        health_status='optimal',
+        status=UnitStatusEnum.ONLINE,
+        health_status=HealthStatusEnum.OPTIMAL,
         water_generation=True,
         client_name='Test Client',
         client_email='client@test.com',

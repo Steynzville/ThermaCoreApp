@@ -21,11 +21,8 @@ def init_db():
         with open(schema_path, 'r') as f:
             schema_sql = f.read()
             
-        # Execute schema in chunks (split by semicolon)
-        statements = [stmt.strip() for stmt in schema_sql.split(';') if stmt.strip()]
-        for statement in statements:
-            if statement:
-                db.session.execute(text(statement))
+        # Execute entire schema at once to preserve PL/pgSQL functions
+        db.session.execute(text(schema_sql))
         
         db.session.commit()
         print("✓ Database schema created successfully")
@@ -35,10 +32,8 @@ def init_db():
         with open(seed_path, 'r') as f:
             seed_sql = f.read()
             
-        statements = [stmt.strip() for stmt in seed_sql.split(';') if stmt.strip()]
-        for statement in statements:
-            if statement:
-                db.session.execute(text(statement))
+        # Execute entire seed file at once
+        db.session.execute(text(seed_sql))
                 
         db.session.commit()
         print("✓ Seed data inserted successfully")
