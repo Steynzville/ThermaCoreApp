@@ -2,7 +2,7 @@
 from datetime import datetime, timedelta, timezone
 from dateutil import parser as dateutil_parser
 from functools import wraps
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Optional
 
 from flask import request, jsonify, current_app
 from flask_jwt_extended import get_jwt_identity
@@ -12,12 +12,12 @@ from sqlalchemy.orm import Query
 from app.models import User, SensorReading
 
 
-def get_current_user_id() -> Tuple[int, bool]:
+def get_current_user_id() -> Tuple[Optional[int], bool]:
     """
     Safely convert JWT identity to integer user ID with error handling.
     
     Returns:
-        Tuple[int, bool]: (user_id, success) where success indicates if conversion was successful
+        Tuple[Optional[int], bool]: (user_id, success) where success indicates if conversion was successful
         
     Raises:
         None: This function catches all exceptions and returns success flag instead
