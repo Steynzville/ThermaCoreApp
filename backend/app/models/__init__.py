@@ -100,19 +100,22 @@ class Role(db.Model):
         """Check if role has a specific permission.
         
         Args:
-            permission: Can be either a string (e.g., "read_users") or a PermissionEnum
+            permission: Must be either a string (e.g., "read_users") or a PermissionEnum
         
         Returns:
             bool: True if role has the permission, False otherwise
+            
+        Raises:
+            TypeError: If permission is not a string or PermissionEnum
         """
-        # Handle both string and enum types for permission argument
+        # Only allow string and PermissionEnum types for permission argument
         if isinstance(permission, PermissionEnum):
             permission_value = permission.value
         elif isinstance(permission, str):
             permission_value = permission
         else:
-            # Handle other types gracefully
-            permission_value = str(permission)
+            # Raise TypeError for unsupported permission types to prevent silent failures
+            raise TypeError(f"Permission must be a string or PermissionEnum, got {type(permission).__name__}")
         
         return any(p.name.value == permission_value for p in self.permissions)
 
