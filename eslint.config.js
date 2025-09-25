@@ -63,7 +63,16 @@ export default [
       "no-unused-vars": "off", // superseded by unused-imports
       "no-empty": "off", // Allow empty blocks in vendor code
       "no-undef": "warn", // Make undefined variables warnings instead of errors
-      "unused-imports/no-unused-imports": "off", // Disable auto-removal of unused imports
+      "unused-imports/no-unused-imports": "warn", // Warn about unused imports
+      "unused-imports/no-unused-vars": [
+        "warn",
+        {
+          vars: "all",
+          varsIgnorePattern: "^_",
+          args: "after-used",
+          argsIgnorePattern: "^_",
+        },
+      ],
       "react/jsx-uses-react": "off", // React 17+ doesn't need React in scope
       "react/react-in-jsx-scope": "off", // React 17+ doesn't need React in scope
 
