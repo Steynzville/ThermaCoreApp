@@ -61,42 +61,34 @@ class TestEnhancedPermissionHandling:
         from app.models import Role, RoleEnum
         admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
         
-        # Valid PermissionEnum values should work
-        valid_permissions = [
-            PermissionEnum.READ_USERS,
-            PermissionEnum.WRITE_USERS,
-            PermissionEnum.DELETE_USERS,
-            PermissionEnum.READ_UNITS,
-            PermissionEnum.WRITE_UNITS,
-            PermissionEnum.DELETE_UNITS,
-            PermissionEnum.ADMIN_PANEL
-        ]
+        # Dynamically get all PermissionEnum values to ensure coverage stays in sync
+        all_permission_enums = list(PermissionEnum)
         
-        for permission in valid_permissions:
+        for permission in all_permission_enums:
             # Should not raise an error
             result = admin_role.has_permission(permission)
             assert isinstance(result, bool)
+        
+        # Verify we're testing all expected permissions
+        expected_count = len(all_permission_enums)
+        assert expected_count >= 7, f"Expected at least 7 permissions, found {expected_count}"
     
     def test_string_permission_validation(self, client, db_session):
         """Test string permission validation against known values."""
         from app.models import Role, RoleEnum
         admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
         
-        # Valid string permissions
-        valid_string_permissions = [
-            "read_users",
-            "write_users", 
-            "delete_users",
-            "read_units",
-            "write_units",
-            "delete_units",
-            "admin_panel"
-        ]
+        # Dynamically generate valid string permissions from enum to ensure sync
+        valid_string_permissions = [perm.value for perm in PermissionEnum]
         
         for permission in valid_string_permissions:
             # Should not raise an error
             result = admin_role.has_permission(permission)
             assert isinstance(result, bool)
+            
+        # Verify we're testing all expected permissions  
+        expected_count = len(valid_string_permissions)
+        assert expected_count >= 7, f"Expected at least 7 permissions, found {expected_count}"
         
         # Invalid string permissions should return False (not raise error)
         invalid_permissions = [
@@ -107,3 +99,52 @@ class TestEnhancedPermissionHandling:
         
         for permission in invalid_permissions:
             assert admin_role.has_permission(permission) is False
+    
+    def test_comprehensive_enum_coverage(self, client, db_session):
+        """Test that permission tests cover all enum values automatically."""
+        # This test ensures that when new permissions are added to PermissionEnum,
+        # they are automatically included in testing coverage
+        from app.models import Role, RoleEnum
+        admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
+        
+        # Get all enum values dynamically
+        all_permissions = list(PermissionEnum)
+        
+        # Test both enum and string versions of each permission
+        for permission_enum in all_permissions:
+            # Test enum version
+            enum_result = admin_role.has_permission(permission_enum)
+            assert isinstance(enum_result, bool)
+            
+            # Test string version
+            string_result = admin_role.has_permission(permission_enum.value)
+            assert isinstance(string_result, bool)
+            
+            # Both should return the same result
+            assert enum_result == string_result
+            
+        print(f"✅ Tested {len(all_permissions)} permissions: {[p.value for p in all_permissions]}")
+    
+    def test_call_site_audit_prevention(self, client, db_session):
+        """Test that prevents silent coercion at call sites."""
+        from app.models import Role, RoleEnum
+        admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
+        
+        # Test various invalid types that might be passed accidentally
+        invalid_types = [
+            123,           # integer
+            12.34,         # float
+            True,          # boolean
+            False,         # boolean
+            [],            # empty list
+            {},            # empty dict
+            set(),         # empty set
+            None,          # None
+            object(),      # generic object
+        ]
+        
+        for invalid_type in invalid_types:
+            with pytest.raises(TypeError, match="Permission must be a string or PermissionEnum"):
+                admin_role.has_permission(invalid_type)
+        
+        print(f"✅ Verified TypeError for {len(invalid_types)} invalid types")

@@ -9,7 +9,8 @@ from app import db
 from app.tests.timestamp_helpers import (
     simulate_db_trigger_update,
     assert_timestamp_updated,
-    assert_timestamp_unchanged
+    assert_timestamp_unchanged,
+    sleep_for_sqlite_if_needed
 )
 
 
@@ -89,9 +90,8 @@ class TestTimestampUpdates:
             
             original_updated_at = user.updated_at
             
-            # Wait a moment to ensure timestamp difference
-            import time
-            time.sleep(0.1)
+            # Wait a moment to ensure timestamp difference for SQLite
+            sleep_for_sqlite_if_needed(0.1)
             
             # Update the user
             user.first_name = 'Updated Test'
@@ -121,9 +121,8 @@ class TestTimestampUpdates:
             
             original_updated_at = unit.updated_at
             
-            # Wait a moment to ensure timestamp difference
-            import time
-            time.sleep(0.1)
+            # Wait a moment to ensure timestamp difference for SQLite
+            sleep_for_sqlite_if_needed(0.1)
             
             # Update the unit
             unit.location = 'Updated Location'
@@ -162,9 +161,8 @@ class TestTimestampUpdates:
             
             original_updated_at = sensor.updated_at
             
-            # Wait a moment to ensure timestamp difference
-            import time
-            time.sleep(0.1)
+            # Wait a moment to ensure timestamp difference for SQLite
+            sleep_for_sqlite_if_needed(0.1)
             
             # Update the sensor
             sensor.name = 'Updated Temperature Sensor'
@@ -194,9 +192,8 @@ class TestTimestampUpdates:
             
             original_created_at = user.created_at
             
-            # Wait a moment and update
-            import time
-            time.sleep(0.1)
+            # Wait a moment and update - use helper for SQLite
+            sleep_for_sqlite_if_needed(0.1)
             
             user.first_name = 'Updated Created'
             

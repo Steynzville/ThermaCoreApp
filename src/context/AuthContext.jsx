@@ -30,9 +30,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (username, password) => {
     setIsLoading(true);
-    // Artificial 2-second delay for demo
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
+    
     // Proper authentication logic with password validation
     if (username.toLowerCase() === "admin" && password === "admin123") {
       const userData = { username: "admin", role: "admin" };
@@ -61,7 +59,6 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     setIsLoggingOut(true);
-    await new Promise((resolve) => setTimeout(resolve, 2000)); // 2-second delay
     setUser(null);
     setUserRole(null);
 
