@@ -5,14 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/check-security.js --build",
     "preview": "vite preview",
     "format": "prettier --write .",
     "test": "vitest",
     "prepare": "husky",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "analyze": "cross-env ANALYZE=1 vite build"
+    "analyze": "cross-env ANALYZE=1 vite build",
+    "security-check": "node scripts/check-security.js --build"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",

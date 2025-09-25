@@ -40,6 +40,18 @@ export const AuthProvider = ({ children }) => {
     // 5. NOT valid for any production or staging environments
     // 
     // Production builds MUST strip this entire code block and use real authentication APIs.
+    
+    // RUNTIME GUARD: Strictly enforce development-only credentials
+    // These credentials are completely disabled in production, CI, and staging environments
+    const isDevelopmentMode = process.env.NODE_ENV === 'development' || 
+                             (process.env.NODE_ENV === undefined && import.meta.env.DEV);
+    
+    if (!isDevelopmentMode) {
+      // In production/staging/CI: hardcoded credentials are completely disabled
+      setIsLoading(false);
+      return { success: false, error: "Authentication service unavailable. Please contact administrator." };
+    }
+    
     if (username.toLowerCase() === "admin" && password === "admin123") {
       const userData = { username: "admin", role: "admin" };
       setUser(userData);
@@ -50,7 +62,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem("thermacore_role", "admin");
       setIsLoading(false);
       return { success: true, role: "admin" };
-    } else if (username.toLowerCase() === "user" && password === "user123") {
+    } else if (isDevelopmentMode && username.toLowerCase() === "user" && password === "user123") {
       const userData = { username: "user", role: "user" };
       setUser(userData);
       setUserRole("user");

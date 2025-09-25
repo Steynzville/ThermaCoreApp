@@ -61,41 +61,66 @@ class TestEnhancedPermissionHandling:
         from app.models import Role, RoleEnum
         admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
         
-        # Dynamically get all PermissionEnum values to ensure coverage stays in sync
+        # Use hardcoded expected permissions set for robust validation
+        expected_permissions = {
+            'read_units', 'write_units', 'delete_units', 
+            'read_users', 'write_users', 'delete_users', 
+            'admin_panel'
+        }
+        
+        # Verify exact count matches expected
         all_permission_enums = list(PermissionEnum)
+        actual_permissions = {perm.value for perm in all_permission_enums}
         
+        # Exact count assertion instead of weak count > 0
+        assert len(all_permission_enums) == 7, f"Expected exactly 7 permissions, got {len(all_permission_enums)}"
+        
+        # Set-based comparison for exact matching
+        assert actual_permissions == expected_permissions, (
+            f"Permission mismatch detected!\n"
+            f"Expected: {sorted(expected_permissions)}\n"
+            f"Actual:   {sorted(actual_permissions)}\n"
+            f"Missing:  {sorted(expected_permissions - actual_permissions)}\n"
+            f"Extra:    {sorted(actual_permissions - expected_permissions)}"
+        )
+        
+        # Validate each permission works correctly
         for permission in all_permission_enums:
-            # Should not raise an error
             result = admin_role.has_permission(permission)
-            assert isinstance(result, bool)
-        
-        # Verify we're testing all expected permissions - dynamically derived from enum
-        expected_count = len(all_permission_enums)
-        # This assertion ensures the test covers all permissions without hardcoding the count
-        # If permissions are added/removed, the test automatically adapts
-        assert expected_count > 0, "PermissionEnum should contain at least one permission"
-        print(f"✅ Tested {expected_count} permissions: {[p.value for p in all_permission_enums]}")
+            assert isinstance(result, bool), f"Permission {permission.value} should return boolean"
     
     def test_string_permission_validation(self, client, db_session):
         """Test string permission validation against known values."""
         from app.models import Role, RoleEnum
         admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
         
-        # Dynamically generate valid string permissions from enum to ensure sync
-        valid_string_permissions = [perm.value for perm in PermissionEnum]
+        # Use hardcoded expected permissions for exact validation
+        expected_permission_strings = {
+            'read_units', 'write_units', 'delete_units', 
+            'read_users', 'write_users', 'delete_users', 
+            'admin_panel'
+        }
         
-        for permission in valid_string_permissions:
-            # Should not raise an error
+        # Generate actual permissions from enum for comparison  
+        actual_permission_strings = {perm.value for perm in PermissionEnum}
+        
+        # Exact count assertion instead of weak count > 0
+        assert len(actual_permission_strings) == 7, f"Expected exactly 7 permissions, got {len(actual_permission_strings)}"
+        
+        # Set-based comparison with meaningful diff output
+        assert actual_permission_strings == expected_permission_strings, (
+            f"Permission string mismatch detected!\n"
+            f"Expected: {sorted(expected_permission_strings)}\n" 
+            f"Actual:   {sorted(actual_permission_strings)}\n"
+            f"Missing:  {sorted(expected_permission_strings - actual_permission_strings)}\n"
+            f"Extra:    {sorted(actual_permission_strings - expected_permission_strings)}"
+        )
+        
+        # Validate each permission string works correctly
+        for permission in expected_permission_strings:
             result = admin_role.has_permission(permission)
-            assert isinstance(result, bool)
+            assert isinstance(result, bool), f"Permission string '{permission}' should return boolean"
             
-        # Verify we're testing all expected permissions - dynamically derived from enum
-        expected_count = len(valid_string_permissions)
-        # This assertion ensures the test covers all permissions without hardcoding the count
-        # If permissions are added/removed, the test automatically adapts
-        assert expected_count > 0, "PermissionEnum should contain at least one permission"
-        print(f"✅ Tested {expected_count} string permissions: {valid_string_permissions}")
-        
         # Invalid string permissions should return False (not raise error)
         invalid_permissions = [
             "invalid_permission",
@@ -108,13 +133,32 @@ class TestEnhancedPermissionHandling:
     
     def test_comprehensive_enum_coverage(self, client, db_session):
         """Test that permission tests cover all enum values automatically."""
-        # This test ensures that when new permissions are added to PermissionEnum,
-        # they are automatically included in testing coverage
+        # This test ensures complete coverage with exact validation
         from app.models import Role, RoleEnum
         admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
         
-        # Get all enum values dynamically
+        # Hardcoded expected permission set for robust validation
+        expected_permissions = {
+            'read_units', 'write_units', 'delete_units', 
+            'read_users', 'write_users', 'delete_users', 
+            'admin_panel'
+        }
+        
+        # Get all enum values  
         all_permissions = list(PermissionEnum)
+        actual_permissions = {p.value for p in all_permissions}
+        
+        # Exact count assertion
+        assert len(all_permissions) == 7, f"Expected exactly 7 permissions, got {len(all_permissions)}"
+        
+        # Exact set comparison with meaningful diff
+        assert actual_permissions == expected_permissions, (
+            f"Permission set mismatch detected!\n"
+            f"Expected: {sorted(expected_permissions)}\n"
+            f"Actual:   {sorted(actual_permissions)}\n"
+            f"Missing:  {sorted(expected_permissions - actual_permissions)}\n"
+            f"Extra:    {sorted(actual_permissions - expected_permissions)}"
+        )
         
         # Test both enum and string versions of each permission
         for permission_enum in all_permissions:
@@ -128,8 +172,6 @@ class TestEnhancedPermissionHandling:
             
             # Both should return the same result
             assert enum_result == string_result
-            
-        print(f"✅ Tested {len(all_permissions)} permissions: {[p.value for p in all_permissions]}")
     
     def test_call_site_audit_prevention(self, client, db_session):
         """Test that prevents silent coercion at call sites."""
@@ -149,8 +191,9 @@ class TestEnhancedPermissionHandling:
             object(),      # generic object
         ]
         
+        # Exact count assertion for test coverage
+        assert len(invalid_types) == 9, f"Expected exactly 9 invalid types to test, got {len(invalid_types)}"
+        
         for invalid_type in invalid_types:
             with pytest.raises(TypeError, match="Permission must be a string or PermissionEnum"):
                 admin_role.has_permission(invalid_type)
-        
-        print(f"✅ Verified TypeError for {len(invalid_types)} invalid types")
