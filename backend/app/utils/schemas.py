@@ -1,9 +1,19 @@
 """Data serializers and validation schemas for ThermaCore SCADA API."""
 from datetime import datetime, timezone
+import logging
+from dateutil import parser as dateutil_parser
 from marshmallow import Schema, fields, validate, ValidationError, post_load
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 
 from app.models import User, Role, Permission, Unit, Sensor, SensorReading, PermissionEnum, RoleEnum, UnitStatusEnum, HealthStatusEnum
+
+# Setup logger for datetime parsing errors
+logger = logging.getLogger(__name__)
+
+
+def _utc_now():
+    """Helper function to get current UTC datetime for field defaults."""
+    return datetime.now(timezone.utc)
 
 
 class DateTimeField(fields.DateTime):
@@ -22,17 +32,20 @@ class DateTimeField(fields.DateTime):
         # If value is a string, always parse it to datetime first
         if isinstance(value, str):
             try:
-                # Parse string to datetime object to ensure it's valid
-                parsed_dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
+                # Use dateutil.parser.isoparse for more robust ISO 8601 parsing
+                parsed_dt = dateutil_parser.isoparse(value)
                 # Use the parent method to serialize the parsed datetime consistently
                 return super()._serialize(parsed_dt, attr, obj, **kwargs)
-            except (ValueError, AttributeError) as e:
+            except (ValueError, TypeError) as e:
                 # Log the error for debugging but don't expose malformed data to clients
-                import logging
-                logger = logging.getLogger(__name__)
                 logger.warning(f"Invalid datetime string '{value}' in field '{attr}': {e}")
                 # Return None instead of malformed string to prevent client-side errors
                 return None
+        
+        # If value is not a string or datetime, try to handle gracefully
+        if not hasattr(value, 'isoformat') and not hasattr(value, 'strftime'):
+            logger.warning(f"Invalid datetime value type '{type(value).__name__}' in field '{attr}': {value}")
+            return None
         
         # If it's already a datetime object, use the parent method directly
         return super()._serialize(value, attr, obj, **kwargs)
@@ -258,7 +271,7 @@ class SensorReadingSchema(SQLAlchemyAutoSchema):
         model = SensorReading
         load_instance = True
         
-    timestamp = DateTimeField(dump_default=datetime.utcnow)
+    timestamp = DateTimeField(dump_default=_utc_now)
     value = fields.Float(required=True)
     quality = fields.Str(validate=validate.OneOf(['GOOD', 'BAD', 'UNCERTAIN']))
     sensor = fields.Nested(SensorSchema, dump_only=True)
@@ -268,7 +281,7 @@ class SensorReadingCreateSchema(Schema):
     """Schema for sensor reading creation."""
     sensor_id = fields.Int(required=True)
     value = fields.Float(required=True)
-    timestamp = DateTimeField(missing=datetime.utcnow)
+    timestamp = DateTimeField(missing=_utc_now)
     quality = fields.Str(missing='GOOD', validate=validate.OneOf(['GOOD', 'BAD', 'UNCERTAIN']))
 
 

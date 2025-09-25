@@ -56,12 +56,18 @@ def create_app(config_name=None):
     
     # Load configuration with better environment selection
     if config_name is None:
-        # Default to production for docs/app generation to avoid dev-only config
-        config_name = os.environ.get('FLASK_ENV', os.environ.get('APP_ENV', 'production'))
+        # Check for testing environment first
+        if os.environ.get('TESTING', 'false').lower() in ('true', '1'):
+            config_name = 'testing'
+        else:
+            # Use FLASK_ENV, APP_ENV, or default to production
+            config_name = os.environ.get('FLASK_ENV', os.environ.get('APP_ENV', 'production'))
         
-        # Only use development as default if explicitly running in development
-        if config_name == 'development' and not os.environ.get('FLASK_DEBUG'):
-            config_name = 'production'
+        # Only use development if explicitly running in development AND FLASK_DEBUG is true/'1'
+        if config_name == 'development':
+            flask_debug = os.environ.get('FLASK_DEBUG', 'false').lower()
+            if flask_debug not in ('true', '1'):
+                config_name = 'production'
     
     from config import config
     app.config.from_object(config[config_name])
