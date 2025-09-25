@@ -162,7 +162,7 @@ def update_user(user_id):
       - JWT: []
     """
     user = User.query.get_or_404(user_id)
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     schema = UserUpdateSchema()
     
     try:
@@ -232,7 +232,7 @@ def delete_user(user_id):
       - JWT: []
     """
     user = User.query.get_or_404(user_id)
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     
     # Prevent users from deleting their own account
     if user_id == current_user_id:
@@ -307,7 +307,7 @@ def deactivate_user(user_id):
       - JWT: []
     """
     user = User.query.get_or_404(user_id)
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     
     # Prevent users from deactivating their own account
     if user_id == current_user_id:
