@@ -59,6 +59,14 @@ class Config:
     WEBSOCKET_CORS_ORIGINS = os.environ.get('WEBSOCKET_CORS_ORIGINS', '*').split(',')
     WEBSOCKET_PING_TIMEOUT = int(os.environ.get('WEBSOCKET_PING_TIMEOUT', 60))
     WEBSOCKET_PING_INTERVAL = int(os.environ.get('WEBSOCKET_PING_INTERVAL', 25))
+    
+    # OPC UA Configuration
+    OPCUA_SERVER_URL = os.environ.get('OPCUA_SERVER_URL', 'opc.tcp://localhost:4840')
+    OPCUA_USERNAME = os.environ.get('OPCUA_USERNAME')
+    OPCUA_PASSWORD = os.environ.get('OPCUA_PASSWORD')  
+    OPCUA_SECURITY_POLICY = os.environ.get('OPCUA_SECURITY_POLICY', 'None')
+    OPCUA_SECURITY_MODE = os.environ.get('OPCUA_SECURITY_MODE', 'None')
+    OPCUA_TIMEOUT = int(os.environ.get('OPCUA_TIMEOUT', 30))
 
 
 class DevelopmentConfig(Config):

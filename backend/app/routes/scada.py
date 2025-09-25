@@ -2,7 +2,7 @@
 from flask import Blueprint, jsonify, request, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from app.utils.auth_helpers import require_permission
+from app.routes.auth import permission_required
 
 # Create SCADA blueprint
 scada_bp = Blueprint('scada', __name__)
@@ -10,7 +10,7 @@ scada_bp = Blueprint('scada', __name__)
 
 @scada_bp.route('/scada/status', methods=['GET'])
 @jwt_required()
-@require_permission('read_system')
+@permission_required('read_units')
 def get_scada_status():
     """Get status of all SCADA services.
     
@@ -48,7 +48,7 @@ def get_scada_status():
 
 @scada_bp.route('/scada/mqtt/connect', methods=['POST'])
 @jwt_required()
-@require_permission('manage_system')
+@permission_required('admin_panel')
 def mqtt_connect():
     """Connect to MQTT broker.
     
@@ -75,7 +75,7 @@ def mqtt_connect():
 
 @scada_bp.route('/scada/mqtt/disconnect', methods=['POST'])
 @jwt_required()
-@require_permission('manage_system')
+@permission_required('admin_panel')
 def mqtt_disconnect():
     """Disconnect from MQTT broker.
     
@@ -100,7 +100,7 @@ def mqtt_disconnect():
 
 @scada_bp.route('/scada/mqtt/subscribe', methods=['POST'])
 @jwt_required()
-@require_permission('manage_system')
+@permission_required('admin_panel')
 def mqtt_subscribe():
     """Subscribe to additional MQTT topic.
     
@@ -151,7 +151,7 @@ def mqtt_subscribe():
 
 @scada_bp.route('/scada/mqtt/publish', methods=['POST'])
 @jwt_required()
-@require_permission('manage_system')
+@permission_required('admin_panel')
 def mqtt_publish():
     """Publish message to MQTT topic.
     
@@ -209,7 +209,7 @@ def mqtt_publish():
 
 @scada_bp.route('/scada/alerts/rules', methods=['GET'])
 @jwt_required()
-@require_permission('read_system')
+@permission_required('read_units')
 def get_alert_rules():
     """Get all configured alert rules.
     
@@ -235,7 +235,7 @@ def get_alert_rules():
 
 @scada_bp.route('/scada/alerts/rules', methods=['POST'])
 @jwt_required()
-@require_permission('manage_system')
+@permission_required('admin_panel')
 def add_alert_rule():
     """Add new alert rule.
     
@@ -303,7 +303,7 @@ def add_alert_rule():
 
 @scada_bp.route('/scada/websocket/clients', methods=['GET'])
 @jwt_required()
-@require_permission('read_system')
+@permission_required('read_units')
 def get_websocket_clients():
     """Get information about connected WebSocket clients.
     
@@ -323,3 +323,369 @@ def get_websocket_clients():
         return jsonify(clients)
     else:
         return jsonify({'error': 'WebSocket service not available'}), 500
+
+
+@scada_bp.route('/scada/opcua/connect', methods=['POST'])
+@jwt_required()
+@permission_required('admin_panel')
+def opcua_connect():
+    """Connect to OPC UA server.
+    
+    ---
+    tags:
+      - SCADA
+    security:
+      - JWT: []
+    responses:
+      200:
+        description: OPC UA connection successful
+      500:
+        description: Connection failed
+    """
+    if not hasattr(current_app, 'opcua_client'):
+        return jsonify({'error': 'OPC UA client not available'}), 500
+    
+    success = current_app.opcua_client.connect()
+    if success:
+        return jsonify({'status': 'connected'})
+    else:
+        return jsonify({'error': 'Failed to connect to OPC UA server'}), 500
+
+
+@scada_bp.route('/scada/opcua/disconnect', methods=['POST'])
+@jwt_required()
+@permission_required('admin_panel')
+def opcua_disconnect():
+    """Disconnect from OPC UA server.
+    
+    ---
+    tags:
+      - SCADA
+    security:
+      - JWT: []
+    responses:
+      200:
+        description: OPC UA disconnection successful
+    """
+    if hasattr(current_app, 'opcua_client'):
+        current_app.opcua_client.disconnect()
+        return jsonify({'status': 'disconnected'})
+    else:
+        return jsonify({'error': 'OPC UA client not available'}), 500
+
+
+@scada_bp.route('/scada/opcua/browse', methods=['GET'])
+@jwt_required()
+@permission_required('read_units')
+def opcua_browse():
+    """Browse OPC UA server nodes.
+    
+    ---
+    tags:
+      - SCADA
+    security:
+      - JWT: []
+    parameters:
+      - name: root_node
+        in: query
+        type: string
+        description: Root node ID to start browsing from
+        default: i=85
+    responses:
+      200:
+        description: List of OPC UA nodes
+        schema:
+          type: array
+          items:
+            type: object
+      500:
+        description: Browse failed
+    """
+    if not hasattr(current_app, 'opcua_client'):
+        return jsonify({'error': 'OPC UA client not available'}), 500
+    
+    root_node = request.args.get('root_node', 'i=85')
+    nodes = current_app.opcua_client.browse_server_nodes(root_node)
+    return jsonify(nodes)
+
+
+@scada_bp.route('/scada/opcua/subscribe', methods=['POST'])
+@jwt_required()
+@permission_required('admin_panel')
+def opcua_subscribe():
+    """Subscribe to OPC UA node.
+    
+    ---
+    tags:
+      - SCADA
+    security:
+      - JWT: []
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            node_id:
+              type: string
+              description: OPC UA node identifier
+            unit_id:
+              type: string
+              description: ThermaCore unit ID
+            sensor_type:
+              type: string
+              description: Sensor type
+            scale_factor:
+              type: number
+              description: Value scaling factor
+              default: 1.0
+            offset:
+              type: number
+              description: Value offset
+              default: 0.0
+    responses:
+      200:
+        description: Subscription successful
+      400:
+        description: Invalid request data
+      500:
+        description: Subscription failed
+    """
+    try:
+        data = request.get_json()
+        required_fields = ['node_id', 'unit_id', 'sensor_type']
+        
+        if not data or not all(field in data for field in required_fields):
+            return jsonify({'error': 'Missing required fields'}), 400
+        
+        if not hasattr(current_app, 'opcua_client'):
+            return jsonify({'error': 'OPC UA client not available'}), 500
+        
+        success = current_app.opcua_client.subscribe_to_node(
+            node_id=data['node_id'],
+            unit_id=data['unit_id'],
+            sensor_type=data['sensor_type'],
+            scale_factor=data.get('scale_factor', 1.0),
+            offset=data.get('offset', 0.0)
+        )
+        
+        if success:
+            return jsonify({'status': 'subscribed', 'node_id': data['node_id']})
+        else:
+            return jsonify({'error': 'Failed to subscribe to node'}), 500
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@scada_bp.route('/scada/opcua/read', methods=['POST'])
+@jwt_required()
+@permission_required('read_units')
+def opcua_read_node():
+    """Read value from OPC UA node.
+    
+    ---
+    tags:
+      - SCADA
+    security:
+      - JWT: []
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            node_id:
+              type: string
+              description: OPC UA node identifier
+    responses:
+      200:
+        description: Node value read successfully
+        schema:
+          type: object
+      400:
+        description: Invalid request data
+      500:
+        description: Read failed
+    """
+    try:
+        data = request.get_json()
+        if not data or 'node_id' not in data:
+            return jsonify({'error': 'node_id is required'}), 400
+        
+        if not hasattr(current_app, 'opcua_client'):
+            return jsonify({'error': 'OPC UA client not available'}), 500
+        
+        result = current_app.opcua_client.read_node_value(data['node_id'])
+        if result:
+            return jsonify(result)
+        else:
+            return jsonify({'error': 'Failed to read node value'}), 500
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@scada_bp.route('/scada/opcua/poll', methods=['POST'])
+@jwt_required()
+@permission_required('admin_panel')
+def opcua_poll():
+    """Poll all subscribed OPC UA nodes.
+    
+    ---
+    tags:
+      - SCADA
+    security:
+      - JWT: []
+    responses:
+      200:
+        description: Polling completed
+      500:
+        description: Polling failed
+    """
+    if not hasattr(current_app, 'opcua_client'):
+        return jsonify({'error': 'OPC UA client not available'}), 500
+    
+    try:
+        current_app.opcua_client.poll_subscribed_nodes()
+        return jsonify({'status': 'poll_completed'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# Protocol Gateway Simulator Routes
+
+@scada_bp.route('/scada/simulator/status', methods=['GET'])
+@jwt_required()
+@permission_required('read_units')
+def get_simulator_status():
+    """Get protocol gateway simulator status.
+    
+    ---
+    tags:
+      - SCADA
+    security:
+      - JWT: []
+    responses:
+      200:
+        description: Simulator status
+        schema:
+          type: object
+    """
+    if hasattr(current_app, 'protocol_simulator'):
+        status = current_app.protocol_simulator.get_status()
+        return jsonify(status)
+    else:
+        return jsonify({'error': 'Protocol simulator not available'}), 500
+
+
+@scada_bp.route('/scada/simulator/start', methods=['POST'])
+@jwt_required()
+@permission_required('admin_panel')
+def start_simulator():
+    """Start the protocol gateway simulator.
+    
+    ---
+    tags:
+      - SCADA
+    security:
+      - JWT: []
+    responses:
+      200:
+        description: Simulator started successfully
+      500:
+        description: Failed to start simulator
+    """
+    if not hasattr(current_app, 'protocol_simulator'):
+        return jsonify({'error': 'Protocol simulator not available'}), 500
+    
+    # Connect to MQTT first if not connected
+    if not current_app.protocol_simulator.connected:
+        if not current_app.protocol_simulator.connect_mqtt():
+            return jsonify({'error': 'Failed to connect to MQTT broker'}), 500
+    
+    success = current_app.protocol_simulator.start_simulation()
+    if success:
+        return jsonify({'status': 'started'})
+    else:
+        return jsonify({'error': 'Failed to start simulation'}), 500
+
+
+@scada_bp.route('/scada/simulator/stop', methods=['POST'])
+@jwt_required()
+@permission_required('admin_panel')
+def stop_simulator():
+    """Stop the protocol gateway simulator.
+    
+    ---
+    tags:
+      - SCADA
+    security:
+      - JWT: []
+    responses:
+      200:
+        description: Simulator stopped successfully
+    """
+    if hasattr(current_app, 'protocol_simulator'):
+        current_app.protocol_simulator.stop_simulation()
+        return jsonify({'status': 'stopped'})
+    else:
+        return jsonify({'error': 'Protocol simulator not available'}), 500
+
+
+@scada_bp.route('/scada/simulator/inject', methods=['POST'])
+@jwt_required()
+@permission_required('admin_panel')
+def inject_test_scenario():
+    """Inject test scenario into the simulator.
+    
+    ---
+    tags:
+      - SCADA
+    security:
+      - JWT: []
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            scenario_type:
+              type: string
+              enum: ['high_temperature', 'sensor_failure', 'unit_offline']
+              description: Type of scenario to inject
+            unit_id:
+              type: string
+              description: Specific unit ID (optional)
+    responses:
+      200:
+        description: Scenario injected successfully
+      400:
+        description: Invalid request data
+      500:
+        description: Injection failed
+    """
+    try:
+        data = request.get_json()
+        if not data or 'scenario_type' not in data:
+            return jsonify({'error': 'scenario_type is required'}), 400
+        
+        valid_scenarios = ['high_temperature', 'sensor_failure', 'unit_offline']
+        if data['scenario_type'] not in valid_scenarios:
+            return jsonify({'error': f'Invalid scenario type. Must be one of: {valid_scenarios}'}), 400
+        
+        if not hasattr(current_app, 'protocol_simulator'):
+            return jsonify({'error': 'Protocol simulator not available'}), 500
+        
+        current_app.protocol_simulator.inject_test_scenario(
+            scenario_type=data['scenario_type'],
+            unit_id=data.get('unit_id')
+        )
+        
+        return jsonify({'status': 'scenario_injected', 'scenario_type': data['scenario_type']})
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

@@ -143,16 +143,27 @@ def create_app(config_name=None):
             from app.services.mqtt_service import mqtt_client
             from app.services.websocket_service import websocket_service
             from app.services.realtime_processor import realtime_processor
+            from app.services.opcua_service import opcua_client
+            from app.services.protocol_gateway_simulator import ProtocolGatewaySimulator
             
             # Initialize services with app context
             mqtt_client.init_app(app)
             websocket_service.init_app(app)
             realtime_processor.init_app(app)
+            opcua_client.init_app(app)
+            
+            # Initialize protocol simulator
+            protocol_simulator = ProtocolGatewaySimulator(
+                mqtt_broker_host=app.config.get('MQTT_BROKER_HOST', 'localhost'),
+                mqtt_broker_port=app.config.get('MQTT_BROKER_PORT', 1883)
+            )
             
             # Store references in app for easy access
             app.mqtt_client = mqtt_client
             app.websocket_service = websocket_service
             app.realtime_processor = realtime_processor
+            app.opcua_client = opcua_client
+            app.protocol_simulator = protocol_simulator
             
         except ImportError as e:
             import logging
@@ -171,6 +182,10 @@ def create_app(config_name=None):
             status['websocket'] = app.websocket_service.get_status()
         if hasattr(app, 'realtime_processor'):
             status['realtime_processor'] = app.realtime_processor.get_status()
+        if hasattr(app, 'opcua_client'):
+            status['opcua'] = app.opcua_client.get_status()
+        if hasattr(app, 'protocol_simulator'):
+            status['protocol_simulator'] = app.protocol_simulator.get_status()
             
         return status
     
