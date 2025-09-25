@@ -99,7 +99,7 @@ class User(db.Model):
     last_name = Column(String(100))
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login = Column(DateTime)
     
     # Foreign Keys
@@ -159,7 +159,7 @@ class Unit(db.Model):
     user_load = Column(Float, default=0.0)
     
     created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
     sensors = relationship('Sensor', back_populates='unit', cascade='all, delete-orphan')
@@ -182,7 +182,7 @@ class Sensor(db.Model):
     is_active = Column(Boolean, default=True)
     
     created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
     unit = relationship('Unit', back_populates='sensors')

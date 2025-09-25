@@ -27,7 +27,12 @@ class EnumField(fields.Field):
     def deserialize(self, value, attr=None, data=None, **kwargs):
         """Deserialize string value to enum."""
         if isinstance(value, str):
-            return self.enum_class(value)
+            try:
+                return self.enum_class(value)
+            except ValueError:
+                # Convert ValueError to Marshmallow ValidationError for proper error handling
+                valid_values = [e.value for e in self.enum_class]
+                raise ValidationError(f'Invalid value "{value}". Valid values are: {valid_values}')
         return value
 
 
