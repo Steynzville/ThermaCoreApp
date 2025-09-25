@@ -379,8 +379,9 @@ def get_users_stats():
       - JWT: []
     """
     total_users = User.query.count()
-    active_users = User.query.filter(User.is_active == True).count()
-    inactive_users = User.query.filter(User.is_active == False).count()
+    # Use explicit boolean filters that are portable across databases
+    active_users = User.query.filter(User.is_active.is_(True)).count()
+    inactive_users = User.query.filter(User.is_active.is_(False)).count()
     
     # Role counts
     admin_role = Role.query.filter(Role.name == 'admin').first()

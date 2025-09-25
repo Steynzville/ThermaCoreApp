@@ -409,11 +409,15 @@ def get_unit_readings(unit_id):
     hours_back = request.args.get('hours', 24, type=int)
     sensor_type = request.args.get('sensor_type')
     
-    # Build query for sensor readings
+    # Calculate start time in Python for better portability and security
+    from datetime import datetime, timedelta
+    start_time = datetime.utcnow() - timedelta(hours=hours_back)
+    
+    # Build query for sensor readings with parameterized timestamp
     query = db.session.query(SensorReading).join(Sensor).filter(
         Sensor.unit_id == unit_id,
-        SensorReading.timestamp >= db.func.now() - db.text("INTERVAL :hours_back HOUR")
-    ).params(hours_back=hours_back)
+        SensorReading.timestamp >= start_time
+    )
     
     if sensor_type:
         query = query.filter(Sensor.sensor_type == sensor_type)
@@ -531,6 +535,7 @@ def get_units_stats():
       - JWT: []
     """
     # Use single query with conditional aggregation for better performance
+    # Make boolean comparisons explicit and portable across databases
     result = db.session.query(
         db.func.count().label('total_units'),
         db.func.sum(db.case((Unit.status == 'online', 1), else_=0)).label('online_units'),
@@ -540,8 +545,9 @@ def get_units_stats():
         db.func.sum(db.case((Unit.health_status == 'critical', 1), else_=0)).label('critical_health'),
         db.func.sum(db.case((Unit.health_status == 'warning', 1), else_=0)).label('warning_health'),
         db.func.sum(db.case((Unit.health_status == 'optimal', 1), else_=0)).label('optimal_health'),
-        db.func.sum(db.case((Unit.has_alert == True, 1), else_=0)).label('units_with_alerts'),
-        db.func.sum(db.case((Unit.has_alarm == True, 1), else_=0)).label('units_with_alarms')
+        # Explicit boolean comparison for better PostgreSQL compatibility
+        db.func.sum(db.case((Unit.has_alert.is_(True), 1), else_=0)).label('units_with_alerts'),
+        db.func.sum(db.case((Unit.has_alarm.is_(True), 1), else_=0)).label('units_with_alarms')
     ).first()
     
     return jsonify({
