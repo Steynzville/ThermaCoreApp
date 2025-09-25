@@ -40,13 +40,17 @@ class Config:
     DEFAULT_PAGE_SIZE = 50
     MAX_PAGE_SIZE = 100
     
-    # MQTT Configuration
+    # MQTT Configuration with security enforcement
     MQTT_BROKER_HOST = os.environ.get('MQTT_BROKER_HOST', 'localhost')
     MQTT_BROKER_PORT = int(os.environ.get('MQTT_BROKER_PORT', 1883))
     MQTT_USERNAME = os.environ.get('MQTT_USERNAME')
     MQTT_PASSWORD = os.environ.get('MQTT_PASSWORD')
     MQTT_CLIENT_ID = os.environ.get('MQTT_CLIENT_ID', 'thermacore_backend')
     MQTT_KEEPALIVE = int(os.environ.get('MQTT_KEEPALIVE', 60))
+    MQTT_USE_TLS = os.environ.get('MQTT_USE_TLS', 'false').lower() == 'true'
+    MQTT_CA_CERTS = os.environ.get('MQTT_CA_CERTS')  # Path to CA certificate file
+    MQTT_CERT_FILE = os.environ.get('MQTT_CERT_FILE')  # Path to client certificate file
+    MQTT_KEY_FILE = os.environ.get('MQTT_KEY_FILE')   # Path to client private key file
     MQTT_SCADA_TOPICS = [
         'scada/+/temperature',
         'scada/+/pressure', 
@@ -55,18 +59,23 @@ class Config:
         'scada/+/status'
     ]
     
-    # WebSocket Configuration
-    WEBSOCKET_CORS_ORIGINS = os.environ.get('WEBSOCKET_CORS_ORIGINS', '*').split(',')
+    # WebSocket Configuration with restricted CORS for production
+    # Default to localhost for development, but restrict in production
+    _default_websocket_origins = 'http://localhost:3000,http://localhost:5173'
+    WEBSOCKET_CORS_ORIGINS = os.environ.get('WEBSOCKET_CORS_ORIGINS', _default_websocket_origins).split(',')
     WEBSOCKET_PING_TIMEOUT = int(os.environ.get('WEBSOCKET_PING_TIMEOUT', 60))
     WEBSOCKET_PING_INTERVAL = int(os.environ.get('WEBSOCKET_PING_INTERVAL', 25))
     
-    # OPC UA Configuration
+    # OPC UA Configuration with enhanced security
     OPCUA_SERVER_URL = os.environ.get('OPCUA_SERVER_URL', 'opc.tcp://localhost:4840')
     OPCUA_USERNAME = os.environ.get('OPCUA_USERNAME')
     OPCUA_PASSWORD = os.environ.get('OPCUA_PASSWORD')  
     OPCUA_SECURITY_POLICY = os.environ.get('OPCUA_SECURITY_POLICY', 'None')
     OPCUA_SECURITY_MODE = os.environ.get('OPCUA_SECURITY_MODE', 'None')
     OPCUA_TIMEOUT = int(os.environ.get('OPCUA_TIMEOUT', 30))
+    OPCUA_CERT_FILE = os.environ.get('OPCUA_CERT_FILE')  # Path to client certificate
+    OPCUA_PRIVATE_KEY_FILE = os.environ.get('OPCUA_PRIVATE_KEY_FILE')  # Path to private key
+    OPCUA_TRUST_CERT_FILE = os.environ.get('OPCUA_TRUST_CERT_FILE')  # Path to server certificate to trust
 
 
 class DevelopmentConfig(Config):
@@ -79,6 +88,25 @@ class ProductionConfig(Config):
     """Production configuration."""
     DEBUG = False
     TESTING = False
+    
+    # Override WebSocket CORS for production - restrict to trusted domains
+    # This should be set via environment variable in production
+    _prod_websocket_origins = os.environ.get('WEBSOCKET_CORS_ORIGINS')
+    if not _prod_websocket_origins:
+        # If not explicitly set, use a secure default (no wildcard)
+        WEBSOCKET_CORS_ORIGINS = ['https://yourdomain.com']
+    else:
+        WEBSOCKET_CORS_ORIGINS = _prod_websocket_origins.split(',')
+    
+    # Enforce MQTT TLS in production if certificates are provided
+    MQTT_USE_TLS = True  # Force TLS in production
+    
+    # Enforce OPC UA security in production
+    # Override to use at least Basic256Sha256 if not explicitly configured
+    if not os.environ.get('OPCUA_SECURITY_POLICY') or os.environ.get('OPCUA_SECURITY_POLICY') == 'None':
+        OPCUA_SECURITY_POLICY = 'Basic256Sha256'
+    if not os.environ.get('OPCUA_SECURITY_MODE') or os.environ.get('OPCUA_SECURITY_MODE') == 'None':
+        OPCUA_SECURITY_MODE = 'SignAndEncrypt'
 
 
 class TestingConfig(Config):
