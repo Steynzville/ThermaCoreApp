@@ -150,7 +150,7 @@ class ThermaCoreCRUDUser(HttpUser):
             "id": unit_id,
             "name": f"Performance Test Unit {unit_id}",
             "serial_number": f"{unit_id}-2024-{random.randint(100, 999)}",
-            "install_date": datetime.now().isoformat(),
+            "install_date": datetime.utcnow().isoformat(),
             "location": f"Test Site {random.randint(1, 10)}",
             "client_name": f"Test Client {random.randint(1, 5)}",
             "client_email": f"client{random.randint(1, 5)}@test.com"

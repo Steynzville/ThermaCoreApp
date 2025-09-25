@@ -240,6 +240,10 @@ def update_unit(unit_id):
     
     try:
         db.session.commit()
+        
+        # Refresh to get database-generated timestamp
+        db.session.refresh(unit)
+        
         unit_schema = UnitSchema()
         return jsonify(unit_schema.dump(unit)), 200
         
@@ -354,6 +358,9 @@ def create_unit_sensor(unit_id):
     
     db.session.add(sensor)
     db.session.commit()
+    
+    # Refresh to get database-generated timestamp
+    db.session.refresh(sensor)
     
     sensor_schema = SensorSchema()
     return jsonify(sensor_schema.dump(sensor)), 201
@@ -474,6 +481,9 @@ def update_unit_status(unit_id):
             setattr(unit, field, data[field])
     
     db.session.commit()
+    
+    # Refresh to get database-generated timestamp
+    db.session.refresh(unit)
     
     unit_schema = UnitSchema()
     return jsonify(unit_schema.dump(unit)), 200
