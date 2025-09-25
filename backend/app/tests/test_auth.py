@@ -205,8 +205,12 @@ class TestUserRegistration:
         token = self.get_auth_token(client)
         
         # Get admin role ID
-        from app.models import Role, RoleEnum
+        from app.models import Role, RoleEnum, User
         admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
+        
+        # Verify user doesn't exist before registration
+        existing_user = User.query.filter_by(username='newuser').first()
+        assert existing_user is None, "User should not exist before registration"
         
         response = client.post('/api/v1/auth/register',
             json={
@@ -223,10 +227,24 @@ class TestUserRegistration:
             }
         )
         
+        # Verify HTTP response
         assert response.status_code == 201
         data = json.loads(response.data)
         assert data['username'] == 'newuser'
         assert data['email'] == 'newuser@test.com'
+        
+        # Verify user was actually created in the database with correct details
+        created_user = User.query.filter_by(username='newuser').first()
+        assert created_user is not None, "User should exist in database after registration"
+        assert created_user.username == 'newuser', "Username should match"
+        assert created_user.email == 'newuser@test.com', "Email should match"
+        assert created_user.first_name == 'New', "First name should match"
+        assert created_user.last_name == 'User', "Last name should match"
+        assert created_user.role_id == admin_role.id, "Role ID should match"
+        assert created_user.is_active is True, "User should be active by default"
+        assert created_user.password_hash is not None, "Password hash should be set"
+        assert created_user.created_at is not None, "Created timestamp should be set"
+        assert created_user.updated_at is not None, "Updated timestamp should be set"
     
     def test_register_user_without_permission(self, client):
         """Test user registration without proper permissions."""
