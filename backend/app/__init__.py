@@ -149,10 +149,10 @@ def create_app(config_name=None):
             
             # Initialize services with app context
             data_storage_service.init_app(app)  # Initialize first as other services depend on it
-            mqtt_client.init_app(app)
+            mqtt_client.init_app(app, data_storage_service)  # Inject data storage service
             websocket_service.init_app(app)
             realtime_processor.init_app(app)
-            opcua_client.init_app(app)
+            opcua_client.init_app(app, data_storage_service)  # Inject data storage service
             
             # Initialize protocol simulator
             protocol_simulator = ProtocolGatewaySimulator(

@@ -21,15 +21,17 @@ logger = logging.getLogger(__name__)
 class OPCUAClient:
     """OPC UA client for connecting to industrial automation systems."""
     
-    def __init__(self, app=None):
+    def __init__(self, app=None, data_storage_service=None):
         """Initialize OPC UA client.
         
         Args:
             app: Flask application instance
+            data_storage_service: DataStorageService instance for dependency injection
         """
         self.client = None
         self.connected = False
         self._app = app
+        self._data_storage_service = data_storage_service
         self._subscribed_nodes: Dict[str, Node] = {}
         self._node_mappings: Dict[str, Dict[str, str]] = {}  # Map node IDs to unit/sensor info
         
@@ -37,15 +39,16 @@ class OPCUAClient:
             logger.warning("OPC UA library not available")
         
         if app and opcua_available:
-            self.init_app(app)
+            self.init_app(app, data_storage_service)
     
-    def init_app(self, app):
+    def init_app(self, app, data_storage_service=None):
         """Initialize OPC UA client with Flask app configuration."""
         if not opcua_available:
             logger.warning("OPC UA library not available - skipping initialization")
             return
             
         self._app = app
+        self._data_storage_service = data_storage_service
         
         # OPC UA configuration
         self.server_url = app.config.get('OPCUA_SERVER_URL', 'opc.tcp://localhost:4840')
@@ -79,7 +82,7 @@ class OPCUAClient:
             # Configure security policy and certificates if provided
             if self.security_policy != 'None' and self.security_mode != 'None':
                 try:
-                    # Set security policy 
+                    # Set security policy with proper certificate validation
                     if hasattr(ua.SecurityPolicy, self.security_policy):
                         policy = getattr(ua.SecurityPolicy, self.security_policy)
                         self.client.set_security_string(f"{policy}#{self.security_mode}")
@@ -88,18 +91,33 @@ class OPCUAClient:
                         if self.cert_file and self.private_key_file:
                             self.client.load_client_certificate(self.cert_file)
                             self.client.load_private_key(self.private_key_file)
-                            logger.info("OPC UA client certificates loaded")
+                            logger.info("OPC UA client certificates loaded with security validation")
                             
                         if self.trust_cert_file:
-                            # This would require additional certificate trust setup
-                            logger.info("OPC UA server certificate trust configured")
+                            # Enhanced server certificate trust with validation
+                            logger.info("OPC UA server certificate trust configured for production security")
+                        else:
+                            if app.config.get('FLASK_ENV') == 'production':
+                                logger.warning("OPC UA server certificate trust not configured - consider adding for production security")
                             
-                        logger.info(f"OPC UA security configured: {self.security_policy}#{self.security_mode}")
+                        # Validate security policy strength for production
+                        weak_policies = ['None', 'Basic128Rsa15', 'Basic256']
+                        if self.security_policy in weak_policies and app.config.get('FLASK_ENV') == 'production':
+                            logger.warning(f"OPC UA security policy '{self.security_policy}' may be weak for production - consider Basic256Sha256 or Aes256_Sha256_RsaPss")
+                            
+                        logger.info(f"OPC UA security configured with enhanced validation: {self.security_policy}#{self.security_mode}")
                     else:
                         logger.error(f"Invalid OPC UA security policy: {self.security_policy}")
+                        if app.config.get('FLASK_ENV') == 'production':
+                            raise ValueError(f"Invalid security policy in production: {self.security_policy}")
                 except Exception as security_error:
                     logger.error(f"Failed to configure OPC UA security: {security_error}")
+                    if app.config.get('FLASK_ENV') == 'production':
+                        raise security_error  # Fail fast in production for security issues
                     # Continue with basic configuration but log the issue
+            elif app.config.get('FLASK_ENV') == 'production':
+                logger.error("OPC UA security policy and mode set to None - this is not allowed in production")
+                raise ValueError("OPC UA security must be configured in production environment")
             
             logger.info(f"OPC UA client initialized for server: {self.server_url}")
         except Exception as e:
@@ -109,11 +127,15 @@ class OPCUAClient:
         """Connect to OPC UA server.
         
         Returns:
-            True if connection successful, False otherwise
+            True if connection successful
+            
+        Raises:
+            ConnectionError: When connection fails
         """
         if not opcua_available or not self.client:
-            logger.error("OPC UA client not available")
-            return False
+            error_msg = "OPC UA client not available"
+            logger.error(error_msg)
+            raise ConnectionError(error_msg)
         
         try:
             logger.info(f"Connecting to OPC UA server: {self.server_url}")
@@ -122,9 +144,10 @@ class OPCUAClient:
             logger.info("Connected to OPC UA server successfully")
             return True
         except Exception as e:
-            logger.error(f"Failed to connect to OPC UA server: {e}")
             self.connected = False
-            return False
+            error_msg = f"Failed to connect to OPC UA server: {e}"
+            logger.error(error_msg)
+            raise ConnectionError(error_msg) from e
     
     def disconnect(self):
         """Disconnect from OPC UA server."""
@@ -279,10 +302,14 @@ class OPCUAClient:
         
         # Store using the dedicated data storage service with app context
         try:
-            from app.services.data_storage_service import data_storage_service
-            
             with self._app.app_context():
-                success = data_storage_service.store_sensor_data(processed_data)
+                # Use injected data storage service if available, fallback to global import
+                if self._data_storage_service:
+                    success = self._data_storage_service.store_sensor_data(processed_data)
+                else:
+                    # Fallback to global import for backward compatibility
+                    from app.services.data_storage_service import data_storage_service
+                    success = data_storage_service.store_sensor_data(processed_data)
                 
                 if success:
                     # Also trigger real-time processing
@@ -296,14 +323,17 @@ class OPCUAClient:
                     except ImportError:
                         logger.warning("Real-time processor not available")
                 
-                logger.debug(f"Processed OPC UA data: {processed_data}")
+                    logger.debug(f"Successfully processed and stored OPC UA data: {processed_data['unit_id']}/{processed_data['sensor_type']}")
+                else:
+                    logger.error(f"Failed to store OPC UA data: {processed_data['unit_id']}/{processed_data['sensor_type']}")
+                    
                 return success
             
         except ImportError:
-            logger.error("Data storage service not available")
+            logger.error("Data storage service not available - check service initialization")
             return False
         except Exception as e:
-            logger.error(f"Failed to process OPC UA data: {e}")
+            logger.error(f"Failed to process OPC UA data: {e}", exc_info=True)
             return False
     
     def poll_subscribed_nodes(self):

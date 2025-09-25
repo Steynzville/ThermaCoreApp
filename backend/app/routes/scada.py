@@ -355,13 +355,10 @@ def opcua_connect():
         return SecurityAwareErrorHandler.handle_service_unavailable('OPC UA client')
     
     try:
-        success = current_app.opcua_client.connect()
-        if success:
-            return jsonify({'status': 'connected'})
-        else:
-            return SecurityAwareErrorHandler.handle_opcua_error(
-                Exception("Connection failed"), 'server connection'
-            )
+        current_app.opcua_client.connect()  # Now raises ConnectionError on failure
+        return jsonify({'status': 'connected'})
+    except ConnectionError as e:
+        return SecurityAwareErrorHandler.handle_opcua_error(e, 'server connection')
     except Exception as e:
         return SecurityAwareErrorHandler.handle_opcua_error(e, 'server connection')
 
