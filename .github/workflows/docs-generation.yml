@@ -617,7 +617,19 @@ jobs:
           
           echo "Documentation copied successfully!"
       
-      # Step 8: Commit and push changes to docs repository
+      # Step 8: Verify git remote configuration for diagnostics
+      # This diagnostic step helps verify if the Personal Access Token (DOCS_REPO_TOKEN) is being used for authentication
+      - name: Verify git remote configuration
+        run: |
+          cd docs-repo
+          
+          echo "=== Git Remote Configuration Diagnostics ==="
+          echo "Current working directory: $(pwd)"
+          echo "Git remote configuration:"
+          git remote -v
+          echo "==========================================="
+      
+      # Step 9: Commit and push changes to docs repository
       - name: Commit and push documentation updates
         run: |
           cd docs-repo
@@ -649,7 +661,7 @@ jobs:
           
           echo "Documentation successfully pushed to docs repository!"
       
-      # Step 9: Optional Mintlify API deployment
+      # Step 10: Optional Mintlify API deployment
       # This step uses the Mintlify API to trigger deployment if API key is configured
       - name: Deploy via Mintlify API (Optional)
         if: secrets.MINTIFY_API_KEY != ''
@@ -667,7 +679,7 @@ jobs:
               "subdirectory": "thermacore"
             }' || echo "Mintlify API deployment skipped or failed - Netlify auto-deploy will handle it"
       
-      # Step 10: Create deployment summary
+      # Step 11: Create deployment summary
       - name: Create deployment summary
         run: |
           echo "## 📚 Documentation Deployment Summary" >> $GITHUB_STEP_SUMMARY
