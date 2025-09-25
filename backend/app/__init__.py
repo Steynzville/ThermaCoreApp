@@ -54,9 +54,14 @@ def create_app(config_name=None):
     """Create Flask application using the application factory pattern."""
     app = Flask(__name__)
     
-    # Load configuration
+    # Load configuration with better environment selection
     if config_name is None:
-        config_name = os.environ.get('FLASK_ENV', 'development')
+        # Default to production for docs/app generation to avoid dev-only config
+        config_name = os.environ.get('FLASK_ENV', os.environ.get('APP_ENV', 'production'))
+        
+        # Only use development as default if explicitly running in development
+        if config_name == 'development' and not os.environ.get('FLASK_DEBUG'):
+            config_name = 'production'
     
     from config import config
     app.config.from_object(config[config_name])

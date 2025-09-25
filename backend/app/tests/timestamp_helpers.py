@@ -1,5 +1,14 @@
-"""Helper utilities for timestamp handling in tests."""
-from datetime import datetime
+"""Helper utilities for timestamp handling in tests.
+
+NOTE: These helpers are primarily needed for SQLite testing compatibility.
+With PostgreSQL testing (USE_POSTGRES_TESTS=true), database triggers handle 
+timestamp updates automatically, making these helpers largely unnecessary.
+
+To enable PostgreSQL testing, set environment variables:
+    USE_POSTGRES_TESTS=true
+    POSTGRES_TEST_URL=postgresql://user:pass@localhost:5432/test_db
+"""
+from datetime import datetime, timezone
 
 
 def simulate_db_trigger_update(obj):
@@ -14,7 +23,7 @@ def simulate_db_trigger_update(obj):
         obj: SQLAlchemy model instance to update
     """
     if hasattr(obj, 'updated_at'):
-        obj.updated_at = datetime.utcnow()
+        obj.updated_at = datetime.now(timezone.utc)
 
 
 def create_test_model_with_utc(model_class, **kwargs):
@@ -32,9 +41,9 @@ def create_test_model_with_utc(model_class, **kwargs):
     
     # Ensure UTC timestamps are set
     if hasattr(instance, 'created_at'):
-        instance.created_at = datetime.utcnow()
+        instance.created_at = datetime.now(timezone.utc)
     if hasattr(instance, 'updated_at'):  
-        instance.updated_at = datetime.utcnow()
+        instance.updated_at = datetime.now(timezone.utc)
         
     return instance
 

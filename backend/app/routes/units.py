@@ -410,8 +410,9 @@ def get_unit_readings(unit_id):
     sensor_type = request.args.get('sensor_type')
     
     # Calculate start time in Python for better portability and security
-    from datetime import datetime, timedelta
-    start_time = datetime.utcnow() - timedelta(hours=hours_back)
+    # Use timezone-aware UTC datetimes for consistency
+    from datetime import datetime, timedelta, timezone
+    start_time = datetime.now(timezone.utc) - timedelta(hours=hours_back)
     
     # Build query for sensor readings with parameterized timestamp
     query = db.session.query(SensorReading).join(Sensor).filter(

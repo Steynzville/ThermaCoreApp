@@ -1,5 +1,5 @@
 """Authentication routes for ThermaCore SCADA API."""
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import wraps
 
 from flask import Blueprint, request, jsonify, current_app
@@ -159,7 +159,7 @@ def login():
     
     if user and user.check_password(data['password']) and user.is_active:
         # Update last login
-        user.last_login = datetime.utcnow()
+        user.last_login = datetime.now(timezone.utc)
         db.session.commit()
         
         # Refresh to get database-generated timestamp

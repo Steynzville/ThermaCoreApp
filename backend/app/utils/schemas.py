@@ -1,5 +1,5 @@
 """Data serializers and validation schemas for ThermaCore SCADA API."""
-from datetime import datetime
+from datetime import datetime, timezone
 from marshmallow import Schema, fields, validate, ValidationError, post_load
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 
