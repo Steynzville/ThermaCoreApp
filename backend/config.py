@@ -39,6 +39,34 @@ class Config:
     # Pagination
     DEFAULT_PAGE_SIZE = 50
     MAX_PAGE_SIZE = 100
+    
+    # MQTT Configuration
+    MQTT_BROKER_HOST = os.environ.get('MQTT_BROKER_HOST', 'localhost')
+    MQTT_BROKER_PORT = int(os.environ.get('MQTT_BROKER_PORT', 1883))
+    MQTT_USERNAME = os.environ.get('MQTT_USERNAME')
+    MQTT_PASSWORD = os.environ.get('MQTT_PASSWORD')
+    MQTT_CLIENT_ID = os.environ.get('MQTT_CLIENT_ID', 'thermacore_backend')
+    MQTT_KEEPALIVE = int(os.environ.get('MQTT_KEEPALIVE', 60))
+    MQTT_SCADA_TOPICS = [
+        'scada/+/temperature',
+        'scada/+/pressure', 
+        'scada/+/flow_rate',
+        'scada/+/power',
+        'scada/+/status'
+    ]
+    
+    # WebSocket Configuration
+    WEBSOCKET_CORS_ORIGINS = os.environ.get('WEBSOCKET_CORS_ORIGINS', '*').split(',')
+    WEBSOCKET_PING_TIMEOUT = int(os.environ.get('WEBSOCKET_PING_TIMEOUT', 60))
+    WEBSOCKET_PING_INTERVAL = int(os.environ.get('WEBSOCKET_PING_INTERVAL', 25))
+    
+    # OPC UA Configuration
+    OPCUA_SERVER_URL = os.environ.get('OPCUA_SERVER_URL', 'opc.tcp://localhost:4840')
+    OPCUA_USERNAME = os.environ.get('OPCUA_USERNAME')
+    OPCUA_PASSWORD = os.environ.get('OPCUA_PASSWORD')  
+    OPCUA_SECURITY_POLICY = os.environ.get('OPCUA_SECURITY_POLICY', 'None')
+    OPCUA_SECURITY_MODE = os.environ.get('OPCUA_SECURITY_MODE', 'None')
+    OPCUA_TIMEOUT = int(os.environ.get('OPCUA_TIMEOUT', 30))
 
 
 class DevelopmentConfig(Config):
