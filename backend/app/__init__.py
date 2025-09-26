@@ -182,15 +182,21 @@ def create_app(config_name=None):
         from app.routes.units import units_bp
         from app.routes.users import users_bp
         from app.routes.scada import scada_bp
+        from app.routes.analytics import analytics_bp
+        from app.routes.historical import historical_bp
+        from app.routes.multiprotocol import multiprotocol_bp
         
         app.register_blueprint(auth_bp, url_prefix=app.config['API_PREFIX'])
         app.register_blueprint(units_bp, url_prefix=app.config['API_PREFIX'])
         app.register_blueprint(users_bp, url_prefix=app.config['API_PREFIX'])
         app.register_blueprint(scada_bp, url_prefix=app.config['API_PREFIX'])
+        app.register_blueprint(analytics_bp, url_prefix=app.config['API_PREFIX'])
+        app.register_blueprint(historical_bp, url_prefix=app.config['API_PREFIX'])
+        app.register_blueprint(multiprotocol_bp, url_prefix=app.config['API_PREFIX'])
     except ImportError:
         pass  # Routes may not be importable without full dependencies
     
-    # Initialize SCADA services (Phase 2)
+    # Initialize SCADA services (Phase 2, 3 & 4)
     if not app.config.get('TESTING', False):
         try:
             from app.services.mqtt_service import mqtt_client
@@ -199,6 +205,11 @@ def create_app(config_name=None):
             from app.services.opcua_service import opcua_client
             from app.services.protocol_gateway_simulator import ProtocolGatewaySimulator
             from app.services.data_storage_service import data_storage_service
+            # Phase 3 services
+            from app.services.anomaly_detection import anomaly_detection_service
+            # Phase 4 services
+            from app.services.modbus_service import modbus_service
+            from app.services.dnp3_service import dnp3_service
             
             # Initialize services with app context and handle security validation errors
             logger = logging.getLogger(__name__)
@@ -233,6 +244,26 @@ def create_app(config_name=None):
                 logger.error(f"Failed to initialize real-time processor: {e}", exc_info=True)
                 logger.warning(f"Real-time processor initialization failed: {e}")
             
+            # Initialize Phase 3 services
+            try:
+                anomaly_detection_service.init_app(app)
+                logger.info("Anomaly detection service initialized successfully")
+            except Exception as e:
+                logger.warning(f"Anomaly detection service initialization failed: {e}")
+            
+            # Initialize Phase 4 services
+            try:
+                modbus_service.init_app(app)
+                logger.info("Modbus service initialized successfully")
+            except Exception as e:
+                logger.warning(f"Modbus service initialization failed: {e}")
+                
+            try:
+                dnp3_service.init_app(app)
+                logger.info("DNP3 service initialized successfully")
+            except Exception as e:
+                logger.warning(f"DNP3 service initialization failed: {e}")
+            
             # Initialize protocol simulator (not critical)
             try:
                 protocol_simulator = ProtocolGatewaySimulator(
@@ -251,6 +282,10 @@ def create_app(config_name=None):
             app.opcua_client = opcua_client
             app.protocol_simulator = protocol_simulator
             app.data_storage_service = data_storage_service
+            # Phase 3 & 4 services
+            app.anomaly_detection_service = anomaly_detection_service
+            app.modbus_service = modbus_service
+            app.dnp3_service = dnp3_service
             
             logger.info("SCADA services initialization completed")
             
@@ -285,6 +320,13 @@ def create_app(config_name=None):
             status['protocol_simulator'] = app.protocol_simulator.get_status()
         if hasattr(app, 'data_storage_service'):
             status['data_storage'] = app.data_storage_service.get_status()
+        # Phase 3 & 4 services
+        if hasattr(app, 'anomaly_detection_service'):
+            status['anomaly_detection'] = app.anomaly_detection_service.get_status()
+        if hasattr(app, 'modbus_service'):
+            status['modbus'] = app.modbus_service.get_device_status()
+        if hasattr(app, 'dnp3_service'):
+            status['dnp3'] = app.dnp3_service.get_device_status()
             
         return status
     
