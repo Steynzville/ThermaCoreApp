@@ -166,8 +166,8 @@ def create_app(config_name=None):
             swagger = Swagger(app, template=swagger_template)
         except Exception as e:
             # Log the error but don't fail app creation if Swagger fails
-            import logging
-            logging.getLogger(__name__).warning(f"Swagger initialization failed: {e}")
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Swagger initialization failed: {e}")
             swagger = None
     
     # Import models to ensure they are registered (only if db is configured)
