@@ -146,12 +146,13 @@ class TestCriticalServiceInitialization:
         mock_logger = Mock()
         
         with patch('app.utils.environment.is_production_environment', return_value=False):
-            result = _initialize_critical_service(
-                mock_service, "Test Service", mock_app, mock_logger
-            )
+            with patch('app.utils.environment.is_testing_environment', return_value=False):
+                result = _initialize_critical_service(
+                    mock_service, "Test Service", mock_app, mock_logger
+                )
         
         assert result is False
-        mock_logger.warning.assert_called()
+        mock_logger.error.assert_called()  # Now expects error level logging for config issues
         
     def test_service_initialization_value_error_production(self):
         """Test ValueError handling in production environment."""
@@ -174,9 +175,10 @@ class TestCriticalServiceInitialization:
         mock_logger = Mock()
         
         with patch('app.utils.environment.is_production_environment', return_value=False):
-            result = _initialize_critical_service(
-                mock_service, "Test Service", mock_app, mock_logger
-            )
+            with patch('app.utils.environment.is_testing_environment', return_value=False):
+                result = _initialize_critical_service(
+                    mock_service, "Test Service", mock_app, mock_logger
+                )
         
         assert result is False
         mock_logger.warning.assert_called()
