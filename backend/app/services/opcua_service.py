@@ -350,11 +350,11 @@ class OPCUAClient:
                         
                     except Exception as cert_error:
                         # Handle certificate-specific errors separately from general security errors
-                        logger.error(f"Failed to load OPC UA certificates: {cert_error}")
+                        logger.error(f"Failed to load OPC UA certificates: {cert_error}", exc_info=True)
                         raise cert_error
                         
                 except Exception as security_error:
-                    logger.error(f"Failed to configure OPC UA security: {security_error}")
+                    logger.error(f"Failed to configure OPC UA security: {security_error}", exc_info=True)
                     # Always fail fast for security configuration errors (not just production)
                     raise security_error
                     
@@ -407,7 +407,7 @@ class OPCUAClient:
                 self.client.disconnect()
                 self.connected = False
             except Exception as e:
-                logger.error(f"Error disconnecting from OPC UA server: {e}")
+                logger.error(f"Error disconnecting from OPC UA server: {e}", exc_info=True)
     
     def add_node_mapping(self, node_id: str, unit_id: str, sensor_type: str, 
                         scale_factor: float = 1.0, offset: float = 0.0):
@@ -419,7 +419,18 @@ class OPCUAClient:
             sensor_type: Type of sensor
             scale_factor: Value scaling factor
             offset: Value offset
+        
+        Raises:
+            ValueError: If required parameters are None or empty
         """
+        # Defensive programming - validate required parameters
+        if not node_id or not isinstance(node_id, str):
+            raise ValueError("node_id must be a non-empty string")
+        if not unit_id or not isinstance(unit_id, str):
+            raise ValueError("unit_id must be a non-empty string")  
+        if not sensor_type or not isinstance(sensor_type, str):
+            raise ValueError("sensor_type must be a non-empty string")
+        
         self._node_mappings[node_id] = {
             'unit_id': unit_id,
             'sensor_type': sensor_type,
