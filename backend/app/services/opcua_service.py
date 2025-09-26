@@ -160,7 +160,7 @@ class OPCUAClient:
                 except ValueError as e:
                     # Certificate format errors are always security issues - always raise
                     logger.error(f"Invalid certificate format detected", exc_info=True)
-                    raise ValueError(f"Invalid certificate format: {e}")
+                    raise ValueError(f"Invalid certificate format: {e}") from e
             
             # Validate certificate is not expired (always a security issue)
             now = datetime.now(timezone.utc)
@@ -168,27 +168,23 @@ class OPCUAClient:
             # Robust timezone handling for certificate expiry validation
             # Handle different cryptography library versions with proper fallback
             try:
-                # Try newer cryptography versions first (not_valid_after_utc/not_valid_before_utc)
-                not_valid_after = getattr(certificate, 'not_valid_after_utc', None)
+                # Use chained getattr for concise fallback logic (newer versions first, then older)
+                not_valid_after = getattr(certificate, 'not_valid_after_utc', 
+                                        getattr(certificate, 'not_valid_after', None))
                 if not_valid_after is None:
-                    # Fallback to older versions (not_valid_after/not_valid_before)
-                    not_valid_after = getattr(certificate, 'not_valid_after', None)
-                    if not_valid_after is None:
-                        raise AttributeError("Certificate has no not_valid_after attribute")
+                    raise AttributeError("Certificate has no not_valid_after attribute")
                 
-                not_valid_before = getattr(certificate, 'not_valid_before_utc', None)
+                not_valid_before = getattr(certificate, 'not_valid_before_utc',
+                                         getattr(certificate, 'not_valid_before', None))
                 if not_valid_before is None:
-                    # Fallback to older versions
-                    not_valid_before = getattr(certificate, 'not_valid_before', None)
-                    if not_valid_before is None:
-                        raise AttributeError("Certificate has no not_valid_before attribute")
+                    raise AttributeError("Certificate has no not_valid_before attribute")
                 
                 not_valid_after_utc = self._normalize_certificate_datetime(not_valid_after)
                 not_valid_before_utc = self._normalize_certificate_datetime(not_valid_before)
                 
             except AttributeError as e:
                 logger.error(f"Certificate validation failed: unsupported certificate format - {e}", exc_info=True)
-                raise ValueError(f"Certificate format not supported: {e}")
+                raise ValueError(f"Certificate format not supported: {e}") from e
             
             if not_valid_after_utc < now:
                 logger.error(f"Certificate validation failed: expired certificate detected", exc_info=True)
@@ -213,11 +209,11 @@ class OPCUAClient:
             # File I/O errors - log with sanitized path and handle based on environment
             logger.error(f"Failed to read OPC UA trust certificate file", exc_info=True)
             if is_prod:
-                raise ValueError(f"Cannot read OPC UA trust certificate file")
+                raise ValueError(f"Cannot read OPC UA trust certificate file") from e
             else:
                 # Only allow file I/O issues in development with clear message
                 logger.warning(f"OPC UA trust certificate file I/O error (development): {e}")
-                raise ValueError(f"Certificate file I/O error: {e}")
+                raise ValueError(f"Certificate file I/O error: {e}") from e
         
         except ValueError:
             # Certificate validation errors (format, expiry, etc.) - always re-raise as-is
@@ -228,11 +224,11 @@ class OPCUAClient:
             # Other unexpected errors during certificate loading
             logger.error(f"Unexpected error during OPC UA trust certificate loading", exc_info=True)
             if is_prod:
-                raise ValueError(f"Failed to load OPC UA trust certificate in production: {e}")
+                raise ValueError(f"Failed to load OPC UA trust certificate in production: {e}") from e
             else:
                 # Only allow connection/loading issues in development  
                 logger.warning(f"OPC UA trust certificate loading failed (development): {e}")
-                raise ValueError(f"Certificate loading failed: {e}")
+                raise ValueError(f"Certificate loading failed: {e}") from e
     
     def init_app(self, app, data_storage_service=None):
         """Initialize OPC UA client with Flask app configuration."""
