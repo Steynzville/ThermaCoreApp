@@ -133,16 +133,18 @@ class OPCUAClient:
                         if self.cert_file and self.private_key_file:
                             self.client.load_client_certificate(self.cert_file)
                             self.client.load_private_key(self.private_key_file)
-                            logger.info("OPC UA client certificates loaded with security validation")
                             
                         if self.trust_cert_file:
                             # Enhanced server certificate trust with validation
-                            logger.info("OPC UA server certificate trust configured for production security")
-                        else:
-                            if is_prod:
-                                logger.warning("OPC UA server certificate trust not configured - consider adding for production security")
+                            pass
+                        elif is_prod:
+                            logger.warning("OPC UA server certificate trust not configured - consider adding for production security")
                             
-                        logger.info(f"OPC UA security configured with enhanced validation: {self.security_policy}#{self.security_mode}")
+                        # Single clear security status message per environment
+                        if is_prod:
+                            logger.info(f"OPC UA security enabled for production: {self.security_policy}#{self.security_mode} with certificates")
+                        else:
+                            logger.info(f"OPC UA security configured for development: {self.security_policy}#{self.security_mode}")
                     else:
                         # This should not happen with our validation, but kept for safety
                         raise ValueError(f"Invalid security policy in OPC UA library: {self.security_policy}")
@@ -155,6 +157,8 @@ class OPCUAClient:
             elif is_prod:
                 logger.error("OPC UA security policy and mode set to None - this is not allowed in production")
                 raise ValueError("OPC UA security must be configured in production environment")
+            else:
+                logger.info("OPC UA security disabled for development environment")
             
             logger.info(f"OPC UA client initialized for server: {self.server_url}")
         except Exception as e:

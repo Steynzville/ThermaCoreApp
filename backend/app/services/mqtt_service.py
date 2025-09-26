@@ -80,18 +80,18 @@ class MQTTClient:
                                   ciphers=secure_ciphers)
                 # Enable hostname verification for security
                 self.client.tls_insecure_set(False)
-                logger.info(f"MQTT TLS configured with certificates, hostname verification and secure ciphers (production: {is_production_environment(app)})")
             else:
                 # Use system CA certificates with security hardening
                 self.client.tls_set(cert_reqs=ssl.CERT_REQUIRED,
                                   tls_version=tls_version,
                                   ciphers=secure_ciphers)
                 self.client.tls_insecure_set(False)
-                logger.info(f"MQTT TLS configured with system certificates, hostname verification and secure ciphers (production: {is_production_environment(app)})")
                 
-            # Log TLS security status for production monitoring
+            # Single clear TLS status message per environment
             if is_production_environment(app):
-                logger.info("MQTT TLS enabled with hardened security configuration for production")
+                logger.info("MQTT TLS enabled with production security hardening (certificates, hostname verification, secure ciphers)")
+            else:
+                logger.info("MQTT TLS enabled for development environment")
         elif is_production_environment(app):
             logger.error("MQTT TLS not enabled - this is not allowed in production environments")
             raise ValueError("MQTT TLS must be enabled in production environment")
