@@ -192,15 +192,11 @@ def create_app(config_name=None):
             # Initialize services with app context and handle security validation errors
             logger = logging.getLogger(__name__)
             
-            # Initialize data storage service first (required by other services)
-            try:
-                data_storage_service.init_app(app)
-                logger.info("Data storage service initialized successfully")
-            except Exception as e:
-                logger.error(f"Failed to initialize data storage service: {e}", exc_info=True)
-                raise RuntimeError(f"Critical service initialization failed: data_storage_service - {e}") from e
-            
             # Initialize critical services using shared helper
+            _initialize_critical_service(
+                data_storage_service, "Data storage service", app, logger, 'init_app'
+            )
+            
             _initialize_critical_service(
                 mqtt_client, "MQTT client", app, logger, 
                 'init_app', data_storage_service

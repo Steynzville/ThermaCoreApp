@@ -63,6 +63,21 @@ class TestEnvironmentDetection:
         
         with patch.dict('os.environ', {'TESTING': '1'}):
             assert is_testing_environment() is True
+    
+    def test_testing_environment_not_development(self):
+        """Test that testing environment is not classified as development."""
+        with patch.dict('os.environ', {'TESTING': 'true'}):
+            assert is_testing_environment() is True
+            assert is_development_environment() is False
+            assert is_production_environment() is False
+    
+    def test_testing_environment_not_production(self):
+        """Test that testing environment is not classified as production."""
+        # Even with production environment variables, testing takes priority
+        with patch.dict('os.environ', {'TESTING': 'true', 'FLASK_ENV': 'production'}):
+            assert is_testing_environment() is True
+            assert is_production_environment() is False
+            assert is_development_environment() is False
 
 
 class TestOPCUASecurityPolicyValidation:
