@@ -115,15 +115,22 @@ def test_models_structure():
     print("Testing Models Structure...")
     
     try:
-        # Check model files exist
-        model_files = ['user.py', 'unit.py', 'sensor.py']
-        app_models_dir = os.path.join(backend_dir, 'app', 'models')
+        # Check that models are defined in __init__.py
+        from app.models import User, Role, Unit, Sensor, Permission, SensorReading
+        print("✓ User model imported")
+        print("✓ Role model imported")
+        print("✓ Unit model imported")
+        print("✓ Sensor model imported")
+        print("✓ Permission model imported")
+        print("✓ SensorReading model imported")
         
-        for model_file in model_files:
-            if os.path.exists(os.path.join(app_models_dir, model_file)):
-                print(f"✓ Model file '{model_file}' exists")
+        # Check model attributes
+        required_user_attrs = ['username', 'email', 'password_hash', 'role_id']
+        for attr in required_user_attrs:
+            if hasattr(User, attr):
+                print(f"  ✓ User.{attr} exists")
             else:
-                print(f"✗ Model file '{model_file}' missing")
+                print(f"  ✗ User.{attr} missing")
                 return False
                 
         return True
