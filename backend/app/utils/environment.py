@@ -229,7 +229,8 @@ def handle_environment_detection_error(
     logger, 
     app, 
     original_error: Exception, 
-    context: str = "initialization"
+    context: str = "initialization",
+    is_security_validation: bool = False
 ):
     """
     Centralized helper for handling environment detection errors during service initialization.
@@ -244,6 +245,7 @@ def handle_environment_detection_error(
         app: Flask application instance
         original_error: The original exception that occurred
         context: Context string for logging (e.g., "initialization", "testing check")
+        is_security_validation: Whether this is a security validation error
         
     Returns:
         Tuple of (should_continue, error_to_raise_or_None)
@@ -256,7 +258,10 @@ def handle_environment_detection_error(
     # Always fail in production
     try:
         if is_production_environment(app):
-            error_msg = f"{service_name} {context} failed in production: {original_error}"
+            if is_security_validation:
+                error_msg = f"{service_name} security validation failed in production: {original_error}"
+            else:
+                error_msg = f"Critical service initialization failed: {service_name} - {original_error}"
             logger.error(error_msg, exc_info=True)
             runtime_error = RuntimeError(error_msg)
             runtime_error.__cause__ = original_error
@@ -272,7 +277,7 @@ def handle_environment_detection_error(
     # Always fail in testing
     try:
         if is_testing_environment(app):
-            error_msg = f"{service_name} {context} failed in testing: {original_error}"
+            error_msg = f"{service_name} initialization failed in testing: {original_error}"
             logger.error(error_msg, exc_info=True)
             runtime_error = RuntimeError(error_msg)
             runtime_error.__cause__ = original_error
@@ -285,12 +290,15 @@ def handle_environment_detection_error(
         runtime_error.__cause__ = env_error
         return False, runtime_error
     
-    # In development, log appropriately based on error type but continue
+    # In development, still fail for most service initialization errors
+    # Only continue in very specific circumstances (not for configuration errors)
     if isinstance(original_error, (ValueError, RuntimeError)):
-        # Configuration issues that should be fixed
+        # Configuration issues that should be fixed - still fail in development
         logger.error(f"{service_name} failed with configuration error (development). "
                     f"This should be addressed: {original_error}")
+        return False, None
     else:
         logger.warning(f"{service_name} {context} failed (development): {original_error}")
+        return False, None  # Most errors should still fail in development
     
     return True, None

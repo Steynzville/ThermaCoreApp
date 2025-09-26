@@ -82,7 +82,7 @@ def _initialize_critical_service(service, service_name: str, app, logger, init_m
         # Use centralized environment detection error handling
         from app.utils.environment import handle_environment_detection_error
         should_continue, error_to_raise = handle_environment_detection_error(
-            service_name, logger, app, e, "security validation"
+            service_name, logger, app, e, "security validation", is_security_validation=True
         )
         
         if error_to_raise:
@@ -95,7 +95,7 @@ def _initialize_critical_service(service, service_name: str, app, logger, init_m
         # Use centralized environment detection error handling
         from app.utils.environment import handle_environment_detection_error
         should_continue, error_to_raise = handle_environment_detection_error(
-            service_name, logger, app, e, "initialization"
+            service_name, logger, app, e, "initialization", is_security_validation=False
         )
         
         if error_to_raise:
