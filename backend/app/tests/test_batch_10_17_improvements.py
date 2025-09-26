@@ -1,5 +1,6 @@
 """Tests for batch 10-17 improvements: environment detection, policy validation, and service initialization."""
 
+import os
 import pytest
 import logging
 from unittest.mock import Mock, patch, MagicMock
@@ -48,7 +49,11 @@ class TestEnvironmentDetection:
     
     def test_default_to_production_when_unclear(self):
         """Test that unclear environment defaults to production for safety."""
+        env_keys_to_clear = ['FLASK_ENV', 'APP_ENV', 'TESTING', 'DEBUG'] 
         with patch.dict('os.environ', {}, clear=True):
+            # Explicitly ensure no environment vars that affect detection
+            for key in env_keys_to_clear:
+                os.environ.pop(key, None)
             assert is_production_environment() is True
     
     def test_testing_environment_detection(self):
