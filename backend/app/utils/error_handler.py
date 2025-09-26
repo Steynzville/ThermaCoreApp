@@ -57,21 +57,21 @@ class SecurityAwareErrorHandler:
     def handle_mqtt_error(error: Exception, context: str = 'MQTT operation') -> Tuple[Any, int]:
         """Handle MQTT-specific errors."""
         return SecurityAwareErrorHandler.handle_service_error(
-            error, 'service_unavailable', f"MQTT {context}", 500
+            error, 'service_unavailable', f"MQTT {context}", 503
         )
     
     @staticmethod
     def handle_opcua_error(error: Exception, context: str = 'OPC UA operation') -> Tuple[Any, int]:
         """Handle OPC UA-specific errors."""
         return SecurityAwareErrorHandler.handle_service_error(
-            error, 'service_unavailable', f"OPC UA {context}", 500
+            error, 'service_unavailable', f"OPC UA {context}", 503
         )
     
     @staticmethod
     def handle_websocket_error(error: Exception, context: str = 'WebSocket operation') -> Tuple[Any, int]:
         """Handle WebSocket-specific errors."""
         return SecurityAwareErrorHandler.handle_service_error(
-            error, 'service_unavailable', f"WebSocket {context}", 500
+            error, 'service_unavailable', f"WebSocket {context}", 503
         )
     
     @staticmethod
@@ -105,4 +105,4 @@ class SecurityAwareErrorHandler:
     def handle_service_unavailable(service_name: str) -> Tuple[Any, int]:
         """Handle service unavailable cases."""
         logger.warning(f"{service_name} service not available")
-        return jsonify({'error': SecurityAwareErrorHandler.GENERIC_MESSAGES['service_unavailable']}), 500
+        return jsonify({'error': SecurityAwareErrorHandler.GENERIC_MESSAGES['service_unavailable']}), 503

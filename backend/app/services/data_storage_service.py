@@ -38,10 +38,40 @@ class DataStorageService:
             True if storage was successful, False otherwise
         """
         try:
+            # Validate required fields
+            required_fields = ['unit_id', 'sensor_type', 'value', 'timestamp']
+            missing_fields = [field for field in required_fields if field not in data or data[field] is None]
+            
+            if missing_fields:
+                logger.error(f"Missing required sensor data fields: {missing_fields}. Data: {data}")
+                return False
+            
+            # Validate data types
+            if not isinstance(data['value'], (int, float)):
+                try:
+                    data['value'] = float(data['value'])
+                except (ValueError, TypeError):
+                    logger.error(f"Invalid sensor value - cannot convert to number: {data['value']}")
+                    return False
+            
+            # Validate unit_id and sensor_type are non-empty strings
+            if not isinstance(data['unit_id'], str) or not data['unit_id'].strip():
+                logger.error(f"Invalid unit_id - must be non-empty string: {data['unit_id']}")
+                return False
+                
+            if not isinstance(data['sensor_type'], str) or not data['sensor_type'].strip():
+                logger.error(f"Invalid sensor_type - must be non-empty string: {data['sensor_type']}")
+                return False
+            
+            # Set default quality if not provided
+            if 'quality' not in data or not data['quality']:
+                data['quality'] = 'GOOD'
+                logger.debug(f"Setting default quality 'GOOD' for sensor data: {data['unit_id']}/{data['sensor_type']}")
+            
             # Find or create sensor
             sensor = self.find_or_create_sensor(
-                unit_id=data['unit_id'],
-                sensor_type=data['sensor_type']
+                unit_id=data['unit_id'].strip(),
+                sensor_type=data['sensor_type'].strip()
             )
             
             if not sensor:

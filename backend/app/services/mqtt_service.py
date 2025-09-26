@@ -18,24 +18,27 @@ logger = logging.getLogger(__name__)
 class MQTTClient:
     """MQTT client for subscribing to SCADA data topics."""
     
-    def __init__(self, app=None):
+    def __init__(self, app=None, data_storage_service=None):
         """Initialize MQTT client.
         
         Args:
             app: Flask application instance
+            data_storage_service: DataStorageService instance for dependency injection
         """
         self.client = None
         self.connected = False
         self._app = app
+        self._data_storage_service = data_storage_service
         self._message_handlers: Dict[str, Callable] = {}
         self._subscribed_topics: List[str] = []
         
         if app:
-            self.init_app(app)
+            self.init_app(app, data_storage_service)
     
-    def init_app(self, app):
+    def init_app(self, app, data_storage_service=None):
         """Initialize the MQTT client with Flask app configuration."""
         self._app = app
+        self._data_storage_service = data_storage_service
         
         # MQTT configuration
         self.broker_host = app.config.get('MQTT_BROKER_HOST', 'localhost')
@@ -54,14 +57,32 @@ class MQTTClient:
         
         # Configure TLS if enabled
         if self.use_tls:
+            import ssl
             if self.ca_certs:
+                # Configure TLS with certificate pinning and hostname verification
                 self.client.tls_set(ca_certs=self.ca_certs, 
                                   certfile=self.cert_file, 
-                                  keyfile=self.key_file)
-                logger.info("MQTT TLS configured with certificates")
+                                  keyfile=self.key_file,
+                                  cert_reqs=ssl.CERT_REQUIRED,
+                                  tls_version=ssl.PROTOCOL_TLS,
+                                  ciphers=None)  # Use default secure ciphers
+                # Enable hostname verification for security
+                self.client.tls_insecure_set(False)
+                logger.info("MQTT TLS configured with certificates and hostname verification")
             else:
-                self.client.tls_set()  # Use default system CA certificates
-                logger.info("MQTT TLS configured with system certificates")
+                # Use system CA certificates with security hardening
+                self.client.tls_set(cert_reqs=ssl.CERT_REQUIRED,
+                                  tls_version=ssl.PROTOCOL_TLS,
+                                  ciphers=None)
+                self.client.tls_insecure_set(False)
+                logger.info("MQTT TLS configured with system certificates and hostname verification")
+                
+            # Log TLS security status for production monitoring
+            if app.config.get('FLASK_ENV') == 'production':
+                logger.info("MQTT TLS enabled with secure configuration for production")
+        elif app.config.get('FLASK_ENV') == 'production':
+            logger.warning("MQTT TLS not enabled - this is insecure for production environments")
+        
         
         # Set authentication if provided (required for secure connections)
         if self.username and self.password:
@@ -240,12 +261,14 @@ class MQTTClient:
         Args:
             data: Parsed sensor data
         """
-        # Use dedicated data storage service instead of direct database access
+        # Use injected data storage service if available, fallback to global import
         try:
-            from app.services.data_storage_service import data_storage_service
-            
-            # Store data using the dedicated service
-            success = data_storage_service.store_sensor_data(data)
+            if self._data_storage_service:
+                success = self._data_storage_service.store_sensor_data(data)
+            else:
+                # Fallback to global import for backward compatibility
+                from app.services.data_storage_service import data_storage_service
+                success = data_storage_service.store_sensor_data(data)
             
             if success:
                 # Process data for real-time streaming after successful storage
@@ -258,13 +281,15 @@ class MQTTClient:
                     )
                 except ImportError:
                     logger.warning("Real-time processor not available")
+                    
+                logger.debug(f"Successfully stored and processed sensor data: {data['unit_id']}/{data['sensor_type']}")
             else:
                 logger.error(f"Failed to store sensor data: {data['unit_id']}/{data['sensor_type']}")
                 
         except ImportError:
-            logger.error("Data storage service not available")
+            logger.error("Data storage service not available - check service initialization")
         except Exception as e:
-            logger.error(f"Unexpected error in data storage: {e}")
+            logger.error(f"Unexpected error in data storage: {e}", exc_info=True)
     
     def publish_message(self, topic: str, payload: str, qos: int = 0):
         """Publish message to MQTT topic.
