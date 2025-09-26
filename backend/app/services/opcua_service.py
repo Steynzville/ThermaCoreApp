@@ -71,13 +71,15 @@ class OPCUAClient:
             if self.password:
                 self.client.set_password(self.password)
                 
-            # Warn about insecure configurations in production
+            # Warn about insecure configurations in production and enforce strict policies
             if app.config.get('FLASK_ENV') == 'production':
                 if not self.username or not self.password:
-                    logger.warning("OPC UA authentication not configured - this is insecure for production")
+                    logger.error("OPC UA authentication not configured - this is not allowed in production")
+                    raise ValueError("OPC UA authentication must be configured in production environment")
                 
                 if self.security_policy == 'None' or self.security_mode == 'None':
-                    logger.warning("OPC UA security policy/mode set to None - this is insecure for production")
+                    logger.error("OPC UA security policy/mode set to None - this is not allowed in production")
+                    raise ValueError("OPC UA security must be configured in production environment")
             
             # Configure security policy and certificates if provided
             if self.security_policy != 'None' and self.security_mode != 'None':
@@ -103,7 +105,8 @@ class OPCUAClient:
                         # Validate security policy strength for production
                         weak_policies = ['None', 'Basic128Rsa15', 'Basic256']
                         if self.security_policy in weak_policies and app.config.get('FLASK_ENV') == 'production':
-                            logger.warning(f"OPC UA security policy '{self.security_policy}' may be weak for production - consider Basic256Sha256 or Aes256_Sha256_RsaPss")
+                            logger.error(f"OPC UA security policy '{self.security_policy}' is too weak for production - must use Basic256Sha256 or Aes256_Sha256_RsaPss")
+                            raise ValueError(f"Weak security policy not allowed in production: {self.security_policy}")
                             
                         logger.info(f"OPC UA security configured with enhanced validation: {self.security_policy}#{self.security_mode}")
                     else:
@@ -121,7 +124,8 @@ class OPCUAClient:
             
             logger.info(f"OPC UA client initialized for server: {self.server_url}")
         except Exception as e:
-            logger.error(f"Failed to initialize OPC UA client: {e}")
+            logger.error(f"Failed to initialize OPC UA client: {e}", exc_info=True)
+            raise
     
     def connect(self) -> bool:
         """Connect to OPC UA server.
@@ -301,15 +305,13 @@ class OPCUAClient:
         }
         
         # Store using the dedicated data storage service with app context
+        if not self._data_storage_service:
+            logger.error("Data storage service not available - check service initialization. Dependency injection required.")
+            return False
+        
         try:
             with self._app.app_context():
-                # Use injected data storage service if available, fallback to global import
-                if self._data_storage_service:
-                    success = self._data_storage_service.store_sensor_data(processed_data)
-                else:
-                    # Fallback to global import for backward compatibility
-                    from app.services.data_storage_service import data_storage_service
-                    success = data_storage_service.store_sensor_data(processed_data)
+                success = self._data_storage_service.store_sensor_data(processed_data)
                 
                 if success:
                     # Also trigger real-time processing
@@ -329,9 +331,6 @@ class OPCUAClient:
                     
                 return success
             
-        except ImportError:
-            logger.error("Data storage service not available - check service initialization")
-            return False
         except Exception as e:
             logger.error(f"Failed to process OPC UA data: {e}", exc_info=True)
             return False

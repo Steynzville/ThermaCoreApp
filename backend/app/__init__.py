@@ -147,18 +147,75 @@ def create_app(config_name=None):
             from app.services.protocol_gateway_simulator import ProtocolGatewaySimulator
             from app.services.data_storage_service import data_storage_service
             
-            # Initialize services with app context
-            data_storage_service.init_app(app)  # Initialize first as other services depend on it
-            mqtt_client.init_app(app, data_storage_service)  # Inject data storage service
-            websocket_service.init_app(app)
-            realtime_processor.init_app(app)
-            opcua_client.init_app(app, data_storage_service)  # Inject data storage service
+            # Initialize services with app context and handle security validation errors
+            import logging
+            logger = logging.getLogger(__name__)
             
-            # Initialize protocol simulator
-            protocol_simulator = ProtocolGatewaySimulator(
-                mqtt_broker_host=app.config.get('MQTT_BROKER_HOST', 'localhost'),
-                mqtt_broker_port=app.config.get('MQTT_BROKER_PORT', 1883)
-            )
+            try:
+                data_storage_service.init_app(app)  # Initialize first as other services depend on it
+                logger.info("Data storage service initialized successfully")
+            except Exception as e:
+                logger.error(f"Failed to initialize data storage service: {e}", exc_info=True)
+                raise RuntimeError(f"Critical service initialization failed: data_storage_service - {e}") from e
+            
+            try:
+                mqtt_client.init_app(app, data_storage_service)  # Inject data storage service
+                logger.info("MQTT client initialized successfully")
+            except (ValueError, RuntimeError) as e:
+                # Security validation errors in production
+                logger.error(f"MQTT security validation failed: {e}", exc_info=True)
+                if app.config.get('FLASK_ENV') == 'production':
+                    raise RuntimeError(f"MQTT security validation failed in production: {e}") from e
+                # In development, log but continue
+                logger.warning(f"MQTT initialization failed (development): {e}")
+            except Exception as e:
+                logger.error(f"Failed to initialize MQTT client: {e}", exc_info=True)
+                if app.config.get('FLASK_ENV') == 'production':
+                    raise RuntimeError(f"Critical service initialization failed: mqtt_client - {e}") from e
+                logger.warning(f"MQTT client initialization failed (development): {e}")
+            
+            try:
+                websocket_service.init_app(app)
+                logger.info("WebSocket service initialized successfully")
+            except Exception as e:
+                logger.error(f"Failed to initialize WebSocket service: {e}", exc_info=True)
+                # WebSocket service failure is not critical
+                logger.warning(f"WebSocket service initialization failed: {e}")
+            
+            try:
+                realtime_processor.init_app(app)
+                logger.info("Real-time processor initialized successfully")
+            except Exception as e:
+                logger.error(f"Failed to initialize real-time processor: {e}", exc_info=True)
+                # Real-time processor failure is not critical
+                logger.warning(f"Real-time processor initialization failed: {e}")
+            
+            try:
+                opcua_client.init_app(app, data_storage_service)  # Inject data storage service
+                logger.info("OPC UA client initialized successfully")
+            except (ValueError, RuntimeError) as e:
+                # Security validation errors in production
+                logger.error(f"OPC UA security validation failed: {e}", exc_info=True)
+                if app.config.get('FLASK_ENV') == 'production':
+                    raise RuntimeError(f"OPC UA security validation failed in production: {e}") from e
+                # In development, log but continue
+                logger.warning(f"OPC UA initialization failed (development): {e}")
+            except Exception as e:
+                logger.error(f"Failed to initialize OPC UA client: {e}", exc_info=True)
+                if app.config.get('FLASK_ENV') == 'production':
+                    raise RuntimeError(f"Critical service initialization failed: opcua_client - {e}") from e
+                logger.warning(f"OPC UA client initialization failed (development): {e}")
+            
+            # Initialize protocol simulator (not critical)
+            try:
+                protocol_simulator = ProtocolGatewaySimulator(
+                    mqtt_broker_host=app.config.get('MQTT_BROKER_HOST', 'localhost'),
+                    mqtt_broker_port=app.config.get('MQTT_BROKER_PORT', 1883)
+                )
+                logger.info("Protocol simulator initialized successfully")
+            except Exception as e:
+                logger.warning(f"Protocol simulator initialization failed: {e}")
+                protocol_simulator = None
             
             # Store references in app for easy access
             app.mqtt_client = mqtt_client
@@ -168,9 +225,20 @@ def create_app(config_name=None):
             app.protocol_simulator = protocol_simulator
             app.data_storage_service = data_storage_service
             
+            logger.info("SCADA services initialization completed")
+            
+        except RuntimeError:
+            # Re-raise runtime errors (security validation failures)
+            raise
         except ImportError as e:
             import logging
             logging.getLogger(__name__).warning(f"SCADA services not available: {e}")
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Unexpected error during SCADA services initialization: {e}", exc_info=True)
+            if app.config.get('FLASK_ENV') == 'production':
+                raise RuntimeError(f"Critical initialization error in production: {e}") from e
     
     # Health check endpoint
     @app.route('/health')

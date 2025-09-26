@@ -1,5 +1,6 @@
 """Dedicated service for shared sensor data storage and processing logic."""
 import logging
+import math
 from typing import Dict, Any, Optional
 from datetime import datetime, timezone
 from flask import current_app
@@ -46,7 +47,7 @@ class DataStorageService:
                 logger.error(f"Missing required sensor data fields: {missing_fields}. Data: {data}")
                 return False
             
-            # Validate data types
+            # Validate data types and convert to float
             if not isinstance(data['value'], (int, float)):
                 try:
                     data['value'] = float(data['value'])
@@ -54,13 +55,39 @@ class DataStorageService:
                     logger.error(f"Invalid sensor value - cannot convert to number: {data['value']}")
                     return False
             
-            # Validate unit_id and sensor_type are non-empty strings
-            if not isinstance(data['unit_id'], str) or not data['unit_id'].strip():
-                logger.error(f"Invalid unit_id - must be non-empty string: {data['unit_id']}")
+            # Validate numeric value is finite (reject NaN/Inf)
+            if not math.isfinite(data['value']):
+                logger.error(f"Invalid sensor value - non-finite number not allowed: {data['value']}")
+                return False
+            
+            # Validate and sanitize unit_id and sensor_type strings
+            if not isinstance(data['unit_id'], str):
+                logger.error(f"Invalid unit_id - must be string: {type(data['unit_id'])} {data['unit_id']}")
                 return False
                 
-            if not isinstance(data['sensor_type'], str) or not data['sensor_type'].strip():
-                logger.error(f"Invalid sensor_type - must be non-empty string: {data['sensor_type']}")
+            if not isinstance(data['sensor_type'], str):
+                logger.error(f"Invalid sensor_type - must be string: {type(data['sensor_type'])} {data['sensor_type']}")
+                return False
+            
+            # Sanitize strings: strip whitespace and update dict
+            sanitized_unit_id = data['unit_id'].strip()
+            sanitized_sensor_type = data['sensor_type'].strip()
+            
+            if not sanitized_unit_id:
+                logger.error(f"Invalid unit_id - must be non-empty string after stripping: '{data['unit_id']}'")
+                return False
+                
+            if not sanitized_sensor_type:
+                logger.error(f"Invalid sensor_type - must be non-empty string after stripping: '{data['sensor_type']}'")
+                return False
+            
+            # Update dict with sanitized values
+            data['unit_id'] = sanitized_unit_id
+            data['sensor_type'] = sanitized_sensor_type
+            
+            # Validate timestamp type/format
+            if not isinstance(data['timestamp'], (datetime, str)):
+                logger.error(f"Invalid timestamp - must be datetime or ISO string: {type(data['timestamp'])} {data['timestamp']}")
                 return False
             
             # Set default quality if not provided
@@ -70,8 +97,8 @@ class DataStorageService:
             
             # Find or create sensor
             sensor = self.find_or_create_sensor(
-                unit_id=data['unit_id'].strip(),
-                sensor_type=data['sensor_type'].strip()
+                unit_id=data['unit_id'],  # Already sanitized above
+                sensor_type=data['sensor_type']  # Already sanitized above
             )
             
             if not sensor:
@@ -94,11 +121,11 @@ class DataStorageService:
             
         except IntegrityError as e:
             db.session.rollback()
-            logger.error(f"Database integrity error storing sensor data: {e}")
+            logger.error(f"Database integrity error storing sensor data: {e}", exc_info=True)
             return False
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error storing sensor data: {e}")
+            logger.error(f"Error storing sensor data: {e}", exc_info=True)
             return False
     
     def find_or_create_sensor(self, unit_id: str, sensor_type: str) -> Optional[Sensor]:
@@ -173,7 +200,7 @@ class DataStorageService:
                 
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Unexpected error finding/creating sensor {unit_id}/{sensor_type}: {e}")
+            logger.error(f"Unexpected error finding/creating sensor {unit_id}/{sensor_type}: {e}", exc_info=True)
             return None
     
     def get_status(self) -> Dict[str, Any]:
