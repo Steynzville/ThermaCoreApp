@@ -1,11 +1,18 @@
-"""Multi-protocol management routes (normalized status in PR1)."""
+"""Multi-protocol management routes (normalized status in PR1a)."""
 from flask import Blueprint, jsonify, request, current_app
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
+import logging
 
 from app.routes.auth import permission_required
 from app.utils.error_handler import SecurityAwareErrorHandler
-from app.protocols.registry import collect_protocol_status
+from app.protocols.registry import collect_protocol_status, get_protocols_list
+
+# PR1a: Enhanced logging for protocol status monitoring
+logger = logging.getLogger(__name__)
+
+# PR1a: API version for /protocols/status endpoint
+PROTOCOLS_API_VERSION = "1.1.0"
 
 multiprotocol_bp = Blueprint('multiprotocol', __name__)
 
@@ -13,23 +20,79 @@ multiprotocol_bp = Blueprint('multiprotocol', __name__)
 @jwt_required()
 @permission_required('read_units')
 def get_protocols_status():
-    """Get normalized status of all registered protocols.
-
-    Active protocol: connected == True AND status == 'ready'.
+    """Get normalized status of all registered protocols with PR1a enhancements.
+    
+    PR1a improvements:
+    - Enhanced availability semantics with degraded state detection
+    - Improved heartbeat staleness tracking
+    - Better error context and recovery status
+    - Token-based request tracking for audit purposes
+    - Version header in response
+    - Protocols list field in summary
+    
+    Active protocol: connected == True AND status == 'ready' AND heartbeat not stale.
+    
+    Returns:
+        JSON response with protocol status information including:
+        - timestamp: ISO-8601 UTC timestamp
+        - version: API version
+        - summary: Protocol summary with availability breakdown
+        - protocols: Individual protocol status objects
     """
     try:
+        # PR1a: Track request for audit purposes
+        user_identity = get_jwt_identity()
+        logger.info(f"Protocol status requested by user: {user_identity}")
+        
         statuses = collect_protocol_status()
-        active_count = sum(1 for s in statuses if s.get('connected') and s.get('status') == 'ready')
-        return jsonify({
+        
+        # PR1a: Enhanced active protocol counting with heartbeat staleness check
+        active_count = sum(1 for s in statuses 
+                          if s.get('connected') and s.get('status') == 'ready' and not s.get('is_heartbeat_stale', True))
+        
+        # PR1a: Count protocols by availability level
+        availability_summary = {
+            'fully_available': sum(1 for s in statuses if s.get('availability_level') == 'fully_available'),
+            'available': sum(1 for s in statuses if s.get('availability_level') == 'available'),
+            'degraded': sum(1 for s in statuses if s.get('availability_level') == 'degraded'),
+            'unavailable': sum(1 for s in statuses if s.get('availability_level') == 'unavailable')
+        }
+        
+        # PR1a: Count protocols in recovery state
+        recovering_count = sum(1 for s in statuses if s.get('is_recovering', False))
+        
+        # PR1a: Calculate overall health score
+        if statuses:
+            health_scores = [s.get('health_score', 0) for s in statuses]
+            overall_health_score = sum(health_scores) / len(health_scores)
+        else:
+            overall_health_score = 0.0
+        
+        response_data = {
             'timestamp': datetime.utcnow().isoformat(),
+            'version': PROTOCOLS_API_VERSION,  # PR1a: Version header
             'summary': {
                 'total_protocols': len(statuses),
                 'active_protocols': active_count,
-                'supported_protocols': [s['name'] for s in statuses]
+                'supported_protocols': [s['name'] for s in statuses],
+                'protocols_list': get_protocols_list(),  # PR1a: Protocols list field
+                # PR1a: Enhanced summary fields
+                'availability_summary': availability_summary,
+                'recovering_protocols': recovering_count,
+                'health_score': round(overall_health_score, 1)
             },
             'protocols': {s['name']: s for s in statuses}
-        })
+        }
+        
+        # PR1a: Log status summary for monitoring
+        logger.debug(f"Protocol status summary - Active: {active_count}/{len(statuses)}, "
+                    f"Health Score: {response_data['summary']['health_score']}%")
+        
+        return jsonify(response_data)
+        
     except Exception as e:
+        # PR1a: Enhanced error logging with user context
+        logger.error(f"Failed to get protocols status for user {get_jwt_identity()}: {str(e)}")
         return SecurityAwareErrorHandler.handle_error(e, "Failed to get protocols status")
 
 # Retaining legacy endpoints below (unchanged) for device operations and conversions
@@ -39,6 +102,23 @@ def get_protocols_status():
 @jwt_required()
 @permission_required('read_units')
 def list_modbus_devices():
+    """List all Modbus devices and their status.
+    
+    Returns:
+        200: Device status information
+        503: Modbus service not available
+        
+    Example response:
+        {
+            "devices": {
+                "device_001": {
+                    "connected": true,
+                    "last_poll": "2024-01-01T12:00:00Z",
+                    "registers": 24
+                }
+            }
+        }
+    """
     try:
         if not hasattr(current_app, 'modbus_service'):
             return jsonify({'error': 'Modbus service not available'}), 503
@@ -50,6 +130,29 @@ def list_modbus_devices():
 @jwt_required()
 @permission_required('admin_panel')
 def add_modbus_device():
+    """Add a new Modbus TCP device to the system.
+    
+    Request Body:
+        device_id (str): Unique device identifier
+        unit_id (int): Modbus unit/slave ID
+        host (str): Device IP address or hostname
+        port (int, optional): TCP port (default: 502)
+        device_type (str, optional): Device type (default: 'tcp')
+        timeout (float, optional): Connection timeout (default: 5.0)
+        
+    Returns:
+        201: Device added successfully
+        400: Missing required fields
+        503: Modbus service not available
+        
+    Example request:
+        {
+            "device_id": "pump_001",
+            "unit_id": 1,
+            "host": "192.168.1.100",
+            "port": 502
+        }
+    """
     try:
         if not hasattr(current_app, 'modbus_service'):
             return jsonify({'error': 'Modbus service not available'}), 503
