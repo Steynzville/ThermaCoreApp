@@ -6,6 +6,8 @@ from datetime import datetime
 import time
 from dataclasses import dataclass
 
+from app.models import utc_now  # Use timezone-aware datetime
+
 logger = logging.getLogger(__name__)
 
 # Mock Modbus implementation for demonstration
@@ -284,7 +286,7 @@ class ModbusService:
             register_configs = self._register_configs[device_id]
             
             readings = {}
-            timestamp = datetime.utcnow()
+            timestamp = utc_now()
             
             for register in register_configs:
                 try:
@@ -343,7 +345,7 @@ class ModbusService:
             logger.error(f"Failed to read device data for {device_id}: {e}")
             return {
                 'device_id': device_id,
-                'timestamp': datetime.utcnow().isoformat(),
+                'timestamp': utc_now().isoformat(),
                 'readings': {},
                 'success': False,
                 'error': str(e)

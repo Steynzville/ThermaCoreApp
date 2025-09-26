@@ -4,6 +4,7 @@ from unittest.mock import Mock, patch
 from flask import Flask
 from app.protocols.base import ProtocolStatus
 from app.protocols.registry import collect_protocol_status, _fallback
+from app.utils.status_utils import AvailabilityLevel, utc_now  # Import from status_utils
 from app.exceptions import (
     ThermaCoreException, MQTTException, OPCUAException, 
     ModbusException, DNP3Exception, ServiceUnavailableException
@@ -30,8 +31,7 @@ class TestProtocolStatusBase:
     
     def test_protocol_status_to_dict(self):
         """Test converting ProtocolStatus to dictionary."""
-        from datetime import datetime
-        timestamp = datetime.utcnow()
+        timestamp = utc_now()  # Use timezone-aware datetime
         
         status = ProtocolStatus(
             name="opcua",
@@ -54,6 +54,12 @@ class TestProtocolStatusBase:
         assert result["version"] == "1.04"
         assert result["last_heartbeat"] == timestamp.isoformat()
         assert result["demo"] is True
+        
+        # Test that computed fields are present (from status_utils)
+        assert "is_heartbeat_stale" in result
+        assert "time_since_last_heartbeat" in result
+        assert "is_recovering" in result
+        assert "health_score" in result
 
 
 class TestProtocolRegistry:
