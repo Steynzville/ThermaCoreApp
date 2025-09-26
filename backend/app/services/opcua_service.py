@@ -97,8 +97,10 @@ class OPCUAClient:
         from cryptography.hazmat.backends import default_backend
         
         if not os.path.exists(self.trust_cert_file):
-            logger.error(f"OPC UA trust certificate file not found: {self.trust_cert_file}")
-            raise ValueError(f"OPC UA trust certificate file does not exist: {self.trust_cert_file}")
+            # Sanitize path in error messages for security
+            sanitized_path = "***" if is_prod else self.trust_cert_file
+            logger.error(f"OPC UA trust certificate file not found: {sanitized_path}")
+            raise ValueError(f"OPC UA trust certificate file does not exist")
         
         try:
             # Load and validate the certificate
@@ -112,40 +114,66 @@ class OPCUAClient:
                 try:
                     certificate = x509.load_der_x509_certificate(cert_data, default_backend())
                 except ValueError as e:
-                    raise ValueError(f"Invalid certificate format in {self.trust_cert_file}: {e}")
+                    # Certificate format errors are always security issues - always raise
+                    logger.error(f"Invalid certificate format detected", exc_info=True)
+                    raise ValueError(f"Invalid certificate format: {e}")
+            
+            # Validate certificate is not expired (always a security issue)
+            from datetime import datetime, timezone
+            now = datetime.now(timezone.utc)
+            
+            # Use the newer UTC-aware properties if available, fall back to older ones
+            try:
+                not_valid_after_utc = certificate.not_valid_after_utc
+                not_valid_before_utc = certificate.not_valid_before_utc
+            except AttributeError:
+                # Fallback for older cryptography versions
+                not_valid_after_utc = certificate.not_valid_after.replace(tzinfo=timezone.utc)
+                not_valid_before_utc = certificate.not_valid_before.replace(tzinfo=timezone.utc)
+            
+            if not_valid_after_utc < now:
+                logger.error(f"Certificate validation failed: expired certificate detected", exc_info=True)
+                raise ValueError(f"Server certificate has expired: {not_valid_after_utc}")
+            if not_valid_before_utc > now:
+                logger.error(f"Certificate validation failed: certificate not yet valid", exc_info=True)
+                raise ValueError(f"Server certificate is not yet valid: {not_valid_before_utc}")
             
             # Actually load the certificate into the OPC UA client's trust store
             try:
                 self.client.load_server_certificate(self.trust_cert_file)
-                logger.info(f"OPC UA server certificate loaded and trusted from: {self.trust_cert_file}")
+                # Sanitize path in logs for security
+                sanitized_path = "***" if is_prod else self.trust_cert_file
+                logger.info(f"OPC UA server certificate loaded and trusted from: {sanitized_path}")
             except Exception as e:
                 # If the opcua library doesn't support this method, fall back to manual trust store management
                 logger.warning(f"Could not load server certificate via opcua library: {e}")
-                logger.info(f"OPC UA server certificate validated and configured for trust from: {self.trust_cert_file}")
-            
-            # Validate certificate is not expired
-            from datetime import datetime, timezone
-            now = datetime.now(timezone.utc)
-            if certificate.not_valid_after.replace(tzinfo=timezone.utc) < now:
-                raise ValueError(f"Server certificate has expired: {certificate.not_valid_after}")
-            if certificate.not_valid_before.replace(tzinfo=timezone.utc) > now:
-                raise ValueError(f"Server certificate is not yet valid: {certificate.not_valid_before}")
+                sanitized_path = "***" if is_prod else self.trust_cert_file
+                logger.info(f"OPC UA server certificate validated and configured for trust from: {sanitized_path}")
             
         except (OSError, IOError) as e:
-            logger.error(f"Failed to read OPC UA trust certificate file: {e}")
-            raise ValueError(f"Cannot read OPC UA trust certificate file: {self.trust_cert_file}")
-        except Exception as e:
-            logger.error(f"Failed to load OPC UA trust certificate: {e}")
-            # Always raise for certificate validation errors (expired, invalid format, etc.)
+            # File I/O errors - log with sanitized path and handle based on environment
+            logger.error(f"Failed to read OPC UA trust certificate file", exc_info=True)
+            if is_prod:
+                raise ValueError(f"Cannot read OPC UA trust certificate file")
+            else:
+                # Only allow file I/O issues in development with clear message
+                logger.warning(f"OPC UA trust certificate file I/O error (development): {e}")
+                raise ValueError(f"Certificate file I/O error: {e}")
+        
+        except ValueError:
+            # Certificate validation errors (format, expiry, etc.) - always re-raise as-is
             # These are security issues that should be fixed regardless of environment
-            if "expired" in str(e) or "Invalid certificate format" in str(e) or "not yet valid" in str(e):
-                raise ValueError(str(e))
-            elif is_prod:
+            raise
+        
+        except Exception as e:
+            # Other unexpected errors during certificate loading
+            logger.error(f"Unexpected error during OPC UA trust certificate loading", exc_info=True)
+            if is_prod:
                 raise ValueError(f"Failed to load OPC UA trust certificate in production: {e}")
             else:
-                # Only allow connection/loading issues in development
+                # Only allow connection/loading issues in development  
                 logger.warning(f"OPC UA trust certificate loading failed (development): {e}")
-                raise ValueError(f"Certificate loading failed: {e}")  # Still raise but with different message
+                raise ValueError(f"Certificate loading failed: {e}")
     
     def init_app(self, app, data_storage_service=None):
         """Initialize OPC UA client with Flask app configuration."""
@@ -178,7 +206,12 @@ class OPCUAClient:
                 self.client.set_password(self.password)
                 
             # Warn about insecure configurations in production and enforce strict policies
-            is_prod = is_production_environment(app)
+            try:
+                is_prod = is_production_environment(app)
+            except ValueError as e:
+                # Environment detection failed - this indicates a dangerous configuration
+                logger.error(f"Environment detection failed: {e}", exc_info=True)
+                raise ValueError(f"OPC UA service cannot initialize due to environment configuration error: {e}") from e
             if is_prod:
                 if not self.username or not self.password:
                     logger.error("OPC UA authentication not configured - this is not allowed in production")
@@ -196,24 +229,38 @@ class OPCUAClient:
                     
                     # Set security policy with proper certificate validation
                     try:
-                        # Try to use the security policy - the OPC UA library will handle the validation
-                        security_string = f"{self.security_policy}#{self.security_mode}"
-                        self.client.set_security_string(security_string)
+                        # For OPC UA library, we need to use separate method calls instead of security string
+                        # when we have separate policy and mode values
                         
-                        # Load certificates if provided
+                        # If certificates are provided, construct proper security string format:
+                        # Policy,Mode,certificate,private_key[,server_private_key]
                         if self.cert_file and self.private_key_file:
-                            self.client.load_client_certificate(self.cert_file)
-                            self.client.load_private_key(self.private_key_file)
+                            security_string = f"{self.security_policy},{self.security_mode},{self.cert_file},{self.private_key_file}"
+                            if not security_string or security_string.count(',') < 3:
+                                raise ValueError(f"Invalid security string format: '{security_string}'. Expected format: 'Policy,Mode,cert,key'")
                             
+                            # Use the complete security string with certificates
+                            self.client.set_security_string(security_string)
+                        else:
+                            # Without certificates, use separate policy and mode setting
+                            # This may require different OPC UA library methods
+                            raise ValueError("OPC UA security policy and mode require client certificates. "
+                                           "Please configure OPCUA_CERT_FILE and OPCUA_PRIVATE_KEY_FILE.")
+                        
+                        # Trust certificate loading (separate from client certificates)
                         self._load_trust_certificate(is_prod)
                             
                         # Single clear security status message per environment
                         cert_info = ""
                         if self.cert_file and self.private_key_file:
-                            cert_info = f" (client cert: {self.cert_file})"
+                            # Sanitize certificate paths in log messages for security
+                            sanitized_cert_path = "***" if is_prod else self.cert_file
+                            cert_info = f" (client cert: {sanitized_cert_path})"
                         trust_info = ""
                         if self.trust_cert_file:
-                            trust_info = f" (trusted server cert: {self.trust_cert_file})"
+                            # Sanitize certificate paths in log messages for security
+                            sanitized_trust_path = "***" if is_prod else self.trust_cert_file
+                            trust_info = f" (trusted server cert: {sanitized_trust_path})"
                             
                         if is_prod:
                             logger.info(f"OPC UA security enabled for production: {self.security_policy}#{self.security_mode}{cert_info}{trust_info}")
