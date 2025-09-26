@@ -75,6 +75,7 @@ export default defineConfig(() => {
       environment: "jsdom",
       globals: true,
       setupFiles: ["./src/setupTests.js"],
+      exclude: ['**/node_modules/**', '**/e2e/**', '**/playwright-report/**', '**/test-results/**'],
     },
   };
 });
