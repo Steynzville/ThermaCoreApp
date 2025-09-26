@@ -50,8 +50,21 @@ def is_production_environment(app=None) -> bool:
         True if running in production environment
     """
     # First priority: Check if we're in testing environment (testing is never production)
-    if is_testing_environment(app):
+    # Use direct testing check to avoid recursion
+    testing_env = os.environ.get('TESTING', 'false').lower()
+    if testing_env in ('true', '1'):
         return False
+        
+    # Check app configuration for testing
+    if app and app.config.get('TESTING', False):
+        return False
+    
+    # Try current_app for testing
+    try:
+        if current_app and current_app.config.get('TESTING', False):
+            return False
+    except RuntimeError:
+        pass
         
     # Check environment variables first (most reliable)
     flask_env = os.environ.get('FLASK_ENV', '').lower()
@@ -105,8 +118,10 @@ def is_development_environment(app=None) -> bool:
     """
     Check if running in development environment.
     
-    Development environment is determined as:
-    - NOT testing environment AND NOT production environment
+    Development environment is determined by explicit indicators:
+    - FLASK_ENV=development OR APP_ENV=development
+    - DEBUG=True (if no explicit production indicators)
+    - NOT testing environment
     
     Args:
         app: Flask application instance (optional)
@@ -114,9 +129,55 @@ def is_development_environment(app=None) -> bool:
     Returns:
         True if running in development environment
     """
-    # Testing environment is never development
-    if is_testing_environment(app):
+    # Testing environment is never development (check directly to avoid recursion)
+    testing_env = os.environ.get('TESTING', 'false').lower()
+    if testing_env in ('true', '1'):
         return False
         
-    # Development is the opposite of production, but only if not testing
-    return not is_production_environment(app)
+    # Check app configuration for testing
+    if app and app.config.get('TESTING', False):
+        return False
+    
+    # Try current_app for testing
+    try:
+        if current_app and current_app.config.get('TESTING', False):
+            return False
+    except RuntimeError:
+        pass
+        
+    # Check for explicit development environment variables
+    flask_env = os.environ.get('FLASK_ENV', '').lower()
+    if flask_env == 'development':
+        return True
+        
+    app_env = os.environ.get('APP_ENV', '').lower()
+    if app_env == 'development':
+        return True
+    
+    # Check app configuration for development indicators
+    if app:
+        app_flask_env = app.config.get('FLASK_ENV', '').lower()
+        if app_flask_env == 'development':
+            return True
+            
+        # DEBUG=True can indicate development if no explicit production env
+        if app.config.get('DEBUG', False):
+            # But only if no production environment variables are set
+            if not flask_env and not app_env and not app_flask_env:
+                return True
+    
+    # Try current_app
+    try:
+        if current_app and hasattr(current_app, 'config'):
+            app_flask_env = current_app.config.get('FLASK_ENV', '').lower()
+            if app_flask_env == 'development':
+                return True
+                
+            # DEBUG=True can indicate development if no explicit production env
+            if current_app.config.get('DEBUG', False):
+                if not flask_env and not app_env and not app_flask_env:
+                    return True
+    except RuntimeError:
+        pass
+    
+    return False

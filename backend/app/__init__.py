@@ -75,8 +75,8 @@ def _initialize_critical_service(service, service_name: str, app, logger, init_m
         logger.info(f"{service_name} initialized successfully")
         return True
         
-    except (ValueError, RuntimeError) as e:
-        # Security validation errors or explicit runtime errors
+    except (ValueError, RuntimeError, ConnectionError, OSError, ImportError) as e:
+        # Security validation errors, connection issues, or configuration errors
         logger.error(f"{service_name} security validation failed: {e}", exc_info=True)
         if is_production_environment(app):
             raise RuntimeError(f"{service_name} security validation failed in production: {e}") from e
