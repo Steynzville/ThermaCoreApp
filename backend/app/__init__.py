@@ -138,6 +138,16 @@ def create_app(config_name=None):
     if cors_available:
         CORS(app, origins=app.config['CORS_ORIGINS'])
     
+    # Set up middleware - PR2 Implementation
+    from app.middleware.request_id import setup_request_id_middleware
+    from app.middleware.metrics import setup_metrics_middleware
+    setup_request_id_middleware(app)
+    setup_metrics_middleware(app)
+    
+    # Register middleware blueprints
+    from app.middleware.metrics import create_metrics_blueprint
+    app.register_blueprint(create_metrics_blueprint())
+    
     # Initialize Swagger if available and not in testing environment
     if swagger_available and not app.config.get('TESTING', False):
         swagger_template = {

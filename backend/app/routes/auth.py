@@ -14,6 +14,10 @@ from app import db
 from app.models import User, Role
 from app.utils.schemas import LoginSchema, UserCreateSchema, UserSchema, TokenSchema
 from app.utils.helpers import get_current_user_id
+from app.utils.error_handler import SecurityAwareErrorHandler
+from app.middleware.validation import validate_schema
+from app.middleware.rate_limit import auth_rate_limit, standard_rate_limit
+from app.middleware.request_id import track_request_id
 
 
 auth_bp = Blueprint('auth', __name__)
@@ -27,15 +31,21 @@ def permission_required(permission):
             verify_jwt_in_request()
             user_id, success = get_current_user_id()
             if not success or user_id is None:
-                return jsonify({'error': 'Invalid token format'}), 401
+                return SecurityAwareErrorHandler.handle_service_error(
+                    Exception('Invalid token format'), 'authentication_error', 'Token validation', 401
+                )
                 
             user = User.query.get(user_id)
             
             if not user or not user.is_active:
-                return jsonify({'error': 'User not found or inactive'}), 403
+                return SecurityAwareErrorHandler.handle_service_error(
+                    Exception('User not found or inactive'), 'authentication_error', 'User validation', 403
+                )
                 
             if not user.has_permission(permission):
-                return jsonify({'error': 'Insufficient permissions'}), 403
+                return SecurityAwareErrorHandler.handle_service_error(
+                    Exception('Insufficient permissions'), 'permission_error', f'Permission check: {permission}', 403
+                )
                 
             return f(*args, **kwargs)
         return decorated_function
@@ -66,8 +76,11 @@ def role_required(*roles):
 
 
 @auth_bp.route('/auth/register', methods=['POST'])
+@track_request_id
+@standard_rate_limit
 @jwt_required()
 @permission_required('write_users')
+@validate_schema(UserCreateSchema)
 def register():
     """
     Register a new user.
@@ -88,20 +101,20 @@ def register():
         description: Validation error
       409:
         description: User already exists
+      429:
+        description: Rate limit exceeded
     security:
       - JWT: []
     """
-    schema = UserCreateSchema()
-    
-    try:
-        data = schema.load(request.json)
-    except ValidationError as err:
-        return jsonify({'error': 'Validation error', 'details': err.messages}), 400
+    from flask import g
+    data = g.validated_data
     
     # Check if role exists
     role = Role.query.get(data['role_id'])
     if not role:
-        return jsonify({'error': 'Role not found'}), 400
+        return SecurityAwareErrorHandler.handle_service_error(
+            Exception('Role not found'), 'validation_error', 'Role validation', 400
+        )
     
     # Create new user
     user = User(
@@ -121,19 +134,28 @@ def register():
         db.session.refresh(user)
         
         user_schema = UserSchema()
-        return jsonify(user_schema.dump(user)), 201
+        return SecurityAwareErrorHandler.create_success_response(
+            user_schema.dump(user), 'User created successfully', 201
+        )
         
     except IntegrityError as e:
         db.session.rollback()
         if 'username' in str(e.orig):
-            return jsonify({'error': 'Username already exists'}), 409
+            error_msg = 'Username already exists'
         elif 'email' in str(e.orig):
-            return jsonify({'error': 'Email already exists'}), 409
+            error_msg = 'Email already exists' 
         else:
-            return jsonify({'error': 'Database constraint violation'}), 409
+            error_msg = 'Database constraint violation'
+            
+        return SecurityAwareErrorHandler.handle_service_error(
+            e, 'validation_error', f'User creation: {error_msg}', 409
+        )
 
 
 @auth_bp.route('/auth/login', methods=['POST'])
+@track_request_id
+@auth_rate_limit
+@validate_schema(LoginSchema)
 def login():
     """
     Authenticate user and return JWT tokens.
@@ -154,13 +176,11 @@ def login():
         description: Validation error
       401:
         description: Invalid credentials
+      429:
+        description: Rate limit exceeded
     """
-    schema = LoginSchema()
-    
-    try:
-        data = schema.load(request.json)
-    except ValidationError as err:
-        return jsonify({'error': 'Validation error', 'details': err.messages}), 400
+    from flask import g
+    data = g.validated_data
     
     user = User.query.filter_by(username=data['username']).first()
     
@@ -186,9 +206,13 @@ def login():
             'user': user_schema.dump(user)
         }
         
-        return jsonify(token_schema.dump(response_data)), 200
+        return SecurityAwareErrorHandler.create_success_response(
+            token_schema.dump(response_data), 'Login successful', 200
+        )
     
-    return jsonify({'error': 'Invalid credentials'}), 401
+    return SecurityAwareErrorHandler.handle_service_error(
+        Exception('Invalid credentials'), 'authentication_error', 'Login attempt', 401
+    )
 
 
 @auth_bp.route('/auth/refresh', methods=['POST'])

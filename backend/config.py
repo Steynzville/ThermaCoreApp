@@ -40,6 +40,16 @@ class Config:
     DEFAULT_PAGE_SIZE = 50
     MAX_PAGE_SIZE = 100
     
+    # Rate Limiting - PR2 Implementation
+    REDIS_URL = os.environ.get('REDIS_URL')  # Optional Redis for rate limiting
+    RATE_LIMIT_ENABLED = os.environ.get('RATE_LIMIT_ENABLED', 'true').lower() == 'true'
+    DEFAULT_RATE_LIMIT = int(os.environ.get('DEFAULT_RATE_LIMIT', 100))  # requests per minute
+    AUTH_RATE_LIMIT = int(os.environ.get('AUTH_RATE_LIMIT', 10))  # auth requests per minute
+    
+    # Request validation - PR2 Implementation
+    MAX_REQUEST_SIZE = int(os.environ.get('MAX_REQUEST_SIZE', 1024 * 1024))  # 1MB default
+    VALIDATE_JSON_REQUESTS = os.environ.get('VALIDATE_JSON_REQUESTS', 'true').lower() == 'true'
+    
     # MQTT Configuration with security enforcement
     MQTT_BROKER_HOST = os.environ.get('MQTT_BROKER_HOST', 'localhost')
     MQTT_BROKER_PORT = int(os.environ.get('MQTT_BROKER_PORT', 1883))
