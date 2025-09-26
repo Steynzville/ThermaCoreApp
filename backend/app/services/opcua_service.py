@@ -14,12 +14,22 @@ except ImportError:
     Node = None
 
 from flask import current_app
+from app.utils.environment import is_production_environment
 
 logger = logging.getLogger(__name__)
 
 
 class OPCUAClient:
     """OPC UA client for connecting to industrial automation systems."""
+    
+    # Define valid security policies and their strength levels
+    VALID_SECURITY_POLICIES = {
+        'None': 'insecure',
+        'Basic128Rsa15': 'weak', 
+        'Basic256': 'weak',
+        'Basic256Sha256': 'strong',
+        'Aes256_Sha256_RsaPss': 'strong'
+    }
     
     def __init__(self, app=None, data_storage_service=None):
         """Initialize OPC UA client.
@@ -40,6 +50,32 @@ class OPCUAClient:
         
         if app and opcua_available:
             self.init_app(app, data_storage_service)
+    
+    def _validate_security_policy(self, policy: str, require_strong: bool = False) -> bool:
+        """
+        Validate OPC UA security policy.
+        
+        Args:
+            policy: Security policy string to validate
+            require_strong: If True, require strong security policies
+            
+        Returns:
+            True if policy is valid and meets strength requirements
+            
+        Raises:
+            ValueError: If policy is invalid or too weak when strong policy required
+        """
+        if policy not in self.VALID_SECURITY_POLICIES:
+            raise ValueError(f"Invalid OPC UA security policy: {policy}. "
+                           f"Must be one of: {list(self.VALID_SECURITY_POLICIES.keys())}")
+        
+        policy_strength = self.VALID_SECURITY_POLICIES[policy]
+        
+        if require_strong and policy_strength != 'strong':
+            raise ValueError(f"OPC UA security policy '{policy}' is too weak for production. "
+                           f"Must use strong policies: Basic256Sha256 or Aes256_Sha256_RsaPss")
+        
+        return True
     
     def init_app(self, app, data_storage_service=None):
         """Initialize OPC UA client with Flask app configuration."""
@@ -72,7 +108,8 @@ class OPCUAClient:
                 self.client.set_password(self.password)
                 
             # Warn about insecure configurations in production and enforce strict policies
-            if app.config.get('FLASK_ENV') == 'production':
+            is_prod = is_production_environment(app)
+            if is_prod:
                 if not self.username or not self.password:
                     logger.error("OPC UA authentication not configured - this is not allowed in production")
                     raise ValueError("OPC UA authentication must be configured in production environment")
@@ -84,6 +121,9 @@ class OPCUAClient:
             # Configure security policy and certificates if provided
             if self.security_policy != 'None' and self.security_mode != 'None':
                 try:
+                    # Validate security policy first (fails immediately for invalid policies)
+                    self._validate_security_policy(self.security_policy, require_strong=is_prod)
+                    
                     # Set security policy with proper certificate validation
                     if hasattr(ua.SecurityPolicy, self.security_policy):
                         policy = getattr(ua.SecurityPolicy, self.security_policy)
@@ -99,26 +139,20 @@ class OPCUAClient:
                             # Enhanced server certificate trust with validation
                             logger.info("OPC UA server certificate trust configured for production security")
                         else:
-                            if app.config.get('FLASK_ENV') == 'production':
+                            if is_prod:
                                 logger.warning("OPC UA server certificate trust not configured - consider adding for production security")
-                            
-                        # Validate security policy strength for production
-                        weak_policies = ['None', 'Basic128Rsa15', 'Basic256']
-                        if self.security_policy in weak_policies and app.config.get('FLASK_ENV') == 'production':
-                            logger.error(f"OPC UA security policy '{self.security_policy}' is too weak for production - must use Basic256Sha256 or Aes256_Sha256_RsaPss")
-                            raise ValueError(f"Weak security policy not allowed in production: {self.security_policy}")
                             
                         logger.info(f"OPC UA security configured with enhanced validation: {self.security_policy}#{self.security_mode}")
                     else:
-                        logger.error(f"Invalid OPC UA security policy: {self.security_policy}")
-                        if app.config.get('FLASK_ENV') == 'production':
-                            raise ValueError(f"Invalid security policy in production: {self.security_policy}")
+                        # This should not happen with our validation, but kept for safety
+                        raise ValueError(f"Invalid security policy in OPC UA library: {self.security_policy}")
+                        
                 except Exception as security_error:
                     logger.error(f"Failed to configure OPC UA security: {security_error}")
-                    if app.config.get('FLASK_ENV') == 'production':
-                        raise security_error  # Fail fast in production for security issues
-                    # Continue with basic configuration but log the issue
-            elif app.config.get('FLASK_ENV') == 'production':
+                    # Always fail fast for security configuration errors (not just production)
+                    raise security_error
+                    
+            elif is_prod:
                 logger.error("OPC UA security policy and mode set to None - this is not allowed in production")
                 raise ValueError("OPC UA security must be configured in production environment")
             

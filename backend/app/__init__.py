@@ -1,5 +1,6 @@
 """Flask application factory and initialization."""
 import os
+import logging
 
 # Import Flask and core extensions
 from flask import Flask
@@ -48,6 +49,47 @@ if swagger_available:
     swagger = None  # Will be initialized in create_app
 else:
     swagger = None
+
+
+def _initialize_critical_service(service, service_name: str, app, logger, init_method='init_app', *args, **kwargs):
+    """
+    Shared helper function for initializing critical services with consistent error handling.
+    
+    Args:
+        service: Service instance to initialize
+        service_name: Human-readable service name for logging
+        app: Flask application instance
+        logger: Logger instance
+        init_method: Method name to call for initialization (default: 'init_app')
+        *args, **kwargs: Additional arguments to pass to the init method
+    
+    Raises:
+        RuntimeError: In production if service initialization fails
+    """
+    from app.utils.environment import is_production_environment
+    
+    try:
+        # Call the initialization method
+        init_func = getattr(service, init_method)
+        init_func(app, *args, **kwargs)
+        logger.info(f"{service_name} initialized successfully")
+        return True
+        
+    except (ValueError, RuntimeError) as e:
+        # Security validation errors or explicit runtime errors
+        logger.error(f"{service_name} security validation failed: {e}", exc_info=True)
+        if is_production_environment(app):
+            raise RuntimeError(f"{service_name} security validation failed in production: {e}") from e
+        # In development, log but continue
+        logger.warning(f"{service_name} initialization failed (development): {e}")
+        return False
+        
+    except Exception as e:
+        logger.error(f"Failed to initialize {service_name}: {e}", exc_info=True)
+        if is_production_environment(app):
+            raise RuntimeError(f"Critical service initialization failed: {service_name} - {e}") from e
+        logger.warning(f"{service_name} initialization failed (development): {e}")
+        return False
 
 
 def create_app(config_name=None):
@@ -148,38 +190,33 @@ def create_app(config_name=None):
             from app.services.data_storage_service import data_storage_service
             
             # Initialize services with app context and handle security validation errors
-            import logging
             logger = logging.getLogger(__name__)
             
+            # Initialize data storage service first (required by other services)
             try:
-                data_storage_service.init_app(app)  # Initialize first as other services depend on it
+                data_storage_service.init_app(app)
                 logger.info("Data storage service initialized successfully")
             except Exception as e:
                 logger.error(f"Failed to initialize data storage service: {e}", exc_info=True)
                 raise RuntimeError(f"Critical service initialization failed: data_storage_service - {e}") from e
             
-            try:
-                mqtt_client.init_app(app, data_storage_service)  # Inject data storage service
-                logger.info("MQTT client initialized successfully")
-            except (ValueError, RuntimeError) as e:
-                # Security validation errors in production
-                logger.error(f"MQTT security validation failed: {e}", exc_info=True)
-                if app.config.get('FLASK_ENV') == 'production':
-                    raise RuntimeError(f"MQTT security validation failed in production: {e}") from e
-                # In development, log but continue
-                logger.warning(f"MQTT initialization failed (development): {e}")
-            except Exception as e:
-                logger.error(f"Failed to initialize MQTT client: {e}", exc_info=True)
-                if app.config.get('FLASK_ENV') == 'production':
-                    raise RuntimeError(f"Critical service initialization failed: mqtt_client - {e}") from e
-                logger.warning(f"MQTT client initialization failed (development): {e}")
+            # Initialize critical services using shared helper
+            _initialize_critical_service(
+                mqtt_client, "MQTT client", app, logger, 
+                'init_app', data_storage_service
+            )
             
+            _initialize_critical_service(
+                opcua_client, "OPC UA client", app, logger,
+                'init_app', data_storage_service  
+            )
+            
+            # Initialize non-critical services (failures won't stop the app)
             try:
                 websocket_service.init_app(app)
                 logger.info("WebSocket service initialized successfully")
             except Exception as e:
                 logger.error(f"Failed to initialize WebSocket service: {e}", exc_info=True)
-                # WebSocket service failure is not critical
                 logger.warning(f"WebSocket service initialization failed: {e}")
             
             try:
@@ -187,24 +224,7 @@ def create_app(config_name=None):
                 logger.info("Real-time processor initialized successfully")
             except Exception as e:
                 logger.error(f"Failed to initialize real-time processor: {e}", exc_info=True)
-                # Real-time processor failure is not critical
                 logger.warning(f"Real-time processor initialization failed: {e}")
-            
-            try:
-                opcua_client.init_app(app, data_storage_service)  # Inject data storage service
-                logger.info("OPC UA client initialized successfully")
-            except (ValueError, RuntimeError) as e:
-                # Security validation errors in production
-                logger.error(f"OPC UA security validation failed: {e}", exc_info=True)
-                if app.config.get('FLASK_ENV') == 'production':
-                    raise RuntimeError(f"OPC UA security validation failed in production: {e}") from e
-                # In development, log but continue
-                logger.warning(f"OPC UA initialization failed (development): {e}")
-            except Exception as e:
-                logger.error(f"Failed to initialize OPC UA client: {e}", exc_info=True)
-                if app.config.get('FLASK_ENV') == 'production':
-                    raise RuntimeError(f"Critical service initialization failed: opcua_client - {e}") from e
-                logger.warning(f"OPC UA client initialization failed (development): {e}")
             
             # Initialize protocol simulator (not critical)
             try:
@@ -231,13 +251,12 @@ def create_app(config_name=None):
             # Re-raise runtime errors (security validation failures)
             raise
         except ImportError as e:
-            import logging
             logging.getLogger(__name__).warning(f"SCADA services not available: {e}")
         except Exception as e:
-            import logging
             logger = logging.getLogger(__name__)
             logger.error(f"Unexpected error during SCADA services initialization: {e}", exc_info=True)
-            if app.config.get('FLASK_ENV') == 'production':
+            from app.utils.environment import is_production_environment
+            if is_production_environment(app):
                 raise RuntimeError(f"Critical initialization error in production: {e}") from e
     
     # Health check endpoint

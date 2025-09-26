@@ -11,6 +11,7 @@ from flask import current_app
 from sqlalchemy.exc import IntegrityError
 
 from app.models import db, SensorReading, Sensor, Unit
+from app.utils.environment import is_production_environment
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +61,7 @@ class MQTTClient:
             import ssl
             
             # Enforce TLSv1.2+ and secure cipher suites for production
-            if app.config.get('FLASK_ENV') == 'production':
+            if is_production_environment(app):
                 # Production: require TLSv1.2+ with restricted cipher suites
                 tls_version = ssl.PROTOCOL_TLS_CLIENT  # Secure TLS version
                 secure_ciphers = 'ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20:!aNULL:!MD5:!DSS'
@@ -79,19 +80,19 @@ class MQTTClient:
                                   ciphers=secure_ciphers)
                 # Enable hostname verification for security
                 self.client.tls_insecure_set(False)
-                logger.info(f"MQTT TLS configured with certificates, hostname verification and secure ciphers (production: {app.config.get('FLASK_ENV') == 'production'})")
+                logger.info(f"MQTT TLS configured with certificates, hostname verification and secure ciphers (production: {is_production_environment(app)})")
             else:
                 # Use system CA certificates with security hardening
                 self.client.tls_set(cert_reqs=ssl.CERT_REQUIRED,
                                   tls_version=tls_version,
                                   ciphers=secure_ciphers)
                 self.client.tls_insecure_set(False)
-                logger.info(f"MQTT TLS configured with system certificates, hostname verification and secure ciphers (production: {app.config.get('FLASK_ENV') == 'production'})")
+                logger.info(f"MQTT TLS configured with system certificates, hostname verification and secure ciphers (production: {is_production_environment(app)})")
                 
             # Log TLS security status for production monitoring
-            if app.config.get('FLASK_ENV') == 'production':
+            if is_production_environment(app):
                 logger.info("MQTT TLS enabled with hardened security configuration for production")
-        elif app.config.get('FLASK_ENV') == 'production':
+        elif is_production_environment(app):
             logger.error("MQTT TLS not enabled - this is not allowed in production environments")
             raise ValueError("MQTT TLS must be enabled in production environment")
         
@@ -100,7 +101,7 @@ class MQTTClient:
         if self.username and self.password:
             self.client.username_pw_set(self.username, self.password)
             logger.info("MQTT authentication configured")
-        elif app.config.get('FLASK_ENV') == 'production':
+        elif is_production_environment(app):
             logger.error("MQTT authentication not configured - this is not allowed for production")
             raise ValueError("MQTT authentication must be configured in production environment")
         
