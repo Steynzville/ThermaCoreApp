@@ -281,8 +281,8 @@ class SensorReadingCreateSchema(Schema):
     """Schema for sensor reading creation."""
     sensor_id = fields.Int(required=True)
     value = fields.Float(required=True)
-    timestamp = DateTimeField(missing=_utc_now)
-    quality = fields.Str(missing='GOOD', validate=validate.OneOf(['GOOD', 'BAD', 'UNCERTAIN']))
+    timestamp = DateTimeField(load_default=_utc_now)
+    quality = fields.Str(load_default='GOOD', validate=validate.OneOf(['GOOD', 'BAD', 'UNCERTAIN']))
 
 
 # Response schemas
@@ -301,7 +301,7 @@ class ErrorSchema(Schema):
     """Schema for error responses."""
     error = fields.Str()
     message = fields.Str()
-    details = fields.Dict(missing=None)
+    details = fields.Dict(load_default=None)
 
 
 # Authentication response schemas
