@@ -1,12 +1,12 @@
 """Multi-protocol management routes (normalized status in PR1a)."""
 from flask import Blueprint, jsonify, request, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from datetime import datetime
 import logging
 
 from app.routes.auth import permission_required
 from app.utils.error_handler import SecurityAwareErrorHandler
 from app.protocols.registry import collect_protocol_status, get_protocols_list
+from app.models import utc_now  # Use centralized timezone-aware datetime function
 
 # PR1a: Enhanced logging for protocol status monitoring
 logger = logging.getLogger(__name__)
@@ -69,7 +69,7 @@ def get_protocols_status():
             overall_health_score = 0.0
         
         response_data = {
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': utc_now().isoformat(),
             'version': PROTOCOLS_API_VERSION,  # PR1a: Version header
             'summary': {
                 'total_protocols': len(statuses),
@@ -268,7 +268,7 @@ def perform_dnp3_integrity_poll(device_id):
 @permission_required('read_units')
 def get_unified_devices_status():
     try:
-        unified_status = {'timestamp': datetime.utcnow().isoformat(), 'devices': {}}
+        unified_status = {'timestamp': utc_now().isoformat(), 'devices': {}}
         if hasattr(current_app, 'modbus_service'):
             mstat = current_app.modbus_service.get_device_status()
             for did, info in mstat.get('devices', {}).items():
@@ -336,7 +336,7 @@ def convert_protocol_data():
         return jsonify({
             'source_protocol': source_protocol,
             'target_protocol': target_protocol,
-            'conversion_timestamp': datetime.utcnow().isoformat(),
+            'conversion_timestamp': utc_now().isoformat(),
             'converted_data': converted_data,
             'mapping_applied': bool(mapping_config)
         })

@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from collections import deque
 from dataclasses import dataclass
 
-from app.models import Unit, Sensor, SensorReading, db
+from app.models import Unit, Sensor, SensorReading, db, utc_now  # Use timezone-aware datetime
 
 logger = logging.getLogger(__name__)
 
@@ -147,7 +147,7 @@ class AnomalyDetectionService:
                               timestamp: datetime = None) -> AnomalyResult:
         """Analyze a single sensor reading for anomalies."""
         if timestamp is None:
-            timestamp = datetime.utcnow()
+            timestamp = utc_now()
         
         try:
             # Get sensor information
@@ -246,7 +246,7 @@ class AnomalyDetectionService:
             if not unit:
                 raise ValueError(f"Unit {unit_id} not found")
             
-            start_time = datetime.utcnow() - timedelta(hours=hours)
+            start_time = utc_now() - timedelta(hours=hours)
             
             # Get recent readings for the unit
             recent_readings = db.session.query(
@@ -360,7 +360,7 @@ class AnomalyDetectionService:
     
     def _get_historical_values(self, sensor_id: str, days: int = 7) -> List[float]:
         """Get historical sensor values for baseline calculation."""
-        start_time = datetime.utcnow() - timedelta(days=days)
+        start_time = utc_now() - timedelta(days=days)
         
         readings = db.session.query(SensorReading.value).filter(
             and_(

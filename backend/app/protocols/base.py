@@ -1,18 +1,16 @@
 from __future__ import annotations
 from dataclasses import dataclass, asdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any, Literal
-from enum import Enum
+
+# Import utilities and types
+from app.utils.status_utils import (
+    AvailabilityLevel, utc_now, is_heartbeat_stale, get_time_since_last_heartbeat,
+    is_recovering, compute_health_score, compute_availability_level, record_error
+)
 
 # PR1a: Enhanced status types and availability semantics
 StatusType = Literal["not_initialized", "initializing", "ready", "error", "degraded", "unknown", "reconnecting"]
-
-class AvailabilityLevel(Enum):
-    """PR1a: Enhanced availability levels for more granular status reporting."""
-    UNAVAILABLE = 0      # Service not initialized or in fatal error
-    DEGRADED = 1         # Service partially available with reduced functionality  
-    AVAILABLE = 2        # Service initialized but not connected
-    FULLY_AVAILABLE = 3  # Service initialized and connected with healthy heartbeat
 
 @dataclass
 class ProtocolStatus:
@@ -64,85 +62,42 @@ class ProtocolStatus:
         if self.availability_level:
             data["availability_level"] = self.availability_level.name.lower()
         
-        # PR1a: Add computed fields for enhanced availability semantics
-        data["is_heartbeat_stale"] = self.is_heartbeat_stale()
-        data["time_since_last_heartbeat"] = self.get_time_since_last_heartbeat()
-        data["is_recovering"] = self.is_recovering()
-        data["health_score"] = self.compute_health_score()
+        # PR1a: Add computed fields for enhanced availability semantics using status_utils
+        data["is_heartbeat_stale"] = is_heartbeat_stale(self.last_heartbeat, self.heartbeat_timeout_seconds)
+        data["time_since_last_heartbeat"] = get_time_since_last_heartbeat(self.last_heartbeat)
+        data["is_recovering"] = is_recovering(self.retry_count, self.status)
+        data["health_score"] = compute_health_score(
+            self.available, self.connected, self.status, self.last_heartbeat,
+            self.heartbeat_timeout_seconds, self.error, self.retry_count
+        )
         
         return data
     
     def is_heartbeat_stale(self) -> bool:
         """PR1a: Check if heartbeat is stale based on timeout threshold."""
-        if not self.last_heartbeat:
-            return True
-        
-        time_diff = datetime.utcnow() - self.last_heartbeat
-        return time_diff.total_seconds() > self.heartbeat_timeout_seconds
+        return is_heartbeat_stale(self.last_heartbeat, self.heartbeat_timeout_seconds)
     
     def get_time_since_last_heartbeat(self) -> Optional[float]:
         """PR1a: Get time in seconds since last heartbeat."""
-        if not self.last_heartbeat:
-            return None
-        
-        time_diff = datetime.utcnow() - self.last_heartbeat
-        return time_diff.total_seconds()
+        return get_time_since_last_heartbeat(self.last_heartbeat)
     
     def is_recovering(self) -> bool:
         """PR1a: Check if protocol is in recovery state (has retry attempts)."""
-        return self.retry_count > 0 and self.status in ["reconnecting", "initializing"]
+        return is_recovering(self.retry_count, self.status)
     
     def compute_health_score(self) -> float:
         """PR1a: Compute health score (0-100) based on current state."""
-        if not self.available:
-            return 0.0
-        
-        score = 30.0  # Base score for being available
-        
-        if self.connected:
-            score += 40.0  # Additional score for connection
-            
-        if self.status == "ready":
-            score += 20.0  # Additional score for ready status
-            
-        if not self.is_heartbeat_stale():
-            score += 10.0  # Additional score for fresh heartbeat
-            
-        # Deduct points for errors and retries
-        if self.error:
-            score -= 15.0
-        if self.retry_count > 0:
-            score -= min(self.retry_count * 2, 10.0)
-            
-        return max(0.0, min(100.0, score))
+        return compute_health_score(
+            self.available, self.connected, self.status, self.last_heartbeat,
+            self.heartbeat_timeout_seconds, self.error, self.retry_count
+        )
     
     def compute_availability_level(self) -> AvailabilityLevel:
         """PR1a: Refined availability inference logic."""
-        # Priority order: availability -> connection -> status -> heartbeat
-        if not self.available:
-            return AvailabilityLevel.UNAVAILABLE
-        
-        # Check for error states first
-        if self.status == "error" or (self.error and not self.is_recovering()):
-            return AvailabilityLevel.DEGRADED
-        
-        # Full availability requires connection + ready status + fresh heartbeat
-        if self.connected and self.status == "ready" and not self.is_heartbeat_stale():
-            return AvailabilityLevel.FULLY_AVAILABLE
-        
-        # Available but not fully functional
-        if self.connected or self.status in ["ready", "degraded"]:
-            # Degraded if heartbeat is stale or status is degraded
-            if self.is_heartbeat_stale() or self.status == "degraded":
-                return AvailabilityLevel.DEGRADED
-            return AvailabilityLevel.AVAILABLE
-        
-        # Initializing or reconnecting states
-        if self.status in ["initializing", "reconnecting"]:
-            return AvailabilityLevel.DEGRADED
-        
-        # Fallback: available but not connected
-        return AvailabilityLevel.AVAILABLE if self.available else AvailabilityLevel.UNAVAILABLE
+        return compute_availability_level(
+            self.available, self.connected, self.status, self.last_heartbeat,
+            self.heartbeat_timeout_seconds, self.error, self.retry_count
+        )
     
     def update_availability_level(self) -> None:
         """PR1a: Update the availability level based on current state."""
@@ -150,13 +105,8 @@ class ProtocolStatus:
     
     def record_error(self, error_code: str, error_message: str = None, context: Dict[str, Any] = None) -> None:
         """PR1a: Record an error with enhanced context and timestamp."""
-        self.error = {
-            "code": error_code,
-            "message": error_message,
-            "context": context or {},
-            "timestamp": datetime.utcnow().isoformat()
-        }
-        self.last_error_time = datetime.utcnow()
+        self.error = record_error(error_code, error_message, context)
+        self.last_error_time = utc_now()
         self.status = "error"
         self.update_availability_level()
     

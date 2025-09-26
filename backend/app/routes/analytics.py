@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import func, and_, or_
 from typing import Dict, List, Any
 
-from app.models import Unit, Sensor, SensorReading, db
+from app.models import Unit, Sensor, SensorReading, db, utc_now  # Use timezone-aware datetime
 from app.routes.auth import permission_required
 from app.utils.error_handler import SecurityAwareErrorHandler
 
@@ -39,7 +39,7 @@ def get_dashboard_summary():
     """
     try:
         # Get time ranges
-        now = datetime.utcnow()
+        now = utc_now()
         last_24h = now - timedelta(hours=24)
         last_week = now - timedelta(days=7)
         last_month = now - timedelta(days=30)
@@ -153,7 +153,7 @@ def get_unit_trends(unit_id):
         sensor_type = request.args.get('sensor_type')
         
         # Calculate time range
-        now = datetime.utcnow()
+        now = utc_now()
         start_time = now - timedelta(days=days)
         
         # Build query
@@ -237,7 +237,7 @@ def get_units_performance():
     """
     try:
         hours = int(request.args.get('hours', 24))
-        start_time = datetime.utcnow() - timedelta(hours=hours)
+        start_time = utc_now() - timedelta(hours=hours)
         
         # Performance metrics per unit
         performance_data = db.session.query(
@@ -327,7 +327,7 @@ def get_alert_patterns():
     """
     try:
         days = int(request.args.get('days', 30))
-        start_time = datetime.utcnow() - timedelta(days=days)
+        start_time = utc_now() - timedelta(days=days)
         
         # For this demo, we'll simulate alert data since we don't have an alerts table yet
         # In a real implementation, you would query actual alert records
@@ -353,7 +353,7 @@ def get_alert_patterns():
         
         patterns = {}
         for reading in critical_readings:
-            date_str = reading.date.isoformat() if reading.date else datetime.utcnow().date().isoformat()
+            date_str = reading.date.isoformat() if reading.date else utc_now().date().isoformat()
             if date_str not in patterns:
                 patterns[date_str] = {}
             patterns[date_str][reading.sensor_type] = reading.count

@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from enum import Enum
 import time
 
+from app.models import utc_now  # Use timezone-aware datetime
+
 logger = logging.getLogger(__name__)
 
 # Mock DNP3 implementation for demonstration
@@ -221,7 +223,7 @@ class MockDNP3Master:
             raise ConnectionError(f"Outstation {outstation_address} not connected")
         
         logger.info(f"Performing integrity poll on outstation {outstation_address}")
-        self.connected_outstations[outstation_address]['last_poll'] = datetime.utcnow()
+        self.connected_outstations[outstation_address]['last_poll'] = utc_now()
         return True
     
     def _is_outstation_connected(self, outstation_address: int) -> bool:
@@ -395,7 +397,7 @@ class DNP3Service:
             
             data_points = self._data_point_configs[device_id]
             readings = []
-            timestamp = datetime.utcnow()
+            timestamp = utc_now()
             
             # Group data points by type for efficient reading
             binary_inputs = [dp for dp in data_points if dp.data_type == DNP3DataType.BINARY_INPUT]
@@ -521,7 +523,7 @@ class DNP3Service:
             logger.error(f"Failed to read device data for {device_id}: {e}")
             return {
                 'device_id': device_id,
-                'timestamp': datetime.utcnow().isoformat(),
+                'timestamp': utc_now().isoformat(),
                 'readings': {},
                 'success': False,
                 'error': str(e)

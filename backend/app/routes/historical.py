@@ -6,7 +6,7 @@ from sqlalchemy import func, and_, or_, desc, asc
 from typing import Dict, List, Any
 import json
 
-from app.models import Unit, Sensor, SensorReading, db
+from app.models import Unit, Sensor, SensorReading, db, utc_now  # Use timezone-aware datetime
 from app.routes.auth import permission_required
 from app.utils.error_handler import SecurityAwareErrorHandler
 
@@ -76,7 +76,7 @@ def get_historical_data(unit_id):
         
         # Set default time range if not provided
         if not end_date:
-            end_time = datetime.utcnow()
+            end_time = utc_now()
         else:
             end_time = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
             
@@ -249,7 +249,7 @@ def compare_units_historical():
         
         # Parse time range
         if not end_date:
-            end_time = datetime.utcnow()
+            end_time = utc_now()
         else:
             end_time = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
             
@@ -408,7 +408,7 @@ def export_historical_data(unit_id):
         
         # Set time range
         if not end_date:
-            end_time = datetime.utcnow()
+            end_time = utc_now()
         else:
             end_time = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
             
@@ -531,7 +531,7 @@ def get_historical_statistics(unit_id):
         days = int(request.args.get('days', 30))
         sensor_type = request.args.get('sensor_type')
         
-        start_time = datetime.utcnow() - timedelta(days=days)
+        start_time = utc_now() - timedelta(days=days)
         
         # Base query
         query = db.session.query(
