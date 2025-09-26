@@ -78,16 +78,40 @@ def _initialize_critical_service(service, service_name: str, app, logger, init_m
     except (ValueError, RuntimeError, ConnectionError, OSError, ImportError) as e:
         # Security validation errors, connection issues, or configuration errors
         logger.error(f"{service_name} security validation failed: {e}", exc_info=True)
+        
+        # Always fail in production or testing
         if is_production_environment(app):
             raise RuntimeError(f"{service_name} security validation failed in production: {e}") from e
-        # In development, log but continue
-        logger.warning(f"{service_name} initialization failed (development): {e}")
+        
+        # Import testing check to avoid circular imports
+        from app.utils.environment import is_testing_environment
+        if is_testing_environment(app):
+            # In testing, re-raise to ensure tests catch issues
+            raise RuntimeError(f"{service_name} initialization failed in testing: {e}") from e
+        
+        # In development, log but continue for most errors, except security ones
+        if isinstance(e, (ValueError, RuntimeError)):
+            # These often indicate configuration issues that should be fixed
+            logger.error(f"{service_name} failed with configuration error (development). "
+                        f"This should be addressed: {e}")
+        else:
+            logger.warning(f"{service_name} initialization failed (development): {e}")
         return False
         
     except Exception as e:
         logger.error(f"Failed to initialize {service_name}: {e}", exc_info=True)
+        
+        # Always fail in production
         if is_production_environment(app):
             raise RuntimeError(f"Critical service initialization failed: {service_name} - {e}") from e
+        
+        # Import testing check to avoid circular imports  
+        from app.utils.environment import is_testing_environment
+        if is_testing_environment(app):
+            # In testing, re-raise unexpected errors to ensure tests catch them
+            raise RuntimeError(f"{service_name} initialization failed in testing: {e}") from e
+        
+        # In development, be more lenient with generic errors but still log prominently
         logger.warning(f"{service_name} initialization failed (development): {e}")
         return False
 

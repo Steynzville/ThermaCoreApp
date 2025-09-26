@@ -181,7 +181,7 @@ class TestSecurityHardeningImprovements:
         with patch('opcua.Client') as mock_client_class:
             opcua_client = OPCUAClient()
             
-            with pytest.raises(ValueError, match="Invalid security policy in production"):
+            with pytest.raises(ValueError, match="OPC UA security policy .* is too weak for production"):
                 opcua_client.init_app(mock_app, None)
     
     def test_dependency_injection_enforcement_mqtt(self):

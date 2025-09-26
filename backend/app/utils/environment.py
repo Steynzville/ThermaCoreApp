@@ -1,6 +1,72 @@
 """Environment detection utilities for robust deployment checks."""
 import os
 from flask import current_app
+from typing import Optional, Dict, Any
+
+
+def _get_environment_from_config(config: Dict[str, Any]) -> Optional[str]:
+    """Extract environment information from config object.
+    
+    Args:
+        config: Flask config or dict-like object
+        
+    Returns:
+        Environment name if explicitly set, None otherwise
+    """
+    return config.get('FLASK_ENV', '').lower()
+
+
+def _is_debug_enabled(config: Dict[str, Any]) -> bool:
+    """Check if DEBUG is enabled in config.
+    
+    Args:
+        config: Flask config or dict-like object
+        
+    Returns:
+        True if DEBUG is enabled
+    """
+    return config.get('DEBUG', False)
+
+
+def _get_effective_app_config(app=None) -> Optional[Dict[str, Any]]:
+    """Get the effective application configuration.
+    
+    Args:
+        app: Flask application instance (optional)
+        
+    Returns:
+        Config dict or None if no app available
+    """
+    if app and hasattr(app, 'config'):
+        return app.config
+    
+    try:
+        if current_app and hasattr(current_app, 'config'):
+            return current_app.config
+    except RuntimeError:
+        pass
+    
+    return None
+
+
+def _check_environment_mismatch(flask_env: str, app_env: str, debug_enabled: bool) -> bool:
+    """Check for dangerous environment mismatches that could indicate staging misclassified as development.
+    
+    Args:
+        flask_env: FLASK_ENV value
+        app_env: APP_ENV value  
+        debug_enabled: Whether DEBUG is enabled
+        
+    Returns:
+        True if there's a dangerous mismatch (e.g., production env with DEBUG=True)
+    """
+    # Check for production environment variables with DEBUG=True
+    production_envs = ('production', 'prod', 'staging', 'stage')
+    
+    if debug_enabled and (flask_env in production_envs or app_env in production_envs):
+        return True
+    
+    return False
 
 
 def is_testing_environment(app=None) -> bool:
@@ -18,16 +84,10 @@ def is_testing_environment(app=None) -> bool:
     if testing_env in ('true', '1'):
         return True
     
-    # Check app configuration
-    if app and app.config.get('TESTING', False):
+    # Check app configuration using helper
+    config = _get_effective_app_config(app)
+    if config and config.get('TESTING', False):
         return True
-    
-    # Try current_app
-    try:
-        if current_app and current_app.config.get('TESTING', False):
-            return True
-    except RuntimeError:
-        pass
     
     return False
 
@@ -48,64 +108,55 @@ def is_production_environment(app=None) -> bool:
     
     Returns:
         True if running in production environment
+        
+    Raises:
+        ValueError: If dangerous environment mismatches are detected
     """
     # First priority: Check if we're in testing environment (testing is never production)
-    # Use direct testing check to avoid recursion
-    testing_env = os.environ.get('TESTING', 'false').lower()
-    if testing_env in ('true', '1'):
+    if is_testing_environment(app):
         return False
-        
-    # Check app configuration for testing
-    if app and app.config.get('TESTING', False):
-        return False
-    
-    # Try current_app for testing
-    try:
-        if current_app and current_app.config.get('TESTING', False):
-            return False
-    except RuntimeError:
-        pass
         
     # Check environment variables first (most reliable)
     flask_env = os.environ.get('FLASK_ENV', '').lower()
-    if flask_env:
-        return flask_env == 'production'
-    
     app_env = os.environ.get('APP_ENV', '').lower()
-    if app_env:
-        return app_env == 'production'
     
-    # Check app configuration if app is available
-    if app:
+    if flask_env:
+        is_prod_env = flask_env == 'production'
+    elif app_env:
+        is_prod_env = app_env == 'production'
+    else:
+        is_prod_env = None
+    
+    # Get app config for further checks
+    config = _get_effective_app_config(app)
+    debug_enabled = _is_debug_enabled(config) if config else False
+    
+    # Check for dangerous mismatches before proceeding
+    if _check_environment_mismatch(flask_env, app_env, debug_enabled):
+        raise ValueError(
+            f"Dangerous environment mismatch detected: "
+            f"FLASK_ENV='{flask_env}', APP_ENV='{app_env}', DEBUG={debug_enabled}. "
+            f"Production/staging environments should not have DEBUG=True"
+        )
+    
+    # If explicit environment is set, use it
+    if is_prod_env is not None:
+        return is_prod_env
+    
+    # Check app configuration if no explicit environment variables
+    if config:
         # Check DEBUG setting (False typically means production)
-        if not app.config.get('DEBUG', True):
+        if not debug_enabled:
             return True
         
         # Check app's FLASK_ENV config
-        app_flask_env = app.config.get('FLASK_ENV', '').lower()
+        app_flask_env = _get_environment_from_config(config)
         if app_flask_env:
             return app_flask_env == 'production'
         
         # If DEBUG is True and no explicit environment, assume development
-        if app.config.get('DEBUG', True):
+        if debug_enabled:
             return False
-    
-    # Try current_app if no app provided
-    try:
-        if current_app and hasattr(current_app, 'config'):
-            if not current_app.config.get('DEBUG', True):
-                return True
-                
-            app_flask_env = current_app.config.get('FLASK_ENV', '').lower()
-            if app_flask_env:
-                return app_flask_env == 'production'
-            
-            # If DEBUG is True and no explicit environment, assume development
-            if current_app.config.get('DEBUG', True):
-                return False
-    except RuntimeError:
-        # No application context available
-        pass
     
     # Default to production for safety if environment is unclear
     # NOTE: This fallback behavior ensures that if environment detection is ambiguous,
@@ -128,56 +179,46 @@ def is_development_environment(app=None) -> bool:
     
     Returns:
         True if running in development environment
-    """
-    # Testing environment is never development (check directly to avoid recursion)
-    testing_env = os.environ.get('TESTING', 'false').lower()
-    if testing_env in ('true', '1'):
-        return False
         
-    # Check app configuration for testing
-    if app and app.config.get('TESTING', False):
+    Raises:
+        ValueError: If dangerous environment mismatches are detected
+    """
+    # Testing environment is never development
+    if is_testing_environment(app):
         return False
-    
-    # Try current_app for testing
-    try:
-        if current_app and current_app.config.get('TESTING', False):
-            return False
-    except RuntimeError:
-        pass
         
     # Check for explicit development environment variables
     flask_env = os.environ.get('FLASK_ENV', '').lower()
-    if flask_env == 'development':
-        return True
-        
     app_env = os.environ.get('APP_ENV', '').lower()
-    if app_env == 'development':
+    
+    if flask_env == 'development' or app_env == 'development':
         return True
     
+    # Get app config for further checks
+    config = _get_effective_app_config(app)
+    debug_enabled = _is_debug_enabled(config) if config else False
+    
+    # Check for dangerous mismatches
+    if _check_environment_mismatch(flask_env, app_env, debug_enabled):
+        raise ValueError(
+            f"Dangerous environment mismatch detected: "
+            f"FLASK_ENV='{flask_env}', APP_ENV='{app_env}', DEBUG={debug_enabled}. "
+            f"Production/staging environments should not have DEBUG=True"
+        )
+    
     # Check app configuration for development indicators
-    if app:
-        app_flask_env = app.config.get('FLASK_ENV', '').lower()
+    if config:
+        app_flask_env = _get_environment_from_config(config)
         if app_flask_env == 'development':
             return True
             
         # DEBUG=True can indicate development if no explicit production env
-        if app.config.get('DEBUG', False):
+        if debug_enabled:
             # But only if no production environment variables are set
+            production_envs = ('production', 'prod', 'staging', 'stage')
             if not flask_env and not app_env and not app_flask_env:
                 return True
-    
-    # Try current_app
-    try:
-        if current_app and hasattr(current_app, 'config'):
-            app_flask_env = current_app.config.get('FLASK_ENV', '').lower()
-            if app_flask_env == 'development':
+            elif flask_env not in production_envs and app_env not in production_envs and app_flask_env not in production_envs:
                 return True
-                
-            # DEBUG=True can indicate development if no explicit production env
-            if current_app.config.get('DEBUG', False):
-                if not flask_env and not app_env and not app_flask_env:
-                    return True
-    except RuntimeError:
-        pass
     
     return False

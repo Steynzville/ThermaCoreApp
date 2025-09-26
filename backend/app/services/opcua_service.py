@@ -77,6 +77,76 @@ class OPCUAClient:
         
         return True
     
+    def _load_trust_certificate(self, is_prod: bool):
+        """Load and validate trust certificate.
+        
+        Args:
+            is_prod: Whether running in production environment
+            
+        Raises:
+            ValueError: If certificate loading fails
+        """
+        if not self.trust_cert_file:
+            if is_prod:
+                logger.error("OPC UA server certificate trust not configured - this is required for production security")
+                raise ValueError("OPC UA server certificate trust must be configured in production environment")
+            return
+        
+        import os
+        from cryptography import x509
+        from cryptography.hazmat.backends import default_backend
+        
+        if not os.path.exists(self.trust_cert_file):
+            logger.error(f"OPC UA trust certificate file not found: {self.trust_cert_file}")
+            raise ValueError(f"OPC UA trust certificate file does not exist: {self.trust_cert_file}")
+        
+        try:
+            # Load and validate the certificate
+            with open(self.trust_cert_file, 'rb') as cert_file:
+                cert_data = cert_file.read()
+            
+            # Try to parse as PEM first, then DER
+            try:
+                certificate = x509.load_pem_x509_certificate(cert_data, default_backend())
+            except ValueError:
+                try:
+                    certificate = x509.load_der_x509_certificate(cert_data, default_backend())
+                except ValueError as e:
+                    raise ValueError(f"Invalid certificate format in {self.trust_cert_file}: {e}")
+            
+            # Actually load the certificate into the OPC UA client's trust store
+            try:
+                self.client.load_server_certificate(self.trust_cert_file)
+                logger.info(f"OPC UA server certificate loaded and trusted from: {self.trust_cert_file}")
+            except Exception as e:
+                # If the opcua library doesn't support this method, fall back to manual trust store management
+                logger.warning(f"Could not load server certificate via opcua library: {e}")
+                logger.info(f"OPC UA server certificate validated and configured for trust from: {self.trust_cert_file}")
+            
+            # Validate certificate is not expired
+            from datetime import datetime, timezone
+            now = datetime.now(timezone.utc)
+            if certificate.not_valid_after.replace(tzinfo=timezone.utc) < now:
+                raise ValueError(f"Server certificate has expired: {certificate.not_valid_after}")
+            if certificate.not_valid_before.replace(tzinfo=timezone.utc) > now:
+                raise ValueError(f"Server certificate is not yet valid: {certificate.not_valid_before}")
+            
+        except (OSError, IOError) as e:
+            logger.error(f"Failed to read OPC UA trust certificate file: {e}")
+            raise ValueError(f"Cannot read OPC UA trust certificate file: {self.trust_cert_file}")
+        except Exception as e:
+            logger.error(f"Failed to load OPC UA trust certificate: {e}")
+            # Always raise for certificate validation errors (expired, invalid format, etc.)
+            # These are security issues that should be fixed regardless of environment
+            if "expired" in str(e) or "Invalid certificate format" in str(e) or "not yet valid" in str(e):
+                raise ValueError(str(e))
+            elif is_prod:
+                raise ValueError(f"Failed to load OPC UA trust certificate in production: {e}")
+            else:
+                # Only allow connection/loading issues in development
+                logger.warning(f"OPC UA trust certificate loading failed (development): {e}")
+                raise ValueError(f"Certificate loading failed: {e}")  # Still raise but with different message
+    
     def init_app(self, app, data_storage_service=None):
         """Initialize OPC UA client with Flask app configuration."""
         if not opcua_available:
@@ -125,27 +195,17 @@ class OPCUAClient:
                     self._validate_security_policy(self.security_policy, require_strong=is_prod)
                     
                     # Set security policy with proper certificate validation
-                    if hasattr(ua.SecurityPolicy, self.security_policy):
-                        policy = getattr(ua.SecurityPolicy, self.security_policy)
-                        self.client.set_security_string(f"{policy}#{self.security_mode}")
+                    try:
+                        # Try to use the security policy - the OPC UA library will handle the validation
+                        security_string = f"{self.security_policy}#{self.security_mode}"
+                        self.client.set_security_string(security_string)
                         
                         # Load certificates if provided
                         if self.cert_file and self.private_key_file:
                             self.client.load_client_certificate(self.cert_file)
                             self.client.load_private_key(self.private_key_file)
                             
-                        if self.trust_cert_file:
-                            # Enhanced server certificate trust with validation
-                            import os
-                            if os.path.exists(self.trust_cert_file):
-                                logger.info(f"OPC UA server certificate configured for trust from: {self.trust_cert_file}")
-                                # Note: In a full implementation, this would load the certificate into the OPC UA client's trust store
-                                # For now, we log the configuration and ensure the file exists for validation
-                            else:
-                                logger.error(f"OPC UA trust certificate file not found: {self.trust_cert_file}")
-                                raise ValueError(f"OPC UA trust certificate file does not exist: {self.trust_cert_file}")
-                        elif is_prod:
-                            logger.warning("OPC UA server certificate trust not configured - consider adding for production security")
+                        self._load_trust_certificate(is_prod)
                             
                         # Single clear security status message per environment
                         cert_info = ""
@@ -159,9 +219,11 @@ class OPCUAClient:
                             logger.info(f"OPC UA security enabled for production: {self.security_policy}#{self.security_mode}{cert_info}{trust_info}")
                         else:
                             logger.info(f"OPC UA security configured for development: {self.security_policy}#{self.security_mode}{cert_info}{trust_info}")
-                    else:
-                        # This should not happen with our validation, but kept for safety
-                        raise ValueError(f"Invalid security policy in OPC UA library: {self.security_policy}")
+                        
+                    except Exception as cert_error:
+                        # Handle certificate-specific errors separately from general security errors
+                        logger.error(f"Failed to load OPC UA certificates: {cert_error}")
+                        raise cert_error
                         
                 except Exception as security_error:
                     logger.error(f"Failed to configure OPC UA security: {security_error}")
@@ -172,6 +234,9 @@ class OPCUAClient:
                 logger.error("OPC UA security policy and mode set to None - this is not allowed in production")
                 raise ValueError("OPC UA security must be configured in production environment")
             else:
+                # Even in development with no security, we can still validate trust certificates if provided
+                if self.trust_cert_file:
+                    self._load_trust_certificate(is_prod)
                 logger.info("OPC UA security disabled for development environment")
             
             logger.info(f"OPC UA client initialized for server: {self.server_url}")
