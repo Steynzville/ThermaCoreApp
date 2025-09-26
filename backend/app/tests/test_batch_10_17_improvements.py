@@ -16,20 +16,29 @@ class TestEnvironmentDetection:
     
     def test_production_detection_via_flask_env(self):
         """Test production detection via FLASK_ENV."""
-        with patch.dict('os.environ', {'FLASK_ENV': 'production'}):
-            assert is_production_environment() is True
-            assert is_development_environment() is False
+        # Create a mock app that doesn't have TESTING=True to bypass Flask app context
+        mock_app = type('MockApp', (), {'config': {}})()
+        
+        with patch.dict('os.environ', {'FLASK_ENV': 'production'}, clear=True):
+            assert is_production_environment(mock_app) is True
+            assert is_development_environment(mock_app) is False
     
     def test_production_detection_via_app_env(self):
         """Test production detection via APP_ENV."""
+        # Create a mock app that doesn't have TESTING=True to bypass Flask app context
+        mock_app = type('MockApp', (), {'config': {}})()
+        
         with patch.dict('os.environ', {'APP_ENV': 'production'}, clear=True):
-            assert is_production_environment() is True
+            assert is_production_environment(mock_app) is True
     
     def test_development_detection_via_flask_env(self):
         """Test development detection via FLASK_ENV."""
-        with patch.dict('os.environ', {'FLASK_ENV': 'development'}):
-            assert is_development_environment() is True
-            assert is_production_environment() is False
+        # Create a mock app that doesn't have TESTING=True to bypass Flask app context
+        mock_app = type('MockApp', (), {'config': {}})()
+        
+        with patch.dict('os.environ', {'FLASK_ENV': 'development'}, clear=True):
+            assert is_development_environment(mock_app) is True
+            assert is_production_environment(mock_app) is False
     
     def test_production_detection_via_debug_false(self):
         """Test production detection when DEBUG=False in app config."""
@@ -49,35 +58,47 @@ class TestEnvironmentDetection:
     
     def test_default_to_production_when_unclear(self):
         """Test that unclear environment defaults to production for safety."""
+        # Create a mock app that doesn't have TESTING=True to bypass Flask app context
+        mock_app = type('MockApp', (), {'config': {}})()
+        
         env_keys_to_clear = ['FLASK_ENV', 'APP_ENV', 'TESTING', 'DEBUG'] 
         with patch.dict('os.environ', {}, clear=True):
             # Explicitly ensure no environment vars that affect detection
             for key in env_keys_to_clear:
                 os.environ.pop(key, None)
-            assert is_production_environment() is True
+            assert is_production_environment(mock_app) is True
     
     def test_testing_environment_detection(self):
         """Test testing environment detection."""
+        # Create a mock app to ensure consistent behavior
+        mock_app = type('MockApp', (), {'config': {}})()
+        
         with patch.dict('os.environ', {'TESTING': 'true'}):
-            assert is_testing_environment() is True
+            assert is_testing_environment(mock_app) is True
         
         with patch.dict('os.environ', {'TESTING': '1'}):
-            assert is_testing_environment() is True
+            assert is_testing_environment(mock_app) is True
     
     def test_testing_environment_not_development(self):
         """Test that testing environment is not classified as development."""
+        # Create a mock app to ensure consistent behavior
+        mock_app = type('MockApp', (), {'config': {}})()
+        
         with patch.dict('os.environ', {'TESTING': 'true'}):
-            assert is_testing_environment() is True
-            assert is_development_environment() is False
-            assert is_production_environment() is False
+            assert is_testing_environment(mock_app) is True
+            assert is_development_environment(mock_app) is False
+            assert is_production_environment(mock_app) is False
     
     def test_testing_environment_not_production(self):
         """Test that testing environment is not classified as production."""
+        # Create a mock app to ensure consistent behavior
+        mock_app = type('MockApp', (), {'config': {}})()
+        
         # Even with production environment variables, testing takes priority
         with patch.dict('os.environ', {'TESTING': 'true', 'FLASK_ENV': 'production'}):
-            assert is_testing_environment() is True
-            assert is_production_environment() is False
-            assert is_development_environment() is False
+            assert is_testing_environment(mock_app) is True
+            assert is_production_environment(mock_app) is False
+            assert is_development_environment(mock_app) is False
 
 
 class TestOPCUASecurityPolicyValidation:
