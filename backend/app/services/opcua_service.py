@@ -77,6 +77,46 @@ class OPCUAClient:
         
         return True
     
+    def _normalize_certificate_datetime(self, dt):
+        """Normalize certificate datetime to UTC-aware datetime.
+        
+        Robustly handles both ISO format strings and datetime objects,
+        with proper timezone awareness following Python best practices.
+        
+        Args:
+            dt: Datetime object or ISO format string from certificate
+            
+        Returns:
+            UTC-aware datetime object
+        """
+        if dt is None:
+            raise ValueError("Certificate datetime cannot be None")
+            
+        # If already a timezone-aware datetime, convert to UTC
+        if hasattr(dt, 'tzinfo') and dt.tzinfo is not None:
+            return dt.astimezone(timezone.utc)
+        
+        # Handle string input (ISO format)
+        if isinstance(dt, str):
+            try:
+                # Try parsing as ISO format with timezone
+                if dt.endswith('Z'):
+                    dt_str = dt[:-1] + '+00:00'
+                elif '+' in dt or dt.count('-') > 2:  # Has timezone info
+                    dt_str = dt
+                else:
+                    dt_str = dt + '+00:00'  # Assume UTC if no timezone
+                parsed_dt = datetime.fromisoformat(dt_str)
+                return parsed_dt.astimezone(timezone.utc)
+            except ValueError:
+                raise ValueError(f"Invalid certificate datetime format: {dt}")
+        
+        # Handle naive datetime objects (assume UTC as per X.509 standard)
+        if hasattr(dt, 'year'):  # It's a datetime-like object
+            return dt.replace(tzinfo=timezone.utc)
+        
+        raise ValueError(f"Unsupported certificate datetime type: {type(dt)}")
+    
     def _load_trust_certificate(self, is_prod: bool):
         """Load and validate trust certificate.
         
@@ -119,28 +159,11 @@ class OPCUAClient:
                     raise ValueError(f"Invalid certificate format: {e}")
             
             # Validate certificate is not expired (always a security issue)
-            from datetime import datetime, timezone
             now = datetime.now(timezone.utc)
             
-            # Use the newer UTC-aware properties if available, fall back to older ones
-            try:
-                not_valid_after_utc = certificate.not_valid_after_utc
-                not_valid_before_utc = certificate.not_valid_before_utc
-            except AttributeError:
-                # Fallback for older cryptography versions - handle naive UTC datetimes correctly
-                try:
-                    # For older cryptography versions, dates are naive and assumed to be UTC
-                    # Use fromisoformat with explicit UTC timezone for proper handling
-                    not_valid_after_utc = datetime.fromisoformat(
-                        certificate.not_valid_after.isoformat() + '+00:00'
-                    )
-                    not_valid_before_utc = datetime.fromisoformat(
-                        certificate.not_valid_before.isoformat() + '+00:00'
-                    )
-                except (ValueError, AttributeError):
-                    # Final fallback if fromisoformat fails - assume naive UTC
-                    not_valid_after_utc = certificate.not_valid_after.replace(tzinfo=timezone.utc)
-                    not_valid_before_utc = certificate.not_valid_before.replace(tzinfo=timezone.utc)
+            # Robust timezone handling for certificate expiry validation
+            not_valid_after_utc = self._normalize_certificate_datetime(certificate.not_valid_after_utc if hasattr(certificate, 'not_valid_after_utc') else certificate.not_valid_after)
+            not_valid_before_utc = self._normalize_certificate_datetime(certificate.not_valid_before_utc if hasattr(certificate, 'not_valid_before_utc') else certificate.not_valid_before)
             
             if not_valid_after_utc < now:
                 logger.error(f"Certificate validation failed: expired certificate detected", exc_info=True)
@@ -272,10 +295,15 @@ class OPCUAClient:
                                     raise ValueError(f"OPC UA security policy '{self.security_policy}' requires client certificates in production. "
                                                    f"Please configure OPCUA_CERT_FILE and OPCUA_PRIVATE_KEY_FILE.")
                                 else:
-                                    # In development, allow fallback to None security if the specific policy fails
-                                    logger.warning(f"Development environment: falling back to no security due to missing client certificates")
-                                    self.security_policy = 'None'
-                                    self.security_mode = 'None'
+                                    # Check explicit flag for insecure fallback in development
+                                    allow_fallback = app.config.get('OPCUA_ALLOW_INSECURE_FALLBACK', False)
+                                    if allow_fallback:
+                                        logger.warning(f"Development environment: falling back to no security due to missing client certificates (OPCUA_ALLOW_INSECURE_FALLBACK=true)")
+                                        self.security_policy = 'None'
+                                        self.security_mode = 'None'
+                                    else:
+                                        raise ValueError(f"OPC UA security policy '{self.security_policy}' requires client certificates. "
+                                                       f"Set OPCUA_ALLOW_INSECURE_FALLBACK=true to allow fallback to insecure mode in development.")
                         
                         # Trust certificate loading (separate from client certificates)
                         self._load_trust_certificate(is_prod)

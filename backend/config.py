@@ -76,6 +76,9 @@ class Config:
     OPCUA_CERT_FILE = os.environ.get('OPCUA_CERT_FILE')  # Path to client certificate
     OPCUA_PRIVATE_KEY_FILE = os.environ.get('OPCUA_PRIVATE_KEY_FILE')  # Path to private key
     OPCUA_TRUST_CERT_FILE = os.environ.get('OPCUA_TRUST_CERT_FILE')  # Path to server certificate to trust
+    
+    # Security policy fallback behavior (only affects development environment)
+    OPCUA_ALLOW_INSECURE_FALLBACK = os.environ.get('OPCUA_ALLOW_INSECURE_FALLBACK', 'false').lower() == 'true'
 
 
 class DevelopmentConfig(Config):
