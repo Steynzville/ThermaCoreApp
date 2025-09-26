@@ -138,11 +138,13 @@ def create_app(config_name=None):
     if cors_available:
         CORS(app, origins=app.config['CORS_ORIGINS'])
     
-    # Set up middleware - PR2 Implementation
+    # Set up middleware - PR2 Implementation + PR3 Audit Logging
     from app.middleware.request_id import setup_request_id_middleware
     from app.middleware.metrics import setup_metrics_middleware
+    from app.middleware.audit import setup_audit_middleware
     setup_request_id_middleware(app)
     setup_metrics_middleware(app)
+    setup_audit_middleware(app)
     
     # Register middleware blueprints
     from app.middleware.metrics import create_metrics_blueprint

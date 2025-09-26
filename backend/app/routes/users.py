@@ -10,6 +10,7 @@ from app.models import User, Role
 from app.utils.schemas import UserSchema, UserCreateSchema, UserUpdateSchema, RoleSchema
 from app.routes.auth import permission_required, role_required
 from app.utils.helpers import get_current_user_id
+from app.middleware.audit import audit_operation
 
 
 users_bp = Blueprint('users', __name__)
@@ -18,6 +19,7 @@ users_bp = Blueprint('users', __name__)
 @users_bp.route('/users', methods=['GET'])
 @jwt_required()
 @permission_required('read_users')
+@audit_operation('READ', 'users')
 def get_users():
     """
     Get all users with optional filtering and pagination.
@@ -131,6 +133,7 @@ def get_user(user_id):
 @users_bp.route('/users/<int:user_id>', methods=['PUT'])
 @jwt_required()
 @permission_required('write_users')
+@audit_operation('UPDATE', 'user', include_request_data=True, include_response_data=True)
 def update_user(user_id):
     """
     Update an existing user.
@@ -214,6 +217,7 @@ def update_user(user_id):
 @users_bp.route('/users/<int:user_id>', methods=['DELETE'])
 @jwt_required()
 @permission_required('delete_users')
+@audit_operation('DELETE', 'user')
 def delete_user(user_id):
     """
     Delete a user (soft delete by deactivating).

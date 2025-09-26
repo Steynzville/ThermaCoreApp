@@ -18,6 +18,10 @@ from app.utils.error_handler import SecurityAwareErrorHandler
 from app.middleware.validation import validate_schema
 from app.middleware.rate_limit import auth_rate_limit, standard_rate_limit
 from app.middleware.request_id import track_request_id
+from app.middleware.audit import (
+    audit_login_success, audit_login_failure, audit_permission_check,
+    AuditLogger, AuditEventType
+)
 
 
 auth_bp = Blueprint('auth', __name__)
@@ -31,6 +35,12 @@ def permission_required(permission):
             verify_jwt_in_request()
             user_id, success = get_current_user_id()
             if not success or user_id is None:
+                # Audit failed permission check
+                audit_permission_check(
+                    permission=permission,
+                    granted=False,
+                    details={'reason': 'Invalid token format'}
+                )
                 return SecurityAwareErrorHandler.handle_service_error(
                     Exception('Invalid token format'), 'authentication_error', 'Token validation', 401
                 )
@@ -38,14 +48,41 @@ def permission_required(permission):
             user = User.query.get(user_id)
             
             if not user or not user.is_active:
+                # Audit failed permission check - user not found/inactive
+                audit_permission_check(
+                    permission=permission,
+                    granted=False,
+                    user_id=user_id,
+                    username=user.username if user else None,
+                    details={'reason': 'User not found or inactive'}
+                )
                 return SecurityAwareErrorHandler.handle_service_error(
                     Exception('User not found or inactive'), 'authentication_error', 'User validation', 403
                 )
                 
             if not user.has_permission(permission):
+                # Audit denied permission
+                audit_permission_check(
+                    permission=permission,
+                    granted=False,
+                    user_id=user.id,
+                    username=user.username,
+                    resource=request.endpoint if request else None,
+                    details={'reason': 'Insufficient permissions', 'user_role': user.role.name.value}
+                )
                 return SecurityAwareErrorHandler.handle_service_error(
                     Exception('Insufficient permissions'), 'permission_error', f'Permission check: {permission}', 403
                 )
+            
+            # Audit successful permission check
+            audit_permission_check(
+                permission=permission,
+                granted=True,
+                user_id=user.id,
+                username=user.username,
+                resource=request.endpoint if request else None,
+                details={'user_role': user.role.name.value}
+            )
                 
             return f(*args, **kwargs)
         return decorated_function
@@ -196,6 +233,16 @@ def login():
         access_token = create_access_token(identity=str(user.id))
         refresh_token = create_refresh_token(identity=str(user.id))
         
+        # Audit successful login
+        audit_login_success(
+            username=user.username,
+            details={
+                'user_id': user.id,
+                'role': user.role.name.value,
+                'last_login': user.last_login.isoformat()
+            }
+        )
+        
         token_schema = TokenSchema()
         user_schema = UserSchema()
         
@@ -209,6 +256,22 @@ def login():
         return SecurityAwareErrorHandler.create_success_response(
             token_schema.dump(response_data), 'Login successful', 200
         )
+    
+    # Audit failed login
+    username = data.get('username', 'unknown')
+    failure_reason = 'invalid_credentials'
+    if user and not user.is_active:
+        failure_reason = 'inactive_user'
+    elif not user:
+        failure_reason = 'user_not_found'
+    elif not user.check_password(data['password']):
+        failure_reason = 'incorrect_password'
+    
+    audit_login_failure(
+        username=username,
+        reason=failure_reason,
+        details={'attempted_username': username}
+    )
     
     return SecurityAwareErrorHandler.handle_service_error(
         Exception('Invalid credentials'), 'authentication_error', 'Login attempt', 401
@@ -248,6 +311,14 @@ def refresh():
         return jsonify({'error': 'User not found or inactive'}), 401
     
     access_token = create_access_token(identity=str(user.id))
+    
+    # Audit token refresh
+    AuditLogger.log_authentication_event(
+        AuditEventType.TOKEN_REFRESH,
+        username=user.username,
+        outcome="success",
+        details={'user_id': user.id, 'role': user.role.name.value}
+    )
     
     return jsonify({
         'access_token': access_token,
