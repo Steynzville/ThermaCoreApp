@@ -58,38 +58,51 @@ class MQTTClient:
         # Configure TLS if enabled
         if self.use_tls:
             import ssl
+            
+            # Enforce TLSv1.2+ and secure cipher suites for production
+            if app.config.get('FLASK_ENV') == 'production':
+                # Production: require TLSv1.2+ with restricted cipher suites
+                tls_version = ssl.PROTOCOL_TLS_CLIENT  # Secure TLS version
+                secure_ciphers = 'ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20:!aNULL:!MD5:!DSS'
+            else:
+                # Development: allow broader TLS compatibility
+                tls_version = ssl.PROTOCOL_TLS
+                secure_ciphers = None
+            
             if self.ca_certs:
                 # Configure TLS with certificate pinning and hostname verification
                 self.client.tls_set(ca_certs=self.ca_certs, 
                                   certfile=self.cert_file, 
                                   keyfile=self.key_file,
                                   cert_reqs=ssl.CERT_REQUIRED,
-                                  tls_version=ssl.PROTOCOL_TLS,
-                                  ciphers=None)  # Use default secure ciphers
+                                  tls_version=tls_version,
+                                  ciphers=secure_ciphers)
                 # Enable hostname verification for security
                 self.client.tls_insecure_set(False)
-                logger.info("MQTT TLS configured with certificates and hostname verification")
+                logger.info(f"MQTT TLS configured with certificates, hostname verification and secure ciphers (production: {app.config.get('FLASK_ENV') == 'production'})")
             else:
                 # Use system CA certificates with security hardening
                 self.client.tls_set(cert_reqs=ssl.CERT_REQUIRED,
-                                  tls_version=ssl.PROTOCOL_TLS,
-                                  ciphers=None)
+                                  tls_version=tls_version,
+                                  ciphers=secure_ciphers)
                 self.client.tls_insecure_set(False)
-                logger.info("MQTT TLS configured with system certificates and hostname verification")
+                logger.info(f"MQTT TLS configured with system certificates, hostname verification and secure ciphers (production: {app.config.get('FLASK_ENV') == 'production'})")
                 
             # Log TLS security status for production monitoring
             if app.config.get('FLASK_ENV') == 'production':
-                logger.info("MQTT TLS enabled with secure configuration for production")
+                logger.info("MQTT TLS enabled with hardened security configuration for production")
         elif app.config.get('FLASK_ENV') == 'production':
-            logger.warning("MQTT TLS not enabled - this is insecure for production environments")
+            logger.error("MQTT TLS not enabled - this is not allowed in production environments")
+            raise ValueError("MQTT TLS must be enabled in production environment")
         
         
         # Set authentication if provided (required for secure connections)
         if self.username and self.password:
             self.client.username_pw_set(self.username, self.password)
             logger.info("MQTT authentication configured")
-        elif self.use_tls or app.config.get('FLASK_ENV') == 'production':
-            logger.warning("MQTT authentication not configured - this is insecure for production")
+        elif app.config.get('FLASK_ENV') == 'production':
+            logger.error("MQTT authentication not configured - this is not allowed for production")
+            raise ValueError("MQTT authentication must be configured in production environment")
         
         # Set callbacks
         self.client.on_connect = self._on_connect
@@ -112,8 +125,8 @@ class MQTTClient:
             self.client.connect(self.broker_host, self.broker_port, self.keepalive)
             self.client.loop_start()
         except Exception as e:
-            logger.error(f"Failed to connect to MQTT broker: {e}")
-            raise
+            logger.error(f"Failed to connect to MQTT broker: {e}", exc_info=True)
+            raise ConnectionError(f"MQTT connection failed: {e}") from e
     
     def disconnect(self):
         """Disconnect from MQTT broker."""
@@ -261,14 +274,13 @@ class MQTTClient:
         Args:
             data: Parsed sensor data
         """
-        # Use injected data storage service if available, fallback to global import
+        # Use injected data storage service - no fallback allowed
+        if not self._data_storage_service:
+            logger.error("Data storage service not available - check service initialization. Dependency injection required.")
+            return
+        
         try:
-            if self._data_storage_service:
-                success = self._data_storage_service.store_sensor_data(data)
-            else:
-                # Fallback to global import for backward compatibility
-                from app.services.data_storage_service import data_storage_service
-                success = data_storage_service.store_sensor_data(data)
+            success = self._data_storage_service.store_sensor_data(data)
             
             if success:
                 # Process data for real-time streaming after successful storage
@@ -286,8 +298,6 @@ class MQTTClient:
             else:
                 logger.error(f"Failed to store sensor data: {data['unit_id']}/{data['sensor_type']}")
                 
-        except ImportError:
-            logger.error("Data storage service not available - check service initialization")
         except Exception as e:
             logger.error(f"Unexpected error in data storage: {e}", exc_info=True)
     
