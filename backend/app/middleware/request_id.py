@@ -1,0 +1,180 @@
+"""Request ID tracking middleware for ThermaCore SCADA API."""
+import uuid
+import logging
+from functools import wraps
+from typing import Optional, Callable
+
+from flask import request, g, has_request_context
+
+
+logger = logging.getLogger(__name__)
+
+
+class RequestIDManager:
+    """Manages request ID generation and tracking across the application."""
+    
+    REQUEST_ID_HEADER = 'X-Request-ID'
+    
+    @staticmethod
+    def generate_request_id() -> str:
+        """Generate a new UUID4 request ID."""
+        return str(uuid.uuid4())
+    
+    @staticmethod
+    def extract_request_id() -> Optional[str]:
+        """Extract request ID from headers or generate new one."""
+        if not has_request_context():
+            return None
+            
+        # Check if client provided request ID
+        client_request_id = request.headers.get(RequestIDManager.REQUEST_ID_HEADER)
+        
+        if client_request_id:
+            # Validate client-provided request ID (must be valid UUID format)
+            try:
+                # This will raise ValueError if not a valid UUID
+                uuid.UUID(client_request_id)
+                return client_request_id
+            except ValueError:
+                logger.warning(f"Invalid request ID format from client: {client_request_id}")
+        
+        # Generate new request ID
+        return RequestIDManager.generate_request_id()
+    
+    @staticmethod
+    def set_request_id(request_id: Optional[str] = None) -> str:
+        """Set request ID in Flask's g object and return it."""
+        if not has_request_context():
+            return request_id or RequestIDManager.generate_request_id()
+        
+        if not request_id:
+            request_id = RequestIDManager.extract_request_id()
+        
+        g.request_id = request_id
+        return request_id
+    
+    @staticmethod
+    def get_request_id() -> Optional[str]:
+        """Get current request ID from Flask's g object."""
+        if not has_request_context():
+            return None
+        return getattr(g, 'request_id', None)
+    
+    @staticmethod
+    def ensure_request_id() -> str:
+        """Ensure request ID exists, generate if needed."""
+        if not has_request_context():
+            return RequestIDManager.generate_request_id()
+        
+        request_id = RequestIDManager.get_request_id()
+        if not request_id:
+            request_id = RequestIDManager.set_request_id()
+        return request_id
+
+
+class RequestIDFilter(logging.Filter):
+    """Logging filter to include request ID in log records."""
+    
+    def filter(self, record):
+        """Add request ID to log record."""
+        request_id = RequestIDManager.get_request_id()
+        record.request_id = request_id or 'no-request-context'
+        return True
+
+
+def init_request_id_logging(app):
+    """Initialize request ID logging for the application."""
+    # Add request ID filter to all loggers
+    request_id_filter = RequestIDFilter()
+    
+    # Add to root logger
+    logging.getLogger().addFilter(request_id_filter)
+    
+    # Add to Flask's logger
+    app.logger.addFilter(request_id_filter)
+    
+    # Update logging format to include request ID
+    if not app.config.get('TESTING'):
+        for handler in app.logger.handlers:
+            if hasattr(handler, 'setFormatter'):
+                formatter = logging.Formatter(
+                    '[%(asctime)s] [%(request_id)s] %(levelname)s in %(module)s: %(message)s'
+                )
+                handler.setFormatter(formatter)
+
+
+def request_id_required(f: Callable) -> Callable:
+    """Decorator to ensure request has a request ID."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Ensure request ID exists
+        RequestIDManager.ensure_request_id()
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+def track_request_id(f: Callable) -> Callable:
+    """
+    Decorator to track request ID and add it to response headers.
+    Use this on route handlers that need request ID tracking.
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Set up request ID
+        request_id = RequestIDManager.ensure_request_id()
+        
+        # Log request start
+        logger.info(f"Request started: {request.method} {request.path}")
+        
+        try:
+            # Execute the wrapped function
+            response = f(*args, **kwargs)
+            
+            # Add request ID to response headers
+            if hasattr(response, 'headers'):
+                response.headers[RequestIDManager.REQUEST_ID_HEADER] = request_id
+            elif isinstance(response, tuple) and len(response) >= 2:
+                # Handle tuple responses (response, status_code) or (response, status_code, headers)
+                if len(response) == 3 and isinstance(response[2], dict):
+                    response[2][RequestIDManager.REQUEST_ID_HEADER] = request_id
+                else:
+                    # Convert to tuple with headers
+                    headers = {RequestIDManager.REQUEST_ID_HEADER: request_id}
+                    response = (response[0], response[1], headers)
+            
+            logger.info(f"Request completed successfully")
+            return response
+            
+        except Exception as e:
+            logger.error(f"Request failed with error: {str(e)}")
+            raise
+        
+    return decorated_function
+
+
+# Middleware for automatic request ID handling
+def request_id_middleware():
+    """Flask before_request handler to set up request IDs."""
+    RequestIDManager.set_request_id()
+
+
+def setup_request_id_middleware(app):
+    """Set up request ID middleware for the Flask app."""
+    
+    @app.before_request
+    def before_request():
+        """Set up request ID for each request."""
+        request_id_middleware()
+    
+    @app.after_request 
+    def after_request(response):
+        """Add request ID to response headers."""
+        request_id = RequestIDManager.get_request_id()
+        if request_id:
+            response.headers[RequestIDManager.REQUEST_ID_HEADER] = request_id
+        return response
+    
+    # Initialize logging
+    init_request_id_logging(app)
+    
+    return app
