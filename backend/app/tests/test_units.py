@@ -287,7 +287,7 @@ class TestUnitsAPI:
         assert response.status_code == 200
         data = json.loads(response.data)
         
-        assert data['status'] == 'error'
+        assert data['status'] == 'error'  # API returns lowercase
         assert data['health_status'] == 'critical'
         assert data['has_alert'] is True
         assert data['has_alarm'] is True
