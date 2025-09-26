@@ -79,63 +79,28 @@ def _initialize_critical_service(service, service_name: str, app, logger, init_m
         # Security validation errors, connection issues, or configuration errors
         logger.error(f"{service_name} security validation failed: {e}", exc_info=True)
         
-        # Handle environment detection errors properly
-        try:
-            # Always fail in production or testing
-            if is_production_environment(app):
-                raise RuntimeError(f"{service_name} security validation failed in production: {e}") from e
-        except ValueError as env_error:
-            # Environment detection itself failed - this is a critical configuration error
-            logger.error(f"Environment detection failed during {service_name} initialization: {env_error}", exc_info=True)
-            raise RuntimeError(f"{service_name} initialization failed due to environment configuration error: {env_error}") from env_error
+        # Use centralized environment detection error handling
+        from app.utils.environment import handle_environment_detection_error
+        should_continue, error_to_raise = handle_environment_detection_error(
+            service_name, logger, app, e, "security validation", is_security_validation=True
+        )
         
-        # Import testing check to avoid circular imports
-        try:
-            from app.utils.environment import is_testing_environment
-            if is_testing_environment(app):
-                # In testing, re-raise to ensure tests catch issues
-                raise RuntimeError(f"{service_name} initialization failed in testing: {e}") from e
-        except ValueError as env_error:
-            # Environment detection failed in testing check too
-            logger.error(f"Environment detection failed during {service_name} testing check: {env_error}", exc_info=True)
-            raise RuntimeError(f"{service_name} initialization failed due to environment configuration error: {env_error}") from env_error
-        
-        # In development, log but continue for most errors, except security ones
-        if isinstance(e, (ValueError, RuntimeError)):
-            # These often indicate configuration issues that should be fixed
-            logger.error(f"{service_name} failed with configuration error (development). "
-                        f"This should be addressed: {e}")
-        else:
-            logger.warning(f"{service_name} initialization failed (development): {e}")
-        return False
+        if error_to_raise:
+            raise error_to_raise
+        return should_continue
         
     except Exception as e:
         logger.error(f"Failed to initialize {service_name}: {e}", exc_info=True)
         
-        # Handle environment detection errors properly
-        try:
-            # Always fail in production
-            if is_production_environment(app):
-                raise RuntimeError(f"Critical service initialization failed: {service_name} - {e}") from e
-        except ValueError as env_error:
-            # Environment detection failed - this is a critical configuration error
-            logger.error(f"Environment detection failed during {service_name} initialization: {env_error}", exc_info=True)
-            raise RuntimeError(f"{service_name} initialization failed due to environment configuration error: {env_error}") from env_error
+        # Use centralized environment detection error handling
+        from app.utils.environment import handle_environment_detection_error
+        should_continue, error_to_raise = handle_environment_detection_error(
+            service_name, logger, app, e, "initialization", is_security_validation=False
+        )
         
-        # Import testing check to avoid circular imports  
-        try:
-            from app.utils.environment import is_testing_environment
-            if is_testing_environment(app):
-                # In testing, re-raise unexpected errors to ensure tests catch them
-                raise RuntimeError(f"{service_name} initialization failed in testing: {e}") from e
-        except ValueError as env_error:
-            # Environment detection failed in testing check too
-            logger.error(f"Environment detection failed during {service_name} testing check: {env_error}", exc_info=True)
-            raise RuntimeError(f"{service_name} initialization failed due to environment configuration error: {env_error}") from env_error
-        
-        # In development, be more lenient with generic errors but still log prominently
-        logger.warning(f"{service_name} initialization failed (development): {e}")
-        return False
+        if error_to_raise:
+            raise error_to_raise
+        return should_continue
 
 
 def create_app(config_name=None):

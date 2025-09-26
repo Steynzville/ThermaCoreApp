@@ -222,3 +222,83 @@ def is_development_environment(app=None) -> bool:
                 return True
     
     return False
+
+
+def handle_environment_detection_error(
+    service_name: str, 
+    logger, 
+    app, 
+    original_error: Exception, 
+    context: str = "initialization",
+    is_security_validation: bool = False
+):
+    """
+    Centralized helper for handling environment detection errors during service initialization.
+    
+    This consolidates the duplicated try/except logic for environment detection that was 
+    scattered throughout the codebase, following best practices for error propagation,
+    logging, and testability.
+    
+    Args:
+        service_name: Human-readable service name for logging
+        logger: Logger instance to use for error reporting
+        app: Flask application instance
+        original_error: The original exception that occurred
+        context: Context string for logging (e.g., "initialization", "testing check")
+        is_security_validation: Whether this is a security validation error
+        
+    Returns:
+        Tuple of (should_continue, error_to_raise_or_None)
+        - should_continue: True if execution should continue (development), False if should fail
+        - error_to_raise_or_None: Exception to raise, or None if should continue
+        
+    Raises:
+        RuntimeError: In production or testing environments
+    """
+    # Always fail in production
+    try:
+        if is_production_environment(app):
+            if is_security_validation:
+                error_msg = f"{service_name} security validation failed in production: {original_error}"
+            else:
+                error_msg = f"Critical service initialization failed: {service_name} - {original_error}"
+            logger.error(error_msg, exc_info=True)
+            runtime_error = RuntimeError(error_msg)
+            runtime_error.__cause__ = original_error
+            return False, runtime_error
+    except ValueError as env_error:
+        # Environment detection itself failed - this is a critical configuration error
+        error_msg = f"Environment detection failed during {service_name} {context}: {env_error}"
+        logger.error(error_msg, exc_info=True)
+        runtime_error = RuntimeError(f"{service_name} {context} failed due to environment configuration error: {env_error}")
+        runtime_error.__cause__ = env_error
+        return False, runtime_error
+    
+    # Always fail in testing
+    try:
+        if is_testing_environment(app):
+            error_msg = f"{service_name} initialization failed in testing: {original_error}"
+            logger.error(error_msg, exc_info=True)
+            runtime_error = RuntimeError(error_msg)
+            runtime_error.__cause__ = original_error
+            return False, runtime_error
+    except ValueError as env_error:
+        # Environment detection failed in testing check too
+        error_msg = f"Environment detection failed during {service_name} testing check: {env_error}"
+        logger.error(error_msg, exc_info=True)
+        runtime_error = RuntimeError(f"{service_name} {context} failed due to environment configuration error: {env_error}")
+        runtime_error.__cause__ = env_error
+        return False, runtime_error
+    
+    # In development, still fail for most service initialization errors
+    # Only continue in very specific circumstances (not for configuration errors)
+    if isinstance(original_error, (ValueError, RuntimeError)):
+        # Configuration issues that should be fixed - still fail in development
+        logger.error(f"{service_name} failed with configuration error (development). "
+                    f"This should be addressed: {original_error}")
+        return False, None
+    else:
+        logger.warning(f"{service_name} {context} failed (development): {original_error}")
+        return False, None  # Most errors should still fail in development
+    
+    return True, None

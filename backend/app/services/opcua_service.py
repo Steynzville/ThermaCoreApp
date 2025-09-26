@@ -127,9 +127,20 @@ class OPCUAClient:
                 not_valid_after_utc = certificate.not_valid_after_utc
                 not_valid_before_utc = certificate.not_valid_before_utc
             except AttributeError:
-                # Fallback for older cryptography versions
-                not_valid_after_utc = certificate.not_valid_after.replace(tzinfo=timezone.utc)
-                not_valid_before_utc = certificate.not_valid_before.replace(tzinfo=timezone.utc)
+                # Fallback for older cryptography versions - handle naive UTC datetimes correctly
+                try:
+                    # For older cryptography versions, dates are naive and assumed to be UTC
+                    # Use fromisoformat with explicit UTC timezone for proper handling
+                    not_valid_after_utc = datetime.fromisoformat(
+                        certificate.not_valid_after.isoformat() + '+00:00'
+                    )
+                    not_valid_before_utc = datetime.fromisoformat(
+                        certificate.not_valid_before.isoformat() + '+00:00'
+                    )
+                except (ValueError, AttributeError):
+                    # Final fallback if fromisoformat fails - assume naive UTC
+                    not_valid_after_utc = certificate.not_valid_after.replace(tzinfo=timezone.utc)
+                    not_valid_before_utc = certificate.not_valid_before.replace(tzinfo=timezone.utc)
             
             if not_valid_after_utc < now:
                 logger.error(f"Certificate validation failed: expired certificate detected", exc_info=True)
@@ -242,10 +253,29 @@ class OPCUAClient:
                             # Use the complete security string with certificates
                             self.client.set_security_string(security_string)
                         else:
-                            # Without certificates, use separate policy and mode setting
-                            # This may require different OPC UA library methods
-                            raise ValueError("OPC UA security policy and mode require client certificates. "
-                                           "Please configure OPCUA_CERT_FILE and OPCUA_PRIVATE_KEY_FILE.")
+                            # Without client certificates, most OPC UA security policies cannot be used
+                            # However, some servers may support anonymous authentication with certain policies
+                            # or username/password authentication without client certificates
+                            
+                            # Check if this is a policy that can work without client certificates
+                            policies_that_may_work_without_certs = ['None']  # Only None is guaranteed to work
+                            
+                            if self.security_policy in policies_that_may_work_without_certs:
+                                # For 'None' policy, we don't need to set security at all
+                                logger.info(f"Using OPC UA security policy '{self.security_policy}' without client certificates")
+                            else:
+                                # For other policies, warn and attempt graceful fallback
+                                logger.warning(f"OPC UA security policy '{self.security_policy}' typically requires client certificates")
+                                
+                                if is_prod:
+                                    # In production, require certificates for non-None policies
+                                    raise ValueError(f"OPC UA security policy '{self.security_policy}' requires client certificates in production. "
+                                                   f"Please configure OPCUA_CERT_FILE and OPCUA_PRIVATE_KEY_FILE.")
+                                else:
+                                    # In development, allow fallback to None security if the specific policy fails
+                                    logger.warning(f"Development environment: falling back to no security due to missing client certificates")
+                                    self.security_policy = 'None'
+                                    self.security_mode = 'None'
                         
                         # Trust certificate loading (separate from client certificates)
                         self._load_trust_certificate(is_prod)
@@ -263,9 +293,9 @@ class OPCUAClient:
                             trust_info = f" (trusted server cert: {sanitized_trust_path})"
                             
                         if is_prod:
-                            logger.info(f"OPC UA security enabled for production: {self.security_policy}#{self.security_mode}{cert_info}{trust_info}")
+                            logger.info(f"OPC UA security enabled for production: {self.security_policy}, {self.security_mode}{cert_info}{trust_info}")
                         else:
-                            logger.info(f"OPC UA security configured for development: {self.security_policy}#{self.security_mode}{cert_info}{trust_info}")
+                            logger.info(f"OPC UA security configured for development: {self.security_policy}, {self.security_mode}{cert_info}{trust_info}")
                         
                     except Exception as cert_error:
                         # Handle certificate-specific errors separately from general security errors
