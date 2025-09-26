@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertCircle, CheckCircle, Wifi, WifiOff, Plus, Settings, Activity, Zap, Router, Server, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
-import { apiGet } from '@/utils/apiFetch';  // PR1a: Use new apiFetch utility
+import { apiGetJson } from '@/utils/apiFetch';  // Use enhanced apiFetch utility with JSON helper
 
 const MultiProtocolManager = () => {
   const [protocolsStatus, setProtocolsStatus] = useState(null);
@@ -19,13 +19,23 @@ const MultiProtocolManager = () => {
   const [newDevice, setNewDevice] = useState({});
   const [refreshing, setRefreshing] = useState(false);
   
-  // PR1a: Enhanced polling state management with sequential polling
+  // Enhanced polling state management with exponential backoff and page visibility
   const [pollingInterval, setPollingInterval] = useState(10000); // Default 10s
   const [consecutiveErrors, setConsecutiveErrors] = useState(0);
   const [isPageVisible, setIsPageVisible] = useState(true);
-  const [isPolling, setIsPolling] = useState(false); // PR1a: Prevent concurrent polls
+  const [isPolling, setIsPolling] = useState(false); // Prevent concurrent polls
   const timeoutRef = useRef(null);
   const abortControllerRef = useRef(null);
+
+  // Page visibility handling
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setIsPageVisible(!document.hidden);
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
 
   // Check if we're in mock mode
   const isMockMode = import.meta.env.VITE_MOCK_MODE === 'true';
@@ -106,23 +116,49 @@ const MultiProtocolManager = () => {
       return mockVariant;
     }
 
-    // PR1a: Use enhanced apiFetch with automatic 401 handling
-    const response = await apiGet('/api/v1/protocols/status', { 
+    // Use enhanced apiFetch with improved error handling and retry logic
+    return await apiGetJson('/api/v1/protocols/status', { 
       timeout: 15000,  // 15 second timeout
+      retries: 2,      // Retry failed requests
+      retryDelay: 2000, // 2 second delay between retries
       showToastOnError: false // We'll handle errors manually for better UX
     });
-
-    return await response.json();
   };
 
   const loadData = async () => {
     try {
+      setConsecutiveErrors(0); // Reset error count on successful attempt
       const data = await fetchProtocolsStatus();
       setProtocolsStatus(data);
+      
+      // Show success toast only if we had previous errors
+      if (consecutiveErrors > 0) {
+        toast.success("Protocol status loaded successfully");
+      }
     } catch (error) {
       console.error('Failed to fetch protocols status:', error);
+      
+      // Increment consecutive errors for exponential backoff
+      setConsecutiveErrors(prev => prev + 1);
+      
       if (!isMockMode) {
-        toast.error("Failed to load protocol status. Check your connection.");
+        // Enhanced error messaging based on error type
+        let errorMessage = "Failed to load protocol status.";
+        if (error.message.includes('timeout')) {
+          errorMessage = "Request timed out. The server may be busy.";
+        } else if (error.message.includes('Network')) {
+          errorMessage = "Network error. Check your internet connection.";
+        } else if (error.message.includes('Unauthorized')) {
+          errorMessage = "Session expired. Please log in again.";
+        }
+        
+        toast.error(errorMessage, {
+          duration: 4000,
+          action: {
+            label: "Retry",
+            onClick: () => loadData()
+          }
+        });
       }
     } finally {
       setLoading(false);
@@ -130,25 +166,57 @@ const MultiProtocolManager = () => {
     }
   };
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
+    if (refreshing || isPolling) return; // Prevent concurrent refreshes
+    
     setRefreshing(true);
-    loadData();
+    setConsecutiveErrors(0); // Reset error count on manual refresh
+    
+    try {
+      await loadData();
+      toast.success("Protocol status refreshed", { duration: 2000 });
+    } catch (error) {
+      // Error handling is done in loadData, no need to handle here
+    }
   };
 
-  // Initial load and periodic refresh (only in live mode)
+  // Enhanced polling with exponential backoff and better error handling
   useEffect(() => {
     loadData();
 
     let interval;
     if (!isMockMode) {
-      // Poll every 10 seconds in live mode
-      interval = setInterval(loadData, 10000);
+      // Dynamic polling interval based on consecutive errors (exponential backoff)
+      const getPollingInterval = () => {
+        const baseInterval = 10000; // 10 seconds
+        const maxInterval = 60000;  // 60 seconds max
+        return Math.min(baseInterval * Math.pow(1.5, consecutiveErrors), maxInterval);
+      };
+
+      const scheduleNextPoll = () => {
+        const currentInterval = getPollingInterval();
+        interval = setTimeout(() => {
+          if (isPageVisible && !isPolling) {
+            setIsPolling(true);
+            loadData().finally(() => {
+              setIsPolling(false);
+              scheduleNextPoll(); // Schedule next poll
+            });
+          } else {
+            scheduleNextPoll(); // Reschedule if conditions not met
+          }
+        }, currentInterval);
+      };
+
+      scheduleNextPoll();
     }
 
     return () => {
-      if (interval) clearInterval(interval);
+      if (interval) {
+        clearTimeout(interval);
+      }
     };
-  }, [isMockMode]);
+  }, [isMockMode, consecutiveErrors, isPageVisible, isPolling]);
 
   const getStatusIcon = (protocol) => {
     if (protocol.connected && protocol.status === 'ready') {
@@ -198,11 +266,31 @@ const MultiProtocolManager = () => {
         <div className="text-center">
           <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-800 mb-2">Failed to Load</h2>
-          <p className="text-gray-600 mb-4">Could not retrieve protocol status.</p>
-          <Button onClick={loadData}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Try Again
-          </Button>
+          <p className="text-gray-600 mb-4">
+            {consecutiveErrors > 0 
+              ? `Failed to retrieve protocol status after ${consecutiveErrors} attempts.`
+              : "Could not retrieve protocol status."
+            }
+          </p>
+          <div className="flex gap-3 justify-center">
+            <Button onClick={loadData} disabled={isPolling}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${isPolling ? 'animate-spin' : ''}`} />
+              {isPolling ? 'Retrying...' : 'Try Again'}
+            </Button>
+            {!isMockMode && (
+              <Button 
+                variant="outline" 
+                onClick={() => window.location.reload()}
+              >
+                Reload Page
+              </Button>
+            )}
+          </div>
+          {consecutiveErrors > 0 && (
+            <p className="text-sm text-gray-500 mt-3">
+              Next automatic retry in {Math.min(10 * Math.pow(1.5, consecutiveErrors), 60)} seconds
+            </p>
+          )}
         </div>
       </div>
     );
@@ -221,13 +309,23 @@ const MultiProtocolManager = () => {
               Demo Mode
             </Badge>
           )}
+          {consecutiveErrors > 0 && (
+            <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+              Retrying... ({consecutiveErrors} errors)
+            </Badge>
+          )}
+          {!isPageVisible && (
+            <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200">
+              Paused (tab inactive)
+            </Badge>
+          )}
           <Button 
             onClick={handleRefresh} 
-            disabled={refreshing}
+            disabled={refreshing || isPolling}
             variant="outline"
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-            Refresh
+            <RefreshCw className={`h-4 w-4 mr-2 ${(refreshing || isPolling) ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Refreshing...' : 'Refresh'}
           </Button>
         </div>
       </div>

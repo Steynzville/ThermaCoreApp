@@ -1,4 +1,4 @@
-// PR1a: Enhanced API fetch utility with 401 handling and toast notifications
+// Enhanced API fetch utility with 401 handling, toast notifications, and improved error/redirect handling
 import { toast } from 'sonner';
 
 /**
@@ -7,9 +7,19 @@ import { toast } from 'sonner';
  * @param {string} url - API endpoint URL
  * @param {Object} options - Fetch options
  * @param {boolean} showToastOnError - Show toast notification on error (default: true)
+ * @param {boolean} redirectOn401 - Redirect to login on 401 (default: true)
  * @returns {Promise<Response>} - Fetch response
  */
-export const apiFetch = async (url, options = {}, showToastOnError = true) => {
+export const apiFetch = async (url, options = {}, showToastOnError = true, redirectOn401 = true) => {
+  // Extract custom options
+  const { 
+    showToastOnError: optionsToast = showToastOnError,
+    redirectOn401: optionsRedirect = redirectOn401,
+    retries = 0,
+    retryDelay = 1000,
+    ...fetchOptions 
+  } = options;
+
   // Get token from localStorage
   const token = localStorage.getItem('token');
   
@@ -26,114 +36,206 @@ export const apiFetch = async (url, options = {}, showToastOnError = true) => {
   // Merge headers
   const headers = {
     ...defaultHeaders,
-    ...options.headers,
+    ...fetchOptions.headers,
   };
   
-  // Add timeout support
+  // Add timeout support with better default
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), options.timeout || 30000);
+  const timeoutId = setTimeout(() => controller.abort(), fetchOptions.timeout || 30000);
   
-  try {
-    const response = await fetch(url, {
-      ...options,
-      headers,
-      signal: controller.signal,
-    });
-    
-    clearTimeout(timeoutId);
-    
-    // Handle 401 Unauthorized
-    if (response.status === 401) {
-      if (showToastOnError) {
-        toast.error('Session expired. Please log in again.');
-      }
+  // Retry logic wrapper
+  const attemptFetch = async (attemptsLeft) => {
+    try {
+      const response = await fetch(url, {
+        ...fetchOptions,
+        headers,
+        signal: controller.signal,
+      });
       
-      // Clear stored token
-      localStorage.removeItem('token');
-      localStorage.removeItem('refreshToken');
+      clearTimeout(timeoutId);
       
-      // Redirect to login if not already there
-      if (!window.location.pathname.includes('/login')) {
-        window.location.href = '/login';
-      }
-      
-      throw new Error('Unauthorized');
-    }
-    
-    // Handle other error status codes
-    if (!response.ok) {
-      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-      
-      try {
-        const errorData = await response.json();
-        if (errorData.error) {
-          errorMessage = errorData.error;
-        } else if (errorData.message) {
-          errorMessage = errorData.message;
+      // Handle 401 Unauthorized with improved redirect logic
+      if (response.status === 401) {
+        if (optionsToast) {
+          toast.error('Session expired. Please log in again.');
         }
-      } catch (e) {
-        // Unable to parse error response, use default message
+        
+        // Clear stored tokens
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+        
+        // Enhanced redirect handling - check for login page and avoid redirect loops
+        if (optionsRedirect && !window.location.pathname.includes('/login') && !window.location.pathname.includes('/auth')) {
+          // Store current location for post-login redirect
+          const currentPath = window.location.pathname + window.location.search;
+          if (currentPath !== '/login' && currentPath !== '/') {
+            localStorage.setItem('redirectAfterLogin', currentPath);
+          }
+          
+          // Use history API if available, fallback to location.href
+          if (window.history && window.history.pushState) {
+            window.history.pushState(null, '', '/login');
+            // Dispatch popstate to trigger router updates
+            window.dispatchEvent(new PopStateEvent('popstate'));
+          } else {
+            window.location.href = '/login';
+          }
+        }
+        
+        throw new Error('Unauthorized');
       }
       
-      if (showToastOnError) {
-        toast.error(errorMessage);
+      // Handle 403 Forbidden
+      if (response.status === 403) {
+        const forbiddenMessage = 'You do not have permission to perform this action.';
+        if (optionsToast) {
+          toast.error(forbiddenMessage);
+        }
+        throw new Error(forbiddenMessage);
       }
       
-      throw new Error(errorMessage);
-    }
-    
-    return response;
-    
-  } catch (error) {
-    clearTimeout(timeoutId);
-    
-    if (error.name === 'AbortError') {
-      const timeoutMessage = 'Request timeout. Please try again.';
-      if (showToastOnError) {
-        toast.error(timeoutMessage);
+      // Handle 500 Server Error with retry logic
+      if (response.status >= 500 && attemptsLeft > 0) {
+        if (optionsToast) {
+          toast.warning(`Server error. Retrying in ${retryDelay / 1000} seconds... (${attemptsLeft} attempts left)`);
+        }
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+        return attemptFetch(attemptsLeft - 1);
       }
-      throw new Error(timeoutMessage);
+      
+      // Handle other error status codes
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        
+        try {
+          const errorData = await response.json();
+          if (errorData.error) {
+            errorMessage = errorData.error;
+          } else if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.detail) {
+            errorMessage = errorData.detail;
+          }
+        } catch (e) {
+          // Unable to parse error response, use default message
+        }
+        
+        if (optionsToast) {
+          toast.error(errorMessage);
+        }
+        
+        throw new Error(errorMessage);
+      }
+      
+      return response;
+      
+    } catch (error) {
+      clearTimeout(timeoutId);
+      
+      if (error.name === 'AbortError') {
+        const timeoutMessage = 'Request timeout. Please try again.';
+        if (optionsToast) {
+          toast.error(timeoutMessage);
+        }
+        throw new Error(timeoutMessage);
+      }
+      
+      // Network errors with retry logic
+      if (error.message.includes('fetch') && attemptsLeft > 0) {
+        if (optionsToast) {
+          toast.warning(`Network error. Retrying in ${retryDelay / 1000} seconds... (${attemptsLeft} attempts left)`);
+        }
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+        return attemptFetch(attemptsLeft - 1);
+      }
+      
+      // Re-throw other errors
+      throw error;
     }
-    
-    // Re-throw other errors
-    throw error;
-  }
+  };
+
+  return attemptFetch(retries);
 };
 
 /**
- * Convenience method for GET requests
+ * Convenience method for GET requests with enhanced options
  */
 export const apiGet = (url, options = {}) => {
   return apiFetch(url, { ...options, method: 'GET' });
 };
 
 /**
- * Convenience method for POST requests
+ * Convenience method for POST requests with enhanced options
  */
 export const apiPost = (url, data, options = {}) => {
   return apiFetch(url, {
     ...options,
     method: 'POST',
-    body: JSON.stringify(data),
+    body: data ? JSON.stringify(data) : undefined,
   });
 };
 
 /**
- * Convenience method for PUT requests
+ * Convenience method for PUT requests with enhanced options
  */
 export const apiPut = (url, data, options = {}) => {
   return apiFetch(url, {
     ...options,
     method: 'PUT',
-    body: JSON.stringify(data),
+    body: data ? JSON.stringify(data) : undefined,
   });
 };
 
 /**
- * Convenience method for DELETE requests
+ * Convenience method for PATCH requests
+ */
+export const apiPatch = (url, data, options = {}) => {
+  return apiFetch(url, {
+    ...options,
+    method: 'PATCH',
+    body: data ? JSON.stringify(data) : undefined,
+  });
+};
+
+/**
+ * Convenience method for DELETE requests with enhanced options
  */
 export const apiDelete = (url, options = {}) => {
   return apiFetch(url, { ...options, method: 'DELETE' });
+};
+
+/**
+ * Convenience method for file uploads
+ */
+export const apiUpload = (url, formData, options = {}) => {
+  // Remove Content-Type header for FormData to let browser set it with boundary
+  const { headers = {}, ...restOptions } = options;
+  const { 'Content-Type': _, ...headersWithoutContentType } = headers;
+  
+  return apiFetch(url, {
+    ...restOptions,
+    method: 'POST',
+    headers: headersWithoutContentType,
+    body: formData,
+  });
+};
+
+/**
+ * Enhanced method for JSON responses with built-in error handling
+ */
+export const apiGetJson = async (url, options = {}) => {
+  const response = await apiGet(url, options);
+  return await response.json();
+};
+
+export const apiPostJson = async (url, data, options = {}) => {
+  const response = await apiPost(url, data, options);
+  return await response.json();
+};
+
+export const apiPutJson = async (url, data, options = {}) => {
+  const response = await apiPut(url, data, options);
+  return await response.json();
 };
 
 export default apiFetch;
