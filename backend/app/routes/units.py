@@ -13,6 +13,7 @@ from app.utils.schemas import (
     PaginatedResponseSchema
 )
 from app.routes.auth import permission_required
+from app.middleware.audit import audit_operation
 
 
 units_bp = Blueprint('units', __name__)
@@ -21,6 +22,7 @@ units_bp = Blueprint('units', __name__)
 @units_bp.route('/units', methods=['GET'])
 @jwt_required()
 @permission_required('read_units')
+@audit_operation('READ', 'units')
 def get_units():
     """
     Get all units with optional filtering and pagination.
@@ -142,6 +144,7 @@ def get_unit(unit_id):
 @units_bp.route('/units', methods=['POST'])
 @jwt_required()
 @permission_required('write_units')
+@audit_operation('CREATE', 'unit', include_request_data=True, include_response_data=True)
 def create_unit():
     """
     Create a new unit.
@@ -201,6 +204,7 @@ def create_unit():
 @units_bp.route('/units/<string:unit_id>', methods=['PUT'])
 @jwt_required()
 @permission_required('write_units')
+@audit_operation('UPDATE', 'unit', include_request_data=True, include_response_data=True)
 def update_unit(unit_id):
     """
     Update an existing unit.
@@ -258,6 +262,7 @@ def update_unit(unit_id):
 @units_bp.route('/units/<string:unit_id>', methods=['DELETE'])
 @jwt_required()
 @permission_required('delete_units')
+@audit_operation('DELETE', 'unit')
 def delete_unit(unit_id):
     """
     Delete a unit.
