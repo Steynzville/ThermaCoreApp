@@ -2,6 +2,7 @@
 import logging
 from typing import Dict, Any, List, Optional, Union
 from datetime import datetime, timezone
+from dateutil import parser as dateutil_parser
 
 try:
     from opcua import Client, ua
@@ -80,14 +81,18 @@ class OPCUAClient:
     def _normalize_certificate_datetime(self, dt):
         """Normalize certificate datetime to UTC-aware datetime.
         
-        Robustly handles both ISO format strings and datetime objects,
-        with proper timezone awareness following Python best practices.
+        Robustly handles both ISO format strings and datetime objects using
+        dateutil.parser for robust parsing, with proper timezone awareness
+        following Python best practices.
         
         Args:
             dt: Datetime object or ISO format string from certificate
             
         Returns:
             UTC-aware datetime object
+            
+        Raises:
+            ValueError: For invalid or unsupported datetime formats/types
         """
         if dt is None:
             raise ValueError("Certificate datetime cannot be None")
@@ -96,23 +101,22 @@ class OPCUAClient:
         if hasattr(dt, 'tzinfo') and dt.tzinfo is not None:
             return dt.astimezone(timezone.utc)
         
-        # Handle string input (ISO format)
+        # Handle string input using robust dateutil parser
         if isinstance(dt, str):
             try:
-                # Try parsing as ISO format with timezone
-                if dt.endswith('Z'):
-                    dt_str = dt[:-1] + '+00:00'
-                elif '+' in dt or dt.count('-') > 2:  # Has timezone info
-                    dt_str = dt
-                else:
-                    dt_str = dt + '+00:00'  # Assume UTC if no timezone
-                parsed_dt = datetime.fromisoformat(dt_str)
+                # Use dateutil.parser for robust ISO format parsing
+                parsed_dt = dateutil_parser.isoparse(dt)
+                # If parsed as naive datetime, assume UTC as per X.509 standard
+                if parsed_dt.tzinfo is None:
+                    logger.debug(f"Certificate datetime '{dt}' parsed as naive - assuming UTC timezone as per X.509 standard")
+                    parsed_dt = parsed_dt.replace(tzinfo=timezone.utc)
                 return parsed_dt.astimezone(timezone.utc)
-            except ValueError:
-                raise ValueError(f"Invalid certificate datetime format: {dt}")
+            except (ValueError, TypeError) as e:
+                raise ValueError(f"Invalid certificate datetime format: {dt}") from e
         
         # Handle naive datetime objects (assume UTC as per X.509 standard)
         if hasattr(dt, 'year'):  # It's a datetime-like object
+            logger.debug(f"Certificate datetime object is naive - assuming UTC timezone as per X.509 standard")
             return dt.replace(tzinfo=timezone.utc)
         
         raise ValueError(f"Unsupported certificate datetime type: {type(dt)}")
@@ -162,8 +166,29 @@ class OPCUAClient:
             now = datetime.now(timezone.utc)
             
             # Robust timezone handling for certificate expiry validation
-            not_valid_after_utc = self._normalize_certificate_datetime(certificate.not_valid_after_utc if hasattr(certificate, 'not_valid_after_utc') else certificate.not_valid_after)
-            not_valid_before_utc = self._normalize_certificate_datetime(certificate.not_valid_before_utc if hasattr(certificate, 'not_valid_before_utc') else certificate.not_valid_before)
+            # Handle different cryptography library versions with proper fallback
+            try:
+                # Try newer cryptography versions first (not_valid_after_utc/not_valid_before_utc)
+                not_valid_after = getattr(certificate, 'not_valid_after_utc', None)
+                if not_valid_after is None:
+                    # Fallback to older versions (not_valid_after/not_valid_before)
+                    not_valid_after = getattr(certificate, 'not_valid_after', None)
+                    if not_valid_after is None:
+                        raise AttributeError("Certificate has no not_valid_after attribute")
+                
+                not_valid_before = getattr(certificate, 'not_valid_before_utc', None)
+                if not_valid_before is None:
+                    # Fallback to older versions
+                    not_valid_before = getattr(certificate, 'not_valid_before', None)
+                    if not_valid_before is None:
+                        raise AttributeError("Certificate has no not_valid_before attribute")
+                
+                not_valid_after_utc = self._normalize_certificate_datetime(not_valid_after)
+                not_valid_before_utc = self._normalize_certificate_datetime(not_valid_before)
+                
+            except AttributeError as e:
+                logger.error(f"Certificate validation failed: unsupported certificate format - {e}", exc_info=True)
+                raise ValueError(f"Certificate format not supported: {e}")
             
             if not_valid_after_utc < now:
                 logger.error(f"Certificate validation failed: expired certificate detected", exc_info=True)
@@ -298,7 +323,9 @@ class OPCUAClient:
                                     # Check explicit flag for insecure fallback in development
                                     allow_fallback = app.config.get('OPCUA_ALLOW_INSECURE_FALLBACK', False)
                                     if allow_fallback:
-                                        logger.warning(f"Development environment: falling back to no security due to missing client certificates (OPCUA_ALLOW_INSECURE_FALLBACK=true)")
+                                        logger.warning(f"DEVELOPMENT ONLY: Falling back to insecure OPC UA connection (no encryption/authentication) "
+                                                     f"due to missing client certificates. Original policy: {self.security_policy}/{self.security_mode}. "
+                                                     f"This fallback is ONLY allowed in development and controlled by OPCUA_ALLOW_INSECURE_FALLBACK=true")
                                         self.security_policy = 'None'
                                         self.security_mode = 'None'
                                     else:
@@ -342,7 +369,8 @@ class OPCUAClient:
                 # Even in development with no security, we can still validate trust certificates if provided
                 if self.trust_cert_file:
                     self._load_trust_certificate(is_prod)
-                logger.info("OPC UA security disabled for development environment")
+                logger.info("DEVELOPMENT ONLY: OPC UA security disabled - using insecure connection (no encryption/authentication). "
+                          "This configuration is NOT allowed in production environments.")
             
             logger.info(f"OPC UA client initialized for server: {self.server_url}")
         except Exception as e:

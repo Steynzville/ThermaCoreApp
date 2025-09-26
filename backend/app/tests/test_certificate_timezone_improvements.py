@@ -82,6 +82,23 @@ class TestCertificateTimezoneHandling:
         expected_utc = datetime(2024, 12, 25, 10, 30, 0, tzinfo=timezone.utc)
         assert result == expected_utc
         assert result.tzinfo == timezone.utc
+
+    def test_normalize_certificate_datetime_with_dateutil_complex_formats(self):
+        """Test normalization with complex formats that dateutil can parse but fromisoformat cannot."""
+        opcua_client = OPCUAClient()
+        
+        # Test formats that dateutil.parser can handle but datetime.fromisoformat cannot
+        complex_formats = [
+            "2024-12-25 10:30:00+00:00",        # Space separator
+            "2024-12-25T10:30:00.123456Z",     # Microseconds with Z
+            "2024-12-25T10:30:00.123Z",        # Milliseconds with Z
+        ]
+        
+        for iso_string in complex_formats:
+            result = opcua_client._normalize_certificate_datetime(iso_string)
+            assert result.tzinfo == timezone.utc, f"Failed for format: {iso_string}"
+            # All should normalize to UTC properly
+            assert isinstance(result, datetime), f"Failed to return datetime for: {iso_string}"
     
     def test_normalize_certificate_datetime_with_none(self):
         """Test normalization with None input (should raise ValueError)."""
@@ -103,6 +120,17 @@ class TestCertificateTimezoneHandling:
         
         with pytest.raises(ValueError, match="Unsupported certificate datetime type"):
             opcua_client._normalize_certificate_datetime(12345)
+    
+    def test_normalize_certificate_datetime_preserves_error_context(self):
+        """Test that datetime parsing errors preserve original error context."""
+        opcua_client = OPCUAClient()
+        
+        try:
+            opcua_client._normalize_certificate_datetime("2024-13-45T99:99:99Z")
+        except ValueError as e:
+            # Should have error chaining (from e)
+            assert e.__cause__ is not None, "Expected error chaining with 'from e' not found"
+            assert "Invalid certificate datetime format" in str(e)
 
 
 class TestSecurityPolicyFallbackConfiguration:
@@ -132,23 +160,35 @@ class TestSecurityPolicyFallbackConfiguration:
         """Test that fallback works when explicitly enabled."""
         with patch('opcua.Client') as mock_client_class:
             with patch.dict('os.environ', {'FLASK_ENV': 'development', 'TESTING': 'false'}, clear=False):
-                mock_app = Mock()
-                mock_app.config = {
-                    'FLASK_ENV': 'development',
-                    'DEBUG': True,
-                    'TESTING': False,
-                    'OPCUA_SERVER_URL': 'opc.tcp://localhost:4840',
-                    'OPCUA_SECURITY_POLICY': 'Basic256Sha256',
-                    'OPCUA_SECURITY_MODE': 'SignAndEncrypt',
-                    'OPCUA_ALLOW_INSECURE_FALLBACK': True  # Explicit True
-                }
-                
-                opcua_client = OPCUAClient()
-                opcua_client.init_app(mock_app)
-                
-                # Should fallback to None security
-                assert opcua_client.security_policy == 'None'
-                assert opcua_client.security_mode == 'None'
+                with patch('app.services.opcua_service.logger') as mock_logger:
+                    mock_app = Mock()
+                    mock_app.config = {
+                        'FLASK_ENV': 'development',
+                        'DEBUG': True,
+                        'TESTING': False,
+                        'OPCUA_SERVER_URL': 'opc.tcp://localhost:4840',
+                        'OPCUA_SECURITY_POLICY': 'Basic256Sha256',
+                        'OPCUA_SECURITY_MODE': 'SignAndEncrypt',
+                        'OPCUA_ALLOW_INSECURE_FALLBACK': True  # Explicit True
+                    }
+                    
+                    opcua_client = OPCUAClient()
+                    opcua_client.init_app(mock_app)
+                    
+                    # Should fallback to None security
+                    assert opcua_client.security_policy == 'None'
+                    assert opcua_client.security_mode == 'None'
+                    
+                    # Verify improved logging message is used
+                    fallback_warning_calls = [call for call in mock_logger.warning.call_args_list 
+                                            if 'DEVELOPMENT ONLY' in str(call)]
+                    assert len(fallback_warning_calls) > 0, "Expected development-only fallback warning not found"
+                    
+                    warning_message = str(fallback_warning_calls[0])
+                    assert 'DEVELOPMENT ONLY' in warning_message
+                    assert 'insecure OPC UA connection' in warning_message
+                    assert 'no encryption/authentication' in warning_message
+                    assert 'ONLY allowed in development' in warning_message
     
     def test_no_fallback_in_production(self):
         """Test that fallback is never allowed in production regardless of flag."""
