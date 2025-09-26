@@ -17,6 +17,9 @@ const SystemHealth = lazy(() => import("../components/SystemHealth"));
 const SynchronizeUnitsOverview = lazy(
   () => import("../components/SynchronizeUnitsOverview"),
 );
+// Phase 3 & 4 Components
+const AdvancedAnalyticsDashboard = lazy(() => import("../components/AdvancedAnalyticsDashboard"));
+const MultiProtocolManager = lazy(() => import("../components/MultiProtocolManager"));
 const ReportsPage = lazy(() => import("../pages/ReportsPage"));
 const DocumentsPage = lazy(() => import("../pages/DocumentsPage"));
 
@@ -93,6 +96,18 @@ const routes = [
   {
     path: "/analytics",
     component: ViewAnalytics,
+    isProtected: true,
+    roles: ["admin"],
+  },
+  {
+    path: "/advanced-analytics",
+    component: AdvancedAnalyticsDashboard,
+    isProtected: true,
+    roles: ["admin"],
+  },
+  {
+    path: "/protocol-manager",
+    component: MultiProtocolManager,
     isProtected: true,
     roles: ["admin"],
   },
