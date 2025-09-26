@@ -300,5 +300,3 @@ def handle_environment_detection_error(
     else:
         logger.warning(f"{service_name} {context} failed (development): {original_error}")
         return False, None  # Most errors should still fail in development
-    
-    return True, None
