@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertCircle, CheckCircle, Wifi, WifiOff, Plus, Settings, Activity, Zap, Router, Server, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import { apiGet } from '@/utils/apiFetch';  // PR1a: Use new apiFetch utility
 
 const MultiProtocolManager = () => {
   const [protocolsStatus, setProtocolsStatus] = useState(null);
@@ -17,6 +18,14 @@ const MultiProtocolManager = () => {
   const [isAddDeviceOpen, setIsAddDeviceOpen] = useState(false);
   const [newDevice, setNewDevice] = useState({});
   const [refreshing, setRefreshing] = useState(false);
+  
+  // PR1a: Enhanced polling state management with sequential polling
+  const [pollingInterval, setPollingInterval] = useState(10000); // Default 10s
+  const [consecutiveErrors, setConsecutiveErrors] = useState(0);
+  const [isPageVisible, setIsPageVisible] = useState(true);
+  const [isPolling, setIsPolling] = useState(false); // PR1a: Prevent concurrent polls
+  const timeoutRef = useRef(null);
+  const abortControllerRef = useRef(null);
 
   // Check if we're in mock mode
   const isMockMode = import.meta.env.VITE_MOCK_MODE === 'true';
@@ -97,18 +106,11 @@ const MultiProtocolManager = () => {
       return mockVariant;
     }
 
-    // Live API call
-    const token = localStorage.getItem('token');
-    const response = await fetch('/api/v1/protocols/status', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
+    // PR1a: Use enhanced apiFetch with automatic 401 handling
+    const response = await apiGet('/api/v1/protocols/status', { 
+      timeout: 15000,  // 15 second timeout
+      showToastOnError: false // We'll handle errors manually for better UX
     });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
 
     return await response.json();
   };
@@ -262,7 +264,10 @@ const MultiProtocolManager = () => {
               <div>
                 <p className="text-sm text-gray-600">Connection Rate</p>
                 <p className="text-2xl font-bold text-blue-600">
-                  {Math.round((protocolsStatus.summary.active_protocols / protocolsStatus.summary.total_protocols) * 100)}%
+                  {/* PR1a: Guard against division by zero */}
+                  {protocolsStatus.summary.total_protocols > 0 
+                    ? Math.round((protocolsStatus.summary.active_protocols / protocolsStatus.summary.total_protocols) * 100)
+                    : 0}%
                 </p>
               </div>
               <Activity className="h-8 w-8 text-blue-500" />
