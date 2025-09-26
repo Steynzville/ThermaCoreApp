@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertCircle, CheckCircle, Wifi, WifiOff, Plus, Settings, Activity, Zap, Router, Server, RefreshCw } from 'lucide-react';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 
 const MultiProtocolManager = () => {
   const [protocolsStatus, setProtocolsStatus] = useState(null);
@@ -120,11 +120,7 @@ const MultiProtocolManager = () => {
     } catch (error) {
       console.error('Failed to fetch protocols status:', error);
       if (!isMockMode) {
-        toast({
-          title: "Connection Error",
-          description: "Failed to load protocol status. Check your connection.",
-          variant: "destructive"
-        });
+        toast.error("Failed to load protocol status. Check your connection.");
       }
     } finally {
       setLoading(false);
@@ -180,10 +176,7 @@ const MultiProtocolManager = () => {
     // Reset form and close dialog
     setNewDevice({});
     setIsAddDeviceOpen(false);
-    toast({
-      title: "Device Added",
-      description: `New ${selectedProtocol} device configuration saved.`
-    });
+    toast.success(`New ${selectedProtocol} device configuration saved.`);
   };
 
   if (loading) {

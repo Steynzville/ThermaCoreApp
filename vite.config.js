@@ -69,7 +69,11 @@ export default defineConfig(() => {
       cors: true,
     },
     optimizeDeps: {
-      include: [],
+      include: [
+        "path-to-regexp",
+        "react-router-dom",
+        "react-router"
+      ],
     },
     test: {
       environment: "jsdom",
