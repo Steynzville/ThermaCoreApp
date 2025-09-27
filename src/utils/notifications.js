@@ -1,5 +1,7 @@
 // Centralized notifications utility for consistent role-based filtering
 
+import { deviceStatusService } from '../services/deviceStatusService';
+
 // Complete alerts data - all units
 const alerts = [
   {
@@ -131,13 +133,16 @@ export const getAllCurrentNotificationsForUnit = (unitId, userRole) => {
   }
   
   // Apply role-based filtering first before finding unit-specific notifications
-
   let userAlarms = getRoleFilteredAlarms(userRole);
   let userAlerts = getRoleFilteredAlerts(userRole);
+  
+  // Get device status notifications
+  const deviceStatusNotifications = getDeviceStatusNotifications(userRole);
   
   // Find all notifications for this specific unit from the filtered data
   // Use regex to match the unit number more reliably
   const unitPattern = new RegExp(`ThermaCore Unit 0*${parseInt(unitNumber, 10)}\\b`);
+  const unitIdPattern = new RegExp(`TC0*${parseInt(unitNumber, 10)}\\b`);
   
   const unitAlerts = userAlerts.filter(alert => 
     unitPattern.test(alert.message) // Show all alerts, regardless of status
@@ -146,9 +151,15 @@ export const getAllCurrentNotificationsForUnit = (unitId, userRole) => {
   const unitAlarms = userAlarms.filter(alarm => 
     unitPattern.test(alarm.message) // Show all alarms, regardless of status
   );
+
+  // Filter device status notifications for this unit
+  const unitDeviceNotifications = deviceStatusNotifications.filter(notification => 
+    unitIdPattern.test(notification.alertData?.deviceId || '') ||
+    unitPattern.test(notification.message)
+  );
   
   // Combine and return all current notifications for this unit
-  const allNotifications = [...unitAlarms, ...unitAlerts];
+  const allNotifications = [...unitAlarms, ...unitAlerts, ...unitDeviceNotifications];
   return allNotifications.map(notification => notification.alertData);
 };
 
@@ -192,5 +203,33 @@ export const getRoleFilteredAlerts = (userRole) => {
     }
     return false;
   });
+};
+
+/**
+ * Get device status notifications with role-based filtering
+ * @param {string} userRole - User role ("admin" or "user")
+ * @returns {Array} Array of device status notification objects filtered by role
+ */
+export const getDeviceStatusNotifications = (userRole = 'user') => {
+  try {
+    return deviceStatusService.generateDeviceStatusNotifications(userRole);
+  } catch (error) {
+    console.error('Error getting device status notifications:', error);
+    return [];
+  }
+};
+
+/**
+ * Get all notifications (alerts, alarms, and device status) with role-based filtering
+ * @param {string} userRole - User role ("admin" or "user")
+ * @returns {Array} Array of all notification objects filtered by role
+ */
+export const getAllNotifications = (userRole = 'user') => {
+  const userAlarms = getRoleFilteredAlarms(userRole);
+  const userAlerts = getRoleFilteredAlerts(userRole);
+  const deviceStatusNotifications = getDeviceStatusNotifications(userRole);
+  
+  // Combine all notifications, with alarms first, then device status, then alerts
+  return [...userAlarms, ...deviceStatusNotifications, ...userAlerts];
 };
 

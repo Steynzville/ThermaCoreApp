@@ -212,6 +212,32 @@ class WebSocketService:
         
         logger.info(f"Broadcasting system alert: {message}")
         self.socketio.emit('system_alert', message, broadcast=True)
+
+    def broadcast_device_status(self, device_id: str, status_data: Dict[str, Any]):
+        """Broadcast device status update to subscribed clients.
+        
+        Args:
+            device_id: Device identifier
+            status_data: Device status update data
+        """
+        if not self.socketio:
+            return
+        
+        room_name = f"device_{device_id}"
+        message = {
+            'device_id': device_id,
+            'device_name': status_data.get('device_name', device_id),
+            'timestamp': status_data.get('timestamp', datetime.now(timezone.utc)).isoformat(),
+            'changes': status_data.get('changes', []),
+            'old_status': status_data.get('old_status', {}),
+            'new_status': status_data.get('new_status', {}),
+        }
+        
+        logger.debug(f"Broadcasting device status to room {room_name}: {message}")
+        self.socketio.emit('device_status', message, room=room_name)
+        
+        # Also broadcast to general status room for dashboard updates
+        self.socketio.emit('device_status', message, room='status_updates')
     
     def get_connected_clients(self) -> Dict[str, Dict[str, Any]]:
         """Get information about connected clients.

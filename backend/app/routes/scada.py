@@ -1,6 +1,7 @@
 """SCADA integration routes for real-time data management."""
 from flask import Blueprint, jsonify, request, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from datetime import datetime, timezone, timedelta
 
 from app.routes.auth import permission_required
 from app.utils.error_handler import SecurityAwareErrorHandler
@@ -723,3 +724,169 @@ def inject_test_scenario():
         
     except Exception as e:
         return SecurityAwareErrorHandler.handle_service_error(e, 'internal_error', 'Scenario injection', 500)
+
+
+# Device Status Monitoring Routes
+
+@scada_bp.route('/scada/devices/status', methods=['GET'])
+@jwt_required()
+@permission_required('read_units')
+def get_all_devices_status():
+    """Get status of all monitored devices.
+    
+    ---
+    tags:
+      - SCADA
+    security:
+      - JWT: []
+    responses:
+      200:
+        description: All devices status
+        schema:
+          type: object
+          properties:
+            devices:
+              type: array
+              items:
+                type: object
+            total_devices:
+              type: integer
+            online_devices:
+              type: integer
+            offline_devices:
+              type: integer
+    """
+    from app.services.modbus_service import modbus_service
+    from app.services.dnp3_service import dnp3_service
+    
+    devices_status = []
+    
+    # Get device status from Modbus service
+    if hasattr(current_app, 'modbus_service'):
+        modbus_devices = current_app.modbus_service.get_device_status()
+        devices_status.extend(modbus_devices.get('devices', {}).values())
+    
+    # Get device status from DNP3 service
+    if hasattr(current_app, 'dnp3_service'):
+        dnp3_devices = current_app.dnp3_service.get_device_status()
+        devices_status.extend(dnp3_devices.get('devices', {}).values())
+    
+    # Calculate summary statistics
+    total_devices = len(devices_status)
+    online_devices = sum(1 for device in devices_status if device.get('connected', False))
+    offline_devices = total_devices - online_devices
+    
+    return jsonify({
+        'devices': devices_status,
+        'total_devices': total_devices,
+        'online_devices': online_devices,
+        'offline_devices': offline_devices,
+        'timestamp': datetime.now(timezone.utc).isoformat()
+    })
+
+
+@scada_bp.route('/scada/devices/<device_id>/status', methods=['GET'])
+@jwt_required()
+@permission_required('read_units')
+def get_device_status(device_id):
+    """Get status of a specific device.
+    
+    ---
+    tags:
+      - SCADA
+    security:
+      - JWT: []
+    parameters:
+      - name: device_id
+        in: path
+        type: string
+        required: true
+        description: Device identifier
+    responses:
+      200:
+        description: Device status
+        schema:
+          type: object
+      404:
+        description: Device not found
+    """
+    # Try to find device in Modbus service first
+    if hasattr(current_app, 'modbus_service'):
+        modbus_status = current_app.modbus_service.get_device_status(device_id)
+        if modbus_status and modbus_status.get('devices', {}).get(device_id):
+            return jsonify(modbus_status['devices'][device_id])
+    
+    # Try DNP3 service
+    if hasattr(current_app, 'dnp3_service'):
+        dnp3_status = current_app.dnp3_service.get_device_status(device_id)
+        if dnp3_status and dnp3_status.get('devices', {}).get(device_id):
+            return jsonify(dnp3_status['devices'][device_id])
+    
+    return SecurityAwareErrorHandler.handle_not_found('Device', device_id)
+
+
+@scada_bp.route('/scada/devices/status/history', methods=['GET'])
+@jwt_required()
+@permission_required('read_units')
+def get_device_status_history():
+    """Get device status change history.
+    
+    ---
+    tags:
+      - SCADA
+    security:
+      - JWT: []
+    parameters:
+      - name: device_id
+        in: query
+        type: string
+        description: Filter by specific device ID
+      - name: limit
+        in: query
+        type: integer
+        default: 50
+        description: Maximum number of records to return
+    responses:
+      200:
+        description: Device status history
+        schema:
+          type: object
+          properties:
+            history:
+              type: array
+              items:
+                type: object
+            total_records:
+              type: integer
+    """
+    device_id = request.args.get('device_id')
+    limit = min(int(request.args.get('limit', 50)), 1000)  # Cap at 1000
+    
+    # For now, return mock data - in a real implementation, this would come from a database
+    mock_history = [
+        {
+            'device_id': device_id or 'TC001',
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'status_change': 'online -> offline',
+            'event': 'Connection Lost',
+            'severity': 'critical'
+        },
+        {
+            'device_id': device_id or 'TC001',
+            'timestamp': (datetime.now(timezone.utc) - timedelta(minutes=30)).isoformat(),
+            'status_change': 'offline -> online',
+            'event': 'Connection Restored',
+            'severity': 'info'
+        }
+    ]
+    
+    filtered_history = mock_history
+    if device_id:
+        filtered_history = [h for h in mock_history if h['device_id'] == device_id]
+    
+    return jsonify({
+        'history': filtered_history[:limit],
+        'total_records': len(filtered_history),
+        'device_id': device_id,
+        'limit': limit
+    })
