@@ -340,18 +340,39 @@ class ProtocolGatewaySimulator:
             logger.info(f"Injected unit offline scenario for {unit_id}")
     
     def get_status(self) -> Dict[str, Any]:
-        """Get simulator status.
+        """Get simulator status for protocol registry integration.
         
         Returns:
-            Status dictionary
+            Status dictionary compatible with protocol registry standards
         """
+        # Determine overall status
+        if not self.client:
+            status = "not_initialized" 
+        elif self.connected and self.running:
+            status = "ready"
+        elif self.connected and not self.running:
+            status = "initializing"
+        elif not self.connected:
+            status = "error"
+        else:
+            status = "unknown"
+        
         return {
+            'available': self.client is not None,
             'connected': self.connected,
+            'status': status,
+            'version': '1.0.0-simulator',
             'running': self.running,
             'mqtt_host': self.mqtt_host,
             'mqtt_port': self.mqtt_port,
             'simulation_units': self.simulation_units.copy(),
             'sensor_types': list(self.sensor_configs.keys()),
             'unit_states': {unit_id: {'status': state['status'], 'last_values': state['last_values']} 
-                           for unit_id, state in self.unit_states.items()}
+                           for unit_id, state in self.unit_states.items()},
+            'metrics': {
+                'simulation_units_count': len(self.simulation_units),
+                'sensor_types_count': len(self.sensor_configs),
+                'active_unit_states': len(self.unit_states)
+            },
+            'demo': True  # This is a simulation/demo implementation
         }

@@ -327,17 +327,33 @@ class MQTTClient:
             return False
     
     def get_status(self) -> Dict[str, Any]:
-        """Get MQTT client status.
+        """Get MQTT client status for protocol registry integration.
         
         Returns:
-            Status dictionary
+            Status dictionary compatible with protocol registry standards
         """
+        # Determine status based on connection state
+        if not self.client:
+            status = "not_initialized"
+        elif self.connected:
+            status = "ready"
+        else:
+            status = "error"
+        
         return {
+            'available': self.client is not None,
             'connected': self.connected,
+            'status': status,
+            'version': 'paho-mqtt-2.1.0',
             'broker_host': self.broker_host,
             'broker_port': self.broker_port,
             'client_id': self.client_id,
-            'subscribed_topics': self._subscribed_topics.copy()
+            'subscribed_topics': self._subscribed_topics.copy(),
+            'metrics': {
+                'subscribed_topics_count': len(self._subscribed_topics),
+                'message_handlers_count': len(self._message_handlers)
+            },
+            'demo': False  # MQTT is a real protocol implementation
         }
 
 
