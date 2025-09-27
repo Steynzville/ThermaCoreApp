@@ -81,7 +81,7 @@ describe('RemoteControl Component', () => {
     });
   });
 
-  test('shows access denied for users without remote control permissions', async () => {
+  test('allows all users to access remote control interface', async () => {
     // Mock localStorage for viewer user
     Object.defineProperty(window, 'localStorage', {
       value: {
@@ -96,17 +96,17 @@ describe('RemoteControl Component', () => {
       writable: true,
     });
 
-    // Create a mock for viewer permissions
+    // Create a mock for viewer permissions - now all users have access
     vi.doMock('../hooks/useRemoteControl', async (importOriginal) => {
       return {
         useRemoteControl: () => ({
           permissions: {
-            has_remote_control: false,
+            has_remote_control: true,  // All users now have access
             role: 'viewer',
             permissions: {
               read_units: true,
               write_units: false,
-              remote_control: false
+              remote_control: true  // All users now have remote control permission
             }
           },
           isLoading: false,
@@ -128,8 +128,8 @@ describe('RemoteControl Component', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Access Denied')).toBeInTheDocument();
-      expect(screen.getByText(/Your role \(viewer\) does not have remote control permissions/)).toBeInTheDocument();
+      expect(screen.getByText('Remote Control - Test Unit')).toBeInTheDocument();
+      expect(screen.getByText('Viewer • Remote Control')).toBeInTheDocument();
     });
   });
 

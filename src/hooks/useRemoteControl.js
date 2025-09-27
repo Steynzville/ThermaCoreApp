@@ -24,14 +24,14 @@ export const useRemoteControl = (unitId) => {
       // For now, use mock data based on role since backend integration is simulated
       const userRole = localStorage.getItem('thermacore_role');
       
-      // Mock permissions based on role
+      // Mock permissions based on role - ALL users now have remote control access
       const mockPermissions = {
-        has_remote_control: userRole === 'admin' || userRole === 'operator',
+        has_remote_control: true,  // All users now have remote control access
         role: userRole || 'viewer',
         permissions: {
           read_units: true,
           write_units: userRole === 'admin' || userRole === 'operator',
-          remote_control: userRole === 'admin' || userRole === 'operator'
+          remote_control: true  // All users now have remote control permission
         }
       };
 

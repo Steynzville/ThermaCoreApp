@@ -146,39 +146,10 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
     );
   }
 
-  // Check if permissions are loaded and if user has remote control access
-  if (permissions && !permissions.has_remote_control) {
-    return (
-      <div className="min-h-screen bg-blue-50 dark:bg-gray-950 p-6 flex items-center justify-center">
-        <div className="text-center">
-          <AlertTriangle className="h-16 w-16 text-orange-500 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-            Access Denied
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mb-2">
-            Your role ({permissions.role}) does not have remote control permissions.
-          </p>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Only Admin and Operator roles can remotely control units.
-          </p>
-          <button
-            onClick={() => (propUnit ? navigate("/grid-view") : navigate(-1))}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            {propUnit ? "Return to Grid View" : "Back to Unit Details"}
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // All users now have access to remote control, so we remove the permission check
 
   const handleMachineToggle = async (checked) => {
-    // Check permissions
-    if (!permissions?.has_remote_control) {
-      console.warn('User does not have remote control permissions');
-      return;
-    }
-
+    // All users now have access to remote control
     setPowerControlLoading(true);
     
     try {
@@ -218,11 +189,7 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
   };
 
   const handleWaterProductionToggle = async (checked) => {
-    // Check permissions
-    if (!permissions?.has_remote_control) {
-      console.warn('User does not have remote control permissions');
-      return;
-    }
+    // All users now have access to remote control
 
     // Can't enable water production if machine is off
     if (checked && !machineOn) {
@@ -388,10 +355,9 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
             {/* Permission indicator */}
             {permissions && (
               <div className="flex items-center space-x-2">
-                <div className={`w-3 h-3 rounded-full ${permissions.has_remote_control ? 'bg-green-500' : 'bg-orange-500'}`} />
+                <div className="w-3 h-3 rounded-full bg-green-500" />
                 <span className="text-sm text-gray-600 dark:text-gray-400">
-                  {permissions.role.charAt(0).toUpperCase() + permissions.role.slice(1)} • 
-                  {permissions.has_remote_control ? ' Remote Control' : ' View Only'}
+                  {permissions.role.charAt(0).toUpperCase() + permissions.role.slice(1)} • Remote Control
                 </span>
               </div>
             )}
@@ -446,7 +412,7 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                       <Switch 
                         checked={machineOn} 
                         onCheckedChange={() => {}} 
-                        disabled={powerControlLoading || !permissions?.has_remote_control}
+                        disabled={powerControlLoading}
                       />
                       {powerControlLoading && (
                         <div className="absolute inset-0 flex items-center justify-center">
@@ -522,7 +488,7 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                         <Switch
                           checked={waterProductionOn}
                           onCheckedChange={() => {}}
-                          disabled={waterControlLoading || !isConnected || !machineOn || !permissions?.has_remote_control}
+                          disabled={waterControlLoading || !isConnected || !machineOn}
                         />
                         {waterControlLoading && (
                           <div className="absolute inset-0 flex items-center justify-center">
@@ -602,7 +568,7 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                       <Switch
                         checked={autoSwitchEnabled}
                         onCheckedChange={() => {}}
-                        disabled={!isConnected || !machineOn || !permissions?.has_remote_control}
+                        disabled={!isConnected || !machineOn}
                       />
                     </div>
                   </AlertDialogTrigger>
