@@ -624,6 +624,62 @@ class DNP3Service:
                 'connected_devices': sum(1 for d in self._devices.values() if d.is_connected),
                 'devices': devices_status
             }
+    
+    def get_status(self) -> Dict[str, Any]:
+        """Get DNP3 service status for protocol registry integration.
+        
+        Returns:
+            Status dictionary compatible with protocol registry standards
+        """
+        connected_devices = [dev for dev in self._devices.values() if dev.is_connected]
+        total_devices = len(self._devices)
+        
+        # Determine service availability and connection status
+        available = self._master is not None  # Service available if master is initialized
+        connected = len(connected_devices) > 0
+        
+        # Determine overall status
+        if not self._master:
+            status = "not_initialized"
+        elif total_devices == 0:
+            status = "initializing"
+        elif connected:
+            status = "ready"
+        elif total_devices > 0 and not connected:
+            status = "error"
+        else:
+            status = "unknown"
+        
+        # Calculate metrics
+        metrics = {
+            "master_initialized": self._master is not None,
+            "total_devices": total_devices,
+            "connected_devices": len(connected_devices),
+            "total_data_points": sum(len(configs) for configs in self._data_point_configs.values()),
+            "devices_with_data": len(self._last_readings)
+        }
+        
+        # Create device summary
+        devices_summary = {}
+        for device_id, device in self._devices.items():
+            devices_summary[device_id] = {
+                "master_address": device.master_address,
+                "outstation_address": device.outstation_address,
+                "host": device.host,
+                "port": device.port,
+                "connected": device.is_connected,
+                "data_point_count": len(self._data_point_configs.get(device_id, []))
+            }
+        
+        return {
+            "available": available,
+            "connected": connected,
+            "status": status,
+            "version": "1.0.0-mock",
+            "metrics": metrics,
+            "demo": True,  # This is a mock implementation
+            "devices": devices_summary
+        }
 
 
 # Global DNP3 service instance

@@ -471,6 +471,59 @@ class ModbusService:
         except Exception as e:
             logger.error(f"Failed to process register value: {e}")
             return 0.0
+    
+    def get_status(self) -> Dict[str, Any]:
+        """Get Modbus service status for protocol registry integration.
+        
+        Returns:
+            Status dictionary compatible with protocol registry standards
+        """
+        connected_devices = [dev for dev in self._devices.values() if dev.is_connected]
+        total_devices = len(self._devices)
+        
+        # Determine service availability and connection status
+        available = True  # Service is always available (mock implementation)
+        connected = len(connected_devices) > 0
+        
+        # Determine overall status
+        if total_devices == 0:
+            status = "not_initialized"
+        elif connected:
+            status = "ready"
+        elif total_devices > 0 and not connected:
+            status = "error"
+        else:
+            status = "unknown"
+        
+        # Calculate metrics
+        metrics = {
+            "total_devices": total_devices,
+            "connected_devices": len(connected_devices),
+            "total_registers": sum(len(configs) for configs in self._register_configs.values()),
+            "devices_with_data": len(self._last_readings)
+        }
+        
+        # Create device summary
+        devices_summary = {}
+        for device_id, device in self._devices.items():
+            devices_summary[device_id] = {
+                "host": device.host,
+                "port": device.port,
+                "unit_id": device.unit_id,
+                "connected": device.is_connected,
+                "device_type": device.device_type,
+                "register_count": len(self._register_configs.get(device_id, []))
+            }
+        
+        return {
+            "available": available,
+            "connected": connected,
+            "status": status,
+            "version": "1.0.0-mock",
+            "metrics": metrics,
+            "demo": True,  # This is a mock implementation
+            "devices": devices_summary
+        }
 
 
 # Global Modbus service instance
