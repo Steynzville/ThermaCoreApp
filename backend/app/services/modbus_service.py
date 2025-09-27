@@ -370,12 +370,20 @@ class ModbusService:
             elif register_type == 'holding_register':
                 # Convert value to appropriate integer representation
                 if data_type == 'float32':
-                    # Convert float to two 16-bit registers (simplified)
-                    int_value = int(value * 100)  # Scale and convert
+                    # Proper IEEE 754 float32 conversion using struct
+                    import struct
+                    # Convert float to bytes and then to two 16-bit registers
+                    bytes_val = struct.pack('>f', value)  # Big-endian float
+                    combined = struct.unpack('>I', bytes_val)[0]  # Big-endian unsigned int
+                    # Split into high and low 16-bit words
+                    high_word = (combined >> 16) & 0xFFFF
+                    low_word = combined & 0xFFFF
+                    # Write both registers (assuming consecutive addresses)
+                    success = (client.write_single_register(address, high_word, device.unit_id) and
+                             client.write_single_register(address + 1, low_word, device.unit_id))
                 else:
                     int_value = int(value)
-                    
-                success = client.write_single_register(address, int_value, device.unit_id)
+                    success = client.write_single_register(address, int_value, device.unit_id)
             else:
                 raise ValueError(f"Cannot write to register type: {register_type}")
             
@@ -455,11 +463,17 @@ class ModbusService:
                 else:
                     value = raw_values[0]
             elif data_type == 'float32':
-                # Combine two 16-bit registers as IEEE 754 float (simplified)
+                # Proper IEEE 754 float32 conversion using struct
                 if len(raw_values) >= 2:
-                    # This is a simplified conversion - real implementation would use struct
-                    value = ((raw_values[0] << 16) | raw_values[1]) / 100.0
+                    import struct
+                    # Combine two 16-bit registers into a 32-bit integer
+                    # Assuming high-word first (big-endian) - adjust byte order if needed
+                    combined = (raw_values[0] << 16) | raw_values[1]
+                    # Convert to bytes and then to float32
+                    bytes_val = struct.pack('>I', combined)  # Big-endian unsigned int
+                    value = struct.unpack('>f', bytes_val)[0]  # Big-endian float
                 else:
+                    # Single register - treat as scaled integer
                     value = raw_values[0] / 100.0
             else:
                 value = raw_values[0]

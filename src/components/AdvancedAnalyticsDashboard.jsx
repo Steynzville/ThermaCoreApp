@@ -330,7 +330,9 @@ const AdvancedAnalyticsDashboard = () => {
                       <span className="text-sm">Avg Confidence</span>
                       <span className="font-semibold">
                         {formatValue(
-                          dashboardData.anomalies.reduce((sum, a) => sum + a.confidence, 0) / dashboardData.anomalies.length
+                          dashboardData.anomalies.length > 0 
+                            ? dashboardData.anomalies.reduce((sum, a) => sum + a.confidence, 0) / dashboardData.anomalies.length
+                            : 0
                         )}%
                       </span>
                     </div>

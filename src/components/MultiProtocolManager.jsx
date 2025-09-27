@@ -479,7 +479,10 @@ const MultiProtocolManager = () => {
           <div className="space-y-4">
             <div>
               <Label htmlFor="protocol">Protocol</Label>
-              <Select value={selectedProtocol} onValueChange={setSelectedProtocol}>
+              <Select value={selectedProtocol} onValueChange={(value) => {
+                setSelectedProtocol(value);
+                setNewDevice({}); // Reset newDevice state when protocol changes
+              }}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

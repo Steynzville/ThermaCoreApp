@@ -31,7 +31,7 @@ class MQTTClient:
         self._app = app
         self._data_storage_service = data_storage_service
         self._message_handlers: Dict[str, Callable] = {}
-        self._subscribed_topics: List[str] = []
+        self._subscribed_topics: set = set()  # Use set for efficient unique topic management
         
         if app:
             self.init_app(app, data_storage_service)
@@ -187,8 +187,7 @@ class MQTTClient:
             result, _ = self.client.subscribe(topic, qos)
             if result == mqtt.MQTT_ERR_SUCCESS:
                 logger.info(f"Subscribed to topic: {topic}")
-                if topic not in self._subscribed_topics:
-                    self._subscribed_topics.append(topic)
+                self._subscribed_topics.add(topic)  # Set automatically handles duplicates
             else:
                 logger.error(f"Failed to subscribe to topic {topic}")
         except Exception as e:
@@ -348,7 +347,7 @@ class MQTTClient:
             'broker_host': self.broker_host,
             'broker_port': self.broker_port,
             'client_id': self.client_id,
-            'subscribed_topics': self._subscribed_topics.copy(),
+            'subscribed_topics': list(self._subscribed_topics),  # Convert set to list for JSON serialization
             'metrics': {
                 'subscribed_topics_count': len(self._subscribed_topics),
                 'message_handlers_count': len(self._message_handlers)
