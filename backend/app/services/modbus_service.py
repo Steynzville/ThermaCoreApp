@@ -368,14 +368,29 @@ class ModbusService:
             if register_type == 'coil':
                 success = client.write_single_coil(address, bool(value), device.unit_id)
             elif register_type == 'holding_register':
-                # Convert value to appropriate integer representation
+                # Convert value to appropriate representation
                 if data_type == 'float32':
-                    # Convert float to two 16-bit registers (simplified)
-                    int_value = int(value * 100)  # Scale and convert
+                    # Convert float to two 16-bit registers using IEEE 754 format
+                    import struct
+                    try:
+                        # Pack float as IEEE 754, then unpack as 32-bit integer
+                        packed_int = struct.unpack('>I', struct.pack('>f', float(value)))[0]
+                        # Split into two 16-bit registers (big-endian)
+                        high_word = (packed_int >> 16) & 0xFFFF
+                        low_word = packed_int & 0xFFFF
+                        
+                        # Write both registers (would need multi-register write in real implementation)
+                        success = client.write_single_register(address, high_word, device.unit_id)
+                        if success and address + 1 <= 65535:  # Check address bounds
+                            success = success and client.write_single_register(address + 1, low_word, device.unit_id)
+                    except (struct.error, ValueError) as e:
+                        logger.warning(f"Failed to convert float32 for writing: {e}, using scaled integer")
+                        # Fallback to scaled integer
+                        int_value = int(value * 100)
+                        success = client.write_single_register(address, int_value, device.unit_id)
                 else:
                     int_value = int(value)
-                    
-                success = client.write_single_register(address, int_value, device.unit_id)
+                    success = client.write_single_register(address, int_value, device.unit_id)
             else:
                 raise ValueError(f"Cannot write to register type: {register_type}")
             
@@ -455,11 +470,28 @@ class ModbusService:
                 else:
                     value = raw_values[0]
             elif data_type == 'float32':
-                # Combine two 16-bit registers as IEEE 754 float (simplified)
+                # Proper IEEE 754 float32 conversion from two 16-bit registers
                 if len(raw_values) >= 2:
-                    # This is a simplified conversion - real implementation would use struct
-                    value = ((raw_values[0] << 16) | raw_values[1]) / 100.0
+                    # Combine two 16-bit registers with proper endianness handling
+                    # Default to big-endian (register[0] is high word, register[1] is low word)
+                    # For little-endian, swap the registers
+                    high_word = raw_values[0]
+                    low_word = raw_values[1] if len(raw_values) > 1 else 0
+                    
+                    # Combine into 32-bit integer (big-endian by default)
+                    combined = (high_word << 16) | low_word
+                    
+                    # Convert 32-bit integer to IEEE 754 float
+                    import struct
+                    try:
+                        # Pack as unsigned int, unpack as float
+                        value = struct.unpack('>f', struct.pack('>I', combined))[0]
+                    except (struct.error, OverflowError) as e:
+                        logger.warning(f"Failed to convert IEEE 754 float32: {e}, falling back to scaled integer")
+                        # Fallback to scaled conversion
+                        value = combined / 100.0
                 else:
+                    # Single register fallback (scaled integer)
                     value = raw_values[0] / 100.0
             else:
                 value = raw_values[0]

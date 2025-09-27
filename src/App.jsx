@@ -153,7 +153,7 @@ const AppContent = () => {
 
               return (
                 <Route
-                  key={`${route.path}-${index}`}
+                  key={route.path}
                   path={route.path}
                   element={
                     <React.Suspense

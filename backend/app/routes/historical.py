@@ -118,15 +118,43 @@ def get_historical_data(unit_id):
                     'unit': reading.unit
                 })
         else:
-            # Aggregated data
-            if aggregation == 'hourly':
-                time_format = func.date_trunc('hour', SensorReading.timestamp)
-            elif aggregation == 'daily':
-                time_format = func.date_trunc('day', SensorReading.timestamp)
-            elif aggregation == 'weekly':
-                time_format = func.date_trunc('week', SensorReading.timestamp)
+            # Aggregated data (with database dialect compatibility)
+            from sqlalchemy.sql import sqltypes
+            
+            # Check database dialect for compatibility
+            dialect_name = db.engine.dialect.name
+            
+            if dialect_name == 'postgresql':
+                # PostgreSQL-specific date_trunc function
+                if aggregation == 'hourly':
+                    time_format = func.date_trunc('hour', SensorReading.timestamp)
+                elif aggregation == 'daily':
+                    time_format = func.date_trunc('day', SensorReading.timestamp)
+                elif aggregation == 'weekly':
+                    time_format = func.date_trunc('week', SensorReading.timestamp)
+                else:
+                    return jsonify({'error': 'Invalid aggregation type'}), 400
+            elif dialect_name == 'sqlite':
+                # SQLite-compatible date/time functions
+                if aggregation == 'hourly':
+                    time_format = func.datetime(func.strftime('%Y-%m-%d %H:00:00', SensorReading.timestamp))
+                elif aggregation == 'daily':
+                    time_format = func.date(SensorReading.timestamp)
+                elif aggregation == 'weekly':
+                    # SQLite doesn't have native week truncation, use custom logic
+                    time_format = func.date(SensorReading.timestamp, 'weekday 0', '-7 days')
+                else:
+                    return jsonify({'error': 'Invalid aggregation type'}), 400
             else:
-                return jsonify({'error': 'Invalid aggregation type'}), 400
+                # Generic SQL approach (may not work for all databases)
+                if aggregation == 'hourly':
+                    time_format = func.date_format(SensorReading.timestamp, '%Y-%m-%d %H:00:00')
+                elif aggregation == 'daily':
+                    time_format = func.date(SensorReading.timestamp)
+                elif aggregation == 'weekly':
+                    time_format = func.date(SensorReading.timestamp)  # Fallback to daily
+                else:
+                    return jsonify({'error': 'Invalid aggregation type'}), 400
             
             aggregated_data = db.session.query(
                 time_format.label('time_bucket'),
@@ -258,15 +286,44 @@ def compare_units_historical():
         else:
             start_time = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
         
-        # Set aggregation format
-        if aggregation == 'hourly':
-            time_format = func.date_trunc('hour', SensorReading.timestamp)
-        elif aggregation == 'daily':
-            time_format = func.date_trunc('day', SensorReading.timestamp)
-        elif aggregation == 'weekly':
-            time_format = func.date_trunc('week', SensorReading.timestamp)
+        # Set aggregation format (with database dialect compatibility)
+        from sqlalchemy.sql import sqltypes
+        from app.models import db
+        
+        # Check database dialect for compatibility
+        dialect_name = db.engine.dialect.name
+        
+        if dialect_name == 'postgresql':
+            # PostgreSQL-specific date_trunc function
+            if aggregation == 'hourly':
+                time_format = func.date_trunc('hour', SensorReading.timestamp)
+            elif aggregation == 'daily':
+                time_format = func.date_trunc('day', SensorReading.timestamp)
+            elif aggregation == 'weekly':
+                time_format = func.date_trunc('week', SensorReading.timestamp)
+            else:
+                return jsonify({'error': 'Invalid aggregation type'}), 400
+        elif dialect_name == 'sqlite':
+            # SQLite-compatible date/time functions
+            if aggregation == 'hourly':
+                time_format = func.datetime(func.strftime('%Y-%m-%d %H:00:00', SensorReading.timestamp))
+            elif aggregation == 'daily':
+                time_format = func.date(SensorReading.timestamp)
+            elif aggregation == 'weekly':
+                # SQLite doesn't have native week truncation, use custom logic
+                time_format = func.date(SensorReading.timestamp, 'weekday 0', '-7 days')
+            else:
+                return jsonify({'error': 'Invalid aggregation type'}), 400
         else:
-            return jsonify({'error': 'Invalid aggregation type'}), 400
+            # Generic SQL approach (may not work for all databases)
+            if aggregation == 'hourly':
+                time_format = func.date_format(SensorReading.timestamp, '%Y-%m-%d %H:00:00')
+            elif aggregation == 'daily':
+                time_format = func.date(SensorReading.timestamp)
+            elif aggregation == 'weekly':
+                time_format = func.date(SensorReading.timestamp)  # Fallback to daily
+            else:
+                return jsonify({'error': 'Invalid aggregation type'}), 400
         
         # Get comparison data
         comparison_data = db.session.query(
@@ -311,18 +368,23 @@ def compare_units_historical():
         # Calculate summary statistics per unit
         unit_summaries = {}
         for unit_id in unit_ids:
-            unit_values = [
-                record.avg_value for record in comparison_data 
+            unit_records = [
+                record for record in comparison_data 
                 if record.unit_id == unit_id
             ]
             
-            if unit_values:
+            if unit_records:
+                # Calculate weighted average based on sample count
+                total_value_sum = sum(record.avg_value * record.count for record in unit_records)
+                total_count = sum(record.count for record in unit_records)
+                unit_avg_values = [record.avg_value for record in unit_records]
+                
                 unit_summaries[unit_id] = {
                     'unit_name': unit_names[unit_id],
-                    'overall_avg': round(sum(unit_values) / len(unit_values), 2),
-                    'overall_min': round(min(unit_values), 2),
-                    'overall_max': round(max(unit_values), 2),
-                    'data_points': len(unit_values)
+                    'overall_avg': round(total_value_sum / total_count, 2) if total_count > 0 else 0,
+                    'overall_min': round(min(unit_avg_values), 2),
+                    'overall_max': round(max(unit_avg_values), 2),
+                    'data_points': total_count
                 }
             else:
                 unit_summaries[unit_id] = {
@@ -533,14 +595,30 @@ def get_historical_statistics(unit_id):
         
         start_time = utc_now() - timedelta(days=days)
         
-        # Base query
+        # Base query (with database dialect compatibility for stddev)
+        dialect_name = db.engine.dialect.name
+        
+        if dialect_name == 'postgresql':
+            # PostgreSQL has native stddev function
+            stddev_func = func.stddev(SensorReading.value)
+        elif dialect_name == 'sqlite':
+            # SQLite doesn't have stddev, calculate manually or use 0
+            # For simplicity, we'll calculate it in Python later or use a simpler approach
+            stddev_func = func.avg(SensorReading.value * SensorReading.value) - func.avg(SensorReading.value) * func.avg(SensorReading.value)
+        else:
+            # Generic approach - try stddev, fallback to 0
+            try:
+                stddev_func = func.stddev(SensorReading.value)
+            except:
+                stddev_func = func.coalesce(func.stddev(SensorReading.value), 0)
+        
         query = db.session.query(
             Sensor.sensor_type,
             func.count(SensorReading.value).label('total_readings'),
             func.avg(SensorReading.value).label('avg_value'),
             func.min(SensorReading.value).label('min_value'),
             func.max(SensorReading.value).label('max_value'),
-            func.stddev(SensorReading.value).label('std_dev')
+            stddev_func.label('std_dev')
         ).join(Sensor).filter(
             and_(
                 Sensor.unit_id == unit_id,

@@ -115,10 +115,10 @@ const AdminPanel = ({ className }) => {
 
         {/* System Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          {systemStats.map((stat, index) => {
+          {systemStats.map((stat) => {
             const IconComponent = stat.icon;
             return (
-              <Card key={index} className="bg-white dark:bg-gray-900">
+              <Card key={stat.label} className="bg-white dark:bg-gray-900">
                 <CardContent className="p-4">
                   <div className="flex items-center space-x-3">
                     <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">

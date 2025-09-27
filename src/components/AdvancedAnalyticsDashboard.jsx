@@ -287,8 +287,8 @@ const AdvancedAnalyticsDashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {dashboardData.anomalies.map((anomaly, index) => (
-                      <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
+                    {dashboardData.anomalies.map((anomaly) => (
+                      <div key={`${anomaly.sensor_id}-${anomaly.timestamp}`} className="flex items-center justify-between p-4 border rounded-lg">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <Badge variant="outline">{anomaly.sensor_type}</Badge>
@@ -330,7 +330,9 @@ const AdvancedAnalyticsDashboard = () => {
                       <span className="text-sm">Avg Confidence</span>
                       <span className="font-semibold">
                         {formatValue(
-                          dashboardData.anomalies.reduce((sum, a) => sum + a.confidence, 0) / dashboardData.anomalies.length
+                          dashboardData.anomalies.length > 0
+                            ? dashboardData.anomalies.reduce((sum, a) => sum + a.confidence, 0) / dashboardData.anomalies.length
+                            : 0
                         )}%
                       </span>
                     </div>
