@@ -4,7 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import RemoteControl from '../components/RemoteControl';
 import { SettingsProvider } from '../context/SettingsContext';
 
-// Mock the hooks
+// Mock the hooks - declare the mock functions first
 const mockUseRemoteControl = vi.fn(() => ({
   permissions: {
     has_remote_control: true,
@@ -27,11 +27,11 @@ const mockUseAuth = vi.fn(() => ({
   user: { username: 'admin', role: 'admin' }
 }));
 
+// Now use the mock functions in vi.mock calls
 vi.mock('../hooks/useRemoteControl', () => ({
   useRemoteControl: mockUseRemoteControl
 }));
 
-// Mock the useAuth hook
 vi.mock('../context/AuthContext', () => ({
   AuthProvider: ({ children }) => children,
   useAuth: mockUseAuth
