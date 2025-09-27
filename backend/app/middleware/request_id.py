@@ -79,6 +79,12 @@ class RequestIDFilter(logging.Filter):
         """Add request ID to log record."""
         request_id = RequestIDManager.get_request_id()
         record.request_id = request_id or 'no-request-context'
+        
+        # Also add it to the extra data for structured logging
+        if not hasattr(record, 'extra'):
+            record.extra = {}
+        record.extra['correlation_id'] = record.request_id
+        
         return True
 
 
@@ -93,14 +99,32 @@ def init_request_id_logging(app):
     # Add to Flask's logger
     app.logger.addFilter(request_id_filter)
     
-    # Update logging format to include request ID
+    # Update logging format to include request ID for structured logging
     if not app.config.get('TESTING'):
         for handler in app.logger.handlers:
             if hasattr(handler, 'setFormatter'):
+                # Enhanced formatter with correlation ID and structured format
                 formatter = logging.Formatter(
                     '[%(asctime)s] [%(request_id)s] %(levelname)s in %(module)s: %(message)s'
                 )
                 handler.setFormatter(formatter)
+        
+        # Configure structured logging for production
+        if app.config.get('LOG_LEVEL', 'INFO').upper() in ['DEBUG', 'INFO']:
+            # Add structured logging handler if not in testing
+            import sys
+            stream_handler = logging.StreamHandler(sys.stdout)
+            stream_handler.setLevel(getattr(logging, app.config.get('LOG_LEVEL', 'INFO').upper()))
+            stream_handler.addFilter(request_id_filter)
+            stream_handler.setFormatter(logging.Formatter(
+                '%(asctime)s - %(name)s - %(levelname)s - [%(request_id)s] - %(message)s'
+            ))
+            
+            # Add to root logger if not already present
+            root_logger = logging.getLogger()
+            if stream_handler not in root_logger.handlers:
+                root_logger.addHandler(stream_handler)
+                root_logger.setLevel(getattr(logging, app.config.get('LOG_LEVEL', 'INFO').upper()))
 
 
 def request_id_required(f: Callable) -> Callable:
@@ -123,8 +147,14 @@ def track_request_id(f: Callable) -> Callable:
         # Set up request ID
         request_id = RequestIDManager.ensure_request_id()
         
-        # Log request start
-        logger.info(f"Request started: {request.method} {request.path}")
+        # Log request start with structured logging
+        logger.info(f"Request started: {request.method} {request.path}", extra={
+            'request_id': request_id,
+            'method': request.method,
+            'path': request.path,
+            'remote_addr': request.remote_addr,
+            'user_agent': request.headers.get('User-Agent', 'Unknown')
+        })
         
         try:
             # Execute the wrapped function
@@ -142,12 +172,37 @@ def track_request_id(f: Callable) -> Callable:
                     headers = {RequestIDManager.REQUEST_ID_HEADER: request_id}
                     response = (response[0], response[1], headers)
             
-            logger.info(f"Request completed successfully")
+            logger.info(f"Request completed successfully", extra={
+                'request_id': request_id,
+                'method': request.method,
+                'path': request.path,
+                'status': 'success'
+            })
             return response
             
         except Exception as e:
-            logger.error(f"Request failed with error: {str(e)}")
-            raise
+            # Enhanced error logging with correlation ID and context
+            logger.error(f"Request failed with error: {str(e)}", exc_info=True, extra={
+                'request_id': request_id,
+                'method': request.method,
+                'path': request.path,
+                'error_type': e.__class__.__name__,
+                'status': 'error'
+            })
+            
+            # Check if this is a domain exception and handle appropriately
+            from app.exceptions import ThermaCoreException
+            from app.utils.error_handler import SecurityAwareErrorHandler
+            
+            if isinstance(e, ThermaCoreException):
+                # Handle domain exception with proper correlation ID
+                response_data, status_code = SecurityAwareErrorHandler.handle_thermacore_exception(e)
+                # Ensure correlation ID header is added
+                response_data.headers[RequestIDManager.REQUEST_ID_HEADER] = request_id
+                return response_data, status_code
+            else:
+                # Re-raise non-domain exceptions to be handled by Flask's error handlers
+                raise
         
     return decorated_function
 
