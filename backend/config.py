@@ -120,10 +120,7 @@ class ProductionConfig(Config):
     if os.environ.get("MQTT_CA_CERTS") and os.environ.get("MQTT_CERT_FILE") and os.environ.get("MQTT_KEY_FILE"):
         MQTT_USE_TLS = True
     else:
-        # If TLS is not configured, ensure it's explicitly disabled or warn
-        # For now, we'll assume it's disabled if certs are missing.
-        # A more robust solution might raise an error or log a critical warning.
-        MQTT_USE_TLS = False
+        raise ValueError("MQTT certificate paths must be set in environment variables for production")
     
     # Enforce OPC UA security in production
     # Override to use at least Basic256Sha256 if not explicitly configured
