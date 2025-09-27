@@ -1,4 +1,5 @@
 """DNP3 protocol support service for Phase 4 SCADA integration."""
+import os
 import logging
 from typing import Dict, List, Any, Optional, Tuple
 from datetime import datetime
@@ -1226,13 +1227,16 @@ class DNP3Service:
                 "data_point_count": len(self._data_point_configs.get(device_id, []))
             }
         
+        # Detect if running in production/development environment
+        is_demo_mode = os.getenv('FLASK_ENV', 'production') != 'production' or os.getenv('DNP3_DEMO', 'false').lower() == 'true'
+
         return {
             "available": available,
             "connected": connected,
             "status": status,
             "version": "1.0.0-mock",
             "metrics": metrics,
-            "demo": True,  # This is a mock implementation
+            "demo": is_demo_mode,  # Environment-aware demo flag
             "devices": devices_summary
         }
 

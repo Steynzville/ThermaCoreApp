@@ -1,4 +1,5 @@
 """Modbus protocol support service for Phase 4 SCADA integration."""
+import os
 import logging
 import struct
 from typing import Dict, List, Any, Optional, Tuple
@@ -529,13 +530,16 @@ class ModbusService:
                 "register_count": len(self._register_configs.get(device_id, []))
             }
         
+        # Detect if running in production/development environment
+        is_demo_mode = os.getenv('FLASK_ENV', 'production') != 'production' or os.getenv('MODBUS_DEMO', 'false').lower() == 'true'
+
         return {
             "available": available,
             "connected": connected,
             "status": status,
             "version": "1.0.0-mock",
             "metrics": metrics,
-            "demo": True,  # This is a mock implementation
+            "demo": is_demo_mode,  # Environment-aware demo flag
             "devices": devices_summary
         }
 
