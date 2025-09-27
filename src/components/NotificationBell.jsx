@@ -1,17 +1,41 @@
 import { Bell, X } from "lucide-react";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
 import { units } from "../data/mockUnits";
+import { getAllNotifications } from "../utils/notifications";
+import { deviceStatusService } from "../services/deviceStatusService";
 
 const NotificationBell = ({ className = "" }) => {
   const { userRole } = useAuth();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [viewedNotifications, setViewedNotifications] = useState(new Set());
+  const [allNotifications, setAllNotifications] = useState([]);
 
-  // Mock notifications data
+  // Update notifications when component mounts or userRole changes
+  useEffect(() => {
+    const updateNotifications = () => {
+      const notifications = getAllNotifications(userRole);
+      setAllNotifications(notifications);
+    };
+
+    // Initial load
+    updateNotifications();
+
+    // Listen for device status changes to update notifications
+    const unsubscribe = deviceStatusService.addStatusChangeListener(() => {
+      updateNotifications();
+    });
+
+    // Cleanup listener on unmount
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [userRole]);
+
+  // Mock notifications data (kept for backward compatibility)
   const alerts = [
     {
       id: 1,
@@ -136,8 +160,7 @@ const NotificationBell = ({ className = "" }) => {
     return unitMatch && parseInt(unitMatch[1]) <= 6;
   });
 
-  // Combine and sort notifications - alarms first, then alerts
-  const allNotifications = [...userAlarms, ...userAlerts];
+  // Use the enhanced notification system
   const unviewedCount = allNotifications.filter(
     (n) => !viewedNotifications.has(n.id),
   ).length;
@@ -166,8 +189,12 @@ const NotificationBell = ({ className = "" }) => {
   };
 
   const handleNotificationClick = (notification) => {
-    // Extract unit number from notification message
-    const unitMatch = notification.message.match(/ThermaCore Unit (\d+)/);
+    // Extract unit number from notification message or deviceId
+    let unitMatch = notification.message.match(/ThermaCore Unit (\d+)/);
+    if (!unitMatch && notification.alertData?.deviceId) {
+      unitMatch = notification.alertData.deviceId.match(/TC(\d+)/);
+    }
+    
     if (unitMatch) {
       const unitNumber = parseInt(unitMatch[1]); // Convert to integer to match system
       

@@ -249,6 +249,39 @@ class RealTimeDataProcessor:
                 'unit_id': unit_id
             }
             websocket_service.broadcast_system_alert(alert)
+
+    def process_device_status_change(self, device_id: str, status_change: dict):
+        """Process device status change and broadcast notifications.
+        
+        Args:
+            device_id: Device identifier
+            status_change: Status change data with old/new status and changes list
+        """
+        logger.info(f"Device {device_id} status changed: {len(status_change.get('changes', []))} changes detected")
+        
+        # Broadcast device status update to subscribed clients
+        websocket_service.broadcast_device_status(device_id, {
+            'device_id': device_id,
+            'device_name': status_change.get('deviceName', device_id),
+            'timestamp': status_change.get('timestamp', datetime.now(timezone.utc)),
+            'changes': status_change.get('changes', []),
+            'old_status': status_change.get('oldStatus', {}),
+            'new_status': status_change.get('newStatus', {}),
+        })
+        
+        # Generate notifications for significant status changes
+        for change in status_change.get('changes', []):
+            if change.get('severity') in ['critical', 'warning']:
+                alert = {
+                    'type': 'device_status',
+                    'severity': change.get('severity', 'info'),
+                    'title': change.get('event', 'Device Status Change'),
+                    'message': change.get('message', f"Device {device_id} status changed"),
+                    'device_id': device_id,
+                    'device_name': status_change.get('deviceName', device_id),
+                    'timestamp': status_change.get('timestamp', datetime.now(timezone.utc)),
+                }
+                websocket_service.broadcast_system_alert(alert)
     
     def get_status(self) -> Dict[str, Any]:
         """Get real-time data processor status.
