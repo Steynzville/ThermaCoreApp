@@ -4,38 +4,43 @@ import { BrowserRouter } from 'react-router-dom';
 import RemoteControl from '../components/RemoteControl';
 import { SettingsProvider } from '../context/SettingsContext';
 
-// Mock the hooks - declare the mock functions first
-const mockUseRemoteControl = vi.fn(() => ({
-  permissions: {
-    has_remote_control: true,
-    role: 'admin',
+// Declare variables that will be assigned inside vi.mock factories
+let mockUseRemoteControl;
+let mockUseAuth;
+
+// Mock the hooks - declare mock functions inside the factory to avoid hoisting issues
+vi.mock('../hooks/useRemoteControl', () => {
+  mockUseRemoteControl = vi.fn(() => ({
     permissions: {
-      read_units: true,
-      write_units: true,
-      remote_control: true
-    }
-  },
-  isLoading: false,
-  error: null,
-  controlPower: vi.fn().mockResolvedValue({ success: true }),
-  controlWaterProduction: vi.fn().mockResolvedValue({ success: true })
-}));
+      has_remote_control: true,
+      role: 'admin',
+      permissions: {
+        read_units: true,
+        write_units: true,
+        remote_control: true
+      }
+    },
+    isLoading: false,
+    error: null,
+    controlPower: vi.fn().mockResolvedValue({ success: true }),
+    controlWaterProduction: vi.fn().mockResolvedValue({ success: true })
+  }));
+  return {
+    useRemoteControl: mockUseRemoteControl
+  };
+});
 
-const mockUseAuth = vi.fn(() => ({
-  isAuthenticated: true,
-  userRole: 'admin',
-  user: { username: 'admin', role: 'admin' }
-}));
-
-// Now use the mock functions in vi.mock calls
-vi.mock('../hooks/useRemoteControl', () => ({
-  useRemoteControl: mockUseRemoteControl
-}));
-
-vi.mock('../context/AuthContext', () => ({
-  AuthProvider: ({ children }) => children,
-  useAuth: mockUseAuth
-}));
+vi.mock('../context/AuthContext', () => {
+  mockUseAuth = vi.fn(() => ({
+    isAuthenticated: true,
+    userRole: 'admin',
+    user: { username: 'admin', role: 'admin' }
+  }));
+  return {
+    AuthProvider: ({ children }) => children,
+    useAuth: mockUseAuth
+  };
+});
 
 // Mock audio player
 vi.mock('../utils/audioPlayer', () => ({
