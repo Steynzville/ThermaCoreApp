@@ -142,9 +142,14 @@ def create_app(config_name=None):
     from app.middleware.request_id import setup_request_id_middleware
     from app.middleware.metrics import setup_metrics_middleware
     from app.middleware.audit import setup_audit_middleware
+    from app.utils.error_handler import SecurityAwareErrorHandler
+    
     setup_request_id_middleware(app)
     setup_metrics_middleware(app)
     setup_audit_middleware(app)
+    
+    # Register error handlers for proper domain exception handling with correlation IDs
+    SecurityAwareErrorHandler.register_error_handlers(app)
     
     # Register middleware blueprints
     from app.middleware.metrics import create_metrics_blueprint
