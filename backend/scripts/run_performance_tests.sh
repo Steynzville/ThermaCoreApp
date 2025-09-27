@@ -79,7 +79,16 @@ run_performance_test "crud_medium" "ThermaCoreCRUDUser" 20 2 120
 # Test 5: Sensor Data Operations (High Frequency)
 run_performance_test "sensor_data_high_freq" "ThermaCoreSensorDataUser" 30 5 60
 
-# Test 6: Mixed Load Test
+# Test 6: DNP3 Performance Test (Light Load)
+run_performance_test "dnp3_performance_light" "ThermaCoreDNP3PerformanceUser" 5 1 120
+
+# Test 7: DNP3 Performance Test (Medium Load)
+run_performance_test "dnp3_performance_medium" "ThermaCoreDNP3PerformanceUser" 15 3 180
+
+# Test 8: DNP3 Optimization Features Test
+run_performance_test "dnp3_optimization" "ThermaCoreDNP3OptimizationUser" 8 2 240
+
+# Test 9: Mixed Load Test
 echo -e "${YELLOW}Running Mixed Load Test...${NC}"
 locust -f scripts/performance_tests.py \
        --host="$API_URL" \

@@ -5,6 +5,9 @@ from datetime import datetime
 from dataclasses import dataclass
 from enum import Enum
 import time
+from functools import wraps
+from collections import defaultdict, deque
+from threading import Lock
 
 from app.models import utc_now  # Use timezone-aware datetime
 
@@ -12,6 +15,108 @@ logger = logging.getLogger(__name__)
 
 # Mock DNP3 implementation for demonstration
 # In a real implementation, you would use pydnp3 or similar library
+
+
+class DNP3PerformanceMetrics:
+    """Performance metrics tracking for DNP3 operations."""
+    
+    def __init__(self):
+        self.lock = Lock()
+        self.operation_times = defaultdict(deque)  # Track operation response times
+        self.operation_counts = defaultdict(int)
+        self.error_counts = defaultdict(int)
+        self.connection_times = defaultdict(deque)
+        self.data_throughput = defaultdict(deque)  # Track data points per second
+        self.max_history = 1000
+        
+    def record_operation(self, operation: str, duration: float, success: bool = True, data_points: int = 0):
+        """Record performance metrics for a DNP3 operation."""
+        with self.lock:
+            self.operation_times[operation].append(duration)
+            if len(self.operation_times[operation]) > self.max_history:
+                self.operation_times[operation].popleft()
+                
+            self.operation_counts[operation] += 1
+            
+            if not success:
+                self.error_counts[operation] += 1
+                
+            if data_points > 0:
+                throughput = data_points / duration if duration > 0 else 0
+                self.data_throughput[operation].append(throughput)
+                if len(self.data_throughput[operation]) > self.max_history:
+                    self.data_throughput[operation].popleft()
+    
+    def get_operation_stats(self, operation: str) -> Dict[str, Any]:
+        """Get performance statistics for a specific operation."""
+        with self.lock:
+            times = list(self.operation_times.get(operation, []))
+            if not times:
+                return {'operation': operation, 'no_data': True}
+            
+            throughput_data = list(self.data_throughput.get(operation, []))
+            
+            stats = {
+                'operation': operation,
+                'count': self.operation_counts[operation],
+                'errors': self.error_counts[operation],
+                'avg_time': sum(times) / len(times),
+                'min_time': min(times),
+                'max_time': max(times),
+                'total_time': sum(times),
+                'success_rate': (self.operation_counts[operation] - self.error_counts[operation]) / self.operation_counts[operation] * 100
+            }
+            
+            if throughput_data:
+                stats.update({
+                    'avg_throughput': sum(throughput_data) / len(throughput_data),
+                    'max_throughput': max(throughput_data),
+                    'min_throughput': min(throughput_data)
+                })
+            
+            return stats
+    
+    def get_all_stats(self) -> Dict[str, Any]:
+        """Get performance statistics for all operations."""
+        with self.lock:
+            operations = set(self.operation_counts.keys())
+            return {op: self.get_operation_stats(op) for op in operations}
+
+
+def dnp3_performance_monitor(operation_name: str = None):
+    """Decorator to monitor DNP3 operation performance."""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(self, *args, **kwargs):
+            op_name = operation_name or func.__name__
+            start_time = time.time()
+            data_points = 0
+            success = True
+            
+            try:
+                result = func(self, *args, **kwargs)
+                
+                # Try to extract data point count from result
+                if isinstance(result, dict):
+                    if 'total_points' in result:
+                        data_points = result['total_points']
+                    elif 'readings' in result and isinstance(result['readings'], dict):
+                        data_points = len(result['readings'])
+                elif isinstance(result, list):
+                    data_points = len(result)
+                
+                return result
+            except Exception as e:
+                success = False
+                raise
+            finally:
+                duration = time.time() - start_time
+                if hasattr(self, '_performance_metrics'):
+                    self._performance_metrics.record_operation(
+                        op_name, duration, success, data_points
+                    )
+        return wrapper
+    return decorator
 
 
 class DNP3DataType(Enum):
@@ -72,14 +177,144 @@ class DNP3Reading:
     description: str
 
 
+@dataclass
+class DNP3CachedReading:
+    """Cached DNP3 reading with timestamp for optimization."""
+    reading: DNP3Reading
+    cached_at: datetime
+    cache_ttl: float = 1.0  # Cache time-to-live in seconds
+    
+    def is_expired(self) -> bool:
+        """Check if the cached reading has expired."""
+        return (utc_now() - self.cached_at).total_seconds() > self.cache_ttl
+
+
+class DNP3ConnectionPool:
+    """Connection pool for DNP3 devices to optimize connection management."""
+    
+    def __init__(self, max_connections: int = 10):
+        self.max_connections = max_connections
+        self.connections = {}  # device_id -> connection_info
+        self.connection_usage = defaultdict(int)
+        self.lock = Lock()
+    
+    def get_connection(self, device_id: str, device_info: 'DNP3Device') -> bool:
+        """Get or create a connection for a device."""
+        with self.lock:
+            if device_id in self.connections:
+                self.connection_usage[device_id] += 1
+                return True
+            
+            if len(self.connections) >= self.max_connections:
+                # Remove least used connection
+                least_used = min(self.connection_usage, key=self.connection_usage.get)
+                del self.connections[least_used]
+                del self.connection_usage[least_used]
+                logger.debug(f"Removed connection for device {least_used} to make room")
+            
+            # Create new connection (simulated)
+            self.connections[device_id] = {
+                'device_info': device_info,
+                'connected_at': utc_now(),
+                'last_used': utc_now()
+            }
+            self.connection_usage[device_id] = 1
+            logger.debug(f"Created new connection for device {device_id}")
+            return True
+    
+    def release_connection(self, device_id: str):
+        """Release a connection (mark as available)."""
+        with self.lock:
+            if device_id in self.connections:
+                self.connections[device_id]['last_used'] = utc_now()
+    
+    def cleanup_stale_connections(self, max_idle_time: float = 300.0):
+        """Clean up connections that have been idle too long."""
+        with self.lock:
+            now = utc_now()
+            stale_devices = []
+            
+            for device_id, conn_info in self.connections.items():
+                idle_time = (now - conn_info['last_used']).total_seconds()
+                if idle_time > max_idle_time:
+                    stale_devices.append(device_id)
+            
+            for device_id in stale_devices:
+                del self.connections[device_id]
+                del self.connection_usage[device_id]
+                logger.debug(f"Cleaned up stale connection for device {device_id}")
+
+
+class DNP3DataCache:
+    """Data cache for DNP3 readings to reduce unnecessary polling."""
+    
+    def __init__(self, default_ttl: float = 1.0):
+        self.default_ttl = default_ttl
+        self.cache = {}  # (device_id, data_point_index) -> DNP3CachedReading
+        self.lock = Lock()
+    
+    def get_cached_reading(self, device_id: str, data_point_index: int) -> Optional[DNP3Reading]:
+        """Get a cached reading if it's still valid."""
+        with self.lock:
+            key = (device_id, data_point_index)
+            if key in self.cache:
+                cached_reading = self.cache[key]
+                if not cached_reading.is_expired():
+                    return cached_reading.reading
+                else:
+                    # Remove expired reading
+                    del self.cache[key]
+            return None
+    
+    def cache_reading(self, device_id: str, reading: DNP3Reading, ttl: Optional[float] = None):
+        """Cache a reading with optional custom TTL."""
+        with self.lock:
+            key = (device_id, reading.index)
+            cached_reading = DNP3CachedReading(
+                reading=reading,
+                cached_at=utc_now(),
+                cache_ttl=ttl or self.default_ttl
+            )
+            self.cache[key] = cached_reading
+    
+    def cache_readings(self, device_id: str, readings: List[DNP3Reading], ttl: Optional[float] = None):
+        """Cache multiple readings at once."""
+        for reading in readings:
+            self.cache_reading(device_id, reading, ttl)
+    
+    def invalidate_device_cache(self, device_id: str):
+        """Invalidate all cached readings for a device."""
+        with self.lock:
+            keys_to_remove = [key for key in self.cache.keys() if key[0] == device_id]
+            for key in keys_to_remove:
+                del self.cache[key]
+    
+    def cleanup_expired_cache(self):
+        """Clean up expired cache entries."""
+        with self.lock:
+            expired_keys = []
+            for key, cached_reading in self.cache.items():
+                if cached_reading.is_expired():
+                    expired_keys.append(key)
+            
+            for key in expired_keys:
+                del self.cache[key]
+            
+            if expired_keys:
+                logger.debug(f"Cleaned up {len(expired_keys)} expired cache entries")
+
+
 class MockDNP3Master:
-    """Mock DNP3 Master implementation for demonstration."""
+    """Mock DNP3 Master implementation with performance optimizations."""
     
     def __init__(self, master_address: int = 1):
         self.master_address = master_address
         self.connected_outstations = {}
         self.data_cache = {}
+        self._batch_operations = defaultdict(list)  # For batching operations
+        self._last_integrity_poll = {}  # Track last integrity poll time
         
+    @dnp3_performance_monitor('add_outstation')
     def add_outstation(self, outstation_address: int, host: str, port: int) -> bool:
         """Add outstation configuration."""
         try:
@@ -88,7 +323,9 @@ class MockDNP3Master:
                 'host': host,
                 'port': port,
                 'connected': False,
-                'last_poll': None
+                'last_poll': None,
+                'poll_count': 0,
+                'error_count': 0
             }
             
             self.connected_outstations[outstation_address] = outstation_config
@@ -99,16 +336,22 @@ class MockDNP3Master:
             logger.error(f"Failed to add DNP3 outstation {outstation_address}: {e}")
             return False
     
+    @dnp3_performance_monitor('connect_outstation')
     def connect_outstation(self, outstation_address: int) -> bool:
-        """Connect to DNP3 outstation."""
+        """Connect to DNP3 outstation with connection pooling."""
         try:
             if outstation_address not in self.connected_outstations:
                 logger.error(f"Outstation {outstation_address} not configured")
                 return False
             
-            # Simulate connection
+            # Simulate connection with realistic delay
+            import random
+            connection_delay = random.uniform(0.1, 0.3)  # Simulate network delay
+            time.sleep(connection_delay)
+            
             logger.info(f"Connecting to DNP3 outstation {outstation_address}")
             self.connected_outstations[outstation_address]['connected'] = True
+            self.connected_outstations[outstation_address]['connected_at'] = utc_now()
             
             # Initialize data cache for this outstation
             if outstation_address not in self.data_cache:
@@ -132,72 +375,141 @@ class MockDNP3Master:
             logger.error(f"Failed to disconnect from DNP3 outstation {outstation_address}: {e}")
             return False
     
+    @dnp3_performance_monitor('read_binary_inputs')
     def read_binary_inputs(self, outstation_address: int, start_index: int, count: int) -> List[Tuple[int, bool, DNP3Quality]]:
-        """Read binary input points."""
+        """Read binary input points with optimized bulk operations."""
         if not self._is_outstation_connected(outstation_address):
             raise ConnectionError(f"Outstation {outstation_address} not connected")
         
-        # Simulate binary input readings
+        # Simulate network delay based on data size
         import random
-        readings = []
+        network_delay = min(0.05 * (count / 10), 0.5)  # Scale with data size, cap at 0.5s
+        time.sleep(network_delay)
         
+        # Track polling statistics
+        self.connected_outstations[outstation_address]['poll_count'] += 1
+        self.connected_outstations[outstation_address]['last_poll'] = utc_now()
+        
+        readings = []
         for i in range(count):
             index = start_index + i
-            # Simulate some realistic binary states
-            value = random.choice([True, False])
-            quality = DNP3Quality.GOOD
+            # Simulate some realistic binary states with persistence
+            cache_key = f"binary_{index}"
+            if cache_key in self.data_cache[outstation_address]:
+                # Add some variation to cached values
+                prev_value = self.data_cache[outstation_address][cache_key]
+                value = prev_value if random.random() > 0.1 else not prev_value
+            else:
+                value = random.choice([True, False])
             
+            self.data_cache[outstation_address][cache_key] = value
+            quality = DNP3Quality.GOOD
             readings.append((index, value, quality))
         
         logger.debug(f"Read {count} binary inputs from outstation {outstation_address}")
         return readings
     
+    @dnp3_performance_monitor('read_analog_inputs')
     def read_analog_inputs(self, outstation_address: int, start_index: int, count: int) -> List[Tuple[int, float, DNP3Quality]]:
-        """Read analog input points."""
+        """Read analog input points with optimized bulk operations."""
         if not self._is_outstation_connected(outstation_address):
             raise ConnectionError(f"Outstation {outstation_address} not connected")
         
-        # Simulate analog input readings
+        # Simulate network delay based on data size
         import random
-        readings = []
+        network_delay = min(0.08 * (count / 10), 0.8)  # Analog reads are slightly slower
+        time.sleep(network_delay)
         
+        # Track polling statistics
+        self.connected_outstations[outstation_address]['poll_count'] += 1
+        self.connected_outstations[outstation_address]['last_poll'] = utc_now()
+        
+        readings = []
         for i in range(count):
             index = start_index + i
             
-            # Generate realistic analog values based on index
-            if index < 10:  # Temperature sensors
-                value = 20.0 + random.uniform(0, 60)  # 20-80°C
-            elif index < 20:  # Pressure sensors
-                value = random.uniform(0, 150)  # 0-150 PSI
-            elif index < 30:  # Flow sensors
-                value = random.uniform(0, 100)  # 0-100 L/min
+            # Use cached values with small variations for more realistic simulation
+            cache_key = f"analog_{index}"
+            if cache_key in self.data_cache[outstation_address]:
+                prev_value = self.data_cache[outstation_address][cache_key]
+                # Add small variation (±5%)
+                variation = prev_value * 0.05 * (random.random() - 0.5)
+                value = max(0, prev_value + variation)
             else:
-                value = random.uniform(0, 1000)  # Generic 0-1000
+                # Generate realistic analog values based on index
+                if index < 10:  # Temperature sensors
+                    value = 20.0 + random.uniform(0, 60)  # 20-80°C
+                elif index < 20:  # Pressure sensors
+                    value = random.uniform(0, 150)  # 0-150 PSI
+                elif index < 30:  # Flow sensors
+                    value = random.uniform(0, 100)  # 0-100 L/min
+                else:
+                    value = random.uniform(0, 1000)  # Generic 0-1000
             
+            self.data_cache[outstation_address][cache_key] = value
             quality = DNP3Quality.GOOD
-            readings.append((index, value, quality))
+            readings.append((index, round(value, 2), quality))
         
         logger.debug(f"Read {count} analog inputs from outstation {outstation_address}")
         return readings
     
+    @dnp3_performance_monitor('read_counters')
     def read_counters(self, outstation_address: int, start_index: int, count: int) -> List[Tuple[int, int, DNP3Quality]]:
-        """Read counter points."""
+        """Read counter points with optimized bulk operations."""
         if not self._is_outstation_connected(outstation_address):
             raise ConnectionError(f"Outstation {outstation_address} not connected")
         
-        # Simulate counter readings
+        # Simulate network delay
         import random
-        readings = []
+        network_delay = min(0.06 * (count / 10), 0.6)
+        time.sleep(network_delay)
         
+        # Track polling statistics
+        self.connected_outstations[outstation_address]['poll_count'] += 1
+        self.connected_outstations[outstation_address]['last_poll'] = utc_now()
+        
+        readings = []
         for i in range(count):
             index = start_index + i
-            value = random.randint(0, 1000000)  # Counter value
-            quality = DNP3Quality.GOOD
             
+            # Counters increment over time
+            cache_key = f"counter_{index}"
+            if cache_key in self.data_cache[outstation_address]:
+                prev_value = self.data_cache[outstation_address][cache_key]
+                value = prev_value + random.randint(0, 10)  # Increment
+            else:
+                value = random.randint(0, 1000000)  # Initial counter value
+            
+            self.data_cache[outstation_address][cache_key] = value
+            quality = DNP3Quality.GOOD
             readings.append((index, value, quality))
         
         logger.debug(f"Read {count} counters from outstation {outstation_address}")
         return readings
+    
+    def read_bulk_data(self, outstation_address: int, data_groups: Dict[str, Tuple[int, int]]) -> Dict[str, List[Tuple[int, Any, DNP3Quality]]]:
+        """Optimized bulk data reading for multiple data types in one call."""
+        if not self._is_outstation_connected(outstation_address):
+            raise ConnectionError(f"Outstation {outstation_address} not connected")
+        
+        results = {}
+        total_points = sum(count for _, count in data_groups.values())
+        
+        # Single network round trip for all data
+        base_delay = 0.1
+        bulk_delay = base_delay + (total_points * 0.002)  # 2ms per point
+        time.sleep(bulk_delay)
+        
+        for data_type, (start_index, count) in data_groups.items():
+            if data_type == 'binary_inputs':
+                results[data_type] = self.read_binary_inputs(outstation_address, start_index, count)
+            elif data_type == 'analog_inputs':
+                results[data_type] = self.read_analog_inputs(outstation_address, start_index, count)
+            elif data_type == 'counters':
+                results[data_type] = self.read_counters(outstation_address, start_index, count)
+        
+        logger.info(f"Bulk read {total_points} data points from outstation {outstation_address}")
+        return results
     
     def write_binary_output(self, outstation_address: int, index: int, value: bool) -> bool:
         """Write binary output point."""
@@ -233,15 +545,26 @@ class MockDNP3Master:
 
 
 class DNP3Service:
-    """DNP3 protocol service for SCADA communication."""
+    """DNP3 protocol service with performance optimizations for SCADA communication."""
     
     def __init__(self, app=None):
-        """Initialize DNP3 service."""
+        """Initialize DNP3 service with performance monitoring."""
         self._app = app
         self._devices: Dict[str, DNP3Device] = {}
         self._master: Optional[MockDNP3Master] = None
         self._data_point_configs: Dict[str, List[DNP3DataPoint]] = {}
         self._last_readings: Dict[str, List[DNP3Reading]] = {}
+        
+        # Performance optimization components
+        self._performance_metrics = DNP3PerformanceMetrics()
+        self._connection_pool = DNP3ConnectionPool(max_connections=20)
+        self._data_cache = DNP3DataCache(default_ttl=2.0)  # 2-second cache TTL
+        
+        # Performance configuration
+        self._enable_caching = True
+        self._enable_bulk_operations = True
+        self._cache_cleanup_interval = 300  # 5 minutes
+        self._last_cache_cleanup = utc_now()
         
         if app:
             self.init_app(app)
@@ -250,12 +573,21 @@ class DNP3Service:
         """Initialize with Flask app."""
         self._app = app
         self._master = MockDNP3Master()
-        logger.info("DNP3 service initialized")
+        # Give the master access to the performance metrics
+        self._master._performance_metrics = self._performance_metrics
+        logger.info("DNP3 service initialized with performance monitoring")
     
+    def init_master(self, master_address: int = 1):
+        """Initialize DNP3 master with specified address."""
+        self._master = MockDNP3Master(master_address)
+        self._master._performance_metrics = self._performance_metrics
+        logger.info(f"DNP3 master initialized with address {master_address}")
+    
+    @dnp3_performance_monitor('add_device')
     def add_device(self, device_id: str, master_address: int, outstation_address: int,
                    host: str, port: int = 20000, link_timeout: float = 5.0,
                    app_timeout: float = 5.0) -> bool:
-        """Add DNP3 device configuration."""
+        """Add DNP3 device configuration with connection pooling."""
         try:
             device = DNP3Device(
                 device_id=device_id,
@@ -307,8 +639,9 @@ class DNP3Service:
             logger.error(f"Failed to remove DNP3 device {device_id}: {e}")
             return False
     
+    @dnp3_performance_monitor('connect_device')
     def connect_device(self, device_id: str) -> bool:
-        """Connect to DNP3 device."""
+        """Connect to DNP3 device with connection pooling."""
         try:
             if device_id not in self._devices:
                 logger.error(f"Device {device_id} not configured")
@@ -320,11 +653,19 @@ class DNP3Service:
                 logger.error("DNP3 master not initialized")
                 return False
             
+            # Use connection pool for optimized connection management
+            pool_success = self._connection_pool.get_connection(device_id, device)
+            if not pool_success:
+                return False
+            
             success = self._master.connect_outstation(device.outstation_address)
             
             if success:
                 device.is_connected = True
                 logger.info(f"Connected to DNP3 device: {device_id}")
+            else:
+                # Release connection on failure
+                self._connection_pool.release_connection(device_id)
             
             return success
             
@@ -332,10 +673,27 @@ class DNP3Service:
             logger.error(f"Failed to connect to DNP3 device {device_id}: {e}")
             return False
     
+    @dnp3_performance_monitor('disconnect_device')
     def disconnect_device(self, device_id: str) -> bool:
-        """Disconnect from DNP3 device."""
+        """Disconnect from DNP3 device with connection pool cleanup."""
         try:
             if device_id in self._devices:
+                device = self._devices[device_id]
+                
+                if self._master:
+                    self._master.disconnect_outstation(device.outstation_address)
+                
+                device.is_connected = False
+                
+                # Clean up connection pool and cache
+                self._connection_pool.release_connection(device_id)
+                self._data_cache.invalidate_device_cache(device_id)
+            
+            logger.info(f"Disconnected from DNP3 device: {device_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to disconnect from DNP3 device {device_id}: {e}")
                 device = self._devices[device_id]
                 
                 if self._master:
@@ -379,9 +737,13 @@ class DNP3Service:
             logger.error(f"Failed to add data point config for device {device_id}: {e}")
             return False
     
+    @dnp3_performance_monitor('read_device_data')
     def read_device_data(self, device_id: str) -> Dict[str, Any]:
-        """Read data from all configured data points of a device."""
+        """Read data from all configured data points with optimization and caching."""
         try:
+            # Clean up cache if needed
+            self._cleanup_cache_if_needed()
+            
             if device_id not in self._devices:
                 raise ValueError(f"Device {device_id} not configured")
                 
@@ -399,36 +761,102 @@ class DNP3Service:
             readings = []
             timestamp = utc_now()
             
-            # Group data points by type for efficient reading
-            binary_inputs = [dp for dp in data_points if dp.data_type == DNP3DataType.BINARY_INPUT]
-            analog_inputs = [dp for dp in data_points if dp.data_type == DNP3DataType.ANALOG_INPUT]
-            counters = [dp for dp in data_points if dp.data_type == DNP3DataType.COUNTER]
+            # Try cache first if enabled
+            if self._enable_caching:
+                cached_readings = []
+                uncached_points = []
+                
+                for dp in data_points:
+                    cached_reading = self._data_cache.get_cached_reading(device_id, dp.index)
+                    if cached_reading:
+                        cached_readings.append(cached_reading)
+                    else:
+                        uncached_points.append(dp)
+                
+                readings.extend(cached_readings)
+                data_points = uncached_points  # Only read uncached data
+                
+                if cached_readings:
+                    logger.debug(f"Using {len(cached_readings)} cached readings for device {device_id}")
             
-            try:
-                # Read binary inputs
-                if binary_inputs:
-                    indices = [dp.index for dp in binary_inputs]
-                    start_index = min(indices)
-                    count = max(indices) - start_index + 1
-                    
-                    binary_readings = self._master.read_binary_inputs(
-                        device.outstation_address, start_index, count
-                    )
-                    
-                    for dp in binary_inputs:
-                        for index, value, quality in binary_readings:
-                            if index == dp.index:
-                                reading = DNP3Reading(
-                                    index=index,
-                                    data_type=dp.data_type,
-                                    value=value,
-                                    quality=quality,
-                                    timestamp=timestamp,
-                                    sensor_type=dp.sensor_type,
-                                    description=dp.description
-                                )
-                                readings.append(reading)
-                                break
+            if data_points:  # Only read if there are uncached data points
+                # Group data points by type for efficient bulk reading
+                binary_inputs = [dp for dp in data_points if dp.data_type == DNP3DataType.BINARY_INPUT]
+                analog_inputs = [dp for dp in data_points if dp.data_type == DNP3DataType.ANALOG_INPUT]
+                counters = [dp for dp in data_points if dp.data_type == DNP3DataType.COUNTER]
+                
+                try:
+                    # Use bulk operations if enabled
+                    if self._enable_bulk_operations and hasattr(self._master, 'read_bulk_data'):
+                        data_groups = {}
+                        if binary_inputs:
+                            indices = [dp.index for dp in binary_inputs]
+                            data_groups['binary_inputs'] = (min(indices), max(indices) - min(indices) + 1)
+                        if analog_inputs:
+                            indices = [dp.index for dp in analog_inputs]
+                            data_groups['analog_inputs'] = (min(indices), max(indices) - min(indices) + 1)
+                        if counters:
+                            indices = [dp.index for dp in counters]
+                            data_groups['counters'] = (min(indices), max(indices) - min(indices) + 1)
+                        
+                        # Single bulk read operation
+                        bulk_results = self._master.read_bulk_data(device.outstation_address, data_groups)
+                        
+                        # Process bulk results
+                        for data_type, raw_readings in bulk_results.items():
+                            if data_type == 'binary_inputs':
+                                target_points = binary_inputs
+                            elif data_type == 'analog_inputs':
+                                target_points = analog_inputs
+                            else:  # counters
+                                target_points = counters
+                            
+                            for dp in target_points:
+                                for index, value, quality in raw_readings:
+                                    if index == dp.index:
+                                        # Apply scaling and offset for analog inputs
+                                        if dp.data_type == DNP3DataType.ANALOG_INPUT:
+                                            processed_value = (value * dp.scale_factor) + dp.offset
+                                        else:
+                                            processed_value = value
+                                        
+                                        reading = DNP3Reading(
+                                            index=index,
+                                            data_type=dp.data_type,
+                                            value=processed_value,
+                                            quality=quality,
+                                            timestamp=timestamp,
+                                            sensor_type=dp.sensor_type,
+                                            description=dp.description
+                                        )
+                                        readings.append(reading)
+                                        break
+                    else:
+                        # Fallback to individual reads (original implementation)
+                        # Read binary inputs
+                        if binary_inputs:
+                            indices = [dp.index for dp in binary_inputs]
+                            start_index = min(indices)
+                            count = max(indices) - start_index + 1
+                            
+                            binary_readings = self._master.read_binary_inputs(
+                                device.outstation_address, start_index, count
+                            )
+                            
+                            for dp in binary_inputs:
+                                for index, value, quality in binary_readings:
+                                    if index == dp.index:
+                                        reading = DNP3Reading(
+                                            index=index,
+                                            data_type=dp.data_type,
+                                            value=value,
+                                            quality=quality,
+                                            timestamp=timestamp,
+                                            sensor_type=dp.sensor_type,
+                                            description=dp.description
+                                        )
+                                        readings.append(reading)
+                                        break
                 
                 # Read analog inputs
                 if analog_inputs:
@@ -585,6 +1013,129 @@ class DNP3Service:
         except Exception as e:
             logger.error(f"Failed to perform integrity poll on device {device_id}: {e}")
             return False
+    
+    def _cleanup_cache_if_needed(self):
+        """Clean up expired cache entries periodically."""
+        now = utc_now()
+        if (now - self._last_cache_cleanup).total_seconds() > self._cache_cleanup_interval:
+            self._data_cache.cleanup_expired_cache()
+            self._connection_pool.cleanup_stale_connections()
+            self._last_cache_cleanup = now
+            logger.debug("Performed DNP3 cache cleanup")
+    
+    def get_performance_metrics(self) -> Dict[str, Any]:
+        """Get comprehensive performance metrics for DNP3 operations."""
+        metrics = self._performance_metrics.get_all_stats()
+        
+        # Add connection pool stats
+        pool_stats = {
+            'active_connections': len(self._connection_pool.connections),
+            'max_connections': self._connection_pool.max_connections,
+            'connection_usage': dict(self._connection_pool.connection_usage)
+        }
+        
+        # Add cache stats
+        cache_stats = {
+            'cached_readings': len(self._data_cache.cache),
+            'cache_ttl': self._data_cache.default_ttl,
+            'cache_enabled': self._enable_caching
+        }
+        
+        # Add device-specific stats
+        device_stats = {}
+        for device_id, device in self._devices.items():
+            if hasattr(device, 'is_connected') and device.is_connected:
+                device_stats[device_id] = {
+                    'connected': device.is_connected,
+                    'outstation_address': device.outstation_address,
+                    'data_points_configured': len(self._data_point_configs.get(device_id, [])),
+                    'last_readings_count': len(self._last_readings.get(device_id, []))
+                }
+        
+        return {
+            'timestamp': utc_now().isoformat(),
+            'operation_metrics': metrics,
+            'connection_pool': pool_stats,
+            'data_cache': cache_stats,
+            'devices': device_stats,
+            'configuration': {
+                'bulk_operations_enabled': self._enable_bulk_operations,
+                'caching_enabled': self._enable_caching,
+                'cache_cleanup_interval': self._cache_cleanup_interval
+            }
+        }
+    
+    def get_performance_summary(self) -> Dict[str, Any]:
+        """Get a summary of key performance metrics."""
+        metrics = self._performance_metrics.get_all_stats()
+        
+        # Calculate overall averages
+        total_ops = sum(stat.get('count', 0) for stat in metrics.values() if 'count' in stat)
+        avg_response_time = 0
+        total_errors = 0
+        
+        if metrics:
+            response_times = [stat.get('avg_time', 0) for stat in metrics.values() if 'avg_time' in stat]
+            avg_response_time = sum(response_times) / len(response_times) if response_times else 0
+            total_errors = sum(stat.get('errors', 0) for stat in metrics.values() if 'errors' in stat)
+        
+        success_rate = ((total_ops - total_errors) / total_ops * 100) if total_ops > 0 else 100
+        
+        return {
+            'total_operations': total_ops,
+            'average_response_time_ms': round(avg_response_time * 1000, 2),
+            'success_rate_percent': round(success_rate, 2),
+            'total_errors': total_errors,
+            'active_devices': len([d for d in self._devices.values() if d.is_connected]),
+            'cached_readings': len(self._data_cache.cache),
+            'performance_optimizations': {
+                'caching': self._enable_caching,
+                'bulk_operations': self._enable_bulk_operations,
+                'connection_pooling': True
+            }
+        }
+    
+    def enable_performance_optimizations(self, caching: bool = True, bulk_operations: bool = True):
+        """Enable or disable performance optimization features."""
+        self._enable_caching = caching
+        self._enable_bulk_operations = bulk_operations
+        logger.info(f"DNP3 performance optimizations updated: caching={caching}, bulk_ops={bulk_operations}")
+    
+    def clear_performance_metrics(self):
+        """Clear all performance metrics (useful for testing)."""
+        self._performance_metrics = DNP3PerformanceMetrics()
+        if self._master:
+            self._master._performance_metrics = self._performance_metrics
+        logger.info("DNP3 performance metrics cleared")
+    
+    def get_device_performance_stats(self, device_id: str) -> Dict[str, Any]:
+        """Get performance statistics for a specific device."""
+        if device_id not in self._devices:
+            return {'error': f'Device {device_id} not found'}
+        
+        device = self._devices[device_id]
+        stats = {
+            'device_id': device_id,
+            'connected': device.is_connected,
+            'outstation_address': device.outstation_address,
+            'host': device.host,
+            'port': device.port
+        }
+        
+        # Get cached readings for this device
+        device_cache_count = len([key for key in self._data_cache.cache.keys() if key[0] == device_id])
+        stats['cached_readings'] = device_cache_count
+        
+        # Get connection pool info
+        if device_id in self._connection_pool.connections:
+            conn_info = self._connection_pool.connections[device_id]
+            stats['connection_established'] = conn_info['connected_at'].isoformat()
+            stats['connection_usage'] = self._connection_pool.connection_usage[device_id]
+        
+        # Get recent readings count
+        stats['recent_readings'] = len(self._last_readings.get(device_id, []))
+        
+        return stats
     
     def get_device_status(self, device_id: str = None) -> Dict[str, Any]:
         """Get status of DNP3 devices."""
