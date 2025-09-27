@@ -50,8 +50,8 @@ Comprehensive testing is essential for ensuring the reliability, stability, and 
 
 ### 2.3. Running Backend Tests
 
-*   **All tests**: `pytest /home/ubuntu/ThermaCoreApp/backend/app/tests`
-*   **Specific test file**: `pytest /home/ubuntu/ThermaCoreApp/backend/app/tests/test_auth.py`
+*   **All tests**: `pytest backend/app/tests`
+*   **Specific test file**: `pytest backend/app/tests/test_auth.py`
 *   **With PostgreSQL**: Set `USE_POSTGRES_TESTS=true` environment variable before running tests.
 
 ## 3. React Frontend Testing

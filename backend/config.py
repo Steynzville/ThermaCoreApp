@@ -12,11 +12,14 @@ class Config:
     """Base configuration class."""
     
     # Flask Configuration
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
+    SECRET_KEY = os.environ.get("SECRET_KEY")
+    if not SECRET_KEY:
+        raise ValueError("SECRET_KEY must be set in environment variables")
     
     # Database Configuration
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        'postgresql://postgres:password@localhost:5432/thermacore_db'
+    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
+    if not SQLALCHEMY_DATABASE_URI:
+        raise ValueError("DATABASE_URL must be set in environment variables")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_size': 20,
@@ -25,7 +28,9 @@ class Config:
     }
     
     # JWT Configuration
-    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or 'jwt-secret-change-in-production'
+    JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
+    if not JWT_SECRET_KEY:
+        raise ValueError("JWT_SECRET_KEY must be set in environment variables")
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=int(os.environ.get('JWT_ACCESS_TOKEN_EXPIRES', 1)))
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
     
@@ -112,14 +117,22 @@ class ProductionConfig(Config):
         WEBSOCKET_CORS_ORIGINS = _prod_websocket_origins.split(',')
     
     # Enforce MQTT TLS in production if certificates are provided
-    MQTT_USE_TLS = True  # Force TLS in production
+    if os.environ.get("MQTT_CA_CERTS") and os.environ.get("MQTT_CERT_FILE") and os.environ.get("MQTT_KEY_FILE"):
+        MQTT_USE_TLS = True
+    else:
+        raise ValueError("MQTT certificate paths must be set in environment variables for production")
     
     # Enforce OPC UA security in production
     # Override to use at least Basic256Sha256 if not explicitly configured
-    if not os.environ.get('OPCUA_SECURITY_POLICY') or os.environ.get('OPCUA_SECURITY_POLICY') == 'None':
-        OPCUA_SECURITY_POLICY = 'Basic256Sha256'
-    if not os.environ.get('OPCUA_SECURITY_MODE') or os.environ.get('OPCUA_SECURITY_MODE') == 'None':
-        OPCUA_SECURITY_MODE = 'SignAndEncrypt'
+    if not os.environ.get("OPCUA_SECURITY_POLICY") or os.environ.get("OPCUA_SECURITY_POLICY") == "None":
+        OPCUA_SECURITY_POLICY = "Basic256Sha256"
+    if not os.environ.get("OPCUA_SECURITY_MODE") or os.environ.get("OPCUA_SECURITY_MODE") == "None":
+        OPCUA_SECURITY_MODE = "SignAndEncrypt"
+    
+    # Ensure certificate paths are correctly set if security is enabled
+    if OPCUA_SECURITY_POLICY != "None" and OPCUA_SECURITY_MODE != "None":
+        if not (os.environ.get("OPCUA_CERT_FILE") and os.environ.get("OPCUA_PRIVATE_KEY_FILE") and os.environ.get("OPCUA_TRUST_CERT_FILE")):
+            raise ValueError("OPC UA certificate paths must be set in environment variables when security is enabled")
 
 
 class TestingConfig(Config):

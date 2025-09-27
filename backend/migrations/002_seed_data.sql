@@ -41,18 +41,7 @@ FROM roles r, permissions p
 WHERE r.name = 'viewer' AND p.name IN ('read_units', 'read_users', 'remote_control')
 ON CONFLICT DO NOTHING;
 
--- Insert default admin user (password: admin123)
-INSERT INTO users (username, email, password_hash, first_name, last_name, role_id)
-SELECT 
-    'admin',
-    'admin@thermacore.com',
-    'scrypt:32768:8:1$VQ8cTJN1lCQtQCkO$46c0bc14c05c2e7e3b7a0e8b0c9e8f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f',
-    'System',
-    'Administrator',
-    r.id
-FROM roles r
-WHERE r.name = 'admin'
-ON CONFLICT (username) DO NOTHING;
+-- Default admin user creation moved to a secure setup process or manual creation. Refer to documentation for details.
 
 -- Insert sample ThermaCore units based on existing frontend data
 INSERT INTO units (
