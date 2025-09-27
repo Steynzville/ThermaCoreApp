@@ -4,13 +4,9 @@ import { BrowserRouter } from 'react-router-dom';
 import RemoteControl from '../components/RemoteControl';
 import { SettingsProvider } from '../context/SettingsContext';
 
-// Declare variables that will be assigned inside vi.mock factories
-let mockUseRemoteControl;
-let mockUseAuth;
-
-// Mock the hooks - declare mock functions inside the factory to avoid hoisting issues
+// Mock the hooks - declare mock functions entirely inside the factory to avoid hoisting issues
 vi.mock('../hooks/useRemoteControl', () => {
-  mockUseRemoteControl = vi.fn(() => ({
+  const mockUseRemoteControl = vi.fn(() => ({
     permissions: {
       has_remote_control: true,
       role: 'admin',
@@ -31,7 +27,7 @@ vi.mock('../hooks/useRemoteControl', () => {
 });
 
 vi.mock('../context/AuthContext', () => {
-  mockUseAuth = vi.fn(() => ({
+  const mockUseAuth = vi.fn(() => ({
     isAuthenticated: true,
     userRole: 'admin',
     user: { username: 'admin', role: 'admin' }
@@ -98,6 +94,10 @@ describe('RemoteControl Component', () => {
   });
 
   test('allows all users to access remote control interface', async () => {
+    // Get references to the mocked functions using vi.mocked()
+    const mockUseAuth = vi.mocked(await import('../context/AuthContext')).useAuth;
+    const mockUseRemoteControl = vi.mocked(await import('../hooks/useRemoteControl')).useRemoteControl;
+    
     // Override mocks for viewer test
     mockUseAuth.mockReturnValueOnce({
       isAuthenticated: true,
@@ -130,6 +130,9 @@ describe('RemoteControl Component', () => {
   });
 
   test('shows authentication required for unauthenticated users', async () => {
+    // Get reference to the mocked function using vi.mocked()
+    const mockUseAuth = vi.mocked(await import('../context/AuthContext')).useAuth;
+    
     // Mock unauthenticated state
     mockUseAuth.mockReturnValueOnce({
       isAuthenticated: false,
