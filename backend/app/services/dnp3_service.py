@@ -1,4 +1,5 @@
 """DNP3 protocol support service for Phase 4 SCADA integration."""
+import os
 import logging
 from typing import Dict, List, Any, Optional, Tuple
 from datetime import datetime
@@ -827,6 +828,8 @@ class DNP3Service:
                 if not readings or not self._enable_bulk_operations:
                     # Read binary inputs
                     if binary_inputs:
+                        # Create lookup dictionary for efficient index-based access
+                        binary_lookup = {dp.index: dp for dp in binary_inputs}
                         indices = [dp.index for dp in binary_inputs]
                         start_index = min(indices)
                         count = max(indices) - start_index + 1
@@ -835,23 +838,25 @@ class DNP3Service:
                             device.outstation_address, start_index, count
                         )
                         
-                        for dp in binary_inputs:
-                            for index, value, quality in binary_readings:
-                                if index == dp.index:
-                                    reading = DNP3Reading(
-                                        index=index,
-                                        data_type=dp.data_type,
-                                        value=value,
-                                        quality=quality,
-                                        timestamp=timestamp,
-                                        sensor_type=dp.sensor_type,
-                                        description=dp.description
-                                    )
-                                    readings.append(reading)
-                                    break
+                        for index, value, quality in binary_readings:
+                            # Use dictionary lookup instead of nested loop
+                            if index in binary_lookup:
+                                dp = binary_lookup[index]
+                                reading = DNP3Reading(
+                                    index=index,
+                                    data_type=dp.data_type,
+                                    value=value,
+                                    quality=quality,
+                                    timestamp=timestamp,
+                                    sensor_type=dp.sensor_type,
+                                    description=dp.description
+                                )
+                                readings.append(reading)
                     
                     # Read analog inputs
                     if analog_inputs:
+                        # Create lookup dictionary for efficient index-based access
+                        analog_lookup = {dp.index: dp for dp in analog_inputs}
                         indices = [dp.index for dp in analog_inputs]
                         start_index = min(indices)
                         count = max(indices) - start_index + 1
@@ -860,26 +865,28 @@ class DNP3Service:
                             device.outstation_address, start_index, count
                         )
                         
-                        for dp in analog_inputs:
-                            for index, raw_value, quality in analog_readings:
-                                if index == dp.index:
-                                    # Apply scaling and offset
-                                    processed_value = (raw_value * dp.scale_factor) + dp.offset
-                                    
-                                    reading = DNP3Reading(
-                                        index=index,
-                                        data_type=dp.data_type,
-                                        value=processed_value,
-                                        quality=quality,
-                                        timestamp=timestamp,
-                                        sensor_type=dp.sensor_type,
-                                        description=dp.description
-                                    )
-                                    readings.append(reading)
-                                    break
+                        for index, raw_value, quality in analog_readings:
+                            # Use dictionary lookup instead of nested loop
+                            if index in analog_lookup:
+                                dp = analog_lookup[index]
+                                # Apply scaling and offset
+                                processed_value = (raw_value * dp.scale_factor) + dp.offset
+                                
+                                reading = DNP3Reading(
+                                    index=index,
+                                    data_type=dp.data_type,
+                                    value=processed_value,
+                                    quality=quality,
+                                    timestamp=timestamp,
+                                    sensor_type=dp.sensor_type,
+                                    description=dp.description
+                                )
+                                readings.append(reading)
                     
                     # Read counters
                     if counters:
+                        # Create lookup dictionary for efficient index-based access
+                        counter_lookup = {dp.index: dp for dp in counters}
                         indices = [dp.index for dp in counters]
                         start_index = min(indices)
                         count = max(indices) - start_index + 1
@@ -888,20 +895,20 @@ class DNP3Service:
                             device.outstation_address, start_index, count
                         )
                         
-                        for dp in counters:
-                            for index, value, quality in counter_readings:
-                                if index == dp.index:
-                                    reading = DNP3Reading(
-                                        index=index,
-                                        data_type=dp.data_type,
-                                        value=value,
-                                        quality=quality,
-                                        timestamp=timestamp,
-                                        sensor_type=dp.sensor_type,
-                                        description=dp.description
-                                    )
-                                    readings.append(reading)
-                                    break
+                        for index, value, quality in counter_readings:
+                            # Use dictionary lookup instead of nested loop
+                            if index in counter_lookup:
+                                dp = counter_lookup[index]
+                                reading = DNP3Reading(
+                                    index=index,
+                                    data_type=dp.data_type,
+                                    value=value,
+                                    quality=quality,
+                                    timestamp=timestamp,
+                                    sensor_type=dp.sensor_type,
+                                    description=dp.description
+                                )
+                                readings.append(reading)
                 
                 # Cache the new readings if enabled
                 if self._enable_caching and readings:
@@ -1064,8 +1071,17 @@ class DNP3Service:
         total_errors = 0
         
         if metrics:
-            response_times = [stat.get('avg_time', 0) for stat in metrics.values() if 'avg_time' in stat]
-            avg_response_time = sum(response_times) / len(response_times) if response_times else 0
+            # Use weighted average based on operation count for more accurate metrics
+            total_weighted_time = 0
+            total_weight = 0
+            for stat in metrics.values():
+                if 'avg_time' in stat and 'count' in stat:
+                    count = stat.get('count', 0)
+                    avg_time = stat.get('avg_time', 0)
+                    total_weighted_time += avg_time * count
+                    total_weight += count
+            
+            avg_response_time = total_weighted_time / total_weight if total_weight > 0 else 0
             total_errors = sum(stat.get('errors', 0) for stat in metrics.values() if 'errors' in stat)
         
         success_rate = ((total_ops - total_errors) / total_ops * 100) if total_ops > 0 else 100
@@ -1211,13 +1227,16 @@ class DNP3Service:
                 "data_point_count": len(self._data_point_configs.get(device_id, []))
             }
         
+        # Detect if running in production/development environment
+        is_demo_mode = os.getenv('FLASK_ENV', 'production') != 'production' or os.getenv('DNP3_DEMO', 'false').lower() == 'true'
+
         return {
             "available": available,
             "connected": connected,
             "status": status,
             "version": "1.0.0-mock",
             "metrics": metrics,
-            "demo": True,  # This is a mock implementation
+            "demo": is_demo_mode,  # Environment-aware demo flag
             "devices": devices_summary
         }
 
