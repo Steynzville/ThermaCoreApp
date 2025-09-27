@@ -24,6 +24,7 @@ This document provides comprehensive coverage of the Role-Based Access Control (
 | `write_users` | ✓ | ✗ | ✗ | Create and modify users |
 | `delete_users` | ✓ | ✗ | ✗ | Delete users from system |
 | `admin_panel` | ✓ | ✗ | ✗ | Access administrative features |
+| `remote_control` | ✓ | ✓ | ✓ | **Remote control unit operations (power, water production, auto settings, live video)** |
 
 ### Role Definitions
 
@@ -33,18 +34,21 @@ This document provides comprehensive coverage of the Role-Based Access Control (
 - **Unit Management**: Complete CRUD operations on units
 - **System Configuration**: Access to system settings and configuration
 - **Audit Access**: Can view and analyze audit logs
+- **Remote Control Access**: Can remotely control units (power, water production, automatic settings, live video feed)
 
 #### Operator Role
 - **Operational Access**: Read and write access to operational data
 - **Unit Operations**: Can view and modify unit settings and status
 - **Limited User Access**: Can view user information but cannot modify
 - **No System Administration**: Cannot access admin panel or system configuration
+- **Remote Control Access**: Can remotely control units (power, water production, automatic settings, live video feed)
 
 #### Viewer Role
 - **Read-Only Access**: Can view system information but cannot modify
 - **Unit Monitoring**: Can view unit status and historical data
 - **User Information**: Can view basic user information
-- **No Modifications**: Cannot create, update, or delete any resources
+- **Remote Control Access**: **Can remotely control units (power, water production, automatic settings, live video feed)**
+- **No Administrative Modifications**: Cannot create, update, or delete resources through administrative interfaces
 
 ## Enhanced Security Features (PR3)
 
@@ -142,6 +146,16 @@ def create_unit():
 | `/users/{id}` | GET | read_users | read_user |
 | `/users/{id}` | PUT | write_users | update_user |
 | `/users/{id}` | DELETE | delete_users | delete_user |
+
+### Remote Control Endpoints
+| Endpoint | Method | Permission | Audit Events |
+|----------|--------|------------|--------------|
+| `/remote-control/units/{id}/power` | POST | read_units | remote_power_control |
+| `/remote-control/units/{id}/water-production` | POST | read_units | remote_water_control |
+| `/remote-control/units/{id}/status` | GET | read_units | read_remote_status |
+| `/remote-control/permissions` | GET | Valid JWT | read_permissions |
+
+**Note**: Remote control endpoints use `read_units` permission to allow all authenticated users access to remote control features.
 
 ## Security Best Practices
 

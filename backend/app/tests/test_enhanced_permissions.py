@@ -65,7 +65,7 @@ class TestEnhancedPermissionHandling:
         expected_permissions = {
             'read_units', 'write_units', 'delete_units', 
             'read_users', 'write_users', 'delete_users', 
-            'admin_panel'
+            'admin_panel', 'remote_control'
         }
         
         # Verify exact count matches expected
@@ -73,7 +73,7 @@ class TestEnhancedPermissionHandling:
         actual_permissions = {perm.value for perm in all_permission_enums}
         
         # Exact count assertion instead of weak count > 0
-        assert len(all_permission_enums) == 7, f"Expected exactly 7 permissions, got {len(all_permission_enums)}"
+        assert len(all_permission_enums) == 8, f"Expected exactly 8 permissions, got {len(all_permission_enums)}"
         
         # Set-based comparison for exact matching
         assert actual_permissions == expected_permissions, (
@@ -98,14 +98,14 @@ class TestEnhancedPermissionHandling:
         expected_permission_strings = {
             'read_units', 'write_units', 'delete_units', 
             'read_users', 'write_users', 'delete_users', 
-            'admin_panel'
+            'admin_panel', 'remote_control'
         }
         
         # Generate actual permissions from enum for comparison  
         actual_permission_strings = {perm.value for perm in PermissionEnum}
         
         # Exact count assertion instead of weak count > 0
-        assert len(actual_permission_strings) == 7, f"Expected exactly 7 permissions, got {len(actual_permission_strings)}"
+        assert len(actual_permission_strings) == 8, f"Expected exactly 8 permissions, got {len(actual_permission_strings)}"
         
         # Set-based comparison with meaningful diff output
         assert actual_permission_strings == expected_permission_strings, (
@@ -141,7 +141,7 @@ class TestEnhancedPermissionHandling:
         expected_permissions = {
             'read_units', 'write_units', 'delete_units', 
             'read_users', 'write_users', 'delete_users', 
-            'admin_panel'
+            'admin_panel', 'remote_control'
         }
         
         # Get all enum values  
@@ -149,7 +149,7 @@ class TestEnhancedPermissionHandling:
         actual_permissions = {p.value for p in all_permissions}
         
         # Exact count assertion
-        assert len(all_permissions) == 7, f"Expected exactly 7 permissions, got {len(all_permissions)}"
+        assert len(all_permissions) == 8, f"Expected exactly 8 permissions, got {len(all_permissions)}"
         
         # Exact set comparison with meaningful diff
         assert actual_permissions == expected_permissions, (
@@ -197,3 +197,35 @@ class TestEnhancedPermissionHandling:
         for invalid_type in invalid_types:
             with pytest.raises(TypeError, match="Permission must be a string or PermissionEnum"):
                 admin_role.has_permission(invalid_type)
+    
+    def test_remote_control_permission_for_all_roles(self, client, db_session):
+        """Test that all roles (Admin, Operator, Viewer) have remote control access."""
+        from app.models import Role, RoleEnum, PermissionEnum
+        
+        # Get all roles
+        admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
+        operator_role = Role.query.filter_by(name=RoleEnum.OPERATOR).first()
+        viewer_role = Role.query.filter_by(name=RoleEnum.VIEWER).first()
+        
+        # Verify all roles exist
+        assert admin_role is not None, "Admin role should exist"
+        assert operator_role is not None, "Operator role should exist" 
+        assert viewer_role is not None, "Viewer role should exist"
+        
+        # Test that all roles have remote control permission (using both string and enum)
+        roles_to_test = [
+            (admin_role, "Admin"),
+            (operator_role, "Operator"), 
+            (viewer_role, "Viewer")
+        ]
+        
+        for role, role_name in roles_to_test:
+            # Test with string permission
+            assert role.has_permission("remote_control") is True, f"{role_name} role should have remote_control permission (string)"
+            
+            # Test with enum permission
+            assert role.has_permission(PermissionEnum.REMOTE_CONTROL) is True, f"{role_name} role should have remote_control permission (enum)"
+            
+        # Verify that the remote control permission exists in the enum
+        assert hasattr(PermissionEnum, 'REMOTE_CONTROL'), "REMOTE_CONTROL should exist in PermissionEnum"
+        assert PermissionEnum.REMOTE_CONTROL.value == "remote_control", "REMOTE_CONTROL enum value should be 'remote_control'"

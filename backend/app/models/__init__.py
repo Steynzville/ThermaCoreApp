@@ -50,6 +50,7 @@ class PermissionEnum(PyEnum):
     WRITE_USERS = "write_users"
     DELETE_USERS = "delete_users"
     ADMIN_PANEL = "admin_panel"
+    REMOTE_CONTROL = "remote_control"
 
 
 class UnitStatusEnum(PyEnum):

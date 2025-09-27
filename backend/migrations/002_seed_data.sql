@@ -8,7 +8,8 @@ INSERT INTO permissions (name, description) VALUES
     ('read_users', 'Read access to user information'),
     ('write_users', 'Create and update users'),
     ('delete_users', 'Delete users'),
-    ('admin_panel', 'Access to administration panel')
+    ('admin_panel', 'Access to administration panel'),
+    ('remote_control', 'Remote control access to units (power, water production, auto settings, live video)')
 ON CONFLICT (name) DO NOTHING;
 
 -- Insert default roles
@@ -26,18 +27,18 @@ FROM roles r, permissions p
 WHERE r.name = 'admin'
 ON CONFLICT DO NOTHING;
 
--- Operator role gets unit management and read user permissions
+-- Operator role gets unit management, read user permissions, and remote control
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r, permissions p
-WHERE r.name = 'operator' AND p.name IN ('read_units', 'write_units', 'read_users')
+WHERE r.name = 'operator' AND p.name IN ('read_units', 'write_units', 'read_users', 'remote_control')
 ON CONFLICT DO NOTHING;
 
--- Viewer role gets only read permissions
+-- Viewer role gets read permissions and remote control access
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r, permissions p
-WHERE r.name = 'viewer' AND p.name IN ('read_units', 'read_users')
+WHERE r.name = 'viewer' AND p.name IN ('read_units', 'read_users', 'remote_control')
 ON CONFLICT DO NOTHING;
 
 -- Insert default admin user (password: admin123)
