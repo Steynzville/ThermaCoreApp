@@ -197,6 +197,7 @@ def create_app(config_name=None):
         from app.routes.analytics import analytics_bp
         from app.routes.historical import historical_bp
         from app.routes.multiprotocol import multiprotocol_bp
+        from app.routes.remote_control import remote_control_bp
         
         app.register_blueprint(auth_bp, url_prefix=app.config['API_PREFIX'])
         app.register_blueprint(units_bp, url_prefix=app.config['API_PREFIX'])
@@ -205,6 +206,7 @@ def create_app(config_name=None):
         app.register_blueprint(analytics_bp, url_prefix=app.config['API_PREFIX'])
         app.register_blueprint(historical_bp, url_prefix=app.config['API_PREFIX'])
         app.register_blueprint(multiprotocol_bp, url_prefix=app.config['API_PREFIX'])
+        app.register_blueprint(remote_control_bp, url_prefix=app.config['API_PREFIX'])
     except ImportError:
         pass  # Routes may not be importable without full dependencies
     

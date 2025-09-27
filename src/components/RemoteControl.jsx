@@ -18,6 +18,8 @@ import React, { useEffect,useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { useSettings } from "../context/SettingsContext";
+import { useAuth } from "../context/AuthContext";
+import { useRemoteControl } from "../hooks/useRemoteControl";
 import playSound from "../utils/audioPlayer";
 import {
   AlertDialog,
@@ -37,9 +39,19 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { settings } = useSettings();
+  const { isAuthenticated, userRole } = useAuth();
 
   // Get unit from props (when used as tab) or from location state (when used as standalone page)
   const unit = propUnit || location.state?.unit;
+  
+  // Remote control permissions and operations
+  const { 
+    permissions, 
+    isLoading: remoteControlLoading, 
+    error: remoteControlError,
+    controlPower,
+    controlWaterProduction
+  } = useRemoteControl(unit?.id);
 
   // Remote control states
   const [machineOn, setMachineOn] = useState(unit?.status === "online");
@@ -54,6 +66,10 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
   const [videoFeedActive, setVideoFeedActive] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [videoContainerRef, setVideoContainerRef] = useState(null);
+  
+  // Remote control operation states
+  const [powerControlLoading, setPowerControlLoading] = useState(false);
+  const [waterControlLoading, setWaterControlLoading] = useState(false);
 
   // Listen for fullscreen changes (moved before early return to avoid conditional hook call)
   React.useEffect(() => {
@@ -107,48 +123,143 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
     );
   }
 
-  const handleMachineToggle = (checked) => {
-    setMachineOn(checked);
-
-    // Play appropriate audio based on power state
-    if (checked) {
-      playSound("power-on.mp3", settings.soundEnabled, settings.volume);
-    } else {
-      playSound("power-off.mp3", settings.soundEnabled, settings.volume);
-    }
-
-    // Update unit status based on power state
-    if (unit) {
-      unit.status = checked ? "online" : "offline";
-    }
-
-    // When machine control is toggled to "off", water production and automatic controls should both automatically toggle to "off"
-    if (!checked) {
-      setWaterProductionOn(false);
-      setAutoSwitchEnabled(false);
-    }
-    console.log(
-      `Machine ${checked ? "turned on" : "turned off"} for unit ${unit.name}`,
+  // Check if user is authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-blue-50 dark:bg-gray-950 p-6 flex items-center justify-center">
+        <div className="text-center">
+          <AlertTriangle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+            Authentication Required
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            Please log in to access remote control features.
+          </p>
+          <button
+            onClick={() => navigate("/login")}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Go to Login
+          </button>
+        </div>
+      </div>
     );
+  }
+
+  // Check if permissions are loaded and if user has remote control access
+  if (permissions && !permissions.has_remote_control) {
+    return (
+      <div className="min-h-screen bg-blue-50 dark:bg-gray-950 p-6 flex items-center justify-center">
+        <div className="text-center">
+          <AlertTriangle className="h-16 w-16 text-orange-500 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+            Access Denied
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mb-2">
+            Your role ({permissions.role}) does not have remote control permissions.
+          </p>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            Only Admin and Operator roles can remotely control units.
+          </p>
+          <button
+            onClick={() => (propUnit ? navigate("/grid-view") : navigate(-1))}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            {propUnit ? "Return to Grid View" : "Back to Unit Details"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const handleMachineToggle = async (checked) => {
+    // Check permissions
+    if (!permissions?.has_remote_control) {
+      console.warn('User does not have remote control permissions');
+      return;
+    }
+
+    setPowerControlLoading(true);
+    
+    try {
+      // Call remote control API
+      await controlPower(checked);
+      
+      // Update local state only after successful remote operation
+      setMachineOn(checked);
+
+      // Play appropriate audio based on power state
+      if (checked) {
+        playSound("power-on.mp3", settings.soundEnabled, settings.volume);
+      } else {
+        playSound("power-off.mp3", settings.soundEnabled, settings.volume);
+      }
+
+      // Update unit status based on power state
+      if (unit) {
+        unit.status = checked ? "online" : "offline";
+      }
+
+      // When machine control is toggled to "off", water production and automatic controls should both automatically toggle to "off"
+      if (!checked) {
+        setWaterProductionOn(false);
+        setAutoSwitchEnabled(false);
+      }
+      
+      console.log(
+        `Machine ${checked ? "turned on" : "turned off"} for unit ${unit.name}`,
+      );
+    } catch (error) {
+      console.error('Failed to control machine power:', error);
+      // Optionally show error message to user
+    } finally {
+      setPowerControlLoading(false);
+    }
   };
 
-  const handleWaterProductionToggle = (checked) => {
-    setWaterProductionOn(checked);
-    
-    // Play appropriate audio based on water state
-    if (checked) {
-      playSound("water-on.mp3", settings.soundEnabled, settings.volume);
-    } else {
-      playSound("water-off.mp3", settings.soundEnabled, settings.volume);
+  const handleWaterProductionToggle = async (checked) => {
+    // Check permissions
+    if (!permissions?.has_remote_control) {
+      console.warn('User does not have remote control permissions');
+      return;
     }
-    
-    // When machine control is toggled to "on" and water production is switched to "off", automatic control should automatically toggle to "off"
-    if (machineOn && !checked) {
-      setAutoSwitchEnabled(false);
+
+    // Can't enable water production if machine is off
+    if (checked && !machineOn) {
+      console.warn('Cannot enable water production when machine is offline');
+      return;
     }
-    console.log(
-      `Water production ${checked ? "enabled" : "disabled"} for unit ${unit.name}`,
-    );
+
+    setWaterControlLoading(true);
+    
+    try {
+      // Call remote control API
+      await controlWaterProduction(checked);
+      
+      // Update local state only after successful remote operation
+      setWaterProductionOn(checked);
+    
+      // Play appropriate audio based on water state
+      if (checked) {
+        playSound("water-on.mp3", settings.soundEnabled, settings.volume);
+      } else {
+        playSound("water-off.mp3", settings.soundEnabled, settings.volume);
+      }
+    
+      // When machine control is toggled to "on" and water production is switched to "off", automatic control should automatically toggle to "off"
+      if (machineOn && !checked) {
+        setAutoSwitchEnabled(false);
+      }
+      
+      console.log(
+        `Water production ${checked ? "enabled" : "disabled"} for unit ${unit.name}`,
+      );
+    } catch (error) {
+      console.error('Failed to control water production:', error);
+      // Optionally show error message to user
+    } finally {
+      setWaterControlLoading(false);
+    }
   };
 
   const handleAutoSwitchToggle = (checked) => {
@@ -257,20 +368,33 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
           </div>
 
           {/* Status row placed neatly below the heading */}
-          <div className="flex items-center space-x-4 mt-4">
-            <ConnectionPill />
-            <div className="flex items-center space-x-2">
-              {unit.status === "online" ? (
-                <CheckCircle className="h-6 w-6 text-green-500" />
-              ) : (
-                <AlertTriangle className="h-6 w-6 text-red-500" />
-              )}
-              <span
-                className={`text-sm font-medium px-3 py-1 rounded-full ${unit.status === "online" ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400" : "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"}`}
-              >
-                {unit.status.toUpperCase()}
-              </span>
+          <div className="flex items-center justify-between mt-4">
+            <div className="flex items-center space-x-4">
+              <ConnectionPill />
+              <div className="flex items-center space-x-2">
+                {unit.status === "online" ? (
+                  <CheckCircle className="h-6 w-6 text-green-500" />
+                ) : (
+                  <AlertTriangle className="h-6 w-6 text-red-500" />
+                )}
+                <span
+                  className={`text-sm font-medium px-3 py-1 rounded-full ${unit.status === "online" ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400" : "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"}`}
+                >
+                  {unit.status.toUpperCase()}
+                </span>
+              </div>
             </div>
+            
+            {/* Permission indicator */}
+            {permissions && (
+              <div className="flex items-center space-x-2">
+                <div className={`w-3 h-3 rounded-full ${permissions.has_remote_control ? 'bg-green-500' : 'bg-orange-500'}`} />
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  {permissions.role.charAt(0).toUpperCase() + permissions.role.slice(1)} • 
+                  {permissions.has_remote_control ? ' Remote Control' : ' View Only'}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -318,8 +442,17 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                 </div>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <div className="cursor-pointer">
-                      <Switch checked={machineOn} onCheckedChange={() => {}} />
+                    <div className={`${powerControlLoading ? 'opacity-50' : 'cursor-pointer'}`}>
+                      <Switch 
+                        checked={machineOn} 
+                        onCheckedChange={() => {}} 
+                        disabled={powerControlLoading || !permissions?.has_remote_control}
+                      />
+                      {powerControlLoading && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                      )}
                     </div>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
@@ -385,12 +518,17 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                   </div>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <div className="cursor-pointer">
+                      <div className={`${waterControlLoading ? 'opacity-50' : 'cursor-pointer'} relative`}>
                         <Switch
                           checked={waterProductionOn}
                           onCheckedChange={() => {}}
-                          disabled={!isConnected || !machineOn}
+                          disabled={waterControlLoading || !isConnected || !machineOn || !permissions?.has_remote_control}
                         />
+                        {waterControlLoading && (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                          </div>
+                        )}
                       </div>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
@@ -464,7 +602,7 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                       <Switch
                         checked={autoSwitchEnabled}
                         onCheckedChange={() => {}}
-                        disabled={!isConnected || !machineOn}
+                        disabled={!isConnected || !machineOn || !permissions?.has_remote_control}
                       />
                     </div>
                   </AlertDialogTrigger>
