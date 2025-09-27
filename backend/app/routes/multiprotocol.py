@@ -342,3 +342,98 @@ def convert_protocol_data():
         })
     except Exception as e:
         return SecurityAwareErrorHandler.handle_error(e, "Failed to convert protocol data")
+
+
+# DNP3 Performance Monitoring Endpoints
+
+@multiprotocol_bp.route('/protocols/dnp3/performance/metrics', methods=['GET'])
+@jwt_required()
+@permission_required('read_units')
+def get_dnp3_performance_metrics():
+    """Get detailed DNP3 performance metrics."""
+    try:
+        if not hasattr(current_app, 'dnp3_service'):
+            return jsonify({'error': 'DNP3 service not available'}), 503
+        
+        metrics = current_app.dnp3_service.get_performance_metrics()
+        return jsonify(metrics)
+    except Exception as e:
+        return SecurityAwareErrorHandler.handle_error(e, "Failed to get DNP3 performance metrics")
+
+
+@multiprotocol_bp.route('/protocols/dnp3/performance/summary', methods=['GET'])
+@jwt_required()
+@permission_required('read_units')
+def get_dnp3_performance_summary():
+    """Get DNP3 performance summary."""
+    try:
+        if not hasattr(current_app, 'dnp3_service'):
+            return jsonify({'error': 'DNP3 service not available'}), 503
+        
+        summary = current_app.dnp3_service.get_performance_summary()
+        return jsonify(summary)
+    except Exception as e:
+        return SecurityAwareErrorHandler.handle_error(e, "Failed to get DNP3 performance summary")
+
+
+@multiprotocol_bp.route('/protocols/dnp3/devices/<device_id>/performance', methods=['GET'])
+@jwt_required()
+@permission_required('read_units')
+def get_dnp3_device_performance(device_id):
+    """Get performance statistics for a specific DNP3 device."""
+    try:
+        if not hasattr(current_app, 'dnp3_service'):
+            return jsonify({'error': 'DNP3 service not available'}), 503
+        
+        stats = current_app.dnp3_service.get_device_performance_stats(device_id)
+        if 'error' in stats:
+            return jsonify(stats), 404
+        return jsonify(stats)
+    except Exception as e:
+        return SecurityAwareErrorHandler.handle_error(e, f"Failed to get performance stats for DNP3 device {device_id}")
+
+
+@multiprotocol_bp.route('/protocols/dnp3/performance/config', methods=['POST'])
+@jwt_required()
+@permission_required('admin_panel')
+def configure_dnp3_performance():
+    """Configure DNP3 performance optimization settings."""
+    try:
+        if not hasattr(current_app, 'dnp3_service'):
+            return jsonify({'error': 'DNP3 service not available'}), 503
+        
+        data = request.get_json() or {}
+        caching = data.get('enable_caching', True)
+        bulk_operations = data.get('enable_bulk_operations', True)
+        
+        current_app.dnp3_service.enable_performance_optimizations(
+            caching=caching, 
+            bulk_operations=bulk_operations
+        )
+        
+        return jsonify({
+            'message': 'DNP3 performance configuration updated',
+            'caching_enabled': caching,
+            'bulk_operations_enabled': bulk_operations,
+            'timestamp': utc_now().isoformat()
+        })
+    except Exception as e:
+        return SecurityAwareErrorHandler.handle_error(e, "Failed to configure DNP3 performance")
+
+
+@multiprotocol_bp.route('/protocols/dnp3/performance/metrics', methods=['DELETE'])
+@jwt_required()
+@permission_required('admin_panel')
+def clear_dnp3_performance_metrics():
+    """Clear DNP3 performance metrics (useful for testing)."""
+    try:
+        if not hasattr(current_app, 'dnp3_service'):
+            return jsonify({'error': 'DNP3 service not available'}), 503
+        
+        current_app.dnp3_service.clear_performance_metrics()
+        return jsonify({
+            'message': 'DNP3 performance metrics cleared',
+            'timestamp': utc_now().isoformat()
+        })
+    except Exception as e:
+        return SecurityAwareErrorHandler.handle_error(e, "Failed to clear DNP3 performance metrics")

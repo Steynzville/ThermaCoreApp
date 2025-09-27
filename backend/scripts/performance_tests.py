@@ -272,6 +272,207 @@ class ThermaCoreSensorDataUser(HttpUser):
                         json=sensor_data, headers=self.headers)
 
 
+class ThermaCoreDNP3PerformanceUser(HttpUser):
+    """Simulates DNP3 protocol operations for performance testing."""
+    
+    wait_time = between(1, 3)
+    
+    def on_start(self):
+        """Login and setup test environment."""
+        self.login()
+        self.setup_dnp3_devices()
+    
+    def login(self):
+        """Login and store auth token."""
+        response = self.client.post("/api/v1/auth/login", json={
+            "username": "admin",
+            "password": "admin123"
+        })
+        
+        if response.status_code == 200:
+            data = response.json()
+            self.auth_token = data['access_token']
+            self.headers = {'Authorization': f'Bearer {self.auth_token}'}
+        else:
+            self.auth_token = None
+            self.headers = {}
+    
+    def setup_dnp3_devices(self):
+        """Setup test DNP3 devices for performance testing."""
+        # Create test DNP3 devices
+        test_devices = [
+            {
+                'device_id': 'DNP3_PERF_01',
+                'master_address': 1,
+                'outstation_address': 10,
+                'host': 'localhost',
+                'port': 20000
+            },
+            {
+                'device_id': 'DNP3_PERF_02',
+                'master_address': 1,
+                'outstation_address': 11,
+                'host': 'localhost',
+                'port': 20001
+            }
+        ]
+        
+        for device in test_devices:
+            self.client.post("/api/v1/multiprotocol/protocols/dnp3/devices",
+                           json=device, headers=self.headers)
+            # Connect the device
+            self.client.post(f"/api/v1/multiprotocol/protocols/dnp3/devices/{device['device_id']}/connect",
+                           headers=self.headers)
+    
+    @task(8)
+    def read_dnp3_device_data(self):
+        """Read data from DNP3 devices - primary operation."""
+        device_ids = ['DNP3_PERF_01', 'DNP3_PERF_02']
+        device_id = random.choice(device_ids)
+        
+        response = self.client.get(f"/api/v1/multiprotocol/protocols/dnp3/devices/{device_id}/data",
+                                 headers=self.headers)
+        
+        # Track response for performance analysis
+        if hasattr(response, 'request'):
+            with self.client.request_event.fire(
+                request_type="GET",
+                name="dnp3_device_data",
+                response_time=response.elapsed.total_seconds() * 1000,
+                response_length=len(response.content) if response.content else 0,
+                response=response,
+                context={}
+            ):
+                pass
+    
+    @task(3)
+    def perform_dnp3_integrity_poll(self):
+        """Perform integrity polls on DNP3 devices."""
+        device_ids = ['DNP3_PERF_01', 'DNP3_PERF_02']
+        device_id = random.choice(device_ids)
+        
+        response = self.client.post(f"/api/v1/multiprotocol/protocols/dnp3/devices/{device_id}/integrity-poll",
+                                  headers=self.headers)
+        
+        # Track performance for integrity polls specifically
+        if hasattr(response, 'request'):
+            with self.client.request_event.fire(
+                request_type="POST",
+                name="dnp3_integrity_poll",
+                response_time=response.elapsed.total_seconds() * 1000,
+                response_length=len(response.content) if response.content else 0,
+                response=response,
+                context={}
+            ):
+                pass
+    
+    @task(2)
+    def get_dnp3_performance_summary(self):
+        """Get DNP3 performance metrics."""
+        self.client.get("/api/v1/multiprotocol/protocols/dnp3/performance/summary",
+                       headers=self.headers)
+    
+    @task(1)
+    def get_dnp3_performance_metrics(self):
+        """Get detailed DNP3 performance metrics."""
+        self.client.get("/api/v1/multiprotocol/protocols/dnp3/performance/metrics",
+                       headers=self.headers)
+    
+    @task(1)
+    def get_device_performance_stats(self):
+        """Get performance stats for specific DNP3 devices."""
+        device_ids = ['DNP3_PERF_01', 'DNP3_PERF_02']
+        device_id = random.choice(device_ids)
+        
+        self.client.get(f"/api/v1/multiprotocol/protocols/dnp3/devices/{device_id}/performance",
+                       headers=self.headers)
+
+
+class ThermaCoreDNP3OptimizationUser(HttpUser):
+    """Tests DNP3 optimization features specifically."""
+    
+    wait_time = between(2, 5)  # Longer wait for optimization tests
+    
+    def on_start(self):
+        """Login and setup optimization test environment."""
+        self.login()
+        self.setup_optimization_test()
+    
+    def login(self):
+        """Login and store auth token."""
+        response = self.client.post("/api/v1/auth/login", json={
+            "username": "admin",
+            "password": "admin123"
+        })
+        
+        if response.status_code == 200:
+            data = response.json()
+            self.auth_token = data['access_token']
+            self.headers = {'Authorization': f'Bearer {self.auth_token}'}
+        else:
+            self.auth_token = None
+            self.headers = {}
+    
+    def setup_optimization_test(self):
+        """Setup devices for testing optimization features."""
+        # Enable all optimizations
+        self.client.post("/api/v1/multiprotocol/protocols/dnp3/performance/config",
+                        json={'enable_caching': True, 'enable_bulk_operations': True},
+                        headers=self.headers)
+        
+        # Create test device
+        device = {
+            'device_id': 'DNP3_OPT_TEST',
+            'master_address': 1,
+            'outstation_address': 20,
+            'host': 'localhost',
+            'port': 20002
+        }
+        
+        self.client.post("/api/v1/multiprotocol/protocols/dnp3/devices",
+                       json=device, headers=self.headers)
+        self.client.post(f"/api/v1/multiprotocol/protocols/dnp3/devices/{device['device_id']}/connect",
+                       headers=self.headers)
+    
+    @task(10)
+    def test_caching_performance(self):
+        """Test performance with caching - rapid repeated reads."""
+        device_id = 'DNP3_OPT_TEST'
+        
+        # Perform multiple rapid reads to test cache effectiveness
+        for _ in range(3):
+            response = self.client.get(f"/api/v1/multiprotocol/protocols/dnp3/devices/{device_id}/data",
+                                     headers=self.headers)
+            time.sleep(0.1)  # Short delay between reads
+    
+    @task(5)
+    def test_bulk_operations(self):
+        """Test bulk operation performance."""
+        device_id = 'DNP3_OPT_TEST'
+        
+        # Perform integrity poll which uses bulk operations
+        self.client.post(f"/api/v1/multiprotocol/protocols/dnp3/devices/{device_id}/integrity-poll",
+                       headers=self.headers)
+    
+    @task(3)
+    def toggle_optimization_features(self):
+        """Test toggling optimization features."""
+        # Randomly enable/disable optimizations to test impact
+        config = {
+            'enable_caching': random.choice([True, False]),
+            'enable_bulk_operations': random.choice([True, False])
+        }
+        
+        self.client.post("/api/v1/multiprotocol/protocols/dnp3/performance/config",
+                        json=config, headers=self.headers)
+    
+    @task(1)
+    def clear_metrics_for_fresh_test(self):
+        """Clear metrics to start fresh performance measurements."""
+        self.client.delete("/api/v1/multiprotocol/protocols/dnp3/performance/metrics",
+                         headers=self.headers)
+
+
 # Performance test scenarios
 if __name__ == "__main__":
     print("""

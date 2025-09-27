@@ -773,9 +773,9 @@ class DNP3Service:
                 analog_inputs = [dp for dp in data_points if dp.data_type == DNP3DataType.ANALOG_INPUT]
                 counters = [dp for dp in data_points if dp.data_type == DNP3DataType.COUNTER]
                 
-                # Use bulk operations if enabled and available
-                if self._enable_bulk_operations and hasattr(self._master, 'read_bulk_data'):
-                    try:
+                try:
+                    # Use bulk operations if enabled
+                    if self._enable_bulk_operations and hasattr(self._master, 'read_bulk_data'):
                         data_groups = {}
                         if binary_inputs:
                             indices = [dp.index for dp in binary_inputs]
@@ -819,99 +819,97 @@ class DNP3Service:
                                         )
                                         readings.append(reading)
                                         break
-                    except Exception as e:
-                        logger.error(f"Bulk operations failed for device {device_id}: {e}")
-                        readings = []  # Clear and fall back to individual reads
+                    else:
+                        # Fallback to individual reads (original implementation)
+                        # Read binary inputs
+                        if binary_inputs:
+                            indices = [dp.index for dp in binary_inputs]
+                            start_index = min(indices)
+                            count = max(indices) - start_index + 1
+                            
+                            binary_readings = self._master.read_binary_inputs(
+                                device.outstation_address, start_index, count
+                            )
+                            
+                            for dp in binary_inputs:
+                                for index, value, quality in binary_readings:
+                                    if index == dp.index:
+                                        reading = DNP3Reading(
+                                            index=index,
+                                            data_type=dp.data_type,
+                                            value=value,
+                                            quality=quality,
+                                            timestamp=timestamp,
+                                            sensor_type=dp.sensor_type,
+                                            description=dp.description
+                                        )
+                                        readings.append(reading)
+                                        break
+                except Exception as e:
+                    logger.error(f"Failed to read data using bulk operations for device {device_id}: {e}")
+                    # Fall back to individual reads if bulk operations fail
+                    readings = []
                 
-                # Fallback to individual reads if bulk operations are disabled or failed
-                if not readings or not self._enable_bulk_operations:
-                    # Read binary inputs
-                    if binary_inputs:
-                        indices = [dp.index for dp in binary_inputs]
-                        start_index = min(indices)
-                        count = max(indices) - start_index + 1
-                        
-                        binary_readings = self._master.read_binary_inputs(
-                            device.outstation_address, start_index, count
-                        )
-                        
-                        for dp in binary_inputs:
-                            for index, value, quality in binary_readings:
-                                if index == dp.index:
-                                    reading = DNP3Reading(
-                                        index=index,
-                                        data_type=dp.data_type,
-                                        value=value,
-                                        quality=quality,
-                                        timestamp=timestamp,
-                                        sensor_type=dp.sensor_type,
-                                        description=dp.description
-                                    )
-                                    readings.append(reading)
-                                    break
+                # Read analog inputs
+                if analog_inputs:
+                    indices = [dp.index for dp in analog_inputs]
+                    start_index = min(indices)
+                    count = max(indices) - start_index + 1
                     
-                    # Read analog inputs
-                    if analog_inputs:
-                        indices = [dp.index for dp in analog_inputs]
-                        start_index = min(indices)
-                        count = max(indices) - start_index + 1
-                        
-                        analog_readings = self._master.read_analog_inputs(
-                            device.outstation_address, start_index, count
-                        )
-                        
-                        for dp in analog_inputs:
-                            for index, raw_value, quality in analog_readings:
-                                if index == dp.index:
-                                    # Apply scaling and offset
-                                    processed_value = (raw_value * dp.scale_factor) + dp.offset
-                                    
-                                    reading = DNP3Reading(
-                                        index=index,
-                                        data_type=dp.data_type,
-                                        value=processed_value,
-                                        quality=quality,
-                                        timestamp=timestamp,
-                                        sensor_type=dp.sensor_type,
-                                        description=dp.description
-                                    )
-                                    readings.append(reading)
-                                    break
+                    analog_readings = self._master.read_analog_inputs(
+                        device.outstation_address, start_index, count
+                    )
                     
-                    # Read counters
-                    if counters:
-                        indices = [dp.index for dp in counters]
-                        start_index = min(indices)
-                        count = max(indices) - start_index + 1
-                        
-                        counter_readings = self._master.read_counters(
-                            device.outstation_address, start_index, count
-                        )
-                        
-                        for dp in counters:
-                            for index, value, quality in counter_readings:
-                                if index == dp.index:
-                                    reading = DNP3Reading(
-                                        index=index,
-                                        data_type=dp.data_type,
-                                        value=value,
-                                        quality=quality,
-                                        timestamp=timestamp,
-                                        sensor_type=dp.sensor_type,
-                                        description=dp.description
-                                    )
-                                    readings.append(reading)
-                                    break
+                    for dp in analog_inputs:
+                        for index, raw_value, quality in analog_readings:
+                            if index == dp.index:
+                                # Apply scaling and offset
+                                processed_value = (raw_value * dp.scale_factor) + dp.offset
+                                
+                                reading = DNP3Reading(
+                                    index=index,
+                                    data_type=dp.data_type,
+                                    value=processed_value,
+                                    quality=quality,
+                                    timestamp=timestamp,
+                                    sensor_type=dp.sensor_type,
+                                    description=dp.description
+                                )
+                                readings.append(reading)
+                                break
+                
+                # Read counters
+                if counters:
+                    indices = [dp.index for dp in counters]
+                    start_index = min(indices)
+                    count = max(indices) - start_index + 1
+                    
+                    counter_readings = self._master.read_counters(
+                        device.outstation_address, start_index, count
+                    )
+                    
+                    for dp in counters:
+                        for index, value, quality in counter_readings:
+                            if index == dp.index:
+                                reading = DNP3Reading(
+                                    index=index,
+                                    data_type=dp.data_type,
+                                    value=value,
+                                    quality=quality,
+                                    timestamp=timestamp,
+                                    sensor_type=dp.sensor_type,
+                                    description=dp.description
+                                )
+                                readings.append(reading)
+                                break
                 
                 # Cache the new readings if enabled
                 if self._enable_caching and readings:
                     # Only cache newly read data (not previously cached)
-                    new_readings = [r for r in readings if r not in (cached_readings if self._enable_caching else [])]
-                    if new_readings:
-                        self._data_cache.cache_readings(device_id, new_readings)
-            
-            # Store last readings
-            self._last_readings[device_id] = readings
+                    self._data_cache.cache_readings(device_id, readings)
+                
+                # Store last readings
+                self._last_readings[device_id] = readings
             
             # Convert readings to dictionary format
             readings_dict = {}
@@ -923,18 +921,28 @@ class DNP3Service:
                     'sensor_type': reading.sensor_type,
                     'description': reading.description,
                     'value': reading.value,
-                    'quality': reading.quality.value,
-                    'timestamp': reading.timestamp.isoformat()
-                }
-            
-            return {
-                'device_id': device_id,
-                'outstation_address': device.outstation_address,
-                'timestamp': timestamp.isoformat(),
-                'readings': readings_dict,
-                'total_points': len(readings),
-                'success': True
+                'quality': reading.quality.value,
+                'timestamp': reading.timestamp.isoformat()
             }
+            
+        return {
+            'device_id': device_id,
+            'outstation_address': device.outstation_address,
+            'timestamp': timestamp.isoformat(),
+            'readings': readings_dict,
+            'total_points': len(readings),
+            'success': True
+        }
+            
+        except Exception as e:
+                logger.error(f"Failed to read data from DNP3 device {device_id}: {e}")
+                return {
+                    'device_id': device_id,
+                    'timestamp': timestamp.isoformat(),
+                    'readings': {},
+                    'success': False,
+                    'error': str(e)
+                }
             
         except Exception as e:
             logger.error(f"Failed to read device data for {device_id}: {e}")
