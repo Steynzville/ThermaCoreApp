@@ -94,18 +94,14 @@ describe('RemoteControl Component', () => {
   });
 
   test('allows all users to access remote control interface', async () => {
-    // Get references to the mocked functions using vi.mocked()
-    const mockUseAuth = vi.mocked(await import('../context/AuthContext')).useAuth;
-    const mockUseRemoteControl = vi.mocked(await import('../hooks/useRemoteControl')).useRemoteControl;
-    
-    // Override mocks for viewer test
-    mockUseAuth.mockReturnValueOnce({
+    // Directly mock before render using require() instead of dynamic imports
+    vi.mocked(require('../context/AuthContext')).useAuth.mockReturnValue({
       isAuthenticated: true,
       userRole: 'viewer',
       user: { username: 'viewer', role: 'viewer' }
     });
-    
-    mockUseRemoteControl.mockReturnValueOnce({
+
+    vi.mocked(require('../hooks/useRemoteControl')).useRemoteControl.mockReturnValue({
       permissions: {
         has_remote_control: true,
         role: 'viewer',
@@ -130,11 +126,8 @@ describe('RemoteControl Component', () => {
   });
 
   test('shows authentication required for unauthenticated users', async () => {
-    // Get reference to the mocked function using vi.mocked()
-    const mockUseAuth = vi.mocked(await import('../context/AuthContext')).useAuth;
-    
-    // Mock unauthenticated state
-    mockUseAuth.mockReturnValueOnce({
+    // Directly mock before render using require() instead of dynamic imports
+    vi.mocked(require('../context/AuthContext')).useAuth.mockReturnValue({
       isAuthenticated: false,
       userRole: null,
       user: null
