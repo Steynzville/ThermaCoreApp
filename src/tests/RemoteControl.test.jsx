@@ -5,32 +5,36 @@ import RemoteControl from '../components/RemoteControl';
 import { SettingsProvider } from '../context/SettingsContext';
 
 // Mock the hooks
-vi.mock('../hooks/useRemoteControl', () => ({
-  useRemoteControl: vi.fn(() => ({
+const mockUseRemoteControl = vi.fn(() => ({
+  permissions: {
+    has_remote_control: true,
+    role: 'admin',
     permissions: {
-      has_remote_control: true,
-      role: 'admin',
-      permissions: {
-        read_units: true,
-        write_units: true,
-        remote_control: true
-      }
-    },
-    isLoading: false,
-    error: null,
-    controlPower: vi.fn().mockResolvedValue({ success: true }),
-    controlWaterProduction: vi.fn().mockResolvedValue({ success: true })
-  }))
+      read_units: true,
+      write_units: true,
+      remote_control: true
+    }
+  },
+  isLoading: false,
+  error: null,
+  controlPower: vi.fn().mockResolvedValue({ success: true }),
+  controlWaterProduction: vi.fn().mockResolvedValue({ success: true })
+}));
+
+const mockUseAuth = vi.fn(() => ({
+  isAuthenticated: true,
+  userRole: 'admin',
+  user: { username: 'admin', role: 'admin' }
+}));
+
+vi.mock('../hooks/useRemoteControl', () => ({
+  useRemoteControl: mockUseRemoteControl
 }));
 
 // Mock the useAuth hook
 vi.mock('../context/AuthContext', () => ({
   AuthProvider: ({ children }) => children,
-  useAuth: vi.fn(() => ({
-    isAuthenticated: true,
-    userRole: 'admin',
-    user: { username: 'admin', role: 'admin' }
-  }))
+  useAuth: mockUseAuth
 }));
 
 // Mock audio player
@@ -89,17 +93,14 @@ describe('RemoteControl Component', () => {
   });
 
   test('allows all users to access remote control interface', async () => {
-    // Mock viewer authentication and permissions
-    const { useAuth } = await import('../context/AuthContext');
-    const { useRemoteControl } = await import('../hooks/useRemoteControl');
-    
-    vi.mocked(useAuth).mockReturnValueOnce({
+    // Override mocks for viewer test
+    mockUseAuth.mockReturnValueOnce({
       isAuthenticated: true,
       userRole: 'viewer',
       user: { username: 'viewer', role: 'viewer' }
     });
     
-    vi.mocked(useRemoteControl).mockReturnValueOnce({
+    mockUseRemoteControl.mockReturnValueOnce({
       permissions: {
         has_remote_control: true,
         role: 'viewer',
@@ -125,8 +126,7 @@ describe('RemoteControl Component', () => {
 
   test('shows authentication required for unauthenticated users', async () => {
     // Mock unauthenticated state
-    const { useAuth } = await import('../context/AuthContext');
-    vi.mocked(useAuth).mockReturnValueOnce({
+    mockUseAuth.mockReturnValueOnce({
       isAuthenticated: false,
       userRole: null,
       user: null
