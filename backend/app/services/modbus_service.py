@@ -495,20 +495,21 @@ class ModbusService:
         """
         connected_devices = [dev for dev in self._devices.values() if dev.is_connected]
         total_devices = len(self._devices)
+        num_connected = len(connected_devices)
         
         # Determine service availability and connection status
         available = True  # Service is always available (mock implementation)
-        connected = len(connected_devices) > 0
+        connected = num_connected > 0
         
         # Determine overall status
         if total_devices == 0:
             status = "not_initialized"
-        elif connected:
+        elif num_connected == total_devices:
             status = "ready"
-        elif total_devices > 0 and not connected:
-            status = "error"
+        elif num_connected > 0:
+            status = "degraded"
         else:
-            status = "unknown"
+            status = "error"
         
         # Calculate metrics
         metrics = {
