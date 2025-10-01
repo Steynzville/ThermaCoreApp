@@ -39,12 +39,13 @@ class MetricsCollector:
         
     def record_request_start(self, endpoint: str, method: str):
         """Record the start of a request."""
+        # Set request-scoped data in Flask's g object (no lock needed - thread-local)
+        g.request_start_time = time.time()
+        g.request_endpoint = endpoint
+        g.request_method = method
+        
+        # Increment request count (protected by lock - shared state)
         with self.lock:
-            g.request_start_time = time.time()
-            g.request_endpoint = endpoint
-            g.request_method = method
-            
-            # Increment request count
             key = f"{method} {endpoint}"
             self.request_count[key] += 1
     
@@ -222,45 +223,22 @@ def get_metrics_collector() -> MetricsCollector:
 
 
 def collect_metrics(f: Callable) -> Callable:
-    """Decorator to collect metrics for route handlers."""
+    """
+    Decorator to collect metrics for route handlers.
+    
+    DEPRECATED: This decorator is deprecated in favor of the app-level middleware.
+    Metrics are automatically collected for all routes via setup_metrics_middleware.
+    This decorator is kept for backward compatibility and now acts as a no-op wrapper.
+    
+    To enable metrics collection, use:
+        from app.middleware.metrics import setup_metrics_middleware
+        setup_metrics_middleware(app)
+    """
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        collector = get_metrics_collector()
-        endpoint = request.endpoint or 'unknown'
-        method = request.method
-        
-        # Record request start
-        collector.record_request_start(endpoint, method)
-        
-        error = None
-        status_code = 200
-        
-        try:
-            # Execute the wrapped function
-            response = f(*args, **kwargs)
-            
-            # Extract status code from response
-            if hasattr(response, 'status_code'):
-                status_code = response.status_code
-            elif isinstance(response, tuple) and len(response) >= 2:
-                status_code = response[1]
-            
-            return response
-            
-        except Exception as e:
-            error = e
-            # Try to determine status code from exception
-            if hasattr(e, 'status_code'):
-                status_code = e.status_code
-            elif hasattr(e, 'code'):
-                status_code = e.code
-            else:
-                status_code = 500
-            raise
-            
-        finally:
-            # Record request end
-            collector.record_request_end(status_code, error)
+        # No-op: Metrics are collected by middleware, not decorator
+        # This prevents double-counting when both are used
+        return f(*args, **kwargs)
     
     return decorated_function
 
@@ -272,6 +250,7 @@ def setup_metrics_middleware(app):
     def before_request():
         """Start metrics collection for request."""
         collector = get_metrics_collector()
+        # Use request.path as fallback to ensure consistent endpoint tracking
         endpoint = request.endpoint or request.path
         method = request.method
         collector.record_request_start(endpoint, method)
@@ -282,16 +261,6 @@ def setup_metrics_middleware(app):
         collector = get_metrics_collector()
         collector.record_request_end(response.status_code)
         return response
-    
-    @app.errorhandler(Exception)
-    def handle_exception(error):
-        """Record metrics for unhandled exceptions."""
-        collector = get_metrics_collector()
-        status_code = getattr(error, 'code', 500)
-        collector.record_request_end(status_code, error)
-        
-        # Re-raise the exception to let Flask handle it normally
-        raise error
     
     return app
 
