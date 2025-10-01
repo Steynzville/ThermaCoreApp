@@ -7,6 +7,7 @@ from typing import Dict, Any, Optional, List, Callable
 from functools import wraps
 
 from flask import request, g, current_app
+from werkzeug.exceptions import HTTPException
 
 from app.middleware.request_id import RequestIDManager
 
@@ -271,8 +272,7 @@ def setup_metrics_middleware(app):
         
         if exc is not None:
             # Exception occurred - check if it's a Werkzeug HTTPException with a status code
-            from werkzeug.exceptions import HTTPException
-            if isinstance(exc, HTTPException) and hasattr(exc, 'code'):
+            if isinstance(exc, HTTPException) and exc.code is not None:
                 status_code = exc.code
             else:
                 # Default to 500 for non-HTTP exceptions

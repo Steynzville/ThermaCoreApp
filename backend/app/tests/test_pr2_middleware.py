@@ -358,17 +358,11 @@ class TestMetricsCollector:
             recent_errors = collector.get_recent_errors()
             assert len(recent_errors) >= 3
             
-            # Check error types
-            error_types = [err['error_type'] for err in recent_errors[-3:]]
-            assert 'NotFound' in error_types
-            assert 'BadRequest' in error_types
-            assert 'Forbidden' in error_types
-            
-            # Check status codes in errors
-            status_codes = [err['status_code'] for err in recent_errors[-3:]]
-            assert 404 in status_codes
-            assert 400 in status_codes
-            assert 403 in status_codes
+            # Check that the correct error types are associated with the correct status codes
+            errors_data = [(err['error_type'], err['status_code']) for err in recent_errors[-3:]]
+            assert ('NotFound', 404) in errors_data
+            assert ('BadRequest', 400) in errors_data
+            assert ('Forbidden', 403) in errors_data
     
     def test_metrics_no_double_counting_same_route(self, app):
         """Test that metrics are not double-counted when making multiple requests to same route."""
