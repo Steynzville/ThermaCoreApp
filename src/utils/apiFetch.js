@@ -1,6 +1,17 @@
 // Enhanced API fetch utility with 401 handling, toast notifications, and improved error/redirect handling
 import { toast } from 'sonner';
 
+// Pre-convert network error patterns to lowercase for performance optimization
+// This avoids repeated toLowerCase() calls during error checking
+const NETWORK_ERROR_PATTERNS = [
+  'failed to fetch',                                    // Chrome/Firefox
+  'network request failed',                              // React Native
+  'networkerror when attempting to fetch resource',      // Safari
+  'load failed',                                         // Safari
+  'network error',                                       // Generic network errors
+  'fetch failed',                                        // Generic fetch failures
+];
+
 /**
  * Enhanced fetch wrapper with automatic token handling and error responses
  * 
@@ -143,18 +154,9 @@ export const apiFetch = async (url, options = {}, showToastOnError = true, redir
       // Network errors with retry logic
       // Detect actual network failures using a whitelist of known network error messages
       // This ensures retries only occur for genuine network failures, not programming errors
-      const networkErrorPatterns = [
-        'Failed to fetch',                                    // Chrome/Firefox
-        'Network request failed',                              // React Native
-        'NetworkError when attempting to fetch resource',      // Safari
-        'Load failed',                                         // Safari
-        'network error',                                       // Generic network errors
-        'fetch failed',                                        // Generic fetch failures
-      ];
-      
       const isNetworkError = error instanceof TypeError && 
-        networkErrorPatterns.some(pattern => 
-          error.message.toLowerCase().includes(pattern.toLowerCase())
+        NETWORK_ERROR_PATTERNS.some(pattern => 
+          error.message.toLowerCase().includes(pattern)
         );
       
       if (isNetworkError && attemptsLeft > 0) {
