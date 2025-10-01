@@ -257,10 +257,26 @@ def setup_metrics_middleware(app):
     
     @app.after_request
     def after_request(response):
-        """Complete metrics collection for request."""
-        collector = get_metrics_collector()
-        collector.record_request_end(response.status_code)
+        """Store response for teardown_request to access."""
+        g.response = response
         return response
+    
+    @app.teardown_request
+    def teardown_request(exc):
+        """Complete metrics collection, including errors."""
+        collector = get_metrics_collector()
+        
+        # Get response from g if available (normal requests)
+        response = getattr(g, 'response', None)
+        
+        if exc is not None:
+            # Exception occurred - use 500 status code
+            status_code = 500
+            collector.record_request_end(status_code, exc)
+        elif response is not None:
+            # Normal request with response
+            collector.record_request_end(response.status_code)
+        # If neither exc nor response, request was likely aborted before after_request
     
     return app
 
