@@ -310,6 +310,100 @@ class TestMetricsCollector:
             assert len(recent_errors) > 0
             assert recent_errors[-1]['error_type'] == 'ValueError'
             assert 'Test exception' in recent_errors[-1]['error']
+    
+    def test_metrics_werkzeug_http_exceptions(self, app):
+        """Test metrics collection for Werkzeug HTTP exceptions with proper status codes."""
+        from app.middleware.metrics import setup_metrics_middleware
+        from werkzeug.exceptions import NotFound, BadRequest, Forbidden
+        
+        # Set up middleware
+        setup_metrics_middleware(app)
+        
+        # Create routes that raise different HTTP exceptions
+        @app.route('/test-404')
+        def test_404_route():
+            raise NotFound("Resource not found")
+        
+        @app.route('/test-400')
+        def test_400_route():
+            raise BadRequest("Bad request")
+        
+        @app.route('/test-403')
+        def test_403_route():
+            raise Forbidden("Access forbidden")
+        
+        # Get collector
+        collector = get_metrics_collector()
+        
+        # Make requests that will fail with different HTTP exceptions
+        with app.test_client() as client:
+            # Test 404
+            response_404 = client.get('/test-404')
+            assert response_404.status_code == 404
+            
+            # Test 400
+            response_400 = client.get('/test-400')
+            assert response_400.status_code == 400
+            
+            # Test 403
+            response_403 = client.get('/test-403')
+            assert response_403.status_code == 403
+            
+            # Verify metrics were recorded with correct status codes
+            assert collector.status_codes['GET test_404_route'][404] == 1
+            assert collector.status_codes['GET test_400_route'][400] == 1
+            assert collector.status_codes['GET test_403_route'][403] == 1
+            
+            # Verify errors were tracked
+            recent_errors = collector.get_recent_errors()
+            assert len(recent_errors) >= 3
+            
+            # Check error types
+            error_types = [err['error_type'] for err in recent_errors[-3:]]
+            assert 'NotFound' in error_types
+            assert 'BadRequest' in error_types
+            assert 'Forbidden' in error_types
+            
+            # Check status codes in errors
+            status_codes = [err['status_code'] for err in recent_errors[-3:]]
+            assert 404 in status_codes
+            assert 400 in status_codes
+            assert 403 in status_codes
+    
+    def test_metrics_no_double_counting_same_route(self, app):
+        """Test that metrics are not double-counted when making multiple requests to same route."""
+        from app.middleware.metrics import setup_metrics_middleware
+        
+        # Set up middleware
+        setup_metrics_middleware(app)
+        
+        # Create a test route
+        @app.route('/test-counter')
+        def test_counter_route():
+            return {'count': 'test'}, 200
+        
+        # Get collector
+        collector = get_metrics_collector()
+        
+        # Make multiple requests to the same route
+        with app.test_client() as client:
+            for i in range(5):
+                response = client.get('/test-counter')
+                assert response.status_code == 200
+            
+            # Verify exactly 5 requests were counted (no double-counting)
+            assert collector.request_count['GET test_counter_route'] == 5
+            
+            # Verify response times were recorded correctly (5 entries)
+            assert len(collector.response_times['GET test_counter_route']) == 5
+            
+            # Verify status codes
+            assert collector.status_codes['GET test_counter_route'][200] == 5
+            
+            # Verify endpoint metrics
+            metrics = collector.endpoint_metrics['GET test_counter_route']
+            assert metrics['calls'] == 5
+            assert metrics['errors'] == 0
 
 
 class TestSecurityAwareErrorHandler:

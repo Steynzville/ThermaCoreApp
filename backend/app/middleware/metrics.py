@@ -270,8 +270,13 @@ def setup_metrics_middleware(app):
         response = getattr(g, 'response', None)
         
         if exc is not None:
-            # Exception occurred - use 500 status code
-            status_code = 500
+            # Exception occurred - check if it's a Werkzeug HTTPException with a status code
+            from werkzeug.exceptions import HTTPException
+            if isinstance(exc, HTTPException) and hasattr(exc, 'code'):
+                status_code = exc.code
+            else:
+                # Default to 500 for non-HTTP exceptions
+                status_code = 500
             collector.record_request_end(status_code, exc)
         elif response is not None:
             # Normal request with response
