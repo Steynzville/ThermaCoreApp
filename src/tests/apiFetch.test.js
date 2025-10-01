@@ -222,4 +222,51 @@ describe('apiFetch network error retry logic', () => {
     expect(attempts).toBe(2);
     expect(response.ok).toBe(true);
   });
+
+  it('should NOT retry on blob/arrayBuffer errors', async () => {
+    const blobError = new TypeError('Cannot read blob');
+    
+    let attempts = 0;
+    global.fetch = vi.fn(() => {
+      attempts++;
+      return Promise.reject(blobError);
+    });
+
+    await expect(
+      apiFetch('/api/test', { 
+        retries: 2,
+        retryDelay: 10,
+        showToastOnError: false 
+      })
+    ).rejects.toThrow('Cannot read blob');
+
+    // Should only attempt once, not retry
+    expect(attempts).toBe(1);
+  });
+
+  it('should retry on generic network/fetch errors', async () => {
+    const networkError = new TypeError('A network error occurred');
+    
+    let attempts = 0;
+    global.fetch = vi.fn(() => {
+      attempts++;
+      if (attempts < 2) {
+        return Promise.reject(networkError);
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ data: 'success' }),
+      });
+    });
+
+    const response = await apiFetch('/api/test', { 
+      retries: 2,
+      retryDelay: 10,
+      showToastOnError: false 
+    });
+
+    expect(attempts).toBe(2);
+    expect(response.ok).toBe(true);
+  });
 });
