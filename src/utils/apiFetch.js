@@ -141,7 +141,18 @@ export const apiFetch = async (url, options = {}, showToastOnError = true, redir
       }
       
       // Network errors with retry logic
-      if (error.message.includes('fetch') && attemptsLeft > 0) {
+      // Detect actual network failures: TypeError from fetch that indicates connection issues
+      // Cross-browser compatible check for network errors (not all TypeErrors)
+      const isNetworkError = error instanceof TypeError && 
+        !error.message.includes('JSON') && 
+        !error.message.includes('text') && 
+        !error.message.includes('blob') && 
+        !error.message.includes('arrayBuffer') &&
+        !error.message.includes('not a function') &&
+        !error.message.includes('undefined') &&
+        !error.message.includes('null');
+      
+      if (isNetworkError && attemptsLeft > 0) {
         if (optionsToast) {
           toast.warning(`Network error. Retrying in ${retryDelay / 1000} seconds... (${attemptsLeft} attempts left)`);
         }
