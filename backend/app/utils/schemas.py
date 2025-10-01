@@ -247,6 +247,7 @@ class SensorSchema(SQLAlchemyAutoSchema):
     class Meta:
         model = Sensor
         load_instance = True
+        include_fk = True  # Include foreign key fields
         
     name = fields.Str(required=True, validate=validate.Length(min=1, max=100))
     sensor_type = fields.Str(required=True, validate=validate.Length(min=1, max=50))
@@ -256,7 +257,7 @@ class SensorSchema(SQLAlchemyAutoSchema):
 
 class SensorCreateSchema(Schema):
     """Schema for sensor creation."""
-    unit_id = fields.Str(required=True)
+    unit_id = fields.Str(required=False)  # Optional since it's overridden from path parameter
     name = fields.Str(required=True, validate=validate.Length(min=1, max=100))
     sensor_type = fields.Str(required=True, validate=validate.Length(min=1, max=50))
     unit_of_measurement = fields.Str(validate=validate.Length(max=20))
