@@ -390,3 +390,75 @@ def test_integration_middleware_stack(app):
         # Check headers
         assert 'X-Request-ID' in response.headers
         assert 'X-RateLimit-Limit' in response.headers
+
+
+def test_metrics_werkzeug_http_exceptions(app):
+    """Test that metrics properly capture Werkzeug HTTPException status codes."""
+    from werkzeug.exceptions import NotFound, BadRequest, Forbidden
+    from app.middleware.metrics import setup_metrics_middleware, get_metrics_collector
+    
+    # Set up metrics middleware
+    setup_metrics_middleware(app)
+    collector = get_metrics_collector()
+    
+    # Create routes that raise different HTTP exceptions
+    @app.route('/not-found')
+    def raise_not_found():
+        raise NotFound("Resource not found")
+    
+    @app.route('/bad-request')
+    def raise_bad_request():
+        raise BadRequest("Invalid request")
+    
+    @app.route('/forbidden')
+    def raise_forbidden():
+        raise Forbidden("Access denied")
+    
+    with app.test_client() as client:
+        # Trigger each exception
+        client.get('/not-found')
+        client.get('/bad-request')
+        client.get('/forbidden')
+        
+        # Get metrics
+        metrics = collector.get_metrics()
+        recent_errors = metrics['recent_errors']
+        
+        # Should have 3 errors recorded
+        assert len(recent_errors) >= 3
+        
+        # Check that the correct error types are associated with the correct status codes
+        errors_data = [(err['error_type'], err['status_code']) for err in recent_errors]
+        assert ('NotFound', 404) in errors_data
+        assert ('BadRequest', 400) in errors_data
+        assert ('Forbidden', 403) in errors_data
+
+
+def test_metrics_no_double_counting_same_route(app):
+    """Test that metrics don't double-count requests to the same route."""
+    from app.middleware.metrics import setup_metrics_middleware, get_metrics_collector
+    
+    # Set up metrics middleware
+    setup_metrics_middleware(app)
+    collector = get_metrics_collector()
+    
+    @app.route('/test-endpoint')
+    def test_endpoint():
+        return {'message': 'success'}
+    
+    with app.test_client() as client:
+        # Make multiple requests to the same endpoint
+        for _ in range(3):
+            client.get('/test-endpoint')
+        
+        # Get metrics
+        metrics = collector.get_metrics()
+        endpoint_metrics = metrics['endpoint_metrics']
+        
+        # Check that the endpoint was called exactly 3 times
+        key = 'GET /test-endpoint'
+        assert key in endpoint_metrics or 'GET test_endpoint' in endpoint_metrics
+        
+        # Find the correct key (either path or endpoint name)
+        actual_key = key if key in endpoint_metrics else 'GET test_endpoint'
+        assert endpoint_metrics[actual_key]['calls'] == 3
