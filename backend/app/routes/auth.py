@@ -259,10 +259,10 @@ def login():
     # Audit failed login
     username = data.get('username', 'unknown')
     failure_reason = 'invalid_credentials'
-    if user and not user.is_active:
-        failure_reason = 'inactive_user'
-    elif not user:
+    if not user:
         failure_reason = 'user_not_found'
+    elif not user.is_active:
+        failure_reason = 'inactive_user'
     elif not user.check_password(data['password']):
         failure_reason = 'incorrect_password'
     

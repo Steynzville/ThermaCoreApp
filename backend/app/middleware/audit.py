@@ -22,6 +22,43 @@ from app.middleware.request_id import RequestIDManager
 logger = logging.getLogger(__name__)
 
 
+# Sensitive fields that should be redacted in audit logs
+SENSITIVE_FIELDS = {
+    'password', 'token', 'api_key', 'secret', 'jwt', 'refresh_token',
+    'access_token', 'authorization', 'secret_key', 'private_key',
+    'client_secret', 'api_secret', 'auth_token', 'session_token',
+    'csrf_token', 'x-api-key', 'x-auth-token'
+}
+
+
+def redact_sensitive_data(data, sensitive_keys=None):
+    """Recursively redact sensitive information from data structures.
+    
+    Args:
+        data: Data structure to redact (dict, list, or primitive)
+        sensitive_keys: Set of keys to redact (defaults to SENSITIVE_FIELDS)
+    
+    Returns:
+        Redacted copy of the data
+    """
+    if sensitive_keys is None:
+        sensitive_keys = SENSITIVE_FIELDS
+    
+    if isinstance(data, dict):
+        redacted = {}
+        for key, value in data.items():
+            # Check if key should be redacted (case-insensitive)
+            if key.lower() in sensitive_keys:
+                redacted[key] = '[REDACTED]'
+            else:
+                redacted[key] = redact_sensitive_data(value, sensitive_keys)
+        return redacted
+    elif isinstance(data, list):
+        return [redact_sensitive_data(item, sensitive_keys) for item in data]
+    else:
+        return data
+
+
 class AuditEventType(Enum):
     """Audit event types for different operations."""
     # Authentication events
@@ -104,14 +141,14 @@ class AuditLogger:
             if not user_id and not username and has_request_context():
                 try:
                     verify_jwt_in_request(optional=True)
-                    current_user_id = get_jwt_identity()
-                    if current_user_id:
-                        user = User.query.get(current_user_id)
+                    current_user_id_str = get_jwt_identity()
+                    if current_user_id_str:
+                        user = User.query.get(int(current_user_id_str))
                         if user:
                             user_id = user.id
                             username = user.username
                 except Exception:
-                    # Don't fail audit logging due to JWT issues
+                    # Don't fail audit logging due to JWT issues or int conversion
                     pass
             
             # Build audit record
@@ -131,7 +168,7 @@ class AuditLogger:
                 'url': url,
                 'ip_address': ip_address,
                 'user_agent': user_agent,
-                'details': details or {}
+                'details': redact_sensitive_data(details) if details else {}
             }
             
             # Log the audit event
@@ -249,9 +286,9 @@ def audit_operation(
             try:
                 if has_request_context():
                     verify_jwt_in_request(optional=True)
-                    current_user_id = get_jwt_identity()
-                    if current_user_id:
-                        user = User.query.get(current_user_id)
+                    current_user_id_str = get_jwt_identity()
+                    if current_user_id_str:
+                        user = User.query.get(int(current_user_id_str))
                         if user:
                             user_id = user.id
                             username = user.username
@@ -263,10 +300,12 @@ def audit_operation(
             if include_request_data and has_request_context() and request:
                 if request.is_json:
                     try:
-                        details['request_data'] = request.get_json()
+                        raw_request_data = request.get_json()
+                        details['request_data'] = redact_sensitive_data(raw_request_data)
                     except Exception:
                         details['request_data'] = 'Unable to parse JSON'
-                details['query_params'] = dict(request.args)
+                raw_query_params = dict(request.args)
+                details['query_params'] = redact_sensitive_data(raw_query_params)
             
             # Extract resource ID from URL path if available
             resource_id = kwargs.get('id') or kwargs.get('unit_id') or kwargs.get('user_id')
@@ -318,20 +357,28 @@ def audit_operation(
 def setup_audit_middleware(app):
     """Set up audit logging middleware for the Flask app."""
     
+    # Define endpoints/paths to exclude from audit logging
+    EXCLUDED_ENDPOINTS = ['health', 'metrics', 'docs', 'swagger', 'swaggerui']
+    EXCLUDED_PATHS = ['/health', '/metrics', '/docs', '/api/docs', '/swagger', '/swaggerui']
+    
     @app.before_request
     def audit_api_access():
         """Log API access for auditing."""
         if request.endpoint and not request.endpoint.startswith('static'):
-            # Don't log health checks and monitoring endpoints to reduce noise
-            if request.endpoint in ['health', 'metrics', 'docs']:
+            # Use explicit path and endpoint checks for exclusion
+            if (request.endpoint in EXCLUDED_ENDPOINTS or
+                any(request.path.startswith(p) for p in EXCLUDED_PATHS)):
                 return
                 
+            # Redact sensitive query parameters before logging
+            redacted_query_params = redact_sensitive_data(dict(request.args))
+            
             AuditLogger.log_event(
                 event_type=AuditEventType.API_ACCESS,
                 resource=request.endpoint,
                 action=f"{request.method}_{request.endpoint}",
                 details={
-                    'query_params': dict(request.args),
+                    'query_params': redacted_query_params,
                     'content_type': request.content_type
                 }
             )
