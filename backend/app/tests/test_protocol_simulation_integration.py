@@ -220,12 +220,15 @@ class TestProtocolSimulationIntegration:
                 time.sleep(0.1)  # Small delay
             
             # Verify each data point has a timestamp
+            timestamps = []
             for data in data_points:
                 assert 'timestamp' in data
-                assert isinstance(data['timestamp'], datetime)
+                # The method returns an ISO string, so we parse it
+                ts = datetime.fromisoformat(data['timestamp'])
+                assert isinstance(ts, datetime)
+                timestamps.append(ts)
             
             # Timestamps should be different (progression)
-            timestamps = [data['timestamp'] for data in data_points]
             assert timestamps[0] <= timestamps[1] <= timestamps[2]
     
     def test_end_to_end_protocol_pipeline(self, app):

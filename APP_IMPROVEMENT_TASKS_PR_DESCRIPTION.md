@@ -122,8 +122,8 @@ Every audit log includes:
 ### 4. Protocol Adapter Implementations
 - **MQTT**: Real broker connectivity with TLS support
 - **OPC UA**: Client/server architecture with certificate authentication
-- **Modbus TCP**: Complete register support (coils, discrete inputs, holding/input registers)
-- **DNP3**: Master/outstation communication with point management
+- **Modbus TCP**: Standardized interface with mock backend (foundation for production implementation)
+- **DNP3**: Standardized interface with mock backend (foundation for production implementation)
 
 ### 5. Error Handling Improvements
 - **Centralized error handler**: Prevents information leakage in API responses
@@ -328,7 +328,7 @@ OPCUA_TRUST_CERT_FILE=/path/to/server.crt
 - Comprehensive audit logging system
 - Rate limiting with Redis support
 - Metrics collection framework
-- Multi-protocol support (MQTT, OPC UA, Modbus, DNP3)
+- Multi-protocol support (MQTT, OPC UA with real implementations; Modbus, DNP3 with mock backends)
 - Advanced analytics and ML anomaly detection
 - Role-based access control (RBAC)
 - Input validation framework
