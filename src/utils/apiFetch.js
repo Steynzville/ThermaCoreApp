@@ -1,6 +1,9 @@
 // Enhanced API fetch utility with 401 handling, toast notifications, and improved error/redirect handling
 import { toast } from 'sonner';
 
+// Global redirect guard to prevent multiple simultaneous redirects
+let isRedirecting = false;
+
 /**
  * Enhanced fetch wrapper with automatic token handling and error responses
  * 
@@ -39,12 +42,13 @@ export const apiFetch = async (url, options = {}, showToastOnError = true, redir
     ...fetchOptions.headers,
   };
   
-  // Add timeout support with better default
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), fetchOptions.timeout || 30000);
-  
-  // Retry logic wrapper
-  const attemptFetch = async (attemptsLeft) => {
+  // Retry logic wrapper with per-attempt timeout
+  const attemptFetch = async (attemptsLeft, retryCount = 0) => {
+    // Create new controller and timeout for each attempt
+    const controller = new AbortController();
+    const timeout = fetchOptions.timeout || 30000;
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    
     try {
       const response = await fetch(url, {
         ...fetchOptions,
@@ -64,8 +68,10 @@ export const apiFetch = async (url, options = {}, showToastOnError = true, redir
         localStorage.removeItem('token');
         localStorage.removeItem('refreshToken');
         
-        // Enhanced redirect handling - check for login page and avoid redirect loops
-        if (optionsRedirect && !window.location.pathname.includes('/login') && !window.location.pathname.includes('/auth')) {
+        // Enhanced redirect handling with guard to prevent multiple simultaneous redirects
+        if (optionsRedirect && !isRedirecting && !window.location.pathname.includes('/login') && !window.location.pathname.includes('/auth')) {
+          isRedirecting = true;
+          
           // Store current location for post-login redirect
           const currentPath = window.location.pathname + window.location.search;
           if (currentPath !== '/login' && currentPath !== '/') {
@@ -80,6 +86,9 @@ export const apiFetch = async (url, options = {}, showToastOnError = true, redir
           } else {
             window.location.href = '/login';
           }
+          
+          // Reset redirect guard after a delay
+          setTimeout(() => { isRedirecting = false; }, 1000);
         }
         
         throw new Error('Unauthorized');
@@ -94,16 +103,28 @@ export const apiFetch = async (url, options = {}, showToastOnError = true, redir
         throw new Error(forbiddenMessage);
       }
       
-      // Handle 500 Server Error with retry logic
-      if (response.status >= 500 && attemptsLeft > 0) {
+      // Handle 429 Too Many Requests with retry
+      if (response.status === 429 && attemptsLeft > 0) {
+        const retryAfter = response.headers.get('Retry-After');
+        const delay = retryAfter ? parseInt(retryAfter) * 1000 : retryDelay * Math.pow(2, retryCount);
         if (optionsToast) {
-          toast.warning(`Server error. Retrying in ${retryDelay / 1000} seconds... (${attemptsLeft} attempts left)`);
+          toast.warning(`Rate limited. Retrying in ${delay / 1000} seconds...`);
         }
-        await new Promise(resolve => setTimeout(resolve, retryDelay));
-        return attemptFetch(attemptsLeft - 1);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return attemptFetch(attemptsLeft - 1, retryCount + 1);
       }
       
-      // Handle other error status codes
+      // Handle 500+ Server Errors with retry and exponential backoff
+      if (response.status >= 500 && attemptsLeft > 0) {
+        const delay = retryDelay * Math.pow(2, retryCount);
+        if (optionsToast) {
+          toast.warning(`Server error. Retrying in ${delay / 1000} seconds... (${attemptsLeft} attempts left)`);
+        }
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return attemptFetch(attemptsLeft - 1, retryCount + 1);
+      }
+      
+      // Handle other error status codes (4xx errors should not retry)
       if (!response.ok) {
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
         
@@ -132,7 +153,17 @@ export const apiFetch = async (url, options = {}, showToastOnError = true, redir
     } catch (error) {
       clearTimeout(timeoutId);
       
+      // Handle timeout errors
       if (error.name === 'AbortError') {
+        if (attemptsLeft > 0) {
+          const delay = retryDelay * Math.pow(2, retryCount);
+          if (optionsToast) {
+            toast.warning(`Request timeout. Retrying in ${delay / 1000} seconds... (${attemptsLeft} attempts left)`);
+          }
+          await new Promise(resolve => setTimeout(resolve, delay));
+          return attemptFetch(attemptsLeft - 1, retryCount + 1);
+        }
+        
         const timeoutMessage = 'Request timeout. Please try again.';
         if (optionsToast) {
           toast.error(timeoutMessage);
@@ -140,16 +171,19 @@ export const apiFetch = async (url, options = {}, showToastOnError = true, redir
         throw new Error(timeoutMessage);
       }
       
-      // Network errors with retry logic
-      if (error.message.includes('fetch') && attemptsLeft > 0) {
+      // Network errors with retry logic and exponential backoff
+      if ((error.message.includes('fetch') || error.message.includes('Failed to fetch') || 
+           error.message.includes('NetworkError') || error.message.includes('Network request failed')) 
+          && attemptsLeft > 0) {
+        const delay = retryDelay * Math.pow(2, retryCount);
         if (optionsToast) {
-          toast.warning(`Network error. Retrying in ${retryDelay / 1000} seconds... (${attemptsLeft} attempts left)`);
+          toast.warning(`Network error. Retrying in ${delay / 1000} seconds... (${attemptsLeft} attempts left)`);
         }
-        await new Promise(resolve => setTimeout(resolve, retryDelay));
-        return attemptFetch(attemptsLeft - 1);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return attemptFetch(attemptsLeft - 1, retryCount + 1);
       }
       
-      // Re-throw other errors
+      // Re-throw other errors (no retry for non-network errors)
       throw error;
     }
   };
