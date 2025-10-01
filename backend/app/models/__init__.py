@@ -73,7 +73,7 @@ class Permission(db.Model):
     __tablename__ = 'permissions'
     
     id = Column(Integer, primary_key=True)
-    name = Column(Enum(PermissionEnum), unique=True, nullable=False)
+    name = Column(Enum(PermissionEnum, native_enum=False), unique=True, nullable=False)
     description = Column(String(255))
     created_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
     
@@ -86,7 +86,7 @@ class Role(db.Model):
     __tablename__ = 'roles'
     
     id = Column(Integer, primary_key=True)
-    name = Column(Enum(RoleEnum), unique=True, nullable=False)
+    name = Column(Enum(RoleEnum, native_enum=False), unique=True, nullable=False)
     description = Column(String(255))
     created_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
     
@@ -177,8 +177,8 @@ class Unit(db.Model):
     install_date = Column(DateTime, nullable=False)  # timezone-aware set via application logic
     last_maintenance = Column(DateTime)  # timezone-aware set via application logic
     location = Column(String(200))
-    status = Column(Enum(UnitStatusEnum), default=UnitStatusEnum.OFFLINE)
-    health_status = Column(Enum(HealthStatusEnum), default=HealthStatusEnum.OPTIMAL)
+    status = Column(Enum(UnitStatusEnum, native_enum=False), default=UnitStatusEnum.OFFLINE)
+    health_status = Column(Enum(HealthStatusEnum, native_enum=False), default=HealthStatusEnum.OPTIMAL)
     water_generation = Column(Boolean, default=False)
     has_alert = Column(Boolean, default=False)
     has_alarm = Column(Boolean, default=False)

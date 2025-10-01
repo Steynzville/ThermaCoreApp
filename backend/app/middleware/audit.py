@@ -363,12 +363,14 @@ def audit_login_failure(username: str, reason: str, details: Optional[Dict] = No
 
 
 def audit_permission_check(permission: str, granted: bool, user_id: Optional[int] = None, 
-                         username: Optional[str] = None, resource: Optional[str] = None):
+                         username: Optional[str] = None, resource: Optional[str] = None,
+                         details: Optional[dict] = None):
     """Audit permission check."""
     AuditLogger.log_authorization_event(
         permission=permission,
         granted=granted,
         user_id=user_id,
         username=username,
-        resource=resource
+        resource=resource,
+        details=details
     )

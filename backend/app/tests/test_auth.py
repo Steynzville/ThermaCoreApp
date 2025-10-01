@@ -116,7 +116,7 @@ class TestAuthentication:
             headers={'Content-Type': 'application/json'}
         )
         
-        login_data = json.loads(login_response.data)
+        login_data = unwrap_response(login_response)
         refresh_token = login_data['refresh_token']
         
         # Use refresh token
