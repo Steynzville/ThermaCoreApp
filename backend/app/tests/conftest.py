@@ -2,10 +2,33 @@
 import os
 import tempfile
 import pytest
+from sqlalchemy import text
 
 from app import create_app, db
 from app.models import User, Role, Permission, Unit, Sensor
 from config import TestingConfig
+
+
+def _init_database():
+    """Initialize database with schema."""
+    # Check if we're using PostgreSQL for tests
+    use_postgres = os.environ.get('USE_POSTGRES_TESTS', 'false').lower() == 'true'
+    
+    if use_postgres:
+        # Use PostgreSQL migration script for PostgreSQL tests
+        schema_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
+            'migrations', 
+            '001_initial_schema.sql'
+        )
+        with open(schema_path, 'r') as f:
+            schema_sql = f.read()
+        db.session.execute(text(schema_sql))
+        db.session.commit()
+    else:
+        # For SQLite tests, use SQLAlchemy's create_all() which properly handles
+        # enum types and other SQLAlchemy-specific features
+        db.create_all()
 
 
 @pytest.fixture(scope='session')
@@ -22,7 +45,7 @@ def app():
     app.config['WTF_CSRF_ENABLED'] = False
     
     with app.app_context():
-        db.create_all()
+        _init_database()
         _create_test_data()
         yield app
         
