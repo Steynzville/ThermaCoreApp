@@ -154,9 +154,11 @@ export const apiFetch = async (url, options = {}, showToastOnError = true, redir
       // Network errors with retry logic
       // Detect actual network failures using a whitelist of known network error messages
       // This ensures retries only occur for genuine network failures, not programming errors
+      // Safely convert error.message to string to handle edge cases where it might be undefined, null, or non-string
+      const errorMessage = String(error.message || '').toLowerCase();
       const isNetworkError = error instanceof TypeError && 
         NETWORK_ERROR_PATTERNS.some(pattern => 
-          error.message.toLowerCase().includes(pattern)
+          errorMessage.includes(pattern)
         );
       
       if (isNetworkError && attemptsLeft > 0) {
