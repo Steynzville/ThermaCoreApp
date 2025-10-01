@@ -141,16 +141,21 @@ export const apiFetch = async (url, options = {}, showToastOnError = true, redir
       }
       
       // Network errors with retry logic
-      // Detect actual network failures: TypeError from fetch that indicates connection issues
-      // Cross-browser compatible check for network errors (not all TypeErrors)
+      // Detect actual network failures using a whitelist of known network error messages
+      // This ensures retries only occur for genuine network failures, not programming errors
+      const networkErrorPatterns = [
+        'Failed to fetch',                                    // Chrome/Firefox
+        'Network request failed',                              // React Native
+        'NetworkError when attempting to fetch resource',      // Safari
+        'Load failed',                                         // Safari
+        'network error',                                       // Generic network errors
+        'fetch failed',                                        // Generic fetch failures
+      ];
+      
       const isNetworkError = error instanceof TypeError && 
-        !error.message.includes('JSON') && 
-        !error.message.includes('text') && 
-        !error.message.includes('blob') && 
-        !error.message.includes('arrayBuffer') &&
-        !error.message.includes('not a function') &&
-        !error.message.includes('undefined') &&
-        !error.message.includes('null');
+        networkErrorPatterns.some(pattern => 
+          error.message.toLowerCase().includes(pattern.toLowerCase())
+        );
       
       if (isNetworkError && attemptsLeft > 0) {
         if (optionsToast) {
