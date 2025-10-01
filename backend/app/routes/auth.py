@@ -244,13 +244,12 @@ def login():
         )
         
         token_schema = TokenSchema()
-        user_schema = UserSchema()
         
         response_data = {
             'access_token': access_token,
             'refresh_token': refresh_token,
             'expires_in': current_app.config['JWT_ACCESS_TOKEN_EXPIRES'].total_seconds(),
-            'user': user_schema.dump(user)
+            'user': user  # Pass model object, not serialized dict
         }
         
         return SecurityAwareErrorHandler.create_success_response(

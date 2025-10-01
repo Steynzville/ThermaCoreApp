@@ -358,10 +358,11 @@ def create_unit_sensor(unit_id):
     
     try:
         data = schema.load(request.json)
-        data['unit_id'] = unit_id  # Override unit_id with path parameter
     except ValidationError as err:
         return jsonify({'error': 'Validation error', 'details': err.messages}), 400
     
+    # Always set unit_id from path parameter (override if present in request)
+    data['unit_id'] = unit_id
     sensor = Sensor(**data)
     
     db.session.add(sensor)

@@ -6,6 +6,20 @@ from datetime import datetime
 from app.models import Unit, Sensor
 
 
+def unwrap_response(response):
+    """Helper to extract data from standardized API response envelope.
+    
+    The API wraps responses in: {'success': bool, 'data': {...}, 'message': str, ...}
+    This helper extracts the actual data payload.
+    """
+    data = json.loads(response.data)
+    # If response has the standard envelope structure, return the inner data
+    if 'data' in data and 'success' in data:
+        return data['data']
+    # Otherwise return as-is (for error responses)
+    return data
+
+
 class TestUnitsAPI:
     """Test units API endpoints."""
     
@@ -17,7 +31,7 @@ class TestUnitsAPI:
         )
         
         if response.status_code == 200:
-            data = json.loads(response.data)
+            data = unwrap_response(response)
             return data['access_token']
         return None
     
@@ -30,7 +44,7 @@ class TestUnitsAPI:
         )
         
         assert response.status_code == 200
-        data = json.loads(response.data)
+        data = unwrap_response(response)
         
         assert 'data' in data
         assert 'page' in data
@@ -47,7 +61,7 @@ class TestUnitsAPI:
         )
         
         assert response.status_code == 200
-        data = json.loads(response.data)
+        data = unwrap_response(response)
         
         for unit in data['data']:
             assert unit['status'] == 'online'
@@ -61,7 +75,7 @@ class TestUnitsAPI:
         )
         
         assert response.status_code == 200
-        data = json.loads(response.data)
+        data = unwrap_response(response)
         
         assert data['page'] == 1
         assert data['per_page'] == 10
@@ -75,7 +89,7 @@ class TestUnitsAPI:
         )
         
         assert response.status_code == 200
-        data = json.loads(response.data)
+        data = unwrap_response(response)
         
         assert data['id'] == 'TEST001'
         assert data['name'] == 'Test Unit 001'
@@ -113,7 +127,7 @@ class TestUnitsAPI:
         )
         
         assert response.status_code == 201
-        data = json.loads(response.data)
+        data = unwrap_response(response)
         
         assert data['id'] == 'TEST002'
         assert data['name'] == 'Test Unit 002'
@@ -138,7 +152,7 @@ class TestUnitsAPI:
         )
         
         assert response.status_code == 409
-        data = json.loads(response.data)
+        data = unwrap_response(response)
         assert 'already exists' in data['error']
     
     def test_create_unit_validation_error(self, client):
@@ -161,7 +175,7 @@ class TestUnitsAPI:
         )
         
         assert response.status_code == 400
-        data = json.loads(response.data)
+        data = unwrap_response(response)
         assert 'Validation error' in data['error']
     
     def test_update_unit_success(self, client):
@@ -184,7 +198,7 @@ class TestUnitsAPI:
         )
         
         assert response.status_code == 200
-        data = json.loads(response.data)
+        data = unwrap_response(response)
         
         assert data['name'] == 'Updated Test Unit 001'
         assert data['location'] == 'Updated Test Site'
@@ -252,7 +266,7 @@ class TestUnitsAPI:
         )
         
         assert response.status_code == 200
-        data = json.loads(response.data)
+        data = unwrap_response(response)
         
         required_fields = [
             'total_units', 'online_units', 'offline_units',
@@ -285,7 +299,7 @@ class TestUnitsAPI:
         )
         
         assert response.status_code == 200
-        data = json.loads(response.data)
+        data = unwrap_response(response)
         
         assert data['status'] == 'error'  # API returns lowercase
         assert data['health_status'] == 'critical'
@@ -304,7 +318,7 @@ class TestUnitSensors:
         )
         
         if response.status_code == 200:
-            data = json.loads(response.data)
+            data = unwrap_response(response)
             return data['access_token']
         return None
     
@@ -317,7 +331,7 @@ class TestUnitSensors:
         )
         
         assert response.status_code == 200
-        data = json.loads(response.data)
+        data = unwrap_response(response)
         
         assert isinstance(data, list)
         assert len(data) >= 1  # Should have test sensor
@@ -343,7 +357,7 @@ class TestUnitSensors:
         )
         
         assert response.status_code == 201
-        data = json.loads(response.data)
+        data = unwrap_response(response)
         
         assert data['name'] == 'Test Pressure Sensor'
         assert data['sensor_type'] == 'pressure'
@@ -358,7 +372,7 @@ class TestUnitSensors:
         )
         
         assert response.status_code == 200
-        data = json.loads(response.data)
+        data = unwrap_response(response)
         
         assert isinstance(data, list)
 
@@ -374,7 +388,7 @@ class TestUnitsPermissions:
         )
         
         if response.status_code == 200:
-            data = json.loads(response.data)
+            data = unwrap_response(response)
             return data['access_token']
         return None
     
