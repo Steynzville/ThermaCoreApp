@@ -105,8 +105,9 @@ class ProtocolStatus:
     
     def record_error(self, error_code: str, error_message: str = None, context: Dict[str, Any] = None) -> None:
         """PR1a: Record an error with enhanced context and timestamp."""
-        self.error = record_error(error_code, error_message, context)
-        self.last_error_time = utc_now()
+        now = utc_now()
+        self.error = record_error(error_code, error_message, context, timestamp=now)
+        self.last_error_time = now
         self.status = "error"
         self.update_availability_level()
     

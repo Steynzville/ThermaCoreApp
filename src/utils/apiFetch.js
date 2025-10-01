@@ -39,12 +39,12 @@ export const apiFetch = async (url, options = {}, showToastOnError = true, redir
     ...fetchOptions.headers,
   };
   
-  // Add timeout support with better default
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), fetchOptions.timeout || 30000);
-  
   // Retry logic wrapper
   const attemptFetch = async (attemptsLeft) => {
+    // Create a new AbortController and timeout for each attempt
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), fetchOptions.timeout || 30000);
+    
     try {
       const response = await fetch(url, {
         ...fetchOptions,
@@ -140,8 +140,8 @@ export const apiFetch = async (url, options = {}, showToastOnError = true, redir
         throw new Error(timeoutMessage);
       }
       
-      // Network errors with retry logic
-      if (error.message.includes('fetch') && attemptsLeft > 0) {
+      // Network errors with retry logic - Use specific TypeError check
+      if (error instanceof TypeError && error.message === 'Failed to fetch' && attemptsLeft > 0) {
         if (optionsToast) {
           toast.warning(`Network error. Retrying in ${retryDelay / 1000} seconds... (${attemptsLeft} attempts left)`);
         }

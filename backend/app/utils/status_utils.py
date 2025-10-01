@@ -18,6 +18,9 @@ from datetime import datetime, timezone
 from typing import Optional, Dict, Any
 from enum import Enum
 
+# Import utc_now from the central location (app.models) to maintain a single source of truth
+from app.models import utc_now
+
 # Import AvailabilityLevel from the protocol base module
 # Note: This creates a circular import risk, but since we only need the enum
 # and not the ProtocolStatus class, it should be manageable
@@ -29,15 +32,6 @@ class AvailabilityLevel(Enum):
     DEGRADED = 1         # Service partially available with reduced functionality  
     AVAILABLE = 2        # Service initialized but not connected
     FULLY_AVAILABLE = 3  # Service initialized and connected with healthy heartbeat
-
-
-def utc_now() -> datetime:
-    """Get current UTC time as timezone-aware datetime.
-    
-    This function ensures all datetime operations in status utils use
-    timezone-aware UTC datetimes consistently with the rest of the application.
-    """
-    return datetime.now(timezone.utc)
 
 
 def is_heartbeat_stale(last_heartbeat: Optional[datetime], heartbeat_timeout_seconds: int = 300) -> bool:
@@ -52,6 +46,10 @@ def is_heartbeat_stale(last_heartbeat: Optional[datetime], heartbeat_timeout_sec
     """
     if not last_heartbeat:
         return True
+    
+    # Ensure last_heartbeat is timezone-aware to prevent TypeError
+    if last_heartbeat.tzinfo is None:
+        last_heartbeat = last_heartbeat.replace(tzinfo=timezone.utc)
     
     time_diff = utc_now() - last_heartbeat
     return time_diff.total_seconds() > heartbeat_timeout_seconds
@@ -68,6 +66,10 @@ def get_time_since_last_heartbeat(last_heartbeat: Optional[datetime]) -> Optiona
     """
     if not last_heartbeat:
         return None
+    
+    # Ensure last_heartbeat is timezone-aware to prevent TypeError
+    if last_heartbeat.tzinfo is None:
+        last_heartbeat = last_heartbeat.replace(tzinfo=timezone.utc)
     
     time_diff = utc_now() - last_heartbeat
     return time_diff.total_seconds()
@@ -182,20 +184,24 @@ def compute_availability_level(
     return AvailabilityLevel.AVAILABLE if available else AvailabilityLevel.UNAVAILABLE
 
 
-def record_error(error_code: str, error_message: str = None, context: Dict[str, Any] = None) -> Dict[str, Any]:
+def record_error(error_code: str, error_message: str = None, context: Dict[str, Any] = None, timestamp: datetime = None) -> Dict[str, Any]:
     """Create an error record with enhanced context and timestamp.
     
     Args:
         error_code: Error code identifier
         error_message: Human-readable error message
         context: Additional error context information
+        timestamp: Optional timestamp for the error (defaults to current UTC time)
         
     Returns:
         Dict[str, Any]: Error record dictionary
     """
+    if timestamp is None:
+        timestamp = utc_now()
+    
     return {
         "code": error_code,
         "message": error_message,
         "context": context or {},
-        "timestamp": utc_now().isoformat()
+        "timestamp": timestamp.isoformat()
     }
