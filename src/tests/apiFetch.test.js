@@ -269,4 +269,113 @@ describe('apiFetch network error retry logic', () => {
     expect(attempts).toBe(2);
     expect(response.ok).toBe(true);
   });
+
+  it('should handle error with undefined message gracefully', async () => {
+    const errorWithUndefinedMessage = new TypeError();
+    delete errorWithUndefinedMessage.message;
+    
+    let attempts = 0;
+    global.fetch = vi.fn(() => {
+      attempts++;
+      return Promise.reject(errorWithUndefinedMessage);
+    });
+
+    await expect(
+      apiFetch('/api/test', { 
+        retries: 2,
+        retryDelay: 10,
+        showToastOnError: false 
+      })
+    ).rejects.toThrow();
+
+    // Should only attempt once since message is undefined (not a network error)
+    expect(attempts).toBe(1);
+  });
+
+  it('should handle error with null message gracefully', async () => {
+    const errorWithNullMessage = new TypeError('test');
+    errorWithNullMessage.message = null;
+    
+    let attempts = 0;
+    global.fetch = vi.fn(() => {
+      attempts++;
+      return Promise.reject(errorWithNullMessage);
+    });
+
+    await expect(
+      apiFetch('/api/test', { 
+        retries: 2,
+        retryDelay: 10,
+        showToastOnError: false 
+      })
+    ).rejects.toThrow();
+
+    // Should only attempt once since message is null (not a network error)
+    expect(attempts).toBe(1);
+  });
+
+  it('should handle error with number message gracefully', async () => {
+    const errorWithNumberMessage = new TypeError();
+    errorWithNumberMessage.message = 123;
+    
+    let attempts = 0;
+    global.fetch = vi.fn(() => {
+      attempts++;
+      return Promise.reject(errorWithNumberMessage);
+    });
+
+    await expect(
+      apiFetch('/api/test', { 
+        retries: 2,
+        retryDelay: 10,
+        showToastOnError: false 
+      })
+    ).rejects.toThrow();
+
+    // Should only attempt once since message is a number (not a network error)
+    expect(attempts).toBe(1);
+  });
+
+  it('should handle error with object message gracefully', async () => {
+    const errorWithObjectMessage = new TypeError();
+    errorWithObjectMessage.message = { error: 'some error' };
+    
+    let attempts = 0;
+    global.fetch = vi.fn(() => {
+      attempts++;
+      return Promise.reject(errorWithObjectMessage);
+    });
+
+    await expect(
+      apiFetch('/api/test', { 
+        retries: 2,
+        retryDelay: 10,
+        showToastOnError: false 
+      })
+    ).rejects.toThrow();
+
+    // Should only attempt once since message is an object (not a network error)
+    expect(attempts).toBe(1);
+  });
+
+  it('should handle error with empty string message gracefully', async () => {
+    const errorWithEmptyMessage = new TypeError('');
+    
+    let attempts = 0;
+    global.fetch = vi.fn(() => {
+      attempts++;
+      return Promise.reject(errorWithEmptyMessage);
+    });
+
+    await expect(
+      apiFetch('/api/test', { 
+        retries: 2,
+        retryDelay: 10,
+        showToastOnError: false 
+      })
+    ).rejects.toThrow();
+
+    // Should only attempt once since empty message doesn't match network patterns
+    expect(attempts).toBe(1);
+  });
 });
