@@ -237,28 +237,79 @@ class TestMetricsCollector:
             assert len(collector.request_count) == 0
     
     def test_metrics_middleware_integration(self, app):
-        """Test metrics collection via middleware (recommended approach)."""
+        """Test metrics collection via middleware and no double-counting with decorator."""
         from app.middleware.metrics import setup_metrics_middleware
         
         # Set up middleware
         setup_metrics_middleware(app)
         
-        # Create a test route
+        # Create a test route without decorator
         @app.route('/test-metrics')
         def test_route():
             return {'message': 'test'}, 200
         
+        # Create a test route with deprecated decorator
+        @app.route('/test-metrics-decorated')
+        @collect_metrics
+        def test_route_decorated():
+            return {'message': 'test decorated'}, 200
+        
         # Get collector
         collector = get_metrics_collector()
         
-        # Make a request
+        # Make requests
         with app.test_client() as client:
+            # Test undecorated route
             response = client.get('/test-metrics')
             assert response.status_code == 200
             
+            # Test decorated route
+            response_decorated = client.get('/test-metrics-decorated')
+            assert response_decorated.status_code == 200
+            
             # Check that metrics were collected by middleware
-            # The endpoint name will be 'test_route' (the function name)
             assert any('GET' in key for key in collector.request_count.keys())
+            
+            # Verify no double-counting - each endpoint should have exactly 1 request
+            assert collector.request_count['GET test_route'] == 1
+            assert collector.request_count['GET test_route_decorated'] == 1
+            
+            # Verify total requests count
+            assert collector.get_metrics_summary()['overview']['total_requests'] == 2
+    
+    def test_metrics_exception_handling(self, app):
+        """Test metrics collection for unhandled exceptions."""
+        from app.middleware.metrics import setup_metrics_middleware
+        
+        # Set up middleware
+        setup_metrics_middleware(app)
+        
+        # Create a route that raises an exception
+        @app.route('/test-error')
+        def test_error_route():
+            raise ValueError("Test exception")
+        
+        # Get collector
+        collector = get_metrics_collector()
+        
+        # Make a request that will fail
+        with app.test_client() as client:
+            response = client.get('/test-error')
+            # Flask returns 500 for unhandled exceptions
+            assert response.status_code == 500
+            
+            # Verify metrics were recorded for the error
+            assert collector.request_count['GET test_error_route'] == 1
+            
+            # Verify error was tracked
+            summary = collector.get_metrics_summary()
+            assert summary['overview']['total_requests'] == 1
+            
+            # Check that error was recorded in recent errors
+            recent_errors = collector.get_recent_errors()
+            assert len(recent_errors) > 0
+            assert recent_errors[-1]['error_type'] == 'ValueError'
+            assert 'Test exception' in recent_errors[-1]['error']
 
 
 class TestSecurityAwareErrorHandler:
