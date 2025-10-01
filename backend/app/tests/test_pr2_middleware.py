@@ -12,7 +12,7 @@ from app.middleware.validation import (
 )
 from app.middleware.rate_limit import RateLimiter, rate_limit, get_rate_limiter
 from app.middleware.request_id import RequestIDManager, RequestIDFilter, track_request_id
-from app.middleware.metrics import MetricsCollector, collect_metrics
+from app.middleware.metrics import MetricsCollector, collect_metrics, get_metrics_collector
 from app.utils.error_handler import SecurityAwareErrorHandler
 
 
@@ -216,8 +216,7 @@ class TestMetricsCollector:
         assert summary['overview']['total_requests'] == 1
     
     def test_collect_metrics_decorator(self, app):
-        """Test metrics collection decorator."""
-        collector = MetricsCollector()
+        """Test metrics collection decorator (now deprecated and acts as no-op)."""
         
         @collect_metrics
         def test_route():
@@ -227,9 +226,39 @@ class TestMetricsCollector:
             g.request_id = 'test-id'
             response = test_route()
             
-            # Metrics should have been recorded
-            key = 'GET None'  # endpoint is None in test context
-            assert collector.endpoint_metrics[key]['calls'] == 1
+            # The decorator is now a no-op wrapper
+            # It should not interfere with the route execution
+            assert response == ({'message': 'test'}, 200)
+            
+            # Metrics should NOT be recorded by the decorator
+            # (they would be recorded by middleware in actual usage)
+            collector = get_metrics_collector()
+            # Since we're not using middleware here, metrics should be empty
+            assert len(collector.request_count) == 0
+    
+    def test_metrics_middleware_integration(self, app):
+        """Test metrics collection via middleware (recommended approach)."""
+        from app.middleware.metrics import setup_metrics_middleware
+        
+        # Set up middleware
+        setup_metrics_middleware(app)
+        
+        # Create a test route
+        @app.route('/test-metrics')
+        def test_route():
+            return {'message': 'test'}, 200
+        
+        # Get collector
+        collector = get_metrics_collector()
+        
+        # Make a request
+        with app.test_client() as client:
+            response = client.get('/test-metrics')
+            assert response.status_code == 200
+            
+            # Check that metrics were collected by middleware
+            # The endpoint name will be 'test_route' (the function name)
+            assert any('GET' in key for key in collector.request_count.keys())
 
 
 class TestSecurityAwareErrorHandler:

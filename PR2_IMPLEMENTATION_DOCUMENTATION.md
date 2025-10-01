@@ -173,16 +173,20 @@ All log messages automatically include request ID when using the configured logg
 - Request volume tracking
 - Recent activity and error logging
 - REST API for metrics access
+- Automatic collection via middleware (no decorator needed)
 
 #### Usage:
 
-```python
-from app.middleware.metrics import collect_metrics
+Metrics are automatically collected for all routes when the middleware is enabled:
 
-@collect_metrics
-def my_endpoint():
-    pass
+```python
+from app.middleware.metrics import setup_metrics_middleware
+
+# In your application factory
+setup_metrics_middleware(app)
 ```
+
+**Note:** The `@collect_metrics` decorator is deprecated and now acts as a no-op wrapper for backward compatibility. All metrics are collected automatically by the middleware.
 
 #### Metrics API Endpoints:
 - `GET /api/v1/metrics/summary` - Complete metrics overview
@@ -313,7 +317,7 @@ See `app/routes/examples.py` for comprehensive examples showing how to use all m
 @track_request_id
 @standard_rate_limit  
 @validate_schema(ExampleRequestSchema)
-@collect_metrics
+# Note: @collect_metrics is deprecated - metrics are automatically collected
 @validate_query_params(
     include_meta=lambda x: x.lower() in ['true', 'false']
 )
@@ -323,6 +327,8 @@ def comprehensive_example():
         validated_data, 'Request processed successfully', 200
     )
 ```
+
+**Important:** The `@collect_metrics` decorator is deprecated as of this refactoring. Metrics are automatically collected for all routes via the middleware setup in `app/__init__.py`. Using the decorator will not cause any issues (it's now a no-op), but it's recommended to remove it from your routes.
 
 ## Benefits
 
@@ -357,5 +363,21 @@ def comprehensive_example():
 - `app/utils/error_handler.py` - Enhanced with error envelope format
 - `config.py` - Added rate limiting and validation configuration  
 - `app/routes/auth.py` - Updated to use new middleware
+
+## Metrics Middleware Refactoring (Post-PR2)
+
+After the initial PR2 implementation, the metrics middleware was refactored to address several issues:
+
+### Issues Fixed:
+1. **Duplicate Metrics Collection**: Removed double-counting that occurred when both the `@collect_metrics` decorator and middleware were used
+2. **Thread Safety**: Fixed improper use of locks with Flask's request-scoped `g` object
+3. **Error Handling**: Removed redundant error handler that interfered with Flask's normal error handling flow
+4. **Consistency**: Standardized endpoint key format across the codebase
+
+### Changes Made:
+- `@collect_metrics` decorator is now deprecated and acts as a no-op wrapper for backward compatibility
+- Metrics collection is now exclusively handled by the middleware (`setup_metrics_middleware`)
+- Thread-local Flask `g` object writes moved outside of locks
+- Error handler removed - metrics are still collected via `after_request` hook
 
 This implementation provides a solid foundation for API reliability, security, and observability while maintaining backward compatibility with existing code.

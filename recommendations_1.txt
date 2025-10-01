@@ -1,0 +1,58 @@
+Metrics Middleware Refactor Recommendations
+
+ISSUE 1: Duplicate Metrics Collection
+======================================
+The current implementation has both `setup_metrics_middleware` (app-level) and 
+`collect_metrics` decorator collecting metrics. When routes use the decorator, 
+metrics are collected twice, causing:
+- Double counting of requests
+- Inaccurate timing measurements
+- Memory inefficiency
+
+RECOMMENDATION: Remove the decorator-based collection and rely only on the 
+middleware-based collection via before_request/after_request hooks.
+
+ISSUE 2: Thread Safety - Flask g Object in Lock
+================================================
+In `record_request_start`, the code writes to Flask's `g` object inside a lock:
+```python
+with self.lock:
+    g.request_start_time = time.time()
+    g.request_endpoint = endpoint
+    g.request_method = method
+```
+
+Flask's `g` object is request-scoped and thread-local. Writing to it doesn't 
+need synchronization, and doing so inside a lock is counterproductive.
+
+RECOMMENDATION: Move `g` object writes outside the lock. Only protect shared 
+state (defaultdict updates) with the lock.
+
+ISSUE 3: Problematic Error Handler
+===================================
+The error handler in `setup_metrics_middleware` catches all exceptions, records 
+metrics, then re-raises. This interferes with Flask's error handling:
+- It may prevent proper error response formatting
+- Creates confusion about error handling flow
+- The re-raise is redundant
+
+RECOMMENDATION: Remove the error handler. Metrics will still be collected via 
+after_request hook for error responses (Flask calls after_request even for errors).
+
+ISSUE 4: Inconsistent Endpoint Key Format
+==========================================
+The decorator uses `request.endpoint or 'unknown'` while middleware uses 
+`request.endpoint or request.path`. This creates inconsistency.
+
+RECOMMENDATION: Standardize on using `request.endpoint or request.path` for 
+better metrics tracking.
+
+IMPLEMENTATION PLAN:
+====================
+1. Deprecate `collect_metrics` decorator (mark as deprecated but keep for 
+   backward compatibility as a no-op wrapper)
+2. Fix thread safety in `record_request_start` by moving g writes outside lock
+3. Remove the problematic error handler from `setup_metrics_middleware`
+4. Standardize endpoint key format
+5. Update documentation to recommend middleware-only approach
+6. Update tests to reflect the changes

@@ -5,6 +5,7 @@ from marshmallow import Schema, fields, validate
 from app.middleware.validation import validate_schema, validate_query_params
 from app.middleware.rate_limit import standard_rate_limit, RateLimitConfig
 from app.middleware.request_id import track_request_id
+# Note: collect_metrics is deprecated - kept for backward compatibility but not used
 from app.middleware.metrics import collect_metrics
 from app.utils.error_handler import SecurityAwareErrorHandler
 
@@ -26,7 +27,6 @@ example_bp = Blueprint('example', __name__, url_prefix='/api/v1/examples')
 @track_request_id
 @standard_rate_limit  # 100 requests per minute per IP
 @validate_schema(ExampleRequestSchema)
-@collect_metrics
 @validate_query_params(
     include_meta=lambda x: x.lower() in ['true', 'false'],
     format=lambda x: x in ['json', 'xml']
@@ -40,7 +40,7 @@ def comprehensive_example():
     - Rate limiting
     - JSON schema validation
     - Query parameter validation  
-    - Metrics collection
+    - Metrics collection (automatic via middleware)
     - Standardized error envelope responses
     """
     # Access validated data from middleware
@@ -87,7 +87,6 @@ def comprehensive_example():
 @example_bp.route('/rate-limited', methods=['GET'])
 @track_request_id
 @rate_limit(limit=5, window_seconds=60, per='ip')  # Custom rate limit: 5 per minute
-@collect_metrics
 def rate_limited_example():
     """Example with strict rate limiting."""
     return SecurityAwareErrorHandler.create_success_response(
@@ -104,9 +103,8 @@ def rate_limited_example():
 @example_bp.route('/metrics-demo', methods=['GET', 'POST', 'PUT'])
 @track_request_id
 @standard_rate_limit
-@collect_metrics
 def metrics_demo():
-    """Example showing metrics collection for different methods."""
+    """Example showing metrics collection for different methods (automatic via middleware)."""
     method = request.method
     
     # Simulate different processing based on method
@@ -134,7 +132,6 @@ def metrics_demo():
 @track_request_id
 @standard_rate_limit
 @validate_schema(ExampleRequestSchema)
-@collect_metrics
 def validation_demo():
     """Example showing comprehensive input validation."""
     validated_data = g.validated_data
