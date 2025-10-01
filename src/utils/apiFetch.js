@@ -137,7 +137,7 @@ export const apiFetch = async (url, options = {}, showToastOnError = true, redir
           } else if (errorData.detail) {
             errorMessage = errorData.detail;
           }
-        } catch (e) {
+        } catch (_e) {
           // Unable to parse error response, use default message
         }
         
