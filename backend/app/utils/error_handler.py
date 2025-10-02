@@ -78,7 +78,7 @@ class SecurityAwareErrorHandler:
         )
         
         # Generate error code from error type
-        error_code = exception.error_type.upper().replace('_', '_')
+        error_code = exception.error_type.upper()
         
         # Create response envelope with correlation ID
         response_data = {
@@ -139,7 +139,7 @@ class SecurityAwareErrorHandler:
         )
         
         # Generate error code from error type
-        error_code = error_type.upper().replace('_', '_')
+        error_code = error_type.upper()
         
         response_data = {
             'success': False,
