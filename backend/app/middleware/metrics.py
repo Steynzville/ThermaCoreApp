@@ -159,11 +159,12 @@ class MetricsCollector:
         """Get recent request activity."""
         with self.lock:
             activity_list = list(self.recent_requests)[-limit:]
-            # Escape endpoint field in each activity record to prevent XSS
+            # Escape endpoint and error fields in each activity record to prevent XSS
             return [
                 {
                     **activity,
-                    'endpoint': escape(activity['endpoint'])
+                    'endpoint': escape(activity['endpoint']),
+                    'error': escape(activity['error']) if activity['error'] else None
                 }
                 for activity in activity_list
             ]
@@ -172,11 +173,12 @@ class MetricsCollector:
         """Get recent errors."""
         with self.lock:
             errors_list = list(self.recent_errors)[-limit:]
-            # Escape endpoint field in each error record to prevent XSS
+            # Escape endpoint and error fields in each error record to prevent XSS
             return [
                 {
                     **error,
-                    'endpoint': escape(error['endpoint'])
+                    'endpoint': escape(error['endpoint']),
+                    'error': escape(error['error'])
                 }
                 for error in errors_list
             ]
