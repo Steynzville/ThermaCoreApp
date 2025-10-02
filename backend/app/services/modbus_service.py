@@ -87,7 +87,8 @@ class ModbusClient:
                 
             registers.append(value)
         
-        logger.debug(f"Read {count} holding registers from address {address}: {registers}")
+        # Avoid logging register addresses to prevent information exposure
+        logger.debug(f"Read {count} holding registers successfully")
         return registers
     
     def read_input_registers(self, address: int, count: int, unit_id: int = 1) -> List[int]:
@@ -103,7 +104,8 @@ class ModbusClient:
         # Simulate coil readings
         import random
         coils = [random.choice([True, False]) for _ in range(count)]
-        logger.debug(f"Read {count} coils from address {address}: {coils}")
+        # Avoid logging register addresses to prevent information exposure
+        logger.debug(f"Read {count} coils successfully")
         return coils
     
     def read_discrete_inputs(self, address: int, count: int, unit_id: int = 1) -> List[bool]:
@@ -115,7 +117,8 @@ class ModbusClient:
         if not self.connected:
             raise ConnectionError("Not connected to Modbus device")
         
-        logger.info(f"Writing coil at address {address} to {value}")
+        # Avoid logging register addresses to prevent information exposure
+        logger.info(f"Writing coil to device (unit {unit_id})")
         # Simulate write operation
         return True
     
@@ -124,7 +127,8 @@ class ModbusClient:
         if not self.connected:
             raise ConnectionError("Not connected to Modbus device")
         
-        logger.info(f"Writing register at address {address} to {value}")
+        # Avoid logging register addresses to prevent information exposure
+        logger.info(f"Writing register to device (unit {unit_id})")
         # Simulate write operation
         return True
     
@@ -133,7 +137,8 @@ class ModbusClient:
         if not self.connected:
             raise ConnectionError("Not connected to Modbus device")
         
-        logger.info(f"Writing {len(values)} registers starting at address {address}")
+        # Avoid logging register addresses to prevent information exposure
+        logger.info(f"Writing {len(values)} registers to device (unit {unit_id})")
         # Simulate atomic write operation
         return True
 
@@ -338,7 +343,8 @@ class ModbusService:
                     }
                     
                 except Exception as e:
-                    logger.error(f"Failed to read register {register.address} on device {device_id}: {e}")
+                    # Avoid logging register addresses to prevent information exposure
+                    logger.error(f"Failed to read register on device {device_id}: {e}")
                     continue
             
             # Store last readings
@@ -402,7 +408,8 @@ class ModbusService:
                 raise ValueError(f"Cannot write to register type: {register_type}")
             
             if success:
-                logger.info(f"Successfully wrote {value} to {register_type} address {address} on device {device_id}")
+                # Avoid logging register addresses to prevent information exposure
+                logger.info(f"Successfully wrote to {register_type} on device {device_id}")
             
             return success
             
