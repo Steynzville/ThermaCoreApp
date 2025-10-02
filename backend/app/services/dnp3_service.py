@@ -1012,7 +1012,7 @@ class DNP3Service:
             'success_rate_percent': round(success_rate, 2),
             'total_errors': total_errors,
             'active_devices': len([d for d in self._devices.values() if d.is_connected]),
-            'cached_readings': len(self._data_cache.cache),
+            'cached_readings': len(self._data_cache),
             'performance_optimizations': {
                 'caching': self._enable_caching,
                 'bulk_operations': self._enable_bulk_operations,
