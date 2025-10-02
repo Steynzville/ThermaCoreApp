@@ -63,17 +63,15 @@ class TestDNP3CacheLookupOptimization:
         }
         service._connection_pool['test_device'] = test_conn_info
         
-        # Use Mock to track calls to _connection_pool.get
+        # Use patch.object as context manager to track calls to _connection_pool.get
         original_get = service._connection_pool.get
-        mock_get = Mock(side_effect=original_get)
-        service._connection_pool.get = mock_get
-        
-        # Get device stats
-        stats = service.get_device_performance_stats('test_device')
-        
-        # Verify .get() was called exactly once for the device_id
-        mock_get.assert_called_once_with('test_device')
-        assert 'connection_established' in stats
+        with patch.object(service._connection_pool, 'get', side_effect=original_get, wraps=original_get) as mock_get:
+            # Get device stats
+            stats = service.get_device_performance_stats('test_device')
+            
+            # Verify .get() was called exactly once for the device_id
+            mock_get.assert_called_once_with('test_device')
+            assert 'connection_established' in stats
     
     def test_connection_pool_is_ttlcache(self):
         """Test that connection pool uses TTLCache which supports .get() method."""
