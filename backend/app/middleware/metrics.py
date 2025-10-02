@@ -6,8 +6,7 @@ from threading import Lock
 from typing import Dict, Any, Optional, List, Callable
 from functools import wraps
 
-from flask import request, g, current_app
-from markupsafe import escape
+from flask import request, g, current_app, escape
 from werkzeug.exceptions import HTTPException
 
 from app.middleware.request_id import RequestIDManager
@@ -93,7 +92,7 @@ class MetricsCollector:
                 'method': method,
                 'status_code': status_code,
                 'duration': round(duration, 4),
-                'request_id': get_safe_request_id(),
+                'request_id': RequestIDManager.get_request_id(),
                 'error': str(error) if error else None
             })
             
@@ -106,7 +105,7 @@ class MetricsCollector:
                     'error': str(error),
                     'error_type': type(error).__name__,
                     'status_code': status_code,
-                    'request_id': get_safe_request_id()
+                    'request_id': RequestIDManager.get_request_id()
                 })
     
     def get_metrics_summary(self) -> Dict[str, Any]:
@@ -242,15 +241,6 @@ def get_metrics_collector() -> MetricsCollector:
     return _metrics_collector
 
 
-def get_safe_request_id() -> str:
-    """Get request ID and escape it for safe inclusion in responses.
-    
-    Returns:
-        Escaped request ID string safe for HTML/JSON output, or empty string if None.
-    """
-    return escape(RequestIDManager.get_request_id() or '')
-
-
 def collect_metrics(f: Callable) -> Callable:
     """
     Decorator to collect metrics for route handlers.
@@ -328,7 +318,7 @@ def create_metrics_blueprint():
         return {
             'success': True,
             'data': collector.get_metrics_summary(),
-            'request_id': get_safe_request_id(),
+            'request_id': RequestIDManager.get_request_id(),
             'timestamp': datetime.utcnow().isoformat() + 'Z'
         }
     
@@ -342,7 +332,7 @@ def create_metrics_blueprint():
         return {
             'success': True,
             'data': collector.get_recent_activity(limit),
-            'request_id': get_safe_request_id(),
+            'request_id': RequestIDManager.get_request_id(),
             'timestamp': datetime.utcnow().isoformat() + 'Z'
         }
     
@@ -356,7 +346,7 @@ def create_metrics_blueprint():
         return {
             'success': True,
             'data': collector.get_recent_errors(limit),
-            'request_id': get_safe_request_id(),
+            'request_id': RequestIDManager.get_request_id(),
             'timestamp': datetime.utcnow().isoformat() + 'Z'
         }
     
@@ -373,14 +363,14 @@ def create_metrics_blueprint():
                     'code': 'ENDPOINT_NOT_FOUND',
                     'message': f'No metrics found for endpoint: {escape(endpoint)}'
                 },
-                'request_id': get_safe_request_id(),
+                'request_id': RequestIDManager.get_request_id(),
                 'timestamp': datetime.utcnow().isoformat() + 'Z'
             }, 404
         
         return {
             'success': True,
             'data': data,
-            'request_id': get_safe_request_id(),
+            'request_id': RequestIDManager.get_request_id(),
             'timestamp': datetime.utcnow().isoformat() + 'Z'
         }
     
