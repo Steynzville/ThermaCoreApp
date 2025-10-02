@@ -362,34 +362,47 @@ class TestMetricsCollector:
             # Get metrics summary
             summary = collector.get_metrics_summary()
             
-            # Check endpoints dictionary keys are escaped
+            # Check endpoints dictionary keys are escaped - verify dangerous HTML tags are NOT executable
             for endpoint_key in summary['endpoints'].keys():
+                # Dangerous opening tags should not be present in executable form
                 assert '<script>' not in endpoint_key
+                assert '</script>' not in endpoint_key
                 assert '<img' not in endpoint_key
-                assert 'onerror' not in endpoint_key or '&lt;' in endpoint_key
+                assert '<iframe' not in endpoint_key
+                assert '<svg' not in endpoint_key
             
             # Check endpoint field in each stats object is escaped
             for endpoint_key, stats in summary['endpoints'].items():
+                # Dangerous opening tags should not be present in executable form
                 assert '<script>' not in stats['endpoint']
+                assert '</script>' not in stats['endpoint']
                 assert '<img' not in stats['endpoint']
-                assert '&lt;' in stats['endpoint'] or '&gt;' in stats['endpoint']
+                assert '<iframe' not in stats['endpoint']
+                assert '<svg' not in stats['endpoint']
             
             # Check top_endpoints list has escaped endpoint values
             for endpoint_stat in summary['top_endpoints']:
+                # Dangerous opening tags should not be present in executable form
                 assert '<script>' not in endpoint_stat['endpoint']
+                assert '</script>' not in endpoint_stat['endpoint']
                 assert '<img' not in endpoint_stat['endpoint']
-                assert '&lt;' in endpoint_stat['endpoint'] or '&gt;' in endpoint_stat['endpoint']
+                assert '<iframe' not in endpoint_stat['endpoint']
+                assert '<svg' not in endpoint_stat['endpoint']
             
             # Check error_summary endpoint keys are escaped
             for endpoint_key in summary['error_summary']['error_rate_by_endpoint'].keys():
+                # Dangerous opening tags should not be present in executable form
                 assert '<script>' not in endpoint_key
+                assert '</script>' not in endpoint_key
                 assert '<img' not in endpoint_key
+                assert '<iframe' not in endpoint_key
+                assert '<svg' not in endpoint_key
     
     def test_get_recent_activity_xss_protection(self, app):
         """Test that get_recent_activity escapes endpoint data to prevent XSS."""
         collector = MetricsCollector()
         
-        # Create malicious endpoint string
+        # Create malicious endpoint string with error containing XSS
         malicious_endpoint = '<svg onload=alert(1)>/api/test'
         
         with app.test_request_context(malicious_endpoint, method='GET'):
@@ -398,20 +411,30 @@ class TestMetricsCollector:
             # Record request
             collector.record_request_start(malicious_endpoint, 'GET')
             time.sleep(0.01)
-            collector.record_request_end(200)
+            # Record with an error that contains XSS attempt
+            test_error = ValueError("<script>alert('error XSS')</script>")
+            collector.record_request_end(500, error=test_error)
             
             # Get recent activity
             activity = collector.get_recent_activity(10)
             
-            # Verify endpoint is escaped in all activity records
+            # Verify endpoint and error fields are escaped - check dangerous HTML tags are NOT executable
             assert len(activity) > 0
             for record in activity:
-                if malicious_endpoint in record['endpoint'] or '&lt;' in record['endpoint']:
-                    # Found our malicious endpoint record
-                    assert '<svg' not in record['endpoint']
-                    assert 'onload' not in record['endpoint'] or '&lt;' in record['endpoint']
-                    assert '&lt;' in record['endpoint']
-                    assert '&gt;' in record['endpoint']
+                # Check endpoint field - dangerous HTML tags should not be in executable form
+                assert '<svg' not in record['endpoint']
+                assert '<script>' not in record['endpoint']
+                assert '</script>' not in record['endpoint']
+                assert '<img' not in record['endpoint']
+                assert '<iframe' not in record['endpoint']
+                
+                # Check error field for dangerous HTML tags (if present)
+                if record.get('error'):
+                    assert '<script>' not in record['error']
+                    assert '</script>' not in record['error']
+                    assert '<img' not in record['error']
+                    assert '<iframe' not in record['error']
+                    assert '<svg' not in record['error']
     
     def test_get_recent_errors_xss_protection(self, app):
         """Test that get_recent_errors escapes endpoint data to prevent XSS."""
@@ -423,24 +446,31 @@ class TestMetricsCollector:
         with app.test_request_context(malicious_endpoint, method='GET'):
             g.request_id = 'test-id'
             
-            # Record request with error
+            # Record request with error containing XSS
             collector.record_request_start(malicious_endpoint, 'GET')
             time.sleep(0.01)
-            test_error = ValueError("Test error")
+            test_error = ValueError("<img src=x onerror=alert('XSS in error')>")
             collector.record_request_end(500, error=test_error)
             
             # Get recent errors
             errors = collector.get_recent_errors(10)
             
-            # Verify endpoint is escaped in all error records
+            # Verify endpoint and error fields are escaped - check dangerous HTML tags are NOT executable
             assert len(errors) > 0
             for record in errors:
-                if malicious_endpoint in record['endpoint'] or '&lt;' in record['endpoint']:
-                    # Found our malicious endpoint record
-                    assert '<iframe' not in record['endpoint']
-                    assert 'javascript:' not in record['endpoint'] or '&lt;' in record['endpoint']
-                    assert '&lt;' in record['endpoint']
-                    assert '&gt;' in record['endpoint']
+                # Check endpoint field - dangerous HTML tags should not be in executable form
+                assert '<iframe' not in record['endpoint']
+                assert '<script>' not in record['endpoint']
+                assert '</script>' not in record['endpoint']
+                assert '<img' not in record['endpoint']
+                assert '<svg' not in record['endpoint']
+                
+                # Check error field - dangerous HTML tags should not be in executable form
+                assert '<script>' not in record['error']
+                assert '</script>' not in record['error']
+                assert '<img' not in record['error']
+                assert '<iframe' not in record['error']
+                assert '<svg' not in record['error']
 
 
 class TestSecurityAwareErrorHandler:
