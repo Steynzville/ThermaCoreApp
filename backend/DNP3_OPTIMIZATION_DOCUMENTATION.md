@@ -1,5 +1,8 @@
 # DNP3 Optimization and Performance Measurements Documentation
 
+> **Last Reviewed**: October 2024  
+> **Status**: Current and Accurate
+
 ## Overview
 
 This implementation adds comprehensive performance optimizations and measurement capabilities to the DNP3 protocol service in ThermaCore SCADA system. The optimizations focus on reducing network overhead, improving response times, and providing detailed performance monitoring.

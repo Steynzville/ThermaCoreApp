@@ -1,5 +1,8 @@
 # Testing Guidelines
 
+> **Last Reviewed**: October 2024  
+> **Status**: Current and Accurate
+
 Comprehensive testing is essential for ensuring the reliability, stability, and correctness of the ThermaCoreApp. This document outlines the testing strategy, tools, and best practices for both the Python Flask backend and the React frontend.
 
 ## 1. General Testing Principles

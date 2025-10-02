@@ -1,5 +1,8 @@
 # Architecture Overview
 
+> **Last Reviewed**: October 2024  
+> **Status**: Current and Accurate
+
 The ThermaCoreApp is a full-stack application designed for monitoring and managing industrial units, likely in a SCADA (Supervisory Control and Data Acquisition) context. It comprises a Python Flask backend API and a React frontend application, communicating primarily via RESTful APIs and WebSockets. The architecture emphasizes modularity, security, and scalability.
 
 ## 1. High-Level Architecture

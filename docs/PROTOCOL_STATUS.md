@@ -1,5 +1,8 @@
 # Protocol Status Normalization (PR1 & PR1a)
 
+> **Last Reviewed**: October 2024  
+> **Status**: Current and Accurate
+
 This document describes the normalized schema returned by `GET /api/v1/protocols/status` after PR1 and PR1a enhancements.
 
 ## Response Envelope

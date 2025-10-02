@@ -1,5 +1,8 @@
 # Code Style Guidelines
 
+> **Last Reviewed**: October 2024  
+> **Status**: Current and Accurate
+
 Consistent code style is crucial for readability, maintainability, and collaboration within the ThermaCoreApp project. This document outlines the code style guidelines for both the Python backend and the React frontend.
 
 ## 1. General Principles

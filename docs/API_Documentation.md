@@ -1,5 +1,8 @@
 # API Documentation
 
+> **Last Reviewed**: October 2024  
+> **Status**: Current and Accurate
+
 The ThermaCoreApp backend exposes a RESTful API for managing users, units, sensor data, and analytics. This document provides an overview of the available endpoints, their functionalities, and expected request/response formats.
 
 ## 1. Base URL

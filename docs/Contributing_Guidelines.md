@@ -1,5 +1,8 @@
 # Contributing Guidelines
 
+> **Last Reviewed**: October 2024  
+> **Status**: Current and Accurate
+
 We welcome contributions to the ThermaCoreApp project! By contributing, you help us improve the application for everyone. To ensure a smooth and collaborative development process, please follow these guidelines.
 
 ## 1. Code of Conduct
@@ -36,16 +39,16 @@ cd ThermaCoreApp
     ```bash
 git checkout -b feature/your-feature-name
     ```
-4.  **Set Up Development Environment**: Follow the instructions in the [Getting Started Guide](/docs/GETTING_STARTED.md) to set up your local development environment.
-5.  **Make Your Changes**: Implement your feature or fix. Ensure your code adheres to the [Code Style Guidelines](/docs/CODE_STYLE_GUIDELINES.md).
-6.  **Write Tests**: Add or update tests to cover your changes. Refer to the [Testing Guidelines](/docs/TESTING_GUIDELINES.md).
+4.  **Set Up Development Environment**: Follow the instructions in the [Getting Started Guide](/docs/Getting_Started_Guide_for_New_Developers.md) to set up your local development environment.
+5.  **Make Your Changes**: Implement your feature or fix. Ensure your code adheres to the [Code Style Guidelines](/docs/Code_Style_Guidelines.md).
+6.  **Write Tests**: Add or update tests to cover your changes. Refer to the [Testing Guidelines](/docs/Testing_Guidelines.md).
 7.  **Run Tests**: Ensure all existing tests pass, along with your new tests.
     *   **Backend**: `pytest backend/app/tests`
     *   **Frontend**: `pnpm test`
 8.  **Format and Lint Your Code**: Ensure your code is properly formatted and passes linting checks.
     *   **Backend**: Use `flake8` or `pylint`.
     *   **Frontend**: `pnpm run format` and `pnpm run lint:fix`
-9.  **Commit Your Changes**: Write clear and concise commit messages following the [Code Style Guidelines](/docs/CODE_STYLE_GUIDELINES.md) (e.g., `feat: add user profile page`, `fix: resolve unit status display issue`).
+9.  **Commit Your Changes**: Write clear and concise commit messages following the [Code Style Guidelines](/docs/Code_Style_Guidelines.md) (e.g., `feat: add user profile page`, `fix: resolve unit status display issue`).
     ```bash
 git add .
 git commit -m "feat: your commit message"
@@ -72,7 +75,7 @@ git push origin feature/your-feature-name
 
 ## 5. Protocol Implementation Standards
 
-*   When contributing to or extending protocol integrations (MQTT, OPC UA, Modbus, DNP3), ensure strict adherence to the [Protocol Implementation Standards](/docs/PROTOCOL_IMPLEMENTATION_STANDARDS.md).
+*   When contributing to or extending protocol integrations (MQTT, OPC UA, Modbus, DNP3), ensure strict adherence to the [Protocol Implementation Standards](/docs/Protocol_Implementation_Standards.md).
 *   Pay close attention to security, error handling, and configuration aspects outlined in the standards.
 
 Thank you for your contributions!

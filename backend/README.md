@@ -1,5 +1,8 @@
 # ThermaCore SCADA API Backend
 
+> **Last Reviewed**: October 2024  
+> **Status**: Current and Accurate
+
 A comprehensive REST API backend for the ThermaCore SCADA system, built with Flask, SQLAlchemy, and TimescaleDB for time-series data management.
 
 ## 🚀 Features

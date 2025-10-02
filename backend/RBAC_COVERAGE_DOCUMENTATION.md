@@ -1,5 +1,8 @@
 # ThermaCore SCADA API - Enhanced RBAC Coverage Documentation
 
+> **Last Reviewed**: October 2024  
+> **Status**: Current and Accurate
+
 ## Overview
 
 This document provides comprehensive coverage of the Role-Based Access Control (RBAC) implementation in the ThermaCore SCADA API, including enhanced security features added in PR3.

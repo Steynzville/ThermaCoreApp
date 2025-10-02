@@ -1,5 +1,8 @@
 # Protocol Implementation Standards
 
+> **Last Reviewed**: October 2024  
+> **Status**: Current and Accurate
+
 The ThermaCoreApp integrates with various industrial communication protocols to acquire data from and send commands to SCADA (Supervisory Control and Data Acquisition) units. This document outlines the standards and best practices for implementing and extending protocol support within the application.
 
 ## 1. Supported Protocols
