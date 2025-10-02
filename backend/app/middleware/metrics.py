@@ -133,7 +133,7 @@ class MetricsCollector:
                     error_rate = (metrics['errors'] / metrics['calls']) * 100
                     
                     stats = {
-                        'endpoint': key,
+                        'endpoint': escape(key),
                         'calls': metrics['calls'],
                         'avg_response_time': round(avg_time, 4),
                         'min_response_time': round(metrics['min_time'], 4),
@@ -142,9 +142,9 @@ class MetricsCollector:
                         'total_errors': metrics['errors']
                     }
                     
-                    summary['endpoints'][key] = stats
+                    summary['endpoints'][escape(key)] = stats
                     endpoint_stats.append(stats)
-                    summary['error_summary']['error_rate_by_endpoint'][key] = error_rate
+                    summary['error_summary']['error_rate_by_endpoint'][escape(key)] = error_rate
             
             # Sort by call count for top endpoints
             summary['top_endpoints'] = sorted(
@@ -158,12 +158,28 @@ class MetricsCollector:
     def get_recent_activity(self, limit: int = 50) -> List[Dict[str, Any]]:
         """Get recent request activity."""
         with self.lock:
-            return list(self.recent_requests)[-limit:]
+            activity_list = list(self.recent_requests)[-limit:]
+            # Escape endpoint field in each activity record to prevent XSS
+            return [
+                {
+                    **activity,
+                    'endpoint': escape(activity['endpoint'])
+                }
+                for activity in activity_list
+            ]
     
     def get_recent_errors(self, limit: int = 20) -> List[Dict[str, Any]]:
         """Get recent errors."""
         with self.lock:
-            return list(self.recent_errors)[-limit:]
+            errors_list = list(self.recent_errors)[-limit:]
+            # Escape endpoint field in each error record to prevent XSS
+            return [
+                {
+                    **error,
+                    'endpoint': escape(error['endpoint'])
+                }
+                for error in errors_list
+            ]
     
     def get_endpoint_metrics(self, endpoint: str) -> Dict[str, Any]:
         """Get metrics for a specific endpoint."""
