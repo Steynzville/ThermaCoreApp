@@ -403,8 +403,15 @@ def configure_dnp3_performance():
             return jsonify({'error': 'DNP3 service not available'}), 503
         
         data = request.get_json() or {}
+        
+        # Validate input types
         caching = data.get('enable_caching', True)
         bulk_operations = data.get('enable_bulk_operations', True)
+        
+        if not isinstance(caching, bool):
+            return jsonify({'error': 'enable_caching must be a boolean'}), 400
+        if not isinstance(bulk_operations, bool):
+            return jsonify({'error': 'enable_bulk_operations must be a boolean'}), 400
         
         current_app.dnp3_service.enable_performance_optimizations(
             caching=caching, 
