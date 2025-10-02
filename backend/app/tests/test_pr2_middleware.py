@@ -331,13 +331,13 @@ class TestMetricsCollector:
             metrics = collector.get_endpoint_metrics(key)
             
             # Verify the endpoint in the response is escaped
-            assert metrics['endpoint'] != malicious_endpoint
+            assert metrics['endpoint'] != key
             assert '&lt;' in metrics['endpoint']  # < should be escaped to &lt;
             assert '&gt;' in metrics['endpoint']  # > should be escaped to &gt;
             assert '<script>' not in metrics['endpoint']  # Raw script tag should not be present
             assert '</script>' not in metrics['endpoint']  # Raw closing script tag should not be present
             assert 'alert' in metrics['endpoint']  # But the text content should still be there (escaped)
-            assert '&quot;' in metrics['endpoint']  # " should be escaped to &quot;
+            assert '&#34;' in metrics['endpoint']  # " should be escaped to &#34;
     
     def test_get_metrics_summary_xss_protection(self, app):
         """Test that get_metrics_summary escapes endpoint data to prevent XSS."""
