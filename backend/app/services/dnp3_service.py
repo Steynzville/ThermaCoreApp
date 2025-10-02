@@ -121,6 +121,249 @@ def dnp3_performance_monitor(operation_name: str = None):
     return decorator
 
 
+class DNP3ConnectionPool:
+    """Connection pool with TTLCache-based automatic cleanup.
+    
+    Uses cachetools.TTLCache to automatically expire stale connections,
+    eliminating the need for manual periodic cleanup.
+    """
+    
+    def __init__(self, max_connections: int = 20, connection_ttl: float = 300.0):
+        """Initialize connection pool with TTL-based expiration.
+        
+        Args:
+            max_connections: Maximum number of concurrent connections
+            connection_ttl: Time-to-live for connections in seconds (default: 300s/5min)
+        """
+        self.max_connections = max_connections
+        self.connection_ttl = connection_ttl
+        # Use TTLCache for automatic expiration
+        self._pool = TTLCache(maxsize=max_connections, ttl=connection_ttl)
+        self.connection_usage = defaultdict(int)
+        self._lock = RLock()
+    
+    @property
+    def connections(self) -> Dict[str, Any]:
+        """Get current connections dictionary."""
+        with self._lock:
+            return dict(self._pool)
+    
+    def get_connection(self, device_id: str, device: 'DNP3Device') -> bool:
+        """Get or create a connection for a device.
+        
+        Args:
+            device_id: Device identifier
+            device: DNP3Device configuration
+            
+        Returns:
+            True if connection exists or was created
+        """
+        with self._lock:
+            if device_id in self._pool:
+                # Update last_used timestamp
+                conn_info = self._pool[device_id]
+                conn_info['last_used'] = utc_now()
+                self._pool[device_id] = conn_info
+                self.connection_usage[device_id] += 1
+                return True
+            else:
+                # Create new connection
+                conn_info = {
+                    'device_info': device,
+                    'connected_at': utc_now(),
+                    'last_used': utc_now()
+                }
+                self._pool[device_id] = conn_info
+                self.connection_usage[device_id] = 1
+                return True
+    
+    def cleanup_stale_connections(self, max_idle_time: float = 300.0):
+        """Clean up stale connections (kept for backward compatibility).
+        
+        Note: TTLCache handles cleanup automatically, but this method
+        is kept for explicit cleanup if needed.
+        
+        Args:
+            max_idle_time: Maximum idle time in seconds (not used with TTLCache)
+        """
+        # TTLCache automatically handles expiration
+        # This method is kept for compatibility but does nothing
+        pass
+    
+    def __setitem__(self, key: str, value: Any):
+        """Set item in pool (dict-like interface)."""
+        with self._lock:
+            self._pool[key] = value
+    
+    def __getitem__(self, key: str) -> Any:
+        """Get item from pool (dict-like interface)."""
+        with self._lock:
+            return self._pool[key]
+    
+    def __contains__(self, key: str) -> bool:
+        """Check if key is in pool (dict-like interface)."""
+        with self._lock:
+            return key in self._pool
+    
+    def pop(self, key: str, default=None) -> Any:
+        """Remove and return item from pool (dict-like interface)."""
+        with self._lock:
+            return self._pool.pop(key, default)
+    
+    def items(self):
+        """Get items iterator (dict-like interface)."""
+        with self._lock:
+            return list(self._pool.items())
+
+
+class DNP3DataCache:
+    """Data cache with optimized device-level invalidation.
+    
+    Maintains a device index for O(M) cache invalidation where M is the
+    number of cache entries for a specific device, rather than O(N) where
+    N is the total cache size.
+    """
+    
+    def __init__(self, default_ttl: float = 2.0, maxsize: int = 1024):
+        """Initialize data cache with TTL and size limits.
+        
+        Args:
+            default_ttl: Default time-to-live for cache entries in seconds
+            maxsize: Maximum number of cache entries
+        """
+        self.default_ttl = default_ttl
+        self.maxsize = maxsize
+        # Use TTLCache for automatic expiration
+        self._cache = TTLCache(maxsize=maxsize, ttl=default_ttl)
+        # Device index for O(M) invalidation: device_id -> set of cache keys
+        self._device_index = defaultdict(set)
+        self._lock = RLock()
+        self._last_status_log = utc_now()
+        self._status_log_interval = 300.0  # Log every 5 minutes
+    
+    @property
+    def cache(self) -> Dict[Tuple[str, int], Any]:
+        """Get current cache dictionary."""
+        with self._lock:
+            return dict(self._cache)
+    
+    def cache_reading(self, device_id: str, reading: 'DNP3Reading'):
+        """Cache a reading for a device.
+        
+        Args:
+            device_id: Device identifier
+            reading: DNP3Reading to cache
+        """
+        with self._lock:
+            cache_key = (device_id, reading.index)
+            self._cache[cache_key] = reading
+            # Maintain device index for O(M) invalidation
+            self._device_index[device_id].add(cache_key)
+            
+            # Periodic cache status logging
+            self._log_cache_status_if_needed()
+    
+    def get_cached_reading(self, device_id: str, index: int) -> Optional['DNP3Reading']:
+        """Get a cached reading for a device.
+        
+        Args:
+            device_id: Device identifier
+            index: Data point index
+            
+        Returns:
+            Cached reading or None if not found/expired
+        """
+        with self._lock:
+            cache_key = (device_id, index)
+            reading = self._cache.get(cache_key)
+            
+            # Clean up device index if entry expired
+            if reading is None and cache_key in self._device_index[device_id]:
+                self._device_index[device_id].discard(cache_key)
+            
+            return reading
+    
+    def invalidate_device_cache(self, device_id: str):
+        """Invalidate all cache entries for a device.
+        
+        Optimized to O(M) where M is the number of entries for the device,
+        rather than O(N) where N is the total cache size.
+        
+        Args:
+            device_id: Device identifier
+        """
+        with self._lock:
+            # Get all cache keys for this device from index - O(1)
+            device_keys = self._device_index.get(device_id, set())
+            
+            # Remove each key - O(M) where M is entries for this device
+            for cache_key in device_keys:
+                self._cache.pop(cache_key, None)
+            
+            # Clear device index entry
+            self._device_index.pop(device_id, None)
+            
+            logger.debug(f"Invalidated {len(device_keys)} cache entries for device {device_id}")
+    
+    def _log_cache_status_if_needed(self):
+        """Log cache status periodically for monitoring."""
+        now = utc_now()
+        if (now - self._last_status_log).total_seconds() > self._status_log_interval:
+            cache_size = len(self._cache)
+            num_devices = len(self._device_index)
+            
+            # Calculate cache utilization
+            utilization = (cache_size / self.maxsize * 100) if self.maxsize > 0 else 0
+            
+            logger.info(
+                f"DNP3 Cache Status: {cache_size}/{self.maxsize} entries ({utilization:.1f}% full), "
+                f"{num_devices} devices, TTL={self.default_ttl}s"
+            )
+            
+            # Log per-device breakdown if there are entries
+            if num_devices > 0:
+                device_counts = {dev_id: len(keys) for dev_id, keys in self._device_index.items()}
+                logger.debug(f"Cache entries per device: {device_counts}")
+            
+            self._last_status_log = now
+    
+    def __setitem__(self, key: Tuple[str, int], value: Any):
+        """Set item in cache (dict-like interface)."""
+        device_id = key[0]
+        with self._lock:
+            self._cache[key] = value
+            self._device_index[device_id].add(key)
+    
+    def __getitem__(self, key: Tuple[str, int]) -> Any:
+        """Get item from cache (dict-like interface)."""
+        with self._lock:
+            return self._cache[key]
+    
+    def __contains__(self, key: Tuple[str, int]) -> bool:
+        """Check if key is in cache (dict-like interface)."""
+        with self._lock:
+            return key in self._cache
+    
+    def get(self, key: Tuple[str, int], default=None) -> Any:
+        """Get item from cache with default (dict-like interface)."""
+        with self._lock:
+            return self._cache.get(key, default)
+    
+    def pop(self, key: Tuple[str, int], default=None) -> Any:
+        """Remove and return item from cache (dict-like interface)."""
+        with self._lock:
+            value = self._cache.pop(key, default)
+            # Clean up device index
+            if key in self._device_index[key[0]]:
+                self._device_index[key[0]].discard(key)
+            return value
+    
+    def keys(self):
+        """Get keys iterator (dict-like interface)."""
+        with self._lock:
+            return list(self._cache.keys())
+
+
 class DNP3DataType(Enum):
     """DNP3 data point types."""
     BINARY_INPUT = "binary_input"
@@ -444,19 +687,17 @@ class DNP3Service:
         self._data_point_configs: Dict[str, List[DNP3DataPoint]] = {}
         self._last_readings: Dict[str, List[DNP3Reading]] = {}
         
-        # Performance optimization components using cachetools
+        # Performance optimization components using cachetools wrappers
         self._performance_metrics = DNP3PerformanceMetrics()
-        # LRUCache for connection pool with max 20 connections
-        self._connection_pool = LRUCache(maxsize=20)
-        # TTLCache for data cache with 2-second TTL and max 1024 entries
-        self._data_cache = TTLCache(maxsize=1024, ttl=2.0)
+        # DNP3ConnectionPool with TTLCache for automatic cleanup (max 20 connections, 300s TTL)
+        self._connection_pool = DNP3ConnectionPool(max_connections=20, connection_ttl=300.0)
+        # DNP3DataCache with optimized O(M) device invalidation (2s TTL, max 1024 entries)
+        self._data_cache = DNP3DataCache(default_ttl=2.0, maxsize=1024)
         self._cache_lock = RLock()  # Lock for thread-safe cache access
         
         # Performance configuration
         self._enable_caching = True
         self._enable_bulk_operations = True
-        self._cache_cleanup_interval = 300  # 5 minutes (not needed with TTLCache)
-        self._last_cache_cleanup = utc_now()
         
         if app:
             self.init_app(app)
@@ -545,22 +786,18 @@ class DNP3Service:
                 logger.error("DNP3 master not initialized")
                 return False
             
-            # Use LRUCache-based connection pool
-            connection_info = {
-                'device_info': device,
-                'connected_at': utc_now(),
-                'last_used': utc_now()
-            }
-            self._connection_pool[device_id] = connection_info
-            
-            success = self._master.connect_outstation(device.outstation_address)
+            # Use DNP3ConnectionPool with automatic TTL-based cleanup
+            success = self._connection_pool.get_connection(device_id, device)
             
             if success:
-                device.is_connected = True
-                logger.info(f"Connected to DNP3 device: {device_id}")
-            else:
-                # Remove from pool on failure
-                self._connection_pool.pop(device_id, None)
+                success = self._master.connect_outstation(device.outstation_address)
+                
+                if success:
+                    device.is_connected = True
+                    logger.info(f"Connected to DNP3 device: {device_id}")
+                else:
+                    # Remove from pool on failure
+                    self._connection_pool.pop(device_id, None)
             
             return success
             
@@ -583,11 +820,8 @@ class DNP3Service:
                 # Clean up connection pool
                 self._connection_pool.pop(device_id, None)
                 
-                # Invalidate device cache
-                with self._cache_lock:
-                    keys_to_remove = [key for key in self._data_cache.keys() if key[0] == device_id]
-                    for key in keys_to_remove:
-                        self._data_cache.pop(key, None)
+                # Invalidate device cache using optimized O(M) method
+                self._data_cache.invalidate_device_cache(device_id)
             
             logger.info(f"Disconnected from DNP3 device: {device_id}")
             return True
@@ -629,9 +863,6 @@ class DNP3Service:
     def read_device_data(self, device_id: str) -> Dict[str, Any]:
         """Read data from all configured data points with optimization and caching."""
         try:
-            # Clean up cache if needed
-            self._cleanup_cache_if_needed()
-            
             if device_id not in self._devices:
                 raise ValueError(f"Device {device_id} not configured")
                 
@@ -654,14 +885,12 @@ class DNP3Service:
             if self._enable_caching:
                 uncached_points = []
                 
-                with self._cache_lock:
-                    for dp in data_points:
-                        cache_key = (device_id, dp.index)
-                        if cache_key in self._data_cache:
-                            cached_reading = self._data_cache[cache_key]
-                            cached_readings.append(cached_reading)
-                        else:
-                            uncached_points.append(dp)
+                for dp in data_points:
+                    cached_reading = self._data_cache.get_cached_reading(device_id, dp.index)
+                    if cached_reading is not None:
+                        cached_readings.append(cached_reading)
+                    else:
+                        uncached_points.append(dp)
                 
                 readings.extend(cached_readings)
                 data_points = uncached_points  # Only read uncached data
@@ -817,10 +1046,8 @@ class DNP3Service:
                     cached_indices = {r.index for r in cached_readings}
                     new_readings = [r for r in readings if r.index not in cached_indices]
                     if new_readings:
-                        with self._cache_lock:
-                            for reading in new_readings:
-                                cache_key = (device_id, reading.index)
-                                self._data_cache[cache_key] = reading
+                        for reading in new_readings:
+                            self._data_cache.cache_reading(device_id, reading)
             
             # Store last readings
             self._last_readings[device_id] = readings
@@ -915,28 +1142,6 @@ class DNP3Service:
             logger.error(f"Failed to perform integrity poll on device {device_id}: {e}")
             return False
     
-    def _cleanup_cache_if_needed(self):
-        """Clean up stale connections periodically."""
-        # TTLCache automatically handles cache expiration, so we only need to clean up connections
-        now = utc_now()
-        if (now - self._last_cache_cleanup).total_seconds() > self._cache_cleanup_interval:
-            # Clean up stale connections that haven't been used recently
-            max_idle_time = 300.0  # 5 minutes
-            stale_devices = []
-            for device_id, conn_info in list(self._connection_pool.items()):
-                if 'last_used' in conn_info:
-                    idle_time = (now - conn_info['last_used']).total_seconds()
-                    if idle_time > max_idle_time:
-                        stale_devices.append(device_id)
-            
-            for device_id in stale_devices:
-                self._connection_pool.pop(device_id, None)
-                logger.debug(f"Cleaned up stale connection for device {device_id}")
-            
-            self._last_cache_cleanup = now
-            if stale_devices:
-                logger.debug(f"Performed DNP3 connection cleanup, removed {len(stale_devices)} connections")
-    
     def get_performance_metrics(self) -> Dict[str, Any]:
         """Get comprehensive performance metrics for DNP3 operations."""
         metrics = self._performance_metrics.get_all_stats()
@@ -945,13 +1150,15 @@ class DNP3Service:
         pool_stats = {
             'active_connections': len(self._connection_pool.connections),
             'max_connections': self._connection_pool.max_connections,
-            'connection_usage': dict(self._connection_pool.connection_usage)
+            'connection_usage': dict(self._connection_pool.connection_usage),
+            'connection_ttl': self._connection_pool.connection_ttl
         }
         
         # Add cache stats
         cache_stats = {
             'cached_readings': len(self._data_cache.cache),
             'cache_ttl': self._data_cache.default_ttl,
+            'cache_maxsize': self._data_cache.maxsize,
             'cache_enabled': self._enable_caching
         }
         
@@ -974,8 +1181,7 @@ class DNP3Service:
             'devices': device_stats,
             'configuration': {
                 'bulk_operations_enabled': self._enable_bulk_operations,
-                'caching_enabled': self._enable_caching,
-                'cache_cleanup_interval': self._cache_cleanup_interval
+                'caching_enabled': self._enable_caching
             }
         }
     
@@ -1045,13 +1251,13 @@ class DNP3Service:
             'port': device.port
         }
         
-        # Get cached readings for this device
-        device_cache_count = len([key for key in self._data_cache.cache.keys() if key[0] == device_id])
+        # Get cached readings for this device using O(1) lookup
+        device_cache_count = len(self._data_cache._device_index.get(device_id, set()))
         stats['cached_readings'] = device_cache_count
         
         # Get connection pool info
-        if device_id in self._connection_pool.connections:
-            conn_info = self._connection_pool.connections[device_id]
+        if device_id in self._connection_pool:
+            conn_info = self._connection_pool[device_id]
             stats['connection_established'] = conn_info['connected_at'].isoformat()
             stats['connection_usage'] = self._connection_pool.connection_usage[device_id]
         
