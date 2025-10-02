@@ -22,7 +22,7 @@ For complete details, see: [CACHING_PERFORMANCE_SECURITY_SUMMARY.md](./CACHING_P
 
 ## 📊 Caching Improvements
 
-### DNP3 Data Caching
+### DNP3 Data Caching (v1.1.0 - Optimized)
 ```python
 # Enable with 2-second TTL
 dnp3_service.enable_performance_optimizations(caching=True)
@@ -30,16 +30,23 @@ dnp3_service._data_cache.default_ttl = 2.0
 ```
 - **Hit Rate**: 60-80%
 - **Response Time**: <1ms (cached) vs 20-50ms (network)
+- **Optimization**: O(M) device cache invalidation (M << N)
+- **Auto-Expiration**: TTLCache-based automatic cleanup
+- **Monitoring**: Periodic cache status logging (every 5 minutes)
 - **Location**: `backend/app/services/dnp3_service.py`
 
-### Connection Pooling
+### Connection Pooling (v1.1.0 - TTL-Based)
 ```python
-# Configure 20 max connections
-dnp3_service._connection_pool.max_connections = 20
+# Configure 20 max connections with 300s TTL
+service._connection_pool = DNP3ConnectionPool(
+    max_connections=20,
+    connection_ttl=300.0
+)
 ```
 - **Scalability**: 4x more concurrent devices
 - **Reuse Rate**: 95%+
-- **Cleanup**: Automatic stale connection removal (300s)
+- **Cleanup**: Automatic TTL-based expiration (no manual cleanup)
+- **Thread-Safe**: All operations protected by RLock
 
 ### Metrics Caching
 - **History**: Bounded to 1000 entries
@@ -205,7 +212,9 @@ pytest backend/app/tests/
 
 ### Comprehensive Guides
 - **[CACHING_PERFORMANCE_SECURITY_SUMMARY.md](./CACHING_PERFORMANCE_SECURITY_SUMMARY.md)** - Complete 755-line detailed summary
-- **[backend/DNP3_OPTIMIZATION_DOCUMENTATION.md](./backend/DNP3_OPTIMIZATION_DOCUMENTATION.md)** - DNP3 optimizations deep dive
+- **[backend/DNP3_OPTIMIZATION_DOCUMENTATION.md](./backend/DNP3_OPTIMIZATION_DOCUMENTATION.md)** - DNP3 quick reference and API
+- **[backend/DNP3_PERFORMANCE_OPTIMIZATION_GUIDE.md](./backend/DNP3_PERFORMANCE_OPTIMIZATION_GUIDE.md)** - Performance tuning guide (NEW v1.1.0)
+- **[backend/DNP3_SECURITY_COMPLIANCE_GUIDE.md](./backend/DNP3_SECURITY_COMPLIANCE_GUIDE.md)** - Security and compliance guide (NEW v1.1.0)
 - **[METRICS_MIDDLEWARE_REFACTOR_SUMMARY.md](./METRICS_MIDDLEWARE_REFACTOR_SUMMARY.md)** - Metrics refactoring details
 - **[SECURITY_IMPROVEMENTS_SUMMARY.md](./SECURITY_IMPROVEMENTS_SUMMARY.md)** - Security hardening summary
 - **[backend/SECURITY_IMPROVEMENTS_COMPLETE.md](./backend/SECURITY_IMPROVEMENTS_COMPLETE.md)** - Complete security implementation
