@@ -658,8 +658,8 @@ class DNP3Service:
                 with self._cache_lock:
                     for dp in data_points:
                         cache_key = (device_id, dp.index)
-                        if cache_key in self._data_cache:
-                            cached_reading = self._data_cache[cache_key]
+                        cached_reading = self._data_cache.get(cache_key)
+                        if cached_reading is not None:
                             cached_readings.append(cached_reading)
                         else:
                             uncached_points.append(dp)
