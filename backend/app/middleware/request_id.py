@@ -113,16 +113,22 @@ def init_request_id_logging(app):
         if app.config.get('LOG_LEVEL', 'INFO').upper() in ['DEBUG', 'INFO']:
             # Add structured logging handler if not in testing
             import sys
-            stream_handler = logging.StreamHandler(sys.stdout)
-            stream_handler.setLevel(getattr(logging, app.config.get('LOG_LEVEL', 'INFO').upper()))
-            stream_handler.addFilter(request_id_filter)
-            stream_handler.setFormatter(logging.Formatter(
-                '%(asctime)s - %(name)s - %(levelname)s - [%(request_id)s] - %(message)s'
-            ))
             
-            # Add to root logger if not already present
+            # Check if a StreamHandler for stdout already exists
             root_logger = logging.getLogger()
-            if stream_handler not in root_logger.handlers:
+            has_stdout_handler = any(
+                isinstance(h, logging.StreamHandler) and 
+                getattr(h, 'stream', None) is sys.stdout
+                for h in root_logger.handlers
+            )
+            
+            if not has_stdout_handler:
+                stream_handler = logging.StreamHandler(sys.stdout)
+                stream_handler.setLevel(getattr(logging, app.config.get('LOG_LEVEL', 'INFO').upper()))
+                stream_handler.addFilter(request_id_filter)
+                stream_handler.setFormatter(logging.Formatter(
+                    '%(asctime)s - %(name)s - %(levelname)s - [%(request_id)s] - %(message)s'
+                ))
                 root_logger.addHandler(stream_handler)
                 root_logger.setLevel(getattr(logging, app.config.get('LOG_LEVEL', 'INFO').upper()))
 
@@ -181,8 +187,8 @@ def track_request_id(f: Callable) -> Callable:
             return response
             
         except Exception as e:
-            # Enhanced error logging with correlation ID and context
-            logger.error(f"Request failed with error: {str(e)}", exc_info=True, extra={
+            # Log request failure (handler will log detailed exception info)
+            logger.info(f"Request failed", extra={
                 'request_id': request_id,
                 'method': request.method,
                 'path': request.path,
