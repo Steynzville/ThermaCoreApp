@@ -228,8 +228,8 @@ class TestProtocolSimulationIntegration:
                 assert isinstance(ts, datetime)
                 timestamps.append(ts)
             
-            # Timestamps should be different (progression)
-            assert timestamps[0] <= timestamps[1] <= timestamps[2]
+            # Timestamps should be strictly increasing (progression)
+            assert timestamps[0] < timestamps[1] < timestamps[2]
     
     def test_end_to_end_protocol_pipeline(self, app):
         """Test complete pipeline from protocol adapters through registry to status reporting."""

@@ -5,6 +5,7 @@ including authentication, authorization, and data modification events.
 """
 import json
 import logging
+import re
 from datetime import datetime, timezone
 from enum import Enum
 from functools import wraps
@@ -31,19 +32,31 @@ SENSITIVE_FIELDS = {
     'csrf_token', 'x-api-key', 'x-auth-token'
 }
 
+# Configurable sensitive data patterns for regex-based redaction
+SENSITIVE_PATTERNS = [
+    (re.compile(r'password["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'password=***'),
+    (re.compile(r'token["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'token=***'),
+    (re.compile(r'api[_-]?key["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'api_key=***'),
+    (re.compile(r'secret["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'secret=***'),
+    (re.compile(r'authorization["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'authorization=***'),
+]
 
-def redact_sensitive_data(data, sensitive_keys=None):
+
+def redact_sensitive_data(data, sensitive_keys=None, sensitive_patterns=None):
     """Recursively redact sensitive information from data structures.
     
     Args:
         data: Data structure to redact (dict, list, or primitive)
         sensitive_keys: Set of keys to redact (defaults to SENSITIVE_FIELDS)
+        sensitive_patterns: List of (pattern, replacement) tuples for regex-based redaction
     
     Returns:
         Redacted copy of the data
     """
     if sensitive_keys is None:
         sensitive_keys = SENSITIVE_FIELDS
+    if sensitive_patterns is None:
+        sensitive_patterns = SENSITIVE_PATTERNS
     
     if isinstance(data, dict):
         redacted = {}
@@ -52,10 +65,17 @@ def redact_sensitive_data(data, sensitive_keys=None):
             if key.lower() in sensitive_keys:
                 redacted[key] = '[REDACTED]'
             else:
-                redacted[key] = redact_sensitive_data(value, sensitive_keys)
+                # Recursively redact nested structures
+                redacted[key] = redact_sensitive_data(value, sensitive_keys, sensitive_patterns)
         return redacted
     elif isinstance(data, list):
-        return [redact_sensitive_data(item, sensitive_keys) for item in data]
+        return [redact_sensitive_data(item, sensitive_keys, sensitive_patterns) for item in data]
+    elif isinstance(data, str):
+        # Apply pattern-based redaction for string values
+        redacted_str = data
+        for pattern, replacement in sensitive_patterns:
+            redacted_str = pattern.sub(replacement, redacted_str)
+        return redacted_str
     else:
         return data
 
@@ -305,7 +325,7 @@ def audit_operation(
                         details['request_data'] = redact_sensitive_data(raw_request_data)
                     except Exception:
                         details['request_data'] = 'Unable to parse JSON'
-                raw_query_params = dict(request.args)
+                raw_query_params = request.args.to_dict(flat=False)
                 details['query_params'] = redact_sensitive_data(raw_query_params)
             
             # Extract resource ID from URL path if available
@@ -372,7 +392,7 @@ def setup_audit_middleware(app):
                 return
                 
             # Redact sensitive query parameters before logging
-            redacted_query_params = redact_sensitive_data(dict(request.args))
+            redacted_query_params = redact_sensitive_data(request.args.to_dict(flat=False))
             
             AuditLogger.log_event(
                 event_type=AuditEventType.API_ACCESS,
