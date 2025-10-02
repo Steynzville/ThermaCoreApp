@@ -94,6 +94,11 @@ class Config:
     
     # Security policy fallback behavior (only affects development environment)
     OPCUA_ALLOW_INSECURE_FALLBACK = os.environ.get('OPCUA_ALLOW_INSECURE_FALLBACK', 'false').lower() == 'true'
+    
+    # Modbus Configuration
+    # Control whether sensitive Modbus data (register addresses, values) should be logged
+    # Disabled by default for security; enable for debugging purposes only
+    MODBUS_LOG_SENSITIVE_DATA = os.environ.get('MODBUS_LOG_SENSITIVE_DATA', 'false').lower() == 'true'
 
 
 class DevelopmentConfig(Config):

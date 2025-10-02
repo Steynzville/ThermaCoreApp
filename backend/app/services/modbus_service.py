@@ -11,6 +11,15 @@ from app.models import utc_now  # Use timezone-aware datetime
 
 logger = logging.getLogger(__name__)
 
+
+def _is_sensitive_logging_enabled() -> bool:
+    """Check if sensitive Modbus data logging is enabled.
+    
+    Returns:
+        True if MODBUS_LOG_SENSITIVE_DATA environment variable is set to 'true'
+    """
+    return os.getenv('MODBUS_LOG_SENSITIVE_DATA', 'false').lower() == 'true'
+
 # Mock Modbus implementation for demonstration
 # In a real implementation, you would use pymodbus library
 
@@ -87,8 +96,11 @@ class ModbusClient:
                 
             registers.append(value)
         
-        # Avoid logging register addresses to prevent information exposure
-        logger.debug(f"Read {count} holding registers successfully")
+        # Use configurable logging for register addresses
+        if _is_sensitive_logging_enabled():
+            logger.debug(f"Read {count} holding register(s) at address {address}")
+        else:
+            logger.debug(f"Read {count} holding register(s)")
         return registers
     
     def read_input_registers(self, address: int, count: int, unit_id: int = 1) -> List[int]:
@@ -104,8 +116,11 @@ class ModbusClient:
         # Simulate coil readings
         import random
         coils = [random.choice([True, False]) for _ in range(count)]
-        # Avoid logging register addresses to prevent information exposure
-        logger.debug(f"Read {count} coils successfully")
+        # Use configurable logging for register addresses
+        if _is_sensitive_logging_enabled():
+            logger.debug(f"Read {count} coil(s) at address {address}")
+        else:
+            logger.debug(f"Read {count} coil(s)")
         return coils
     
     def read_discrete_inputs(self, address: int, count: int, unit_id: int = 1) -> List[bool]:
@@ -117,8 +132,11 @@ class ModbusClient:
         if not self.connected:
             raise ConnectionError("Not connected to Modbus device")
         
-        # Avoid logging register addresses to prevent information exposure
-        logger.info(f"Writing coil to device (unit {unit_id})")
+        # Use configurable logging for register addresses
+        if _is_sensitive_logging_enabled():
+            logger.info(f"Writing coil at address {address} to device (unit {unit_id})")
+        else:
+            logger.info(f"Writing coil to device (unit {unit_id})")
         # Simulate write operation
         return True
     
@@ -127,8 +145,11 @@ class ModbusClient:
         if not self.connected:
             raise ConnectionError("Not connected to Modbus device")
         
-        # Avoid logging register addresses to prevent information exposure
-        logger.info(f"Writing register to device (unit {unit_id})")
+        # Use configurable logging for register addresses
+        if _is_sensitive_logging_enabled():
+            logger.info(f"Writing register at address {address} to device (unit {unit_id})")
+        else:
+            logger.info(f"Writing register to device (unit {unit_id})")
         # Simulate write operation
         return True
     
@@ -137,8 +158,11 @@ class ModbusClient:
         if not self.connected:
             raise ConnectionError("Not connected to Modbus device")
         
-        # Avoid logging register addresses to prevent information exposure
-        logger.info(f"Writing {len(values)} registers to device (unit {unit_id})")
+        # Use configurable logging for register addresses
+        if _is_sensitive_logging_enabled():
+            logger.info(f"Writing {len(values)} register(s) at address {address} to device (unit {unit_id})")
+        else:
+            logger.info(f"Writing {len(values)} register(s) to device (unit {unit_id})")
         # Simulate atomic write operation
         return True
 
@@ -161,6 +185,123 @@ class ModbusService:
         """Initialize with Flask app."""
         self._app = app
         logger.info("Modbus service initialized")
+    
+    def _log_register_read(self, device_id: str, register_type: str, address: int, 
+                          count: int, sensor_type: str = None) -> None:
+        """Log register read operation with configurable sensitivity.
+        
+        Args:
+            device_id: Device identifier
+            register_type: Type of register (holding_register, input_register, etc.)
+            address: Register address
+            count: Number of registers
+            sensor_type: Optional sensor type for additional context
+        """
+        if _is_sensitive_logging_enabled():
+            # Debug mode: log full details including addresses
+            context = f" ({sensor_type})" if sensor_type else ""
+            logger.debug(f"Reading {count} {register_type}(s) at address {address} "
+                        f"from device {device_id}{context}")
+        else:
+            # Production mode: log without exposing addresses
+            context = f" for {sensor_type}" if sensor_type else ""
+            logger.debug(f"Reading {count} {register_type}(s) from device {device_id}{context}")
+    
+    def _log_register_read_error(self, device_id: str, register_type: str = None, 
+                                 address: int = None, sensor_type: str = None, 
+                                 error: Exception = None) -> None:
+        """Log register read error with enhanced context.
+        
+        Args:
+            device_id: Device identifier
+            register_type: Optional register type for context
+            address: Optional register address (only logged if sensitive logging enabled)
+            sensor_type: Optional sensor type for improved debugging context
+            error: Exception that occurred
+        """
+        error_msg = str(error) if error else "Unknown error"
+        
+        # Build context string with available information
+        context_parts = []
+        if sensor_type:
+            context_parts.append(f"sensor_type={sensor_type}")
+        if register_type:
+            context_parts.append(f"register_type={register_type}")
+        
+        if _is_sensitive_logging_enabled() and address is not None:
+            context_parts.append(f"address={address}")
+        
+        context = f" ({', '.join(context_parts)})" if context_parts else ""
+        logger.error(f"Failed to read register on device {device_id}{context}: {error_msg}")
+    
+    def _log_register_write(self, device_id: str, register_type: str, address: int = None, 
+                           value: Any = None, data_type: str = None, 
+                           is_multiple: bool = False) -> None:
+        """Log register write operation with configurable sensitivity.
+        
+        Args:
+            device_id: Device identifier
+            register_type: Type of register being written
+            address: Register address (only logged if sensitive logging enabled)
+            value: Value being written (only logged if sensitive logging enabled)
+            data_type: Data type of the value
+            is_multiple: Whether this is a multiple register write
+        """
+        if _is_sensitive_logging_enabled():
+            # Debug mode: log full details
+            operation = "multiple registers" if is_multiple else "register"
+            addr_info = f" at address {address}" if address is not None else ""
+            value_info = f" with value {value}" if value is not None else ""
+            type_info = f" ({data_type})" if data_type else ""
+            logger.info(f"Writing {operation}{addr_info}{value_info}{type_info} "
+                       f"to {register_type} on device {device_id}")
+        else:
+            # Production mode: log without exposing addresses or values
+            operation = "multiple registers" if is_multiple else "register"
+            logger.info(f"Writing {operation} to {register_type} on device {device_id}")
+    
+    def _log_register_write_success(self, device_id: str, register_type: str, 
+                                    address: int = None, is_multiple: bool = False) -> None:
+        """Log successful register write with configurable sensitivity.
+        
+        Args:
+            device_id: Device identifier
+            register_type: Type of register that was written
+            address: Register address (only logged if sensitive logging enabled)
+            is_multiple: Whether this was a multiple register write
+        """
+        if _is_sensitive_logging_enabled():
+            # Debug mode: include address
+            operation = "multiple registers" if is_multiple else "register"
+            addr_info = f" at address {address}" if address is not None else ""
+            logger.info(f"Successfully wrote {operation}{addr_info} to {register_type} "
+                       f"on device {device_id}")
+        else:
+            # Production mode: generic success message
+            logger.info(f"Successfully wrote to {register_type} on device {device_id}")
+    
+    def _log_register_write_error(self, device_id: str, register_type: str = None, 
+                                  address: int = None, error: Exception = None) -> None:
+        """Log register write error with enhanced context.
+        
+        Args:
+            device_id: Device identifier
+            register_type: Optional register type for better debugging
+            address: Optional register address (only logged if sensitive logging enabled)
+            error: Exception that occurred
+        """
+        error_msg = str(error) if error else "Unknown error"
+        
+        # Build context string with available information
+        context_parts = []
+        if register_type:
+            context_parts.append(f"register_type={register_type}")
+        
+        if _is_sensitive_logging_enabled() and address is not None:
+            context_parts.append(f"address={address}")
+        
+        context = f" ({', '.join(context_parts)})" if context_parts else ""
+        logger.error(f"Failed to write register on device {device_id}{context}: {error_msg}")
     
     def add_device(self, device_id: str, unit_id: int, host: str, port: int = 502, 
                    device_type: str = 'tcp', timeout: float = 5.0) -> bool:
@@ -305,6 +446,12 @@ class ModbusService:
             
             for register in register_configs:
                 try:
+                    # Log the read operation
+                    self._log_register_read(
+                        device_id, register.register_type, register.address, 
+                        register.count, register.sensor_type
+                    )
+                    
                     # Read based on register type
                     if register.register_type == 'holding_register':
                         raw_values = client.read_holding_registers(
@@ -343,8 +490,11 @@ class ModbusService:
                     }
                     
                 except Exception as e:
-                    # Avoid logging register addresses to prevent information exposure
-                    logger.error(f"Failed to read register on device {device_id}: {e}")
+                    # Enhanced error logging with sensor_type for improved context
+                    self._log_register_read_error(
+                        device_id, register.register_type, register.address, 
+                        register.sensor_type, e
+                    )
                     continue
             
             # Store last readings
@@ -382,6 +532,8 @@ class ModbusService:
             
             # Convert value based on data type
             if register_type == 'coil':
+                # Log the write operation
+                self._log_register_write(device_id, register_type, address, value, data_type)
                 success = client.write_single_coil(address, bool(value), device.unit_id)
             elif register_type == 'holding_register':
                 # Convert value to appropriate integer representation
@@ -399,22 +551,29 @@ class ModbusService:
                     # Split into high and low 16-bit words
                     high_word = (combined >> 16) & 0xFFFF
                     low_word = combined & 0xFFFF
+                    # Log the multiple register write operation
+                    self._log_register_write(device_id, register_type, address, value, 
+                                            data_type, is_multiple=True)
                     # Use atomic write_multiple_registers to avoid partial write failures
                     success = client.write_multiple_registers(address, [high_word, low_word], device.unit_id)
                 else:
+                    # Log the single register write operation
+                    self._log_register_write(device_id, register_type, address, value, data_type)
                     int_value = int(value)
                     success = client.write_single_register(address, int_value, device.unit_id)
             else:
                 raise ValueError(f"Cannot write to register type: {register_type}")
             
             if success:
-                # Avoid logging register addresses to prevent information exposure
-                logger.info(f"Successfully wrote to {register_type} on device {device_id}")
+                # Determine if this was a multiple register write
+                is_multiple = (register_type == 'holding_register' and data_type == 'float32')
+                self._log_register_write_success(device_id, register_type, address, is_multiple)
             
             return success
             
         except Exception as e:
-            logger.error(f"Failed to write register on device {device_id}: {e}")
+            # Enhanced error logging with register_type for better debugging
+            self._log_register_write_error(device_id, register_type, address, e)
             return False
     
     def get_device_status(self, device_id: str = None) -> Dict[str, Any]:
