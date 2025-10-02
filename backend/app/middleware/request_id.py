@@ -110,27 +110,30 @@ def init_request_id_logging(app):
                 handler.setFormatter(formatter)
         
         # Configure structured logging for production
-        if app.config.get('LOG_LEVEL', 'INFO').upper() in ['DEBUG', 'INFO']:
-            # Add structured logging handler if not in testing
-            import sys
-            
-            # Check if a StreamHandler for stdout already exists
-            root_logger = logging.getLogger()
-            has_stdout_handler = any(
-                isinstance(h, logging.StreamHandler) and 
-                getattr(h, 'stream', None) is sys.stdout
-                for h in root_logger.handlers
-            )
-            
-            if not has_stdout_handler:
-                stream_handler = logging.StreamHandler(sys.stdout)
-                stream_handler.setLevel(getattr(logging, app.config.get('LOG_LEVEL', 'INFO').upper()))
-                stream_handler.addFilter(request_id_filter)
-                stream_handler.setFormatter(logging.Formatter(
-                    '%(asctime)s - %(name)s - %(levelname)s - [%(request_id)s] - %(message)s'
-                ))
-                root_logger.addHandler(stream_handler)
-                root_logger.setLevel(getattr(logging, app.config.get('LOG_LEVEL', 'INFO').upper()))
+        # Always add structured logging handler (not conditional on LOG_LEVEL)
+        import sys
+        
+        # Get log level configuration
+        log_level_str = app.config.get('LOG_LEVEL', 'INFO').upper()
+        log_level = getattr(logging, log_level_str)
+        
+        # Check if a StreamHandler for stdout already exists
+        root_logger = logging.getLogger()
+        has_stdout_handler = any(
+            isinstance(h, logging.StreamHandler) and 
+            getattr(h, 'stream', None) is sys.stdout
+            for h in root_logger.handlers
+        )
+        
+        if not has_stdout_handler:
+            stream_handler = logging.StreamHandler(sys.stdout)
+            stream_handler.setLevel(log_level)
+            stream_handler.addFilter(request_id_filter)
+            stream_handler.setFormatter(logging.Formatter(
+                '%(asctime)s - %(name)s - %(levelname)s - [%(request_id)s] - %(message)s'
+            ))
+            root_logger.addHandler(stream_handler)
+            root_logger.setLevel(log_level)
 
 
 def request_id_required(f: Callable) -> Callable:
@@ -187,7 +190,7 @@ def track_request_id(f: Callable) -> Callable:
             return response
             
         except Exception as e:
-            # Log request failure (handler will log detailed exception info)
+            # Log request failure (global error handler will log detailed exception info)
             logger.info(f"Request failed", extra={
                 'request_id': request_id,
                 'method': request.method,
@@ -196,19 +199,9 @@ def track_request_id(f: Callable) -> Callable:
                 'status': 'error'
             })
             
-            # Check if this is a domain exception and handle appropriately
-            from app.exceptions import ThermaCoreException
-            from app.utils.error_handler import SecurityAwareErrorHandler
-            
-            if isinstance(e, ThermaCoreException):
-                # Handle domain exception with proper correlation ID
-                response_data, status_code = SecurityAwareErrorHandler.handle_thermacore_exception(e)
-                # Ensure correlation ID header is added
-                response_data.headers[RequestIDManager.REQUEST_ID_HEADER] = request_id
-                return response_data, status_code
-            else:
-                # Re-raise non-domain exceptions to be handled by Flask's error handlers
-                raise
+            # Re-raise all exceptions to be handled by Flask's global error handlers
+            # This ensures a single point of exception handling in register_error_handlers
+            raise
         
     return decorated_function
 
