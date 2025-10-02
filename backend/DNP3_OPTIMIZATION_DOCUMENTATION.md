@@ -9,22 +9,24 @@ This implementation adds comprehensive performance optimizations and measurement
 
 ## Key Performance Optimizations
 
-### 1. Connection Pooling (`DNP3ConnectionPool`)
-- **Purpose**: Manage DNP3 device connections efficiently
+### 1. Connection Pooling
+- **Purpose**: Manage DNP3 device connections efficiently using cachetools.TTLCache
+- **Implementation**: `cachetools.TTLCache(maxsize=20, ttl=300.0)`
 - **Features**:
   - Maximum connection limit (default: 20)
-  - Least Recently Used (LRU) eviction policy
-  - Automatic stale connection cleanup (300s timeout)
+  - Automatic Time-To-Live (TTL) expiration (300s = 5 minutes)
+  - Automatic stale connection cleanup
   - Thread-safe connection management
-- **Benefits**: Reduced connection overhead and improved scalability
+- **Benefits**: Reduced connection overhead, improved scalability, and automatic memory management
 
-### 2. Data Caching (`DNP3DataCache`)
+### 2. Data Caching
 - **Purpose**: Cache frequently accessed data points to reduce polling
+- **Implementation**: `cachetools.TTLCache(maxsize=1024, ttl=2.0)`
 - **Features**:
   - Configurable Time-To-Live (default: 2 seconds)
   - Per-device cache invalidation
   - Automatic expired entry cleanup
-  - Thread-safe cache operations
+  - Thread-safe cache operations via RLock
 - **Benefits**: Reduced network traffic and faster response times
 
 ### 3. Bulk Operations
@@ -98,11 +100,17 @@ service.enable_performance_optimizations(
     bulk_operations=True    # Enable bulk read operations
 )
 
-# Cache configuration
-service._data_cache.default_ttl = 2.0  # 2-second cache TTL
+# Cache configuration (using cachetools.TTLCache)
+# Note: TTL is set at initialization and cannot be changed dynamically
+# To change TTL, reinitialize the cache:
+# service._data_cache = TTLCache(maxsize=1024, ttl=3.0)  # 3-second cache TTL
 
-# Connection pool configuration
-service._connection_pool.max_connections = 20  # Maximum connections
+# Connection pool configuration (using cachetools.TTLCache)
+# Connections automatically expire after 300 seconds (5 minutes)
+# To check pool status:
+print(f"Active connections: {len(service._connection_pool)}")
+print(f"Max connections: {service._connection_pool.maxsize}")
+print(f"Connection TTL: {service._connection_pool.ttl} seconds")
 ```
 
 ### Performance Metrics Configuration
@@ -110,8 +118,8 @@ service._connection_pool.max_connections = 20  # Maximum connections
 # Metrics history configuration
 service._performance_metrics.max_history = 1000  # Maximum metrics history
 
-# Cache cleanup interval
-service._cache_cleanup_interval = 300  # 5 minutes
+# Note: Cache cleanup is now automatic with TTLCache
+# The _cache_cleanup_interval is kept for compatibility but not actively used
 ```
 
 ## Usage Examples
@@ -190,10 +198,10 @@ locust -f scripts/performance_tests.py --host=http://localhost:5000 ThermaCoreDN
 - Validate connection pool utilization
 
 ### Common Issues and Solutions:
-1. **High response times**: Check network connectivity, increase cache TTL
-2. **Low cache hit rate**: Reduce cache TTL, verify data point configuration
-3. **Connection pool exhaustion**: Increase max_connections, check for connection leaks
-4. **Memory usage growth**: Verify cleanup intervals, check metrics history limits
+1. **High response times**: Check network connectivity, consider reinitializing cache with higher TTL
+2. **Low cache hit rate**: Verify data point configuration, check if TTL is too short for use case
+3. **Connection pool exhaustion**: Increase maxsize when reinitializing connection pool, TTLCache automatically handles cleanup
+4. **Memory usage growth**: Verify metrics history limits; caches are bounded and auto-cleanup
 
 ### Debug Configuration:
 ```python
@@ -201,13 +209,17 @@ locust -f scripts/performance_tests.py --host=http://localhost:5000 ThermaCoreDN
 import logging
 logging.getLogger('app.services.dnp3_service').setLevel(logging.DEBUG)
 
-# Monitor cache statistics
-cache_stats = dnp3_service._data_cache.__dict__
-print(f"Cache entries: {len(cache_stats['cache'])}")
+# Monitor cache statistics (correct cachetools API)
+print(f"Cache entries: {len(dnp3_service._data_cache)}")
+print(f"Cache TTL: {dnp3_service._data_cache.ttl} seconds")
+print(f"Cache max size: {dnp3_service._data_cache.maxsize}")
+print(f"Cache keys: {list(dnp3_service._data_cache.keys())}")
 
-# Check connection pool status
-pool_stats = dnp3_service._connection_pool.__dict__
-print(f"Active connections: {len(pool_stats['connections'])}")
+# Check connection pool status (correct cachetools API)
+print(f"Active connections: {len(dnp3_service._connection_pool)}")
+print(f"Connection pool max size: {dnp3_service._connection_pool.maxsize}")
+print(f"Connection pool TTL: {dnp3_service._connection_pool.ttl} seconds")
+print(f"Connected devices: {list(dnp3_service._connection_pool.keys())}")
 ```
 
 ## Future Enhancements
