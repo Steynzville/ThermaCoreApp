@@ -7,8 +7,9 @@ from flask import current_app
 from sqlalchemy.exc import IntegrityError
 
 from app.models import db, SensorReading, Sensor, Unit
+from app.utils.secure_logger import SecureLogger
 
-logger = logging.getLogger(__name__)
+logger = SecureLogger.get_secure_logger(__name__)
 
 
 class DataStorageService:
