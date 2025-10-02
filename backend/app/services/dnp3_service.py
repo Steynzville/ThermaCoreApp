@@ -446,8 +446,8 @@ class DNP3Service:
         
         # Performance optimization components using cachetools
         self._performance_metrics = DNP3PerformanceMetrics()
-        # LRUCache for connection pool with max 20 connections
-        self._connection_pool = LRUCache(maxsize=20)
+        # TTLCache for connection pool with max 20 connections and 300s (5 min) TTL for automatic cleanup
+        self._connection_pool = TTLCache(maxsize=20, ttl=300.0)
         # TTLCache for data cache with 2-second TTL and max 1024 entries
         self._data_cache = TTLCache(maxsize=1024, ttl=2.0)
         self._cache_lock = RLock()  # Lock for thread-safe cache access
@@ -455,7 +455,8 @@ class DNP3Service:
         # Performance configuration
         self._enable_caching = True
         self._enable_bulk_operations = True
-        self._cache_cleanup_interval = 300  # 5 minutes (not needed with TTLCache)
+        # Cache cleanup interval no longer needed - TTLCache handles it automatically
+        self._cache_cleanup_interval = 300  # Kept for compatibility, but not actively used
         self._last_cache_cleanup = utc_now()
         
         if app:
@@ -926,41 +927,33 @@ class DNP3Service:
     
     def _cleanup_cache_if_needed(self):
         """Clean up stale connections periodically."""
-        # TTLCache automatically handles cache expiration, so we only need to clean up connections
+        # Note: TTLCache automatically handles cache expiration for both
+        # _connection_pool and _data_cache, so no manual cleanup is needed.
+        # This method is kept for compatibility and potential future use.
         now = utc_now()
         if (now - self._last_cache_cleanup).total_seconds() > self._cache_cleanup_interval:
-            # Clean up stale connections that haven't been used recently
-            max_idle_time = 300.0  # 5 minutes
-            stale_devices = []
-            for device_id, conn_info in list(self._connection_pool.items()):
-                if 'last_used' in conn_info:
-                    idle_time = (now - conn_info['last_used']).total_seconds()
-                    if idle_time > max_idle_time:
-                        stale_devices.append(device_id)
-            
-            for device_id in stale_devices:
-                self._connection_pool.pop(device_id, None)
-                logger.debug(f"Cleaned up stale connection for device {device_id}")
-            
             self._last_cache_cleanup = now
-            if stale_devices:
-                logger.debug(f"Performed DNP3 connection cleanup, removed {len(stale_devices)} connections")
+            # Log current cache sizes for monitoring
+            logger.debug(f"Cache status - Connections: {len(self._connection_pool)}, "
+                        f"Data cache: {len(self._data_cache)}")
     
     def get_performance_metrics(self) -> Dict[str, Any]:
         """Get comprehensive performance metrics for DNP3 operations."""
         metrics = self._performance_metrics.get_all_stats()
         
-        # Add connection pool stats
+        # Add connection pool stats (using correct cachetools API)
         pool_stats = {
-            'active_connections': len(self._connection_pool.connections),
-            'max_connections': self._connection_pool.max_connections,
-            'connection_usage': dict(self._connection_pool.connection_usage)
+            'active_connections': len(self._connection_pool),
+            'max_connections': self._connection_pool.maxsize,
+            'connection_ttl_seconds': self._connection_pool.ttl,
+            'connection_ids': list(self._connection_pool.keys())
         }
         
-        # Add cache stats
+        # Add cache stats (using correct cachetools API)
         cache_stats = {
-            'cached_readings': len(self._data_cache.cache),
-            'cache_ttl': self._data_cache.default_ttl,
+            'cached_readings': len(self._data_cache),
+            'cache_ttl_seconds': self._data_cache.ttl,
+            'max_cache_size': self._data_cache.maxsize,
             'cache_enabled': self._enable_caching
         }
         
@@ -1019,7 +1012,7 @@ class DNP3Service:
             'success_rate_percent': round(success_rate, 2),
             'total_errors': total_errors,
             'active_devices': len([d for d in self._devices.values() if d.is_connected]),
-            'cached_readings': len(self._data_cache.cache),
+            'cached_readings': len(self._data_cache),
             'performance_optimizations': {
                 'caching': self._enable_caching,
                 'bulk_operations': self._enable_bulk_operations,
@@ -1054,15 +1047,16 @@ class DNP3Service:
             'port': device.port
         }
         
-        # Get cached readings for this device
-        device_cache_count = len([key for key in self._data_cache.cache.keys() if key[0] == device_id])
+        # Get cached readings for this device (using correct cachetools API)
+        device_cache_count = len([key for key in self._data_cache.keys() if key[0] == device_id])
         stats['cached_readings'] = device_cache_count
         
-        # Get connection pool info
-        if device_id in self._connection_pool.connections:
-            conn_info = self._connection_pool.connections[device_id]
+        # Get connection pool info (using correct cachetools API)
+        if device_id in self._connection_pool:
+            conn_info = self._connection_pool[device_id]
             stats['connection_established'] = conn_info['connected_at'].isoformat()
-            stats['connection_usage'] = self._connection_pool.connection_usage[device_id]
+            if 'last_used' in conn_info:
+                stats['connection_last_used'] = conn_info['last_used'].isoformat()
         
         # Get recent readings count
         stats['recent_readings'] = len(self._last_readings.get(device_id, []))
