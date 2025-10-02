@@ -494,27 +494,28 @@ class TestMetricsCollector:
             # Make a request to create metrics
             client.get('/test-route')
             
-            # Test 1: get_endpoint_metrics route with error (404)
-            # Manually set a potentially malicious request_id in Flask's g
+            # Test 1: get_endpoint_metrics route with error (404) - test XSS escaping
             with app.test_request_context('/api/v1/metrics/endpoint/nonexistent'):
                 from flask import g
-                # Simulate a request_id that could contain XSS (though it should be validated as UUID)
-                # For testing purposes, we'll verify the escape function is called
-                g.request_id = str(uuid.uuid4())  # Use valid UUID
+                # Inject a malicious request_id that needs escaping
+                malicious_id = "<script>alert('xss')</script>"
+                g.request_id = malicious_id
                 
                 response_data = metrics_bp.view_functions['get_endpoint_metrics']('nonexistent')
                 assert isinstance(response_data, tuple)
                 response_dict, status_code = response_data
                 assert status_code == 404
                 assert 'request_id' in response_dict
-                # Verify request_id is a string (escaped)
-                assert isinstance(response_dict['request_id'], str)
+                # Verify that the malicious content is properly escaped
+                assert '<script>' not in response_dict['request_id']
+                assert '&lt;script&gt;' in response_dict['request_id']
+                assert 'alert' in response_dict['request_id']  # Content is preserved but escaped
             
-            # Test 2: get_endpoint_metrics route with success (200)
-            # First create metrics for a specific endpoint
+            # Test 2: get_endpoint_metrics route with success (200) - test XSS escaping
             with app.test_request_context('/test-route'):
                 from flask import g
-                g.request_id = str(uuid.uuid4())
+                malicious_id = '<img src=x onerror=alert(1)>'
+                g.request_id = malicious_id
                 collector.record_request_start('/test-route', 'GET')
                 import time
                 time.sleep(0.01)
@@ -523,35 +524,48 @@ class TestMetricsCollector:
                 response_data = metrics_bp.view_functions['get_endpoint_metrics']('GET /test-route')
                 assert isinstance(response_data, dict)
                 assert 'request_id' in response_data
-                # Verify request_id is a string (escaped)
-                assert isinstance(response_data['request_id'], str)
+                # Verify escaping worked
+                assert '<img' not in response_data['request_id']
+                assert '&lt;img' in response_data['request_id']
             
-            # Test 3: get_metrics_summary route
+            # Test 3: get_metrics_summary route - test XSS escaping
             with app.test_request_context('/api/v1/metrics/summary'):
                 from flask import g
-                g.request_id = str(uuid.uuid4())
+                malicious_id = "<iframe src='javascript:alert(1)'></iframe>"
+                g.request_id = malicious_id
                 
                 response_data = metrics_bp.view_functions['get_metrics_summary']()
                 assert 'request_id' in response_data
-                assert isinstance(response_data['request_id'], str)
+                # Verify escaping
+                assert '<iframe' not in response_data['request_id']
+                assert '&lt;iframe' in response_data['request_id']
             
-            # Test 4: get_recent_activity route
+            # Test 4: get_recent_activity route - test XSS escaping
             with app.test_request_context('/api/v1/metrics/activity'):
                 from flask import g
-                g.request_id = str(uuid.uuid4())
+                malicious_id = '<svg onload=alert(1)>'
+                g.request_id = malicious_id
                 
                 response_data = metrics_bp.view_functions['get_recent_activity']()
                 assert 'request_id' in response_data
-                assert isinstance(response_data['request_id'], str)
+                # Verify escaping
+                assert '<svg' not in response_data['request_id']
+                assert '&lt;svg' in response_data['request_id']
             
-            # Test 5: get_recent_errors route
+            # Test 5: get_recent_errors route - test XSS escaping
             with app.test_request_context('/api/v1/metrics/errors'):
                 from flask import g
-                g.request_id = str(uuid.uuid4())
+                malicious_id = '"><script>alert(document.cookie)</script>'
+                g.request_id = malicious_id
                 
                 response_data = metrics_bp.view_functions['get_recent_errors']()
                 assert 'request_id' in response_data
-                assert isinstance(response_data['request_id'], str)
+                # Verify escaping
+                assert '<script>' not in response_data['request_id']
+                assert '&lt;script&gt;' in response_data['request_id']
+                # Quotes should also be escaped
+                assert '&#34;' in response_data['request_id'] or '&quot;' in response_data['request_id']
+
 
 
 class TestSecurityAwareErrorHandler:
