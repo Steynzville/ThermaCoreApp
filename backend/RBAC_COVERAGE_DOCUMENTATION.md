@@ -150,12 +150,12 @@ def create_unit():
 ### Remote Control Endpoints
 | Endpoint | Method | Permission | Audit Events |
 |----------|--------|------------|--------------|
-| `/remote-control/units/{id}/power` | POST | read_units | remote_power_control |
-| `/remote-control/units/{id}/water-production` | POST | read_units | remote_water_control |
+| `/remote-control/units/{id}/power` | POST | remote_control | remote_power_control |
+| `/remote-control/units/{id}/water-production` | POST | remote_control | remote_water_control |
 | `/remote-control/units/{id}/status` | GET | read_units | read_remote_status |
 | `/remote-control/permissions` | GET | Valid JWT | read_permissions |
 
-**Note**: Remote control endpoints use `read_units` permission to allow all authenticated users access to remote control features.
+**Note**: Remote control endpoints use `remote_control` permission to allow all authenticated users access to remote control features.
 
 ## Security Best Practices
 
