@@ -310,6 +310,32 @@ class TestMetricsCollector:
             assert len(recent_errors) > 0
             assert recent_errors[-1]['error_type'] == 'ValueError'
             assert 'Test exception' in recent_errors[-1]['error']
+    
+    def test_get_endpoint_metrics_xss_protection(self, app):
+        """Test that get_endpoint_metrics escapes endpoint parameter to prevent XSS."""
+        collector = MetricsCollector()
+        
+        # Create a malicious endpoint string containing HTML/script tags
+        malicious_endpoint = '<script>alert("XSS")</script>/api/test'
+        
+        with app.test_request_context(malicious_endpoint, method='GET'):
+            g.request_id = 'test-id'
+            
+            # Record request to create metrics for this endpoint
+            collector.record_request_start(malicious_endpoint, 'GET')
+            time.sleep(0.01)
+            collector.record_request_end(200)
+            
+            # Get metrics for the malicious endpoint
+            key = f'GET {malicious_endpoint}'
+            metrics = collector.get_endpoint_metrics(key)
+            
+            # Verify the endpoint in the response is escaped
+            assert metrics['endpoint'] != malicious_endpoint
+            assert '&lt;' in metrics['endpoint']  # < should be escaped to &lt;
+            assert '&gt;' in metrics['endpoint']  # > should be escaped to &gt;
+            assert '<script>' not in metrics['endpoint']  # Raw script tag should not be present
+            assert 'alert' in metrics['endpoint']  # But the text content should still be there (escaped)
 
 
 class TestSecurityAwareErrorHandler:
