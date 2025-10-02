@@ -331,11 +331,116 @@ class TestMetricsCollector:
             metrics = collector.get_endpoint_metrics(key)
             
             # Verify the endpoint in the response is escaped
-            assert metrics['endpoint'] != malicious_endpoint
+            assert metrics['endpoint'] != key
             assert '&lt;' in metrics['endpoint']  # < should be escaped to &lt;
             assert '&gt;' in metrics['endpoint']  # > should be escaped to &gt;
             assert '<script>' not in metrics['endpoint']  # Raw script tag should not be present
+            assert '</script>' not in metrics['endpoint']  # Raw closing script tag should not be present
             assert 'alert' in metrics['endpoint']  # But the text content should still be there (escaped)
+            assert '&#34;' in metrics['endpoint']  # " should be escaped to &#34;
+    
+    def test_get_metrics_summary_xss_protection(self, app):
+        """Test that get_metrics_summary escapes endpoint data to prevent XSS."""
+        collector = MetricsCollector()
+        
+        # Create malicious endpoint strings
+        malicious_endpoint1 = '<img src=x onerror=alert(1)>/api/test1'
+        malicious_endpoint2 = '<script>alert("XSS")</script>/api/test2'
+        
+        with app.test_request_context('/', method='GET'):
+            g.request_id = 'test-id'
+            
+            # Record requests for both malicious endpoints
+            collector.record_request_start(malicious_endpoint1, 'GET')
+            time.sleep(0.01)
+            collector.record_request_end(200)
+            
+            collector.record_request_start(malicious_endpoint2, 'POST')
+            time.sleep(0.01)
+            collector.record_request_end(200)
+            
+            # Get metrics summary
+            summary = collector.get_metrics_summary()
+            
+            # Check endpoints dictionary keys are escaped
+            for endpoint_key in summary['endpoints'].keys():
+                assert '<script>' not in endpoint_key
+                assert '<img' not in endpoint_key
+                assert 'onerror' not in endpoint_key or '&lt;' in endpoint_key
+            
+            # Check endpoint field in each stats object is escaped
+            for endpoint_key, stats in summary['endpoints'].items():
+                assert '<script>' not in stats['endpoint']
+                assert '<img' not in stats['endpoint']
+                assert '&lt;' in stats['endpoint'] or '&gt;' in stats['endpoint']
+            
+            # Check top_endpoints list has escaped endpoint values
+            for endpoint_stat in summary['top_endpoints']:
+                assert '<script>' not in endpoint_stat['endpoint']
+                assert '<img' not in endpoint_stat['endpoint']
+                assert '&lt;' in endpoint_stat['endpoint'] or '&gt;' in endpoint_stat['endpoint']
+            
+            # Check error_summary endpoint keys are escaped
+            for endpoint_key in summary['error_summary']['error_rate_by_endpoint'].keys():
+                assert '<script>' not in endpoint_key
+                assert '<img' not in endpoint_key
+    
+    def test_get_recent_activity_xss_protection(self, app):
+        """Test that get_recent_activity escapes endpoint data to prevent XSS."""
+        collector = MetricsCollector()
+        
+        # Create malicious endpoint string
+        malicious_endpoint = '<svg onload=alert(1)>/api/test'
+        
+        with app.test_request_context(malicious_endpoint, method='GET'):
+            g.request_id = 'test-id'
+            
+            # Record request
+            collector.record_request_start(malicious_endpoint, 'GET')
+            time.sleep(0.01)
+            collector.record_request_end(200)
+            
+            # Get recent activity
+            activity = collector.get_recent_activity(10)
+            
+            # Verify endpoint is escaped in all activity records
+            assert len(activity) > 0
+            for record in activity:
+                if malicious_endpoint in record['endpoint'] or '&lt;' in record['endpoint']:
+                    # Found our malicious endpoint record
+                    assert '<svg' not in record['endpoint']
+                    assert 'onload' not in record['endpoint'] or '&lt;' in record['endpoint']
+                    assert '&lt;' in record['endpoint']
+                    assert '&gt;' in record['endpoint']
+    
+    def test_get_recent_errors_xss_protection(self, app):
+        """Test that get_recent_errors escapes endpoint data to prevent XSS."""
+        collector = MetricsCollector()
+        
+        # Create malicious endpoint string
+        malicious_endpoint = '<iframe src=javascript:alert(1)>/api/test'
+        
+        with app.test_request_context(malicious_endpoint, method='GET'):
+            g.request_id = 'test-id'
+            
+            # Record request with error
+            collector.record_request_start(malicious_endpoint, 'GET')
+            time.sleep(0.01)
+            test_error = ValueError("Test error")
+            collector.record_request_end(500, error=test_error)
+            
+            # Get recent errors
+            errors = collector.get_recent_errors(10)
+            
+            # Verify endpoint is escaped in all error records
+            assert len(errors) > 0
+            for record in errors:
+                if malicious_endpoint in record['endpoint'] or '&lt;' in record['endpoint']:
+                    # Found our malicious endpoint record
+                    assert '<iframe' not in record['endpoint']
+                    assert 'javascript:' not in record['endpoint'] or '&lt;' in record['endpoint']
+                    assert '&lt;' in record['endpoint']
+                    assert '&gt;' in record['endpoint']
 
 
 class TestSecurityAwareErrorHandler:
