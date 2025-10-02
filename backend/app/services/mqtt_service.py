@@ -347,7 +347,7 @@ class MQTTClient:
             'broker_host': self.broker_host,
             'broker_port': self.broker_port,
             'client_id': self.client_id,
-            'subscribed_topics': list(self._subscribed_topics),  # Convert set to list for JSON serialization
+            'subscribed_topics': sorted(list(self._subscribed_topics)),  # Sort topics for deterministic ordering
             'metrics': {
                 'subscribed_topics_count': len(self._subscribed_topics),
                 'message_handlers_count': len(self._message_handlers)
