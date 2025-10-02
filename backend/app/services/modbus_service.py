@@ -127,6 +127,15 @@ class ModbusClient:
         logger.info(f"Writing register at address {address} to {value}")
         # Simulate write operation
         return True
+    
+    def write_multiple_registers(self, address: int, values: List[int], unit_id: int = 1) -> bool:
+        """Write multiple holding registers atomically."""
+        if not self.connected:
+            raise ConnectionError("Not connected to Modbus device")
+        
+        logger.info(f"Writing {len(values)} registers starting at address {address} with values {values}")
+        # Simulate atomic write operation
+        return True
 
 
 class ModbusService:
@@ -384,16 +393,8 @@ class ModbusService:
                     # Split into high and low 16-bit words
                     high_word = (combined >> 16) & 0xFFFF
                     low_word = combined & 0xFFFF
-                    # Write both registers independently to detect partial failures
-                    # Execute both writes and check individual results
-                    success_high = client.write_single_register(address, high_word, device.unit_id)
-                    success_low = client.write_single_register(address + 1, low_word, device.unit_id)
-                    # Combine results: both must succeed
-                    success = success_high and success_low
-                    if success_high and not success_low:
-                        logger.error(f"Partial write failure: high word succeeded but low word failed for float32 at address {address}")
-                    elif not success_high and success_low:
-                        logger.error(f"Partial write failure: high word failed but low word succeeded for float32 at address {address}")
+                    # Use atomic write_multiple_registers to avoid partial write failures
+                    success = client.write_multiple_registers(address, [high_word, low_word], device.unit_id)
                 else:
                     int_value = int(value)
                     success = client.write_single_register(address, int_value, device.unit_id)

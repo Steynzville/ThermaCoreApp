@@ -1052,8 +1052,8 @@ class DNP3Service:
         stats['cached_readings'] = device_cache_count
         
         # Get connection pool info (using correct cachetools API)
-        if device_id in self._connection_pool:
-            conn_info = self._connection_pool[device_id]
+        conn_info = self._connection_pool.get(device_id)
+        if conn_info:
             stats['connection_established'] = conn_info['connected_at'].isoformat()
             if 'last_used' in conn_info:
                 stats['connection_last_used'] = conn_info['last_used'].isoformat()
