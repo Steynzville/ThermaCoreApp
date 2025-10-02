@@ -386,13 +386,13 @@ class ModbusService:
                     low_word = combined & 0xFFFF
                     # Write both registers independently to detect partial failures
                     # Execute both writes and check individual results
-                    high_success = client.write_single_register(address, high_word, device.unit_id)
-                    low_success = client.write_single_register(address + 1, low_word, device.unit_id)
+                    success_high = client.write_single_register(address, high_word, device.unit_id)
+                    success_low = client.write_single_register(address + 1, low_word, device.unit_id)
                     # Combine results: both must succeed
-                    success = high_success and low_success
-                    if high_success and not low_success:
+                    success = success_high and success_low
+                    if success_high and not success_low:
                         logger.error(f"Partial write failure: high word succeeded but low word failed for float32 at address {address}")
-                    elif not high_success and low_success:
+                    elif not success_high and success_low:
                         logger.error(f"Partial write failure: high word failed but low word succeeded for float32 at address {address}")
                 else:
                     int_value = int(value)
