@@ -183,12 +183,12 @@ def get_remote_control_permissions():
             return jsonify({'error': 'User not found'}), 404
             
         return jsonify({
-            'has_remote_control': True,  # All users now have remote control access
+            'has_remote_control': user.has_permission('remote_control'),
             'role': user.role.name.value,
             'permissions': {
                 'read_units': user.has_permission('read_units'),
                 'write_units': user.has_permission('write_units'),
-                'remote_control': True  # All users now have remote control permission
+                'remote_control': user.has_permission('remote_control')
             }
         })
         
