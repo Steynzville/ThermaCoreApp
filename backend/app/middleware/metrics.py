@@ -92,7 +92,7 @@ class MetricsCollector:
                 'method': method,
                 'status_code': status_code,
                 'duration': round(duration, 4),
-                'request_id': RequestIDManager.get_request_id(),
+                'request_id': escape(RequestIDManager.get_request_id() or ''),
                 'error': str(error) if error else None
             })
             
@@ -105,7 +105,7 @@ class MetricsCollector:
                     'error': str(error),
                     'error_type': type(error).__name__,
                     'status_code': status_code,
-                    'request_id': RequestIDManager.get_request_id()
+                    'request_id': escape(RequestIDManager.get_request_id() or '')
                 })
     
     def get_metrics_summary(self) -> Dict[str, Any]:
@@ -318,7 +318,7 @@ def create_metrics_blueprint():
         return {
             'success': True,
             'data': collector.get_metrics_summary(),
-            'request_id': RequestIDManager.get_request_id(),
+            'request_id': escape(RequestIDManager.get_request_id() or ''),
             'timestamp': datetime.utcnow().isoformat() + 'Z'
         }
     
@@ -332,7 +332,7 @@ def create_metrics_blueprint():
         return {
             'success': True,
             'data': collector.get_recent_activity(limit),
-            'request_id': RequestIDManager.get_request_id(),
+            'request_id': escape(RequestIDManager.get_request_id() or ''),
             'timestamp': datetime.utcnow().isoformat() + 'Z'
         }
     
@@ -346,7 +346,7 @@ def create_metrics_blueprint():
         return {
             'success': True,
             'data': collector.get_recent_errors(limit),
-            'request_id': RequestIDManager.get_request_id(),
+            'request_id': escape(RequestIDManager.get_request_id() or ''),
             'timestamp': datetime.utcnow().isoformat() + 'Z'
         }
     
@@ -363,14 +363,14 @@ def create_metrics_blueprint():
                     'code': 'ENDPOINT_NOT_FOUND',
                     'message': f'No metrics found for endpoint: {escape(endpoint)}'
                 },
-                'request_id': RequestIDManager.get_request_id(),
+                'request_id': escape(RequestIDManager.get_request_id() or ''),
                 'timestamp': datetime.utcnow().isoformat() + 'Z'
             }, 404
         
         return {
             'success': True,
             'data': data,
-            'request_id': RequestIDManager.get_request_id(),
+            'request_id': escape(RequestIDManager.get_request_id() or ''),
             'timestamp': datetime.utcnow().isoformat() + 'Z'
         }
     
