@@ -5,8 +5,8 @@ from datetime import datetime, timedelta
 from unittest.mock import Mock, patch
 
 from app.services.dnp3_service import (
-    DNP3Service, DNP3PerformanceMetrics, DNP3ConnectionPool, 
-    DNP3DataCache, DNP3Device, DNP3DataPoint, DNP3Reading,
+    DNP3Service, DNP3PerformanceMetrics,
+    DNP3Device, DNP3DataPoint, DNP3Reading,
     DNP3DataType, DNP3Quality, dnp3_performance_monitor
 )
 from app.models import utc_now
@@ -76,198 +76,6 @@ class TestDNP3PerformanceMetrics:
         
         assert 'no_data' in stats
         assert stats['operation'] == 'nonexistent'
-
-
-class TestDNP3ConnectionPool:
-    """Test DNP3 connection pool functionality."""
-    
-    def test_connection_pool_initialization(self):
-        """Test connection pool initializes correctly."""
-        pool = DNP3ConnectionPool(max_connections=5)
-        
-        assert pool.max_connections == 5
-        assert len(pool.connections) == 0
-        assert len(pool.connection_usage) == 0
-    
-    def test_get_connection_new(self):
-        """Test getting a new connection."""
-        pool = DNP3ConnectionPool(max_connections=5)
-        device = DNP3Device(
-            device_id='test_device',
-            master_address=1,
-            outstation_address=10,
-            host='localhost',
-            port=20000
-        )
-        
-        result = pool.get_connection('test_device', device)
-        
-        assert result is True
-        assert 'test_device' in pool.connections
-        assert pool.connection_usage['test_device'] == 1
-    
-    def test_get_connection_existing(self):
-        """Test getting an existing connection."""
-        pool = DNP3ConnectionPool(max_connections=5)
-        device = DNP3Device(
-            device_id='test_device',
-            master_address=1,
-            outstation_address=10,
-            host='localhost',
-            port=20000
-        )
-        
-        # First connection
-        pool.get_connection('test_device', device)
-        initial_usage = pool.connection_usage['test_device']
-        
-        # Second connection (reuse)
-        result = pool.get_connection('test_device', device)
-        
-        assert result is True
-        assert pool.connection_usage['test_device'] == initial_usage + 1
-    
-    def test_connection_pool_limit(self):
-        """Test connection pool enforces maximum connections."""
-        pool = DNP3ConnectionPool(max_connections=2)
-        
-        # Create devices
-        devices = []
-        for i in range(3):
-            devices.append(DNP3Device(
-                device_id=f'device_{i}',
-                master_address=1,
-                outstation_address=10 + i,
-                host='localhost',
-                port=20000 + i
-            ))
-        
-        # Add connections up to limit
-        for i in range(2):
-            result = pool.get_connection(f'device_{i}', devices[i])
-            assert result is True
-        
-        assert len(pool.connections) == 2
-        
-        # Add one more (should remove least used)
-        result = pool.get_connection('device_2', devices[2])
-        assert result is True
-        assert len(pool.connections) == 2  # Still at limit
-    
-    def test_cleanup_stale_connections(self):
-        """Test cleanup of stale connections."""
-        pool = DNP3ConnectionPool()
-        device = DNP3Device(
-            device_id='test_device',
-            master_address=1,
-            outstation_address=10,
-            host='localhost',
-            port=20000
-        )
-        
-        # Add connection
-        pool.get_connection('test_device', device)
-        
-        # Simulate old last_used time
-        old_time = utc_now() - timedelta(seconds=400)
-        pool.connections['test_device']['last_used'] = old_time
-        
-        # Cleanup
-        pool.cleanup_stale_connections(max_idle_time=300.0)
-        
-        assert 'test_device' not in pool.connections
-
-
-class TestDNP3DataCache:
-    """Test DNP3 data cache functionality."""
-    
-    def test_cache_initialization(self):
-        """Test cache initializes correctly."""
-        cache = DNP3DataCache(default_ttl=2.0)
-        
-        assert cache.default_ttl == 2.0
-        assert len(cache.cache) == 0
-    
-    def test_cache_and_retrieve_reading(self):
-        """Test caching and retrieving a reading."""
-        cache = DNP3DataCache(default_ttl=60.0)  # Long TTL for test
-        
-        reading = DNP3Reading(
-            index=1,
-            data_type=DNP3DataType.ANALOG_INPUT,
-            value=25.5,
-            quality=DNP3Quality.GOOD,
-            timestamp=utc_now(),
-            sensor_type='temperature',
-            description='Test sensor'
-        )
-        
-        # Cache the reading
-        cache.cache_reading('device_1', reading)
-        
-        # Retrieve it
-        retrieved = cache.get_cached_reading('device_1', 1)
-        
-        assert retrieved is not None
-        assert retrieved.value == 25.5
-        assert retrieved.sensor_type == 'temperature'
-    
-    def test_cache_expiration(self):
-        """Test cache expiration."""
-        cache = DNP3DataCache(default_ttl=0.1)  # Very short TTL
-        
-        reading = DNP3Reading(
-            index=1,
-            data_type=DNP3DataType.ANALOG_INPUT,
-            value=25.5,
-            quality=DNP3Quality.GOOD,
-            timestamp=utc_now(),
-            sensor_type='temperature',
-            description='Test sensor'
-        )
-        
-        # Cache the reading
-        cache.cache_reading('device_1', reading)
-        
-        # Wait for expiration
-        time.sleep(0.2)
-        
-        # Should return None (expired)
-        retrieved = cache.get_cached_reading('device_1', 1)
-        assert retrieved is None
-        
-        # Cache should be cleaned up
-        assert len(cache.cache) == 0
-    
-    def test_invalidate_device_cache(self):
-        """Test invalidating all cache for a device."""
-        cache = DNP3DataCache(default_ttl=60.0)
-        
-        # Cache multiple readings for different devices
-        for device_id in ['device_1', 'device_2']:
-            for index in range(3):
-                reading = DNP3Reading(
-                    index=index,
-                    data_type=DNP3DataType.ANALOG_INPUT,
-                    value=index * 10,
-                    quality=DNP3Quality.GOOD,
-                    timestamp=utc_now(),
-                    sensor_type='test',
-                    description=f'Test {index}'
-                )
-                cache.cache_reading(device_id, reading)
-        
-        assert len(cache.cache) == 6
-        
-        # Invalidate device_1 cache
-        cache.invalidate_device_cache('device_1')
-        
-        # Should have 3 entries left (device_2)
-        assert len(cache.cache) == 3
-        
-        # Verify only device_2 entries remain
-        for key in cache.cache.keys():
-            assert key[0] == 'device_2'
 
 
 class TestDNP3PerformanceMonitor:
@@ -405,3 +213,138 @@ class TestDNP3ServiceOptimizations:
         
         # Cleanup time should be updated
         assert service._last_cache_cleanup == future_time
+
+
+class TestDNP3CachetoolsIntegration:
+    """Test DNP3Service cachetools integration (TTLCache usage)."""
+    
+    def test_connection_pool_uses_ttlcache(self):
+        """Test that connection pool uses TTLCache with correct settings."""
+        from cachetools import TTLCache
+        service = DNP3Service()
+        
+        assert isinstance(service._connection_pool, TTLCache)
+        assert service._connection_pool.maxsize == 20
+        assert service._connection_pool.ttl == 300.0  # 5 minutes
+    
+    def test_data_cache_uses_ttlcache(self):
+        """Test that data cache uses TTLCache with correct settings."""
+        from cachetools import TTLCache
+        service = DNP3Service()
+        
+        assert isinstance(service._data_cache, TTLCache)
+        assert service._data_cache.maxsize == 1024
+        assert service._data_cache.ttl == 2.0  # 2 seconds
+    
+    def test_get_performance_metrics_with_cachetools(self):
+        """Test that get_performance_metrics works with cachetools API."""
+        service = DNP3Service()
+        service.init_master()
+        
+        # Add a device and connection
+        service.add_device('test_device', 1, 10, 'localhost', 20000)
+        service.connect_device('test_device')
+        service._connection_pool['test_device'] = {
+            'connected_at': utc_now(),
+            'last_used': utc_now()
+        }
+        
+        # Get metrics - should not raise AttributeError
+        metrics = service.get_performance_metrics()
+        
+        assert 'connection_pool' in metrics
+        assert 'active_connections' in metrics['connection_pool']
+        assert 'max_connections' in metrics['connection_pool']
+        assert 'connection_ttl_seconds' in metrics['connection_pool']
+        assert metrics['connection_pool']['max_connections'] == 20
+        assert metrics['connection_pool']['connection_ttl_seconds'] == 300.0
+        
+        assert 'data_cache' in metrics
+        assert 'cached_readings' in metrics['data_cache']
+        assert 'cache_ttl_seconds' in metrics['data_cache']
+        assert 'max_cache_size' in metrics['data_cache']
+        assert metrics['data_cache']['cache_ttl_seconds'] == 2.0
+        assert metrics['data_cache']['max_cache_size'] == 1024
+    
+    def test_get_device_performance_stats_with_cachetools(self):
+        """Test that get_device_performance_stats works with cachetools API."""
+        service = DNP3Service()
+        service.init_master()
+        
+        # Add a device
+        service.add_device('test_device', 1, 10, 'localhost', 20000)
+        service.connect_device('test_device')
+        
+        # Add to connection pool and cache
+        service._connection_pool['test_device'] = {
+            'connected_at': utc_now(),
+            'last_used': utc_now()
+        }
+        service._data_cache[('test_device', 1)] = {'value': 25.5}
+        service._data_cache[('test_device', 2)] = {'value': 30.0}
+        
+        # Get device stats - should not raise AttributeError
+        stats = service.get_device_performance_stats('test_device')
+        
+        assert 'device_id' in stats
+        assert 'cached_readings' in stats
+        assert stats['cached_readings'] == 2
+        assert 'connection_established' in stats
+        assert 'connection_last_used' in stats
+    
+    def test_cache_invalidation_on_disconnect(self):
+        """Test that cache is properly invalidated when device disconnects."""
+        service = DNP3Service()
+        service.init_master()
+        
+        # Add devices and cache entries
+        service.add_device('device1', 1, 10, 'localhost', 20000)
+        service.add_device('device2', 1, 11, 'localhost', 20001)
+        service.connect_device('device1')
+        service.connect_device('device2')
+        
+        # Add cache entries for both devices
+        service._data_cache[('device1', 1)] = {'value': 25.5}
+        service._data_cache[('device1', 2)] = {'value': 30.0}
+        service._data_cache[('device2', 1)] = {'value': 45.0}
+        
+        assert len(service._data_cache) == 3
+        
+        # Disconnect device1
+        service.disconnect_device('device1')
+        
+        # Only device2 cache should remain
+        remaining_keys = list(service._data_cache.keys())
+        assert len(remaining_keys) == 1
+        assert remaining_keys[0] == ('device2', 1)
+    
+    def test_ttlcache_automatic_expiration(self):
+        """Test that TTLCache automatically expires entries."""
+        service = DNP3Service()
+        
+        # Add cache entry
+        service._data_cache[('device1', 1)] = {'value': 25.5}
+        assert len(service._data_cache) == 1
+        
+        # Wait for expiration (2 seconds + buffer)
+        time.sleep(2.5)
+        
+        # Cache should be empty due to automatic expiration
+        assert len(service._data_cache) == 0
+    
+    def test_connection_pool_automatic_expiration(self):
+        """Test that connection pool TTLCache automatically expires entries."""
+        service = DNP3Service()
+        
+        # Add connection
+        service._connection_pool['device1'] = {
+            'connected_at': utc_now(),
+            'last_used': utc_now()
+        }
+        assert len(service._connection_pool) == 1
+        
+        # Connection should stay for a while (TTL is 300 seconds)
+        time.sleep(1)
+        assert len(service._connection_pool) == 1
+        
+        # Note: Full 300s expiration test would be too slow for unit tests
