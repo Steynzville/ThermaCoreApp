@@ -133,7 +133,7 @@ class ModbusClient:
         if not self.connected:
             raise ConnectionError("Not connected to Modbus device")
         
-        logger.info(f"Writing {len(values)} registers starting at address {address} with values {values}")
+        logger.info(f"Writing {len(values)} registers starting at address {address}")
         # Simulate atomic write operation
         return True
 

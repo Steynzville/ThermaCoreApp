@@ -56,28 +56,23 @@ class TestDNP3CacheLookupOptimization:
         # Add a device
         service.add_device('test_device', 1, 10, 'localhost', 20000)
         
-        # Mock the connection pool to track calls
-        original_get = service._connection_pool.get
-        call_count = {'count': 0}
-        
-        def tracked_get(*args, **kwargs):
-            call_count['count'] += 1
-            return original_get(*args, **kwargs)
-        
-        service._connection_pool.get = tracked_get
-        
         # Add to connection pool
-        service._connection_pool['test_device'] = {
+        test_conn_info = {
             'connected_at': utc_now(),
             'last_used': utc_now()
         }
+        service._connection_pool['test_device'] = test_conn_info
+        
+        # Use Mock to track calls to _connection_pool.get
+        original_get = service._connection_pool.get
+        mock_get = Mock(side_effect=original_get)
+        service._connection_pool.get = mock_get
         
         # Get device stats
         stats = service.get_device_performance_stats('test_device')
         
         # Verify .get() was called exactly once for the device_id
-        # (There may be other .get() calls for different keys, but we check it was called at least once)
-        assert call_count['count'] >= 1
+        mock_get.assert_called_once_with('test_device')
         assert 'connection_established' in stats
     
     def test_connection_pool_is_ttlcache(self):
