@@ -175,7 +175,7 @@ class MetricsCollector:
             response_times = list(self.response_times.get(endpoint, []))
             
             result = {
-                'endpoint': endpoint,
+                'endpoint': escape(endpoint),
                 'calls': metrics['calls'],
                 'total_time': round(metrics['total_time'], 4),
                 'avg_response_time': round(metrics['total_time'] / metrics['calls'], 4) if metrics['calls'] > 0 else 0,
