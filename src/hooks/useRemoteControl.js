@@ -21,21 +21,24 @@ export const useRemoteControl = (unitId) => {
     setError(null);
 
     try {
-      // For now, use mock data based on role since backend integration is simulated
-      const userRole = localStorage.getItem('thermacore_role');
+      // Fetch permissions from backend API
+      const token = localStorage.getItem('thermacore_token');
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
       
-      // Mock permissions based on role - ALL users now have remote control access
-      const mockPermissions = {
-        has_remote_control: true,  // All users now have remote control access
-        role: userRole || 'viewer',
-        permissions: {
-          read_units: true,
-          write_units: userRole === 'admin' || userRole === 'operator',
-          remote_control: true  // All users now have remote control permission
+      const response = await fetch(`${API_BASE_URL}/remote-control/permissions`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
-      };
+      });
 
-      setPermissions(mockPermissions);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch permissions: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setPermissions(data);
     } catch (err) {
       console.error('Failed to fetch remote control permissions:', err);
       setError('Failed to fetch permissions');
@@ -54,20 +57,25 @@ export const useRemoteControl = (unitId) => {
     setError(null);
 
     try {
-      // Mock API call - in real implementation this would call the backend
-      console.log(`Remote control: Setting unit ${unitId} power to ${powerOn ? 'ON' : 'OFF'}`);
+      const token = localStorage.getItem('thermacore_token');
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Return mock success response
-      return {
-        success: true,
-        unit_id: unitId,
-        power_on: powerOn,
-        status: powerOn ? 'online' : 'offline',
-        water_generation: powerOn ? undefined : false // Water generation turns off when power is off
-      };
+      const response = await fetch(`${API_BASE_URL}/remote-control/units/${unitId}/power`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ power_on: powerOn })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to control power: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
     } catch (err) {
       console.error('Failed to control power:', err);
       setError('Failed to control power');
@@ -87,19 +95,25 @@ export const useRemoteControl = (unitId) => {
     setError(null);
 
     try {
-      // Mock API call - in real implementation this would call the backend
-      console.log(`Remote control: Setting unit ${unitId} water production to ${waterProductionOn ? 'ON' : 'OFF'}`);
+      const token = localStorage.getItem('thermacore_token');
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Return mock success response
-      return {
-        success: true,
-        unit_id: unitId,
-        water_production_on: waterProductionOn,
-        status: 'online' // Assume unit is online if controlling water production
-      };
+      const response = await fetch(`${API_BASE_URL}/remote-control/units/${unitId}/water-production`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ water_production_on: waterProductionOn })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to control water production: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
     } catch (err) {
       console.error('Failed to control water production:', err);
       setError('Failed to control water production');
@@ -115,20 +129,24 @@ export const useRemoteControl = (unitId) => {
     setError(null);
 
     try {
-      // Mock API call - in real implementation this would call the backend
-      console.log(`Fetching remote control status for unit ${unitId}`);
+      const token = localStorage.getItem('thermacore_token');
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Return mock status
-      return {
-        unit_id: unitId,
-        status: 'online',
-        water_generation: true,
-        power_on: true,
-        last_updated: new Date().toISOString()
-      };
+      const response = await fetch(`${API_BASE_URL}/remote-control/units/${unitId}/status`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to fetch status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
     } catch (err) {
       console.error('Failed to fetch unit status:', err);
       setError('Failed to fetch unit status');

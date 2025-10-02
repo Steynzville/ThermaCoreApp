@@ -15,7 +15,7 @@ remote_control_bp = Blueprint('remote_control', __name__)
 
 @remote_control_bp.route('/remote-control/units/<string:unit_id>/power', methods=['POST'])
 @jwt_required()
-@permission_required('read_units')
+@permission_required('remote_control')
 def control_unit_power(unit_id):
     """Control unit power state remotely.
     
@@ -81,7 +81,7 @@ def control_unit_power(unit_id):
 
 @remote_control_bp.route('/remote-control/units/<string:unit_id>/water-production', methods=['POST'])
 @jwt_required()
-@permission_required('read_units')
+@permission_required('remote_control')
 def control_water_production(unit_id):
     """Control unit water production remotely.
     
