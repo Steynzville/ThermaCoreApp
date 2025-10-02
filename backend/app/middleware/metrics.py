@@ -6,7 +6,7 @@ from threading import Lock
 from typing import Dict, Any, Optional, List, Callable
 from functools import wraps
 
-from flask import request, g, current_app
+from flask import request, g, current_app, escape
 from werkzeug.exceptions import HTTPException
 
 from app.middleware.request_id import RequestIDManager
@@ -343,7 +343,7 @@ def create_metrics_blueprint():
                 'success': False,
                 'error': {
                     'code': 'ENDPOINT_NOT_FOUND',
-                    'message': f'No metrics found for endpoint: {endpoint}'
+                    'message': f'No metrics found for endpoint: {escape(endpoint)}'
                 },
                 'request_id': RequestIDManager.get_request_id(),
                 'timestamp': datetime.utcnow().isoformat() + 'Z'
