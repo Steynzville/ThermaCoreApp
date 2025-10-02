@@ -372,6 +372,11 @@ class ModbusService:
                 # Convert value to appropriate integer representation
                 if data_type == 'float32':
                     # Proper IEEE 754 float32 conversion using struct
+                    # Endianness: Big-endian (network byte order) is used by default
+                    # This matches the Modbus standard convention where the high-order word
+                    # is transmitted first. If your device uses little-endian, modify the
+                    # struct format strings from '>f' and '>I' to '<f' and '<I'.
+                    # For configurable endianness, this could be made a device parameter.
                     import struct
                     # Convert float to bytes and then to two 16-bit registers
                     bytes_val = struct.pack('>f', value)  # Big-endian float
@@ -379,9 +384,16 @@ class ModbusService:
                     # Split into high and low 16-bit words
                     high_word = (combined >> 16) & 0xFFFF
                     low_word = combined & 0xFFFF
-                    # Write both registers (assuming consecutive addresses)
-                    success = (client.write_single_register(address, high_word, device.unit_id) and
-                             client.write_single_register(address + 1, low_word, device.unit_id))
+                    # Write both registers independently to detect partial failures
+                    # Execute both writes and check individual results
+                    success_high = client.write_single_register(address, high_word, device.unit_id)
+                    success_low = client.write_single_register(address + 1, low_word, device.unit_id)
+                    # Combine results: both must succeed
+                    success = success_high and success_low
+                    if success_high and not success_low:
+                        logger.error(f"Partial write failure: high word succeeded but low word failed for float32 at address {address}")
+                    elif not success_high and success_low:
+                        logger.error(f"Partial write failure: high word failed but low word succeeded for float32 at address {address}")
                 else:
                     int_value = int(value)
                     success = client.write_single_register(address, int_value, device.unit_id)
@@ -465,10 +477,15 @@ class ModbusService:
                     value = raw_values[0]
             elif data_type == 'float32':
                 # Proper IEEE 754 float32 conversion using struct
+                # Endianness: Big-endian (network byte order) is used by default
+                # This matches the Modbus standard convention where the high-order word
+                # comes first. If your device uses little-endian, modify the struct
+                # format strings from '>I' and '>f' to '<I' and '<f'.
+                # For configurable endianness, this could be made a device parameter.
                 if len(raw_values) >= 2:
                     import struct
                     # Combine two 16-bit registers into a 32-bit integer
-                    # Assuming high-word first (big-endian) - adjust byte order if needed
+                    # High-word first (big-endian byte order)
                     combined = (raw_values[0] << 16) | raw_values[1]
                     # Convert to bytes and then to float32
                     bytes_val = struct.pack('>I', combined)  # Big-endian unsigned int

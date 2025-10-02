@@ -753,6 +753,9 @@ class DNP3Service:
                                     description=dp.description
                                 )
                                 readings.append(reading)
+                            else:
+                                # Log when received index is not in our configuration
+                                logger.warning(f"Received binary input for unconfigured index {index} from device {device_id}")
                     
                     # Read analog inputs
                     if analog_inputs:
@@ -783,6 +786,9 @@ class DNP3Service:
                                     description=dp.description
                                 )
                                 readings.append(reading)
+                            else:
+                                # Log when received index is not in our configuration
+                                logger.warning(f"Received analog input for unconfigured index {index} from device {device_id}")
                     
                     # Read counters
                     if counters:
@@ -810,6 +816,9 @@ class DNP3Service:
                                     description=dp.description
                                 )
                                 readings.append(reading)
+                            else:
+                                # Log when received index is not in our configuration
+                                logger.warning(f"Received counter for unconfigured index {index} from device {device_id}")
                 
                 # Cache the new readings if enabled
                 if self._enable_caching and readings:
