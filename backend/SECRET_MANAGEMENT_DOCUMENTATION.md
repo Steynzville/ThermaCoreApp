@@ -1,5 +1,8 @@
 # ThermaCore SCADA API - Secret Management Documentation
 
+> **Last Reviewed**: October 2024  
+> **Status**: Current and Accurate
+
 ## Overview
 
 This document provides comprehensive guidance for secure secret management in the ThermaCore SCADA API, covering environment variables, encryption keys, database credentials, and other sensitive configuration data.

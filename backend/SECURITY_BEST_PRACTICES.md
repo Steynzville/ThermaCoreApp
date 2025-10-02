@@ -1,5 +1,8 @@
 # ThermaCore SCADA API - Security Best Practices Guide
 
+> **Last Reviewed**: October 2024  
+> **Status**: Current and Accurate
+
 ## Overview
 
 This guide provides comprehensive security best practices for the ThermaCore SCADA API, covering development, deployment, and operational security considerations. These practices complement the audit logging and secret management implementations in PR3.
