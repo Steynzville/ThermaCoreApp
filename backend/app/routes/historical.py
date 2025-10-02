@@ -9,6 +9,7 @@ import json
 from app.models import Unit, Sensor, SensorReading, db, utc_now  # Use timezone-aware datetime
 from app.routes.auth import permission_required
 from app.utils.error_handler import SecurityAwareErrorHandler
+from app.utils.helpers import parse_timestamp
 
 # Create historical data blueprint
 historical_bp = Blueprint('historical', __name__)
@@ -72,18 +73,25 @@ def get_historical_data(unit_id):
         end_date = request.args.get('end_date')
         sensor_types = request.args.get('sensor_types')
         aggregation = request.args.get('aggregation', 'raw')
-        limit = int(request.args.get('limit', 1000))
+        
+        # Robust query parameter parsing with validation
+        try:
+            limit = int(request.args.get('limit', 1000))
+            if limit < 1 or limit > 10000:
+                return jsonify({'error': 'Invalid limit parameter. Must be between 1 and 10000'}), 400
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Invalid limit parameter. Must be an integer'}), 400
         
         # Set default time range if not provided
         if not end_date:
             end_time = utc_now()
         else:
-            end_time = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+            end_time = parse_timestamp(end_date)
             
         if not start_date:
             start_time = end_time - timedelta(days=7)  # Default to last 7 days
         else:
-            start_time = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+            start_time = parse_timestamp(start_date)
         
         # Build base query
         query = db.session.query(
@@ -251,12 +259,12 @@ def compare_units_historical():
         if not end_date:
             end_time = utc_now()
         else:
-            end_time = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+            end_time = parse_timestamp(end_date)
             
         if not start_date:
             start_time = end_time - timedelta(days=30)  # Default to last 30 days
         else:
-            start_time = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+            start_time = parse_timestamp(start_date)
         
         # Set aggregation format
         if aggregation == 'hourly':
@@ -410,12 +418,12 @@ def export_historical_data(unit_id):
         if not end_date:
             end_time = utc_now()
         else:
-            end_time = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+            end_time = parse_timestamp(end_date)
             
         if not start_date:
             start_time = end_time - timedelta(days=30)  # Default to last 30 days
         else:
-            start_time = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+            start_time = parse_timestamp(start_date)
         
         # Build query
         query = db.session.query(
@@ -528,7 +536,14 @@ def get_historical_statistics(unit_id):
         if not unit:
             return jsonify({'error': 'Unit not found'}), 404
         
-        days = int(request.args.get('days', 30))
+        # Robust query parameter parsing with validation
+        try:
+            days = int(request.args.get('days', 30))
+            if days < 1 or days > 365:
+                return jsonify({'error': 'Invalid days parameter. Must be between 1 and 365'}), 400
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Invalid days parameter. Must be an integer'}), 400
+            
         sensor_type = request.args.get('sensor_type')
         
         start_time = utc_now() - timedelta(days=days)
@@ -573,8 +588,6 @@ def get_historical_statistics(unit_id):
             'total_sensor_types': len(statistics)
         })
         
-    except ValueError:
-        return jsonify({'error': 'Invalid days parameter'}), 400
     except Exception as e:
         return SecurityAwareErrorHandler.handle_error(
             e, "Failed to get historical statistics"
