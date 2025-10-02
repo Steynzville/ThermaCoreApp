@@ -1,5 +1,9 @@
 # Deployment Instructions
 
+> **Last Reviewed**: October 2024  
+> **Status**: Current and Accurate  
+> **Note**: Dockerfiles referenced in this document need to be created based on the examples provided.
+
 This document provides comprehensive instructions for deploying the ThermaCoreApp, which comprises a Python Flask backend and a React frontend, within an industrial environment. The deployment strategy emphasizes containerization using Docker and Docker Compose for consistency, scalability, and ease of management, aligning with the project's SCADA integration objectives.
 
 ## 1. Prerequisites
@@ -126,7 +130,7 @@ volumes:
   pgdata:
 ```
 
-**Note**: The `Dockerfile` for the backend should be in `backend/Dockerfile` and for the frontend in `src/Dockerfile`. These Dockerfiles need to be created if they don't exist, to build the respective application images.
+**Note**: The `Dockerfile` for the backend should be in `backend/Dockerfile` and for the frontend in `src/Dockerfile`. These Dockerfiles need to be created if they don't exist, to build the respective application images. Example Dockerfiles are provided in sections 3.2 and 3.3 below.
 
 ### 3.2. Create Backend `Dockerfile` (`backend/Dockerfile`)
 

@@ -1,5 +1,8 @@
 # Getting Started Guide for New Developers
 
+> **Last Reviewed**: October 2024  
+> **Status**: Current and Accurate
+
 This guide provides instructions for setting up your development environment and running the ThermaCoreApp locally. It covers both the backend (Flask API) and the frontend (React application).
 
 ## 1. Prerequisites
@@ -121,18 +124,19 @@ The backend API will be running at `http://localhost:5000`.
 
 ## 4. Frontend Setup (React Application)
 
-### 4.1. Navigate to Frontend Directory
+### 4.1. Navigate to Project Root
 
-From the root of the cloned repository, navigate to the frontend directory:
+If you are in the `backend` directory, return to the project root:
 
 ```bash
-cd .. # If you are in the backend directory
-cd src
+cd ..
 ```
+
+The frontend source code is located in the `src/` directory at the project root.
 
 ### 4.2. Install Dependencies
 
-Install the Node.js dependencies using pnpm:
+From the project root, install the Node.js dependencies using pnpm:
 
 ```bash
 pnpm install

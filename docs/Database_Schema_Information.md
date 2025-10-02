@@ -1,5 +1,8 @@
 # Database Schema Information
 
+> **Last Reviewed**: October 2024  
+> **Status**: Current and Accurate
+
 The ThermaCoreApp utilizes a PostgreSQL database to store all application data. The schema is defined using SQLAlchemy ORM in `backend/app/models/__init__.py`. This document outlines the key tables, their columns, relationships, and enumerations.
 
 ## 1. Enumerations
