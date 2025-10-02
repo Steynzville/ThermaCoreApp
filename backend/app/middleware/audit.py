@@ -17,9 +17,10 @@ from sqlalchemy.exc import SQLAlchemyError
 from app import db
 from app.models import User
 from app.middleware.request_id import RequestIDManager
+from app.utils.secure_logger import SecureLogger
 
 
-logger = logging.getLogger(__name__)
+logger = SecureLogger.get_secure_logger(__name__)
 
 
 # Sensitive fields that should be redacted in audit logs

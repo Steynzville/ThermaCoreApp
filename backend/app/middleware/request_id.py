@@ -5,9 +5,10 @@ from functools import wraps
 from typing import Optional, Callable
 
 from flask import request, g, has_request_context
+from app.utils.secure_logger import SecureLogger
 
 
-logger = logging.getLogger(__name__)
+logger = SecureLogger.get_secure_logger(__name__)
 
 
 class RequestIDManager:

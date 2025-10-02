@@ -12,8 +12,9 @@ from sqlalchemy.exc import IntegrityError
 
 from app.models import db, SensorReading, Sensor, Unit
 from app.utils.environment import is_production_environment
+from app.utils.secure_logger import SecureLogger
 
-logger = logging.getLogger(__name__)
+logger = SecureLogger.get_secure_logger(__name__)
 
 
 class MQTTClient:

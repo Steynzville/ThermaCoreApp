@@ -4,8 +4,9 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, Tuple, Optional
 from flask import jsonify, g
+from app.utils.secure_logger import SecureLogger
 
-logger = logging.getLogger(__name__)
+logger = SecureLogger.get_secure_logger(__name__)
 
 
 class SecurityAwareErrorHandler:
@@ -50,26 +51,24 @@ class SecurityAwareErrorHandler:
         
         # Log the exception with correlation ID and full context
         log_message = (
-            f"Domain exception [{request_id}] in {exception.context}: {str(exception)}"
+            f"Domain exception [{request_id}] {exception.__class__.__name__} in {exception.context}: {str(exception)}"
         )
+        
+        # Enhanced logging with structured context including error class for debugging
+        log_extra = {
+            'request_id': request_id,
+            'error_type': exception.error_type,
+            'error_class': exception.__class__.__name__,
+            'context': exception.context,
+            'details': exception.details,
+            'status_code': exception.status_code
+        }
         
         # Log with appropriate level based on error type
         if exception.error_type in ['internal_error', 'database_error', 'configuration_error']:
-            logger.error(log_message, exc_info=True, extra={
-                'request_id': request_id,
-                'error_type': exception.error_type,
-                'context': exception.context,
-                'details': exception.details,
-                'status_code': exception.status_code
-            })
+            logger.error(log_message, exc_info=True, extra=log_extra)
         else:
-            logger.warning(log_message, extra={
-                'request_id': request_id,
-                'error_type': exception.error_type,
-                'context': exception.context,
-                'details': exception.details,
-                'status_code': exception.status_code
-            })
+            logger.warning(log_message, extra=log_extra)
         
         # Get generic user-facing message
         generic_message = SecurityAwareErrorHandler.GENERIC_MESSAGES.get(
@@ -116,7 +115,8 @@ class SecurityAwareErrorHandler:
         request_id = getattr(g, 'request_id', str(uuid.uuid4()))
         
         # Log the actual error with full details and correlation ID
-        log_message = f"Service error [{request_id}] in {context}: {str(error)}"
+        # Include error class name for better debugging
+        log_message = f"Service error [{request_id}] {error.__class__.__name__} in {context}: {str(error)}"
         
         # Enhanced logging with structured context
         log_extra = {
