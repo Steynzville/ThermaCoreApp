@@ -256,6 +256,7 @@ class DeviceStatusService {
   generateDeviceStatusNotifications(userRole = 'user') {
     const notifications = [];
     const recentChanges = this.getStatusHistory(20);
+    let notificationId = 1;
     
     recentChanges.forEach((change) => {
       // Apply role-based filtering - regular users see units 1-6 only
@@ -266,14 +267,14 @@ class DeviceStatusService {
         }
       }
 
-      change.changes.forEach((statusChange, changeIndex) => {
+      change.changes.forEach((statusChange) => {
         notifications.push({
-          id: `device-${change.deviceId}-${change.timestamp.getTime()}-${changeIndex}`,
+          id: notificationId,
           type: statusChange.type === 'alarm' ? 'alarm' : 'alert',
           message: `${change.deviceName} - ${statusChange.event}`,
           timestamp: change.timestamp.toISOString().replace('T', ' ').slice(0, 19),
           alertData: {
-            id: notifications.length + 1,
+            id: notificationId,
             type: statusChange.severity,
             title: statusChange.event,
             message: statusChange.message,
@@ -282,6 +283,7 @@ class DeviceStatusService {
             deviceName: change.deviceName,
           }
         });
+        notificationId++;
       });
     });
 
