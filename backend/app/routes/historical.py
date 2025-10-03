@@ -82,8 +82,8 @@ def get_historical_data(args, unit_id):
         start_date = args.get('start_date')
         end_date = args.get('end_date')
         sensor_types = args.get('sensor_types')
-        aggregation = args.get('aggregation', 'raw')
-        limit = args.get('limit', 1000)
+        aggregation = args['aggregation']
+        limit = args['limit']
         
         # Set default time range if not provided
         try:
@@ -247,7 +247,7 @@ def compare_units_historical(args):
         # Extract validated parameters
         unit_ids = args['unit_ids']
         sensor_type = args['sensor_type']
-        aggregation = args.get('aggregation', 'daily')
+        aggregation = args['aggregation']
         start_date = args.get('start_date')
         end_date = args.get('end_date')
         
@@ -417,7 +417,7 @@ def export_historical_data(args, unit_id):
             return jsonify({'error': 'Unit not found'}), 404
         
         # Extract validated parameters
-        export_format = args.get('format', 'json')
+        export_format = args['format']
         start_date = args.get('start_date')
         end_date = args.get('end_date')
         sensor_types = args.get('sensor_types')
@@ -556,7 +556,7 @@ def get_historical_statistics(args, unit_id):
             return jsonify({'error': 'Unit not found'}), 404
         
         # Extract validated parameters
-        days = args.get('days', 30)
+        days = args['days']
         sensor_type = args.get('sensor_type')
         
         start_time = utc_now() - timedelta(days=days)

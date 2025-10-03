@@ -159,7 +159,7 @@ def get_unit_trends(args, unit_id):
             return jsonify({'error': 'Unit not found'}), 404
         
         # Extract validated parameters
-        days = args.get('days', 7)
+        days = args['days']
         sensor_type = args.get('sensor_type')
         
         # Calculate time range
@@ -248,7 +248,7 @@ def get_units_performance(args):
     """
     try:
         # Extract validated parameter
-        hours = args.get('hours', 24)
+        hours = args['hours']
         start_time = utc_now() - timedelta(hours=hours)
         
         # Performance metrics per unit
@@ -340,7 +340,7 @@ def get_alert_patterns(args):
     """
     try:
         # Extract validated parameter
-        days = args.get('days', 30)
+        days = args['days']
         start_time = utc_now() - timedelta(days=days)
         
         # For this demo, we'll simulate alert data since we don't have an alerts table yet
