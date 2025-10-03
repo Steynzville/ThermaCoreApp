@@ -26,10 +26,13 @@ class SanitizingFilter(logging.Filter):
         # Sanitize the log message. It can be an object, so convert to string first.
         # This ensures objects with malicious __str__ methods are sanitized.
         try:
-            record.msg = sanitize(str(record.msg))
+            if record.msg is not None:
+                record.msg = sanitize(str(record.msg))
+            else:
+                record.msg = ""
         except Exception:
             # If conversion fails, use a safe placeholder to prevent logging failures
-            record.msg = "[Error converting log message to string]"
+            record.msg = "[message conversion failed]"
         
         # Sanitize arguments passed to the logger.
         # The sanitize function handles dicts and lists recursively.
