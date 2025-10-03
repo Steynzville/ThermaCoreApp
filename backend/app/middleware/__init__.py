@@ -1,7 +1,7 @@
 """Middleware package for ThermaCore SCADA API.
 
 This package contains all middleware components for the PR2 implementation:
-- Input validation middleware
+- Input validation and sanitization middleware
 - Rate limiting middleware  
 - Request ID tracking middleware
 - Metrics collection middleware
@@ -9,6 +9,7 @@ This package contains all middleware components for the PR2 implementation:
 
 These components work together to provide:
 - Comprehensive input validation with error envelopes
+- Centralized input sanitization to prevent injection attacks
 - Rate limiting with Redis or memory fallback
 - Request ID tracking across all requests
 - Performance metrics collection and monitoring
@@ -19,7 +20,8 @@ from .validation import (
     RequestValidator,
     validate_schema,
     validate_query_params,
-    validate_path_params
+    validate_path_params,
+    sanitize
 )
 
 from .rate_limit import (
@@ -59,6 +61,7 @@ __all__ = [
     'validate_schema', 
     'validate_query_params',
     'validate_path_params',
+    'sanitize',
     
     # Rate Limiting
     'RateLimiter',

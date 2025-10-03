@@ -143,10 +143,33 @@ def create_app(config_name=None):
     from app.middleware.metrics import setup_metrics_middleware
     from app.middleware.audit import setup_audit_middleware
     from app.utils.error_handler import SecurityAwareErrorHandler
+    from app.utils.logging_filter import SanitizingFilter
     
     setup_request_id_middleware(app)
     setup_metrics_middleware(app)
     setup_audit_middleware(app)
+    
+    # Add sanitization filter to all logger handlers to prevent log injection
+    # This sanitizes data at the logging layer without mutating request data
+    # Apply to root logger to ensure all application loggers are covered
+    import logging
+    root_logger = logging.getLogger()
+    
+    # Add filter to existing handlers at app initialization
+    for handler in root_logger.handlers:
+        # Check for duplicates to prevent redundant processing on re-initialization
+        if not any(isinstance(f, SanitizingFilter) for f in handler.filters):
+            handler.addFilter(SanitizingFilter())
+    
+    # Also add to app.logger handlers in case they're not in root logger
+    for handler in app.logger.handlers:
+        if not any(isinstance(f, SanitizingFilter) for f in handler.filters):
+            handler.addFilter(SanitizingFilter())
+    
+    # NOTE: If you add new logging handlers programmatically after app initialization,
+    # you must manually add the SanitizingFilter to those handlers:
+    #   from app.utils.logging_filter import SanitizingFilter
+    #   handler.addFilter(SanitizingFilter())
     
     # Register error handlers for proper domain exception handling with correlation IDs
     SecurityAwareErrorHandler.register_error_handlers(app)

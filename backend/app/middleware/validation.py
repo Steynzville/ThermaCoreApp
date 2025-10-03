@@ -11,6 +11,63 @@ from marshmallow import Schema, ValidationError
 from app.utils.error_handler import SecurityAwareErrorHandler
 
 
+# Translation table to remove all ASCII control characters (0-31)
+# and Unicode line/paragraph separators that could be used for log injection
+# This is more comprehensive and performant than multiple .replace() calls
+CONTROL_CHARS = dict.fromkeys(range(32))
+# Add Unicode line separator (U+2028) and paragraph separator (U+2029)
+CONTROL_CHARS[0x2028] = None
+CONTROL_CHARS[0x2029] = None
+
+
+def sanitize(value: Any, depth: int = 0, max_depth: int = 10) -> Any:
+    """Sanitize input to prevent log injection and other security issues.
+    
+    Removes all ASCII control characters (0-31) and Unicode line/paragraph
+    separators that could be used for log forging or other injection attacks.
+    
+    WARNING: This function removes control characters including tabs (\t).
+    It is ONLY intended for use in the logging layer via SanitizingFilter.
+    DO NOT use this function to sanitize request data or user input directly,
+    as it will corrupt legitimate multiline text, tabs, and structured data.
+    
+    Note: This function is designed for text inputs intended for logging.
+    Binary or structured payloads should not be passed through this function
+    as they may be corrupted. Use appropriate encoding (e.g., base64) before
+    logging binary data.
+    
+    Args:
+        value: The value to sanitize (can be str, dict, list, or other types)
+        depth: Current recursion depth (internal use)
+        max_depth: Maximum recursion depth to prevent DoS attacks
+        
+    Returns:
+        Sanitized value with control characters removed from strings
+    """
+    # Prevent DoS from deeply nested structures
+    # Return safe placeholder to prevent unsanitized data from being logged
+    if depth > max_depth:
+        return "[deeply nested structure]"
+    
+    if isinstance(value, str):
+        # Remove all ASCII control characters and Unicode separators using str.translate
+        return value.translate(CONTROL_CHARS)
+    elif isinstance(value, dict):
+        # Recursively sanitize both keys and values
+        # Only sanitize keys if they are strings to avoid issues with non-string keys
+        return {
+            (sanitize(k, depth + 1, max_depth) if isinstance(k, str) else k): 
+            sanitize(v, depth + 1, max_depth) 
+            for k, v in value.items()
+        }
+    elif isinstance(value, list):
+        # Recursively sanitize list items
+        return [sanitize(item, depth + 1, max_depth) for item in value]
+    else:
+        # Return other types as-is
+        return value
+
+
 class RequestValidator:
     """Comprehensive request validation middleware with error envelope support."""
     
