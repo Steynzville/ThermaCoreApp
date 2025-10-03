@@ -219,26 +219,26 @@ def use_args(schema_class: Schema, location: str = 'query'):
         def decorated_function(*args, **kwargs):
             schema = schema_class()
             
-            # Get data based on location
-            if location == 'json':
-                data = request.get_json() or {}
-            elif location == 'query':
-                data = request.args.to_dict()
-            elif location == 'form':
-                data = request.form.to_dict()
-            else:
-                return jsonify({
-                    'success': False,
-                    'error': {
-                        'code': 'VALIDATION_CONFIG_ERROR',
-                        'message': 'Invalid validation configuration',
-                        'details': {'location': location, 'valid_locations': ['json', 'query', 'form']}
-                    },
-                    'request_id': getattr(g, 'request_id', str(uuid.uuid4())),
-                    'timestamp': datetime.utcnow().isoformat() + 'Z'
-                }), 500
-            
             try:
+                # Get data based on location
+                if location == 'json':
+                    data = request.get_json() or {}
+                elif location == 'query':
+                    data = request.args.to_dict()
+                elif location == 'form':
+                    data = request.form.to_dict()
+                else:
+                    return jsonify({
+                        'success': False,
+                        'error': {
+                            'code': 'VALIDATION_CONFIG_ERROR',
+                            'message': 'Invalid validation configuration',
+                            'details': {'location': location, 'valid_locations': ['json', 'query', 'form']}
+                        },
+                        'request_id': getattr(g, 'request_id', str(uuid.uuid4())),
+                        'timestamp': datetime.utcnow().isoformat() + 'Z'
+                    }), 500
+                
                 # Validate and deserialize data
                 validated_data = schema.load(data)
                 # Pass validated data as first argument to the route function
@@ -253,6 +253,18 @@ def use_args(schema_class: Schema, location: str = 'query'):
                             'field_errors': e.messages,
                             'location': location
                         }
+                    },
+                    'request_id': getattr(g, 'request_id', str(uuid.uuid4())),
+                    'timestamp': datetime.utcnow().isoformat() + 'Z'
+                }), 400
+            except Exception:
+                # Catches JSON decoding errors and other unexpected issues
+                return jsonify({
+                    'success': False,
+                    'error': {
+                        'code': 'BAD_REQUEST',
+                        'message': 'Could not parse request data. If location is "json", please ensure it is valid JSON.',
+                        'details': {'location': location}
                     },
                     'request_id': getattr(g, 'request_id', str(uuid.uuid4())),
                     'timestamp': datetime.utcnow().isoformat() + 'Z'
