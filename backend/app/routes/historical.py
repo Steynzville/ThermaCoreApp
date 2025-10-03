@@ -5,12 +5,12 @@ from datetime import datetime, timedelta
 from sqlalchemy import func, and_, or_, desc, asc
 from typing import Dict, List, Any
 import json
+from webargs.flaskparser import use_args
 
 from app.models import Unit, Sensor, SensorReading, db, utc_now  # Use timezone-aware datetime
 from app.routes.auth import permission_required
 from app.utils.error_handler import SecurityAwareErrorHandler
 from app.utils.helpers import parse_timestamp
-from app.middleware.validation import use_args
 from app.utils.schemas import (
     HistoricalDataQuerySchema,
     StatisticsQuerySchema,
@@ -25,7 +25,7 @@ historical_bp = Blueprint('historical', __name__)
 @historical_bp.route('/historical/data/<unit_id>', methods=['GET'])
 @jwt_required()
 @permission_required('read_units')
-@use_args(HistoricalDataQuerySchema, location='query')
+@use_args(HistoricalDataQuerySchema(), location='query')
 def get_historical_data(args, unit_id):
     """Get historical data for a unit with flexible time ranges and aggregation.
     
@@ -201,7 +201,7 @@ def get_historical_data(args, unit_id):
 @historical_bp.route('/historical/compare/units', methods=['POST'])
 @jwt_required()
 @permission_required('read_units')
-@use_args(CompareUnitsSchema, location='json')
+@use_args(CompareUnitsSchema(), location='json')
 def compare_units_historical(args):
     """Compare historical data between multiple units.
     
@@ -369,7 +369,7 @@ def compare_units_historical(args):
 @historical_bp.route('/historical/export/<unit_id>', methods=['GET'])
 @jwt_required()
 @permission_required('read_units')
-@use_args(ExportDataQuerySchema, location='query')
+@use_args(ExportDataQuerySchema(), location='query')
 def export_historical_data(args, unit_id):
     """Export historical data for a unit in various formats.
     
@@ -518,7 +518,7 @@ def export_historical_data(args, unit_id):
 @historical_bp.route('/historical/statistics/<unit_id>', methods=['GET'])
 @jwt_required()
 @permission_required('read_units')
-@use_args(StatisticsQuerySchema, location='query')
+@use_args(StatisticsQuerySchema(), location='query')
 def get_historical_statistics(args, unit_id):
     """Get statistical analysis of historical data for a unit.
     

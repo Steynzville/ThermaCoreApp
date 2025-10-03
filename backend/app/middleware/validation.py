@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, Callable
 
 from flask import request, jsonify, g
 from marshmallow import Schema, ValidationError
+from webargs.flaskparser import parser
 
 from app.utils.error_handler import SecurityAwareErrorHandler
 
@@ -195,82 +196,28 @@ def validate_schema(schema_class: Schema, location: str = 'json'):
     return decorator
 
 
-def use_args(schema_class: Schema, location: str = 'query'):
+# Configure webargs error handler to use our standardized error format
+@parser.error_handler
+def handle_webargs_error(error, req, schema, *, error_status_code, error_headers):
     """
-    Decorator to parse and validate request arguments using a Marshmallow schema.
-    Similar to webargs.use_args but using marshmallow directly.
+    Custom error handler for webargs validation errors.
     
-    This provides webargs-like functionality for centralizing request validation.
-    The validated data is passed as the first argument to the decorated function.
-    
-    Args:
-        schema_class: Marshmallow schema class to validate against
-        location: Where to find the data ('json', 'query', 'form')
-    
-    Example:
-        @use_args(HistoricalDataQuerySchema, location='query')
-        def get_data(args, unit_id):
-            # args contains validated query parameters
-            limit = args['limit']
-            aggregation = args['aggregation']
+    This ensures webargs validation errors use our standardized error envelope format
+    with correlation IDs and consistent structure.
     """
-    def decorator(f: Callable) -> Callable:
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            schema = schema_class()
-            
-            try:
-                # Get data based on location
-                if location == 'json':
-                    data = request.get_json() or {}
-                elif location == 'query':
-                    data = request.args.to_dict()
-                elif location == 'form':
-                    data = request.form.to_dict()
-                else:
-                    return jsonify({
-                        'success': False,
-                        'error': {
-                            'code': 'VALIDATION_CONFIG_ERROR',
-                            'message': 'Invalid validation configuration',
-                            'details': {'location': location, 'valid_locations': ['json', 'query', 'form']}
-                        },
-                        'request_id': getattr(g, 'request_id', str(uuid.uuid4())),
-                        'timestamp': datetime.utcnow().isoformat() + 'Z'
-                    }), 500
-                
-                # Validate and deserialize data
-                validated_data = schema.load(data)
-                # Pass validated data as first argument to the route function
-                return f(validated_data, *args, **kwargs)
-            except ValidationError as e:
-                return jsonify({
-                    'success': False,
-                    'error': {
-                        'code': 'VALIDATION_ERROR',
-                        'message': 'Request data validation failed',
-                        'details': {
-                            'field_errors': e.messages,
-                            'location': location
-                        }
-                    },
-                    'request_id': getattr(g, 'request_id', str(uuid.uuid4())),
-                    'timestamp': datetime.utcnow().isoformat() + 'Z'
-                }), 400
-            except Exception:
-                # Catches JSON decoding errors and other unexpected issues
-                return jsonify({
-                    'success': False,
-                    'error': {
-                        'code': 'BAD_REQUEST',
-                        'message': 'Could not parse request data. If location is "json", please ensure it is valid JSON.',
-                        'details': {'location': location}
-                    },
-                    'request_id': getattr(g, 'request_id', str(uuid.uuid4())),
-                    'timestamp': datetime.utcnow().isoformat() + 'Z'
-                }), 400
-        return decorated_function
-    return decorator
+    return jsonify({
+        'success': False,
+        'error': {
+            'code': 'VALIDATION_ERROR',
+            'message': 'Request data validation failed',
+            'details': {
+                'field_errors': error.messages,
+                'location': getattr(error, 'location', 'unknown')
+            }
+        },
+        'request_id': getattr(g, 'request_id', str(uuid.uuid4())),
+        'timestamp': datetime.utcnow().isoformat() + 'Z'
+    }), error_status_code or 400
 
 
 def validate_query_params(**param_validators):
