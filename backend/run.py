@@ -4,7 +4,9 @@ import os
 from app import create_app, db
 
 # Create Flask application
-app = create_app(os.environ.get('FLASK_ENV', 'development'))
+# Flask's create_app() reads FLASK_ENV, FLASK_DEBUG, and other environment variables
+# to select the appropriate configuration (see app/__init__.py lines 112-122)
+app = create_app()
 
 
 @app.cli.command()
