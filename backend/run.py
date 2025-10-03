@@ -90,6 +90,6 @@ def create_admin():
 
 
 if __name__ == '__main__':
-    # Only run in debug mode if FLASK_ENV is set to 'development'
-    debug_mode = os.environ.get('FLASK_ENV') == 'development'
-    app.run(host='0.0.0.0', port=5000, debug=debug_mode)
+    # Use Flask's built-in debug configuration
+    # The app.debug is set by the configuration loaded in create_app
+    app.run(host='0.0.0.0', port=5000, debug=app.debug)

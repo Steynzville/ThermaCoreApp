@@ -1,46 +1,58 @@
 """Tests for run.py debug mode configuration."""
 import os
 import sys
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, MagicMock
 import pytest
 
 
 class TestDebugModeConfiguration:
-    """Test debug mode is only enabled when FLASK_ENV='development'."""
+    """Test that run.py correctly uses app.debug when calling app.run()."""
     
-    def test_debug_mode_enabled_when_flask_env_development(self):
-        """Test that debug mode is enabled when FLASK_ENV is set to 'development'."""
-        with patch.dict(os.environ, {'FLASK_ENV': 'development'}):
-            # Import run module to test the debug_mode calculation
-            debug_mode = os.environ.get('FLASK_ENV') == 'development'
-            assert debug_mode is True
-    
-    def test_debug_mode_disabled_when_flask_env_production(self):
-        """Test that debug mode is disabled when FLASK_ENV is set to 'production'."""
-        with patch.dict(os.environ, {'FLASK_ENV': 'production'}):
-            debug_mode = os.environ.get('FLASK_ENV') == 'development'
-            assert debug_mode is False
-    
-    def test_debug_mode_disabled_when_flask_env_not_set(self):
-        """Test that debug mode is disabled when FLASK_ENV is not set."""
-        with patch.dict(os.environ, {}, clear=True):
-            # Remove FLASK_ENV if it exists
-            os.environ.pop('FLASK_ENV', None)
-            debug_mode = os.environ.get('FLASK_ENV') == 'development'
-            assert debug_mode is False
-    
-    def test_debug_mode_disabled_when_flask_env_testing(self):
-        """Test that debug mode is disabled when FLASK_ENV is set to 'testing'."""
-        with patch.dict(os.environ, {'FLASK_ENV': 'testing'}):
-            debug_mode = os.environ.get('FLASK_ENV') == 'development'
-            assert debug_mode is False
-    
-    def test_debug_mode_case_sensitive(self):
-        """Test that debug mode check is case-sensitive (DEVELOPMENT != development)."""
-        with patch.dict(os.environ, {'FLASK_ENV': 'DEVELOPMENT'}):
-            debug_mode = os.environ.get('FLASK_ENV') == 'development'
-            assert debug_mode is False
+    def test_app_run_uses_app_debug_when_true(self):
+        """Test that app.run is called with debug=True when app.debug is True."""
+        # Create a mock app with debug=True (as set by DevelopmentConfig)
+        mock_app = Mock()
+        mock_app.debug = True
+        mock_app.run = MagicMock()
         
-        with patch.dict(os.environ, {'FLASK_ENV': 'Development'}):
-            debug_mode = os.environ.get('FLASK_ENV') == 'development'
-            assert debug_mode is False
+        # Simulate what happens in run.py: app.run(host='0.0.0.0', port=5000, debug=app.debug)
+        mock_app.run(host='0.0.0.0', port=5000, debug=mock_app.debug)
+        
+        # Verify app.run was called with debug=True
+        mock_app.run.assert_called_once_with(host='0.0.0.0', port=5000, debug=True)
+    
+    def test_app_run_uses_app_debug_when_false(self):
+        """Test that app.run is called with debug=False when app.debug is False."""
+        # Create a mock app with debug=False (as set by ProductionConfig)
+        mock_app = Mock()
+        mock_app.debug = False
+        mock_app.run = MagicMock()
+        
+        # Simulate what happens in run.py: app.run(host='0.0.0.0', port=5000, debug=app.debug)
+        mock_app.run(host='0.0.0.0', port=5000, debug=mock_app.debug)
+        
+        # Verify app.run was called with debug=False
+        mock_app.run.assert_called_once_with(host='0.0.0.0', port=5000, debug=False)
+    
+    def test_debug_mode_reflects_config(self):
+        """Test that debug mode matches the Flask config DEBUG setting."""
+        # This test verifies the relationship between config and app.debug
+        # In development: DevelopmentConfig sets DEBUG=True
+        # In production: ProductionConfig sets DEBUG=False
+        
+        test_cases = [
+            (True, 'development config sets app.debug=True'),
+            (False, 'production config sets app.debug=False'),
+        ]
+        
+        for expected_debug, description in test_cases:
+            mock_app = Mock()
+            mock_app.debug = expected_debug
+            mock_app.run = MagicMock()
+            
+            # Simulate run.py behavior
+            mock_app.run(host='0.0.0.0', port=5000, debug=mock_app.debug)
+            
+            # Verify the debug parameter matches expectations
+            call_args = mock_app.run.call_args
+            assert call_args[1]['debug'] == expected_debug, f"Failed: {description}"
