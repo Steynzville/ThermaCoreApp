@@ -31,14 +31,20 @@ class TestDebugModeConfiguration:
             assert app.config['DEBUG'] is False, "TestingConfig should set DEBUG=False"
             assert app.config['TESTING'] is True, "TestingConfig should set TESTING=True"
     
-    def test_flask_env_development_sets_debug(self):
-        """Test that FLASK_ENV=development results in debug mode."""
-        # Note: create_app requires FLASK_DEBUG=1 when FLASK_ENV=development (see line 120 of __init__.py)
+    def test_flask_env_development_without_debug_flag(self):
+        """Test that FLASK_ENV=development alone falls back to production config."""
+        # Per line 120-122 of __init__.py, FLASK_ENV=development without FLASK_DEBUG
+        # falls back to production config for security
+        with patch.dict(os.environ, {'FLASK_ENV': 'development'}, clear=True):
+            app = create_app()  # Should fall back to production
+            assert app.config['DEBUG'] is False, "Should use production config without FLASK_DEBUG"
+    
+    def test_flask_env_development_with_debug_flag(self):
+        """Test that FLASK_ENV=development with FLASK_DEBUG=1 enables debug mode."""
+        # Both FLASK_ENV=development and FLASK_DEBUG=1 are required for DevelopmentConfig
         with patch.dict(os.environ, {'FLASK_ENV': 'development', 'FLASK_DEBUG': '1'}, clear=True):
-            app = create_app()  # Should default to using FLASK_ENV
-            # The actual config loaded depends on create_app logic
-            # If FLASK_ENV=development and FLASK_DEBUG=1, it loads DevelopmentConfig
-            assert app.config['DEBUG'] is True
+            app = create_app()  # Should use DevelopmentConfig
+            assert app.config['DEBUG'] is True, "Should use DevelopmentConfig with both flags"
     
     def test_flask_env_production_sets_no_debug(self):
         """Test that FLASK_ENV=production results in no debug mode."""
