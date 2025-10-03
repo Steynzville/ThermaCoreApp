@@ -45,8 +45,9 @@ def sanitize(value: Any, depth: int = 0, max_depth: int = 10) -> Any:
         Sanitized value with control characters removed from strings
     """
     # Prevent DoS from deeply nested structures
+    # Return safe placeholder to prevent unsanitized data from being logged
     if depth > max_depth:
-        return value
+        return "[deeply nested structure]"
     
     if isinstance(value, str):
         # Remove all ASCII control characters and Unicode separators using str.translate

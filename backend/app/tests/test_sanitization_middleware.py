@@ -158,13 +158,32 @@ class TestSanitizeFunction:
         }
         
         # Should sanitize up to max_depth (default 10)
+        # Beyond max_depth, items are replaced with placeholder string
         sanitized = sanitize(nested)
         # Should not crash or cause issues
         assert isinstance(sanitized, dict)
+        # Navigate to depth 9 - should still have nested dict structure
+        result = sanitized
+        for i in range(1, 10):
+            result = result[f'level{i}']
+            assert isinstance(result, dict)
+        # At depth 9, the value for key 'level10' was sanitized at depth 10
+        # which is still within limit, so it's a dict
+        assert isinstance(result['level10'], dict)
+        # But that dict's items were sanitized at depth 11 (> max_depth=10)
+        # So both key and value became placeholders
+        assert result['level10'] == {'[deeply nested structure]': '[deeply nested structure]'}
         
         # Test with lower max_depth
         sanitized_shallow = sanitize(nested, max_depth=3)
         assert isinstance(sanitized_shallow, dict)
+        # Navigate to depth 2
+        result_shallow = sanitized_shallow['level1']['level2']
+        # At depth 2, the value for 'level3' was sanitized at depth 3
+        # which is still within limit, so it's a dict
+        assert isinstance(result_shallow['level3'], dict)
+        # But that dict's items were sanitized at depth 4 (> max_depth=3)
+        assert result_shallow['level3'] == {'[deeply nested structure]': '[deeply nested structure]'}
 
 
 class TestLoggingFilter:
@@ -198,6 +217,32 @@ class TestLoggingFilter:
         # Message should be sanitized
         assert '\n' not in record.msg
         assert record.msg == 'User login: user123[ERROR] Fake error'
+    
+    def test_logging_filter_sanitizes_object_message(self):
+        """Test that the logging filter sanitizes object messages with malicious __str__."""
+        import logging
+        from app.utils.logging_filter import SanitizingFilter
+        
+        # Create an object with malicious __str__ method
+        class MaliciousObject:
+            def __str__(self):
+                return 'Normal message\nMALICIOUS INJECTION\rFAKE LOG ENTRY'
+        
+        # Create a log record with object as message
+        record = logging.LogRecord(
+            name='test', level=logging.INFO, pathname='', lineno=0,
+            msg=MaliciousObject(),
+            args=(), exc_info=None
+        )
+        
+        # Apply the filter
+        sanitizing_filter = SanitizingFilter()
+        sanitizing_filter.filter(record)
+        
+        # Message should be sanitized (object converted to string and sanitized)
+        assert '\n' not in record.msg
+        assert '\r' not in record.msg
+        assert record.msg == 'Normal messageMALICIOUS INJECTIONFAKE LOG ENTRY'
     
     def test_logging_filter_sanitizes_args(self):
         """Test that the logging filter sanitizes log arguments."""

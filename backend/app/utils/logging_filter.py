@@ -23,9 +23,9 @@ class SanitizingFilter(logging.Filter):
         Returns:
             True to allow the log record to be logged
         """
-        # Sanitize the log message
-        if isinstance(record.msg, str):
-            record.msg = sanitize(record.msg)
+        # Sanitize the log message. It can be an object, so convert to string first.
+        # This ensures objects with malicious __str__ methods are sanitized.
+        record.msg = sanitize(str(record.msg))
         
         # Sanitize arguments passed to the logger.
         # The sanitize function handles dicts and lists recursively.
