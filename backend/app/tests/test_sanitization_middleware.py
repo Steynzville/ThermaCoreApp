@@ -3,7 +3,7 @@ import pytest
 from flask import Flask, request, jsonify
 from werkzeug.datastructures import ImmutableMultiDict
 
-from app.middleware.validation import sanitize, sanitize_request_params
+from app.middleware.validation import sanitize
 
 
 class TestSanitizeFunction:
@@ -96,8 +96,39 @@ class TestSanitizeFunction:
         assert sanitized == "testvalue"
     
     def test_sanitize_dict_keys(self):
-        """Test that dictionary keys are also sanitized."""
+        """Test that dictionary string keys are also sanitized."""
         input_dict = {'key\nwith\nnewlines': 'value', 'clean': 'test\ttabs'}
+        sanitized = sanitize(input_dict)
+        # Keys should be sanitized
+        assert 'key\nwith\nnewlines' not in sanitized
+        assert 'keywithnewlines' in sanitized
+        # Values should be sanitized
+        assert sanitized['keywithnewlines'] == 'value'
+        assert sanitized['clean'] == 'testtabs'
+    
+    def test_sanitize_dict_with_non_string_keys(self):
+        """Test that dictionaries with non-string keys work correctly."""
+        input_dict = {0: 'value\nwith\nnewlines', 1: 'clean', 'str_key\n': 'test\ttabs'}
+        sanitized = sanitize(input_dict)
+        # Non-string keys should be preserved
+        assert 0 in sanitized
+        assert 1 in sanitized
+        # String keys should be sanitized
+        assert 'str_key\n' not in sanitized
+        assert 'str_key' in sanitized
+        # All values should be sanitized
+        assert sanitized[0] == 'valuewithnewlines'
+        assert sanitized[1] == 'clean'
+        assert sanitized['str_key'] == 'testtabs'
+    
+    def test_sanitize_unicode_separators(self):
+        """Test that Unicode line and paragraph separators are removed."""
+        # U+2028 is Line Separator, U+2029 is Paragraph Separator
+        input_str = "line1\u2028line2\u2029line3"
+        sanitized = sanitize(input_str)
+        assert '\u2028' not in sanitized
+        assert '\u2029' not in sanitized
+        assert sanitized == "line1line2line3"
         sanitized = sanitize(input_dict)
         # Keys should be sanitized
         assert 'key\nwith\nnewlines' not in sanitized
@@ -109,8 +140,29 @@ class TestSanitizeFunction:
     def test_sanitize_depth_limit(self):
         """Test that deeply nested structures are handled safely."""
         # Create a deeply nested structure
-        nested = {'level1': {'level2': {'level3': {'level4': {'level5': {'level6': {'level7': {
-            'level8': {'level9': {'level10': {'level11': 'value\nwith\nnewlines'}}}}}}}}}}
+        nested = {
+            'level1': {
+                'level2': {
+                    'level3': {
+                        'level4': {
+                            'level5': {
+                                'level6': {
+                                    'level7': {
+                                        'level8': {
+                                            'level9': {
+                                                'level10': {
+                                                    'level11': 'value\nwith\nnewlines'
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
         
         # Should sanitize up to max_depth (default 10)
         sanitized = sanitize(nested)
@@ -167,6 +219,59 @@ class TestLoggingFilter:
             exc_info=None
         )
         
+        # Apply the filter
+        sanitizing_filter = SanitizingFilter()
+        sanitizing_filter.filter(record)
+        
+        # Arguments should be sanitized
+        assert record.args[0] == 'unit123'
+        assert record.args[1] == 'tempsensor'
+    
+    def test_logging_filter_sanitizes_all_arg_types(self):
+        """Test that the logging filter sanitizes all argument types, not just strings."""
+        import logging
+        from app.utils.logging_filter import SanitizingFilter
+        
+        # Create a log record with mixed type arguments including dicts and lists
+        record = logging.LogRecord(
+            name='test', level=logging.INFO, pathname='', lineno=0,
+            msg='Data: %s %s %s',
+            args=('string\nvalue', {'key\n': 'value\n'}, ['list\nitem']),
+            exc_info=None
+        )
+        
+        # Apply the filter
+        sanitizing_filter = SanitizingFilter()
+        sanitizing_filter.filter(record)
+        
+        # All argument types should be sanitized
+        assert record.args[0] == 'stringvalue'
+        assert 'key\n' not in record.args[1]
+        assert 'key' in record.args[1]
+        assert record.args[1]['key'] == 'value'
+        assert record.args[2] == ['listitem']
+    
+    def test_logging_filter_sanitizes_unicode_separators(self):
+        """Test that the logging filter sanitizes Unicode separators."""
+        import logging
+        from app.utils.logging_filter import SanitizingFilter
+        
+        # Create a log record with Unicode line/paragraph separators
+        record = logging.LogRecord(
+            name='test', level=logging.INFO, pathname='', lineno=0,
+            msg='Message: %s',
+            args=('line1\u2028line2\u2029line3',),
+            exc_info=None
+        )
+        
+        # Apply the filter
+        sanitizing_filter = SanitizingFilter()
+        sanitizing_filter.filter(record)
+        
+        # Unicode separators should be removed
+        assert '\u2028' not in record.args[0]
+        assert '\u2029' not in record.args[0]
+        assert record.args[0] == 'line1line2line3'
         # Apply the filter
         sanitizing_filter = SanitizingFilter()
         sanitizing_filter.filter(record)

@@ -9,15 +9,16 @@ The ThermaCore SCADA API includes centralized input sanitization that protects a
 ### Core Components
 
 1. **`sanitize()` function** (`app/middleware/validation.py`)
-   - Removes all ASCII control characters (0-31)
+   - Removes all ASCII control characters (0-31) and Unicode line/paragraph separators (U+2028, U+2029)
    - Works recursively on strings, dictionaries, and lists
-   - Sanitizes both dictionary keys and values
+   - Sanitizes dictionary string keys and all values (preserves non-string keys like integers)
    - Includes depth limit (max_depth=10) to prevent DoS from deeply nested structures
    - Safe for all data types (non-string types are returned unchanged)
+   - **Note**: Designed for text inputs; binary data should be encoded (e.g., base64) before logging
 
 2. **`SanitizingFilter` logging filter** (`app/utils/logging_filter.py`)
    - Registered on all Flask logger handlers
-   - Automatically sanitizes log messages and arguments before logging
+   - Automatically sanitizes log messages and all arguments (strings, dicts, lists, etc.) before logging
    - Operates transparently without modifying application data
 
 ### Architecture Decision
