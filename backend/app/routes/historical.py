@@ -492,7 +492,7 @@ def export_historical_data(unit_id):
             })
             
     except ValueError as e:
-        return jsonify({'error': f'Invalid parameter: {str(e)}'}), 400
+        return jsonify({'error': 'Invalid request data provided.'}), 400
     except Exception as e:
         return SecurityAwareErrorHandler.handle_error(
             e, "Failed to export historical data"
