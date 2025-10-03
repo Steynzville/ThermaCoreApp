@@ -155,7 +155,9 @@ def create_app(config_name=None):
     import logging
     root_logger = logging.getLogger()
     for handler in root_logger.handlers:
-        handler.addFilter(SanitizingFilter())
+        # Check for duplicates to prevent redundant processing on re-initialization
+        if not any(isinstance(f, SanitizingFilter) for f in handler.filters):
+            handler.addFilter(SanitizingFilter())
     
     # Also add to app.logger handlers in case they're not in root logger
     for handler in app.logger.handlers:
