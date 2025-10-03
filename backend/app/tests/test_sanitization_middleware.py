@@ -53,7 +53,7 @@ class TestSanitizeFunction:
     def test_sanitize_list(self):
         """Test sanitizing list items."""
         input_list = ['clean', 'with\nnewline', 'and\ttab']
-        expected = ['clean', 'withnewline', 'andttab']
+        expected = ['clean', 'withnewline', 'andtab']
         assert sanitize(input_list) == expected
     
     def test_sanitize_list_of_dicts(self):
@@ -84,167 +84,146 @@ class TestSanitizeFunction:
         assert '\n' not in sanitized
         assert '\r' not in sanitized
         assert sanitized == "user123[ERROR] Fake error messagemalicious content"
+    
+    def test_sanitize_removes_all_control_chars(self):
+        """Test that all ASCII control characters are removed."""
+        # Test various control characters
+        input_str = "test\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0fvalue"
+        sanitized = sanitize(input_str)
+        # All control chars (0-31) should be removed
+        for i in range(32):
+            assert chr(i) not in sanitized
+        assert sanitized == "testvalue"
+    
+    def test_sanitize_dict_keys(self):
+        """Test that dictionary keys are also sanitized."""
+        input_dict = {'key\nwith\nnewlines': 'value', 'clean': 'test\ttabs'}
+        sanitized = sanitize(input_dict)
+        # Keys should be sanitized
+        assert 'key\nwith\nnewlines' not in sanitized
+        assert 'keywithnewlines' in sanitized
+        # Values should be sanitized
+        assert sanitized['keywithnewlines'] == 'value'
+        assert sanitized['clean'] == 'testtabs'
+    
+    def test_sanitize_depth_limit(self):
+        """Test that deeply nested structures are handled safely."""
+        # Create a deeply nested structure
+        nested = {'level1': {'level2': {'level3': {'level4': {'level5': {'level6': {'level7': {
+            'level8': {'level9': {'level10': {'level11': 'value\nwith\nnewlines'}}}}}}}}}}
+        
+        # Should sanitize up to max_depth (default 10)
+        sanitized = sanitize(nested)
+        # Should not crash or cause issues
+        assert isinstance(sanitized, dict)
+        
+        # Test with lower max_depth
+        sanitized_shallow = sanitize(nested, max_depth=3)
+        assert isinstance(sanitized_shallow, dict)
 
 
-class TestSanitizeRequestParams:
-    """Test the sanitize_request_params() middleware."""
+class TestLoggingFilter:
+    """Test the SanitizingFilter for logging."""
     
-    def test_sanitize_view_args(self):
-        """Test sanitization of view_args (path parameters)."""
-        app = Flask(__name__)
+    def test_logging_filter_sanitizes_message(self):
+        """Test that the logging filter sanitizes log messages."""
+        import logging
+        from app.utils.logging_filter import SanitizingFilter
         
-        @app.route('/test/<unit_id>')
-        def test_route(unit_id):
-            return jsonify({'unit_id': unit_id})
+        # Create a logger with the sanitizing filter
+        logger = logging.getLogger('test_logger')
+        logger.setLevel(logging.INFO)
         
-        # Register the sanitization middleware
-        @app.before_request
-        def sanitize_params():
-            sanitize_request_params()
+        # Add a handler with our filter
+        handler = logging.StreamHandler()
+        handler.addFilter(SanitizingFilter())
+        logger.addHandler(handler)
         
-        with app.test_client() as client:
-            # Test with malicious unit_id containing newlines
-            response = client.get('/test/unit123%0A%0Dmalicious')
-            assert response.status_code == 200
-            data = response.get_json()
-            # Newlines should be removed
-            assert '\n' not in data['unit_id']
-            assert '\r' not in data['unit_id']
-            assert 'unit123malicious' == data['unit_id']
+        # Create a log record with malicious content
+        record = logging.LogRecord(
+            name='test', level=logging.INFO, pathname='', lineno=0,
+            msg='User login: user123\n[ERROR] Fake error',
+            args=(), exc_info=None
+        )
+        
+        # Apply the filter
+        sanitizing_filter = SanitizingFilter()
+        sanitizing_filter.filter(record)
+        
+        # Message should be sanitized
+        assert '\n' not in record.msg
+        assert record.msg == 'User login: user123[ERROR] Fake error'
     
-    def test_sanitize_query_params(self):
-        """Test sanitization of query parameters."""
-        app = Flask(__name__)
+    def test_logging_filter_sanitizes_args(self):
+        """Test that the logging filter sanitizes log arguments."""
+        import logging
+        from app.utils.logging_filter import SanitizingFilter
         
-        @app.route('/test')
-        def test_route():
-            sensor_type = request.args.get('sensor_type')
-            return jsonify({'sensor_type': sensor_type})
+        # Create a log record with malicious arguments
+        record = logging.LogRecord(
+            name='test', level=logging.INFO, pathname='', lineno=0,
+            msg='Unit: %s, Sensor: %s',
+            args=('unit\n123', 'temp\rsensor'),
+            exc_info=None
+        )
         
-        # Register the sanitization middleware
-        @app.before_request
-        def sanitize_params():
-            sanitize_request_params()
+        # Apply the filter
+        sanitizing_filter = SanitizingFilter()
+        sanitizing_filter.filter(record)
         
-        with app.test_client() as client:
-            # Test with malicious query parameter
-            response = client.get('/test?sensor_type=temp%0A%0Dmalicious')
-            assert response.status_code == 200
-            data = response.get_json()
-            # Newlines should be removed
-            assert '\n' not in data['sensor_type']
-            assert '\r' not in data['sensor_type']
-            assert 'tempmalicious' == data['sensor_type']
+        # Arguments should be sanitized
+        assert record.args[0] == 'unit123'
+        assert record.args[1] == 'tempsensor'
     
-    def test_sanitize_form_data(self):
-        """Test sanitization of form data."""
-        app = Flask(__name__)
-        
-        @app.route('/test', methods=['POST'])
-        def test_route():
-            username = request.form.get('username')
-            return jsonify({'username': username})
-        
-        # Register the sanitization middleware
-        @app.before_request
-        def sanitize_params():
-            sanitize_request_params()
-        
-        with app.test_client() as client:
-            # Test with malicious form data
-            response = client.post('/test', data={'username': 'admin\n\rinjected'})
-            assert response.status_code == 200
-            data = response.get_json()
-            # Newlines should be removed
-            assert '\n' not in data['username']
-            assert '\r' not in data['username']
-            assert 'admininjected' == data['username']
-    
-    def test_sanitize_all_params_together(self):
-        """Test sanitization of all parameter types in one request."""
-        app = Flask(__name__)
-        
-        @app.route('/test/<path_param>', methods=['POST'])
-        def test_route(path_param):
-            query_param = request.args.get('query')
-            form_param = request.form.get('form')
-            return jsonify({
-                'path': path_param,
-                'query': query_param,
-                'form': form_param
-            })
-        
-        # Register the sanitization middleware
-        @app.before_request
-        def sanitize_params():
-            sanitize_request_params()
-        
-        with app.test_client() as client:
-            response = client.post(
-                '/test/path%0Avalue?query=query%0Dvalue',
-                data={'form': 'form\tvalue'}
-            )
-            assert response.status_code == 200
-            data = response.get_json()
-            
-            # All control characters should be removed
-            assert '\n' not in data['path']
-            assert '\r' not in data['query']
-            assert '\t' not in data['form']
-            assert data['path'] == 'pathvalue'
-            assert data['query'] == 'queryvalue'
-            assert data['form'] == 'formvalue'
-    
-    def test_sanitize_does_not_affect_normal_requests(self):
-        """Test that sanitization doesn't affect normal clean requests."""
-        app = Flask(__name__)
-        
-        @app.route('/test/<unit_id>')
-        def test_route(unit_id):
-            sensor = request.args.get('sensor', 'default')
-            return jsonify({'unit_id': unit_id, 'sensor': sensor})
-        
-        # Register the sanitization middleware
-        @app.before_request
-        def sanitize_params():
-            sanitize_request_params()
-        
-        with app.test_client() as client:
-            response = client.get('/test/unit123?sensor=temperature')
-            assert response.status_code == 200
-            data = response.get_json()
-            # Clean data should remain unchanged
-            assert data['unit_id'] == 'unit123'
-            assert data['sensor'] == 'temperature'
-
-
-class TestHistoricalRouteSanitization:
-    """Test that historical routes use pre-sanitized parameters."""
-    
-    def test_export_historical_data_uses_sanitized_unit_id(self):
-        """Test that export_historical_data uses sanitized unit_id in logging."""
-        # This test verifies that the manual sanitization has been removed
-        # and the route relies on the middleware
-        from app.routes.historical import historical_bp
+    def test_logging_filter_with_flask_app(self):
+        """Test that logging filter works with Flask app."""
+        from flask import Flask
+        from app.utils.logging_filter import SanitizingFilter
         
         app = Flask(__name__)
         app.config['TESTING'] = True
-        app.register_blueprint(historical_bp, url_prefix='/api/v1')
         
-        # Register the sanitization middleware
-        @app.before_request
-        def sanitize_params():
-            sanitize_request_params()
+        # Add sanitizing filter to app logger
+        for handler in app.logger.handlers:
+            handler.addFilter(SanitizingFilter())
+        
+        # Test that logging with malicious data works
+        with app.app_context():
+            # This should not raise an error
+            app.logger.info("Test message with unit_id=%s", "unit\n123")
+
+
+class TestIntegrationWithoutRequestMutation:
+    """Test that the application works without mutating request objects."""
+    
+    def test_request_data_remains_intact(self):
+        """Test that original request data is not modified."""
+        from flask import Flask, request, jsonify
+        from app.utils.logging_filter import SanitizingFilter
+        
+        app = Flask(__name__)
+        app.config['TESTING'] = True
+        
+        # Add logging filter
+        for handler in app.logger.handlers:
+            handler.addFilter(SanitizingFilter())
+        
+        @app.route('/test/<unit_id>')
+        def test_route(unit_id):
+            # Log with potentially malicious data - filter will sanitize at logging layer
+            app.logger.info("Processing unit: %s", unit_id)
+            # But the actual unit_id parameter should remain unchanged
+            return jsonify({'unit_id': unit_id, 'original': True})
         
         with app.test_client() as client:
-            # Even though this will fail due to auth/db, we can verify
-            # the middleware runs and sanitizes the unit_id parameter
-            response = client.get('/api/v1/historical/export/unit123%0Amalicious')
+            # Send request with newlines in path
+            response = client.get('/test/unit123%0Amalicious')
+            data = response.get_json()
             
-            # The route will fail for other reasons (auth, db), but
-            # the unit_id should have been sanitized before reaching the route
-            # We can't easily test the logging output, but we verified
-            # the code change removed the manual sanitization
+            # The route receives the original data (URL-decoded)
+            # Flask handles URL decoding, so %0A becomes \n
+            assert 'unit123\nmalicious' == data['unit_id']
+            assert data['original'] is True
 
 
 @pytest.fixture

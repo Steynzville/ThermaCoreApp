@@ -427,7 +427,7 @@ def export_historical_data(unit_id):
                 start_time = parse_timestamp(start_date)
         except ValueError as e:
             # Log without echoing user input to prevent log injection
-            # unit_id is now pre-sanitized by the middleware
+            # Logging layer automatically sanitizes output via SanitizingFilter
             current_app.logger.warning(
                 "Invalid date parameter in historical export for unit_id=%s",
                 unit_id,

@@ -2,89 +2,124 @@
 
 ## Overview
 
-The ThermaCore SCADA API now includes centralized input sanitization middleware that automatically sanitizes all incoming request parameters before they reach route handlers. This provides application-wide protection against log injection and other injection attacks.
+The ThermaCore SCADA API includes centralized input sanitization that protects against log injection attacks **at the logging layer**. This approach sanitizes data when it's being logged while keeping the original request data intact for application logic.
 
 ## Implementation
 
 ### Core Components
 
 1. **`sanitize()` function** (`app/middleware/validation.py`)
-   - Removes control characters (newlines `\n`, carriage returns `\r`, tabs `\t`)
+   - Removes all ASCII control characters (0-31)
    - Works recursively on strings, dictionaries, and lists
+   - Sanitizes both dictionary keys and values
+   - Includes depth limit (max_depth=10) to prevent DoS from deeply nested structures
    - Safe for all data types (non-string types are returned unchanged)
 
-2. **`sanitize_request_params()` middleware** (`app/middleware/validation.py`)
-   - Registered as `@app.before_request` handler
-   - Automatically sanitizes:
-     - `request.view_args` (path parameters like `/api/v1/units/<unit_id>`)
-     - `request.args` (query parameters like `?sensor_type=temperature`)
-     - `request.form` (form data from POST/PUT requests)
+2. **`SanitizingFilter` logging filter** (`app/utils/logging_filter.py`)
+   - Registered on all Flask logger handlers
+   - Automatically sanitizes log messages and arguments before logging
+   - Operates transparently without modifying application data
+
+### Architecture Decision
+
+**Why sanitize at the logging layer instead of at request ingress?**
+
+The initial implementation sanitized request parameters globally via middleware, but this approach had critical flaws:
+- **Data corruption**: Removed control characters from valid user input (e.g., multiline text fields)
+- **Silent failures**: Business logic received modified data without awareness
+- **Breaking changes**: Extensions or code relying on original data could fail
+
+**The logging-layer approach is superior because:**
+- ✅ **Preserves data integrity**: Original request data remains intact for all application logic
+- ✅ **Targeted protection**: Only sanitizes when logging, where injection attacks occur
+- ✅ **No side effects**: Doesn't affect request processing, validation, or business logic
+- ✅ **Explicit and clear**: Developers know logging is sanitized, but data is original
 
 ### How It Works
 
 ```python
-# Before - manual sanitization in route handlers
+# Logging filter automatically sanitizes at log time
 @app.route('/units/<unit_id>')
 def get_unit(unit_id):
-    # Had to manually sanitize
-    sanitized_id = str(unit_id).replace('\n', '').replace('\r', '').replace('\t', '')
-    logger.info(f"Getting unit {sanitized_id}")
-    # ... rest of code
-
-# After - automatic sanitization via middleware
-@app.route('/units/<unit_id>')
-def get_unit(unit_id):
-    # unit_id is already sanitized by middleware
-    logger.info(f"Getting unit {unit_id}")
-    # ... rest of code
+    # unit_id contains original data (including any control characters)
+    # Business logic uses the real, unmodified data
+    unit = Unit.query.get(unit_id)
+    
+    # When logging, the filter sanitizes the output
+    # The log file won't have control characters, preventing log injection
+    logger.info(f"Getting unit {unit_id}")  # Sanitized in logs!
+    
+    return jsonify({'unit_id': unit_id})  # Original data in response
 ```
 
 ## Usage
 
-### Using the sanitize() function directly
+### Automatic Sanitization in Logs
 
-If you need to sanitize user input for other purposes (e.g., database queries, external API calls), you can import and use the `sanitize()` function:
+All logging automatically goes through the sanitizing filter:
+
+### Using sanitize() for Other Purposes
+
+You can use the sanitize() function directly when needed:
 
 ```python
 from app.middleware import sanitize
 
-# Sanitize a string
+# Sanitize a string - removes all ASCII control characters (0-31)
 user_input = "hello\nworld"
 clean_input = sanitize(user_input)  # Returns: "helloworld"
 
-# Sanitize a dictionary
-data = {'name': 'John\nDoe', 'email': 'john@example.com'}
+# Sanitize a dictionary - sanitizes both keys and values
+data = {'name\n': 'John\nDoe', 'email': 'john@example.com'}
 clean_data = sanitize(data)  # Returns: {'name': 'JohnDoe', 'email': 'john@example.com'}
 
 # Sanitize a list
 items = ['item1', 'item2\n\r', 'item3\t']
 clean_items = sanitize(items)  # Returns: ['item1', 'item2', 'item3']
+
+# Control recursion depth for deeply nested structures
+deep_data = {...}  # Very nested structure
+safe_data = sanitize(deep_data, max_depth=5)  # Prevents DoS
 ```
 
-### Request Parameters (Automatic)
+### Logging is Automatically Sanitized
 
-All request parameters are automatically sanitized before reaching your route handlers:
+All logging goes through the SanitizingFilter, which sanitizes at the logging layer:
 
 ```python
+from flask import current_app
+
 @app.route('/api/v1/units/<unit_id>')
 def get_unit(unit_id):
-    # unit_id is already sanitized - no manual work needed!
-    return jsonify({'unit_id': unit_id})
+    # unit_id contains the ORIGINAL data (unmodified)
+    # This is important - business logic gets real data
+    
+    # Logging is automatically sanitized by the filter
+    current_app.logger.info(f"Processing unit: {unit_id}")
+    # In log files: control characters are removed
+    # In code: unit_id still has original value
+    
+    return jsonify({'unit_id': unit_id})  # Returns original data
 
 @app.route('/api/v1/sensors')
 def get_sensors():
-    # Query parameters are already sanitized
+    # Query parameters contain ORIGINAL data
     sensor_type = request.args.get('sensor_type')
-    # sensor_type is safe to use in logs
-    logger.info(f"Filtering by sensor type: {sensor_type}")
-    return jsonify({'type': sensor_type})
+    
+    # Logging is sanitized automatically
+    logger.info(f"Filtering by sensor type: {sensor_type}")  # Safe in logs
+    
+    # Business logic gets original data
+    return jsonify({'type': sensor_type})  # Original data in response
 ```
 
 ## Security Benefits
 
 ### 1. Log Injection Prevention
 
-**Before sanitization:**
+The logging filter prevents log injection while preserving data integrity:
+
+**Without logging filter:**
 ```
 # Malicious input: "user123\n[ERROR] Fake error message"
 # Log output:
@@ -92,27 +127,27 @@ INFO: Processing request for user user123
 ERROR: Fake error message  # <-- Injected fake log entry!
 ```
 
-**After sanitization:**
+**With logging filter:**
 ```
-# Same input, but sanitized
+# Same malicious input
 # Log output:
-INFO: Processing request for user user123[ERROR] Fake error message  # <-- All on one line, no injection
+INFO: Processing request for user user123[ERROR] Fake error message  # <-- Sanitized, all on one line
+# Application data: "user123\n[ERROR] Fake error message"  # <-- Original, intact for validation/business logic
 ```
 
-### 2. Log Forging Prevention
+### 2. Data Integrity Preserved
 
-Attackers can't inject fake log entries that might:
-- Confuse log analysis tools
-- Hide malicious activity
-- Trigger false alerts
-- Bypass security monitoring
+Unlike request-mutation approaches, the logging filter approach:
+- ✅ **Keeps original data intact** - Business logic receives real, unmodified input
+- ✅ **Allows proper validation** - Can validate that multiline input is actually invalid
+- ✅ **No silent failures** - Application knows exactly what user sent
+- ✅ **Compatible with extensions** - Other middleware/extensions see original request data
 
-### 3. Consistent Security
+### 3. Targeted Protection
 
-All routes benefit automatically without manual effort:
-- New routes are protected by default
-- No risk of developers forgetting to sanitize
-- Uniform security posture across the application
+Security is applied exactly where needed:
+- Logs are sanitized (preventing log injection)
+- Application data is original (enabling proper validation and processing)
 
 ## Testing
 
@@ -124,64 +159,78 @@ pytest app/tests/test_sanitization_middleware.py -v
 ```
 
 Test coverage includes:
-- String sanitization with various control characters
-- Dictionary and list sanitization
-- Nested data structure sanitization
-- Path parameter sanitization
-- Query parameter sanitization
-- Form data sanitization
-- Log injection prevention
-- Clean data preservation
+- String sanitization with all ASCII control characters (0-31)
+- Dictionary key and value sanitization
+- List and nested structure sanitization
+- Depth limit protection against DoS
+- Logging filter sanitization
+- Data integrity preservation (original data unchanged)
 
-## Migration from Manual Sanitization
+## Migration from Previous Approach
 
-If you have existing code with manual sanitization, you can safely remove it:
+If you previously used request-mutation middleware or manual sanitization:
 
-**Before:**
+**Old approach (problematic):**
 ```python
+# DON'T DO THIS - mutates request data
+@app.before_request
+def sanitize_params():
+    request.view_args = sanitize(request.view_args)  # Corrupts data!
+
 def export_data(unit_id):
-    # Manual sanitization (no longer needed)
-    sanitized_id = str(unit_id).replace('\n', '').replace('\r', '').replace('\t', '')
-    logger.warning("Export for unit_id=%s", sanitized_id)
+    # unit_id has been corrupted by middleware
+    # Can't properly validate or process original input
+    logger.warning("Export for unit_id=%s", unit_id)
 ```
 
-**After:**
+**New approach (recommended):**
 ```python
+# Logging filter is set up once in app initialization
+# No per-request hooks needed
+
 def export_data(unit_id):
-    # unit_id is pre-sanitized by middleware
-    logger.warning("Export for unit_id=%s", unit_id)
+    # unit_id contains original, unmodified data
+    # Proper validation can check for invalid characters
+    if '\n' in unit_id or '\r' in unit_id:
+        return jsonify({'error': 'Invalid unit_id format'}), 400
+    
+    # Logging is automatically sanitized
+    logger.warning("Export for unit_id=%s", unit_id)  # Safe in logs
+    
+    # Business logic uses original data
+    return export_unit(unit_id)
 ```
 
 ## Performance
 
-The sanitization middleware has minimal performance impact:
-- Only processes string values
-- Non-string types pass through without modification
-- Recursive processing is efficient for nested structures
+The logging filter has minimal performance impact:
+- Only processes data when logging occurs (not on every request)
+- Uses efficient str.translate() for string sanitization
+- Includes depth limit to prevent DoS from deeply nested structures
 - No database or network calls
 
 ## Best Practices
 
-1. **Trust the middleware** - Don't add manual sanitization unless you have a specific need
-2. **Use for logging** - Always safe to use sanitized parameters in log messages
-3. **Additional validation** - Sanitization removes control characters but doesn't validate format (e.g., email format, UUID format)
-4. **Direct use** - Import `sanitize()` function if you need to sanitize other data sources
+1. **Don't manually sanitize for logging** - The logging filter handles it automatically
+2. **Validate input properly** - Use original data to detect and reject invalid input
+3. **Use sanitize() for display** - When showing user input in UI, sanitize to remove control chars
+4. **Preserve data integrity** - Let validation logic see real input, not sanitized version
 
 ## Examples
 
-### Example 1: Historical Data Export
+### Example 1: Historical Data Export (Corrected)
 ```python
 @historical_bp.route('/historical/export/<unit_id>', methods=['GET'])
 def export_historical_data(unit_id):
-    # unit_id is already sanitized
+    # unit_id contains original data
     try:
         unit = Unit.query.get(unit_id)
         # ... export logic
     except ValueError as e:
-        # Safe to log unit_id - already sanitized
+        # Logging is automatically sanitized by SanitizingFilter
         current_app.logger.warning(
             "Invalid date parameter for unit_id=%s",
-            unit_id  # No manual sanitization needed!
+            unit_id  # Original data, sanitized in logs only!
         )
 ```
 

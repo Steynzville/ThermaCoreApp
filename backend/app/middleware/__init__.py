@@ -21,8 +21,7 @@ from .validation import (
     validate_schema,
     validate_query_params,
     validate_path_params,
-    sanitize,
-    sanitize_request_params
+    sanitize
 )
 
 from .rate_limit import (
@@ -63,7 +62,6 @@ __all__ = [
     'validate_query_params',
     'validate_path_params',
     'sanitize',
-    'sanitize_request_params',
     
     # Rate Limiting
     'RateLimiter',
