@@ -27,18 +27,17 @@ class SanitizingFilter(logging.Filter):
         if isinstance(record.msg, str):
             record.msg = sanitize(record.msg)
         
-        # Sanitize arguments passed to the logger
-        # Apply sanitize to all arguments since it handles all types recursively
-        # This ensures objects with __str__ methods containing control chars are also sanitized
+        # Sanitize arguments passed to the logger.
+        # We must convert all arguments to strings before sanitizing to handle
+        # objects with custom __str__ methods that might contain control characters.
         if record.args:
             if isinstance(record.args, dict):
-                record.args = sanitize(record.args)
+                # For dictionary-based arguments, convert values to strings and sanitize
+                record.args = {
+                    k: sanitize(str(v)) for k, v in record.args.items()
+                }
             elif isinstance(record.args, (list, tuple)):
-                # Sanitize all args, not just strings, as sanitize() handles all types
-                record.args = tuple(sanitize(arg) for arg in record.args)
-        
-        # Sanitize extra data if present
-        if hasattr(record, 'extra'):
-            record.extra = sanitize(record.extra)
+                # For tuple/list-based arguments, convert each argument to a string and then sanitize
+                record.args = tuple(sanitize(str(arg)) for arg in record.args)
         
         return True

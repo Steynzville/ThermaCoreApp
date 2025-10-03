@@ -18,8 +18,10 @@ The ThermaCore SCADA API includes centralized input sanitization that protects a
 
 2. **`SanitizingFilter` logging filter** (`app/utils/logging_filter.py`)
    - Registered on all Flask logger handlers
-   - Automatically sanitizes log messages and all arguments (strings, dicts, lists, etc.) before logging
+   - Converts all log arguments to strings before sanitization (handles objects with custom `__str__` methods)
+   - Sanitizes log messages and all argument types (strings, objects, numbers, etc.)
    - Operates transparently without modifying application data
+   - Does not attempt to access non-standard LogRecord attributes
 
 ### Architecture Decision
 

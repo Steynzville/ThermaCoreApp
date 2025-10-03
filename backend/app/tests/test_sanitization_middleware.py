@@ -228,15 +228,16 @@ class TestLoggingFilter:
         assert record.args[1] == 'tempsensor'
     
     def test_logging_filter_sanitizes_all_arg_types(self):
-        """Test that the logging filter sanitizes all argument types, not just strings."""
+        """Test that the logging filter converts all arguments to strings and sanitizes them."""
         import logging
         from app.utils.logging_filter import SanitizingFilter
         
-        # Create a log record with mixed type arguments including dicts and lists
+        # Create a log record with mixed type arguments
+        # Note: Arguments are converted to strings to ensure objects with __str__ are sanitized
         record = logging.LogRecord(
             name='test', level=logging.INFO, pathname='', lineno=0,
             msg='Data: %s %s %s',
-            args=('string\nvalue', {'key\n': 'value\n'}, ['list\nitem']),
+            args=('string\nvalue', 123, True),
             exc_info=None
         )
         
@@ -244,12 +245,56 @@ class TestLoggingFilter:
         sanitizing_filter = SanitizingFilter()
         sanitizing_filter.filter(record)
         
-        # All argument types should be sanitized
+        # All arguments should be converted to strings and sanitized
         assert record.args[0] == 'stringvalue'
-        assert 'key\n' not in record.args[1]
-        assert 'key' in record.args[1]
-        assert record.args[1]['key'] == 'value'
-        assert record.args[2] == ['listitem']
+        assert record.args[1] == '123'  # Number converted to string
+        assert record.args[2] == 'True'  # Boolean converted to string
+    
+    def test_logging_filter_sanitizes_objects_with_str(self):
+        """Test that the logging filter sanitizes objects with custom __str__ methods."""
+        import logging
+        from app.utils.logging_filter import SanitizingFilter
+        
+        # Create a class with __str__ that contains control characters
+        class MaliciousObject:
+            def __str__(self):
+                return "object\nwith\ncontrol\nchars"
+        
+        record = logging.LogRecord(
+            name='test', level=logging.INFO, pathname='', lineno=0,
+            msg='Object: %s',
+            args=(MaliciousObject(),),
+            exc_info=None
+        )
+        
+        # Apply the filter
+        sanitizing_filter = SanitizingFilter()
+        sanitizing_filter.filter(record)
+        
+        # Object should be converted to string via __str__ and then sanitized
+        assert '\n' not in record.args[0]
+        assert record.args[0] == 'objectwithcontrolchars'
+    
+    def test_logging_filter_sanitizes_dict_args(self):
+        """Test that the logging filter sanitizes dictionary-style arguments."""
+        import logging
+        from app.utils.logging_filter import SanitizingFilter
+        
+        # Create a log record with dict-style arguments (used with %(name)s formatting)
+        record = logging.LogRecord(
+            name='test', level=logging.INFO, pathname='', lineno=0,
+            msg='User: %(username)s, ID: %(user_id)s',
+            args={'username': 'admin\n123', 'user_id': 'id\rwith\rcarriage'},
+            exc_info=None
+        )
+        
+        # Apply the filter
+        sanitizing_filter = SanitizingFilter()
+        sanitizing_filter.filter(record)
+        
+        # Dict values should be converted to strings and sanitized
+        assert record.args['username'] == 'admin123'
+        assert record.args['user_id'] == 'idwithcarriage'
     
     def test_logging_filter_sanitizes_unicode_separators(self):
         """Test that the logging filter sanitizes Unicode separators."""
