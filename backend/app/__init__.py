@@ -154,6 +154,8 @@ def create_app(config_name=None):
     # Apply to root logger to ensure all application loggers are covered
     import logging
     root_logger = logging.getLogger()
+    
+    # Add filter to existing handlers
     for handler in root_logger.handlers:
         # Check for duplicates to prevent redundant processing on re-initialization
         if not any(isinstance(f, SanitizingFilter) for f in handler.filters):
@@ -163,6 +165,19 @@ def create_app(config_name=None):
     for handler in app.logger.handlers:
         if not any(isinstance(f, SanitizingFilter) for f in handler.filters):
             handler.addFilter(SanitizingFilter())
+    
+    # Ensure any new handlers added later also get the filter
+    # Store original addHandler method
+    original_add_handler = logging.Logger.addHandler
+    
+    def patched_add_handler(self, handler):
+        # Add sanitizing filter to new handlers
+        if not any(isinstance(f, SanitizingFilter) for f in handler.filters):
+            handler.addFilter(SanitizingFilter())
+        return original_add_handler(self, handler)
+    
+    # Patch the addHandler method
+    logging.Logger.addHandler = patched_add_handler
     
     # Register error handlers for proper domain exception handling with correlation IDs
     SecurityAwareErrorHandler.register_error_handlers(app)
