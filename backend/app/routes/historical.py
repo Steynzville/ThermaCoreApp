@@ -184,7 +184,7 @@ def get_historical_data(unit_id):
         })
         
     except ValueError as e:
-        current_app.logger.error("ValueError in get_historical_data: %s", e)
+        current_app.logger.error("ValueError in get_historical_data: %s", e, exc_info=True)
         return jsonify({'error': 'Invalid request parameter.'}), 400
     except Exception as e:
         return SecurityAwareErrorHandler.handle_error(
@@ -355,7 +355,7 @@ def compare_units_historical():
         })
         
     except ValueError as e:
-        current_app.logger.error("ValueError in compare_units_historical: %s", e)
+        current_app.logger.error("ValueError in compare_units_historical: %s", e, exc_info=True)
         return jsonify({'error': 'Invalid request parameter.'}), 400
     except Exception as e:
         return SecurityAwareErrorHandler.handle_error(

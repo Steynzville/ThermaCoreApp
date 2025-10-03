@@ -208,7 +208,7 @@ def get_unit_trends(unit_id):
         })
         
     except ValueError as e:
-        current_app.logger.error("ValueError in get_unit_trends: %s", e)
+        current_app.logger.error("ValueError in get_unit_trends: %s", e, exc_info=True)
         return jsonify({'error': 'Invalid days parameter'}), 400
     except Exception as e:
         return SecurityAwareErrorHandler.handle_error(
@@ -299,7 +299,7 @@ def get_units_performance():
         })
         
     except ValueError as e:
-        current_app.logger.error("ValueError in get_units_performance: %s", e)
+        current_app.logger.error("ValueError in get_units_performance: %s", e, exc_info=True)
         return jsonify({'error': 'Invalid hours parameter'}), 400
     except Exception as e:
         return SecurityAwareErrorHandler.handle_error(
@@ -383,7 +383,7 @@ def get_alert_patterns():
         })
         
     except ValueError as e:
-        current_app.logger.error("ValueError in get_alert_patterns: %s", e)
+        current_app.logger.error("ValueError in get_alert_patterns: %s", e, exc_info=True)
         return jsonify({'error': 'Invalid days parameter'}), 400
     except Exception as e:
         return SecurityAwareErrorHandler.handle_error(
