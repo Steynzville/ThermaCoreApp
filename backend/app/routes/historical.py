@@ -427,9 +427,11 @@ def export_historical_data(unit_id):
                 start_time = parse_timestamp(start_date)
         except ValueError as e:
             # Log without echoing user input to prevent log injection
+            # Sanitize unit_id to prevent log forging via control characters
+            sanitized_unit_id = str(unit_id).replace('\n', '').replace('\r', '').replace('\t', '')
             current_app.logger.warning(
                 "Invalid date parameter in historical export for unit_id=%s",
-                unit_id,
+                sanitized_unit_id,
                 extra={'error_type': 'ValueError', 'endpoint': 'export_historical_data'}
             )
             return jsonify({'error': 'Invalid date format provided. Please use ISO 8601 format.'}), 400
