@@ -142,11 +142,18 @@ def create_app(config_name=None):
     from app.middleware.request_id import setup_request_id_middleware
     from app.middleware.metrics import setup_metrics_middleware
     from app.middleware.audit import setup_audit_middleware
+    from app.middleware.validation import sanitize_request_params
     from app.utils.error_handler import SecurityAwareErrorHandler
     
     setup_request_id_middleware(app)
     setup_metrics_middleware(app)
     setup_audit_middleware(app)
+    
+    # Register centralized sanitization middleware
+    @app.before_request
+    def sanitize_params():
+        """Sanitize all incoming request parameters."""
+        sanitize_request_params()
     
     # Register error handlers for proper domain exception handling with correlation IDs
     SecurityAwareErrorHandler.register_error_handlers(app)

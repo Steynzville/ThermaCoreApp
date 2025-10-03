@@ -7,8 +7,35 @@ from typing import Any, Dict, List, Optional, Callable
 
 from flask import request, jsonify, g
 from marshmallow import Schema, ValidationError
+from werkzeug.datastructures import ImmutableMultiDict
 
 from app.utils.error_handler import SecurityAwareErrorHandler
+
+
+def sanitize(value: Any) -> Any:
+    """Sanitize input to prevent log injection and other security issues.
+    
+    Removes control characters like newlines, carriage returns, and tabs
+    that could be used for log forging or other injection attacks.
+    
+    Args:
+        value: The value to sanitize (can be str, dict, list, or other types)
+        
+    Returns:
+        Sanitized value with control characters removed from strings
+    """
+    if isinstance(value, str):
+        # Remove control characters that could be used for log injection
+        return value.replace('\n', '').replace('\r', '').replace('\t', '')
+    elif isinstance(value, dict):
+        # Recursively sanitize dictionary values
+        return {k: sanitize(v) for k, v in value.items()}
+    elif isinstance(value, list):
+        # Recursively sanitize list items
+        return [sanitize(item) for item in value]
+    else:
+        # Return other types as-is
+        return value
 
 
 class RequestValidator:
@@ -219,3 +246,45 @@ def validate_path_params(**param_validators):
             return f(*args, **kwargs)
         return decorated_function
     return decorator
+
+
+def sanitize_request_params():
+    """Sanitize all incoming request parameters to prevent injection attacks.
+    
+    This function is called before each request to sanitize:
+    - request.view_args (path parameters)
+    - request.args (query parameters)
+    - request.form (form data)
+    
+    It removes control characters that could be used for log injection
+    or other security vulnerabilities.
+    """
+    # Sanitize view_args (path parameters)
+    if request.view_args:
+        request.view_args = sanitize(request.view_args)
+    
+    # Sanitize query parameters
+    if request.args:
+        # Convert ImmutableMultiDict to dict, sanitize, and convert back
+        sanitized_args = sanitize(request.args.to_dict(flat=False))
+        # Flatten single-item lists back to strings for compatibility
+        flattened_args = {}
+        for key, value in sanitized_args.items():
+            if isinstance(value, list) and len(value) == 1:
+                flattened_args[key] = value[0]
+            else:
+                flattened_args[key] = value
+        request.args = ImmutableMultiDict(flattened_args)
+    
+    # Sanitize form data
+    if request.form:
+        # Convert ImmutableMultiDict to dict, sanitize, and convert back
+        sanitized_form = sanitize(request.form.to_dict(flat=False))
+        # Flatten single-item lists back to strings for compatibility
+        flattened_form = {}
+        for key, value in sanitized_form.items():
+            if isinstance(value, list) and len(value) == 1:
+                flattened_form[key] = value[0]
+            else:
+                flattened_form[key] = value
+        request.form = ImmutableMultiDict(flattened_form)
