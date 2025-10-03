@@ -310,13 +310,6 @@ class TestLoggingFilter:
         assert '\u2028' not in record.args[0]
         assert '\u2029' not in record.args[0]
         assert record.args[0] == 'line1line2line3'
-        # Apply the filter
-        sanitizing_filter = SanitizingFilter()
-        sanitizing_filter.filter(record)
-        
-        # Arguments should be sanitized
-        assert record.args[0] == 'unit123'
-        assert record.args[1] == 'tempsensor'
     
     def test_logging_filter_with_flask_app(self):
         """Test that logging filter works with Flask app."""
