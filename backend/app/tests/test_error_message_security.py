@@ -52,10 +52,10 @@ class TestErrorMessageSecurity:
                     # Should contain generic message
                     assert data['error'] == 'Invalid request parameter.'
                     
-                    # Verify logger was called with actual error
-                    assert mock_logger.called
-                    call_args = str(mock_logger.call_args)
-                    assert 'ValueError in get_historical_data' in call_args
+                    # Verify logger was called with the correct message
+                    mock_logger.assert_called_once()
+                    logged_message = mock_logger.call_args[0][0]
+                    assert 'ValueError in get_historical_data' in logged_message
 
     def test_compare_units_valueerror_generic_message(self, client, app):
         """Test that ValueError in compare_units_historical returns generic message."""
@@ -86,10 +86,10 @@ class TestErrorMessageSecurity:
                     # Should contain generic message
                     assert data['error'] == 'Invalid request parameter.'
                     
-                    # Verify logger was called with actual error
-                    assert mock_logger.called
-                    call_args = str(mock_logger.call_args)
-                    assert 'ValueError in compare_units_historical' in call_args
+                    # Verify logger was called with the correct message
+                    mock_logger.assert_called_once()
+                    logged_message = mock_logger.call_args[0][0]
+                    assert 'ValueError in compare_units_historical' in logged_message
 
     def test_analytics_unit_trends_valueerror_logged(self, client, app):
         """Test that ValueError in get_unit_trends is logged server-side."""
@@ -109,10 +109,10 @@ class TestErrorMessageSecurity:
                 assert 'error' in data
                 assert data['error'] == 'Invalid days parameter'
                 
-                # Verify logger was called
-                assert mock_logger.called
-                call_args = str(mock_logger.call_args)
-                assert 'ValueError in get_unit_trends' in call_args
+                # Verify logger was called with the correct message
+                mock_logger.assert_called_once()
+                logged_message = mock_logger.call_args[0][0]
+                assert 'ValueError in get_unit_trends' in logged_message
 
     def test_analytics_units_performance_valueerror_logged(self, client, app):
         """Test that ValueError in get_units_performance is logged server-side."""
@@ -132,10 +132,10 @@ class TestErrorMessageSecurity:
                 assert 'error' in data
                 assert data['error'] == 'Invalid hours parameter'
                 
-                # Verify logger was called
-                assert mock_logger.called
-                call_args = str(mock_logger.call_args)
-                assert 'ValueError in get_units_performance' in call_args
+                # Verify logger was called with the correct message
+                mock_logger.assert_called_once()
+                logged_message = mock_logger.call_args[0][0]
+                assert 'ValueError in get_units_performance' in logged_message
 
     def test_analytics_alert_patterns_valueerror_logged(self, client, app):
         """Test that ValueError in get_alert_patterns is logged server-side."""
@@ -155,7 +155,7 @@ class TestErrorMessageSecurity:
                 assert 'error' in data
                 assert data['error'] == 'Invalid days parameter'
                 
-                # Verify logger was called
-                assert mock_logger.called
-                call_args = str(mock_logger.call_args)
-                assert 'ValueError in get_alert_patterns' in call_args
+                # Verify logger was called with the correct message
+                mock_logger.assert_called_once()
+                logged_message = mock_logger.call_args[0][0]
+                assert 'ValueError in get_alert_patterns' in logged_message
