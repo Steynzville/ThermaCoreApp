@@ -425,17 +425,18 @@ def export_historical_data(unit_id):
                 start_time = end_time - timedelta(days=30)  # Default to last 30 days
             else:
                 start_time = parse_timestamp(start_date)
-                
-            # Validate date range
-            if start_time >= end_time:
-                return jsonify({'error': 'start_date must be before end_date'}), 400
         except ValueError as e:
             # Log without echoing user input to prevent log injection
             current_app.logger.warning(
-                f"Invalid date parameter in historical export for unit_id={unit_id}",
+                "Invalid date parameter in historical export for unit_id=%s",
+                unit_id,
                 extra={'error_type': 'ValueError', 'endpoint': 'export_historical_data'}
             )
             return jsonify({'error': 'Invalid date format provided. Please use ISO 8601 format.'}), 400
+        
+        # Validate date range
+        if start_time >= end_time:
+            return jsonify({'error': 'start_date must be before end_date'}), 400
         
         # Build query
         query = db.session.query(
