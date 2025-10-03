@@ -414,16 +414,24 @@ def export_historical_data(unit_id):
         end_date = request.args.get('end_date')
         sensor_types = request.args.get('sensor_types')
         
-        # Set time range
-        if not end_date:
-            end_time = utc_now()
-        else:
-            end_time = parse_timestamp(end_date)
-            
-        if not start_date:
-            start_time = end_time - timedelta(days=30)  # Default to last 30 days
-        else:
-            start_time = parse_timestamp(start_date)
+        # Set time range with validation
+        try:
+            if not end_date:
+                end_time = utc_now()
+            else:
+                end_time = parse_timestamp(end_date)
+                
+            if not start_date:
+                start_time = end_time - timedelta(days=30)  # Default to last 30 days
+            else:
+                start_time = parse_timestamp(start_date)
+                
+            # Validate date range
+            if start_time >= end_time:
+                return jsonify({'error': 'start_date must be before end_date'}), 400
+        except ValueError as e:
+            current_app.logger.warning(f"Invalid date parameter in historical export: {str(e)}")
+            return jsonify({'error': 'Invalid date format provided. Please use ISO 8601 format.'}), 400
         
         # Build query
         query = db.session.query(
@@ -491,8 +499,6 @@ def export_historical_data(unit_id):
                 'data': data
             })
             
-    except ValueError as e:
-        return jsonify({'error': 'Invalid request data provided.'}), 400
     except Exception as e:
         return SecurityAwareErrorHandler.handle_error(
             e, "Failed to export historical data"
