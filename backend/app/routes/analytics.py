@@ -1,5 +1,5 @@
 """Advanced analytics routes for Phase 3 SCADA integration."""
-from flask import Blueprint, jsonify, request, current_app
+from flask import Blueprint, jsonify, request, current_app, g
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, timedelta
 from sqlalchemy import func, and_, or_
@@ -8,6 +8,12 @@ from typing import Dict, List, Any
 from app.models import Unit, Sensor, SensorReading, db, utc_now  # Use timezone-aware datetime
 from app.routes.auth import permission_required
 from app.utils.error_handler import SecurityAwareErrorHandler
+from app.middleware.validation import use_args
+from app.utils.schemas import (
+    TrendsQuerySchema,
+    PerformanceQuerySchema,
+    AlertPatternsQuerySchema
+)
 
 # Create analytics blueprint
 analytics_bp = Blueprint('analytics', __name__)
@@ -117,8 +123,11 @@ def get_dashboard_summary():
 @analytics_bp.route('/analytics/trends/<unit_id>', methods=['GET'])
 @jwt_required()
 @permission_required('read_units')
-def get_unit_trends(unit_id):
+@use_args(TrendsQuerySchema, location='query')
+def get_unit_trends(args, unit_id):
     """Get trend analysis for a specific unit.
+    
+    Query parameters are validated using TrendsQuerySchema.
     
     ---
     tags:
@@ -148,9 +157,10 @@ def get_unit_trends(unit_id):
         unit = Unit.query.get(unit_id)
         if not unit:
             return jsonify({'error': 'Unit not found'}), 404
-            
-        days = int(request.args.get('days', 7))
-        sensor_type = request.args.get('sensor_type')
+        
+        # Extract validated parameters
+        days = args.get('days', 7)
+        sensor_type = args.get('sensor_type')
         
         # Calculate time range
         now = utc_now()
@@ -207,9 +217,6 @@ def get_unit_trends(unit_id):
             'trends': trends
         })
         
-    except ValueError as e:
-        current_app.logger.error("ValueError in get_unit_trends: %s", e, exc_info=True)
-        return jsonify({'error': 'Invalid days parameter'}), 400
     except Exception as e:
         return SecurityAwareErrorHandler.handle_error(
             e, "Failed to get unit trends"
@@ -219,8 +226,11 @@ def get_unit_trends(unit_id):
 @analytics_bp.route('/analytics/performance/units', methods=['GET'])
 @jwt_required()
 @permission_required('read_units')
-def get_units_performance():
+@use_args(PerformanceQuerySchema, location='query')
+def get_units_performance(args):
     """Get performance analysis across all units.
+    
+    Query parameters are validated using PerformanceQuerySchema.
     
     ---
     tags:
@@ -237,7 +247,8 @@ def get_units_performance():
         description: Units performance analysis
     """
     try:
-        hours = int(request.args.get('hours', 24))
+        # Extract validated parameter
+        hours = args.get('hours', 24)
         start_time = utc_now() - timedelta(hours=hours)
         
         # Performance metrics per unit
@@ -298,9 +309,6 @@ def get_units_performance():
             }
         })
         
-    except ValueError as e:
-        current_app.logger.error("ValueError in get_units_performance: %s", e, exc_info=True)
-        return jsonify({'error': 'Invalid hours parameter'}), 400
     except Exception as e:
         return SecurityAwareErrorHandler.handle_error(
             e, "Failed to get units performance"
@@ -310,8 +318,11 @@ def get_units_performance():
 @analytics_bp.route('/analytics/alerts/patterns', methods=['GET'])
 @jwt_required()
 @permission_required('read_units')
-def get_alert_patterns():
+@use_args(AlertPatternsQuerySchema, location='query')
+def get_alert_patterns(args):
     """Analyze alert patterns and frequencies.
+    
+    Query parameters are validated using AlertPatternsQuerySchema.
     
     ---
     tags:
@@ -328,7 +339,8 @@ def get_alert_patterns():
         description: Alert pattern analysis
     """
     try:
-        days = int(request.args.get('days', 30))
+        # Extract validated parameter
+        days = args.get('days', 30)
         start_time = utc_now() - timedelta(days=days)
         
         # For this demo, we'll simulate alert data since we don't have an alerts table yet
@@ -382,9 +394,6 @@ def get_alert_patterns():
             'most_problematic_sensor': max(sensor_totals, key=sensor_totals.get) if sensor_totals else None
         })
         
-    except ValueError as e:
-        current_app.logger.error("ValueError in get_alert_patterns: %s", e, exc_info=True)
-        return jsonify({'error': 'Invalid days parameter'}), 400
     except Exception as e:
         return SecurityAwareErrorHandler.handle_error(
             e, "Failed to analyze alert patterns"

@@ -312,3 +312,84 @@ class TokenSchema(Schema):
     refresh_token = fields.Str()
     expires_in = fields.Int()
     user = fields.Nested(UserSchema, exclude=('password_hash',))
+
+
+# Query parameter validation schemas
+class HistoricalDataQuerySchema(Schema):
+    """Schema for historical data query parameters."""
+    start_date = fields.Str(required=False)
+    end_date = fields.Str(required=False)
+    sensor_types = fields.Str(required=False)
+    aggregation = fields.Str(
+        required=False, 
+        validate=validate.OneOf(['raw', 'hourly', 'daily', 'weekly']),
+        load_default='raw'
+    )
+    limit = fields.Int(
+        required=False,
+        validate=validate.Range(min=1, max=10000),
+        load_default=1000
+    )
+
+
+class StatisticsQuerySchema(Schema):
+    """Schema for statistics query parameters."""
+    days = fields.Int(
+        required=False,
+        validate=validate.Range(min=1, max=365),
+        load_default=30
+    )
+    sensor_type = fields.Str(required=False)
+
+
+class TrendsQuerySchema(Schema):
+    """Schema for trends query parameters."""
+    days = fields.Int(
+        required=False,
+        validate=validate.Range(min=1, max=365),
+        load_default=7
+    )
+    sensor_type = fields.Str(required=False)
+
+
+class PerformanceQuerySchema(Schema):
+    """Schema for performance query parameters."""
+    hours = fields.Int(
+        required=False,
+        validate=validate.Range(min=1, max=8760),  # Up to 1 year
+        load_default=24
+    )
+
+
+class AlertPatternsQuerySchema(Schema):
+    """Schema for alert patterns query parameters."""
+    days = fields.Int(
+        required=False,
+        validate=validate.Range(min=1, max=365),
+        load_default=30
+    )
+
+
+class CompareUnitsSchema(Schema):
+    """Schema for comparing units historical data."""
+    unit_ids = fields.List(fields.Str(), required=True, validate=validate.Length(min=1))
+    sensor_type = fields.Str(required=True)
+    aggregation = fields.Str(
+        required=False,
+        validate=validate.OneOf(['hourly', 'daily', 'weekly']),
+        load_default='daily'
+    )
+    start_date = fields.Str(required=False)
+    end_date = fields.Str(required=False)
+
+
+class ExportDataQuerySchema(Schema):
+    """Schema for export data query parameters."""
+    format = fields.Str(
+        required=False,
+        validate=validate.OneOf(['json', 'csv']),
+        load_default='json'
+    )
+    start_date = fields.Str(required=False)
+    end_date = fields.Str(required=False)
+    sensor_types = fields.Str(required=False)

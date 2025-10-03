@@ -195,6 +195,72 @@ def validate_schema(schema_class: Schema, location: str = 'json'):
     return decorator
 
 
+def use_args(schema_class: Schema, location: str = 'query'):
+    """
+    Decorator to parse and validate request arguments using a Marshmallow schema.
+    Similar to webargs.use_args but using marshmallow directly.
+    
+    This provides webargs-like functionality for centralizing request validation.
+    The validated data is passed as the first argument to the decorated function.
+    
+    Args:
+        schema_class: Marshmallow schema class to validate against
+        location: Where to find the data ('json', 'query', 'form')
+    
+    Example:
+        @use_args(HistoricalDataQuerySchema, location='query')
+        def get_data(args, unit_id):
+            # args contains validated query parameters
+            limit = args['limit']
+            aggregation = args['aggregation']
+    """
+    def decorator(f: Callable) -> Callable:
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            schema = schema_class()
+            
+            # Get data based on location
+            if location == 'json':
+                data = request.get_json() or {}
+            elif location == 'query':
+                data = request.args.to_dict()
+            elif location == 'form':
+                data = request.form.to_dict()
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': {
+                        'code': 'VALIDATION_CONFIG_ERROR',
+                        'message': 'Invalid validation configuration',
+                        'details': {'location': location, 'valid_locations': ['json', 'query', 'form']}
+                    },
+                    'request_id': getattr(g, 'request_id', str(uuid.uuid4())),
+                    'timestamp': datetime.utcnow().isoformat() + 'Z'
+                }), 500
+            
+            try:
+                # Validate and deserialize data
+                validated_data = schema.load(data)
+                # Pass validated data as first argument to the route function
+                return f(validated_data, *args, **kwargs)
+            except ValidationError as e:
+                return jsonify({
+                    'success': False,
+                    'error': {
+                        'code': 'VALIDATION_ERROR',
+                        'message': 'Request data validation failed',
+                        'details': {
+                            'field_errors': e.messages,
+                            'location': location
+                        }
+                    },
+                    'request_id': getattr(g, 'request_id', str(uuid.uuid4())),
+                    'timestamp': datetime.utcnow().isoformat() + 'Z'
+                }), 400
+        return decorated_function
+    return decorator
+
+
 def validate_query_params(**param_validators):
     """
     Decorator to validate query parameters with custom validators.

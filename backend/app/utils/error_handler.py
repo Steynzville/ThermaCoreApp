@@ -198,6 +198,53 @@ class SecurityAwareErrorHandler:
         return SecurityAwareErrorHandler.handle_service_error(
             error, 'permission_error', f"Permission {context}", 403
         )
+    
+    @staticmethod
+    def handle_value_error(error: Exception, context: str = 'Request parameter validation', 
+                          user_message: str = 'Invalid request parameter.') -> Tuple[Any, int]:
+        """Handle ValueError exceptions with centralized logging and generic responses.
+        
+        This centralizes ValueError handling to ensure:
+        - Sensitive error details are never exposed to clients
+        - All errors are properly logged with context
+        - Consistent error response format across all endpoints
+        
+        Args:
+            error: The ValueError that occurred
+            context: Context for logging (e.g., endpoint name)
+            user_message: Generic user-facing message (default: 'Invalid request parameter.')
+            
+        Returns:
+            Tuple of (JSON response, status_code)
+        """
+        # Get correlation ID from request context
+        request_id = getattr(g, 'request_id', str(uuid.uuid4()))
+        
+        # Log the actual error with full details server-side
+        log_message = f"ValueError [{request_id}] in {context}: {str(error)}"
+        logger.error(log_message, exc_info=True, extra={
+            'request_id': request_id,
+            'error_type': 'value_error',
+            'context': context,
+            'error_class': 'ValueError'
+        })
+        
+        # Return generic user-facing message in standardized envelope
+        response_data = {
+            'success': False,
+            'error': {
+                'code': 'VALIDATION_ERROR',
+                'message': user_message,
+                'details': {
+                    'context': context,
+                    'correlation_id': request_id
+                }
+            },
+            'request_id': request_id,
+            'timestamp': datetime.utcnow().isoformat() + 'Z'
+        }
+        
+        return jsonify(response_data), 400
 
     @staticmethod
     def handle_not_found_error(context: str = 'Resource') -> Tuple[Any, int]:
