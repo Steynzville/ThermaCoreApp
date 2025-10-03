@@ -151,8 +151,16 @@ def create_app(config_name=None):
     
     # Add sanitization filter to all logger handlers to prevent log injection
     # This sanitizes data at the logging layer without mutating request data
-    for handler in app.logger.handlers:
+    # Apply to root logger to ensure all application loggers are covered
+    import logging
+    root_logger = logging.getLogger()
+    for handler in root_logger.handlers:
         handler.addFilter(SanitizingFilter())
+    
+    # Also add to app.logger handlers in case they're not in root logger
+    for handler in app.logger.handlers:
+        if not any(isinstance(f, SanitizingFilter) for f in handler.filters):
+            handler.addFilter(SanitizingFilter())
     
     # Register error handlers for proper domain exception handling with correlation IDs
     SecurityAwareErrorHandler.register_error_handlers(app)

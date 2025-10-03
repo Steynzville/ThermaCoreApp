@@ -14,10 +14,12 @@ The ThermaCore SCADA API includes centralized input sanitization that protects a
    - Sanitizes dictionary string keys and all values (preserves non-string keys like integers)
    - Includes depth limit (max_depth=10) to prevent DoS from deeply nested structures
    - Safe for all data types (non-string types are returned unchanged)
+   - **WARNING**: Removes tabs and other control characters - ONLY use via logging filter, NOT for direct input sanitization
    - **Note**: Designed for text inputs; binary data should be encoded (e.g., base64) before logging
 
 2. **`SanitizingFilter` logging filter** (`app/utils/logging_filter.py`)
-   - Registered on all Flask logger handlers
+   - Registered on root logger to cover all application loggers
+   - Also registered on Flask app logger to ensure coverage
    - Converts all log arguments to strings before sanitization (handles objects with custom `__str__` methods)
    - Sanitizes log messages and all argument types (strings, objects, numbers, etc.)
    - Operates transparently without modifying application data

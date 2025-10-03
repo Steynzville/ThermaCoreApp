@@ -26,6 +26,11 @@ def sanitize(value: Any, depth: int = 0, max_depth: int = 10) -> Any:
     Removes all ASCII control characters (0-31) and Unicode line/paragraph
     separators that could be used for log forging or other injection attacks.
     
+    WARNING: This function removes control characters including tabs (\t).
+    It is ONLY intended for use in the logging layer via SanitizingFilter.
+    DO NOT use this function to sanitize request data or user input directly,
+    as it will corrupt legitimate multiline text, tabs, and structured data.
+    
     Note: This function is designed for text inputs intended for logging.
     Binary or structured payloads should not be passed through this function
     as they may be corrupted. Use appropriate encoding (e.g., base64) before
