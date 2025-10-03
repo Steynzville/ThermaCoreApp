@@ -28,16 +28,35 @@ class SanitizingFilter(logging.Filter):
             record.msg = sanitize(record.msg)
         
         # Sanitize arguments passed to the logger.
-        # We must convert all arguments to strings before sanitizing to handle
-        # objects with custom __str__ methods that might contain control characters.
+        # The sanitize function handles dicts and lists recursively.
+        # For other types (objects, numbers, etc.), we convert to string first
+        # to handle objects with custom __str__ methods containing control characters.
         if record.args:
             if isinstance(record.args, dict):
-                # For dictionary-based arguments, convert values to strings and sanitize
-                record.args = {
-                    k: sanitize(str(v)) for k, v in record.args.items()
-                }
+                # For dictionary-based arguments (used with %(name)s formatting),
+                # sanitize recursively but convert non-dict/list/str values to strings first
+                sanitized_dict = {}
+                for k, v in record.args.items():
+                    # Convert value to string if it's not a type that sanitize handles recursively
+                    if isinstance(v, (str, dict, list)):
+                        sanitized_dict[k] = v
+                    else:
+                        # Convert objects/numbers/etc to strings to catch malicious __str__ methods
+                        sanitized_dict[k] = str(v)
+                record.args = sanitize(sanitized_dict)
             elif isinstance(record.args, (list, tuple)):
-                # For tuple/list-based arguments, convert each argument to a string and then sanitize
-                record.args = tuple(sanitize(str(arg)) for arg in record.args)
+                # For tuple/list-based arguments (used with %s formatting),
+                # convert non-dict/list/str items to strings, then sanitize recursively
+                converted_args = []
+                for arg in record.args:
+                    if isinstance(arg, (str, dict, list)):
+                        converted_args.append(arg)
+                    else:
+                        # Convert objects/numbers/etc to strings to catch malicious __str__ methods
+                        converted_args.append(str(arg))
+                # Sanitize returns a list, but record.args should be a tuple for %s formatting
+                sanitized = sanitize(converted_args)
+                record.args = tuple(sanitized) if isinstance(sanitized, list) else sanitized
+
         
         return True
