@@ -241,14 +241,14 @@ def export_historical_data(unit_id):
 ```python
 @app.route('/api/v1/search')
 def search():
-    # All query parameters are pre-sanitized
+    # Query parameters contain original, unsanitized data
     query = request.args.get('q', '')
     category = request.args.get('category', '')
     
-    # Safe to use in logs
+    # Logging is automatically sanitized by the filter
     logger.info(f"Search: query={query}, category={category}")
     
-    # Safe to use in responses
+    # Return original data in the response
     return jsonify({
         'query': query,
         'category': category,

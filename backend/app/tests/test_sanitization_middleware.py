@@ -129,13 +129,6 @@ class TestSanitizeFunction:
         assert '\u2028' not in sanitized
         assert '\u2029' not in sanitized
         assert sanitized == "line1line2line3"
-        sanitized = sanitize(input_dict)
-        # Keys should be sanitized
-        assert 'key\nwith\nnewlines' not in sanitized
-        assert 'keywithnewlines' in sanitized
-        # Values should be sanitized
-        assert sanitized['keywithnewlines'] == 'value'
-        assert sanitized['clean'] == 'testtabs'
     
     def test_sanitize_depth_limit(self):
         """Test that deeply nested structures are handled safely."""
