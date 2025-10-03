@@ -37,10 +37,11 @@ class RequestIDManager:
                 parsed_uuid = uuid.UUID(client_request_id)
                 # Strictly validate that it's a UUID4 (version 4)
                 if parsed_uuid.version == 4:
-                    return client_request_id
+                    # Return canonical UUID string representation
+                    return str(parsed_uuid)
                 else:
                     # Reject non-UUID4 versions to prevent injection attacks
-                    logger.warning(f"Invalid request ID: not UUID4 (version {parsed_uuid.version})")
+                    logger.warning("Invalid request ID: not UUID4")
             except ValueError:
                 # Invalid UUID format - don't log the actual value to prevent XSS
                 logger.warning("Invalid request ID format from client: malformed UUID")
