@@ -11,7 +11,7 @@ class TestDebugModeConfiguration:
     
     def test_debug_disabled_with_testing_config(self):
         """Test that app.debug is False when using TestingConfig."""
-        with patch.dict(os.environ, {'FLASK_ENV': 'testing', 'TESTING': '1'}, clear=True):
+        with patch.dict(os.environ, {'FLASK_ENV': 'testing'}, clear=True):
             app = create_app()
             assert app.debug is False, "TestingConfig should set app.debug=False"
             assert app.config['DEBUG'] is False, "TestingConfig should set DEBUG=False"
