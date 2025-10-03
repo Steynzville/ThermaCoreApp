@@ -136,6 +136,37 @@ class TestRequestIDManager:
             # Should generate a new valid UUID
             uuid.UUID(extracted_id)
     
+    def test_extract_request_id_uuid_version_1_rejected(self, app):
+        """Test that UUID version 1 is rejected (only UUID4 allowed)."""
+        uuid1 = str(uuid.uuid1())
+        with app.test_request_context('/', headers={'X-Request-ID': uuid1}):
+            extracted_id = RequestIDManager.extract_request_id()
+            # Should NOT return the UUID1, should generate new UUID4
+            assert extracted_id != uuid1
+            parsed = uuid.UUID(extracted_id)
+            assert parsed.version == 4
+    
+    def test_extract_request_id_uuid_version_5_rejected(self, app):
+        """Test that UUID version 5 is rejected (only UUID4 allowed)."""
+        uuid5 = str(uuid.uuid5(uuid.NAMESPACE_DNS, 'test.example.com'))
+        with app.test_request_context('/', headers={'X-Request-ID': uuid5}):
+            extracted_id = RequestIDManager.extract_request_id()
+            # Should NOT return the UUID5, should generate new UUID4
+            assert extracted_id != uuid5
+            parsed = uuid.UUID(extracted_id)
+            assert parsed.version == 4
+    
+    def test_extract_request_id_xss_payload_rejected(self, app):
+        """Test that XSS payloads are rejected and don't cause issues."""
+        xss_payload = '<script>alert("xss")</script>'
+        with app.test_request_context('/', headers={'X-Request-ID': xss_payload}):
+            extracted_id = RequestIDManager.extract_request_id()
+            # Should NOT contain XSS payload
+            assert xss_payload not in extracted_id
+            # Should be a valid UUID4
+            parsed = uuid.UUID(extracted_id)
+            assert parsed.version == 4
+    
     def test_request_id_filter(self):
         """Test logging filter for request IDs."""
         import logging
