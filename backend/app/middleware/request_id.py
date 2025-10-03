@@ -31,13 +31,19 @@ class RequestIDManager:
         client_request_id = request.headers.get(RequestIDManager.REQUEST_ID_HEADER)
         
         if client_request_id:
-            # Validate client-provided request ID (must be valid UUID format)
+            # Validate client-provided request ID (must be valid UUID4 format)
             try:
                 # This will raise ValueError if not a valid UUID
-                uuid.UUID(client_request_id)
-                return client_request_id
+                parsed_uuid = uuid.UUID(client_request_id)
+                # Strictly validate that it's a UUID4 (version 4)
+                if parsed_uuid.version == 4:
+                    return client_request_id
+                else:
+                    # Reject non-UUID4 versions to prevent injection attacks
+                    logger.warning(f"Invalid request ID: not UUID4 (version {parsed_uuid.version})")
             except ValueError:
-                logger.warning(f"Invalid request ID format from client: {client_request_id}")
+                # Invalid UUID format - don't log the actual value to prevent XSS
+                logger.warning("Invalid request ID format from client: malformed UUID")
         
         # Generate new request ID
         return RequestIDManager.generate_request_id()
