@@ -99,4 +99,9 @@ if __name__ == '__main__':
     # IMPORTANT: This is only for development/testing purposes.
     # In production, use a production WSGI server (e.g., gunicorn, uWSGI)
     # instead of app.run(), and ensure FLASK_ENV is never set to 'development'.
+    if not app.debug:
+        raise RuntimeError(
+            "This script is for development only. "
+            "In production, use a WSGI server like Gunicorn or uWSGI."
+        )
     app.run(host='0.0.0.0', port=5000)
