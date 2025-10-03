@@ -19,7 +19,8 @@ class TestDebugModeConfiguration:
     
     def test_debug_disabled_with_production_config(self):
         """Test that app.debug is False when using ProductionConfig."""
-        with patch.dict(os.environ, {'FLASK_ENV': 'production', 'FLASK_DEBUG': '0'}, clear=True):
+        # FLASK_ENV=production should always disable debug mode, even if FLASK_DEBUG=1
+        with patch.dict(os.environ, {'FLASK_ENV': 'production', 'FLASK_DEBUG': '1'}, clear=True):
             app = create_app()
             assert app.debug is False, "ProductionConfig should set app.debug=False"
             assert app.config['DEBUG'] is False, "ProductionConfig should set DEBUG=False"
