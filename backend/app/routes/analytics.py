@@ -123,7 +123,7 @@ def get_dashboard_summary():
 @analytics_bp.route('/analytics/trends/<unit_id>', methods=['GET'])
 @jwt_required()
 @permission_required('read_units')
-@use_args(TrendsQuerySchema(), location='query')
+@use_args(TrendsQuerySchema, location='query')
 def get_unit_trends(args, unit_id):
     """Get trend analysis for a specific unit.
     
@@ -226,7 +226,7 @@ def get_unit_trends(args, unit_id):
 @analytics_bp.route('/analytics/performance/units', methods=['GET'])
 @jwt_required()
 @permission_required('read_units')
-@use_args(PerformanceQuerySchema(), location='query')
+@use_args(PerformanceQuerySchema, location='query')
 def get_units_performance(args):
     """Get performance analysis across all units.
     
@@ -318,7 +318,7 @@ def get_units_performance(args):
 @analytics_bp.route('/analytics/alerts/patterns', methods=['GET'])
 @jwt_required()
 @permission_required('read_units')
-@use_args(AlertPatternsQuerySchema(), location='query')
+@use_args(AlertPatternsQuerySchema, location='query')
 def get_alert_patterns(args):
     """Analyze alert patterns and frequencies.
     

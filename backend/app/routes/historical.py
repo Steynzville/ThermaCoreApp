@@ -10,7 +10,6 @@ from webargs.flaskparser import use_args
 from app.models import Unit, Sensor, SensorReading, db, utc_now  # Use timezone-aware datetime
 from app.routes.auth import permission_required
 from app.utils.error_handler import SecurityAwareErrorHandler
-from app.utils.helpers import parse_timestamp
 from app.utils.schemas import (
     HistoricalDataQuerySchema,
     StatisticsQuerySchema,
@@ -25,7 +24,7 @@ historical_bp = Blueprint('historical', __name__)
 @historical_bp.route('/historical/data/<unit_id>', methods=['GET'])
 @jwt_required()
 @permission_required('read_units')
-@use_args(HistoricalDataQuerySchema(), location='query')
+@use_args(HistoricalDataQuerySchema, location='query')
 def get_historical_data(args, unit_id):
     """Get historical data for a unit with flexible time ranges and aggregation.
     
@@ -85,22 +84,9 @@ def get_historical_data(args, unit_id):
         aggregation = args['aggregation']
         limit = args['limit']
         
-        # Set default time range if not provided
-        try:
-            if not end_date:
-                end_time = utc_now()
-            else:
-                end_time = parse_timestamp(end_date)
-                
-            if not start_date:
-                start_time = end_time - timedelta(days=7)  # Default to last 7 days
-            else:
-                start_time = parse_timestamp(start_date)
-        except ValueError as e:
-            return SecurityAwareErrorHandler.handle_value_error(
-                e, 'get_historical_data date parsing', 
-                'Invalid date format provided. Please use ISO 8601 format.'
-            )
+        # Set default time range if not provided (dates are already datetime objects from schema)
+        end_time = end_date if end_date else utc_now()
+        start_time = start_date if start_date else (end_time - timedelta(days=7))
         
         # Build base query
         query = db.session.query(
@@ -201,7 +187,7 @@ def get_historical_data(args, unit_id):
 @historical_bp.route('/historical/compare/units', methods=['POST'])
 @jwt_required()
 @permission_required('read_units')
-@use_args(CompareUnitsSchema(), location='json')
+@use_args(CompareUnitsSchema, location='json')
 def compare_units_historical(args):
     """Compare historical data between multiple units.
     
@@ -256,22 +242,9 @@ def compare_units_historical(args):
         if len(units) != len(unit_ids):
             return jsonify({'error': 'One or more units not found'}), 404
         
-        # Parse time range
-        try:
-            if not end_date:
-                end_time = utc_now()
-            else:
-                end_time = parse_timestamp(end_date)
-                
-            if not start_date:
-                start_time = end_time - timedelta(days=30)  # Default to last 30 days
-            else:
-                start_time = parse_timestamp(start_date)
-        except ValueError as e:
-            return SecurityAwareErrorHandler.handle_value_error(
-                e, 'compare_units_historical date parsing',
-                'Invalid date format provided. Please use ISO 8601 format.'
-            )
+        # Parse time range (dates are already datetime objects from schema)
+        end_time = end_date if end_date else utc_now()
+        start_time = start_date if start_date else (end_time - timedelta(days=30))
         
         # Set aggregation format
         if aggregation == 'hourly':
@@ -369,7 +342,7 @@ def compare_units_historical(args):
 @historical_bp.route('/historical/export/<unit_id>', methods=['GET'])
 @jwt_required()
 @permission_required('read_units')
-@use_args(ExportDataQuerySchema(), location='query')
+@use_args(ExportDataQuerySchema, location='query')
 def export_historical_data(args, unit_id):
     """Export historical data for a unit in various formats.
     
@@ -422,22 +395,9 @@ def export_historical_data(args, unit_id):
         end_date = args.get('end_date')
         sensor_types = args.get('sensor_types')
         
-        # Set time range with validation
-        try:
-            if not end_date:
-                end_time = utc_now()
-            else:
-                end_time = parse_timestamp(end_date)
-                
-            if not start_date:
-                start_time = end_time - timedelta(days=30)  # Default to last 30 days
-            else:
-                start_time = parse_timestamp(start_date)
-        except ValueError as e:
-            return SecurityAwareErrorHandler.handle_value_error(
-                e, 'export_historical_data date parsing',
-                'Invalid date format provided. Please use ISO 8601 format.'
-            )
+        # Set time range (dates are already datetime objects from schema)
+        end_time = end_date if end_date else utc_now()
+        start_time = start_date if start_date else (end_time - timedelta(days=30))
         
         # Validate date range
         if start_time >= end_time:
@@ -518,7 +478,7 @@ def export_historical_data(args, unit_id):
 @historical_bp.route('/historical/statistics/<unit_id>', methods=['GET'])
 @jwt_required()
 @permission_required('read_units')
-@use_args(StatisticsQuerySchema(), location='query')
+@use_args(StatisticsQuerySchema, location='query')
 def get_historical_statistics(args, unit_id):
     """Get statistical analysis of historical data for a unit.
     

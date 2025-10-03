@@ -317,8 +317,8 @@ class TokenSchema(Schema):
 # Query parameter validation schemas
 class HistoricalDataQuerySchema(Schema):
     """Schema for historical data query parameters."""
-    start_date = fields.Str(required=False)
-    end_date = fields.Str(required=False)
+    start_date = fields.DateTime(required=False, format='iso')
+    end_date = fields.DateTime(required=False, format='iso')
     sensor_types = fields.Str(required=False)
     aggregation = fields.Str(
         required=False, 
@@ -379,8 +379,8 @@ class CompareUnitsSchema(Schema):
         validate=validate.OneOf(['hourly', 'daily', 'weekly']),
         load_default='daily'
     )
-    start_date = fields.Str(required=False)
-    end_date = fields.Str(required=False)
+    start_date = fields.DateTime(required=False, format='iso')
+    end_date = fields.DateTime(required=False, format='iso')
 
 
 class ExportDataQuerySchema(Schema):
@@ -390,6 +390,6 @@ class ExportDataQuerySchema(Schema):
         validate=validate.OneOf(['json', 'csv']),
         load_default='json'
     )
-    start_date = fields.Str(required=False)
-    end_date = fields.Str(required=False)
+    start_date = fields.DateTime(required=False, format='iso')
+    end_date = fields.DateTime(required=False, format='iso')
     sensor_types = fields.Str(required=False)
