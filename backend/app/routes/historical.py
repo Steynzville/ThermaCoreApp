@@ -1,15 +1,21 @@
 """Historical data analysis routes for Phase 3 SCADA integration."""
-from flask import Blueprint, jsonify, request, current_app
+from flask import Blueprint, jsonify, request, current_app, g
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, timedelta
 from sqlalchemy import func, and_, or_, desc, asc
 from typing import Dict, List, Any
 import json
+from webargs.flaskparser import use_args
 
 from app.models import Unit, Sensor, SensorReading, db, utc_now  # Use timezone-aware datetime
 from app.routes.auth import permission_required
 from app.utils.error_handler import SecurityAwareErrorHandler
-from app.utils.helpers import parse_timestamp
+from app.utils.schemas import (
+    HistoricalDataQuerySchema,
+    StatisticsQuerySchema,
+    ExportDataQuerySchema,
+    CompareUnitsSchema
+)
 
 # Create historical data blueprint
 historical_bp = Blueprint('historical', __name__)
@@ -18,8 +24,11 @@ historical_bp = Blueprint('historical', __name__)
 @historical_bp.route('/historical/data/<unit_id>', methods=['GET'])
 @jwt_required()
 @permission_required('read_units')
-def get_historical_data(unit_id):
+@use_args(HistoricalDataQuerySchema, location='query')
+def get_historical_data(args, unit_id):
     """Get historical data for a unit with flexible time ranges and aggregation.
+    
+    Query parameters are validated using HistoricalDataQuerySchema.
     
     ---
     tags:
@@ -68,30 +77,16 @@ def get_historical_data(unit_id):
         if not unit:
             return jsonify({'error': 'Unit not found'}), 404
         
-        # Parse parameters
-        start_date = request.args.get('start_date')
-        end_date = request.args.get('end_date')
-        sensor_types = request.args.get('sensor_types')
-        aggregation = request.args.get('aggregation', 'raw')
+        # Extract validated parameters from args
+        start_date = args.get('start_date')
+        end_date = args.get('end_date')
+        sensor_types = args.get('sensor_types')
+        aggregation = args['aggregation']
+        limit = args['limit']
         
-        # Robust query parameter parsing with validation
-        try:
-            limit = int(request.args.get('limit', 1000))
-            if limit < 1 or limit > 10000:
-                return jsonify({'error': 'Invalid limit parameter. Must be between 1 and 10000'}), 400
-        except (ValueError, TypeError):
-            return jsonify({'error': 'Invalid limit parameter. Must be an integer'}), 400
-        
-        # Set default time range if not provided
-        if not end_date:
-            end_time = utc_now()
-        else:
-            end_time = parse_timestamp(end_date)
-            
-        if not start_date:
-            start_time = end_time - timedelta(days=7)  # Default to last 7 days
-        else:
-            start_time = parse_timestamp(start_date)
+        # Set default time range if not provided (dates are already datetime objects from schema)
+        end_time = end_date if end_date else utc_now()
+        start_time = start_date if start_date else (end_time - timedelta(days=7))
         
         # Build base query
         query = db.session.query(
@@ -183,9 +178,6 @@ def get_historical_data(unit_id):
             'data': data
         })
         
-    except ValueError as e:
-        current_app.logger.error("ValueError in get_historical_data: %s", e, exc_info=True)
-        return jsonify({'error': 'Invalid request parameter.'}), 400
     except Exception as e:
         return SecurityAwareErrorHandler.handle_error(
             e, "Failed to get historical data"
@@ -195,8 +187,11 @@ def get_historical_data(unit_id):
 @historical_bp.route('/historical/compare/units', methods=['POST'])
 @jwt_required()
 @permission_required('read_units')
-def compare_units_historical():
+@use_args(CompareUnitsSchema, location='json')
+def compare_units_historical(args):
     """Compare historical data between multiple units.
+    
+    Request body is validated using CompareUnitsSchema.
     
     ---
     tags:
@@ -235,37 +230,21 @@ def compare_units_historical():
         description: Invalid request data
     """
     try:
-        data = request.get_json()
-        if not data:
-            return jsonify({'error': 'Request body required'}), 400
-        
-        unit_ids = data.get('unit_ids', [])
-        sensor_type = data.get('sensor_type')
-        aggregation = data.get('aggregation', 'daily')
-        start_date = data.get('start_date')
-        end_date = data.get('end_date')
-        
-        if not unit_ids:
-            return jsonify({'error': 'unit_ids required'}), 400
-        
-        if not sensor_type:
-            return jsonify({'error': 'sensor_type required'}), 400
+        # Extract validated parameters
+        unit_ids = args['unit_ids']
+        sensor_type = args['sensor_type']
+        aggregation = args['aggregation']
+        start_date = args.get('start_date')
+        end_date = args.get('end_date')
         
         # Validate units exist
         units = Unit.query.filter(Unit.id.in_(unit_ids)).all()
         if len(units) != len(unit_ids):
             return jsonify({'error': 'One or more units not found'}), 404
         
-        # Parse time range
-        if not end_date:
-            end_time = utc_now()
-        else:
-            end_time = parse_timestamp(end_date)
-            
-        if not start_date:
-            start_time = end_time - timedelta(days=30)  # Default to last 30 days
-        else:
-            start_time = parse_timestamp(start_date)
+        # Parse time range (dates are already datetime objects from schema)
+        end_time = end_date if end_date else utc_now()
+        start_time = start_date if start_date else (end_time - timedelta(days=30))
         
         # Set aggregation format
         if aggregation == 'hourly':
@@ -354,9 +333,6 @@ def compare_units_historical():
             }
         })
         
-    except ValueError as e:
-        current_app.logger.error("ValueError in compare_units_historical: %s", e, exc_info=True)
-        return jsonify({'error': 'Invalid request parameter.'}), 400
     except Exception as e:
         return SecurityAwareErrorHandler.handle_error(
             e, "Failed to compare units historical data"
@@ -366,8 +342,11 @@ def compare_units_historical():
 @historical_bp.route('/historical/export/<unit_id>', methods=['GET'])
 @jwt_required()
 @permission_required('read_units')
-def export_historical_data(unit_id):
+@use_args(ExportDataQuerySchema, location='query')
+def export_historical_data(args, unit_id):
     """Export historical data for a unit in various formats.
+    
+    Query parameters are validated using ExportDataQuerySchema.
     
     ---
     tags:
@@ -410,36 +389,15 @@ def export_historical_data(unit_id):
         if not unit:
             return jsonify({'error': 'Unit not found'}), 404
         
-        # Parse parameters
-        export_format = request.args.get('format', 'json')
-        start_date = request.args.get('start_date')
-        end_date = request.args.get('end_date')
-        sensor_types = request.args.get('sensor_types')
+        # Extract validated parameters
+        export_format = args['format']
+        start_date = args.get('start_date')
+        end_date = args.get('end_date')
+        sensor_types = args.get('sensor_types')
         
-        # Set time range with validation
-        try:
-            if not end_date:
-                end_time = utc_now()
-            else:
-                end_time = parse_timestamp(end_date)
-                
-            if not start_date:
-                start_time = end_time - timedelta(days=30)  # Default to last 30 days
-            else:
-                start_time = parse_timestamp(start_date)
-        except ValueError as e:
-            # Log without echoing user input to prevent log injection
-            # Logging layer automatically sanitizes output via SanitizingFilter
-            current_app.logger.warning(
-                "Invalid date parameter in historical export for unit_id=%s",
-                unit_id,
-                extra={'error_type': 'ValueError', 'endpoint': 'export_historical_data'}
-            )
-            return jsonify({'error': 'Invalid date format provided. Please use ISO 8601 format.'}), 400
-        
-        # Validate date range
-        if start_time >= end_time:
-            return jsonify({'error': 'start_date must be before end_date'}), 400
+        # Set time range (dates are already datetime objects from schema)
+        end_time = end_date if end_date else utc_now()
+        start_time = start_date if start_date else (end_time - timedelta(days=30))
         
         # Build query
         query = db.session.query(
@@ -516,8 +474,11 @@ def export_historical_data(unit_id):
 @historical_bp.route('/historical/statistics/<unit_id>', methods=['GET'])
 @jwt_required()
 @permission_required('read_units')
-def get_historical_statistics(unit_id):
+@use_args(StatisticsQuerySchema, location='query')
+def get_historical_statistics(args, unit_id):
     """Get statistical analysis of historical data for a unit.
+    
+    Query parameters are validated using StatisticsQuerySchema.
     
     ---
     tags:
@@ -550,15 +511,9 @@ def get_historical_statistics(unit_id):
         if not unit:
             return jsonify({'error': 'Unit not found'}), 404
         
-        # Robust query parameter parsing with validation
-        try:
-            days = int(request.args.get('days', 30))
-            if days < 1 or days > 365:
-                return jsonify({'error': 'Invalid days parameter. Must be between 1 and 365'}), 400
-        except (ValueError, TypeError):
-            return jsonify({'error': 'Invalid days parameter. Must be an integer'}), 400
-            
-        sensor_type = request.args.get('sensor_type')
+        # Extract validated parameters
+        days = args['days']
+        sensor_type = args.get('sensor_type')
         
         start_time = utc_now() - timedelta(days=days)
         

@@ -1,8 +1,9 @@
 """Example route demonstrating PR2 middleware usage."""
 from flask import Blueprint, request, g
 from marshmallow import Schema, fields, validate
+from webargs.flaskparser import use_args
 
-from app.middleware.validation import validate_schema, validate_query_params
+from app.middleware.validation import validate_query_params
 from app.middleware.rate_limit import standard_rate_limit, RateLimitConfig
 from app.middleware.request_id import track_request_id
 # Note: collect_metrics is deprecated - kept for backward compatibility but not used
@@ -26,12 +27,12 @@ example_bp = Blueprint('example', __name__, url_prefix='/api/v1/examples')
 @example_bp.route('/comprehensive', methods=['POST'])
 @track_request_id
 @standard_rate_limit  # 100 requests per minute per IP
-@validate_schema(ExampleRequestSchema)
+@use_args(ExampleRequestSchema, location='json')
 @validate_query_params(
     include_meta=lambda x: x.lower() in ['true', 'false'],
     format=lambda x: x in ['json', 'xml']
 )
-def comprehensive_example():
+def comprehensive_example(validated_data):
     """
     Comprehensive example showing all PR2 middleware features.
     
@@ -43,8 +44,6 @@ def comprehensive_example():
     - Metrics collection (automatic via middleware)
     - Standardized error envelope responses
     """
-    # Access validated data from middleware
-    validated_data = g.validated_data
     
     # Get query parameters
     include_meta = request.args.get('include_meta', 'false').lower() == 'true'
@@ -131,10 +130,9 @@ def metrics_demo():
 @example_bp.route('/validation-demo', methods=['POST'])
 @track_request_id
 @standard_rate_limit
-@validate_schema(ExampleRequestSchema)
-def validation_demo():
+@use_args(ExampleRequestSchema, location='json')
+def validation_demo(validated_data):
     """Example showing comprehensive input validation."""
-    validated_data = g.validated_data
     
     # The data has already been validated by middleware
     # We can use it safely without additional checks
