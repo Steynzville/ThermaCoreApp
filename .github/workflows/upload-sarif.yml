@@ -20,7 +20,7 @@ jobs:
           python-version: '3.x'
 
       - name: Install Bandit
-        run: pip install bandit bandit-sarif-formatter
+        run: pip install bandit==1.7.5 bandit-sarif-formatter==1.0.0
 
       - name: Run Bandit scan and generate SARIF
         run: bandit -r . -f sarif -o bandit_report.sarif
