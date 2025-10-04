@@ -200,6 +200,157 @@ class TestAuthentication:
         assert response.status_code == 200
 
 
+class TestTokenSecurity:
+    """Test JWT token security enhancements."""
+    
+    def get_auth_token(self, client, username='admin', password='admin123'):
+        """Helper method to get auth token."""
+        response = client.post('/api/v1/auth/login',
+            json={'username': username, 'password': password},
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        if response.status_code == 200:
+            data = unwrap_response(response)
+            return data['access_token']
+        return None
+    
+    def test_token_contains_security_claims(self, client):
+        """Test that tokens include security claims like jti and role."""
+        import jwt
+        from flask import current_app
+        
+        # Get a token
+        response = client.post('/api/v1/auth/login',
+            json={'username': 'admin', 'password': 'admin123'},
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        assert response.status_code == 200
+        data = unwrap_response(response)
+        token = data['access_token']
+        
+        # Decode token without verification to inspect claims
+        decoded = jwt.decode(token, options={"verify_signature": False})
+        
+        # Verify security claims are present
+        assert 'jti' in decoded, "Token should include jti (JWT ID) claim"
+        assert 'role' in decoded, "Token should include role claim"
+        assert 'sub' in decoded, "Token should include sub (subject) claim"
+        assert 'iat' in decoded, "Token should include iat (issued at) claim"
+        assert 'exp' in decoded, "Token should include exp (expiration) claim"
+    
+    def test_refresh_token_contains_jti(self, client):
+        """Test that refresh tokens include jti claim."""
+        import jwt
+        
+        # Get tokens
+        response = client.post('/api/v1/auth/login',
+            json={'username': 'admin', 'password': 'admin123'},
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        assert response.status_code == 200
+        data = unwrap_response(response)
+        refresh_token = data['refresh_token']
+        
+        # Decode token without verification to inspect claims
+        decoded = jwt.decode(refresh_token, options={"verify_signature": False})
+        
+        # Verify jti claim is present in refresh token
+        assert 'jti' in decoded, "Refresh token should include jti (JWT ID) claim"
+
+
+class TestErrorHandling:
+    """Test error handling improvements using SecurityAwareErrorHandler."""
+    
+    def test_invalid_token_uses_security_aware_handler(self, client):
+        """Test that invalid token errors use SecurityAwareErrorHandler."""
+        response = client.get('/api/v1/auth/me',
+            headers={'Authorization': 'Bearer invalid_token'}
+        )
+        
+        # Should return 401 or 422 (JWT validation error)
+        assert response.status_code in [401, 422]
+        data = json.loads(response.data)
+        
+        # SecurityAwareErrorHandler wraps errors in a specific format
+        # Check that error is properly structured
+        assert 'error' in data or 'msg' in data  # JWT errors may use 'msg'
+    
+    def test_me_endpoint_error_handling(self, client, db_session):
+        """Test /auth/me endpoint error handling with SecurityAwareErrorHandler."""
+        # First get a valid token
+        login_response = client.post('/api/v1/auth/login',
+            json={'username': 'admin', 'password': 'admin123'},
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        assert login_response.status_code == 200
+        data = unwrap_response(login_response)
+        token = data['access_token']
+        
+        # Deactivate the user
+        from app.models import User
+        admin_user = User.query.filter_by(username='admin').first()
+        admin_user.is_active = False
+        db_session.commit()
+        
+        try:
+            # Try to access /me with token of inactive user
+            response = client.get('/api/v1/auth/me',
+                headers={'Authorization': f'Bearer {token}'}
+            )
+            
+            # Should return 401 with SecurityAwareErrorHandler format
+            assert response.status_code == 401
+            response_data = json.loads(response.data)
+            
+            # Check for SecurityAwareErrorHandler response format
+            assert 'error' in response_data or 'success' in response_data
+            
+        finally:
+            # Reactivate user for other tests
+            admin_user.is_active = True
+            db_session.commit()
+    
+    def test_refresh_endpoint_error_handling(self, client, db_session):
+        """Test /auth/refresh endpoint error handling with SecurityAwareErrorHandler."""
+        # First get a valid refresh token
+        login_response = client.post('/api/v1/auth/login',
+            json={'username': 'admin', 'password': 'admin123'},
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        assert login_response.status_code == 200
+        data = unwrap_response(login_response)
+        refresh_token = data['refresh_token']
+        
+        # Deactivate the user
+        from app.models import User
+        admin_user = User.query.filter_by(username='admin').first()
+        admin_user.is_active = False
+        db_session.commit()
+        
+        try:
+            # Try to refresh with token of inactive user
+            response = client.post('/api/v1/auth/refresh',
+                headers={'Authorization': f'Bearer {refresh_token}'}
+            )
+            
+            # Should return 401 with SecurityAwareErrorHandler format
+            assert response.status_code == 401
+            response_data = json.loads(response.data)
+            
+            # Check for SecurityAwareErrorHandler response format
+            assert 'error' in response_data or 'success' in response_data
+            
+        finally:
+            # Reactivate user for other tests
+            admin_user.is_active = True
+            db_session.commit()
+
+
 class TestUserRegistration:
     """Test user registration functionality."""
     

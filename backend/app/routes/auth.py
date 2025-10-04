@@ -1,4 +1,5 @@
 """Authentication routes for ThermaCore SCADA API."""
+import secrets
 from datetime import datetime, timezone
 from functools import wraps
 
@@ -97,15 +98,54 @@ def role_required(*roles):
             verify_jwt_in_request()
             user_id, success = get_current_user_id()
             if not success or user_id is None:
-                return jsonify({'error': 'Invalid token format'}), 401
+                # Audit failed role check
+                audit_permission_check(
+                    permission=f"role:{','.join(roles)}",
+                    granted=False,
+                    details={'reason': 'Invalid token format'}
+                )
+                return SecurityAwareErrorHandler.handle_service_error(
+                    Exception('Invalid token format'), 'authentication_error', 'Token validation', 401
+                )
                 
             user = User.query.get(user_id)
             
             if not user or not user.is_active:
-                return jsonify({'error': 'User not found or inactive'}), 403
+                # Audit failed role check - user not found/inactive
+                audit_permission_check(
+                    permission=f"role:{','.join(roles)}",
+                    granted=False,
+                    user_id=user_id,
+                    username=user.username if user else None,
+                    details={'reason': 'User not found or inactive'}
+                )
+                return SecurityAwareErrorHandler.handle_service_error(
+                    Exception('User not found or inactive'), 'authentication_error', 'User validation', 403
+                )
                 
             if user.role.name.value not in roles:
-                return jsonify({'error': 'Insufficient role permissions'}), 403
+                # Audit denied role check
+                audit_permission_check(
+                    permission=f"role:{','.join(roles)}",
+                    granted=False,
+                    user_id=user.id,
+                    username=user.username,
+                    resource=request.endpoint if request else None,
+                    details={'reason': 'Insufficient role permissions', 'user_role': user.role.name.value, 'required_roles': list(roles)}
+                )
+                return SecurityAwareErrorHandler.handle_service_error(
+                    Exception('Insufficient role permissions'), 'permission_error', f'Role check: {roles}', 403
+                )
+            
+            # Audit successful role check
+            audit_permission_check(
+                permission=f"role:{','.join(roles)}",
+                granted=True,
+                user_id=user.id,
+                username=user.username,
+                resource=request.endpoint if request else None,
+                details={'user_role': user.role.name.value}
+            )
                 
             return f(*args, **kwargs)
         return decorated_function
@@ -226,8 +266,13 @@ def login(data):
         db.session.refresh(user)
         
         # Create tokens with string identity (JWT requirement)
-        access_token = create_access_token(identity=str(user.id))
-        refresh_token = create_refresh_token(identity=str(user.id))
+        # Include additional security claims: iat (issued at) and jti (JWT ID)
+        additional_claims = {
+            'jti': secrets.token_urlsafe(16),
+            'role': user.role.name.value
+        }
+        access_token = create_access_token(identity=str(user.id), additional_claims=additional_claims)
+        refresh_token = create_refresh_token(identity=str(user.id), additional_claims={'jti': secrets.token_urlsafe(16)})
         
         # Audit successful login
         audit_login_success(
@@ -298,14 +343,23 @@ def refresh():
     """
     user_id, success = get_current_user_id()
     if not success or user_id is None:
-        return jsonify({'error': 'Invalid token format'}), 401
+        return SecurityAwareErrorHandler.handle_service_error(
+            Exception('Invalid token format'), 'authentication_error', 'Token validation', 401
+        )
         
     user = User.query.get(user_id)
     
     if not user or not user.is_active:
-        return jsonify({'error': 'User not found or inactive'}), 401
+        return SecurityAwareErrorHandler.handle_service_error(
+            Exception('User not found or inactive'), 'authentication_error', 'User validation', 401
+        )
     
-    access_token = create_access_token(identity=str(user.id))
+    # Create new access token with security claims
+    additional_claims = {
+        'jti': secrets.token_urlsafe(16),
+        'role': user.role.name.value
+    }
+    access_token = create_access_token(identity=str(user.id), additional_claims=additional_claims)
     
     # Audit token refresh
     AuditLogger.log_authentication_event(
@@ -341,12 +395,16 @@ def get_current_user():
     """
     user_id, success = get_current_user_id()
     if not success or user_id is None:
-        return jsonify({'error': 'Invalid token format'}), 401
+        return SecurityAwareErrorHandler.handle_service_error(
+            Exception('Invalid token format'), 'authentication_error', 'Token validation', 401
+        )
         
     user = User.query.get(user_id)
     
     if not user or not user.is_active:
-        return jsonify({'error': 'User not found or inactive'}), 401
+        return SecurityAwareErrorHandler.handle_service_error(
+            Exception('User not found or inactive'), 'authentication_error', 'User validation', 401
+        )
     
     user_schema = UserSchema()
     return jsonify(user_schema.dump(user)), 200
