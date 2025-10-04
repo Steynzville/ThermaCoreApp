@@ -65,7 +65,7 @@ jobs:
         working-directory: ./ThermaCoreApp/backend
 
       - name: Run Bandit (Python SAST)
-        run: bandit -r . -ll -f json -o bandit_report.json
+        run: bandit -r . -l -f json -o bandit_report.json
         working-directory: ./ThermaCoreApp/backend
 
       - name: Upload Bandit Report
