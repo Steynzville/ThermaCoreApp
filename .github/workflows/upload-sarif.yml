@@ -26,6 +26,7 @@ jobs:
 
       - name: Run Bandit scan and generate SARIF
         run: bandit -r . -f sarif -o bandit_report.sarif || true
+        continue-on-error: true
 
       - name: Upload SARIF file
         uses: github/codeql-action/upload-sarif@v3
