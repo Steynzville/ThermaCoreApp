@@ -58,7 +58,7 @@ def permission_required(permission):
                     details={'reason': 'User not found or inactive'}
                 )
                 return SecurityAwareErrorHandler.handle_service_error(
-                    Exception('User not found or inactive'), 'authentication_error', 'User validation', 403
+                    Exception('User not found or inactive'), 'authentication_error', 'User validation', 401
                 )
                 
             if not user.has_permission(permission):
@@ -120,7 +120,7 @@ def role_required(*roles):
                     details={'reason': 'User not found or inactive'}
                 )
                 return SecurityAwareErrorHandler.handle_service_error(
-                    Exception('User not found or inactive'), 'authentication_error', 'User validation', 403
+                    Exception('User not found or inactive'), 'authentication_error', 'User validation', 401
                 )
                 
             if user.role.name.value not in roles:
