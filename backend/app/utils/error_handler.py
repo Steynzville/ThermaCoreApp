@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Any, Dict, Tuple, Optional
 from flask import jsonify, g
 from app.utils.secure_logger import SecureLogger
+from app.utils.input_validator import InputValidator
 
 logger = SecureLogger.get_secure_logger(__name__)
 
@@ -191,6 +192,80 @@ class SecurityAwareErrorHandler:
         return SecurityAwareErrorHandler.handle_service_error(
             error, 'validation_error', f"Validation {context}", 400
         )
+    
+    @staticmethod
+    def handle_input_validation_error(field_name: str, error_message: str, 
+                                      context: str = 'Input validation') -> Tuple[Any, int]:
+        """Handle input validation errors with sanitized field information.
+        
+        This prevents information leakage about system internals while providing
+        useful feedback about validation failures.
+        
+        Args:
+            field_name: Name of the field that failed validation
+            error_message: Validation error message (will be sanitized)
+            context: Context for logging
+            
+        Returns:
+            Tuple of (JSON response, status_code)
+        """
+        # Get or create correlation ID from request context
+        if not hasattr(g, 'request_id'):
+            g.request_id = str(uuid.uuid4())
+        request_id = g.request_id
+        
+        # Sanitize field name and error message for logging
+        safe_field = InputValidator.sanitize_for_logging(field_name)
+        safe_message = InputValidator.sanitize_for_logging(error_message)
+        
+        # Log the actual validation error with details
+        log_message = f"Input validation failed [{request_id}] in {context}: field={safe_field}, error={safe_message}"
+        logger.warning(log_message, extra={
+            'request_id': request_id,
+            'error_type': 'input_validation_error',
+            'context': context,
+            'field': safe_field
+        })
+        
+        # Return generic user-facing message without exposing internal details
+        response_data = {
+            'success': False,
+            'error': {
+                'code': 'VALIDATION_ERROR',
+                'message': 'Invalid input provided. Please check your request and try again.',
+                'details': {
+                    'correlation_id': request_id
+                }
+            },
+            'request_id': request_id,
+            'timestamp': datetime.utcnow().isoformat() + 'Z'
+        }
+        
+        return jsonify(response_data), 400
+    
+    @staticmethod
+    def validate_and_handle_input(value: Any, context: str = 'input') -> Tuple[bool, Optional[Tuple[Any, int]]]:
+        """Validate input and return error response if validation fails.
+        
+        This is a convenience method that combines validation and error handling.
+        
+        Args:
+            value: Input value to validate
+            context: Context description for error messages
+            
+        Returns:
+            Tuple of (is_valid, error_response)
+            - is_valid: True if input is valid
+            - error_response: Error response tuple if invalid, None if valid
+        """
+        is_valid, error_msg = InputValidator.validate_input(value, context)
+        
+        if not is_valid:
+            return False, SecurityAwareErrorHandler.handle_input_validation_error(
+                context, error_msg, 'Security validation'
+            )
+        
+        return True, None
     
     @staticmethod
     def handle_permission_error(error: Exception, context: str = 'Permission check') -> Tuple[Any, int]:

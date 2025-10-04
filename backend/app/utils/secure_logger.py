@@ -9,14 +9,42 @@ class SecureLogger:
     
     # Patterns to redact from logs
     SENSITIVE_PATTERNS = [
-        (re.compile(r'password["\']?\s*[:=]\s*["\']?([^"\'\\s,}]+)', re.IGNORECASE), 'password=***'),
-        (re.compile(r'token["\']?\s*[:=]\s*["\']?([^"\'\\s,}]+)', re.IGNORECASE), 'token=***'),
-        (re.compile(r'api[_-]?key["\']?\s*[:=]\s*["\']?([^"\'\\s,}]+)', re.IGNORECASE), 'api_key=***'),
-        (re.compile(r'secret["\']?\s*[:=]\s*["\']?([^"\'\\s,}]+)', re.IGNORECASE), 'secret=***'),
-        (re.compile(r'authorization["\']?\s*[:=]\s*["\']?([^"\'\\s,}]+)', re.IGNORECASE), 'authorization=***'),
-        (re.compile(r'jwt["\']?\s*[:=]\s*["\']?([^"\'\\s,}]+)', re.IGNORECASE), 'jwt=***'),
-        (re.compile(r'access_token["\']?\s*[:=]\s*["\']?([^"\'\\s,}]+)', re.IGNORECASE), 'access_token=***'),
-        (re.compile(r'refresh_token["\']?\s*[:=]\s*["\']?([^"\'\\s,}]+)', re.IGNORECASE), 'refresh_token=***'),
+        # Authentication credentials
+        (re.compile(r'password["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'password=***'),
+        (re.compile(r'passwd["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'passwd=***'),
+        (re.compile(r'\bpwd["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'pwd=***'),
+        
+        # Tokens and keys - these should come before 'authorization' to avoid conflicts
+        (re.compile(r'Bearer\s+([a-zA-Z0-9\-._~+/]+=*)', re.IGNORECASE), 'Bearer ***'),
+        (re.compile(r'token["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'token=***'),
+        (re.compile(r'api[_-]?key["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'api_key=***'),
+        (re.compile(r'secret["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'secret=***'),
+        (re.compile(r'jwt["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'jwt=***'),
+        (re.compile(r'access_token["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'access_token=***'),
+        (re.compile(r'refresh_token["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'refresh_token=***'),
+        (re.compile(r'\bsession["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'session=***'),
+        (re.compile(r'csrf["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'csrf=***'),
+        
+        # Authorization header (should come after Bearer pattern)
+        (re.compile(r'authorization["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'authorization=***'),
+        
+        # Personal Identifiable Information (PII)
+        (re.compile(r'\b\d{3}-\d{2}-\d{4}\b'), '***-**-****'),  # SSN
+        (re.compile(r'\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b'), '****-****-****-****'),  # Credit card
+        (re.compile(r'\b\d{3}[- ]?\d{3}[- ]?\d{4}\b'), '***-***-****'),  # Phone number
+        
+        # Connection strings with passwords
+        (re.compile(r'://([^:]+):([^@]+)@', re.IGNORECASE), r'://\1:***@'),  # Database URLs
+        
+        # Email addresses (partial redaction for privacy)
+        (re.compile(r'\b([a-zA-Z0-9._%+-]{1,3})[a-zA-Z0-9._%+-]*@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})\b'), r'\1***@\2'),
+        
+        # Private/secret keys
+        (re.compile(r'private[_-]?key["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'private_key=***'),
+        (re.compile(r'client[_-]?secret["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'client_secret=***'),
+        
+        # Certificates
+        (re.compile(r'-----BEGIN\s+(?:RSA\s+)?PRIVATE\s+KEY-----.+?-----END\s+(?:RSA\s+)?PRIVATE\s+KEY-----', re.DOTALL), '[PRIVATE_KEY_REDACTED]'),
     ]
     
     @classmethod
@@ -51,10 +79,14 @@ class SecureLogger:
             return data
         
         sensitive_keys = {
-            'password', 'token', 'api_key', 'secret', 'jwt', 'refresh_token',
-            'access_token', 'authorization', 'secret_key', 'private_key',
-            'client_secret', 'api_secret', 'auth_token', 'session_token',
-            'csrf_token', 'x-api-key', 'x-auth-token'
+            'password', 'passwd', 'pwd', 'token', 'api_key', 'secret', 'jwt', 
+            'refresh_token', 'access_token', 'authorization', 'secret_key', 
+            'private_key', 'client_secret', 'api_secret', 'auth_token', 
+            'session_token', 'csrf_token', 'x-api-key', 'x-auth-token',
+            'session', 'session_id', 'sessionid', 'bearer', 'credentials',
+            'cert', 'certificate', 'private_key_path', 'key_file',
+            'ssn', 'social_security', 'credit_card', 'card_number', 'cvv',
+            'pin', 'security_code', 'account_number', 'routing_number'
         }
         
         sanitized = {}
