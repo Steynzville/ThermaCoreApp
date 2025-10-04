@@ -2,7 +2,7 @@
 from datetime import datetime, timezone
 import logging
 from dateutil import parser as dateutil_parser
-from marshmallow import Schema, fields, validate, ValidationError, post_load
+from marshmallow import Schema, fields, validate, ValidationError, post_load, validates_schema
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 
 from app.models import User, Role, Permission, Unit, Sensor, SensorReading, PermissionEnum, RoleEnum, UnitStatusEnum, HealthStatusEnum
@@ -330,6 +330,16 @@ class HistoricalDataQuerySchema(Schema):
         validate=validate.Range(min=1, max=10000),
         load_default=1000
     )
+    
+    @validates_schema
+    def validate_date_range(self, data, **kwargs):
+        """Validate that start_date is before end_date."""
+        start_date = data.get('start_date')
+        end_date = data.get('end_date')
+        
+        # Only validate if both dates are provided
+        if start_date and end_date and start_date >= end_date:
+            raise ValidationError('start_date must be before end_date', field_name='start_date')
 
 
 class StatisticsQuerySchema(Schema):
@@ -381,6 +391,16 @@ class CompareUnitsSchema(Schema):
     )
     start_date = fields.DateTime(required=False, format='iso')
     end_date = fields.DateTime(required=False, format='iso')
+    
+    @validates_schema
+    def validate_date_range(self, data, **kwargs):
+        """Validate that start_date is before end_date."""
+        start_date = data.get('start_date')
+        end_date = data.get('end_date')
+        
+        # Only validate if both dates are provided
+        if start_date and end_date and start_date >= end_date:
+            raise ValidationError('start_date must be before end_date', field_name='start_date')
 
 
 class ExportDataQuerySchema(Schema):
@@ -393,3 +413,13 @@ class ExportDataQuerySchema(Schema):
     start_date = fields.DateTime(required=False, format='iso')
     end_date = fields.DateTime(required=False, format='iso')
     sensor_types = fields.Str(required=False)
+    
+    @validates_schema
+    def validate_date_range(self, data, **kwargs):
+        """Validate that start_date is before end_date."""
+        start_date = data.get('start_date')
+        end_date = data.get('end_date')
+        
+        # Only validate if both dates are provided
+        if start_date and end_date and start_date >= end_date:
+            raise ValidationError('start_date must be before end_date', field_name='start_date')
