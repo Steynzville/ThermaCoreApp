@@ -1,4 +1,6 @@
 name: Focused Code Quality and Security Checks
+permissions:
+  contents: read
 
 on:
   push:
