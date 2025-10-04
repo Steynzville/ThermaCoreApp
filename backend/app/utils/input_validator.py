@@ -15,7 +15,7 @@ class InputValidator:
     ]
     
     XSS_PATTERNS = [
-        re.compile(r"<script[^>]*>.*?</script>", re.IGNORECASE | re.DOTALL),
+        re.compile(r"<script[^>]*>.*?</script(?:\s[^>]*)?>", re.IGNORECASE | re.DOTALL),
         re.compile(r"javascript:", re.IGNORECASE),
         re.compile(r"on\w+\s*=", re.IGNORECASE),  # Event handlers like onclick, onload
         re.compile(r"<iframe", re.IGNORECASE),
