@@ -1,0 +1,32 @@
+name: Bandit Scan and SARIF Upload
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  bandit_scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install Bandit
+        run: pip install bandit bandit-sarif-formatter
+
+      - name: Run Bandit scan and generate SARIF
+        run: bandit -r . -f sarif -o bandit_report.sarif
+        working-directory: Steynzville/ThermaCoreApp
+
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: Steynzville/ThermaCoreApp/bandit_report.sarif
