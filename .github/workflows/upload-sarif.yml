@@ -25,7 +25,8 @@ jobs:
         run: pip install bandit==1.7.5 bandit-sarif-formatter==1.0.0
 
       - name: Run Bandit scan and generate SARIF
-        run: bandit -r . -f sarif -o bandit_report.sarif || true
+        run: bandit -r . -f sarif -o bandit_report.sarif
+        continue-on-error: true
 
       - name: Upload SARIF file
         uses: github/codeql-action/upload-sarif@v3
