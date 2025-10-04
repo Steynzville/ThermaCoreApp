@@ -88,6 +88,10 @@ def get_historical_data(args, unit_id):
         end_time = end_date if end_date else utc_now()
         start_time = start_date if start_date else (end_time - timedelta(days=7))
         
+        # Validate date range
+        if start_time >= end_time:
+            return jsonify({'error': 'start_date must be before end_date'}), 400
+        
         # Build base query
         query = db.session.query(
             SensorReading.timestamp,
@@ -245,6 +249,10 @@ def compare_units_historical(args):
         # Parse time range (dates are already datetime objects from schema)
         end_time = end_date if end_date else utc_now()
         start_time = start_date if start_date else (end_time - timedelta(days=30))
+        
+        # Validate date range
+        if start_time >= end_time:
+            return jsonify({'error': 'start_date must be before end_date'}), 400
         
         # Set aggregation format
         if aggregation == 'hourly':
