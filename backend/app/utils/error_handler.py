@@ -200,7 +200,7 @@ class SecurityAwareErrorHandler:
         )
     
     @staticmethod
-    def handle_value_error(error: Exception, context: str = 'Request parameter validation', 
+    def handle_value_error(error: ValueError, context: str = 'Request parameter validation', 
                           user_message: str = 'Invalid request parameter.') -> Tuple[Any, int]:
         """Handle ValueError exceptions with centralized logging and generic responses.
         
