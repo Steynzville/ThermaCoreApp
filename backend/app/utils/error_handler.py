@@ -217,8 +217,10 @@ class SecurityAwareErrorHandler:
         Returns:
             Tuple of (JSON response, status_code)
         """
-        # Get correlation ID from request context
-        request_id = getattr(g, 'request_id', str(uuid.uuid4()))
+        # Get or create correlation ID from request context
+        if not hasattr(g, 'request_id'):
+            g.request_id = str(uuid.uuid4())
+        request_id = g.request_id
         
         # Log the actual error with full details server-side
         log_message = f"ValueError [{request_id}] in {context}: {str(error)}"
