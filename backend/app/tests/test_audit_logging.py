@@ -309,7 +309,7 @@ class TestAuditIntegration:
 class TestRoleRequiredAuditLogging:
     """Test cases for role_required decorator audit logging."""
     
-    def get_auth_token(self, client, username='admin', password='admin123'):
+    def get_auth_token(self, client, username='admin', password='admin123'):  # nosec B106
         """Helper method to get auth token."""
         response = client.post('/api/v1/auth/login',
             json={'username': username, 'password': password},
