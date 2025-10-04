@@ -10,23 +10,23 @@ class SecureLogger:
     # Patterns to redact from logs
     SENSITIVE_PATTERNS = [
         # Authentication credentials
-        (re.compile(r'password["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'password=***'),
-        (re.compile(r'passwd["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'passwd=***'),
-        (re.compile(r'\bpwd["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'pwd=***'),
+        (re.compile(r'password["\']?\s*[:=]\s*["\']?([^"'\s,}]+)', re.IGNORECASE), 'password=***'),
+        (re.compile(r'passwd["\']?\s*[:=]\s*["\']?([^"'\s,}]+)', re.IGNORECASE), 'passwd=***'),
+        (re.compile(r'\bpwd["\']?\s*[:=]\s*["\']?([^"'\s,}]+)', re.IGNORECASE), 'pwd=***'),
         
         # Tokens and keys - these should come before 'authorization' to avoid conflicts
         (re.compile(r'Bearer\s+([a-zA-Z0-9\-._~+/]+=*)', re.IGNORECASE), 'Bearer ***'),
-        (re.compile(r'token["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'token=***'),
-        (re.compile(r'api[_-]?key["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'api_key=***'),
-        (re.compile(r'secret["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'secret=***'),
-        (re.compile(r'jwt["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'jwt=***'),
-        (re.compile(r'access_token["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'access_token=***'),
-        (re.compile(r'refresh_token["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'refresh_token=***'),
-        (re.compile(r'\bsession["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'session=***'),
-        (re.compile(r'csrf["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'csrf=***'),
+        (re.compile(r'token["\']?\s*[:=]\s*["\']?([^"'\s,}]+)', re.IGNORECASE), 'token=***'),
+        (re.compile(r'api[_-]?key["\']?\s*[:=]\s*["\']?([^"'\s,}]+)', re.IGNORECASE), 'api_key=***'),
+        (re.compile(r'secret["\']?\s*[:=]\s*["\']?([^"'\s,}]+)', re.IGNORECASE), 'secret=***'),
+        (re.compile(r'jwt["\']?\s*[:=]\s*["\']?([^"'\s,}]+)', re.IGNORECASE), 'jwt=***'),
+        (re.compile(r'access_token["\']?\s*[:=]\s*["\']?([^"'\s,}]+)', re.IGNORECASE), 'access_token=***'),
+        (re.compile(r'refresh_token["\']?\s*[:=]\s*["\']?([^"'\s,}]+)', re.IGNORECASE), 'refresh_token=***'),
+        (re.compile(r'\bsession["\']?\s*[:=]\s*["\']?([^"'\s,}]+)', re.IGNORECASE), 'session=***'),
+        (re.compile(r'csrf["\']?\s*[:=]\s*["\']?([^"'\s,}]+)', re.IGNORECASE), 'csrf=***'),
         
         # Authorization header (should come after Bearer pattern)
-        (re.compile(r'authorization["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'authorization=***'),
+        (re.compile(r'authorization["\']?\s*[:=]\s*["\']?([^"'\s,}]+)', re.IGNORECASE), 'authorization=***'),
         
         # Personal Identifiable Information (PII)
         (re.compile(r'\b\d{3}-\d{2}-\d{4}\b'), '***-**-****'),  # SSN
@@ -40,8 +40,8 @@ class SecureLogger:
         (re.compile(r'\b([a-zA-Z0-9._%+-]{1,3})[a-zA-Z0-9._%+-]*@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})\b'), r'\1***@\2'),
         
         # Private/secret keys
-        (re.compile(r'private[_-]?key["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'private_key=***'),
-        (re.compile(r'client[_-]?secret["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'client_secret=***'),
+        (re.compile(r'private[_-]?key["\']?\s*[:=]\s*["\']?([^"'\s,}]+)', re.IGNORECASE), 'private_key=***'),
+        (re.compile(r'client[_-]?secret["\']?\s*[:=]\s*["\']?([^"'\s,}]+)', re.IGNORECASE), 'client_secret=***'),
         
         # Certificates
         (re.compile(r'-----BEGIN\s+(?:RSA\s+)?PRIVATE\s+KEY-----.+?-----END\s+(?:RSA\s+)?PRIVATE\s+KEY-----', re.DOTALL), '[PRIVATE_KEY_REDACTED]'),

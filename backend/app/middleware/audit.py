@@ -39,17 +39,17 @@ SENSITIVE_FIELDS = {
 # Configurable sensitive data patterns for regex-based redaction
 SENSITIVE_PATTERNS = [
     # Authentication credentials
-    (re.compile(r'password["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'password=***'),
-    (re.compile(r'passwd["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'passwd=***'),
-    (re.compile(r'pwd["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'pwd=***'),
+    (re.compile(r'password["\']?\s*[:=]\s*["\']?([^"'\s,}]+)', re.IGNORECASE), 'password=***'),
+    (re.compile(r'passwd["\']?\s*[:=]\s*["\']?([^"'\s,}]+)', re.IGNORECASE), 'passwd=***'),
+    (re.compile(r'pwd["\']?\s*[:=]\s*["\']?([^"'\s,}]+)', re.IGNORECASE), 'pwd=***'),
     
     # Tokens and keys
-    (re.compile(r'token["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'token=***'),
-    (re.compile(r'api[_-]?key["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'api_key=***'),
-    (re.compile(r'secret["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'secret=***'),
-    (re.compile(r'authorization["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'authorization=***'),
-    (re.compile(r'jwt["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'jwt=***'),
-    (re.compile(r'session["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'session=***'),
+    (re.compile(r'token["\']?\s*[:=]\s*["\']?([^"'\s,}]+)', re.IGNORECASE), 'token=***'),
+    (re.compile(r'api[_-]?key["\']?\s*[:=]\s*["\']?([^"'\s,}]+)', re.IGNORECASE), 'api_key=***'),
+    (re.compile(r'secret["\']?\s*[:=]\s*["\']?([^"'\s,}]+)', re.IGNORECASE), 'secret=***'),
+    (re.compile(r'authorization["\']?\s*[:=]\s*["\']?([^"'\s,}]+)', re.IGNORECASE), 'authorization=***'),
+    (re.compile(r'jwt["\']?\s*[:=]\s*["\']?([^"'\s,}]+)', re.IGNORECASE), 'jwt=***'),
+    (re.compile(r'session["\']?\s*[:=]\s*["\']?([^"'\s,}]+)', re.IGNORECASE), 'session=***'),
     
     # Personal Identifiable Information (PII)
     (re.compile(r'\b\d{3}-\d{2}-\d{4}\b'), '***-**-****'),  # SSN
