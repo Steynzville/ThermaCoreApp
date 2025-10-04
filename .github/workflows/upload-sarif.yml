@@ -9,6 +9,8 @@ on:
 
 jobs:
   bandit_scan:
+    permissions:
+      security-events: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
