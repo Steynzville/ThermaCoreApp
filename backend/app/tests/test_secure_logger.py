@@ -109,7 +109,9 @@ class TestSecureLogger:
         
         assert sanitized['username'] == 'admin'
         assert sanitized['password'] == '[REDACTED]'
-        assert sanitized['email'] == 'admin@example.com'
+        # Email is partially redacted for privacy (new security feature)
+        assert '@example.com' in sanitized['email']
+        assert 'admin@example.com' not in sanitized['email']
     
     def test_sanitize_dict_with_token(self):
         """Test dictionary sanitization with token field."""

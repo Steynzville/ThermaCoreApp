@@ -26,19 +26,40 @@ logger = SecureLogger.get_secure_logger(__name__)
 
 # Sensitive fields that should be redacted in audit logs
 SENSITIVE_FIELDS = {
-    'password', 'token', 'api_key', 'secret', 'jwt', 'refresh_token',
-    'access_token', 'authorization', 'secret_key', 'private_key',
-    'client_secret', 'api_secret', 'auth_token', 'session_token',
-    'csrf_token', 'x-api-key', 'x-auth-token'
+    'password', 'passwd', 'pwd', 'token', 'api_key', 'secret', 'jwt', 
+    'refresh_token', 'access_token', 'authorization', 'secret_key', 
+    'private_key', 'client_secret', 'api_secret', 'auth_token', 
+    'session_token', 'csrf_token', 'x-api-key', 'x-auth-token',
+    'session', 'session_id', 'sessionid', 'bearer', 'credentials',
+    'cert', 'certificate', 'private_key_path', 'key_file',
+    'ssn', 'social_security', 'credit_card', 'card_number', 'cvv',
+    'pin', 'security_code', 'account_number', 'routing_number'
 }
 
 # Configurable sensitive data patterns for regex-based redaction
 SENSITIVE_PATTERNS = [
-    (re.compile(r'password["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'password=***'),
-    (re.compile(r'token["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'token=***'),
-    (re.compile(r'api[_-]?key["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'api_key=***'),
-    (re.compile(r'secret["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'secret=***'),
-    (re.compile(r'authorization["\']?\s*[:=]\s*["\']?([^"\'\s,}]+)', re.IGNORECASE), 'authorization=***'),
+    # Authentication credentials
+    (re.compile(r'password["\']?\s*[:=]\s*["\']?([^"'\s,}]+)', re.IGNORECASE), 'password=***'),
+    (re.compile(r'passwd["\']?\s*[:=]\s*["\']?([^"'\s,}]+)', re.IGNORECASE), 'passwd=***'),
+    (re.compile(r'pwd["\']?\s*[:=]\s*["\']?([^"'\s,}]+)', re.IGNORECASE), 'pwd=***'),
+    
+    # Tokens and keys
+    (re.compile(r'token["\']?\s*[:=]\s*["\']?([^"'\s,}]+)', re.IGNORECASE), 'token=***'),
+    (re.compile(r'api[_-]?key["\']?\s*[:=]\s*["\']?([^"'\s,}]+)', re.IGNORECASE), 'api_key=***'),
+    (re.compile(r'secret["\']?\s*[:=]\s*["\']?([^"'\s,}]+)', re.IGNORECASE), 'secret=***'),
+    (re.compile(r'authorization["\']?\s*[:=]\s*["\']?([^"'\s,}]+)', re.IGNORECASE), 'authorization=***'),
+    (re.compile(r'jwt["\']?\s*[:=]\s*["\']?([^"'\s,}]+)', re.IGNORECASE), 'jwt=***'),
+    (re.compile(r'session["\']?\s*[:=]\s*["\']?([^"'\s,}]+)', re.IGNORECASE), 'session=***'),
+    
+    # Personal Identifiable Information (PII)
+    (re.compile(r'\b\d{3}-\d{2}-\d{4}\b'), '***-**-****'),  # SSN
+    (re.compile(r'\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b'), '****-****-****-****'),  # Credit card
+    
+    # Connection strings with passwords
+    (re.compile(r'://([^:]+):([^@]+)@', re.IGNORECASE), r'://\1:***@'),  # Database URLs
+    
+    # Bearer tokens
+    (re.compile(r'Bearer\s+([a-zA-Z0-9\-._~+/]+=*)', re.IGNORECASE), 'Bearer ***'),
 ]
 
 
