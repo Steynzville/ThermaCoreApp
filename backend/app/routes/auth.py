@@ -9,13 +9,13 @@ from flask_jwt_extended import (
 )
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError
+from webargs.flaskparser import use_args
 
 from app import db
 from app.models import User, Role
 from app.utils.schemas import LoginSchema, UserCreateSchema, UserSchema, TokenSchema
 from app.utils.helpers import get_current_user_id
 from app.utils.error_handler import SecurityAwareErrorHandler
-from app.middleware.validation import validate_schema
 from app.middleware.rate_limit import auth_rate_limit, standard_rate_limit
 from app.middleware.request_id import track_request_id
 from app.middleware.audit import (
@@ -117,8 +117,8 @@ def role_required(*roles):
 @standard_rate_limit
 @jwt_required()
 @permission_required('write_users')
-@validate_schema(UserCreateSchema)
-def register():
+@use_args(UserCreateSchema, location='json')
+def register(data):
     """
     Register a new user.
     ---
@@ -143,8 +143,6 @@ def register():
     security:
       - JWT: []
     """
-    from flask import g
-    data = g.validated_data
     
     # Check if role exists
     role = Role.query.get(data['role_id'])
@@ -192,8 +190,8 @@ def register():
 @auth_bp.route('/auth/login', methods=['POST'])
 @track_request_id
 @auth_rate_limit
-@validate_schema(LoginSchema)
-def login():
+@use_args(LoginSchema, location='json')
+def login(data):
     """
     Authenticate user and return JWT tokens.
     ---
@@ -216,8 +214,6 @@ def login():
       429:
         description: Rate limit exceeded
     """
-    from flask import g
-    data = g.validated_data
     
     user = User.query.filter_by(username=data['username']).first()
     

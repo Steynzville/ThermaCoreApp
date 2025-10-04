@@ -140,60 +140,8 @@ class RequestValidator:
         return None
 
 
-def validate_schema(schema_class: Schema, location: str = 'json'):
-    """
-    Decorator to validate request data against a Marshmallow schema.
-    
-    Args:
-        schema_class: Marshmallow schema class to validate against
-        location: Where to find the data ('json', 'query', 'form')
-    """
-    def decorator(f: Callable) -> Callable:
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            schema = schema_class()
-            
-            # Get data based on location
-            if location == 'json':
-                data = request.get_json() or {}
-            elif location == 'query':
-                data = request.args.to_dict()
-            elif location == 'form':
-                data = request.form.to_dict()
-            else:
-                return jsonify({
-                    'success': False,
-                    'error': {
-                        'code': 'VALIDATION_CONFIG_ERROR',
-                        'message': 'Invalid validation configuration',
-                        'details': {'location': location, 'valid_locations': ['json', 'query', 'form']}
-                    },
-                    'request_id': getattr(g, 'request_id', str(uuid.uuid4())),
-                    'timestamp': datetime.utcnow().isoformat() + 'Z'
-                }), 500
-            
-            try:
-                # Validate and deserialize data
-                validated_data = schema.load(data)
-                # Store validated data in Flask's g object for route access
-                g.validated_data = validated_data
-                return f(*args, **kwargs)
-            except ValidationError as e:
-                return jsonify({
-                    'success': False,
-                    'error': {
-                        'code': 'VALIDATION_ERROR',
-                        'message': 'Request data validation failed',
-                        'details': {
-                            'field_errors': e.messages,
-                            'location': location
-                        }
-                    },
-                    'request_id': getattr(g, 'request_id', str(uuid.uuid4())),
-                    'timestamp': datetime.utcnow().isoformat() + 'Z'
-                }), 400
-        return decorated_function
-    return decorator
+# Legacy validate_schema decorator removed - all routes now use webargs @use_args decorator
+# This ensures a single, consistent validation strategy across the entire codebase
 
 
 # Configure webargs error handler to use our standardized error format
