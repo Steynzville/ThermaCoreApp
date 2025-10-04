@@ -1,5 +1,6 @@
 """Unit tests for authentication functionality."""
 import json
+import jwt
 import pytest
 from datetime import datetime
 
@@ -217,9 +218,6 @@ class TestTokenSecurity:
     
     def test_token_contains_security_claims(self, client):
         """Test that tokens include security claims like jti and role."""
-        import jwt
-        from flask import current_app
-        
         # Get a token
         response = client.post('/api/v1/auth/login',
             json={'username': 'admin', 'password': 'admin123'},
@@ -242,8 +240,6 @@ class TestTokenSecurity:
     
     def test_refresh_token_contains_jti(self, client):
         """Test that refresh tokens include jti claim."""
-        import jwt
-        
         # Get tokens
         response = client.post('/api/v1/auth/login',
             json={'username': 'admin', 'password': 'admin123'},
