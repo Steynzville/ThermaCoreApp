@@ -1,0 +1,95 @@
+name: Focused Code Quality and Security Checks
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js (for pnpm)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm dependencies (frontend)
+        run: pnpm install --frozen-lockfile
+        working-directory: ./ThermaCoreApp
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Python dependencies (backend)
+        run: pip install -r backend/requirements.txt
+        working-directory: ./ThermaCoreApp
+
+      - name: Run Frontend Tests
+        run: pnpm test
+        working-directory: ./ThermaCoreApp
+
+      - name: Run Backend Tests
+        run: pytest
+        working-directory: ./ThermaCoreApp/backend
+
+  python-quality-and-security:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Python dependencies
+        run: pip install -r backend/requirements.txt flake8 ruff bandit
+        working-directory: ./ThermaCoreApp
+
+      - name: Run Flake8 (Python Linter)
+        run: flake8 .
+        working-directory: ./ThermaCoreApp/backend
+
+      - name: Run Ruff (Python Linter/Formatter)
+        run: ruff check .
+        working-directory: ./ThermaCoreApp/backend
+
+      - name: Run Bandit (Python SAST)
+        run: bandit -r . -ll -f json -o bandit_report.json
+        working-directory: ./ThermaCoreApp/backend
+
+      - name: Upload Bandit Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: ThermaCoreApp/backend/bandit_report.json
+
+  dependency-and-secret-scanning:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+
+      - name: Run OSV-Scanner (Dependency Vulnerabilities)
+        uses: google/osv-scanner-action@v1
+        with:
+          scan-path: './ThermaCoreApp'
+
+      - name: Run Secret Scanner
+        uses: secret-scanner/action@v1
+        with:
+          fail_on_new_secrets: true
+
