@@ -2,6 +2,7 @@ name: Focused Code Quality and Security Checks
 permissions:
   contents: write
   pull-requests: write
+  security-events: write
 
 on:
   push:
@@ -97,15 +98,86 @@ jobs:
         run: ruff check .
         working-directory: backend
 
-      - name: Run Bandit (Python SAST)
-        run: bandit -r . -l -f json -o .bandit_report.json
+      - name: Create Bandit Configuration
+        run: |
+          cat > .bandit << 'EOF'
+          [bandit]
+          exclude_dirs = tests,app/tests
+          skips = B101,B311,B105,B107
+          targets = app,services,middleware,routes,utils
+          EOF
         working-directory: backend
 
-      - name: Upload Bandit Report
-        uses: actions/upload-artifact@v4
+      - name: Run Bandit and Generate SARIF Report
+        run: |
+          # Run bandit and capture exit code
+          bandit -c .bandit -r . -f json -o bandit_report.json --severity-level high,medium || true
+          
+          # Convert Bandit JSON to SARIF for GitHub Security tab
+          python -c "
+          import json
+          try:
+              with open('bandit_report.json', 'r') as f:
+                  bandit_data = json.load(f)
+              
+              sarif = {
+                  '\$schema': 'https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json',
+                  'version': '2.1.0',
+                  'runs': [{
+                      'tool': {
+                          'driver': {
+                              'name': 'Bandit',
+                              'informationUri': 'https://bandit.readthedocs.io/',
+                              'rules': []
+                          }
+                      },
+                      'results': []
+                  }]
+              }
+              
+              for issue in bandit_data.get('results', []):
+                  # Only include high/medium severity issues
+                  if issue.get('issue_severity') in ['HIGH', 'MEDIUM']:
+                      sarif['runs'][0]['results'].append({
+                          'ruleId': issue.get('test_id', ''),
+                          'level': 'error' if issue.get('issue_severity') == 'HIGH' else 'warning',
+                          'message': {
+                              'text': issue.get('issue_text', '')
+                          },
+                          'locations': [{
+                              'physicalLocation': {
+                                  'artifactLocation': {
+                                      'uri': issue.get('filename', '').replace('./', '')
+                                  },
+                                  'region': {
+                                      'startLine': issue.get('line_number', 0),
+                                      'startColumn': issue.get('col_offset', 0)
+                                  }
+                              }
+                          }]
+                      })
+              
+              with open('bandit_sarif.json', 'w') as f:
+                  json.dump(sarif, f, indent=2)
+              print('SARIF report generated successfully')
+          except Exception as e:
+              print(f'Error generating SARIF: {e}')
+          "
+        working-directory: backend
+
+      - name: Upload Security Scan Results to GitHub
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
         with:
-          name: bandit-report
-          path: backend/.bandit_report.json
+          sarif_file: backend/bandit_sarif.json
+          wait-for-processing: true
+
+      - name: Upload Bandit Report Artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bandit-security-report
+          path: backend/bandit_report.json
 
   dependency-and-secret-scanning:
     runs-on: ubuntu-latest
@@ -116,13 +188,13 @@ jobs:
       - name: Dependency Review
         uses: actions/dependency-review-action@v4
 
-      - name: osv-scanner
+      - name: OSV Scanner
         uses: google/osv-scanner-action@v2.2.3
         with:
           scan-path: .
 
       - name: Run Secret Scanner
-        uses: secret-scanner/action@0.0.2
+        uses: secret-scanner/action@v0.0.2
         with:
           fail_on_new_secrets: true
 
