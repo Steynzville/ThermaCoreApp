@@ -40,7 +40,7 @@ for key in ['MQTT_CA_CERTS', 'MQTT_CERT_FILE', 'MQTT_KEY_FILE',
 
 print("   Importing config module without production env vars...")
 from config import ProductionConfig, DevelopmentConfig, TestingConfig
-print("   ✓ SUCCESS! Import works even without production certificates")
+print("   ✓ SUCCESS! Import works even without production certificates")  # noqa: T201
 
 print("\n3. Validation still enforced when ProductionConfig is instantiated")
 print("-" * 70)
