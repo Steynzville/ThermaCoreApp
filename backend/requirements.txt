@@ -45,7 +45,7 @@ flask-socketio==5.4.1
 
 # Optional OPC UA support
 opcua==0.98.13
-cryptography==42.0.8
+cryptography==44.0.1
 
 # Phase 3: Machine Learning and Analytics Dependencies
 numpy==1.24.3
