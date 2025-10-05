@@ -1,9 +1,8 @@
 """Unit tests for units API functionality."""
 import json
-import pytest
 from datetime import datetime
 
-from app.models import Unit, Sensor
+from app.models import Unit
 
 
 def unwrap_response(response):

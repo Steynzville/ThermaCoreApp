@@ -69,7 +69,7 @@ def db_session(app):
 
 def _create_test_data():
     """Create test data for tests."""
-    from app.models import User, Role, Permission, Unit, Sensor, PermissionEnum, RoleEnum, UnitStatusEnum, HealthStatusEnum
+    from app.models import PermissionEnum, RoleEnum, UnitStatusEnum, HealthStatusEnum
     from datetime import datetime
     
     # Create permissions

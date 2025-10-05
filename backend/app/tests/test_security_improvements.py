@@ -1,6 +1,6 @@
 """Test security improvements for error handling and data storage."""
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 from app import create_app
 from app.utils.error_handler import SecurityAwareErrorHandler
 from app.services.data_storage_service import data_storage_service
@@ -113,7 +113,7 @@ class TestSecurityImprovements:
     def test_data_storage_unit_not_found(self, app):
         """Test handling when unit is not found."""
         with app.app_context():
-            with patch('app.services.data_storage_service.db') as mock_db, \
+            with patch('app.services.data_storage_service.db'), \
                  patch('app.services.data_storage_service.Unit') as mock_unit:
                 
                 # Unit doesn't exist

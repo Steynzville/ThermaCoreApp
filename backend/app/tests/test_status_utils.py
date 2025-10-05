@@ -1,7 +1,6 @@
 """Tests for status_utils.py - Business logic for protocol status calculations."""
 
 import pytest
-from unittest.mock import patch
 from datetime import datetime, timezone, timedelta
 from app.utils.status_utils import (
     AvailabilityLevel,

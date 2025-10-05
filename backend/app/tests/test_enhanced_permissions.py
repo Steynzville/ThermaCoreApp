@@ -8,7 +8,7 @@ class TestEnhancedPermissionHandling:
     
     def test_role_has_permission_with_valid_string(self, client, db_session):
         """Test Role.has_permission with valid string permission."""
-        from app.models import Role, RoleEnum
+        from app.models import RoleEnum
         admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
         
         # Test with valid string permission
@@ -18,7 +18,7 @@ class TestEnhancedPermissionHandling:
     
     def test_role_has_permission_with_valid_enum(self, client, db_session):
         """Test Role.has_permission with valid PermissionEnum."""
-        from app.models import Role, RoleEnum
+        from app.models import RoleEnum
         admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
         
         # Test with PermissionEnum
@@ -27,7 +27,7 @@ class TestEnhancedPermissionHandling:
     
     def test_role_has_permission_type_error_on_invalid_type(self, client, db_session):
         """Test Role.has_permission raises TypeError for unsupported types."""
-        from app.models import Role, RoleEnum
+        from app.models import RoleEnum
         admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
         
         # Test with invalid types that should raise TypeError
@@ -45,7 +45,6 @@ class TestEnhancedPermissionHandling:
     
     def test_user_has_permission_inherits_type_safety(self, client, db_session):
         """Test User.has_permission inherits type safety from Role.has_permission."""
-        from app.models import User
         admin_user = User.query.filter_by(username='admin').first()
         
         # Valid cases should work
@@ -58,7 +57,7 @@ class TestEnhancedPermissionHandling:
     
     def test_permission_enum_value_validation(self, client, db_session):
         """Test permission validation against known PermissionEnum values."""
-        from app.models import Role, RoleEnum
+        from app.models import RoleEnum
         admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
         
         # Use hardcoded expected permissions set for robust validation
@@ -91,7 +90,7 @@ class TestEnhancedPermissionHandling:
     
     def test_string_permission_validation(self, client, db_session):
         """Test string permission validation against known values."""
-        from app.models import Role, RoleEnum
+        from app.models import RoleEnum
         admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
         
         # Use hardcoded expected permissions for exact validation
@@ -134,7 +133,7 @@ class TestEnhancedPermissionHandling:
     def test_comprehensive_enum_coverage(self, client, db_session):
         """Test that permission tests cover all enum values automatically."""
         # This test ensures complete coverage with exact validation
-        from app.models import Role, RoleEnum
+        from app.models import RoleEnum
         admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
         
         # Hardcoded expected permission set for robust validation
@@ -175,7 +174,7 @@ class TestEnhancedPermissionHandling:
     
     def test_call_site_audit_prevention(self, client, db_session):
         """Test that prevents silent coercion at call sites."""
-        from app.models import Role, RoleEnum
+        from app.models import RoleEnum
         admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
         
         # Test various invalid types that might be passed accidentally
@@ -200,7 +199,7 @@ class TestEnhancedPermissionHandling:
     
     def test_remote_control_permission_for_all_roles(self, client, db_session):
         """Test that all roles (Admin, Operator, Viewer) have remote control access."""
-        from app.models import Role, RoleEnum, PermissionEnum
+        from app.models import RoleEnum, PermissionEnum
         
         # Get all roles
         admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()

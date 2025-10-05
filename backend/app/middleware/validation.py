@@ -1,15 +1,12 @@
 """Input validation middleware for ThermaCore SCADA API."""
-import json
 import uuid
 from datetime import datetime
 from functools import wraps
-from typing import Any, Dict, List, Optional, Callable
+from typing import Any, Callable
 
 from flask import request, jsonify, g
-from marshmallow import Schema, ValidationError
 from webargs.flaskparser import parser
 
-from app.utils.error_handler import SecurityAwareErrorHandler
 
 
 # Translation table to remove all ASCII control characters (0-31)

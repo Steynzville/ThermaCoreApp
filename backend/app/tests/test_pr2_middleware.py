@@ -2,15 +2,14 @@
 import json
 import time
 import uuid
-from unittest.mock import patch, MagicMock
 
 import pytest
-from flask import Flask, request, g
+from flask import Flask, g
 
 from app.middleware.validation import (
-    RequestValidator, validate_schema, validate_query_params, validate_path_params
+    RequestValidator
 )
-from app.middleware.rate_limit import RateLimiter, rate_limit, get_rate_limiter
+from app.middleware.rate_limit import RateLimiter, rate_limit
 from app.middleware.request_id import RequestIDManager, RequestIDFilter, track_request_id
 from app.middleware.metrics import MetricsCollector, collect_metrics, get_metrics_collector
 from app.utils.error_handler import SecurityAwareErrorHandler
@@ -99,8 +98,8 @@ class TestRateLimiter:
             g.request_id = 'test-id'
             
             # First two requests should work
-            response1 = test_route()
-            response2 = test_route()
+            test_route()
+            test_route()
             
             # Third request should be rate limited
             response3 = test_route()

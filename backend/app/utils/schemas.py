@@ -5,7 +5,7 @@ from dateutil import parser as dateutil_parser
 from marshmallow import Schema, fields, validate, ValidationError, post_load, validates_schema
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 
-from app.models import User, Role, Permission, Unit, Sensor, SensorReading, PermissionEnum, RoleEnum, UnitStatusEnum, HealthStatusEnum
+from app.models import User, Unit, Sensor, SensorReading, PermissionEnum, RoleEnum, UnitStatusEnum, HealthStatusEnum
 
 # Setup logger for datetime parsing errors
 logger = logging.getLogger(__name__)

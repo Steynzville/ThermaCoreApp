@@ -1,9 +1,7 @@
 """Integration tests for ThermaCore SCADA API."""
 import json
-import pytest
-from datetime import datetime, timedelta
 
-from app.models import Unit, User, SensorReading, Sensor
+from app.models import Sensor
 
 
 class TestIntegrationWorkflows:
@@ -58,7 +56,7 @@ class TestIntegrationWorkflows:
             'max_value': 50.0
         }
         
-        sensor_response = client.post(f'/api/v1/units/LIFECYCLE001/sensors',
+        sensor_response = client.post('/api/v1/units/LIFECYCLE001/sensors',
             json=sensor_data,
             headers={
                 'Authorization': f'Bearer {token}',
@@ -67,7 +65,7 @@ class TestIntegrationWorkflows:
         )
         
         assert sensor_response.status_code == 201
-        sensor = json.loads(sensor_response.data)
+        json.loads(sensor_response.data)
         
         # 3. Update unit status
         status_update = {
@@ -78,7 +76,7 @@ class TestIntegrationWorkflows:
             'battery_level': 85.0
         }
         
-        update_response = client.patch(f'/api/v1/units/LIFECYCLE001/status',
+        update_response = client.patch('/api/v1/units/LIFECYCLE001/status',
             json=status_update,
             headers={
                 'Authorization': f'Bearer {token}',
@@ -92,7 +90,7 @@ class TestIntegrationWorkflows:
         assert updated_unit['temp_outside'] == 25.5
         
         # 4. Get unit with sensors
-        get_response = client.get(f'/api/v1/units/LIFECYCLE001',
+        get_response = client.get('/api/v1/units/LIFECYCLE001',
             headers={'Authorization': f'Bearer {token}'}
         )
         
@@ -101,14 +99,14 @@ class TestIntegrationWorkflows:
         assert len(unit_with_sensors['sensors']) >= 1
         
         # 5. Delete unit
-        delete_response = client.delete(f'/api/v1/units/LIFECYCLE001',
+        delete_response = client.delete('/api/v1/units/LIFECYCLE001',
             headers={'Authorization': f'Bearer {token}'}
         )
         
         assert delete_response.status_code == 204
         
         # 6. Verify unit is deleted
-        verify_response = client.get(f'/api/v1/units/LIFECYCLE001',
+        verify_response = client.get('/api/v1/units/LIFECYCLE001',
             headers={'Authorization': f'Bearer {token}'}
         )
         assert verify_response.status_code == 404

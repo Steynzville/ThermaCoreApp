@@ -1,7 +1,6 @@
 """Integration tests to verify SCADA endpoint security improvements."""
-import json
 import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 from app import create_app
 
 

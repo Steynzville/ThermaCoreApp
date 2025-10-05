@@ -5,7 +5,7 @@ import random
 import threading
 import time
 from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 
 import paho.mqtt.client as mqtt
 

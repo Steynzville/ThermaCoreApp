@@ -189,7 +189,7 @@ def track_request_id(f: Callable) -> Callable:
                     headers = {RequestIDManager.REQUEST_ID_HEADER: request_id}
                     response = (response[0], response[1], headers)
             
-            logger.info(f"Request completed successfully", extra={
+            logger.info("Request completed successfully", extra={
                 'request_id': request_id,
                 'method': request.method,
                 'path': request.path,
@@ -199,7 +199,7 @@ def track_request_id(f: Callable) -> Callable:
             
         except Exception as e:
             # Log request failure (global error handler will log detailed exception info)
-            logger.info(f"Request failed", extra={
+            logger.info("Request failed", extra={
                 'request_id': request_id,
                 'method': request.method,
                 'path': request.path,

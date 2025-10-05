@@ -6,9 +6,8 @@ from functools import wraps
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import (
     create_access_token, create_refresh_token, jwt_required, 
-    get_jwt_identity, get_jwt, verify_jwt_in_request
+    verify_jwt_in_request
 )
-from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError
 from webargs.flaskparser import use_args
 

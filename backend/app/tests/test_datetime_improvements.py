@@ -1,6 +1,5 @@
 """Tests for the datetime and environment handling improvements."""
 import pytest
-import os
 from datetime import datetime, timezone
 from unittest.mock import patch, Mock
 
@@ -63,14 +62,14 @@ class TestEnvironmentLogicImprovements:
         monkeypatch.setenv('TESTING', 'true')
         # Create a fresh app instance to test the environment logic
         test_app = create_app('development')  # Explicit development
-        assert test_app.config['TESTING'] == True
+        assert test_app.config['TESTING']
     
     def test_testing_env_1_overrides_explicit_config(self, monkeypatch):
         """Test that TESTING=1 overrides explicit config_name."""
         monkeypatch.setenv('TESTING', '1')
         # Create a fresh app instance to test the environment logic
         test_app = create_app('production')  # Explicit production
-        assert test_app.config['TESTING'] == True
+        assert test_app.config['TESTING']
 
 
 class TestTimezoneAwareMaintenance:

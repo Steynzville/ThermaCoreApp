@@ -2,8 +2,6 @@
 import pytest
 from unittest.mock import Mock, patch
 from datetime import datetime, timezone, timedelta
-import tempfile
-from pathlib import Path
 
 from app.services.opcua_service import OPCUAClient
 
@@ -138,7 +136,7 @@ class TestSecurityPolicyFallbackConfiguration:
     
     def test_fallback_disabled_by_default(self):
         """Test that fallback is disabled by default in development."""
-        with patch('opcua.Client') as mock_client_class:
+        with patch('opcua.Client'):
             with patch.dict('os.environ', {'FLASK_ENV': 'development', 'TESTING': 'false'}, clear=False):
                 mock_app = Mock()
                 mock_app.config = {
@@ -158,7 +156,7 @@ class TestSecurityPolicyFallbackConfiguration:
     
     def test_fallback_enabled_with_explicit_flag(self):
         """Test that fallback works when explicitly enabled."""
-        with patch('opcua.Client') as mock_client_class:
+        with patch('opcua.Client'):
             with patch.dict('os.environ', {'FLASK_ENV': 'development', 'TESTING': 'false'}, clear=False):
                 with patch('app.services.opcua_service.logger') as mock_logger:
                     mock_app = Mock()
@@ -192,7 +190,7 @@ class TestSecurityPolicyFallbackConfiguration:
     
     def test_no_fallback_in_production(self):
         """Test that fallback is never allowed in production regardless of flag."""
-        with patch('opcua.Client') as mock_client_class:
+        with patch('opcua.Client'):
             with patch.dict('os.environ', {'FLASK_ENV': 'production', 'TESTING': 'false'}, clear=False):
                 mock_app = Mock()
                 mock_app.config = {

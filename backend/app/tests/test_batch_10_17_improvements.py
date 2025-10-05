@@ -2,12 +2,10 @@
 
 import os
 import pytest
-import logging
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 
 from app.utils.environment import is_production_environment, is_development_environment, is_testing_environment
 from app.services.opcua_service import OPCUAClient
-from app.services.mqtt_service import MQTTClient
 from app import _initialize_critical_service
 
 

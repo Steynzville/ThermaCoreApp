@@ -1,10 +1,7 @@
 """Modbus protocol support service for Phase 4 SCADA integration."""
 import os
 import logging
-import struct
-from typing import Dict, List, Any, Optional, Tuple
-from datetime import datetime
-import time
+from typing import Dict, List, Any
 from dataclasses import dataclass
 
 from app.models import utc_now  # Use timezone-aware datetime

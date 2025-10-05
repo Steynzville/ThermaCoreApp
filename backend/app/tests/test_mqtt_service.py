@@ -1,8 +1,8 @@
 """Tests for MQTT client service."""
 import json
 import pytest
-from datetime import datetime, timezone
-from unittest.mock import Mock, patch, MagicMock
+from datetime import datetime
+from unittest.mock import Mock, patch
 
 from app.services.mqtt_service import MQTTClient
 

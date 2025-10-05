@@ -1,13 +1,13 @@
 """User management routes for ThermaCore SCADA API."""
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import or_
 
 from app import db
 from app.models import User, Role
-from app.utils.schemas import UserSchema, UserCreateSchema, UserUpdateSchema, RoleSchema
+from app.utils.schemas import UserSchema, UserUpdateSchema, RoleSchema
 from app.routes.auth import permission_required, role_required
 from app.utils.helpers import get_current_user_id
 from app.middleware.audit import audit_operation

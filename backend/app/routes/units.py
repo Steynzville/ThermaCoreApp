@@ -1,16 +1,15 @@
 """Unit management routes for ThermaCore SCADA API."""
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import and_, or_
+from sqlalchemy import or_
 
 from app import db
-from app.models import Unit, User, Sensor, SensorReading
+from app.models import Unit, Sensor, SensorReading
 from app.utils.schemas import (
     UnitSchema, UnitCreateSchema, UnitUpdateSchema,
-    SensorSchema, SensorCreateSchema, SensorReadingSchema,
-    PaginatedResponseSchema
+    SensorSchema, SensorCreateSchema, SensorReadingSchema
 )
 from app.routes.auth import permission_required
 from app.middleware.audit import audit_operation
@@ -254,7 +253,7 @@ def update_unit(unit_id):
         unit_schema = UnitSchema()
         return jsonify(unit_schema.dump(unit)), 200
         
-    except IntegrityError as e:
+    except IntegrityError:
         db.session.rollback()
         return jsonify({'error': 'Database constraint violation'}), 409
 
@@ -353,7 +352,8 @@ def create_unit_sensor(unit_id):
     security:
       - JWT: []
     """
-    unit = Unit.query.get_or_404(unit_id)
+    # Validate that the unit exists
+    Unit.query.get_or_404(unit_id)
     schema = SensorCreateSchema()
     
     try:
@@ -411,7 +411,8 @@ def get_unit_readings(unit_id):
     security:
       - JWT: []
     """
-    unit = Unit.query.get_or_404(unit_id)
+    # Validate that the unit exists
+    Unit.query.get_or_404(unit_id)
     hours_back = request.args.get('hours', 24, type=int)
     sensor_type = request.args.get('sensor_type')
     

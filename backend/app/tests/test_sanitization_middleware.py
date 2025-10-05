@@ -1,7 +1,6 @@
 """Tests for centralized sanitization middleware."""
 import pytest
-from flask import Flask, request, jsonify
-from werkzeug.datastructures import ImmutableMultiDict
+from flask import Flask, jsonify
 
 from app.middleware.validation import sanitize
 
@@ -379,7 +378,7 @@ class TestIntegrationWithoutRequestMutation:
     
     def test_request_data_remains_intact(self):
         """Test that original request data is not modified."""
-        from flask import Flask, request, jsonify
+        from flask import Flask
         from app.utils.logging_filter import SanitizingFilter
         
         app = Flask(__name__)

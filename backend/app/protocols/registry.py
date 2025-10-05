@@ -3,7 +3,6 @@ from typing import List, Set
 from datetime import datetime
 from flask import current_app
 from .base import ProtocolStatus
-from app.models import utc_now  # Use centralized timezone-aware datetime function
 import logging
 
 logger = logging.getLogger(__name__)

@@ -1,10 +1,8 @@
 """Historical data analysis routes for Phase 3 SCADA integration."""
-from flask import Blueprint, jsonify, request, current_app, g
-from flask_jwt_extended import jwt_required, get_jwt_identity
-from datetime import datetime, timedelta
-from sqlalchemy import func, and_, or_, desc, asc
-from typing import Dict, List, Any
-import json
+from flask import Blueprint, jsonify, current_app
+from flask_jwt_extended import jwt_required
+from datetime import timedelta
+from sqlalchemy import func, and_
 from webargs.flaskparser import use_args
 
 from app.models import Unit, Sensor, SensorReading, db, utc_now  # Use timezone-aware datetime

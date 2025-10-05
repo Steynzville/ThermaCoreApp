@@ -1,10 +1,9 @@
 """Tests for protocol status normalization (PR1)."""
 import pytest
 from unittest.mock import Mock, patch
-from flask import Flask
 from app.protocols.base import ProtocolStatus
 from app.protocols.registry import collect_protocol_status, _fallback
-from app.utils.status_utils import AvailabilityLevel, utc_now  # Import from status_utils
+from app.utils.status_utils import utc_now  # Import from status_utils
 from app.exceptions import (
     ThermaCoreException, MQTTException, OPCUAException, 
     ModbusException, DNP3Exception, ServiceUnavailableException

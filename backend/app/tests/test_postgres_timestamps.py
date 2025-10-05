@@ -9,7 +9,6 @@ To run these tests:
     export POSTGRES_TEST_URL=postgresql://user:pass@localhost:5432/test_db
     python -m pytest app/tests/test_postgres_timestamps.py
 """
-import os
 import pytest
 from datetime import datetime
 

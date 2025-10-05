@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
 """Manual test script for PR2 middleware functionality."""
 import sys
-import os
 import json
 import uuid
-from datetime import datetime
 
 # Add the backend directory to Python path
 sys.path.insert(0, '/home/runner/work/ThermaCoreApp/ThermaCoreApp/backend')
 
 try:
-    from app.middleware.validation import RequestValidator, validate_schema
+    from app.middleware.validation import RequestValidator
     from app.middleware.rate_limit import RateLimiter
     from app.middleware.request_id import RequestIDManager
     from app.middleware.metrics import MetricsCollector
@@ -25,7 +23,7 @@ def test_request_validator():
     print("\n🧪 Testing RequestValidator...")
     
     # Test validate_request_size
-    validator = RequestValidator()
+    RequestValidator()
     print("✅ RequestValidator initialized")
     
     # The validation methods require Flask context, so we'll just test initialization
@@ -116,7 +114,7 @@ def test_integration():
     # Test that all components can work together
     rate_limiter = RateLimiter()
     metrics_collector = MetricsCollector()
-    request_id = RequestIDManager.generate_request_id()
+    RequestIDManager.generate_request_id()
     
     # Simulate a rate-limited request with metrics
     identifier = "integration_test"

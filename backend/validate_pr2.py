@@ -57,8 +57,6 @@ def test_core_functionality():
         from datetime import datetime
         from collections import defaultdict, deque
         from threading import Lock
-        from typing import Dict, Any, Optional, List, Callable
-        from functools import wraps
         
         print("✅ Core Python imports successful")
         

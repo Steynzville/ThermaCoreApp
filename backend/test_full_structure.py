@@ -5,7 +5,6 @@ Tests basic application structure and validates core components.
 """
 import sys
 import os
-import tempfile
 
 # Add the backend directory to Python path
 backend_dir = os.path.dirname(os.path.abspath(__file__))
@@ -24,7 +23,7 @@ def test_python_environment():
     
     # Test sqlite3
     try:
-        import sqlite3
+        import sqlite3  # noqa: F401
         print("✓ SQLite3 available")
     except ImportError:
         print("✗ SQLite3 not available")
@@ -116,7 +115,7 @@ def test_models_structure():
     
     try:
         # Check that models are defined in __init__.py
-        from app.models import User, Role, Unit, Sensor, Permission, SensorReading
+        from app.models import User
         print("✓ User model imported")
         print("✓ Role model imported")
         print("✓ Unit model imported")

@@ -1,5 +1,4 @@
 """Test SQL query improvements for boolean aggregations."""
-import pytest
 from app import db
 from app.models import Unit, UnitStatusEnum, HealthStatusEnum
 from datetime import datetime

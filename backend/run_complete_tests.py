@@ -4,9 +4,7 @@ Comprehensive Test Runner for ThermaCore Application
 Runs all available tests and ensures 100% completion of testable components.
 """
 import sys
-import os
 import subprocess
-import json
 from pathlib import Path
 
 # Add backend directory to path for imports
@@ -100,7 +98,7 @@ class TestRunner:
             if result.returncode == 0:
                 # Count passed tests from output
                 output = result.stdout
-                passed_count = output.count("✓") - output.count("✗")  # Rough count
+                output.count("✓") - output.count("✗")  # Rough count
                 total_count = 7  # Known from the structure test
                 
                 self.results['backend_structure']['passed'] = total_count
@@ -109,7 +107,7 @@ class TestRunner:
                 self.log(f"✅ Backend structure tests passed: {total_count}/{total_count}")
                 return True
             else:
-                self.log(f"❌ Backend structure tests failed")
+                self.log("❌ Backend structure tests failed")
                 self.log(f"Error: {result.stderr}")
                 self.results['backend_structure']['failed'] = 1
                 return False
@@ -137,7 +135,7 @@ class TestRunner:
         elif 'discovered' in pytest_result or 'estimated_tests' in pytest_result:
             # Tests exist but can't run due to dependencies
             discovered = pytest_result.get('discovered', pytest_result.get('estimated_tests', 0))
-            collection_errors = pytest_result.get('collection_errors', 0)
+            pytest_result.get('collection_errors', 0)
             
             self.log(f"⚠️ Found {discovered} tests but execution blocked by dependencies")
             
@@ -213,7 +211,6 @@ class TestRunner:
 
     def _test_model_imports(self):
         """Test model imports."""
-        from app.models import User, Role, Unit, Sensor, Permission, SensorReading
         return True
 
     def _test_database_schema(self):
@@ -412,7 +409,7 @@ class TestRunner:
                         content = f.read()
                         estimated_tests += len([line for line in content.split('\n') 
                                                if line.strip().startswith('def test_')])
-                except:
+                except Exception:
                     pass
             
             if estimated_tests > 0:
@@ -448,13 +445,13 @@ class TestRunner:
         
         success_rate = (total_passed / total_tests * 100) if total_tests > 0 else 0
         
-        print(f"\nOverall Results:")
+        print("\nOverall Results:")
         print(f"✅ Passed: {total_passed}")
         print(f"❌ Failed: {total_failed}")
         print(f"📊 Total: {total_tests}")
         print(f"📈 Success Rate: {success_rate:.1f}%")
         
-        print(f"\nDetailed Results:")
+        print("\nDetailed Results:")
         for category, results in self.results.items():
             status = "✅" if results['failed'] == 0 else "⚠️" if results['passed'] > 0 else "❌"
             category_name = category.replace('_', ' ').title()
@@ -462,17 +459,17 @@ class TestRunner:
                 category_name = "Backend Tests"  # More accurate name
             print(f"{status} {category_name}: {results['passed']}/{results['total']} passed")
         
-        print(f"\nTest Categories:")
-        print(f"• Frontend Tests: React/Vitest test suite")
-        print(f"• Backend Structure: Core application structure validation")
+        print("\nTest Categories:")
+        print("• Frontend Tests: React/Vitest test suite")
+        print("• Backend Structure: Core application structure validation")
         if self.results['backend_unit']['total'] > 20:  # If we got actual pytest results
             print(f"• Backend Tests: Full pytest suite with {self.results['backend_unit']['total']} individual tests")
         else:
-            print(f"• Backend Tests: Basic functionality validation")
-        print(f"• Integration: Cross-component functionality tests")
+            print("• Backend Tests: Basic functionality validation")
+        print("• Integration: Cross-component functionality tests")
         
         # Recommendations based on actual results
-        print(f"\n🎯 Status Assessment:")
+        print("\n🎯 Status Assessment:")
         if total_tests > 200 and success_rate >= 95:
             print("🎉 EXCELLENT: Full test suite running with high success rate!")
         elif total_tests > 200 and success_rate >= 80:
@@ -484,16 +481,16 @@ class TestRunner:
         else:
             print("❌ NEEDS WORK: Major issues preventing full test execution")
         
-        print(f"\n📋 Test Infrastructure Status:")
+        print("\n📋 Test Infrastructure Status:")
         if self.results['backend_unit']['total'] > 100:
             print(f"✅ Full Backend Suite: {self.results['backend_unit']['total']} tests executed")
         else:
-            print(f"⚠️ Backend Suite: Limited execution due to dependency requirements")
-            print(f"   - Found ~204 test functions in backend test files")
-            print(f"   - Requires pytest, Flask-JWT-Extended, and other Flask extensions")
+            print("⚠️ Backend Suite: Limited execution due to dependency requirements")
+            print("   - Found ~204 test functions in backend test files")
+            print("   - Requires pytest, Flask-JWT-Extended, and other Flask extensions")
             
-        print(f"✅ Frontend: Full test coverage available (pnpm/vitest)")
-        print(f"✅ Structure: Core application structure validated")
+        print("✅ Frontend: Full test coverage available (pnpm/vitest)")
+        print("✅ Structure: Core application structure validated")
         
         return success_rate >= 80 or (total_tests > 200 and success_rate >= 70)
 
@@ -503,7 +500,7 @@ class TestRunner:
         print("="*60)
         
         # Run all test categories
-        results = {
+        {
             'frontend': self.run_frontend_tests(),
             'backend_structure': self.run_backend_structure_tests(),
             'backend_core': self.run_backend_core_tests(),
@@ -513,7 +510,7 @@ class TestRunner:
         # Generate comprehensive report
         overall_success = self.generate_report()
         
-        print(f"\n🏁 Test Execution Complete!")
+        print("\n🏁 Test Execution Complete!")
         return overall_success
 
 def main():

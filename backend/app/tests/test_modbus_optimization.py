@@ -1,9 +1,9 @@
 """Tests for Modbus float32 atomic write optimization."""
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock
 import struct
 
-from app.services.modbus_service import ModbusService, ModbusClient, ModbusDevice
+from app.services.modbus_service import ModbusService, ModbusClient
 
 
 class TestModbusAtomicWrite:
