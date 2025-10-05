@@ -29,7 +29,7 @@ jobs:
 
       - name: Install pnpm dependencies (frontend)
         run: pnpm install --frozen-lockfile
-        working-directory: ./Steynzville/ThermaCoreApp  # Corrected path
+        working-directory: Steynzville/ThermaCoreApp  # Remove the leading ./
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -38,15 +38,15 @@ jobs:
 
       - name: Install Python dependencies (backend)
         run: pip install -r backend/requirements.txt
-        working-directory: ./Steynzville/ThermaCoreApp  # Corrected path
+        working-directory: Steynzville/ThermaCoreApp  # Remove the leading ./
 
       - name: Run Frontend Tests
         run: pnpm test
-        working-directory: ./Steynzville/ThermaCoreApp  # Corrected path
+        working-directory: Steynzville/ThermaCoreApp  # Remove the leading ./
 
       - name: Run Backend Tests
         run: pytest
-        working-directory: ./Steynzville/ThermaCoreApp/backend  # Corrected path
+        working-directory: Steynzville/ThermaCoreApp/backend  # Remove the leading ./
 
   python-quality-and-security:
     runs-on: ubuntu-latest
@@ -61,21 +61,21 @@ jobs:
 
       - name: Install Python dependencies
         run: pip install -r backend/requirements.txt flake8 ruff bandit
-        working-directory: ./Steynzville/ThermaCoreApp  # Corrected path
+        working-directory: Steynzville/ThermaCoreApp  # Remove the leading ./
 
       - name: Run Ruff (Python Linter/Formatter)
         run: ruff check .
-        working-directory: ./Steynzville/ThermaCoreApp/backend  # Corrected path
+        working-directory: Steynzville/ThermaCoreApp/backend  # Remove the leading ./
 
       - name: Run Bandit (Python SAST)
         run: bandit -r . -l -f json -o .bandit_report.json
-        working-directory: ./Steynzville/ThermaCoreApp/backend  # Corrected path
+        working-directory: Steynzville/ThermaCoreApp/backend  # Remove the leading ./
 
       - name: Upload Bandit Report
         uses: actions/upload-artifact@v4
         with:
           name: bandit-report
-          path: ./Steynzville/ThermaCoreApp/backend/.bandit_report.json  # Corrected path
+          path: Steynzville/ThermaCoreApp/backend/.bandit_report.json  # Remove the leading ./
 
   dependency-and-secret-scanning:
     runs-on: ubuntu-latest
@@ -89,10 +89,10 @@ jobs:
       - name: osv-scanner
         uses: google/osv-scanner-action@v2.2.3
         with:
-          scan-path: ./Steynzville/ThermaCoreApp  # Scan the actual code directory
+          scan-path: Steynzville/ThermaCoreApp  # Remove the leading ./
 
       - name: Run Secret Scanner
         uses: secret-scanner/action@0.0.2
         with:
           fail_on_new_secrets: true
-          working-directory: ./Steynzville/ThermaCoreApp  # Run in the actual code directory
+          working-directory: Steynzville/ThermaCoreApp  # Remove the leading ./
