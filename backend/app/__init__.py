@@ -284,12 +284,16 @@ def create_app(config_name=None):
                 logger.info("Using secure OPC-UA client with security wrapper")
             except Exception as secure_init_error:
                 logger.warning(f"Secure OPC-UA client initialization failed, falling back to standard client: {secure_init_error}")
-                _initialize_critical_service(
-                    opcua_client, "OPC UA client", app, logger,
-                    'init_app', data_storage_service  
-                )
-                app.opcua_client = opcua_client
-            
+                try:
+                    _initialize_critical_service(
+                        opcua_client, "OPC UA client", app, logger,
+                        'init_app', data_storage_service  
+                    )
+                    app.opcua_client = opcua_client
+                    logger.info("Using standard OPC-UA client (fallback)")
+                except Exception as standard_init_error:
+                    logger.error(f"Standard OPC-UA client initialization failed: {standard_init_error}", exc_info=True)
+                    app.opcua_client = None
             # Initialize non-critical services (failures won't stop the app)
             try:
                 websocket_service.init_app(app)
