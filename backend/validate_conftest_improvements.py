@@ -84,7 +84,7 @@ def check_conftest_changes():
         failed += 1
     
     # Check for SQLAlchemy models listing
-    if 'print(f"SQLAlchemy models to create:' in content:
+    if 'print(f"SQLAlchemy models to create:"' in content:
         print("  ✓ SQLAlchemy models listing")
         passed += 1
     else:
