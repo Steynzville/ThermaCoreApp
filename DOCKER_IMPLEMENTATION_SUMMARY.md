@@ -24,7 +24,7 @@ A complete Docker-based deployment solution has been implemented for the ThermaC
    - Automatically mounts migrations for database initialization
 
 2. **`backend/Dockerfile`**
-   - Based on Python 3.9 slim (Debian Buster)
+   - Based on Python 3.9 slim (Debian Bullseye)
    - Installs system dependencies (libpq-dev, gcc)
    - Installs Python dependencies from requirements.txt
    - Uses Gunicorn as production WSGI server (4 workers)
