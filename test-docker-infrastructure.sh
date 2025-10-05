@@ -67,7 +67,7 @@ test_step "Frontend accessibility" "curl -f -I http://localhost/ 2>/dev/null | h
 test_step "Database tables exist" "docker-compose exec -T db psql -U postgres -d thermacore_db -c '\dt' | grep -q users"
 
 # Test 8: Seed data
-test_step "Seed data loaded" "docker-compose exec -T db psql -U postgres -d thermacore_db -tAc 'SELECT COUNT(*) FROM roles;' | grep -qE '^[1-9][0-9]*$'"
+test_step "Seed data loaded" "docker-compose exec -T db psql -U postgres -d thermacore_db -tAc 'SELECT COUNT(*) FROM roles;' | grep -qE '^[1-9][0-9]*$|^[1-9]$'"
 
 # Test 9: Container status
 test_step "All containers running" "[ $(docker-compose ps | grep -c 'Up') -eq 3 ]"
