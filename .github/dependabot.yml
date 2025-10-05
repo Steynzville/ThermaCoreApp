@@ -1,19 +1,13 @@
 version: 2
 updates:
-  # npm dependencies
-  - package-ecosystem: "npm"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 10
-    versioning-strategy: auto
-
   # pnpm dependencies
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    versioning-strategy: auto
+    package-manager: "pnpm"  # Optional: explicitly specify pnpm
 
   # Python dependencies
   - package-ecosystem: "pip"
