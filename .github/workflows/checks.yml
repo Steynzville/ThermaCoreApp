@@ -20,6 +20,10 @@ jobs:
       DATABASE_URL: sqlite:///test.db
       FLASK_ENV: test
       FLASK_APP: app.py
+      # MQTT environment variables to prevent production config errors
+      MQTT_CERT_PATH: /dummy/path/to/cert.pem
+      MQTT_KEY_PATH: /dummy/path/to/key.pem
+      MQTT_CA_PATH: /dummy/path/to/ca.pem
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -60,6 +64,9 @@ jobs:
       DATABASE_URL: sqlite:///test.db
       FLASK_ENV: test
       FLASK_APP: app.py
+      MQTT_CERT_PATH: /dummy/path/to/cert.pem
+      MQTT_KEY_PATH: /dummy/path/to/key.pem
+      MQTT_CA_PATH: /dummy/path/to/ca.pem
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
