@@ -12,7 +12,6 @@ This script demonstrates the new middleware features implemented in PR2:
 Run this script to see examples of the API responses with the new middleware.
 """
 import json
-from datetime import datetime
 
 
 def show_examples():

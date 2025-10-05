@@ -1,10 +1,8 @@
 """WebSocket service for real-time data streaming to frontend clients."""
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 from datetime import datetime, timezone
-import json
 
-from flask import current_app
 from flask_socketio import SocketIO, emit, join_room, leave_room
 
 logger = logging.getLogger(__name__)

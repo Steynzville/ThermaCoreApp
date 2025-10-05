@@ -14,11 +14,9 @@ def test_domain_exception_handling():
     
     try:
         from app.exceptions import (
-            ThermaCoreException, ValidationException, 
-            AuthenticationException, DatabaseException,
+            ThermaCoreException, AuthenticationException, DatabaseException,
             UnitOfflineException, SensorNotFoundException
         )
-        from app.utils.error_handler import SecurityAwareErrorHandler
         
         # Test basic ThermaCoreException
         test_exception = ThermaCoreException(
@@ -93,7 +91,7 @@ def test_correlation_id_handling():
                 assert 'details' in call_args['error']
                 assert 'correlation_id' in call_args['error']['details']
                 
-                print(f"✓ Correlation ID properly included in error response")
+                print("✓ Correlation ID properly included in error response")
                 print(f"  - Request ID: {call_args['request_id']}")
                 print(f"  - Error details contain correlation_id: {call_args['error']['details']['correlation_id']}")
                 print(f"  - Status code: {status}")
@@ -112,7 +110,7 @@ def test_logging_filter():
     print("\nTesting Logging Filter...")
     
     try:
-        from app.middleware.request_id import RequestIDFilter, RequestIDManager
+        from app.middleware.request_id import RequestIDFilter
         
         # Create a filter and log record
         filter_obj = RequestIDFilter()
@@ -135,7 +133,7 @@ def test_logging_filter():
         assert hasattr(record, 'request_id'), "Record should have request_id attribute"
         assert record.request_id == 'no-request-context', "Should set no-request-context when no context"
         
-        print(f"✓ Logging filter works correctly")
+        print("✓ Logging filter works correctly")
         print(f"  - Record has request_id: {record.request_id}")
         print(f"  - Filter returns: {result}")
         

@@ -3,19 +3,15 @@
 This middleware provides comprehensive audit logging for security-critical operations
 including authentication, authorization, and data modification events.
 """
-import json
-import logging
 import re
 from datetime import datetime, timezone
 from enum import Enum
 from functools import wraps
 from typing import Optional, Dict, Any
 
-from flask import request, g, has_request_context, current_app
+from flask import request, has_request_context
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
-from sqlalchemy.exc import SQLAlchemyError
 
-from app import db
 from app.models import User
 from app.middleware.request_id import RequestIDManager
 from app.utils.secure_logger import SecureLogger

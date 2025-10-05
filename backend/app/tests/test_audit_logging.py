@@ -1,8 +1,6 @@
 """Test suite for audit logging middleware (PR3)."""
-import json
 import pytest
-from unittest.mock import patch, MagicMock
-from datetime import datetime, timezone
+from unittest.mock import patch
 
 from app.middleware.audit import (
     AuditLogger, AuditEventType, AuditSeverity,
@@ -167,7 +165,7 @@ class TestAuditDecorators:
                 def test_function():
                     return {'success': True}
                 
-                result = test_function()
+                test_function()
                 
                 # Verify audit was logged
                 mock_audit.assert_called_once()
@@ -246,9 +244,9 @@ class TestAuditMiddleware:
     def test_audit_api_access(self, app, client):
         """Test API access auditing."""
         with app.app_context():
-            with patch('app.middleware.audit.AuditLogger.log_event') as mock_audit:
+            with patch('app.middleware.audit.AuditLogger.log_event'):
                 # Make a request to trigger audit logging
-                response = client.get('/api/v1/health')  # Assuming health endpoint exists
+                client.get('/api/v1/health')  # Assuming health endpoint exists
                 
                 # Note: This test may not trigger the audit due to endpoint filtering
                 # In a real scenario, we'd test with an actual API endpoint
@@ -299,7 +297,7 @@ class TestAuditIntegration:
             
             with patch('app.middleware.audit.audit_permission_check') as mock_audit:
                 # Test permission check (this would normally be done in the decorator)
-                has_permission = user.has_permission('read_units')
+                user.has_permission('read_units')
                 
                 # In real implementation, the decorator would call audit_permission_check
                 # We can verify the function exists and is importable
@@ -329,7 +327,7 @@ class TestRoleRequiredAuditLogging:
     def test_role_required_successful_audit(self, app, client):
         """Test that successful role checks are audited."""
         with app.app_context():
-            with patch('app.middleware.audit.audit_permission_check') as mock_audit:
+            with patch('app.middleware.audit.audit_permission_check'):
                 # Get admin token
                 token = self.get_auth_token(client, 'admin', 'admin123')
                 
@@ -338,7 +336,7 @@ class TestRoleRequiredAuditLogging:
                 from app.models import Role, RoleEnum
                 admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
                 
-                response = client.post('/api/v1/auth/register',
+                client.post('/api/v1/auth/register',
                     json={
                         'username': 'audituser',
                         'email': 'audit@test.com',
@@ -359,7 +357,7 @@ class TestRoleRequiredAuditLogging:
     def test_role_required_denied_audit(self, app, client):
         """Test that denied role checks are audited."""
         with app.app_context():
-            with patch('app.middleware.audit.audit_permission_check') as mock_audit:
+            with patch('app.middleware.audit.audit_permission_check'):
                 # Get viewer token (lower privilege)
                 token = self.get_auth_token(client, 'viewer', 'viewer123')
                 

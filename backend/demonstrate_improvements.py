@@ -7,7 +7,7 @@ works with the ThermaCore SCADA domain exceptions.
 """
 import sys
 import uuid
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 # Add the app directory to the path
 sys.path.insert(0, 'app')
@@ -20,7 +20,7 @@ def demonstrate_domain_exceptions():
     
     try:
         from exceptions import (
-            ThermaCoreException, ValidationException, AuthenticationException,
+            ValidationException, AuthenticationException,
             UnitOfflineException, SensorNotFoundException, DatabaseException,
             MQTTConnectionException, OPCUAConnectionException,
             TimeoutException, ConfigurationException
@@ -82,8 +82,8 @@ def demonstrate_error_handling():
     print("=" * 70)
     
     # Mock Flask dependencies
-    mock_flask = Mock()
-    mock_jsonify = Mock()
+    Mock()
+    Mock()
     mock_g = Mock()
     
     # Set up mock request ID
@@ -121,7 +121,7 @@ def demonstrate_error_handling():
         
         # Simulate validation error response
         response1 = simulate_error_response(validation_error, validation_error.error_type, validation_error.status_code)
-        print(f"\n1. Validation Error Response:")
+        print("\n1. Validation Error Response:")
         print(f"   Request ID: {response1['request_id']}")
         print(f"   Success: {response1['success']}")
         print(f"   Error Code: {response1['error']['code']}")
@@ -130,7 +130,7 @@ def demonstrate_error_handling():
         
         # Simulate authentication error response
         response2 = simulate_error_response(auth_error, auth_error.error_type, auth_error.status_code)
-        print(f"\n2. Authentication Error Response:")
+        print("\n2. Authentication Error Response:")
         print(f"   Request ID: {response2['request_id']}")
         print(f"   Success: {response2['success']}")
         print(f"   Error Code: {response2['error']['code']}")

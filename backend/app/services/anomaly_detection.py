@@ -1,11 +1,12 @@
 """Machine Learning Anomaly Detection Service for Phase 3."""
 import logging
 import statistics
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Tuple
 from datetime import datetime, timedelta
 from collections import deque
 from dataclasses import dataclass
 
+from sqlalchemy import and_
 from app.models import Unit, Sensor, SensorReading, db, utc_now  # Use timezone-aware datetime
 
 logger = logging.getLogger(__name__)

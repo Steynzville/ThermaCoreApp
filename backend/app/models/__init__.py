@@ -2,10 +2,8 @@
 from datetime import datetime, timezone
 from enum import Enum as PyEnum
 
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import Column, DateTime, Enum, Float, Integer, String, Text, Boolean, ForeignKey, Table
+from sqlalchemy import Column, DateTime, Enum, Float, Integer, String, Boolean, ForeignKey, Table
 from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app import db

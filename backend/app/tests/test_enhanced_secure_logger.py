@@ -1,5 +1,4 @@
 """Tests for enhanced SecureLogger sensitive patterns."""
-import pytest
 from app.utils.secure_logger import SecureLogger
 
 

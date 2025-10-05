@@ -1,6 +1,6 @@
 """SCADA integration routes for real-time data management."""
 from flask import Blueprint, jsonify, request, current_app
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required
 from datetime import datetime, timezone, timedelta
 
 from app.routes.auth import permission_required
@@ -756,8 +756,6 @@ def get_all_devices_status():
             offline_devices:
               type: integer
     """
-    from app.services.modbus_service import modbus_service
-    from app.services.dnp3_service import dnp3_service
     
     devices_status = []
     

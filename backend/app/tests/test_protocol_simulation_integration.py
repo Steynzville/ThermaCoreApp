@@ -1,13 +1,11 @@
 """Integration tests for protocol simulation and adapter interaction as part of PR4."""
 import pytest
 import time
-import json
-from datetime import datetime, timezone
-from unittest.mock import Mock, patch, MagicMock
-from typing import Dict, Any
+from datetime import datetime
+from unittest.mock import Mock, patch
 
 from app import create_app, db
-from app.models import Unit, Sensor, SensorReading, UnitStatusEnum
+from app.models import Unit, UnitStatusEnum
 from app.services.protocol_gateway_simulator import ProtocolGatewaySimulator
 from app.services.modbus_service import ModbusService
 from app.services.dnp3_service import DNP3Service
@@ -250,7 +248,6 @@ class TestProtocolSimulationIntegration:
             # Initialize all protocol services
             modbus_service = app.modbus_service
             dnp3_service = app.dnp3_service
-            simulator = app.protocol_simulator
             
             # Add some test configurations
             modbus_service.add_device('UNIT001', 1, 'localhost', 502)

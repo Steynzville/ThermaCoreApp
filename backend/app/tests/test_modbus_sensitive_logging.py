@@ -1,11 +1,9 @@
 """Tests for Modbus sensitive logging configuration."""
-import pytest
 import os
-from unittest.mock import Mock, patch, MagicMock
-import logging
+from unittest.mock import Mock, patch
 
 from app.services.modbus_service import (
-    ModbusService, ModbusClient, ModbusDevice, _is_sensitive_logging_enabled
+    ModbusService, ModbusClient, _is_sensitive_logging_enabled
 )
 
 
@@ -60,7 +58,7 @@ class TestModbusSensitiveLogging:
         
         # Capture log output
         with patch('app.services.modbus_service.logger') as mock_logger:
-            result = service.read_device_data('test_device')
+            service.read_device_data('test_device')
             
             # Verify error was logged with sensor_type context
             assert mock_logger.error.called
@@ -114,7 +112,7 @@ class TestModbusSensitiveLogging:
         
         # Capture log output
         with patch('app.services.modbus_service.logger') as mock_logger:
-            result = service.read_device_data('test_device')
+            service.read_device_data('test_device')
             
             # Check debug logs - they should not contain address
             debug_calls = [str(call) for call in mock_logger.debug.call_args_list]
@@ -143,7 +141,7 @@ class TestModbusSensitiveLogging:
             
             # Capture log output
             with patch('app.services.modbus_service.logger') as mock_logger:
-                result = service.read_device_data('test_device')
+                service.read_device_data('test_device')
                 
                 # Check debug logs - they should contain address
                 debug_calls = [str(call) for call in mock_logger.debug.call_args_list]
@@ -166,7 +164,7 @@ class TestModbusSensitiveLogging:
         
         # Capture log output
         with patch('app.services.modbus_service.logger') as mock_logger:
-            result = service.write_register(
+            service.write_register(
                 'test_device', 'holding_register', 100, 42, 'uint16'
             )
             
@@ -188,7 +186,7 @@ class TestModbusSensitiveLogging:
             
             # Capture log output
             with patch('app.services.modbus_service.logger') as mock_logger:
-                result = service.write_register(
+                service.write_register(
                     'test_device', 'holding_register', 100, 42, 'uint16'
                 )
                 
@@ -255,7 +253,7 @@ class TestModbusSensitiveLogging:
         
         # Capture log output
         with patch('app.services.modbus_service.logger') as mock_logger:
-            result = service.read_device_data('test_device')
+            service.read_device_data('test_device')
             
             # Verify error log has context but no address
             assert mock_logger.error.called
@@ -278,7 +276,7 @@ class TestModbusSensitiveLogging:
             del os.environ['MODBUS_LOG_SENSITIVE_DATA']
         
         with patch('app.services.modbus_service.logger') as mock_logger:
-            registers = client.read_holding_registers(100, 2, 1)
+            client.read_holding_registers(100, 2, 1)
             
             # Should not log address
             debug_calls = [str(call) for call in mock_logger.debug.call_args_list]
@@ -289,7 +287,7 @@ class TestModbusSensitiveLogging:
         os.environ['MODBUS_LOG_SENSITIVE_DATA'] = 'true'
         try:
             with patch('app.services.modbus_service.logger') as mock_logger:
-                registers = client.read_holding_registers(200, 2, 1)
+                client.read_holding_registers(200, 2, 1)
                 
                 # Should log address
                 debug_calls = [str(call) for call in mock_logger.debug.call_args_list]
@@ -308,7 +306,7 @@ class TestModbusSensitiveLogging:
             del os.environ['MODBUS_LOG_SENSITIVE_DATA']
         
         with patch('app.services.modbus_service.logger') as mock_logger:
-            result = client.write_single_register(100, 42, 1)
+            client.write_single_register(100, 42, 1)
             
             # Should not log address
             info_calls = [str(call) for call in mock_logger.info.call_args_list]
@@ -319,7 +317,7 @@ class TestModbusSensitiveLogging:
         os.environ['MODBUS_LOG_SENSITIVE_DATA'] = 'true'
         try:
             with patch('app.services.modbus_service.logger') as mock_logger:
-                result = client.write_single_register(200, 42, 1)
+                client.write_single_register(200, 42, 1)
                 
                 # Should log address
                 info_calls = [str(call) for call in mock_logger.info.call_args_list]

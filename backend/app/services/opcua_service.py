@@ -1,6 +1,5 @@
 """OPC UA client service for industrial data acquisition."""
-import logging
-from typing import Dict, Any, List, Optional, Union
+from typing import Dict, Any, List, Optional
 from datetime import datetime, timezone
 from dateutil import parser as dateutil_parser
 
@@ -14,7 +13,6 @@ except ImportError:
     ua = None
     Node = None
 
-from flask import current_app
 from app.utils.environment import is_production_environment
 from app.utils.secure_logger import SecureLogger
 
@@ -117,7 +115,7 @@ class OPCUAClient:
         
         # Handle naive datetime objects (assume UTC as per X.509 standard)
         if hasattr(dt, 'year'):  # It's a datetime-like object
-            logger.debug(f"Certificate datetime object is naive - assuming UTC timezone as per X.509 standard")
+            logger.debug("Certificate datetime object is naive - assuming UTC timezone as per X.509 standard")
             return dt.replace(tzinfo=timezone.utc)
         
         raise ValueError(f"Unsupported certificate datetime type: {type(dt)}")
@@ -145,7 +143,7 @@ class OPCUAClient:
             # Sanitize path in error messages for security
             sanitized_path = "***" if is_prod else self.trust_cert_file
             logger.error(f"OPC UA trust certificate file not found: {sanitized_path}")
-            raise ValueError(f"OPC UA trust certificate file does not exist")
+            raise ValueError("OPC UA trust certificate file does not exist")
         
         try:
             # Load and validate the certificate
@@ -160,7 +158,7 @@ class OPCUAClient:
                     certificate = x509.load_der_x509_certificate(cert_data, default_backend())
                 except ValueError as e:
                     # Certificate format errors are always security issues - always raise
-                    logger.error(f"Invalid certificate format detected", exc_info=True)
+                    logger.error("Invalid certificate format detected", exc_info=True)
                     raise ValueError(f"Invalid certificate format: {e}") from e
             
             # Validate certificate is not expired (always a security issue)
@@ -188,10 +186,10 @@ class OPCUAClient:
                 raise ValueError(f"Certificate format not supported: {e}") from e
             
             if not_valid_after_utc < now:
-                logger.error(f"Certificate validation failed: expired certificate detected", exc_info=True)
+                logger.error("Certificate validation failed: expired certificate detected", exc_info=True)
                 raise ValueError(f"Server certificate has expired: {not_valid_after_utc}")
             if not_valid_before_utc > now:
-                logger.error(f"Certificate validation failed: certificate not yet valid", exc_info=True)
+                logger.error("Certificate validation failed: certificate not yet valid", exc_info=True)
                 raise ValueError(f"Server certificate is not yet valid: {not_valid_before_utc}")
             
             # Actually load the certificate into the OPC UA client's trust store
@@ -208,9 +206,9 @@ class OPCUAClient:
             
         except (OSError, IOError) as e:
             # File I/O errors - log with sanitized path and handle based on environment
-            logger.error(f"Failed to read OPC UA trust certificate file", exc_info=True)
+            logger.error("Failed to read OPC UA trust certificate file", exc_info=True)
             if is_prod:
-                raise ValueError(f"Cannot read OPC UA trust certificate file") from e
+                raise ValueError("Cannot read OPC UA trust certificate file") from e
             else:
                 # Only allow file I/O issues in development with clear message
                 logger.warning(f"OPC UA trust certificate file I/O error (development): {e}")
@@ -223,7 +221,7 @@ class OPCUAClient:
         
         except Exception as e:
             # Other unexpected errors during certificate loading
-            logger.error(f"Unexpected error during OPC UA trust certificate loading", exc_info=True)
+            logger.error("Unexpected error during OPC UA trust certificate loading", exc_info=True)
             if is_prod:
                 raise ValueError(f"Failed to load OPC UA trust certificate in production: {e}") from e
             else:
@@ -638,7 +636,7 @@ class OPCUAClient:
                         try:
                             node_info['data_type'] = str(child.get_data_type_as_variant_type())
                             node_info['value'] = child.get_value()
-                        except:
+                        except Exception:
                             pass
                     
                     nodes.append(node_info)

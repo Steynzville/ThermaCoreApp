@@ -1,7 +1,5 @@
 """Tests for error propagation and handling improvements."""
-import pytest
 from unittest.mock import Mock, patch
-import os
 
 from app.utils.environment import handle_environment_detection_error
 from app import _initialize_critical_service

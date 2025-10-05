@@ -1,5 +1,4 @@
 """Test DateTimeField robustness improvements."""
-import pytest
 from datetime import datetime
 from app.utils.schemas import DateTimeField
 

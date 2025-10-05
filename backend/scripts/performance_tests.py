@@ -1,7 +1,6 @@
 """Performance testing script for ThermaCore SCADA API using Locust."""
-import json
 import random
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from locust import HttpUser, task, between
 
@@ -440,8 +439,9 @@ class ThermaCoreDNP3OptimizationUser(HttpUser):
         device_id = 'DNP3_OPT_TEST'
         
         # Perform multiple rapid reads to test cache effectiveness
+        import time
         for _ in range(3):
-            response = self.client.get(f"/api/v1/multiprotocol/protocols/dnp3/devices/{device_id}/data",
+            self.client.get(f"/api/v1/multiprotocol/protocols/dnp3/devices/{device_id}/data",
                                      headers=self.headers)
             time.sleep(0.1)  # Short delay between reads
     

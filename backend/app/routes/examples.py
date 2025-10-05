@@ -4,10 +4,9 @@ from marshmallow import Schema, fields, validate
 from webargs.flaskparser import use_args
 
 from app.middleware.validation import validate_query_params
-from app.middleware.rate_limit import standard_rate_limit, RateLimitConfig
+from app.middleware.rate_limit import standard_rate_limit, rate_limit
 from app.middleware.request_id import track_request_id
 # Note: collect_metrics is deprecated - kept for backward compatibility but not used
-from app.middleware.metrics import collect_metrics
 from app.utils.error_handler import SecurityAwareErrorHandler
 
 

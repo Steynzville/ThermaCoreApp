@@ -8,8 +8,8 @@ from enum import Enum
 import time
 from functools import wraps
 from collections import defaultdict, deque
-from threading import Lock, RLock
-from cachetools import TTLCache, LRUCache
+from threading import RLock
+from cachetools import TTLCache
 
 from app.models import utc_now  # Use timezone-aware datetime
 
@@ -108,7 +108,7 @@ def dnp3_performance_monitor(operation_name: str = None):
                     data_points = len(result)
                 
                 return result
-            except Exception as e:
+            except Exception:
                 success = False
                 raise
             finally:

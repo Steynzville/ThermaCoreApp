@@ -6,10 +6,10 @@ from typing import Dict, Any, List, Tuple, Optional
 
 from flask import request, jsonify, current_app
 from flask_jwt_extended import get_jwt_identity
-from sqlalchemy import and_, or_
+from sqlalchemy import or_
 from sqlalchemy.orm import Query
 
-from app.models import User, SensorReading
+from app.models import SensorReading
 
 
 def get_current_user_id() -> Tuple[Optional[int], bool]:

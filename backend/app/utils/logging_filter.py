@@ -1,6 +1,5 @@
 """Logging filter for sanitizing log messages to prevent injection attacks."""
 import logging
-from typing import Any
 
 from app.middleware.validation import sanitize
 

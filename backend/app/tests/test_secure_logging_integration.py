@@ -1,6 +1,6 @@
 """Tests for secure logging integration with error handler."""
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from app import create_app
 from app.utils.error_handler import SecurityAwareErrorHandler
 
@@ -134,7 +134,7 @@ class TestSecureLoggingIntegration:
         with app.app_context():
             error = Exception("Auth failed: password=secret123 token=xyz789 api_key=abc456")
             
-            with patch('app.utils.error_handler.logger') as mock_logger:
+            with patch('app.utils.error_handler.logger'):
                 response, status_code = SecurityAwareErrorHandler.handle_service_error(
                     error, 'authentication_error', 'login', 401
                 )

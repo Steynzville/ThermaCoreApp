@@ -1,9 +1,8 @@
 """Integration tests for Phase 2 SCADA data ingestion pipeline."""
 import json
 import pytest
-import time
 from datetime import datetime, timezone
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 from app import create_app, db
 from app.models import Unit, Sensor, SensorReading

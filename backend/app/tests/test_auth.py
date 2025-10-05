@@ -1,8 +1,6 @@
 """Unit tests for authentication functionality."""
 import json
 import jwt
-import pytest
-from datetime import datetime
 
 from app.models import User
 

@@ -1,5 +1,4 @@
 """Tests for InputValidator utility class."""
-import pytest
 from app.utils.input_validator import InputValidator
 
 

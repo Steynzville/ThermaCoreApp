@@ -1,9 +1,7 @@
 """Dedicated service for shared sensor data storage and processing logic."""
-import logging
 import math
 from typing import Dict, Any, Optional
-from datetime import datetime, timezone
-from flask import current_app
+from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 
 from app.models import db, SensorReading, Sensor, Unit

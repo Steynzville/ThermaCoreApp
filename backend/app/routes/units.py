@@ -1,16 +1,15 @@
 """Unit management routes for ThermaCore SCADA API."""
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import and_, or_
+from sqlalchemy import or_
 
 from app import db
-from app.models import Unit, User, Sensor, SensorReading
+from app.models import Unit, Sensor, SensorReading
 from app.utils.schemas import (
     UnitSchema, UnitCreateSchema, UnitUpdateSchema,
-    SensorSchema, SensorCreateSchema, SensorReadingSchema,
-    PaginatedResponseSchema
+    SensorSchema, SensorCreateSchema, SensorReadingSchema
 )
 from app.routes.auth import permission_required
 from app.middleware.audit import audit_operation

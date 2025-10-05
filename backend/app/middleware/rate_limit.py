@@ -1,7 +1,7 @@
 """Rate limiting middleware for ThermaCore SCADA API."""
 import time
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime
 from functools import wraps
 from typing import Dict, Optional, Callable, Tuple
 
@@ -43,7 +43,7 @@ class RateLimiter:
             Tuple of (is_allowed, rate_limit_info)
         """
         current_time = time.time()
-        window_start = current_time - window_seconds
+        current_time - window_seconds
         
         try:
             if self.redis_client:
@@ -169,11 +169,11 @@ def rate_limit(limit: int, window_seconds: int = 60, per: str = 'ip', key_func: 
                 identifier = request.remote_addr or 'unknown'
             elif per == 'user':
                 # Try to get user from JWT token
-                from flask_jwt_extended import get_jwt_identity, jwt_required
+                from flask_jwt_extended import get_jwt_identity
                 try:
                     identity = get_jwt_identity()
                     identifier = f"user:{identity}" if identity else f"ip:{request.remote_addr}"
-                except:
+                except Exception:
                     identifier = f"ip:{request.remote_addr or 'unknown'}"
             elif per == 'endpoint':
                 identifier = f"endpoint:{request.endpoint}:{request.remote_addr or 'unknown'}"

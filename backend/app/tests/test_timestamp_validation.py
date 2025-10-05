@@ -1,7 +1,6 @@
 """Tests for timestamp consistency and registration field validation."""
 import json
-import pytest
-from datetime import datetime, timezone
+from datetime import datetime
 from app.models import User, Unit, Sensor
 from app.tests.timestamp_helpers import simulate_db_trigger_update, assert_timestamp_updated
 

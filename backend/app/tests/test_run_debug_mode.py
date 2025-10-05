@@ -1,6 +1,5 @@
 """Tests for run.py debug mode configuration."""
 import os
-import pytest
 from unittest.mock import patch
 
 from app import create_app

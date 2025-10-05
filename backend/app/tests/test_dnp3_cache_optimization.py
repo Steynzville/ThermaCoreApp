@@ -1,6 +1,5 @@
 """Tests for DNP3 cache lookup optimization."""
-import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 from cachetools import TTLCache
 
 from app.services.dnp3_service import DNP3Service

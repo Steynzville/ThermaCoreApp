@@ -12,10 +12,9 @@ def test_domain_exceptions_basic():
     try:
         # Test direct import of exceptions module
         from app.exceptions import (
-            ThermaCoreException, ValidationException, 
-            AuthenticationException, DatabaseException,
+            ThermaCoreException, AuthenticationException, DatabaseException,
             UnitOfflineException, SensorNotFoundException,
-            ResourceNotFoundException, InvalidDataException
+            InvalidDataException
         )
         
         # Test basic ThermaCoreException
@@ -27,7 +26,7 @@ def test_domain_exceptions_basic():
             details={"test_key": "test_value"}
         )
         
-        print(f"✓ Created ThermaCoreException:")
+        print("✓ Created ThermaCoreException:")
         print(f"  - Message: {str(test_exception)}")
         print(f"  - Error type: {test_exception.error_type}")
         print(f"  - Status code: {test_exception.status_code}")
@@ -86,7 +85,7 @@ def test_exception_attributes():
     
     try:
         from app.exceptions import (
-            ThermaCoreException, ValidationException, 
+            ValidationException, 
             AuthenticationException, ProtocolException,
             MQTTException, OPCUAException, ModbusException,
             DNP3Exception, TimeoutException

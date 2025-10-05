@@ -1,7 +1,7 @@
 """Secure logging utilities for sensitive data protection."""
 import re
 import logging
-from typing import Any, Optional
+from typing import Any
 
 
 class SecureLogger:

@@ -2,12 +2,11 @@
 import pytest
 import time
 from datetime import datetime, timedelta
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 from app.services.dnp3_service import (
     DNP3Service, DNP3PerformanceMetrics,
-    DNP3Device, DNP3DataPoint, DNP3Reading,
-    DNP3DataType, DNP3Quality, dnp3_performance_monitor
+    dnp3_performance_monitor
 )
 from app.models import utc_now
 

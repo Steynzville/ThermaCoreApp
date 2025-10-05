@@ -1,5 +1,4 @@
 """Tests for SecureLogger utility class."""
-import pytest
 import logging
 from app.utils.secure_logger import SecureLogger, SecureLoggerAdapter
 

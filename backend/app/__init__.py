@@ -66,8 +66,6 @@ def _initialize_critical_service(service, service_name: str, app, logger, init_m
     Raises:
         RuntimeError: In production if service initialization fails
     """
-    from app.utils.environment import is_production_environment
-    
     try:
         # Call the initialization method
         init_func = getattr(service, init_method)
@@ -152,7 +150,6 @@ def create_app(config_name=None):
     # Add sanitization filter to all logger handlers to prevent log injection
     # This sanitizes data at the logging layer without mutating request data
     # Apply to root logger to ensure all application loggers are covered
-    import logging
     root_logger = logging.getLogger()
     
     # Add filter to existing handlers at app initialization
@@ -210,8 +207,9 @@ def create_app(config_name=None):
             logger.warning(f"Swagger initialization failed: {e}")
     
     # Import models to ensure they are registered (only if db is configured)
+    # This is intentional to ensure SQLAlchemy models are loaded
     try:
-        from app.models import User, Role, Permission, Unit, Sensor, SensorReading
+        from app.models import User, Role, Permission, Unit, Sensor, SensorReading  # noqa: F401
     except ImportError:
         pass  # Models may not be importable without full dependencies
     

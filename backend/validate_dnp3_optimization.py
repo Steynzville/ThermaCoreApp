@@ -41,7 +41,6 @@ def test_dnp3_optimization_components():
         
         # Test data cache
         print("\n--- Testing DNP3DataCache ---")
-        from datetime import datetime
         from app.models import utc_now
         from app.services.dnp3_service import DNP3Reading
         
@@ -103,7 +102,7 @@ def test_performance_monitor_decorator():
                 return {'total_points': data_count, 'success': True}
         
         service = TestService()
-        result = service.test_method(10)
+        service.test_method(10)
         
         # Check that metrics were recorded
         stats = service._performance_metrics.get_operation_stats('test_operation')

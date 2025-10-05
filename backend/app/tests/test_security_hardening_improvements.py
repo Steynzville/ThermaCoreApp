@@ -1,5 +1,4 @@
 """Tests for security hardening and validation improvements."""
-import math
 import pytest
 from unittest.mock import Mock, patch
 from datetime import datetime
@@ -65,7 +64,7 @@ class TestSecurityHardeningImprovements:
         # Call store_sensor_data (will fail due to no DB context, but validation should pass)
         try:
             service.store_sensor_data(data)
-        except:
+        except Exception:
             pass  # Expected to fail due to DB context
         
         # Check that dict was updated with sanitized values
@@ -178,7 +177,7 @@ class TestSecurityHardeningImprovements:
             'OPCUA_SECURITY_MODE': 'SignAndEncrypt',
         }
         
-        with patch('opcua.Client') as mock_client_class:
+        with patch('opcua.Client'):
             opcua_client = OPCUAClient()
             
             with pytest.raises(ValueError, match="OPC UA security policy .* is too weak for production"):

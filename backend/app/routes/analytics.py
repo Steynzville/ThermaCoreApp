@@ -1,9 +1,8 @@
 """Advanced analytics routes for Phase 3 SCADA integration."""
-from flask import Blueprint, jsonify, request, current_app, g
-from flask_jwt_extended import jwt_required, get_jwt_identity
-from datetime import datetime, timedelta
+from flask import Blueprint, jsonify
+from flask_jwt_extended import jwt_required
+from datetime import timedelta
 from sqlalchemy import func, and_, or_
-from typing import Dict, List, Any
 from webargs.flaskparser import use_args
 
 from app.models import Unit, Sensor, SensorReading, db, utc_now  # Use timezone-aware datetime
@@ -48,7 +47,7 @@ def get_dashboard_summary():
         now = utc_now()
         last_24h = now - timedelta(hours=24)
         last_week = now - timedelta(days=7)
-        last_month = now - timedelta(days=30)
+        now - timedelta(days=30)
         
         # Overview metrics
         total_units = db.session.query(func.count(Unit.id)).scalar()

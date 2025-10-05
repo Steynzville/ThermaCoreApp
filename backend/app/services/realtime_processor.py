@@ -1,6 +1,6 @@
 """Real-time data processing service that integrates MQTT and WebSocket services."""
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from datetime import datetime, timezone
 
 from app.services.mqtt_service import mqtt_client

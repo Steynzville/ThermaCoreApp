@@ -1,7 +1,6 @@
 """Tests for WebSocket service."""
-import pytest
 from datetime import datetime, timezone
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 
 from app.services.websocket_service import WebSocketService
 

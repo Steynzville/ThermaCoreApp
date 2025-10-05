@@ -1,16 +1,10 @@
 """MQTT client service for SCADA data ingestion."""
 import json
-import logging
-import threading
-import time
 from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional, Callable
+from typing import Dict, Any, Optional, Callable
 
 import paho.mqtt.client as mqtt
-from flask import current_app
-from sqlalchemy.exc import IntegrityError
 
-from app.models import db, SensorReading, Sensor, Unit
 from app.utils.environment import is_production_environment
 from app.utils.secure_logger import SecureLogger
 

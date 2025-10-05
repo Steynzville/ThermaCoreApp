@@ -6,7 +6,7 @@ from threading import Lock
 from typing import Dict, Any, Optional, List, Callable
 from functools import wraps
 
-from flask import request, g, current_app, escape
+from flask import request, g, escape
 from werkzeug.exceptions import HTTPException
 
 from app.middleware.request_id import RequestIDManager

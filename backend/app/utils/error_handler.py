@@ -1,8 +1,7 @@
 """Centralized error handling utilities for secure API responses."""
-import logging
 import uuid
 from datetime import datetime
-from typing import Any, Dict, Tuple, Optional
+from typing import Any, Tuple, Optional
 from flask import jsonify, g
 from app.utils.secure_logger import SecureLogger
 from app.utils.input_validator import InputValidator
