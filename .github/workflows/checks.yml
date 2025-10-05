@@ -111,7 +111,7 @@ jobs:
         uses: actions/dependency-review-action@v4
 
       - name: osv-scanner
-        uses: google/osv-scanner-action@v2.2.3
+        uses: google/osv-scanner-action@v1
         with:
           scan-path: .
 
