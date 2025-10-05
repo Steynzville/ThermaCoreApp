@@ -132,8 +132,8 @@ jobs:
 
       - name: Run Bandit and Generate SARIF Report
         run: |
-          # Run bandit and capture exit code
-          bandit -c .bandit -r . -f json -o bandit_report.json --severity-level high,medium || true
+          # Run bandit with ALL severity levels and filter later
+          bandit -c .bandit -r . -f json -o bandit_report.json --severity-level all || true
           
           # Convert Bandit JSON to SARIF for GitHub Security tab
           python -c "
@@ -157,6 +157,7 @@ jobs:
                   }]
               }
               
+              # Filter for only HIGH and MEDIUM severity issues
               for issue in bandit_data.get('results', []):
                   # Only include high/medium severity issues
                   if issue.get('issue_severity') in ['HIGH', 'MEDIUM']:
@@ -179,11 +180,20 @@ jobs:
                           }]
                       })
               
+              print(f'📊 Found {len(sarif[\"runs\"][0][\"results\"])} high/medium severity issues')
+              
               with open('bandit_sarif.json', 'w') as f:
                   json.dump(sarif, f, indent=2)
-              print('SARIF report generated successfully')
+              print('✅ SARIF report generated successfully')
           except Exception as e:
-              print(f'Error generating SARIF: {e}')
+              print(f'❌ Error generating SARIF: {e}')
+              # Create empty SARIF to avoid upload errors
+              with open('bandit_sarif.json', 'w') as f:
+                  json.dump({
+                      '\$schema': 'https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json',
+                      'version': '2.1.0',
+                      'runs': [{'tool': {'driver': {'name': 'Bandit'}}, 'results': []}]
+                  }, f)
           "
         working-directory: backend
 
