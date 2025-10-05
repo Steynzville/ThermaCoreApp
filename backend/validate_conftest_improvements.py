@@ -69,26 +69,26 @@ def check_conftest_changes():
     
     # Check for detailed table information logging
     if "for col in columns:" in content and "print(f\"    - {col['name']}\")" in content:
-        print(f"  ✓ Column details logging")
+        print("  ✓ Column details logging")
         passed += 1
     else:
-        print(f"  ✗ Missing: Column details logging")
+        print("  ✗ Missing: Column details logging")
         failed += 1
     
     # Check for PostgreSQL schema path validation
     if 'if not os.path.exists(schema_path):' in content:
-        print(f"  ✓ Schema path validation")
+        print("  ✓ Schema path validation")
         passed += 1
     else:
-        print(f"  ✗ Missing: Schema path validation")
+        print("  ✗ Missing: Schema path validation")
         failed += 1
     
     # Check for SQLAlchemy models listing
     if 'print(f"SQLAlchemy models to create:' in content:
-        print(f"  ✓ SQLAlchemy models listing")
+        print("  ✓ SQLAlchemy models listing")
         passed += 1
     else:
-        print(f"  ✗ Missing: SQLAlchemy models listing")
+        print("  ✗ Missing: SQLAlchemy models listing")
         failed += 1
     
     print("\n" + "=" * 70)

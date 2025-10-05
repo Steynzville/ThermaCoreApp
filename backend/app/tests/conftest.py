@@ -2,7 +2,6 @@
 import os
 import tempfile
 import pytest
-import sys
 from sqlalchemy import text, inspect
 
 from app import create_app, db
@@ -71,7 +70,7 @@ def _init_database():
             print(f"Available tables: {tables}")
             raise RuntimeError(f"Database initialization incomplete - missing tables: {missing_tables}")
         
-        print(f"\n✓ All expected tables verified")
+        print("\n✓ All expected tables verified")
         print(f"{'='*70}\n")
         
     except Exception as e:
