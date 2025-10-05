@@ -29,6 +29,7 @@ jobs:
         uses: pnpm/action-setup@v2
         with:
           version: 8 # or your preferred version
+        working-directory: ..
 
       - name: Install pnpm dependencies (frontend)
         run: pnpm install --frozen-lockfile
