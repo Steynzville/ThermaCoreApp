@@ -172,16 +172,6 @@ class TestingConfig(Config):
     } if _use_postgres_tests else {})
 
 
-# Helper to get production config instance (lazy initialization to avoid import-time errors)
-_production_config_instance = None
-
-def _get_production_config():
-    """Get or create ProductionConfig instance with validation."""
-    global _production_config_instance
-    if _production_config_instance is None:
-        _production_config_instance = ProductionConfig()
-    return _production_config_instance
-
 # Configuration dictionary
 config = {
     'development': DevelopmentConfig,
