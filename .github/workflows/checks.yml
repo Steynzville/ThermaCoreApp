@@ -29,7 +29,7 @@ jobs:
 
       - name: Install pnpm dependencies (frontend)
         run: pnpm install --frozen-lockfile
-        working-directory: ./ # Corrected path to the repository root
+        working-directory: ./ # pnpm-lock.yaml is in the root of the checked-out repository
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -38,15 +38,15 @@ jobs:
 
       - name: Install Python dependencies (backend)
         run: pip install -r backend/requirements.txt
-        working-directory: ./ # Corrected path to the repository root
+        working-directory: ./ # requirements.txt is in backend/ relative to the root
 
       - name: Run Frontend Tests
         run: pnpm test
-        working-directory: ./ # Corrected path to the repository root
+        working-directory: ./ # Frontend tests are run from the root
 
       - name: Run Backend Tests
         run: pytest
-        working-directory: ./backend # Corrected path to the backend directory
+        working-directory: ./backend # Backend tests are run from the backend directory
 
   python-quality-and-security:
     runs-on: ubuntu-latest
@@ -60,22 +60,22 @@ jobs:
           python-version: '3.10'
 
       - name: Install Python dependencies
-        run: pip install -r backend/requirements.txt flake8 ruff bandit # Corrected path
-        working-directory: ./ # Added working-directory to ensure correct context
+        run: pip install -r backend/requirements.txt flake8 ruff bandit
+        working-directory: ./ # requirements.txt is in backend/ relative to the root
 
       - name: Run Ruff (Python Linter/Formatter)
         run: ruff check .
-        working-directory: ./backend # Corrected path to the backend directory
+        working-directory: ./backend # Ruff runs in the backend directory
 
       - name: Run Bandit (Python SAST)
         run: bandit -r . -l -f json -o .bandit_report.json
-        working-directory: ./backend # Corrected path to the backend directory
+        working-directory: ./backend # Bandit runs in the backend directory
 
       - name: Upload Bandit Report
         uses: actions/upload-artifact@v4
         with:
           name: bandit-report
-          path: ./.bandit_report.json # Corrected path relative to the repository root
+          path: ./backend/.bandit_report.json # Path to the report relative to the repository root
 
   dependency-and-secret-scanning:
     runs-on: ubuntu-latest
@@ -89,10 +89,10 @@ jobs:
       - name: osv-scanner
         uses: google/osv-scanner-action@v2.2.3
         with:
-          scan-path: ./ # Corrected path to the repository root
+          scan-path: ./ # Scan the entire repository
 
       - name: Run Secret Scanner
         uses: secret-scanner/action@0.0.2
         with:
           fail_on_new_secrets: true
-          working-directory: ./ # Corrected path to the repository root
+          working-directory: ./ # Run secret scanner in the repository root
