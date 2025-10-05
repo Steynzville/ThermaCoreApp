@@ -1,0 +1,98 @@
+name: Focused Code Quality and Security Checks
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: list workspace files
+        run: ls -l ${{ github.workspace }}
+
+      - name: Set up Node.js (for pnpm)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8 # or your preferred version
+        working-directory: ..
+
+      - name: Install pnpm dependencies (frontend)
+        run: pnpm install --frozen-lockfile
+        working-directory: ${{ github.workspace }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Python dependencies (backend)
+        run: pip install -r backend/requirements.txt
+
+      - name: Run Frontend Tests
+        run: pnpm test
+
+      - name: Run Backend Tests
+        run: pytest
+
+  python-quality-and-security:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Python dependencies
+        run: pip install -r backend/requirements.txt flake8 ruff bandit
+
+      - name: Run Flake8 (Python Linter)
+        run: flake8 .
+
+      - name: Run Ruff (Python Linter/Formatter)
+        run: ruff check .
+
+      - name: Run Bandit (Python SAST)
+        run: bandit -r . -l -f json -o .bandit_report.json
+
+      - name: Upload Bandit Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: .bandit_report.json
+
+  dependency-and-secret-scanning:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+
+      - name: Run OSV-Scanner (Dependency Vulnerabilities)
+        uses: google/osv-scanner-action@v2.2.3
+        with:
+          scan-path: './ThermaCoreApp'
+
+      - name: Run Secret Scanner
+        uses: secret-scanner/action@0.0.2
+        with:
+          fail_on_new_secrets: true
