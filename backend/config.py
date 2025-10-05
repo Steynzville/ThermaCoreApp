@@ -174,7 +174,7 @@ class TestingConfig(Config):
 # Configuration dictionary
 config = {
     'development': DevelopmentConfig,
-    'production': ProductionConfig,  # Keep as class for direct access, will be instantiated in create_app
+    'production': ProductionConfig,  # All values are config classes; instantiation happens in create_app as needed
     'testing': TestingConfig,
     'default': DevelopmentConfig
 }
