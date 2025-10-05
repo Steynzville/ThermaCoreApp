@@ -2,7 +2,8 @@
 import os
 import tempfile
 import pytest
-from sqlalchemy import text
+import sys
+from sqlalchemy import text, inspect
 
 from app import create_app, db
 from app.models import User, Role, Permission, Unit, Sensor
@@ -14,21 +15,86 @@ def _init_database():
     # Check if we're using PostgreSQL for tests
     use_postgres = os.environ.get('USE_POSTGRES_TESTS', 'false').lower() == 'true'
     
-    if use_postgres:
-        # Use PostgreSQL migration script for PostgreSQL tests
-        schema_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
-            'migrations', 
-            '001_initial_schema.sql'
-        )
-        with open(schema_path, 'r') as f:
-            schema_sql = f.read()
-        db.session.execute(text(schema_sql))
-        db.session.commit()
-    else:
-        # For SQLite tests, use SQLAlchemy's create_all() which properly handles
-        # enum types and other SQLAlchemy-specific features
-        db.create_all()
+    print(f"\n{'='*70}")
+    print("Database Initialization - Debug Output")
+    print(f"{'='*70}")
+    print(f"Database Type: {'PostgreSQL' if use_postgres else 'SQLite'}")
+    print(f"Database URI: {db.engine.url}")
+    
+    try:
+        if use_postgres:
+            print("Using PostgreSQL migration script for schema initialization...")
+            # Use PostgreSQL migration script for PostgreSQL tests
+            schema_path = os.path.join(
+                os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
+                'migrations', 
+                '001_initial_schema.sql'
+            )
+            print(f"Schema file path: {schema_path}")
+            
+            if not os.path.exists(schema_path):
+                raise FileNotFoundError(f"Schema file not found: {schema_path}")
+            
+            with open(schema_path, 'r') as f:
+                schema_sql = f.read()
+            
+            print(f"Schema SQL loaded ({len(schema_sql)} characters)")
+            db.session.execute(text(schema_sql))
+            db.session.commit()
+            print("✓ PostgreSQL schema executed successfully")
+            
+        else:
+            # For SQLite tests, use SQLAlchemy's create_all() which properly handles
+            # enum types and other SQLAlchemy-specific features
+            print("Using SQLAlchemy create_all() for SQLite schema initialization...")
+            print(f"SQLAlchemy models to create: {list(db.Model.metadata.tables.keys())}")
+            
+            db.create_all()
+            print("✓ SQLite tables created successfully")
+        
+        # Verify tables were created
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
+        print(f"\nTables created ({len(tables)}):")
+        for table in sorted(tables):
+            columns = inspector.get_columns(table)
+            print(f"  ✓ {table} ({len(columns)} columns)")
+            for col in columns:
+                print(f"    - {col['name']} ({col['type']})")
+        
+        # Verify expected tables exist
+        expected_tables = ['users', 'roles', 'permissions', 'role_permissions', 'units', 'sensors', 'sensor_readings']
+        missing_tables = [t for t in expected_tables if t not in tables]
+        
+        if missing_tables:
+            print(f"\n✗ ERROR: Missing expected tables: {missing_tables}")
+            print(f"Available tables: {tables}")
+            raise RuntimeError(f"Database initialization incomplete - missing tables: {missing_tables}")
+        
+        print(f"\n✓ All expected tables verified")
+        print(f"{'='*70}\n")
+        
+    except Exception as e:
+        print(f"\n{'='*70}")
+        print("✗ ERROR: Database initialization failed!")
+        print(f"{'='*70}")
+        print(f"Error type: {type(e).__name__}")
+        print(f"Error message: {str(e)}")
+        print(f"Database type: {'PostgreSQL' if use_postgres else 'SQLite'}")
+        print(f"Database URI: {db.engine.url}")
+        
+        # Try to get current table state for debugging
+        try:
+            inspector = inspect(db.engine)
+            existing_tables = inspector.get_table_names()
+            print(f"Existing tables at time of error: {existing_tables}")
+        except Exception as inspect_error:
+            print(f"Could not inspect database: {inspect_error}")
+        
+        print(f"{'='*70}\n")
+        
+        # Re-raise the exception to fail the test setup
+        raise
 
 
 @pytest.fixture(scope='session')
