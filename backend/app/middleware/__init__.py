@@ -18,7 +18,6 @@ These components work together to provide:
 
 from .validation import (
     RequestValidator,
-    validate_schema,
     validate_query_params,
     validate_path_params,
     sanitize
@@ -58,7 +57,6 @@ from .audit import (
 __all__ = [
     # Validation
     'RequestValidator',
-    'validate_schema', 
     'validate_query_params',
     'validate_path_params',
     'sanitize',
