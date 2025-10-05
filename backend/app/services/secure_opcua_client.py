@@ -1,8 +1,7 @@
 """Secure OPC-UA Client with enhanced security features."""
 from typing import Dict, Any, Optional
-from datetime import datetime, timezone
 
-from app.services.opcua_service import OPCUAClient, opcua_available, logger
+from app.services.opcua_service import OPCUAClient, logger
 from app.services.secure_opcua_wrapper import SecureOPCUAWrapper, secure_operation
 
 

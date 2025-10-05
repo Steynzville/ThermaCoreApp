@@ -1,7 +1,6 @@
 """Tests for secure OPC-UA wrapper and client."""
 import pytest
-from unittest.mock import Mock, MagicMock, patch
-from datetime import datetime, timezone
+from unittest.mock import Mock, patch
 
 from app.services.secure_opcua_wrapper import SecureOPCUAWrapper, secure_operation
 from app.services.secure_opcua_client import SecureOPCUAClient
