@@ -56,8 +56,8 @@ services:
 
   frontend:
     build:
-      context: .
-      dockerfile: src/Dockerfile
+      context: ./src
+      dockerfile: Dockerfile
     ports:
       - "80:80"
     environment:
