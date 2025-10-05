@@ -11,6 +11,8 @@ on:
 jobs:
   ruff-autofix:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Grant write permission for GITHUB_TOKEN to push changes
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -29,19 +31,19 @@ jobs:
       - name: Run Ruff and Auto-Fix issues
         id: ruff_fix
         run: ruff check . --fix
-        working-directory: ./ThermaCoreApp/backend
+        working-directory: ./backend
 
       - name: Check for changes
         id: git_status
         run: echo "changes=$(git status --porcelain)" >> $GITHUB_OUTPUT
-        working-directory: ./ThermaCoreApp/backend
+        working-directory: ./backend
 
       - name: Commit and Push changes if any
-        if: steps.git_status.outputs.changes != ''
+        if: steps.git_status.outputs.changes != '' && github.event_name == 'push'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .
           git commit -m "Fix Python code style with Ruff"
           git push
-        working-directory: ./ThermaCoreApp/backend
+        working-directory: ./backend
