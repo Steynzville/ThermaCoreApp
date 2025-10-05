@@ -52,6 +52,20 @@ jobs:
       - name: Run Frontend Tests
         run: pnpm test
 
+      - name: Set up test database
+        run: |
+          python -c "
+          import os
+          os.environ['FLASK_ENV'] = 'test'
+          os.environ['DATABASE_URL'] = 'sqlite:///test.db'
+          from app import create_app, db
+          app = create_app('testing')
+          with app.app_context():
+              db.create_all()
+              print('Database tables created successfully')
+          "
+        working-directory: backend
+
       - name: Run Backend Tests
         run: pytest
         working-directory: backend
