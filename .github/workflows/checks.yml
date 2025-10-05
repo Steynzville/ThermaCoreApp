@@ -194,7 +194,7 @@ jobs:
           scan-path: .
 
       - name: Run Secret Scanner
-        uses: secret-scanner/action@v0.0.2
+        uses: secret-scanner/action@0.2.1
         with:
           fail_on_new_secrets: true
 
