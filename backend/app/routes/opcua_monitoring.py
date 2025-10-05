@@ -63,19 +63,22 @@ def get_opcua_security_events():
         JSON response with recent security events
     """
     try:
-        events = []
+        raw_events = []
         
         # Check if secure OPC-UA client is available
         if hasattr(current_app, 'secure_opcua_client'):
             client = current_app.secure_opcua_client
             
             if hasattr(client, 'get_security_events'):
-                events = client.get_security_events(limit=20)
-                
-                # Convert datetime objects to ISO format strings
-                for event in events:
-                    if 'timestamp' in event and hasattr(event['timestamp'], 'isoformat'):
-                        event['timestamp'] = event['timestamp'].isoformat()
+                raw_events = client.get_security_events(limit=20)
+        
+        # Create copies of events and convert datetime objects to ISO format strings
+        events = []
+        for event in raw_events:
+            event_copy = event.copy()
+            if 'timestamp' in event_copy and hasattr(event_copy['timestamp'], 'isoformat'):
+                event_copy['timestamp'] = event_copy['timestamp'].isoformat()
+            events.append(event_copy)
         
         logger.info(f"Retrieved {len(events)} OPC-UA security events")
         
