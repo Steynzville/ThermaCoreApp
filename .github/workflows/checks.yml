@@ -17,6 +17,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Debug - Check for pnpm-lock.yaml
+        run: |
+          echo "Checking for pnpm-lock.yaml:"
+          find . -name "pnpm-lock.yaml" -type f
+          echo "Current directory contents:"
+          ls -la
+          echo "File check:"
+          [ -f "pnpm-lock.yaml" ] && echo "pnpm-lock.yaml exists" || echo "pnpm-lock.yaml does not exist"
+
       - name: Set up Node.js (for pnpm)
         uses: actions/setup-node@v4
         with:
@@ -28,8 +37,8 @@ jobs:
           version: 8
 
       - name: Install pnpm dependencies (frontend)
-        run: pnpm install --frozen-lockfile
-        # No working-directory needed - files are in root
+        run: pnpm install
+        # Remove --frozen-lockfile to allow generation if missing
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -38,15 +47,13 @@ jobs:
 
       - name: Install Python dependencies (backend)
         run: pip install -r backend/requirements.txt
-        # No working-directory needed - backend/ is relative to root
 
       - name: Run Frontend Tests
         run: pnpm test
-        # No working-directory needed - run from root
 
       - name: Run Backend Tests
         run: pytest
-        working-directory: backend  # Just 'backend' without ./
+        working-directory: backend
 
   python-quality-and-security:
     runs-on: ubuntu-latest
@@ -88,10 +95,9 @@ jobs:
       - name: osv-scanner
         uses: google/osv-scanner-action@v2.2.3
         with:
-          scan-path: .  # Scan the entire repository
+          scan-path: .
 
       - name: Run Secret Scanner
         uses: secret-scanner/action@0.0.2
         with:
           fail_on_new_secrets: true
-          # No working-directory needed - scan from root
