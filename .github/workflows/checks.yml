@@ -17,15 +17,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Debug - List directory structure
-        run: |
-          echo "Current directory:"
-          pwd
-          echo "Directory contents:"
-          ls -la
-          echo "Steynzville directory contents:"
-          ls -la Steynzville/ || echo "Steynzville directory not found"
-
       - name: Set up Node.js (for pnpm)
         uses: actions/setup-node@v4
         with:
@@ -36,12 +27,9 @@ jobs:
         with:
           version: 8
 
-      - name: Change to actual code directory
-        run: cd Steynzville/ThermaCoreApp && pwd && ls -la
-
       - name: Install pnpm dependencies (frontend)
         run: pnpm install --frozen-lockfile
-        working-directory: Steynzville/ThermaCoreApp
+        # No working-directory needed - files are in root
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -49,13 +37,61 @@ jobs:
           python-version: '3.10'
 
       - name: Install Python dependencies (backend)
-        run: pip install -r requirements.txt
-        working-directory: Steynzville/ThermaCoreApp
+        run: pip install -r backend/requirements.txt
+        # No working-directory needed - backend/ is relative to root
 
       - name: Run Frontend Tests
         run: pnpm test
-        working-directory: Steynzville/ThermaCoreApp
+        # No working-directory needed - run from root
 
       - name: Run Backend Tests
         run: pytest
-        working-directory: Steynzville/ThermaCoreApp
+        working-directory: backend  # Just 'backend' without ./
+
+  python-quality-and-security:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Python dependencies
+        run: pip install -r backend/requirements.txt flake8 ruff bandit
+
+      - name: Run Ruff (Python Linter/Formatter)
+        run: ruff check .
+        working-directory: backend
+
+      - name: Run Bandit (Python SAST)
+        run: bandit -r . -l -f json -o .bandit_report.json
+        working-directory: backend
+
+      - name: Upload Bandit Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: backend/.bandit_report.json
+
+  dependency-and-secret-scanning:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+
+      - name: osv-scanner
+        uses: google/osv-scanner-action@v2.2.3
+        with:
+          scan-path: .  # Scan the entire repository
+
+      - name: Run Secret Scanner
+        uses: secret-scanner/action@0.0.2
+        with:
+          fail_on_new_secrets: true
+          # No working-directory needed - scan from root
