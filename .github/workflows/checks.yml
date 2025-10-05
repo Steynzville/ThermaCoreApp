@@ -29,7 +29,7 @@ jobs:
 
       - name: Install pnpm dependencies (frontend)
         run: pnpm install --frozen-lockfile
-        working-directory: ./ThermaCoreApp  # Corrected path
+        working-directory: ./ # Corrected path to the repository root
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -38,15 +38,15 @@ jobs:
 
       - name: Install Python dependencies (backend)
         run: pip install -r backend/requirements.txt
-        working-directory: ./ThermaCoreApp  # Added working-directory
+        working-directory: ./ # Corrected path to the repository root
 
       - name: Run Frontend Tests
         run: pnpm test
-        working-directory: ./ThermaCoreApp  # Added working-directory
+        working-directory: ./ # Corrected path to the repository root
 
       - name: Run Backend Tests
         run: pytest
-        working-directory: ./ThermaCoreApp/backend  # Corrected path
+        working-directory: ./backend # Corrected path to the backend directory
 
   python-quality-and-security:
     runs-on: ubuntu-latest
@@ -60,21 +60,22 @@ jobs:
           python-version: '3.10'
 
       - name: Install Python dependencies
-        run: pip install -r ThermaCoreApp/backend/requirements.txt flake8 ruff bandit # Corrected path
+        run: pip install -r backend/requirements.txt flake8 ruff bandit # Corrected path
+        working-directory: ./ # Added working-directory to ensure correct context
 
       - name: Run Ruff (Python Linter/Formatter)
         run: ruff check .
-        working-directory: ./ThermaCoreApp/backend  # Corrected path
+        working-directory: ./backend # Corrected path to the backend directory
 
       - name: Run Bandit (Python SAST)
         run: bandit -r . -l -f json -o .bandit_report.json
-        working-directory: ./ThermaCoreApp/backend  # Corrected path
+        working-directory: ./backend # Corrected path to the backend directory
 
       - name: Upload Bandit Report
         uses: actions/upload-artifact@v4
         with:
           name: bandit-report
-          path: ./ThermaCoreApp/.bandit_report.json # Corrected path
+          path: ./.bandit_report.json # Corrected path relative to the repository root
 
   dependency-and-secret-scanning:
     runs-on: ubuntu-latest
@@ -88,10 +89,10 @@ jobs:
       - name: osv-scanner
         uses: google/osv-scanner-action@v2.2.3
         with:
-          scan-path: ./ThermaCoreApp # Corrected path
+          scan-path: ./ # Corrected path to the repository root
 
       - name: Run Secret Scanner
         uses: secret-scanner/action@0.0.2
         with:
           fail_on_new_secrets: true
-          working-directory: ./ThermaCoreApp # Added working-directory
+          working-directory: ./ # Corrected path to the repository root
