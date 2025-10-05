@@ -18,7 +18,6 @@ jobs:
     env:
       SECRET_KEY: dummy-test-secret-key-123-for-github-actions
       JWT_SECRET_KEY: dummy-jwt-secret-key-456-for-github-actions
-      DATABASE_URL: sqlite:///test.db
       FLASK_ENV: test
       FLASK_APP: app.py
       # MQTT environment variables to prevent production config errors
@@ -29,47 +28,70 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js (for pnpm)
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8
-
-      - name: Install pnpm dependencies (frontend)
-        run: pnpm install
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Install Python dependencies (backend)
-        run: pip install -r backend/requirements.txt
-
-      - name: Run Frontend Tests
-        run: pnpm test
-
-      - name: Set up test database
+      - name: Set up Docker
         run: |
-          python -c "
-          import os
-          os.environ['FLASK_ENV'] = 'test'
-          os.environ['DATABASE_URL'] = 'sqlite:///test.db'
+          sudo systemctl start docker
+          docker --version
+          docker-compose --version
+
+      - name: Start Database Service
+        run: |
+          docker-compose up -d database
+          sleep 10  # Wait for database to be ready
+
+      - name: Initialize Database Schema
+        run: |
+          docker-compose exec -T database psql -U thermacore_user -d thermacore -c "
+          CREATE EXTENSION IF NOT EXISTS timescaledb;
+          SELECT extname, extversion FROM pg_extension WHERE extname = 'timescaledb';
+          "
+
+      - name: Build and Start Backend
+        run: |
+          docker-compose build backend
+          docker-compose up -d backend
+          sleep 5  # Wait for backend to be ready
+
+      - name: Run Database Migrations
+        run: |
+          docker-compose exec -T backend python -c "
           from app import create_app, db
+          from app.models.sensor_reading import SensorReading
+          
           app = create_app('testing')
           with app.app_context():
+              # Create all tables
+              db.drop_all()
               db.create_all()
-              print('Database tables created successfully')
+              print('✅ Database tables created')
+              
+              # Initialize TimescaleDB hypertables
+              try:
+                  SensorReading.create_hypertable()
+                  print('✅ TimescaleDB hypertables initialized')
+              except Exception as e:
+                  print(f'📝 Note: {e}')
+                  
+              # Verify tables exist
+              from sqlalchemy import inspect
+              inspector = inspect(db.engine)
+              tables = inspector.get_table_names()
+              print(f'📊 Tables in database: {tables}')
           "
-        working-directory: backend
 
       - name: Run Backend Tests
-        run: pytest
-        working-directory: backend
+        run: |
+          docker-compose exec -T backend python -m pytest -v --tb=short
+
+      - name: Run Frontend Tests
+        run: |
+          # Build frontend for testing
+          docker-compose build frontend
+          docker-compose run --rm frontend npm test
+
+      - name: Stop Services
+        if: always()
+        run: docker-compose down
 
   python-quality-and-security:
     runs-on: ubuntu-latest
