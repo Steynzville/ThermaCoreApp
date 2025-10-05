@@ -230,6 +230,7 @@ def create_app(config_name=None):
         from app.routes.historical import historical_bp
         from app.routes.multiprotocol import multiprotocol_bp
         from app.routes.remote_control import remote_control_bp
+        from app.routes.opcua_monitoring import init_opcua_monitoring
         
         app.register_blueprint(auth_bp, url_prefix=app.config['API_PREFIX'])
         app.register_blueprint(units_bp, url_prefix=app.config['API_PREFIX'])
@@ -239,6 +240,7 @@ def create_app(config_name=None):
         app.register_blueprint(historical_bp, url_prefix=app.config['API_PREFIX'])
         app.register_blueprint(multiprotocol_bp, url_prefix=app.config['API_PREFIX'])
         app.register_blueprint(remote_control_bp, url_prefix=app.config['API_PREFIX'])
+        init_opcua_monitoring(app)  # Initialize OPC-UA monitoring endpoints
     except ImportError:
         pass  # Routes may not be importable without full dependencies
     
@@ -249,6 +251,7 @@ def create_app(config_name=None):
             from app.services.websocket_service import websocket_service
             from app.services.realtime_processor import realtime_processor
             from app.services.opcua_service import opcua_client
+            from app.services.secure_opcua_client import secure_opcua_client
             from app.services.protocol_gateway_simulator import ProtocolGatewaySimulator
             from app.services.data_storage_service import data_storage_service
             # Phase 3 services
@@ -270,11 +273,27 @@ def create_app(config_name=None):
                 'init_app', data_storage_service
             )
             
-            _initialize_critical_service(
-                opcua_client, "OPC UA client", app, logger,
-                'init_app', data_storage_service  
-            )
-            
+            # Initialize secure OPC-UA client (preferred) with fallback to standard client
+            try:
+                _initialize_critical_service(
+                    secure_opcua_client, "Secure OPC UA client", app, logger,
+                    'init_app', data_storage_service  
+                )
+                app.secure_opcua_client = secure_opcua_client
+                app.opcua_client = secure_opcua_client  # Also set standard reference for compatibility
+                logger.info("Using secure OPC-UA client with security wrapper")
+            except Exception as secure_init_error:
+                logger.warning(f"Secure OPC-UA client initialization failed, falling back to standard client: {secure_init_error}")
+                try:
+                    _initialize_critical_service(
+                        opcua_client, "OPC UA client", app, logger,
+                        'init_app', data_storage_service  
+                    )
+                    app.opcua_client = opcua_client
+                    logger.info("Using standard OPC-UA client (fallback)")
+                except Exception as standard_init_error:
+                    logger.error(f"Standard OPC-UA client initialization failed: {standard_init_error}", exc_info=True)
+                    app.opcua_client = None
             # Initialize non-critical services (failures won't stop the app)
             try:
                 websocket_service.init_app(app)
@@ -325,7 +344,7 @@ def create_app(config_name=None):
             app.mqtt_client = mqtt_client
             app.websocket_service = websocket_service
             app.realtime_processor = realtime_processor
-            app.opcua_client = opcua_client
+            # opcua_client is already set above (either secure or standard)
             app.protocol_simulator = protocol_simulator
             app.data_storage_service = data_storage_service
             # Phase 3 & 4 services

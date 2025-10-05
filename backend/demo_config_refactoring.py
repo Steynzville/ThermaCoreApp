@@ -39,7 +39,7 @@ for key in ['MQTT_CA_CERTS', 'MQTT_CERT_FILE', 'MQTT_KEY_FILE',
     os.environ.pop(key, None)
 
 print("   Importing config module without production env vars...")
-from config import ProductionConfig, DevelopmentConfig, TestingConfig
+from config import ProductionConfig, DevelopmentConfig, TestingConfig  # noqa: E402
 
 print("\n3. Validation still enforced when ProductionConfig is instantiated")
 print("-" * 70)
