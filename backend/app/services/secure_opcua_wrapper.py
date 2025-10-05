@@ -92,18 +92,31 @@ class SecureOPCUAWrapper:
         
         # Remove any potentially sensitive parts while keeping structure
         # For production, only show the pattern, not the actual ID
+        if self._should_sanitize_for_production():
+            return self._sanitize_node_id_for_production(node_id)
+        
+        return node_id
+
+    def _should_sanitize_for_production(self) -> bool:
+        """
+        Determine if node ID should be sanitized for production environment.
+        """
         try:
             from app.utils.environment import is_production_environment
             if self._client and hasattr(self._client, '_app'):
-                if is_production_environment(self._client._app):
-                    # In production, sanitize more aggressively
-                    parts = node_id.split(';')
-                    if len(parts) > 0:
-                        return f"ns=***;{parts[-1][:10]}..."
+                return is_production_environment(self._client._app)
         except Exception:
             pass
-        
-        return node_id
+        return False
+
+    def _sanitize_node_id_for_production(self, node_id: str) -> str:
+        """
+        Aggressively sanitize node ID for production environment.
+        """
+        parts = node_id.split(';')
+        if len(parts) > 0:
+            return f"ns=***;{parts[-1][:10]}..."
+        return "***SANITIZED***"
     
     def log_security_event(self, event_type: str, details: Dict[str, Any]):
         """
