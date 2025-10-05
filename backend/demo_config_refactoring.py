@@ -50,7 +50,7 @@ try:
     prod_config = ProductionConfig()
     print("      ✗ FAILED: Should have raised ValueError")
 except ValueError as e:
-    print(f"      ✓ SUCCESS: Raised ValueError as expected")
+    print("      ✓ SUCCESS: Raised ValueError as expected")
     print(f"         Message: {str(e)[:60]}...")
 
 print("\n   b) Setting MQTT certs but not OPC UA certs...")
@@ -62,7 +62,7 @@ try:
     prod_config = ProductionConfig()
     print("      ✗ FAILED: Should have raised ValueError")
 except ValueError as e:
-    print(f"      ✓ SUCCESS: Raised ValueError as expected")
+    print("      ✓ SUCCESS: Raised ValueError as expected")
     print(f"         Message: {str(e)[:60]}...")
 
 print("\n   c) Setting all required certificates...")
