@@ -1,6 +1,7 @@
 name: Focused Code Quality and Security Checks
 permissions:
-  contents: read
+  contents: write
+  pull-requests: write
 
 on:
   push:
@@ -13,18 +14,14 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    env:
+      SECRET_KEY: dummy-test-secret-key-123-for-github-actions
+      DATABASE_URL: sqlite:///test.db
+      FLASK_ENV: test
+      FLASK_APP: app.py
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Debug - Check for pnpm-lock.yaml
-        run: |
-          echo "Checking for pnpm-lock.yaml:"
-          find . -name "pnpm-lock.yaml" -type f
-          echo "Current directory contents:"
-          ls -la
-          echo "File check:"
-          [ -f "pnpm-lock.yaml" ] && echo "pnpm-lock.yaml exists" || echo "pnpm-lock.yaml does not exist"
 
       - name: Set up Node.js (for pnpm)
         uses: actions/setup-node@v4
@@ -38,7 +35,6 @@ jobs:
 
       - name: Install pnpm dependencies (frontend)
         run: pnpm install
-        # Remove --frozen-lockfile to allow generation if missing
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -57,6 +53,11 @@ jobs:
 
   python-quality-and-security:
     runs-on: ubuntu-latest
+    env:
+      SECRET_KEY: dummy-test-secret-key-123-for-github-actions
+      DATABASE_URL: sqlite:///test.db
+      FLASK_ENV: test
+      FLASK_APP: app.py
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -68,6 +69,14 @@ jobs:
 
       - name: Install Python dependencies
         run: pip install -r backend/requirements.txt flake8 ruff bandit
+
+      - name: Run Flake8 (Python Linter)
+        run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        working-directory: backend
+
+      - name: Run Flake8 (Python Style Guide)
+        run: flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        working-directory: backend
 
       - name: Run Ruff (Python Linter/Formatter)
         run: ruff check .
@@ -101,3 +110,30 @@ jobs:
         uses: secret-scanner/action@0.0.2
         with:
           fail_on_new_secrets: true
+
+  dependabot-auto-merge:
+    runs-on: ubuntu-latest
+    if: ${{ github.actor == 'dependabot[bot]' }}
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Enable auto-merge for Dependabot PRs
+        if: ${{ steps.metadata.outputs.update-type == 'version-update:semver-patch' }}
+        run: |
+          gh pr merge --auto --merge "${{ github.event.pull_request.html_url }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Approve Dependabot PRs
+        if: ${{ steps.metadata.outputs.update-type == 'version-update:semver-patch' }}
+        run: |
+          gh pr review --approve "${{ github.event.pull_request.html_url }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
