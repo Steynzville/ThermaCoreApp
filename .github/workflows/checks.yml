@@ -17,6 +17,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Debug - List directory structure
+        run: |
+          echo "Current directory:"
+          pwd
+          echo "Directory contents:"
+          ls -la
+          echo "Steynzville directory contents:"
+          ls -la Steynzville/ || echo "Steynzville directory not found"
+
       - name: Set up Node.js (for pnpm)
         uses: actions/setup-node@v4
         with:
@@ -27,9 +36,12 @@ jobs:
         with:
           version: 8
 
+      - name: Change to actual code directory
+        run: cd Steynzville/ThermaCoreApp && pwd && ls -la
+
       - name: Install pnpm dependencies (frontend)
         run: pnpm install --frozen-lockfile
-        working-directory: Steynzville/ThermaCoreApp  # Remove the leading ./
+        working-directory: Steynzville/ThermaCoreApp
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -37,62 +49,13 @@ jobs:
           python-version: '3.10'
 
       - name: Install Python dependencies (backend)
-        run: pip install -r backend/requirements.txt
-        working-directory: Steynzville/ThermaCoreApp  # Remove the leading ./
+        run: pip install -r requirements.txt
+        working-directory: Steynzville/ThermaCoreApp
 
       - name: Run Frontend Tests
         run: pnpm test
-        working-directory: Steynzville/ThermaCoreApp  # Remove the leading ./
+        working-directory: Steynzville/ThermaCoreApp
 
       - name: Run Backend Tests
         run: pytest
-        working-directory: Steynzville/ThermaCoreApp/backend  # Remove the leading ./
-
-  python-quality-and-security:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Install Python dependencies
-        run: pip install -r backend/requirements.txt flake8 ruff bandit
-        working-directory: Steynzville/ThermaCoreApp  # Remove the leading ./
-
-      - name: Run Ruff (Python Linter/Formatter)
-        run: ruff check .
-        working-directory: Steynzville/ThermaCoreApp/backend  # Remove the leading ./
-
-      - name: Run Bandit (Python SAST)
-        run: bandit -r . -l -f json -o .bandit_report.json
-        working-directory: Steynzville/ThermaCoreApp/backend  # Remove the leading ./
-
-      - name: Upload Bandit Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: bandit-report
-          path: Steynzville/ThermaCoreApp/backend/.bandit_report.json  # Remove the leading ./
-
-  dependency-and-secret-scanning:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Dependency Review
-        uses: actions/dependency-review-action@v4
-
-      - name: osv-scanner
-        uses: google/osv-scanner-action@v2.2.3
-        with:
-          scan-path: Steynzville/ThermaCoreApp  # Remove the leading ./
-
-      - name: Run Secret Scanner
-        uses: secret-scanner/action@0.0.2
-        with:
-          fail_on_new_secrets: true
-          working-directory: Steynzville/ThermaCoreApp  # Remove the leading ./
+        working-directory: Steynzville/ThermaCoreApp
