@@ -114,9 +114,8 @@ class ProductionConfig(Config):
     
     def __init__(self):
         """Initialize production configuration with environment variable validation."""
-        # Call parent init if it exists
-        if hasattr(super(), '__init__'):
-            super().__init__()
+        # Call parent init
+        super().__init__()
         
         # Override WebSocket CORS for production - restrict to trusted domains
         # This should be set via environment variable in production
