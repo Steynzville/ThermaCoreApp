@@ -68,7 +68,7 @@ def check_conftest_changes():
             failed += 1
     
     # Check for detailed table information logging
-    if "for col in columns:" in content and "print(f\"    - {col['name']}":
+    if "for col in columns:" in content and "print(f\"    - {col['name']}\")" in content:
         print(f"  ✓ Column details logging")
         passed += 1
     else:
