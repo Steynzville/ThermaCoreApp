@@ -5,19 +5,35 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "09:00"
     open-pull-requests-limit: 10
     versioning-strategy: auto
-    package-manager: "pnpm"  # Optional: explicitly specify pnpm
+    package-manager: "pnpm"
+    labels:
+      - "dependencies"
+      - "npm"
 
   # Python dependencies
   - package-ecosystem: "pip"
     directory: "/backend"
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "09:00"
     open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "python"
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "github-actions"
