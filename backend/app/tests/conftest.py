@@ -2,6 +2,7 @@
 import os
 import tempfile
 import pytest
+import traceback
 from sqlalchemy import text, inspect
 
 from app import create_app, db
@@ -48,6 +49,12 @@ def _init_database():
             print("Using SQLAlchemy create_all() for SQLite schema initialization...")
             print(f"SQLAlchemy models to create: {list(db.Model.metadata.tables.keys())}")
             
+            # Drop all tables first to ensure clean state
+            print("Dropping existing tables (if any) to ensure clean state...")
+            db.drop_all()
+            print("✓ Existing tables dropped")
+            
+            # Create all tables
             db.create_all()
             print("✓ SQLite tables created successfully")
         
@@ -82,11 +89,15 @@ def _init_database():
         print(f"Database type: {'PostgreSQL' if use_postgres else 'SQLite'}")
         print(f"Database URI: {db.engine.url}")
         
+        # Print full traceback for debugging
+        print(f"\nFull traceback:")
+        print(traceback.format_exc())
+        
         # Try to get current table state for debugging
         try:
             inspector = inspect(db.engine)
             existing_tables = inspector.get_table_names()
-            print(f"Existing tables at time of error: {existing_tables}")
+            print(f"\nExisting tables at time of error: {existing_tables}")
         except Exception as inspect_error:
             print(f"Could not inspect database: {inspect_error}")
         
