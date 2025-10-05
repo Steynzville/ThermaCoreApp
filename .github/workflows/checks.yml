@@ -27,6 +27,14 @@ jobs:
         with:
           version: 8 # or your preferred version
 
+      # Ensure lockfile is always present for install
+      - name: Ensure pnpm-lock.yaml is present
+        run: |
+          if [ ! -f pnpm-lock.yaml ]; then
+            echo "pnpm-lock.yaml not found in working directory. Copying from root if possible..."
+            cp "${GITHUB_WORKSPACE}/pnpm-lock.yaml" ./pnpm-lock.yaml || echo "Lockfile not found in root either."
+          fi
+
       - name: Install pnpm dependencies (frontend)
         run: pnpm install --frozen-lockfile
 
