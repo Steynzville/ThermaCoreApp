@@ -55,9 +55,21 @@ This command will:
 - Pull the TimescaleDB image
 - Start all services in detached mode
 
-### 4. Initialize the Database
+### 4. Verify Database Initialization
 
-After the containers are running, initialize the database schema and seed data:
+The database schema is automatically initialized when the database container starts for the first time. The migration files in `backend/migrations/` are executed automatically.
+
+You can verify the initialization by checking the database:
+
+```bash
+# Check if tables were created
+docker-compose exec db psql -U postgres -d thermacore_db -c "\dt"
+
+# Check if TimescaleDB extension is enabled
+docker-compose exec db psql -U postgres -d thermacore_db -c "SELECT * FROM pg_extension WHERE extname='timescaledb';"
+```
+
+**Note:** If you need to manually re-initialize the database (e.g., after making changes to migrations), you can run:
 
 ```bash
 docker-compose exec backend flask init-db
