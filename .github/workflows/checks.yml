@@ -17,9 +17,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: list workspace files
-        run: ls -l ${{ github.workspace }}
-
       - name: Set up Node.js (for pnpm)
         uses: actions/setup-node@v4
         with:
@@ -33,7 +30,7 @@ jobs:
 
       - name: Install pnpm dependencies (frontend)
         run: pnpm install --frozen-lockfile
-        working-directory: ${{ github.workspace }}
+        working-directory: ..
 
       - name: Set up Python
         uses: actions/setup-python@v5
