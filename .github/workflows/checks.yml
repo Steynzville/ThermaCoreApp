@@ -22,6 +22,11 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8 # or your preferred version
+
       - name: Install pnpm dependencies (frontend)
         run: pnpm install --frozen-lockfile
 
@@ -86,4 +91,3 @@ jobs:
         uses: secret-scanner/action@v1
         with:
           fail_on_new_secrets: true
-
