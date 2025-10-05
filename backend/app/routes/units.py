@@ -254,7 +254,7 @@ def update_unit(unit_id):
         unit_schema = UnitSchema()
         return jsonify(unit_schema.dump(unit)), 200
         
-    except IntegrityError as e:
+    except IntegrityError:
         db.session.rollback()
         return jsonify({'error': 'Database constraint violation'}), 409
 
@@ -353,7 +353,8 @@ def create_unit_sensor(unit_id):
     security:
       - JWT: []
     """
-    unit = Unit.query.get_or_404(unit_id)
+    # Validate that the unit exists
+    Unit.query.get_or_404(unit_id)
     schema = SensorCreateSchema()
     
     try:
@@ -411,7 +412,8 @@ def get_unit_readings(unit_id):
     security:
       - JWT: []
     """
-    unit = Unit.query.get_or_404(unit_id)
+    # Validate that the unit exists
+    Unit.query.get_or_404(unit_id)
     hours_back = request.args.get('hours', 24, type=int)
     sensor_type = request.args.get('sensor_type')
     
