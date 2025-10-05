@@ -37,14 +37,49 @@ jobs:
           sudo chmod +x /usr/local/bin/docker-compose
           docker-compose --version
 
+      - name: Check Docker Compose Configuration
+        run: |
+          echo "📋 Checking docker-compose.yml file..."
+          ls -la docker-compose.yml || echo "❌ docker-compose.yml not found"
+          cat docker-compose.yml || echo "❌ Cannot read docker-compose.yml"
+          echo "📋 Available services:"
+          docker-compose config --services || echo "❌ Cannot parse docker-compose.yml"
+
       - name: Start Database Service
         run: |
-          docker-compose up -d database
+          # Try different possible service names
+          if docker-compose config --services | grep -q "database"; then
+            echo "✅ Starting 'database' service"
+            docker-compose up -d database
+          elif docker-compose config --services | grep -q "timescaledb"; then
+            echo "✅ Starting 'timescaledb' service"
+            docker-compose up -d timescaledb
+          elif docker-compose config --services | grep -q "db"; then
+            echo "✅ Starting 'db' service"
+            docker-compose up -d db
+          else
+            echo "❌ No database service found. Available services:"
+            docker-compose config --services
+            exit 1
+          fi
           sleep 10  # Wait for database to be ready
 
       - name: Initialize Database Schema
         run: |
-          docker-compose exec -T database psql -U thermacore_user -d thermacore -c "
+          # Determine database service name
+          if docker-compose config --services | grep -q "database"; then
+            DB_SERVICE="database"
+          elif docker-compose config --services | grep -q "timescaledb"; then
+            DB_SERVICE="timescaledb"
+          elif docker-compose config --services | grep -q "db"; then
+            DB_SERVICE="db"
+          else
+            echo "❌ Cannot determine database service name"
+            exit 1
+          fi
+          
+          echo "📊 Using database service: $DB_SERVICE"
+          docker-compose exec -T $DB_SERVICE psql -U thermacore_user -d thermacore -c "
           CREATE EXTENSION IF NOT EXISTS timescaledb;
           SELECT extname, extversion FROM pg_extension WHERE extname = 'timescaledb';
           "
@@ -240,8 +275,7 @@ jobs:
 
       - name: Run Secret Scanner
         uses: secret-scanner/action@0.2.1
-        with:
-          fail_on_new_secrets: true
+        # Remove the invalid 'fail_on_new_secrets' parameter
 
   dependabot-auto-merge:
     runs-on: ubuntu-latest
