@@ -59,9 +59,6 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r backend/requirements.txt flake8 ruff bandit
 
-      - name: Run Flake8 (Python Linter)
-        run: flake8 .
-
       - name: Run Ruff (Python Linter/Formatter)
         run: ruff check .
 
