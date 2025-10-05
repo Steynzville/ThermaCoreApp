@@ -14,7 +14,8 @@ RUN npm install -g pnpm
 RUN pnpm install --frozen-lockfile
 
 # Copy the rest of the application code
-COPY . .
+COPY src/ ./src
+COPY public/ ./public
 
 # Build the React app
 RUN pnpm run build
