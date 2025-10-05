@@ -1,0 +1,59 @@
+# Git
+.git/
+.gitignore
+.github/
+
+# Documentation
+docs/
+*.md
+!README.md
+!DOCKER_SETUP.md
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Backend artifacts (handled by backend/.dockerignore)
+backend/__pycache__/
+backend/*.pyc
+backend/.pytest_cache/
+backend/htmlcov/
+backend/performance_results/
+
+# Frontend artifacts (handled by src/.dockerignore)
+node_modules/
+dist/
+build/
+
+# Testing
+coverage/
+.coverage
+.nyc_output/
+*.log
+
+# Scripts
+scripts/
+run_all_tests.sh
+audit_asserts.py
+validate_*.py
+demo_*.py
+
+# CI/CD
+.github/
+
+# Docker
+.dockerignore
+
+# Misc
+tmp/
+temp/
+*.tmp
