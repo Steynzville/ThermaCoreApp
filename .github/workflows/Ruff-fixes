@@ -39,7 +39,7 @@ jobs:
         working-directory: ./backend
 
       - name: Commit and Push changes if any
-        if: steps.git_status.outputs.changes != '' && github.event_name == 'push'
+        if: steps.git_status.outputs.changes != '' && github.event_name == 'push' && github.actor != 'github-actions[bot]'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
