@@ -112,32 +112,42 @@ class ProductionConfig(Config):
     DEBUG = False
     TESTING = False
     
-    # Override WebSocket CORS for production - restrict to trusted domains
-    # This should be set via environment variable in production
-    _prod_websocket_origins = os.environ.get('WEBSOCKET_CORS_ORIGINS')
-    if not _prod_websocket_origins:
-        # If not explicitly set, use a secure default (no wildcard)
-        WEBSOCKET_CORS_ORIGINS = ['https://yourdomain.com']
-    else:
-        WEBSOCKET_CORS_ORIGINS = _prod_websocket_origins.split(',')
-    
-    # Enforce MQTT TLS in production if certificates are provided
-    if os.environ.get("MQTT_CA_CERTS") and os.environ.get("MQTT_CERT_FILE") and os.environ.get("MQTT_KEY_FILE"):
-        MQTT_USE_TLS = True
-    else:
-        raise ValueError("MQTT certificate paths must be set in environment variables for production")
-    
-    # Enforce OPC UA security in production
-    # Override to use at least Basic256Sha256 if not explicitly configured
-    if not os.environ.get("OPCUA_SECURITY_POLICY") or os.environ.get("OPCUA_SECURITY_POLICY") == "None":
-        OPCUA_SECURITY_POLICY = "Basic256Sha256"
-    if not os.environ.get("OPCUA_SECURITY_MODE") or os.environ.get("OPCUA_SECURITY_MODE") == "None":
-        OPCUA_SECURITY_MODE = "SignAndEncrypt"
-    
-    # Ensure certificate paths are correctly set if security is enabled
-    if OPCUA_SECURITY_POLICY != "None" and OPCUA_SECURITY_MODE != "None":
-        if not (os.environ.get("OPCUA_CERT_FILE") and os.environ.get("OPCUA_PRIVATE_KEY_FILE") and os.environ.get("OPCUA_TRUST_CERT_FILE")):
-            raise ValueError("OPC UA certificate paths must be set in environment variables when security is enabled")
+    def __init__(self):
+        """Initialize production configuration with environment variable validation."""
+        # Call parent init
+        super().__init__()
+        
+        # Override WebSocket CORS for production - restrict to trusted domains
+        # This should be set via environment variable in production
+        _prod_websocket_origins = os.environ.get('WEBSOCKET_CORS_ORIGINS')
+        if not _prod_websocket_origins:
+            # If not explicitly set, use a secure default (no wildcard)
+            self.WEBSOCKET_CORS_ORIGINS = ['https://yourdomain.com']
+        else:
+            self.WEBSOCKET_CORS_ORIGINS = _prod_websocket_origins.split(',')
+        
+        # Enforce MQTT TLS in production if certificates are provided
+        if os.environ.get("MQTT_CA_CERTS") and os.environ.get("MQTT_CERT_FILE") and os.environ.get("MQTT_KEY_FILE"):
+            self.MQTT_USE_TLS = True
+        else:
+            raise ValueError("MQTT certificate paths must be set in environment variables for production")
+        
+        # Enforce OPC UA security in production
+        # Override to use at least Basic256Sha256 if not explicitly configured
+        if not os.environ.get("OPCUA_SECURITY_POLICY") or os.environ.get("OPCUA_SECURITY_POLICY") == "None":
+            self.OPCUA_SECURITY_POLICY = "Basic256Sha256"
+        else:
+            self.OPCUA_SECURITY_POLICY = os.environ.get("OPCUA_SECURITY_POLICY")
+            
+        if not os.environ.get("OPCUA_SECURITY_MODE") or os.environ.get("OPCUA_SECURITY_MODE") == "None":
+            self.OPCUA_SECURITY_MODE = "SignAndEncrypt"
+        else:
+            self.OPCUA_SECURITY_MODE = os.environ.get("OPCUA_SECURITY_MODE")
+        
+        # Ensure certificate paths are correctly set if security is enabled
+        if self.OPCUA_SECURITY_POLICY != "None" and self.OPCUA_SECURITY_MODE != "None":
+            if not (os.environ.get("OPCUA_CERT_FILE") and os.environ.get("OPCUA_PRIVATE_KEY_FILE") and os.environ.get("OPCUA_TRUST_CERT_FILE")):
+                raise ValueError("OPC UA certificate paths must be set in environment variables when security is enabled")
 
 
 class TestingConfig(Config):
@@ -164,7 +174,7 @@ class TestingConfig(Config):
 # Configuration dictionary
 config = {
     'development': DevelopmentConfig,
-    'production': ProductionConfig,
+    'production': ProductionConfig,  # All values are config classes; instantiation happens in create_app as needed
     'testing': TestingConfig,
     'default': DevelopmentConfig
 }

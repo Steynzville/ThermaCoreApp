@@ -125,14 +125,27 @@ class TestSecurityImprovements:
     
     def test_production_config_security_defaults(self):
         """Test that production config has secure defaults."""
+        import os
+        from unittest.mock import patch
         from config import ProductionConfig
         
-        # Should enforce MQTT TLS
-        assert ProductionConfig.MQTT_USE_TLS is True
-        
-        # Should have restricted WebSocket CORS (not wildcard)
-        assert '*' not in ProductionConfig.WEBSOCKET_CORS_ORIGINS
-        
-        # Should enforce OPC UA security
-        assert ProductionConfig.OPCUA_SECURITY_POLICY != 'None'
-        assert ProductionConfig.OPCUA_SECURITY_MODE != 'None'
+        # Set required environment variables for ProductionConfig instantiation
+        with patch.dict(os.environ, {
+            'MQTT_CA_CERTS': '/path/to/ca',
+            'MQTT_CERT_FILE': '/path/to/cert',
+            'MQTT_KEY_FILE': '/path/to/key',
+            'OPCUA_CERT_FILE': '/path/to/opcua/cert',
+            'OPCUA_PRIVATE_KEY_FILE': '/path/to/opcua/key',
+            'OPCUA_TRUST_CERT_FILE': '/path/to/opcua/trust'
+        }):
+            prod_config = ProductionConfig()
+            
+            # Should enforce MQTT TLS
+            assert prod_config.MQTT_USE_TLS is True
+            
+            # Should have restricted WebSocket CORS (not wildcard)
+            assert '*' not in prod_config.WEBSOCKET_CORS_ORIGINS
+            
+            # Should enforce OPC UA security
+            assert prod_config.OPCUA_SECURITY_POLICY != 'None'
+            assert prod_config.OPCUA_SECURITY_MODE != 'None'
