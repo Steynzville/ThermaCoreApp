@@ -1,5 +1,5 @@
 # Flask and web framework dependencies
-Flask==3.1.0
+Flask==3.1.1
 Flask-SQLAlchemy==3.1.1
 Flask-Migrate==4.0.7
 Flask-JWT-Extended==4.6.0
@@ -43,4 +43,4 @@ flask-socketio==5.4.1
 
 # Optional OPC UA support
 opcua==0.98.13
-cryptography==42.0.8
+cryptography==44.0.1
