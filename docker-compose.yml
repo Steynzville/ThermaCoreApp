@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  db:
+    image: timescale/timescaledb-ha:pg13-latest
+    environment:
+      POSTGRES_DB: ${DB_NAME:-thermacore_db}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/migrations:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-thermacore_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      FLASK_ENV: production
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-password}@db:5432/${DB_NAME:-thermacore_db}
+      SECRET_KEY: ${SECRET_KEY}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_ACCESS_TOKEN_EXPIRES: ${JWT_ACCESS_TOKEN_EXPIRES:-3600}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:80}
+      MQTT_BROKER_HOST: ${MQTT_BROKER_HOST:-}
+      MQTT_BROKER_PORT: ${MQTT_BROKER_PORT:-1883}
+      MQTT_USERNAME: ${MQTT_USERNAME:-}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:-}
+      MQTT_CLIENT_ID: ${MQTT_CLIENT_ID:-thermacore_backend}
+      MQTT_KEEPALIVE: ${MQTT_KEEPALIVE:-60}
+      OPCUA_SERVER_URL: ${OPCUA_SERVER_URL:-}
+      OPCUA_USERNAME: ${OPCUA_USERNAME:-}
+      OPCUA_PASSWORD: ${OPCUA_PASSWORD:-}
+      OPCUA_SECURITY_POLICY: ${OPCUA_SECURITY_POLICY:-None}
+      OPCUA_SECURITY_MODE: ${OPCUA_SECURITY_MODE:-None}
+      OPCUA_TIMEOUT: ${OPCUA_TIMEOUT:-30}
+      WEBSOCKET_CORS_ORIGINS: ${WEBSOCKET_CORS_ORIGINS:-*}
+      WEBSOCKET_PING_TIMEOUT: ${WEBSOCKET_PING_TIMEOUT:-60}
+      WEBSOCKET_PING_INTERVAL: ${WEBSOCKET_PING_INTERVAL:-25}
+    volumes:
+      - ./backend/certs:/app/certs:ro
+    ports:
+      - "5000:5000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: always
+
+  frontend:
+    build:
+      context: .
+      dockerfile: src/Dockerfile
+    ports:
+      - "80:80"
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:5000}
+    depends_on:
+      - backend
+    restart: always
+
+volumes:
+  pgdata:
