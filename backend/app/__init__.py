@@ -120,7 +120,14 @@ def create_app(config_name=None):
                 config_name = 'production'
     
     from config import config
-    app.config.from_object(config[config_name])
+    
+    # Special handling for ProductionConfig - instantiate it to trigger validation
+    config_obj = config[config_name]
+    if config_name == 'production':
+        # Instantiate ProductionConfig to run __init__ validation
+        config_obj = config_obj()
+    
+    app.config.from_object(config_obj)
     
     # Initialize core extensions
     db.init_app(app)
