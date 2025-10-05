@@ -90,11 +90,11 @@ jobs:
         uses: actions/dependency-review-action@v4
 
       - name: Run OSV-Scanner (Dependency Vulnerabilities)
-        uses: google/osv-scanner-action@v1
+        uses: google/osv-scanner-action@v2.2.3
         with:
           scan-path: './ThermaCoreApp'
 
       - name: Run Secret Scanner
-        uses: secret-scanner/action@v1
+        uses: secret-scanner/action@0.0.2
         with:
           fail_on_new_secrets: true
