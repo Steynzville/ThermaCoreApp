@@ -443,14 +443,24 @@ test_step() {
 # Change to repo directory
 cd "$(dirname "$0")"
 
+# Create .env file with secure keys if not present
+if [ ! -f .env ]; then
+    echo "Generating .env file with secure keys..."
+    echo "POSTGRES_PASSWORD=$(openssl rand -hex 16)" > .env
+    echo "SECRET_KEY=$(openssl rand -hex 32)" >> .env
+    echo "DEBUG=False" >> .env
+fi
+
 # Test 1: Docker Compose config validation
 test_step "Docker Compose configuration" "docker-compose config > /dev/null"
 
 # Test 2: Start services
 echo "Starting services..."
 docker-compose up -d
-sleep 10
+sleep 20
 
+# Check that all containers are running
+test_step "All containers running" "[ \$(docker-compose ps | grep -c 'Up') -ge 3 ]"
 # Test 3: Database health
 test_step "Database health check" "docker-compose exec -T db pg_isready -U postgres -d thermacore_db"
 
