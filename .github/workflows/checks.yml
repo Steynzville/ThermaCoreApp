@@ -77,15 +77,7 @@ jobs:
           python-version: '3.10'
 
       - name: Install Python dependencies
-        run: pip install -r backend/requirements.txt flake8 ruff bandit
-
-      - name: Run Flake8 (Python Linter)
-        run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        working-directory: backend
-
-      - name: Run Flake8 (Python Style Guide)
-        run: flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-        working-directory: backend
+        run: pip install -r backend/requirements.txt ruff bandit
 
       - name: Run Ruff (Python Linter/Formatter)
         run: ruff check .
