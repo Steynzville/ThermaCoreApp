@@ -36,7 +36,8 @@ jobs:
           fi
 
       - name: Install pnpm dependencies (frontend)
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lootckfile
+        working-directory: ${{ github.workspace }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
