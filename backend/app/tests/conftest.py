@@ -90,7 +90,7 @@ def _init_database():
         print(f"Database URI: {db.engine.url}")
         
         # Print full traceback for debugging
-        print(f"\nFull traceback:")
+        print("\nFull traceback:")
         print(traceback.format_exc())
         
         # Try to get current table state for debugging
