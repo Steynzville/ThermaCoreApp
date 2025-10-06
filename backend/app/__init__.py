@@ -149,6 +149,8 @@ def create_app(config_name=None):
     from app.middleware.audit import setup_audit_middleware
     from app.utils.error_handler import SecurityAwareErrorHandler
     from app.utils.logging_filter import SanitizingFilter
+    # Import validation middleware to register webargs error handler
+    from app.middleware import validation  # noqa: F401
     
     setup_request_id_middleware(app)
     setup_metrics_middleware(app)
