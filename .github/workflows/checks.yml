@@ -201,9 +201,10 @@ jobs:
           sleep 10
           echo "✅ Backend started"
 
-      - name: Create Migration Script
+      - name: Run Database Migrations with Robust Script
         run: |
-          cat > /tmp/run_migrations.py << 'EOF'
+          echo "🗃️ Running database migrations with robust script..."
+          docker-compose -f docker-compose.ci.yml run --rm backend python -c "
           import sys
           import os
           
@@ -216,67 +217,76 @@ jobs:
               app = create_app('testing')
               
               with app.app_context():
-                  print("🚀 Starting database migrations...")
+                  print('🚀 Starting database migrations...')
                   
                   # Method 1: Try Flask-Migrate
                   try:
                       from flask_migrate import upgrade
                       upgrade()
-                      print("✅ Flask-Migrate upgrades applied")
+                      print('✅ Flask-Migrate upgrades applied')
                   except Exception as e:
-                      print(f"📝 Flask-Migrate not available: {e}")
+                      print(f'📝 Flask-Migrate not available: {e}')
                       
                       # Method 2: Fallback to create_all
                       db.drop_all()
                       db.create_all()
-                      print("✅ Database tables created via create_all")
+                      print('✅ Database tables created via create_all')
                   
                   # Method 3: Try to set up TimescaleDB hypertables
                   try:
                       # Try different possible import paths
                       try:
                           from app.models.sensor_reading import SensorReading
+                          print('✅ Imported SensorReading from app.models.sensor_reading')
                       except ImportError:
                           try:
                               from models.sensor_reading import SensorReading
+                              print('✅ Imported SensorReading from models.sensor_reading')
                           except ImportError:
-                              print("❌ Could not import SensorReading from any path")
+                              print('❌ Could not import SensorReading from any path')
                               SensorReading = None
                       
                       if SensorReading:
                           try:
                               SensorReading.create_hypertable()
-                              print("✅ TimescaleDB hypertables initialized")
+                              print('✅ TimescaleDB hypertables initialized')
                           except Exception as e:
-                              print(f"📝 Hypertable setup note: {e}")
+                              print(f'📝 Hypertable setup note: {e}')
+                      else:
+                          print('📝 Skipping hypertable initialization - SensorReading not available')
                   
                   except Exception as e:
-                      print(f"📝 SensorReading setup skipped: {e}")
+                      print(f'📝 SensorReading setup skipped: {e}')
                   
                   # Verify tables were created
                   from sqlalchemy import inspect
                   inspector = inspect(db.engine)
                   tables = inspector.get_table_names()
-                  print(f"📊 Final tables in database: {tables}")
+                  print(f'📊 Final tables in database: {tables}')
                   
                   if tables:
-                      print("🎉 Database migration completed successfully!")
+                      print('🎉 Database migration completed successfully!')
                   else:
-                      print("⚠️  No tables found in database")
+                      print('⚠️  No tables found in database')
                       
           except Exception as e:
-              print(f"❌ Migration failed: {e}")
+              print(f'❌ Migration failed: {e}')
               import traceback
               traceback.print_exc()
+              
+              # Debug: Show application structure
+              print('\n🔍 Debugging application structure:')
+              print(f'Current directory: {os.getcwd()}')
+              print(f'Python path: {sys.path}')
+              if os.path.exists('/app'):
+                  print(f'Files in /app: {os.listdir(\"/app\")}')
+                  if os.path.exists('/app/app'):
+                      print(f'Files in /app/app: {os.listdir(\"/app/app\")}')
+                      if os.path.exists('/app/app/models'):
+                          print(f'Files in /app/app/models: {os.listdir(\"/app/app/models\")}')
+              
               sys.exit(1)
-          EOF
-          
-          echo "📄 Migration script created"
-
-      - name: Run Database Migrations with Script
-        run: |
-          echo "🗃️ Running database migrations with script..."
-          docker-compose -f docker-compose.ci.yml run --rm backend python /tmp/run_migrations.py
+          "
 
       - name: Run Backend Tests
         run: |
