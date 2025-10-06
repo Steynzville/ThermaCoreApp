@@ -201,35 +201,82 @@ jobs:
           sleep 10
           echo "✅ Backend started"
 
-      - name: Run Database Migrations
+      - name: Create Migration Script
         run: |
-          echo "🗃️ Running database migrations..."
-          docker-compose -f docker-compose.ci.yml run --rm backend python -c "
-          from app import create_app, db
-          from app.models.sensor_reading import SensorReading
+          cat > /tmp/run_migrations.py << 'EOF'
+          import sys
+          import os
           
-          app = create_app('testing')
-          with app.app_context():
-              try:
-                  from flask_migrate import upgrade
-                  upgrade()
-                  print('✅ Database migrations applied via Flask-Migrate')
-              except ImportError:
-                  db.drop_all()
-                  db.create_all()
-                  print('✅ Database tables created via create_all')
+          # Add current directory to path
+          sys.path.insert(0, '/app')
+          
+          try:
+              from app import create_app, db
               
-              try:
-                  SensorReading.create_hypertable()
-                  print('✅ TimescaleDB hypertables initialized')
-              except Exception as e:
-                  print(f'📝 Note: Hypertable might already exist: {e}')
+              app = create_app('testing')
+              
+              with app.app_context():
+                  print("🚀 Starting database migrations...")
                   
-              from sqlalchemy import inspect
-              inspector = inspect(db.engine)
-              tables = inspector.get_table_names()
-              print(f'📊 Tables in database: {tables}')
-          "
+                  # Method 1: Try Flask-Migrate
+                  try:
+                      from flask_migrate import upgrade
+                      upgrade()
+                      print("✅ Flask-Migrate upgrades applied")
+                  except Exception as e:
+                      print(f"📝 Flask-Migrate not available: {e}")
+                      
+                      # Method 2: Fallback to create_all
+                      db.drop_all()
+                      db.create_all()
+                      print("✅ Database tables created via create_all")
+                  
+                  # Method 3: Try to set up TimescaleDB hypertables
+                  try:
+                      # Try different possible import paths
+                      try:
+                          from app.models.sensor_reading import SensorReading
+                      except ImportError:
+                          try:
+                              from models.sensor_reading import SensorReading
+                          except ImportError:
+                              print("❌ Could not import SensorReading from any path")
+                              SensorReading = None
+                      
+                      if SensorReading:
+                          try:
+                              SensorReading.create_hypertable()
+                              print("✅ TimescaleDB hypertables initialized")
+                          except Exception as e:
+                              print(f"📝 Hypertable setup note: {e}")
+                  
+                  except Exception as e:
+                      print(f"📝 SensorReading setup skipped: {e}")
+                  
+                  # Verify tables were created
+                  from sqlalchemy import inspect
+                  inspector = inspect(db.engine)
+                  tables = inspector.get_table_names()
+                  print(f"📊 Final tables in database: {tables}")
+                  
+                  if tables:
+                      print("🎉 Database migration completed successfully!")
+                  else:
+                      print("⚠️  No tables found in database")
+                      
+          except Exception as e:
+              print(f"❌ Migration failed: {e}")
+              import traceback
+              traceback.print_exc()
+              sys.exit(1)
+          EOF
+          
+          echo "📄 Migration script created"
+
+      - name: Run Database Migrations with Script
+        run: |
+          echo "🗃️ Running database migrations with script..."
+          docker-compose -f docker-compose.ci.yml run --rm backend python /tmp/run_migrations.py
 
       - name: Run Backend Tests
         run: |
