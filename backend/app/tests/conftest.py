@@ -172,7 +172,7 @@ def _create_test_data():
     
     # Assign permissions to roles
     admin_role.permissions = permissions
-    operator_role.permissions = permissions[:3] + permissions[3:4]  # units + read users
+    operator_role.permissions = permissions[:3] + permissions[3:4] + permissions[7:8]  # units + read users + remote control
     viewer_role.permissions = permissions[0:1] + permissions[3:4]   # read only
     
     db.session.add(admin_role)
