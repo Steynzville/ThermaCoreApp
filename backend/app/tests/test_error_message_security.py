@@ -32,8 +32,8 @@ class TestErrorMessageSecurity:
         token = self.get_auth_token(client)
         
         with app.app_context():
-            # Mock parse_timestamp to raise ValueError
-            with patch('app.routes.historical.parse_timestamp') as mock_parse:
+            # Mock parse_timestamp to raise ValueError (it's imported from app.utils.helpers)
+            with patch('app.utils.helpers.parse_timestamp') as mock_parse:
                 mock_parse.side_effect = ValueError("Sensitive internal error details")
                 
                 # Mock logger to verify it's called
@@ -69,8 +69,8 @@ class TestErrorMessageSecurity:
         token = self.get_auth_token(client)
         
         with app.app_context():
-            # Mock parse_timestamp to raise ValueError
-            with patch('app.routes.historical.parse_timestamp') as mock_parse:
+            # Mock parse_timestamp to raise ValueError (it's imported from app.utils.helpers)
+            with patch('app.utils.helpers.parse_timestamp') as mock_parse:
                 mock_parse.side_effect = ValueError("Sensitive date parsing error")
                 
                 with patch('app.utils.error_handler.logger') as mock_logger:
