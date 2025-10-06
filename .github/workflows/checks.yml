@@ -211,6 +211,17 @@ jobs:
               with app.app_context():
                   print('🚀 Starting database migrations...')
                   
+                  # CRITICAL: Import all models before any database operations
+                  print('📦 Importing all application models...')
+                  try:
+                      # Import all models to ensure they're registered with SQLAlchemy
+                      from app.models import User, Role, Permission, SensorReading, Sensor, Unit
+                      print('✅ All core models imported successfully')
+                  except ImportError as e:
+                      print(f'⚠️  Model import failed: {e}')
+                      print('❌ Cannot proceed without models')
+                      sys.exit(1)
+                  
                   # Method 1: Try Flask-Migrate
                   try:
                       from flask_migrate import upgrade
@@ -218,12 +229,32 @@ jobs:
                       print('✅ Flask-Migrate upgrades applied')
                   except Exception as e:
                       print(f'📝 Flask-Migrate not available: {e}')
+                      
+                      # Method 2: Fallback to create_all (now with models imported)
+                      print('🔄 Creating all tables via db.create_all()...')
                       db.drop_all()
                       db.create_all()
                       print('✅ Database tables created via create_all')
                   
-                  print('🎉 Database migration completed!')
+                  # VERIFY tables were actually created
+                  from sqlalchemy import inspect
+                  inspector = inspect(db.engine)
+                  tables = inspector.get_table_names()
+                  print(f'📊 Tables in database: {tables}')
                   
+                  # Check for critical tables
+                  critical_tables = ['roles', 'users', 'permissions', 'sensor_readings']
+                  missing_tables = [table for table in critical_tables if table not in tables]
+                  
+                  if missing_tables:
+                      print(f'❌ CRITICAL: Missing tables: {missing_tables}')
+                      print('💡 This indicates models were not properly imported before create_all()')
+                      sys.exit(1)
+                  else:
+                      print('✅ All critical tables present!')
+                  
+                  print('🎉 Database migration completed successfully!')
+                      
           except Exception as e:
               print(f'❌ Migration failed: {e}')
               import traceback
