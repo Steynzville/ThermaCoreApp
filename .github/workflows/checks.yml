@@ -198,111 +198,121 @@ jobs:
         run: |
           echo "🗃️ Running database migrations with robust script..."
           docker-compose -f docker-compose.ci.yml run --rm backend python -c "
-          import sys
-          import os
-          
-          # Add current directory to path
-          sys.path.insert(0, '/app')
-          
-          try:
-              from app import create_app, db
-              
-              app = create_app('testing')
-              
-              with app.app_context():
-                  print('🚀 Starting database migrations...')
-                  
-                  # Method 1: Try Flask-Migrate
-                  try:
-                      from flask_migrate import upgrade
-                      upgrade()
-                      print('✅ Flask-Migrate upgrades applied')
-                  except Exception as e:
-                      print(f'📝 Flask-Migrate not available: {e}')
-                      
-                      # Method 2: Fallback to create_all
-                      db.drop_all()
-                      db.create_all()
-                      print('✅ Database tables created via create_all')
-                  
-                  # Method 3: Try to set up TimescaleDB hypertables
-                  try:
-                      # Try different possible import paths
-                      try:
-                          from app.models.sensor_reading import SensorReading
-                          print('✅ Imported SensorReading from app.models.sensor_reading')
-                      except ImportError:
-                          try:
-                              from models.sensor_reading import SensorReading
-                              print('✅ Imported SensorReading from models.sensor_reading')
-                          except ImportError:
-                              print('❌ Could not import SensorReading from any path')
-                              SensorReading = None
-                      
-                      if SensorReading:
-                          try:
-                              SensorReading.create_hypertable()
-                              print('✅ TimescaleDB hypertables initialized')
-                          except Exception as e:
-                              print(f'📝 Hypertable setup note: {e}')
-                      else:
-                          print('📝 Skipping hypertable initialization - SensorReading not available')
-                  
-                  except Exception as e:
-                      print(f'📝 SensorReading setup skipped: {e}')
-                  
-                  # Verify tables were created
-                  from sqlalchemy import inspect
-                  inspector = inspect(db.engine)
-                  tables = inspector.get_table_names()
-                  print(f'📊 Final tables in database: {tables}')
-                  
-                  if tables:
-                      print('🎉 Database migration completed successfully!')
-                  else:
-                      print('⚠️  No tables found in database')
-                      
-          except Exception as e:
-              print(f'❌ Migration failed: {e}')
-              import traceback
-              traceback.print_exc()
-              
-              # Debug: Show application structure
-              print('\n🔍 Debugging application structure:')
-              print(f'Current directory: {os.getcwd()}')
-              print(f'Python path: {sys.path}')
-              if os.path.exists('/app'):
-                  print(f'Files in /app: {os.listdir(\"/app\")}')
-                  if os.path.exists('/app/app'):
-                      print(f'Files in /app/app: {os.listdir(\"/app/app\")}')
-                      if os.path.exists('/app/app/models'):
-                          print(f'Files in /app/app/models: {os.listdir(\"/app/app/models\")}')
-              
-              sys.exit(1)
-          "
+import sys
+import os
 
-      - name: Run Backend Tests with Database Migrations
-        run: |
-          echo "🧪 Applying database migrations and running tests..."
-          docker-compose -f docker-compose.ci.yml run --rm backend bash -c "
-            # Apply database migrations first
-            echo '🚀 Applying database migrations...'
-            python -c '
-            import sys
-            sys.path.insert(0, \"/app\")
-            from app import create_app, db
+# Add current directory to path
+sys.path.insert(0, '/app')
+
+try:
+    from app import create_app, db
+    
+    app = create_app('testing')
+    
+    with app.app_context():
+        print('🚀 Starting database migrations...')
+        
+        # Method 1: Try Flask-Migrate
+        try:
             from flask_migrate import upgrade
+            upgrade()
+            print('✅ Flask-Migrate upgrades applied')
+        except Exception as e:
+            print(f'📝 Flask-Migrate not available: {e}')
             
-            app = create_app(\"testing\")
-            with app.app_context():
-                upgrade()
-                print(\"✅ Database migrations applied successfully\")
-            '
+            # Method 2: Fallback to create_all
+            db.drop_all()
+            db.create_all()
+            print('✅ Database tables created via create_all')
+        
+        # Method 3: Try to set up TimescaleDB hypertables
+        try:
+            # Try different possible import paths
+            try:
+                from app.models.sensor_reading import SensorReading
+                print('✅ Imported SensorReading from app.models.sensor_reading')
+            except ImportError:
+                try:
+                    from models.sensor_reading import SensorReading
+                    print('✅ Imported SensorReading from models.sensor_reading')
+                except ImportError:
+                    print('❌ Could not import SensorReading from any path')
+                    SensorReading = None
             
-            # Now run tests
-            echo '🧪 Running tests...'
-            python -m pytest -v --tb=short -x
-          "
+            if SensorReading:
+                try:
+                    SensorReading.create_hypertable()
+                    print('✅ TimescaleDB hypertables initialized')
+                except Exception as e:
+                    print(f'📝 Hypertable setup note: {e}')
+            else:
+                print('📝 Skipping hypertable initialization - SensorReading not available')
+        
+        except Exception as e:
+            print(f'📝 SensorReading setup skipped: {e}')
+        
+        # Verify tables were created
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
+        print(f'📊 Final tables in database: {tables}')
+        
+        if tables:
+            print('🎉 Database migration completed successfully!')
+        else:
+            print('⚠️  No tables found in database')
+            
+except Exception as e:
+    print(f'❌ Migration failed: {e}')
+    import traceback
+    traceback.print_exc()
+    
+    # Debug: Show application structure
+    print('\n🔍 Debugging application structure:')
+    print(f'Current directory: {os.getcwd()}')
+    print(f'Python path: {sys.path}')
+    if os.path.exists('/app'):
+        print(f'Files in /app: {os.listdir(\"/app\")}')
+        if os.path.exists('/app/app'):
+            print(f'Files in /app/app: {os.listdir(\"/app/app\")}')
+            if os.path.exists('/app/app/models'):
+                print(f'Files in /app/app/models: {os.listdir(\"/app/app/models\")}')
+    
+    sys.exit(1)
+"
+
+      - name: Apply Database Migrations for Tests
+        run: |
+          echo "🗃️ Applying database migrations for tests..."
+          docker-compose -f docker-compose.ci.yml run --rm backend python -c "
+import sys
+sys.path.insert(0, '/app')
+from app import create_app
+from flask_migrate import upgrade
+
+app = create_app('testing')
+with app.app_context():
+    upgrade()
+    print('✅ Database migrations applied successfully')
+    
+    # Verify tables exist
+    from sqlalchemy import inspect
+    inspector = inspect(app.extensions['sqlalchemy'].db.engine)
+    tables = inspector.get_table_names()
+    print(f'📊 Tables in database: {tables}')
+    
+    required_tables = ['roles', 'users', 'sensors', 'sensor_readings']
+    for table in required_tables:
+        if table in tables:
+            print(f'✅ Table {table} exists')
+        else:
+            print(f'❌ Table {table} missing')
+"
+
+      - name: Run Backend Tests
+        run: |
+          echo "🧪 Running backend tests..."
+          docker-compose -f docker-compose.ci.yml run --rm backend python -m pytest -v --tb=short -x
 
       - name: Stop Services
         if: always()
