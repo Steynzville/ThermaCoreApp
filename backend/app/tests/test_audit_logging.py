@@ -225,7 +225,8 @@ class TestAuditDecorators:
                 granted=True,
                 user_id=1,
                 username='admin',
-                resource='units'
+                resource='units',
+                details=None
             )
 
 
