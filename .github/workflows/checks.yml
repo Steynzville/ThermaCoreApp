@@ -281,12 +281,28 @@ jobs:
               sys.exit(1)
           "
 
-      - name: Run Backend Tests Directly (No Server Needed)
+      - name: Run Backend Tests with Database Migrations
         run: |
-          echo "🧪 Running backend tests directly (no Flask server needed)..."
-          # Run tests directly without starting a Flask server
-          # The tests should create their own app context
-          docker-compose -f docker-compose.ci.yml run --rm backend python -m pytest -v --tb=short -x
+          echo "🧪 Applying database migrations and running tests..."
+          docker-compose -f docker-compose.ci.yml run --rm backend bash -c "
+            # Apply database migrations first
+            echo '🚀 Applying database migrations...'
+            python -c '
+            import sys
+            sys.path.insert(0, \"/app\")
+            from app import create_app, db
+            from flask_migrate import upgrade
+            
+            app = create_app(\"testing\")
+            with app.app_context():
+                upgrade()
+                print(\"✅ Database migrations applied successfully\")
+            '
+            
+            # Now run tests
+            echo '🧪 Running tests...'
+            python -m pytest -v --tb=short -x
+          "
 
       - name: Stop Services
         if: always()
