@@ -27,7 +27,7 @@ This document provides comprehensive coverage of the Role-Based Access Control (
 | `write_users` | ✓ | ✗ | ✗ | Create and modify users |
 | `delete_users` | ✓ | ✗ | ✗ | Delete users from system |
 | `admin_panel` | ✓ | ✗ | ✗ | Access administrative features |
-| `remote_control` | ✓ | ✓ | ✓ | **Remote control unit operations (power, water production, auto settings, live video)** |
+| `remote_control` | ✓ | ✓ | ✗ | **Remote control unit operations (power, water production, auto settings, live video)** |
 
 ### Role Definitions
 
@@ -50,7 +50,7 @@ This document provides comprehensive coverage of the Role-Based Access Control (
 - **Read-Only Access**: Can view system information but cannot modify
 - **Unit Monitoring**: Can view unit status and historical data
 - **User Information**: Can view basic user information
-- **Remote Control Access**: **Can remotely control units (power, water production, automatic settings, live video feed)**
+- **No Remote Control**: Cannot remotely control units
 - **No Administrative Modifications**: Cannot create, update, or delete resources through administrative interfaces
 
 ## Enhanced Security Features (PR3)
@@ -158,7 +158,7 @@ def create_unit():
 | `/remote-control/units/{id}/status` | GET | read_units | read_remote_status |
 | `/remote-control/permissions` | GET | Valid JWT | read_permissions |
 
-**Note**: Remote control endpoints use `remote_control` permission to allow all authenticated users access to remote control features.
+**Note**: Remote control endpoints use `remote_control` permission to allow Admin and Operator users access to remote control features. Viewer users have read-only access and cannot perform remote control operations.
 
 ## Security Best Practices
 
