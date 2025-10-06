@@ -27,6 +27,11 @@ Thumbs.db
 # Testing
 coverage/
 
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
 # Temporary files
 tmp/
 temp/
