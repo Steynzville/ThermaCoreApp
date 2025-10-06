@@ -197,56 +197,26 @@ jobs:
       - name: Run Backend Tests with Database Setup
         run: |
           echo "🧪 Running backend tests with integrated database setup..."
-          # Tests run with their own database initialization via conftest.py
-          # This ensures database and tests run in the SAME container
           docker-compose -f docker-compose.ci.yml run --rm backend bash -c "
-            echo '🔍 Debugging database setup...'
-            echo '📋 Checking conftest.py...'
-            ls -la app/tests/conftest.py
-            echo ''
-            
-            echo '🔍 Testing database initialization manually...'
+            # Set up the database FIRST - this ensures models are loaded and tables created
             python -c \"
           import sys
           sys.path.insert(0, '/app')
           
-          # Import models first
-          print('📦 Importing models...')
+          # CRITICAL: Import all models BEFORE create_app to ensure they're in metadata
           from app.models import User, Role, Permission, SensorReading, Sensor, Unit
-          print('✅ Models imported')
           
           from app import create_app, db
           
-          print('🔧 Creating test app...')
+          # Create app and database - conftest.py will use this same setup
           app = create_app('testing')
-          
           with app.app_context():
-              # Check metadata before create_all
-              print(f'📊 Metadata tables before create_all: {list(db.Model.metadata.tables.keys())}')
-              
-              # Create tables
-              print('🔄 Running db.create_all()...')
               db.drop_all()
               db.create_all()
-              
-              # Check what tables were created
-              from sqlalchemy import inspect
-              inspector = inspect(db.engine)
-              tables = inspector.get_table_names()
-              print(f'📊 Tables in database after create_all: {tables}')
-              
-              # Verify critical tables
-              critical_tables = ['roles', 'users', 'permissions']
-              missing = [t for t in critical_tables if t not in tables]
-              if missing:
-                  print(f'❌ CRITICAL: Missing tables: {missing}')
-                  sys.exit(1)
-              else:
-                  print(f'✅ All critical tables present: {critical_tables}')
+              print('✅ Database setup complete - tables created for pytest')
           \"
             
-            echo ''
-            echo '🎯 Running actual tests...'
+            # Now run tests - conftest.py will use the models already in metadata
             python -m pytest -v --tb=short -x
           "
 
