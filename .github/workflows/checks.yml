@@ -83,57 +83,49 @@ jobs:
             cat requirements.txt | grep locust
           fi
 
-      - name: Check Frontend Directory Structure
+      - name: Create Temporary Docker Compose Without Frontend
         run: |
-          echo "📁 Checking frontend directory structure..."
-          ls -la frontend/ || echo "❌ frontend directory not found"
-          echo "📁 Checking for public directory..."
-          ls -la frontend/public/ || echo "❌ frontend/public directory not found - this may cause build issues"
-          echo "📁 Checking for src directory..."
-          ls -la frontend/src/ || echo "❌ frontend/src directory not found"
+          echo "🔧 Creating temporary docker-compose.ci.yml without frontend..."
+          # Create a temporary compose file that excludes the frontend service
+          docker-compose config > docker-compose.ci.yml
+          
+          # Remove frontend service from the config
+          python3 -c "
+          import yaml
+          with open('docker-compose.ci.yml', 'r') as f:
+              config = yaml.safe_load(f)
+          
+          # Remove frontend service if it exists
+          if 'services' in config and 'frontend' in config['services']:
+              del config['services']['frontend']
+              print('✅ Removed frontend service from docker-compose.ci.yml')
+          else:
+              print('ℹ️  No frontend service found in docker-compose.yml')
+          
+          # Write the modified config
+          with open('docker-compose.ci.yml', 'w') as f:
+              yaml.dump(config, f)
+          "
+          
+          echo "📋 Temporary docker-compose.ci.yml created:"
+          cat docker-compose.ci.yml | head -20
 
-      - name: Create Missing Frontend Directories (Simplified)
+      - name: Build Database and Backend Only (Using CI Compose)
         run: |
-          echo "🔧 Ensuring frontend directory structure exists..."
-          # Create directories if they don't exist to prevent Docker build failures
-          mkdir -p frontend/public
-          mkdir -p frontend/src
-          mkdir -p frontend/build
-          
-          # Create minimal required files using echo to avoid heredoc issues
-          if [ ! -f "frontend/package.json" ]; then
-            echo "⚠️ Creating minimal package.json for frontend"
-            echo '{"name": "thermacore-frontend", "version": "1.0.0", "description": "ThermaCoreApp Frontend", "scripts": {"test": "echo \"No frontend tests configured\" && exit 0"}}' > frontend/package.json
-          fi
-          
-          if [ ! -f "frontend/public/index.html" ]; then
-            echo "⚠️ Creating minimal index.html for frontend"
-            mkdir -p frontend/public
-            echo '<!DOCTYPE html><html><head><title>ThermaCoreApp</title></head><body><div id="root">Frontend not built yet</div></body></html>' > frontend/public/index.html
-          fi
-          
-          echo "✅ Frontend directory structure verified/created"
-
-      - name: Build Database and Backend Only (Explicitly Skip Frontend)
-        run: |
-          echo "🏗️ Building database and backend services (explicitly skipping frontend)..."
+          echo "🏗️ Building database and backend services using CI compose file..."
           
           # Build database first to ensure it's ready
-          docker-compose build $DB_SERVICE
+          docker-compose -f docker-compose.ci.yml build $DB_SERVICE
           echo "✅ Database service built"
           
-          # Then build backend only - explicitly skip frontend
-          docker-compose build backend
+          # Then build backend only
+          docker-compose -f docker-compose.ci.yml build backend
           echo "✅ Backend built successfully"
-          
-          # Verify services were built
-          echo "📋 Built services:"
-          docker images | grep thermacore || echo "No thermacore images found"
 
       - name: Start Database with Simplified Health Check
         run: |
           # Determine database service name
-          SERVICES=$(docker-compose config --services)
+          SERVICES=$(docker-compose -f docker-compose.ci.yml config --services)
           if echo "$SERVICES" | grep -q "timescaledb"; then
             DB_SERVICE="timescaledb"
           elif echo "$SERVICES" | grep -q "db"; then
@@ -148,7 +140,7 @@ jobs:
           fi
           
           echo "🚀 Starting database service: $DB_SERVICE"
-          docker-compose up -d $DB_SERVICE
+          docker-compose -f docker-compose.ci.yml up -d $DB_SERVICE
           
           echo "⏳ Waiting for database to start (simple wait)..."
           # Simple sleep to allow database to initialize
@@ -157,7 +149,7 @@ jobs:
           echo "🔧 Testing database connection..."
           # Try multiple connection attempts with simpler method
           for i in {1..10}; do
-            if docker-compose exec -T $DB_SERVICE psql -U postgres -c "SELECT version();" 2>/dev/null; then
+            if docker-compose -f docker-compose.ci.yml exec -T $DB_SERVICE psql -U postgres -c "SELECT version();" 2>/dev/null; then
               echo "✅ Database is ready and responding"
               break
             else
@@ -167,18 +159,18 @@ jobs:
           done
           
           # Final connection test
-          if docker-compose exec -T $DB_SERVICE psql -U postgres -c "SELECT 1;" 2>/dev/null; then
+          if docker-compose -f docker-compose.ci.yml exec -T $DB_SERVICE psql -U postgres -c "SELECT 1;" 2>/dev/null; then
             echo "🎉 Database connection successful!"
           else
             echo "❌ Database failed to start properly"
             echo "📋 Checking database logs:"
-            docker-compose logs $DB_SERVICE
+            docker-compose -f docker-compose.ci.yml logs $DB_SERVICE
             exit 1
           fi
 
       - name: Initialize Test Database
         run: |
-          SERVICES=$(docker-compose config --services)
+          SERVICES=$(docker-compose -f docker-compose.ci.yml config --services)
           if echo "$SERVICES" | grep -q "timescaledb"; then
             DB_SERVICE="timescaledb"
           elif echo "$SERVICES" | grep -q "db"; then
@@ -193,7 +185,7 @@ jobs:
           fi
           
           echo "🔧 Initializing test database on service: $DB_SERVICE"
-          docker-compose exec -T $DB_SERVICE psql -U postgres -c "
+          docker-compose -f docker-compose.ci.yml exec -T $DB_SERVICE psql -U postgres -c "
             DROP DATABASE IF EXISTS thermacore;
             DROP USER IF EXISTS thermacore_user;
             CREATE USER thermacore_user WITH PASSWORD 'thermacore_pass';
@@ -205,14 +197,14 @@ jobs:
         run: |
           echo "🚀 Starting backend service only..."
           # Start only backend (not frontend)
-          docker-compose up -d backend
+          docker-compose -f docker-compose.ci.yml up -d backend
           sleep 10
           echo "✅ Backend started"
 
       - name: Run Database Migrations
         run: |
           echo "🗃️ Running database migrations..."
-          docker-compose run --rm backend python -c "
+          docker-compose -f docker-compose.ci.yml run --rm backend python -c "
           from app import create_app, db
           from app.models.sensor_reading import SensorReading
           
@@ -242,12 +234,17 @@ jobs:
       - name: Run Backend Tests
         run: |
           echo "🧪 Running backend tests..."
-          docker-compose exec -T backend python -m pytest -v --tb=short -x
+          docker-compose -f docker-compose.ci.yml exec -T backend python -m pytest -v --tb=short -x
 
       - name: Stop Services
         if: always()
         run: |
-          docker-compose down --remove-orphans --timeout 30 || echo "Docker compose down failed but continuing..."
+          docker-compose -f docker-compose.ci.yml down --remove-orphans --timeout 30 || echo "Docker compose down failed but continuing..."
+
+      - name: Cleanup Temporary Files
+        if: always()
+        run: |
+          rm -f docker-compose.ci.yml || echo "No temporary file to clean up"
 
   python-quality-and-security:
     runs-on: ubuntu-latest
