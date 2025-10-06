@@ -194,31 +194,12 @@ jobs:
           
           echo "✅ Database setup completed"
 
-      - name: Run Backend Tests with Database Setup
+      - name: Run Backend Tests
         run: |
-          echo "🧪 Running backend tests with integrated database setup..."
-          docker-compose -f docker-compose.ci.yml run --rm backend bash -c "
-            # Set up the database FIRST - this ensures models are loaded and tables created
-            python -c \"
-          import sys
-          sys.path.insert(0, '/app')
-          
-          # CRITICAL: Import all models BEFORE create_app to ensure they're in metadata
-          from app.models import User, Role, Permission, SensorReading, Sensor, Unit
-          
-          from app import create_app, db
-          
-          # Create app and database - conftest.py will use this same setup
-          app = create_app('testing')
-          with app.app_context():
-              db.drop_all()
-              db.create_all()
-              print('✅ Database setup complete - tables created for pytest')
-          \"
-            
-            # Now run tests - conftest.py will use the models already in metadata
-            python -m pytest -v --tb=short -x
-          "
+          echo "🧪 Running backend tests..."
+          # Tests use conftest.py for database initialization
+          # conftest.py creates a temporary database and initializes it with all models
+          docker-compose -f docker-compose.ci.yml run --rm backend python -m pytest -v --tb=short -x
 
       - name: Stop Services
         if: always()
