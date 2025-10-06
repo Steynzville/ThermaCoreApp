@@ -23,7 +23,8 @@ class TestErrorMessageSecurity:
             json={'username': username, 'password': password}
         )
         if response.status_code == 200:
-            return response.json['access_token']
+            # Response is wrapped in success envelope: {'success': True, 'data': {...}}
+            return response.json['data']['access_token']
         return None
 
     def test_historical_data_valueerror_generic_message(self, client, app):
