@@ -1,6 +1,5 @@
 """Tests for secure error message handling in historical and analytics routes."""
 import pytest
-from unittest.mock import patch
 from app import create_app
 
 
