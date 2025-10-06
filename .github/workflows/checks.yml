@@ -92,7 +92,7 @@ jobs:
           echo "📁 Checking for src directory..."
           ls -la frontend/src/ || echo "❌ frontend/src directory not found"
 
-      - name: Create Missing Frontend Directories (If Needed)
+      - name: Create Missing Frontend Directories (Simplified)
         run: |
           echo "🔧 Ensuring frontend directory structure exists..."
           # Create directories if they don't exist to prevent Docker build failures
@@ -100,35 +100,16 @@ jobs:
           mkdir -p frontend/src
           mkdir -p frontend/build
           
-          # Create minimal required files if they don't exist
+          # Create minimal required files using echo to avoid heredoc issues
           if [ ! -f "frontend/package.json" ]; then
             echo "⚠️ Creating minimal package.json for frontend"
-            cat > frontend/package.json << 'EOF'
-            {
-              "name": "thermacore-frontend",
-              "version": "1.0.0",
-              "description": "ThermaCoreApp Frontend",
-              "scripts": {
-                "test": "echo 'No frontend tests configured' && exit 0"
-              }
-            }
-            EOF
+            echo '{"name": "thermacore-frontend", "version": "1.0.0", "description": "ThermaCoreApp Frontend", "scripts": {"test": "echo \"No frontend tests configured\" && exit 0"}}' > frontend/package.json
           fi
           
           if [ ! -f "frontend/public/index.html" ]; then
             echo "⚠️ Creating minimal index.html for frontend"
             mkdir -p frontend/public
-            cat > frontend/public/index.html << 'EOF'
-            <!DOCTYPE html>
-            <html>
-              <head>
-                <title>ThermaCoreApp</title>
-              </head>
-              <body>
-                <div id="root">Frontend not built yet</div>
-              </body>
-            </html>
-            EOF
+            echo '<!DOCTYPE html><html><head><title>ThermaCoreApp</title></head><body><div id="root">Frontend not built yet</div></body></html>' > frontend/public/index.html
           fi
           
           echo "✅ Frontend directory structure verified/created"
