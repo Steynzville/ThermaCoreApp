@@ -114,16 +114,21 @@ jobs:
           
           echo "✅ Frontend directory structure verified/created"
 
-      - name: Build Database and Backend Only (Skip Frontend)
+      - name: Build Database and Backend Only (Explicitly Skip Frontend)
         run: |
-          echo "🏗️ Building database and backend services (skipping frontend)..."
+          echo "🏗️ Building database and backend services (explicitly skipping frontend)..."
+          
           # Build database first to ensure it's ready
           docker-compose build $DB_SERVICE
           echo "✅ Database service built"
           
-          # Then build backend only (skip frontend to avoid build issues)
+          # Then build backend only - explicitly skip frontend
           docker-compose build backend
           echo "✅ Backend built successfully"
+          
+          # Verify services were built
+          echo "📋 Built services:"
+          docker images | grep thermacore || echo "No thermacore images found"
 
       - name: Start Database with Simplified Health Check
         run: |
@@ -196,9 +201,10 @@ jobs:
             GRANT ALL PRIVILEGES ON DATABASE thermacore TO thermacore_user;
           " || echo "⚠️ Database setup completed"
 
-      - name: Start Backend
+      - name: Start Backend Only
         run: |
-          echo "🚀 Starting backend service..."
+          echo "🚀 Starting backend service only..."
+          # Start only backend (not frontend)
           docker-compose up -d backend
           sleep 10
           echo "✅ Backend started"
