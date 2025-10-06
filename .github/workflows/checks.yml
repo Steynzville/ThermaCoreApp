@@ -205,22 +205,20 @@ jobs:
           sys.path.insert(0, '/app')
           
           try:
+              # CRITICAL: Import models BEFORE creating the app
+              # This ensures models are registered in the metadata before db.init_app
+              print('📦 Pre-importing models before app creation...')
+              from app.models import User, Role, Permission, SensorReading, Sensor, Unit
+              print('✅ Models pre-imported successfully')
+              
               from app import create_app, db
               app = create_app('testing')
               
               with app.app_context():
                   print('🚀 Starting database migrations...')
                   
-                  # CRITICAL: Import all models before any database operations
-                  print('📦 Importing all application models...')
-                  try:
-                      # Import all models to ensure they're registered with SQLAlchemy
-                      from app.models import User, Role, Permission, SensorReading, Sensor, Unit
-                      print('✅ All core models imported successfully')
-                  except ImportError as e:
-                      print(f'⚠️  Model import failed: {e}')
-                      print('❌ Cannot proceed without models')
-                      sys.exit(1)
+                  # Verify models are in metadata
+                  print(f'📊 SQLAlchemy metadata tables: {list(db.Model.metadata.tables.keys())}')
                   
                   # Method 1: Try Flask-Migrate
                   try:
@@ -230,7 +228,7 @@ jobs:
                   except Exception as e:
                       print(f'📝 Flask-Migrate not available: {e}')
                       
-                      # Method 2: Fallback to create_all (now with models imported)
+                      # Method 2: Fallback to create_all (models already imported)
                       print('🔄 Creating all tables via db.create_all()...')
                       db.drop_all()
                       db.create_all()
@@ -248,7 +246,8 @@ jobs:
                   
                   if missing_tables:
                       print(f'❌ CRITICAL: Missing tables: {missing_tables}')
-                      print('💡 This indicates models were not properly imported before create_all()')
+                      print(f'💡 Expected tables: {critical_tables}')
+                      print(f'💡 Metadata tables: {list(db.Model.metadata.tables.keys())}')
                       sys.exit(1)
                   else:
                       print('✅ All critical tables present!')
