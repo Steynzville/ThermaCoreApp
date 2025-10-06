@@ -57,8 +57,8 @@ class TestErrorMessageSecurity:
                     # Should NOT contain the sensitive error details
                     assert 'Sensitive internal error details' not in str(data)
                     
-                    # Should contain generic message
-                    assert data['error']['message'] == 'Invalid date format provided. Please use ISO 8601 format.'
+                    # Should contain generic validation error message
+                    assert data['error']['message'] == 'Request data validation failed'
                     assert data['error']['code'] == 'VALIDATION_ERROR'
                     
                     # Verify logger was called
