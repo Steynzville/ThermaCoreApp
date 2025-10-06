@@ -168,7 +168,7 @@ jobs:
             exit 1
           fi
 
-      - name: Initialize Test Database
+      - name: Initialize Test Database (Fixed Transaction Issue)
         run: |
           SERVICES=$(docker-compose -f docker-compose.ci.yml config --services)
           if echo "$SERVICES" | grep -q "timescaledb"; then
@@ -185,21 +185,36 @@ jobs:
           fi
           
           echo "🔧 Initializing test database on service: $DB_SERVICE"
-          docker-compose -f docker-compose.ci.yml exec -T $DB_SERVICE psql -U postgres -c "
-            DROP DATABASE IF EXISTS thermacore;
-            DROP USER IF EXISTS thermacore_user;
-            CREATE USER thermacore_user WITH PASSWORD 'thermacore_pass';
-            CREATE DATABASE thermacore OWNER thermacore_user;
-            GRANT ALL PRIVILEGES ON DATABASE thermacore TO thermacore_user;
-          " || echo "⚠️ Database setup completed"
+          # Use single commands to avoid transaction blocks
+          docker-compose -f docker-compose.ci.yml exec -T $DB_SERVICE psql -U postgres -c "DROP DATABASE IF EXISTS thermacore;" || echo "⚠️ Could not drop database (might not exist)"
+          docker-compose -f docker-compose.ci.yml exec -T $DB_SERVICE psql -U postgres -c "DROP USER IF EXISTS thermacore_user;" || echo "⚠️ Could not drop user (might not exist)"
+          docker-compose -f docker-compose.ci.yml exec -T $DB_SERVICE psql -U postgres -c "CREATE USER thermacore_user WITH PASSWORD 'thermacore_pass';" || echo "⚠️ User might already exist"
+          docker-compose -f docker-compose.ci.yml exec -T $DB_SERVICE psql -U postgres -c "CREATE DATABASE thermacore OWNER thermacore_user;" || echo "⚠️ Database might already exist"
+          docker-compose -f docker-compose.ci.yml exec -T $DB_SERVICE psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE thermacore TO thermacore_user;" || echo "⚠️ Grant might already exist"
+          
+          echo "✅ Database setup completed"
 
-      - name: Start Backend Only
+      - name: Start Backend Only and Wait for Stability
         run: |
           echo "🚀 Starting backend service only..."
           # Start only backend (not frontend)
           docker-compose -f docker-compose.ci.yml up -d backend
-          sleep 10
-          echo "✅ Backend started"
+          
+          echo "⏳ Waiting for backend to stabilize..."
+          # Wait longer and check if backend is running properly
+          sleep 20
+          
+          echo "🔍 Checking backend container status..."
+          if docker-compose -f docker-compose.ci.yml ps backend | grep -q "Up"; then
+            echo "✅ Backend is running and stable"
+          else
+            echo "❌ Backend container is not running properly"
+            echo "📋 Backend logs:"
+            docker-compose -f docker-compose.ci.yml logs backend
+            echo "🔄 Attempting to restart backend..."
+            docker-compose -f docker-compose.ci.yml restart backend
+            sleep 10
+          fi
 
       - name: Run Database Migrations with Robust Script
         run: |
@@ -288,10 +303,44 @@ jobs:
               sys.exit(1)
           "
 
-      - name: Run Backend Tests
+      - name: Check Backend Health Before Tests
+        run: |
+          echo "🏥 Checking backend health before running tests..."
+          # Wait a bit more to ensure backend is stable
+          sleep 10
+          
+          echo "🔍 Checking if backend container is running..."
+          if docker-compose -f docker-compose.ci.yml ps backend | grep -q "Up"; then
+            echo "✅ Backend container is running"
+          else
+            echo "❌ Backend container is not running"
+            echo "📋 Backend logs:"
+            docker-compose -f docker-compose.ci.yml logs backend
+            exit 1
+          fi
+          
+          echo "🔧 Testing backend API endpoint..."
+          # Try to hit a simple health endpoint
+          if docker-compose -f docker-compose.ci.yml exec -T backend curl -f http://localhost:5000/health 2>/dev/null || \
+             docker-compose -f docker-compose.ci.yml exec -T backend curl -f http://localhost:5000/ 2>/dev/null || \
+             docker-compose -f docker-compose.ci.yml exec -T backend python -c "from app import create_app; app = create_app('testing'); print('✅ Flask app can be created')" 2>/dev/null; then
+            echo "✅ Backend is responsive"
+          else
+            echo "⚠️ Backend might not be fully responsive, but continuing with tests..."
+          fi
+
+      - name: Run Backend Tests (With Container Check)
         run: |
           echo "🧪 Running backend tests..."
-          docker-compose -f docker-compose.ci.yml exec -T backend python -m pytest -v --tb=short -x
+          # Ensure backend is still running before tests
+          if ! docker-compose -f docker-compose.ci.yml ps backend | grep -q "Up"; then
+            echo "❌ Backend container stopped, restarting..."
+            docker-compose -f docker-compose.ci.yml restart backend
+            sleep 15
+          fi
+          
+          # Use run instead of exec to avoid container restart issues
+          docker-compose -f docker-compose.ci.yml run --rm backend python -m pytest -v --tb=short -x
 
       - name: Stop Services
         if: always()
