@@ -156,7 +156,8 @@ def _create_test_data():
         Permission(name=PermissionEnum.READ_USERS, description='Read users'),
         Permission(name=PermissionEnum.WRITE_USERS, description='Write users'),
         Permission(name=PermissionEnum.DELETE_USERS, description='Delete users'),
-        Permission(name=PermissionEnum.ADMIN_PANEL, description='Admin panel access')
+        Permission(name=PermissionEnum.ADMIN_PANEL, description='Admin panel access'),
+        Permission(name=PermissionEnum.REMOTE_CONTROL, description='Remote control access')
     ]
     
     for permission in permissions:
