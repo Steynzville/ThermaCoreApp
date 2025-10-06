@@ -197,117 +197,12 @@ jobs:
       - name: Run Database Migrations with Robust Script
         run: |
           echo "🗃️ Running database migrations with robust script..."
-          docker-compose -f docker-compose.ci.yml run --rm backend python -c "
-import sys
-import os
-
-# Add current directory to path
-sys.path.insert(0, '/app')
-
-try:
-    from app import create_app, db
-    
-    app = create_app('testing')
-    
-    with app.app_context():
-        print('🚀 Starting database migrations...')
-        
-        # Method 1: Try Flask-Migrate
-        try:
-            from flask_migrate import upgrade
-            upgrade()
-            print('✅ Flask-Migrate upgrades applied')
-        except Exception as e:
-            print(f'📝 Flask-Migrate not available: {e}')
-            
-            # Method 2: Fallback to create_all
-            db.drop_all()
-            db.create_all()
-            print('✅ Database tables created via create_all')
-        
-        # Method 3: Try to set up TimescaleDB hypertables
-        try:
-            # Try different possible import paths
-            try:
-                from app.models.sensor_reading import SensorReading
-                print('✅ Imported SensorReading from app.models.sensor_reading')
-            except ImportError:
-                try:
-                    from models.sensor_reading import SensorReading
-                    print('✅ Imported SensorReading from models.sensor_reading')
-                except ImportError:
-                    print('❌ Could not import SensorReading from any path')
-                    SensorReading = None
-            
-            if SensorReading:
-                try:
-                    SensorReading.create_hypertable()
-                    print('✅ TimescaleDB hypertables initialized')
-                except Exception as e:
-                    print(f'📝 Hypertable setup note: {e}')
-            else:
-                print('📝 Skipping hypertable initialization - SensorReading not available')
-        
-        except Exception as e:
-            print(f'📝 SensorReading setup skipped: {e}')
-        
-        # Verify tables were created
-        from sqlalchemy import inspect
-        inspector = inspect(db.engine)
-        tables = inspector.get_table_names()
-        print(f'📊 Final tables in database: {tables}')
-        
-        if tables:
-            print('🎉 Database migration completed successfully!')
-        else:
-            print('⚠️  No tables found in database')
-            
-except Exception as e:
-    print(f'❌ Migration failed: {e}')
-    import traceback
-    traceback.print_exc()
-    
-    # Debug: Show application structure
-    print('\n🔍 Debugging application structure:')
-    print(f'Current directory: {os.getcwd()}')
-    print(f'Python path: {sys.path}')
-    if os.path.exists('/app'):
-        print(f'Files in /app: {os.listdir(\"/app\")}')
-        if os.path.exists('/app/app'):
-            print(f'Files in /app/app: {os.listdir(\"/app/app\")}')
-            if os.path.exists('/app/app/models'):
-                print(f'Files in /app/app/models: {os.listdir(\"/app/app/models\")}')
-    
-    sys.exit(1)
-"
+          docker-compose -f docker-compose.ci.yml run --rm backend python -c "import sys; sys.path.insert(0, '/app'); from app import create_app, db; app = create_app('testing'); with app.app_context(): from flask_migrate import upgrade; upgrade(); print('✅ Database migrations applied')"
 
       - name: Apply Database Migrations for Tests
         run: |
           echo "🗃️ Applying database migrations for tests..."
-          docker-compose -f docker-compose.ci.yml run --rm backend python -c "
-import sys
-sys.path.insert(0, '/app')
-from app import create_app
-from flask_migrate import upgrade
-
-app = create_app('testing')
-with app.app_context():
-    upgrade()
-    print('✅ Database migrations applied successfully')
-    
-    # Verify tables exist
-    from sqlalchemy import inspect
-    inspector = inspect(app.extensions['sqlalchemy'].db.engine)
-    tables = inspector.get_table_names()
-    print(f'📊 Tables in database: {tables}')
-    
-    required_tables = ['roles', 'users', 'sensors', 'sensor_readings']
-    for table in required_tables:
-        if table in tables:
-            print(f'✅ Table {table} exists')
-        else:
-            print(f'❌ Table {table} missing')
-"
+          docker-compose -f docker-compose.ci.yml run --rm backend python -c "import sys; sys.path.insert(0, '/app'); from app import create_app; from flask_migrate import upgrade; app = create_app('testing'); with app.app_context(): upgrade(); print('✅ Database migrations applied successfully')"
 
       - name: Run Backend Tests
         run: |
@@ -352,24 +247,11 @@ with app.app_context():
       - name: Run Bandit and Generate SARIF Report
         run: |
           bandit -r . -f json -o bandit_report.json --skip B101,B311,B105,B107,B108,B104,B110 || true
-          
-          python -c "
-import json
+          python -c "import json;
 try:
     with open('bandit_report.json', 'r') as f:
         bandit_data = json.load(f)
-    
-    sarif = {
-        '\$schema': 'https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json',
-        'version': '2.1.0',
-        'runs': [{
-            'tool': {
-                'driver': {'name': 'Bandit'},
-            },
-            'results': []
-        }]
-    }
-    
+    sarif = {'\$schema': 'https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json', 'version': '2.1.0', 'runs': [{'tool': {'driver': {'name': 'Bandit'}}, 'results': []}]}
     for issue in bandit_data.get('results', []):
         if issue.get('issue_severity') in ['HIGH', 'MEDIUM']:
             sarif['runs'][0]['results'].append({
@@ -379,27 +261,21 @@ try:
                 'locations': [{
                     'physicalLocation': {
                         'artifactLocation': {'uri': issue.get('filename', '').replace('./', '')},
-                        'region': {
-                            'startLine': issue.get('line_number', 0),
-                            'startColumn': issue.get('col_offset', 0)
-                        }
+                        'region': {'startLine': issue.get('line_number', 0), 'startColumn': issue.get('col_offset', 0)}
                     }
                 }]
             })
-    
-    print(f'📊 Found {len(sarif[\"runs\"][0][\"results\"])} high/medium severity issues')
-    
+    print(f'Found {len(sarif[\"runs\"][0][\"results\"])} high/medium severity issues')
     with open('bandit_sarif.json', 'w') as f:
         json.dump(sarif, f, indent=2)
 except Exception as e:
-    print(f'❌ Error generating SARIF: {e}')
+    print(f'Error generating SARIF: {e}')
     with open('bandit_sarif.json', 'w') as f:
         json.dump({
             '\$schema': 'https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json',
             'version': '2.1.0',
             'runs': [{'tool': {'driver': {'name': 'Bandit'}}, 'results': []}]
-        }, f)
-"
+        }, f)"
         working-directory: backend
 
       - name: Upload Security Scan Results
@@ -423,13 +299,9 @@ except Exception as e:
 
       - name: Install and Run Gitleaks Properly
         run: |
-          # Install gitleaks with proper configuration
           curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.18.1/gitleaks_8.18.1_linux_x64.tar.gz | tar xz -C /tmp/
           chmod +x /tmp/gitleaks
           sudo mv /tmp/gitleaks /usr/local/bin/
-          
-          echo "🔍 Creating gitleaks configuration..."
-          # Create a proper config file that excludes test files and documentation
           cat > .gitleaks.toml << 'EOF'
 title = "ThermaCoreApp Gitleaks Config"
 [allowlist]
@@ -463,10 +335,7 @@ title = "ThermaCoreApp Gitleaks Config"
     '''frontend/src/__tests__/.*''',
   ]
 EOF
-          
-          echo "🔍 Running gitleaks secret scan with proper config..."
           gitleaks detect --source . --config .gitleaks.toml --no-git --verbose --redact
-          
           echo "✅ Gitleaks scan completed successfully"
 
       - name: Dependency Review
@@ -476,17 +345,12 @@ EOF
       - name: Run OSV Scanner with Go Install (Most Reliable)
         run: |
           echo "🔧 Installing OSV Scanner via Go install..."
-          # Install Go if not present
           if ! command -v go &> /dev/null; then
             curl -L https://golang.org/dl/go1.21.0.linux-amd64.tar.gz | sudo tar -C /usr/local -xzf -
             echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
             source ~/.bashrc
           fi
-          
-          # Install OSV Scanner via Go
           go install github.com/google/osv-scanner/cmd/osv-scanner@v1
-          
-          echo "🔍 Running OSV Scanner..."
           ~/go/bin/osv-scanner -r . --skip-git || echo "OSV Scanner completed with findings"
 
   dependabot-auto-merge:
