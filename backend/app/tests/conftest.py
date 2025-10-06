@@ -6,7 +6,7 @@ import traceback
 from sqlalchemy import text, inspect
 
 from app import create_app, db
-from app.models import User, Role, Permission, Unit, Sensor
+from app.models import User, Role, Permission, Unit, Sensor, SensorReading
 from config import TestingConfig
 
 
