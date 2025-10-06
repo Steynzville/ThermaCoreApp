@@ -205,13 +205,8 @@ jobs:
           import pytest
           sys.path.insert(0, "/app")
           
-          # Import ALL models FIRST
-          from app.models.user import User
-          from app.models.role import Role
-          from app.models.permission import Permission
-          from app.models.sensor_reading import SensorReading
-          from app.models.sensor import Sensor
-          from app.models.unit import Unit
+          # Import ALL models FIRST (all models are in app.models.__init__.py)
+          from app.models import User, Role, Permission, SensorReading, Sensor, Unit
           
           from app import create_app, db
           
