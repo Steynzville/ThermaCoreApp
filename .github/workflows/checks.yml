@@ -288,10 +288,12 @@ with app.app_context():
           fi
 
       - name: Install Python dependencies
-        run: pip install -r backend/requirements.txt ruff bandit
+        run: |
+          pip install -r backend/requirements.txt ruff bandit
 
       - name: Run Ruff
-        run: ruff check .
+        run: |
+          ruff check .
         working-directory: backend
 
       - name: Run Bandit and Generate SARIF Report
@@ -302,7 +304,16 @@ import json
 try:
     with open('bandit_report.json', 'r') as f:
         bandit_data = json.load(f)
-    sarif = {'\$schema': 'https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json', 'version': '2.1.0', 'runs': [{'tool': {'driver': {'name': 'Bandit'}}, 'results': []}]}
+    sarif = {
+        '\$schema': 'https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json',
+        'version': '2.1.0',
+        'runs': [{
+            'tool': {
+                'driver': {'name': 'Bandit'},
+            },
+            'results': []
+        }]
+    }
     for issue in bandit_data.get('results', []):
         if issue.get('issue_severity') in ['HIGH', 'MEDIUM']:
             sarif['runs'][0]['results'].append({
@@ -312,7 +323,10 @@ try:
                 'locations': [{
                     'physicalLocation': {
                         'artifactLocation': {'uri': issue.get('filename', '').replace('./', '')},
-                        'region': {'startLine': issue.get('line_number', 0), 'startColumn': issue.get('col_offset', 0)}
+                        'region': {
+                            'startLine': issue.get('line_number', 0),
+                            'startColumn': issue.get('col_offset', 0)
+                        }
                     }
                 }]
             })
