@@ -194,6 +194,57 @@ jobs:
           
           echo "✅ Database setup completed"
 
+      - name: Debug conftest.py Database Setup
+        run: |
+          echo "🔍 Debugging conftest.py database setup..."
+          docker-compose -f docker-compose.ci.yml run --rm backend bash -c "
+            python -c \"
+          import sys
+          sys.path.insert(0, '/app')
+          
+          print('Testing conftest.py database initialization...')
+          
+          # Import conftest and test the app fixture
+          from app.tests.conftest import app as app_fixture
+          
+          # Get the app from the fixture
+          import pytest
+          app_gen = app_fixture(None)
+          app = next(app_gen)
+          
+          with app.app_context():
+              from app import db
+              from sqlalchemy import inspect
+              
+              # Check what tables exist
+              inspector = inspect(db.engine)
+              tables = inspector.get_table_names()
+              print(f'📊 Tables in conftest.py database: {sorted(tables)}')
+              
+              if 'roles' in tables:
+                  print('✅ Roles table exists in conftest.py')
+              else:
+                  print('❌ Roles table MISSING in conftest.py')
+                  
+              # Check metadata
+              print(f'📊 Metadata tables: {sorted(list(db.Model.metadata.tables.keys()))}')
+              
+              # Try to query roles
+              try:
+                  from app.models import Role
+                  roles = Role.query.all()
+                  print(f'✅ Can query roles: {len(roles)} roles found')
+              except Exception as e:
+                  print(f'❌ Cannot query roles: {e}')
+          
+          # Clean up the generator
+          try:
+              next(app_gen)
+          except StopIteration:
+              pass
+          \"
+          "
+
       - name: Run Backend Tests
         run: |
           echo "🧪 Running backend tests..."
