@@ -149,8 +149,14 @@ def handle_webargs_error(error, req, schema, *, error_status_code, error_headers
     
     This ensures webargs validation errors use our standardized error envelope format
     with correlation IDs and consistent structure.
+    
+    Note: This handler must abort (raise HTTPException) rather than return a response,
+    as required by webargs' error handling mechanism.
     """
-    return jsonify({
+    from flask import abort, make_response
+    
+    # Create the error response
+    error_response = {
         'success': False,
         'error': {
             'code': 'VALIDATION_ERROR',
@@ -162,7 +168,12 @@ def handle_webargs_error(error, req, schema, *, error_status_code, error_headers
         },
         'request_id': getattr(g, 'request_id', str(uuid.uuid4())),
         'timestamp': datetime.utcnow().isoformat() + 'Z'
-    }), error_status_code or 400
+    }
+    
+    # Abort with the error status code and attach response data
+    # We'll catch this in a Flask error handler
+    response = make_response(jsonify(error_response), error_status_code or 400)
+    abort(response)
 
 
 def validate_query_params(**param_validators):
