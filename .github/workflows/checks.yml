@@ -194,70 +194,12 @@ jobs:
           
           echo "✅ Database setup completed"
 
-      - name: Run Backend Tests with Guaranteed Database
+      - name: Run Backend Tests
         run: |
-          echo "🧪 Running tests with guaranteed database setup..."
-          docker-compose -f docker-compose.ci.yml run --rm backend bash -c '
-          cat > /tmp/run_tests.py << "PYTEST_SCRIPT"
-          import sys
-          import os
-          import tempfile
-          import pytest
-          sys.path.insert(0, "/app")
-          
-          # Import ALL models FIRST (all models are in app.models.__init__.py)
-          from app.models import User, Role, Permission, SensorReading, Sensor, Unit
-          
-          from app import create_app, db
-          
-          # Create persistent database
-          fd, db_path = tempfile.mkstemp(suffix=".db")
-          os.close(fd)
-          
-          # Create app with our database
-          app = create_app("testing")
-          app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
-          app.config["TESTING"] = True
-          
-          # Set up database
-          with app.app_context():
-              db.drop_all()
-              db.create_all()
-              
-              # Verify tables exist
-              from sqlalchemy import inspect
-              inspector = inspect(db.engine)
-              tables = inspector.get_table_names()
-              
-              if "roles" not in tables:
-                  print("❌ CRITICAL: roles table missing")
-                  sys.exit(1)
-              
-              print("✅ Database ready - all tables exist")
-          
-          # Force pytest to use our app
-          import app.tests.conftest as conftest
-          
-          @pytest.fixture(scope="session")
-          def forced_app():
-              return app
-          
-          conftest.app = forced_app
-          
-          # Run tests
-          result = pytest.main(["-v", "--tb=short", "-x"])
-          
-          # Cleanup
-          try:
-              os.unlink(db_path)
-          except:
-              pass
-          
-          sys.exit(result)
-          PYTEST_SCRIPT
-          
-          python /tmp/run_tests.py
-          '
+          echo "🧪 Running backend tests..."
+          # Tests use conftest.py for database initialization
+          # conftest.py creates a temporary database and initializes it with all models
+          docker-compose -f docker-compose.ci.yml run --rm backend python -m pytest -v --tb=short -x
 
       - name: Stop Services
         if: always()
