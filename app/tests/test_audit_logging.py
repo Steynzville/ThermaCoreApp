@@ -1,0 +1,3 @@
+def test_audit_permission_check_function(mock_audit):
+    # ... other test code ...
+    mock_audit.assert_called_once_with(expected_param_1, expected_param_2, details=None)  # Updated expectation
