@@ -21,37 +21,37 @@ This document provides comprehensive coverage of the Role-Based Access Control (
 | Permission | Admin | Operator | Viewer | Description |
 |-----------|-------|----------|--------|-------------|
 | `read_units` | ✓ | ✓ | ✓ | View unit information and status |
-| `write_units` | ✓ | ✓ | ✗ | Create and modify units |
-| `delete_units` | ✓ | ✗ | ✗ | Delete units from system |
+| `write_units` | ✓ | ✗ | ✗ | ThermaCore only - Create and modify units |
+| `delete_units` | ✓ | ✗ | ✗ | ThermaCore only - Delete units from system |
 | `read_users` | ✓ | ✓ | ✓ | View user information |
-| `write_users` | ✓ | ✗ | ✗ | Create and modify users |
-| `delete_users` | ✓ | ✗ | ✗ | Delete users from system |
-| `admin_panel` | ✓ | ✗ | ✗ | Access administrative features |
-| `remote_control` | ✓ | ✓ | ✗ | **Remote control unit operations (power, water production, auto settings, live video)** |
+| `write_users` | ✓ | ✗ | ✗ | ThermaCore only - Create and modify users |
+| `delete_users` | ✓ | ✗ | ✗ | ThermaCore only - Delete users from system |
+| `admin_panel` | ✓ | ✗ | ✗ | ThermaCore only - Access administrative features |
+| `remote_control` | ✓ | ✓ | ✗ | Operators only - Remote control unit operations (power, water production, auto settings, live video) |
 
 ### Role Definitions
 
-#### Admin Role
-- **Full System Access**: Complete control over all resources
-- **User Management**: Can create, modify, and delete users
-- **Unit Management**: Complete CRUD operations on units
+#### Admin Role (ThermaCore Staff Only)
+- **Full System Administration**: Complete control over all resources and system configuration
+- **User Management**: Can create, modify, and delete users (ThermaCore staff only)
+- **Unit Management**: Complete CRUD operations on units (add, modify, delete units)
 - **System Configuration**: Access to system settings and configuration
 - **Audit Access**: Can view and analyze audit logs
 - **Remote Control Access**: Can remotely control units (power, water production, automatic settings, live video feed)
 
-#### Operator Role
-- **Operational Access**: Read and write access to operational data
-- **Unit Operations**: Can view and modify unit settings and status
-- **Limited User Access**: Can view user information but cannot modify
-- **No System Administration**: Cannot access admin panel or system configuration
+#### Operator Role (Client Power Users)
+- **Operational Monitoring**: Read-only access to unit data and status
+- **User Information**: Can view user information but cannot modify
 - **Remote Control Access**: Can remotely control units (power, water production, automatic settings, live video feed)
+- **No System Administration**: Cannot access admin panel or system configuration
+- **No Modification Rights**: Cannot add, modify, or delete units or users
 
-#### Viewer Role
+#### Viewer Role (Client Read-Only Users)
 - **Read-Only Access**: Can view system information but cannot modify
 - **Unit Monitoring**: Can view unit status and historical data
 - **User Information**: Can view basic user information
 - **No Remote Control**: Cannot remotely control units
-- **No Administrative Modifications**: Cannot create, update, or delete resources through administrative interfaces
+- **No Administrative Modifications**: Cannot create, update, or delete resources
 
 ## Enhanced Security Features (PR3)
 
