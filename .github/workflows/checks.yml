@@ -1,447 +1,333 @@
-name: Focused Code Quality and Security Checks
-permissions:
-  contents: write
-  pull-requests: write
-  security-events: write
-
+name: Checks
 on:
   push:
-    branches:
-      - main
+    branches: [main, master]
   pull_request:
-    branches:
-      - main
+    branches: [main, master]
+
+permissions:
+  contents: read
+  id-token: write
 
 env:
-  SECRET_KEY: dummy-test-secret-key-123-for-github-actions
-  JWT_SECRET_KEY: dummy-jwt-secret-key-456-for-github-actions
-  FLASK_ENV: test
-  FLASK_APP: app.py
-  DATABASE_URL: postgresql://thermacore_user:thermacore_pass@database:5432/thermacore
-  # MQTT environment variables to prevent production config errors
-  MQTT_CERT_PATH: /dummy/path/to/cert.pem
-  MQTT_KEY_PATH: /dummy/path/to/key.pem
-  MQTT_CA_PATH: /dummy/path/to/ca.pem
+  PYTHON_VERSION: "3.11"
+  NODE_VERSION: "20"
+  POETRY_VERSION: "1.8.3"
+  COVERAGE_THRESHOLD: "85"
+  DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/app_test"
 
 jobs:
-  build-and-test:
+  lint:
+    name: Lint & Static Analysis
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    
     steps:
-      - name: Checkout code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Poetry
+        run: pip install poetry==${{ env.POETRY_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          poetry install --no-interaction --no-ansi
+
+      - name: Run black
+        run: |
+          poetry run black --check .
+
+      - name: Run isort
+        run: |
+          poetry run isort --check-only .
+
+      - name: Run flake8
+        run: |
+          poetry run flake8 .
+
+      - name: Run mypy
+        run: |
+          poetry run mypy .
+
+  tests:
+    name: Unit & Integration Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache Poetry virtualenv
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pypoetry
+          key: poetry-${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('poetry.lock') }}
+          restore-keys: |
+            poetry-${{ runner.os }}-${{ env.PYTHON_VERSION }}-
+
+      - name: Install Poetry
+        run: pip install poetry==${{ env.POETRY_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          poetry install --no-interaction --no-ansi
+
+      - name: Wait for PostgreSQL to be ready
+        run: |
+          for i in {1..20}; do
+            if pg_isready -h localhost -U postgres; then
+              echo "Postgres is ready!"
+              break
+            fi
+            echo "Waiting for Postgres..."
+            sleep 3
+          done
+
+      - name: Wait for Redis to be ready
+        run: |
+          for i in {1..20}; do
+            if redis-cli -h localhost ping; then
+              echo "Redis is ready!"
+              break
+            fi
+            echo "Waiting for Redis..."
+            sleep 3
+          done
+
+      - name: Run Database Migrations (Alembic)
+        run: |
+          poetry run alembic upgrade head
+
+      - name: Seed Test Data
+        run: |
+          poetry run python -m app.seed_test_data
+          
+      - name: Run Integration Tests with Coverage
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+        run: |
+          poetry run pytest -v --maxfail=1 --disable-warnings --cov=app --cov-report=xml
+
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: false
+
+  docker-validation:
+    name: Docker Build Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Set up Docker Compose
+      - name: Validate docker-compose.yml
         run: |
-          sudo systemctl start docker
-          docker --version
-          sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-          sudo chmod +x /usr/local/bin/docker-compose
-          docker-compose --version
+          docker compose config
 
-      - name: Check Docker Compose Configuration and Services
+      - name: Build images
         run: |
-          echo "📋 Checking docker-compose.yml file..."
-          ls -la docker-compose.yml || echo "❌ docker-compose.yml not found"
-          echo "📋 Available services:"
-          docker-compose config --services || echo "❌ Cannot parse docker-compose.yml"
-          
-          echo "🔍 Checking for database service names..."
-          SERVICES=$(docker-compose config --services)
-          echo "Available services: $SERVICES"
-          
-          if echo "$SERVICES" | grep -q "timescaledb"; then
-            echo "✅ Found 'timescaledb' service"
-            DB_SERVICE="timescaledb"
-          elif echo "$SERVICES" | grep -q "db"; then
-            echo "✅ Found 'db' service" 
-            DB_SERVICE="db"
-          elif echo "$SERVICES" | grep -q "postgres"; then
-            echo "✅ Found 'postgres' service"
-            DB_SERVICE="postgres"
-          elif echo "$SERVICES" | grep -q "database"; then
-            echo "✅ Found 'database' service"
-            DB_SERVICE="database"
-          else
-            echo "❌ No database service found. Available: $SERVICES"
-            exit 1
-          fi
-          
-          echo "📊 Using database service: $DB_SERVICE"
+          docker compose build --parallel
 
-      - name: Fix Locust Version in Requirements
+      - name: Start containers
         run: |
-          cd backend
-          if grep -q "locust==2.35.0" requirements.txt; then
-            echo "🔧 Fixing locust version from 2.35.0 to 2.20.1"
-            sed -i 's/locust==2.35.0/locust==2.20.1/' requirements.txt
-            echo "✅ Updated requirements.txt"
-            cat requirements.txt | grep locust
-          fi
+          docker compose up -d
+          sleep 10
+          docker compose ps
 
-      - name: Create Temporary Docker Compose Without Frontend
+      - name: Run quick backend health check
         run: |
-          echo "🔧 Creating temporary docker-compose.ci.yml without frontend..."
-          # Create a temporary compose file that excludes the frontend service
-          docker-compose config > docker-compose.ci.yml
-          
-          # Remove frontend service from the config
-          python3 -c "
-          import yaml
-          with open('docker-compose.ci.yml', 'r') as f:
-              config = yaml.safe_load(f)
-          
-          # Remove frontend service if it exists
-          if 'services' in config and 'frontend' in config['services']:
-              del config['services']['frontend']
-              print('✅ Removed frontend service from docker-compose.ci.yml')
-          else:
-              print('ℹ️  No frontend service found in docker-compose.yml')
-          
-          # Write the modified config
-          with open('docker-compose.ci.yml', 'w') as f:
-              yaml.dump(config, f)
-          "
-          
-          echo "📋 Temporary docker-compose.ci.yml created:"
-          cat docker-compose.ci.yml | head -20
-
-      - name: Build Database and Backend Only (Using CI Compose)
-        run: |
-          echo "🏗️ Building database and backend services using CI compose file..."
-          
-          # Build database first to ensure it's ready
-          docker-compose -f docker-compose.ci.yml build $DB_SERVICE
-          echo "✅ Database service built"
-          
-          # Then build backend only
-          docker-compose -f docker-compose.ci.yml build backend
-          echo "✅ Backend built successfully"
-
-      - name: Start Database with Simplified Health Check
-        run: |
-          # Determine database service name
-          SERVICES=$(docker-compose -f docker-compose.ci.yml config --services)
-          if echo "$SERVICES" | grep -q "timescaledb"; then
-            DB_SERVICE="timescaledb"
-          elif echo "$SERVICES" | grep -q "db"; then
-            DB_SERVICE="db"
-          elif echo "$SERVICES" | grep -q "postgres"; then
-            DB_SERVICE="postgres"
-          elif echo "$SERVICES" | grep -q "database"; then
-            DB_SERVICE="database"
-          else
-            echo "❌ Cannot determine database service"
-            exit 1
-          fi
-          
-          echo "🚀 Starting database service: $DB_SERVICE"
-          docker-compose -f docker-compose.ci.yml up -d $DB_SERVICE
-          
-          echo "⏳ Waiting for database to start (simple wait)..."
-          # Simple sleep to allow database to initialize
-          sleep 30
-          
-          echo "🔧 Testing database connection..."
-          # Try multiple connection attempts with simpler method
-          for i in {1..10}; do
-            if docker-compose -f docker-compose.ci.yml exec -T $DB_SERVICE psql -U postgres -c "SELECT version();" 2>/dev/null; then
-              echo "✅ Database is ready and responding"
-              break
-            else
-              echo "⏳ Database not ready yet, attempt $i/10..."
-              sleep 10
-            fi
-          done
-          
-          # Final connection test
-          if docker-compose -f docker-compose.ci.yml exec -T $DB_SERVICE psql -U postgres -c "SELECT 1;" 2>/dev/null; then
-            echo "🎉 Database connection successful!"
-          else
-            echo "❌ Database failed to start properly"
-            echo "📋 Checking database logs:"
-            docker-compose -f docker-compose.ci.yml logs $DB_SERVICE
-            exit 1
-          fi
-
-      - name: Initialize Test Database (Fixed Transaction Issue)
-        run: |
-          SERVICES=$(docker-compose -f docker-compose.ci.yml config --services)
-          if echo "$SERVICES" | grep -q "timescaledb"; then
-            DB_SERVICE="timescaledb"
-          elif echo "$SERVICES" | grep -q "db"; then
-            DB_SERVICE="db"
-          elif echo "$SERVICES" | grep -q "postgres"; then
-            DB_SERVICE="postgres"
-          elif echo "$SERVICES" | grep -q "database"; then
-            DB_SERVICE="database"
-          else
-            echo "❌ Cannot determine database service"
-            exit 1
-          fi
-          
-          echo "🔧 Initializing test database on service: $DB_SERVICE"
-          # Use single commands to avoid transaction blocks
-          docker-compose -f docker-compose.ci.yml exec -T $DB_SERVICE psql -U postgres -c "DROP DATABASE IF EXISTS thermacore;" || echo "⚠️ Could not drop database (might not exist)"
-          docker-compose -f docker-compose.ci.yml exec -T $DB_SERVICE psql -U postgres -c "DROP USER IF EXISTS thermacore_user;" || echo "⚠️ Could not drop user (might not exist)"
-          docker-compose -f docker-compose.ci.yml exec -T $DB_SERVICE psql -U postgres -c "CREATE USER thermacore_user WITH PASSWORD 'thermacore_pass';" || echo "⚠️ User might already exist"
-          docker-compose -f docker-compose.ci.yml exec -T $DB_SERVICE psql -U postgres -c "CREATE DATABASE thermacore OWNER thermacore_user;" || echo "⚠️ Database might already exist"
-          docker-compose -f docker-compose.ci.yml exec -T $DB_SERVICE psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE thermacore TO thermacore_user;" || echo "⚠️ Grant might already exist"
-          
-          echo "✅ Database setup completed"
-
-      - name: Run Database Migrations with Robust Script
-        run: |
-          echo "🗃️ Running database migrations with robust script..."
-          docker-compose -f docker-compose.ci.yml run --rm backend python -c "
-import sys
-import os
-sys.path.insert(0, '/app')
-try:
-    from app import create_app, db
-    app = create_app('testing')
-    with app.app_context():
-        print('🚀 Starting database migrations...')
-        try:
-            from flask_migrate import upgrade
-            upgrade()
-            print('✅ Flask-Migrate upgrades applied')
-        except Exception as e:
-            print(f'📝 Flask-Migrate not available: {e}')
-            db.drop_all()
-            db.create_all()
-            print('✅ Database tables created via create_all')
-        from sqlalchemy import inspect
-        inspector = inspect(db.engine)
-        tables = inspector.get_table_names()
-        print(f'📊 Final tables in database: {tables}')
-        if tables:
-            print('🎉 Database migration completed successfully!')
-        else:
-            print('⚠️  No tables found in database')
+          docker compose exec -T backend python -c "
+          import requests, sys
+          try:
+              r = requests.get('http://localhost:5000/health', timeout=5)
+              print('Health check:', r.status_code, r.text[:100])
+              sys.exit(0 if r.ok else 1)
 except Exception as e:
-    print(f'❌ Migration failed: {e}')
-    import traceback
-    traceback.print_exc()
+    print('Health check failed:', e)
     sys.exit(1)
 "
 
-      - name: Apply Database Migrations for Tests
-        run: |
-          echo "🗃️ Applying database migrations for tests..."
-          docker-compose -f docker-compose.ci.yml run --rm backend python -c "
-import sys
-sys.path.insert(0, '/app')
-from app import create_app
-from flask_migrate import upgrade
-app = create_app('testing')
-with app.app_context():
-    upgrade()
-    print('✅ Database migrations applied successfully')
-    from sqlalchemy import inspect
-    inspector = inspect(app.extensions['sqlalchemy'].db.engine)
-    tables = inspector.get_table_names()
-    print(f'📊 Tables in database: {tables}')
-    required_tables = ['roles', 'users', 'sensors', 'sensor_readings']
-    for table in required_tables:
-        if table in tables:
-            print(f'✅ Table {table} exists')
-        else:
-            print(f'❌ Table {table} missing')
-"
-
-      - name: Run Backend Tests
-        run: |
-          echo "🧪 Running backend tests..."
-          docker-compose -f docker-compose.ci.yml run --rm backend python -m pytest -v --tb=short -x
-
-      - name: Stop Services
+      - name: Stop and cleanup
         if: always()
         run: |
-          docker-compose -f docker-compose.ci.yml down --remove-orphans --timeout 30 || echo "Docker compose down failed but continuing..."
+          docker compose down -v --remove-orphans
 
-      - name: Cleanup Temporary Files
-        if: always()
-        run: |
-          rm -f docker-compose.ci.yml || echo "No temporary file to clean up"
-
-  python-quality-and-security:
+  security:
+    name: Python Security & Dependency Scan
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Fix Locust Version for Quality Checks
+      - name: Install dependencies for security checks
         run: |
-          cd backend
-          if grep -q "locust==2.35.0" requirements.txt; then
-            sed -i 's/locust==2.35.0/locust==2.20.1/' requirements.txt
-          fi
+          pip install bandit safety
 
-      - name: Install Python dependencies
+      - name: Run Bandit Security Scan
         run: |
-          pip install -r backend/requirements.txt ruff bandit
+          bandit -r app -f txt -o bandit_report.txt || true
 
-      - name: Run Ruff
+      - name: Run Safety Vulnerability Scan
         run: |
-          ruff check .
-        working-directory: backend
+          pip install -r requirements.txt
+          safety check --full-report > safety_report.txt || true
 
-      - name: Run Bandit and Generate SARIF Report
-        run: |
-          bandit -r . -f json -o bandit_report.json --skip B101,B311,B105,B107,B108,B104,B110 || true
-          python -c "
-import json
-try:
-    with open('bandit_report.json', 'r') as f:
-        bandit_data = json.load(f)
-    sarif = {
-        '\$schema': 'https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json',
-        'version': '2.1.0',
-        'runs': [{
-            'tool': {
-                'driver': {'name': 'Bandit'},
-            },
-            'results': []
-        }]
-    }
-    for issue in bandit_data.get('results', []):
-        if issue.get('issue_severity') in ['HIGH', 'MEDIUM']:
-            sarif['runs'][0]['results'].append({
-                'ruleId': issue.get('test_id', ''),
-                'level': 'error' if issue.get('issue_severity') == 'HIGH' else 'warning',
-                'message': {'text': issue.get('issue_text', '')},
-                'locations': [{
-                    'physicalLocation': {
-                        'artifactLocation': {'uri': issue.get('filename', '').replace('./', '')},
-                        'region': {
-                            'startLine': issue.get('line_number', 0),
-                            'startColumn': issue.get('col_offset', 0)
-                        }
-                    }
-                }]
-            })
-    print(f'Found {len(sarif[\"runs\"][0][\"results\"])} high/medium severity issues')
-    with open('bandit_sarif.json', 'w') as f:
-        json.dump(sarif, f, indent=2)
-except Exception as e:
-    print(f'Error generating SARIF: {e}')
-    with open('bandit_sarif.json', 'w') as f:
-        json.dump({
-            '\$schema': 'https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json',
-            'version': '2.1.0',
-            'runs': [{'tool': {'driver': {'name': 'Bandit'}}, 'results': []}]
-        }, f)
-"
-        working-directory: backend
-
-      - name: Upload Security Scan Results
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: backend/bandit_sarif.json
-
-      - name: Upload Bandit Report Artifact
+      - name: Upload security reports
         uses: actions/upload-artifact@v4
-        if: always()
         with:
-          name: bandit-security-report
-          path: backend/bandit_report.json
+          name: python-security-reports
+          path: |
+            bandit_report.txt
+            safety_report.txt
 
-  dependency-and-secret-scanning:
+  secrets:
+    name: Secret Scanning & Dependency Review
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install and Run Gitleaks Properly
+      - name: Run Gitleaks
         run: |
           curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.18.1/gitleaks_8.18.1_linux_x64.tar.gz | tar xz -C /tmp/
           chmod +x /tmp/gitleaks
           sudo mv /tmp/gitleaks /usr/local/bin/
-          cat > .gitleaks.toml << 'EOF'
-title = "ThermaCoreApp Gitleaks Config"
-[allowlist]
-  description = "Allow test files and documentation"
-  files = [
-    '''.*\.md$''',
-    '''.*\.txt$''',
-    '''.*test.*\.py$''',
-    '''.*Test.*\.py$''',
-    '''.*spec.*\.py$''',
-    '''.*fixture.*\.py$''',
-    '''conftest\.py$''',
-    '''.*__init__\.py$''',
-    '''.*\.lock$''',
-    '''.*\.json$''',
-    '''.*\.yml$''',
-    '''.*\.yaml$''',
-    '''\.env\.example$''',
-    '''\.gitignore$''',
-    '''bandit_report\.json$''',
-    '''coverage\.xml$''',
-    '''.*\.html$''',
-    '''.*\.sql$''',
-    '''.*\.log$''',
-    '''\.github/workflows/.*''',
-    '''backend/app/tests/.*''',
-    '''backend/app/utils/validate_secure_logging\.py$''',
-    '''backend/SECURITY_.*''',
-    '''backend/SECRET_.*''',
-    '''backend/SECURE_.*''',
-    '''frontend/src/__tests__/.*''',
-  ]
-EOF
-          gitleaks detect --source . --config .gitleaks.toml --no-git --verbose --redact
-          echo "✅ Gitleaks scan completed successfully"
+          gitleaks detect --source . --no-git --verbose --redact
 
       - name: Dependency Review
         if: github.event_name == 'pull_request'
         uses: actions/dependency-review-action@v4
+        dependency-audit:
+        
+      - name: Dependency & Vulnerability Audit
+        runs-on: ubuntu-latest
+        steps:
+        
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Run OSV Scanner with Go Install (Most Reliable)
+      - name: Install OSV Scanner
         run: |
-          echo "🔧 Installing OSV Scanner via Go install..."
-          if ! command -v go &> /dev/null; then
-            curl -L https://golang.org/dl/go1.21.0.linux-amd64.tar.gz | sudo tar -C /usr/local -xzf -
-            echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
-            source ~/.bashrc
-          fi
-          go install github.com/google/osv-scanner/cmd/osv-scanner@v1
-          ~/go/bin/osv-scanner -r . --skip-git || echo "OSV Scanner completed with findings"
+          curl -sSfL https://github.com/google/osv-scanner/releases/download/v1.7.3/osv-scanner_linux_amd64 -o osv-scanner
+          chmod +x osv-scanner
+          sudo mv osv-scanner /usr/local/bin/
 
-  dependabot-auto-merge:
+      - name: Run OSV Scanner
+        run: |
+          osv-scanner --recursive --lockfile=poetry.lock > osv-report.txt || true
+
+      - name: Upload OSV report
+        uses: actions/upload-artifact@v4
+        with:
+          name: osv-scan-report
+          path: osv-report.txt
+
+  dependabot:
+    name: Dependabot & Auto-Merge Workflow
     runs-on: ubuntu-latest
-    if: ${{ github.actor == 'dependabot[bot]' }}
     permissions:
       contents: write
       pull-requests: write
+    if: github.event_name == 'pull_request'
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Dependabot metadata
-        id: metadata
+        id: dependabot
         uses: dependabot/fetch-metadata@v2
         with:
-          github-token: "${{ secrets.GITHUB_TOKEN }}"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Auto-approve Dependabot PRs
+        if: ${{ steps.dependabot.outputs.dependency-type != 'direct' }}
+        uses: hmarr/auto-approve-action@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Enable auto-merge for Dependabot PRs
-        if: ${{ steps.metadata.outputs.update-type == 'version-update:semver-patch' }}
-        run: |
-          gh pr merge --auto --merge "${{ github.event.pull_request.html_url }}"
+        if: ${{ steps.dependabot.outputs.update-type == 'version-update:semver-patch' || steps.dependabot.outputs.update-type == 'version-update:semver-minor' }}
+        run: gh pr merge --auto --squash "$PR_URL"
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
 
-      - name: Approve Dependabot PRs
-        if: ${{ steps.metadata.outputs.update-type == 'version-update:semver-patch' }}
+  report-summary:
+    name: Summarize Reports
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [lint, tests, docker-validation, security, secrets, dependency-audit]
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: reports
+
+      - name: Display artifact summary
         run: |
-          gh pr review --approve "${{ github.event.pull_request.html_url }}"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          echo "=== Reports Summary ==="
+          find reports -type f -maxdepth 3
+          echo "======================="
+
+      - name: Upload combined reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: combined-ci-reports
+          path: reports/
+
+  notify:
+    name: Notifications
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [report-summary]
+    steps:
+      - name: Job summary output
+        run: |
+          echo "✅ CI/CD pipeline completed."
+          echo "Check artifacts for detailed results."
+
+      - name: Send status to Slack (optional)
+        if: ${{ success() && env.SLACK_WEBHOOK_URL != '' }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data '{"text":"✅ GitHub Actions pipeline completed successfully."}' \
+          $SLACK_WEBHOOK_URL
