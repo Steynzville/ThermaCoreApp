@@ -194,48 +194,11 @@ jobs:
           
           echo "✅ Database setup completed"
 
-      - name: Run Database Migration
+      - name: Run Backend Tests
         run: |
-          echo "🔄 Running database migrations..."
-          docker-compose -f docker-compose.ci.yml run --rm backend python -c "
-import sys
-import os
-
-# Add current directory to path
-sys.path.insert(0, '/app')
-
-try:
-    from app import create_app, db
-    app = create_app('testing')
-    
-    with app.app_context():
-        print('🚀 Starting database migrations...')
-        
-        # Method 1: Try Flask-Migrate
-        try:
-            from flask_migrate import upgrade
-            upgrade()
-            print('✅ Flask-Migrate upgrades applied')
-        except Exception as e:
-            print(f'📝 Flask-Migrate not available: {e}')
-            db.drop_all()
-            db.create_all()
-            print('✅ Database tables created via create_all')
-        
-        print('🎉 Database migration completed!')
-        
-except Exception as e:
-    print(f'❌ Migration failed: {e}')
-    import traceback
-    traceback.print_exc()
-    sys.exit(1)
-"
-
-      - name: Run Backend Tests Directly (No Server Needed)
-        run: |
-          echo "🧪 Running backend tests directly (no Flask server needed)..."
-          # Run tests directly without starting a Flask server
-          # The tests should create their own app context
+          echo "🧪 Running backend tests..."
+          # Tests use conftest.py for database initialization
+          # conftest.py creates a temporary database and initializes it with all models
           docker-compose -f docker-compose.ci.yml run --rm backend python -m pytest -v --tb=short -x
 
       - name: Stop Services
