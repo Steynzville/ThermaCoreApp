@@ -198,38 +198,38 @@ jobs:
         run: |
           echo "🔄 Running database migrations..."
           docker-compose -f docker-compose.ci.yml run --rm backend python -c "
-import sys
-import os
-
-# Add current directory to path
-sys.path.insert(0, '/app')
-
-try:
-    from app import create_app, db
-    app = create_app('testing')
-    
-    with app.app_context():
-        print('🚀 Starting database migrations...')
-        
-        # Method 1: Try Flask-Migrate
-        try:
-            from flask_migrate import upgrade
-            upgrade()
-            print('✅ Flask-Migrate upgrades applied')
-        except Exception as e:
-            print(f'📝 Flask-Migrate not available: {e}')
-            db.drop_all()
-            db.create_all()
-            print('✅ Database tables created via create_all')
-        
-        print('🎉 Database migration completed!')
-        
-except Exception as e:
-    print(f'❌ Migration failed: {e}')
-    import traceback
-    traceback.print_exc()
-    sys.exit(1)
-"
+          import sys
+          import os
+          
+          # Add current directory to path
+          sys.path.insert(0, '/app')
+          
+          try:
+              from app import create_app, db
+              app = create_app('testing')
+              
+              with app.app_context():
+                  print('🚀 Starting database migrations...')
+                  
+                  # Method 1: Try Flask-Migrate
+                  try:
+                      from flask_migrate import upgrade
+                      upgrade()
+                      print('✅ Flask-Migrate upgrades applied')
+                  except Exception as e:
+                      print(f'📝 Flask-Migrate not available: {e}')
+                      db.drop_all()
+                      db.create_all()
+                      print('✅ Database tables created via create_all')
+                  
+                  print('🎉 Database migration completed!')
+                  
+          except Exception as e:
+              print(f'❌ Migration failed: {e}')
+              import traceback
+              traceback.print_exc()
+              sys.exit(1)
+          "
 
       - name: Run Backend Tests Directly (No Server Needed)
         run: |
