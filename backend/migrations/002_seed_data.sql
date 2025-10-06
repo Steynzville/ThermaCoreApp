@@ -14,9 +14,9 @@ ON CONFLICT (name) DO NOTHING;
 
 -- Insert default roles
 INSERT INTO roles (name, description) VALUES 
-    ('admin', 'Full system access with all permissions'),
-    ('operator', 'Operational access to units with limited user management'),
-    ('viewer', 'Read-only access to system data')
+    ('admin', 'ThermaCore staff only - Full system administration with all permissions'),
+    ('operator', 'Client power users - Read-only access with remote control capabilities'),
+    ('viewer', 'Client read-only users - View-only access to system data')
 ON CONFLICT (name) DO NOTHING;
 
 -- Assign permissions to roles
@@ -27,18 +27,18 @@ FROM roles r, permissions p
 WHERE r.name = 'admin'
 ON CONFLICT DO NOTHING;
 
--- Operator role gets unit management, read user permissions, and remote control
+-- Operator role gets read units, read users, and remote control only (no write/delete)
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r, permissions p
-WHERE r.name = 'operator' AND p.name IN ('read_units', 'write_units', 'read_users', 'remote_control')
+WHERE r.name = 'operator' AND p.name IN ('read_units', 'read_users', 'remote_control')
 ON CONFLICT DO NOTHING;
 
--- Viewer role gets read permissions and remote control access
+-- Viewer role gets read permissions only (no remote control)
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r, permissions p
-WHERE r.name = 'viewer' AND p.name IN ('read_units', 'read_users', 'remote_control')
+WHERE r.name = 'viewer' AND p.name IN ('read_units', 'read_users')
 ON CONFLICT DO NOTHING;
 
 -- Default admin user creation moved to a secure setup process or manual creation. Refer to documentation for details.
