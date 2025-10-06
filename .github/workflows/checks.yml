@@ -194,78 +194,11 @@ jobs:
           
           echo "✅ Database setup completed"
 
-      - name: Run Database Migration
+      - name: Run Backend Tests with Database Setup
         run: |
-          echo "🔄 Running database migrations..."
-          docker-compose -f docker-compose.ci.yml run --rm backend python -c "
-          import sys
-          import os
-          
-          # Add current directory to path
-          sys.path.insert(0, '/app')
-          
-          try:
-              # CRITICAL: Import models BEFORE creating the app
-              # This ensures models are registered in the metadata before db.init_app
-              print('📦 Pre-importing models before app creation...')
-              from app.models import User, Role, Permission, SensorReading, Sensor, Unit
-              print('✅ Models pre-imported successfully')
-              
-              from app import create_app, db
-              app = create_app('testing')
-              
-              with app.app_context():
-                  print('🚀 Starting database migrations...')
-                  
-                  # Verify models are in metadata
-                  print(f'📊 SQLAlchemy metadata tables: {list(db.Model.metadata.tables.keys())}')
-                  
-                  # Method 1: Try Flask-Migrate
-                  try:
-                      from flask_migrate import upgrade
-                      upgrade()
-                      print('✅ Flask-Migrate upgrades applied')
-                  except Exception as e:
-                      print(f'📝 Flask-Migrate not available: {e}')
-                      
-                      # Method 2: Fallback to create_all (models already imported)
-                      print('🔄 Creating all tables via db.create_all()...')
-                      db.drop_all()
-                      db.create_all()
-                      print('✅ Database tables created via create_all')
-                  
-                  # VERIFY tables were actually created
-                  from sqlalchemy import inspect
-                  inspector = inspect(db.engine)
-                  tables = inspector.get_table_names()
-                  print(f'📊 Tables in database: {tables}')
-                  
-                  # Check for critical tables
-                  critical_tables = ['roles', 'users', 'permissions', 'sensor_readings']
-                  missing_tables = [table for table in critical_tables if table not in tables]
-                  
-                  if missing_tables:
-                      print(f'❌ CRITICAL: Missing tables: {missing_tables}')
-                      print(f'💡 Expected tables: {critical_tables}')
-                      print(f'💡 Metadata tables: {list(db.Model.metadata.tables.keys())}')
-                      sys.exit(1)
-                  else:
-                      print('✅ All critical tables present!')
-                  
-                  print('🎉 Database migration completed successfully!')
-                      
-          except Exception as e:
-              print(f'❌ Migration failed: {e}')
-              import traceback
-              traceback.print_exc()
-              sys.exit(1)
-          "
-
-      - name: Run Backend Tests Directly (No Server Needed)
-        run: |
-          echo "🧪 Running backend tests directly (no Flask server needed)..."
-          # Run tests directly without starting a Flask server
-          # The tests should create their own app context
+          echo "🧪 Running backend tests with integrated database setup..."
+          # Tests run with their own database initialization via conftest.py
+          # This ensures database and tests run in the SAME container
           docker-compose -f docker-compose.ci.yml run --rm backend python -m pytest -v --tb=short -x
 
       - name: Stop Services
