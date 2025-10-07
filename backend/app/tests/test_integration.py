@@ -74,9 +74,8 @@ class TestIntegrationWorkflows:
         status_update = {
             'status': 'online',
             'health_status': 'optimal',
-            'temp_outside': 25.5,
-            'humidity': 65.0,
-            'battery_level': 85.0
+            'has_alert': False,
+            'has_alarm': False
         }
         
         update_response = client.patch('/api/v1/units/LIFECYCLE001/status',
@@ -90,7 +89,7 @@ class TestIntegrationWorkflows:
         assert update_response.status_code == 200
         updated_unit = json.loads(update_response.data)
         assert updated_unit['status'] == 'online'
-        assert updated_unit['temp_outside'] == 25.5
+        assert updated_unit['health_status'] == 'optimal'
         
         # 4. Get unit with sensors
         get_response = client.get('/api/v1/units/LIFECYCLE001',
