@@ -1,4 +1,5 @@
 """Unit management routes for ThermaCore SCADA API."""
+import logging
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
 from marshmallow import ValidationError
@@ -17,6 +18,7 @@ from app.middleware.audit import audit_operation
 
 
 units_bp = Blueprint('units', __name__)
+logger = logging.getLogger(__name__)
 
 
 @units_bp.route('/units', methods=['GET'])
@@ -177,13 +179,15 @@ def create_unit():
             return jsonify({'error': 'Request must contain valid JSON data'}), 400
             
         data = schema.load(json_data)
-    except BadRequest:
+    except BadRequest as err:
         # Handle malformed JSON (e.g., syntax errors)
+        logger.warning(f"Bad JSON request in create_unit: {str(err)}")
         return jsonify({
             'error': 'Invalid JSON format',
             'details': 'Request body must contain valid JSON'
         }), 400
     except ValidationError as err:
+        logger.warning(f"Validation failed in create_unit: {err.messages}")
         return jsonify({'error': 'Validation error', 'details': err.messages}), 400
     
     # Check if unit ID already exists
@@ -253,13 +257,15 @@ def update_unit(unit_id):
             return jsonify({'error': 'Request must contain valid JSON data'}), 400
             
         data = schema.load(json_data)
-    except BadRequest:
+    except BadRequest as err:
         # Handle malformed JSON (e.g., syntax errors)
+        logger.warning(f"Bad JSON request in update_unit: {str(err)}")
         return jsonify({
             'error': 'Invalid JSON format',
             'details': 'Request body must contain valid JSON'
         }), 400
     except ValidationError as err:
+        logger.warning(f"Validation failed in update_unit: {err.messages}")
         return jsonify({'error': 'Validation error', 'details': err.messages}), 400
     
     # Update unit attributes
@@ -386,13 +392,15 @@ def create_unit_sensor(unit_id):
             return jsonify({'error': 'Request must contain valid JSON data'}), 400
             
         data = schema.load(json_data)
-    except BadRequest:
+    except BadRequest as err:
         # Handle malformed JSON (e.g., syntax errors)
+        logger.warning(f"Bad JSON request in create_unit_sensor: {str(err)}")
         return jsonify({
             'error': 'Invalid JSON format',
             'details': 'Request body must contain valid JSON'
         }), 400
     except ValidationError as err:
+        logger.warning(f"Validation failed in create_unit_sensor: {err.messages}")
         return jsonify({'error': 'Validation error', 'details': err.messages}), 400
     
     # Always set unit_id from path parameter (override if present in request)
@@ -518,8 +526,9 @@ def update_unit_status(unit_id):
         data = request.json
         if data is None:
             data = {}
-    except BadRequest:
+    except BadRequest as err:
         # Handle malformed JSON (e.g., syntax errors)
+        logger.warning(f"Bad JSON request in update_unit_status: {str(err)}")
         return jsonify({
             'error': 'Invalid JSON format',
             'details': 'Request body must contain valid JSON'
