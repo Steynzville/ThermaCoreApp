@@ -126,9 +126,9 @@ class TestMQTTClient:
         assert result is not None
         assert result['timestamp'].timestamp() == unix_timestamp
     
-    @patch('app.services.mqtt_service.db')
-    @patch('app.services.mqtt_service.Unit')
-    @patch('app.services.mqtt_service.Sensor')
+    @patch('app.db')
+    @patch('app.models.Unit')
+    @patch('app.models.Sensor')
     def test_find_or_create_sensor_existing(self, mock_sensor, mock_unit, mock_db):
         """Test finding existing sensor."""
         mock_app = Mock()
@@ -148,9 +148,9 @@ class TestMQTTClient:
         assert result == existing_sensor
         mock_sensor.query.filter_by.assert_called_with(unit_id='UNIT001', sensor_type='temperature')
     
-    @patch('app.services.mqtt_service.db')
-    @patch('app.services.mqtt_service.Unit')
-    @patch('app.services.mqtt_service.Sensor')
+    @patch('app.db')
+    @patch('app.models.Unit')
+    @patch('app.models.Sensor')
     def test_find_or_create_sensor_new(self, mock_sensor_class, mock_unit, mock_db):
         """Test creating new sensor."""
         mock_app = Mock()
@@ -174,7 +174,7 @@ class TestMQTTClient:
         mock_db.session.add.assert_called_once_with(new_sensor)
         mock_db.session.commit.assert_called_once()
     
-    @patch('app.services.mqtt_service.Unit')
+    @patch('app.models.Unit')
     def test_find_or_create_sensor_no_unit(self, mock_unit):
         """Test handling missing unit."""
         client = MQTTClient()
