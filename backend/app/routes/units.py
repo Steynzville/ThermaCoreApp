@@ -488,7 +488,10 @@ def update_unit_status(unit_id):
       - JWT: []
     """
     unit = Unit.query.get_or_404(unit_id)
-    data = request.json
+    try:
+        data = UnitUpdateSchema(only=('status', 'health_status', 'has_alert', 'has_alarm')).load(request.json)
+    except ValidationError as err:
+        return jsonify({'error': 'Validation error', 'messages': err.messages}), 400
     
     # Validate status values
     valid_statuses = ['online', 'offline', 'maintenance', 'error']
