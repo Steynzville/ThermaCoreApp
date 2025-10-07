@@ -117,8 +117,9 @@ class TestErrorMessageSecurity:
         assert data['error']['code'] == 'VALIDATION_ERROR'
         assert 'field_errors' in data['error']['details']
         
-        # The error should mention the 'days' field
-        assert 'days' in data['error']['details']['field_errors']
+        # The error should mention the 'days' field in the 'query' location
+        assert 'query' in data['error']['details']['field_errors']
+        assert 'days' in data['error']['details']['field_errors']['query']
 
     def test_analytics_units_performance_valueerror_logged(self, client, app):
         """Test that ValueError in get_units_performance returns validation error for invalid parameter."""
@@ -141,8 +142,9 @@ class TestErrorMessageSecurity:
         assert data['error']['code'] == 'VALIDATION_ERROR'
         assert 'field_errors' in data['error']['details']
         
-        # The error should mention the 'hours' field
-        assert 'hours' in data['error']['details']['field_errors']
+        # The error should mention the 'hours' field in the 'query' location
+        assert 'query' in data['error']['details']['field_errors']
+        assert 'hours' in data['error']['details']['field_errors']['query']
 
     def test_analytics_alert_patterns_valueerror_logged(self, client, app):
         """Test that ValueError in get_alert_patterns returns validation error for invalid parameter."""
@@ -165,5 +167,6 @@ class TestErrorMessageSecurity:
         assert data['error']['code'] == 'VALIDATION_ERROR'
         assert 'field_errors' in data['error']['details']
         
-        # The error should mention the 'days' field
-        assert 'days' in data['error']['details']['field_errors']
+        # The error should mention the 'days' field in the 'query' location
+        assert 'query' in data['error']['details']['field_errors']
+        assert 'days' in data['error']['details']['field_errors']['query']

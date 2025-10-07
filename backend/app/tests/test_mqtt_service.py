@@ -23,17 +23,25 @@ class TestMQTTClient:
         mock_app.config = {
             'MQTT_BROKER_HOST': 'test-broker',
             'MQTT_BROKER_PORT': 1883,
-            'MQTT_CLIENT_ID': 'test-client'
+            'MQTT_CLIENT_ID': 'test-client',
+            'MQTT_USE_TLS': True,
+            'MQTT_CA_CERTS': '/dummy/path/to/ca.pem',
+            'MQTT_CERT_FILE': '/dummy/path/to/cert.pem',
+            'MQTT_KEY_FILE': '/dummy/path/to/key.pem',
+            'MQTT_USERNAME': 'test-user',
+            'MQTT_PASSWORD': 'test-pass',
+            'TESTING': True  # Ensure we're not in production mode
         }
         
         with patch('paho.mqtt.client.Client') as mock_mqtt_client:
-            client = MQTTClient(mock_app)
-            
-            assert client._app == mock_app
-            assert client.broker_host == 'test-broker'
-            assert client.broker_port == 1883
-            assert client.client_id == 'test-client'
-            mock_mqtt_client.assert_called_once_with(client_id='test-client')
+            with patch('app.services.mqtt_service.is_production_environment', return_value=False):
+                client = MQTTClient(mock_app)
+                
+                assert client._app == mock_app
+                assert client.broker_host == 'test-broker'
+                assert client.broker_port == 1883
+                assert client.client_id == 'test-client'
+                mock_mqtt_client.assert_called_once_with(client_id='test-client')
     
     def test_parse_scada_message_valid_json(self):
         """Test parsing valid SCADA message with JSON payload."""

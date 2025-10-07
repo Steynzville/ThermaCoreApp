@@ -13,11 +13,14 @@ class TestIntegrationWorkflows:
             json={'username': username, 'password': password},
             headers={'Content-Type': 'application/json'}
         )
-        
         if response.status_code == 200:
             data = json.loads(response.data)
-            return data['access_token']
-        return None
+            if 'data' in data and 'access_token' in data['data']:
+                return data['data']['access_token']
+            else:
+                raise KeyError(f"'access_token' not found in login response: {data}")
+        else:
+            raise RuntimeError(f"Login failed: {response.status_code} {response.data}")
     
     def test_complete_unit_lifecycle(self, client, db_session):
         """Test complete unit lifecycle from creation to deletion."""
@@ -71,9 +74,8 @@ class TestIntegrationWorkflows:
         status_update = {
             'status': 'online',
             'health_status': 'optimal',
-            'temp_outside': 25.5,
-            'humidity': 65.0,
-            'battery_level': 85.0
+            'has_alert': False,
+            'has_alarm': False
         }
         
         update_response = client.patch('/api/v1/units/LIFECYCLE001/status',
@@ -87,7 +89,7 @@ class TestIntegrationWorkflows:
         assert update_response.status_code == 200
         updated_unit = json.loads(update_response.data)
         assert updated_unit['status'] == 'online'
-        assert updated_unit['temp_outside'] == 25.5
+        assert updated_unit['health_status'] == 'optimal'
         
         # 4. Get unit with sensors
         get_response = client.get('/api/v1/units/LIFECYCLE001',
@@ -138,7 +140,8 @@ class TestIntegrationWorkflows:
         
         assert create_response.status_code == 201
         new_user = json.loads(create_response.data)
-        user_id = new_user['id']
+        # Register endpoint returns success envelope: {'success': True, 'data': {...}}
+        user_id = new_user['data']['id']
         
         # 2. Login as new operator
         operator_token = self.get_auth_token(client, 'newoperator', 'operator123')
@@ -150,7 +153,7 @@ class TestIntegrationWorkflows:
         )
         assert units_response.status_code == 200
         
-        # 4. Test operator can create units
+        # 4. Test operator CANNOT create units (should be forbidden)
         unit_data = {
             'id': 'OPERATOR001',
             'name': 'Operator Created Unit',
@@ -165,21 +168,38 @@ class TestIntegrationWorkflows:
                 'Content-Type': 'application/json'
             }
         )
-        assert create_unit_response.status_code == 201
+        assert create_unit_response.status_code == 403  # Operators cannot create units
         
-        # 5. Test operator cannot delete users
+        # 5. Test admin CAN create units
+        admin_unit_data = {
+            'id': 'ADMIN001',
+            'name': 'Admin Created Unit',
+            'serial_number': 'ADMIN001-2024-001',
+            'install_date': '2024-01-15T00:00:00'
+        }
+        
+        admin_create_response = client.post('/api/v1/units',
+            json=admin_unit_data,
+            headers={
+                'Authorization': f'Bearer {admin_token}',
+                'Content-Type': 'application/json'
+            }
+        )
+        assert admin_create_response.status_code == 201  # Admins can create units
+        
+        # 6. Test operator cannot delete users
         delete_user_response = client.delete(f'/api/v1/users/{user_id}',
             headers={'Authorization': f'Bearer {operator_token}'}
         )
         assert delete_user_response.status_code == 403
         
-        # 6. Admin can deactivate the user
+        # 7. Admin can deactivate the user
         deactivate_response = client.patch(f'/api/v1/users/{user_id}/deactivate',
             headers={'Authorization': f'Bearer {admin_token}'}
         )
         assert deactivate_response.status_code == 200
         
-        # 7. Verify deactivated user cannot login
+        # 8. Verify deactivated user cannot login
         disabled_login = client.post('/api/v1/auth/login',
             json={'username': 'newoperator', 'password': 'operator123'},
             headers={'Content-Type': 'application/json'}
