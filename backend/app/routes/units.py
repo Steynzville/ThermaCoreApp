@@ -5,7 +5,6 @@ from flask_jwt_extended import jwt_required
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import or_
-from werkzeug.exceptions import BadRequest
 
 from app import db
 from app.models import Unit, Sensor, SensorReading
