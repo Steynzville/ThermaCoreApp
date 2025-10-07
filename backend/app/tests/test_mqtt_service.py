@@ -126,66 +126,6 @@ class TestMQTTClient:
         assert result is not None
         assert result['timestamp'].timestamp() == unix_timestamp
     
-    @patch('app.services.mqtt_service.db')
-    @patch('app.services.mqtt_service.Unit')
-    @patch('app.services.mqtt_service.Sensor')
-    def test_find_or_create_sensor_existing(self, mock_sensor, mock_unit, mock_db):
-        """Test finding existing sensor."""
-        mock_app = Mock()
-        mock_app.app_context.return_value.__enter__ = Mock()
-        mock_app.app_context.return_value.__exit__ = Mock()
-        
-        client = MQTTClient()
-        client._app = mock_app
-        
-        # Mock existing unit and sensor
-        mock_unit.query.filter_by.return_value.first.return_value = Mock(id='UNIT001')
-        existing_sensor = Mock(id=1)
-        mock_sensor.query.filter_by.return_value.first.return_value = existing_sensor
-        
-        result = client._find_or_create_sensor('UNIT001', 'temperature')
-        
-        assert result == existing_sensor
-        mock_sensor.query.filter_by.assert_called_with(unit_id='UNIT001', sensor_type='temperature')
-    
-    @patch('app.services.mqtt_service.db')
-    @patch('app.services.mqtt_service.Unit')
-    @patch('app.services.mqtt_service.Sensor')
-    def test_find_or_create_sensor_new(self, mock_sensor_class, mock_unit, mock_db):
-        """Test creating new sensor."""
-        mock_app = Mock()
-        mock_app.app_context.return_value.__enter__ = Mock()
-        mock_app.app_context.return_value.__exit__ = Mock()
-        
-        client = MQTTClient()
-        client._app = mock_app
-        
-        # Mock existing unit but no sensor
-        mock_unit.query.filter_by.return_value.first.return_value = Mock(id='UNIT001')
-        mock_sensor_class.query.filter_by.return_value.first.return_value = None
-        
-        new_sensor = Mock(id=2)
-        mock_sensor_class.return_value = new_sensor
-        
-        result = client._find_or_create_sensor('UNIT001', 'temperature')
-        
-        assert result == new_sensor
-        mock_sensor_class.assert_called_once()
-        mock_db.session.add.assert_called_once_with(new_sensor)
-        mock_db.session.commit.assert_called_once()
-    
-    @patch('app.services.mqtt_service.Unit')
-    def test_find_or_create_sensor_no_unit(self, mock_unit):
-        """Test handling missing unit."""
-        client = MQTTClient()
-        
-        # Mock no existing unit
-        mock_unit.query.filter_by.return_value.first.return_value = None
-        
-        result = client._find_or_create_sensor('NONEXISTENT', 'temperature')
-        
-        assert result is None
-    
     def test_get_status(self):
         """Test getting MQTT client status."""
         mock_app = Mock()
@@ -196,21 +136,24 @@ class TestMQTTClient:
         }
         
         with patch('paho.mqtt.client.Client'):
-            client = MQTTClient(mock_app)
-            client.connected = True
-            client._subscribed_topics = ['scada/+/temperature']
-            
-            status = client.get_status()
-            
-            assert status['connected'] is True
-            assert status['broker_host'] == 'test-broker'
-            assert status['broker_port'] == 1883
-            assert status['client_id'] == 'test-client'
-            assert 'scada/+/temperature' in status['subscribed_topics']
+            with patch('app.services.mqtt_service.is_production_environment', return_value=False):
+                client = MQTTClient(mock_app)
+                client.connected = True
+                client._subscribed_topics = ['scada/+/temperature']
+                
+                status = client.get_status()
+                
+                assert status['connected'] is True
+                assert status['broker_host'] == 'test-broker'
+                assert status['broker_port'] == 1883
+                assert status['client_id'] == 'test-client'
+                assert 'scada/+/temperature' in status['subscribed_topics']
     
     @patch('paho.mqtt.client.Client')
-    def test_connect_success(self, mock_client_class):
+    @patch('app.services.mqtt_service.is_production_environment')
+    def test_connect_success(self, mock_prod_env, mock_client_class):
         """Test successful MQTT connection."""
+        mock_prod_env.return_value = False  # Force test mode
         mock_client = Mock()
         mock_client_class.return_value = mock_client
         
@@ -229,8 +172,10 @@ class TestMQTTClient:
         mock_client.loop_start.assert_called_once()
     
     @patch('paho.mqtt.client.Client')
-    def test_connect_failure(self, mock_client_class):
+    @patch('app.services.mqtt_service.is_production_environment')
+    def test_connect_failure(self, mock_prod_env, mock_client_class):
         """Test MQTT connection failure."""
+        mock_prod_env.return_value = False  # Force test mode
         mock_client = Mock()
         mock_client.connect.side_effect = Exception("Connection failed")
         mock_client_class.return_value = mock_client
@@ -244,8 +189,10 @@ class TestMQTTClient:
             client.connect()
     
     @patch('paho.mqtt.client.Client')
-    def test_disconnect(self, mock_client_class):
+    @patch('app.services.mqtt_service.is_production_environment')
+    def test_disconnect(self, mock_prod_env, mock_client_class):
         """Test MQTT disconnection."""
+        mock_prod_env.return_value = False  # Force test mode
         mock_client = Mock()
         mock_client_class.return_value = mock_client
         

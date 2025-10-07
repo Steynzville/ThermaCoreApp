@@ -68,7 +68,7 @@ class TestRateLimiter:
         limiter = RateLimiter()
         
         # First request should be allowed
-        is_allowed, info = limiter.is_allowed('test_user', 5, 60)
+        is_allowed, info = limiter.is_allowed('test_user_allow', 5, 60)
         assert is_allowed
         assert info['remaining'] == 4
         assert info['limit'] == 5
@@ -80,11 +80,11 @@ class TestRateLimiter:
         
         # Make requests up to limit
         for i in range(5):
-            is_allowed, info = limiter.is_allowed('test_user', 5, 60)
+            is_allowed, info = limiter.is_allowed('test_user_block', 5, 60)
             assert is_allowed
         
         # Next request should be blocked
-        is_allowed, info = limiter.is_allowed('test_user', 5, 60)
+        is_allowed, info = limiter.is_allowed('test_user_block', 5, 60)
         assert not is_allowed
         assert info['remaining'] == 0
     

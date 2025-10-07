@@ -153,6 +153,7 @@ def get_opcua_nodes():
         else:
             return jsonify({
                 'nodes': [],
+                'count': 0,
                 'message': 'OPC-UA client not initialized',
                 'timestamp': datetime.now(timezone.utc).isoformat()
             }), 200
