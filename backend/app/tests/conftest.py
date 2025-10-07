@@ -172,7 +172,7 @@ def _create_test_data():
     
     # Assign permissions to roles
     admin_role.permissions = permissions  # All permissions - ThermaCore staff only
-    operator_role.permissions = permissions[0:1] + permissions[3:4] + permissions[7:8]  # read units + read users + remote control
+    operator_role.permissions = permissions[0:2] + permissions[3:4] + permissions[7:8]  # read/write units + read users + remote control
     viewer_role.permissions = permissions[0:1] + permissions[3:4]   # read only
     
     db.session.add(admin_role)
