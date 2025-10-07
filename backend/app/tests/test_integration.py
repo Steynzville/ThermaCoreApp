@@ -13,11 +13,14 @@ class TestIntegrationWorkflows:
             json={'username': username, 'password': password},
             headers={'Content-Type': 'application/json'}
         )
-        
         if response.status_code == 200:
             data = json.loads(response.data)
-            return data['access_token']
-        return None
+            if 'data' in data and 'access_token' in data['data']:
+                return data['data']['access_token']
+            else:
+                raise KeyError(f"'access_token' not found in login response: {data}")
+        else:
+            raise RuntimeError(f"Login failed: {response.status_code} {response.data}")
     
     def test_complete_unit_lifecycle(self, client, db_session):
         """Test complete unit lifecycle from creation to deletion."""
