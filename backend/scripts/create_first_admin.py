@@ -18,7 +18,7 @@ def create_first_admin():
     
     # Admin credentials as specified
     ADMIN_USERNAME = "Steyn_Admin"
-    ADMIN_PASSWORD = "Steiner1!"
+    ADMIN_PASSWORD = os.environ.get("FIRST_ADMIN_PASSWORD", "Steiner1!")
     ADMIN_EMAIL = "Steyn.Enslin@ThermaCore.com.au"
     ADMIN_FIRST_NAME = "Steyn"
     ADMIN_LAST_NAME = "Enslin"
@@ -76,7 +76,7 @@ def create_first_admin():
             print("✅ First admin user created!")
             print("=" * 70)
             print(f"Username: {ADMIN_USERNAME}")
-            print("Password: [hidden for security; see script or reset after login]")
+            print("Password: [HIDDEN]")
             print(f"Email: {ADMIN_EMAIL}")
             print("=" * 70)
             print("⚠️  Please login and change password immediately.")

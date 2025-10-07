@@ -15,6 +15,7 @@ from app.utils.schemas import (
 )
 from app.routes.auth import permission_required
 from app.middleware.audit import audit_operation
+from app.utils.validation import validate_json_request
 
 
 units_bp = Blueprint('units', __name__)
@@ -147,6 +148,7 @@ def get_unit(unit_id):
 @jwt_required()
 @permission_required('write_units')
 @audit_operation('CREATE', 'unit', include_request_data=True, include_response_data=True)
+@validate_json_request
 def create_unit():
     """
     Create a new unit.
@@ -173,19 +175,7 @@ def create_unit():
     schema = UnitCreateSchema()
     
     try:
-        # Access request.json - this can raise BadRequest for malformed JSON
-        json_data = request.json
-        if json_data is None:
-            return jsonify({'error': 'Request must contain valid JSON data'}), 400
-            
-        data = schema.load(json_data)
-    except BadRequest as err:
-        # Handle malformed JSON (e.g., syntax errors)
-        logger.warning(f"Bad JSON request in create_unit: {str(err)}")
-        return jsonify({
-            'error': 'Invalid JSON format',
-            'details': 'Request body must contain valid JSON'
-        }), 400
+        data = schema.load(request.json)
     except ValidationError as err:
         logger.warning(f"Validation failed in create_unit: {err.messages}")
         return jsonify({'error': 'Validation error', 'details': err.messages}), 400
@@ -220,6 +210,7 @@ def create_unit():
 @jwt_required()
 @permission_required('write_units')
 @audit_operation('UPDATE', 'unit', include_request_data=True, include_response_data=True)
+@validate_json_request
 def update_unit(unit_id):
     """
     Update an existing unit.
@@ -251,19 +242,7 @@ def update_unit(unit_id):
     schema = UnitUpdateSchema()
     
     try:
-        # Access request.json - this can raise BadRequest for malformed JSON
-        json_data = request.json
-        if json_data is None:
-            return jsonify({'error': 'Request must contain valid JSON data'}), 400
-            
-        data = schema.load(json_data)
-    except BadRequest as err:
-        # Handle malformed JSON (e.g., syntax errors)
-        logger.warning(f"Bad JSON request in update_unit: {str(err)}")
-        return jsonify({
-            'error': 'Invalid JSON format',
-            'details': 'Request body must contain valid JSON'
-        }), 400
+        data = schema.load(request.json)
     except ValidationError as err:
         logger.warning(f"Validation failed in update_unit: {err.messages}")
         return jsonify({'error': 'Validation error', 'details': err.messages}), 400
@@ -353,6 +332,7 @@ def get_unit_sensors(unit_id):
 @units_bp.route('/units/<string:unit_id>/sensors', methods=['POST'])
 @jwt_required()
 @permission_required('write_units')
+@validate_json_request
 def create_unit_sensor(unit_id):
     """
     Create a new sensor for a unit.
@@ -386,19 +366,7 @@ def create_unit_sensor(unit_id):
     schema = SensorCreateSchema()
     
     try:
-        # Access request.json - this can raise BadRequest for malformed JSON
-        json_data = request.json
-        if json_data is None:
-            return jsonify({'error': 'Request must contain valid JSON data'}), 400
-            
-        data = schema.load(json_data)
-    except BadRequest as err:
-        # Handle malformed JSON (e.g., syntax errors)
-        logger.warning(f"Bad JSON request in create_unit_sensor: {str(err)}")
-        return jsonify({
-            'error': 'Invalid JSON format',
-            'details': 'Request body must contain valid JSON'
-        }), 400
+        data = schema.load(request.json)
     except ValidationError as err:
         logger.warning(f"Validation failed in create_unit_sensor: {err.messages}")
         return jsonify({'error': 'Validation error', 'details': err.messages}), 400
@@ -481,6 +449,7 @@ def get_unit_readings(unit_id):
 @units_bp.route('/units/<string:unit_id>/status', methods=['PATCH'])
 @jwt_required()
 @permission_required('write_units')
+@validate_json_request
 def update_unit_status(unit_id):
     """
     Update unit status and health status.
@@ -520,19 +489,7 @@ def update_unit_status(unit_id):
       - JWT: []
     """
     unit = Unit.query.get_or_404(unit_id)
-    
-    try:
-        # Access request.json - this can raise BadRequest for malformed JSON
-        data = request.json
-        if data is None:
-            data = {}
-    except BadRequest as err:
-        # Handle malformed JSON (e.g., syntax errors)
-        logger.warning(f"Bad JSON request in update_unit_status: {str(err)}")
-        return jsonify({
-            'error': 'Invalid JSON format',
-            'details': 'Request body must contain valid JSON'
-        }), 400
+    data = request.json
     
     # Validate status values
     valid_statuses = ['online', 'offline', 'maintenance', 'error']
