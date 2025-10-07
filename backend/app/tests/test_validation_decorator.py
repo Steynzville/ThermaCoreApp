@@ -31,9 +31,14 @@ class TestValidationDecorator:
     
     @pytest.fixture(autouse=True)
     def setup(self, app):
-        """Register test blueprint."""
-        app.register_blueprint(test_bp)
+        """Register test blueprint using fresh app per test."""
+        # Check if blueprint is already registered to avoid duplicate registration
+        if 'test_validation' not in app.blueprints:
+            app.register_blueprint(test_bp)
         yield
+        # Cleanup: Remove the blueprint after test
+        if 'test_validation' in app.blueprints:
+            del app.blueprints['test_validation']
     
     def test_valid_json_request(self, client):
         """Test that valid JSON passes through the decorator."""

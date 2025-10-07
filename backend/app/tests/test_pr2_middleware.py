@@ -268,7 +268,10 @@ class TestMetricsCollector:
     
     def test_metrics_middleware_integration(self, app):
         """Test metrics collection via middleware and no double-counting with decorator."""
-        from app.middleware.metrics import setup_metrics_middleware
+        from app.middleware.metrics import setup_metrics_middleware, reset_metrics_collector
+        
+        # Reset metrics to ensure clean state
+        reset_metrics_collector()
         
         # Set up middleware
         setup_metrics_middleware(app)
@@ -309,7 +312,10 @@ class TestMetricsCollector:
     
     def test_metrics_exception_handling(self, app):
         """Test metrics collection for unhandled exceptions."""
-        from app.middleware.metrics import setup_metrics_middleware
+        from app.middleware.metrics import setup_metrics_middleware, reset_metrics_collector
+        
+        # Reset metrics to ensure clean state
+        reset_metrics_collector()
         
         # Set up middleware
         setup_metrics_middleware(app)
@@ -586,7 +592,10 @@ def test_integration_middleware_stack(app):
 def test_metrics_werkzeug_http_exceptions(app):
     """Test that metrics properly capture Werkzeug HTTPException status codes."""
     from werkzeug.exceptions import NotFound, BadRequest, Forbidden
-    from app.middleware.metrics import setup_metrics_middleware, get_metrics_collector
+    from app.middleware.metrics import setup_metrics_middleware, get_metrics_collector, reset_metrics_collector
+    
+    # Reset metrics to ensure clean state
+    reset_metrics_collector()
     
     # Set up metrics middleware
     setup_metrics_middleware(app)
@@ -627,7 +636,10 @@ def test_metrics_werkzeug_http_exceptions(app):
 
 def test_metrics_no_double_counting_same_route(app):
     """Test that metrics don't double-count requests to the same route."""
-    from app.middleware.metrics import setup_metrics_middleware, get_metrics_collector
+    from app.middleware.metrics import setup_metrics_middleware, get_metrics_collector, reset_metrics_collector
+    
+    # Reset metrics to ensure clean state
+    reset_metrics_collector()
     
     # Set up metrics middleware
     setup_metrics_middleware(app)
