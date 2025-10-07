@@ -117,8 +117,8 @@ class TestErrorMessageSecurity:
         assert data['error']['code'] == 'VALIDATION_ERROR'
         assert 'field_errors' in data['error']['details']
         
-        # The error should mention the 'days' field
-        assert 'days' in data['error']['details']['field_errors']
+        # The error should have the structure {'query': {'days': ['Not a valid integer.']}}
+        assert data['error']['details']['field_errors'] == {'query': {'days': ['Not a valid integer.']}}
 
     def test_analytics_units_performance_valueerror_logged(self, client, app):
         """Test that ValueError in get_units_performance returns validation error for invalid parameter."""
