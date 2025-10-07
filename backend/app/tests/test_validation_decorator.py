@@ -85,17 +85,17 @@ class TestValidationDecorator:
         assert 'Request must contain valid JSON data' in data['error']
     
     def test_patch_empty_json_allowed(self, client):
-        """Test that PATCH requests allow empty JSON for partial updates."""
+        """Test that PATCH requests allow empty dict JSON for partial updates."""
         response = client.patch('/test/validate-patch',
-            data='',
+            json={},  # Empty dict is valid JSON
             headers={'Content-Type': 'application/json'}
         )
         
-        # PATCH should allow empty JSON (None) - it passes through the decorator
+        # PATCH should allow empty dict - it passes through the decorator
         assert response.status_code == 200
         data = json.loads(response.data)
         assert data['success'] is True
-        assert data['data'] is None
+        assert data['data'] == {}
     
     def test_patch_partial_json_allowed(self, client):
         """Test that PATCH requests allow partial JSON."""
@@ -130,7 +130,7 @@ class TestUnitsValidation:
         return None
     
     def test_create_unit_empty_json(self, client):
-        """Test that create_unit rejects empty JSON."""
+        """Test that create_unit rejects empty/malformed JSON."""
         token = self.get_auth_token(client)
         
         response = client.post('/api/v1/units',
@@ -144,7 +144,8 @@ class TestUnitsValidation:
         assert response.status_code == 400
         data = json.loads(response.data)
         assert 'error' in data
-        assert 'Request must contain valid JSON data' in data['error']
+        # Empty string is malformed JSON
+        assert 'Invalid JSON format' in data['error']
     
     def test_create_unit_malformed_json(self, client):
         """Test that create_unit rejects malformed JSON."""
@@ -164,7 +165,7 @@ class TestUnitsValidation:
         assert 'Invalid JSON format' in data['error']
     
     def test_update_unit_empty_json(self, client):
-        """Test that update_unit rejects empty JSON."""
+        """Test that update_unit rejects empty/malformed JSON."""
         token = self.get_auth_token(client)
         
         response = client.put('/api/v1/units/TEST001',
@@ -178,7 +179,8 @@ class TestUnitsValidation:
         assert response.status_code == 400
         data = json.loads(response.data)
         assert 'error' in data
-        assert 'Request must contain valid JSON data' in data['error']
+        # Empty string is malformed JSON
+        assert 'Invalid JSON format' in data['error']
     
     def test_update_unit_malformed_json(self, client):
         """Test that update_unit rejects malformed JSON."""
@@ -198,7 +200,7 @@ class TestUnitsValidation:
         assert 'Invalid JSON format' in data['error']
     
     def test_create_sensor_empty_json(self, client):
-        """Test that create_unit_sensor rejects empty JSON."""
+        """Test that create_unit_sensor rejects empty/malformed JSON."""
         token = self.get_auth_token(client)
         
         response = client.post('/api/v1/units/TEST001/sensors',
@@ -212,10 +214,11 @@ class TestUnitsValidation:
         assert response.status_code == 400
         data = json.loads(response.data)
         assert 'error' in data
-        assert 'Request must contain valid JSON data' in data['error']
+        # Empty string is malformed JSON
+        assert 'Invalid JSON format' in data['error']
     
     def test_update_unit_status_empty_json(self, client):
-        """Test that update_unit_status allows empty JSON for PATCH (partial updates)."""
+        """Test that update_unit_status rejects malformed JSON (empty string)."""
         token = self.get_auth_token(client)
         
         response = client.patch('/api/v1/units/TEST001/status',
@@ -226,7 +229,7 @@ class TestUnitsValidation:
             }
         )
         
-        # PATCH requests should allow empty JSON for partial updates
-        # The endpoint may still return 404 if unit doesn't exist, but shouldn't 
-        # fail validation at the decorator level
-        assert response.status_code in [200, 404]
+        # Empty string is malformed JSON and should be rejected
+        assert response.status_code == 400
+        data = json.loads(response.data)
+        assert 'error' in data
