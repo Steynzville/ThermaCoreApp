@@ -76,7 +76,7 @@ def create_first_admin():
             print("✅ First admin user created!")
             print("=" * 70)
             print(f"Username: {ADMIN_USERNAME}")
-            print(f"Password: {ADMIN_PASSWORD}")
+            print("Password: [hidden for security; see script or reset after login]")
             print(f"Email: {ADMIN_EMAIL}")
             print("=" * 70)
             print("⚠️  Please login and change password immediately.")
