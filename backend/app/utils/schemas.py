@@ -205,6 +205,12 @@ class UnitCreateSchema(Schema):
     serial_number = fields.Str(required=True, validate=validate.Length(min=1, max=100))
     install_date = DateTimeField(required=True)
     location = fields.Str(validate=validate.Length(max=200))
+    
+    # Status fields with sensible defaults for new units
+    status = EnumField(UnitStatusEnum, load_default='offline')
+    health_status = EnumField(HealthStatusEnum, load_default='warning')
+    
+    # Client information
     client_name = fields.Str(validate=validate.Length(max=200))
     client_contact = fields.Str(validate=validate.Length(max=200))
     client_email = fields.Email()

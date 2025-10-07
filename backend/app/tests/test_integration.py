@@ -217,6 +217,8 @@ class TestIntegrationWorkflows:
                 'name': 'Online Unit',
                 'serial_number': 'FILTER001-2024-001',
                 'install_date': '2024-01-15T00:00:00',
+                'status': 'online',
+                'health_status': 'optimal',
                 'location': 'Site A'
             },
             {
@@ -224,6 +226,8 @@ class TestIntegrationWorkflows:
                 'name': 'Offline Unit',
                 'serial_number': 'FILTER002-2024-002',
                 'install_date': '2024-01-16T00:00:00',
+                'status': 'offline',
+                'health_status': 'critical',
                 'location': 'Site B'
             },
             {
@@ -231,6 +235,8 @@ class TestIntegrationWorkflows:
                 'name': 'Maintenance Unit',
                 'serial_number': 'FILTER003-2024-003',
                 'install_date': '2024-01-17T00:00:00',
+                'status': 'maintenance',
+                'health_status': 'warning',
                 'location': 'Site A'
             }
         ]
@@ -245,22 +251,6 @@ class TestIntegrationWorkflows:
                 }
             )
             assert response.status_code == 201
-        
-        # Update units with different statuses for filtering tests
-        status_updates = [
-            ('FILTER001', {'status': 'online', 'health_status': 'optimal'}),
-            ('FILTER002', {'status': 'offline', 'health_status': 'critical'}),
-            ('FILTER003', {'status': 'maintenance', 'health_status': 'warning'})
-        ]
-        
-        for unit_id, status_data in status_updates:
-            client.patch(f'/api/v1/units/{unit_id}/status',
-                json=status_data,
-                headers={
-                    'Authorization': f'Bearer {token}',
-                    'Content-Type': 'application/json'
-                }
-            )
         
         # 1. Test status filtering
         online_units = client.get('/api/v1/units?status=online',
