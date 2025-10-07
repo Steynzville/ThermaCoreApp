@@ -140,7 +140,8 @@ class TestIntegrationWorkflows:
         
         assert create_response.status_code == 201
         new_user = json.loads(create_response.data)
-        user_id = new_user['id']
+        # Register endpoint returns success envelope: {'success': True, 'data': {...}}
+        user_id = new_user['data']['id']
         
         # 2. Login as new operator
         operator_token = self.get_auth_token(client, 'newoperator', 'operator123')
