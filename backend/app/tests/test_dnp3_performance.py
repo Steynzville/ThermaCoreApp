@@ -61,7 +61,7 @@ class TestDNP3PerformanceMetrics:
         assert stats['operation'] == 'read_data'
         assert stats['count'] == 3
         assert stats['errors'] == 1
-        assert stats['avg_time'] == 0.2
+        assert stats['avg_time'] == pytest.approx(0.2)
         assert stats['min_time'] == 0.1
         assert stats['max_time'] == 0.3
         assert stats['success_rate'] == pytest.approx(66.67, rel=1e-2)

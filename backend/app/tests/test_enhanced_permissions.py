@@ -198,7 +198,7 @@ class TestEnhancedPermissionHandling:
                 admin_role.has_permission(invalid_type)
     
     def test_remote_control_permission_for_all_roles(self, client, db_session):
-        """Test that all roles (Admin, Operator, Viewer) have remote control access."""
+        """Test remote control permission according to security model: Admin and Operator only, NOT Viewer."""
         from app.models import RoleEnum, PermissionEnum
         
         # Get all roles
@@ -211,19 +211,22 @@ class TestEnhancedPermissionHandling:
         assert operator_role is not None, "Operator role should exist" 
         assert viewer_role is not None, "Viewer role should exist"
         
-        # Test that all roles have remote control permission (using both string and enum)
-        roles_to_test = [
+        # Test that Admin and Operator have remote control permission
+        roles_with_remote_control = [
             (admin_role, "Admin"),
-            (operator_role, "Operator"), 
-            (viewer_role, "Viewer")
+            (operator_role, "Operator")
         ]
         
-        for role, role_name in roles_to_test:
+        for role, role_name in roles_with_remote_control:
             # Test with string permission
             assert role.has_permission("remote_control") is True, f"{role_name} role should have remote_control permission (string)"
             
             # Test with enum permission
             assert role.has_permission(PermissionEnum.REMOTE_CONTROL) is True, f"{role_name} role should have remote_control permission (enum)"
+        
+        # Test that Viewer does NOT have remote control permission (security requirement)
+        assert viewer_role.has_permission("remote_control") is False, "Viewer role should NOT have remote_control permission (string)"
+        assert viewer_role.has_permission(PermissionEnum.REMOTE_CONTROL) is False, "Viewer role should NOT have remote_control permission (enum)"
             
         # Verify that the remote control permission exists in the enum
         assert hasattr(PermissionEnum, 'REMOTE_CONTROL'), "REMOTE_CONTROL should exist in PermissionEnum"

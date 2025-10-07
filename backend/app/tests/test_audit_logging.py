@@ -405,18 +405,3 @@ class TestRoleRequiredAuditLogging:
             
             # Should be denied with 401 or 422 (JWT validation)
             assert response.status_code in [401, 422]
-
-
-# Fixtures for testing
-@pytest.fixture
-def app():
-    """Create a test Flask application."""
-    from app import create_app
-    app = create_app('testing')
-    return app
-
-
-@pytest.fixture
-def client(app):
-    """Create a test client."""
-    return app.test_client()

@@ -17,7 +17,7 @@ env:
   JWT_SECRET_KEY: dummy-jwt-secret-key-456-for-github-actions
   FLASK_ENV: test
   FLASK_APP: app.py
-  DATABASE_URL: postgresql://thermacore_user:thermacore_pass@database:5432/thermacore
+  DATABASE_URL: postgresql://thermacore_user:thermacore_pass@db:5432/thermacore
   # MQTT environment variables to prevent production config errors
   MQTT_CERT_PATH: /dummy/path/to/cert.pem
   MQTT_KEY_PATH: /dummy/path/to/key.pem
