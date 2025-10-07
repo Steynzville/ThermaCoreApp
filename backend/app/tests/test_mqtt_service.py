@@ -150,8 +150,10 @@ class TestMQTTClient:
                 assert 'scada/+/temperature' in status['subscribed_topics']
     
     @patch('paho.mqtt.client.Client')
-    def test_connect_success(self, mock_client_class):
+    @patch('app.services.mqtt_service.is_production_environment')
+    def test_connect_success(self, mock_prod_env, mock_client_class):
         """Test successful MQTT connection."""
+        mock_prod_env.return_value = False  # Force test mode
         mock_client = Mock()
         mock_client_class.return_value = mock_client
         
@@ -170,8 +172,10 @@ class TestMQTTClient:
         mock_client.loop_start.assert_called_once()
     
     @patch('paho.mqtt.client.Client')
-    def test_connect_failure(self, mock_client_class):
+    @patch('app.services.mqtt_service.is_production_environment')
+    def test_connect_failure(self, mock_prod_env, mock_client_class):
         """Test MQTT connection failure."""
+        mock_prod_env.return_value = False  # Force test mode
         mock_client = Mock()
         mock_client.connect.side_effect = Exception("Connection failed")
         mock_client_class.return_value = mock_client
@@ -185,8 +189,10 @@ class TestMQTTClient:
             client.connect()
     
     @patch('paho.mqtt.client.Client')
-    def test_disconnect(self, mock_client_class):
+    @patch('app.services.mqtt_service.is_production_environment')
+    def test_disconnect(self, mock_prod_env, mock_client_class):
         """Test MQTT disconnection."""
+        mock_prod_env.return_value = False  # Force test mode
         mock_client = Mock()
         mock_client_class.return_value = mock_client
         
