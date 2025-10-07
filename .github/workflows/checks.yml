@@ -199,7 +199,7 @@ jobs:
           echo "🧪 Running backend tests..."
           # Tests use conftest.py for database initialization
           # conftest.py creates a temporary database and initializes it with all models
-          docker-compose -f docker-compose.ci.yml run --rm backend python -m pytest -v --tb=short -x
+          docker-compose -f docker-compose.ci.yml run --rm backend python -m pytest -v --tb=short
 
       - name: Stop Services
         if: always()

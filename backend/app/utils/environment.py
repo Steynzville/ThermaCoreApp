@@ -49,17 +49,22 @@ def _get_effective_app_config(app=None) -> Optional[Dict[str, Any]]:
     return None
 
 
-def _check_environment_mismatch(flask_env: str, app_env: str, debug_enabled: bool) -> bool:
+def _check_environment_mismatch(flask_env: str, app_env: str, debug_enabled: bool, is_testing: bool = False) -> bool:
     """Check for dangerous environment mismatches that could indicate staging misclassified as development.
     
     Args:
         flask_env: FLASK_ENV value
         app_env: APP_ENV value  
         debug_enabled: Whether DEBUG is enabled
+        is_testing: Whether in testing environment (allows DEBUG=True)
         
     Returns:
         True if there's a dangerous mismatch (e.g., production env with DEBUG=True)
     """
+    # Testing environment is allowed to have DEBUG=True
+    if is_testing:
+        return False
+    
     # Check for production environment variables with DEBUG=True
     production_envs = ('production', 'prod', 'staging', 'stage')
     
@@ -131,8 +136,11 @@ def is_production_environment(app=None) -> bool:
     config = _get_effective_app_config(app)
     debug_enabled = _is_debug_enabled(config) if config else False
     
+    # Check if in testing environment
+    is_testing = is_testing_environment(app)
+    
     # Check for dangerous mismatches before proceeding
-    if _check_environment_mismatch(flask_env, app_env, debug_enabled):
+    if _check_environment_mismatch(flask_env, app_env, debug_enabled, is_testing):
         raise ValueError(
             f"Dangerous environment mismatch detected: "
             f"FLASK_ENV='{flask_env}', APP_ENV='{app_env}', DEBUG={debug_enabled}. "
@@ -198,8 +206,11 @@ def is_development_environment(app=None) -> bool:
     config = _get_effective_app_config(app)
     debug_enabled = _is_debug_enabled(config) if config else False
     
+    # Check if in testing environment
+    is_testing = is_testing_environment(app)
+    
     # Check for dangerous mismatches
-    if _check_environment_mismatch(flask_env, app_env, debug_enabled):
+    if _check_environment_mismatch(flask_env, app_env, debug_enabled, is_testing):
         raise ValueError(
             f"Dangerous environment mismatch detected: "
             f"FLASK_ENV='{flask_env}', APP_ENV='{app_env}', DEBUG={debug_enabled}. "

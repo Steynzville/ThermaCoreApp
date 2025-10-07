@@ -16,6 +16,9 @@ def validate_json_request(f):
     - Empty request data
     - Invalid/malformed JSON
     
+    For PATCH requests, allows partial or empty JSON payloads.
+    For POST/PUT requests, requires valid non-empty JSON.
+    
     Returns consistent 400 error responses for validation failures.
     
     Usage:
@@ -29,7 +32,8 @@ def validate_json_request(f):
         try:
             # Access request.json - this can raise BadRequest for malformed JSON
             json_data = request.json
-            if json_data is None:
+            # Allow PATCH requests to have empty/partial JSON for partial updates
+            if json_data is None and request.method != 'PATCH':
                 return jsonify({'error': 'Request must contain valid JSON data'}), 400
         except BadRequest as err:
             # Handle malformed JSON (e.g., syntax errors)

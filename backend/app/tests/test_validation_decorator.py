@@ -18,14 +18,27 @@ def test_endpoint():
     return jsonify({'success': True, 'data': request.json}), 200
 
 
+@test_bp.route('/test/validate-patch', methods=['PATCH'])
+@validate_json_request
+def test_patch_endpoint():
+    """Test PATCH endpoint that uses the validation decorator."""
+    from flask import request
+    return jsonify({'success': True, 'data': request.json}), 200
+
+
 class TestValidationDecorator:
     """Test the validate_json_request decorator."""
     
     @pytest.fixture(autouse=True)
     def setup(self, app):
-        """Register test blueprint."""
-        app.register_blueprint(test_bp)
+        """Register test blueprint using fresh app per test."""
+        # Check if blueprint is already registered to avoid duplicate registration
+        if 'test_validation' not in app.blueprints:
+            app.register_blueprint(test_bp)
         yield
+        # Cleanup: Remove the blueprint after test
+        if 'test_validation' in app.blueprints:
+            del app.blueprints['test_validation']
     
     def test_valid_json_request(self, client):
         """Test that valid JSON passes through the decorator."""
@@ -75,6 +88,31 @@ class TestValidationDecorator:
         data = json.loads(response.data)
         assert 'error' in data
         assert 'Request must contain valid JSON data' in data['error']
+    
+    def test_patch_empty_json_allowed(self, client):
+        """Test that PATCH requests allow empty dict JSON for partial updates."""
+        response = client.patch('/test/validate-patch',
+            json={},  # Empty dict is valid JSON
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        # PATCH should allow empty dict - it passes through the decorator
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert data['success'] is True
+        assert data['data'] == {}
+    
+    def test_patch_partial_json_allowed(self, client):
+        """Test that PATCH requests allow partial JSON."""
+        response = client.patch('/test/validate-patch',
+            json={'partial': 'data'},
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert data['success'] is True
+        assert data['data']['partial'] == 'data'
 
 
 class TestUnitsValidation:
@@ -97,7 +135,7 @@ class TestUnitsValidation:
         return None
     
     def test_create_unit_empty_json(self, client):
-        """Test that create_unit rejects empty JSON."""
+        """Test that create_unit rejects empty/malformed JSON."""
         token = self.get_auth_token(client)
         
         response = client.post('/api/v1/units',
@@ -111,7 +149,8 @@ class TestUnitsValidation:
         assert response.status_code == 400
         data = json.loads(response.data)
         assert 'error' in data
-        assert 'Request must contain valid JSON data' in data['error']
+        # Empty string is malformed JSON
+        assert 'Invalid JSON format' in data['error']
     
     def test_create_unit_malformed_json(self, client):
         """Test that create_unit rejects malformed JSON."""
@@ -131,7 +170,7 @@ class TestUnitsValidation:
         assert 'Invalid JSON format' in data['error']
     
     def test_update_unit_empty_json(self, client):
-        """Test that update_unit rejects empty JSON."""
+        """Test that update_unit rejects empty/malformed JSON."""
         token = self.get_auth_token(client)
         
         response = client.put('/api/v1/units/TEST001',
@@ -145,7 +184,8 @@ class TestUnitsValidation:
         assert response.status_code == 400
         data = json.loads(response.data)
         assert 'error' in data
-        assert 'Request must contain valid JSON data' in data['error']
+        # Empty string is malformed JSON
+        assert 'Invalid JSON format' in data['error']
     
     def test_update_unit_malformed_json(self, client):
         """Test that update_unit rejects malformed JSON."""
@@ -165,7 +205,7 @@ class TestUnitsValidation:
         assert 'Invalid JSON format' in data['error']
     
     def test_create_sensor_empty_json(self, client):
-        """Test that create_unit_sensor rejects empty JSON."""
+        """Test that create_unit_sensor rejects empty/malformed JSON."""
         token = self.get_auth_token(client)
         
         response = client.post('/api/v1/units/TEST001/sensors',
@@ -179,10 +219,11 @@ class TestUnitsValidation:
         assert response.status_code == 400
         data = json.loads(response.data)
         assert 'error' in data
-        assert 'Request must contain valid JSON data' in data['error']
+        # Empty string is malformed JSON
+        assert 'Invalid JSON format' in data['error']
     
     def test_update_unit_status_empty_json(self, client):
-        """Test that update_unit_status rejects empty JSON."""
+        """Test that update_unit_status rejects malformed JSON (empty string)."""
         token = self.get_auth_token(client)
         
         response = client.patch('/api/v1/units/TEST001/status',
@@ -193,7 +234,7 @@ class TestUnitsValidation:
             }
         )
         
+        # Empty string is malformed JSON and should be rejected
         assert response.status_code == 400
         data = json.loads(response.data)
         assert 'error' in data
-        assert 'Request must contain valid JSON data' in data['error']

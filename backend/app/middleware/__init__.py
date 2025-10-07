@@ -42,7 +42,8 @@ from .metrics import (
     MetricsCollector,
     collect_metrics,
     setup_metrics_middleware,
-    create_metrics_blueprint
+    create_metrics_blueprint,
+    reset_metrics_collector
 )
 
 from .audit import (
@@ -79,6 +80,7 @@ __all__ = [
     'collect_metrics',
     'setup_metrics_middleware',
     'create_metrics_blueprint',
+    'reset_metrics_collector',
     
     # Audit Logging
     'AuditLogger',

@@ -38,7 +38,18 @@ class MetricsCollector:
         # Recent activity tracking
         self.recent_requests = deque(maxlen=max_history)
         self.recent_errors = deque(maxlen=100)  # Track last 100 errors
-        
+    
+    def reset(self):
+        """Reset all metrics to initial state. Useful for testing."""
+        with self.lock:
+            self.request_count.clear()
+            self.response_times.clear()
+            self.status_codes.clear()
+            self.error_rates.clear()
+            self.endpoint_metrics.clear()
+            self.recent_requests.clear()
+            self.recent_errors.clear()
+    
     def record_request_start(self, endpoint: str, method: str):
         """Record the start of a request."""
         # Set request-scoped data in Flask's g object (no lock needed - thread-local)
@@ -240,6 +251,15 @@ def get_metrics_collector() -> MetricsCollector:
     if _metrics_collector is None:
         _metrics_collector = MetricsCollector()
     return _metrics_collector
+
+
+def reset_metrics_collector():
+    """Reset the global metrics collector. Useful for testing to ensure clean state."""
+    global _metrics_collector
+    if _metrics_collector is not None:
+        _metrics_collector.reset()
+    else:
+        _metrics_collector = MetricsCollector()
 
 
 def collect_metrics(f: Callable) -> Callable:
