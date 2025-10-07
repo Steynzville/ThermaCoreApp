@@ -18,6 +18,14 @@ def test_endpoint():
     return jsonify({'success': True, 'data': request.json}), 200
 
 
+@test_bp.route('/test/validate-patch', methods=['PATCH'])
+@validate_json_request
+def test_patch_endpoint():
+    """Test PATCH endpoint that uses the validation decorator."""
+    from flask import request
+    return jsonify({'success': True, 'data': request.json}), 200
+
+
 class TestValidationDecorator:
     """Test the validate_json_request decorator."""
     
@@ -75,6 +83,31 @@ class TestValidationDecorator:
         data = json.loads(response.data)
         assert 'error' in data
         assert 'Request must contain valid JSON data' in data['error']
+    
+    def test_patch_empty_json_allowed(self, client):
+        """Test that PATCH requests allow empty JSON for partial updates."""
+        response = client.patch('/test/validate-patch',
+            data='',
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        # PATCH should allow empty JSON (None) - it passes through the decorator
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert data['success'] is True
+        assert data['data'] is None
+    
+    def test_patch_partial_json_allowed(self, client):
+        """Test that PATCH requests allow partial JSON."""
+        response = client.patch('/test/validate-patch',
+            json={'partial': 'data'},
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert data['success'] is True
+        assert data['data']['partial'] == 'data'
 
 
 class TestUnitsValidation:
@@ -182,7 +215,7 @@ class TestUnitsValidation:
         assert 'Request must contain valid JSON data' in data['error']
     
     def test_update_unit_status_empty_json(self, client):
-        """Test that update_unit_status rejects empty JSON."""
+        """Test that update_unit_status allows empty JSON for PATCH (partial updates)."""
         token = self.get_auth_token(client)
         
         response = client.patch('/api/v1/units/TEST001/status',
@@ -193,7 +226,7 @@ class TestUnitsValidation:
             }
         )
         
-        assert response.status_code == 400
-        data = json.loads(response.data)
-        assert 'error' in data
-        assert 'Request must contain valid JSON data' in data['error']
+        # PATCH requests should allow empty JSON for partial updates
+        # The endpoint may still return 404 if unit doesn't exist, but shouldn't 
+        # fail validation at the decorator level
+        assert response.status_code in [200, 404]
