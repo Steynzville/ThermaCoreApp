@@ -498,8 +498,10 @@ def update_unit_status(unit_id):
     valid_health_statuses = ['optimal', 'warning', 'critical']
     
     # Extract enum values if they are enums (Marshmallow may return enums)
-    status_value = data.get('status').value if hasattr(data.get('status'), 'value') else data.get('status')
-    health_status_value = data.get('health_status').value if hasattr(data.get('health_status'), 'value') else data.get('health_status')
+    status_raw = data.get('status')
+    status_value = status_raw.value if status_raw is not None and hasattr(status_raw, 'value') else status_raw
+    health_status_raw = data.get('health_status')
+    health_status_value = health_status_raw.value if health_status_raw is not None and hasattr(health_status_raw, 'value') else health_status_raw
     
     if 'status' in data and status_value not in valid_statuses:
         return jsonify({'error': f'Invalid status. Must be one of: {valid_statuses}'}), 400
