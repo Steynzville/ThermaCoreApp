@@ -4,6 +4,7 @@ from flask_jwt_extended import jwt_required
 from marshmallow import ValidationError
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import or_
+from werkzeug.exceptions import BadRequest
 
 from app import db
 from app.models import Unit, Sensor, SensorReading
@@ -170,7 +171,18 @@ def create_unit():
     schema = UnitCreateSchema()
     
     try:
-        data = schema.load(request.json)
+        # Access request.json - this can raise BadRequest for malformed JSON
+        json_data = request.json
+        if json_data is None:
+            return jsonify({'error': 'Request must contain valid JSON data'}), 400
+            
+        data = schema.load(json_data)
+    except BadRequest as err:
+        # Handle malformed JSON (e.g., syntax errors)
+        return jsonify({
+            'error': 'Invalid JSON format',
+            'details': 'Request body must contain valid JSON'
+        }), 400
     except ValidationError as err:
         return jsonify({'error': 'Validation error', 'details': err.messages}), 400
     
@@ -235,7 +247,18 @@ def update_unit(unit_id):
     schema = UnitUpdateSchema()
     
     try:
-        data = schema.load(request.json)
+        # Access request.json - this can raise BadRequest for malformed JSON
+        json_data = request.json
+        if json_data is None:
+            return jsonify({'error': 'Request must contain valid JSON data'}), 400
+            
+        data = schema.load(json_data)
+    except BadRequest as err:
+        # Handle malformed JSON (e.g., syntax errors)
+        return jsonify({
+            'error': 'Invalid JSON format',
+            'details': 'Request body must contain valid JSON'
+        }), 400
     except ValidationError as err:
         return jsonify({'error': 'Validation error', 'details': err.messages}), 400
     
@@ -357,7 +380,18 @@ def create_unit_sensor(unit_id):
     schema = SensorCreateSchema()
     
     try:
-        data = schema.load(request.json)
+        # Access request.json - this can raise BadRequest for malformed JSON
+        json_data = request.json
+        if json_data is None:
+            return jsonify({'error': 'Request must contain valid JSON data'}), 400
+            
+        data = schema.load(json_data)
+    except BadRequest as err:
+        # Handle malformed JSON (e.g., syntax errors)
+        return jsonify({
+            'error': 'Invalid JSON format',
+            'details': 'Request body must contain valid JSON'
+        }), 400
     except ValidationError as err:
         return jsonify({'error': 'Validation error', 'details': err.messages}), 400
     
@@ -478,7 +512,18 @@ def update_unit_status(unit_id):
       - JWT: []
     """
     unit = Unit.query.get_or_404(unit_id)
-    data = request.json or {}
+    
+    try:
+        # Access request.json - this can raise BadRequest for malformed JSON
+        data = request.json
+        if data is None:
+            data = {}
+    except BadRequest as err:
+        # Handle malformed JSON (e.g., syntax errors)
+        return jsonify({
+            'error': 'Invalid JSON format',
+            'details': 'Request body must contain valid JSON'
+        }), 400
     
     # Validate status values
     valid_statuses = ['online', 'offline', 'maintenance', 'error']
