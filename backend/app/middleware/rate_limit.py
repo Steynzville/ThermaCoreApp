@@ -22,9 +22,13 @@ class RateLimiter:
     
     def _cleanup_memory_cache(self):
         """Clean expired entries from in-memory cache."""
-        # DISABLED: Cleanup is redundant as individual rate limit checks handle their own cleanup
-        # This was causing authentication issues by interfering with rate limit logic
-        pass
+        current_time = time.time()
+        expired_keys = [
+            key for key, (count, window_start) in self._in_memory_cache.items()
+            if current_time - window_start > 60  # Clean entries older than 1 minute
+        ]
+        for key in expired_keys:
+            del self._in_memory_cache[key]
     
     def is_allowed(self, identifier: str, limit: int, window_seconds: int = 60) -> Tuple[bool, Dict]:
         """
