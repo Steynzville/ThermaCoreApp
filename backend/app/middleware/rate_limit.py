@@ -23,10 +23,21 @@ class RateLimiter:
     def _cleanup_memory_cache(self):
         """Clean expired entries from in-memory cache."""
         current_time = time.time()
-        expired_keys = [
-            key for key, (count, window_start) in self._in_memory_cache.items()
-            if current_time - window_start > 60  # Clean entries older than 1 minute
-        ]
+        expired_keys = []
+        
+        for key, value in list(self._in_memory_cache.items()):
+            # Skip if value is not a list (should always be a list in current implementation)
+            if not isinstance(value, list):
+                expired_keys.append(key)
+                continue
+            
+            # Remove timestamps older than 60 seconds
+            self._in_memory_cache[key] = [req_time for req_time in value if current_time - req_time <= 60]
+            
+            # If no timestamps remain, mark key for deletion
+            if not self._in_memory_cache[key]:
+                expired_keys.append(key)
+        
         for key in expired_keys:
             del self._in_memory_cache[key]
     
