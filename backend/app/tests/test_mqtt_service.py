@@ -136,17 +136,18 @@ class TestMQTTClient:
         }
         
         with patch('paho.mqtt.client.Client'):
-            client = MQTTClient(mock_app)
-            client.connected = True
-            client._subscribed_topics = ['scada/+/temperature']
-            
-            status = client.get_status()
-            
-            assert status['connected'] is True
-            assert status['broker_host'] == 'test-broker'
-            assert status['broker_port'] == 1883
-            assert status['client_id'] == 'test-client'
-            assert 'scada/+/temperature' in status['subscribed_topics']
+            with patch('app.services.mqtt_service.is_production_environment', return_value=False):
+                client = MQTTClient(mock_app)
+                client.connected = True
+                client._subscribed_topics = ['scada/+/temperature']
+                
+                status = client.get_status()
+                
+                assert status['connected'] is True
+                assert status['broker_host'] == 'test-broker'
+                assert status['broker_port'] == 1883
+                assert status['client_id'] == 'test-client'
+                assert 'scada/+/temperature' in status['subscribed_topics']
     
     @patch('paho.mqtt.client.Client')
     def test_connect_success(self, mock_client_class):
