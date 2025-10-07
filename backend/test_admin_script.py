@@ -5,7 +5,6 @@ This script tests that the FIRST_ADMIN_PASSWORD environment variable works corre
 """
 import os
 import sys
-import tempfile
 
 # Test 1: Verify script shows [HIDDEN] in output
 print("=" * 70)
