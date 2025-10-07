@@ -177,7 +177,7 @@ def create_unit():
             return jsonify({'error': 'Request must contain valid JSON data'}), 400
             
         data = schema.load(json_data)
-    except BadRequest as err:
+    except BadRequest:
         # Handle malformed JSON (e.g., syntax errors)
         return jsonify({
             'error': 'Invalid JSON format',
@@ -253,7 +253,7 @@ def update_unit(unit_id):
             return jsonify({'error': 'Request must contain valid JSON data'}), 400
             
         data = schema.load(json_data)
-    except BadRequest as err:
+    except BadRequest:
         # Handle malformed JSON (e.g., syntax errors)
         return jsonify({
             'error': 'Invalid JSON format',
@@ -386,7 +386,7 @@ def create_unit_sensor(unit_id):
             return jsonify({'error': 'Request must contain valid JSON data'}), 400
             
         data = schema.load(json_data)
-    except BadRequest as err:
+    except BadRequest:
         # Handle malformed JSON (e.g., syntax errors)
         return jsonify({
             'error': 'Invalid JSON format',
@@ -518,7 +518,7 @@ def update_unit_status(unit_id):
         data = request.json
         if data is None:
             data = {}
-    except BadRequest as err:
+    except BadRequest:
         # Handle malformed JSON (e.g., syntax errors)
         return jsonify({
             'error': 'Invalid JSON format',
