@@ -78,18 +78,28 @@ def is_testing_environment(app=None) -> bool:
     """
     Check if running in testing environment.
     
+    This function checks multiple sources to determine if code is running in a test context:
+    1. TESTING environment variable (highest priority) 
+    2. App config TESTING flag (second priority)
+    
+    Note: When testing production config behavior (e.g., in test_run_debug_mode.py),
+    tests may clear environment variables and set FLASK_ENV=production. In such cases,
+    this function will correctly return False, allowing production validation logic to run.
+    Service initialization failures in such scenarios are handled by the test-aware
+    error handling in handle_environment_detection_error().
+    
     Args:
         app: Flask application instance (optional)
     
     Returns:
         True if running in testing environment
     """
-    # Check environment variable first
+    # Check environment variable first (highest priority)
     testing_env = os.environ.get('TESTING', 'false').lower()
     if testing_env in ('true', '1'):
         return True
     
-    # Check app configuration using helper
+    # Check app configuration using helper (second priority)
     config = _get_effective_app_config(app)
     if config and config.get('TESTING', False):
         return True
@@ -249,6 +259,14 @@ def handle_environment_detection_error(
     This consolidates the duplicated try/except logic for environment detection that was 
     scattered throughout the codebase, following best practices for error propagation,
     logging, and testability.
+    
+    Service Initialization in Test Mode:
+    - Services are NOT initialized when app.config['TESTING'] is True (see app/__init__.py)
+    - This prevents MQTT/OPC UA connection attempts during normal test runs
+    - Tests that specifically test production config (e.g., test_run_debug_mode.py) may
+      set FLASK_ENV=production with clear=True, causing services to attempt initialization
+    - In such cases, service validation errors are caught and propagated as RuntimeErrors
+    - Test scenarios should mock services or provide valid test credentials
     
     Args:
         service_name: Human-readable service name for logging
