@@ -67,7 +67,7 @@ jobs:
     
     - name: Upload Error Logs
       if: always()  # Upload logs even if previous steps failed
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: stabilization-logs-py${{ matrix.python-version }}
         path: |
@@ -78,7 +78,7 @@ jobs:
     
     - name: Upload Test Environment Config
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: test-config-py${{ matrix.python-version }}
         path: |
@@ -153,7 +153,7 @@ jobs:
     
     - name: Upload All Artifacts
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: full-stabilization-results
         path: |
