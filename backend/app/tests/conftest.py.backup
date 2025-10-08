@@ -248,34 +248,3 @@ def _create_test_data():
     
     db.session.add(test_sensor)
     db.session.commit()
-
-@pytest.fixture(scope='function')
-def safe_app():
-    """Create a safe isolated app instance for testing.
-    
-    This fixture creates a completely isolated Flask app instance
-    with its own temporary database, useful for tests that need
-    to modify app configuration or database schema.
-    """
-    import tempfile
-    db_fd, db_path = tempfile.mkstemp()
-    
-    # Override database URL for this isolated test
-    from config import TestingConfig
-    original_db_uri = TestingConfig.SQLALCHEMY_DATABASE_URI
-    TestingConfig.SQLALCHEMY_DATABASE_URI = f'sqlite:///{db_path}'
-    
-    test_app = create_app('testing')
-    test_app.config['TESTING'] = True
-    test_app.config['WTF_CSRF_ENABLED'] = False
-    
-    with test_app.app_context():
-        _init_database()
-        yield test_app
-    
-    # Restore original config
-    TestingConfig.SQLALCHEMY_DATABASE_URI = original_db_uri
-    
-    # Clean up temp database
-    os.close(db_fd)
-    os.unlink(db_path)

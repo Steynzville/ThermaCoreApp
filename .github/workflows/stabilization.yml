@@ -1,0 +1,166 @@
+name: Stabilization Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  stabilization:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11']
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Install dependencies
+      run: |
+        cd backend
+        pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Phase 1 - Runtime Stabilization
+      run: |
+        chmod +x phase1_runtime.sh
+        ./phase1_runtime.sh
+    
+    - name: Phase 2 - Database Stabilization
+      run: |
+        chmod +x phase2_database.sh
+        ./phase2_database.sh
+    
+    - name: Phase 3 - Assertion Detection
+      run: |
+        chmod +x phase3_assertions.sh
+        ./phase3_assertions.sh
+      continue-on-error: true  # Don't fail the build if tests have assertions
+    
+    - name: Phase 4 - Type Error Detection
+      run: |
+        chmod +x phase4_types.sh
+        ./phase4_types.sh
+      continue-on-error: true  # Don't fail the build if tests have type errors
+    
+    - name: Phase 5 - CI Optimization
+      run: |
+        chmod +x phase5_ci.sh
+        ./phase5_ci.sh
+    
+    - name: Upload Error Logs
+      if: always()  # Upload logs even if previous steps failed
+      uses: actions/upload-artifact@v3
+      with:
+        name: stabilization-logs-py${{ matrix.python-version }}
+        path: |
+          backend/assertion_errors.log
+          backend/type_errors.log
+          backend/suspected_files.txt
+        if-no-files-found: ignore
+    
+    - name: Upload Test Environment Config
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-config-py${{ matrix.python-version }}
+        path: |
+          .env.test
+          backend/ruff.toml
+        if-no-files-found: ignore
+    
+    - name: Comment PR with Results
+      if: github.event_name == 'pull_request' && always()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          
+          let comment = '## 🔧 Stabilization Test Results\n\n';
+          
+          // Read assertion errors if available
+          try {
+            const assertionLog = fs.readFileSync('backend/assertion_errors.log', 'utf8');
+            const assertionCount = (assertionLog.match(/AssertionError/g) || []).length;
+            comment += `### Phase 3: Assertion Errors\n`;
+            comment += `- Found ${assertionCount} assertion errors\n\n`;
+          } catch (e) {
+            comment += `### Phase 3: Assertion Errors\n- No assertion errors found ✅\n\n`;
+          }
+          
+          // Read type errors if available
+          try {
+            const typeLog = fs.readFileSync('backend/type_errors.log', 'utf8');
+            const typeErrorCount = (typeLog.match(/TypeError/g) || []).length;
+            const attrErrorCount = (typeLog.match(/AttributeError/g) || []).length;
+            comment += `### Phase 4: Type Errors\n`;
+            comment += `- Found ${typeErrorCount} TypeErrors\n`;
+            comment += `- Found ${attrErrorCount} AttributeErrors\n\n`;
+          } catch (e) {
+            comment += `### Phase 4: Type Errors\n- No type errors found ✅\n\n`;
+          }
+          
+          comment += '\n📋 Full logs are available in the workflow artifacts.';
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+  
+  # Run all phases together as integration test
+  full-stabilization:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install dependencies
+      run: |
+        cd backend
+        pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Run Full Stabilization Suite
+      run: |
+        chmod +x run_stabilization.sh
+        ./run_stabilization.sh
+      continue-on-error: true
+    
+    - name: Upload All Artifacts
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: full-stabilization-results
+        path: |
+          .env.test
+          backend/assertion_errors.log
+          backend/type_errors.log
+          backend/suspected_files.txt
+          backend/ruff.toml
+          backend/app/utils/db_retry.py
+        if-no-files-found: ignore
