@@ -1,13 +1,11 @@
 """Test configuration for ThermaCore SCADA API tests."""
 import os
-import tempfile
 import pytest
 import traceback
 from sqlalchemy import text, inspect
 
 from app import create_app, db
 from app.models import User, Role, Permission, Unit, Sensor, SensorReading  # noqa: F401
-from config import TestingConfig
 
 
 def _init_database():
