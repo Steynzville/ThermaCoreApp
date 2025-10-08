@@ -238,7 +238,10 @@ jobs:
 
       - name: Run Bandit and Generate SARIF Report
         run: |
-          bandit -r . -f json -o bandit_report.json --skip B101,B311,B105,B107,B108,B104,B110 || true
+          # Run Bandit excluding test directories and skipping assert checks (B101)
+          bandit -r . -f json -o bandit_report.json \
+            --exclude './app/tests/*,./test_*.py' \
+            --skip B101,B311,B105,B107,B108,B104,B110 || true
           
           python -c "
           import json
@@ -246,17 +249,22 @@ jobs:
               with open('bandit_report.json', 'r') as f:
                   bandit_data = json.load(f)
               
+              # Create valid SARIF 2.1.0 format without extra properties
               sarif = {
                   '\$schema': 'https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json',
                   'version': '2.1.0',
                   'runs': [{
                       'tool': {
-                          'driver': {'name': 'Bandit'},
+                          'driver': {
+                              'name': 'Bandit',
+                              'version': '1.7.0'
+                          }
                       },
                       'results': []
                   }]
               }
               
+              # Only include HIGH and MEDIUM severity issues
               for issue in bandit_data.get('results', []):
                   if issue.get('issue_severity') in ['HIGH', 'MEDIUM']:
                       sarif['runs'][0]['results'].append({
@@ -276,15 +284,17 @@ jobs:
               
               print(f'📊 Found {len(sarif[\"runs\"][0][\"results\"])} high/medium severity issues')
               
+              # Write clean SARIF without 'errors' or 'generated_at' properties
               with open('bandit_sarif.json', 'w') as f:
                   json.dump(sarif, f, indent=2)
           except Exception as e:
               print(f'❌ Error generating SARIF: {e}')
+              # Write minimal valid SARIF on error
               with open('bandit_sarif.json', 'w') as f:
                   json.dump({
                       '\$schema': 'https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json',
                       'version': '2.1.0',
-                      'runs': [{'tool': {'driver': {'name': 'Bandit'}}, 'results': []}]
+                      'runs': [{'tool': {'driver': {'name': 'Bandit', 'version': '1.7.0'}}, 'results': []}]
                   }, f)
           "
         working-directory: backend
