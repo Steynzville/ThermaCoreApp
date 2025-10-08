@@ -209,7 +209,7 @@ class WebSocketService:
         }
         
         logger.info(f"Broadcasting system alert: {message}")
-        # Broadcast to all connected clients (no room specified broadcasts to all)
+        # Broadcast to all connected clients across all namespaces (no room or namespace specified broadcasts to all clients in all namespaces)
         self.socketio.emit('system_alert', message)
 
     def broadcast_device_status(self, device_id: str, status_data: Dict[str, Any]):
