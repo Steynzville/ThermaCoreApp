@@ -246,60 +246,128 @@ jobs:
             --exclude ./app/tests,./test_*.py,./validate_*.py,**/test_*.py \
             --skip B101,B311,B105,B107,B108,B104,B110 || true
           
-          python -c "
+          # Generate clean SARIF output using heredoc to avoid shell quoting issues
+          python - <<'EOF'
           import json
+          import sys
+          
+          def create_minimal_sarif():
+              """Create a minimal valid SARIF structure."""
+              return {
+                  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+                  "version": "2.1.0",
+                  "runs": [{
+                      "tool": {
+                          "driver": {
+                              "name": "Bandit",
+                              "version": "1.7.0"
+                          }
+                      },
+                      "results": []
+                  }]
+              }
+          
           try:
+              # Read Bandit JSON report
               with open('bandit_report.json', 'r') as f:
                   bandit_data = json.load(f)
               
-              # Create valid SARIF 2.1.0 format without extra properties
-              sarif = {
-                  '\$schema': 'https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json',
-                  'version': '2.1.0',
-                  'runs': [{
-                      'tool': {
-                          'driver': {
-                              'name': 'Bandit',
-                              'version': '1.7.0'
-                          }
-                      },
-                      'results': []
-                  }]
-              }
-              
-              # Only include HIGH and MEDIUM severity issues
-              for issue in bandit_data.get('results', []):
-                  if issue.get('issue_severity') in ['HIGH', 'MEDIUM']:
-                      sarif['runs'][0]['results'].append({
-                          'ruleId': issue.get('test_id', ''),
-                          'level': 'error' if issue.get('issue_severity') == 'HIGH' else 'warning',
-                          'message': {'text': issue.get('issue_text', '')},
-                          'locations': [{
-                              'physicalLocation': {
-                                  'artifactLocation': {'uri': issue.get('filename', '').replace('./', '')},
-                                  'region': {
-                                      'startLine': issue.get('line_number', 0),
-                                      'startColumn': issue.get('col_offset', 0)
+              # Validate that we have the expected structure
+              if not isinstance(bandit_data, dict):
+                  print(f"⚠️  bandit_report.json is not a dict, creating minimal SARIF")
+                  sarif = create_minimal_sarif()
+              else:
+                  # Create valid SARIF 2.1.0 format - only standard properties
+                  sarif = create_minimal_sarif()
+                  
+                  # Process Bandit results - only HIGH and MEDIUM severity
+                  results = bandit_data.get('results', [])
+                  if not isinstance(results, list):
+                      print(f"⚠️  'results' is not a list in bandit_report.json")
+                      results = []
+                  
+                  for issue in results:
+                      if not isinstance(issue, dict):
+                          continue
+                      
+                      severity = issue.get('issue_severity', '')
+                      if severity in ['HIGH', 'MEDIUM']:
+                          sarif['runs'][0]['results'].append({
+                              'ruleId': issue.get('test_id', 'unknown'),
+                              'level': 'error' if severity == 'HIGH' else 'warning',
+                              'message': {
+                                  'text': issue.get('issue_text', 'No description provided')
+                              },
+                              'locations': [{
+                                  'physicalLocation': {
+                                      'artifactLocation': {
+                                          'uri': issue.get('filename', 'unknown').replace('./', '')
+                                      },
+                                      'region': {
+                                          'startLine': issue.get('line_number', 1),
+                                          'startColumn': issue.get('col_offset', 1)
+                                      }
                                   }
-                              }
-                          }]
-                      })
+                              }]
+                          })
+                  
+                  print(f"📊 Generated SARIF with {len(sarif['runs'][0]['results'])} high/medium severity issues")
               
-              print(f'📊 Found {len(sarif[\"runs\"][0][\"results\"])} high/medium severity issues')
+              # Write clean SARIF - no 'errors' or 'generated_at' properties
+              with open('bandit_sarif.json', 'w') as f:
+                  json.dump(sarif, f, indent=2)
               
-              # Write clean SARIF without 'errors' or 'generated_at' properties
+              print("✅ SARIF file written successfully")
+              
+          except FileNotFoundError:
+              print("⚠️  bandit_report.json not found, creating minimal SARIF")
+              sarif = create_minimal_sarif()
+              with open('bandit_sarif.json', 'w') as f:
+                  json.dump(sarif, f, indent=2)
+          except json.JSONDecodeError as e:
+              print(f"❌ Failed to parse bandit_report.json: {e}")
+              print("Creating minimal valid SARIF")
+              sarif = create_minimal_sarif()
               with open('bandit_sarif.json', 'w') as f:
                   json.dump(sarif, f, indent=2)
           except Exception as e:
-              print(f'❌ Error generating SARIF: {e}')
-              # Write minimal valid SARIF on error
+              print(f"❌ Unexpected error: {e}")
+              sarif = create_minimal_sarif()
               with open('bandit_sarif.json', 'w') as f:
-                  json.dump({
-                      '\$schema': 'https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json',
-                      'version': '2.1.0',
-                      'runs': [{'tool': {'driver': {'name': 'Bandit', 'version': '1.7.0'}}, 'results': []}]
-                  }, f)
-          "
+                  json.dump(sarif, f, indent=2)
+          EOF
+          
+          # Validate generated SARIF
+          echo "🔍 Validating generated SARIF file:"
+          head -20 bandit_sarif.json
+          
+          # Verify required properties exist
+          python - <<'EOF'
+          import json
+          try:
+              with open('bandit_sarif.json', 'r') as f:
+                  sarif = json.load(f)
+              
+              # Check required SARIF properties
+              assert '$schema' in sarif, "Missing $schema property"
+              assert 'version' in sarif, "Missing version property"
+              assert 'runs' in sarif, "Missing runs property"
+              assert isinstance(sarif['runs'], list), "runs must be a list"
+              assert len(sarif['runs']) > 0, "runs must not be empty"
+              
+              # Check no extra top-level properties
+              allowed_keys = {'$schema', 'version', 'runs'}
+              extra_keys = set(sarif.keys()) - allowed_keys
+              if extra_keys:
+                  print(f"⚠️  Found unexpected top-level keys: {extra_keys}")
+                  sys.exit(1)
+              
+              print("✅ SARIF validation passed")
+          except Exception as e:
+              print(f"❌ SARIF validation failed: {e}")
+              import sys
+              sys.exit(1)
+          EOF
         working-directory: backend
 
       - name: Upload Security Scan Results
