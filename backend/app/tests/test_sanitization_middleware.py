@@ -11,7 +11,8 @@ class TestSanitizeFunction:
     def test_sanitize_string_with_control_chars(self):
         """Test sanitizing string with control characters."""
         input_str = "test\nvalue\rwith\ttabs"
-        expected = "testvaluewithttabs"
+        # Control characters (\n, \r, \t) are removed, not replaced
+        expected = "testvaluewithtabs"
         assert sanitize(input_str) == expected
     
     def test_sanitize_clean_string(self):
