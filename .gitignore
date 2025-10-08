@@ -2,6 +2,7 @@
 .env
 .env.local
 .env.*.local
+# Keep .env.test for testing (not ignored)
 
 # Node modules
 node_modules/
@@ -36,3 +37,7 @@ __pycache__/
 tmp/
 temp/
 *.tmp
+*.backup
+
+# Stabilization script outputs (generated fresh each time)
+suspected_files.txt
