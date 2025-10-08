@@ -12,14 +12,10 @@ class Config:
     """Base configuration class."""
     
     # Flask Configuration
-    SECRET_KEY = os.environ.get("SECRET_KEY")
-    if not SECRET_KEY:
-        raise ValueError("SECRET_KEY must be set in environment variables")
+    SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-secret-key-change-in-production"
     
-    # Database Configuration
-    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
-    if not SQLALCHEMY_DATABASE_URI:
-        raise ValueError("DATABASE_URL must be set in environment variables")
+    # Database Configuration  
+    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL") or "sqlite:///thermacore.db"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_size': 20,
@@ -28,9 +24,7 @@ class Config:
     }
     
     # JWT Configuration
-    JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
-    if not JWT_SECRET_KEY:
-        raise ValueError("JWT_SECRET_KEY must be set in environment variables")
+    JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY") or "dev-jwt-secret-change-in-production"
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=int(os.environ.get('JWT_ACCESS_TOKEN_EXPIRES', 1)))
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
     
@@ -105,6 +99,20 @@ class DevelopmentConfig(Config):
     """Development configuration."""
     DEBUG = True
     TESTING = False
+    
+    def __init__(self):
+        """Initialize development configuration."""
+        super().__init__()
+        # Validate that critical environment variables are set for development
+        if os.environ.get("SECRET_KEY") is None:
+            import warnings
+            warnings.warn("SECRET_KEY not set in environment, using default (not secure for production)")
+        if os.environ.get("DATABASE_URL") is None:
+            import warnings
+            warnings.warn("DATABASE_URL not set in environment, using default SQLite database")
+        if os.environ.get("JWT_SECRET_KEY") is None:
+            import warnings
+            warnings.warn("JWT_SECRET_KEY not set in environment, using default (not secure for production)")
 
 
 class ProductionConfig(Config):
@@ -116,6 +124,14 @@ class ProductionConfig(Config):
         """Initialize production configuration with environment variable validation."""
         # Call parent init
         super().__init__()
+        
+        # Validate critical environment variables are set for production
+        if not os.environ.get("SECRET_KEY"):
+            raise ValueError("SECRET_KEY must be set in environment variables for production")
+        if not os.environ.get("DATABASE_URL"):
+            raise ValueError("DATABASE_URL must be set in environment variables for production")
+        if not os.environ.get("JWT_SECRET_KEY"):
+            raise ValueError("JWT_SECRET_KEY must be set in environment variables for production")
         
         # Override WebSocket CORS for production - restrict to trusted domains
         # This should be set via environment variable in production
@@ -154,6 +170,10 @@ class TestingConfig(Config):
     """Testing configuration."""
     DEBUG = True
     TESTING = True
+    
+    # Override with safe defaults for testing
+    SECRET_KEY = "test-secret-key-not-for-production"
+    JWT_SECRET_KEY = "test-jwt-secret-not-for-production"
     
     # Use PostgreSQL for testing to match production, with SQLite fallback
     # This can be overridden with POSTGRES_TEST_URL environment variable
