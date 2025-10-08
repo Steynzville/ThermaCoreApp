@@ -23,10 +23,17 @@ class RateLimiter:
     def _cleanup_memory_cache(self):
         """Clean expired entries from in-memory cache."""
         current_time = time.time()
-        expired_keys = [
-            key for key, (count, window_start) in self._in_memory_cache.items()
-            if current_time - window_start > 60  # Clean entries older than 1 minute
-        ]
+        expired_keys = []
+        
+        for key, requests in self._in_memory_cache.items():
+            # Filter out old requests (older than 60 seconds)
+            if isinstance(requests, list):
+                # Keep only requests from the last 60 seconds
+                self._in_memory_cache[key] = [req_time for req_time in requests if current_time - req_time <= 60]
+                # If no requests left, mark key for deletion
+                if not self._in_memory_cache[key]:
+                    expired_keys.append(key)
+        
         for key in expired_keys:
             del self._in_memory_cache[key]
     
@@ -43,7 +50,6 @@ class RateLimiter:
             Tuple of (is_allowed, rate_limit_info)
         """
         current_time = time.time()
-        current_time - window_seconds
         
         try:
             if self.redis_client:
@@ -127,6 +133,12 @@ class RateLimiter:
 
 # Global rate limiter instance
 _rate_limiter = None
+
+
+def reset_rate_limiter():
+    """Reset the global rate limiter instance (useful for testing)."""
+    global _rate_limiter
+    _rate_limiter = None
 
 
 def get_rate_limiter() -> RateLimiter:
