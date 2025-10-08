@@ -243,7 +243,7 @@ jobs:
           # --skip B101: skips assert_used check (pytest tests use bare asserts)
           # --skip others: skip other low-risk checks
           bandit -r . -f json -o bandit_report.json \
-            --exclude ./app/tests,./test_*.py,./validate_*.py,**/test_*.py \
+            --exclude '**/tests/**,**/test_*.py,**/validate_*.py' \
             --skip B101,B311,B105,B107,B108,B104,B110 || true
           
           # Generate clean SARIF output using heredoc to avoid shell quoting issues
