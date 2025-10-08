@@ -5,6 +5,20 @@ from app.models import User, Unit, Sensor
 from app.tests.timestamp_helpers import simulate_db_trigger_update, assert_timestamp_updated
 
 
+def unwrap_response(response):
+    """Helper to extract data from standardized API response envelope.
+    
+    The API wraps responses in: {'success': bool, 'data': {...}, 'message': str, ...}
+    This helper extracts the actual data payload.
+    """
+    data = json.loads(response.data)
+    # If response has the standard envelope structure, return the inner data
+    if 'data' in data and 'success' in data:
+        return data['data']
+    # Otherwise return as-is (for error responses)
+    return data
+
+
 class TestTimestampConsistency:
     """Test timestamp handling consistency across environments."""
     
@@ -15,16 +29,18 @@ class TestTimestampConsistency:
             json={'username': 'admin', 'password': 'admin123'},
             headers={'Content-Type': 'application/json'}
         )
-        token = json.loads(response.data)['access_token']
+        token = unwrap_response(response)['access_token']
         
         # Get admin role for new user
         from app.models import Role, RoleEnum
+        import time
         admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
         
-        # Register new user with all fields
+        # Register new user with all fields - use unique email to avoid conflicts
+        unique_id = str(int(time.time() * 1000000))
         user_data = {
-            'username': 'testuser',
-            'email': 'testuser@test.com',
+            'username': f'testuser_{unique_id}',
+            'email': f'testuser_{unique_id}@test.com',
             'password': 'password123',
             'first_name': 'Test',
             'last_name': 'User',
@@ -40,18 +56,18 @@ class TestTimestampConsistency:
         )
         
         assert response.status_code == 201
-        data = json.loads(response.data)
+        data = unwrap_response(response)
         
         # Verify all fields are set in response
-        assert data['username'] == 'testuser'
-        assert data['email'] == 'testuser@test.com'
+        assert data['username'] == f'testuser_{unique_id}'
+        assert data['email'] == f'testuser_{unique_id}@test.com'
         assert data['first_name'] == 'Test'
         assert data['last_name'] == 'User'
         assert 'created_at' in data
         assert 'updated_at' in data
         
         # Verify user exists in database with all fields set
-        created_user = User.query.filter_by(username='testuser').first()
+        created_user = User.query.filter_by(username=f'testuser_{unique_id}').first()
         assert created_user is not None
         assert created_user.first_name == 'Test'
         assert created_user.last_name == 'User'
@@ -68,16 +84,18 @@ class TestTimestampConsistency:
             json={'username': 'admin', 'password': 'admin123'},
             headers={'Content-Type': 'application/json'}
         )
-        token = json.loads(response.data)['access_token']
+        token = unwrap_response(response)['access_token']
         
         # Get admin role for new user
         from app.models import Role, RoleEnum
+        import time
         admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
         
-        # Register new user without optional fields
+        # Register new user without optional fields - use unique email to avoid conflicts
+        unique_id = str(int(time.time() * 1000000))
         user_data = {
-            'username': 'testuser2',
-            'email': 'testuser2@test.com',
+            'username': f'testuser2_{unique_id}',
+            'email': f'testuser2_{unique_id}@test.com',
             'password': 'password123',
             'role_id': admin_role.id
         }
@@ -91,7 +109,7 @@ class TestTimestampConsistency:
         )
         
         assert response.status_code == 201
-        data = json.loads(response.data)
+        data = unwrap_response(response)
         
         # Optional fields should be None in response
         assert data['first_name'] is None
@@ -100,7 +118,7 @@ class TestTimestampConsistency:
         assert 'updated_at' in data
         
         # Verify in database
-        created_user = User.query.filter_by(username='testuser2').first()
+        created_user = User.query.filter_by(username=f'testuser2_{unique_id}').first()
         assert created_user is not None
         assert created_user.first_name is None
         assert created_user.last_name is None
@@ -109,13 +127,16 @@ class TestTimestampConsistency:
 
     def test_timestamp_updates_with_simulated_triggers(self, client, db_session):
         """Test that updated_at timestamps work correctly in SQLite test environment."""
-        # Create a test user
+        # Create a test user - use unique email to avoid conflicts
         from app.models import Role, RoleEnum
+        import time
         admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
         
+        # Create unique username/email using timestamp to avoid conflicts
+        unique_id = str(int(time.time() * 1000000))
         user = User(
-            username='timestamp_test_user',
-            email='timestamp@test.com',
+            username=f'timestamp_test_user_{unique_id}',
+            email=f'timestamp_{unique_id}@test.com',
             first_name='Timestamp',
             last_name='Test',
             role_id=admin_role.id

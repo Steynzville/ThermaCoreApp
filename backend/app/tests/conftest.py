@@ -1,13 +1,11 @@
 """Test configuration for ThermaCore SCADA API tests."""
 import os
-import tempfile
 import pytest
 import traceback
 from sqlalchemy import text, inspect
 
 from app import create_app, db
 from app.models import User, Role, Permission, Unit, Sensor, SensorReading  # noqa: F401
-from config import TestingConfig
 
 
 def _init_database():
@@ -109,23 +107,24 @@ def _init_database():
 @pytest.fixture(scope='session')
 def app():
     """Create application for the tests."""
-    # Create a temporary file for the test database
-    db_fd, db_path = tempfile.mkstemp()
-    
-    # Override database URL for testing
-    TestingConfig.SQLALCHEMY_DATABASE_URI = f'sqlite:///{db_path}'
+    # Use in-memory SQLite database for test isolation (already set in TestingConfig)
+    # No need to override - TestingConfig uses 'sqlite:///:memory:' by default
     
     app = create_app('testing')
     app.config['TESTING'] = True
     app.config['WTF_CSRF_ENABLED'] = False
     
+    # Disable rate limiting for tests
+    app.config['RATE_LIMIT_ENABLED'] = False
+    
+    # Set permissive CORS for tests
+    app.config['CORS_ORIGINS'] = ['*']
+    app.config['WEBSOCKET_CORS_ORIGINS'] = ['*']
+    
     with app.app_context():
         _init_database()
         _create_test_data()
         yield app
-        
-    os.close(db_fd)
-    os.unlink(db_path)
 
 
 @pytest.fixture(scope='function')

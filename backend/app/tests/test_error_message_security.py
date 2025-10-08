@@ -37,8 +37,8 @@ class TestErrorMessageSecurity:
                 headers={'Authorization': f'Bearer {token}'}
             )
             
-            # Verify response
-            assert response.status_code == 400
+            # Verify response - webargs returns 422 for validation errors
+            assert response.status_code == 422
             data = response.json
             
             # Check new error envelope structure
@@ -75,8 +75,8 @@ class TestErrorMessageSecurity:
                 }
             )
             
-            # Verify response
-            assert response.status_code == 400
+            # Verify response - webargs returns 422 for validation errors
+            assert response.status_code == 422
             data = response.json
             
             # Check new error envelope structure
@@ -106,8 +106,8 @@ class TestErrorMessageSecurity:
             headers={'Authorization': f'Bearer {token}'}
         )
         
-        # Verify response
-        assert response.status_code == 400
+        # Verify response - webargs returns 422 for validation errors
+        assert response.status_code == 422
         data = response.json
         
         # Check new error envelope structure
@@ -131,8 +131,8 @@ class TestErrorMessageSecurity:
             headers={'Authorization': f'Bearer {token}'}
         )
         
-        # Verify response
-        assert response.status_code == 400
+        # Verify response - webargs returns 422 for validation errors
+        assert response.status_code == 422
         data = response.json
         
         # Check new error envelope structure
@@ -156,8 +156,8 @@ class TestErrorMessageSecurity:
             headers={'Authorization': f'Bearer {token}'}
         )
         
-        # Verify response
-        assert response.status_code == 400
+        # Verify response - webargs returns 422 for validation errors
+        assert response.status_code == 422
         data = response.json
         
         # Check new error envelope structure

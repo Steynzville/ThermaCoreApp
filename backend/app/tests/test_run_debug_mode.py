@@ -19,7 +19,21 @@ class TestDebugModeConfiguration:
     def test_debug_disabled_with_production_config(self):
         """Test that app.debug is False when using ProductionConfig."""
         # FLASK_ENV=production should always disable debug mode, even if FLASK_DEBUG=1
-        with patch.dict(os.environ, {'FLASK_ENV': 'production', 'FLASK_DEBUG': '1'}, clear=True):
+        with patch.dict(os.environ, {
+            'FLASK_ENV': 'production',
+            'FLASK_DEBUG': '1',
+            'SECRET_KEY': 'test-secret-key',
+            'JWT_SECRET_KEY': 'test-jwt-secret',
+            'DATABASE_URL': 'postgresql://test:test@localhost/test',
+            'MQTT_CA_CERTS': '/path/to/ca',
+            'MQTT_CERT_FILE': '/path/to/cert',
+            'MQTT_KEY_FILE': '/path/to/key',
+            'MQTT_USERNAME': 'test',
+            'MQTT_PASSWORD': 'test',
+            'OPCUA_CERT_FILE': '/path/to/opcua/cert',
+            'OPCUA_PRIVATE_KEY_FILE': '/path/to/opcua/key',
+            'OPCUA_TRUST_CERT_FILE': '/path/to/opcua/trust'
+        }, clear=True):
             app = create_app()
             assert app.debug is False, "ProductionConfig should set app.debug=False"
             assert app.config['DEBUG'] is False, "ProductionConfig should set DEBUG=False"
@@ -28,7 +42,20 @@ class TestDebugModeConfiguration:
         """Test that FLASK_ENV=development alone falls back to production config."""
         # Per line 120-122 of __init__.py, FLASK_ENV=development without FLASK_DEBUG
         # falls back to production config for security
-        with patch.dict(os.environ, {'FLASK_ENV': 'development'}, clear=True):
+        with patch.dict(os.environ, {
+            'FLASK_ENV': 'development',
+            'SECRET_KEY': 'test-secret-key',
+            'JWT_SECRET_KEY': 'test-jwt-secret',
+            'DATABASE_URL': 'postgresql://test:test@localhost/test',
+            'MQTT_CA_CERTS': '/path/to/ca',
+            'MQTT_CERT_FILE': '/path/to/cert',
+            'MQTT_KEY_FILE': '/path/to/key',
+            'MQTT_USERNAME': 'test',
+            'MQTT_PASSWORD': 'test',
+            'OPCUA_CERT_FILE': '/path/to/opcua/cert',
+            'OPCUA_PRIVATE_KEY_FILE': '/path/to/opcua/key',
+            'OPCUA_TRUST_CERT_FILE': '/path/to/opcua/trust'
+        }, clear=True):
             app = create_app()  # Should fall back to production
             assert app.config['DEBUG'] is False, "Should use production config without FLASK_DEBUG"
     
@@ -43,7 +70,21 @@ class TestDebugModeConfiguration:
         """Test that FLASK_DEBUG=1 alone is not enough to enable debug mode."""
         # For security, we require both FLASK_ENV=development and FLASK_DEBUG=1
         # to enter debug mode. FLASK_ENV defaults to 'production' if not set.
-        with patch.dict(os.environ, {'FLASK_DEBUG': '1'}, clear=True):
+        with patch.dict(os.environ, {
+            'FLASK_DEBUG': '1',
+            # Add required production config env vars
+            'SECRET_KEY': 'test-secret-key',
+            'JWT_SECRET_KEY': 'test-jwt-secret',
+            'DATABASE_URL': 'postgresql://test:test@localhost/test',
+            'MQTT_CA_CERTS': '/path/to/ca',
+            'MQTT_CERT_FILE': '/path/to/cert',
+            'MQTT_KEY_FILE': '/path/to/key',
+            'MQTT_USERNAME': 'test',
+            'MQTT_PASSWORD': 'test',
+            'OPCUA_CERT_FILE': '/path/to/opcua/cert',
+            'OPCUA_PRIVATE_KEY_FILE': '/path/to/opcua/key',
+            'OPCUA_TRUST_CERT_FILE': '/path/to/opcua/trust'
+        }, clear=True):
             app = create_app()
             assert app.debug is False, "FLASK_DEBUG=1 alone should not enable debug mode"
             assert app.config['DEBUG'] is False, "FLASK_DEBUG=1 alone should not set DEBUG=True"

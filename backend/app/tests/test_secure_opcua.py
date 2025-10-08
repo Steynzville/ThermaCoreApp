@@ -229,7 +229,7 @@ class TestSecureOPCUAClient:
     
     def test_initialization(self, mock_app):
         """Test secure client initialization."""
-        with patch('app.services.secure_opcua_client.opcua_available', False):
+        with patch('app.services.opcua_service.opcua_available', False):
             client = SecureOPCUAClient()
             
             assert hasattr(client, '_security_wrapper')
@@ -237,7 +237,7 @@ class TestSecureOPCUAClient:
     
     def test_get_status_includes_security(self, mock_app):
         """Test that status includes security information."""
-        with patch('app.services.secure_opcua_client.opcua_available', False):
+        with patch('app.services.opcua_service.opcua_available', False):
             client = SecureOPCUAClient()
             
             status = client.get_status()
@@ -247,7 +247,7 @@ class TestSecureOPCUAClient:
     
     def test_get_security_events(self, mock_app):
         """Test getting security events."""
-        with patch('app.services.secure_opcua_client.opcua_available', False):
+        with patch('app.services.opcua_service.opcua_available', False):
             client = SecureOPCUAClient()
             
             # Add some events
@@ -260,7 +260,7 @@ class TestSecureOPCUAClient:
     
     def test_reset_security_state(self, mock_app):
         """Test resetting security state."""
-        with patch('app.services.secure_opcua_client.opcua_available', False):
+        with patch('app.services.opcua_service.opcua_available', False):
             client = SecureOPCUAClient()
             client._security_wrapper._connection_attempts = 5
             
@@ -270,7 +270,7 @@ class TestSecureOPCUAClient:
     
     def test_subscribe_to_node_validates_node_id(self, mock_app):
         """Test that subscribe validates node ID."""
-        with patch('app.services.secure_opcua_client.opcua_available', False):
+        with patch('app.services.opcua_service.opcua_available', False):
             client = SecureOPCUAClient()
             client.connected = True
             
@@ -285,7 +285,7 @@ class TestIntegration:
     
     def test_wrapper_and_client_integration(self):
         """Test wrapper and client work together."""
-        with patch('app.services.secure_opcua_client.opcua_available', False):
+        with patch('app.services.opcua_service.opcua_available', False):
             client = SecureOPCUAClient()
             
             # Verify wrapper is properly initialized

@@ -120,6 +120,19 @@ class MetricsCollector:
                     'request_id': RequestIDManager.get_request_id()
                 })
     
+    def get_metrics(self) -> Dict[str, Any]:
+        """Get all collected metrics including raw data for testing."""
+        with self.lock:
+            return {
+                'request_count': dict(self.request_count),
+                'response_times': {k: list(v) for k, v in self.response_times.items()},
+                'status_codes': {k: dict(v) for k, v in self.status_codes.items()},
+                'error_rates': dict(self.error_rates),
+                'endpoint_metrics': dict(self.endpoint_metrics),
+                'recent_requests': list(self.recent_requests),
+                'recent_errors': list(self.recent_errors)
+            }
+    
     def get_metrics_summary(self) -> Dict[str, Any]:
         """Get a summary of all collected metrics."""
         with self.lock:

@@ -166,21 +166,25 @@ class TestSCADAIntegration:
     def test_service_integration_in_app(self, app):
         """Test that all services are properly integrated in the Flask app."""
         # Services should be available in development mode
-        dev_app = create_app('development')
+        # Services are only initialized when TESTING is False
+        import os
+        from unittest.mock import patch
+        with patch.dict(os.environ, {'FLASK_ENV': 'development', 'FLASK_DEBUG': '1', 'TESTING': 'false'}, clear=False):
+            dev_app = create_app('development')
         
-        assert hasattr(dev_app, 'mqtt_client')
-        assert hasattr(dev_app, 'websocket_service')
-        assert hasattr(dev_app, 'realtime_processor')
-        assert hasattr(dev_app, 'opcua_client')
-        assert hasattr(dev_app, 'protocol_simulator')
-        
-        # Test health endpoint includes all services
-        with dev_app.test_client() as client:
-            response = client.get('/health')
-            health_data = response.get_json()
+            assert hasattr(dev_app, 'mqtt_client')
+            assert hasattr(dev_app, 'websocket_service')
+            assert hasattr(dev_app, 'realtime_processor')
+            assert hasattr(dev_app, 'opcua_client')
+            assert hasattr(dev_app, 'protocol_simulator')
             
-            assert 'mqtt' in health_data
-            assert 'websocket' in health_data
-            assert 'realtime_processor' in health_data
-            assert 'opcua' in health_data
+            # Test health endpoint includes all services
+            with dev_app.test_client() as client:
+                response = client.get('/health')
+                health_data = response.get_json()
+                
+                assert 'mqtt' in health_data
+                assert 'websocket' in health_data
+                assert 'realtime_processor' in health_data
+                assert 'opcua' in health_data
             assert 'protocol_simulator' in health_data
