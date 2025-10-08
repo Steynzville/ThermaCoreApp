@@ -465,9 +465,7 @@ class DNP3Service:
     def init_app(self, app):
         """Initialize with Flask app."""
         self._app = app
-        self._master = MockDNP3Master()
-        # Give the master access to the performance metrics
-        self._master._performance_metrics = self._performance_metrics
+        # Don't create master here - wait for explicit init_master() call
         logger.info("DNP3 service initialized with performance monitoring")
     
     def init_master(self, master_address: int = 1):
@@ -1148,8 +1146,13 @@ class DNP3Service:
                 "data_point_count": len(self._data_point_configs.get(device_id, []))
             }
         
-        # Detect if running in production/development environment
-        is_demo_mode = os.getenv('FLASK_ENV', 'production') != 'production' or os.getenv('DNP3_DEMO', 'false').lower() == 'true'
+        # Detect if running in production/development/testing environment
+        # Demo mode is enabled in non-production environments (development/testing) or when explicitly set
+        is_testing = (hasattr(self, '_app') and self._app and self._app.config.get('TESTING', False)) or \
+                     os.getenv('TESTING', 'false').lower() == 'true'
+        is_demo_mode = (os.getenv('FLASK_ENV', 'production') != 'production' or 
+                       is_testing or 
+                       os.getenv('DNP3_DEMO', 'false').lower() == 'true')
 
         return {
             "available": available,

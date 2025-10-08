@@ -28,7 +28,12 @@ class TestSecurityImprovements:
             # Should not expose the raw error message
             response_data = response.get_json()
             assert 'Sensitive database connection details' not in str(response_data)
-            assert response_data['error'] == 'Database operation failed. Please try again later.'
+            # Check structured error response
+            assert 'error' in response_data
+            if isinstance(response_data['error'], dict):
+                assert response_data['error']['message'] == 'Database operation failed. Please try again later.'
+            else:
+                assert response_data['error'] == 'Database operation failed. Please try again later.'
             assert status_code == 500
     
     def test_mqtt_error_handling(self, app):
@@ -42,7 +47,12 @@ class TestSecurityImprovements:
             
             response_data = response.get_json()
             assert 'secret123' not in str(response_data)
-            assert response_data['error'] == 'Service is currently unavailable.'
+            # Check structured error response
+            assert 'error' in response_data
+            if isinstance(response_data['error'], dict):
+                assert response_data['error']['message'] == 'Service is currently unavailable.'
+            else:
+                assert response_data['error'] == 'Service is currently unavailable.'
     
     def test_opcua_error_handling(self, app):
         """Test OPC UA-specific error handling."""
@@ -55,7 +65,12 @@ class TestSecurityImprovements:
             
             response_data = response.get_json()
             assert '/etc/opcua/private/keys' not in str(response_data)
-            assert response_data['error'] == 'Service is currently unavailable.'
+            # Check structured error response
+            assert 'error' in response_data
+            if isinstance(response_data['error'], dict):
+                assert response_data['error']['message'] == 'Service is currently unavailable.'
+            else:
+                assert response_data['error'] == 'Service is currently unavailable.'
     
     def test_validation_error_handling(self, app):
         """Test validation error handling."""
@@ -67,7 +82,12 @@ class TestSecurityImprovements:
             )
             
             response_data = response.get_json()
-            assert response_data['error'] == 'Invalid request data provided.'
+            # Check structured error response
+            assert 'error' in response_data
+            if isinstance(response_data['error'], dict):
+                assert response_data['error']['message'] == 'Invalid request data provided.'
+            else:
+                assert response_data['error'] == 'Invalid request data provided.'
             assert status_code == 400
     
     def test_service_unavailable_handling(self, app):
@@ -76,7 +96,10 @@ class TestSecurityImprovements:
             response, status_code = SecurityAwareErrorHandler.handle_service_unavailable('MQTT client')
             
             response_data = response.get_json()
-            assert response_data['error'] == 'Service is currently unavailable.'
+            # Check for structured error response
+            assert 'error' in response_data
+            assert 'message' in response_data['error']
+            assert response_data['error']['message'] == 'Service is currently unavailable.'
             assert status_code == 500
     
     def test_data_storage_race_condition_handling(self, app):

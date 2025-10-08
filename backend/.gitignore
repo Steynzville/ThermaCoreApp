@@ -52,7 +52,9 @@ local_settings.py
 db.sqlite3
 
 # Flask stuff:
-instance/
+instance/*.db
+instance/*.sqlite
+instance/*.sqlite3
 .webassets-cache
 
 # Scrapy stuff:

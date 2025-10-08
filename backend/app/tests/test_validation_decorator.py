@@ -6,39 +6,41 @@ from flask import Blueprint, jsonify
 from app.utils.validation import validate_json_request
 
 
-# Create a test blueprint for testing the decorator
-test_bp = Blueprint('test_validation', __name__)
-
-
-@test_bp.route('/test/validate', methods=['POST'])
-@validate_json_request
-def test_endpoint():
-    """Test endpoint that uses the validation decorator."""
-    from flask import request
-    return jsonify({'success': True, 'data': request.json}), 200
-
-
-@test_bp.route('/test/validate-patch', methods=['PATCH'])
-@validate_json_request
-def test_patch_endpoint():
-    """Test PATCH endpoint that uses the validation decorator."""
-    from flask import request
-    return jsonify({'success': True, 'data': request.json}), 200
-
-
 class TestValidationDecorator:
     """Test the validate_json_request decorator."""
     
-    @pytest.fixture(autouse=True)
-    def setup(self, app):
-        """Register test blueprint using fresh app per test."""
-        # Check if blueprint is already registered to avoid duplicate registration
-        if 'test_validation' not in app.blueprints:
-            app.register_blueprint(test_bp)
-        yield
-        # Cleanup: Remove the blueprint after test
-        if 'test_validation' in app.blueprints:
-            del app.blueprints['test_validation']
+    @pytest.fixture
+    def validation_app(self):
+        """Create a fresh app with test blueprint for each test."""
+        from app import create_app
+        app = create_app('testing')
+        
+        # Register test blueprint with fresh app
+        # Use a unique blueprint name per test run to avoid conflicts
+        import time
+        unique_bp = Blueprint(f'test_validation_{int(time.time() * 1000000)}', __name__)
+        
+        @unique_bp.route('/test/validate', methods=['POST'])
+        @validate_json_request
+        def test_endpoint():
+            """Test endpoint that uses the validation decorator."""
+            from flask import request
+            return jsonify({'success': True, 'data': request.json}), 200
+        
+        @unique_bp.route('/test/validate-patch', methods=['PATCH'])
+        @validate_json_request
+        def test_patch_endpoint():
+            """Test PATCH endpoint that uses the validation decorator."""
+            from flask import request
+            return jsonify({'success': True, 'data': request.json}), 200
+        
+        app.register_blueprint(unique_bp)
+        return app
+    
+    @pytest.fixture
+    def client(self, validation_app):
+        """Create test client from validation app."""
+        return validation_app.test_client()
     
     def test_valid_json_request(self, client):
         """Test that valid JSON passes through the decorator."""

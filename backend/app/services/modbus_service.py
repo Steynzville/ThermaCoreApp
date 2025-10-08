@@ -712,8 +712,13 @@ class ModbusService:
                 "register_count": len(self._register_configs.get(device_id, []))
             }
         
-        # Detect if running in production/development environment
-        is_demo_mode = os.getenv('FLASK_ENV', 'production') != 'production' or os.getenv('MODBUS_DEMO', 'false').lower() == 'true'
+        # Detect if running in production/development/testing environment
+        # Demo mode is enabled in non-production environments (development/testing) or when explicitly set
+        is_testing = (hasattr(self, '_app') and self._app and self._app.config.get('TESTING', False)) or \
+                     os.getenv('TESTING', 'false').lower() == 'true'
+        is_demo_mode = (os.getenv('FLASK_ENV', 'production') != 'production' or 
+                       is_testing or 
+                       os.getenv('MODBUS_DEMO', 'false').lower() == 'true')
 
         return {
             "available": available,
