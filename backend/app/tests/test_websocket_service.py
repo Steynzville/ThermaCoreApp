@@ -148,7 +148,8 @@ class TestWebSocketService:
         assert 'timestamp' in message
         
         # broadcast parameter is optional in Flask-SocketIO and may not be explicitly set
-        # The call without a room parameter broadcasts by default
+        # This test verifies that the emit call is made with the correct event and message.
+        # Since no room parameter is provided, the message is broadcast to all clients by default.
     
     def test_broadcast_without_socketio(self):
         """Test that broadcast methods handle missing socketio gracefully."""
