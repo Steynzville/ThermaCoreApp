@@ -38,6 +38,8 @@ def validate_json_request(f):
         except BadRequest as err:
             # Handle malformed JSON (e.g., syntax errors)
             logger.warning(f"Bad JSON request in {f.__name__}: {str(err)}")
+            # All BadRequest exceptions from JSON parsing are treated as invalid format
+            # Empty string with Content-Type: application/json is malformed JSON
             return jsonify({
                 'error': 'Invalid JSON format',
                 'details': 'Request body must contain valid JSON'
