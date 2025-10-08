@@ -254,7 +254,7 @@ def _create_test_data():
 @pytest.fixture(scope='function')
 def safe_app():
     """Create a safe isolated app instance for testing.
-    
+
     This fixture creates a completely isolated Flask app instance
     with its own temporary database, useful for tests that need
     to modify app configuration or database schema.

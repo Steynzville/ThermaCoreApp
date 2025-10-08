@@ -34,7 +34,7 @@ example_bp = Blueprint('example', __name__, url_prefix='/api/v1/examples')
 def comprehensive_example(validated_data):
     """
     Comprehensive example showing all PR2 middleware features.
-    
+
     This endpoint demonstrates:
     - Request ID tracking
     - Rate limiting
@@ -43,11 +43,11 @@ def comprehensive_example(validated_data):
     - Metrics collection (automatic via middleware)
     - Standardized error envelope responses
     """
-    
+
     # Get query parameters
     include_meta = request.args.get('include_meta', 'false').lower() == 'true'
     format_type = request.args.get('format', 'json')
-    
+
     # Process the request
     result = {
         'processed_data': validated_data,
@@ -61,7 +61,7 @@ def comprehensive_example(validated_data):
             'rate_limit_check': 'passed'
         }
     }
-    
+
     if include_meta:
         result['meta'] = {
             'api_version': 'v1',
@@ -73,7 +73,7 @@ def comprehensive_example(validated_data):
                 'error_envelopes'
             ]
         }
-    
+
     # Return success response using standardized envelope
     return SecurityAwareErrorHandler.create_success_response(
         result,
@@ -104,7 +104,7 @@ def rate_limited_example():
 def metrics_demo():
     """Example showing metrics collection for different methods (automatic via middleware)."""
     method = request.method
-    
+
     # Simulate different processing based on method
     if method == 'GET':
         message = 'Data retrieved successfully'
@@ -114,7 +114,7 @@ def metrics_demo():
         message = 'Data updated successfully'
     else:
         message = 'Method processed'
-    
+
     return SecurityAwareErrorHandler.create_success_response(
         {
             'method': method,
@@ -132,10 +132,10 @@ def metrics_demo():
 @use_args(ExampleRequestSchema, location='json')
 def validation_demo(validated_data):
     """Example showing comprehensive input validation."""
-    
+
     # The data has already been validated by middleware
     # We can use it safely without additional checks
-    
+
     return SecurityAwareErrorHandler.create_success_response(
         {
             'validated_input': validated_data,

@@ -15,17 +15,17 @@ from app.middleware.request_id import RequestIDManager
 
 class MetricsCollector:
     """Thread-safe metrics collector for API performance monitoring."""
-    
+
     def __init__(self, max_history: int = 1000):
         self.max_history = max_history
         self.lock = Lock()
-        
+
         # Core metrics
         self.request_count = defaultdict(int)
         self.response_times = defaultdict(deque)
         self.status_codes = defaultdict(lambda: defaultdict(int))
         self.error_rates = defaultdict(lambda: {'total': 0, 'errors': 0})
-        
+
         # Performance metrics
         self.endpoint_metrics = defaultdict(lambda: {
             'calls': 0,
@@ -34,11 +34,11 @@ class MetricsCollector:
             'max_time': 0.0,
             'errors': 0
         })
-        
+
         # Recent activity tracking
         self.recent_requests = deque(maxlen=max_history)
         self.recent_errors = deque(maxlen=100)  # Track last 100 errors
-    
+
     def reset(self):
         """Reset all metrics to initial state. Useful for testing."""
         with self.lock:
@@ -49,45 +49,45 @@ class MetricsCollector:
             self.endpoint_metrics.clear()
             self.recent_requests.clear()
             self.recent_errors.clear()
-    
+
     def record_request_start(self, endpoint: str, method: str):
         """Record the start of a request."""
         # Set request-scoped data in Flask's g object (no lock needed - thread-local)
         g.request_start_time = time.time()
         g.request_endpoint = endpoint
         g.request_method = method
-        
+
         # Increment request count (protected by lock - shared state)
         with self.lock:
             key = f"{method} {endpoint}"
             self.request_count[key] += 1
-    
+
     def record_request_end(self, status_code: int, error: Optional[Exception] = None):
         """Record the end of a request."""
         if not hasattr(g, 'request_start_time'):
             return
-            
+
         end_time = time.time()
         duration = end_time - g.request_start_time
         endpoint = getattr(g, 'request_endpoint', 'unknown')
         method = getattr(g, 'request_method', 'unknown')
-        
+
         with self.lock:
             key = f"{method} {endpoint}"
-            
+
             # Record response time
             self.response_times[key].append(duration)
             if len(self.response_times[key]) > self.max_history:
                 self.response_times[key].popleft()
-            
+
             # Record status code
             self.status_codes[key][status_code] += 1
-            
+
             # Update error rates
             self.error_rates[key]['total'] += 1
             if status_code >= 400:
                 self.error_rates[key]['errors'] += 1
-            
+
             # Update endpoint metrics
             metrics = self.endpoint_metrics[key]
             metrics['calls'] += 1
@@ -96,7 +96,7 @@ class MetricsCollector:
             metrics['max_time'] = max(metrics['max_time'], duration)
             if status_code >= 400:
                 metrics['errors'] += 1
-            
+
             # Record recent activity
             self.recent_requests.append({
                 'timestamp': datetime.utcnow().isoformat() + 'Z',
@@ -107,7 +107,7 @@ class MetricsCollector:
                 'request_id': RequestIDManager.get_request_id(),
                 'error': str(error) if error else None
             })
-            
+
             # Record errors
             if error:
                 self.recent_errors.append({
@@ -119,7 +119,7 @@ class MetricsCollector:
                     'status_code': status_code,
                     'request_id': RequestIDManager.get_request_id()
                 })
-    
+
     def get_metrics_summary(self) -> Dict[str, Any]:
         """Get a summary of all collected metrics."""
         with self.lock:
@@ -136,14 +136,14 @@ class MetricsCollector:
                     'error_rate_by_endpoint': {}
                 }
             }
-            
+
             # Calculate endpoint statistics
             endpoint_stats = []
             for key, metrics in self.endpoint_metrics.items():
                 if metrics['calls'] > 0:
                     avg_time = metrics['total_time'] / metrics['calls']
                     error_rate = (metrics['errors'] / metrics['calls']) * 100
-                    
+
                     stats = {
                         'endpoint': escape(key),
                         'calls': metrics['calls'],
@@ -153,20 +153,20 @@ class MetricsCollector:
                         'error_rate': round(error_rate, 2),
                         'total_errors': metrics['errors']
                     }
-                    
+
                     summary['endpoints'][escape(key)] = stats
                     endpoint_stats.append(stats)
                     summary['error_summary']['error_rate_by_endpoint'][escape(key)] = error_rate
-            
+
             # Sort by call count for top endpoints
             summary['top_endpoints'] = sorted(
                 endpoint_stats, 
                 key=lambda x: x['calls'], 
                 reverse=True
             )[:10]
-            
+
             return summary
-    
+
     def get_recent_activity(self, limit: int = 50) -> List[Dict[str, Any]]:
         """Get recent request activity."""
         with self.lock:
@@ -180,7 +180,7 @@ class MetricsCollector:
                 }
                 for activity in activity_list
             ]
-    
+
     def get_recent_errors(self, limit: int = 20) -> List[Dict[str, Any]]:
         """Get recent errors."""
         with self.lock:
@@ -194,16 +194,16 @@ class MetricsCollector:
                 }
                 for error in errors_list
             ]
-    
+
     def get_endpoint_metrics(self, endpoint: str) -> Dict[str, Any]:
         """Get metrics for a specific endpoint."""
         with self.lock:
             if endpoint not in self.endpoint_metrics:
                 return {}
-            
+
             metrics = self.endpoint_metrics[endpoint]
             response_times = list(self.response_times.get(endpoint, []))
-            
+
             result = {
                 'endpoint': escape(endpoint),
                 'calls': metrics['calls'],
@@ -215,7 +215,7 @@ class MetricsCollector:
                 'error_rate': round((metrics['errors'] / metrics['calls']) * 100, 2) if metrics['calls'] > 0 else 0,
                 'status_codes': dict(self.status_codes.get(endpoint, {}))
             }
-            
+
             # Add percentile calculations if we have enough data
             if len(response_times) >= 5:
                 sorted_times = sorted(response_times)
@@ -224,9 +224,9 @@ class MetricsCollector:
                     'p95_response_time': round(self._percentile(sorted_times, 95), 4),
                     'p99_response_time': round(self._percentile(sorted_times, 99), 4)
                 })
-            
+
             return result
-    
+
     @staticmethod
     def _percentile(sorted_data: List[float], percentile: int) -> float:
         """Calculate percentile from sorted data."""
@@ -265,11 +265,11 @@ def reset_metrics_collector():
 def collect_metrics(f: Callable) -> Callable:
     """
     Decorator to collect metrics for route handlers.
-    
+
     DEPRECATED: This decorator is deprecated in favor of the app-level middleware.
     Metrics are automatically collected for all routes via setup_metrics_middleware.
     This decorator is kept for backward compatibility and now acts as a no-op wrapper.
-    
+
     To enable metrics collection, use:
         from app.middleware.metrics import setup_metrics_middleware
         setup_metrics_middleware(app)
@@ -279,13 +279,13 @@ def collect_metrics(f: Callable) -> Callable:
         # No-op: Metrics are collected by middleware, not decorator
         # This prevents double-counting when both are used
         return f(*args, **kwargs)
-    
+
     return decorated_function
 
 
 def setup_metrics_middleware(app):
     """Set up metrics collection middleware for the Flask app."""
-    
+
     @app.before_request
     def before_request():
         """Start metrics collection for request."""
@@ -294,21 +294,21 @@ def setup_metrics_middleware(app):
         endpoint = request.endpoint or request.path
         method = request.method
         collector.record_request_start(endpoint, method)
-    
+
     @app.after_request
     def after_request(response):
         """Store response for teardown_request to access."""
         g.response = response
         return response
-    
+
     @app.teardown_request
     def teardown_request(exc):
         """Complete metrics collection, including errors."""
         collector = get_metrics_collector()
-        
+
         # Get response from g if available (normal requests)
         response = getattr(g, 'response', None)
-        
+
         if exc is not None:
             # Exception occurred - check if it's a Werkzeug HTTPException with a status code
             if isinstance(exc, HTTPException) and exc.code is not None:
@@ -321,7 +321,7 @@ def setup_metrics_middleware(app):
             # Normal request with response
             collector.record_request_end(response.status_code)
         # If neither exc nor response, request was likely aborted before after_request
-    
+
     return app
 
 
@@ -329,9 +329,9 @@ def setup_metrics_middleware(app):
 def create_metrics_blueprint():
     """Create a blueprint with metrics endpoints."""
     from flask import Blueprint
-    
+
     metrics_bp = Blueprint('metrics', __name__, url_prefix='/api/v1/metrics')
-    
+
     @metrics_bp.route('/summary', methods=['GET'])
     def get_metrics_summary():
         """Get comprehensive metrics summary."""
@@ -342,13 +342,13 @@ def create_metrics_blueprint():
             'request_id': RequestIDManager.get_request_id(),
             'timestamp': datetime.utcnow().isoformat() + 'Z'
         }
-    
+
     @metrics_bp.route('/activity', methods=['GET'])
     def get_recent_activity():
         """Get recent request activity."""
         limit = request.args.get('limit', 50, type=int)
         limit = min(max(1, limit), 100)  # Clamp between 1 and 100
-        
+
         collector = get_metrics_collector()
         return {
             'success': True,
@@ -356,13 +356,13 @@ def create_metrics_blueprint():
             'request_id': RequestIDManager.get_request_id(),
             'timestamp': datetime.utcnow().isoformat() + 'Z'
         }
-    
+
     @metrics_bp.route('/errors', methods=['GET'])
     def get_recent_errors():
         """Get recent errors."""
         limit = request.args.get('limit', 20, type=int)
         limit = min(max(1, limit), 50)  # Clamp between 1 and 50
-        
+
         collector = get_metrics_collector()
         return {
             'success': True,
@@ -370,13 +370,13 @@ def create_metrics_blueprint():
             'request_id': RequestIDManager.get_request_id(),
             'timestamp': datetime.utcnow().isoformat() + 'Z'
         }
-    
+
     @metrics_bp.route('/endpoint/<path:endpoint>', methods=['GET'])
     def get_endpoint_metrics(endpoint: str):
         """Get metrics for specific endpoint."""
         collector = get_metrics_collector()
         data = collector.get_endpoint_metrics(endpoint)
-        
+
         if not data:
             return {
                 'success': False,
@@ -387,12 +387,12 @@ def create_metrics_blueprint():
                 'request_id': RequestIDManager.get_request_id(),
                 'timestamp': datetime.utcnow().isoformat() + 'Z'
             }, 404
-        
+
         return {
             'success': True,
             'data': data,
             'request_id': RequestIDManager.get_request_id(),
             'timestamp': datetime.utcnow().isoformat() + 'Z'
         }
-    
+
     return metrics_bp

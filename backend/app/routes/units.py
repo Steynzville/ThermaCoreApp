@@ -71,20 +71,20 @@ def get_units():
     health_status = request.args.get('health_status')
     search = request.args.get('search', '').strip()
     location = request.args.get('location')
-    
+
     # Build query
     query = Unit.query
-    
+
     # Apply filters
     if status:
         query = query.filter(Unit.status == status)
-    
+
     if health_status:
         query = query.filter(Unit.health_status == health_status)
-        
+
     if location:
         query = query.filter(Unit.location.ilike(f'%{location}%'))
-    
+
     if search:
         search_filter = or_(
             Unit.name.ilike(f'%{search}%'),
@@ -93,16 +93,16 @@ def get_units():
             Unit.client_name.ilike(f'%{search}%')
         )
         query = query.filter(search_filter)
-    
+
     # Apply pagination
     pagination = query.paginate(
         page=page,
         per_page=per_page,
         error_out=False
     )
-    
+
     units_schema = UnitSchema(many=True)
-    
+
     return jsonify({
         'data': units_schema.dump(pagination.items),
         'page': page,
@@ -172,31 +172,31 @@ def create_unit():
       - JWT: []
     """
     schema = UnitCreateSchema()
-    
+
     try:
         data = schema.load(request.json)
     except ValidationError as err:
         logger.warning(f"Validation failed in create_unit: {err.messages}")
         return jsonify({'error': 'Validation error', 'details': err.messages}), 400
-    
+
     # Check if unit ID already exists
     existing_unit = Unit.query.get(data['id'])
     if existing_unit:
         return jsonify({'error': 'Unit ID already exists'}), 409
-    
+
     # Create new unit
     unit = Unit(**data)
-    
+
     try:
         db.session.add(unit)
         db.session.commit()
-        
+
         # Refresh to get database-generated timestamp
         db.session.refresh(unit)
-        
+
         unit_schema = UnitSchema()
         return jsonify(unit_schema.dump(unit)), 201
-        
+
     except IntegrityError as e:
         db.session.rollback()
         if 'serial_number' in str(e.orig):
@@ -239,27 +239,27 @@ def update_unit(unit_id):
     """
     unit = Unit.query.get_or_404(unit_id)
     schema = UnitUpdateSchema()
-    
+
     try:
         data = schema.load(request.json)
     except ValidationError as err:
         logger.warning(f"Validation failed in update_unit: {err.messages}")
         return jsonify({'error': 'Validation error', 'details': err.messages}), 400
-    
+
     # Update unit attributes
     for key, value in data.items():
         if hasattr(unit, key):
             setattr(unit, key, value)
-    
+
     try:
         db.session.commit()
-        
+
         # Refresh to get database-generated timestamp
         db.session.refresh(unit)
-        
+
         unit_schema = UnitSchema()
         return jsonify(unit_schema.dump(unit)), 200
-        
+
     except IntegrityError:
         db.session.rollback()
         return jsonify({'error': 'Database constraint violation'}), 409
@@ -289,10 +289,10 @@ def delete_unit(unit_id):
       - JWT: []
     """
     unit = Unit.query.get_or_404(unit_id)
-    
+
     db.session.delete(unit)
     db.session.commit()
-    
+
     return '', 204
 
 
@@ -363,23 +363,23 @@ def create_unit_sensor(unit_id):
     # Validate that the unit exists
     Unit.query.get_or_404(unit_id)
     schema = SensorCreateSchema()
-    
+
     try:
         data = schema.load(request.json)
     except ValidationError as err:
         logger.warning(f"Validation failed in create_unit_sensor: {err.messages}")
         return jsonify({'error': 'Validation error', 'details': err.messages}), 400
-    
+
     # Always set unit_id from path parameter (override if present in request)
     data['unit_id'] = unit_id
     sensor = Sensor(**data)
-    
+
     db.session.add(sensor)
     db.session.commit()
-    
+
     # Refresh to get database-generated timestamp
     db.session.refresh(sensor)
-    
+
     sensor_schema = SensorSchema()
     return jsonify(sensor_schema.dump(sensor)), 201
 
@@ -424,23 +424,23 @@ def get_unit_readings(unit_id):
     Unit.query.get_or_404(unit_id)
     hours_back = request.args.get('hours', 24, type=int)
     sensor_type = request.args.get('sensor_type')
-    
+
     # Calculate start time in Python for better portability and security
     # Use timezone-aware UTC datetimes for consistency
     from datetime import datetime, timedelta, timezone
     start_time = datetime.now(timezone.utc) - timedelta(hours=hours_back)
-    
+
     # Build query for sensor readings with parameterized timestamp
     query = db.session.query(SensorReading).join(Sensor).filter(
         Sensor.unit_id == unit_id,
         SensorReading.timestamp >= start_time
     )
-    
+
     if sensor_type:
         query = query.filter(Sensor.sensor_type == sensor_type)
-    
+
     readings = query.order_by(SensorReading.timestamp.desc()).limit(1000).all()
-    
+
     readings_schema = SensorReadingSchema(many=True)
     return jsonify(readings_schema.dump(readings)), 200
 
@@ -492,33 +492,33 @@ def update_unit_status(unit_id):
         data = UnitUpdateSchema(only=('status', 'health_status', 'has_alert', 'has_alarm')).load(request.json)
     except ValidationError as err:
         return jsonify({'error': 'Validation error', 'messages': err.messages}), 400
-    
+
     # Validate status values
     valid_statuses = ['online', 'offline', 'maintenance', 'error']
     valid_health_statuses = ['optimal', 'warning', 'critical']
-    
+
     # Extract enum values if they are enums (Marshmallow may return enums)
     status_raw = data.get('status')
     status_value = status_raw.value if status_raw is not None and hasattr(status_raw, 'value') else status_raw
     health_status_raw = data.get('health_status')
     health_status_value = health_status_raw.value if health_status_raw is not None and hasattr(health_status_raw, 'value') else health_status_raw
-    
+
     if 'status' in data and status_value not in valid_statuses:
         return jsonify({'error': f'Invalid status. Must be one of: {valid_statuses}'}), 400
-    
+
     if 'health_status' in data and health_status_value not in valid_health_statuses:
         return jsonify({'error': f'Invalid health_status. Must be one of: {valid_health_statuses}'}), 400
-    
+
     # Update fields
     for field in ['status', 'health_status', 'has_alert', 'has_alarm']:
         if field in data:
             setattr(unit, field, data[field])
-    
+
     db.session.commit()
-    
+
     # Refresh to get database-generated timestamp
     db.session.refresh(unit)
-    
+
     unit_schema = UnitSchema()
     return jsonify(unit_schema.dump(unit)), 200
 
@@ -576,7 +576,7 @@ def get_units_stats():
         db.func.sum(db.case((Unit.has_alert.is_(True), 1), else_=0)).label('units_with_alerts'),
         db.func.sum(db.case((Unit.has_alarm.is_(True), 1), else_=0)).label('units_with_alarms')
     ).first()
-    
+
     return jsonify({
         'total_units': result.total_units or 0,
         'online_units': result.online_units or 0,

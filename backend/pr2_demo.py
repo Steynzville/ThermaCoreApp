@@ -17,7 +17,7 @@ import json
 def show_examples():
     print("🚀 PR2 Middleware Features Demo")
     print("=" * 60)
-    
+
     print("\n1. ✅ SUCCESS RESPONSE WITH ENVELOPE")
     print("-" * 40)
     success_response = {
@@ -32,7 +32,7 @@ def show_examples():
         "timestamp": "2024-01-20T10:30:45.123Z"
     }
     print(json.dumps(success_response, indent=2))
-    
+
     print("\n2. ❌ VALIDATION ERROR WITH ENVELOPE")
     print("-" * 40)
     validation_error = {
@@ -52,7 +52,7 @@ def show_examples():
         "timestamp": "2024-01-20T10:31:15.456Z"
     }
     print(json.dumps(validation_error, indent=2))
-    
+
     print("\n3. 🚫 RATE LIMIT ERROR WITH ENVELOPE")
     print("-" * 40)
     rate_limit_error = {
@@ -71,7 +71,7 @@ def show_examples():
         "timestamp": "2024-01-20T10:32:00.789Z"
     }
     print(json.dumps(rate_limit_error, indent=2))
-    
+
     print("\n4. 📊 METRICS SUMMARY RESPONSE")
     print("-" * 40)
     metrics_summary = {
@@ -110,7 +110,7 @@ def show_examples():
         "timestamp": "2024-01-20T10:35:00.123Z"
     }
     print(json.dumps(metrics_summary, indent=2))
-    
+
     print("\n5. 🔄 HTTP HEADERS WITH NEW FEATURES")
     print("-" * 40)
     headers = {
@@ -121,10 +121,10 @@ def show_examples():
         "X-RateLimit-Window": "60",
         "Content-Type": "application/json"
     }
-    
+
     for header, value in headers.items():
         print(f"{header}: {value}")
-    
+
     print("\n6. 🛠️ MIDDLEWARE FEATURES SUMMARY")
     print("-" * 40)
     features = [
@@ -139,10 +139,10 @@ def show_examples():
         "✅ Content Type Validation - Automatic JSON validation",
         "✅ Thread-Safe Implementation - Production-ready components"
     ]
-    
+
     for feature in features:
         print(feature)
-    
+
     print("\n7. 🎯 EXAMPLE ROUTE USAGE")
     print("-" * 40)
     example_code = '''
@@ -152,15 +152,15 @@ def show_examples():
 @validate_schema(LoginSchema)        # Validate JSON against schema
 def login():
     data = g.validated_data          # Access validated data from middleware
-    
+
     # Login logic here...
-    
+
     return SecurityAwareErrorHandler.create_success_response(
         token_data, 'Login successful', 200
     )
 '''
     print(example_code)
-    
+
     print("\n" + "=" * 60)
     print("🎉 PR2 Implementation Complete!")
     print("All middleware components are ready for production use.")

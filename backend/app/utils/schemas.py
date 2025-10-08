@@ -18,17 +18,17 @@ def _utc_now():
 
 class DateTimeField(fields.DateTime):
     """Custom DateTime field that ensures robust datetime serialization.
-    
+
     Always parses string values to datetime objects and validates them.
     Returns None for invalid datetime strings instead of malformed strings.
     Ensures timezone-aware datetimes are properly handled.
     """
-    
+
     def _serialize(self, value, attr, obj, **kwargs):
         """Serialize datetime value with robust validation and parsing."""
         if value is None:
             return None
-        
+
         # If value is a string, always parse it to datetime first
         if isinstance(value, str):
             try:
@@ -41,23 +41,23 @@ class DateTimeField(fields.DateTime):
                 logger.warning(f"Invalid datetime string '{value}' in field '{attr}': {e}")
                 # Return None instead of malformed string to prevent client-side errors
                 return None
-        
+
         # If value is not a string or datetime, try to handle gracefully
         if not hasattr(value, 'isoformat') and not hasattr(value, 'strftime'):
             logger.warning(f"Invalid datetime value type '{type(value).__name__}' in field '{attr}': {value}")
             return None
-        
+
         # If it's already a datetime object, use the parent method directly
         return super()._serialize(value, attr, obj, **kwargs)
 
 
 class EnumField(fields.Field):
     """Custom field for handling enum serialization."""
-    
+
     def __init__(self, enum_class, *args, **kwargs):
         self.enum_class = enum_class
         super().__init__(*args, **kwargs)
-    
+
     def serialize(self, attr, obj, accessor=None):
         """Serialize enum to its value."""
         value = getattr(obj, attr, None)
@@ -68,7 +68,7 @@ class EnumField(fields.Field):
             return value
         # If it's an enum, return its value
         return value.value if hasattr(value, 'value') else str(value)
-    
+
     def deserialize(self, value, attr=None, data=None, **kwargs):
         """Deserialize string value to enum with consistent error handling."""
         if isinstance(value, str):
@@ -115,17 +115,17 @@ class UserSchema(SQLAlchemyAutoSchema):
         model = User
         load_instance = True
         exclude = ('password_hash',)
-        
+
     email = fields.Email(required=True)
     username = fields.Str(required=True, validate=validate.Length(min=3, max=80))
     password = fields.Str(load_only=True, validate=validate.Length(min=6))
     role = fields.Nested(RoleSchema, dump_only=True)
-    
+
     # Override datetime fields with custom field
     created_at = DateTimeField(dump_only=True)
     updated_at = DateTimeField(dump_only=True)
     last_login = DateTimeField(dump_only=True)
-    
+
     @post_load
     def make_user(self, data, **kwargs):
         """Process loaded data."""
@@ -170,19 +170,19 @@ class UnitSchema(SQLAlchemyAutoSchema):
         model = Unit
         load_instance = True
         include_relationships = True
-        
+
     id = fields.Str(required=True, validate=validate.Length(min=3, max=50))
     name = fields.Str(required=True, validate=validate.Length(min=1, max=200))
     serial_number = fields.Str(required=True, validate=validate.Length(min=1, max=100))
     install_date = DateTimeField(required=True)
     status = EnumField(UnitStatusEnum)
     health_status = EnumField(HealthStatusEnum)
-    
+
     # Override timestamp fields
     created_at = DateTimeField(dump_only=True)
     updated_at = DateTimeField(dump_only=True)
     last_maintenance = DateTimeField(dump_only=True)
-    
+
     # Validation for numeric fields
     temp_outside = fields.Float(validate=validate.Range(min=-50.0, max=70.0))
     temp_in = fields.Float(validate=validate.Range(min=-20.0, max=60.0))
@@ -194,7 +194,7 @@ class UnitSchema(SQLAlchemyAutoSchema):
     current_power = fields.Float(validate=validate.Range(min=0.0))
     parasitic_load = fields.Float(validate=validate.Range(min=0.0))
     user_load = fields.Float(validate=validate.Range(min=0.0))
-    
+
     sensors = fields.Nested('SensorSchema', many=True, dump_only=True, exclude=('unit',))
 
 
@@ -205,11 +205,11 @@ class UnitCreateSchema(Schema):
     serial_number = fields.Str(required=True, validate=validate.Length(min=1, max=100))
     install_date = DateTimeField(required=True)
     location = fields.Str(validate=validate.Length(max=200))
-    
+
     # Status fields with sensible defaults for new units
     status = EnumField(UnitStatusEnum, load_default='offline')
     health_status = EnumField(HealthStatusEnum, load_default='warning')
-    
+
     # Client information
     client_name = fields.Str(validate=validate.Length(max=200))
     client_contact = fields.Str(validate=validate.Length(max=200))
@@ -227,13 +227,13 @@ class UnitUpdateSchema(Schema):
     has_alert = fields.Bool()
     has_alarm = fields.Bool()
     last_maintenance = DateTimeField()
-    
+
     # Client information
     client_name = fields.Str(validate=validate.Length(max=200))
     client_contact = fields.Str(validate=validate.Length(max=200))
     client_email = fields.Email()
     client_phone = fields.Str(validate=validate.Length(max=50))
-    
+
     # Current readings
     temp_outside = fields.Float(validate=validate.Range(min=-50.0, max=70.0))
     temp_in = fields.Float(validate=validate.Range(min=-20.0, max=60.0))
@@ -254,7 +254,7 @@ class SensorSchema(SQLAlchemyAutoSchema):
         model = Sensor
         load_instance = True
         include_fk = True  # Include foreign key fields
-        
+
     name = fields.Str(required=True, validate=validate.Length(min=1, max=100))
     sensor_type = fields.Str(required=True, validate=validate.Length(min=1, max=50))
     unit_of_measurement = fields.Str(validate=validate.Length(max=20))
@@ -277,7 +277,7 @@ class SensorReadingSchema(SQLAlchemyAutoSchema):
     class Meta:
         model = SensorReading
         load_instance = True
-        
+
     timestamp = DateTimeField(dump_default=_utc_now)
     value = fields.Float(required=True)
     quality = fields.Str(validate=validate.OneOf(['GOOD', 'BAD', 'UNCERTAIN']))
@@ -336,13 +336,13 @@ class HistoricalDataQuerySchema(Schema):
         validate=validate.Range(min=1, max=10000),
         load_default=1000
     )
-    
+
     @validates_schema
     def validate_date_range(self, data, **kwargs):
         """Validate that start_date is before end_date."""
         start_date = data.get('start_date')
         end_date = data.get('end_date')
-        
+
         # Only validate if both dates are provided
         if start_date and end_date and start_date >= end_date:
             raise ValidationError('start_date must be before end_date', field_name='start_date')
@@ -397,13 +397,13 @@ class CompareUnitsSchema(Schema):
     )
     start_date = fields.DateTime(required=False, format='iso')
     end_date = fields.DateTime(required=False, format='iso')
-    
+
     @validates_schema
     def validate_date_range(self, data, **kwargs):
         """Validate that start_date is before end_date."""
         start_date = data.get('start_date')
         end_date = data.get('end_date')
-        
+
         # Only validate if both dates are provided
         if start_date and end_date and start_date >= end_date:
             raise ValidationError('start_date must be before end_date', field_name='start_date')
@@ -419,13 +419,13 @@ class ExportDataQuerySchema(Schema):
     start_date = fields.DateTime(required=False, format='iso')
     end_date = fields.DateTime(required=False, format='iso')
     sensor_types = fields.Str(required=False)
-    
+
     @validates_schema
     def validate_date_range(self, data, **kwargs):
         """Validate that start_date is before end_date."""
         start_date = data.get('start_date')
         end_date = data.get('end_date')
-        
+
         # Only validate if both dates are provided
         if start_date and end_date and start_date >= end_date:
             raise ValidationError('start_date must be before end_date', field_name='start_date')

@@ -11,12 +11,12 @@ from app import db
 
 def utc_now():
     """Get current UTC time as timezone-aware datetime.
-    
+
     This function enforces timezone-aware datetimes at the application level
     by always returning UTC datetime objects. This approach works with both
     PostgreSQL and SQLite, unlike using DateTime(timezone=True) which only
     works with PostgreSQL.
-    
+
     For production PostgreSQL deployments, consider adding database triggers
     to automatically update timestamp fields and enforce timezone constraints.
     """
@@ -69,12 +69,12 @@ class HealthStatusEnum(PyEnum):
 class Permission(db.Model):
     """Permission model."""
     __tablename__ = 'permissions'
-    
+
     id = Column(Integer, primary_key=True)
     name = Column(Enum(PermissionEnum, native_enum=False, values_callable=lambda x: [e.value for e in x]), unique=True, nullable=False)
     description = Column(String(255))
     created_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
-    
+
     def __repr__(self):
         return f'<Permission {self.name}>'
 
@@ -82,28 +82,28 @@ class Permission(db.Model):
 class Role(db.Model):
     """Role model."""
     __tablename__ = 'roles'
-    
+
     id = Column(Integer, primary_key=True)
     name = Column(Enum(RoleEnum, native_enum=False, values_callable=lambda x: [e.value for e in x]), unique=True, nullable=False)
     description = Column(String(255))
     created_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
-    
+
     # Relationships
     permissions = relationship('Permission', secondary=role_permissions, backref='roles')
     users = relationship('User', back_populates='role')
-    
+
     def __repr__(self):
         return f'<Role {self.name}>'
-    
+
     def has_permission(self, permission):
         """Check if role has a specific permission.
-        
+
         Args:
             permission: Must be either a string (e.g., "read_users") or a PermissionEnum
-        
+
         Returns:
             bool: True if role has the permission, False otherwise
-            
+
         Raises:
             TypeError: If permission is not a string or PermissionEnum
         """
@@ -115,14 +115,14 @@ class Role(db.Model):
         else:
             # Raise TypeError for unsupported permission types to prevent silent failures
             raise TypeError(f"Permission must be a string or PermissionEnum, got {type(permission).__name__}")
-        
+
         return any(p.name.value == permission_value for p in self.permissions)
 
 
 class User(db.Model):
     """User model."""
     __tablename__ = 'users'
-    
+
     id = Column(Integer, primary_key=True)
     username = Column(String(80), unique=True, nullable=False, index=True)
     email = Column(String(120), unique=True, nullable=False, index=True)
@@ -133,30 +133,30 @@ class User(db.Model):
     created_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
     updated_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
     last_login = Column(DateTime)  # timezone-aware set via application logic
-    
+
     # Foreign Keys
     role_id = Column(Integer, ForeignKey('roles.id'), nullable=False)
-    
+
     # Relationships
     role = relationship('Role', back_populates='users')
-    
+
     def __repr__(self):
         return f'<User {self.username}>'
-    
+
     def set_password(self, password):
         """Set password hash."""
         self.password_hash = generate_password_hash(password)
-    
+
     def check_password(self, password):
         """Check password against hash."""
         return check_password_hash(self.password_hash, password)
-    
+
     def has_permission(self, permission):
         """Check if user has a specific permission.
-        
+
         Args:
             permission: Can be either a string (e.g., "read_users") or a PermissionEnum
-        
+
         Returns:
             bool: True if user has the permission, False otherwise
         """
@@ -168,7 +168,7 @@ class User(db.Model):
 class Unit(db.Model):
     """Unit model representing ThermaCore units."""
     __tablename__ = 'units'
-    
+
     id = Column(String(50), primary_key=True)  # TC001, TC002, etc.
     name = Column(String(200), nullable=False)
     serial_number = Column(String(100), unique=True, nullable=False)
@@ -180,13 +180,13 @@ class Unit(db.Model):
     water_generation = Column(Boolean, default=False)
     has_alert = Column(Boolean, default=False)
     has_alarm = Column(Boolean, default=False)
-    
+
     # Client information
     client_name = Column(String(200))
     client_contact = Column(String(200))
     client_email = Column(String(120))
     client_phone = Column(String(50))
-    
+
     # Current readings (latest values for quick access)
     temp_outside = Column(Float)
     temp_in = Column(Float)
@@ -198,13 +198,13 @@ class Unit(db.Model):
     current_power = Column(Float, default=0.0)
     parasitic_load = Column(Float, default=0.0)
     user_load = Column(Float, default=0.0)
-    
+
     created_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
     updated_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
-    
+
     # Relationships
     sensors = relationship('Sensor', back_populates='unit', cascade='all, delete-orphan')
-    
+
     def __repr__(self):
         return f'<Unit {self.id}: {self.name}>'
 
@@ -212,7 +212,7 @@ class Unit(db.Model):
 class Sensor(db.Model):
     """Sensor model for unit sensors."""
     __tablename__ = 'sensors'
-    
+
     id = Column(Integer, primary_key=True)
     unit_id = Column(String(50), ForeignKey('units.id'), nullable=False)
     name = Column(String(100), nullable=False)
@@ -221,14 +221,14 @@ class Sensor(db.Model):
     min_value = Column(Float)
     max_value = Column(Float)
     is_active = Column(Boolean, default=True)
-    
+
     created_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
     updated_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
-    
+
     # Relationships
     unit = relationship('Unit', back_populates='sensors')
     readings = relationship('SensorReading', back_populates='sensor', cascade='all, delete-orphan')
-    
+
     def __repr__(self):
         return f'<Sensor {self.name} ({self.sensor_type}) for Unit {self.unit_id}>'
 
@@ -236,15 +236,15 @@ class Sensor(db.Model):
 class SensorReading(db.Model):
     """Sensor reading model for time-series data."""
     __tablename__ = 'sensor_readings'
-    
+
     id = Column(Integer, primary_key=True)
     sensor_id = Column(Integer, ForeignKey('sensors.id'), nullable=False)
     timestamp = Column(DateTime, default=utc_now, nullable=False, index=True)  # timezone-aware via utc_now() function
     value = Column(Float, nullable=False)
     quality = Column(String(20), default='GOOD')  # GOOD, BAD, UNCERTAIN
-    
+
     # Relationships
     sensor = relationship('Sensor', back_populates='readings')
-    
+
     def __repr__(self):
         return f'<SensorReading {self.sensor_id} at {self.timestamp}: {self.value}>'

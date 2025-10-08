@@ -17,7 +17,7 @@ from app.utils.error_handler import SecurityAwareErrorHandler
 
 class TestRequestValidator:
     """Test request validation middleware."""
-    
+
     def test_validate_json_content_type_success(self, app):
         """Test successful JSON content type validation."""
         with app.test_request_context('/', method='POST', 
@@ -25,7 +25,7 @@ class TestRequestValidator:
                                     json={}):
             result = RequestValidator.validate_json_content_type()
             assert result is None
-    
+
     def test_validate_json_content_type_failure(self, app):
         """Test failed JSON content type validation."""
         with app.test_request_context('/', method='POST', 
@@ -38,14 +38,14 @@ class TestRequestValidator:
             data = json.loads(response.data)
             assert not data['success']
             assert data['error']['code'] == 'INVALID_CONTENT_TYPE'
-    
+
     def test_validate_request_size_success(self, app):
         """Test successful request size validation."""
         with app.test_request_context('/', method='POST', 
                                     content_length=500):
             result = RequestValidator.validate_request_size(1000)
             assert result is None
-    
+
     def test_validate_request_size_failure(self, app):
         """Test failed request size validation."""
         with app.test_request_context('/', method='POST', 
@@ -62,45 +62,45 @@ class TestRequestValidator:
 
 class TestRateLimiter:
     """Test rate limiting functionality."""
-    
+
     def test_memory_rate_limiter_allow(self):
         """Test memory-based rate limiter allows requests under limit."""
         limiter = RateLimiter()
-        
+
         # First request should be allowed
         is_allowed, info = limiter.is_allowed('test_user_allow', 5, 60)
         assert is_allowed
         assert info['remaining'] == 4
         assert info['limit'] == 5
         assert info.get('fallback', False)  # Memory limiter is fallback
-    
+
     def test_memory_rate_limiter_block(self):
         """Test memory-based rate limiter blocks requests over limit."""
         limiter = RateLimiter()
-        
+
         # Make requests up to limit
         for i in range(5):
             is_allowed, info = limiter.is_allowed('test_user_block', 5, 60)
             assert is_allowed
-        
+
         # Next request should be blocked
         is_allowed, info = limiter.is_allowed('test_user_block', 5, 60)
         assert not is_allowed
         assert info['remaining'] == 0
-    
+
     def test_rate_limit_decorator(self, app):
         """Test rate limiting decorator."""
         @rate_limit(limit=2, window_seconds=60, per='ip')
         def test_route():
             return {'success': True, 'message': 'OK'}
-        
+
         with app.test_request_context('/', environ_base={'REMOTE_ADDR': '127.0.0.1'}):
             g.request_id = 'test-id'
-            
+
             # First two requests should work
             test_route()
             test_route()
-            
+
             # Third request should be rate limited
             response3 = test_route()
             assert isinstance(response3, tuple)
@@ -111,7 +111,7 @@ class TestRateLimiter:
 
 class TestRequestIDManager:
     """Test request ID management."""
-    
+
     def test_generate_request_id(self):
         """Test request ID generation."""
         request_id = RequestIDManager.generate_request_id()
@@ -119,14 +119,14 @@ class TestRequestIDManager:
         assert len(request_id) == 36  # UUID4 length
         # Verify it's a valid UUID
         uuid.UUID(request_id)
-    
+
     def test_extract_request_id_from_header(self, app):
         """Test extracting request ID from headers."""
         test_id = str(uuid.uuid4())
         with app.test_request_context('/', headers={'X-Request-ID': test_id}):
             extracted_id = RequestIDManager.extract_request_id()
             assert extracted_id == test_id
-    
+
     def test_extract_request_id_invalid_header(self, app):
         """Test handling invalid request ID in headers."""
         with app.test_request_context('/', headers={'X-Request-ID': 'invalid-uuid'}):
@@ -134,7 +134,7 @@ class TestRequestIDManager:
             assert extracted_id != 'invalid-uuid'
             # Should generate a new valid UUID
             uuid.UUID(extracted_id)
-    
+
     def test_extract_request_id_uuid_version_1_rejected(self, app):
         """Test that UUID version 1 is rejected (only UUID4 allowed)."""
         uuid1 = str(uuid.uuid1())
@@ -144,7 +144,7 @@ class TestRequestIDManager:
             assert extracted_id != uuid1
             parsed = uuid.UUID(extracted_id)
             assert parsed.version == 4
-    
+
     def test_extract_request_id_uuid_version_5_rejected(self, app):
         """Test that UUID version 5 is rejected (only UUID4 allowed)."""
         uuid5 = str(uuid.uuid5(uuid.NAMESPACE_DNS, 'test.example.com'))
@@ -154,7 +154,7 @@ class TestRequestIDManager:
             assert extracted_id != uuid5
             parsed = uuid.UUID(extracted_id)
             assert parsed.version == 4
-    
+
     def test_extract_request_id_xss_payload_rejected(self, app):
         """Test that XSS payloads are rejected and don't cause issues."""
         xss_payload = '<script>alert("xss")</script>'
@@ -165,29 +165,29 @@ class TestRequestIDManager:
             # Should be a valid UUID4
             parsed = uuid.UUID(extracted_id)
             assert parsed.version == 4
-    
+
     def test_request_id_filter(self):
         """Test logging filter for request IDs."""
         import logging
-        
+
         filter_obj = RequestIDFilter()
         record = logging.LogRecord(
             name='test', level=logging.INFO, pathname='', lineno=0,
             msg='test message', args=(), exc_info=None
         )
-        
+
         # Without request context
         result = filter_obj.filter(record)
         assert result is True
         assert record.request_id == 'no-request-context'
-    
+
     def test_track_request_id_decorator(self, app):
         """Test request ID tracking decorator."""
         @track_request_id
         def test_route():
             from flask import jsonify
             return jsonify({'message': 'test'})
-        
+
         with app.test_request_context('/'):
             response = test_route()
             # Should have request ID in headers
@@ -196,176 +196,176 @@ class TestRequestIDManager:
 
 class TestMetricsCollector:
     """Test metrics collection functionality."""
-    
+
     def test_metrics_collector_initialization(self):
         """Test metrics collector initialization."""
         collector = MetricsCollector()
         assert collector.max_history == 1000
         assert len(collector.request_count) == 0
         assert len(collector.endpoint_metrics) == 0
-    
+
     def test_record_request_metrics(self, app):
         """Test recording request metrics."""
         collector = MetricsCollector()
-        
+
         with app.test_request_context('/test', method='GET'):
             g.request_id = 'test-id'
-            
+
             # Record request start
             collector.record_request_start('/test', 'GET')
             assert hasattr(g, 'request_start_time')
             assert g.request_endpoint == '/test'
-            
+
             # Simulate some processing time
             time.sleep(0.01)
-            
+
             # Record request end
             collector.record_request_end(200)
-            
+
             # Check metrics were recorded
             key = 'GET /test'
             assert collector.request_count[key] == 1
             assert len(collector.response_times[key]) == 1
             assert collector.status_codes[key][200] == 1
             assert collector.endpoint_metrics[key]['calls'] == 1
-    
+
     def test_get_metrics_summary(self, app):
         """Test getting metrics summary."""
         collector = MetricsCollector()
-        
+
         with app.test_request_context('/test', method='GET'):
             g.request_id = 'test-id'
             collector.record_request_start('/test', 'GET')
             time.sleep(0.01)
             collector.record_request_end(200)
-        
+
         summary = collector.get_metrics_summary()
         assert 'overview' in summary
         assert 'endpoints' in summary
         assert 'top_endpoints' in summary
         assert summary['overview']['total_requests'] == 1
-    
+
     def test_collect_metrics_decorator(self, app):
         """Test metrics collection decorator (now deprecated and acts as no-op)."""
-        
+
         @collect_metrics
         def test_route():
             return {'message': 'test'}, 200
-        
+
         with app.test_request_context('/test', method='GET'):
             g.request_id = 'test-id'
             response = test_route()
-            
+
             # The decorator is now a no-op wrapper
             # It should not interfere with the route execution
             assert response == ({'message': 'test'}, 200)
-            
+
             # Metrics should NOT be recorded by the decorator
             # (they would be recorded by middleware in actual usage)
             collector = get_metrics_collector()
             # Since we're not using middleware here, metrics should be empty
             assert len(collector.request_count) == 0
-    
+
     def test_metrics_middleware_integration(self, app):
         """Test metrics collection via middleware and no double-counting with decorator."""
         from app.middleware.metrics import setup_metrics_middleware, reset_metrics_collector
-        
+
         # Reset metrics to ensure clean state
         reset_metrics_collector()
-        
+
         # Set up middleware
         setup_metrics_middleware(app)
-        
+
         # Create a test route without decorator
         @app.route('/test-metrics')
         def test_route():
             return {'message': 'test'}, 200
-        
+
         # Create a test route with deprecated decorator
         @app.route('/test-metrics-decorated')
         @collect_metrics
         def test_route_decorated():
             return {'message': 'test decorated'}, 200
-        
+
         # Get collector
         collector = get_metrics_collector()
-        
+
         # Make requests
         with app.test_client() as client:
             # Test undecorated route
             response = client.get('/test-metrics')
             assert response.status_code == 200
-            
+
             # Test decorated route
             response_decorated = client.get('/test-metrics-decorated')
             assert response_decorated.status_code == 200
-            
+
             # Check that metrics were collected by middleware
             assert any('GET' in key for key in collector.request_count.keys())
-            
+
             # Verify no double-counting - each endpoint should have exactly 1 request
             assert collector.request_count['GET test_route'] == 1
             assert collector.request_count['GET test_route_decorated'] == 1
-            
+
             # Verify total requests count
             assert collector.get_metrics_summary()['overview']['total_requests'] == 2
-    
+
     def test_metrics_exception_handling(self, app):
         """Test metrics collection for unhandled exceptions."""
         from app.middleware.metrics import setup_metrics_middleware, reset_metrics_collector
-        
+
         # Reset metrics to ensure clean state
         reset_metrics_collector()
-        
+
         # Set up middleware
         setup_metrics_middleware(app)
-        
+
         # Create a route that raises an exception
         @app.route('/test-error')
         def test_error_route():
             raise ValueError("Test exception")
-        
+
         # Get collector
         collector = get_metrics_collector()
-        
+
         # Make a request that will fail
         with app.test_client() as client:
             response = client.get('/test-error')
             # Flask returns 500 for unhandled exceptions
             assert response.status_code == 500
-            
+
             # Verify metrics were recorded for the error
             assert collector.request_count['GET test_error_route'] == 1
-            
+
             # Verify error was tracked
             summary = collector.get_metrics_summary()
             assert summary['overview']['total_requests'] == 1
-            
+
             # Check that error was recorded in recent errors
             recent_errors = collector.get_recent_errors()
             assert len(recent_errors) > 0
             assert recent_errors[-1]['error_type'] == 'ValueError'
             assert 'Test exception' in recent_errors[-1]['error']
-    
+
     def test_get_endpoint_metrics_xss_protection(self, app):
         """Test that get_endpoint_metrics escapes endpoint parameter to prevent XSS."""
         collector = MetricsCollector()
-        
+
         # Create a malicious endpoint string containing HTML/script tags
         malicious_endpoint = '<script>alert("XSS")</script>/api/test'
-        
+
         with app.test_request_context(malicious_endpoint, method='GET'):
             g.request_id = 'test-id'
-            
+
             # Record request to create metrics for this endpoint
             collector.record_request_start(malicious_endpoint, 'GET')
             time.sleep(0.01)
             collector.record_request_end(200)
-            
+
             # Get metrics for the malicious endpoint
             key = f'GET {malicious_endpoint}'
             metrics = collector.get_endpoint_metrics(key)
-            
+
             # Verify the endpoint in the response is escaped
             assert metrics['endpoint'] != key
             assert '&lt;' in metrics['endpoint']  # < should be escaped to &lt;
@@ -374,30 +374,30 @@ class TestMetricsCollector:
             assert '</script>' not in metrics['endpoint']  # Raw closing script tag should not be present
             assert 'alert' in metrics['endpoint']  # But the text content should still be there (escaped)
             assert '&#34;' in metrics['endpoint']  # " should be escaped to &#34;
-    
+
     def test_get_metrics_summary_xss_protection(self, app):
         """Test that get_metrics_summary escapes endpoint data to prevent XSS."""
         collector = MetricsCollector()
-        
+
         # Create malicious endpoint strings
         malicious_endpoint1 = '<img src=x onerror=alert(1)>/api/test1'
         malicious_endpoint2 = '<script>alert("XSS")</script>/api/test2'
-        
+
         with app.test_request_context('/', method='GET'):
             g.request_id = 'test-id'
-            
+
             # Record requests for both malicious endpoints
             collector.record_request_start(malicious_endpoint1, 'GET')
             time.sleep(0.01)
             collector.record_request_end(200)
-            
+
             collector.record_request_start(malicious_endpoint2, 'POST')
             time.sleep(0.01)
             collector.record_request_end(200)
-            
+
             # Get metrics summary
             summary = collector.get_metrics_summary()
-            
+
             # Check endpoints dictionary keys are escaped - verify dangerous HTML tags are NOT executable
             for endpoint_key in summary['endpoints'].keys():
                 # Dangerous opening tags should not be present in executable form
@@ -406,7 +406,7 @@ class TestMetricsCollector:
                 assert '<img' not in endpoint_key
                 assert '<iframe' not in endpoint_key
                 assert '<svg' not in endpoint_key
-            
+
             # Check endpoint field in each stats object is escaped
             for endpoint_key, stats in summary['endpoints'].items():
                 # Dangerous opening tags should not be present in executable form
@@ -415,7 +415,7 @@ class TestMetricsCollector:
                 assert '<img' not in stats['endpoint']
                 assert '<iframe' not in stats['endpoint']
                 assert '<svg' not in stats['endpoint']
-            
+
             # Check top_endpoints list has escaped endpoint values
             for endpoint_stat in summary['top_endpoints']:
                 # Dangerous opening tags should not be present in executable form
@@ -424,7 +424,7 @@ class TestMetricsCollector:
                 assert '<img' not in endpoint_stat['endpoint']
                 assert '<iframe' not in endpoint_stat['endpoint']
                 assert '<svg' not in endpoint_stat['endpoint']
-            
+
             # Check error_summary endpoint keys are escaped
             for endpoint_key in summary['error_summary']['error_rate_by_endpoint'].keys():
                 # Dangerous opening tags should not be present in executable form
@@ -433,27 +433,27 @@ class TestMetricsCollector:
                 assert '<img' not in endpoint_key
                 assert '<iframe' not in endpoint_key
                 assert '<svg' not in endpoint_key
-    
+
     def test_get_recent_activity_xss_protection(self, app):
         """Test that get_recent_activity escapes endpoint data to prevent XSS."""
         collector = MetricsCollector()
-        
+
         # Create malicious endpoint string with error containing XSS
         malicious_endpoint = '<svg onload=alert(1)>/api/test'
-        
+
         with app.test_request_context(malicious_endpoint, method='GET'):
             g.request_id = 'test-id'
-            
+
             # Record request
             collector.record_request_start(malicious_endpoint, 'GET')
             time.sleep(0.01)
             # Record with an error that contains XSS attempt
             test_error = ValueError("<script>alert('error XSS')</script>")
             collector.record_request_end(500, error=test_error)
-            
+
             # Get recent activity
             activity = collector.get_recent_activity(10)
-            
+
             # Verify endpoint and error fields are escaped - check dangerous HTML tags are NOT executable
             assert len(activity) > 0
             for record in activity:
@@ -463,7 +463,7 @@ class TestMetricsCollector:
                 assert '</script>' not in record['endpoint']
                 assert '<img' not in record['endpoint']
                 assert '<iframe' not in record['endpoint']
-                
+
                 # Check error field for dangerous HTML tags (if present)
                 if record.get('error'):
                     assert '<script>' not in record['error']
@@ -471,26 +471,26 @@ class TestMetricsCollector:
                     assert '<img' not in record['error']
                     assert '<iframe' not in record['error']
                     assert '<svg' not in record['error']
-    
+
     def test_get_recent_errors_xss_protection(self, app):
         """Test that get_recent_errors escapes endpoint data to prevent XSS."""
         collector = MetricsCollector()
-        
+
         # Create malicious endpoint string
         malicious_endpoint = '<iframe src=javascript:alert(1)>/api/test'
-        
+
         with app.test_request_context(malicious_endpoint, method='GET'):
             g.request_id = 'test-id'
-            
+
             # Record request with error containing XSS
             collector.record_request_start(malicious_endpoint, 'GET')
             time.sleep(0.01)
             test_error = ValueError("<img src=x onerror=alert('XSS in error')>")
             collector.record_request_end(500, error=test_error)
-            
+
             # Get recent errors
             errors = collector.get_recent_errors(10)
-            
+
             # Verify endpoint and error fields are escaped - check dangerous HTML tags are NOT executable
             assert len(errors) > 0
             for record in errors:
@@ -500,7 +500,7 @@ class TestMetricsCollector:
                 assert '</script>' not in record['endpoint']
                 assert '<img' not in record['endpoint']
                 assert '<svg' not in record['endpoint']
-                
+
                 # Check error field - dangerous HTML tags should not be in executable form
                 assert '<script>' not in record['error']
                 assert '</script>' not in record['error']
@@ -511,17 +511,17 @@ class TestMetricsCollector:
 
 class TestSecurityAwareErrorHandler:
     """Test enhanced error handler with envelope format."""
-    
+
     def test_handle_service_error(self, app):
         """Test service error handling with envelope format."""
         with app.test_request_context('/'):
             g.request_id = 'test-id'
             error = Exception("Test error")
-            
+
             response, status_code = SecurityAwareErrorHandler.handle_service_error(
                 error, 'validation_error', 'test context', 400
             )
-            
+
             assert status_code == 400
             data = json.loads(response.data)
             assert not data['success']
@@ -529,17 +529,17 @@ class TestSecurityAwareErrorHandler:
             assert data['error']['message'] == SecurityAwareErrorHandler.GENERIC_MESSAGES['validation_error']
             assert data['request_id'] == 'test-id'
             assert 'timestamp' in data
-    
+
     def test_create_success_response(self, app):
         """Test success response creation with envelope format."""
         with app.test_request_context('/'):
             g.request_id = 'test-id'
             data = {'key': 'value'}
-            
+
             response, status_code = SecurityAwareErrorHandler.create_success_response(
                 data, 'Test message', 200
             )
-            
+
             assert status_code == 200
             response_data = json.loads(response.data)
             assert response_data['success']
@@ -562,28 +562,28 @@ def test_integration_middleware_stack(app):
     """Test that all middleware components work together."""
     from app.middleware.request_id import setup_request_id_middleware
     from app.middleware.metrics import setup_metrics_middleware
-    
+
     # Set up middleware
     setup_request_id_middleware(app)
     setup_metrics_middleware(app)
-    
+
     @app.route('/test')
     @rate_limit(limit=10, window_seconds=60)
     @track_request_id
     @collect_metrics
     def test_endpoint():
         return SecurityAwareErrorHandler.create_success_response({'message': 'success'})
-    
+
     with app.test_client() as client:
         response = client.get('/test')
         assert response.status_code == 200
-        
+
         # Check response format
         data = json.loads(response.data)
         assert data['success']
         assert 'request_id' in data
         assert 'timestamp' in data
-        
+
         # Check headers
         assert 'X-Request-ID' in response.headers
         assert 'X-RateLimit-Limit' in response.headers
@@ -593,40 +593,40 @@ def test_metrics_werkzeug_http_exceptions(app):
     """Test that metrics properly capture Werkzeug HTTPException status codes."""
     from werkzeug.exceptions import NotFound, BadRequest, Forbidden
     from app.middleware.metrics import setup_metrics_middleware, get_metrics_collector, reset_metrics_collector
-    
+
     # Reset metrics to ensure clean state
     reset_metrics_collector()
-    
+
     # Set up metrics middleware
     setup_metrics_middleware(app)
     collector = get_metrics_collector()
-    
+
     # Create routes that raise different HTTP exceptions
     @app.route('/not-found')
     def raise_not_found():
         raise NotFound("Resource not found")
-    
+
     @app.route('/bad-request')
     def raise_bad_request():
         raise BadRequest("Invalid request")
-    
+
     @app.route('/forbidden')
     def raise_forbidden():
         raise Forbidden("Access denied")
-    
+
     with app.test_client() as client:
         # Trigger each exception
         client.get('/not-found')
         client.get('/bad-request')
         client.get('/forbidden')
-        
+
         # Get metrics
         metrics = collector.get_metrics()
         recent_errors = metrics['recent_errors']
-        
+
         # Should have 3 errors recorded
         assert len(recent_errors) >= 3
-        
+
         # Check that the correct error types are associated with the correct status codes
         errors_data = [(err['error_type'], err['status_code']) for err in recent_errors]
         assert ('NotFound', 404) in errors_data
@@ -637,31 +637,31 @@ def test_metrics_werkzeug_http_exceptions(app):
 def test_metrics_no_double_counting_same_route(app):
     """Test that metrics don't double-count requests to the same route."""
     from app.middleware.metrics import setup_metrics_middleware, get_metrics_collector, reset_metrics_collector
-    
+
     # Reset metrics to ensure clean state
     reset_metrics_collector()
-    
+
     # Set up metrics middleware
     setup_metrics_middleware(app)
     collector = get_metrics_collector()
-    
+
     @app.route('/test-endpoint')
     def test_endpoint():
         return {'message': 'success'}
-    
+
     with app.test_client() as client:
         # Make multiple requests to the same endpoint
         for _ in range(3):
             client.get('/test-endpoint')
-        
+
         # Get metrics
         metrics = collector.get_metrics()
         endpoint_metrics = metrics['endpoint_metrics']
-        
+
         # Check that the endpoint was called exactly 3 times
         key = 'GET /test-endpoint'
         assert key in endpoint_metrics or 'GET test_endpoint' in endpoint_metrics
-        
+
         # Find the correct key (either path or endpoint name)
         actual_key = key if key in endpoint_metrics else 'GET test_endpoint'
         assert endpoint_metrics[actual_key]['calls'] == 3

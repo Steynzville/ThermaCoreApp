@@ -11,16 +11,16 @@ logger = logging.getLogger(__name__)
 def validate_json_request(f):
     """
     Decorator to validate JSON request data.
-    
+
     Checks for:
     - Empty request data
     - Invalid/malformed JSON
-    
+
     For PATCH requests, allows partial or empty JSON payloads.
     For POST/PUT requests, requires valid non-empty JSON.
-    
+
     Returns consistent 400 error responses for validation failures.
-    
+
     Usage:
         @validate_json_request
         def my_endpoint():
@@ -42,7 +42,7 @@ def validate_json_request(f):
                 'error': 'Invalid JSON format',
                 'details': 'Request body must contain valid JSON'
             }), 400
-        
+
         return f(*args, **kwargs)
-    
+
     return decorated_function

@@ -23,7 +23,7 @@ analytics_bp = Blueprint('analytics', __name__)
 @permission_required('read_units')
 def get_dashboard_summary():
     """Get comprehensive dashboard summary with analytics.
-    
+
     ---
     tags:
       - Analytics
@@ -48,31 +48,31 @@ def get_dashboard_summary():
         last_24h = now - timedelta(hours=24)
         last_week = now - timedelta(days=7)
         now - timedelta(days=30)
-        
+
         # Overview metrics
         total_units = db.session.query(func.count(Unit.id)).scalar()
         active_units = db.session.query(func.count(Unit.id)).filter(
             Unit.status == 'online'
         ).scalar()
         total_sensors = db.session.query(func.count(Sensor.id)).scalar()
-        
+
         # Recent readings count
         recent_readings = db.session.query(func.count(SensorReading.id)).filter(
             SensorReading.timestamp >= last_24h
         ).scalar()
-        
+
         # Trend analysis
         current_week_readings = db.session.query(func.count(SensorReading.id)).filter(
             SensorReading.timestamp >= last_week
         ).scalar()
-        
+
         previous_week_readings = db.session.query(func.count(SensorReading.id)).filter(
             and_(
                 SensorReading.timestamp >= (last_week - timedelta(days=7)),
                 SensorReading.timestamp < last_week
             )
         ).scalar()
-        
+
         # Performance metrics
         avg_temperature = db.session.query(func.avg(SensorReading.value)).filter(
             and_(
@@ -80,14 +80,14 @@ def get_dashboard_summary():
                 Sensor.sensor_type == 'temperature'
             )
         ).join(Sensor).scalar() or 0
-        
+
         max_temperature = db.session.query(func.max(SensorReading.value)).filter(
             and_(
                 SensorReading.timestamp >= last_24h,
                 Sensor.sensor_type == 'temperature'
             )
         ).join(Sensor).scalar() or 0
-        
+
         summary = {
             'overview': {
                 'total_units': total_units,
@@ -110,9 +110,9 @@ def get_dashboard_summary():
                 'data_quality_score': min(100, (recent_readings / (active_units * 24)) * 100) if active_units > 0 else 0
             }
         }
-        
+
         return jsonify(summary)
-        
+
     except Exception as e:
         return SecurityAwareErrorHandler.handle_error(
             e, "Failed to generate dashboard summary"
@@ -125,9 +125,9 @@ def get_dashboard_summary():
 @use_args(TrendsQuerySchema, location='query')
 def get_unit_trends(args, unit_id):
     """Get trend analysis for a specific unit.
-    
+
     Query parameters are validated using TrendsQuerySchema.
-    
+
     ---
     tags:
       - Analytics
@@ -156,15 +156,15 @@ def get_unit_trends(args, unit_id):
         unit = Unit.query.get(unit_id)
         if not unit:
             return jsonify({'error': 'Unit not found'}), 404
-        
+
         # Extract validated parameters
         days = args['days']
         sensor_type = args.get('sensor_type')
-        
+
         # Calculate time range
         now = utc_now()
         start_time = now - timedelta(days=days)
-        
+
         # Build query
         query = db.session.query(
             SensorReading.timestamp,
@@ -177,12 +177,12 @@ def get_unit_trends(args, unit_id):
                 SensorReading.timestamp >= start_time
             )
         )
-        
+
         if sensor_type:
             query = query.filter(Sensor.sensor_type == sensor_type)
-            
+
         readings = query.order_by(SensorReading.timestamp).all()
-        
+
         # Group by sensor type
         trends = {}
         for reading in readings:
@@ -193,12 +193,12 @@ def get_unit_trends(args, unit_id):
                     'type': reading.sensor_type,
                     'data': []
                 }
-            
+
             trends[sensor_key]['data'].append({
                 'timestamp': reading.timestamp.isoformat(),
                 'value': float(reading.value)
             })
-        
+
         # Calculate statistics for each sensor type
         for sensor_key in trends:
             values = [d['value'] for d in trends[sensor_key]['data']]
@@ -209,13 +209,13 @@ def get_unit_trends(args, unit_id):
                     'avg': sum(values) / len(values),
                     'count': len(values)
                 }
-        
+
         return jsonify({
             'unit_id': unit_id,
             'period_days': days,
             'trends': trends
         })
-        
+
     except Exception as e:
         return SecurityAwareErrorHandler.handle_error(
             e, "Failed to get unit trends"
@@ -228,9 +228,9 @@ def get_unit_trends(args, unit_id):
 @use_args(PerformanceQuerySchema, location='query')
 def get_units_performance(args):
     """Get performance analysis across all units.
-    
+
     Query parameters are validated using PerformanceQuerySchema.
-    
+
     ---
     tags:
       - Analytics
@@ -249,7 +249,7 @@ def get_units_performance(args):
         # Extract validated parameter
         hours = args['hours']
         start_time = utc_now() - timedelta(hours=hours)
-        
+
         # Performance metrics per unit
         performance_data = db.session.query(
             Unit.id,
@@ -266,23 +266,23 @@ def get_units_performance(args):
                 SensorReading.timestamp >= start_time
             )
         ).group_by(Unit.id, Unit.name, Unit.status).all()
-        
+
         units_performance = []
         for unit_data in performance_data:
             performance_score = 100  # Start with perfect score
-            
+
             # Reduce score based on inactivity
             if unit_data.reading_count == 0:
                 performance_score -= 50
             elif unit_data.reading_count < hours:  # Less than 1 reading per hour
                 performance_score -= 20
-                
+
             # Status-based scoring
             if unit_data.status == 'offline':
                 performance_score -= 30
             elif unit_data.status == 'maintenance':
                 performance_score -= 10
-                
+
             units_performance.append({
                 'unit_id': unit_data.id,
                 'unit_name': unit_data.name,
@@ -293,10 +293,10 @@ def get_units_performance(args):
                 'min_value': round(float(unit_data.min_value), 2) if unit_data.min_value else 0,
                 'performance_score': max(0, performance_score)
             })
-            
+
         # Sort by performance score descending
         units_performance.sort(key=lambda x: x['performance_score'], reverse=True)
-        
+
         return jsonify({
             'period_hours': hours,
             'units': units_performance,
@@ -307,7 +307,7 @@ def get_units_performance(args):
                 'worst_performing': units_performance[-1] if units_performance else None
             }
         })
-        
+
     except Exception as e:
         return SecurityAwareErrorHandler.handle_error(
             e, "Failed to get units performance"
@@ -320,9 +320,9 @@ def get_units_performance(args):
 @use_args(AlertPatternsQuerySchema, location='query')
 def get_alert_patterns(args):
     """Analyze alert patterns and frequencies.
-    
+
     Query parameters are validated using AlertPatternsQuerySchema.
-    
+
     ---
     tags:
       - Analytics
@@ -341,10 +341,10 @@ def get_alert_patterns(args):
         # Extract validated parameter
         days = args['days']
         start_time = utc_now() - timedelta(days=days)
-        
+
         # For this demo, we'll simulate alert data since we don't have an alerts table yet
         # In a real implementation, you would query actual alert records
-        
+
         # Simulate alert patterns based on sensor readings exceeding thresholds
         critical_readings = db.session.query(
             func.count().label('count'),
@@ -363,27 +363,27 @@ def get_alert_patterns(args):
             func.date(SensorReading.timestamp),
             Sensor.sensor_type
         ).all()
-        
+
         patterns = {}
         for reading in critical_readings:
             date_str = reading.date.isoformat() if reading.date else utc_now().date().isoformat()
             if date_str not in patterns:
                 patterns[date_str] = {}
             patterns[date_str][reading.sensor_type] = reading.count
-            
+
         # Calculate trends
         total_alerts = sum(
             sum(day_data.values()) for day_data in patterns.values()
         )
-        
+
         avg_alerts_per_day = total_alerts / days if days > 0 else 0
-        
+
         # Most problematic sensor types
         sensor_totals = {}
         for day_data in patterns.values():
             for sensor_type, count in day_data.items():
                 sensor_totals[sensor_type] = sensor_totals.get(sensor_type, 0) + count
-                
+
         return jsonify({
             'period_days': days,
             'total_potential_alerts': total_alerts,
@@ -392,7 +392,7 @@ def get_alert_patterns(args):
             'sensor_type_breakdown': sensor_totals,
             'most_problematic_sensor': max(sensor_totals, key=sensor_totals.get) if sensor_totals else None
         })
-        
+
     except Exception as e:
         return SecurityAwareErrorHandler.handle_error(
             e, "Failed to analyze alert patterns"

@@ -20,13 +20,13 @@ def validate_registry() -> None:
     """PR1a: Validate registry for duplicate protocol names."""
     protocol_names: Set[str] = set()
     duplicates: List[str] = []
-    
+
     for name, attr in REGISTRY:
         if name in protocol_names:
             duplicates.append(name)
         else:
             protocol_names.add(name)
-    
+
     if duplicates:
         raise ValueError(f"Duplicate protocol names found in registry: {duplicates}")
 
@@ -43,7 +43,7 @@ def _fallback(name: str) -> ProtocolStatus:
 
 def collect_protocol_status() -> list[dict]:
     """Collect normalized status dictionaries for all registered protocols.
-    
+
     PR1a enhancements:
     - Enhanced error handling with detailed context
     - Automatic availability level computation
@@ -56,14 +56,14 @@ def collect_protocol_status() -> list[dict]:
     """
     statuses: List[dict] = []
     processed_names: Set[str] = set()  # PR1a: Track processed names
-    
+
     for name, attr in REGISTRY:
         # PR1a: Guard against duplicate protocol names during collection
         if name in processed_names:
             logger.warning(f"Duplicate protocol name '{name}' encountered during collection")
             continue
         processed_names.add(name)
-        
+
         adapter = getattr(current_app, attr, None)
         if adapter and hasattr(adapter, "get_status"):
             try:
@@ -80,7 +80,7 @@ def collect_protocol_status() -> list[dict]:
                         except (ValueError, TypeError):
                             # Invalid heartbeat format, ignore
                             logger.warning(f"Invalid heartbeat format for protocol '{name}': {raw.get('last_heartbeat')}")
-                    
+
                     status_obj = ProtocolStatus(
                         name=name,
                         available=raw.get("available", raw.get("connected", False)),
@@ -95,7 +95,7 @@ def collect_protocol_status() -> list[dict]:
                         heartbeat_timeout_seconds=raw.get("heartbeat_timeout_seconds", 300),
                         retry_count=raw.get("retry_count", 0),
                     )
-                    
+
                     # PR1a: Parse last_error_time if provided
                     if raw.get("last_error_time"):
                         try:
@@ -105,15 +105,15 @@ def collect_protocol_status() -> list[dict]:
                                 status_obj.last_error_time = raw["last_error_time"]
                         except (ValueError, TypeError):
                             logger.warning(f"Invalid last_error_time format for protocol '{name}': {raw.get('last_error_time')}")
-                    
+
                     # PR1a: Update availability level based on current state
                     status_obj.update_availability_level()
-                    
+
                 else:  # If future adapters return ProtocolStatus directly
                     status_obj = raw  # type: ignore
                     if hasattr(status_obj, 'update_availability_level'):
                         status_obj.update_availability_level()
-                        
+
             except Exception as exc:  # Defensive: capture per-adapter failure
                 logger.error(f"Failed to get status for protocol '{name}': {str(exc)}")
                 status_obj = ProtocolStatus(
@@ -130,7 +130,7 @@ def collect_protocol_status() -> list[dict]:
                 )
         else:
             status_obj = _fallback(name)
-        
+
         statuses.append(status_obj.to_dict())
     return statuses
 

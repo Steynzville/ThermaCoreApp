@@ -15,7 +15,7 @@ scada_bp = Blueprint('scada', __name__)
 @permission_required('read_units')
 def get_scada_status():
     """Get status of all SCADA services.
-    
+
     ---
     tags:
       - SCADA
@@ -35,16 +35,16 @@ def get_scada_status():
               type: object
     """
     status = {}
-    
+
     if hasattr(current_app, 'mqtt_client'):
         status['mqtt'] = current_app.mqtt_client.get_status()
-    
+
     if hasattr(current_app, 'websocket_service'):
         status['websocket'] = current_app.websocket_service.get_status()
-        
+
     if hasattr(current_app, 'realtime_processor'):
         status['realtime_processor'] = current_app.realtime_processor.get_status()
-    
+
     return jsonify(status)
 
 
@@ -53,7 +53,7 @@ def get_scada_status():
 @permission_required('admin_panel')
 def mqtt_connect():
     """Connect to MQTT broker.
-    
+
     ---
     tags:
       - SCADA
@@ -80,7 +80,7 @@ def mqtt_connect():
 @permission_required('admin_panel')
 def mqtt_disconnect():
     """Disconnect from MQTT broker.
-    
+
     ---
     tags:
       - SCADA
@@ -105,7 +105,7 @@ def mqtt_disconnect():
 @permission_required('admin_panel')
 def mqtt_subscribe():
     """Subscribe to additional MQTT topic.
-    
+
     ---
     tags:
       - SCADA
@@ -139,16 +139,16 @@ def mqtt_subscribe():
             return SecurityAwareErrorHandler.handle_validation_error(
                 ValueError("Topic is required"), 'MQTT subscription'
             )
-        
+
         topic = data['topic']
         qos = data.get('qos', 0)
-        
+
         if hasattr(current_app, 'mqtt_client'):
             current_app.mqtt_client.subscribe_topic(topic, qos)
             return jsonify({'status': 'subscribed', 'topic': topic})
         else:
             return SecurityAwareErrorHandler.handle_service_unavailable('MQTT client')
-            
+
     except Exception as e:
         return SecurityAwareErrorHandler.handle_mqtt_error(e, 'subscription')
 
@@ -158,7 +158,7 @@ def mqtt_subscribe():
 @permission_required('admin_panel')
 def mqtt_publish():
     """Publish message to MQTT topic.
-    
+
     ---
     tags:
       - SCADA
@@ -195,11 +195,11 @@ def mqtt_publish():
             return SecurityAwareErrorHandler.handle_validation_error(
                 ValueError("Topic and payload are required"), 'MQTT publish'
             )
-        
+
         topic = data['topic']
         payload = data['payload']
         qos = data.get('qos', 0)
-        
+
         if hasattr(current_app, 'mqtt_client'):
             success = current_app.mqtt_client.publish_message(topic, payload, qos)
             if success:
@@ -210,7 +210,7 @@ def mqtt_publish():
                 )
         else:
             return SecurityAwareErrorHandler.handle_service_unavailable('MQTT client')
-            
+
     except Exception as e:
         return SecurityAwareErrorHandler.handle_mqtt_error(e, 'message publishing')
 
@@ -220,7 +220,7 @@ def mqtt_publish():
 @permission_required('read_units')
 def get_alert_rules():
     """Get all configured alert rules.
-    
+
     ---
     tags:
       - SCADA
@@ -246,7 +246,7 @@ def get_alert_rules():
 @permission_required('admin_panel')
 def add_alert_rule():
     """Add new alert rule.
-    
+
     ---
     tags:
       - SCADA
@@ -287,12 +287,12 @@ def add_alert_rule():
     try:
         data = request.get_json()
         required_fields = ['sensor_type', 'condition', 'threshold']
-        
+
         if not data or not all(field in data for field in required_fields):
             return SecurityAwareErrorHandler.handle_validation_error(
                 ValueError("Missing required fields"), 'Alert rule creation'
             )
-        
+
         if hasattr(current_app, 'realtime_processor'):
             current_app.realtime_processor.add_alert_rule(
                 sensor_type=data['sensor_type'],
@@ -304,7 +304,7 @@ def add_alert_rule():
             return jsonify({'status': 'rule_added'}), 201
         else:
             return SecurityAwareErrorHandler.handle_service_unavailable('Real-time processor')
-            
+
     except ValueError as e:
         return SecurityAwareErrorHandler.handle_validation_error(e, 'Alert rule threshold parsing')
     except Exception as e:
@@ -316,7 +316,7 @@ def add_alert_rule():
 @permission_required('read_units')
 def get_websocket_clients():
     """Get information about connected WebSocket clients.
-    
+
     ---
     tags:
       - SCADA
@@ -340,7 +340,7 @@ def get_websocket_clients():
 @permission_required('admin_panel')
 def opcua_connect():
     """Connect to OPC UA server.
-    
+
     ---
     tags:
       - SCADA
@@ -354,7 +354,7 @@ def opcua_connect():
     """
     if not hasattr(current_app, 'opcua_client'):
         return SecurityAwareErrorHandler.handle_service_unavailable('OPC UA client')
-    
+
     try:
         current_app.opcua_client.connect()  # Now raises ConnectionError on failure
         return jsonify({'status': 'connected'})
@@ -369,7 +369,7 @@ def opcua_connect():
 @permission_required('admin_panel')
 def opcua_disconnect():
     """Disconnect from OPC UA server.
-    
+
     ---
     tags:
       - SCADA
@@ -391,7 +391,7 @@ def opcua_disconnect():
 @permission_required('read_units')
 def opcua_browse():
     """Browse OPC UA server nodes.
-    
+
     ---
     tags:
       - SCADA
@@ -415,7 +415,7 @@ def opcua_browse():
     """
     if not hasattr(current_app, 'opcua_client'):
         return SecurityAwareErrorHandler.handle_service_unavailable('OPC UA client')
-    
+
     try:
         root_node = request.args.get('root_node', 'i=85')
         nodes = current_app.opcua_client.browse_server_nodes(root_node)
@@ -429,7 +429,7 @@ def opcua_browse():
 @permission_required('admin_panel')
 def opcua_subscribe():
     """Subscribe to OPC UA node.
-    
+
     ---
     tags:
       - SCADA
@@ -470,15 +470,15 @@ def opcua_subscribe():
     try:
         data = request.get_json()
         required_fields = ['node_id', 'unit_id', 'sensor_type']
-        
+
         if not data or not all(field in data for field in required_fields):
             return SecurityAwareErrorHandler.handle_validation_error(
                 ValueError("Missing required fields"), 'OPC UA subscription'
             )
-        
+
         if not hasattr(current_app, 'opcua_client'):
             return SecurityAwareErrorHandler.handle_service_unavailable('OPC UA client')
-        
+
         success = current_app.opcua_client.subscribe_to_node(
             node_id=data['node_id'],
             unit_id=data['unit_id'],
@@ -486,14 +486,14 @@ def opcua_subscribe():
             scale_factor=data.get('scale_factor', 1.0),
             offset=data.get('offset', 0.0)
         )
-        
+
         if success:
             return jsonify({'status': 'subscribed', 'node_id': data['node_id']})
         else:
             return SecurityAwareErrorHandler.handle_opcua_error(
                 Exception("Subscription failed"), 'node subscription'
             )
-            
+
     except Exception as e:
         return SecurityAwareErrorHandler.handle_opcua_error(e, 'node subscription')
 
@@ -503,7 +503,7 @@ def opcua_subscribe():
 @permission_required('read_units')
 def opcua_read_node():
     """Read value from OPC UA node.
-    
+
     ---
     tags:
       - SCADA
@@ -535,10 +535,10 @@ def opcua_read_node():
             return SecurityAwareErrorHandler.handle_validation_error(
                 ValueError("node_id is required"), 'OPC UA node reading'
             )
-        
+
         if not hasattr(current_app, 'opcua_client'):
             return SecurityAwareErrorHandler.handle_service_unavailable('OPC UA client')
-        
+
         result = current_app.opcua_client.read_node_value(data['node_id'])
         if result:
             return jsonify(result)
@@ -546,7 +546,7 @@ def opcua_read_node():
             return SecurityAwareErrorHandler.handle_opcua_error(
                 Exception("Read failed"), 'node value reading'
             )
-            
+
     except Exception as e:
         return SecurityAwareErrorHandler.handle_opcua_error(e, 'node value reading')
 
@@ -556,7 +556,7 @@ def opcua_read_node():
 @permission_required('admin_panel')
 def opcua_poll():
     """Poll all subscribed OPC UA nodes.
-    
+
     ---
     tags:
       - SCADA
@@ -570,7 +570,7 @@ def opcua_poll():
     """
     if not hasattr(current_app, 'opcua_client'):
         return SecurityAwareErrorHandler.handle_service_unavailable('OPC UA client')
-    
+
     try:
         current_app.opcua_client.poll_subscribed_nodes()
         return jsonify({'status': 'poll_completed'})
@@ -585,7 +585,7 @@ def opcua_poll():
 @permission_required('read_units')
 def get_simulator_status():
     """Get protocol gateway simulator status.
-    
+
     ---
     tags:
       - SCADA
@@ -609,7 +609,7 @@ def get_simulator_status():
 @permission_required('admin_panel')
 def start_simulator():
     """Start the protocol gateway simulator.
-    
+
     ---
     tags:
       - SCADA
@@ -623,7 +623,7 @@ def start_simulator():
     """
     if not hasattr(current_app, 'protocol_simulator'):
         return SecurityAwareErrorHandler.handle_service_unavailable('Protocol simulator')
-    
+
     try:
         # Connect to MQTT first if not connected
         if not current_app.protocol_simulator.connected:
@@ -631,7 +631,7 @@ def start_simulator():
                 return SecurityAwareErrorHandler.handle_service_error(
                     Exception("MQTT connection failed"), 'connection_error', 'Simulator MQTT connection', 500
                 )
-        
+
         success = current_app.protocol_simulator.start_simulation()
         if success:
             return jsonify({'status': 'started'})
@@ -648,7 +648,7 @@ def start_simulator():
 @permission_required('admin_panel')
 def stop_simulator():
     """Stop the protocol gateway simulator.
-    
+
     ---
     tags:
       - SCADA
@@ -670,7 +670,7 @@ def stop_simulator():
 @permission_required('admin_panel')
 def inject_test_scenario():
     """Inject test scenario into the simulator.
-    
+
     ---
     tags:
       - SCADA
@@ -704,24 +704,24 @@ def inject_test_scenario():
             return SecurityAwareErrorHandler.handle_validation_error(
                 ValueError("scenario_type is required"), 'Scenario injection'
             )
-        
+
         valid_scenarios = ['high_temperature', 'sensor_failure', 'unit_offline']
         if data['scenario_type'] not in valid_scenarios:
             return SecurityAwareErrorHandler.handle_validation_error(
                 ValueError(f"Invalid scenario type. Must be one of: {valid_scenarios}"), 
                 'Scenario type validation'
             )
-        
+
         if not hasattr(current_app, 'protocol_simulator'):
             return SecurityAwareErrorHandler.handle_service_unavailable('Protocol simulator')
-        
+
         current_app.protocol_simulator.inject_test_scenario(
             scenario_type=data['scenario_type'],
             unit_id=data.get('unit_id')
         )
-        
+
         return jsonify({'status': 'scenario_injected', 'scenario_type': data['scenario_type']})
-        
+
     except Exception as e:
         return SecurityAwareErrorHandler.handle_service_error(e, 'internal_error', 'Scenario injection', 500)
 
@@ -733,7 +733,7 @@ def inject_test_scenario():
 @permission_required('read_units')
 def get_all_devices_status():
     """Get status of all monitored devices.
-    
+
     ---
     tags:
       - SCADA
@@ -756,24 +756,24 @@ def get_all_devices_status():
             offline_devices:
               type: integer
     """
-    
+
     devices_status = []
-    
+
     # Get device status from Modbus service
     if hasattr(current_app, 'modbus_service'):
         modbus_devices = current_app.modbus_service.get_device_status()
         devices_status.extend(modbus_devices.get('devices', {}).values())
-    
+
     # Get device status from DNP3 service
     if hasattr(current_app, 'dnp3_service'):
         dnp3_devices = current_app.dnp3_service.get_device_status()
         devices_status.extend(dnp3_devices.get('devices', {}).values())
-    
+
     # Calculate summary statistics
     total_devices = len(devices_status)
     online_devices = sum(1 for device in devices_status if device.get('connected', False))
     offline_devices = total_devices - online_devices
-    
+
     return jsonify({
         'devices': devices_status,
         'total_devices': total_devices,
@@ -788,7 +788,7 @@ def get_all_devices_status():
 @permission_required('read_units')
 def get_device_status(device_id):
     """Get status of a specific device.
-    
+
     ---
     tags:
       - SCADA
@@ -813,13 +813,13 @@ def get_device_status(device_id):
         modbus_status = current_app.modbus_service.get_device_status(device_id)
         if modbus_status and modbus_status.get('devices', {}).get(device_id):
             return jsonify(modbus_status['devices'][device_id])
-    
+
     # Try DNP3 service
     if hasattr(current_app, 'dnp3_service'):
         dnp3_status = current_app.dnp3_service.get_device_status(device_id)
         if dnp3_status and dnp3_status.get('devices', {}).get(device_id):
             return jsonify(dnp3_status['devices'][device_id])
-    
+
     return SecurityAwareErrorHandler.handle_not_found('Device', device_id)
 
 
@@ -828,7 +828,7 @@ def get_device_status(device_id):
 @permission_required('read_units')
 def get_device_status_history():
     """Get device status change history.
-    
+
     ---
     tags:
       - SCADA
@@ -859,7 +859,7 @@ def get_device_status_history():
     """
     device_id = request.args.get('device_id')
     limit = min(int(request.args.get('limit', 50)), 1000)  # Cap at 1000
-    
+
     # For now, return mock data - in a real implementation, this would come from a database
     mock_history = [
         {
@@ -877,11 +877,11 @@ def get_device_status_history():
             'severity': 'info'
         }
     ]
-    
+
     filtered_history = mock_history
     if device_id:
         filtered_history = [h for h in mock_history if h['device_id'] == device_id]
-    
+
     return jsonify({
         'history': filtered_history[:limit],
         'total_records': len(filtered_history),

@@ -61,17 +61,17 @@ def get_users():
     role_name = request.args.get('role')
     active = request.args.get('active', type=bool)
     search = request.args.get('search', '').strip()
-    
+
     # Build query
     query = User.query.join(Role)
-    
+
     # Apply filters
     if role_name:
         query = query.filter(Role.name == role_name)
-    
+
     if active is not None:
         query = query.filter(User.is_active == active)
-    
+
     if search:
         search_filter = or_(
             User.username.ilike(f'%{search}%'),
@@ -80,16 +80,16 @@ def get_users():
             User.last_name.ilike(f'%{search}%')
         )
         query = query.filter(search_filter)
-    
+
     # Apply pagination
     pagination = query.paginate(
         page=page,
         per_page=per_page,
         error_out=False
     )
-    
+
     users_schema = UserSchema(many=True)
-    
+
     return jsonify({
         'data': users_schema.dump(pagination.items),
         'page': page,
@@ -169,41 +169,41 @@ def update_user(user_id):
     current_user_id, success = get_current_user_id()
     if not success or current_user_id is None:
         return jsonify({'error': 'Invalid token format'}), 401
-        
+
     schema = UserUpdateSchema()
-    
+
     try:
         data = schema.load(request.json)
     except ValidationError as err:
         return jsonify({'error': 'Validation error', 'details': err.messages}), 400
-    
+
     # Prevent users from modifying their own role or active status
     if user_id == current_user_id:
         if 'role_id' in data:
             return jsonify({'error': 'Cannot modify your own role'}), 403
         if 'is_active' in data and not data['is_active']:
             return jsonify({'error': 'Cannot deactivate your own account'}), 403
-    
+
     # Check if role exists (if role_id is being updated)
     if 'role_id' in data:
         role = Role.query.get(data['role_id'])
         if not role:
             return jsonify({'error': 'Role not found'}), 400
-    
+
     # Update user attributes
     for key, value in data.items():
         if hasattr(user, key):
             setattr(user, key, value)
-    
+
     try:
         db.session.commit()
-        
+
         # Refresh to get database-generated timestamp
         db.session.refresh(user)
-        
+
         user_schema = UserSchema()
         return jsonify(user_schema.dump(user)), 200
-        
+
     except IntegrityError as e:
         db.session.rollback()
         if 'username' in str(e.orig):
@@ -243,15 +243,15 @@ def delete_user(user_id):
     current_user_id, success = get_current_user_id()
     if not success or current_user_id is None:
         return jsonify({'error': 'Invalid token format'}), 401
-    
+
     # Prevent users from deleting their own account
     if user_id == current_user_id:
         return jsonify({'error': 'Cannot delete your own account'}), 403
-    
+
     # Soft delete by deactivating the user
     user.is_active = False
     db.session.commit()
-    
+
     return '', 204
 
 
@@ -282,10 +282,10 @@ def activate_user(user_id):
     user = User.query.get_or_404(user_id)
     user.is_active = True
     db.session.commit()
-    
+
     # Refresh to get database-generated timestamp
     db.session.refresh(user)
-    
+
     user_schema = UserSchema()
     return jsonify(user_schema.dump(user)), 200
 
@@ -320,17 +320,17 @@ def deactivate_user(user_id):
     current_user_id, success = get_current_user_id()
     if not success or current_user_id is None:
         return jsonify({'error': 'Invalid token format'}), 401
-    
+
     # Prevent users from deactivating their own account
     if user_id == current_user_id:
         return jsonify({'error': 'Cannot deactivate your own account'}), 403
-    
+
     user.is_active = False
     db.session.commit()
-    
+
     # Refresh to get database-generated timestamp
     db.session.refresh(user)
-    
+
     user_schema = UserSchema()
     return jsonify(user_schema.dump(user)), 200
 
@@ -394,16 +394,16 @@ def get_users_stats():
     # Use explicit boolean filters that are portable across databases
     active_users = User.query.filter(User.is_active.is_(True)).count()
     inactive_users = User.query.filter(User.is_active.is_(False)).count()
-    
+
     # Role counts
     admin_role = Role.query.filter(Role.name == 'admin').first()
     operator_role = Role.query.filter(Role.name == 'operator').first()
     viewer_role = Role.query.filter(Role.name == 'viewer').first()
-    
+
     admin_users = User.query.filter(User.role_id == admin_role.id).count() if admin_role else 0
     operator_users = User.query.filter(User.role_id == operator_role.id).count() if operator_role else 0
     viewer_users = User.query.filter(User.role_id == viewer_role.id).count() if viewer_role else 0
-    
+
     return jsonify({
         'total_users': total_users,
         'active_users': active_users,
@@ -450,14 +450,14 @@ def reset_user_password(user_id):
     """
     user = User.query.get_or_404(user_id)
     data = request.json
-    
+
     if not data or 'new_password' not in data:
         return jsonify({'error': 'New password required'}), 400
-    
+
     if len(data['new_password']) < 6:
         return jsonify({'error': 'New password must be at least 6 characters long'}), 400
-    
+
     user.set_password(data['new_password'])
     db.session.commit()
-    
+
     return jsonify({'message': 'Password reset successfully'}), 200

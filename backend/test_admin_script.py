@@ -14,7 +14,7 @@ print("=" * 70)
 script_path = os.path.join(os.path.dirname(__file__), 'scripts', 'create_first_admin.py')
 with open(script_path, 'r') as f:
     content = f.read()
-    
+
 # Check that the script prints "Password: [HIDDEN]"
 if 'print("Password: [HIDDEN]")' in content:
     print("✓ Script correctly hides password in output")

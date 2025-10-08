@@ -20,25 +20,25 @@ CONTROL_CHARS[0x2029] = None
 
 def sanitize(value: Any, depth: int = 0, max_depth: int = 10) -> Any:
     """Sanitize input to prevent log injection and other security issues.
-    
+
     Removes all ASCII control characters (0-31) and Unicode line/paragraph
     separators that could be used for log forging or other injection attacks.
-    
+
     WARNING: This function removes control characters including tabs (\t).
     It is ONLY intended for use in the logging layer via SanitizingFilter.
     DO NOT use this function to sanitize request data or user input directly,
     as it will corrupt legitimate multiline text, tabs, and structured data.
-    
+
     Note: This function is designed for text inputs intended for logging.
     Binary or structured payloads should not be passed through this function
     as they may be corrupted. Use appropriate encoding (e.g., base64) before
     logging binary data.
-    
+
     Args:
         value: The value to sanitize (can be str, dict, list, or other types)
         depth: Current recursion depth (internal use)
         max_depth: Maximum recursion depth to prevent DoS attacks
-        
+
     Returns:
         Sanitized value with control characters removed from strings
     """
@@ -46,7 +46,7 @@ def sanitize(value: Any, depth: int = 0, max_depth: int = 10) -> Any:
     # Return safe placeholder to prevent unsanitized data from being logged
     if depth > max_depth:
         return "[deeply nested structure]"
-    
+
     if isinstance(value, str):
         # Remove all ASCII control characters and Unicode separators using str.translate
         return value.translate(CONTROL_CHARS)
@@ -68,7 +68,7 @@ def sanitize(value: Any, depth: int = 0, max_depth: int = 10) -> Any:
 
 class RequestValidator:
     """Comprehensive request validation middleware with error envelope support."""
-    
+
     @staticmethod
     def validate_json_content_type():
         """Validate that request has proper JSON content type for POST/PUT requests."""
@@ -85,7 +85,7 @@ class RequestValidator:
                     'timestamp': datetime.utcnow().isoformat() + 'Z'
                 }), 400
         return None
-    
+
     @staticmethod
     def validate_json_body():
         """Validate that request body contains valid JSON."""
@@ -115,7 +115,7 @@ class RequestValidator:
                     'timestamp': datetime.utcnow().isoformat() + 'Z'
                 }), 400
         return None
-    
+
     @staticmethod
     def validate_request_size(max_size: int = 1024 * 1024):  # 1MB default
         """Validate request payload size."""
@@ -146,15 +146,15 @@ class RequestValidator:
 def handle_webargs_error(error, req, schema, *, error_status_code, error_headers):
     """
     Custom error handler for webargs validation errors.
-    
+
     This ensures webargs validation errors use our standardized error envelope format
     with correlation IDs and consistent structure.
-    
+
     Note: This handler must abort (raise HTTPException) rather than return a response,
     as required by webargs' error handling mechanism.
     """
     from flask import abort, make_response
-    
+
     # Create the error response
     error_response = {
         'success': False,
@@ -169,7 +169,7 @@ def handle_webargs_error(error, req, schema, *, error_status_code, error_headers
         'request_id': getattr(g, 'request_id', str(uuid.uuid4())),
         'timestamp': datetime.utcnow().isoformat() + 'Z'
     }
-    
+
     # Abort with the error status code and attach response data
     # We'll catch this in a Flask error handler
     response = make_response(jsonify(error_response), error_status_code or 400)
@@ -179,7 +179,7 @@ def handle_webargs_error(error, req, schema, *, error_status_code, error_headers
 def validate_query_params(**param_validators):
     """
     Decorator to validate query parameters with custom validators.
-    
+
     Usage:
         @validate_query_params(
             page=lambda x: int(x) > 0,
@@ -191,7 +191,7 @@ def validate_query_params(**param_validators):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             errors = {}
-            
+
             for param_name, validator in param_validators.items():
                 param_value = request.args.get(param_name)
                 if param_value is not None:
@@ -200,7 +200,7 @@ def validate_query_params(**param_validators):
                             errors[param_name] = f'Invalid value: {param_value}'
                     except Exception as e:
                         errors[param_name] = f'Validation error: {str(e)}'
-            
+
             if errors:
                 return jsonify({
                     'success': False,
@@ -212,7 +212,7 @@ def validate_query_params(**param_validators):
                     'request_id': getattr(g, 'request_id', str(uuid.uuid4())),
                     'timestamp': datetime.utcnow().isoformat() + 'Z'
                 }), 400
-            
+
             return f(*args, **kwargs)
         return decorated_function
     return decorator
@@ -221,7 +221,7 @@ def validate_query_params(**param_validators):
 def validate_path_params(**param_validators):
     """
     Decorator to validate path parameters with custom validators.
-    
+
     Usage:
         @validate_path_params(
             unit_id=lambda x: len(x) > 0 and x.isalnum(),
@@ -232,7 +232,7 @@ def validate_path_params(**param_validators):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             errors = {}
-            
+
             for param_name, validator in param_validators.items():
                 param_value = kwargs.get(param_name)
                 if param_value is not None:
@@ -241,7 +241,7 @@ def validate_path_params(**param_validators):
                             errors[param_name] = f'Invalid value: {param_value}'
                     except Exception as e:
                         errors[param_name] = f'Validation error: {str(e)}'
-            
+
             if errors:
                 return jsonify({
                     'success': False,
@@ -253,7 +253,7 @@ def validate_path_params(**param_validators):
                     'request_id': getattr(g, 'request_id', str(uuid.uuid4())),
                     'timestamp': datetime.utcnow().isoformat() + 'Z'
                 }), 400
-            
+
             return f(*args, **kwargs)
         return decorated_function
     return decorator

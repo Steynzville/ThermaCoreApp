@@ -25,9 +25,9 @@ historical_bp = Blueprint('historical', __name__)
 @use_args(HistoricalDataQuerySchema, location='query')
 def get_historical_data(args, unit_id):
     """Get historical data for a unit with flexible time ranges and aggregation.
-    
+
     Query parameters are validated using HistoricalDataQuerySchema.
-    
+
     ---
     tags:
       - Historical Data
@@ -74,18 +74,18 @@ def get_historical_data(args, unit_id):
         unit = Unit.query.get(unit_id)
         if not unit:
             return jsonify({'error': 'Unit not found'}), 404
-        
+
         # Extract validated parameters from args
         start_date = args.get('start_date')
         end_date = args.get('end_date')
         sensor_types = args.get('sensor_types')
         aggregation = args['aggregation']
         limit = args['limit']
-        
+
         # Set default time range if not provided (dates are already datetime objects from schema)
         end_time = end_date if end_date else utc_now()
         start_time = start_date if start_date else (end_time - timedelta(days=7))
-        
+
         # Build base query
         query = db.session.query(
             SensorReading.timestamp,
@@ -100,12 +100,12 @@ def get_historical_data(args, unit_id):
                 SensorReading.timestamp <= end_time
             )
         )
-        
+
         # Filter by sensor types if specified
         if sensor_types:
             sensor_type_list = [s.strip() for s in sensor_types.split(',')]
             query = query.filter(Sensor.sensor_type.in_(sensor_type_list))
-        
+
         # Apply aggregation
         if aggregation == 'raw':
             readings = query.order_by(SensorReading.timestamp.desc()).limit(limit).all()
@@ -128,7 +128,7 @@ def get_historical_data(args, unit_id):
                 time_format = func.date_trunc('week', SensorReading.timestamp)
             else:
                 return jsonify({'error': 'Invalid aggregation type'}), 400
-            
+
             aggregated_data = db.session.query(
                 time_format.label('time_bucket'),
                 Sensor.sensor_type,
@@ -144,15 +144,15 @@ def get_historical_data(args, unit_id):
                     SensorReading.timestamp <= end_time
                 )
             )
-            
+
             if sensor_types:
                 sensor_type_list = [s.strip() for s in sensor_types.split(',')]
                 aggregated_data = aggregated_data.filter(Sensor.sensor_type.in_(sensor_type_list))
-            
+
             aggregated_data = aggregated_data.group_by(
                 time_format, Sensor.sensor_type, Sensor.name
             ).order_by(time_format.desc()).limit(limit).all()
-            
+
             data = []
             for reading in aggregated_data:
                 data.append({
@@ -164,7 +164,7 @@ def get_historical_data(args, unit_id):
                     'max_value': round(float(reading.max_value), 2),
                     'sample_count': reading.count
                 })
-        
+
         return jsonify({
             'unit_id': unit_id,
             'unit_name': unit.name,
@@ -175,7 +175,7 @@ def get_historical_data(args, unit_id):
             'sensor_types_filter': sensor_types,
             'data': data
         })
-        
+
     except Exception as e:
         return SecurityAwareErrorHandler.handle_error(
             e, "Failed to get historical data"
@@ -188,9 +188,9 @@ def get_historical_data(args, unit_id):
 @use_args(CompareUnitsSchema, location='json')
 def compare_units_historical(args):
     """Compare historical data between multiple units.
-    
+
     Request body is validated using CompareUnitsSchema.
-    
+
     ---
     tags:
       - Historical Data
@@ -234,16 +234,16 @@ def compare_units_historical(args):
         aggregation = args['aggregation']
         start_date = args.get('start_date')
         end_date = args.get('end_date')
-        
+
         # Validate units exist
         units = Unit.query.filter(Unit.id.in_(unit_ids)).all()
         if len(units) != len(unit_ids):
             return jsonify({'error': 'One or more units not found'}), 404
-        
+
         # Parse time range (dates are already datetime objects from schema)
         end_time = end_date if end_date else utc_now()
         start_time = start_date if start_date else (end_time - timedelta(days=30))
-        
+
         # Set aggregation format
         if aggregation == 'hourly':
             time_format = func.date_trunc('hour', SensorReading.timestamp)
@@ -253,7 +253,7 @@ def compare_units_historical(args):
             time_format = func.date_trunc('week', SensorReading.timestamp)
         else:
             return jsonify({'error': 'Invalid aggregation type'}), 400
-        
+
         # Get comparison data
         comparison_data = db.session.query(
             time_format.label('time_bucket'),
@@ -273,11 +273,11 @@ def compare_units_historical(args):
         ).group_by(
             time_format, Sensor.unit_id, Unit.name
         ).order_by(time_format.asc()).all()
-        
+
         # Organize data by time bucket
         time_series = {}
         unit_names = {unit.id: unit.name for unit in units}
-        
+
         for record in comparison_data:
             time_key = record.time_bucket.isoformat()
             if time_key not in time_series:
@@ -285,7 +285,7 @@ def compare_units_historical(args):
                     'timestamp': time_key,
                     'units': {}
                 }
-            
+
             time_series[time_key]['units'][record.unit_id] = {
                 'unit_name': record.unit_name,
                 'avg_value': round(float(record.avg_value), 2),
@@ -293,7 +293,7 @@ def compare_units_historical(args):
                 'max_value': round(float(record.max_value), 2),
                 'sample_count': record.count
             }
-        
+
         # Calculate summary statistics per unit
         unit_summaries = {}
         for unit_id in unit_ids:
@@ -301,7 +301,7 @@ def compare_units_historical(args):
                 record.avg_value for record in comparison_data 
                 if record.unit_id == unit_id
             ]
-            
+
             if unit_values:
                 unit_summaries[unit_id] = {
                     'unit_name': unit_names[unit_id],
@@ -318,7 +318,7 @@ def compare_units_historical(args):
                     'overall_max': 0,
                     'data_points': 0
                 }
-        
+
         return jsonify({
             'comparison': {
                 'unit_ids': unit_ids,
@@ -330,7 +330,7 @@ def compare_units_historical(args):
                 'unit_summaries': unit_summaries
             }
         })
-        
+
     except Exception as e:
         return SecurityAwareErrorHandler.handle_error(
             e, "Failed to compare units historical data"
@@ -343,9 +343,9 @@ def compare_units_historical(args):
 @use_args(ExportDataQuerySchema, location='query')
 def export_historical_data(args, unit_id):
     """Export historical data for a unit in various formats.
-    
+
     Query parameters are validated using ExportDataQuerySchema.
-    
+
     ---
     tags:
       - Historical Data
@@ -386,17 +386,17 @@ def export_historical_data(args, unit_id):
         unit = Unit.query.get(unit_id)
         if not unit:
             return jsonify({'error': 'Unit not found'}), 404
-        
+
         # Extract validated parameters
         export_format = args['format']
         start_date = args.get('start_date')
         end_date = args.get('end_date')
         sensor_types = args.get('sensor_types')
-        
+
         # Set time range (dates are already datetime objects from schema)
         end_time = end_date if end_date else utc_now()
         start_time = start_date if start_date else (end_time - timedelta(days=30))
-        
+
         # Build query
         query = db.session.query(
             SensorReading.timestamp,
@@ -411,17 +411,17 @@ def export_historical_data(args, unit_id):
                 SensorReading.timestamp <= end_time
             )
         )
-        
+
         if sensor_types:
             sensor_type_list = [s.strip() for s in sensor_types.split(',')]
             query = query.filter(Sensor.sensor_type.in_(sensor_type_list))
-        
+
         readings = query.order_by(SensorReading.timestamp.desc()).all()
-        
+
         if export_format == 'csv':
             # Prepare CSV data
             csv_lines = ['timestamp,sensor_type,sensor_name,unit,value']
-            
+
             for reading in readings:
                 csv_lines.append(
                     f"{reading.timestamp.isoformat()},"
@@ -430,9 +430,9 @@ def export_historical_data(args, unit_id):
                     f"{reading.unit},"
                     f"{reading.value}"
                 )
-            
+
             csv_content = '\\n'.join(csv_lines)
-            
+
             response = current_app.response_class(
                 csv_content,
                 mimetype='text/csv',
@@ -441,7 +441,7 @@ def export_historical_data(args, unit_id):
                 }
             )
             return response
-        
+
         else:  # JSON format
             data = []
             for reading in readings:
@@ -452,7 +452,7 @@ def export_historical_data(args, unit_id):
                     'sensor_name': reading.name,
                     'unit': reading.unit
                 })
-            
+
             return jsonify({
                 'unit_id': unit_id,
                 'unit_name': unit.name,
@@ -462,7 +462,7 @@ def export_historical_data(args, unit_id):
                 'total_records': len(data),
                 'data': data
             })
-            
+
     except Exception as e:
         return SecurityAwareErrorHandler.handle_error(
             e, "Failed to export historical data"
@@ -475,9 +475,9 @@ def export_historical_data(args, unit_id):
 @use_args(StatisticsQuerySchema, location='query')
 def get_historical_statistics(args, unit_id):
     """Get statistical analysis of historical data for a unit.
-    
+
     Query parameters are validated using StatisticsQuerySchema.
-    
+
     ---
     tags:
       - Historical Data
@@ -508,13 +508,13 @@ def get_historical_statistics(args, unit_id):
         unit = Unit.query.get(unit_id)
         if not unit:
             return jsonify({'error': 'Unit not found'}), 404
-        
+
         # Extract validated parameters
         days = args['days']
         sensor_type = args.get('sensor_type')
-        
+
         start_time = utc_now() - timedelta(days=days)
-        
+
         # Base query
         query = db.session.query(
             Sensor.sensor_type,
@@ -529,12 +529,12 @@ def get_historical_statistics(args, unit_id):
                 SensorReading.timestamp >= start_time
             )
         )
-        
+
         if sensor_type:
             query = query.filter(Sensor.sensor_type == sensor_type)
-        
+
         stats = query.group_by(Sensor.sensor_type).all()
-        
+
         statistics = {}
         for stat in stats:
             statistics[stat.sensor_type] = {
@@ -545,7 +545,7 @@ def get_historical_statistics(args, unit_id):
                 'standard_deviation': round(float(stat.std_dev), 2) if stat.std_dev else 0,
                 'range': round(float(stat.max_value - stat.min_value), 2) if stat.max_value and stat.min_value else 0
             }
-        
+
         return jsonify({
             'unit_id': unit_id,
             'unit_name': unit.name,
@@ -554,7 +554,7 @@ def get_historical_statistics(args, unit_id):
             'statistics': statistics,
             'total_sensor_types': len(statistics)
         })
-        
+
     except Exception as e:
         return SecurityAwareErrorHandler.handle_error(
             e, "Failed to get historical statistics"

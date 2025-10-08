@@ -44,9 +44,9 @@ def permission_required(permission):
                 return SecurityAwareErrorHandler.handle_service_error(
                     Exception('Invalid token format'), 'authentication_error', 'Token validation', 401
                 )
-                
+
             user = User.query.get(user_id)
-            
+
             if not user or not user.is_active:
                 # Audit failed permission check - user not found/inactive
                 audit_permission_check(
@@ -59,7 +59,7 @@ def permission_required(permission):
                 return SecurityAwareErrorHandler.handle_service_error(
                     Exception('User not found or inactive'), 'authentication_error', 'User validation', 401
                 )
-                
+
             if not user.has_permission(permission):
                 # Audit denied permission
                 audit_permission_check(
@@ -73,7 +73,7 @@ def permission_required(permission):
                 return SecurityAwareErrorHandler.handle_service_error(
                     Exception('Insufficient permissions'), 'permission_error', f'Permission check: {permission}', 403
                 )
-            
+
             # Audit successful permission check
             audit_permission_check(
                 permission=permission,
@@ -83,7 +83,7 @@ def permission_required(permission):
                 resource=request.endpoint if request else None,
                 details={'user_role': user.role.name.value}
             )
-                
+
             return f(*args, **kwargs)
         return decorated_function
     return decorator
@@ -106,9 +106,9 @@ def role_required(*roles):
                 return SecurityAwareErrorHandler.handle_service_error(
                     Exception('Invalid token format'), 'authentication_error', 'Token validation', 401
                 )
-                
+
             user = User.query.get(user_id)
-            
+
             if not user or not user.is_active:
                 # Audit failed role check - user not found/inactive
                 audit_permission_check(
@@ -121,7 +121,7 @@ def role_required(*roles):
                 return SecurityAwareErrorHandler.handle_service_error(
                     Exception('User not found or inactive'), 'authentication_error', 'User validation', 401
                 )
-                
+
             if user.role.name.value not in roles:
                 # Audit denied role check
                 audit_permission_check(
@@ -135,7 +135,7 @@ def role_required(*roles):
                 return SecurityAwareErrorHandler.handle_service_error(
                     Exception('Insufficient role permissions'), 'permission_error', f'Role check: {roles}', 403
                 )
-            
+
             # Audit successful role check
             audit_permission_check(
                 permission=f"role:{','.join(roles)}",
@@ -145,7 +145,7 @@ def role_required(*roles):
                 resource=request.endpoint if request else None,
                 details={'user_role': user.role.name.value}
             )
-                
+
             return f(*args, **kwargs)
         return decorated_function
     return decorator
@@ -182,14 +182,14 @@ def register(data):
     security:
       - JWT: []
     """
-    
+
     # Check if role exists
     role = Role.query.get(data['role_id'])
     if not role:
         return SecurityAwareErrorHandler.handle_service_error(
             Exception('Role not found'), 'validation_error', 'Role validation', 400
         )
-    
+
     # Create new user
     user = User(
         username=data['username'],
@@ -199,19 +199,19 @@ def register(data):
         role_id=data['role_id']
     )
     user.set_password(data['password'])
-    
+
     try:
         db.session.add(user)
         db.session.commit()
-        
+
         # Refresh to get database-generated timestamp
         db.session.refresh(user)
-        
+
         user_schema = UserSchema()
         return SecurityAwareErrorHandler.create_success_response(
             user_schema.dump(user), 'User created successfully', 201
         )
-        
+
     except IntegrityError as e:
         db.session.rollback()
         if 'username' in str(e.orig):
@@ -220,7 +220,7 @@ def register(data):
             error_msg = 'Email already exists' 
         else:
             error_msg = 'Database constraint violation'
-            
+
         return SecurityAwareErrorHandler.handle_service_error(
             e, 'validation_error', f'User creation: {error_msg}', 409
         )
@@ -253,17 +253,17 @@ def login(data):
       429:
         description: Rate limit exceeded
     """
-    
+
     user = User.query.filter_by(username=data['username']).first()
-    
+
     if user and user.check_password(data['password']) and user.is_active:
         # Update last login
         user.last_login = datetime.now(timezone.utc)
         db.session.commit()
-        
+
         # Refresh to get database-generated timestamp
         db.session.refresh(user)
-        
+
         # Create tokens with string identity (JWT requirement)
         # Include additional security claims: iat (issued at) and jti (JWT ID)
         additional_claims = {
@@ -272,7 +272,7 @@ def login(data):
         }
         access_token = create_access_token(identity=str(user.id), additional_claims=additional_claims)
         refresh_token = create_refresh_token(identity=str(user.id), additional_claims={'jti': secrets.token_urlsafe(16)})
-        
+
         # Audit successful login
         audit_login_success(
             username=user.username,
@@ -282,20 +282,20 @@ def login(data):
                 'last_login': user.last_login.isoformat()
             }
         )
-        
+
         token_schema = TokenSchema()
-        
+
         response_data = {
             'access_token': access_token,
             'refresh_token': refresh_token,
             'expires_in': current_app.config['JWT_ACCESS_TOKEN_EXPIRES'].total_seconds(),
             'user': user  # Pass model object, not serialized dict
         }
-        
+
         return SecurityAwareErrorHandler.create_success_response(
             token_schema.dump(response_data), 'Login successful', 200
         )
-    
+
     # Audit failed login
     username = data.get('username', 'unknown')
     failure_reason = 'invalid_credentials'
@@ -305,13 +305,13 @@ def login(data):
         failure_reason = 'inactive_user'
     elif not user.check_password(data['password']):
         failure_reason = 'incorrect_password'
-    
+
     audit_login_failure(
         username=username,
         reason=failure_reason,
         details={'attempted_username': username}
     )
-    
+
     return SecurityAwareErrorHandler.handle_service_error(
         Exception('Invalid credentials'), 'authentication_error', 'Login attempt', 401
     )
@@ -345,21 +345,21 @@ def refresh():
         return SecurityAwareErrorHandler.handle_service_error(
             Exception('Invalid token format'), 'authentication_error', 'Token validation', 401
         )
-        
+
     user = User.query.get(user_id)
-    
+
     if not user or not user.is_active:
         return SecurityAwareErrorHandler.handle_service_error(
             Exception('User not found or inactive'), 'authentication_error', 'User validation', 401
         )
-    
+
     # Create new access token with security claims
     additional_claims = {
         'jti': secrets.token_urlsafe(16),
         'role': user.role.name.value
     }
     access_token = create_access_token(identity=str(user.id), additional_claims=additional_claims)
-    
+
     # Audit token refresh
     AuditLogger.log_authentication_event(
         AuditEventType.TOKEN_REFRESH,
@@ -367,7 +367,7 @@ def refresh():
         outcome="success",
         details={'user_id': user.id, 'role': user.role.name.value}
     )
-    
+
     return jsonify({
         'access_token': access_token,
         'expires_in': current_app.config['JWT_ACCESS_TOKEN_EXPIRES'].total_seconds()
@@ -397,14 +397,14 @@ def get_current_user():
         return SecurityAwareErrorHandler.handle_service_error(
             Exception('Invalid token format'), 'authentication_error', 'Token validation', 401
         )
-        
+
     user = User.query.get(user_id)
-    
+
     if not user or not user.is_active:
         return SecurityAwareErrorHandler.handle_service_error(
             Exception('User not found or inactive'), 'authentication_error', 'User validation', 401
         )
-    
+
     user_schema = UserSchema()
     return jsonify(user_schema.dump(user)), 200
 
@@ -461,26 +461,26 @@ def change_password():
       - JWT: []
     """
     data = request.json
-    
+
     if not data or 'current_password' not in data or 'new_password' not in data:
         return jsonify({'error': 'Current password and new password required'}), 400
-    
+
     if len(data['new_password']) < 6:
         return jsonify({'error': 'New password must be at least 6 characters long'}), 400
-    
+
     user_id, success = get_current_user_id()
     if not success or user_id is None:
         return jsonify({'error': 'Invalid token format'}), 401
-        
+
     user = User.query.get(user_id)
-    
+
     if not user or not user.is_active:
         return jsonify({'error': 'User not found or inactive'}), 401
-    
+
     if not user.check_password(data['current_password']):
         return jsonify({'error': 'Invalid current password'}), 401
-    
+
     user.set_password(data['new_password'])
     db.session.commit()
-    
+
     return jsonify({'message': 'Password changed successfully'}), 200

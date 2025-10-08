@@ -13,7 +13,7 @@ opcua_monitoring = Blueprint('opcua_monitoring', __name__, url_prefix='/api/opcu
 def get_opcua_security_status():
     """
     Get comprehensive OPC-UA security status.
-    
+
     Returns:
         JSON response with security status information
     """
@@ -22,16 +22,16 @@ def get_opcua_security_status():
             'timestamp': datetime.now(timezone.utc).isoformat(),
             'opcua': {}
         }
-        
+
         # Check if secure OPC-UA client is available
         if hasattr(current_app, 'secure_opcua_client'):
             client = current_app.secure_opcua_client
             status['opcua'] = client.get_status()
-            
+
             # Add security-specific information
             if hasattr(client, 'get_security_events'):
                 status['recent_security_events'] = client.get_security_events(limit=5)
-                
+
         # Check if standard OPC-UA client is available
         elif hasattr(current_app, 'opcua_client'):
             client = current_app.opcua_client
@@ -42,10 +42,10 @@ def get_opcua_security_status():
                 'available': False,
                 'message': 'OPC-UA client not initialized'
             }
-        
+
         logger.info("OPC-UA security status requested")
         return jsonify(status), 200
-        
+
     except Exception as e:
         logger.error(f"Error retrieving OPC-UA security status: {e}", exc_info=True)
         return jsonify({
@@ -58,20 +58,20 @@ def get_opcua_security_status():
 def get_opcua_security_events():
     """
     Get recent OPC-UA security events.
-    
+
     Returns:
         JSON response with recent security events
     """
     try:
         raw_events = []
-        
+
         # Check if secure OPC-UA client is available
         if hasattr(current_app, 'secure_opcua_client'):
             client = current_app.secure_opcua_client
-            
+
             if hasattr(client, 'get_security_events'):
                 raw_events = client.get_security_events(limit=20)
-        
+
         # Create copies of events and convert datetime objects to ISO format strings
         events = []
         for event in raw_events:
@@ -79,15 +79,15 @@ def get_opcua_security_events():
             if 'timestamp' in event_copy and hasattr(event_copy['timestamp'], 'isoformat'):
                 event_copy['timestamp'] = event_copy['timestamp'].isoformat()
             events.append(event_copy)
-        
+
         logger.info(f"Retrieved {len(events)} OPC-UA security events")
-        
+
         return jsonify({
             'events': events,
             'count': len(events),
             'timestamp': datetime.now(timezone.utc).isoformat()
         }), 200
-        
+
     except Exception as e:
         logger.error(f"Error retrieving OPC-UA security events: {e}", exc_info=True)
         return jsonify({
@@ -100,7 +100,7 @@ def get_opcua_security_events():
 def get_opcua_connection_status():
     """
     Get OPC-UA connection status.
-    
+
     Returns:
         JSON response with connection status
     """
@@ -117,9 +117,9 @@ def get_opcua_connection_status():
                 'message': 'OPC-UA client not initialized',
                 'timestamp': datetime.now(timezone.utc).isoformat()
             }), 200
-        
+
         status = client.get_status()
-        
+
         return jsonify({
             'connected': status.get('connected', False),
             'available': status.get('available', False),
@@ -127,7 +127,7 @@ def get_opcua_connection_status():
             'subscribed_nodes': status.get('subscribed_nodes', 0),
             'timestamp': datetime.now(timezone.utc).isoformat()
         }), 200
-        
+
     except Exception as e:
         logger.error(f"Error retrieving OPC-UA connection status: {e}", exc_info=True)
         return jsonify({
@@ -140,7 +140,7 @@ def get_opcua_connection_status():
 def get_opcua_nodes():
     """
     Get list of subscribed OPC-UA nodes.
-    
+
     Returns:
         JSON response with node information
     """
@@ -157,10 +157,10 @@ def get_opcua_nodes():
                 'message': 'OPC-UA client not initialized',
                 'timestamp': datetime.now(timezone.utc).isoformat()
             }), 200
-        
+
         status = client.get_status()
         mappings = status.get('mappings', {})
-        
+
         # Format node information
         nodes = []
         for node_id, mapping in mappings.items():
@@ -171,13 +171,13 @@ def get_opcua_nodes():
                 'scale_factor': mapping.get('scale_factor', 1.0),
                 'offset': mapping.get('offset', 0.0)
             })
-        
+
         return jsonify({
             'nodes': nodes,
             'count': len(nodes),
             'timestamp': datetime.now(timezone.utc).isoformat()
         }), 200
-        
+
     except Exception as e:
         logger.error(f"Error retrieving OPC-UA nodes: {e}", exc_info=True)
         return jsonify({
@@ -189,7 +189,7 @@ def get_opcua_nodes():
 def init_opcua_monitoring(app):
     """
     Initialize OPC-UA monitoring blueprint.
-    
+
     Args:
         app: Flask application instance
     """

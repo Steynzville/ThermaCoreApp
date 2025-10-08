@@ -38,7 +38,7 @@ SENSITIVE_PATTERNS = [
     (re.compile(r"password[\"']?\s*[:=]\s*[\"']?([^\"'\s,}]*)", re.IGNORECASE), 'password=***'),
     (re.compile(r"passwd[\"']?\s*[:=]\s*[\"']?([^\"'\s,}]*)", re.IGNORECASE), 'passwd=***'),
     (re.compile(r"pwd[\"']?\s*[:=]\s*[\"']?([^\"'\s,}]*)", re.IGNORECASE), 'pwd=***'),
-    
+
     # Tokens and keys
     (re.compile(r"token[\"']?\s*[:=]\s*[\"']?([^\"'\s,}]*)", re.IGNORECASE), 'token=***'),
     (re.compile(r"api[_-]?key[\"']?\s*[:=]\s*[\"']?([^\"'\s,}]*)", re.IGNORECASE), 'api_key=***'),
@@ -46,14 +46,14 @@ SENSITIVE_PATTERNS = [
     (re.compile(r"authorization[\"']?\s*[:=]\s*[\"']?([^\"'\s,}]*)", re.IGNORECASE), 'authorization=***'),
     (re.compile(r"jwt[\"']?\s*[:=]\s*[\"']?([^\"'\s,}]*)", re.IGNORECASE), 'jwt=***'),
     (re.compile(r"session[\"']?\s*[:=]\s*[\"']?([^\"'\s,}]*)", re.IGNORECASE), 'session=***'),
-    
+
     # Personal Identifiable Information (PII)
     (re.compile(r'\b\d{3}-\d{2}-\d{4}\b'), '***-**-****'),  # SSN
     (re.compile(r'\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b'), '****-****-****-****'),  # Credit card
-    
+
     # Connection strings with passwords
     (re.compile(r'://([^:]+):([^@]+)@', re.IGNORECASE), r'://\1:***@'),  # Database URLs
-    
+
     # Bearer tokens
     (re.compile(r'Bearer\s+([a-zA-Z0-9\-._~+/]+=*)', re.IGNORECASE), 'Bearer ***'),
 ]
@@ -61,12 +61,12 @@ SENSITIVE_PATTERNS = [
 
 def redact_sensitive_data(data, sensitive_keys=None, sensitive_patterns=None):
     """Recursively redact sensitive information from data structures.
-    
+
     Args:
         data: Data structure to redact (dict, list, or primitive)
         sensitive_keys: Set of keys to redact (defaults to SENSITIVE_FIELDS)
         sensitive_patterns: List of (pattern, replacement) tuples for regex-based redaction
-    
+
     Returns:
         Redacted copy of the data
     """
@@ -74,7 +74,7 @@ def redact_sensitive_data(data, sensitive_keys=None, sensitive_patterns=None):
         sensitive_keys = SENSITIVE_FIELDS
     if sensitive_patterns is None:
         sensitive_patterns = SENSITIVE_PATTERNS
-    
+
     if isinstance(data, dict):
         redacted = {}
         for key, value in data.items():
@@ -104,18 +104,18 @@ class AuditEventType(Enum):
     LOGIN_FAILURE = "login_failure"
     LOGOUT = "logout"
     TOKEN_REFRESH = "token_refresh"
-    
+
     # Authorization events  
     PERMISSION_GRANTED = "permission_granted"
     PERMISSION_DENIED = "permission_denied"
     ROLE_CHECK = "role_check"
-    
+
     # Data modification events
     CREATE = "create"
     READ = "read"
     UPDATE = "update"
     DELETE = "delete"
-    
+
     # System events
     API_ACCESS = "api_access"
     CONFIGURATION_CHANGE = "configuration_change"
@@ -132,7 +132,7 @@ class AuditSeverity(Enum):
 
 class AuditLogger:
     """Centralized audit logging functionality."""
-    
+
     @staticmethod
     def log_event(
         event_type: AuditEventType,
@@ -148,7 +148,7 @@ class AuditLogger:
         user_agent: Optional[str] = None
     ):
         """Log an audit event with comprehensive details.
-        
+
         Args:
             event_type: Type of event being logged
             user_id: ID of the user performing the action
@@ -165,7 +165,7 @@ class AuditLogger:
         try:
             # Get request context information
             request_id = RequestIDManager.get_request_id() if has_request_context() else None
-            
+
             if has_request_context() and request:
                 ip_address = ip_address or request.remote_addr
                 user_agent = user_agent or request.headers.get('User-Agent', 'Unknown')
@@ -174,7 +174,7 @@ class AuditLogger:
                 url = request.url
             else:
                 method = endpoint = url = None
-            
+
             # Try to get user information from JWT if not provided
             if not user_id and not username and has_request_context():
                 try:
@@ -188,7 +188,7 @@ class AuditLogger:
                 except Exception:
                     # Don't fail audit logging due to JWT issues or int conversion
                     pass
-            
+
             # Build audit record
             audit_record = {
                 'timestamp': datetime.now(timezone.utc).isoformat(),
@@ -208,10 +208,10 @@ class AuditLogger:
                 'user_agent': user_agent,
                 'details': redact_sensitive_data(details) if details else {}
             }
-            
+
             # Log the audit event
             audit_message = f"AUDIT: {event_type.value} - User: {username or 'Unknown'} ({user_id}) - Resource: {resource} - Action: {action} - Outcome: {outcome}"
-            
+
             if severity == AuditSeverity.CRITICAL:
                 logger.critical(audit_message, extra={'audit': audit_record})
             elif severity == AuditSeverity.ERROR:
@@ -220,11 +220,11 @@ class AuditLogger:
                 logger.warning(audit_message, extra={'audit': audit_record})
             else:
                 logger.info(audit_message, extra={'audit': audit_record})
-                
+
         except Exception as e:
             # Audit logging must never fail the main operation
             logger.error(f"Failed to log audit event: {e}")
-    
+
     @staticmethod
     def log_authentication_event(
         event_type: AuditEventType,
@@ -242,7 +242,7 @@ class AuditLogger:
             severity=severity,
             details=details
         )
-    
+
     @staticmethod
     def log_authorization_event(
         permission: str,
@@ -256,7 +256,7 @@ class AuditLogger:
         event_type = AuditEventType.PERMISSION_GRANTED if granted else AuditEventType.PERMISSION_DENIED
         outcome = "success" if granted else "denied"
         severity = AuditSeverity.WARNING if not granted else AuditSeverity.INFO
-        
+
         AuditLogger.log_event(
             event_type=event_type,
             user_id=user_id,
@@ -267,7 +267,7 @@ class AuditLogger:
             severity=severity,
             details=details or {'permission': permission}
         )
-    
+
     @staticmethod
     def log_data_event(
         operation: str,
@@ -285,10 +285,10 @@ class AuditLogger:
             'UPDATE': AuditEventType.UPDATE,
             'DELETE': AuditEventType.DELETE
         }
-        
+
         event_type = event_type_map.get(operation.upper(), AuditEventType.API_ACCESS)
         severity = AuditSeverity.WARNING if outcome != "success" else AuditSeverity.INFO
-        
+
         AuditLogger.log_event(
             event_type=event_type,
             user_id=user_id,
@@ -309,7 +309,7 @@ def audit_operation(
     include_response_data: bool = False
 ):
     """Decorator to automatically audit CRUD operations.
-    
+
     Args:
         operation: Type of operation (CREATE, READ, UPDATE, DELETE)
         resource: Resource being operated on (e.g., 'user', 'unit')
@@ -332,7 +332,7 @@ def audit_operation(
                             username = user.username
             except Exception:
                 pass
-            
+
             # Prepare audit details
             details = {}
             if include_request_data and has_request_context() and request:
@@ -344,14 +344,14 @@ def audit_operation(
                         details['request_data'] = 'Unable to parse JSON'
                 raw_query_params = request.args.to_dict(flat=False)
                 details['query_params'] = redact_sensitive_data(raw_query_params)
-            
+
             # Extract resource ID from URL path if available
             resource_id = kwargs.get('id') or kwargs.get('unit_id') or kwargs.get('user_id')
-            
+
             try:
                 # Execute the original function
                 result = f(*args, **kwargs)
-                
+
                 # Add response data to audit if requested
                 if include_response_data and hasattr(result, 'get_json'):
                     try:
@@ -360,7 +360,7 @@ def audit_operation(
                             details['response_data'] = response_data['data']
                     except Exception:
                         pass
-                
+
                 # Log successful operation
                 AuditLogger.log_data_event(
                     operation=operation,
@@ -371,9 +371,9 @@ def audit_operation(
                     outcome="success",
                     details=details if details else None
                 )
-                
+
                 return result
-                
+
             except Exception as e:
                 # Log failed operation
                 details['error'] = str(e)
@@ -387,18 +387,18 @@ def audit_operation(
                     details=details
                 )
                 raise
-                
+
         return decorated_function
     return decorator
 
 
 def setup_audit_middleware(app):
     """Set up audit logging middleware for the Flask app."""
-    
+
     # Define endpoints/paths to exclude from audit logging
     EXCLUDED_ENDPOINTS = ['health', 'metrics', 'docs', 'swagger', 'swaggerui']
     EXCLUDED_PATHS = ['/health', '/metrics', '/docs', '/api/docs', '/swagger', '/swaggerui']
-    
+
     @app.before_request
     def audit_api_access():
         """Log API access for auditing."""
@@ -407,10 +407,10 @@ def setup_audit_middleware(app):
             if (request.endpoint in EXCLUDED_ENDPOINTS or
                 any(request.path.startswith(p) for p in EXCLUDED_PATHS)):
                 return
-                
+
             # Redact sensitive query parameters before logging
             redacted_query_params = redact_sensitive_data(request.args.to_dict(flat=False))
-            
+
             AuditLogger.log_event(
                 event_type=AuditEventType.API_ACCESS,
                 resource=request.endpoint,
@@ -420,7 +420,7 @@ def setup_audit_middleware(app):
                     'content_type': request.content_type
                 }
             )
-    
+
     return app
 
 

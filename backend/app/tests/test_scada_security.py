@@ -6,17 +6,17 @@ from app import create_app
 
 class TestScadaSecurityIntegration:
     """Integration tests for SCADA endpoint security."""
-    
+
     @pytest.fixture
     def app(self):
         """Create test Flask app."""
         return create_app('testing')
-    
+
     @pytest.fixture
     def client(self, app):
         """Create test client."""
         return app.test_client()
-        
+
     @pytest.fixture
     def mock_jwt_token(self, app):
         """Create a mock JWT token for authenticated requests."""
@@ -36,7 +36,7 @@ class TestScadaSecurityIntegration:
         import os
         from unittest.mock import patch
         from config import ProductionConfig
-        
+
         # Set required environment variables for ProductionConfig instantiation
         with patch.dict(os.environ, {
             'MQTT_CA_CERTS': '/path/to/ca',
@@ -47,10 +47,10 @@ class TestScadaSecurityIntegration:
             'OPCUA_TRUST_CERT_FILE': '/path/to/opcua/trust'
         }):
             prod_config = ProductionConfig()
-            
+
             # Production config should not allow wildcard CORS
             assert '*' not in prod_config.WEBSOCKET_CORS_ORIGINS
-            
+
             # Should have specific trusted domains
             assert len(prod_config.WEBSOCKET_CORS_ORIGINS) >= 1
             assert all('http' in origin or 'https' in origin for origin in prod_config.WEBSOCKET_CORS_ORIGINS)
@@ -60,7 +60,7 @@ class TestScadaSecurityIntegration:
         import os
         from unittest.mock import patch
         from config import ProductionConfig
-        
+
         # Set required environment variables for ProductionConfig instantiation
         with patch.dict(os.environ, {
             'MQTT_CA_CERTS': '/path/to/ca',
@@ -71,23 +71,23 @@ class TestScadaSecurityIntegration:
             'OPCUA_TRUST_CERT_FILE': '/path/to/opcua/trust'
         }):
             prod_config = ProductionConfig()
-            
+
             # Production should enforce TLS for MQTT
             assert prod_config.MQTT_USE_TLS is True
-            
+
             # Production should enforce OPC UA security
             assert prod_config.OPCUA_SECURITY_POLICY != 'None'
             assert prod_config.OPCUA_SECURITY_MODE != 'None'
-        
+
     def test_development_vs_production_security_configs(self):
         """Test that production has more restrictive security than development."""
         import os
         from unittest.mock import patch
         from config import Config, ProductionConfig
-        
+
         # Development allows broader WebSocket CORS
         dev_origins = Config.WEBSOCKET_CORS_ORIGINS
-        
+
         # Set required environment variables for ProductionConfig instantiation
         with patch.dict(os.environ, {
             'MQTT_CA_CERTS': '/path/to/ca',
@@ -99,7 +99,7 @@ class TestScadaSecurityIntegration:
         }):
             prod_config = ProductionConfig()
             prod_origins = prod_config.WEBSOCKET_CORS_ORIGINS
-            
+
             # Production should be more restrictive
             assert '*' not in prod_origins
             assert len(prod_origins) <= len(dev_origins) or prod_origins != dev_origins

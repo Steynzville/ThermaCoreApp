@@ -21,7 +21,7 @@ multiprotocol_bp = Blueprint('multiprotocol', __name__)
 @permission_required('read_units')
 def get_protocols_status():
     """Get normalized status of all registered protocols with PR1a enhancements.
-    
+
     PR1a improvements:
     - Enhanced availability semantics with degraded state detection
     - Improved heartbeat staleness tracking
@@ -29,9 +29,9 @@ def get_protocols_status():
     - Token-based request tracking for audit purposes
     - Version header in response
     - Protocols list field in summary
-    
+
     Active protocol: connected == True AND status == 'ready' AND heartbeat not stale.
-    
+
     Returns:
         JSON response with protocol status information including:
         - timestamp: ISO-8601 UTC timestamp
@@ -43,13 +43,13 @@ def get_protocols_status():
         # PR1a: Track request for audit purposes
         user_identity = get_jwt_identity()
         logger.info(f"Protocol status requested by user: {user_identity}")
-        
+
         statuses = collect_protocol_status()
-        
+
         # PR1a: Enhanced active protocol counting with heartbeat staleness check
         active_count = sum(1 for s in statuses 
                           if s.get('connected') and s.get('status') == 'ready' and not s.get('is_heartbeat_stale', True))
-        
+
         # PR1a: Count protocols by availability level
         availability_summary = {
             'fully_available': sum(1 for s in statuses if s.get('availability_level') == 'fully_available'),
@@ -57,17 +57,17 @@ def get_protocols_status():
             'degraded': sum(1 for s in statuses if s.get('availability_level') == 'degraded'),
             'unavailable': sum(1 for s in statuses if s.get('availability_level') == 'unavailable')
         }
-        
+
         # PR1a: Count protocols in recovery state
         recovering_count = sum(1 for s in statuses if s.get('is_recovering', False))
-        
+
         # PR1a: Calculate overall health score
         if statuses:
             health_scores = [s.get('health_score', 0) for s in statuses]
             overall_health_score = sum(health_scores) / len(health_scores)
         else:
             overall_health_score = 0.0
-        
+
         response_data = {
             'timestamp': utc_now().isoformat(),
             'version': PROTOCOLS_API_VERSION,  # PR1a: Version header
@@ -83,13 +83,13 @@ def get_protocols_status():
             },
             'protocols': {s['name']: s for s in statuses}
         }
-        
+
         # PR1a: Log status summary for monitoring
         logger.debug(f"Protocol status summary - Active: {active_count}/{len(statuses)}, "
                     f"Health Score: {response_data['summary']['health_score']}%")
-        
+
         return jsonify(response_data)
-        
+
     except Exception as e:
         # PR1a: Enhanced error logging with user context
         logger.error(f"Failed to get protocols status for user {get_jwt_identity()}: {str(e)}")
@@ -103,11 +103,11 @@ def get_protocols_status():
 @permission_required('read_units')
 def list_modbus_devices():
     """List all Modbus devices and their status.
-    
+
     Returns:
         200: Device status information
         503: Modbus service not available
-        
+
     Example response:
         {
             "devices": {
@@ -131,7 +131,7 @@ def list_modbus_devices():
 @permission_required('admin_panel')
 def add_modbus_device():
     """Add a new Modbus TCP device to the system.
-    
+
     Request Body:
         device_id (str): Unique device identifier
         unit_id (int): Modbus unit/slave ID
@@ -139,12 +139,12 @@ def add_modbus_device():
         port (int, optional): TCP port (default: 502)
         device_type (str, optional): Device type (default: 'tcp')
         timeout (float, optional): Connection timeout (default: 5.0)
-        
+
     Returns:
         201: Device added successfully
         400: Missing required fields
         503: Modbus service not available
-        
+
     Example request:
         {
             "device_id": "pump_001",
@@ -354,7 +354,7 @@ def get_dnp3_performance_metrics():
     try:
         if not hasattr(current_app, 'dnp3_service'):
             return jsonify({'error': 'DNP3 service not available'}), 503
-        
+
         metrics = current_app.dnp3_service.get_performance_metrics()
         return jsonify(metrics)
     except Exception as e:
@@ -369,7 +369,7 @@ def get_dnp3_performance_summary():
     try:
         if not hasattr(current_app, 'dnp3_service'):
             return jsonify({'error': 'DNP3 service not available'}), 503
-        
+
         summary = current_app.dnp3_service.get_performance_summary()
         return jsonify(summary)
     except Exception as e:
@@ -384,7 +384,7 @@ def get_dnp3_device_performance(device_id):
     try:
         if not hasattr(current_app, 'dnp3_service'):
             return jsonify({'error': 'DNP3 service not available'}), 503
-        
+
         stats = current_app.dnp3_service.get_device_performance_stats(device_id)
         if 'error' in stats:
             return jsonify(stats), 404
@@ -401,23 +401,23 @@ def configure_dnp3_performance():
     try:
         if not hasattr(current_app, 'dnp3_service'):
             return jsonify({'error': 'DNP3 service not available'}), 503
-        
+
         data = request.get_json() or {}
-        
+
         # Validate input types
         caching = data.get('enable_caching', True)
         bulk_operations = data.get('enable_bulk_operations', True)
-        
+
         if not isinstance(caching, bool):
             return jsonify({'error': 'enable_caching must be a boolean'}), 400
         if not isinstance(bulk_operations, bool):
             return jsonify({'error': 'enable_bulk_operations must be a boolean'}), 400
-        
+
         current_app.dnp3_service.enable_performance_optimizations(
             caching=caching, 
             bulk_operations=bulk_operations
         )
-        
+
         return jsonify({
             'message': 'DNP3 performance configuration updated',
             'caching_enabled': caching,
@@ -436,7 +436,7 @@ def clear_dnp3_performance_metrics():
     try:
         if not hasattr(current_app, 'dnp3_service'):
             return jsonify({'error': 'DNP3 service not available'}), 503
-        
+
         current_app.dnp3_service.clear_performance_metrics()
         return jsonify({
             'message': 'DNP3 performance metrics cleared',
