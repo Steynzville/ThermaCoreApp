@@ -20,6 +20,9 @@ class TestProductionConfigValidation:
         
         # Clear MQTT cert environment variables
         with patch.dict(os.environ, {
+            'SECRET_KEY': 'test-secret-key',
+            'JWT_SECRET_KEY': 'test-jwt-secret',
+            'DATABASE_URL': 'postgresql://test:test@localhost/test',
             'MQTT_CA_CERTS': '',
             'MQTT_CERT_FILE': '',
             'MQTT_KEY_FILE': ''
@@ -33,6 +36,9 @@ class TestProductionConfigValidation:
         
         # Set MQTT certs but not OPC UA certs
         with patch.dict(os.environ, {
+            'SECRET_KEY': 'test-secret-key',
+            'JWT_SECRET_KEY': 'test-jwt-secret',
+            'DATABASE_URL': 'postgresql://test:test@localhost/test',
             'MQTT_CA_CERTS': '/path/to/ca',
             'MQTT_CERT_FILE': '/path/to/cert',
             'MQTT_KEY_FILE': '/path/to/key',
@@ -49,6 +55,9 @@ class TestProductionConfigValidation:
         
         # Set all required environment variables
         with patch.dict(os.environ, {
+            'SECRET_KEY': 'test-secret-key',
+            'JWT_SECRET_KEY': 'test-jwt-secret',
+            'DATABASE_URL': 'postgresql://test:test@localhost/test',
             'MQTT_CA_CERTS': '/path/to/ca',
             'MQTT_CERT_FILE': '/path/to/cert',
             'MQTT_KEY_FILE': '/path/to/key',
@@ -69,6 +78,9 @@ class TestProductionConfigValidation:
         
         # Set custom OPC UA security settings
         with patch.dict(os.environ, {
+            'SECRET_KEY': 'test-secret-key',
+            'JWT_SECRET_KEY': 'test-jwt-secret',
+            'DATABASE_URL': 'postgresql://test:test@localhost/test',
             'MQTT_CA_CERTS': '/path/to/ca',
             'MQTT_CERT_FILE': '/path/to/cert',
             'MQTT_KEY_FILE': '/path/to/key',
@@ -90,6 +102,9 @@ class TestProductionConfigValidation:
         
         # Set custom WebSocket CORS origins
         with patch.dict(os.environ, {
+            'SECRET_KEY': 'test-secret-key',
+            'JWT_SECRET_KEY': 'test-jwt-secret',
+            'DATABASE_URL': 'postgresql://test:test@localhost/test',
             'MQTT_CA_CERTS': '/path/to/ca',
             'MQTT_CERT_FILE': '/path/to/cert',
             'MQTT_KEY_FILE': '/path/to/key',
@@ -110,6 +125,9 @@ class TestProductionConfigValidation:
         
         # Don't set WEBSOCKET_CORS_ORIGINS
         with patch.dict(os.environ, {
+            'SECRET_KEY': 'test-secret-key',
+            'JWT_SECRET_KEY': 'test-jwt-secret',
+            'DATABASE_URL': 'postgresql://test:test@localhost/test',
             'MQTT_CA_CERTS': '/path/to/ca',
             'MQTT_CERT_FILE': '/path/to/cert',
             'MQTT_KEY_FILE': '/path/to/key',
