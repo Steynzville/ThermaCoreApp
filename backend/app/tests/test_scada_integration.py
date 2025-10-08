@@ -187,4 +187,4 @@ class TestSCADAIntegration:
                 assert 'websocket' in health_data
                 assert 'realtime_processor' in health_data
                 assert 'opcua' in health_data
-            assert 'protocol_simulator' in health_data
+                assert 'protocol_simulator' in health_data
