@@ -61,7 +61,7 @@ def validate_file_modifications():
         print(f"Checking {file_path}...")
         
         if not os.path.exists(file_path):
-            print(f"  ❌ File does not exist")
+            print("  ❌ File does not exist")
             all_valid = False
             continue
             
