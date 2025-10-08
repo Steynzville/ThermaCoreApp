@@ -252,7 +252,7 @@ class TestExceptionIntegration:
         
         assert status_code == 503
         # Should return generic message, not the actual error details
-        assert "temporarily unavailable" in response.get_json()["error"].lower()
+        assert "temporarily unavailable" in response.get_json()["error"]["message"].lower()
 
 
 if __name__ == "__main__":
