@@ -168,7 +168,7 @@ class ProductionConfig(Config):
 
 class TestingConfig(Config):
     """Testing configuration."""
-    DEBUG = False
+    DEBUG = True
     TESTING = True
     
     # Override with safe defaults for testing

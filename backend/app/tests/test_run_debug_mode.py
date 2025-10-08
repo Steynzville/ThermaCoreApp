@@ -8,12 +8,12 @@ from app import create_app
 class TestDebugModeConfiguration:
     """Test that app.debug is correctly set based on FLASK_ENV."""
     
-    def test_debug_disabled_with_testing_config(self):
-        """Test that app.debug is False when using TestingConfig."""
+    def test_debug_enabled_with_testing_config(self):
+        """Test that app.debug is True when using TestingConfig for better debugging."""
         with patch.dict(os.environ, {'FLASK_ENV': 'testing'}, clear=True):
             app = create_app()
-            assert app.debug is False, "TestingConfig should set app.debug=False"
-            assert app.config['DEBUG'] is False, "TestingConfig should set DEBUG=False"
+            assert app.debug is True, "TestingConfig should set app.debug=True for test debugging"
+            assert app.config['DEBUG'] is True, "TestingConfig should set DEBUG=True for test debugging"
             assert app.config['TESTING'] is True, "TestingConfig should set TESTING=True"
     
     def test_debug_disabled_with_production_config(self):
