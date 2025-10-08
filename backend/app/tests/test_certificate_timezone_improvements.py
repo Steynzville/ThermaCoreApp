@@ -136,29 +136,9 @@ class TestSecurityPolicyFallbackConfiguration:
     
     def test_fallback_disabled_by_default(self):
         """Test that fallback is disabled by default in development."""
-        with patch('opcua.Client'):
-            with patch.dict('os.environ', {'FLASK_ENV': 'development', 'TESTING': 'false'}, clear=False):
-                mock_app = Mock()
-                mock_app.config = {
-                    'FLASK_ENV': 'development',
-                    'DEBUG': True,
-                    'TESTING': False,
-                    'OPCUA_SERVER_URL': 'opc.tcp://localhost:4840',
-                    'OPCUA_SECURITY_POLICY': 'Basic256Sha256',
-                    'OPCUA_SECURITY_MODE': 'SignAndEncrypt',
-                    'OPCUA_ALLOW_INSECURE_FALLBACK': False  # Explicit False
-                }
-                
-                opcua_client = OPCUAClient()
-                
-                with pytest.raises(ValueError, match="requires client certificates.*Set OPCUA_ALLOW_INSECURE_FALLBACK=true"):
-                    opcua_client.init_app(mock_app)
-    
-    def test_fallback_enabled_with_explicit_flag(self):
-        """Test that fallback works when explicitly enabled."""
-        with patch('opcua.Client'):
-            with patch.dict('os.environ', {'FLASK_ENV': 'development', 'TESTING': 'false'}, clear=False):
-                with patch('app.services.opcua_service.logger') as mock_logger:
+        with patch('app.services.opcua_service.opcua_available', True):
+            with patch('app.services.opcua_service.Client'):
+                with patch.dict('os.environ', {'FLASK_ENV': 'development', 'TESTING': 'false'}, clear=False):
                     mock_app = Mock()
                     mock_app.config = {
                         'FLASK_ENV': 'development',
@@ -167,17 +147,39 @@ class TestSecurityPolicyFallbackConfiguration:
                         'OPCUA_SERVER_URL': 'opc.tcp://localhost:4840',
                         'OPCUA_SECURITY_POLICY': 'Basic256Sha256',
                         'OPCUA_SECURITY_MODE': 'SignAndEncrypt',
-                        'OPCUA_ALLOW_INSECURE_FALLBACK': True  # Explicit True
+                        'OPCUA_ALLOW_INSECURE_FALLBACK': False  # Explicit False
                     }
                     
                     opcua_client = OPCUAClient()
-                    opcua_client.init_app(mock_app)
                     
-                    # Should fallback to None security
-                    assert opcua_client.security_policy == 'None'
-                    assert opcua_client.security_mode == 'None'
-                    
-                    # Verify improved logging message is used
+                    with pytest.raises(ValueError, match="requires client certificates.*Set OPCUA_ALLOW_INSECURE_FALLBACK=true"):
+                        opcua_client.init_app(mock_app)
+    
+    def test_fallback_enabled_with_explicit_flag(self):
+        """Test that fallback works when explicitly enabled."""
+        with patch('app.services.opcua_service.opcua_available', True):
+            with patch('app.services.opcua_service.Client'):
+                with patch.dict('os.environ', {'FLASK_ENV': 'development', 'TESTING': 'false'}, clear=False):
+                    with patch('app.services.opcua_service.logger') as mock_logger:
+                        mock_app = Mock()
+                        mock_app.config = {
+                            'FLASK_ENV': 'development',
+                            'DEBUG': True,
+                            'TESTING': False,
+                            'OPCUA_SERVER_URL': 'opc.tcp://localhost:4840',
+                            'OPCUA_SECURITY_POLICY': 'Basic256Sha256',
+                            'OPCUA_SECURITY_MODE': 'SignAndEncrypt',
+                            'OPCUA_ALLOW_INSECURE_FALLBACK': True  # Explicit True
+                        }
+                        
+                        opcua_client = OPCUAClient()
+                        opcua_client.init_app(mock_app)
+                        
+                        # Should fallback to None security
+                        assert opcua_client.security_policy == 'None'
+                        assert opcua_client.security_mode == 'None'
+                        
+                        # Verify improved logging message is used
                     fallback_warning_calls = [call for call in mock_logger.warning.call_args_list 
                                             if 'DEVELOPMENT ONLY' in str(call)]
                     assert len(fallback_warning_calls) > 0, "Expected development-only fallback warning not found"
@@ -190,22 +192,23 @@ class TestSecurityPolicyFallbackConfiguration:
     
     def test_no_fallback_in_production(self):
         """Test that fallback is never allowed in production regardless of flag."""
-        with patch('opcua.Client'):
-            with patch.dict('os.environ', {'FLASK_ENV': 'production', 'TESTING': 'false'}, clear=False):
-                mock_app = Mock()
-                mock_app.config = {
-                    'FLASK_ENV': 'production',
-                    'DEBUG': False,
-                    'TESTING': False,
-                    'OPCUA_SERVER_URL': 'opc.tcp://localhost:4840',
-                    'OPCUA_USERNAME': 'testuser',  # Add authentication
-                    'OPCUA_PASSWORD': 'testpass',  # Add authentication
-                    'OPCUA_SECURITY_POLICY': 'Basic256Sha256',
-                    'OPCUA_SECURITY_MODE': 'SignAndEncrypt',
-                    'OPCUA_ALLOW_INSECURE_FALLBACK': True  # Should be ignored in production
-                }
-                
-                opcua_client = OPCUAClient()
-                
-                with pytest.raises(ValueError, match="requires client certificates in production"):
-                    opcua_client.init_app(mock_app)
+        with patch('app.services.opcua_service.opcua_available', True):
+            with patch('app.services.opcua_service.Client'):
+                with patch.dict('os.environ', {'FLASK_ENV': 'production', 'TESTING': 'false'}, clear=False):
+                    mock_app = Mock()
+                    mock_app.config = {
+                        'FLASK_ENV': 'production',
+                        'DEBUG': False,
+                        'TESTING': False,
+                        'OPCUA_SERVER_URL': 'opc.tcp://localhost:4840',
+                        'OPCUA_USERNAME': 'testuser',  # Add authentication
+                        'OPCUA_PASSWORD': 'testpass',  # Add authentication
+                        'OPCUA_SECURITY_POLICY': 'Basic256Sha256',
+                        'OPCUA_SECURITY_MODE': 'SignAndEncrypt',
+                        'OPCUA_ALLOW_INSECURE_FALLBACK': True  # Should be ignored in production
+                    }
+                    
+                    opcua_client = OPCUAClient()
+                    
+                    with pytest.raises(ValueError, match="requires client certificates in production"):
+                        opcua_client.init_app(mock_app)

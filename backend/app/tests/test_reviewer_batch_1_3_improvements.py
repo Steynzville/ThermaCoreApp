@@ -165,15 +165,16 @@ class TestOPCUACertificateLoading:
                     'OPCUA_TRUST_CERT_FILE': str(cert_path)
                 }
                 
-                with patch('opcua.Client') as mock_client_class:
-                    mock_client = Mock()
-                    mock_client_class.return_value = mock_client
-                    
-                    opcua_client = OPCUAClient()
-                    opcua_client.init_app(mock_app)
-                    
-                    # Verify certificate was processed (no exception raised)
-                    assert opcua_client.trust_cert_file == str(cert_path)
+                with patch('app.services.opcua_service.opcua_available', True):
+                    with patch('app.services.opcua_service.Client') as mock_client_class:
+                        mock_client = Mock()
+                        mock_client_class.return_value = mock_client
+                        
+                        opcua_client = OPCUAClient()
+                        opcua_client.init_app(mock_app)
+                        
+                        # Verify certificate was processed (no exception raised)
+                        assert opcua_client.trust_cert_file == str(cert_path)
                 
         finally:
             cert_path.unlink()  # Clean up
@@ -194,11 +195,12 @@ class TestOPCUACertificateLoading:
                 'OPCUA_TRUST_CERT_FILE': '/nonexistent/cert.pem'
             }
             
-            with patch('opcua.Client'):
-                opcua_client = OPCUAClient()
-                
-                with pytest.raises(ValueError, match="OPC UA trust certificate file does not exist"):
-                    opcua_client.init_app(mock_app)
+            with patch('app.services.opcua_service.opcua_available', True):
+                with patch('app.services.opcua_service.Client'):
+                    opcua_client = OPCUAClient()
+                    
+                    with pytest.raises(ValueError, match="OPC UA trust certificate file does not exist"):
+                        opcua_client.init_app(mock_app)
                 
     def test_certificate_loading_expired_certificate(self):
         """Test certificate loading fails with expired certificate."""
@@ -219,11 +221,12 @@ class TestOPCUACertificateLoading:
                     'OPCUA_TRUST_CERT_FILE': str(cert_path)
                 }
                 
-                with patch('opcua.Client'):
-                    opcua_client = OPCUAClient()
-                    
-                    with pytest.raises(ValueError, match="Server certificate has expired"):
-                        opcua_client.init_app(mock_app)
+                with patch('app.services.opcua_service.opcua_available', True):
+                    with patch('app.services.opcua_service.Client'):
+                        opcua_client = OPCUAClient()
+                        
+                        with pytest.raises(ValueError, match="Server certificate has expired"):
+                            opcua_client.init_app(mock_app)
                     
         finally:
             cert_path.unlink()
@@ -251,11 +254,12 @@ class TestOPCUACertificateLoading:
                     'OPCUA_TRUST_CERT_FILE': str(cert_path)
                 }
                 
-                with patch('opcua.Client'):
-                    opcua_client = OPCUAClient()
-                    
-                    with pytest.raises(ValueError, match="Invalid certificate format"):
-                        opcua_client.init_app(mock_app)
+                with patch('app.services.opcua_service.opcua_available', True):
+                    with patch('app.services.opcua_service.Client'):
+                        opcua_client = OPCUAClient()
+                        
+                        with pytest.raises(ValueError, match="Invalid certificate format"):
+                            opcua_client.init_app(mock_app)
                     
         finally:
             cert_path.unlink()
@@ -276,11 +280,12 @@ class TestOPCUACertificateLoading:
                 'OPCUA_TRUST_CERT_FILE': None  # No trust certificate
             }
             
-            with patch('opcua.Client'):
-                opcua_client = OPCUAClient()
-                
-                with pytest.raises(ValueError, match="OPC UA security must be configured in production"):
-                    opcua_client.init_app(mock_app)
+            with patch('app.services.opcua_service.opcua_available', True):
+                with patch('app.services.opcua_service.Client'):
+                    opcua_client = OPCUAClient()
+                    
+                    with pytest.raises(ValueError, match="OPC UA security must be configured in production"):
+                        opcua_client.init_app(mock_app)
 
 
 class TestImprovedExceptionHandling:

@@ -177,11 +177,12 @@ class TestSecurityHardeningImprovements:
             'OPCUA_SECURITY_MODE': 'SignAndEncrypt',
         }
         
-        with patch('opcua.Client'):
-            opcua_client = OPCUAClient()
-            
-            with pytest.raises(ValueError, match="OPC UA security policy .* is too weak for production"):
-                opcua_client.init_app(mock_app, None)
+        with patch('app.services.opcua_service.opcua_available', True):
+            with patch('app.services.opcua_service.Client'):
+                opcua_client = OPCUAClient()
+                
+                with pytest.raises(ValueError, match="OPC UA security policy .* is too weak for production"):
+                    opcua_client.init_app(mock_app, None)
     
     def test_dependency_injection_enforcement_mqtt(self):
         """Test MQTT dependency injection enforcement."""
