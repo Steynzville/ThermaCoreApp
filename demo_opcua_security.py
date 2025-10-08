@@ -176,7 +176,7 @@ def demonstrate_monitoring_endpoints():
     for i, endpoint in enumerate(endpoints, 1):
         print(f"{i}. {endpoint['method']} {endpoint['path']}")
         print(f"   Description: {endpoint['description']}")
-        print(f"   Example Response:")
+        print("   Example Response:")
         
         import json
         response_json = json.dumps(endpoint['response'], indent=6)

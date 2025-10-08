@@ -10,7 +10,6 @@ This script verifies that all the issues mentioned in the problem statement are 
 
 import os
 import sys
-import tempfile
 import json
 
 def test_database_creation():
@@ -139,7 +138,7 @@ def test_authentication_flow():
                 return False
             
             print("\n  • data.access_token: ✓ Present")
-            print(f"  • data.refresh_token: ✓ Present")
+            print("  • data.refresh_token: ✓ Present")
             print(f"  • data.expires_in: {inner_data['expires_in']} seconds")
             print(f"  • data.user.username: {inner_data['user']['username']}")
             print(f"  • data.user.email: {inner_data['user']['email']}")
