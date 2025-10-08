@@ -189,6 +189,21 @@ class TestingConfig(Config):
         'pool_size': 5,
         'pool_pre_ping': True
     } if _use_postgres_tests else {})
+    
+    # Disable rate limiting in tests
+    RATE_LIMIT_ENABLED = False
+    
+    # Disable TLS enforcement in tests
+    MQTT_USE_TLS = False
+    OPCUA_SECURITY_POLICY = 'None'
+    OPCUA_SECURITY_MODE = 'None'
+    
+    # Permissive CORS for tests
+    CORS_ORIGINS = ['*']
+    WEBSOCKET_CORS_ORIGINS = ['*']
+    
+    # Disable validation for tests
+    VALIDATE_JSON_REQUESTS = True  # Keep enabled but with test-friendly behavior
 
 
 # Configuration dictionary
