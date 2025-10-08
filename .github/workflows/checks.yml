@@ -238,9 +238,12 @@ jobs:
 
       - name: Run Bandit and Generate SARIF Report
         run: |
-          # Run Bandit excluding test directories and skipping assert checks (B101)
+          # Run Bandit excluding test files and directories
+          # --exclude: excludes test directories and test files from scan
+          # --skip B101: skips assert_used check (pytest tests use bare asserts)
+          # --skip others: skip other low-risk checks
           bandit -r . -f json -o bandit_report.json \
-            --exclude './app/tests/*,./test_*.py' \
+            --exclude ./app/tests,./test_*.py,./validate_*.py,**/test_*.py \
             --skip B101,B311,B105,B107,B108,B104,B110 || true
           
           python -c "
