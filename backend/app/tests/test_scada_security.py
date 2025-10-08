@@ -39,6 +39,9 @@ class TestScadaSecurityIntegration:
         
         # Set required environment variables for ProductionConfig instantiation
         with patch.dict(os.environ, {
+            'SECRET_KEY': 'test-secret-key',
+            'JWT_SECRET_KEY': 'test-jwt-secret',
+            'DATABASE_URL': 'postgresql://test:test@localhost/test',
             'MQTT_CA_CERTS': '/path/to/ca',
             'MQTT_CERT_FILE': '/path/to/cert',
             'MQTT_KEY_FILE': '/path/to/key',
@@ -63,6 +66,9 @@ class TestScadaSecurityIntegration:
         
         # Set required environment variables for ProductionConfig instantiation
         with patch.dict(os.environ, {
+            'SECRET_KEY': 'test-secret-key',
+            'JWT_SECRET_KEY': 'test-jwt-secret',
+            'DATABASE_URL': 'postgresql://test:test@localhost/test',
             'MQTT_CA_CERTS': '/path/to/ca',
             'MQTT_CERT_FILE': '/path/to/cert',
             'MQTT_KEY_FILE': '/path/to/key',
@@ -90,6 +96,9 @@ class TestScadaSecurityIntegration:
         
         # Set required environment variables for ProductionConfig instantiation
         with patch.dict(os.environ, {
+            'SECRET_KEY': 'test-secret-key',
+            'JWT_SECRET_KEY': 'test-jwt-secret',
+            'DATABASE_URL': 'postgresql://test:test@localhost/test',
             'MQTT_CA_CERTS': '/path/to/ca',
             'MQTT_CERT_FILE': '/path/to/cert',
             'MQTT_KEY_FILE': '/path/to/key',
