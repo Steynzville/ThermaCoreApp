@@ -26,9 +26,8 @@ def _init_database():
             print("Using PostgreSQL migration script for schema initialization...")
             # Use PostgreSQL migration script for PostgreSQL tests
             schema_path = os.path.join(
-                os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
-                'migrations', 
-                '001_initial_schema.sql'
+                os.path.dirname(__file__),
+                '../../migrations/001_initial_schema.sql'
             )
             print(f"Schema file path: {schema_path}")
             
