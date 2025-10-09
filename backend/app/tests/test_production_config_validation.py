@@ -141,3 +141,63 @@ class TestProductionConfigValidation:
             # Should have secure default (not wildcard)
             assert config.WEBSOCKET_CORS_ORIGINS == ['https://yourdomain.com']
             assert '*' not in config.WEBSOCKET_CORS_ORIGINS
+    
+    def test_production_config_rejects_wildcard_cors(self):
+        """Test that ProductionConfig rejects wildcard CORS origins."""
+        from config import ProductionConfig
+        
+        # Try to set wildcard CORS origins
+        with patch.dict(os.environ, {
+            'SECRET_KEY': 'test-secret-key',
+            'JWT_SECRET_KEY': 'test-jwt-secret',
+            'DATABASE_URL': 'postgresql://test:test@localhost/test',
+            'MQTT_CA_CERTS': '/path/to/ca',
+            'MQTT_CERT_FILE': '/path/to/cert',
+            'MQTT_KEY_FILE': '/path/to/key',
+            'OPCUA_CERT_FILE': '/path/to/opcua/cert',
+            'OPCUA_PRIVATE_KEY_FILE': '/path/to/opcua/key',
+            'OPCUA_TRUST_CERT_FILE': '/path/to/opcua/trust',
+            'WEBSOCKET_CORS_ORIGINS': '*'
+        }, clear=False):
+            with pytest.raises(ValueError, match="Wildcard CORS origins"):
+                ProductionConfig()
+    
+    def test_production_config_rejects_http_cors(self):
+        """Test that ProductionConfig rejects HTTP (non-HTTPS) CORS origins."""
+        from config import ProductionConfig
+        
+        # Try to set HTTP CORS origins
+        with patch.dict(os.environ, {
+            'SECRET_KEY': 'test-secret-key',
+            'JWT_SECRET_KEY': 'test-jwt-secret',
+            'DATABASE_URL': 'postgresql://test:test@localhost/test',
+            'MQTT_CA_CERTS': '/path/to/ca',
+            'MQTT_CERT_FILE': '/path/to/cert',
+            'MQTT_KEY_FILE': '/path/to/key',
+            'OPCUA_CERT_FILE': '/path/to/opcua/cert',
+            'OPCUA_PRIVATE_KEY_FILE': '/path/to/opcua/key',
+            'OPCUA_TRUST_CERT_FILE': '/path/to/opcua/trust',
+            'WEBSOCKET_CORS_ORIGINS': 'http://app.example.com'
+        }, clear=False):
+            with pytest.raises(ValueError, match="must use HTTPS"):
+                ProductionConfig()
+    
+    def test_production_config_rejects_mixed_http_https_cors(self):
+        """Test that ProductionConfig rejects mixed HTTP/HTTPS CORS origins."""
+        from config import ProductionConfig
+        
+        # Try to set mixed HTTP and HTTPS CORS origins
+        with patch.dict(os.environ, {
+            'SECRET_KEY': 'test-secret-key',
+            'JWT_SECRET_KEY': 'test-jwt-secret',
+            'DATABASE_URL': 'postgresql://test:test@localhost/test',
+            'MQTT_CA_CERTS': '/path/to/ca',
+            'MQTT_CERT_FILE': '/path/to/cert',
+            'MQTT_KEY_FILE': '/path/to/key',
+            'OPCUA_CERT_FILE': '/path/to/opcua/cert',
+            'OPCUA_PRIVATE_KEY_FILE': '/path/to/opcua/key',
+            'OPCUA_TRUST_CERT_FILE': '/path/to/opcua/trust',
+            'WEBSOCKET_CORS_ORIGINS': 'https://app.example.com,http://admin.example.com'
+        }, clear=False):
+            with pytest.raises(ValueError, match="must use HTTPS"):
+                ProductionConfig()

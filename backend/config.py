@@ -140,7 +140,18 @@ class ProductionConfig(Config):
             # If not explicitly set, use a secure default (no wildcard)
             self.WEBSOCKET_CORS_ORIGINS = ['https://yourdomain.com']
         else:
-            self.WEBSOCKET_CORS_ORIGINS = _prod_websocket_origins.split(',')
+            origins = [origin.strip() for origin in _prod_websocket_origins.split(',') if origin.strip()]
+            
+            # Validate no wildcard in production
+            if '*' in origins:
+                raise ValueError("Wildcard CORS origins ('*') are not allowed in production")
+            
+            # Validate all origins use HTTPS in production
+            for origin in origins:
+                if not origin.startswith('https://'):
+                    raise ValueError(f"Production CORS origins must use HTTPS. Invalid origin: {origin}")
+            
+            self.WEBSOCKET_CORS_ORIGINS = origins
         
         # Enforce MQTT TLS in production if certificates are provided
         if os.environ.get("MQTT_CA_CERTS") and os.environ.get("MQTT_CERT_FILE") and os.environ.get("MQTT_KEY_FILE"):
