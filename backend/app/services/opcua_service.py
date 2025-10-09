@@ -31,6 +31,11 @@ class OPCUAClient:
         'Aes256_Sha256_RsaPss': 'strong'
     }
     
+    # Security policies that can work without client certificates
+    # Most OPC UA security policies require client certificates for authentication
+    # Only 'None' is guaranteed to work without certificates
+    POLICIES_WITHOUT_CERTIFICATES = ['None']
+    
     def __init__(self, app=None, data_storage_service=None):
         """Initialize OPC UA client.
         
@@ -283,9 +288,7 @@ class OPCUAClient:
                     if not (self.cert_file and self.private_key_file):
                         # Without client certificates, most OPC UA security policies cannot be used
                         # Check if this is a policy that can work without client certificates
-                        policies_that_may_work_without_certs = ['None']  # Only None is guaranteed to work
-                        
-                        if self.security_policy not in policies_that_may_work_without_certs:
+                        if self.security_policy not in self.POLICIES_WITHOUT_CERTIFICATES:
                             if is_prod:
                                 # In production, require certificates for non-None policies
                                 raise ValueError(f"OPC UA security policy '{self.security_policy}' requires client certificates in production. "
