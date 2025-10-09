@@ -2,6 +2,10 @@
 from pathlib import Path
 import os
 
+# Constants for search depth limits
+MAX_PARENT_SEARCH_DEPTH = 5
+MAX_REPO_ROOT_SEARCH_DEPTH = 10
+
 
 def find_workflow_file(filename='checks.yml'):
     """
@@ -14,7 +18,7 @@ def find_workflow_file(filename='checks.yml'):
         filename: The workflow filename to search for (default: 'checks.yml')
     
     Returns:
-        Path: The resolved path to the workflow file
+        pathlib.Path: The resolved path to the workflow file
         
     Raises:
         FileNotFoundError: If the workflow file cannot be found in any location
@@ -31,9 +35,9 @@ def find_workflow_file(filename='checks.yml'):
     if cwd_path.exists():
         return cwd_path
     
-    # Strategy 3: Search parent directories (up to 5 levels)
+    # Strategy 3: Search parent directories
     current = Path.cwd()
-    for _ in range(5):
+    for _ in range(MAX_PARENT_SEARCH_DEPTH):
         candidate = current / '.github' / 'workflows' / filename
         if candidate.exists():
             return candidate
@@ -45,7 +49,7 @@ def find_workflow_file(filename='checks.yml'):
     # Strategy 4: Repository root detection via common markers
     # Look for markers like .git, .github, package.json, etc.
     current = Path(__file__).resolve()
-    for _ in range(10):  # Search up to 10 levels
+    for _ in range(MAX_REPO_ROOT_SEARCH_DEPTH):
         parent = current.parent
         if parent == current:  # Reached filesystem root
             break
@@ -66,8 +70,8 @@ def find_workflow_file(filename='checks.yml'):
     search_paths = [
         repo_root_from_test / '.github' / 'workflows' / filename,
         cwd_path,
-        'Parent directories up to 5 levels',
-        'Repository root detection (up to 10 levels)',
+        f'Parent directories up to {MAX_PARENT_SEARCH_DEPTH} levels',
+        f'Repository root detection (up to {MAX_REPO_ROOT_SEARCH_DEPTH} levels)',
     ]
     if 'GITHUB_WORKSPACE' in os.environ:
         search_paths.append(f"GITHUB_WORKSPACE: {os.environ['GITHUB_WORKSPACE']}")
