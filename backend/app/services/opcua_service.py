@@ -317,6 +317,9 @@ class OPCUAClient:
                         else:
                             # Certificates not provided - this case was already validated above
                             # If we reach here, OPCUA_ALLOW_INSECURE_FALLBACK is true in development
+                            allow_fallback = app.config.get('OPCUA_ALLOW_INSECURE_FALLBACK', False)
+                            if not allow_fallback:
+                                raise AssertionError("Reached insecure fallback without OPCUA_ALLOW_INSECURE_FALLBACK being True. This is a bug.")
                             logger.warning(f"DEVELOPMENT ONLY: Falling back to insecure OPC UA connection (no encryption/authentication) "
                                          f"due to missing client certificates. Original policy: {self.security_policy}/{self.security_mode}. "
                                          f"This fallback is ONLY allowed in development and controlled by OPCUA_ALLOW_INSECURE_FALLBACK=true")
