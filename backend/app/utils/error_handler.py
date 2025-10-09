@@ -500,7 +500,7 @@ class SecurityAwareErrorHandler:
                         },
                         'request_id': request_id,
                         'timestamp': datetime.utcnow().isoformat() + 'Z'
-                    }), 422
+                    }), 401
                 
                 @jwt_manager.revoked_token_loader
                 def revoked_token_callback(jwt_header, jwt_payload):
