@@ -23,10 +23,13 @@ class RateLimiter:
     def _cleanup_memory_cache(self):
         """Clean expired entries from in-memory cache."""
         current_time = time.time()
-        expired_keys = [
-            key for key, (count, window_start) in self._in_memory_cache.items()
-            if current_time - window_start > 60  # Clean entries older than 1 minute
-        ]
+        expired_keys = []
+        for key, requests in self._in_memory_cache.items():
+            if isinstance(requests, list) and len(requests) > 0:
+                # Check if the newest request is older than 1 minute
+                newest_request = max(requests)
+                if current_time - newest_request > 60:
+                    expired_keys.append(key)
         for key in expired_keys:
             del self._in_memory_cache[key]
     
@@ -203,13 +206,22 @@ def rate_limit(limit: int, window_seconds: int = 60, per: str = 'ip', key_func: 
             
             # Add rate limit headers to response
             response = f(*args, **kwargs)
-            if hasattr(response, 'headers'):
-                response.headers['X-RateLimit-Limit'] = str(rate_info['limit'])
-                response.headers['X-RateLimit-Remaining'] = str(rate_info['remaining'])
-                response.headers['X-RateLimit-Reset'] = str(rate_info['reset_time'])
-                response.headers['X-RateLimit-Window'] = str(rate_info['window_seconds'])
+            
+            # Handle different response types
+            response_obj = None
+            if isinstance(response, tuple):
+                # Response is (response_obj, status_code) or (response_obj, status_code, headers)
+                response_obj = response[0]
+            elif hasattr(response, 'headers'):
+                response_obj = response
+            
+            if response_obj and hasattr(response_obj, 'headers'):
+                response_obj.headers['X-RateLimit-Limit'] = str(rate_info['limit'])
+                response_obj.headers['X-RateLimit-Remaining'] = str(rate_info['remaining'])
+                response_obj.headers['X-RateLimit-Reset'] = str(rate_info['reset_time'])
+                response_obj.headers['X-RateLimit-Window'] = str(rate_info['window_seconds'])
                 if rate_info.get('fallback'):
-                    response.headers['X-RateLimit-Fallback'] = 'true'
+                    response_obj.headers['X-RateLimit-Fallback'] = 'true'
             
             return response
         return decorated_function
