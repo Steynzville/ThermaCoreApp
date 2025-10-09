@@ -110,5 +110,16 @@ class TestScadaSecurityIntegration:
             prod_origins = prod_config.WEBSOCKET_CORS_ORIGINS
             
             # Production should be more restrictive
-            assert '*' not in prod_origins
+            assert '*' not in prod_origins, "Production must not allow wildcard CORS"
+            
+            # Production must use HTTPS only
+            assert all(origin.startswith('https://') for origin in prod_origins), \
+                "Production CORS origins must use HTTPS only"
+            
+            # Development can use HTTP, production cannot
+            assert any(origin.startswith('http://') and not origin.startswith('https://') 
+                      for origin in dev_origins), \
+                "Development should allow HTTP origins"
+            
+            # Production should be more restrictive than development
             assert len(prod_origins) <= len(dev_origins) or prod_origins != dev_origins
