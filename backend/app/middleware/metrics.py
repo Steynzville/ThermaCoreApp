@@ -316,6 +316,9 @@ def setup_metrics_middleware(app):
     @app.before_request
     def before_request():
         """Start metrics collection for request."""
+        # Clear the metrics recorded flag for this new request
+        g._metrics_recorded = False
+        
         collector = get_metrics_collector()
         # Use request.path as fallback to ensure consistent endpoint tracking
         endpoint = request.endpoint or request.path
