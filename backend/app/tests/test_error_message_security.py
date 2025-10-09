@@ -1,6 +1,4 @@
 """Tests for secure error message handling in historical and analytics routes."""
-import pytest
-from app import create_app
 
 
 class TestErrorMessageSecurity:
