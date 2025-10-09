@@ -242,8 +242,10 @@ class TestSecurityHardeningImprovements:
         mock_app = Mock()
         mock_app.config = {
             'FLASK_ENV': 'development',
+            'DEBUG': True,  # Needed for environment detection to recognize as development
             'MQTT_BROKER_HOST': 'invalid_host',
             'MQTT_BROKER_PORT': 1883,
+            'MQTT_USE_TLS': False,  # Explicit TLS setting for development
         }
         
         with patch('paho.mqtt.client.Client') as mock_client_class:
