@@ -425,8 +425,6 @@ class SecurityAwareErrorHandler:
         # Register JWT error handlers if flask-jwt-extended is available
         # In Flask-JWT-Extended v4+, we need to use the jwt object's callbacks
         try:
-            from flask_jwt_extended import JWTManager
-            
             # Check if JWT extension is registered with the app
             # Flask-JWT-Extended registers itself as 'flask-jwt-extended' in app.extensions
             if 'flask-jwt-extended' in app.extensions:
