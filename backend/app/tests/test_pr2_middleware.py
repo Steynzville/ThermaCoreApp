@@ -317,6 +317,9 @@ class TestMetricsCollector:
         # Reset metrics to ensure clean state
         reset_metrics_collector()
         
+        # Allow Flask to handle exceptions and return 500 response
+        app.config['PROPAGATE_EXCEPTIONS'] = False
+        
         # Set up middleware
         setup_metrics_middleware(app)
         
