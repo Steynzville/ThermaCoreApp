@@ -147,6 +147,7 @@ class TestProductionConfigValidation:
         from config import ProductionConfig
         
         # Try to set wildcard CORS origins
+        # Must set FLASK_ENV and APP_ENV to 'production' to trigger validation
         with patch.dict(os.environ, {
             'SECRET_KEY': 'test-secret-key',
             'JWT_SECRET_KEY': 'test-jwt-secret',
@@ -157,7 +158,11 @@ class TestProductionConfigValidation:
             'OPCUA_CERT_FILE': '/path/to/opcua/cert',
             'OPCUA_PRIVATE_KEY_FILE': '/path/to/opcua/key',
             'OPCUA_TRUST_CERT_FILE': '/path/to/opcua/trust',
-            'WEBSOCKET_CORS_ORIGINS': '*'
+            'WEBSOCKET_CORS_ORIGINS': '*',
+            'FLASK_ENV': 'production',
+            'APP_ENV': 'production',
+            'CI': '',  # Clear CI flag to simulate true production
+            'PYTEST_CURRENT_TEST': ''  # Clear test flag
         }, clear=False):
             with pytest.raises(ValueError, match="Wildcard CORS origins"):
                 ProductionConfig()
@@ -167,6 +172,7 @@ class TestProductionConfigValidation:
         from config import ProductionConfig
         
         # Try to set HTTP CORS origins
+        # Must set FLASK_ENV and APP_ENV to 'production' to trigger validation
         with patch.dict(os.environ, {
             'SECRET_KEY': 'test-secret-key',
             'JWT_SECRET_KEY': 'test-jwt-secret',
@@ -177,7 +183,11 @@ class TestProductionConfigValidation:
             'OPCUA_CERT_FILE': '/path/to/opcua/cert',
             'OPCUA_PRIVATE_KEY_FILE': '/path/to/opcua/key',
             'OPCUA_TRUST_CERT_FILE': '/path/to/opcua/trust',
-            'WEBSOCKET_CORS_ORIGINS': 'http://app.example.com'
+            'WEBSOCKET_CORS_ORIGINS': 'http://app.example.com',
+            'FLASK_ENV': 'production',
+            'APP_ENV': 'production',
+            'CI': '',  # Clear CI flag to simulate true production
+            'PYTEST_CURRENT_TEST': ''  # Clear test flag
         }, clear=False):
             with pytest.raises(ValueError, match="must use HTTPS"):
                 ProductionConfig()
@@ -187,6 +197,7 @@ class TestProductionConfigValidation:
         from config import ProductionConfig
         
         # Try to set mixed HTTP and HTTPS CORS origins
+        # Must set FLASK_ENV and APP_ENV to 'production' to trigger validation
         with patch.dict(os.environ, {
             'SECRET_KEY': 'test-secret-key',
             'JWT_SECRET_KEY': 'test-jwt-secret',
@@ -197,7 +208,11 @@ class TestProductionConfigValidation:
             'OPCUA_CERT_FILE': '/path/to/opcua/cert',
             'OPCUA_PRIVATE_KEY_FILE': '/path/to/opcua/key',
             'OPCUA_TRUST_CERT_FILE': '/path/to/opcua/trust',
-            'WEBSOCKET_CORS_ORIGINS': 'https://app.example.com,http://admin.example.com'
+            'WEBSOCKET_CORS_ORIGINS': 'https://app.example.com,http://admin.example.com',
+            'FLASK_ENV': 'production',
+            'APP_ENV': 'production',
+            'CI': '',  # Clear CI flag to simulate true production
+            'PYTEST_CURRENT_TEST': ''  # Clear test flag
         }, clear=False):
             with pytest.raises(ValueError, match="must use HTTPS"):
                 ProductionConfig()
