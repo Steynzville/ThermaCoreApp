@@ -1,20 +1,8 @@
 """Tests for secure error message handling in historical and analytics routes."""
-import pytest
-from app import create_app
 
 
 class TestErrorMessageSecurity:
     """Test that error responses don't expose sensitive exception details."""
-    
-    @pytest.fixture
-    def app(self):
-        """Create test Flask app."""
-        return create_app('testing')
-    
-    @pytest.fixture
-    def client(self, app):
-        """Create test client."""
-        return app.test_client()
     
     def get_auth_token(self, client, username='admin', password='admin123'):
         """Helper method to get auth token."""

@@ -172,7 +172,8 @@ def handle_webargs_error(error, req, schema, *, error_status_code, error_headers
     
     # Abort with the error status code and attach response data
     # We'll catch this in a Flask error handler
-    response = make_response(jsonify(error_response), error_status_code or 400)
+    # Use 422 (Unprocessable Entity) as default for validation errors (webargs convention)
+    response = make_response(jsonify(error_response), error_status_code or 422)
     abort(response)
 
 

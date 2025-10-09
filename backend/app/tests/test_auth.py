@@ -55,7 +55,8 @@ class TestAuthentication:
             headers={'Content-Type': 'application/json'}
         )
         
-        assert response.status_code == 400
+        # Webargs returns 422 for validation errors (Unprocessable Entity)
+        assert response.status_code == 422
         data = unwrap_response(response)
         # Check for validation error in any form (structured or simple)
         data_str = str(data).lower()
