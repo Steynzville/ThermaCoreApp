@@ -21,7 +21,13 @@ class RateLimiter:
         return f"rate_limit:{identifier}"
     
     def _cleanup_memory_cache(self):
-        """Clean expired entries from in-memory cache."""
+        """
+        Clean expired entries from in-memory cache.
+        
+        Note: The in-memory cache stores request timestamps as lists of floats.
+        Each key maps to a list of Unix timestamps representing when requests were made.
+        This method removes cache entries where all requests are older than 60 seconds.
+        """
         current_time = time.time()
         expired_keys = []
         for key, requests in self._in_memory_cache.items():

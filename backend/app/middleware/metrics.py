@@ -13,6 +13,57 @@ from werkzeug.exceptions import HTTPException
 from app.middleware.request_id import RequestIDManager
 
 
+# HTTP status code to exception name mapping for synthetic exception tracking
+# Used when HTTPExceptions are converted to responses before reaching teardown
+HTTP_STATUS_TO_EXCEPTION_NAME = {
+    400: 'BadRequest',
+    401: 'Unauthorized',
+    403: 'Forbidden',
+    404: 'NotFound',
+    405: 'MethodNotAllowed',
+    406: 'NotAcceptable',
+    408: 'RequestTimeout',
+    409: 'Conflict',
+    410: 'Gone',
+    411: 'LengthRequired',
+    412: 'PreconditionFailed',
+    413: 'RequestEntityTooLarge',
+    414: 'RequestURITooLarge',
+    415: 'UnsupportedMediaType',
+    416: 'RequestedRangeNotSatisfiable',
+    417: 'ExpectationFailed',
+    422: 'UnprocessableEntity',
+    423: 'Locked',
+    424: 'FailedDependency',
+    428: 'PreconditionRequired',
+    429: 'TooManyRequests',
+    431: 'RequestHeaderFieldsTooLarge',
+    451: 'UnavailableForLegalReasons',
+    500: 'InternalServerError',
+    501: 'NotImplemented',
+    502: 'BadGateway',
+    503: 'ServiceUnavailable',
+    504: 'GatewayTimeout',
+    505: 'HTTPVersionNotSupported'
+}
+
+
+class SyntheticHTTPException(Exception):
+    """
+    Exception-like object for tracking HTTP errors in metrics.
+    
+    Used when HTTPExceptions are converted to responses by Flask
+    before reaching the teardown handler. This allows consistent
+    error tracking in metrics regardless of how the error was handled.
+    """
+    
+    def __init__(self, message: str, code: int, exception_name: str):
+        super().__init__(message)
+        self.code = code
+        # Set the class name to match the HTTP exception type
+        self.__class__.__name__ = exception_name
+
+
 class MetricsCollector:
     """Thread-safe metrics collector for API performance monitoring."""
     
@@ -363,51 +414,15 @@ def setup_metrics_middleware(app):
             # For 4xx/5xx responses, create synthetic exception for error tracking
             # This handles HTTPExceptions that Flask converts to responses
             if response.status_code >= 400:
-                # Map common HTTP status codes to exception names
-                status_to_exception = {
-                    400: 'BadRequest',
-                    401: 'Unauthorized',
-                    403: 'Forbidden',
-                    404: 'NotFound',
-                    405: 'MethodNotAllowed',
-                    406: 'NotAcceptable',
-                    408: 'RequestTimeout',
-                    409: 'Conflict',
-                    410: 'Gone',
-                    411: 'LengthRequired',
-                    412: 'PreconditionFailed',
-                    413: 'RequestEntityTooLarge',
-                    414: 'RequestURITooLarge',
-                    415: 'UnsupportedMediaType',
-                    416: 'RequestedRangeNotSatisfiable',
-                    417: 'ExpectationFailed',
-                    422: 'UnprocessableEntity',
-                    423: 'Locked',
-                    424: 'FailedDependency',
-                    428: 'PreconditionRequired',
-                    429: 'TooManyRequests',
-                    431: 'RequestHeaderFieldsTooLarge',
-                    451: 'UnavailableForLegalReasons',
-                    500: 'InternalServerError',
-                    501: 'NotImplemented',
-                    502: 'BadGateway',
-                    503: 'ServiceUnavailable',
-                    504: 'GatewayTimeout',
-                    505: 'HTTPVersionNotSupported'
-                }
-                
-                # Create a synthetic HTTPException for tracking
-                exc_class_name = status_to_exception.get(response.status_code, f'HTTP{response.status_code}')
+                # Map status code to exception name using module-level constant
+                exc_class_name = HTTP_STATUS_TO_EXCEPTION_NAME.get(
+                    response.status_code, 
+                    f'HTTP{response.status_code}'
+                )
                 error_msg = f"{response.status_code} {exc_class_name.replace('_', ' ')}"
                 
-                # Create exception-like object for consistent tracking
-                class SyntheticHTTPException(Exception):
-                    def __init__(self, message, code):
-                        super().__init__(message)
-                        self.code = code
-                
-                synthetic_exc = SyntheticHTTPException(error_msg, response.status_code)
-                synthetic_exc.__class__.__name__ = exc_class_name
+                # Create synthetic exception for consistent error tracking
+                synthetic_exc = SyntheticHTTPException(error_msg, response.status_code, exc_class_name)
                 
                 collector.record_request_end(response.status_code, synthetic_exc)
             else:
