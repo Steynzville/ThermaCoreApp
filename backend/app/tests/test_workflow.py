@@ -1,16 +1,88 @@
 """Test workflow configuration and CI/CD setup."""
 from pathlib import Path
+import os
+
+
+def find_workflow_file(filename='checks.yml'):
+    """
+    Find a workflow file using robust path resolution with multiple fallbacks.
+    
+    This function attempts to locate workflow files in various ways to ensure
+    reliability across different environments (local development, CI, etc.).
+    
+    Args:
+        filename: The workflow filename to search for (default: 'checks.yml')
+    
+    Returns:
+        Path: The resolved path to the workflow file
+        
+    Raises:
+        FileNotFoundError: If the workflow file cannot be found in any location
+    """
+    # Strategy 1: From the test file's perspective (relative navigation)
+    test_file = Path(__file__).resolve()
+    repo_root_from_test = test_file.parent.parent.parent.parent
+    workflow_path = repo_root_from_test / '.github' / 'workflows' / filename
+    if workflow_path.exists():
+        return workflow_path
+    
+    # Strategy 2: From current working directory
+    cwd_path = Path.cwd() / '.github' / 'workflows' / filename
+    if cwd_path.exists():
+        return cwd_path
+    
+    # Strategy 3: Search parent directories (up to 5 levels)
+    current = Path.cwd()
+    for _ in range(5):
+        candidate = current / '.github' / 'workflows' / filename
+        if candidate.exists():
+            return candidate
+        parent = current.parent
+        if parent == current:  # Reached filesystem root
+            break
+        current = parent
+    
+    # Strategy 4: Repository root detection via common markers
+    # Look for markers like .git, .github, package.json, etc.
+    current = Path(__file__).resolve()
+    for _ in range(10):  # Search up to 10 levels
+        parent = current.parent
+        if parent == current:  # Reached filesystem root
+            break
+        # Check for repository root indicators
+        if any((parent / marker).exists() for marker in ['.git', 'package.json', 'pnpm-lock.yaml']):
+            candidate = parent / '.github' / 'workflows' / filename
+            if candidate.exists():
+                return candidate
+        current = parent
+    
+    # Strategy 5: Environment variable (if set in CI or other environments)
+    if 'GITHUB_WORKSPACE' in os.environ:
+        workspace_path = Path(os.environ['GITHUB_WORKSPACE']) / '.github' / 'workflows' / filename
+        if workspace_path.exists():
+            return workspace_path
+    
+    # If all strategies fail, raise an error with helpful information
+    search_paths = [
+        repo_root_from_test / '.github' / 'workflows' / filename,
+        cwd_path,
+        'Parent directories up to 5 levels',
+        'Repository root detection (up to 10 levels)',
+    ]
+    if 'GITHUB_WORKSPACE' in os.environ:
+        search_paths.append(f"GITHUB_WORKSPACE: {os.environ['GITHUB_WORKSPACE']}")
+    
+    raise FileNotFoundError(
+        f"Could not find workflow file '{filename}'. Searched:\n" +
+        "\n".join(f"  - {path}" for path in search_paths) +
+        f"\n\nCurrent working directory: {Path.cwd()}\n" +
+        f"Test file location: {test_file}"
+    )
 
 
 def _get_workflow_path():
     """Get the path to the workflow file using robust path resolution."""
-    # Start from this test file's location
-    test_file = Path(__file__).resolve()
-    # Navigate to the repository root (3 levels up from backend/app/tests/)
-    repo_root = test_file.parent.parent.parent.parent
-    # Construct path to workflow file
-    workflow_path = repo_root / '.github' / 'workflows' / 'checks.yml'
-    return workflow_path
+    return find_workflow_file('checks.yml')
 
 
 def test_workflow_file_exists():
