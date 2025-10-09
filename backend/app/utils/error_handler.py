@@ -484,7 +484,7 @@ class SecurityAwareErrorHandler:
                     """Handle missing JWT tokens."""
                     return _build_jwt_error_response(
                         error_string,
-                        f'Missing JWT token [{{request_id}}]: {error_string}',
+                        f'Missing JWT token [{request_id}]: {error_string}',
                         status_code=401
                     )
                 
