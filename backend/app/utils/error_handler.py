@@ -422,6 +422,38 @@ class SecurityAwareErrorHandler:
                 e, 'service_unavailable', 'Service unavailable', 503
             )
         
+        # Helper method for JWT error responses
+        def _build_jwt_error_response(error_message: str, log_message: str, status_code: int = 422):
+            """Build standardized JWT error response with request_id and timestamp.
+            
+            Args:
+                error_message: User-facing error message
+                log_message: Message to log
+                status_code: HTTP status code (default: 422)
+                
+            Returns:
+                Tuple of (JSON response, status_code)
+            """
+            request_id = getattr(g, 'request_id', str(uuid.uuid4()))
+            logger.warning(log_message.format(request_id=request_id), extra={
+                'request_id': request_id,
+                'error_type': 'authentication_error'
+            })
+            return jsonify({
+                'success': False,
+                'error': {
+                    'code': 'VALIDATION_ERROR',
+                    'message': 'Request data validation failed',
+                    'details': {
+                        'field_errors': {'authorization': [error_message]},
+                        'location': 'headers',
+                        'correlation_id': request_id
+                    }
+                },
+                'request_id': request_id,
+                'timestamp': datetime.utcnow().isoformat() + 'Z'
+            }), status_code
+        
         # Register JWT error handlers if flask-jwt-extended is available
         # In Flask-JWT-Extended v4+, we need to use the jwt object's callbacks
         try:
@@ -434,94 +466,35 @@ class SecurityAwareErrorHandler:
                 @jwt_manager.expired_token_loader
                 def expired_token_callback(jwt_header, jwt_payload):
                     """Handle expired JWT tokens."""
-                    request_id = getattr(g, 'request_id', str(uuid.uuid4()))
-                    logger.warning(f"Expired JWT token [{request_id}]", extra={
-                        'request_id': request_id,
-                        'error_type': 'authentication_error'
-                    })
-                    return jsonify({
-                        'success': False,
-                        'error': {
-                            'code': 'VALIDATION_ERROR',
-                            'message': 'Request data validation failed',
-                            'details': {
-                                'field_errors': {'authorization': ['Token has expired']},
-                                'location': 'headers',
-                                'correlation_id': request_id
-                            }
-                        },
-                        'request_id': request_id,
-                        'timestamp': datetime.utcnow().isoformat() + 'Z'
-                    }), 422
+                    return _build_jwt_error_response(
+                        'Token has expired',
+                        'Expired JWT token [{request_id}]'
+                    )
                 
                 @jwt_manager.invalid_token_loader
                 def invalid_token_callback(error_string):
                     """Handle invalid JWT tokens."""
-                    request_id = getattr(g, 'request_id', str(uuid.uuid4()))
-                    logger.warning(f"Invalid JWT token [{request_id}]: {error_string}", extra={
-                        'request_id': request_id,
-                        'error_type': 'authentication_error'
-                    })
-                    return jsonify({
-                        'success': False,
-                        'error': {
-                            'code': 'VALIDATION_ERROR',
-                            'message': 'Request data validation failed',
-                            'details': {
-                                'field_errors': {'authorization': [error_string]},
-                                'location': 'headers',
-                                'correlation_id': request_id
-                            }
-                        },
-                        'request_id': request_id,
-                        'timestamp': datetime.utcnow().isoformat() + 'Z'
-                    }), 422
+                    return _build_jwt_error_response(
+                        error_string,
+                        'Invalid JWT token [{request_id}]: ' + error_string
+                    )
                 
                 @jwt_manager.unauthorized_loader
                 def unauthorized_callback(error_string):
                     """Handle missing JWT tokens."""
-                    request_id = getattr(g, 'request_id', str(uuid.uuid4()))
-                    logger.warning(f"Missing JWT token [{request_id}]: {error_string}", extra={
-                        'request_id': request_id,
-                        'error_type': 'authentication_error'
-                    })
-                    return jsonify({
-                        'success': False,
-                        'error': {
-                            'code': 'VALIDATION_ERROR',
-                            'message': 'Request data validation failed',
-                            'details': {
-                                'field_errors': {'authorization': [error_string]},
-                                'location': 'headers',
-                                'correlation_id': request_id
-                            }
-                        },
-                        'request_id': request_id,
-                        'timestamp': datetime.utcnow().isoformat() + 'Z'
-                    }), 401
+                    return _build_jwt_error_response(
+                        error_string,
+                        'Missing JWT token [{request_id}]: ' + error_string,
+                        status_code=401
+                    )
                 
                 @jwt_manager.revoked_token_loader
                 def revoked_token_callback(jwt_header, jwt_payload):
                     """Handle revoked JWT tokens."""
-                    request_id = getattr(g, 'request_id', str(uuid.uuid4()))
-                    logger.warning(f"Revoked JWT token [{request_id}]", extra={
-                        'request_id': request_id,
-                        'error_type': 'authentication_error'
-                    })
-                    return jsonify({
-                        'success': False,
-                        'error': {
-                            'code': 'VALIDATION_ERROR',
-                            'message': 'Request data validation failed',
-                            'details': {
-                                'field_errors': {'authorization': ['Token has been revoked']},
-                                'location': 'headers',
-                                'correlation_id': request_id
-                            }
-                        },
-                        'request_id': request_id,
-                        'timestamp': datetime.utcnow().isoformat() + 'Z'
-                    }), 422
+                    return _build_jwt_error_response(
+                        'Token has been revoked',
+                        'Revoked JWT token [{request_id}]'
+                    )
                 
         except (ImportError, RuntimeError):
             # flask-jwt-extended not available or not initialized, skip JWT error handlers
