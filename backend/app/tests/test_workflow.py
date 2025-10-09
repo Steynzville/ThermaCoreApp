@@ -1,5 +1,4 @@
 """Test workflow configuration and CI/CD setup."""
-import os
 from pathlib import Path
 
 
