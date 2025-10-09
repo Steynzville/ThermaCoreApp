@@ -165,6 +165,10 @@ def rate_limit(limit: int, window_seconds: int = 60, per: str = 'ip', key_func: 
     def decorator(f: Callable) -> Callable:
         @wraps(f)
         def decorated_function(*args, **kwargs):
+            # Check if rate limiting is disabled (e.g., in testing)
+            if not current_app.config.get('RATE_LIMIT_ENABLED', True):
+                return f(*args, **kwargs)
+            
             # Generate rate limiting identifier
             if key_func:
                 identifier = key_func()

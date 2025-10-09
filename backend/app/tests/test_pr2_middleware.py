@@ -247,6 +247,11 @@ class TestMetricsCollector:
     
     def test_collect_metrics_decorator(self, app):
         """Test metrics collection decorator (now deprecated and acts as no-op)."""
+        from app.middleware.metrics import reset_metrics_collector
+        
+        # Reset metrics to ensure clean state
+        reset_metrics_collector()
+        collector = get_metrics_collector()
         
         @collect_metrics
         def test_route():
@@ -262,8 +267,8 @@ class TestMetricsCollector:
             
             # Metrics should NOT be recorded by the decorator
             # (they would be recorded by middleware in actual usage)
-            collector = get_metrics_collector()
-            # Since we're not using middleware here, metrics should be empty
+            # Since we're not using middleware here and we reset the collector,
+            # metrics should be empty
             assert len(collector.request_count) == 0
     
     def test_metrics_middleware_integration(self, app):
