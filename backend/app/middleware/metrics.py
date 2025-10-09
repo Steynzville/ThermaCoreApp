@@ -13,6 +13,57 @@ from werkzeug.exceptions import HTTPException
 from app.middleware.request_id import RequestIDManager
 
 
+# HTTP status code to exception name mapping for synthetic exception tracking
+# Used when HTTPExceptions are converted to responses before reaching teardown
+HTTP_STATUS_TO_EXCEPTION_NAME = {
+    400: 'BadRequest',
+    401: 'Unauthorized',
+    403: 'Forbidden',
+    404: 'NotFound',
+    405: 'MethodNotAllowed',
+    406: 'NotAcceptable',
+    408: 'RequestTimeout',
+    409: 'Conflict',
+    410: 'Gone',
+    411: 'LengthRequired',
+    412: 'PreconditionFailed',
+    413: 'RequestEntityTooLarge',
+    414: 'RequestURITooLarge',
+    415: 'UnsupportedMediaType',
+    416: 'RequestedRangeNotSatisfiable',
+    417: 'ExpectationFailed',
+    422: 'UnprocessableEntity',
+    423: 'Locked',
+    424: 'FailedDependency',
+    428: 'PreconditionRequired',
+    429: 'TooManyRequests',
+    431: 'RequestHeaderFieldsTooLarge',
+    451: 'UnavailableForLegalReasons',
+    500: 'InternalServerError',
+    501: 'NotImplemented',
+    502: 'BadGateway',
+    503: 'ServiceUnavailable',
+    504: 'GatewayTimeout',
+    505: 'HTTPVersionNotSupported'
+}
+
+
+class SyntheticHTTPException(Exception):
+    """
+    Exception-like object for tracking HTTP errors in metrics.
+    
+    Used when HTTPExceptions are converted to responses by Flask
+    before reaching the teardown handler. This allows consistent
+    error tracking in metrics regardless of how the error was handled.
+    """
+    
+    def __init__(self, message: str, code: int, exception_name: str):
+        super().__init__(message)
+        self.code = code
+        # Set the class name to match the HTTP exception type
+        self.__class__.__name__ = exception_name
+
+
 class MetricsCollector:
     """Thread-safe metrics collector for API performance monitoring."""
     
@@ -299,9 +350,26 @@ def collect_metrics(f: Callable) -> Callable:
 def setup_metrics_middleware(app):
     """Set up metrics collection middleware for the Flask app."""
     
+    # Check if middleware has already been set up to avoid duplicate registration
+    if hasattr(app, '_metrics_middleware_setup'):
+        return app
+    app._metrics_middleware_setup = True
+    
+    # Use Flask signal to catch exceptions (including HTTPExceptions)
+    from flask import got_request_exception
+    
+    def handle_exception(sender, exception, **extra):
+        """Store exception in g for teardown_request to access."""
+        g.request_exception = exception
+    
+    got_request_exception.connect(handle_exception, app)
+    
     @app.before_request
     def before_request():
         """Start metrics collection for request."""
+        # Clear the metrics recorded flag for this new request
+        g._metrics_recorded = False
+        
         collector = get_metrics_collector()
         # Use request.path as fallback to ensure consistent endpoint tracking
         endpoint = request.endpoint or request.path
@@ -317,22 +385,48 @@ def setup_metrics_middleware(app):
     @app.teardown_request
     def teardown_request(exc):
         """Complete metrics collection, including errors."""
+        # Protect against multiple teardown calls (Flask test client behavior)
+        if getattr(g, '_metrics_recorded', False):
+            return
+        g._metrics_recorded = True
+        
         collector = get_metrics_collector()
         
         # Get response from g if available (normal requests)
         response = getattr(g, 'response', None)
         
-        if exc is not None:
+        # Check if there was an exception caught by the signal
+        request_exception = getattr(g, 'request_exception', None)
+        
+        # Use the exception from signal if available, otherwise use exc parameter
+        actual_exc = request_exception if request_exception is not None else exc
+        
+        if actual_exc is not None:
             # Exception occurred - check if it's a Werkzeug HTTPException with a status code
-            if isinstance(exc, HTTPException) and exc.code is not None:
-                status_code = exc.code
+            if isinstance(actual_exc, HTTPException) and actual_exc.code is not None:
+                status_code = actual_exc.code
             else:
                 # Default to 500 for non-HTTP exceptions
                 status_code = 500
-            collector.record_request_end(status_code, exc)
+            collector.record_request_end(status_code, actual_exc)
         elif response is not None:
             # Normal request with response
-            collector.record_request_end(response.status_code)
+            # For 4xx/5xx responses, create synthetic exception for error tracking
+            # This handles HTTPExceptions that Flask converts to responses
+            if response.status_code >= 400:
+                # Map status code to exception name using module-level constant
+                exc_class_name = HTTP_STATUS_TO_EXCEPTION_NAME.get(
+                    response.status_code, 
+                    f'HTTP{response.status_code}'
+                )
+                error_msg = f"{response.status_code} {exc_class_name.replace('_', ' ')}"
+                
+                # Create synthetic exception for consistent error tracking
+                synthetic_exc = SyntheticHTTPException(error_msg, response.status_code, exc_class_name)
+                
+                collector.record_request_end(response.status_code, synthetic_exc)
+            else:
+                collector.record_request_end(response.status_code)
         # If neither exc nor response, request was likely aborted before after_request
     
     return app
