@@ -129,6 +129,19 @@ def create_app(config_name=None):
     
     app.config.from_object(config_obj)
     
+    # SECURITY: Explicitly enforce debug mode based on config_name
+    # Flask may auto-enable debug from FLASK_DEBUG env var, but we require
+    # BOTH FLASK_ENV=development AND FLASK_DEBUG=1 for security
+    # Production must never have debug enabled, even if FLASK_DEBUG=1
+    if config_name == 'production':
+        app.debug = False
+    elif config_name == 'development':
+        # Development config should have debug enabled
+        app.debug = True
+    elif config_name == 'testing':
+        # Testing config should have debug enabled for better test debugging
+        app.debug = True
+    
     # Initialize core extensions
     db.init_app(app)
     
