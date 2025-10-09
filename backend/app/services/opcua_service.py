@@ -278,7 +278,26 @@ class OPCUAClient:
             # Configure security policy and certificates if provided
             if self.security_policy != 'None' and self.security_mode != 'None':
                 try:
-                    # Validate security policy first (fails immediately for invalid policies)
+                    # Check for required certificates BEFORE validating policy strength
+                    # This ensures we give appropriate error messages (certificates missing vs weak policy)
+                    if not (self.cert_file and self.private_key_file):
+                        # Without client certificates, most OPC UA security policies cannot be used
+                        # Check if this is a policy that can work without client certificates
+                        policies_that_may_work_without_certs = ['None']  # Only None is guaranteed to work
+                        
+                        if self.security_policy not in policies_that_may_work_without_certs:
+                            if is_prod:
+                                # In production, require certificates for non-None policies
+                                raise ValueError(f"OPC UA security policy '{self.security_policy}' requires client certificates in production. "
+                                               f"Please configure OPCUA_CERT_FILE and OPCUA_PRIVATE_KEY_FILE.")
+                            else:
+                                # Check explicit flag for insecure fallback in development
+                                allow_fallback = app.config.get('OPCUA_ALLOW_INSECURE_FALLBACK', False)
+                                if not allow_fallback:
+                                    raise ValueError(f"OPC UA security policy '{self.security_policy}' requires client certificates. "
+                                                   f"Set OPCUA_ALLOW_INSECURE_FALLBACK=true to allow fallback to insecure mode in development.")
+                    
+                    # Validate security policy strength (after certificate check)
                     self._validate_security_policy(self.security_policy, require_strong=is_prod)
                     
                     # Set security policy with proper certificate validation
@@ -296,36 +315,13 @@ class OPCUAClient:
                             # Use the complete security string with certificates
                             self.client.set_security_string(security_string)
                         else:
-                            # Without client certificates, most OPC UA security policies cannot be used
-                            # However, some servers may support anonymous authentication with certain policies
-                            # or username/password authentication without client certificates
-                            
-                            # Check if this is a policy that can work without client certificates
-                            policies_that_may_work_without_certs = ['None']  # Only None is guaranteed to work
-                            
-                            if self.security_policy in policies_that_may_work_without_certs:
-                                # For 'None' policy, we don't need to set security at all
-                                logger.info(f"Using OPC UA security policy '{self.security_policy}' without client certificates")
-                            else:
-                                # For other policies, warn and attempt graceful fallback
-                                logger.warning(f"OPC UA security policy '{self.security_policy}' typically requires client certificates")
-                                
-                                if is_prod:
-                                    # In production, require certificates for non-None policies
-                                    raise ValueError(f"OPC UA security policy '{self.security_policy}' requires client certificates in production. "
-                                                   f"Please configure OPCUA_CERT_FILE and OPCUA_PRIVATE_KEY_FILE.")
-                                else:
-                                    # Check explicit flag for insecure fallback in development
-                                    allow_fallback = app.config.get('OPCUA_ALLOW_INSECURE_FALLBACK', False)
-                                    if allow_fallback:
-                                        logger.warning(f"DEVELOPMENT ONLY: Falling back to insecure OPC UA connection (no encryption/authentication) "
-                                                     f"due to missing client certificates. Original policy: {self.security_policy}/{self.security_mode}. "
-                                                     f"This fallback is ONLY allowed in development and controlled by OPCUA_ALLOW_INSECURE_FALLBACK=true")
-                                        self.security_policy = 'None'
-                                        self.security_mode = 'None'
-                                    else:
-                                        raise ValueError(f"OPC UA security policy '{self.security_policy}' requires client certificates. "
-                                                       f"Set OPCUA_ALLOW_INSECURE_FALLBACK=true to allow fallback to insecure mode in development.")
+                            # Certificates not provided - this case was already validated above
+                            # If we reach here, OPCUA_ALLOW_INSECURE_FALLBACK is true in development
+                            logger.warning(f"DEVELOPMENT ONLY: Falling back to insecure OPC UA connection (no encryption/authentication) "
+                                         f"due to missing client certificates. Original policy: {self.security_policy}/{self.security_mode}. "
+                                         f"This fallback is ONLY allowed in development and controlled by OPCUA_ALLOW_INSECURE_FALLBACK=true")
+                            self.security_policy = 'None'
+                            self.security_mode = 'None'
                         
                         # Trust certificate loading (separate from client certificates)
                         self._load_trust_certificate(is_prod)
