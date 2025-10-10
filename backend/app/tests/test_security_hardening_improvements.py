@@ -243,6 +243,7 @@ class TestSecurityHardeningImprovements:
         mock_app.config = {
             'FLASK_ENV': 'development',
             'DEBUG': True,  # Needed for environment detection to recognize as development
+            'TESTING': True,  # Mark as testing environment to avoid production security checks
             'MQTT_BROKER_HOST': 'invalid_host',
             'MQTT_BROKER_PORT': 1883,
             'MQTT_USE_TLS': False,  # Explicit TLS setting for development
