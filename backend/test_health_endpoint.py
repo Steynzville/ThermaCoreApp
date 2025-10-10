@@ -50,7 +50,7 @@ def test_health_endpoint():
                 return False
             
             if data['status'] != 'healthy':
-                print(f"   ❌ FAILED: Expected status='healthy', got '{data['status']}'")
+                print(f"   ❌ FAILED: Expected status='healthy', got \"{data['status']}\"")
                 return False
             
             if 'version' not in data:
