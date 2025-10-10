@@ -44,8 +44,10 @@ class TestSCADAIntegration:
             db.session.add(unit)
             db.session.commit()
             
-            # Initialize MQTT client
-            mqtt_client.init_app(app)
+            # Initialize MQTT client with data storage service
+            from app.services.data_storage_service import data_storage_service
+            data_storage_service.init_app(app)
+            mqtt_client.init_app(app, data_storage_service)
             
             # Simulate MQTT message processing
             test_topic = 'scada/UNIT001/temperature'
