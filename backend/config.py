@@ -142,29 +142,27 @@ class ProductionConfig(Config):
         else:
             origins = [origin.strip() for origin in _prod_websocket_origins.split(',') if origin.strip()]
             
-            # SMART CORS VALIDATION - Only in actual production
-            # In CI/test environments, allow configuration testing without strict enforcement
-            if self._is_true_production():
-                # Validate no wildcard in production
-                if '*' in origins:
-                    raise ValueError("Wildcard CORS origins ('*') are not allowed in production")
-                
-                # Validate all origins use HTTPS in production
-                for origin in origins:
-                    if not origin.startswith('https://'):
-                        raise ValueError(f"Production CORS origins must use HTTPS. Invalid origin: {origin}")
+            # STRICT CORS VALIDATION - Always enforce in ProductionConfig
+            # Production configuration must never allow wildcard CORS
+            # Validate no wildcard in production
+            if '*' in origins:
+                raise ValueError("Wildcard CORS origins ('*') are not allowed in production")
+            
+            # Validate all origins use HTTPS in production
+            for origin in origins:
+                if not origin.startswith('https://'):
+                    raise ValueError(f"Production CORS origins must use HTTPS. Invalid origin: {origin}")
             
             self.WEBSOCKET_CORS_ORIGINS = origins
         
-        # Also validate regular CORS origins with the same smart approach
-        if self._is_true_production():
-            cors_origins = self.CORS_ORIGINS
-            if '*' in cors_origins:
-                raise ValueError("Wildcard CORS origins ('*') are not allowed in production")
-            
-            for origin in cors_origins:
-                if origin.startswith('http://') and not origin.startswith('https://'):
-                    raise ValueError(f"Production CORS origins must use HTTPS. Invalid origin: {origin}")
+        # Also validate regular CORS origins with strict enforcement
+        cors_origins = self.CORS_ORIGINS
+        if '*' in cors_origins:
+            raise ValueError("Wildcard CORS origins ('*') are not allowed in production")
+        
+        for origin in cors_origins:
+            if origin.startswith('http://') and not origin.startswith('https://'):
+                raise ValueError(f"Production CORS origins must use HTTPS. Invalid origin: {origin}")
         
         # Enforce MQTT TLS in production if certificates are provided
         if os.environ.get("MQTT_CA_CERTS") and os.environ.get("MQTT_CERT_FILE") and os.environ.get("MQTT_KEY_FILE"):
