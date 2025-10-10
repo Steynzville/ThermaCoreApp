@@ -72,6 +72,7 @@ jobs:
           fi
           
           echo "📊 Using database service: $DB_SERVICE"
+          echo "DB_SERVICE=$DB_SERVICE" >> $GITHUB_ENV
 
       - name: Fix Locust Version in Requirements
         run: |
@@ -115,7 +116,7 @@ jobs:
           echo "🏗️ Building database and backend services using CI compose file..."
           
           # Build database first to ensure it's ready
-          docker-compose -f docker-compose.ci.yml build $DB_SERVICE
+          docker-compose -f docker-compose.ci.yml build ${{ env.DB_SERVICE }}
           echo "✅ Database service built"
           
           # Then build backend only
@@ -124,23 +125,9 @@ jobs:
 
       - name: Start Database with Simplified Health Check
         run: |
-          # Determine database service name
-          SERVICES=$(docker-compose -f docker-compose.ci.yml config --services)
-          if echo "$SERVICES" | grep -q "timescaledb"; then
-            DB_SERVICE="timescaledb"
-          elif echo "$SERVICES" | grep -q "db"; then
-            DB_SERVICE="db"
-          elif echo "$SERVICES" | grep -q "postgres"; then
-            DB_SERVICE="postgres"
-          elif echo "$SERVICES" | grep -q "database"; then
-            DB_SERVICE="database"
-          else
-            echo "❌ Cannot determine database service"
-            exit 1
-          fi
+          echo "🚀 Starting database service: ${{ env.DB_SERVICE }}"
+          docker-compose -f docker-compose.ci.yml up -d ${{ env.DB_SERVICE }}
           
-          echo "🚀 Starting database service: $DB_SERVICE"
-          docker-compose -f docker-compose.ci.yml up -d $DB_SERVICE
           
           echo "⏳ Waiting for database to start (simple wait)..."
           # Simple sleep to allow database to initialize
@@ -149,7 +136,7 @@ jobs:
           echo "🔧 Testing database connection..."
           # Try multiple connection attempts with simpler method
           for i in {1..10}; do
-            if docker-compose -f docker-compose.ci.yml exec -T $DB_SERVICE psql -U postgres -c "SELECT version();" 2>/dev/null; then
+            if docker-compose -f docker-compose.ci.yml exec -T ${{ env.DB_SERVICE }} psql -U postgres -c "SELECT version();" 2>/dev/null; then
               echo "✅ Database is ready and responding"
               break
             else
@@ -159,38 +146,24 @@ jobs:
           done
           
           # Final connection test
-          if docker-compose -f docker-compose.ci.yml exec -T $DB_SERVICE psql -U postgres -c "SELECT 1;" 2>/dev/null; then
+          if docker-compose -f docker-compose.ci.yml exec -T ${{ env.DB_SERVICE }} psql -U postgres -c "SELECT 1;" 2>/dev/null; then
             echo "🎉 Database connection successful!"
           else
             echo "❌ Database failed to start properly"
             echo "📋 Checking database logs:"
-            docker-compose -f docker-compose.ci.yml logs $DB_SERVICE
+            docker-compose -f docker-compose.ci.yml logs ${{ env.DB_SERVICE }}
             exit 1
           fi
 
       - name: Initialize Test Database (Fixed Transaction Issue)
         run: |
-          SERVICES=$(docker-compose -f docker-compose.ci.yml config --services)
-          if echo "$SERVICES" | grep -q "timescaledb"; then
-            DB_SERVICE="timescaledb"
-          elif echo "$SERVICES" | grep -q "db"; then
-            DB_SERVICE="db"
-          elif echo "$SERVICES" | grep -q "postgres"; then
-            DB_SERVICE="postgres"
-          elif echo "$SERVICES" | grep -q "database"; then
-            DB_SERVICE="database"
-          else
-            echo "❌ Cannot determine database service"
-            exit 1
-          fi
-          
-          echo "🔧 Initializing test database on service: $DB_SERVICE"
+          echo "🔧 Initializing test database on service: ${{ env.DB_SERVICE }}"
           # Use single commands to avoid transaction blocks
-          docker-compose -f docker-compose.ci.yml exec -T $DB_SERVICE psql -U postgres -c "DROP DATABASE IF EXISTS thermacore;" || echo "⚠️ Could not drop database (might not exist)"
-          docker-compose -f docker-compose.ci.yml exec -T $DB_SERVICE psql -U postgres -c "DROP USER IF EXISTS thermacore_user;" || echo "⚠️ Could not drop user (might not exist)"
-          docker-compose -f docker-compose.ci.yml exec -T $DB_SERVICE psql -U postgres -c "CREATE USER thermacore_user WITH PASSWORD 'thermacore_pass';" || echo "⚠️ User might already exist"
-          docker-compose -f docker-compose.ci.yml exec -T $DB_SERVICE psql -U postgres -c "CREATE DATABASE thermacore OWNER thermacore_user;" || echo "⚠️ Database might already exist"
-          docker-compose -f docker-compose.ci.yml exec -T $DB_SERVICE psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE thermacore TO thermacore_user;" || echo "⚠️ Grant might already exist"
+          docker-compose -f docker-compose.ci.yml exec -T ${{ env.DB_SERVICE }} psql -U postgres -c "DROP DATABASE IF EXISTS thermacore;" || echo "⚠️ Could not drop database (might not exist)"
+          docker-compose -f docker-compose.ci.yml exec -T ${{ env.DB_SERVICE }} psql -U postgres -c "DROP USER IF EXISTS thermacore_user;" || echo "⚠️ Could not drop user (might not exist)"
+          docker-compose -f docker-compose.ci.yml exec -T ${{ env.DB_SERVICE }} psql -U postgres -c "CREATE USER thermacore_user WITH PASSWORD 'thermacore_pass';" || echo "⚠️ User might already exist"
+          docker-compose -f docker-compose.ci.yml exec -T ${{ env.DB_SERVICE }} psql -U postgres -c "CREATE DATABASE thermacore OWNER thermacore_user;" || echo "⚠️ Database might already exist"
+          docker-compose -f docker-compose.ci.yml exec -T ${{ env.DB_SERVICE }} psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE thermacore TO thermacore_user;" || echo "⚠️ Grant might already exist"
           
           echo "✅ Database setup completed"
 
