@@ -174,7 +174,11 @@ class ProductionConfig(Config):
         
         # Re-read MQTT configuration from environment to pick up test values
         self.MQTT_BROKER_HOST = os.environ.get('MQTT_BROKER_HOST', 'localhost')
-        self.MQTT_BROKER_PORT = int(os.environ.get('MQTT_BROKER_PORT', 1883))
+        mqtt_port_str = os.environ.get('MQTT_BROKER_PORT', '1883')
+        try:
+            self.MQTT_BROKER_PORT = int(mqtt_port_str)
+        except ValueError:
+            raise ValueError(f"MQTT_BROKER_PORT environment variable must be a valid integer, got '{mqtt_port_str}'")
         self.MQTT_USERNAME = os.environ.get('MQTT_USERNAME')
         self.MQTT_PASSWORD = os.environ.get('MQTT_PASSWORD')
         
