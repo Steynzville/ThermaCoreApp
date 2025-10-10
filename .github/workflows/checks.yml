@@ -43,37 +43,6 @@ jobs:
           sudo chmod +x /usr/local/bin/docker-compose
           docker-compose --version
 
-      - name: Check Docker Compose Configuration and Services
-        run: |
-          echo "📋 Checking docker-compose.yml file..."
-          ls -la docker-compose.yml || echo "❌ docker-compose.yml not found"
-          echo "📋 Available services:"
-          docker-compose config --services || echo "❌ Cannot parse docker-compose.yml"
-          
-          echo "🔍 Checking for database service names..."
-          SERVICES=$(docker-compose config --services)
-          echo "Available services: $SERVICES"
-          
-          if echo "$SERVICES" | grep -q "timescaledb"; then
-            echo "✅ Found 'timescaledb' service"
-            DB_SERVICE="timescaledb"
-          elif echo "$SERVICES" | grep -q "db"; then
-            echo "✅ Found 'db' service" 
-            DB_SERVICE="db"
-          elif echo "$SERVICES" | grep -q "postgres"; then
-            echo "✅ Found 'postgres' service"
-            DB_SERVICE="postgres"
-          elif echo "$SERVICES" | grep -q "database"; then
-            echo "✅ Found 'database' service"
-            DB_SERVICE="database"
-          else
-            echo "❌ No database service found. Available: $SERVICES"
-            exit 1
-          fi
-          
-          echo "📊 Using database service: $DB_SERVICE"
-          echo "DB_SERVICE=$DB_SERVICE" >> $GITHUB_ENV
-
       - name: Fix Locust Version in Requirements
         run: |
           cd backend
@@ -110,6 +79,32 @@ jobs:
           
           echo "📋 Temporary docker-compose.ci.yml created:"
           cat docker-compose.ci.yml | head -20
+
+      - name: Detect Database Service Name from CI Compose
+        run: |
+          echo "🔍 Checking for database service names in docker-compose.ci.yml..."
+          SERVICES=$(docker-compose -f docker-compose.ci.yml config --services)
+          echo "Available services in CI compose: $SERVICES"
+          
+          if echo "$SERVICES" | grep -q "timescaledb"; then
+            echo "✅ Found 'timescaledb' service"
+            DB_SERVICE="timescaledb"
+          elif echo "$SERVICES" | grep -q "db"; then
+            echo "✅ Found 'db' service" 
+            DB_SERVICE="db"
+          elif echo "$SERVICES" | grep -q "postgres"; then
+            echo "✅ Found 'postgres' service"
+            DB_SERVICE="postgres"
+          elif echo "$SERVICES" | grep -q "database"; then
+            echo "✅ Found 'database' service"
+            DB_SERVICE="database"
+          else
+            echo "❌ No database service found. Available: $SERVICES"
+            exit 1
+          fi
+          
+          echo "📊 Using database service: $DB_SERVICE"
+          echo "DB_SERVICE=$DB_SERVICE" >> $GITHUB_ENV
 
       - name: Build Database and Backend Only (Using CI Compose)
         run: |
