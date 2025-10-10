@@ -125,6 +125,11 @@ class ProductionConfig(Config):
         # Call parent init
         super().__init__()
         
+        # Set secure CORS defaults if not explicitly provided
+        # This prevents inheriting HTTP localhost defaults from base Config
+        if not os.environ.get('CORS_ORIGINS'):
+            self.CORS_ORIGINS = ['https://localhost:3000']  # HTTPS version for testing
+        
         # Validate critical environment variables are set for production
         if not os.environ.get("SECRET_KEY"):
             raise ValueError("SECRET_KEY must be set in environment variables for production")
