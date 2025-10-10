@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: thermacore-backend
+    env: python
+    rootDir: backend
+    buildCommand: |
+      pip install -r requirements.txt
+      pip install gunicorn
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: thermacore-db
+          property: connectionString
+      - key: FLASK_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+
+databases:
+  - name: thermacore-db
+    databaseName: thermacore
+    user: thermacore_user
+    plan: free
