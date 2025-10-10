@@ -49,6 +49,23 @@ class Config:
     MAX_REQUEST_SIZE = int(os.environ.get('MAX_REQUEST_SIZE', 1024 * 1024))  # 1MB default
     VALIDATE_JSON_REQUESTS = os.environ.get('VALIDATE_JSON_REQUESTS', 'true').lower() == 'true'
     
+    @staticmethod
+    def _read_mqtt_config():
+        """Read MQTT configuration from environment variables.
+        
+        Helper method to centralize MQTT configuration reading and avoid duplication.
+        Used by both class-level initialization and ProductionConfig.__init__().
+        
+        Returns:
+            dict: Dictionary containing MQTT configuration values
+        """
+        return {
+            'MQTT_BROKER_HOST': os.environ.get('MQTT_BROKER_HOST', 'localhost'),
+            'MQTT_BROKER_PORT': int(os.environ.get('MQTT_BROKER_PORT', 1883)),
+            'MQTT_USERNAME': os.environ.get('MQTT_USERNAME'),
+            'MQTT_PASSWORD': os.environ.get('MQTT_PASSWORD'),
+        }
+    
     # MQTT Configuration with security enforcement
     MQTT_BROKER_HOST = os.environ.get('MQTT_BROKER_HOST', 'localhost')
     MQTT_BROKER_PORT = int(os.environ.get('MQTT_BROKER_PORT', 1883))
@@ -173,14 +190,12 @@ class ProductionConfig(Config):
             raise ValueError("MQTT certificate paths must be set in environment variables for production")
         
         # Re-read MQTT configuration from environment to pick up test values
-        self.MQTT_BROKER_HOST = os.environ.get('MQTT_BROKER_HOST', 'localhost')
-        mqtt_port_str = os.environ.get('MQTT_BROKER_PORT', '1883')
-        try:
-            self.MQTT_BROKER_PORT = int(mqtt_port_str)
-        except ValueError:
-            raise ValueError(f"MQTT_BROKER_PORT environment variable must be a valid integer, got '{mqtt_port_str}'")
-        self.MQTT_USERNAME = os.environ.get('MQTT_USERNAME')
-        self.MQTT_PASSWORD = os.environ.get('MQTT_PASSWORD')
+        # Use centralized helper method to avoid duplication
+        mqtt_config = self._read_mqtt_config()
+        self.MQTT_BROKER_HOST = mqtt_config['MQTT_BROKER_HOST']
+        self.MQTT_BROKER_PORT = mqtt_config['MQTT_BROKER_PORT']
+        self.MQTT_USERNAME = mqtt_config['MQTT_USERNAME']
+        self.MQTT_PASSWORD = mqtt_config['MQTT_PASSWORD']
         
         # Enforce OPC UA security in production
         # Override to use at least Basic256Sha256 if not explicitly configured
