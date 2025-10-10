@@ -241,13 +241,11 @@ class TestSecurityHardeningImprovements:
         """Test proper ConnectionError raising for connection failures."""
         mock_app = Mock()
         mock_app.config = {
-            'ENV': 'production',
-            'FLASK_ENV': 'production',
-            'DEBUG': False,  # Ensure DEBUG is False when FLASK_ENV=production
-            'TESTING': False,
+            'FLASK_ENV': 'development',
+            'DEBUG': True,  # Needed for environment detection to recognize as development
             'MQTT_BROKER_HOST': 'invalid_host',
             'MQTT_BROKER_PORT': 1883,
-            'MQTT_USE_TLS': False,  # Explicit TLS setting for testing
+            'MQTT_USE_TLS': False,  # Explicit TLS setting for development
         }
         
         with patch('paho.mqtt.client.Client') as mock_client_class:
