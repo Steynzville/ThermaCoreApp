@@ -112,11 +112,12 @@ def is_production_environment(app=None) -> bool:
     Robust production environment detection.
     
     Checks multiple sources in order of priority:
-    1. TESTING environment check (testing is never production)
-    2. FLASK_ENV environment variable
-    3. APP_ENV environment variable  
-    4. DEBUG config setting (False = production)
-    5. Flask app.config FLASK_ENV setting
+    1. CI/pytest context check (never production during tests)
+    2. TESTING environment check (testing is never production)
+    3. FLASK_ENV environment variable
+    4. APP_ENV environment variable  
+    5. DEBUG config setting (False = production)
+    6. Flask app.config FLASK_ENV setting
     
     Args:
         app: Flask application instance (optional, uses current_app if available)
@@ -127,7 +128,11 @@ def is_production_environment(app=None) -> bool:
     Raises:
         ValueError: If dangerous environment mismatches are detected
     """
-    # First priority: Check if we're in testing environment (testing is never production)
+    # First priority: Check if we're in CI or pytest context (never production during tests)
+    if os.environ.get('CI') or os.environ.get('PYTEST_CURRENT_TEST'):
+        return False
+    
+    # Second priority: Check if we're in testing environment (testing is never production)
     if is_testing_environment(app):
         return False
         

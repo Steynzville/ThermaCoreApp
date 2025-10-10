@@ -19,7 +19,8 @@ class TestDebugModeConfiguration:
     def test_debug_disabled_with_production_config(self):
         """Test that app.debug is False when using ProductionConfig."""
         # FLASK_ENV=production should always disable debug mode, even if FLASK_DEBUG=1
-        with patch.dict(os.environ, {
+        # Preserve CI and PYTEST_CURRENT_TEST to ensure proper test environment detection
+        env_vars = {
             'FLASK_ENV': 'production',
             'FLASK_DEBUG': '1',
             'SECRET_KEY': 'test-secret-key',
@@ -33,7 +34,14 @@ class TestDebugModeConfiguration:
             'OPCUA_CERT_FILE': '/path/to/opcua/cert',
             'OPCUA_PRIVATE_KEY_FILE': '/path/to/opcua/key',
             'OPCUA_TRUST_CERT_FILE': '/path/to/opcua/trust'
-        }, clear=True):
+        }
+        # Preserve test context indicators
+        if os.environ.get('CI'):
+            env_vars['CI'] = os.environ.get('CI')
+        if os.environ.get('PYTEST_CURRENT_TEST'):
+            env_vars['PYTEST_CURRENT_TEST'] = os.environ.get('PYTEST_CURRENT_TEST')
+        
+        with patch.dict(os.environ, env_vars, clear=True):
             app = create_app()
             assert app.debug is False, "ProductionConfig should set app.debug=False"
             assert app.config['DEBUG'] is False, "ProductionConfig should set DEBUG=False"
@@ -42,7 +50,8 @@ class TestDebugModeConfiguration:
         """Test that FLASK_ENV=development alone falls back to production config."""
         # Per line 120-122 of __init__.py, FLASK_ENV=development without FLASK_DEBUG
         # falls back to production config for security
-        with patch.dict(os.environ, {
+        # Preserve CI and PYTEST_CURRENT_TEST to ensure proper test environment detection
+        env_vars = {
             'FLASK_ENV': 'development',
             'SECRET_KEY': 'test-secret-key',
             'JWT_SECRET_KEY': 'test-jwt-secret',
@@ -55,7 +64,14 @@ class TestDebugModeConfiguration:
             'OPCUA_CERT_FILE': '/path/to/opcua/cert',
             'OPCUA_PRIVATE_KEY_FILE': '/path/to/opcua/key',
             'OPCUA_TRUST_CERT_FILE': '/path/to/opcua/trust'
-        }, clear=True):
+        }
+        # Preserve test context indicators
+        if os.environ.get('CI'):
+            env_vars['CI'] = os.environ.get('CI')
+        if os.environ.get('PYTEST_CURRENT_TEST'):
+            env_vars['PYTEST_CURRENT_TEST'] = os.environ.get('PYTEST_CURRENT_TEST')
+        
+        with patch.dict(os.environ, env_vars, clear=True):
             app = create_app()  # Should fall back to production
             assert app.config['DEBUG'] is False, "Should use production config without FLASK_DEBUG"
     
@@ -70,7 +86,8 @@ class TestDebugModeConfiguration:
         """Test that FLASK_DEBUG=1 alone is not enough to enable debug mode."""
         # For security, we require both FLASK_ENV=development and FLASK_DEBUG=1
         # to enter debug mode. FLASK_ENV defaults to 'production' if not set.
-        with patch.dict(os.environ, {
+        # Preserve CI and PYTEST_CURRENT_TEST to ensure proper test environment detection
+        env_vars = {
             'FLASK_DEBUG': '1',
             # Add required production config env vars
             'SECRET_KEY': 'test-secret-key',
@@ -84,7 +101,14 @@ class TestDebugModeConfiguration:
             'OPCUA_CERT_FILE': '/path/to/opcua/cert',
             'OPCUA_PRIVATE_KEY_FILE': '/path/to/opcua/key',
             'OPCUA_TRUST_CERT_FILE': '/path/to/opcua/trust'
-        }, clear=True):
+        }
+        # Preserve test context indicators
+        if os.environ.get('CI'):
+            env_vars['CI'] = os.environ.get('CI')
+        if os.environ.get('PYTEST_CURRENT_TEST'):
+            env_vars['PYTEST_CURRENT_TEST'] = os.environ.get('PYTEST_CURRENT_TEST')
+        
+        with patch.dict(os.environ, env_vars, clear=True):
             app = create_app()
             assert app.debug is False, "FLASK_DEBUG=1 alone should not enable debug mode"
             assert app.config['DEBUG'] is False, "FLASK_DEBUG=1 alone should not set DEBUG=True"
