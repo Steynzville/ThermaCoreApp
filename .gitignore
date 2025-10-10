@@ -36,3 +36,8 @@ __pycache__/
 tmp/
 temp/
 *.tmp
+
+# Generated security scan configs and reports
+.gitleaks.toml
+bandit_report.json
+bandit_sarif.json
