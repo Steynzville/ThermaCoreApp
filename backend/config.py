@@ -155,6 +155,12 @@ class ProductionConfig(Config):
             
             self.WEBSOCKET_CORS_ORIGINS = origins
         
+        # Reload CORS_ORIGINS from environment (base class sets it at import time)
+        # Production config must validate based on actual environment, not import-time defaults
+        _cors_origins_env = os.environ.get('CORS_ORIGINS')
+        if _cors_origins_env:
+            self.CORS_ORIGINS = _cors_origins_env.split(',')
+        
         # Also validate regular CORS origins with strict enforcement
         cors_origins = self.CORS_ORIGINS
         if '*' in cors_origins:
