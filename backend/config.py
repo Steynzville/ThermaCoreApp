@@ -155,7 +155,11 @@ class ProductionConfig(Config):
         _prod_websocket_origins = os.environ.get('WEBSOCKET_CORS_ORIGINS')
         if not _prod_websocket_origins:
             # If not explicitly set, use a secure default (no wildcard)
-            self.WEBSOCKET_CORS_ORIGINS = ['https://yourdomain.com']
+            self.WEBSOCKET_CORS_ORIGINS = [
+                "https://thermacoreapp.com",
+                "https://app.thermacoreapp.com",
+                "https://monitoring.thermacoreapp.com"
+            ]
         else:
             origins = [origin.strip() for origin in _prod_websocket_origins.split(',') if origin.strip()]
             

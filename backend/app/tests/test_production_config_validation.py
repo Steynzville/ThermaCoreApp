@@ -139,7 +139,11 @@ class TestProductionConfigValidation:
             config = ProductionConfig()
             
             # Should have secure default (not wildcard)
-            assert config.WEBSOCKET_CORS_ORIGINS == ['https://yourdomain.com']
+            assert config.WEBSOCKET_CORS_ORIGINS == [
+                "https://thermacoreapp.com",
+                "https://app.thermacoreapp.com",
+                "https://monitoring.thermacoreapp.com"
+            ]
             assert '*' not in config.WEBSOCKET_CORS_ORIGINS
     
     def test_production_config_rejects_wildcard_cors(self):
