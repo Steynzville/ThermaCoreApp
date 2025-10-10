@@ -172,6 +172,12 @@ class ProductionConfig(Config):
         else:
             raise ValueError("MQTT certificate paths must be set in environment variables for production")
         
+        # Re-read MQTT configuration from environment to pick up test values
+        self.MQTT_BROKER_HOST = os.environ.get('MQTT_BROKER_HOST', 'localhost')
+        self.MQTT_BROKER_PORT = int(os.environ.get('MQTT_BROKER_PORT', 1883))
+        self.MQTT_USERNAME = os.environ.get('MQTT_USERNAME')
+        self.MQTT_PASSWORD = os.environ.get('MQTT_PASSWORD')
+        
         # Enforce OPC UA security in production
         # Override to use at least Basic256Sha256 if not explicitly configured
         if not os.environ.get("OPCUA_SECURITY_POLICY") or os.environ.get("OPCUA_SECURITY_POLICY") == "None":
