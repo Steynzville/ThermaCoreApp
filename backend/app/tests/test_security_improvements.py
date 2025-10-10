@@ -159,9 +159,12 @@ class TestSecurityImprovements:
             'JWT_SECRET_KEY': 'test-jwt-secret',
             'DATABASE_URL': 'postgresql://test:test@localhost/test',
             'CORS_ORIGINS': 'https://localhost:3000',  # Production requires HTTPS
+            'WEBSOCKET_CORS_ORIGINS': 'https://localhost:3000',  # Specific origin, not wildcard
             'MQTT_CA_CERTS': '/path/to/ca',
             'MQTT_CERT_FILE': '/path/to/cert',
             'MQTT_KEY_FILE': '/path/to/key',
+            'MQTT_USERNAME': 'test',
+            'MQTT_PASSWORD': 'test',
             'OPCUA_CERT_FILE': '/path/to/opcua/cert',
             'OPCUA_PRIVATE_KEY_FILE': '/path/to/opcua/key',
             'OPCUA_TRUST_CERT_FILE': '/path/to/opcua/trust'
