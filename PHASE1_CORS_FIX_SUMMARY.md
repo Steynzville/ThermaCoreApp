@@ -1,10 +1,12 @@
 # Phase 1: CORS Security Configuration Fix - Summary
 
 ## Objective
-Fix insecure CORS configuration in ProductionConfig to use specific, trusted HTTPS domains instead of placeholder values.
+Fix insecure CORS configuration to prevent wildcard origins in production and use specific, trusted HTTPS domains.
 
 ## Problem
-The ProductionConfig class was using a placeholder domain (`https://yourdomain.com`) for WEBSOCKET_CORS_ORIGINS when no environment variable was set. This needed to be updated with actual ThermaCore application domains.
+1. The ProductionConfig class was using a placeholder domain (`https://yourdomain.com`) for WEBSOCKET_CORS_ORIGINS when no environment variable was set
+2. **Critical Issue**: The `docker-compose.yml` file was setting `WEBSOCKET_CORS_ORIGINS: ${WEBSOCKET_CORS_ORIGINS:-*}` which defaulted to a wildcard `*`, causing security tests to fail in CI
+3. The wildcard setting in docker-compose.yml affected all test runs in the Docker environment, making it impossible for tests to properly validate production security
 
 ## Solution Implemented
 
@@ -25,7 +27,24 @@ self.WEBSOCKET_CORS_ORIGINS = [
 
 **Location:** Lines 158-162 in backend/config.py
 
-### 2. Updated Test Expectations (backend/app/tests/test_production_config_validation.py)
+### 2. Fixed Docker Compose Security Issue (docker-compose.yml) **[CRITICAL FIX]**
+**Before:**
+```yaml
+WEBSOCKET_CORS_ORIGINS: ${WEBSOCKET_CORS_ORIGINS:-*}  # ❌ WILDCARD DEFAULT!
+```
+
+**After:**
+```yaml
+# WEBSOCKET_CORS_ORIGINS - Not set here to allow code defaults to work properly
+# For production, set via environment variable or .env file with specific domains
+# Example: WEBSOCKET_CORS_ORIGINS=https://thermacoreapp.com,https://app.thermacoreapp.com
+```
+
+**Why this was critical:** The wildcard default in docker-compose.yml was causing all tests run in Docker (including CI) to fail because it set `WEBSOCKET_CORS_ORIGINS='*'` which violated security requirements. By removing this line, the code defaults in `config.py` take effect properly.
+
+**Location:** Lines 43-45 in docker-compose.yml
+
+### 3. Updated Test Expectations (backend/app/tests/test_production_config_validation.py)
 Updated the test `test_production_config_websocket_cors_default` to expect the new ThermaCore-specific domains instead of the placeholder domain.
 
 **Location:** Lines 142-147
@@ -70,7 +89,8 @@ Number of trusted domains: 3
 
 ## Files Modified
 1. `backend/config.py` - Updated ProductionConfig WEBSOCKET_CORS_ORIGINS default
-2. `backend/app/tests/test_production_config_validation.py` - Updated test expectations
+2. `docker-compose.yml` - **Removed wildcard default** that was causing CI test failures
+3. `backend/app/tests/test_production_config_validation.py` - Updated test expectations
 
 ## Deployment Notes
 

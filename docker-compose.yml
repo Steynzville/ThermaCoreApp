@@ -40,7 +40,9 @@ services:
       OPCUA_SECURITY_POLICY: ${OPCUA_SECURITY_POLICY:-None}
       OPCUA_SECURITY_MODE: ${OPCUA_SECURITY_MODE:-None}
       OPCUA_TIMEOUT: ${OPCUA_TIMEOUT:-30}
-      WEBSOCKET_CORS_ORIGINS: ${WEBSOCKET_CORS_ORIGINS:-*}
+      # WEBSOCKET_CORS_ORIGINS - Not set here to allow code defaults to work properly
+      # For production, set via environment variable or .env file with specific domains
+      # Example: WEBSOCKET_CORS_ORIGINS=https://thermacoreapp.com,https://app.thermacoreapp.com
       WEBSOCKET_PING_TIMEOUT: ${WEBSOCKET_PING_TIMEOUT:-60}
       WEBSOCKET_PING_INTERVAL: ${WEBSOCKET_PING_INTERVAL:-25}
     volumes:
