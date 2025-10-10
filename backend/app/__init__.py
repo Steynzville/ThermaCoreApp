@@ -129,6 +129,18 @@ def create_app(config_name=None):
     
     app.config.from_object(config_obj)
     
+    # SECURITY: Explicitly enforce debug mode based solely on config_name
+    # This overrides any environment variables such as FLASK_DEBUG.
+    # Production will never have debug enabled, regardless of environment variables.
+    if config_name == 'production':
+        app.debug = False
+    elif config_name == 'development':
+        # Development config should have debug enabled
+        app.debug = True
+    elif config_name == 'testing':
+        # Testing config should have debug enabled for better test debugging
+        app.debug = True
+    
     # Initialize core extensions
     db.init_app(app)
     
