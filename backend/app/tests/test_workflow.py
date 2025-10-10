@@ -7,6 +7,9 @@ import pytest
 MAX_PARENT_SEARCH_DEPTH = 5
 MAX_REPO_ROOT_SEARCH_DEPTH = 10
 
+# Skip message for when workflow file is not accessible
+WORKFLOW_FILE_SKIP_MESSAGE = "Workflow file not accessible in this environment (e.g., Docker container without repository mount)"
+
 
 def find_workflow_file(filename='checks.yml'):
     """
@@ -87,7 +90,7 @@ def find_workflow_file(filename='checks.yml'):
 
 def _get_workflow_path():
     """Get the path to the workflow file using robust path resolution.
-    
+
     Returns None if the file cannot be found (e.g., when running in Docker
     without the repository mounted).
     """
@@ -101,7 +104,7 @@ def test_workflow_file_exists():
     """Test that the GitHub Actions workflow file exists."""
     workflow_path = _get_workflow_path()
     if workflow_path is None:
-        pytest.skip("Workflow file not accessible in this environment (e.g., Docker container without repository mount)")
+        pytest.skip(WORKFLOW_FILE_SKIP_MESSAGE)
     assert workflow_path.exists(), f"Workflow file should exist at {workflow_path}"
 
 
@@ -109,7 +112,7 @@ def test_workflow_file_has_content():
     """Test that the workflow file has valid content."""
     workflow_path = _get_workflow_path()
     if workflow_path is None:
-        pytest.skip("Workflow file not accessible in this environment (e.g., Docker container without repository mount)")
+        pytest.skip(WORKFLOW_FILE_SKIP_MESSAGE)
     
     workflow_content = workflow_path.read_text()
     
@@ -121,7 +124,7 @@ def test_workflow_has_required_jobs():
     """Test that the workflow has required jobs."""
     workflow_path = _get_workflow_path()
     if workflow_path is None:
-        pytest.skip("Workflow file not accessible in this environment (e.g., Docker container without repository mount)")
+        pytest.skip(WORKFLOW_FILE_SKIP_MESSAGE)
     
     workflow_content = workflow_path.read_text()
     
