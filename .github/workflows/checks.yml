@@ -471,6 +471,35 @@ jobs:
           echo "🔍 Running OSV Scanner..."
           ~/go/bin/osv-scanner -r . --skip-git || echo "OSV Scanner completed with findings"
 
+  frontend-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install Frontend Dependencies
+        run: pnpm install
+
+      - name: Run Frontend Type Checking
+        run: pnpm type-check
+
+      - name: Run Frontend Linting
+        run: pnpm lint
+
+      - name: Run Frontend Build Verification
+        run: pnpm build
+
+      - name: Run Frontend Tests with Coverage
+        run: pnpm test:coverage
+
   dependabot-auto-merge:
     runs-on: ubuntu-latest
     if: ${{ github.actor == 'dependabot[bot]' }}
