@@ -125,11 +125,6 @@ class ProductionConfig(Config):
         # Call parent init
         super().__init__()
         
-        # Set secure CORS defaults if not explicitly provided
-        # This prevents inheriting HTTP localhost defaults from base Config
-        if not os.environ.get('CORS_ORIGINS'):
-            self.CORS_ORIGINS = ['https://localhost:3000']  # HTTPS version for testing
-        
         # Validate critical environment variables are set for production
         if not os.environ.get("SECRET_KEY"):
             raise ValueError("SECRET_KEY must be set in environment variables for production")
@@ -138,12 +133,17 @@ class ProductionConfig(Config):
         if not os.environ.get("JWT_SECRET_KEY"):
             raise ValueError("JWT_SECRET_KEY must be set in environment variables for production")
         
+        # Set secure CORS defaults if not explicitly provided
+        # This prevents inheriting HTTP localhost defaults from base Config
+        if not os.environ.get('CORS_ORIGINS'):
+            self.CORS_ORIGINS = ['https://localhost:3000']  # HTTPS version for testing
+        
         # Override WebSocket CORS for production - restrict to trusted domains
         # This should be set via environment variable in production
         _prod_websocket_origins = os.environ.get('WEBSOCKET_CORS_ORIGINS')
         if not _prod_websocket_origins:
-            # If not explicitly set, use a secure default (no wildcard)
-            self.WEBSOCKET_CORS_ORIGINS = ['https://yourdomain.com']
+            # If not explicitly set, use a secure HTTPS default (no wildcard, no HTTP)
+            self.WEBSOCKET_CORS_ORIGINS = ['https://localhost:3000']
         else:
             origins = [origin.strip() for origin in _prod_websocket_origins.split(',') if origin.strip()]
             
