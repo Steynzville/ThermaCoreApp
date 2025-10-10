@@ -32,7 +32,7 @@ marshmallow-sqlalchemy==1.1.0
 webargs==8.6.0
 
 # Performance testing
-locust==2.35.0
+locust==2.20.1
 
 # Utilities
 click==8.1.7

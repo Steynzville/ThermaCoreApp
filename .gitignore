@@ -36,3 +36,11 @@ __pycache__/
 tmp/
 temp/
 *.tmp
+
+# CI/CD temporary files
+docker-compose.ci.yml
+.gitleaks.toml
+
+# Generated reports (bandit JSON reports)
+backend/bandit_report.json
+bandit_report.json
