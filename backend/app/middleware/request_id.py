@@ -96,6 +96,16 @@ class RequestIDFilter(logging.Filter):
         return True
 
 
+class RequestAwareFormatter(logging.Formatter):
+    """Custom formatter that gracefully handles missing request_id field."""
+    
+    def format(self, record):
+        """Format log record, ensuring request_id is always present."""
+        if not hasattr(record, 'request_id'):
+            record.request_id = 'no-request-context'
+        return super().format(record)
+
+
 def init_request_id_logging(app):
     """Initialize request ID logging for the application."""
     # Add request ID filter to all loggers
@@ -112,7 +122,7 @@ def init_request_id_logging(app):
         for handler in app.logger.handlers:
             if hasattr(handler, 'setFormatter'):
                 # Enhanced formatter with correlation ID and structured format
-                formatter = logging.Formatter(
+                formatter = RequestAwareFormatter(
                     '[%(asctime)s] [%(request_id)s] %(levelname)s in %(module)s: %(message)s'
                 )
                 handler.setFormatter(formatter)
@@ -137,7 +147,7 @@ def init_request_id_logging(app):
             stream_handler = logging.StreamHandler(sys.stdout)
             stream_handler.setLevel(log_level)
             stream_handler.addFilter(request_id_filter)
-            stream_handler.setFormatter(logging.Formatter(
+            stream_handler.setFormatter(RequestAwareFormatter(
                 '%(asctime)s - %(name)s - %(levelname)s - [%(request_id)s] - %(message)s'
             ))
             root_logger.addHandler(stream_handler)
