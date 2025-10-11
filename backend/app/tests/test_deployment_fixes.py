@@ -1,9 +1,8 @@
 """Tests for deployment fixes - secure logger and MQTT service."""
-import pytest
 import logging
 import tempfile
 import os
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 from app.utils.secure_logger import SecureLogger, SecureLoggerAdapter
 from app.services.mqtt_service import MQTTClient
 
@@ -101,7 +100,7 @@ class TestMQTTAuthenticationFallback:
             'TESTING': False
         }
         
-        with patch('paho.mqtt.client.Client') as mock_mqtt_client:
+        with patch('paho.mqtt.client.Client'):
             with patch('app.services.mqtt_service.is_production_environment', return_value=True):
                 # This should NOT raise an exception
                 client = MQTTClient()
@@ -124,7 +123,7 @@ class TestMQTTAuthenticationFallback:
             'TESTING': False
         }
         
-        with patch('paho.mqtt.client.Client') as mock_mqtt_client:
+        with patch('paho.mqtt.client.Client'):
             with patch('app.services.mqtt_service.is_production_environment', return_value=True):
                 with patch('app.services.mqtt_service.logger') as mock_logger:
                     client = MQTTClient()
@@ -164,7 +163,7 @@ class TestMQTTCertificateValidation:
                 'TESTING': False
             }
             
-            with patch('paho.mqtt.client.Client') as mock_mqtt_client:
+            with patch('paho.mqtt.client.Client'):
                 with patch('app.services.mqtt_service.is_production_environment', return_value=False):
                     with patch('app.services.mqtt_service.logger') as mock_logger:
                         client = MQTTClient()
@@ -196,7 +195,7 @@ class TestMQTTCertificateValidation:
             'TESTING': False
         }
         
-        with patch('paho.mqtt.client.Client') as mock_mqtt_client:
+        with patch('paho.mqtt.client.Client'):
             with patch('app.services.mqtt_service.is_production_environment', return_value=False):
                 with patch('app.services.mqtt_service.logger') as mock_logger:
                     client = MQTTClient()

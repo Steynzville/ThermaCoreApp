@@ -159,7 +159,7 @@ class SecureLoggerAdapter(logging.LoggerAdapter):
         msg, kwargs = self.process(msg, kwargs)
         try:
             self.logger.error(msg, *args, **kwargs)
-        except (KeyError, ValueError) as e:
+        except (KeyError, ValueError):
             # Fallback to basic logging during startup
             fallback_logger = logging.getLogger('fallback')
             fallback_logger.error(msg, *args, **kwargs)
@@ -169,7 +169,7 @@ class SecureLoggerAdapter(logging.LoggerAdapter):
         msg, kwargs = self.process(msg, kwargs)
         try:
             self.logger.warning(msg, *args, **kwargs)
-        except (KeyError, ValueError) as e:
+        except (KeyError, ValueError):
             # Fallback to basic logging during startup
             fallback_logger = logging.getLogger('fallback')
             fallback_logger.warning(msg, *args, **kwargs)
@@ -179,7 +179,7 @@ class SecureLoggerAdapter(logging.LoggerAdapter):
         msg, kwargs = self.process(msg, kwargs)
         try:
             self.logger.info(msg, *args, **kwargs)
-        except (KeyError, ValueError) as e:
+        except (KeyError, ValueError):
             # Fallback to basic logging during startup
             fallback_logger = logging.getLogger('fallback')
             fallback_logger.info(msg, *args, **kwargs)
@@ -189,7 +189,7 @@ class SecureLoggerAdapter(logging.LoggerAdapter):
         msg, kwargs = self.process(msg, kwargs)
         try:
             self.logger.debug(msg, *args, **kwargs)
-        except (KeyError, ValueError) as e:
+        except (KeyError, ValueError):
             # Fallback to basic logging during startup
             fallback_logger = logging.getLogger('fallback')
             fallback_logger.debug(msg, *args, **kwargs)
@@ -199,7 +199,7 @@ class SecureLoggerAdapter(logging.LoggerAdapter):
         msg, kwargs = self.process(msg, kwargs)
         try:
             self.logger.critical(msg, *args, **kwargs)
-        except (KeyError, ValueError) as e:
+        except (KeyError, ValueError):
             # Fallback to basic logging during startup
             fallback_logger = logging.getLogger('fallback')
             fallback_logger.critical(msg, *args, **kwargs)
