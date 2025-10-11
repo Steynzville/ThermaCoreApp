@@ -58,14 +58,14 @@ def ensure_certificates():
     cert_dir = "/tmp"
     certificates_to_generate = [
         # MQTT certificates
-        ('/tmp/ca.crt', '/tmp/ca.key'),
-        ('/tmp/client.crt', '/tmp/client.key'),
-        ('/tmp/client_cert.pem', '/tmp/client_key.pem'),
-        ('/tmp/server_trust.pem', '/tmp/server_trust.key'),
+        (f"{cert_dir}/ca.crt", f"{cert_dir}/ca.key"),
+        (f"{cert_dir}/client.crt", f"{cert_dir}/client.key"),
+        (f"{cert_dir}/client_cert.pem", f"{cert_dir}/client_key.pem"),
+        (f"{cert_dir}/server_trust.pem", f"{cert_dir}/server_trust.key"),
         
         # OPC-UA certificates  
-        ('/tmp/opcua_cert.pem', '/tmp/opcua_key.pem'),
-        ('/tmp/opcua_trust.pem', '/tmp/opcua_trust.key'),
+        (f"{cert_dir}/opcua_cert.pem", f"{cert_dir}/opcua_key.pem"),
+        (f"{cert_dir}/opcua_trust.pem", f"{cert_dir}/opcua_trust.key"),
     ]
     
     # Also create the same certificates in current directory for local development
