@@ -185,8 +185,10 @@ class TestSCADAIntegration:
                 response = client.get('/health')
                 health_data = response.get_json()
                 
-                assert 'mqtt' in health_data
-                assert 'websocket' in health_data
-                assert 'realtime_processor' in health_data
-                assert 'opcua' in health_data
-                assert 'protocol_simulator' in health_data
+                # Services are now nested under 'services' key
+                assert 'services' in health_data
+                assert 'mqtt' in health_data['services']
+                assert 'websocket' in health_data['services']
+                assert 'realtime_processor' in health_data['services']
+                assert 'opcua' in health_data['services']
+                assert 'protocol_simulator' in health_data['services']
