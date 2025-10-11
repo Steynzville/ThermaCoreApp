@@ -1,5 +1,6 @@
 """Main application entry point for ThermaCore SCADA API."""
 import os
+from sqlalchemy import text
 
 from app import create_app, db
 
@@ -12,7 +13,6 @@ app = create_app()
 @app.cli.command()
 def init_db():
     """Initialize the database with tables and seed data."""
-    from sqlalchemy import text
     import sys
     
     print("Creating database tables...")
