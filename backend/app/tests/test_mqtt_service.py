@@ -274,7 +274,7 @@ class TestMQTTClient:
                     mock_client_instance = Mock()
                     mock_mqtt_client.return_value = mock_client_instance
                     
-                    client = MQTTClient(mock_app)
+                    MQTTClient(mock_app)
                     
                     # Verify TLS was configured with certificates
                     mock_client_instance.tls_set.assert_called_once()
@@ -308,7 +308,7 @@ class TestMQTTClient:
                 mock_mqtt_client.return_value = mock_client_instance
                 
                 # Should not raise in development mode
-                client = MQTTClient(mock_app)
+                MQTTClient(mock_app)
                 
                 # TLS should not be configured if certificates don't exist
                 mock_client_instance.tls_set.assert_not_called()

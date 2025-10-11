@@ -2,8 +2,7 @@
 import os
 import tempfile
 import pytest
-from pathlib import Path
-from unittest.mock import patch, Mock
+from unittest.mock import patch
 
 # Import the certificate generation module
 import sys
@@ -102,7 +101,7 @@ class TestCertificateGeneration:
     
     def test_ensure_certificates_creates_all_required_certs(self):
         """Test that ensure_certificates creates all required certificate pairs."""
-        with tempfile.TemporaryDirectory() as tmpdir:
+        with tempfile.TemporaryDirectory():
             # Mock the local cert directory
             with patch('generate_certs.os.path.exists') as mock_exists:
                 mock_exists.return_value = False
@@ -123,7 +122,7 @@ class TestCertificateGeneration:
             
             # Check certificate validity period
             import subprocess
-            from datetime import datetime, timedelta
+            from datetime import datetime
             
             output = subprocess.check_output([
                 'openssl', 'x509', '-in', cert_file, '-noout', '-dates'

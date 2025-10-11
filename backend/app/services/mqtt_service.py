@@ -56,11 +56,14 @@ class MQTTClient:
         logger.info(f"MQTT Certificate paths - CA: {self.ca_certs}, Cert: {self.cert_file}, Key: {self.key_file}")
         
         # Check if certificates exist and have content
-        cert_files_exist = all([
-            os.path.exists(self.ca_certs) and os.path.getsize(self.ca_certs) > 0,
-            os.path.exists(self.cert_file) and os.path.getsize(self.cert_file) > 0, 
-            os.path.exists(self.key_file) and os.path.getsize(self.key_file) > 0
-        ]) if self.use_tls else False
+        if self.use_tls and self.ca_certs and self.cert_file and self.key_file:
+            cert_files_exist = all([
+                os.path.exists(self.ca_certs) and os.path.getsize(self.ca_certs) > 0,
+                os.path.exists(self.cert_file) and os.path.getsize(self.cert_file) > 0, 
+                os.path.exists(self.key_file) and os.path.getsize(self.key_file) > 0
+            ])
+        else:
+            cert_files_exist = False
         
         # Configure TLS if enabled
         if self.use_tls:
