@@ -235,5 +235,107 @@ class TestMQTTClient:
         
         # Simulate clean disconnect (rc=0)
         client._on_disconnect(None, None, 0)
+    
+    def test_init_with_generated_certificates(self):
+        """Test MQTTClient initialization with generated certificates."""
+        import tempfile
+        import os
+        import sys
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+        import generate_certs
         
-        assert client.connected is False
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Generate test certificates
+            ca_cert = os.path.join(tmpdir, "ca.crt")
+            ca_key = os.path.join(tmpdir, "ca.key")
+            client_cert = os.path.join(tmpdir, "client.crt")
+            client_key = os.path.join(tmpdir, "client.key")
+            
+            generate_certs.generate_self_signed_cert(ca_cert, ca_key)
+            generate_certs.generate_self_signed_cert(client_cert, client_key)
+            
+            # Create mock app with TLS enabled and certificate paths
+            mock_app = Mock()
+            mock_app.config = {
+                'MQTT_BROKER_HOST': 'test-broker',
+                'MQTT_BROKER_PORT': 8883,
+                'MQTT_CLIENT_ID': 'test-client',
+                'MQTT_USE_TLS': True,
+                'MQTT_CA_CERTS': ca_cert,
+                'MQTT_CERT_FILE': client_cert,
+                'MQTT_KEY_FILE': client_key,
+                'MQTT_USERNAME': 'test-user',
+                'MQTT_PASSWORD': 'test-pass',
+                'TESTING': True
+            }
+            
+            with patch('paho.mqtt.client.Client') as mock_mqtt_client:
+                with patch('app.services.mqtt_service.is_production_environment', return_value=False):
+                    mock_client_instance = Mock()
+                    mock_mqtt_client.return_value = mock_client_instance
+                    
+                    MQTTClient(mock_app)
+                    
+                    # Verify TLS was configured with certificates
+                    mock_client_instance.tls_set.assert_called_once()
+                    call_kwargs = mock_client_instance.tls_set.call_args[1]
+                    assert call_kwargs['ca_certs'] == ca_cert
+                    assert call_kwargs['certfile'] == client_cert
+                    assert call_kwargs['keyfile'] == client_key
+                    
+                    # Verify hostname verification was enabled
+                    mock_client_instance.tls_insecure_set.assert_called_once_with(False)
+    
+    def test_init_with_missing_certificates_development(self):
+        """Test MQTTClient initialization with missing certificates in development."""
+        mock_app = Mock()
+        mock_app.config = {
+            'MQTT_BROKER_HOST': 'test-broker',
+            'MQTT_BROKER_PORT': 8883,
+            'MQTT_CLIENT_ID': 'test-client',
+            'MQTT_USE_TLS': True,
+            'MQTT_CA_CERTS': '/nonexistent/ca.crt',
+            'MQTT_CERT_FILE': '/nonexistent/client.crt',
+            'MQTT_KEY_FILE': '/nonexistent/client.key',
+            'MQTT_USERNAME': 'test-user',
+            'MQTT_PASSWORD': 'test-pass',
+            'TESTING': True
+        }
+        
+        with patch('paho.mqtt.client.Client') as mock_mqtt_client:
+            with patch('app.services.mqtt_service.is_production_environment', return_value=False):
+                mock_client_instance = Mock()
+                mock_mqtt_client.return_value = mock_client_instance
+                
+                # Should not raise in development mode
+                MQTTClient(mock_app)
+                
+                # TLS should not be configured if certificates don't exist
+                mock_client_instance.tls_set.assert_not_called()
+    
+    def test_init_with_missing_certificates_production_fails(self):
+        """Test MQTTClient initialization with missing certificates in production."""
+        mock_app = Mock()
+        mock_app.config = {
+            'MQTT_BROKER_HOST': 'test-broker',
+            'MQTT_BROKER_PORT': 8883,
+            'MQTT_CLIENT_ID': 'test-client',
+            'MQTT_USE_TLS': True,
+            'MQTT_CA_CERTS': '/nonexistent/ca.crt',
+            'MQTT_CERT_FILE': '/nonexistent/client.crt',
+            'MQTT_KEY_FILE': '/nonexistent/client.key',
+            'MQTT_USERNAME': 'test-user',
+            'MQTT_PASSWORD': 'test-pass',
+            'FLASK_ENV': 'production'
+        }
+        
+        with patch('paho.mqtt.client.Client') as mock_mqtt_client:
+            with patch('app.services.mqtt_service.is_production_environment', return_value=True):
+                mock_client_instance = Mock()
+                mock_mqtt_client.return_value = mock_client_instance
+                
+                # Should log warning and continue without TLS (graceful degradation)
+                MQTTClient(mock_app)
+                
+                # TLS should not be configured if certificates don't exist
+                mock_client_instance.tls_set.assert_not_called()

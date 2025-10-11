@@ -137,22 +137,28 @@ class TestSecurityHardeningImprovements:
             'MQTT_PASSWORD': 'test_pass',
             'MQTT_BROKER_HOST': 'localhost',
             'MQTT_BROKER_PORT': 8883,
+            'MQTT_CA_CERTS': '/tmp/ca.crt',
+            'MQTT_CERT_FILE': '/tmp/client.crt',
+            'MQTT_KEY_FILE': '/tmp/client.key',
         }
         
-        with patch('paho.mqtt.client.Client') as mock_client_class:
-            mock_client = Mock()
-            mock_client_class.return_value = mock_client
-            
-            mqtt_client = MQTTClient()
-            mqtt_client.init_app(mock_app, Mock())
-            
-            # Verify TLS was configured with secure settings
-            mock_client.tls_set.assert_called()
-            call_args = mock_client.tls_set.call_args
-            
-            # Should use secure TLS version and cipher suites for production
-            assert 'tls_version' in call_args.kwargs
-            assert 'ciphers' in call_args.kwargs
+        # Mock certificate files to exist
+        with patch('os.path.exists', return_value=True):
+            with patch('os.path.getsize', return_value=100):
+                with patch('paho.mqtt.client.Client') as mock_client_class:
+                    mock_client = Mock()
+                    mock_client_class.return_value = mock_client
+                    
+                    mqtt_client = MQTTClient()
+                    mqtt_client.init_app(mock_app, Mock())
+                    
+                    # Verify TLS was configured with secure settings
+                    mock_client.tls_set.assert_called()
+                    call_args = mock_client.tls_set.call_args
+                    
+                    # Should use secure TLS version and cipher suites for production
+                    assert 'tls_version' in call_args.kwargs
+                    assert 'ciphers' in call_args.kwargs
     
     @pytest.mark.skip(reason="OPC UA authentication enforcement not yet implemented - aspirational test")
     def test_opcua_production_security_enforcement(self):
