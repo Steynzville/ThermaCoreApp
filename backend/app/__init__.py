@@ -384,7 +384,7 @@ def create_app(config_name=None):
     # Health check endpoint
     @app.route('/health')
     def health_check():
-        """Health check endpoint."""
+        """Health check endpoint with explicit service status reporting."""
         status = {
             'status': 'healthy',
             'version': '1.0.0',
@@ -392,14 +392,29 @@ def create_app(config_name=None):
         }
         services = {}
         is_degraded = False
+        critical_services_down = []
         
-        # Add SCADA services status if available with null checking and error handling
+        # MQTT Service - Critical service
         if hasattr(app, 'mqtt_client') and app.mqtt_client is not None:
             try:
-                services['mqtt'] = app.mqtt_client.get_status()
+                mqtt_status = app.mqtt_client.get_status()
+                services['mqtt'] = mqtt_status
+                # Check if MQTT is operational
+                if not mqtt_status.get('available', False):
+                    is_degraded = True
+                    critical_services_down.append('mqtt')
+                elif not mqtt_status.get('connected', False):
+                    is_degraded = True
+                    logger.warning("MQTT service not connected")
             except Exception as e:
-                services['mqtt'] = {'status': 'error', 'message': str(e)}
+                services['mqtt'] = {'status': 'error', 'message': str(e), 'available': False}
                 is_degraded = True
+                critical_services_down.append('mqtt')
+                logger.error(f"Error getting MQTT status: {e}", exc_info=True)
+        else:
+            services['mqtt'] = {'status': 'not_initialized', 'available': False}
+            is_degraded = True
+            critical_services_down.append('mqtt')
         
         if hasattr(app, 'websocket_service') and app.websocket_service is not None:
             try:
@@ -415,15 +430,27 @@ def create_app(config_name=None):
                 services['realtime_processor'] = {'status': 'error', 'message': str(e)}
                 is_degraded = True
         
+        # OPC UA Service - Critical service
         if hasattr(app, 'opcua_client') and app.opcua_client is not None:
             try:
-                services['opcua'] = app.opcua_client.get_status()
+                opcua_status = app.opcua_client.get_status()
+                services['opcua'] = opcua_status
+                # Check if OPC UA is operational
+                if not opcua_status.get('available', False):
+                    is_degraded = True
+                    critical_services_down.append('opcua')
+                elif not opcua_status.get('connected', False):
+                    is_degraded = True
+                    logger.warning("OPC UA service not connected")
             except Exception as e:
-                services['opcua'] = {'status': 'error', 'message': str(e)}
+                services['opcua'] = {'status': 'error', 'message': str(e), 'available': False}
                 is_degraded = True
+                critical_services_down.append('opcua')
+                logger.error(f"Error getting OPC UA status: {e}", exc_info=True)
         else:
-            services['opcua'] = {'status': 'not_initialized'}
+            services['opcua'] = {'status': 'not_initialized', 'available': False}
             is_degraded = True
+            critical_services_down.append('opcua')
         
         if hasattr(app, 'protocol_simulator') and app.protocol_simulator is not None:
             try:
@@ -454,21 +481,33 @@ def create_app(config_name=None):
                 services['modbus'] = {'status': 'error', 'message': str(e)}
                 is_degraded = True
         
+        # DNP3 Service - Phase 4 service (not critical)
         if hasattr(app, 'dnp3_service') and app.dnp3_service is not None:
             try:
-                services['dnp3'] = app.dnp3_service.get_device_status()
+                dnp3_status = app.dnp3_service.get_device_status()
+                services['dnp3'] = dnp3_status
+                # DNP3 is not critical - just log if unavailable
+                if not dnp3_status.get('available', True):
+                    logger.info("DNP3 service not available (non-critical)")
             except Exception as e:
-                services['dnp3'] = {'status': 'error', 'message': str(e)}
-                is_degraded = True
+                services['dnp3'] = {'status': 'error', 'message': str(e), 'available': False}
+                logger.warning(f"Error getting DNP3 status: {e}")
+                # DNP3 errors don't mark the system as degraded
+        else:
+            services['dnp3'] = {'status': 'not_initialized', 'available': False}
         
         # Update overall status based on service health
         if is_degraded:
             status['status'] = 'degraded'
+            if critical_services_down:
+                status['critical_services_down'] = critical_services_down
+                status['message'] = f"Critical services unavailable: {', '.join(critical_services_down)}"
         
         # Add services to status
         status['services'] = services
         
         # Return 200 for healthy/degraded (app is running), 503 for critical failures
+        # Keep returning 200 even for degraded state to avoid Render restart loops
         http_status = 200
         
         return jsonify(status), http_status
