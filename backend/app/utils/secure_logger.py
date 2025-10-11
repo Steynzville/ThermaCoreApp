@@ -163,7 +163,7 @@ class SecureLoggerAdapter(logging.LoggerAdapter):
         msg, kwargs = self.process(msg, kwargs)
         try:
             self.logger.error(msg, *args, **kwargs)
-        except (KeyError, ValueError, TypeError) as e:
+        except (KeyError, ValueError, TypeError):
             # Fallback to basic logging during startup or formatting issues
             # TypeError can occur with % formatting issues
             try:
@@ -177,7 +177,7 @@ class SecureLoggerAdapter(logging.LoggerAdapter):
         msg, kwargs = self.process(msg, kwargs)
         try:
             self.logger.warning(msg, *args, **kwargs)
-        except (KeyError, ValueError, TypeError) as e:
+        except (KeyError, ValueError, TypeError):
             # Fallback to basic logging during startup or formatting issues
             # TypeError can occur with % formatting issues
             try:
@@ -191,7 +191,7 @@ class SecureLoggerAdapter(logging.LoggerAdapter):
         msg, kwargs = self.process(msg, kwargs)
         try:
             self.logger.info(msg, *args, **kwargs)
-        except (KeyError, ValueError, TypeError) as e:
+        except (KeyError, ValueError, TypeError):
             # Fallback to basic logging during startup or formatting issues
             # TypeError can occur with % formatting issues
             try:
@@ -205,7 +205,7 @@ class SecureLoggerAdapter(logging.LoggerAdapter):
         msg, kwargs = self.process(msg, kwargs)
         try:
             self.logger.debug(msg, *args, **kwargs)
-        except (KeyError, ValueError, TypeError) as e:
+        except (KeyError, ValueError, TypeError):
             # Fallback to basic logging during startup or formatting issues
             # TypeError can occur with % formatting issues
             try:
@@ -219,7 +219,7 @@ class SecureLoggerAdapter(logging.LoggerAdapter):
         msg, kwargs = self.process(msg, kwargs)
         try:
             self.logger.critical(msg, *args, **kwargs)
-        except (KeyError, ValueError, TypeError) as e:
+        except (KeyError, ValueError, TypeError):
             # Fallback to basic logging during startup or formatting issues
             # TypeError can occur with % formatting issues
             try:

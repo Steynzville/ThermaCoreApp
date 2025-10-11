@@ -405,12 +405,12 @@ def create_app(config_name=None):
                     critical_services_down.append('mqtt')
                 elif not mqtt_status.get('connected', False):
                     is_degraded = True
-                    logger.warning("MQTT service not connected")
+                    app.logger.warning("MQTT service not connected")
             except Exception as e:
                 services['mqtt'] = {'status': 'error', 'message': str(e), 'available': False}
                 is_degraded = True
                 critical_services_down.append('mqtt')
-                logger.error(f"Error getting MQTT status: {e}", exc_info=True)
+                app.logger.error(f"Error getting MQTT status: {e}", exc_info=True)
         else:
             services['mqtt'] = {'status': 'not_initialized', 'available': False}
             is_degraded = True
@@ -441,12 +441,12 @@ def create_app(config_name=None):
                     critical_services_down.append('opcua')
                 elif not opcua_status.get('connected', False):
                     is_degraded = True
-                    logger.warning("OPC UA service not connected")
+                    app.logger.warning("OPC UA service not connected")
             except Exception as e:
                 services['opcua'] = {'status': 'error', 'message': str(e), 'available': False}
                 is_degraded = True
                 critical_services_down.append('opcua')
-                logger.error(f"Error getting OPC UA status: {e}", exc_info=True)
+                app.logger.error(f"Error getting OPC UA status: {e}", exc_info=True)
         else:
             services['opcua'] = {'status': 'not_initialized', 'available': False}
             is_degraded = True
@@ -488,10 +488,10 @@ def create_app(config_name=None):
                 services['dnp3'] = dnp3_status
                 # DNP3 is not critical - just log if unavailable
                 if not dnp3_status.get('available', True):
-                    logger.info("DNP3 service not available (non-critical)")
+                    app.logger.info("DNP3 service not available (non-critical)")
             except Exception as e:
                 services['dnp3'] = {'status': 'error', 'message': str(e), 'available': False}
-                logger.warning(f"Error getting DNP3 status: {e}")
+                app.logger.warning(f"Error getting DNP3 status: {e}")
                 # DNP3 errors don't mark the system as degraded
         else:
             services['dnp3'] = {'status': 'not_initialized', 'available': False}
