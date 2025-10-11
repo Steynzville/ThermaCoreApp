@@ -28,7 +28,7 @@ def test_login(base_url, username, password):
     login_url = f"{base_url}/api/v1/auth/login"
     
     print(f"\n{'='*60}")
-    print(f"Testing Login Endpoint")
+    print("Testing Login Endpoint")
     print(f"{'='*60}")
     print(f"URL: {login_url}")
     print(f"Username: {username}")
@@ -109,7 +109,7 @@ def test_login(base_url, username, password):
         return response.status_code == 200
         
     except RequestException as e:
-        print(f"\n❌ ERROR - Network request failed!")
+        print("\n❌ ERROR - Network request failed!")
         print(f"Error: {e}")
         print(f"\n{'='*60}\n")
         return False
