@@ -36,53 +36,54 @@ let authToken = null;
  * @param {string} password - User password
  * @returns {Promise<Object>} Authentication result
  */
-export const login = (identifier, password) => {
-  // In the future, this would be replaced with:
-  // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  // return fetch(`${API_BASE_URL}/auth/login`, {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify({ identifier, password })
-  // }).then(response => response.json());
+export const login = async (identifier, password) => {
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: identifier, password: password })
+    });
 
-  return new Promise((resolve, reject) => {
-    // Simulate API delay
-    setTimeout(() => {
-      const user = mockUsers.find(
-        (u) =>
-          (u.username === identifier || u.email === identifier) &&
-          u.password === password,
-      );
+    const result = await response.json();
 
-      if (user) {
-        // Generate mock token
-        authToken = `mock-token-${user.id}-${Date.now()}`;
-        currentUser = {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          role: user.role,
-          firstName: user.firstName,
-          lastName: user.lastName,
-        };
+    if (response.ok && result.success) {
+      // Extract data from backend response
+      const { access_token, user } = result.data;
+      
+      // Store token and user data
+      authToken = access_token;
+      currentUser = {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role?.name || user.role,
+        firstName: user.first_name,
+        lastName: user.last_name,
+      };
 
-        // Update last login
-        user.lastLogin = new Date().toISOString();
-
-        resolve({
-          success: true,
-          user: currentUser,
-          token: authToken,
-          message: "Login successful",
-        });
-      } else {
-        reject({
-          success: false,
-          message: "Invalid credentials",
-        });
-      }
-    }, 500); // Simulate 500ms API delay
-  });
+      return {
+        success: true,
+        user: currentUser,
+        token: authToken,
+        message: result.message || "Login successful",
+      };
+    } else {
+      // Backend returned error response
+      return {
+        success: false,
+        message: result.message || result.error || "Invalid credentials",
+      };
+    }
+  } catch (error) {
+    // Network or other error
+    console.error('Login error:', error);
+    return {
+      success: false,
+      message: "Network error. Please check your connection and try again.",
+    };
+  }
 };
 
 /**
