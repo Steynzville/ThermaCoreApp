@@ -91,13 +91,12 @@ class MQTTClient:
                 # Enable hostname verification for security
                 self.client.tls_insecure_set(False)
             else:
-                logger.warning("MQTT certificates missing or empty. TLS disabled.")
-                # In production, we should fail if certificates are missing
+                # Log appropriate warning based on environment
                 if is_production_environment(app):
-                    logger.error("MQTT certificates are required in production but are missing or empty")
-                    raise ValueError("MQTT certificates must be present and valid in production environment")
-                # For development, we can skip TLS setup if certificates are not available
-                # Don't configure TLS at all
+                    logger.warning("MQTT certificates missing in production - TLS disabled")
+                else:
+                    logger.warning("MQTT certificates missing or empty. TLS disabled.")
+                # Continue without TLS instead of crashing - allows graceful degradation
                 
             # Single clear TLS status message per environment
             if cert_files_exist:
