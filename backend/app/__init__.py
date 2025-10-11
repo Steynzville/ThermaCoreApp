@@ -1,9 +1,10 @@
 """Flask application factory and initialization."""
 import os
 import logging
+from datetime import datetime
 
 # Import Flask and core extensions
-from flask import Flask
+from flask import Flask, jsonify
 from flask_sqlalchemy import SQLAlchemy
 
 # Try to import optional extensions, but don't fail if they're not installed
@@ -384,29 +385,92 @@ def create_app(config_name=None):
     @app.route('/health')
     def health_check():
         """Health check endpoint."""
-        status = {'status': 'healthy', 'version': '1.0.0'}
+        status = {
+            'status': 'healthy',
+            'version': '1.0.0',
+            'timestamp': datetime.utcnow().isoformat()
+        }
+        services = {}
+        is_degraded = False
         
-        # Add SCADA services status if available
-        if hasattr(app, 'mqtt_client'):
-            status['mqtt'] = app.mqtt_client.get_status()
-        if hasattr(app, 'websocket_service'):
-            status['websocket'] = app.websocket_service.get_status()
-        if hasattr(app, 'realtime_processor'):
-            status['realtime_processor'] = app.realtime_processor.get_status()
-        if hasattr(app, 'opcua_client'):
-            status['opcua'] = app.opcua_client.get_status()
-        if hasattr(app, 'protocol_simulator'):
-            status['protocol_simulator'] = app.protocol_simulator.get_status()
-        if hasattr(app, 'data_storage_service'):
-            status['data_storage'] = app.data_storage_service.get_status()
+        # Add SCADA services status if available with null checking and error handling
+        if hasattr(app, 'mqtt_client') and app.mqtt_client is not None:
+            try:
+                services['mqtt'] = app.mqtt_client.get_status()
+            except Exception as e:
+                services['mqtt'] = {'status': 'error', 'message': str(e)}
+                is_degraded = True
+        
+        if hasattr(app, 'websocket_service') and app.websocket_service is not None:
+            try:
+                services['websocket'] = app.websocket_service.get_status()
+            except Exception as e:
+                services['websocket'] = {'status': 'error', 'message': str(e)}
+                is_degraded = True
+        
+        if hasattr(app, 'realtime_processor') and app.realtime_processor is not None:
+            try:
+                services['realtime_processor'] = app.realtime_processor.get_status()
+            except Exception as e:
+                services['realtime_processor'] = {'status': 'error', 'message': str(e)}
+                is_degraded = True
+        
+        if hasattr(app, 'opcua_client') and app.opcua_client is not None:
+            try:
+                services['opcua'] = app.opcua_client.get_status()
+            except Exception as e:
+                services['opcua'] = {'status': 'error', 'message': str(e)}
+                is_degraded = True
+        else:
+            services['opcua'] = {'status': 'not_initialized'}
+            is_degraded = True
+        
+        if hasattr(app, 'protocol_simulator') and app.protocol_simulator is not None:
+            try:
+                services['protocol_simulator'] = app.protocol_simulator.get_status()
+            except Exception as e:
+                services['protocol_simulator'] = {'status': 'error', 'message': str(e)}
+                is_degraded = True
+        
+        if hasattr(app, 'data_storage_service') and app.data_storage_service is not None:
+            try:
+                services['data_storage'] = app.data_storage_service.get_status()
+            except Exception as e:
+                services['data_storage'] = {'status': 'error', 'message': str(e)}
+                is_degraded = True
+        
         # Phase 3 & 4 services
-        if hasattr(app, 'anomaly_detection_service'):
-            status['anomaly_detection'] = app.anomaly_detection_service.get_status()
-        if hasattr(app, 'modbus_service'):
-            status['modbus'] = app.modbus_service.get_device_status()
-        if hasattr(app, 'dnp3_service'):
-            status['dnp3'] = app.dnp3_service.get_device_status()
-            
-        return status
+        if hasattr(app, 'anomaly_detection_service') and app.anomaly_detection_service is not None:
+            try:
+                services['anomaly_detection'] = app.anomaly_detection_service.get_status()
+            except Exception as e:
+                services['anomaly_detection'] = {'status': 'error', 'message': str(e)}
+                is_degraded = True
+        
+        if hasattr(app, 'modbus_service') and app.modbus_service is not None:
+            try:
+                services['modbus'] = app.modbus_service.get_device_status()
+            except Exception as e:
+                services['modbus'] = {'status': 'error', 'message': str(e)}
+                is_degraded = True
+        
+        if hasattr(app, 'dnp3_service') and app.dnp3_service is not None:
+            try:
+                services['dnp3'] = app.dnp3_service.get_device_status()
+            except Exception as e:
+                services['dnp3'] = {'status': 'error', 'message': str(e)}
+                is_degraded = True
+        
+        # Update overall status based on service health
+        if is_degraded:
+            status['status'] = 'degraded'
+        
+        # Add services to status
+        status['services'] = services
+        
+        # Return 200 for healthy/degraded (app is running), 503 for critical failures
+        http_status = 200
+        
+        return jsonify(status), http_status
     
     return app
