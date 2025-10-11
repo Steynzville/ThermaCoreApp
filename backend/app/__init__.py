@@ -407,10 +407,13 @@ def create_app(config_name=None):
                     is_degraded = True
                     app.logger.warning("MQTT service not connected")
             except Exception as e:
+                # Only log first occurrence of error to reduce spam
+                if not hasattr(app, '_mqtt_error_logged'):
+                    app.logger.error(f"Error getting MQTT status: {e}", exc_info=True)
+                    app._mqtt_error_logged = True
                 services['mqtt'] = {'status': 'error', 'message': str(e), 'available': False}
                 is_degraded = True
                 critical_services_down.append('mqtt')
-                app.logger.error(f"Error getting MQTT status: {e}", exc_info=True)
         else:
             services['mqtt'] = {'status': 'not_initialized', 'available': False}
             is_degraded = True
