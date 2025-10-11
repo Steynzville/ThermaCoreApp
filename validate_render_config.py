@@ -52,12 +52,14 @@ def validate_render_yaml():
     print("✅ PASS: 'services' section exists")
     services = config['services']
     
+    # Ensure at least one service exists before accessing
     if not services or len(services) == 0:
         print("❌ FAIL: No services defined")
         all_checks_passed = False
         return all_checks_passed
     
-    service = services[0]  # Check first service
+    # Safe to access first service after bounds check above
+    service = services[0]
     
     # Check 2-7: Service configuration
     checks = [
@@ -136,11 +138,13 @@ def validate_render_yaml():
     else:
         print("✅ PASS: 'databases' section exists")
         databases = config['databases']
+        # Ensure at least one database exists before accessing
         if not databases or len(databases) == 0:
             print("❌ FAIL: No databases defined")
             all_checks_passed = False
             return all_checks_passed
         else:
+            # Safe to access first database after bounds check above
             db = databases[0]
             db_checks = [
                 ('name', 'thermacore-db', "Database name"),
