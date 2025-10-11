@@ -111,7 +111,7 @@ def validate_render_yaml():
             if secret_var.get('generateValue') is True:
                 print("✅ PASS: SECRET_KEY configured with generateValue: true")
             else:
-                print(f"❌ FAIL: SECRET_KEY generateValue is {secret_var.get('generateValue')}, expected true")
+                print("❌ FAIL: SECRET_KEY generateValue is misconfigured, expected 'generateValue: true'")
                 all_checks_passed = False
         else:
             print("❌ FAIL: SECRET_KEY environment variable not found")
