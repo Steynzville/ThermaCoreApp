@@ -6,9 +6,11 @@ This document describes the `render.yaml` configuration file used for deploying 
 
 ## Configuration Summary
 
-The `render.yaml` file in the repository root defines the complete deployment configuration for:
+The `render.yaml` file in the `backend/` directory defines the complete deployment configuration for:
 - **Flask Backend Service**: Python web service running the ThermaCore API
 - **PostgreSQL Database**: TimescaleDB-compatible database for time-series data
+
+**Important**: The `render.yaml` file must be located in the `backend/` folder because the Render service is configured with `rootDir: backend`. Render looks for the configuration file relative to the root directory setting.
 
 ## Service Configuration
 

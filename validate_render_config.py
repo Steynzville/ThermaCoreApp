@@ -2,7 +2,7 @@
 """
 Validation script for render.yaml deployment configuration.
 
-This script validates that the render.yaml file in the repository root
+This script validates that the render.yaml file in the backend folder
 is properly configured for deploying the Flask backend on Render.
 
 Can be run as:
@@ -16,9 +16,9 @@ import yaml
 
 
 def get_render_yaml_path():
-    """Get the path to render.yaml in the repository root."""
+    """Get the path to render.yaml in the backend folder."""
     repo_root = Path(__file__).parent
-    render_yaml = repo_root / "render.yaml"
+    render_yaml = repo_root / "backend" / "render.yaml"
     
     if not render_yaml.exists():
         raise FileNotFoundError(f"render.yaml not found at {render_yaml}")
