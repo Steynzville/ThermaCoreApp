@@ -67,6 +67,35 @@ The service uses three critical environment variables:
 - Disables Flask debug mode for security
 - Prevents detailed error messages from leaking sensitive information
 
+### Additional Required Environment Variables for Production
+
+The following environment variables must be added manually in the Render dashboard for production deployment:
+
+#### OPC UA Certificate Paths (Required when security is enabled)
+
+When OPC UA security is enabled (which is the default in production), you must set:
+- **OPCUA_CERT_FILE**: Path to client certificate file
+- **OPCUA_PRIVATE_KEY_FILE**: Path to client private key file
+- **OPCUA_TRUST_CERT_FILE**: Path to server trust certificate file
+
+See [OPCUA_CERTIFICATE_ENVIRONMENT_VARIABLES.md](./OPCUA_CERTIFICATE_ENVIRONMENT_VARIABLES.md) for complete documentation.
+
+#### MQTT Certificate Paths (Required in production)
+
+Production requires MQTT TLS certificates:
+- **MQTT_CA_CERTS**: Path to CA certificate file
+- **MQTT_CERT_FILE**: Path to client certificate file
+- **MQTT_KEY_FILE**: Path to client private key file
+
+#### Other Required Production Variables
+
+- **JWT_SECRET_KEY**: Secret key for JWT tokens (auto-generate in Render)
+- **OPCUA_USERNAME**: Username for OPC UA authentication
+- **OPCUA_PASSWORD**: Password for OPC UA authentication
+- **MQTT_USERNAME**: Username for MQTT authentication
+- **MQTT_PASSWORD**: Password for MQTT authentication
+- **MQTT_BROKER_HOST**: MQTT broker hostname
+
 ## Database Configuration
 
 ```yaml
