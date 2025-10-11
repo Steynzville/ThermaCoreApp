@@ -1,7 +1,7 @@
 """Tests for logging format, MQTT initialization, and health check improvements."""
 import logging
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 from flask import Flask
 
 from app.utils.secure_logger import SecureLogger, SecureLoggerAdapter
@@ -165,7 +165,7 @@ class TestMQTTServiceInitializationLogging:
             # Manually trigger the error after init
             try:
                 raise Exception("Callback error")
-            except Exception as e:
+            except Exception:
                 mock_logger.error.assert_not_called()  # Should not be called in successful path
 
 
