@@ -1,5 +1,6 @@
 """MQTT client service for SCADA data ingestion."""
 import json
+import os
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional, Callable
 
@@ -44,12 +45,22 @@ class MQTTClient:
         self.client_id = app.config.get('MQTT_CLIENT_ID', 'thermacore_backend')
         self.keepalive = app.config.get('MQTT_KEEPALIVE', 60)
         self.use_tls = app.config.get('MQTT_USE_TLS', False)
-        self.ca_certs = app.config.get('MQTT_CA_CERTS')
-        self.cert_file = app.config.get('MQTT_CERT_FILE')
-        self.key_file = app.config.get('MQTT_KEY_FILE')
+        self.ca_certs = app.config.get('MQTT_CA_CERTS', '/tmp/ca.crt')
+        self.cert_file = app.config.get('MQTT_CERT_FILE', '/tmp/client.crt')
+        self.key_file = app.config.get('MQTT_KEY_FILE', '/tmp/client.key')
         
         # Create MQTT client
         self.client = mqtt.Client(client_id=self.client_id)
+        
+        # Log certificate paths for debugging
+        logger.info(f"MQTT Certificate paths - CA: {self.ca_certs}, Cert: {self.cert_file}, Key: {self.key_file}")
+        
+        # Check if certificates exist and have content
+        cert_files_exist = all([
+            os.path.exists(self.ca_certs) and os.path.getsize(self.ca_certs) > 0,
+            os.path.exists(self.cert_file) and os.path.getsize(self.cert_file) > 0, 
+            os.path.exists(self.key_file) and os.path.getsize(self.key_file) > 0
+        ]) if self.use_tls else False
         
         # Configure TLS if enabled
         if self.use_tls:
@@ -65,8 +76,9 @@ class MQTTClient:
                 tls_version = ssl.PROTOCOL_TLS
                 secure_ciphers = None
             
-            if self.ca_certs:
+            if cert_files_exist:
                 # Configure TLS with certificate pinning and hostname verification
+                logger.info("MQTT certificates found, configuring TLS...")
                 self.client.tls_set(ca_certs=self.ca_certs, 
                                   certfile=self.cert_file, 
                                   keyfile=self.key_file,
@@ -76,17 +88,20 @@ class MQTTClient:
                 # Enable hostname verification for security
                 self.client.tls_insecure_set(False)
             else:
-                # Use system CA certificates with security hardening
-                self.client.tls_set(cert_reqs=ssl.CERT_REQUIRED,
-                                  tls_version=tls_version,
-                                  ciphers=secure_ciphers)
-                self.client.tls_insecure_set(False)
+                logger.warning("MQTT certificates missing or empty. TLS disabled.")
+                # In production, we should fail if certificates are missing
+                if is_production_environment(app):
+                    logger.error("MQTT certificates are required in production but are missing or empty")
+                    raise ValueError("MQTT certificates must be present and valid in production environment")
+                # For development, we can skip TLS setup if certificates are not available
+                # Don't configure TLS at all
                 
             # Single clear TLS status message per environment
-            if is_production_environment(app):
-                logger.info("MQTT TLS enabled with production security hardening (certificates, hostname verification, secure ciphers)")
-            else:
-                logger.info("MQTT TLS enabled for development environment")
+            if cert_files_exist:
+                if is_production_environment(app):
+                    logger.info("MQTT TLS enabled with production security hardening (certificates, hostname verification, secure ciphers)")
+                else:
+                    logger.info("MQTT TLS enabled for development environment")
         elif is_production_environment(app):
             logger.error("MQTT TLS not enabled - this is not allowed in production environments")
             raise ValueError("MQTT TLS must be enabled in production environment")

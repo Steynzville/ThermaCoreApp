@@ -112,3 +112,9 @@ performance_results/
 # Database files
 *.db
 *.sqlite
+
+# Certificates - generated locally or on deployment
+certs/
+*.crt
+*.key
+*.pem
