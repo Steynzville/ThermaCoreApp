@@ -1,6 +1,10 @@
 """Main application entry point for ThermaCore SCADA API."""
 import os
+import sys
 from sqlalchemy import text
+
+# Add backend to Python path for proper imports in both development and deployment
+sys.path.insert(0, os.path.dirname(__file__))
 
 from app import create_app, db
 
