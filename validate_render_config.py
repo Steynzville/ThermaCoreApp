@@ -139,6 +139,7 @@ def validate_render_yaml():
         if not databases or len(databases) == 0:
             print("❌ FAIL: No databases defined")
             all_checks_passed = False
+            return all_checks_passed
         else:
             db = databases[0]
             db_checks = [
