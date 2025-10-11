@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useEffect,useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
+
+import * as authService from "../services/authService";
 
 const AuthContext = createContext();
 
@@ -31,65 +33,38 @@ export const AuthProvider = ({ children }) => {
   const login = async (username, password) => {
     setIsLoading(true);
     
-    // SECURITY WARNING: Hardcoded credentials below are STRICTLY for local development and demo purposes ONLY.
-    // These credentials are:
-    // 1. NEVER shipped to production builds (verified by build tools)
-    // 2. Automatically replaced by proper authentication backend in production environments
-    // 3. Excluded from all security scanning in CI/CD environments
-    // 4. Used SOLELY for frontend development workflow and demonstration purposes
-    // 5. NOT valid for any production or staging environments
-    // 
-    // Production builds MUST strip this entire code block and use real authentication APIs.
-    
-    // RUNTIME GUARD: Strictly enforce development-only credentials
-    // These credentials are completely disabled in production, CI, and staging environments
-    const isDevelopmentMode = process.env.NODE_ENV === 'development' || 
-                             (process.env.NODE_ENV === undefined && import.meta.env.DEV);
-    
-    if (!isDevelopmentMode) {
-      // In production/staging/CI: hardcoded credentials are completely disabled
-      setIsLoading(false);
-      return { success: false, error: "Authentication service unavailable. Please contact administrator." };
-    }
-    
-    // BUILD-TIME CREDENTIAL REPLACEMENT: These values are completely removed in production builds  
-    if (!import.meta.env.DEV) {
-      // In production/staging/CI: hardcoded credentials are completely disabled
-      setIsLoading(false);
-      return { success: false, error: "Authentication service unavailable. Please contact administrator." };
-    }
-    
-    // Development-only credentials - use obfuscated approach to avoid bundling literal strings
-    const devCredentials = {
-      au: ["admin"].join(""),     // Obfuscated "admin"  
-      ap: ["dev_", "admin_", "credential"].join(""),
-      uu: ["user"].join(""),      // Obfuscated "user"
-      up: ["dev_", "user_", "credential"].join("")
-    };
-    
-    if (username.toLowerCase() === devCredentials.au && password === devCredentials.ap) {
-      const userData = { username: devCredentials.au, role: "admin" };
-      setUser(userData);
-      setUserRole("admin");
+    try {
+      // Call the backend authentication API
+      const result = await authService.login(username, password);
+      
+      if (result.success) {
+        const userData = { 
+          username: result.user.username, 
+          role: result.user.role,
+          email: result.user.email,
+          firstName: result.user.firstName,
+          lastName: result.user.lastName,
+        };
+        
+        setUser(userData);
+        setUserRole(result.user.role);
 
-      // Persist to localStorage
-      localStorage.setItem("thermacore_user", JSON.stringify(userData));
-      localStorage.setItem("thermacore_role", "admin");
+        // Persist to localStorage
+        localStorage.setItem("thermacore_user", JSON.stringify(userData));
+        localStorage.setItem("thermacore_role", result.user.role);
+        localStorage.setItem("thermacore_token", result.token);
+        
+        setIsLoading(false);
+        return { success: true, role: result.user.role };
+      } else {
+        setIsLoading(false);
+        return { success: false, error: result.message || "Invalid credentials!" };
+      }
+    } catch (error) {
+      console.error('Login error:', error);
       setIsLoading(false);
-      return { success: true, role: "admin" };
-    } else if (username.toLowerCase() === devCredentials.uu && password === devCredentials.up) {
-      const userData = { username: devCredentials.uu, role: "user" };
-      setUser(userData);
-      setUserRole("user");
-
-      // Persist to localStorage
-      localStorage.setItem("thermacore_user", JSON.stringify(userData));
-      localStorage.setItem("thermacore_role", "user");
-      setIsLoading(false);
-      return { success: true, role: "user" };
+      return { success: false, error: "An error occurred during login. Please try again." };
     }
-    setIsLoading(false);
-    return { success: false, error: "Invalid credentials!" };
   };
 
   const logout = async () => {
@@ -100,6 +75,7 @@ export const AuthProvider = ({ children }) => {
     // Clear from localStorage
     localStorage.removeItem("thermacore_user");
     localStorage.removeItem("thermacore_role");
+    localStorage.removeItem("thermacore_token");
     setIsLoggingOut(false);
   };
 
