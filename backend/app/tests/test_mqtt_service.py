@@ -334,6 +334,8 @@ class TestMQTTClient:
                 mock_client_instance = Mock()
                 mock_mqtt_client.return_value = mock_client_instance
                 
-                # Should raise in production mode
-                with pytest.raises(ValueError, match="MQTT certificates must be present"):
-                    MQTTClient(mock_app)
+                # Should log warning and continue without TLS (graceful degradation)
+                MQTTClient(mock_app)
+                
+                # TLS should not be configured if certificates don't exist
+                mock_client_instance.tls_set.assert_not_called()
