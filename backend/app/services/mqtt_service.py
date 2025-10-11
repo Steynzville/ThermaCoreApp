@@ -51,103 +51,138 @@ class MQTTClient:
     
     def init_app(self, app, data_storage_service=None):
         """Initialize the MQTT client with Flask app configuration."""
-        self._app = app
-        self._data_storage_service = data_storage_service
+        logger.info("Starting MQTT service initialization...")
         
-        # MQTT configuration
-        self.broker_host = app.config.get('MQTT_BROKER_HOST', 'localhost')
-        self.broker_port = app.config.get('MQTT_BROKER_PORT', 1883)
-        self.username = app.config.get('MQTT_USERNAME')
-        self.password = app.config.get('MQTT_PASSWORD')
-        self.client_id = app.config.get('MQTT_CLIENT_ID', 'thermacore_backend')
-        self.keepalive = app.config.get('MQTT_KEEPALIVE', 60)
-        self.use_tls = app.config.get('MQTT_USE_TLS', False)
-        self.ca_certs = app.config.get('MQTT_CA_CERTS', '/tmp/ca.crt')
-        self.cert_file = app.config.get('MQTT_CERT_FILE', '/tmp/client.crt')
-        self.key_file = app.config.get('MQTT_KEY_FILE', '/tmp/client.key')
+        try:
+            self._app = app
+            self._data_storage_service = data_storage_service
+            
+            # MQTT configuration
+            self.broker_host = app.config.get('MQTT_BROKER_HOST', 'localhost')
+            self.broker_port = app.config.get('MQTT_BROKER_PORT', 1883)
+            self.username = app.config.get('MQTT_USERNAME')
+            self.password = app.config.get('MQTT_PASSWORD')
+            self.client_id = app.config.get('MQTT_CLIENT_ID', 'thermacore_backend')
+            self.keepalive = app.config.get('MQTT_KEEPALIVE', 60)
+            self.use_tls = app.config.get('MQTT_USE_TLS', False)
+            self.ca_certs = app.config.get('MQTT_CA_CERTS', '/tmp/ca.crt')
+            self.cert_file = app.config.get('MQTT_CERT_FILE', '/tmp/client.crt')
+            self.key_file = app.config.get('MQTT_KEY_FILE', '/tmp/client.key')
+            
+            logger.info(f"MQTT configuration loaded - Broker: {self.broker_host}:{self.broker_port}, TLS: {self.use_tls}")
+            
+            # Create MQTT client
+            self.client = mqtt.Client(client_id=self.client_id)
+            logger.info(f"MQTT client created with ID: {self.client_id}")
+        except Exception as e:
+            logger.error(f"Failed to configure MQTT client: {e}", exc_info=True)
+            raise
         
-        # Create MQTT client
-        self.client = mqtt.Client(client_id=self.client_id)
-        
-        # Log certificate paths for debugging
-        logger.info(f"MQTT Certificate paths - CA: {self.ca_certs}, Cert: {self.cert_file}, Key: {self.key_file}")
-        
-        # Check if certificates exist and have content
-        if self.use_tls and self.ca_certs and self.cert_file and self.key_file:
-            # Validate each certificate file individually for better error reporting
-            cert_files_exist = all([
-                self._validate_certificate_file(self.ca_certs),
-                self._validate_certificate_file(self.cert_file),
-                self._validate_certificate_file(self.key_file)
-            ])
-        else:
+        try:
+            # Log certificate paths for debugging
+            logger.info(f"MQTT Certificate paths - CA: {self.ca_certs}, Cert: {self.cert_file}, Key: {self.key_file}")
+            
+            # Check if certificates exist and have content
+            if self.use_tls and self.ca_certs and self.cert_file and self.key_file:
+                # Validate each certificate file individually for better error reporting
+                cert_files_exist = all([
+                    self._validate_certificate_file(self.ca_certs),
+                    self._validate_certificate_file(self.cert_file),
+                    self._validate_certificate_file(self.key_file)
+                ])
+            else:
+                cert_files_exist = False
+        except Exception as e:
+            logger.warning(f"Error validating MQTT certificates: {e}")
             cert_files_exist = False
         
         # Configure TLS if enabled
-        if self.use_tls:
-            import ssl
-            
-            # Enforce TLSv1.2+ and secure cipher suites for production
-            if is_production_environment(app):
-                # Production: require TLSv1.2+ with restricted cipher suites
-                tls_version = ssl.PROTOCOL_TLS_CLIENT  # Secure TLS version
-                secure_ciphers = 'ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20:!aNULL:!MD5:!DSS'
-            else:
-                # Development: allow broader TLS compatibility
-                tls_version = ssl.PROTOCOL_TLS
-                secure_ciphers = None
-            
-            if cert_files_exist:
-                # Configure TLS with certificate pinning and hostname verification
-                logger.info("MQTT certificates found, configuring TLS...")
-                self.client.tls_set(ca_certs=self.ca_certs, 
-                                  certfile=self.cert_file, 
-                                  keyfile=self.key_file,
-                                  cert_reqs=ssl.CERT_REQUIRED,
-                                  tls_version=tls_version,
-                                  ciphers=secure_ciphers)
-                # Enable hostname verification for security
-                self.client.tls_insecure_set(False)
-            else:
-                # Log appropriate warning based on environment
-                if is_production_environment(app):
-                    logger.warning("MQTT certificates missing in production - TLS disabled")
-                else:
-                    logger.warning("MQTT certificates missing or empty. TLS disabled.")
-                # Continue without TLS instead of crashing - allows graceful degradation
+        try:
+            if self.use_tls:
+                import ssl
                 
-            # Single clear TLS status message per environment
-            if cert_files_exist:
+                # Enforce TLSv1.2+ and secure cipher suites for production
                 if is_production_environment(app):
-                    logger.info("MQTT TLS enabled with production security hardening (certificates, hostname verification, secure ciphers)")
+                    # Production: require TLSv1.2+ with restricted cipher suites
+                    tls_version = ssl.PROTOCOL_TLS_CLIENT  # Secure TLS version
+                    secure_ciphers = 'ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20:!aNULL:!MD5:!DSS'
                 else:
-                    logger.info("MQTT TLS enabled for development environment")
-        elif is_production_environment(app):
-            logger.warning("MQTT TLS not enabled in production - security reduced")
-            # Continue without TLS - prioritize availability
+                    # Development: allow broader TLS compatibility
+                    tls_version = ssl.PROTOCOL_TLS
+                    secure_ciphers = None
+                
+                if cert_files_exist:
+                    # Configure TLS with certificate pinning and hostname verification
+                    logger.info("MQTT certificates found, configuring TLS...")
+                    self.client.tls_set(ca_certs=self.ca_certs, 
+                                      certfile=self.cert_file, 
+                                      keyfile=self.key_file,
+                                      cert_reqs=ssl.CERT_REQUIRED,
+                                      tls_version=tls_version,
+                                      ciphers=secure_ciphers)
+                    # Enable hostname verification for security
+                    self.client.tls_insecure_set(False)
+                else:
+                    # Log appropriate warning based on environment
+                    if is_production_environment(app):
+                        logger.warning("MQTT certificates missing in production - TLS disabled")
+                    else:
+                        logger.warning("MQTT certificates missing or empty. TLS disabled.")
+                    # Continue without TLS instead of crashing - allows graceful degradation
+                    
+                # Single clear TLS status message per environment
+                if cert_files_exist:
+                    if is_production_environment(app):
+                        logger.info("MQTT TLS enabled with production security hardening (certificates, hostname verification, secure ciphers)")
+                    else:
+                        logger.info("MQTT TLS enabled for development environment")
+            elif is_production_environment(app):
+                logger.warning("MQTT TLS not enabled in production - security reduced")
+                # Continue without TLS - prioritize availability
+        except Exception as e:
+            logger.error(f"Error configuring MQTT TLS: {e}", exc_info=True)
+            if is_production_environment(app):
+                logger.warning("Continuing without TLS due to configuration error")
+            # Allow graceful degradation
         
         
         # Set authentication if provided (required for secure connections)
-        if self.username and self.password:
-            self.client.username_pw_set(self.username, self.password)
-            logger.info("MQTT authentication configured")
-        elif is_production_environment(app):
-            logger.warning("MQTT running without authentication in production - security reduced")
-            # Continue without authentication
+        try:
+            if self.username and self.password:
+                self.client.username_pw_set(self.username, self.password)
+                logger.info("MQTT authentication configured")
+            elif is_production_environment(app):
+                logger.warning("MQTT running without authentication in production - security reduced")
+                # Continue without authentication
+        except Exception as e:
+            logger.error(f"Error configuring MQTT authentication: {e}", exc_info=True)
+            if is_production_environment(app):
+                raise
         
         # Set callbacks
-        self.client.on_connect = self._on_connect
-        self.client.on_disconnect = self._on_disconnect
-        self.client.on_message = self._on_message
+        try:
+            self.client.on_connect = self._on_connect
+            self.client.on_disconnect = self._on_disconnect
+            self.client.on_message = self._on_message
+            logger.info("MQTT callbacks configured successfully")
+        except Exception as e:
+            logger.error(f"Error configuring MQTT callbacks: {e}", exc_info=True)
+            raise
         
         # Default SCADA data topics to subscribe to
-        self.default_topics = app.config.get('MQTT_SCADA_TOPICS', [
-            'scada/+/temperature',
-            'scada/+/pressure', 
-            'scada/+/flow_rate',
-            'scada/+/power',
-            'scada/+/status'
-        ])
+        try:
+            self.default_topics = app.config.get('MQTT_SCADA_TOPICS', [
+                'scada/+/temperature',
+                'scada/+/pressure', 
+                'scada/+/flow_rate',
+                'scada/+/power',
+                'scada/+/status'
+            ])
+            logger.info(f"MQTT default topics configured: {len(self.default_topics)} topics")
+            logger.info("MQTT service initialization completed successfully")
+        except Exception as e:
+            logger.error(f"Error configuring MQTT topics: {e}", exc_info=True)
+            raise
     
     def connect(self):
         """Connect to MQTT broker."""

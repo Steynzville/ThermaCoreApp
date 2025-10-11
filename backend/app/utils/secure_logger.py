@@ -163,42 +163,67 @@ class SecureLoggerAdapter(logging.LoggerAdapter):
         msg, kwargs = self.process(msg, kwargs)
         try:
             self.logger.error(msg, *args, **kwargs)
-        except (KeyError, ValueError):
-            # Fallback to basic logging during startup
-            _FALLBACK_LOGGER.error(msg, *args, **kwargs)
+        except (KeyError, ValueError, TypeError):
+            # Fallback to basic logging during startup or formatting issues
+            # TypeError can occur with % formatting issues
+            try:
+                _FALLBACK_LOGGER.error(msg, *args, **kwargs)
+            except Exception:
+                # Last resort: log without any args/kwargs
+                _FALLBACK_LOGGER.error(str(msg))
     
     def warning(self, msg: Any, *args, **kwargs):
         """Log warning with sanitization."""
         msg, kwargs = self.process(msg, kwargs)
         try:
             self.logger.warning(msg, *args, **kwargs)
-        except (KeyError, ValueError):
-            # Fallback to basic logging during startup
-            _FALLBACK_LOGGER.warning(msg, *args, **kwargs)
+        except (KeyError, ValueError, TypeError):
+            # Fallback to basic logging during startup or formatting issues
+            # TypeError can occur with % formatting issues
+            try:
+                _FALLBACK_LOGGER.warning(msg, *args, **kwargs)
+            except Exception:
+                # Last resort: log without any args/kwargs
+                _FALLBACK_LOGGER.warning(str(msg))
     
     def info(self, msg: Any, *args, **kwargs):
         """Log info with sanitization."""
         msg, kwargs = self.process(msg, kwargs)
         try:
             self.logger.info(msg, *args, **kwargs)
-        except (KeyError, ValueError):
-            # Fallback to basic logging during startup
-            _FALLBACK_LOGGER.info(msg, *args, **kwargs)
+        except (KeyError, ValueError, TypeError):
+            # Fallback to basic logging during startup or formatting issues
+            # TypeError can occur with % formatting issues
+            try:
+                _FALLBACK_LOGGER.info(msg, *args, **kwargs)
+            except Exception:
+                # Last resort: log without any args/kwargs
+                _FALLBACK_LOGGER.info(str(msg))
     
     def debug(self, msg: Any, *args, **kwargs):
         """Log debug with sanitization."""
         msg, kwargs = self.process(msg, kwargs)
         try:
             self.logger.debug(msg, *args, **kwargs)
-        except (KeyError, ValueError):
-            # Fallback to basic logging during startup
-            _FALLBACK_LOGGER.debug(msg, *args, **kwargs)
+        except (KeyError, ValueError, TypeError):
+            # Fallback to basic logging during startup or formatting issues
+            # TypeError can occur with % formatting issues
+            try:
+                _FALLBACK_LOGGER.debug(msg, *args, **kwargs)
+            except Exception:
+                # Last resort: log without any args/kwargs
+                _FALLBACK_LOGGER.debug(str(msg))
     
     def critical(self, msg: Any, *args, **kwargs):
         """Log critical with sanitization."""
         msg, kwargs = self.process(msg, kwargs)
         try:
             self.logger.critical(msg, *args, **kwargs)
-        except (KeyError, ValueError):
-            # Fallback to basic logging during startup
-            _FALLBACK_LOGGER.critical(msg, *args, **kwargs)
+        except (KeyError, ValueError, TypeError):
+            # Fallback to basic logging during startup or formatting issues
+            # TypeError can occur with % formatting issues
+            try:
+                _FALLBACK_LOGGER.critical(msg, *args, **kwargs)
+            except Exception:
+                # Last resort: log without any args/kwargs
+                _FALLBACK_LOGGER.critical(str(msg))
