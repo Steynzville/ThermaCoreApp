@@ -4,6 +4,10 @@ import logging
 from typing import Any
 
 
+# Module-level fallback logger for when request_id formatting fails
+_FALLBACK_LOGGER = logging.getLogger('fallback')
+
+
 class SecureLogger:
     """Utility class for sanitizing log messages to prevent sensitive data leakage."""
     
@@ -157,24 +161,44 @@ class SecureLoggerAdapter(logging.LoggerAdapter):
     def error(self, msg: Any, *args, **kwargs):
         """Log error with sanitization."""
         msg, kwargs = self.process(msg, kwargs)
-        self.logger.error(msg, *args, **kwargs)
+        try:
+            self.logger.error(msg, *args, **kwargs)
+        except (KeyError, ValueError):
+            # Fallback to basic logging during startup
+            _FALLBACK_LOGGER.error(msg, *args, **kwargs)
     
     def warning(self, msg: Any, *args, **kwargs):
         """Log warning with sanitization."""
         msg, kwargs = self.process(msg, kwargs)
-        self.logger.warning(msg, *args, **kwargs)
+        try:
+            self.logger.warning(msg, *args, **kwargs)
+        except (KeyError, ValueError):
+            # Fallback to basic logging during startup
+            _FALLBACK_LOGGER.warning(msg, *args, **kwargs)
     
     def info(self, msg: Any, *args, **kwargs):
         """Log info with sanitization."""
         msg, kwargs = self.process(msg, kwargs)
-        self.logger.info(msg, *args, **kwargs)
+        try:
+            self.logger.info(msg, *args, **kwargs)
+        except (KeyError, ValueError):
+            # Fallback to basic logging during startup
+            _FALLBACK_LOGGER.info(msg, *args, **kwargs)
     
     def debug(self, msg: Any, *args, **kwargs):
         """Log debug with sanitization."""
         msg, kwargs = self.process(msg, kwargs)
-        self.logger.debug(msg, *args, **kwargs)
+        try:
+            self.logger.debug(msg, *args, **kwargs)
+        except (KeyError, ValueError):
+            # Fallback to basic logging during startup
+            _FALLBACK_LOGGER.debug(msg, *args, **kwargs)
     
     def critical(self, msg: Any, *args, **kwargs):
         """Log critical with sanitization."""
         msg, kwargs = self.process(msg, kwargs)
-        self.logger.critical(msg, *args, **kwargs)
+        try:
+            self.logger.critical(msg, *args, **kwargs)
+        except (KeyError, ValueError):
+            # Fallback to basic logging during startup
+            _FALLBACK_LOGGER.critical(msg, *args, **kwargs)
