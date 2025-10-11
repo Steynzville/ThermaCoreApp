@@ -338,6 +338,26 @@ SECRET_KEY=your-super-secret-key
 JWT_SECRET_KEY=your-jwt-secret-key
 ```
 
+### Certificate Generation for MQTT and OPC-UA
+
+The application includes automatic certificate generation for secure MQTT and OPC-UA connections:
+
+```bash
+# Generate certificates (included in build process)
+python generate_certs.py
+```
+
+This creates self-signed certificates for:
+- **MQTT**: CA, client, and server trust certificates
+- **OPC-UA**: Client and trust certificates
+
+**For Render deployment**, update the build command to:
+```bash
+pip install pyopenssl && python backend/generate_certs.py && pip install -r backend/requirements.txt
+```
+
+See [CERTIFICATE_GENERATION_DEPLOYMENT.md](CERTIFICATE_GENERATION_DEPLOYMENT.md) for detailed deployment instructions.
+
 ### Docker Deployment (Future Enhancement)
 
 ```dockerfile
