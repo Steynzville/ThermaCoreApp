@@ -550,10 +550,11 @@ def debug_admin_state():
             'all_roles': [{'id': r.id, 'name': r.name.value} for r in Role.query.all()]
         }), 200
     except Exception as e:
+        # Log the error and stack trace server-side for diagnostics
+        current_app.logger.error("Error in debug_admin_state: %s\n%s", str(e), traceback.format_exc())
         return jsonify({
             'success': False,
-            'error': str(e),
-            'traceback': traceback.format_exc()
+            'error': 'Internal server error'
         }), 500
 
 
