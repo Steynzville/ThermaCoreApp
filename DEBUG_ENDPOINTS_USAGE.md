@@ -16,6 +16,8 @@ These endpoints were added to diagnose and fix the authentication 500 error when
 
 **Purpose:** Check the current state of the admin user in the database
 
+**Note:** This endpoint checks for both 'admin' and 'Steyn_Admin' usernames automatically.
+
 **Usage:**
 ```bash
 curl https://thermacoreapp.onrender.com/api/v1/auth/debug/admin-state
@@ -26,7 +28,8 @@ curl https://thermacoreapp.onrender.com/api/v1/auth/debug/admin-state
 {
   "success": true,
   "admin_user_exists": true,
-  "username": "admin",
+  "steyn_admin_exists": true,
+  "username": "Steyn_Admin",
   "role_id": 1,
   "has_role_object": true,
   "role_name": "admin",
@@ -42,8 +45,9 @@ curl https://thermacoreapp.onrender.com/api/v1/auth/debug/admin-state
 ```json
 {
   "success": true,
-  "admin_user_exists": true,
-  "username": "admin",
+  "admin_user_exists": false,
+  "steyn_admin_exists": true,
+  "username": "Steyn_Admin",
   "role_id": null,
   "has_role_object": false,
   "role_name": null,
@@ -59,6 +63,8 @@ curl https://thermacoreapp.onrender.com/api/v1/auth/debug/admin-state
 
 **Purpose:** Automatically fix the admin user's role assignment
 
+**Note:** This endpoint checks for both 'admin' and 'Steyn_Admin' usernames automatically.
+
 **Usage:**
 ```bash
 curl -X POST https://thermacoreapp.onrender.com/api/v1/auth/debug/fix-admin-role
@@ -70,7 +76,7 @@ curl -X POST https://thermacoreapp.onrender.com/api/v1/auth/debug/fix-admin-role
   "success": true,
   "message": "Admin role fixed",
   "admin_user": {
-    "username": "admin",
+    "username": "Steyn_Admin",
     "role_id": 1,
     "role_name": "admin"
   }
@@ -81,8 +87,7 @@ curl -X POST https://thermacoreapp.onrender.com/api/v1/auth/debug/fix-admin-role
 ```json
 {
   "success": false,
-  "error": "Admin user not found",
-  "traceback": "..."
+  "error": "Admin user not found (checked both \"admin\" and \"Steyn_Admin\")"
 }
 ```
 

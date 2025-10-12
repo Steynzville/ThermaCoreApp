@@ -536,17 +536,27 @@ def change_password():
 
 @auth_bp.route('/debug/admin-state', methods=['GET'])
 def debug_admin_state():
-    """Temporary endpoint to check admin user database state"""
+    """Temporary endpoint to check admin user database state
+    
+    WARNING: This endpoint exposes sensitive database information.
+    Remove this endpoint after resolving the authentication issue.
+    """
     try:
+        # Check for both 'admin' and 'Steyn_Admin' usernames
         admin_user = User.query.filter_by(username='admin').first()
+        steyn_admin = User.query.filter_by(username='Steyn_Admin').first()
+        
+        # Use whichever exists
+        target_user = admin_user or steyn_admin
         
         return jsonify({
             'success': True,
             'admin_user_exists': admin_user is not None,
-            'username': admin_user.username if admin_user else None,
-            'role_id': admin_user.role_id if admin_user else None,
-            'has_role_object': admin_user.role is not None if admin_user else False,
-            'role_name': admin_user.role.name.value if admin_user and admin_user.role else None,
+            'steyn_admin_exists': steyn_admin is not None,
+            'username': target_user.username if target_user else None,
+            'role_id': target_user.role_id if target_user else None,
+            'has_role_object': target_user.role is not None if target_user else False,
+            'role_name': target_user.role.name.value if target_user and target_user.role else None,
             'all_roles': [{'id': r.id, 'name': r.name.value} for r in Role.query.all()]
         }), 200
     except Exception as e:
@@ -560,12 +570,21 @@ def debug_admin_state():
 
 @auth_bp.route('/debug/fix-admin-role', methods=['POST'])
 def fix_admin_role():
-    """Temporary endpoint to fix admin user role assignment"""
+    """Temporary endpoint to fix admin user role assignment
+    
+    WARNING: This endpoint exposes sensitive database information.
+    Remove this endpoint after resolving the authentication issue.
+    """
     try:
+        # Check for both 'admin' and 'Steyn_Admin' usernames
         admin_user = User.query.filter_by(username='admin').first()
+        steyn_admin = User.query.filter_by(username='Steyn_Admin').first()
         
-        if not admin_user:
-            return jsonify({'success': False, 'error': 'Admin user not found'}), 404
+        # Use whichever exists
+        target_user = admin_user or steyn_admin
+        
+        if not target_user:
+            return jsonify({'success': False, 'error': 'Admin user not found (checked both "admin" and "Steyn_Admin")'}), 404
             
         # Get or create admin role
         from app.models import RoleEnum
@@ -574,16 +593,16 @@ def fix_admin_role():
             return jsonify({'success': False, 'error': 'Admin role not found in database'}), 404
             
         # Assign role to admin user
-        admin_user.role_id = admin_role.id
+        target_user.role_id = admin_role.id
         db.session.commit()
         
         return jsonify({
             'success': True,
             'message': 'Admin role fixed',
             'admin_user': {
-                'username': admin_user.username,
-                'role_id': admin_user.role_id,
-                'role_name': admin_user.role.name.value if admin_user.role else None
+                'username': target_user.username,
+                'role_id': target_user.role_id,
+                'role_name': target_user.role.name.value if target_user.role else None
             }
         }), 200
     except Exception as e:

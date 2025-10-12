@@ -17,10 +17,12 @@ BEGIN
     END IF;
 END $$;
 
--- Update Steyn_Admin to have admin role if role_id is NULL
+-- Update specific admin users to have admin role if role_id is NULL
+-- NOTE: Adjust the username to match your environment's admin user
+-- Common usernames: 'admin', 'Steyn_Admin', or your specific admin username
 UPDATE users 
 SET role_id = (SELECT id FROM roles WHERE name = 'admin')
-WHERE username = 'Steyn_Admin' 
+WHERE username IN ('Steyn_Admin', 'admin')
   AND role_id IS NULL;
 
 -- Update any other users without roles to have viewer role (safe default)
