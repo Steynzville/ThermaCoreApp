@@ -28,7 +28,7 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 from app import create_app, db
 from app.models import User, Role, Permission, RoleEnum
 from sqlalchemy import inspect, text
-from sqlalchemy.exc import OperationalError, ProgrammingError
+from sqlalchemy.exc import OperationalError
 
 
 def print_header(title):
@@ -195,7 +195,7 @@ def check_admin_user(app):
                     
                     # Check role assignment
                     if not user.role:
-                        print_error(f"  - Role object is NULL! (Database foreign key issue)")
+                        print_error("  - Role object is NULL! (Database foreign key issue)")
                         print_info("    This will cause 500 error during login!")
                         return False
                     else:
@@ -204,14 +204,14 @@ def check_admin_user(app):
                     
                     # Test password hash
                     if not user.password_hash:
-                        print_error(f"  - No password hash set!")
+                        print_error("  - No password hash set!")
                         return False
                     else:
-                        print_success(f"  - Password hash exists")
+                        print_success("  - Password hash exists")
                     
                     # Check if user can authenticate
                     if not user.is_active:
-                        print_warning(f"  - User is INACTIVE - cannot login!")
+                        print_warning("  - User is INACTIVE - cannot login!")
             
             # Check for the specific admin user mentioned in the problem
             steyn_admin = User.query.filter_by(username='Steyn_Admin').first()
@@ -324,7 +324,7 @@ def test_login_logic(app):
             
             # Check 4: Role has name attribute
             if admin_user.role and hasattr(admin_user.role, 'name'):
-                print_success(f"  4. Role has name attribute")
+                print_success("  4. Role has name attribute")
                 checks.append(True)
             else:
                 print_error("  4. Role missing name attribute")

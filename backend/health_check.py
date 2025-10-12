@@ -91,13 +91,13 @@ def main():
                 cors = os.environ.get('CORS_ORIGINS', '')
                 
                 if jwt_key:
-                    print(f"✅ JWT_SECRET_KEY: Set")
+                    print("✅ JWT_SECRET_KEY: Set")
                 else:
                     print("❌ JWT_SECRET_KEY: Not set")
                     return 1
                 
                 if secret_key:
-                    print(f"✅ SECRET_KEY: Set")
+                    print("✅ SECRET_KEY: Set")
                 else:
                     print("❌ SECRET_KEY: Not set")
                     return 1
