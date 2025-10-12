@@ -254,67 +254,114 @@ def login(data):
         description: Rate limit exceeded
     """
     
-    user = User.query.filter_by(username=data['username']).first()
-    
-    if user and user.check_password(data['password']) and user.is_active:
-        # Update last login
-        user.last_login = datetime.now(timezone.utc)
-        db.session.commit()
+    try:
+        # Database query - handle connection errors
+        try:
+            user = User.query.filter_by(username=data['username']).first()
+        except Exception as db_error:
+            current_app.logger.error(f"Database error during login query: {db_error}", exc_info=True)
+            return SecurityAwareErrorHandler.handle_service_error(
+                db_error, 'database_error', 'Database connection failed', 500
+            )
         
-        # Refresh to get database-generated timestamp
-        db.session.refresh(user)
+        if user and user.check_password(data['password']) and user.is_active:
+            # Verify user has a role (critical requirement)
+            if not user.role:
+                current_app.logger.error(f"User {user.username} has no role assigned")
+                return SecurityAwareErrorHandler.handle_service_error(
+                    Exception('User role not configured'), 'configuration_error', 'User configuration', 500
+                )
+            
+            # Update last login with database error handling
+            try:
+                user.last_login = datetime.now(timezone.utc)
+                db.session.commit()
+                
+                # Refresh to get database-generated timestamp
+                db.session.refresh(user)
+            except Exception as db_error:
+                current_app.logger.error(f"Database error updating last login: {db_error}", exc_info=True)
+                # Rollback the session to prevent inconsistent state
+                db.session.rollback()
+                # Continue with login even if last_login update fails
+            
+            # Create tokens with string identity (JWT requirement)
+            # Include additional security claims: iat (issued at) and jti (JWT ID)
+            try:
+                additional_claims = {
+                    'jti': secrets.token_urlsafe(16),
+                    'role': user.role.name.value
+                }
+                access_token = create_access_token(identity=str(user.id), additional_claims=additional_claims)
+                refresh_token = create_refresh_token(identity=str(user.id), additional_claims={'jti': secrets.token_urlsafe(16)})
+            except Exception as token_error:
+                current_app.logger.error(f"Error creating JWT tokens: {token_error}", exc_info=True)
+                return SecurityAwareErrorHandler.handle_service_error(
+                    token_error, 'token_error', 'Token generation failed', 500
+                )
+            
+            # Audit successful login (non-critical, log but don't fail)
+            try:
+                audit_login_success(
+                    username=user.username,
+                    details={
+                        'user_id': user.id,
+                        'role': user.role.name.value,
+                        'last_login': user.last_login.isoformat() if user.last_login else None
+                    }
+                )
+            except Exception as audit_error:
+                current_app.logger.warning(f"Error auditing login success: {audit_error}")
+            
+            # Serialize response
+            try:
+                token_schema = TokenSchema()
+                
+                response_data = {
+                    'access_token': access_token,
+                    'refresh_token': refresh_token,
+                    'expires_in': current_app.config['JWT_ACCESS_TOKEN_EXPIRES'].total_seconds(),
+                    'user': user  # Pass model object, not serialized dict
+                }
+                
+                return SecurityAwareErrorHandler.create_success_response(
+                    token_schema.dump(response_data), 'Login successful', 200
+                )
+            except Exception as serialization_error:
+                current_app.logger.error(f"Error serializing login response: {serialization_error}", exc_info=True)
+                return SecurityAwareErrorHandler.handle_service_error(
+                    serialization_error, 'serialization_error', 'Response serialization failed', 500
+                )
         
-        # Create tokens with string identity (JWT requirement)
-        # Include additional security claims: iat (issued at) and jti (JWT ID)
-        additional_claims = {
-            'jti': secrets.token_urlsafe(16),
-            'role': user.role.name.value
-        }
-        access_token = create_access_token(identity=str(user.id), additional_claims=additional_claims)
-        refresh_token = create_refresh_token(identity=str(user.id), additional_claims={'jti': secrets.token_urlsafe(16)})
+        # Audit failed login (non-critical, log but don't fail)
+        username = data.get('username', 'unknown')
+        failure_reason = 'invalid_credentials'
+        if not user:
+            failure_reason = 'user_not_found'
+        elif not user.is_active:
+            failure_reason = 'inactive_user'
+        elif not user.check_password(data['password']):
+            failure_reason = 'incorrect_password'
         
-        # Audit successful login
-        audit_login_success(
-            username=user.username,
-            details={
-                'user_id': user.id,
-                'role': user.role.name.value,
-                'last_login': user.last_login.isoformat()
-            }
+        try:
+            audit_login_failure(
+                username=username,
+                reason=failure_reason,
+                details={'attempted_username': username}
+            )
+        except Exception as audit_error:
+            current_app.logger.warning(f"Error auditing login failure: {audit_error}")
+        
+        return SecurityAwareErrorHandler.handle_service_error(
+            Exception('Invalid credentials'), 'authentication_error', 'Login attempt', 401
         )
         
-        token_schema = TokenSchema()
-        
-        response_data = {
-            'access_token': access_token,
-            'refresh_token': refresh_token,
-            'expires_in': current_app.config['JWT_ACCESS_TOKEN_EXPIRES'].total_seconds(),
-            'user': user  # Pass model object, not serialized dict
-        }
-        
-        return SecurityAwareErrorHandler.create_success_response(
-            token_schema.dump(response_data), 'Login successful', 200
+    except Exception as e:
+        # Catch-all for any unexpected errors
+        current_app.logger.error(f"Unexpected error in login endpoint: {e}", exc_info=True)
+        return SecurityAwareErrorHandler.handle_service_error(
+            e, 'internal_error', 'Login processing', 500
         )
-    
-    # Audit failed login
-    username = data.get('username', 'unknown')
-    failure_reason = 'invalid_credentials'
-    if not user:
-        failure_reason = 'user_not_found'
-    elif not user.is_active:
-        failure_reason = 'inactive_user'
-    elif not user.check_password(data['password']):
-        failure_reason = 'incorrect_password'
-    
-    audit_login_failure(
-        username=username,
-        reason=failure_reason,
-        details={'attempted_username': username}
-    )
-    
-    return SecurityAwareErrorHandler.handle_service_error(
-        Exception('Invalid credentials'), 'authentication_error', 'Login attempt', 401
-    )
 
 
 @auth_bp.route('/auth/refresh', methods=['POST'])

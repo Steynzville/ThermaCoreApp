@@ -273,6 +273,32 @@ class TestErrorHandling:
         # Check that error is properly structured
         assert 'error' in data or 'msg' in data  # JWT errors may use 'msg'
     
+    def test_login_error_handling_structure(self, client):
+        """Test that login endpoint has proper error handling structure.
+        
+        This test verifies that the login endpoint properly handles errors
+        and returns 401 for invalid credentials (not 500 for unhandled exceptions).
+        The actual error handling code added includes:
+        - Database connection error handling
+        - Missing user role error handling  
+        - JWT token generation error handling
+        - Schema serialization error handling
+        """
+        # Test with invalid credentials - should return 401, not 500
+        response = client.post('/api/v1/auth/login',
+            json={'username': 'nonexistent', 'password': 'wrongpass'},
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        # Should return 401 with proper error message (not 500 unhandled exception)
+        assert response.status_code == 401
+        response_data = json.loads(response.data)
+        
+        # Check for SecurityAwareErrorHandler response format
+        assert 'error' in response_data
+        # Verify it's using the SecurityAwareErrorHandler format with proper structure
+        assert response_data['error']['code'] in ['AUTHENTICATION_ERROR', 'authentication_error']
+    
     def test_me_endpoint_error_handling(self, client, db_session):
         """Test /auth/me endpoint error handling with SecurityAwareErrorHandler."""
         # First get a valid token
