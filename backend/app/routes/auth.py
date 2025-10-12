@@ -588,8 +588,9 @@ def fix_admin_role():
         }), 200
     except Exception as e:
         db.session.rollback()
+        # Log the error and stack trace server-side for diagnostics
+        current_app.logger.error("Error in fix_admin_role: %s\n%s", str(e), traceback.format_exc())
         return jsonify({
             'success': False,
-            'error': str(e),
-            'traceback': traceback.format_exc()
+            'error': 'Internal server error'
         }), 500
