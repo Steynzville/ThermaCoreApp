@@ -1,5 +1,6 @@
 """Authentication routes for ThermaCore SCADA API."""
 import secrets
+import traceback
 from datetime import datetime, timezone
 from functools import wraps
 
@@ -531,3 +532,63 @@ def change_password():
     db.session.commit()
     
     return jsonify({'message': 'Password changed successfully'}), 200
+
+
+@auth_bp.route('/debug/admin-state', methods=['GET'])
+def debug_admin_state():
+    """Temporary endpoint to check admin user database state"""
+    try:
+        admin_user = User.query.filter_by(username='admin').first()
+        
+        return jsonify({
+            'success': True,
+            'admin_user_exists': admin_user is not None,
+            'username': admin_user.username if admin_user else None,
+            'role_id': admin_user.role_id if admin_user else None,
+            'has_role_object': admin_user.role is not None if admin_user else False,
+            'role_name': admin_user.role.name.value if admin_user and admin_user.role else None,
+            'all_roles': [{'id': r.id, 'name': r.name.value} for r in Role.query.all()]
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
+
+@auth_bp.route('/debug/fix-admin-role', methods=['POST'])
+def fix_admin_role():
+    """Temporary endpoint to fix admin user role assignment"""
+    try:
+        admin_user = User.query.filter_by(username='admin').first()
+        
+        if not admin_user:
+            return jsonify({'success': False, 'error': 'Admin user not found'}), 404
+            
+        # Get or create admin role
+        from app.models import RoleEnum
+        admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
+        if not admin_role:
+            return jsonify({'success': False, 'error': 'Admin role not found in database'}), 404
+            
+        # Assign role to admin user
+        admin_user.role_id = admin_role.id
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Admin role fixed',
+            'admin_user': {
+                'username': admin_user.username,
+                'role_id': admin_user.role_id,
+                'role_name': admin_user.role.name.value if admin_user.role else None
+            }
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
