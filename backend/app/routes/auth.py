@@ -13,7 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from webargs.flaskparser import use_args
 
 from app import db
-from app.models import User, Role
+from app.models import User, Role, RoleEnum
 from app.utils.schemas import LoginSchema, UserCreateSchema, UserSchema, TokenSchema
 from app.utils.helpers import get_current_user_id
 from app.utils.error_handler import SecurityAwareErrorHandler
@@ -26,6 +26,28 @@ from app.middleware.audit import (
 
 
 auth_bp = Blueprint('auth', __name__)
+
+
+def _fix_null_role_id(user):
+    """TEMPORARY FIX FOR NULL ROLE_ID - REMOVE AFTER FIX
+    
+    Automatically assigns a role to users with NULL or missing role_id.
+    This is a temporary workaround to prevent authentication failures.
+    
+    Args:
+        user: User object that may have NULL role_id
+    """
+    if not user.role or user.role_id is None:
+        current_app.logger.warning(f"User ID {user.id} has NULL role_id - applying temporary fix")
+        admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
+        if not admin_role:
+            admin_role = Role.query.first()  # Get any role
+        if admin_role:
+            user.role_id = admin_role.id
+            db.session.commit()
+            # Refresh the user object to get the updated role
+            db.session.refresh(user)
+            current_app.logger.info(f"User ID {user.id} assigned role {admin_role.name.value}")
 
 
 def permission_required(permission):
@@ -62,18 +84,7 @@ def permission_required(permission):
                 )
             
             # TEMPORARY FIX FOR NULL ROLE_ID - REMOVE AFTER FIX
-            # Reference: Issue for NULL role_id in authentication logic
-            if not user.role or user.role_id is None:
-                # Get the admin role or any available role
-                from app.models import RoleEnum
-                admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
-                if not admin_role:
-                    admin_role = Role.query.first()  # Get any role
-                if admin_role:
-                    user.role_id = admin_role.id
-                    db.session.commit()
-                    # Refresh the user object to get the updated role
-                    db.session.refresh(user)
+            _fix_null_role_id(user)
                 
             if not user.has_permission(permission):
                 # Audit denied permission
@@ -138,18 +149,7 @@ def role_required(*roles):
                 )
             
             # TEMPORARY FIX FOR NULL ROLE_ID - REMOVE AFTER FIX
-            # Reference: Issue for NULL role_id in authentication logic
-            if not user.role or user.role_id is None:
-                # Get the admin role or any available role
-                from app.models import RoleEnum
-                admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
-                if not admin_role:
-                    admin_role = Role.query.first()  # Get any role
-                if admin_role:
-                    user.role_id = admin_role.id
-                    db.session.commit()
-                    # Refresh the user object to get the updated role
-                    db.session.refresh(user)
+            _fix_null_role_id(user)
                 
             if user.role.name.value not in roles:
                 # Audit denied role check
@@ -295,21 +295,7 @@ def login(data):
         
         if user and user.check_password(data['password']) and user.is_active:
             # TEMPORARY FIX FOR NULL ROLE_ID - REMOVE AFTER FIX
-            # Reference: Issue for NULL role_id in authentication logic
-            # This fix is placed before the role verification check to auto-assign a role
-            if not user.role or user.role_id is None:
-                current_app.logger.warning(f"User {user.username} has NULL role_id - applying temporary fix")
-                # Get the admin role or any available role
-                from app.models import RoleEnum
-                admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
-                if not admin_role:
-                    admin_role = Role.query.first()  # Get any role
-                if admin_role:
-                    user.role_id = admin_role.id
-                    db.session.commit()
-                    # Refresh the user object to get the updated role
-                    db.session.refresh(user)
-                    current_app.logger.info(f"Assigned role {admin_role.name.value} to user {user.username}")
+            _fix_null_role_id(user)
             
             # Verify user has a role (critical requirement)
             if not user.role:
@@ -447,18 +433,7 @@ def refresh():
         )
     
     # TEMPORARY FIX FOR NULL ROLE_ID - REMOVE AFTER FIX
-    # Reference: Issue for NULL role_id in authentication logic
-    if not user.role or user.role_id is None:
-        # Get the admin role or any available role
-        from app.models import RoleEnum
-        admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
-        if not admin_role:
-            admin_role = Role.query.first()  # Get any role
-        if admin_role:
-            user.role_id = admin_role.id
-            db.session.commit()
-            # Refresh the user object to get the updated role
-            db.session.refresh(user)
+    _fix_null_role_id(user)
     
     # Create new access token with security claims
     additional_claims = {
