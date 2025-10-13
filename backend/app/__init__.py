@@ -295,31 +295,157 @@ def create_app(config_name=None):
     except ImportError:
         pass  # Models may not be importable without full dependencies
 
-    # Register blueprints (only if available)
+    # Register blueprints with detailed logging
+    logger = logging.getLogger(__name__)
+    logger.info("Starting blueprint registration...")
+    
+    blueprints_registered = 0
+    blueprints_failed = 0
+    
+    # Register auth blueprint
     try:
         from app.routes.auth import auth_bp
-        from app.routes.units import units_bp
-        from app.routes.users import users_bp
-        from app.routes.scada import scada_bp
-        from app.routes.analytics import analytics_bp
-        from app.routes.historical import historical_bp
-        from app.routes.multiprotocol import multiprotocol_bp
-        from app.routes.remote_control import remote_control_bp
-        from app.routes.opcua_monitoring import init_opcua_monitoring
-        from app.routes.services import services_bp
-
         app.register_blueprint(auth_bp, url_prefix=app.config["API_PREFIX"])
+        logger.info("Registered auth routes")
+        blueprints_registered += 1
+    except ImportError as e:
+        logger.error(f"Failed to import auth routes: {e}", exc_info=True)
+        blueprints_failed += 1
+    except Exception as e:
+        logger.error(f"Failed to register auth routes: {e}", exc_info=True)
+        blueprints_failed += 1
+    
+    # Register units blueprint
+    try:
+        from app.routes.units import units_bp
         app.register_blueprint(units_bp, url_prefix=app.config["API_PREFIX"])
+        logger.info("Registered units routes")
+        blueprints_registered += 1
+    except ImportError as e:
+        logger.error(f"Failed to import units routes: {e}", exc_info=True)
+        blueprints_failed += 1
+    except Exception as e:
+        logger.error(f"Failed to register units routes: {e}", exc_info=True)
+        blueprints_failed += 1
+    
+    # Register users blueprint
+    try:
+        from app.routes.users import users_bp
         app.register_blueprint(users_bp, url_prefix=app.config["API_PREFIX"])
+        logger.info("Registered users routes")
+        blueprints_registered += 1
+    except ImportError as e:
+        logger.error(f"Failed to import users routes: {e}", exc_info=True)
+        blueprints_failed += 1
+    except Exception as e:
+        logger.error(f"Failed to register users routes: {e}", exc_info=True)
+        blueprints_failed += 1
+    
+    # Register scada blueprint
+    try:
+        from app.routes.scada import scada_bp
         app.register_blueprint(scada_bp, url_prefix=app.config["API_PREFIX"])
+        logger.info("Registered scada routes")
+        blueprints_registered += 1
+    except ImportError as e:
+        logger.error(f"Failed to import scada routes: {e}", exc_info=True)
+        blueprints_failed += 1
+    except Exception as e:
+        logger.error(f"Failed to register scada routes: {e}", exc_info=True)
+        blueprints_failed += 1
+    
+    # Register analytics blueprint
+    try:
+        from app.routes.analytics import analytics_bp
         app.register_blueprint(analytics_bp, url_prefix=app.config["API_PREFIX"])
+        logger.info("Registered analytics routes")
+        blueprints_registered += 1
+    except ImportError as e:
+        logger.error(f"Failed to import analytics routes: {e}", exc_info=True)
+        blueprints_failed += 1
+    except Exception as e:
+        logger.error(f"Failed to register analytics routes: {e}", exc_info=True)
+        blueprints_failed += 1
+    
+    # Register historical blueprint
+    try:
+        from app.routes.historical import historical_bp
         app.register_blueprint(historical_bp, url_prefix=app.config["API_PREFIX"])
+        logger.info("Registered historical routes")
+        blueprints_registered += 1
+    except ImportError as e:
+        logger.error(f"Failed to import historical routes: {e}", exc_info=True)
+        blueprints_failed += 1
+    except Exception as e:
+        logger.error(f"Failed to register historical routes: {e}", exc_info=True)
+        blueprints_failed += 1
+    
+    # Register multiprotocol blueprint
+    try:
+        from app.routes.multiprotocol import multiprotocol_bp
         app.register_blueprint(multiprotocol_bp, url_prefix=app.config["API_PREFIX"])
+        logger.info("Registered multiprotocol routes")
+        blueprints_registered += 1
+    except ImportError as e:
+        logger.error(f"Failed to import multiprotocol routes: {e}", exc_info=True)
+        blueprints_failed += 1
+    except Exception as e:
+        logger.error(f"Failed to register multiprotocol routes: {e}", exc_info=True)
+        blueprints_failed += 1
+    
+    # Register remote control blueprint
+    try:
+        from app.routes.remote_control import remote_control_bp
         app.register_blueprint(remote_control_bp, url_prefix=app.config["API_PREFIX"])
+        logger.info("Registered remote_control routes")
+        blueprints_registered += 1
+    except ImportError as e:
+        logger.error(f"Failed to import remote_control routes: {e}", exc_info=True)
+        blueprints_failed += 1
+    except Exception as e:
+        logger.error(f"Failed to register remote_control routes: {e}", exc_info=True)
+        blueprints_failed += 1
+    
+    # Register services blueprint
+    try:
+        from app.routes.services import services_bp
         app.register_blueprint(services_bp, url_prefix=app.config["API_PREFIX"])
-        init_opcua_monitoring(app)  # Initialize OPC-UA monitoring endpoints
-    except ImportError:
-        pass  # Routes may not be importable without full dependencies
+        logger.info("Registered services routes")
+        blueprints_registered += 1
+    except ImportError as e:
+        logger.error(f"Failed to import services routes: {e}", exc_info=True)
+        blueprints_failed += 1
+    except Exception as e:
+        logger.error(f"Failed to register services routes: {e}", exc_info=True)
+        blueprints_failed += 1
+    
+    # Initialize OPC-UA monitoring endpoints
+    try:
+        from app.routes.opcua_monitoring import init_opcua_monitoring
+        init_opcua_monitoring(app)
+        logger.info("Initialized OPC-UA monitoring endpoints")
+        blueprints_registered += 1
+    except ImportError as e:
+        logger.error(f"Failed to import opcua_monitoring routes: {e}", exc_info=True)
+        blueprints_failed += 1
+    except Exception as e:
+        logger.error(f"Failed to initialize opcua_monitoring routes: {e}", exc_info=True)
+        blueprints_failed += 1
+    
+    # Log summary of blueprint registration
+    logger.info(f"Blueprint registration complete: {blueprints_registered} registered, {blueprints_failed} failed")
+    
+    # List all registered routes for verification
+    if blueprints_registered > 0:
+        route_count = len(list(app.url_map.iter_rules()))
+        logger.info(f"Total routes registered: {route_count}")
+        logger.debug("Registered blueprints: " + ", ".join([bp for bp in app.blueprints.keys()]))
+    else:
+        logger.error("CRITICAL: No blueprints were registered! All API endpoints will return 404.")
+        # In production, this should be a critical error
+        from app.utils.environment import is_production_environment
+        if is_production_environment(app):
+            raise RuntimeError("Failed to register any blueprints in production environment")
 
     # Initialize SCADA services (Phase 2, 3 & 4)
     if not app.config.get("TESTING", False):
