@@ -52,9 +52,12 @@ else:
     swagger = None
 
 
-def _initialize_critical_service(service, service_name: str, app, logger, init_method='init_app', *args, **kwargs):
+def _initialize_critical_service(service, service_name: str, app, logger, init_method='init_app', required=True, *args, **kwargs):
     """
-    Shared helper function for initializing critical services with consistent error handling.
+    Shared helper function for initializing services with consistent error handling.
+    
+    This function now supports both required and optional services through the
+    service manager framework, enabling graceful degradation.
     
     Args:
         service: Service instance to initialize
@@ -62,23 +65,41 @@ def _initialize_critical_service(service, service_name: str, app, logger, init_m
         app: Flask application instance
         logger: Logger instance
         init_method: Method name to call for initialization (default: 'init_app')
+        required: Whether this service is required (True) or optional (False)
         *args, **kwargs: Additional arguments to pass to the init method
     
+    Returns:
+        True if initialization succeeded, False otherwise
+        
     Raises:
-        RuntimeError: In production if service initialization fails
+        RuntimeError: If service is required and initialization fails in production
     """
+    from app.utils.service_manager import initialize_service, get_service_config
+    
+    # Get service configuration (enabled/required status)
+    # Extract base service name (e.g., "OPC UA client" -> "opcua")
+    service_base_name = service_name.lower().replace('secure ', '').replace(' client', '').replace(' service', '').replace(' ', '_').replace('-', '_')
+    service_config = get_service_config(app, service_base_name)
+    
+    # Override required flag if configured
+    if not service_config['enabled']:
+        logger.info(f"{service_name} is disabled via configuration, skipping initialization")
+        return False
+    
+    # Use configured required status if available, otherwise use parameter
+    required = service_config.get('required', required)
+    
     try:
-        # Call the initialization method
-        init_func = getattr(service, init_method)
-        init_func(app, *args, **kwargs)
-        logger.info(f"{service_name} initialized successfully")
-        return True
+        # Use the new service manager for initialization
+        return initialize_service(
+            service, service_name, app, logger, init_method, required, *args, **kwargs
+        )
         
     except (ValueError, RuntimeError, ConnectionError, OSError, ImportError) as e:
         # Security validation errors, connection issues, or configuration errors
         logger.error(f"{service_name} security validation failed: {e}", exc_info=True)
         
-        # Use centralized environment detection error handling
+        # For backwards compatibility, also use environment detection error handling
         from app.utils.environment import handle_environment_detection_error
         should_continue, error_to_raise = handle_environment_detection_error(
             service_name, logger, app, e, "security validation", is_security_validation=True
@@ -91,7 +112,7 @@ def _initialize_critical_service(service, service_name: str, app, logger, init_m
     except Exception as e:
         logger.error(f"Failed to initialize {service_name}: {e}", exc_info=True)
         
-        # Use centralized environment detection error handling
+        # For backwards compatibility, also use environment detection error handling
         from app.utils.environment import handle_environment_detection_error
         should_continue, error_to_raise = handle_environment_detection_error(
             service_name, logger, app, e, "initialization", is_security_validation=False
@@ -246,6 +267,7 @@ def create_app(config_name=None):
         from app.routes.multiprotocol import multiprotocol_bp
         from app.routes.remote_control import remote_control_bp
         from app.routes.opcua_monitoring import init_opcua_monitoring
+        from app.routes.services import services_bp
         
         app.register_blueprint(auth_bp, url_prefix=app.config['API_PREFIX'])
         app.register_blueprint(units_bp, url_prefix=app.config['API_PREFIX'])
@@ -255,6 +277,7 @@ def create_app(config_name=None):
         app.register_blueprint(historical_bp, url_prefix=app.config['API_PREFIX'])
         app.register_blueprint(multiprotocol_bp, url_prefix=app.config['API_PREFIX'])
         app.register_blueprint(remote_control_bp, url_prefix=app.config['API_PREFIX'])
+        app.register_blueprint(services_bp, url_prefix=app.config['API_PREFIX'])
         init_opcua_monitoring(app)  # Initialize OPC-UA monitoring endpoints
     except ImportError:
         pass  # Routes may not be importable without full dependencies
@@ -279,20 +302,26 @@ def create_app(config_name=None):
             logger = logging.getLogger(__name__)
             
             # Initialize critical services using shared helper
+            # Data storage is always required
             _initialize_critical_service(
-                data_storage_service, "Data storage service", app, logger, 'init_app'
+                data_storage_service, "Data storage service", app, logger, 
+                'init_app', required=True
             )
             
+            # MQTT client - required by default, but can be configured as optional
+            mqtt_required = app.config.get('SERVICE_MQTT_REQUIRED', True)
             _initialize_critical_service(
                 mqtt_client, "MQTT client", app, logger, 
-                'init_app', data_storage_service
+                'init_app', required=mqtt_required, data_storage_service=data_storage_service
             )
             
             # Initialize secure OPC-UA client (preferred) with fallback to standard client
+            # OPC-UA is now optional in production by default
+            opcua_required = app.config.get('SERVICE_OPCUA_REQUIRED', False)
             try:
                 _initialize_critical_service(
                     secure_opcua_client, "Secure OPC UA client", app, logger,
-                    'init_app', data_storage_service  
+                    'init_app', required=opcua_required, data_storage_service=data_storage_service
                 )
                 app.secure_opcua_client = secure_opcua_client
                 app.opcua_client = secure_opcua_client  # Also set standard reference for compatibility
@@ -302,13 +331,16 @@ def create_app(config_name=None):
                 try:
                     _initialize_critical_service(
                         opcua_client, "OPC UA client", app, logger,
-                        'init_app', data_storage_service  
+                        'init_app', required=opcua_required, data_storage_service=data_storage_service
                     )
                     app.opcua_client = opcua_client
                     logger.info("Using standard OPC-UA client (fallback)")
                 except Exception as standard_init_error:
                     logger.error(f"Standard OPC-UA client initialization failed: {standard_init_error}", exc_info=True)
                     app.opcua_client = None
+                    # If OPC-UA is optional, log and continue
+                    if not opcua_required:
+                        logger.info("OPC-UA client initialization failed but service is optional, continuing without it")
             # Initialize non-critical services (failures won't stop the app)
             try:
                 websocket_service.init_app(app)

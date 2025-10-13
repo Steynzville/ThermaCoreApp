@@ -106,6 +106,18 @@ class Config:
     # Security policy fallback behavior (only affects development environment)
     OPCUA_ALLOW_INSECURE_FALLBACK = os.environ.get('OPCUA_ALLOW_INSECURE_FALLBACK', 'false').lower() == 'true'
     
+    # Service Management Configuration
+    # Control which services are enabled and required
+    # Format: SERVICE_{SERVICE_NAME}_ENABLED and SERVICE_{SERVICE_NAME}_REQUIRED
+    
+    # OPC-UA Service Configuration
+    SERVICE_OPCUA_ENABLED = os.environ.get('SERVICE_OPCUA_ENABLED', 'true').lower() == 'true'
+    SERVICE_OPCUA_REQUIRED = os.environ.get('SERVICE_OPCUA_REQUIRED', 'true').lower() == 'true'
+    
+    # MQTT Service Configuration
+    SERVICE_MQTT_ENABLED = os.environ.get('SERVICE_MQTT_ENABLED', 'true').lower() == 'true'
+    SERVICE_MQTT_REQUIRED = os.environ.get('SERVICE_MQTT_REQUIRED', 'true').lower() == 'true'
+    
     # Modbus Configuration
     # Control whether sensitive Modbus data (register addresses, values) should be logged
     # Disabled by default for security; enable for debugging purposes only
@@ -217,6 +229,16 @@ class ProductionConfig(Config):
         if self.OPCUA_SECURITY_POLICY != "None" and self.OPCUA_SECURITY_MODE != "None":
             if not (os.environ.get("OPCUA_CERT_FILE") and os.environ.get("OPCUA_PRIVATE_KEY_FILE") and os.environ.get("OPCUA_TRUST_CERT_FILE")):
                 raise ValueError("OPC UA certificate paths must be set in environment variables when security is enabled")
+        
+        # Service Management for Production
+        # Make OPC-UA optional in production by default (can be overridden with env vars)
+        # This prevents OPC-UA security/connection issues from crashing the entire backend
+        self.SERVICE_OPCUA_ENABLED = os.environ.get('SERVICE_OPCUA_ENABLED', 'true').lower() == 'true'
+        self.SERVICE_OPCUA_REQUIRED = os.environ.get('SERVICE_OPCUA_REQUIRED', 'false').lower() == 'true'
+        
+        # MQTT remains required in production by default
+        self.SERVICE_MQTT_ENABLED = os.environ.get('SERVICE_MQTT_ENABLED', 'true').lower() == 'true'
+        self.SERVICE_MQTT_REQUIRED = os.environ.get('SERVICE_MQTT_REQUIRED', 'true').lower() == 'true'
     
     def _is_true_production(self):
         """
