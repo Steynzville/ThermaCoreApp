@@ -41,27 +41,29 @@ def init_database_on_startup():
             # Seed default admin user if not present
             admin_user = User.query.filter_by(username="Steyn_Admin").first()
             if not admin_user:
-                print("Creating default admin user...")
-                admin_user = User(
-                    username="Steyn_Admin",
-                    email="admin@thermacore.com",
-                    first_name="Admin",
-                    last_name="User",
-                    role_id=admin_role.id,
-                    is_active=True
-                )
-                admin_user.set_password("password")
-                db.session.add(admin_user)
-                db.session.commit()
-                print("=" * 70)
-                print("✅ Default admin user created!")
-                print("=" * 70)
-                print("   Username: Steyn_Admin")
-                print("   Password: password")
-                print("=" * 70)
-                print("⚠️  Please change the password after first login.")
-                print("=" * 70)
-            
+                if not admin_role or admin_role.id is None:
+                    print("⚠️  Cannot create default admin user: admin role is missing or has no ID.")
+                else:
+                    print("Creating default admin user...")
+                    admin_user = User(
+                        username="Steyn_Admin",
+                        email="admin@thermacore.com",
+                        first_name="Admin",
+                        last_name="User",
+                        role_id=admin_role.id,
+                        is_active=True
+                    )
+                    admin_user.set_password("password")
+                    db.session.add(admin_user)
+                    db.session.commit()
+                    print("=" * 70)
+                    print("✅ Default admin user created!")
+                    print("=" * 70)
+                    print("   Username: Steyn_Admin")
+                    print("   Password: password")
+                    print("=" * 70)
+                    print("⚠️  Please change the password after first login.")
+                    print("=" * 70)
         except Exception as e:
             print(f"⚠️  Database initialization error: {e}")
             # Don't fail the app startup - database might already be initialized
