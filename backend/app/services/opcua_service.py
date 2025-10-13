@@ -18,6 +18,9 @@ from app.utils.secure_logger import SecureLogger
 
 logger = SecureLogger.get_secure_logger(__name__)
 
+# Constant for service unavailability warning message
+SERVICE_UNAVAILABLE_MSG = "service will be unavailable"
+
 
 class OPCUAClient:
     """OPC UA client for connecting to industrial automation systems."""
@@ -274,12 +277,12 @@ class OPCUAClient:
             if is_prod:
                 if not self.username or not self.password:
                     logger.error("OPC UA authentication not configured - this is not allowed in production")
-                    logger.warning("OPC UA service cannot initialize without authentication in production - service will be unavailable")
+                    logger.warning(f"OPC UA service cannot initialize without authentication in production - {SERVICE_UNAVAILABLE_MSG}")
                     return  # Gracefully return without initializing
                 
                 if self.security_policy == 'None' or self.security_mode == 'None':
                     logger.error("OPC UA security policy/mode set to None - this is not allowed in production")
-                    logger.warning("OPC UA service cannot initialize without security in production - service will be unavailable")
+                    logger.warning(f"OPC UA service cannot initialize without security in production - {SERVICE_UNAVAILABLE_MSG}")
                     return  # Gracefully return without initializing
             
             # Configure security policy and certificates if provided
@@ -363,7 +366,7 @@ class OPCUAClient:
                     
             elif is_prod:
                 logger.error("OPC UA security policy and mode set to None - this is not allowed in production")
-                logger.warning("OPC UA service cannot initialize without security in production - service will be unavailable")
+                logger.warning(f"OPC UA service cannot initialize without security in production - {SERVICE_UNAVAILABLE_MSG}")
                 return  # Gracefully return without initializing
             else:
                 # Even in development with no security, we can still validate trust certificates if provided
