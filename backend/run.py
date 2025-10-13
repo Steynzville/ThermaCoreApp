@@ -64,7 +64,7 @@ def init_database_on_startup():
                     print("=" * 70)
                     print("⚠️  Please change the password after first login.")
                     print("=" * 70)
-        except Exception as e:
+        except Exception:
             print("⚠️  Database initialization error. See logs for details.")
             # Don't fail the app startup - database might already be initialized
             # or there might be connection issues that resolve later
