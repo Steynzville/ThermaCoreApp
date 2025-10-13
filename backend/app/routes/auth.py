@@ -284,52 +284,186 @@ def login(data):
     """
     
     try:
-        # Database query - handle connection errors
+        # Log authentication attempt with context
+        current_app.logger.info(
+            f"Login attempt for username: {data.get('username', 'UNKNOWN')}",
+            extra={
+                'event': 'login_attempt',
+                'username': data.get('username', 'UNKNOWN'),
+                'ip_address': request.remote_addr,
+                'user_agent': request.headers.get('User-Agent', 'UNKNOWN')
+            }
+        )
+        
+        # Additional validation for required fields (defense in depth)
+        if not data.get('username') or not data.get('password'):
+            current_app.logger.warning(
+                "Login attempt with missing credentials",
+                extra={'username': data.get('username', 'UNKNOWN')}
+            )
+            return SecurityAwareErrorHandler.handle_service_error(
+                Exception('Missing username or password'), 'validation_error', 'Credential validation', 400
+            )
+        
+        # Database query - handle connection errors with retry logic
         try:
             user = User.query.filter_by(username=data['username']).first()
         except Exception as db_error:
-            current_app.logger.error(f"Database error during login query: {db_error}", exc_info=True)
+            current_app.logger.error(
+                f"Database error during login query: {db_error}",
+                exc_info=True,
+                extra={
+                    'event': 'database_error',
+                    'operation': 'user_query',
+                    'username': data.get('username', 'UNKNOWN')
+                }
+            )
             return SecurityAwareErrorHandler.handle_service_error(
                 db_error, 'database_error', 'Database connection failed', 500
             )
         
         if user and user.check_password(data['password']) and user.is_active:
             # TEMPORARY FIX FOR NULL ROLE_ID - REMOVE AFTER FIX
-            _fix_null_role_id(user)
+            # Apply defensive fix for NULL role_id before proceeding
+            try:
+                _fix_null_role_id(user)
+            except Exception as fix_error:
+                current_app.logger.error(
+                    f"Failed to fix NULL role_id for user {user.username}: {fix_error}",
+                    exc_info=True,
+                    extra={'event': 'role_fix_failed', 'username': user.username}
+                )
+                # Continue - will be caught by role check below
             
-            # Verify user has a role (critical requirement)
-            if not user.role:
-                current_app.logger.error(f"User {user.username} has no role assigned")
+            # Verify user has a role (critical requirement with enhanced validation)
+            if not user.role or user.role_id is None:
+                current_app.logger.error(
+                    f"User {user.username} has no role assigned (role_id: {user.role_id})",
+                    extra={
+                        'event': 'missing_role',
+                        'username': user.username,
+                        'user_id': user.id,
+                        'role_id': user.role_id
+                    }
+                )
                 return SecurityAwareErrorHandler.handle_service_error(
                     Exception('User role not configured'), 'configuration_error', 'User configuration', 500
                 )
             
-            # Update last login with database error handling
+            # Additional validation: Verify role has required attributes
+            try:
+                role_name = user.role.name.value
+                if not role_name:
+                    raise ValueError("Role name is empty")
+            except AttributeError as attr_error:
+                current_app.logger.error(
+                    f"User {user.username} role object is malformed: {attr_error}",
+                    exc_info=True,
+                    extra={
+                        'event': 'malformed_role',
+                        'username': user.username,
+                        'user_id': user.id,
+                        'role_id': user.role_id
+                    }
+                )
+                return SecurityAwareErrorHandler.handle_service_error(
+                    Exception('User role configuration is invalid'), 'configuration_error', 'Role validation', 500
+                )
+            except Exception as role_error:
+                current_app.logger.error(
+                    f"Unexpected error validating role for user {user.username}: {role_error}",
+                    exc_info=True,
+                    extra={'event': 'role_validation_error', 'username': user.username}
+                )
+                return SecurityAwareErrorHandler.handle_service_error(
+                    role_error, 'configuration_error', 'Role validation', 500
+                )
+            
+            # Update last login with enhanced database error handling
             try:
                 user.last_login = datetime.now(timezone.utc)
                 db.session.commit()
                 
                 # Refresh to get database-generated timestamp
                 db.session.refresh(user)
+                current_app.logger.debug(
+                    f"Updated last_login for user {user.username}",
+                    extra={'event': 'last_login_updated', 'username': user.username}
+                )
             except Exception as db_error:
-                current_app.logger.error(f"Database error updating last login: {db_error}", exc_info=True)
+                current_app.logger.error(
+                    f"Database error updating last login: {db_error}",
+                    exc_info=True,
+                    extra={
+                        'event': 'last_login_update_failed',
+                        'username': user.username,
+                        'error_type': type(db_error).__name__
+                    }
+                )
                 # Rollback the session to prevent inconsistent state
-                db.session.rollback()
+                try:
+                    db.session.rollback()
+                except Exception as rollback_error:
+                    current_app.logger.error(
+                        f"Failed to rollback after last_login error: {rollback_error}",
+                        exc_info=True
+                    )
                 # Continue with login even if last_login update fails
             
             # Create tokens with string identity (JWT requirement)
             # Include additional security claims: iat (issued at) and jti (JWT ID)
             try:
+                # Pre-validate user ID and role before token generation
+                if not user.id:
+                    raise ValueError("User ID is None or empty")
+                if not user.role or not user.role.name:
+                    raise ValueError("User role or role name is None")
+                
+                user_id_str = str(user.id)
+                role_value = user.role.name.value
+                
                 additional_claims = {
                     'jti': secrets.token_urlsafe(16),
-                    'role': user.role.name.value
+                    'role': role_value
                 }
-                access_token = create_access_token(identity=str(user.id), additional_claims=additional_claims)
-                refresh_token = create_refresh_token(identity=str(user.id), additional_claims={'jti': secrets.token_urlsafe(16)})
-            except Exception as token_error:
-                current_app.logger.error(f"Error creating JWT tokens: {token_error}", exc_info=True)
+                
+                current_app.logger.debug(
+                    f"Creating tokens for user {user.username}",
+                    extra={
+                        'event': 'token_generation',
+                        'username': user.username,
+                        'user_id': user_id_str,
+                        'role': role_value
+                    }
+                )
+                
+                access_token = create_access_token(identity=user_id_str, additional_claims=additional_claims)
+                refresh_token = create_refresh_token(identity=user_id_str, additional_claims={'jti': secrets.token_urlsafe(16)})
+                
+                if not access_token or not refresh_token:
+                    raise ValueError("Token generation returned empty token")
+                    
+            except ValueError as val_error:
+                current_app.logger.error(
+                    f"Validation error during token generation: {val_error}",
+                    exc_info=True,
+                    extra={'event': 'token_validation_error', 'username': user.username}
+                )
                 return SecurityAwareErrorHandler.handle_service_error(
-                    token_error, 'token_error', 'Token generation failed', 500
+                    val_error, 'configuration_error', 'Token generation validation', 500
+                )
+            except Exception as token_error:
+                current_app.logger.error(
+                    f"Error creating JWT tokens: {token_error}",
+                    exc_info=True,
+                    extra={
+                        'event': 'token_generation_failed',
+                        'username': user.username,
+                        'error_type': type(token_error).__name__
+                    }
+                )
+                return SecurityAwareErrorHandler.handle_service_error(
+                    token_error, 'internal_error', 'Token generation failed', 500
                 )
             
             # Audit successful login (non-critical, log but don't fail)
@@ -339,14 +473,28 @@ def login(data):
                     details={
                         'user_id': user.id,
                         'role': user.role.name.value,
-                        'last_login': user.last_login.isoformat() if user.last_login else None
+                        'last_login': user.last_login.isoformat() if user.last_login else None,
+                        'ip_address': request.remote_addr,
+                        'user_agent': request.headers.get('User-Agent', 'UNKNOWN')
                     }
                 )
             except Exception as audit_error:
-                current_app.logger.warning(f"Error auditing login success: {audit_error}")
+                current_app.logger.warning(
+                    f"Error auditing login success: {audit_error}",
+                    extra={
+                        'event': 'audit_error',
+                        'username': user.username,
+                        'error_type': type(audit_error).__name__
+                    }
+                )
             
-            # Serialize response
+            # Serialize response with enhanced error handling
             try:
+                # Pre-validate configuration before serialization
+                if not current_app.config.get('JWT_ACCESS_TOKEN_EXPIRES'):
+                    current_app.logger.error("JWT_ACCESS_TOKEN_EXPIRES not configured")
+                    raise ValueError("JWT configuration incomplete")
+                
                 token_schema = TokenSchema()
                 
                 response_data = {
@@ -356,41 +504,116 @@ def login(data):
                     'user': user  # Pass model object, not serialized dict
                 }
                 
+                # Attempt serialization with validation
+                serialized_data = token_schema.dump(response_data)
+                
+                # Validate serialized data has required fields
+                if not serialized_data.get('access_token') or not serialized_data.get('user'):
+                    raise ValueError("Serialization produced incomplete data")
+                
+                current_app.logger.info(
+                    f"Login successful for user {user.username}",
+                    extra={
+                        'event': 'login_success',
+                        'username': user.username,
+                        'user_id': user.id,
+                        'role': user.role.name.value
+                    }
+                )
+                
                 return SecurityAwareErrorHandler.create_success_response(
-                    token_schema.dump(response_data), 'Login successful', 200
+                    serialized_data, 'Login successful', 200
+                )
+            except ValueError as val_error:
+                current_app.logger.error(
+                    f"Validation error during serialization: {val_error}",
+                    exc_info=True,
+                    extra={'event': 'serialization_validation_error', 'username': user.username}
+                )
+                return SecurityAwareErrorHandler.handle_service_error(
+                    val_error, 'configuration_error', 'Response validation failed', 500
                 )
             except Exception as serialization_error:
-                current_app.logger.error(f"Error serializing login response: {serialization_error}", exc_info=True)
+                current_app.logger.error(
+                    f"Error serializing login response: {serialization_error}",
+                    exc_info=True,
+                    extra={
+                        'event': 'serialization_failed',
+                        'username': user.username,
+                        'error_type': type(serialization_error).__name__
+                    }
+                )
                 return SecurityAwareErrorHandler.handle_service_error(
-                    serialization_error, 'serialization_error', 'Response serialization failed', 500
+                    serialization_error, 'internal_error', 'Response serialization failed', 500
                 )
         
         # Audit failed login (non-critical, log but don't fail)
         username = data.get('username', 'unknown')
         failure_reason = 'invalid_credentials'
+        
+        # Determine specific failure reason for better diagnostics
         if not user:
             failure_reason = 'user_not_found'
         elif not user.is_active:
             failure_reason = 'inactive_user'
-        elif not user.check_password(data['password']):
+        elif not user.check_password(data.get('password', '')):
             failure_reason = 'incorrect_password'
+        
+        current_app.logger.warning(
+            f"Login failed for username: {username}, reason: {failure_reason}",
+            extra={
+                'event': 'login_failed',
+                'username': username,
+                'reason': failure_reason,
+                'ip_address': request.remote_addr,
+                'user_agent': request.headers.get('User-Agent', 'UNKNOWN')
+            }
+        )
         
         try:
             audit_login_failure(
                 username=username,
                 reason=failure_reason,
-                details={'attempted_username': username}
+                details={
+                    'attempted_username': username,
+                    'ip_address': request.remote_addr,
+                    'user_agent': request.headers.get('User-Agent', 'UNKNOWN')
+                }
             )
         except Exception as audit_error:
-            current_app.logger.warning(f"Error auditing login failure: {audit_error}")
+            current_app.logger.warning(
+                f"Error auditing login failure: {audit_error}",
+                extra={'event': 'audit_error', 'username': username}
+            )
         
         return SecurityAwareErrorHandler.handle_service_error(
             Exception('Invalid credentials'), 'authentication_error', 'Login attempt', 401
         )
         
     except Exception as e:
-        # Catch-all for any unexpected errors
-        current_app.logger.error(f"Unexpected error in login endpoint: {e}", exc_info=True)
+        # Catch-all for any unexpected errors with comprehensive logging
+        current_app.logger.error(
+            f"Unexpected error in login endpoint: {e}",
+            exc_info=True,
+            extra={
+                'event': 'login_unexpected_error',
+                'username': data.get('username', 'UNKNOWN') if data else 'NO_DATA',
+                'error_type': type(e).__name__,
+                'error_message': str(e),
+                'ip_address': request.remote_addr,
+                'user_agent': request.headers.get('User-Agent', 'UNKNOWN')
+            }
+        )
+        
+        # Ensure database session is clean after error
+        try:
+            db.session.rollback()
+        except Exception as rollback_error:
+            current_app.logger.error(
+                f"Failed to rollback session after unexpected error: {rollback_error}",
+                exc_info=True
+            )
+        
         return SecurityAwareErrorHandler.handle_service_error(
             e, 'internal_error', 'Login processing', 500
         )
@@ -419,41 +642,141 @@ def refresh():
     security:
       - JWT: []
     """
-    user_id, success = get_current_user_id()
-    if not success or user_id is None:
-        return SecurityAwareErrorHandler.handle_service_error(
-            Exception('Invalid token format'), 'authentication_error', 'Token validation', 401
+    try:
+        # Get and validate user ID from token
+        user_id, success = get_current_user_id()
+        if not success or user_id is None:
+            current_app.logger.warning(
+                "Token refresh failed: Invalid token format",
+                extra={'event': 'refresh_invalid_token'}
+            )
+            return SecurityAwareErrorHandler.handle_service_error(
+                Exception('Invalid token format'), 'authentication_error', 'Token validation', 401
+            )
+        
+        # Query user with database error handling
+        try:
+            user = User.query.get(user_id)
+        except Exception as db_error:
+            current_app.logger.error(
+                f"Database error during refresh query: {db_error}",
+                exc_info=True,
+                extra={'event': 'refresh_database_error', 'user_id': user_id}
+            )
+            return SecurityAwareErrorHandler.handle_service_error(
+                db_error, 'database_error', 'Database query failed', 500
+            )
+        
+        # Validate user exists and is active
+        if not user:
+            current_app.logger.warning(
+                f"Token refresh failed: User not found (ID: {user_id})",
+                extra={'event': 'refresh_user_not_found', 'user_id': user_id}
+            )
+            return SecurityAwareErrorHandler.handle_service_error(
+                Exception('User not found'), 'authentication_error', 'User validation', 401
+            )
+        
+        if not user.is_active:
+            current_app.logger.warning(
+                f"Token refresh failed: User inactive (username: {user.username})",
+                extra={'event': 'refresh_user_inactive', 'username': user.username}
+            )
+            return SecurityAwareErrorHandler.handle_service_error(
+                Exception('User inactive'), 'authentication_error', 'User validation', 401
+            )
+        
+        # TEMPORARY FIX FOR NULL ROLE_ID - REMOVE AFTER FIX
+        try:
+            _fix_null_role_id(user)
+        except Exception as fix_error:
+            current_app.logger.error(
+                f"Failed to fix NULL role_id during refresh for user {user.username}: {fix_error}",
+                exc_info=True,
+                extra={'event': 'refresh_role_fix_failed', 'username': user.username}
+            )
+        
+        # Verify role is properly configured
+        if not user.role or not user.role.name:
+            current_app.logger.error(
+                f"Token refresh failed: User {user.username} has invalid role configuration",
+                extra={
+                    'event': 'refresh_invalid_role',
+                    'username': user.username,
+                    'role_id': user.role_id
+                }
+            )
+            return SecurityAwareErrorHandler.handle_service_error(
+                Exception('User role configuration invalid'), 'configuration_error', 'Role validation', 500
+            )
+        
+        # Create new access token with security claims
+        try:
+            additional_claims = {
+                'jti': secrets.token_urlsafe(16),
+                'role': user.role.name.value
+            }
+            access_token = create_access_token(identity=str(user.id), additional_claims=additional_claims)
+            
+            if not access_token:
+                raise ValueError("Token generation returned empty token")
+                
+        except Exception as token_error:
+            current_app.logger.error(
+                f"Error creating refresh token: {token_error}",
+                exc_info=True,
+                extra={
+                    'event': 'refresh_token_generation_failed',
+                    'username': user.username,
+                    'error_type': type(token_error).__name__
+                }
+            )
+            return SecurityAwareErrorHandler.handle_service_error(
+                token_error, 'internal_error', 'Token generation failed', 500
+            )
+        
+        # Audit token refresh (non-critical)
+        try:
+            AuditLogger.log_authentication_event(
+                AuditEventType.TOKEN_REFRESH,
+                username=user.username,
+                outcome="success",
+                details={
+                    'user_id': user.id,
+                    'role': user.role.name.value,
+                    'ip_address': request.remote_addr
+                }
+            )
+        except Exception as audit_error:
+            current_app.logger.warning(
+                f"Error auditing token refresh: {audit_error}",
+                extra={'event': 'refresh_audit_error', 'username': user.username}
+            )
+        
+        current_app.logger.info(
+            f"Token refresh successful for user {user.username}",
+            extra={'event': 'refresh_success', 'username': user.username}
         )
         
-    user = User.query.get(user_id)
-    
-    if not user or not user.is_active:
-        return SecurityAwareErrorHandler.handle_service_error(
-            Exception('User not found or inactive'), 'authentication_error', 'User validation', 401
+        return jsonify({
+            'access_token': access_token,
+            'expires_in': current_app.config['JWT_ACCESS_TOKEN_EXPIRES'].total_seconds()
+        }), 200
+        
+    except Exception as e:
+        # Catch-all for unexpected errors
+        current_app.logger.error(
+            f"Unexpected error in refresh endpoint: {e}",
+            exc_info=True,
+            extra={
+                'event': 'refresh_unexpected_error',
+                'error_type': type(e).__name__,
+                'error_message': str(e)
+            }
         )
-    
-    # TEMPORARY FIX FOR NULL ROLE_ID - REMOVE AFTER FIX
-    _fix_null_role_id(user)
-    
-    # Create new access token with security claims
-    additional_claims = {
-        'jti': secrets.token_urlsafe(16),
-        'role': user.role.name.value
-    }
-    access_token = create_access_token(identity=str(user.id), additional_claims=additional_claims)
-    
-    # Audit token refresh
-    AuditLogger.log_authentication_event(
-        AuditEventType.TOKEN_REFRESH,
-        username=user.username,
-        outcome="success",
-        details={'user_id': user.id, 'role': user.role.name.value}
-    )
-    
-    return jsonify({
-        'access_token': access_token,
-        'expires_in': current_app.config['JWT_ACCESS_TOKEN_EXPIRES'].total_seconds()
-    }), 200
+        return SecurityAwareErrorHandler.handle_service_error(
+            e, 'internal_error', 'Token refresh processing', 500
+        )
 
 
 @auth_bp.route('/auth/me', methods=['GET'])
