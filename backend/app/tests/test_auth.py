@@ -5,6 +5,10 @@ import jwt
 from app.models import User
 
 
+# Test constants
+MAX_TEST_USERNAME_LENGTH = 1000  # Maximum username length for DoS protection testing
+
+
 def unwrap_response(response):
     """Helper to extract data from standardized API response envelope.
     
@@ -370,6 +374,77 @@ class TestErrorHandling:
             # Reactivate user for other tests
             admin_user.is_active = True
             db_session.commit()
+
+
+class TestEdgeCases:
+    """Test edge cases and error scenarios."""
+    
+    def test_login_with_empty_username(self, client):
+        """Test login with empty username."""
+        response = client.post('/api/v1/auth/login',
+            json={'username': '', 'password': 'password'},
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        # Should return 400 or 422 for validation error
+        assert response.status_code in [400, 422]
+    
+    def test_login_with_empty_password(self, client):
+        """Test login with empty password."""
+        response = client.post('/api/v1/auth/login',
+            json={'username': 'admin', 'password': ''},
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        # Should return 400 or 401 - empty password should fail
+        assert response.status_code in [400, 401]
+    
+    def test_login_with_null_username(self, client):
+        """Test login with null username."""
+        response = client.post('/api/v1/auth/login',
+            json={'username': None, 'password': 'password'},
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        # Should return 400 or 422 for validation error
+        assert response.status_code in [400, 422]
+    
+    def test_login_with_very_long_username(self, client):
+        """Test login with extremely long username."""
+        long_username = 'a' * MAX_TEST_USERNAME_LENGTH
+        response = client.post('/api/v1/auth/login',
+            json={'username': long_username, 'password': 'password'},
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        # Should handle gracefully with 401 (user not found) or 400 (validation)
+        assert response.status_code in [400, 401, 422]
+    
+    def test_login_with_special_characters(self, client):
+        """Test login with special characters in username."""
+        response = client.post('/api/v1/auth/login',
+            json={'username': 'admin<script>alert(1)</script>', 'password': 'admin123'},
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        # Should return 401 (not found) - user doesn't exist
+        assert response.status_code == 401
+    
+    def test_refresh_with_invalid_token_format(self, client):
+        """Test refresh endpoint with malformed token."""
+        response = client.post('/api/v1/auth/refresh',
+            headers={'Authorization': 'Bearer not.a.valid.token'}
+        )
+        
+        # Should return 401 or 422 for invalid token
+        assert response.status_code in [401, 422]
+    
+    def test_refresh_with_missing_token(self, client):
+        """Test refresh endpoint without token."""
+        response = client.post('/api/v1/auth/refresh')
+        
+        # Should return 401 for missing token
+        assert response.status_code == 401
 
 
 class TestUserRegistration:
