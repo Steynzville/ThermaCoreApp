@@ -15,10 +15,10 @@ When `VITE_API_BASE_URL` was undefined or empty, API calls became relative URLs 
 
 ### 1. Updated `public/_redirects`
 ```
-# Don't redirect API calls - let them pass through or 404
-/api/* 404
+# Proxy API calls to the backend
+/api/*  https://thermacoreapp.onrender.com/api/:splat  200
 # Redirect all other requests to index.html for SPA routing
-/* /index.html 200
+/*      /index.html    200
 ```
 
 ### 2. Added Debug Logging to `src/services/authService.js`
@@ -101,9 +101,9 @@ Full URL: /api/v1/auth/login
 
 ## Why This Fix Works
 
-1. **External Domain Requests**: When `VITE_API_BASE_URL` is properly set to `https://thermacoreapp.onrender.com`, requests go directly to the external backend. Netlify redirects don't affect external domains.
+1. **API Proxying**: The `/api/*` rule in `_redirects` proxies all API calls to the backend at `https://thermacoreapp.onrender.com`, ensuring they reach the correct destination regardless of how the URL is constructed.
 
-2. **Relative URL Protection**: If the URL is relative, the `/api/* 404` rule in `_redirects` ensures Netlify doesn't try to redirect API calls to `index.html`.
+2. **Method Preservation**: Netlify's proxy rule with status 200 preserves the HTTP method (POST) when forwarding requests to the backend.
 
 3. **Debug Visibility**: The logging makes it immediately obvious what URL is being called and what method is being used, helping diagnose any remaining issues.
 
