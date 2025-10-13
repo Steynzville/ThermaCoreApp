@@ -478,8 +478,8 @@ def create_app(config_name=None):
                 protocol_simulator = None
 
             # Store references in app for easy access
-            # Set mqtt_client to None if external services are skipped
-            app.mqtt_client = None if skip_external else mqtt_client
+            # Set mqtt_client to None if external services are skipped or not defined
+            app.mqtt_client = None if skip_external or 'mqtt_client' not in locals() else mqtt_client
             app.websocket_service = websocket_service
             app.realtime_processor = realtime_processor
             # opcua_client is already set above (either secure, standard, or None if skipped)
