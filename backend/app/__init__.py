@@ -52,7 +52,7 @@ else:
     swagger = None
 
 
-def _initialize_critical_service(service, service_name: str, app, logger, init_method='init_app', required=True, *args, **kwargs):
+def _initialize_critical_service(service, service_name: str, app, logger, init_method='init_app', *args, required=True, **kwargs):
     """
     Shared helper function for initializing services with consistent error handling.
     
@@ -97,7 +97,10 @@ def _initialize_critical_service(service, service_name: str, app, logger, init_m
         
     except (ValueError, RuntimeError, ConnectionError, OSError, ImportError) as e:
         # Security validation errors, connection issues, or configuration errors
-        logger.error(f"{service_name} security validation failed: {e}", exc_info=True)
+        if isinstance(e, ValueError):
+            logger.error(f"{service_name} configuration error: {e}", exc_info=True)
+        else:
+            logger.error(f"{service_name} security validation failed: {e}", exc_info=True)
         
         # For backwards compatibility, also use environment detection error handling
         from app.utils.environment import handle_environment_detection_error

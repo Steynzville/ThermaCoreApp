@@ -266,13 +266,32 @@ def initialize_service(
         logger.info(f"{service_name} initialized successfully")
         return True
         
+    except (ValueError, RuntimeError, ConnectionError, OSError, ImportError) as e:
+        # Re-raise these specific exceptions so they can be handled by the caller
+        # (e.g., for specific error logging in _initialize_critical_service)
+        service_manager.set_service_error(manager_name, e)
+        raise
+        
     except Exception as e:
         # Record error
         service_manager.set_service_error(manager_name, e)
         logger.error(f"Failed to initialize {service_name}: {e}", exc_info=True)
         
         # Determine if we should raise based on production status and service type
-        from app.utils.environment import is_production_environment
+        from app.utils.environment import is_production_environment, is_testing_environment
+        
+        is_testing = False
+        is_production = False
+        
+        try:
+            is_testing = is_testing_environment(app)
+        except (ValueError, AttributeError):
+            pass
+        
+        # Testing environment always raises
+        if is_testing:
+            raise RuntimeError(f"{service_name} initialization failed in testing: {e}") from e
+        
         try:
             is_production = is_production_environment(app)
         except (ValueError, AttributeError):
@@ -286,7 +305,7 @@ def initialize_service(
         
         # Use service manager to determine if we should raise
         if service_manager.should_raise_error(manager_name, is_production):
-            raise RuntimeError(f"Required service '{service_name}' failed to initialize in production: {e}") from e
+            raise RuntimeError(f"Critical service initialization failed: {service_name} - {e}") from e
         
         # For optional services or development, just log and continue
         logger.warning(f"Optional service '{service_name}' failed to initialize, continuing without it")

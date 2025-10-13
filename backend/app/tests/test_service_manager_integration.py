@@ -53,11 +53,12 @@ class TestProductionScenarios:
         
         # Should raise exception because MQTT is required
         with patch('app.utils.environment.is_production_environment', return_value=True):
-            with pytest.raises(RuntimeError, match="Required service.*failed to initialize in production"):
-                initialize_service(
-                    mock_service, "MQTT client", mock_app, mock_logger,
-                    'init_app', required=True
-                )
+            with patch('app.utils.environment.is_testing_environment', return_value=False):
+                with pytest.raises(RuntimeError, match="Critical service initialization failed"):
+                    initialize_service(
+                        mock_service, "MQTT client", mock_app, mock_logger,
+                        'init_app', required=True
+                    )
     
     def test_disabled_service_never_raises(self):
         """Test that disabled services never raise exceptions."""

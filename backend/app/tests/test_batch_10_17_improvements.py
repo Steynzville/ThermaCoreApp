@@ -207,13 +207,15 @@ class TestCriticalServiceInitialization:
         mock_service = Mock()
         mock_service.init_app.side_effect = Exception("Generic error")
         mock_app = Mock()
+        mock_app.config = {}
         mock_logger = Mock()
         
         with patch('app.utils.environment.is_production_environment', return_value=True):
-            with pytest.raises(RuntimeError, match="Critical service initialization failed"):
-                _initialize_critical_service(
-                    mock_service, "Test Service", mock_app, mock_logger
-                )
+            with patch('app.utils.environment.is_testing_environment', return_value=False):
+                with pytest.raises(RuntimeError, match="Critical service initialization failed"):
+                    _initialize_critical_service(
+                        mock_service, "Test Service", mock_app, mock_logger
+                    )
     
     def test_service_initialization_with_additional_args(self):
         """Test service initialization with additional arguments."""
