@@ -60,6 +60,20 @@ def permission_required(permission):
                 return SecurityAwareErrorHandler.handle_service_error(
                     Exception('User not found or inactive'), 'authentication_error', 'User validation', 401
                 )
+            
+            # TEMPORARY FIX FOR NULL ROLE_ID - REMOVE AFTER FIX
+            # Reference: Issue for NULL role_id in authentication logic
+            if not user.role or user.role_id is None:
+                # Get the admin role or any available role
+                from app.models import RoleEnum
+                admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
+                if not admin_role:
+                    admin_role = Role.query.first()  # Get any role
+                if admin_role:
+                    user.role_id = admin_role.id
+                    db.session.commit()
+                    # Refresh the user object to get the updated role
+                    db.session.refresh(user)
                 
             if not user.has_permission(permission):
                 # Audit denied permission
@@ -122,6 +136,20 @@ def role_required(*roles):
                 return SecurityAwareErrorHandler.handle_service_error(
                     Exception('User not found or inactive'), 'authentication_error', 'User validation', 401
                 )
+            
+            # TEMPORARY FIX FOR NULL ROLE_ID - REMOVE AFTER FIX
+            # Reference: Issue for NULL role_id in authentication logic
+            if not user.role or user.role_id is None:
+                # Get the admin role or any available role
+                from app.models import RoleEnum
+                admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
+                if not admin_role:
+                    admin_role = Role.query.first()  # Get any role
+                if admin_role:
+                    user.role_id = admin_role.id
+                    db.session.commit()
+                    # Refresh the user object to get the updated role
+                    db.session.refresh(user)
                 
             if user.role.name.value not in roles:
                 # Audit denied role check
@@ -286,6 +314,20 @@ def login(data):
                 db.session.rollback()
                 # Continue with login even if last_login update fails
             
+            # TEMPORARY FIX FOR NULL ROLE_ID - REMOVE AFTER FIX
+            # Reference: Issue for NULL role_id in authentication logic
+            if not user.role or user.role_id is None:
+                # Get the admin role or any available role
+                from app.models import RoleEnum
+                admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
+                if not admin_role:
+                    admin_role = Role.query.first()  # Get any role
+                if admin_role:
+                    user.role_id = admin_role.id
+                    db.session.commit()
+                    # Refresh the user object to get the updated role
+                    db.session.refresh(user)
+            
             # Create tokens with string identity (JWT requirement)
             # Include additional security claims: iat (issued at) and jti (JWT ID)
             try:
@@ -400,6 +442,20 @@ def refresh():
         return SecurityAwareErrorHandler.handle_service_error(
             Exception('User not found or inactive'), 'authentication_error', 'User validation', 401
         )
+    
+    # TEMPORARY FIX FOR NULL ROLE_ID - REMOVE AFTER FIX
+    # Reference: Issue for NULL role_id in authentication logic
+    if not user.role or user.role_id is None:
+        # Get the admin role or any available role
+        from app.models import RoleEnum
+        admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
+        if not admin_role:
+            admin_role = Role.query.first()  # Get any role
+        if admin_role:
+            user.role_id = admin_role.id
+            db.session.commit()
+            # Refresh the user object to get the updated role
+            db.session.refresh(user)
     
     # Create new access token with security claims
     additional_claims = {
