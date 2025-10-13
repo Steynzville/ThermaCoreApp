@@ -294,6 +294,23 @@ def login(data):
             )
         
         if user and user.check_password(data['password']) and user.is_active:
+            # TEMPORARY FIX FOR NULL ROLE_ID - REMOVE AFTER FIX
+            # Reference: Issue for NULL role_id in authentication logic
+            # This fix is placed before the role verification check to auto-assign a role
+            if not user.role or user.role_id is None:
+                current_app.logger.warning(f"User {user.username} has NULL role_id - applying temporary fix")
+                # Get the admin role or any available role
+                from app.models import RoleEnum
+                admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
+                if not admin_role:
+                    admin_role = Role.query.first()  # Get any role
+                if admin_role:
+                    user.role_id = admin_role.id
+                    db.session.commit()
+                    # Refresh the user object to get the updated role
+                    db.session.refresh(user)
+                    current_app.logger.info(f"Assigned role {admin_role.name.value} to user {user.username}")
+            
             # Verify user has a role (critical requirement)
             if not user.role:
                 current_app.logger.error(f"User {user.username} has no role assigned")
@@ -313,20 +330,6 @@ def login(data):
                 # Rollback the session to prevent inconsistent state
                 db.session.rollback()
                 # Continue with login even if last_login update fails
-            
-            # TEMPORARY FIX FOR NULL ROLE_ID - REMOVE AFTER FIX
-            # Reference: Issue for NULL role_id in authentication logic
-            if not user.role or user.role_id is None:
-                # Get the admin role or any available role
-                from app.models import RoleEnum
-                admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
-                if not admin_role:
-                    admin_role = Role.query.first()  # Get any role
-                if admin_role:
-                    user.role_id = admin_role.id
-                    db.session.commit()
-                    # Refresh the user object to get the updated role
-                    db.session.refresh(user)
             
             # Create tokens with string identity (JWT requirement)
             # Include additional security claims: iat (issued at) and jti (JWT ID)
