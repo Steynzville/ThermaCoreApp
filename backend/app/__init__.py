@@ -341,6 +341,13 @@ def create_app(config_name=None):
 
             # Initialize services with app context and handle security validation errors
             logger = logging.getLogger(__name__)
+            
+            # Check if external services should be skipped
+            from app.utils.service_manager import should_skip_external_services
+            skip_external = should_skip_external_services()
+            
+            if skip_external:
+                logger.info("SKIP_EXTERNAL_SERVICES is set to 'true' - external services (MQTT, OPC-UA) will not be initialized")
 
             # Initialize critical services using shared helper
             # Data storage is always required
@@ -354,62 +361,72 @@ def create_app(config_name=None):
             )
 
             # MQTT client - required by default, but can be configured as optional
-            mqtt_required = app.config.get("SERVICE_MQTT_REQUIRED", True)
-            _initialize_critical_service(
-                mqtt_client,
-                "MQTT client",
-                app,
-                logger,
-                "init_app",
-                required=mqtt_required,
-                data_storage_service=data_storage_service,
-            )
-
-            # Initialize secure OPC-UA client (preferred) with fallback to standard client
-            # OPC-UA is now optional in production by default
-            opcua_required = app.config.get("SERVICE_OPCUA_REQUIRED", False)
-            try:
+            # Skip MQTT if SKIP_EXTERNAL_SERVICES is set to true
+            if skip_external:
+                logger.info("Skipping MQTT client initialization (external services disabled)")
+            else:
+                mqtt_required = app.config.get("SERVICE_MQTT_REQUIRED", True)
                 _initialize_critical_service(
-                    secure_opcua_client,
-                    "Secure OPC UA client",
+                    mqtt_client,
+                    "MQTT client",
                     app,
                     logger,
                     "init_app",
-                    required=opcua_required,
+                    required=mqtt_required,
                     data_storage_service=data_storage_service,
                 )
-                app.secure_opcua_client = secure_opcua_client
-                app.opcua_client = (
-                    secure_opcua_client  # Also set standard reference for compatibility
-                )
-                logger.info("Using secure OPC-UA client with security wrapper")
-            except Exception as secure_init_error:
-                logger.warning(
-                    f"Secure OPC-UA client initialization failed, falling back to standard client: {secure_init_error}"
-                )
+
+            # Initialize secure OPC-UA client (preferred) with fallback to standard client
+            # OPC-UA is now optional in production by default
+            # Skip OPC-UA if SKIP_EXTERNAL_SERVICES is set to true
+            if skip_external:
+                logger.info("Skipping OPC-UA client initialization (external services disabled)")
+                app.opcua_client = None
+                app.secure_opcua_client = None
+            else:
+                opcua_required = app.config.get("SERVICE_OPCUA_REQUIRED", False)
                 try:
                     _initialize_critical_service(
-                        opcua_client,
-                        "OPC UA client",
+                        secure_opcua_client,
+                        "Secure OPC UA client",
                         app,
                         logger,
                         "init_app",
                         required=opcua_required,
                         data_storage_service=data_storage_service,
                     )
-                    app.opcua_client = opcua_client
-                    logger.info("Using standard OPC-UA client (fallback)")
-                except Exception as standard_init_error:
-                    logger.error(
-                        f"Standard OPC-UA client initialization failed: {standard_init_error}",
-                        exc_info=True,
+                    app.secure_opcua_client = secure_opcua_client
+                    app.opcua_client = (
+                        secure_opcua_client  # Also set standard reference for compatibility
                     )
-                    app.opcua_client = None
-                    # If OPC-UA is optional, log and continue
-                    if not opcua_required:
-                        logger.info(
-                            "OPC-UA client initialization failed but service is optional, continuing without it"
+                    logger.info("Using secure OPC-UA client with security wrapper")
+                except Exception as secure_init_error:
+                    logger.warning(
+                        f"Secure OPC-UA client initialization failed, falling back to standard client: {secure_init_error}"
+                    )
+                    try:
+                        _initialize_critical_service(
+                            opcua_client,
+                            "OPC UA client",
+                            app,
+                            logger,
+                            "init_app",
+                            required=opcua_required,
+                            data_storage_service=data_storage_service,
                         )
+                        app.opcua_client = opcua_client
+                        logger.info("Using standard OPC-UA client (fallback)")
+                    except Exception as standard_init_error:
+                        logger.error(
+                            f"Standard OPC-UA client initialization failed: {standard_init_error}",
+                            exc_info=True,
+                        )
+                        app.opcua_client = None
+                        # If OPC-UA is optional, log and continue
+                        if not opcua_required:
+                            logger.info(
+                                "OPC-UA client initialization failed but service is optional, continuing without it"
+                            )
             # Initialize non-critical services (failures won't stop the app)
             try:
                 websocket_service.init_app(app)
@@ -461,10 +478,11 @@ def create_app(config_name=None):
                 protocol_simulator = None
 
             # Store references in app for easy access
-            app.mqtt_client = mqtt_client
+            # Set mqtt_client to None if external services are skipped
+            app.mqtt_client = None if skip_external else mqtt_client
             app.websocket_service = websocket_service
             app.realtime_processor = realtime_processor
-            # opcua_client is already set above (either secure or standard)
+            # opcua_client is already set above (either secure, standard, or None if skipped)
             app.protocol_simulator = protocol_simulator
             app.data_storage_service = data_storage_service
             # Phase 3 & 4 services
