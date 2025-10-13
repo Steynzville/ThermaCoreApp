@@ -226,8 +226,8 @@ def initialize_service(
     app: Any,
     logger: logging.Logger,
     init_method: str = "init_app",
-    required: bool = True,
     *args,
+    required: bool = True,
     **kwargs,
 ) -> bool:
     """Initialize a service with graceful error handling.

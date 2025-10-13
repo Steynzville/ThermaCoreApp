@@ -115,7 +115,7 @@ def _initialize_critical_service(
     try:
         # Use the new service manager for initialization
         return initialize_service(
-            service, service_name, app, logger, init_method, required, *args, **kwargs
+            service, service_name, app, logger, init_method, *args, required=required, **kwargs
         )
 
     except (ValueError, RuntimeError, ConnectionError, OSError, ImportError) as e:
