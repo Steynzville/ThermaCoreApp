@@ -5,6 +5,10 @@ import jwt
 from app.models import User
 
 
+# Test constants
+MAX_TEST_USERNAME_LENGTH = 1000  # Maximum username length for DoS protection testing
+
+
 def unwrap_response(response):
     """Helper to extract data from standardized API response envelope.
     
@@ -407,7 +411,7 @@ class TestEdgeCases:
     
     def test_login_with_very_long_username(self, client):
         """Test login with extremely long username."""
-        long_username = 'a' * 1000
+        long_username = 'a' * MAX_TEST_USERNAME_LENGTH
         response = client.post('/api/v1/auth/login',
             json={'username': long_username, 'password': 'password'},
             headers={'Content-Type': 'application/json'}
