@@ -317,12 +317,14 @@ def get_service_config(app: Any, service_name: str) -> Dict[str, bool]:
     
     Args:
         app: Flask application instance
-        service_name: Service name (e.g., 'opcua', 'mqtt')
+        service_name: Service name (e.g., 'opcua', 'mqtt', 'opc_ua')
         
     Returns:
         Dictionary with 'enabled' and 'required' keys
     """
-    service_upper = service_name.upper()
+    # Normalize the service name by removing underscores for config key lookup
+    # This handles both 'opcua' and 'opc_ua' -> 'OPCUA'
+    service_upper = service_name.upper().replace('_', '')
     
     # Check for service-specific config
     enabled_key = f'SERVICE_{service_upper}_ENABLED'
