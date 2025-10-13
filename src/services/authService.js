@@ -37,7 +37,7 @@ let authToken = null;
  * @returns {Promise<Object>} Authentication result
  */
 export const login = async (identifier, password) => {
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://thermacoreapp.onrender.com';
   
   // Debug logging to diagnose the issue
   if (import.meta.env.DEV) {
