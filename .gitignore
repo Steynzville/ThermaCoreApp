@@ -41,3 +41,4 @@ temp/
 .gitleaks.toml
 bandit_report.json
 bandit_sarif.json
+bandit_report.html

@@ -203,6 +203,62 @@ curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
 ### System
 - `GET /health` - Health check endpoint
 
+## 🔧 Diagnostic Tools
+
+### API Endpoint Diagnostics
+
+For debugging login and dashboard issues, use the provided diagnostic scripts:
+
+#### Python Diagnostic Script (Recommended)
+
+```bash
+python backend/diagnose_api_endpoints.py https://thermacoreapp.onrender.com admin YOUR_PASSWORD
+```
+
+**Features:**
+- ✅ Tests health, login, and dashboard endpoints
+- ✅ Automatically extracts and uses JWT tokens
+- ✅ Color-coded output with detailed analysis
+- ✅ Actionable recommendations for fixing issues
+
+#### Bash Diagnostic Script
+
+```bash
+./scripts/diagnose-api-endpoints.sh https://thermacoreapp.onrender.com admin YOUR_PASSWORD
+```
+
+**Features:**
+- ✅ Pure curl-based testing (no Python required)
+- ✅ Automatic token extraction
+- ✅ JSON pretty-printing
+
+#### Simple Login Test
+
+```bash
+python backend/test_login_endpoint.py https://thermacoreapp.onrender.com admin YOUR_PASSWORD
+```
+
+### When to Use Diagnostic Tools
+
+Run these scripts when experiencing:
+- Blank page after login
+- Spinner appearing then disappearing
+- Authentication failures
+- Dashboard access issues
+
+### What the Diagnostics Test
+
+1. **Health Endpoint** - Verifies backend is running
+2. **Login Endpoint** - Tests authentication and JWT token generation
+3. **Dashboard Endpoint** - Tests authenticated access to dashboard data
+
+### Comprehensive Documentation
+
+For detailed debugging guidance, see:
+- `API_DIAGNOSTICS_GUIDE.md` - Complete diagnostic guide
+- `QUICK_API_TEST_COMMANDS.md` - Quick curl command reference
+- `AUTHENTICATION_500_ERROR_FIX.md` - Known authentication issues
+
 ## 🔍 API Usage Examples
 
 ### Get Units with Filtering
