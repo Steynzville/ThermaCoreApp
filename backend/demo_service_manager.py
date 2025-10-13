@@ -15,9 +15,7 @@ from unittest.mock import Mock
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from app.utils.service_manager import (
-    ServiceManager, ServiceType, initialize_service, service_manager
-)
+from app.utils.service_manager import ServiceManager, ServiceType
 
 
 def print_header(text):
