@@ -1,8 +1,7 @@
 """Tests for SKIP_EXTERNAL_SERVICES functionality."""
 
 import os
-import pytest
-from unittest.mock import patch, Mock
+from unittest.mock import patch
 from app.utils.service_manager import should_skip_external_services
 
 
