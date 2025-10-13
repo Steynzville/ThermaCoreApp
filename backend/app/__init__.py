@@ -127,13 +127,6 @@ def _initialize_critical_service(
                 f"{service_name} security validation failed: {e}", exc_info=True
             )
 
-        # For optional services, allow graceful degradation even in production
-        if not required:
-            logger.warning(
-                f"Optional service '{service_name}' failed to initialize, continuing without it"
-            )
-            return False
-
         # For backwards compatibility, also use environment detection error handling
         from app.utils.environment import handle_environment_detection_error
 
@@ -152,13 +145,6 @@ def _initialize_critical_service(
 
     except Exception as e:
         logger.error(f"Failed to initialize {service_name}: {e}", exc_info=True)
-
-        # For optional services, allow graceful degradation even in production
-        if not required:
-            logger.warning(
-                f"Optional service '{service_name}' failed to initialize, continuing without it"
-            )
-            return False
 
         # For backwards compatibility, also use environment detection error handling
         from app.utils.environment import handle_environment_detection_error

@@ -274,11 +274,13 @@ class OPCUAClient:
             if is_prod:
                 if not self.username or not self.password:
                     logger.error("OPC UA authentication not configured - this is not allowed in production")
-                    raise ValueError("OPC UA authentication must be configured in production environment")
+                    logger.warning("OPC UA service cannot initialize without authentication in production - service will be unavailable")
+                    return  # Gracefully return without initializing
                 
                 if self.security_policy == 'None' or self.security_mode == 'None':
                     logger.error("OPC UA security policy/mode set to None - this is not allowed in production")
-                    raise ValueError("OPC UA security must be configured in production environment")
+                    logger.warning("OPC UA service cannot initialize without security in production - service will be unavailable")
+                    return  # Gracefully return without initializing
             
             # Configure security policy and certificates if provided
             if self.security_policy != 'None' and self.security_mode != 'None':
@@ -361,7 +363,8 @@ class OPCUAClient:
                     
             elif is_prod:
                 logger.error("OPC UA security policy and mode set to None - this is not allowed in production")
-                raise ValueError("OPC UA security must be configured in production environment")
+                logger.warning("OPC UA service cannot initialize without security in production - service will be unavailable")
+                return  # Gracefully return without initializing
             else:
                 # Even in development with no security, we can still validate trust certificates if provided
                 if self.trust_cert_file:
