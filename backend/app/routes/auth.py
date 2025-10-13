@@ -556,7 +556,9 @@ def login(data):
             failure_reason = 'user_not_found'
         elif not user.is_active:
             failure_reason = 'inactive_user'
-        elif not user.check_password(data.get('password', '')):
+        elif not data.get('password'):
+            failure_reason = 'missing_or_empty_password'
+        elif not user.check_password(data.get('password')):
             failure_reason = 'incorrect_password'
         
         current_app.logger.warning(
