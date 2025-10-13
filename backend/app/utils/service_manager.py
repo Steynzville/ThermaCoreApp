@@ -275,9 +275,14 @@ def initialize_service(
         from app.utils.environment import is_production_environment
         try:
             is_production = is_production_environment(app)
-        except ValueError:
-            # Environment detection failed - be conservative
-            is_production = True
+        except (ValueError, AttributeError):
+            # Environment detection failed or app has no config - check if service is required
+            # If required=False was explicitly passed, treat as development
+            if not required:
+                is_production = False
+            else:
+                # Be conservative for required services
+                is_production = True
         
         # Use service manager to determine if we should raise
         if service_manager.should_raise_error(manager_name, is_production):
