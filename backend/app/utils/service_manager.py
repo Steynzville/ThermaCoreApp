@@ -7,6 +7,7 @@ This module provides a centralized service management framework that:
 - Enables configuration-driven service initialization
 """
 
+import os
 import logging
 from typing import Dict, Any
 from enum import Enum
@@ -218,6 +219,16 @@ class ServiceManager:
 
 # Global service manager instance
 service_manager = ServiceManager()
+
+
+def should_skip_external_services() -> bool:
+    """Check if external services should be skipped based on environment variable.
+    
+    Returns:
+        True if SKIP_EXTERNAL_SERVICES environment variable is set to "true", False otherwise
+    """
+    skip_env = os.getenv('SKIP_EXTERNAL_SERVICES', 'false').lower()
+    return skip_env == 'true'
 
 
 def initialize_service(
