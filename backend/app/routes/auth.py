@@ -491,7 +491,7 @@ def login(data):
             # Serialize response with enhanced error handling
             try:
                 # Pre-validate configuration before serialization
-                if not current_app.config.get('JWT_ACCESS_TOKEN_EXPIRES'):
+                if 'JWT_ACCESS_TOKEN_EXPIRES' not in current_app.config:
                     current_app.logger.error("JWT_ACCESS_TOKEN_EXPIRES not configured")
                     raise ValueError("JWT configuration incomplete")
                 
