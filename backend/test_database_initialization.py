@@ -55,7 +55,7 @@ def test_fresh_database():
         assert admin_user.is_active, "Admin user is not active"
         assert admin_user.check_password("password"), "Admin password is incorrect"
         print(f"✓ Admin user created: {admin_user.username}")
-        print(f"✓ Admin user password verified")
+        print("✓ Admin user password verified")
         
     print("\n✅ TEST 1 PASSED: Fresh database initialization works correctly\n")
 
@@ -67,7 +67,7 @@ def test_idempotency():
     print("=" * 70)
     
     # Import app again (triggers initialization again)
-    from run import app, db
+    from run import app
     from app.models import User, Role, RoleEnum
     
     with app.app_context():
@@ -89,7 +89,7 @@ def test_admin_credentials():
     print("TEST 3: Admin Credentials Verification")
     print("=" * 70)
     
-    from run import app, db
+    from run import app
     from app.models import User
     
     with app.app_context():

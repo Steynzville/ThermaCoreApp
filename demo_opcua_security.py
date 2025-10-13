@@ -71,10 +71,15 @@ def demonstrate_secure_client():
     print("=" * 70 + "\n")
     
     try:
-        from app.services.secure_opcua_client import SecureOPCUAClient
+        # Verify the module can be imported
+        import importlib.util
+        spec = importlib.util.find_spec('app.services.secure_opcua_client')
         
         # Note: This will fail without proper dependencies, but we can show the structure
-        print("✅ SecureOPCUAClient class available")
+        if spec:
+            print("✅ SecureOPCUAClient class available")
+        else:
+            print("⚠️  SecureOPCUAClient module not found")
         print("\nKey Features:")
         print("  • Extends base OPCUAClient with security wrapper")
         print("  • Automatic operation logging via @secure_operation decorator")
