@@ -282,10 +282,20 @@ class TestOPCUACertificateLoading:
             
             with patch('app.services.opcua_service.opcua_available', True):
                 with patch('app.services.opcua_service.Client'):
-                    opcua_client = OPCUAClient()
-                    
-                    with pytest.raises(ValueError, match="OPC UA security must be configured in production"):
-                        opcua_client.init_app(mock_app)
+                    with patch('app.services.opcua_service.logger') as mock_logger:
+                        opcua_client = OPCUAClient()
+                        
+                        # Service should return gracefully without raising ValueError
+                        result = opcua_client.init_app(mock_app)
+                        
+                        # Verify graceful degradation behavior
+                        assert result is None  # init_app returns None when it returns early
+                        # Verify error and warning were logged
+                        mock_logger.error.assert_called()
+                        mock_logger.warning.assert_called()
+                        # Verify the warning message indicates service will be unavailable
+                        warning_calls = [call for call in mock_logger.warning.call_args_list]
+                        assert any('service will be unavailable' in str(call) for call in warning_calls)
 
 
 class TestImprovedExceptionHandling:
