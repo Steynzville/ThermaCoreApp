@@ -37,25 +37,25 @@ class ProtocolGatewaySimulator:
         self.sensor_configs = {
             'temperature': {
                 'base_value': 25.0,
-                'variation_range': (-10.0, 40.0),
+                'variation_range': (-10.0, 200.0),
                 'noise_factor': 2.0,
                 'unit': '°C'
             },
             'pressure': {
                 'base_value': 2.5,
-                'variation_range': (0.5, 8.0),
+                'variation_range': (0.0, 40.0),
                 'noise_factor': 0.5,
                 'unit': 'bar'
             },
             'flow_rate': {
                 'base_value': 150.0,
-                'variation_range': (50.0, 300.0),
+                'variation_range': (0.0, 5000.0),
                 'noise_factor': 20.0,
                 'unit': 'L/min'
             },
             'power': {
                 'base_value': 75.0,
-                'variation_range': (30.0, 120.0),
+                'variation_range': (0.0, 5000.0),
                 'noise_factor': 10.0,
                 'unit': 'kW'
             }

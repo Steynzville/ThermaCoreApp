@@ -172,7 +172,7 @@ class TestProtocolSimulationIntegration:
             assert 'unit' in sensor_data
             
             # Verify realistic ranges
-            assert -10.0 <= sensor_data['value'] <= 40.0  # Temperature range
+            assert -10.0 <= sensor_data['value'] <= 240.0  # Temperature range with anomaly (200 * 1.2)
             assert sensor_data['unit'] == '°C'
             assert sensor_data['quality'] in ['GOOD', 'BAD', 'UNCERTAIN']
     
