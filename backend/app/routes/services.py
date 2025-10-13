@@ -2,20 +2,21 @@
 
 Provides endpoints for monitoring the health and status of backend services.
 """
+
 from flask import Blueprint, jsonify
 from app.utils.service_manager import service_manager
 
 
-services_bp = Blueprint('services', __name__)
+services_bp = Blueprint("services", __name__)
 
 
-@services_bp.route('/services/status', methods=['GET'])
+@services_bp.route("/services/status", methods=["GET"])
 def get_services_status():
     """Get the status of all registered services.
-    
+
     Returns a detailed status of all services including their type (required/optional),
     enabled state, availability, and any errors.
-    
+
     ---
     tags:
       - Services
@@ -54,8 +55,5 @@ def get_services_status():
     """
     overall_health = service_manager.get_overall_health()
     services_status = service_manager.get_all_services_status()
-    
-    return jsonify({
-        'overall_health': overall_health,
-        'services': services_status
-    }), 200
+
+    return jsonify({"overall_health": overall_health, "services": services_status}), 200
