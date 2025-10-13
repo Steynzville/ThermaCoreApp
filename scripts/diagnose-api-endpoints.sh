@@ -15,7 +15,7 @@
 #   ./scripts/diagnose-api-endpoints.sh https://thermacoreapp.onrender.com admin YOUR_PASSWORD
 #
 
-set -e
+# Note: Not using 'set -e' to allow graceful failure handling
 
 # Colors for output
 RED='\033[0;31m'
@@ -86,6 +86,21 @@ print_info() {
     echo "ℹ️  $1"
 }
 
+# Function to pretty-print JSON (pure bash, no Python dependency)
+# Falls back to raw output if jq or python3 not available
+pretty_json() {
+    local file="$1"
+    # Try jq first (if available), then python3, then raw output
+    if command -v jq &> /dev/null; then
+        jq '.' "$file" 2>/dev/null || cat "$file"
+    elif command -v python3 &> /dev/null; then
+        python3 -m json.tool "$file" 2>/dev/null || cat "$file"
+    else
+        # Fallback: just output the file as-is
+        cat "$file"
+    fi
+}
+
 #
 # STEP 1: Test Health Endpoint
 #
@@ -104,7 +119,7 @@ if [ "${HTTP_STATUS}" = "200" ]; then
     print_success "Health endpoint is responding correctly"
     echo ""
     echo "Response:"
-    cat "${HEALTH_RESPONSE}" | python3 -m json.tool 2>/dev/null || cat "${HEALTH_RESPONSE}"
+    pretty_json "${HEALTH_RESPONSE}"
 elif [ "${HTTP_STATUS}" = "000" ]; then
     print_error "Failed to connect to backend - network error or server is down"
     print_info "Check if the backend is deployed and running on Render"
@@ -140,8 +155,8 @@ if [ "${HTTP_STATUS}" = "200" ]; then
     if grep -q "access_token" "${LOGIN_RESPONSE}"; then
         print_success "JWT token found in response"
         
-        # Extract the token
-        ACCESS_TOKEN=$(cat "${LOGIN_RESPONSE}" | python3 -c "import sys, json; data=json.load(sys.stdin); print(data.get('data', {}).get('access_token', ''))" 2>/dev/null || echo "")
+        # Extract the token using pure bash/grep/cut (no Python dependency)
+        ACCESS_TOKEN=$(grep -o '"access_token":"[^"]*' "${LOGIN_RESPONSE}" | cut -d'"' -f4)
         
         if [ -n "${ACCESS_TOKEN}" ]; then
             print_success "Successfully extracted access token"
@@ -156,14 +171,14 @@ if [ "${HTTP_STATUS}" = "200" ]; then
     
     echo ""
     echo "Login Response:"
-    cat "${LOGIN_RESPONSE}" | python3 -m json.tool 2>/dev/null || cat "${LOGIN_RESPONSE}"
+    pretty_json "${LOGIN_RESPONSE}"
     
 elif [ "${HTTP_STATUS}" = "401" ]; then
     print_error "Login failed: Invalid credentials (401 Unauthorized)"
     print_info "Check if the username/password are correct"
     echo ""
     echo "Response:"
-    cat "${LOGIN_RESPONSE}" | python3 -m json.tool 2>/dev/null || cat "${LOGIN_RESPONSE}"
+    pretty_json "${LOGIN_RESPONSE}"
     exit 1
     
 elif [ "${HTTP_STATUS}" = "500" ]; then
@@ -172,7 +187,7 @@ elif [ "${HTTP_STATUS}" = "500" ]; then
     print_info "Check backend logs on Render for stack traces"
     echo ""
     echo "Response:"
-    cat "${LOGIN_RESPONSE}" | python3 -m json.tool 2>/dev/null || cat "${LOGIN_RESPONSE}"
+    pretty_json "${LOGIN_RESPONSE}"
     exit 1
     
 elif [ "${HTTP_STATUS}" = "000" ]; then
@@ -183,7 +198,7 @@ else
     print_warning "Login endpoint returned unexpected status: ${HTTP_STATUS}"
     echo ""
     echo "Response:"
-    cat "${LOGIN_RESPONSE}" | python3 -m json.tool 2>/dev/null || cat "${LOGIN_RESPONSE}"
+    pretty_json "${LOGIN_RESPONSE}"
     exit 1
 fi
 
@@ -209,21 +224,21 @@ if [ -n "${ACCESS_TOKEN}" ]; then
         print_success "Dashboard data retrieved successfully"
         echo ""
         echo "Dashboard Response:"
-        cat "${DASHBOARD_RESPONSE}" | python3 -m json.tool 2>/dev/null || cat "${DASHBOARD_RESPONSE}"
+        pretty_json "${DASHBOARD_RESPONSE}"
         
     elif [ "${HTTP_STATUS}" = "401" ]; then
         print_error "Dashboard access denied: Unauthorized (401)"
         print_warning "Token may be invalid or expired"
         echo ""
         echo "Response:"
-        cat "${DASHBOARD_RESPONSE}" | python3 -m json.tool 2>/dev/null || cat "${DASHBOARD_RESPONSE}"
+        pretty_json "${DASHBOARD_RESPONSE}"
         
     elif [ "${HTTP_STATUS}" = "403" ]; then
         print_error "Dashboard access denied: Forbidden (403)"
         print_warning "User may not have permission to access dashboard"
         echo ""
         echo "Response:"
-        cat "${DASHBOARD_RESPONSE}" | python3 -m json.tool 2>/dev/null || cat "${DASHBOARD_RESPONSE}"
+        pretty_json "${DASHBOARD_RESPONSE}"
         
     elif [ "${HTTP_STATUS}" = "404" ]; then
         print_error "Dashboard endpoint not found (404)"
@@ -246,12 +261,12 @@ if [ -n "${ACCESS_TOKEN}" ]; then
             print_success "Alternative dashboard endpoint works!"
             echo ""
             echo "Dashboard Response:"
-            cat "${DASHBOARD_RESPONSE}" | python3 -m json.tool 2>/dev/null || cat "${DASHBOARD_RESPONSE}"
+            pretty_json "${DASHBOARD_RESPONSE}"
         else
             print_error "Alternative dashboard endpoint also failed"
             echo ""
             echo "Response:"
-            cat "${DASHBOARD_RESPONSE}" | python3 -m json.tool 2>/dev/null || cat "${DASHBOARD_RESPONSE}"
+            pretty_json "${DASHBOARD_RESPONSE}"
         fi
         
     elif [ "${HTTP_STATUS}" = "500" ]; then
@@ -260,7 +275,7 @@ if [ -n "${ACCESS_TOKEN}" ]; then
         print_info "Check backend logs on Render for stack traces"
         echo ""
         echo "Response:"
-        cat "${DASHBOARD_RESPONSE}" | python3 -m json.tool 2>/dev/null || cat "${DASHBOARD_RESPONSE}"
+        pretty_json "${DASHBOARD_RESPONSE}"
         
     elif [ "${HTTP_STATUS}" = "000" ]; then
         print_error "Failed to connect to dashboard endpoint - network error"
@@ -269,7 +284,7 @@ if [ -n "${ACCESS_TOKEN}" ]; then
         print_warning "Dashboard endpoint returned unexpected status: ${HTTP_STATUS}"
         echo ""
         echo "Response:"
-        cat "${DASHBOARD_RESPONSE}" | python3 -m json.tool 2>/dev/null || cat "${DASHBOARD_RESPONSE}"
+        pretty_json "${DASHBOARD_RESPONSE}"
     fi
 else
     print_section "STEP 3: Skipped Dashboard Test"

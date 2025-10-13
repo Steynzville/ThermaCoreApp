@@ -178,7 +178,7 @@ class APITester:
 
                     return (True, access_token)
 
-                except json.JSONDecodeError:
+                except (json.JSONDecodeError, ValueError):
                     self.print_warning("Response is not valid JSON")
                     print("\nResponse:")
                     print(response.text)
