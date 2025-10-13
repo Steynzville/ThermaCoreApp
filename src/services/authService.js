@@ -40,11 +40,13 @@ export const login = async (identifier, password) => {
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
   
   // Debug logging to diagnose the issue
-  console.log('=== LOGIN DEBUG ===');
-  console.log('VITE_API_BASE_URL:', API_BASE_URL);
-  console.log('Full URL:', `${API_BASE_URL}/api/v1/auth/login`);
-  console.log('Method: POST');
-  console.log('Body:', { username: identifier, password: '***' });
+  if (import.meta.env.DEV) {
+    console.log('=== LOGIN DEBUG ===');
+    console.log('VITE_API_BASE_URL:', API_BASE_URL);
+    console.log('Full URL:', `${API_BASE_URL}/api/v1/auth/login`);
+    console.log('Method: POST');
+    console.log('Body:', { username: identifier, password: '***' });
+  }
   
   // Warn if API_BASE_URL is not configured (in production this should be set)
   if (!API_BASE_URL) {
