@@ -1,1 +1,4 @@
+# Don't redirect API calls - let them pass through or 404
+/api/* 404
+# Redirect all other requests to index.html for SPA routing
 /* /index.html 200
