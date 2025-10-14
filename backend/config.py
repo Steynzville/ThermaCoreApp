@@ -49,6 +49,9 @@ class Config:
     MAX_REQUEST_SIZE = int(os.environ.get('MAX_REQUEST_SIZE', 1024 * 1024))  # 1MB default
     VALIDATE_JSON_REQUESTS = os.environ.get('VALIDATE_JSON_REQUESTS', 'true').lower() == 'true'
     
+    # Logging Configuration
+    LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')  # Default to INFO for production-like behavior
+    
     @staticmethod
     def _read_mqtt_config():
         """Read MQTT configuration from environment variables.
@@ -128,6 +131,7 @@ class DevelopmentConfig(Config):
     """Development configuration."""
     DEBUG = True
     TESTING = False
+    LOG_LEVEL = 'DEBUG'  # More verbose logging for development
     
     def __init__(self):
         """Initialize development configuration."""
@@ -148,6 +152,7 @@ class ProductionConfig(Config):
     """Production configuration."""
     DEBUG = False
     TESTING = False
+    LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')  # INFO or WARNING for production
     
     def __init__(self):
         """Initialize production configuration with environment variable validation."""

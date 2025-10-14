@@ -200,6 +200,12 @@ def create_app(config_name=None):
         # Testing config should have debug enabled for better test debugging
         app.debug = True
 
+    # Configure logging level from config
+    log_level_str = app.config.get('LOG_LEVEL', 'INFO')
+    log_level = getattr(logging, log_level_str.upper(), logging.INFO)
+    logging.basicConfig(level=log_level)
+    app.logger.setLevel(log_level)
+
     # Initialize core extensions
     db.init_app(app)
 
