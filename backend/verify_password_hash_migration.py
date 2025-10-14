@@ -14,6 +14,7 @@ Environment Variables:
 
 import os
 import sys
+import uuid
 
 # Add backend to path
 sys.path.insert(0, os.path.dirname(__file__))
@@ -22,7 +23,7 @@ try:
     from sqlalchemy import create_engine, text
     from sqlalchemy.exc import OperationalError
 except ImportError:
-    print("❌ Error: SQLAlchemy not installed. Run: pip install sqlalchemy psycopg2-binary")
+    print("❌ Error: SQLAlchemy not installed. Run: pip install sqlalchemy and a suitable PostgreSQL adapter (e.g., psycopg2, psycopg2-binary, or another supported driver)")
     sys.exit(1)
 
 
@@ -164,7 +165,7 @@ def test_password_hash_length():
                 return True
             
             # Create a test user with a long password
-            test_username = f"test_user_{os.getpid()}"
+            test_username = f"test_user_{uuid.uuid4().hex[:8]}"
             test_user = User(
                 username=test_username,
                 email=f"{test_username}@test.com",

@@ -115,16 +115,40 @@ echo ""
 echo "Verifying database schema..."
 echo ""
 
-# Check password_hash column type
-echo "Checking users.password_hash column type..."
-PASSWORD_HASH_TYPE=$(psql "$DATABASE_URL" -t -c "SELECT data_type FROM information_schema.columns WHERE table_name='users' AND column_name='password_hash';")
-PASSWORD_HASH_TYPE=$(echo "$PASSWORD_HASH_TYPE" | xargs)  # Trim whitespace
+# Check if users table exists
+echo "Checking if users table exists..."
+TABLE_EXISTS=$(psql "$DATABASE_URL" -t -c "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_name='users');")
+TABLE_EXISTS=$(echo "$TABLE_EXISTS" | xargs)  # Trim whitespace
 
-if [ "$PASSWORD_HASH_TYPE" = "text" ]; then
-    echo -e "${GREEN}✅ password_hash is TEXT (correct)${NC}"
+if [ "$TABLE_EXISTS" = "t" ]; then
+    echo -e "${GREEN}✅ users table exists${NC}"
+    
+    # Check if password_hash column exists
+    echo "Checking if password_hash column exists..."
+    COLUMN_EXISTS=$(psql "$DATABASE_URL" -t -c "SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='password_hash');")
+    COLUMN_EXISTS=$(echo "$COLUMN_EXISTS" | xargs)  # Trim whitespace
+    
+    if [ "$COLUMN_EXISTS" = "t" ]; then
+        echo -e "${GREEN}✅ password_hash column exists${NC}"
+        
+        # Check password_hash column type
+        echo "Checking password_hash column type..."
+        PASSWORD_HASH_TYPE=$(psql "$DATABASE_URL" -t -c "SELECT data_type FROM information_schema.columns WHERE table_name='users' AND column_name='password_hash';")
+        PASSWORD_HASH_TYPE=$(echo "$PASSWORD_HASH_TYPE" | xargs)  # Trim whitespace
+        
+        if [ "$PASSWORD_HASH_TYPE" = "text" ]; then
+            echo -e "${GREEN}✅ password_hash is TEXT (correct)${NC}"
+        else
+            echo -e "${RED}❌ password_hash is $PASSWORD_HASH_TYPE (should be TEXT)${NC}"
+            echo "Migration 005 may not have been applied correctly."
+        fi
+    else
+        echo -e "${RED}❌ password_hash column does not exist${NC}"
+        echo "Database schema may be incomplete."
+    fi
 else
-    echo -e "${RED}❌ password_hash is $PASSWORD_HASH_TYPE (should be TEXT)${NC}"
-    echo "Migration 005 may not have been applied correctly."
+    echo -e "${RED}❌ users table does not exist${NC}"
+    echo "Database has not been initialized. Run migrations first."
 fi
 
 echo ""
