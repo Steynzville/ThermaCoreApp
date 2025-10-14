@@ -8,7 +8,7 @@ This document provides a comprehensive index of all diagnostic tools and documen
 
 **Solution:** Run this command:
 ```bash
-python backend/diagnose_api_endpoints.py https://thermacoreapp.onrender.com admin YOUR_PASSWORD
+python dev_tools/diagnostic_scripts/diagnose_api_endpoints.py https://thermacoreapp.onrender.com admin YOUR_PASSWORD
 ```
 
 Then follow the recommendations based on the results.
@@ -21,7 +21,7 @@ Then follow the recommendations based on the results.
 
 | Tool | Type | Purpose | Command |
 |------|------|---------|---------|
-| **diagnose_api_endpoints.py** | Python | Full diagnostic suite | `python backend/diagnose_api_endpoints.py <url> <user> <pass>` |
+| **diagnose_api_endpoints.py** | Python | Full diagnostic suite | `python dev_tools/diagnostic_scripts/diagnose_api_endpoints.py <url> <user> <pass>` |
 | **diagnose-api-endpoints.sh** | Bash | Full diagnostic suite | `./scripts/diagnose-api-endpoints.sh <url> <user> <pass>` |
 | **test_login_endpoint.py** | Python | Simple login test | `python backend/test_login_endpoint.py <url> <user> <pass>` |
 
@@ -73,7 +73,7 @@ Then follow the recommendations based on the results.
 **Goal:** Fast check if backend is working
 
 **Steps:**
-1. Run: `python backend/diagnose_api_endpoints.py https://thermacoreapp.onrender.com admin YOUR_PASSWORD`
+1. Run: `python dev_tools/diagnostic_scripts/diagnose_api_endpoints.py https://thermacoreapp.onrender.com admin YOUR_PASSWORD`
 2. Review color-coded results
 3. Follow recommendations
 
@@ -152,7 +152,7 @@ Then follow the recommendations based on the results.
 Problem: Blank page after login
 │
 ├─ Step 1: Run Diagnostic
-│  └─ python backend/diagnose_api_endpoints.py [url] [user] [pass]
+│  └─ python dev_tools/diagnostic_scripts/diagnose_api_endpoints.py [url] [user] [pass]
 │
 ├─ Step 2: Interpret Results
 │  ├─ Health FAILS → See "Backend Down" below
@@ -300,7 +300,7 @@ Problem: Blank page after login
 ### Diagnostic Testing
 ```bash
 # Full diagnostic (Python)
-python backend/diagnose_api_endpoints.py https://thermacoreapp.onrender.com admin YOUR_PASSWORD
+python dev_tools/diagnostic_scripts/diagnose_api_endpoints.py https://thermacoreapp.onrender.com admin YOUR_PASSWORD
 
 # Full diagnostic (Bash)
 ./scripts/diagnose-api-endpoints.sh https://thermacoreapp.onrender.com admin YOUR_PASSWORD
@@ -309,7 +309,7 @@ python backend/diagnose_api_endpoints.py https://thermacoreapp.onrender.com admi
 python backend/test_login_endpoint.py https://thermacoreapp.onrender.com admin YOUR_PASSWORD
 
 # Local testing
-python backend/diagnose_api_endpoints.py http://localhost:5000 admin admin123
+python dev_tools/diagnostic_scripts/diagnose_api_endpoints.py http://localhost:5000 admin admin123
 ```
 
 ### Manual Testing
@@ -333,7 +333,7 @@ curl -H "Authorization: Bearer TOKEN" \
 
 ### Diagnostic Scripts
 ```
-backend/diagnose_api_endpoints.py          # Python diagnostic tool
+dev_tools/diagnostic_scripts/diagnose_api_endpoints.py          # Python diagnostic tool
 backend/test_login_endpoint.py             # Simple login tester
 scripts/diagnose-api-endpoints.sh          # Bash diagnostic tool
 ```

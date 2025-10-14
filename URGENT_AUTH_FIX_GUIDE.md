@@ -239,7 +239,7 @@ export JWT_SECRET_KEY="..." # From Render
 export SECRET_KEY="..."     # From Render
 
 # Run full diagnostics
-python diagnose_auth_issue.py
+python dev_tools/diagnostic_scripts/diagnose_auth_issue.py
 ```
 
 **This script checks:**
@@ -380,7 +380,7 @@ If you've tried all fixes and authentication still fails:
 1. **Capture full diagnostic output:**
    ```bash
    cd backend
-   python diagnose_auth_issue.py > diagnostic_output.txt 2>&1
+   python dev_tools/diagnostic_scripts/diagnose_auth_issue.py > diagnostic_output.txt 2>&1
    ```
 
 2. **Capture backend logs:**
@@ -408,7 +408,7 @@ If you've tried all fixes and authentication still fails:
 **For immediate assistance:**
 - Check Render service status: https://status.render.com
 - Review documentation: See PRODUCTION_DEPLOYMENT_VERIFICATION.md
-- Run diagnostics: `python diagnose_auth_issue.py`
+- Run diagnostics: `python dev_tools/diagnostic_scripts/diagnose_auth_issue.py`
 
 ---
 

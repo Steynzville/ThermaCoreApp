@@ -1,4 +1,5 @@
 """Logging filter for sanitizing log messages to prevent injection attacks."""
+
 import logging
 
 from app.middleware.validation import sanitize
@@ -6,19 +7,19 @@ from app.middleware.validation import sanitize
 
 class SanitizingFilter(logging.Filter):
     """Logging filter that sanitizes messages and arguments before logging.
-    
+
     This filter prevents log injection attacks by removing control characters
     from log messages and arguments. It operates at the logging layer, ensuring
     that the original request data remains intact for application logic while
     preventing malicious data from corrupting log files.
     """
-    
+
     def filter(self, record: logging.LogRecord) -> bool:
         """Sanitize the log record before it's logged.
-        
+
         Args:
             record: The log record to sanitize
-            
+
         Returns:
             True to allow the log record to be logged
         """
@@ -32,7 +33,7 @@ class SanitizingFilter(logging.Filter):
         except Exception:
             # If conversion fails, use a safe placeholder to prevent logging failures
             record.msg = "[message conversion failed]"
-        
+
         # Sanitize arguments passed to the logger.
         # The sanitize function handles dicts and lists recursively.
         # For other types (objects, numbers, etc.), we convert to string first
@@ -63,10 +64,11 @@ class SanitizingFilter(logging.Filter):
                             converted_args.append(str(arg))
                     # Sanitize returns a list, but record.args should be a tuple for %s formatting
                     sanitized = sanitize(converted_args)
-                    record.args = tuple(sanitized) if isinstance(sanitized, list) else sanitized
+                    record.args = (
+                        tuple(sanitized) if isinstance(sanitized, list) else sanitized
+                    )
             except Exception:
                 # If sanitization fails, use empty tuple to prevent logging failures
                 record.args = ()
 
-        
         return True

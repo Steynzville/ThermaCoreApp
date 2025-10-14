@@ -151,7 +151,7 @@ python test_login_endpoint.py https://thermacoreapp.onrender.com Steyn_Admin Ste
 1. Run full diagnostic:
    ```bash
    cd backend
-   python diagnose_auth_issue.py > diagnosis.txt
+   python dev_tools/diagnostic_scripts/diagnose_auth_issue.py > diagnosis.txt
    ```
 
 2. Check logs:

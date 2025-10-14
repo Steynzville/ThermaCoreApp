@@ -3,6 +3,7 @@
 Manual test script for create_first_admin.py with environment variable support.
 This script tests that the FIRST_ADMIN_PASSWORD environment variable works correctly.
 """
+
 import os
 import sys
 
@@ -11,10 +12,12 @@ print("=" * 70)
 print("Test 1: Verify password output is hidden")
 print("=" * 70)
 
-script_path = os.path.join(os.path.dirname(__file__), 'scripts', 'create_first_admin.py')
-with open(script_path, 'r') as f:
+script_path = os.path.join(
+    os.path.dirname(__file__), "scripts", "create_first_admin.py"
+)
+with open(script_path, "r") as f:
     content = f.read()
-    
+
 # Check that the script prints "Password: [HIDDEN]"
 if 'print("Password: [HIDDEN]")' in content:
     print("✓ Script correctly hides password in output")

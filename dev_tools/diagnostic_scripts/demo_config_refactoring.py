@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Demonstration script showing that ProductionConfig validation 
+Demonstration script showing that ProductionConfig validation
 now occurs in __init__ instead of at import time.
 
 This script demonstrates the key improvement:
@@ -12,13 +12,13 @@ import os
 import sys
 
 # Mock dotenv for this demo
-sys.modules['dotenv'] = type(sys)('dotenv')
-sys.modules['dotenv'].load_dotenv = lambda: None
+sys.modules["dotenv"] = type(sys)("dotenv")
+sys.modules["dotenv"].load_dotenv = lambda: None
 
 # Set minimal required base config env vars
-os.environ['SECRET_KEY'] = 'demo-secret'
-os.environ['DATABASE_URL'] = 'sqlite:///demo.db'
-os.environ['JWT_SECRET_KEY'] = 'demo-jwt-secret'
+os.environ["SECRET_KEY"] = "demo-secret"
+os.environ["DATABASE_URL"] = "sqlite:///demo.db"
+os.environ["JWT_SECRET_KEY"] = "demo-jwt-secret"
 
 print("=" * 70)
 print("ProductionConfig Validation Refactoring Demonstration")
@@ -34,8 +34,14 @@ print("\n2. AFTER: Import succeeds, validation deferred to instantiation")
 print("-" * 70)
 
 # Clear production-specific env vars to simulate non-production environment
-for key in ['MQTT_CA_CERTS', 'MQTT_CERT_FILE', 'MQTT_KEY_FILE', 
-            'OPCUA_CERT_FILE', 'OPCUA_PRIVATE_KEY_FILE', 'OPCUA_TRUST_CERT_FILE']:
+for key in [
+    "MQTT_CA_CERTS",
+    "MQTT_CERT_FILE",
+    "MQTT_KEY_FILE",
+    "OPCUA_CERT_FILE",
+    "OPCUA_PRIVATE_KEY_FILE",
+    "OPCUA_TRUST_CERT_FILE",
+]:
     os.environ.pop(key, None)
 
 print("   Importing config module without production env vars...")
@@ -53,9 +59,9 @@ except ValueError as e:
     print(f"         Message: {str(e)[:60]}...")
 
 print("\n   b) Setting MQTT certs but not OPC UA certs...")
-os.environ['MQTT_CA_CERTS'] = '/demo/ca'
-os.environ['MQTT_CERT_FILE'] = '/demo/cert'
-os.environ['MQTT_KEY_FILE'] = '/demo/key'
+os.environ["MQTT_CA_CERTS"] = "/demo/ca"
+os.environ["MQTT_CERT_FILE"] = "/demo/cert"
+os.environ["MQTT_KEY_FILE"] = "/demo/key"
 
 try:
     prod_config = ProductionConfig()
@@ -65,9 +71,9 @@ except ValueError as e:
     print(f"         Message: {str(e)[:60]}...")
 
 print("\n   c) Setting all required certificates...")
-os.environ['OPCUA_CERT_FILE'] = '/demo/opcua/cert'
-os.environ['OPCUA_PRIVATE_KEY_FILE'] = '/demo/opcua/key'
-os.environ['OPCUA_TRUST_CERT_FILE'] = '/demo/opcua/trust'
+os.environ["OPCUA_CERT_FILE"] = "/demo/opcua/cert"
+os.environ["OPCUA_PRIVATE_KEY_FILE"] = "/demo/opcua/key"
+os.environ["OPCUA_TRUST_CERT_FILE"] = "/demo/opcua/trust"
 
 try:
     prod_config = ProductionConfig()

@@ -1,4 +1,5 @@
 """Main application entry point for ThermaCore SCADA API."""
+
 import os
 import sys
 from sqlalchemy import text
@@ -20,29 +21,31 @@ def init_database_on_startup():
     with app.app_context():
         try:
             from app.models import User, Role, RoleEnum
-            
+
             # Create all database tables
             print("Initializing database tables...")
             db.create_all()
             print("✓ Database tables created successfully")
-            
+
             # Seed admin role if not present
             admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
             if not admin_role:
                 print("Creating default admin role...")
                 admin_role = Role(
                     name=RoleEnum.ADMIN,
-                    description="ThermaCore staff only - Full system administration with all permissions"
+                    description="ThermaCore staff only - Full system administration with all permissions",
                 )
                 db.session.add(admin_role)
                 db.session.commit()
                 print("✓ Admin role created successfully")
-            
+
             # Seed default admin user if not present
             admin_user = User.query.filter_by(username="Steyn_Admin").first()
             if not admin_user:
                 if not admin_role or admin_role.id is None:
-                    print("⚠️  Cannot create default admin user: admin role is missing or has no ID.")
+                    print(
+                        "⚠️  Cannot create default admin user: admin role is missing or has no ID."
+                    )
                 else:
                     print("Creating default admin user...")
                     admin_user = User(
@@ -51,7 +54,7 @@ def init_database_on_startup():
                         first_name="Admin",
                         last_name="User",
                         role_id=admin_role.id,
-                        is_active=True
+                        is_active=True,
                     )
                     admin_user.set_password("password")
                     db.session.add(admin_user)
@@ -69,6 +72,7 @@ def init_database_on_startup():
             # Don't fail the app startup - database might already be initialized
             # or there might be connection issues that resolve later
             import traceback
+
             traceback.print_exc()
 
 
@@ -80,34 +84,38 @@ init_database_on_startup()
 def init_db():
     """Initialize the database with tables and seed data."""
     import sys
-    
+
     print("Creating database tables...")
-    
+
     try:
         # Read and execute schema file
-        schema_path = os.path.join(os.path.dirname(__file__), 'migrations', '001_initial_schema.sql')
-        with open(schema_path, 'r') as f:
+        schema_path = os.path.join(
+            os.path.dirname(__file__), "migrations", "001_initial_schema.sql"
+        )
+        with open(schema_path, "r") as f:
             schema_sql = f.read()
-            
+
         # Execute entire schema at once to preserve PL/pgSQL functions
         db.session.execute(text(schema_sql))
-        
+
         db.session.commit()
         print("✓ Database schema created successfully")
-        
+
         # Read and execute seed data
-        seed_path = os.path.join(os.path.dirname(__file__), 'migrations', '002_seed_data.sql')
-        with open(seed_path, 'r') as f:
+        seed_path = os.path.join(
+            os.path.dirname(__file__), "migrations", "002_seed_data.sql"
+        )
+        with open(seed_path, "r") as f:
             seed_sql = f.read()
-            
+
         # Execute entire seed file at once
         db.session.execute(text(seed_sql))
-                
+
         db.session.commit()
         print("✓ Seed data inserted successfully")
         print("\nDatabase initialization completed!")
         print("Default admin user: admin / admin123")
-        
+
     except Exception as e:
         db.session.rollback()
         print(f"✗ Error initializing database: {e}")
@@ -119,35 +127,35 @@ def create_admin():
     """Create an admin user."""
     from app.models import User, Role
     import getpass
-    
-    admin_role = Role.query.filter_by(name='admin').first()
+
+    admin_role = Role.query.filter_by(name="admin").first()
     if not admin_role:
         print("Error: Admin role not found. Please run 'flask init-db' first.")
         return
-    
+
     username = input("Enter admin username: ")
     email = input("Enter admin email: ")
     password = getpass.getpass("Enter admin password: ")
-    
+
     # Check if user already exists
     existing_user = User.query.filter(
         (User.username == username) | (User.email == email)
     ).first()
-    
+
     if existing_user:
         print("Error: User with this username or email already exists.")
         return
-    
+
     # Create admin user
     admin_user = User(
         username=username,
         email=email,
         first_name="Admin",
         last_name="User",
-        role_id=admin_role.id
+        role_id=admin_role.id,
     )
     admin_user.set_password(password)
-    
+
     try:
         db.session.add(admin_user)
         db.session.commit()
@@ -157,11 +165,11 @@ def create_admin():
         print(f"✗ Error creating admin user: {e}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Use Flask's built-in debug configuration
     # The app.debug is set by the configuration loaded in create_app
     # Flask's app.run() automatically uses app.debug when debug parameter is not specified
-    # 
+    #
     # IMPORTANT: This is only for development/testing purposes.
     # In production, use a production WSGI server (e.g., gunicorn, uWSGI)
     # instead of app.run(), and ensure FLASK_ENV is never set to 'development'.
@@ -170,4 +178,4 @@ if __name__ == '__main__':
             "This script is for development only. "
             "In production, use a WSGI server like Gunicorn or uWSGI."
         )
-    app.run(host='127.0.0.1', port=5000)
+    app.run(host="127.0.0.1", port=5000)

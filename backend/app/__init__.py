@@ -115,7 +115,14 @@ def _initialize_critical_service(
     try:
         # Use the new service manager for initialization
         return initialize_service(
-            service, service_name, app, logger, init_method, *args, required=required, **kwargs
+            service,
+            service_name,
+            app,
+            logger,
+            init_method,
+            *args,
+            required=required,
+            **kwargs,
         )
 
     except (ValueError, RuntimeError, ConnectionError, OSError, ImportError) as e:
@@ -199,6 +206,14 @@ def create_app(config_name=None):
     elif config_name == "testing":
         # Testing config should have debug enabled for better test debugging
         app.debug = True
+
+    # Configure logging level from config
+    log_level_str = app.config.get("LOG_LEVEL", "INFO")
+    log_level = getattr(logging, log_level_str.upper(), logging.INFO)
+    logging.basicConfig(level=log_level, force=True)
+    app.logger.setLevel(log_level)
+    # Also set root logger level to ensure it propagates
+    logging.getLogger().setLevel(log_level)
 
     # Initialize core extensions
     db.init_app(app)
@@ -298,13 +313,14 @@ def create_app(config_name=None):
     # Register blueprints with detailed logging
     logger = logging.getLogger(__name__)
     logger.info("Starting blueprint registration...")
-    
+
     blueprints_registered = 0
     blueprints_failed = 0
-    
+
     # Register auth blueprint
     try:
         from app.routes.auth import auth_bp
+
         app.register_blueprint(auth_bp, url_prefix=app.config["API_PREFIX"])
         logger.info("Registered auth routes")
         blueprints_registered += 1
@@ -314,10 +330,11 @@ def create_app(config_name=None):
     except Exception as e:
         logger.error(f"Failed to register auth routes: {e}", exc_info=True)
         blueprints_failed += 1
-    
+
     # Register units blueprint
     try:
         from app.routes.units import units_bp
+
         app.register_blueprint(units_bp, url_prefix=app.config["API_PREFIX"])
         logger.info("Registered units routes")
         blueprints_registered += 1
@@ -327,10 +344,11 @@ def create_app(config_name=None):
     except Exception as e:
         logger.error(f"Failed to register units routes: {e}", exc_info=True)
         blueprints_failed += 1
-    
+
     # Register users blueprint
     try:
         from app.routes.users import users_bp
+
         app.register_blueprint(users_bp, url_prefix=app.config["API_PREFIX"])
         logger.info("Registered users routes")
         blueprints_registered += 1
@@ -340,10 +358,11 @@ def create_app(config_name=None):
     except Exception as e:
         logger.error(f"Failed to register users routes: {e}", exc_info=True)
         blueprints_failed += 1
-    
+
     # Register scada blueprint
     try:
         from app.routes.scada import scada_bp
+
         app.register_blueprint(scada_bp, url_prefix=app.config["API_PREFIX"])
         logger.info("Registered scada routes")
         blueprints_registered += 1
@@ -353,10 +372,11 @@ def create_app(config_name=None):
     except Exception as e:
         logger.error(f"Failed to register scada routes: {e}", exc_info=True)
         blueprints_failed += 1
-    
+
     # Register analytics blueprint
     try:
         from app.routes.analytics import analytics_bp
+
         app.register_blueprint(analytics_bp, url_prefix=app.config["API_PREFIX"])
         logger.info("Registered analytics routes")
         blueprints_registered += 1
@@ -366,10 +386,11 @@ def create_app(config_name=None):
     except Exception as e:
         logger.error(f"Failed to register analytics routes: {e}", exc_info=True)
         blueprints_failed += 1
-    
+
     # Register historical blueprint
     try:
         from app.routes.historical import historical_bp
+
         app.register_blueprint(historical_bp, url_prefix=app.config["API_PREFIX"])
         logger.info("Registered historical routes")
         blueprints_registered += 1
@@ -379,10 +400,11 @@ def create_app(config_name=None):
     except Exception as e:
         logger.error(f"Failed to register historical routes: {e}", exc_info=True)
         blueprints_failed += 1
-    
+
     # Register multiprotocol blueprint
     try:
         from app.routes.multiprotocol import multiprotocol_bp
+
         app.register_blueprint(multiprotocol_bp, url_prefix=app.config["API_PREFIX"])
         logger.info("Registered multiprotocol routes")
         blueprints_registered += 1
@@ -392,10 +414,11 @@ def create_app(config_name=None):
     except Exception as e:
         logger.error(f"Failed to register multiprotocol routes: {e}", exc_info=True)
         blueprints_failed += 1
-    
+
     # Register remote control blueprint
     try:
         from app.routes.remote_control import remote_control_bp
+
         app.register_blueprint(remote_control_bp, url_prefix=app.config["API_PREFIX"])
         logger.info("Registered remote_control routes")
         blueprints_registered += 1
@@ -405,10 +428,11 @@ def create_app(config_name=None):
     except Exception as e:
         logger.error(f"Failed to register remote_control routes: {e}", exc_info=True)
         blueprints_failed += 1
-    
+
     # Register services blueprint
     try:
         from app.routes.services import services_bp
+
         app.register_blueprint(services_bp, url_prefix=app.config["API_PREFIX"])
         logger.info("Registered services routes")
         blueprints_registered += 1
@@ -418,10 +442,11 @@ def create_app(config_name=None):
     except Exception as e:
         logger.error(f"Failed to register services routes: {e}", exc_info=True)
         blueprints_failed += 1
-    
+
     # Initialize OPC-UA monitoring endpoints
     try:
         from app.routes.opcua_monitoring import init_opcua_monitoring
+
         init_opcua_monitoring(app)
         logger.info("Initialized OPC-UA monitoring endpoints")
         blueprints_registered += 1
@@ -429,23 +454,34 @@ def create_app(config_name=None):
         logger.error(f"Failed to import opcua_monitoring routes: {e}", exc_info=True)
         blueprints_failed += 1
     except Exception as e:
-        logger.error(f"Failed to initialize opcua_monitoring routes: {e}", exc_info=True)
+        logger.error(
+            f"Failed to initialize opcua_monitoring routes: {e}", exc_info=True
+        )
         blueprints_failed += 1
-    
+
     # Log summary of blueprint registration
-    logger.info(f"Blueprint registration complete: {blueprints_registered} registered, {blueprints_failed} failed")
-    
+    logger.info(
+        f"Blueprint registration complete: {blueprints_registered} registered, {blueprints_failed} failed"
+    )
+
     # List all registered routes for verification
     if blueprints_registered > 0:
         route_count = len(list(app.url_map.iter_rules()))
         logger.info(f"Total routes registered: {route_count}")
-        logger.debug("Registered blueprints: " + ", ".join([bp for bp in app.blueprints.keys()]))
+        logger.debug(
+            "Registered blueprints: " + ", ".join([bp for bp in app.blueprints.keys()])
+        )
     else:
-        logger.error("CRITICAL: No blueprints were registered! All API endpoints will return 404.")
+        logger.error(
+            "CRITICAL: No blueprints were registered! All API endpoints will return 404."
+        )
         # In production, this should be a critical error
         from app.utils.environment import is_production_environment
+
         if is_production_environment(app):
-            raise RuntimeError("Failed to register any blueprints in production environment")
+            raise RuntimeError(
+                "Failed to register any blueprints in production environment"
+            )
 
     # Initialize SCADA services (Phase 2, 3 & 4)
     if not app.config.get("TESTING", False):
@@ -467,13 +503,16 @@ def create_app(config_name=None):
 
             # Initialize services with app context and handle security validation errors
             logger = logging.getLogger(__name__)
-            
+
             # Check if external services should be skipped
             from app.utils.service_manager import should_skip_external_services
+
             skip_external = should_skip_external_services()
-            
+
             if skip_external:
-                logger.info("SKIP_EXTERNAL_SERVICES is set to 'true' - external services (MQTT, OPC-UA) will not be initialized")
+                logger.info(
+                    "SKIP_EXTERNAL_SERVICES is set to 'true' - external services (MQTT, OPC-UA) will not be initialized"
+                )
 
             # Initialize critical services using shared helper
             # Data storage is always required
@@ -489,7 +528,9 @@ def create_app(config_name=None):
             # MQTT client - required by default, but can be configured as optional
             # Skip MQTT if SKIP_EXTERNAL_SERVICES is set to true
             if skip_external:
-                logger.info("Skipping MQTT client initialization (external services disabled)")
+                logger.info(
+                    "Skipping MQTT client initialization (external services disabled)"
+                )
             else:
                 mqtt_required = app.config.get("SERVICE_MQTT_REQUIRED", True)
                 _initialize_critical_service(
@@ -506,7 +547,9 @@ def create_app(config_name=None):
             # OPC-UA is now optional in production by default
             # Skip OPC-UA if SKIP_EXTERNAL_SERVICES is set to true
             if skip_external:
-                logger.info("Skipping OPC-UA client initialization (external services disabled)")
+                logger.info(
+                    "Skipping OPC-UA client initialization (external services disabled)"
+                )
                 app.opcua_client = None
                 app.secure_opcua_client = None
             else:
@@ -522,9 +565,7 @@ def create_app(config_name=None):
                         data_storage_service=data_storage_service,
                     )
                     app.secure_opcua_client = secure_opcua_client
-                    app.opcua_client = (
-                        secure_opcua_client  # Also set standard reference for compatibility
-                    )
+                    app.opcua_client = secure_opcua_client  # Also set standard reference for compatibility
                     logger.info("Using secure OPC-UA client with security wrapper")
                 except Exception as secure_init_error:
                     logger.warning(
@@ -605,7 +646,9 @@ def create_app(config_name=None):
 
             # Store references in app for easy access
             # Set mqtt_client to None if external services are skipped or not defined
-            app.mqtt_client = None if skip_external or 'mqtt_client' not in locals() else mqtt_client
+            app.mqtt_client = (
+                None if skip_external or "mqtt_client" not in locals() else mqtt_client
+            )
             app.websocket_service = websocket_service
             app.realtime_processor = realtime_processor
             # opcua_client is already set above (either secure, standard, or None if skipped)

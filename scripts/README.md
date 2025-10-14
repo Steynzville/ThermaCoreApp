@@ -90,13 +90,13 @@ node scripts/test-security-guards.js
 
 The `backend/` directory also contains Python diagnostic scripts:
 
-### backend/diagnose_api_endpoints.py
+### dev_tools/diagnostic_scripts/diagnose_api_endpoints.py
 
 **Purpose:** Python version of the API diagnostic tool (recommended).
 
 **Usage:**
 ```bash
-python backend/diagnose_api_endpoints.py [base_url] [username] [password]
+python dev_tools/diagnostic_scripts/diagnose_api_endpoints.py [base_url] [username] [password]
 ```
 
 **Advantages over bash script:**
@@ -126,7 +126,7 @@ If you're experiencing login issues (blank page, spinner, etc.):
 
 1. **Run the diagnostic script:**
    ```bash
-   python backend/diagnose_api_endpoints.py https://thermacoreapp.onrender.com admin YOUR_PASSWORD
+   python dev_tools/diagnostic_scripts/diagnose_api_endpoints.py https://thermacoreapp.onrender.com admin YOUR_PASSWORD
    ```
 
 2. **Review the results:**
