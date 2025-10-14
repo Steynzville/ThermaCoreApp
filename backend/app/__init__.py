@@ -210,8 +210,10 @@ def create_app(config_name=None):
     # Configure logging level from config
     log_level_str = app.config.get("LOG_LEVEL", "INFO")
     log_level = getattr(logging, log_level_str.upper(), logging.INFO)
-    logging.basicConfig(level=log_level)
+    logging.basicConfig(level=log_level, force=True)
     app.logger.setLevel(log_level)
+    # Also set root logger level to ensure it propagates
+    logging.getLogger().setLevel(log_level)
 
     # Initialize core extensions
     db.init_app(app)

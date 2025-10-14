@@ -366,6 +366,7 @@ class TestingConfig(Config):
 
     DEBUG = True
     TESTING = True
+    LOG_LEVEL = "DEBUG"  # Enable DEBUG logging for tests to capture all log messages
 
     # Override with safe defaults for testing
     SECRET_KEY = "test-secret-key-not-for-production"
