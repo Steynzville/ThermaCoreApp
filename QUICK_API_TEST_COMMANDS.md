@@ -94,7 +94,7 @@ Instead of running curl commands manually, use the provided diagnostic scripts:
 
 ### Python Script
 ```bash
-python backend/diagnose_api_endpoints.py https://thermacoreapp.onrender.com admin YOUR_PASSWORD
+python dev_tools/diagnostic_scripts/diagnose_api_endpoints.py https://thermacoreapp.onrender.com admin YOUR_PASSWORD
 ```
 
 ### Bash Script

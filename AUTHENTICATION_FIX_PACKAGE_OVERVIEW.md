@@ -7,7 +7,7 @@ Authentication 500 Error Fix Package
 │
 ├── 🔧 DIAGNOSTIC TOOLS (3 scripts)
 │   ├── health_check.py ..................... Quick health verification (10 sec)
-│   ├── diagnose_auth_issue.py .............. Comprehensive diagnostics (30 sec)
+│   ├── dev_tools/diagnostic_scripts/diagnose_auth_issue.py .............. Comprehensive diagnostics (30 sec)
 │   └── test_login_endpoint.py .............. API endpoint tester (5 sec)
 │
 ├── 🗄️ DATABASE SCRIPTS (1 script)
@@ -121,7 +121,7 @@ START: Authentication returns 500 error
                      200 OK        500 ERROR
                         │             │
                         ↓             ↓
-                  ✅ RESOLVED   Run diagnose_auth_issue.py
+                  ✅ RESOLVED   Run dev_tools/diagnostic_scripts/diagnose_auth_issue.py
                                      │
                                      ↓
                               Get specific fix
@@ -137,7 +137,7 @@ START: Authentication returns 500 error
 | Tool | Speed | Detail | Use Case | Output |
 |------|-------|--------|----------|--------|
 | **health_check.py** | ⚡ Fast (10s) | 📋 Basic | Quick check | Pass/Fail |
-| **diagnose_auth_issue.py** | 🐢 Medium (30s) | 📚 Detailed | Full diagnostic | Remediation steps |
+| **dev_tools/diagnostic_scripts/diagnose_auth_issue.py** | 🐢 Medium (30s) | 📚 Detailed | Full diagnostic | Remediation steps |
 | **test_login_endpoint.py** | ⚡ Fast (5s) | 📋 Basic | Endpoint test | HTTP response |
 
 ---
@@ -169,7 +169,7 @@ START: Authentication returns 500 error
 ### Level 2: Fix and Understand (Intermediate)
 ```
 1. URGENT_AUTH_FIX_GUIDE.md (15 min read)
-2. Run diagnose_auth_issue.py
+2. Run dev_tools/diagnostic_scripts/diagnose_auth_issue.py
 3. Understand why it failed
 4. Apply fix with understanding
 5. Verify thoroughly
@@ -218,7 +218,7 @@ Merge PR → Deploy Backend → Deploy Database
                                ↓
                         health_check.py
                                ↓
-                        diagnose_auth_issue.py
+                        dev_tools/diagnostic_scripts/diagnose_auth_issue.py
                                ↓
                         test_login_endpoint.py
                                ↓
@@ -239,7 +239,7 @@ health_check.py
         ↓                ↓
        Yes              No
         ↓                ↓
-   Quick fix      diagnose_auth_issue.py
+   Quick fix      dev_tools/diagnostic_scripts/diagnose_auth_issue.py
         ↓                ↓
     Apply fix      Specific issue identified
         ↓                ↓
