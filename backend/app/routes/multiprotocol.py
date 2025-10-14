@@ -4,7 +4,7 @@ from flask import Blueprint, jsonify, request, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 import logging
 
-from app.routes.auth import permission_required
+from app.middleware.authorization import permission_required
 from app.utils.error_handler import SecurityAwareErrorHandler
 from app.protocols.registry import collect_protocol_status, get_protocols_list
 from app.models import utc_now  # Use centralized timezone-aware datetime function

@@ -21,203 +21,16 @@ from app.utils.helpers import get_current_user_id
 from app.utils.error_handler import SecurityAwareErrorHandler
 from app.middleware.rate_limit import auth_rate_limit, standard_rate_limit
 from app.middleware.request_id import track_request_id
+from app.middleware.authorization import permission_required, role_required
 from app.middleware.audit import (
     audit_login_success,
     audit_login_failure,
-    audit_permission_check,
     AuditLogger,
     AuditEventType,
 )
 
 
 auth_bp = Blueprint("auth", __name__)
-
-
-def _fix_null_role_id(user):
-    """TEMPORARY FIX FOR NULL ROLE_ID - REMOVE AFTER FIX
-
-    Automatically assigns a role to users with NULL or missing role_id.
-    This is a temporary workaround to prevent authentication failures.
-
-    Args:
-        user: User object that may have NULL role_id
-    """
-    if not user.role or user.role_id is None:
-        current_app.logger.warning(
-            f"User ID {user.id} has NULL role_id - applying temporary fix"
-        )
-        admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
-        if not admin_role:
-            admin_role = Role.query.first()  # Get any role
-        if admin_role:
-            user.role_id = admin_role.id
-            db.session.commit()
-            # Refresh the user object to get the updated role
-            db.session.refresh(user)
-            current_app.logger.info(
-                f"User ID {user.id} assigned role {admin_role.name.value}"
-            )
-
-
-def permission_required(permission):
-    """Decorator to check if user has required permission."""
-
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            verify_jwt_in_request()
-            user_id, success = get_current_user_id()
-            if not success or user_id is None:
-                # Audit failed permission check
-                audit_permission_check(
-                    permission=permission,
-                    granted=False,
-                    details={"reason": "Invalid token format"},
-                )
-                return SecurityAwareErrorHandler.handle_service_error(
-                    Exception("Invalid token format"),
-                    "authentication_error",
-                    "Token validation",
-                    401,
-                )
-
-            user = User.query.get(user_id)
-
-            if not user or not user.is_active:
-                # Audit failed permission check - user not found/inactive
-                audit_permission_check(
-                    permission=permission,
-                    granted=False,
-                    user_id=user_id,
-                    username=user.username if user else None,
-                    details={"reason": "User not found or inactive"},
-                )
-                return SecurityAwareErrorHandler.handle_service_error(
-                    Exception("User not found or inactive"),
-                    "authentication_error",
-                    "User validation",
-                    401,
-                )
-
-            # TEMPORARY FIX FOR NULL ROLE_ID - REMOVE AFTER FIX
-            _fix_null_role_id(user)
-
-            if not user.has_permission(permission):
-                # Audit denied permission
-                audit_permission_check(
-                    permission=permission,
-                    granted=False,
-                    user_id=user.id,
-                    username=user.username,
-                    resource=request.endpoint if request else None,
-                    details={
-                        "reason": "Insufficient permissions",
-                        "user_role": user.role.name.value,
-                    },
-                )
-                return SecurityAwareErrorHandler.handle_service_error(
-                    Exception("Insufficient permissions"),
-                    "permission_error",
-                    f"Permission check: {permission}",
-                    403,
-                )
-
-            # Audit successful permission check
-            audit_permission_check(
-                permission=permission,
-                granted=True,
-                user_id=user.id,
-                username=user.username,
-                resource=request.endpoint if request else None,
-                details={"user_role": user.role.name.value},
-            )
-
-            return f(*args, **kwargs)
-
-        return decorated_function
-
-    return decorator
-
-
-def role_required(*roles):
-    """Decorator to check if user has required role."""
-
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            verify_jwt_in_request()
-            user_id, success = get_current_user_id()
-            if not success or user_id is None:
-                # Audit failed role check
-                audit_permission_check(
-                    permission=f"role:{','.join(roles)}",
-                    granted=False,
-                    details={"reason": "Invalid token format"},
-                )
-                return SecurityAwareErrorHandler.handle_service_error(
-                    Exception("Invalid token format"),
-                    "authentication_error",
-                    "Token validation",
-                    401,
-                )
-
-            user = User.query.get(user_id)
-
-            if not user or not user.is_active:
-                # Audit failed role check - user not found/inactive
-                audit_permission_check(
-                    permission=f"role:{','.join(roles)}",
-                    granted=False,
-                    user_id=user_id,
-                    username=user.username if user else None,
-                    details={"reason": "User not found or inactive"},
-                )
-                return SecurityAwareErrorHandler.handle_service_error(
-                    Exception("User not found or inactive"),
-                    "authentication_error",
-                    "User validation",
-                    401,
-                )
-
-            # TEMPORARY FIX FOR NULL ROLE_ID - REMOVE AFTER FIX
-            _fix_null_role_id(user)
-
-            if user.role.name.value not in roles:
-                # Audit denied role check
-                audit_permission_check(
-                    permission=f"role:{','.join(roles)}",
-                    granted=False,
-                    user_id=user.id,
-                    username=user.username,
-                    resource=request.endpoint if request else None,
-                    details={
-                        "reason": "Insufficient role permissions",
-                        "user_role": user.role.name.value,
-                        "required_roles": list(roles),
-                    },
-                )
-                return SecurityAwareErrorHandler.handle_service_error(
-                    Exception("Insufficient role permissions"),
-                    "permission_error",
-                    f"Role check: {roles}",
-                    403,
-                )
-
-            # Audit successful role check
-            audit_permission_check(
-                permission=f"role:{','.join(roles)}",
-                granted=True,
-                user_id=user.id,
-                username=user.username,
-                resource=request.endpoint if request else None,
-                details={"user_role": user.role.name.value},
-            )
-
-            return f(*args, **kwargs)
-
-        return decorated_function
-
-    return decorator
 
 
 @auth_bp.route("/auth/register", methods=["POST"])
@@ -366,18 +179,6 @@ def login(data):
             )
 
         if user and user.check_password(data["password"]) and user.is_active:
-            # TEMPORARY FIX FOR NULL ROLE_ID - REMOVE AFTER FIX
-            # Apply defensive fix for NULL role_id before proceeding
-            try:
-                _fix_null_role_id(user)
-            except Exception as fix_error:
-                current_app.logger.error(
-                    f"Failed to fix NULL role_id for user {user.username}: {fix_error}",
-                    exc_info=True,
-                    extra={"event": "role_fix_failed", "username": user.username},
-                )
-                # Continue - will be caught by role check below
-
             # Verify user has a role (critical requirement with enhanced validation)
             if not user.role or user.role_id is None:
                 current_app.logger.error(
@@ -767,16 +568,6 @@ def refresh():
                 "authentication_error",
                 "User validation",
                 401,
-            )
-
-        # TEMPORARY FIX FOR NULL ROLE_ID - REMOVE AFTER FIX
-        try:
-            _fix_null_role_id(user)
-        except Exception as fix_error:
-            current_app.logger.error(
-                f"Failed to fix NULL role_id during refresh for user {user.username}: {fix_error}",
-                exc_info=True,
-                extra={"event": "refresh_role_fix_failed", "username": user.username},
             )
 
         # Verify role is properly configured
