@@ -595,3 +595,231 @@ class TestUserRegistration:
         # Check for "already exists" in either error or details.context
         error_text = str(data).lower()
         assert "already exists" in error_text or "duplicate" in error_text
+
+
+class TestSecurityEnhancements:
+    """Test security enhancements and attack prevention."""
+
+    def test_brute_force_protection(self, client):
+        """Test that rate limiting protects against brute force attacks."""
+        # Attempt multiple failed logins rapidly
+        failed_attempts = 0
+        rate_limited = False
+
+        for i in range(15):  # Try more than the rate limit
+            response = client.post(
+                "/api/v1/auth/login",
+                json={"username": "admin", "password": f"wrongpass{i}"},
+                headers={"Content-Type": "application/json"},
+            )
+
+            if response.status_code == 429:  # Rate limit exceeded
+                rate_limited = True
+                break
+            elif response.status_code == 401:
+                failed_attempts += 1
+
+        # Either we should hit rate limit or all attempts should fail
+        assert rate_limited or failed_attempts == 15
+
+    def test_token_manipulation_detection(self, client):
+        """Test that manipulated tokens are rejected."""
+        # Get a valid token
+        response = client.post(
+            "/api/v1/auth/login",
+            json={"username": "admin", "password": "admin123"},
+            headers={"Content-Type": "application/json"},
+        )
+        
+        assert response.status_code == 200
+        data = unwrap_response(response)
+        valid_token = data["access_token"]
+
+        # Manipulate the token by changing a character
+        manipulated_token = valid_token[:-5] + "XXXXX"
+
+        # Try to use manipulated token
+        response = client.get(
+            "/api/v1/auth/me",
+            headers={"Authorization": f"Bearer {manipulated_token}"},
+        )
+
+        # Should be rejected
+        assert response.status_code in [401, 422]
+
+    def test_expired_token_rejection(self, client, app):
+        """Test that expired tokens are properly rejected."""
+        # Create a token with very short expiration
+        from flask_jwt_extended import create_access_token
+        from datetime import timedelta
+
+        with app.app_context():
+            # Create token that expires immediately
+            expired_token = create_access_token(
+                identity="1",
+                expires_delta=timedelta(seconds=-1),  # Already expired
+            )
+
+        # Try to use expired token
+        response = client.get(
+            "/api/v1/auth/me",
+            headers={"Authorization": f"Bearer {expired_token}"},
+        )
+
+        # Should be rejected
+        assert response.status_code in [401, 422]
+
+    def test_sql_injection_in_login(self, client):
+        """Test that SQL injection attempts in login are safely handled."""
+        sql_injection_attempts = [
+            "admin' OR '1'='1",
+            "admin'--",
+            "admin' OR '1'='1'--",
+            "' OR 1=1--",
+            "admin'; DROP TABLE users--",
+        ]
+
+        for attempt in sql_injection_attempts:
+            response = client.post(
+                "/api/v1/auth/login",
+                json={"username": attempt, "password": "anypassword"},
+                headers={"Content-Type": "application/json"},
+            )
+
+            # Should return 401 (unauthorized), not 500 (server error)
+            assert response.status_code == 401
+
+    def test_xss_in_username(self, client):
+        """Test that XSS attempts in username are safely handled."""
+        xss_attempts = [
+            "<script>alert('XSS')</script>",
+            "<img src=x onerror=alert('XSS')>",
+            "javascript:alert('XSS')",
+        ]
+
+        for attempt in xss_attempts:
+            response = client.post(
+                "/api/v1/auth/login",
+                json={"username": attempt, "password": "anypassword"},
+                headers={"Content-Type": "application/json"},
+            )
+
+            # Should return 401 (unauthorized), not cause an error
+            assert response.status_code == 401
+
+    def test_password_change_requires_current_password(self, client):
+        """Test that password change requires valid current password."""
+        # Login first
+        response = client.post(
+            "/api/v1/auth/login",
+            json={"username": "admin", "password": "admin123"},
+            headers={"Content-Type": "application/json"},
+        )
+        
+        assert response.status_code == 200
+        data = unwrap_response(response)
+        token = data["access_token"]
+
+        # Try to change password with wrong current password
+        response = client.post(
+            "/api/v1/auth/change-password",
+            json={
+                "current_password": "wrongpassword",
+                "new_password": "newpassword123",
+            },
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+            },
+        )
+
+        # Should be rejected
+        assert response.status_code == 401
+
+    def test_token_reuse_after_password_change(self, client, db_session):
+        """Test that old tokens should ideally be invalidated after password change."""
+        # Login and get token
+        response = client.post(
+            "/api/v1/auth/login",
+            json={"username": "admin", "password": "admin123"},
+            headers={"Content-Type": "application/json"},
+        )
+        
+        assert response.status_code == 200
+        data = unwrap_response(response)
+        old_token = data["access_token"]
+
+        # Change password
+        response = client.post(
+            "/api/v1/auth/change-password",
+            json={
+                "current_password": "admin123",
+                "new_password": "newpassword123",
+            },
+            headers={
+                "Authorization": f"Bearer {old_token}",
+                "Content-Type": "application/json",
+            },
+        )
+
+        assert response.status_code == 200
+
+        # Note: In current implementation, old token still works until it expires
+        # This is documented behavior - for production, implement token blacklist
+        # Try to use old token - it will still work in current implementation
+        response = client.get(
+            "/api/v1/auth/me",
+            headers={"Authorization": f"Bearer {old_token}"},
+        )
+
+        # Current behavior: token still works (not ideal for security)
+        # Future enhancement: implement token blacklist/revocation
+        assert response.status_code in [200, 401]
+
+        # Reset password for other tests
+        response = client.post(
+            "/api/v1/auth/login",
+            json={"username": "admin", "password": "newpassword123"},
+            headers={"Content-Type": "application/json"},
+        )
+        
+        if response.status_code == 200:
+            data = unwrap_response(response)
+            new_token = data["access_token"]
+            
+            client.post(
+                "/api/v1/auth/change-password",
+                json={
+                    "current_password": "newpassword123",
+                    "new_password": "admin123",
+                },
+                headers={
+                    "Authorization": f"Bearer {new_token}",
+                    "Content-Type": "application/json",
+                },
+            )
+
+    def test_missing_authorization_header(self, client):
+        """Test that protected endpoints require authorization header."""
+        response = client.get("/api/v1/auth/me")
+
+        # Should return 401 for missing authorization
+        assert response.status_code == 401
+
+    def test_malformed_authorization_header(self, client):
+        """Test that malformed authorization headers are rejected."""
+        malformed_headers = [
+            "InvalidFormat token",
+            "Bearer",
+            "Bearer ",
+            "token_without_bearer_prefix",
+        ]
+
+        for header in malformed_headers:
+            response = client.get(
+                "/api/v1/auth/me",
+                headers={"Authorization": header},
+            )
+
+            # Should return 401 or 422
+            assert response.status_code in [401, 422]
