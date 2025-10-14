@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username VARCHAR(80) UNIQUE NOT NULL,
     email VARCHAR(120) UNIQUE NOT NULL,
-    password_hash VARCHAR(128),
+    password_hash TEXT NOT NULL,
     first_name VARCHAR(100),
     last_name VARCHAR(100),
     is_active BOOLEAN DEFAULT 1 NOT NULL,

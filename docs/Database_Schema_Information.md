@@ -97,7 +97,7 @@ Stores user account information.
 | `id`          | `Integer`       | `PRIMARY KEY`                        | Unique identifier for the user.     |
 | `username`    | `String(80)`    | `UNIQUE`, `NOT NULL`, `INDEX`        | User's unique username.             |
 | `email`       | `String(120)`   | `UNIQUE`, `NOT NULL`, `INDEX`        | User's unique email address.        |
-| `password_hash` | `String(128)`   |                              | Hashed password for security.       |
+| `password_hash` | `Text`        | `NOT NULL`                           | Hashed password for security. Changed to TEXT to accommodate long hashes from modern algorithms like scrypt. |
 | `first_name`  | `String(100)`   |                              | User's first name.                  |
 | `last_name`   | `String(100)`   |                              | User's last name.                   |
 | `is_active`   | `Boolean`       | `DEFAULT TRUE`, `NOT NULL`           | Indicates if the user account is active. |

@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     username VARCHAR(80) UNIQUE NOT NULL,
     email VARCHAR(120) UNIQUE NOT NULL,
-    password_hash VARCHAR(128),
+    password_hash TEXT NOT NULL,
     first_name VARCHAR(100),
     last_name VARCHAR(100),
     is_active BOOLEAN DEFAULT TRUE NOT NULL,
