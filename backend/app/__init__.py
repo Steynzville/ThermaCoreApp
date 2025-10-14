@@ -310,6 +310,41 @@ def create_app(config_name=None):
     except ImportError:
         pass  # Models may not be importable without full dependencies
 
+    # Helper function to register blueprints with consistent error handling
+    def register_blueprint_safe(module_path, blueprint_name, route_name, url_prefix=None):
+        """Register a blueprint with comprehensive error handling.
+        
+        Args:
+            module_path: Import path for the module (e.g., 'app.routes.auth')
+            blueprint_name: Name of the blueprint variable (e.g., 'auth_bp')
+            route_name: Display name for logging (e.g., 'auth')
+            url_prefix: Optional URL prefix override (defaults to app.config["API_PREFIX"])
+        
+        Returns:
+            tuple: (success: bool, is_import_error: bool)
+        """
+        nonlocal blueprints_registered, blueprints_failed
+        
+        try:
+            # Dynamic import of the blueprint
+            module = __import__(module_path, fromlist=[blueprint_name])
+            blueprint = getattr(module, blueprint_name)
+            
+            # Register with URL prefix
+            prefix = url_prefix if url_prefix is not None else app.config["API_PREFIX"]
+            app.register_blueprint(blueprint, url_prefix=prefix)
+            logger.info(f"Registered {route_name} routes")
+            blueprints_registered += 1
+            return True, False
+        except ImportError as e:
+            logger.error(f"Failed to import {route_name} routes: {e}", exc_info=True)
+            blueprints_failed += 1
+            return False, True
+        except Exception as e:
+            logger.error(f"Failed to register {route_name} routes: {e}", exc_info=True)
+            blueprints_failed += 1
+            return False, False
+
     # Register blueprints with detailed logging
     logger = logging.getLogger(__name__)
     logger.info("Starting blueprint registration...")
@@ -317,133 +352,18 @@ def create_app(config_name=None):
     blueprints_registered = 0
     blueprints_failed = 0
 
-    # Register auth blueprint
-    try:
-        from app.routes.auth import auth_bp
+    # Register all blueprints using the helper function
+    register_blueprint_safe('app.routes.auth', 'auth_bp', 'auth')
+    register_blueprint_safe('app.routes.units', 'units_bp', 'units')
+    register_blueprint_safe('app.routes.users', 'users_bp', 'users')
+    register_blueprint_safe('app.routes.scada', 'scada_bp', 'scada')
+    register_blueprint_safe('app.routes.analytics', 'analytics_bp', 'analytics')
+    register_blueprint_safe('app.routes.historical', 'historical_bp', 'historical')
+    register_blueprint_safe('app.routes.multiprotocol', 'multiprotocol_bp', 'multiprotocol')
+    register_blueprint_safe('app.routes.remote_control', 'remote_control_bp', 'remote_control')
+    register_blueprint_safe('app.routes.services', 'services_bp', 'services')
 
-        app.register_blueprint(auth_bp, url_prefix=app.config["API_PREFIX"])
-        logger.info("Registered auth routes")
-        blueprints_registered += 1
-    except ImportError as e:
-        logger.error(f"Failed to import auth routes: {e}", exc_info=True)
-        blueprints_failed += 1
-    except Exception as e:
-        logger.error(f"Failed to register auth routes: {e}", exc_info=True)
-        blueprints_failed += 1
-
-    # Register units blueprint
-    try:
-        from app.routes.units import units_bp
-
-        app.register_blueprint(units_bp, url_prefix=app.config["API_PREFIX"])
-        logger.info("Registered units routes")
-        blueprints_registered += 1
-    except ImportError as e:
-        logger.error(f"Failed to import units routes: {e}", exc_info=True)
-        blueprints_failed += 1
-    except Exception as e:
-        logger.error(f"Failed to register units routes: {e}", exc_info=True)
-        blueprints_failed += 1
-
-    # Register users blueprint
-    try:
-        from app.routes.users import users_bp
-
-        app.register_blueprint(users_bp, url_prefix=app.config["API_PREFIX"])
-        logger.info("Registered users routes")
-        blueprints_registered += 1
-    except ImportError as e:
-        logger.error(f"Failed to import users routes: {e}", exc_info=True)
-        blueprints_failed += 1
-    except Exception as e:
-        logger.error(f"Failed to register users routes: {e}", exc_info=True)
-        blueprints_failed += 1
-
-    # Register scada blueprint
-    try:
-        from app.routes.scada import scada_bp
-
-        app.register_blueprint(scada_bp, url_prefix=app.config["API_PREFIX"])
-        logger.info("Registered scada routes")
-        blueprints_registered += 1
-    except ImportError as e:
-        logger.error(f"Failed to import scada routes: {e}", exc_info=True)
-        blueprints_failed += 1
-    except Exception as e:
-        logger.error(f"Failed to register scada routes: {e}", exc_info=True)
-        blueprints_failed += 1
-
-    # Register analytics blueprint
-    try:
-        from app.routes.analytics import analytics_bp
-
-        app.register_blueprint(analytics_bp, url_prefix=app.config["API_PREFIX"])
-        logger.info("Registered analytics routes")
-        blueprints_registered += 1
-    except ImportError as e:
-        logger.error(f"Failed to import analytics routes: {e}", exc_info=True)
-        blueprints_failed += 1
-    except Exception as e:
-        logger.error(f"Failed to register analytics routes: {e}", exc_info=True)
-        blueprints_failed += 1
-
-    # Register historical blueprint
-    try:
-        from app.routes.historical import historical_bp
-
-        app.register_blueprint(historical_bp, url_prefix=app.config["API_PREFIX"])
-        logger.info("Registered historical routes")
-        blueprints_registered += 1
-    except ImportError as e:
-        logger.error(f"Failed to import historical routes: {e}", exc_info=True)
-        blueprints_failed += 1
-    except Exception as e:
-        logger.error(f"Failed to register historical routes: {e}", exc_info=True)
-        blueprints_failed += 1
-
-    # Register multiprotocol blueprint
-    try:
-        from app.routes.multiprotocol import multiprotocol_bp
-
-        app.register_blueprint(multiprotocol_bp, url_prefix=app.config["API_PREFIX"])
-        logger.info("Registered multiprotocol routes")
-        blueprints_registered += 1
-    except ImportError as e:
-        logger.error(f"Failed to import multiprotocol routes: {e}", exc_info=True)
-        blueprints_failed += 1
-    except Exception as e:
-        logger.error(f"Failed to register multiprotocol routes: {e}", exc_info=True)
-        blueprints_failed += 1
-
-    # Register remote control blueprint
-    try:
-        from app.routes.remote_control import remote_control_bp
-
-        app.register_blueprint(remote_control_bp, url_prefix=app.config["API_PREFIX"])
-        logger.info("Registered remote_control routes")
-        blueprints_registered += 1
-    except ImportError as e:
-        logger.error(f"Failed to import remote_control routes: {e}", exc_info=True)
-        blueprints_failed += 1
-    except Exception as e:
-        logger.error(f"Failed to register remote_control routes: {e}", exc_info=True)
-        blueprints_failed += 1
-
-    # Register services blueprint
-    try:
-        from app.routes.services import services_bp
-
-        app.register_blueprint(services_bp, url_prefix=app.config["API_PREFIX"])
-        logger.info("Registered services routes")
-        blueprints_registered += 1
-    except ImportError as e:
-        logger.error(f"Failed to import services routes: {e}", exc_info=True)
-        blueprints_failed += 1
-    except Exception as e:
-        logger.error(f"Failed to register services routes: {e}", exc_info=True)
-        blueprints_failed += 1
-
-    # Initialize OPC-UA monitoring endpoints
+    # Initialize OPC-UA monitoring endpoints (special case - uses init function instead of blueprint)
     try:
         from app.routes.opcua_monitoring import init_opcua_monitoring
 
