@@ -17,7 +17,7 @@ from app.utils.schemas import (
     SensorCreateSchema,
     SensorReadingSchema,
 )
-from app.routes.auth import permission_required
+from app.middleware.authorization import permission_required
 from app.middleware.audit import audit_operation
 from app.utils.validation import validate_json_request
 

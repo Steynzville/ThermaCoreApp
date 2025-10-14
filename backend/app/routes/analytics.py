@@ -13,7 +13,7 @@ from app.models import (
     db,
     utc_now,
 )  # Use timezone-aware datetime
-from app.routes.auth import permission_required
+from app.middleware.authorization import permission_required
 from app.utils.error_handler import SecurityAwareErrorHandler
 from app.utils.schemas import (
     TrendsQuerySchema,

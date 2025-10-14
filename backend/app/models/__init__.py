@@ -196,7 +196,13 @@ class User(db.Model):
         return f"<User {self.username}>"
 
     def set_password(self, password):
-        """Create hashed password using pbkdf2:sha256 (typically 100+ character hash)"""
+        """Create hashed password using pbkdf2:sha256 (typically 100+ character hash).
+        
+        IMPORTANT: This application ONLY uses pbkdf2:sha256 for password hashing.
+        This method must ALWAYS be used for setting passwords to ensure consistency.
+        Direct assignment to password_hash is NOT recommended and should only be
+        used in tests with the same hashing method.
+        """
         self.password_hash = generate_password_hash(password, method="pbkdf2:sha256")
 
     def check_password(self, password):

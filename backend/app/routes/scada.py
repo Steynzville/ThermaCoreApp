@@ -4,7 +4,7 @@ from flask import Blueprint, jsonify, request, current_app
 from flask_jwt_extended import jwt_required
 from datetime import datetime, timezone, timedelta
 
-from app.routes.auth import permission_required
+from app.middleware.authorization import permission_required
 from app.utils.error_handler import SecurityAwareErrorHandler
 
 # Create SCADA blueprint

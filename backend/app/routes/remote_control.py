@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 from app import db
 from app.models import Unit, UnitStatusEnum
-from app.routes.auth import permission_required
+from app.middleware.authorization import permission_required
 from app.utils.error_handler import SecurityAwareErrorHandler
 from app.middleware.audit import AuditLogger, AuditEventType
 

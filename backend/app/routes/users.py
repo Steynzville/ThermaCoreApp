@@ -9,7 +9,7 @@ from sqlalchemy import or_
 from app import db
 from app.models import User, Role
 from app.utils.schemas import UserSchema, UserUpdateSchema, RoleSchema
-from app.routes.auth import permission_required, role_required
+from app.middleware.authorization import permission_required, role_required
 from app.utils.helpers import get_current_user_id
 from app.middleware.audit import audit_operation
 
