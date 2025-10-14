@@ -2,7 +2,7 @@
 from datetime import datetime, timezone
 from enum import Enum as PyEnum
 
-from sqlalchemy import Column, DateTime, Enum, Float, Integer, String, Boolean, ForeignKey, Table
+from sqlalchemy import Column, DateTime, Enum, Float, Integer, String, Boolean, ForeignKey, Table, Text
 from sqlalchemy.orm import relationship
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -126,7 +126,7 @@ class User(db.Model):
     id = Column(Integer, primary_key=True)
     username = Column(String(80), unique=True, nullable=False, index=True)
     email = Column(String(120), unique=True, nullable=False, index=True)
-    password_hash = Column(String(128))
+    password_hash = Column(Text, nullable=False)
     first_name = Column(String(100))
     last_name = Column(String(100))
     is_active = Column(Boolean, default=True, nullable=False)
