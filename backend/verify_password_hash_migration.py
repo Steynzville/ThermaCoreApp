@@ -202,7 +202,7 @@ def test_password_hash_length():
                         print("❌ Password verification failed (hash may be corrupted)")
                         return False
                 else:
-                    print(f"❌ Password hash was truncated!")
+                    print("❌ Password hash was truncated!")
                     print(f"   Expected: {hash_length} characters")
                     print(f"   Got: {saved_hash_length} characters")
                     return False
