@@ -488,14 +488,26 @@ If you experience authentication errors or see:
 value too long for type character varying(128)
 ```
 
-This means migration 005 was not applied. See [PASSWORD_HASH_MIGRATION_FIX.md](../PASSWORD_HASH_MIGRATION_FIX.md) for detailed fix instructions.
+This means migration 005 was not applied. 
 
-**Quick fix:**
+**Quick Deployment (Recommended):**
+```bash
+# Use the automated deployment script
+bash deploy_migration_005.sh
+```
+
+**See detailed guides:**
+- 🚀 [Quick Start Guide](../MIGRATION_005_QUICK_START.md) - 5-minute deployment
+- 📚 [Full Deployment Guide](../MIGRATION_005_PRODUCTION_DEPLOYMENT.md) - Complete instructions
+- ✅ [Post-Deployment Checklist](../MIGRATION_005_POST_DEPLOYMENT_CHECKLIST.md) - Verification steps
+- 🔧 [Original Fix Guide](../PASSWORD_HASH_MIGRATION_FIX.md) - Detailed troubleshooting
+
+**Manual fix:**
 ```bash
 # Apply migration 005
 psql $DATABASE_URL -f migrations/005_fix_password_hash_length.sql
 
-# Or use the migration script
+# Or use the main migration script
 bash apply_migrations.sh
 
 # Verify the fix
