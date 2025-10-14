@@ -14,6 +14,68 @@ from app import create_app, db
 app = create_app()
 
 
+# Initialize database on startup
+def init_database_on_startup():
+    """Initialize database tables and seed default admin user on startup."""
+    with app.app_context():
+        try:
+            from app.models import User, Role, RoleEnum
+            
+            # Create all database tables
+            print("Initializing database tables...")
+            db.create_all()
+            print("✓ Database tables created successfully")
+            
+            # Seed admin role if not present
+            admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
+            if not admin_role:
+                print("Creating default admin role...")
+                admin_role = Role(
+                    name=RoleEnum.ADMIN,
+                    description="ThermaCore staff only - Full system administration with all permissions"
+                )
+                db.session.add(admin_role)
+                db.session.commit()
+                print("✓ Admin role created successfully")
+            
+            # Seed default admin user if not present
+            admin_user = User.query.filter_by(username="Steyn_Admin").first()
+            if not admin_user:
+                if not admin_role or admin_role.id is None:
+                    print("⚠️  Cannot create default admin user: admin role is missing or has no ID.")
+                else:
+                    print("Creating default admin user...")
+                    admin_user = User(
+                        username="Steyn_Admin",
+                        email="admin@thermacore.com",
+                        first_name="Admin",
+                        last_name="User",
+                        role_id=admin_role.id,
+                        is_active=True
+                    )
+                    admin_user.set_password("password")
+                    db.session.add(admin_user)
+                    db.session.commit()
+                    print("=" * 70)
+                    print("✅ Default admin user created!")
+                    print("=" * 70)
+                    print("   Username: Steyn_Admin")
+                    print("   Password: password")
+                    print("=" * 70)
+                    print("⚠️  Please change the password after first login.")
+                    print("=" * 70)
+        except Exception:
+            print("⚠️  Database initialization error. See logs for details.")
+            # Don't fail the app startup - database might already be initialized
+            # or there might be connection issues that resolve later
+            import traceback
+            traceback.print_exc()
+
+
+# Run database initialization
+init_database_on_startup()
+
+
 @app.cli.command()
 def init_db():
     """Initialize the database with tables and seed data."""

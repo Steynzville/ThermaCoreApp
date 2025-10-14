@@ -98,7 +98,7 @@ def validate_render_yaml():
                 if from_db.get('name') == 'thermacore-db' and from_db.get('property') == 'connectionString':
                     print("✅ PASS: DATABASE_URL configured correctly from database")
                 else:
-                    print(f"❌ FAIL: DATABASE_URL fromDatabase config incorrect")
+                    print("❌ FAIL: DATABASE_URL fromDatabase config incorrect")
                     all_checks_passed = False
             else:
                 print("❌ FAIL: DATABASE_URL missing 'fromDatabase' configuration")
