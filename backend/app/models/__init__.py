@@ -1,8 +1,20 @@
 """Database models for ThermaCore SCADA system."""
+
 from datetime import datetime, timezone
 from enum import Enum as PyEnum
 
-from sqlalchemy import Column, DateTime, Enum, Float, Integer, String, Boolean, ForeignKey, Table, Text
+from sqlalchemy import (
+    Column,
+    DateTime,
+    Enum,
+    Float,
+    Integer,
+    String,
+    Boolean,
+    ForeignKey,
+    Table,
+    Text,
+)
 from sqlalchemy.orm import relationship
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -11,12 +23,12 @@ from app import db
 
 def utc_now():
     """Get current UTC time as timezone-aware datetime.
-    
+
     This function enforces timezone-aware datetimes at the application level
     by always returning UTC datetime objects. This approach works with both
     PostgreSQL and SQLite, unlike using DateTime(timezone=True) which only
     works with PostgreSQL.
-    
+
     For production PostgreSQL deployments, consider adding database triggers
     to automatically update timestamp fields and enforce timezone constraints.
     """
@@ -25,15 +37,23 @@ def utc_now():
 
 # Association table for many-to-many relationship between roles and permissions
 role_permissions = Table(
-    'role_permissions',
+    "role_permissions",
     db.Model.metadata,
-    Column('role_id', Integer, ForeignKey('roles.id', ondelete='CASCADE'), primary_key=True),
-    Column('permission_id', Integer, ForeignKey('permissions.id', ondelete='CASCADE'), primary_key=True)
+    Column(
+        "role_id", Integer, ForeignKey("roles.id", ondelete="CASCADE"), primary_key=True
+    ),
+    Column(
+        "permission_id",
+        Integer,
+        ForeignKey("permissions.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
 )
 
 
 class RoleEnum(PyEnum):
     """Role enumeration."""
+
     ADMIN = "admin"
     OPERATOR = "operator"
     VIEWER = "viewer"
@@ -41,6 +61,7 @@ class RoleEnum(PyEnum):
 
 class PermissionEnum(PyEnum):
     """Permission enumeration."""
+
     READ_UNITS = "read_units"
     WRITE_UNITS = "write_units"
     DELETE_UNITS = "delete_units"
@@ -53,6 +74,7 @@ class PermissionEnum(PyEnum):
 
 class UnitStatusEnum(PyEnum):
     """Unit status enumeration."""
+
     ONLINE = "online"
     OFFLINE = "offline"
     MAINTENANCE = "maintenance"
@@ -61,6 +83,7 @@ class UnitStatusEnum(PyEnum):
 
 class HealthStatusEnum(PyEnum):
     """Health status enumeration."""
+
     OPTIMAL = "optimal"
     WARNING = "warning"
     CRITICAL = "critical"
@@ -68,42 +91,64 @@ class HealthStatusEnum(PyEnum):
 
 class Permission(db.Model):
     """Permission model."""
-    __tablename__ = 'permissions'
-    
+
+    __tablename__ = "permissions"
+
     id = Column(Integer, primary_key=True)
-    name = Column(Enum(PermissionEnum, native_enum=False, values_callable=lambda x: [e.value for e in x]), unique=True, nullable=False)
+    name = Column(
+        Enum(
+            PermissionEnum,
+            native_enum=False,
+            values_callable=lambda x: [e.value for e in x],
+        ),
+        unique=True,
+        nullable=False,
+    )
     description = Column(String(255))
-    created_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
-    
+    created_at = Column(
+        DateTime, default=utc_now
+    )  # timezone-aware via utc_now() function
+
     def __repr__(self):
-        return f'<Permission {self.name}>'
+        return f"<Permission {self.name}>"
 
 
 class Role(db.Model):
     """Role model."""
-    __tablename__ = 'roles'
-    
+
+    __tablename__ = "roles"
+
     id = Column(Integer, primary_key=True)
-    name = Column(Enum(RoleEnum, native_enum=False, values_callable=lambda x: [e.value for e in x]), unique=True, nullable=False)
+    name = Column(
+        Enum(
+            RoleEnum, native_enum=False, values_callable=lambda x: [e.value for e in x]
+        ),
+        unique=True,
+        nullable=False,
+    )
     description = Column(String(255))
-    created_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
-    
+    created_at = Column(
+        DateTime, default=utc_now
+    )  # timezone-aware via utc_now() function
+
     # Relationships
-    permissions = relationship('Permission', secondary=role_permissions, backref='roles')
-    users = relationship('User', back_populates='role')
-    
+    permissions = relationship(
+        "Permission", secondary=role_permissions, backref="roles"
+    )
+    users = relationship("User", back_populates="role")
+
     def __repr__(self):
-        return f'<Role {self.name}>'
-    
+        return f"<Role {self.name}>"
+
     def has_permission(self, permission):
         """Check if role has a specific permission.
-        
+
         Args:
             permission: Must be either a string (e.g., "read_users") or a PermissionEnum
-        
+
         Returns:
             bool: True if role has the permission, False otherwise
-            
+
         Raises:
             TypeError: If permission is not a string or PermissionEnum
         """
@@ -114,15 +159,18 @@ class Role(db.Model):
             permission_value = permission
         else:
             # Raise TypeError for unsupported permission types to prevent silent failures
-            raise TypeError(f"Permission must be a string or PermissionEnum, got {type(permission).__name__}")
-        
+            raise TypeError(
+                f"Permission must be a string or PermissionEnum, got {type(permission).__name__}"
+            )
+
         return any(p.name.value == permission_value for p in self.permissions)
 
 
 class User(db.Model):
     """User model."""
-    __tablename__ = 'users'
-    
+
+    __tablename__ = "users"
+
     id = Column(Integer, primary_key=True)
     username = Column(String(80), unique=True, nullable=False, index=True)
     email = Column(String(120), unique=True, nullable=False, index=True)
@@ -130,33 +178,37 @@ class User(db.Model):
     first_name = Column(String(100))
     last_name = Column(String(100))
     is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
-    updated_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
+    created_at = Column(
+        DateTime, default=utc_now
+    )  # timezone-aware via utc_now() function
+    updated_at = Column(
+        DateTime, default=utc_now
+    )  # timezone-aware via utc_now() function
     last_login = Column(DateTime)  # timezone-aware set via application logic
-    
+
     # Foreign Keys
-    role_id = Column(Integer, ForeignKey('roles.id'), nullable=False)
-    
+    role_id = Column(Integer, ForeignKey("roles.id"), nullable=False)
+
     # Relationships
-    role = relationship('Role', back_populates='users')
-    
+    role = relationship("Role", back_populates="users")
+
     def __repr__(self):
-        return f'<User {self.username}>'
-    
+        return f"<User {self.username}>"
+
     def set_password(self, password):
         """Create hashed password using pbkdf2:sha256 (typically 100+ character hash)"""
-        self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
-    
+        self.password_hash = generate_password_hash(password, method="pbkdf2:sha256")
+
     def check_password(self, password):
         """Check password against hash."""
         return check_password_hash(self.password_hash, password)
-    
+
     def has_permission(self, permission):
         """Check if user has a specific permission.
-        
+
         Args:
             permission: Can be either a string (e.g., "read_users") or a PermissionEnum
-        
+
         Returns:
             bool: True if user has the permission, False otherwise
         """
@@ -167,26 +219,43 @@ class User(db.Model):
 
 class Unit(db.Model):
     """Unit model representing ThermaCore units."""
-    __tablename__ = 'units'
-    
+
+    __tablename__ = "units"
+
     id = Column(String(50), primary_key=True)  # TC001, TC002, etc.
     name = Column(String(200), nullable=False)
     serial_number = Column(String(100), unique=True, nullable=False)
-    install_date = Column(DateTime, nullable=False)  # timezone-aware set via application logic
+    install_date = Column(
+        DateTime, nullable=False
+    )  # timezone-aware set via application logic
     last_maintenance = Column(DateTime)  # timezone-aware set via application logic
     location = Column(String(200))
-    status = Column(Enum(UnitStatusEnum, native_enum=False, values_callable=lambda x: [e.value for e in x]), default=UnitStatusEnum.OFFLINE)
-    health_status = Column(Enum(HealthStatusEnum, native_enum=False, values_callable=lambda x: [e.value for e in x]), default=HealthStatusEnum.OPTIMAL)
+    status = Column(
+        Enum(
+            UnitStatusEnum,
+            native_enum=False,
+            values_callable=lambda x: [e.value for e in x],
+        ),
+        default=UnitStatusEnum.OFFLINE,
+    )
+    health_status = Column(
+        Enum(
+            HealthStatusEnum,
+            native_enum=False,
+            values_callable=lambda x: [e.value for e in x],
+        ),
+        default=HealthStatusEnum.OPTIMAL,
+    )
     water_generation = Column(Boolean, default=False)
     has_alert = Column(Boolean, default=False)
     has_alarm = Column(Boolean, default=False)
-    
+
     # Client information
     client_name = Column(String(200))
     client_contact = Column(String(200))
     client_email = Column(String(120))
     client_phone = Column(String(50))
-    
+
     # Current readings (latest values for quick access)
     temp_outside = Column(Float)
     temp_in = Column(Float)
@@ -198,53 +267,71 @@ class Unit(db.Model):
     current_power = Column(Float, default=0.0)
     parasitic_load = Column(Float, default=0.0)
     user_load = Column(Float, default=0.0)
-    
-    created_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
-    updated_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
-    
+
+    created_at = Column(
+        DateTime, default=utc_now
+    )  # timezone-aware via utc_now() function
+    updated_at = Column(
+        DateTime, default=utc_now
+    )  # timezone-aware via utc_now() function
+
     # Relationships
-    sensors = relationship('Sensor', back_populates='unit', cascade='all, delete-orphan')
-    
+    sensors = relationship(
+        "Sensor", back_populates="unit", cascade="all, delete-orphan"
+    )
+
     def __repr__(self):
-        return f'<Unit {self.id}: {self.name}>'
+        return f"<Unit {self.id}: {self.name}>"
 
 
 class Sensor(db.Model):
     """Sensor model for unit sensors."""
-    __tablename__ = 'sensors'
-    
+
+    __tablename__ = "sensors"
+
     id = Column(Integer, primary_key=True)
-    unit_id = Column(String(50), ForeignKey('units.id'), nullable=False)
+    unit_id = Column(String(50), ForeignKey("units.id"), nullable=False)
     name = Column(String(100), nullable=False)
-    sensor_type = Column(String(50), nullable=False)  # temperature, humidity, pressure, etc.
+    sensor_type = Column(
+        String(50), nullable=False
+    )  # temperature, humidity, pressure, etc.
     unit_of_measurement = Column(String(20))  # °C, %, Pa, etc.
     min_value = Column(Float)
     max_value = Column(Float)
     is_active = Column(Boolean, default=True)
-    
-    created_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
-    updated_at = Column(DateTime, default=utc_now)  # timezone-aware via utc_now() function
-    
+
+    created_at = Column(
+        DateTime, default=utc_now
+    )  # timezone-aware via utc_now() function
+    updated_at = Column(
+        DateTime, default=utc_now
+    )  # timezone-aware via utc_now() function
+
     # Relationships
-    unit = relationship('Unit', back_populates='sensors')
-    readings = relationship('SensorReading', back_populates='sensor', cascade='all, delete-orphan')
-    
+    unit = relationship("Unit", back_populates="sensors")
+    readings = relationship(
+        "SensorReading", back_populates="sensor", cascade="all, delete-orphan"
+    )
+
     def __repr__(self):
-        return f'<Sensor {self.name} ({self.sensor_type}) for Unit {self.unit_id}>'
+        return f"<Sensor {self.name} ({self.sensor_type}) for Unit {self.unit_id}>"
 
 
 class SensorReading(db.Model):
     """Sensor reading model for time-series data."""
-    __tablename__ = 'sensor_readings'
-    
+
+    __tablename__ = "sensor_readings"
+
     id = Column(Integer, primary_key=True)
-    sensor_id = Column(Integer, ForeignKey('sensors.id'), nullable=False)
-    timestamp = Column(DateTime, default=utc_now, nullable=False, index=True)  # timezone-aware via utc_now() function
+    sensor_id = Column(Integer, ForeignKey("sensors.id"), nullable=False)
+    timestamp = Column(
+        DateTime, default=utc_now, nullable=False, index=True
+    )  # timezone-aware via utc_now() function
     value = Column(Float, nullable=False)
-    quality = Column(String(20), default='GOOD')  # GOOD, BAD, UNCERTAIN
-    
+    quality = Column(String(20), default="GOOD")  # GOOD, BAD, UNCERTAIN
+
     # Relationships
-    sensor = relationship('Sensor', back_populates='readings')
-    
+    sensor = relationship("Sensor", back_populates="readings")
+
     def __repr__(self):
-        return f'<SensorReading {self.sensor_id} at {self.timestamp}: {self.value}>'
+        return f"<SensorReading {self.sensor_id} at {self.timestamp}: {self.value}>"
