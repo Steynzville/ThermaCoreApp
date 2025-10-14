@@ -436,14 +436,39 @@ The application supports multiple environments through configuration classes:
 
 ## 📝 Database Migrations
 
+### Automatic Migration Script (Recommended)
+
+```bash
+# Set DATABASE_URL
+export DATABASE_URL="postgresql://user:pass@host:port/dbname"
+
+# Apply all migrations with tracking
+bash apply_migrations.sh
+```
+
+This script will:
+- ✅ Check which migrations have been applied
+- ✅ Apply only missing migrations in correct order
+- ✅ Track migration history in `migration_history` table
+- ✅ Verify critical schema changes
+
+### Available Migrations
+
+1. `001_initial_schema.sql` - Creates tables and TimescaleDB hypertable
+2. `002_seed_data.sql` - Adds default roles, permissions, and users
+3. `003_update_rbac_security.sql` - Updates RBAC permissions
+4. `004_fix_null_roles.sql` - Fixes NULL role assignments
+5. `005_fix_password_hash_length.sql` - **CRITICAL:** Changes password_hash to TEXT
+
 ### Manual Migrations
 
 ```bash
-# Run initial schema setup
+# Run migrations manually in order
 psql -d thermacore_db -f migrations/001_initial_schema.sql
-
-# Run seed data
 psql -d thermacore_db -f migrations/002_seed_data.sql
+psql -d thermacore_db -f migrations/003_update_rbac_security.sql
+psql -d thermacore_db -f migrations/004_fix_null_roles.sql
+psql -d thermacore_db -f migrations/005_fix_password_hash_length.sql
 ```
 
 ### CLI Commands
@@ -454,6 +479,27 @@ flask init-db
 
 # Create admin user interactively
 flask create-admin
+```
+
+### ⚠️ CRITICAL: Password Hash Migration
+
+If you experience authentication errors or see:
+```
+value too long for type character varying(128)
+```
+
+This means migration 005 was not applied. See [PASSWORD_HASH_MIGRATION_FIX.md](../PASSWORD_HASH_MIGRATION_FIX.md) for detailed fix instructions.
+
+**Quick fix:**
+```bash
+# Apply migration 005
+psql $DATABASE_URL -f migrations/005_fix_password_hash_length.sql
+
+# Or use the migration script
+bash apply_migrations.sh
+
+# Verify the fix
+python verify_password_hash_migration.py
 ```
 
 ## 🛡️ Security Features
