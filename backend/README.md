@@ -434,7 +434,7 @@ The application supports multiple environments through configuration classes:
 - **Production**: Optimized for production deployment  
 - **Testing**: Isolated test database, debug enabled
 
-## 📝 Database Setup
+## 📝 Database Setup & Migrations
 
 ### CLI Commands
 
