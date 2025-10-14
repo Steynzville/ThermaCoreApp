@@ -58,10 +58,12 @@ Master index with links to all resources.
 
 **TL;DR:** The authentication code is fine. The database is missing data or misconfigured.
 
-**Most likely cause (80%):** User has NULL role_id in database  
-**Second cause (15%):** Database tables not initialized  
-**Third cause (3%):** CORS misconfigured  
-**Fourth cause (2%):** Environment variables missing
+**Most likely causes:**
+1. **Password hash truncation (NEW!)** - Migration 005 not applied → [QUICK_FIX_PASSWORD_HASH.md](QUICK_FIX_PASSWORD_HASH.md)
+2. **User has NULL role_id** (80%) - Database role not assigned
+3. **Database tables not initialized** (15%) - Migrations not run
+4. **CORS misconfigured** (3%) - Frontend can't connect
+5. **Environment variables missing** (2%) - Config issue
 
 ---
 
@@ -73,9 +75,15 @@ Master index with links to all resources.
 - `backend/test_login_endpoint.py` - Test API endpoint (5 seconds)
 
 ### Database Scripts (If Needed)
+- `backend/apply_migrations.sh` - Apply all migrations automatically
 - `backend/migrations/004_fix_null_roles.sql` - Fix NULL roles
+- `backend/migrations/005_fix_password_hash_length.sql` - Fix password truncation
+- `backend/verify_password_hash_migration.py` - Verify password_hash fix
 
 ### Documentation (Read These)
+- `QUICK_FIX_PASSWORD_HASH.md` - **NEW!** Fix password hash truncation (5 min)
+- `PASSWORD_HASH_MIGRATION_FIX.md` - **NEW!** Detailed password hash fix guide
+- `PRODUCTION_DATABASE_SETUP.md` - **NEW!** Complete database setup guide
 - `QUICK_START_AUTH_FIX.md` - Emergency reference
 - `URGENT_AUTH_FIX_GUIDE.md` - Quick fixes
 - `RENDER_DEPLOYMENT_FIX_GUIDE.md` - Step-by-step
@@ -115,6 +123,13 @@ Read the output. It tells you exactly what's wrong.
 
 ### Step 2: Apply Fix (2-5 minutes)
 
+**If you see "value too long for type character varying(128)":**
+```bash
+cd backend
+bash apply_migrations.sh
+```
+See [QUICK_FIX_PASSWORD_HASH.md](QUICK_FIX_PASSWORD_HASH.md) for details.
+
 **If health check says "NO ROLE":**
 ```sql
 psql $DATABASE_URL
@@ -124,9 +139,9 @@ UPDATE users SET role_id = (SELECT id FROM roles WHERE name = 'admin') WHERE use
 
 **If health check says "Tables missing":**
 ```bash
-psql $DATABASE_URL -f backend/migrations/001_initial_schema.sql
-psql $DATABASE_URL -f backend/migrations/002_seed_data.sql
-cd backend && python scripts/create_first_admin.py
+cd backend
+bash apply_migrations.sh
+python scripts/create_first_admin.py
 ```
 
 **If health check says "CORS issue":**

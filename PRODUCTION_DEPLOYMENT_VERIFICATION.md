@@ -105,10 +105,15 @@ ORDER BY table_name;
 
 **If tables don't exist:**
 ```bash
-# Run migrations
-psql $DATABASE_URL -f migrations/001_initial_schema.sql
-psql $DATABASE_URL -f migrations/002_seed_data.sql
-psql $DATABASE_URL -f migrations/003_update_rbac_security.sql
+# Run all migrations using the migration script (recommended)
+bash backend/apply_migrations.sh
+
+# Or run manually:
+# psql $DATABASE_URL -f backend/migrations/001_initial_schema.sql
+# psql $DATABASE_URL -f backend/migrations/002_seed_data.sql
+# psql $DATABASE_URL -f backend/migrations/003_update_rbac_security.sql
+# psql $DATABASE_URL -f backend/migrations/004_fix_null_roles.sql
+# psql $DATABASE_URL -f backend/migrations/005_fix_password_hash_length.sql
 ```
 
 ---
@@ -141,7 +146,7 @@ GROUP BY r.name;
 
 **If roles/permissions missing:**
 ```bash
-psql $DATABASE_URL -f migrations/002_seed_data.sql
+psql $DATABASE_URL -f backend/migrations/002_seed_data.sql
 ```
 
 ---
@@ -292,9 +297,15 @@ python test_login_endpoint.py https://thermacoreapp.onrender.com Steyn_Admin Ste
 # Connect to production database
 export DATABASE_URL="..."  # From Render
 
-# Run migrations
-psql $DATABASE_URL -f backend/migrations/001_initial_schema.sql
-psql $DATABASE_URL -f backend/migrations/002_seed_data.sql
+# Run all migrations (recommended)
+bash backend/apply_migrations.sh
+
+# Or run manually:
+# psql $DATABASE_URL -f backend/migrations/001_initial_schema.sql
+# psql $DATABASE_URL -f backend/migrations/002_seed_data.sql
+# psql $DATABASE_URL -f backend/migrations/003_update_rbac_security.sql
+# psql $DATABASE_URL -f backend/migrations/004_fix_null_roles.sql
+# psql $DATABASE_URL -f backend/migrations/005_fix_password_hash_length.sql
 
 # Create admin user
 cd backend

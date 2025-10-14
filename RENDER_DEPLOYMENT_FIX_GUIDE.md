@@ -114,18 +114,33 @@ WHERE u.username = 'Steyn_Admin';
 
 #### Option B: Run Fix Script (Recommended)
 
+```bash
+# Export DATABASE_URL
+export DATABASE_URL="postgresql://..."
+
+# Run all migrations (including password_hash fix)
+bash backend/apply_migrations.sh
+
+# This will apply any missing migrations including:
+# - 004_fix_null_roles.sql (fixes NULL role_id)
+# - 005_fix_password_hash_length.sql (fixes password truncation)
+```
+
+#### Option C: Manual Migration Application
+
 ```sql
 -- Connect to database
 psql "postgresql://..."
 
--- Run the fix script
+-- Run the fix scripts
 \i backend/migrations/004_fix_null_roles.sql
+\i backend/migrations/005_fix_password_hash_length.sql
 
 -- Exit
 \q
 ```
 
-#### Option C: Complete Database Reset (If tables are missing)
+#### Option D: Complete Database Reset (If tables are missing)
 
 **⚠️ Warning: This will delete all existing data!**
 
@@ -133,10 +148,15 @@ psql "postgresql://..."
 # Export DATABASE_URL
 export DATABASE_URL="postgresql://..."
 
-# Run all migrations in order
-psql $DATABASE_URL -f backend/migrations/001_initial_schema.sql
-psql $DATABASE_URL -f backend/migrations/002_seed_data.sql
-psql $DATABASE_URL -f backend/migrations/003_update_rbac_security.sql
+# Run all migrations using the migration script (recommended)
+bash backend/apply_migrations.sh
+
+# Or run manually in order:
+# psql $DATABASE_URL -f backend/migrations/001_initial_schema.sql
+# psql $DATABASE_URL -f backend/migrations/002_seed_data.sql
+# psql $DATABASE_URL -f backend/migrations/003_update_rbac_security.sql
+# psql $DATABASE_URL -f backend/migrations/004_fix_null_roles.sql
+# psql $DATABASE_URL -f backend/migrations/005_fix_password_hash_length.sql
 
 # Create admin user
 cd backend
