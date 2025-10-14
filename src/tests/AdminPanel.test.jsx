@@ -88,8 +88,8 @@ describe('AdminPanel Component', () => {
     const changePasswordBtn = screen.getByText('Change My Password');
     fireEvent.click(changePasswordBtn);
     
-    // Check if modal is displayed
-    expect(screen.getByText('Reset Password')).toBeInTheDocument();
+    // Check if modal is displayed - use role and heading to be more specific
+    expect(screen.getByRole('heading', { name: 'Reset Password' })).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Enter new password')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Confirm new password')).toBeInTheDocument();
   });
@@ -120,10 +120,11 @@ describe('AdminPanel Component', () => {
     fireEvent.change(newPasswordInput, { target: { value: 'password123' } });
     fireEvent.change(confirmPasswordInput, { target: { value: 'password456' } });
     
-    // Click Reset Password button (get the one in the modal)
-    const resetButtons = screen.getAllByText('Reset Password');
-    const modalResetButton = resetButtons.find(btn => btn.tagName === 'SPAN' && btn.closest('button'));
-    fireEvent.click(modalResetButton.closest('button'));
+    // Click Reset Password button - find button by role within the modal
+    const buttons = screen.getAllByRole('button', { name: /Reset Password/i });
+    // The last button should be the one in the modal (after the table buttons)
+    const modalResetButton = buttons[buttons.length - 1];
+    fireEvent.click(modalResetButton);
     
     // Check for validation error
     await waitFor(() => {
@@ -145,15 +146,17 @@ describe('AdminPanel Component', () => {
     fireEvent.change(newPasswordInput, { target: { value: '123' } });
     fireEvent.change(confirmPasswordInput, { target: { value: '123' } });
     
-    // Click Reset Password button (get the one in the modal)
-    const resetButtons = screen.getAllByText('Reset Password');
-    const modalResetButton = resetButtons.find(btn => btn.tagName === 'SPAN' && btn.closest('button'));
-    fireEvent.click(modalResetButton.closest('button'));
+    // Click Reset Password button - find button by role within the modal
+    const buttons = screen.getAllByRole('button', { name: /Reset Password/i });
+    // The last button should be the one in the modal (after the table buttons)
+    const modalResetButton = buttons[buttons.length - 1];
+    fireEvent.click(modalResetButton);
     
-    // Check for validation error (there are two instances, one in the modal)
+    // Check for validation error - there will be multiple instances (info banner + error)
+    // So we check that at least 2 exist (banner always present + error message after validation)
     await waitFor(() => {
       const errorMessages = screen.getAllByText('Password must be at least 6 characters long');
-      expect(errorMessages.length).toBeGreaterThan(0);
+      expect(errorMessages.length).toBeGreaterThanOrEqual(2);
     });
   });
 
