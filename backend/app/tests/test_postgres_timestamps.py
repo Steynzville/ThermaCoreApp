@@ -11,6 +11,7 @@ To run these tests:
 """
 import pytest
 from datetime import datetime
+from werkzeug.security import generate_password_hash
 
 from app.models import User, Unit, Sensor
 from app import db
@@ -39,6 +40,7 @@ class TestPostgreSQLTimestampTriggers:
             user = User(
                 username='postgres_test_user',
                 email='postgres@test.com',
+                password_hash=generate_password_hash('test_password_123'),
                 first_name='PostgreSQL',
                 last_name='Test',
                 role_id=1
@@ -138,6 +140,7 @@ class TestPostgreSQLTimestampTriggers:
             user = User(
                 username='postgres_multi_test',
                 email='multi@postgres.test',
+                password_hash=generate_password_hash('test_password_123'),
                 first_name='Multi',
                 last_name='Test',
                 role_id=1
