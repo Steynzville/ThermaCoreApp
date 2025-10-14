@@ -76,7 +76,7 @@ Tables created (7):
     - id (INTEGER)
     - username (VARCHAR(80))
     - email (VARCHAR(120))
-    - password_hash (VARCHAR(128))
+    - password_hash (TEXT)
     - first_name (VARCHAR(100))
     - last_name (VARCHAR(100))
     - is_active (BOOLEAN)
