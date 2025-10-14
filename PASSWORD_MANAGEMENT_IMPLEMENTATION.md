@@ -44,10 +44,12 @@ The modal includes the following features:
 - **Endpoint**: `POST /api/users/{id}/reset-password`
 - **Headers**: Authorization Bearer token from localStorage
 - **Body**: `{ "new_password": "user_entered_password" }`
+- **Rate Limiting**: 10 password resets per hour per admin user
 - **Response Handling**: 
   - Success: Toast notification with success message
   - Error: Toast notification with error message from server
   - Network Error: Generic error message with toast notification
+  - Rate Limit Exceeded: 429 status with retry information
 
 ### 6. Error Handling
 - **Network Errors**: Caught and displayed with toast notifications
@@ -142,6 +144,7 @@ const response = await apiPost(
 3. **Server-side Validation**: Backend enforces password requirements
 4. **No Password Exposure**: Passwords masked by default with toggle option
 5. **Error Message Security**: Generic error messages for network failures
+6. **Rate Limiting**: Password reset endpoint limited to 10 requests per hour per admin user to prevent brute force attacks and abuse
 
 ## Future Enhancements
 - Password strength meter
@@ -181,9 +184,22 @@ Content-Type: application/json
 - **400**: Validation error
 - **404**: User not found
 - **401**: Unauthorized (no valid token)
+- **429**: Rate limit exceeded (max 10 resets per hour per admin)
 - **500**: Server error
 
+### Rate Limiting
+The password reset endpoint is protected with rate limiting to prevent abuse:
+- **Limit**: 10 password resets per hour per admin user
+- **Tracking**: Per authenticated admin user (not by IP)
+- **Response Headers**: 
+  - `X-RateLimit-Limit`: Maximum requests allowed
+  - `X-RateLimit-Remaining`: Requests remaining in current window
+  - `X-RateLimit-Reset`: Unix timestamp when limit resets
+  - `X-RateLimit-Window`: Time window in seconds
+- **429 Response**: Includes retry information and time until reset
+
 ## File Changes
+### Frontend
 - **Modified**: `src/components/AdminPanel.jsx`
   - Added Password Management tab
   - Implemented password reset modal
@@ -192,6 +208,12 @@ Content-Type: application/json
 
 - **Created**: `src/tests/AdminPanel.test.jsx`
   - Comprehensive test suite for new functionality
+
+### Backend
+- **Modified**: `backend/app/routes/users.py`
+  - Added rate limiting to password reset endpoint
+  - Imported rate_limit decorator from middleware
+  - Applied `@rate_limit(limit=10, window_seconds=3600, per="user")` to `reset_user_password` endpoint
 
 ## Maintenance Notes
 - Password requirements (minimum length) should match backend validation

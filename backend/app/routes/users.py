@@ -12,6 +12,7 @@ from app.utils.schemas import UserSchema, UserUpdateSchema, RoleSchema
 from app.middleware.authorization import permission_required, role_required
 from app.utils.helpers import get_current_user_id
 from app.middleware.audit import audit_operation
+from app.middleware.rate_limit import rate_limit
 
 
 users_bp = Blueprint("users", __name__)
@@ -428,6 +429,7 @@ def get_users_stats():
 @users_bp.route("/users/<int:user_id>/reset-password", methods=["POST"])
 @jwt_required()
 @role_required("admin")
+@rate_limit(limit=10, window_seconds=3600, per="user")  # 10 password resets per hour per admin user
 def reset_user_password(user_id):
     """
     Reset a user's password (admin only).
