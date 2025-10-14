@@ -83,7 +83,7 @@ class TestTimestampUpdates:
             user = User(
                 username="test_timestamp_user",
                 email="timestamp@test.com",
-                password_hash=generate_password_hash("test_password_123"),
+                password_hash=generate_password_hash("test_password_123", method="pbkdf2:sha256"),
                 first_name="Test",
                 last_name="User",
                 role_id=1,  # Assuming role with id=1 exists from conftest
@@ -186,7 +186,7 @@ class TestTimestampUpdates:
             user = User(
                 username="test_created_user",
                 email="created@test.com",
-                password_hash=generate_password_hash("test_password_123"),
+                password_hash=generate_password_hash("test_password_123", method="pbkdf2:sha256"),
                 first_name="Created",
                 last_name="User",
                 role_id=1,

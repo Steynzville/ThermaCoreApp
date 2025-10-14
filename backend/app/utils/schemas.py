@@ -364,6 +364,13 @@ class TokenSchema(Schema):
     user = fields.Nested(UserSchema, exclude=("password_hash",))
 
 
+class PasswordChangeSchema(Schema):
+    """Password change request schema."""
+
+    current_password = fields.Str(required=True, validate=validate.Length(min=1))
+    new_password = fields.Str(required=True, validate=validate.Length(min=6))
+
+
 # Query parameter validation schemas
 class HistoricalDataQuerySchema(Schema):
     """Schema for historical data query parameters."""

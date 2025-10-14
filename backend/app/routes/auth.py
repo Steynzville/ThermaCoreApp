@@ -16,7 +16,7 @@ from webargs.flaskparser import use_args
 
 from app import db
 from app.models import User, Role, RoleEnum
-from app.utils.schemas import LoginSchema, UserCreateSchema, UserSchema, TokenSchema
+from app.utils.schemas import LoginSchema, UserCreateSchema, UserSchema, TokenSchema, PasswordChangeSchema
 from app.utils.helpers import get_current_user_id
 from app.utils.error_handler import SecurityAwareErrorHandler
 from app.middleware.rate_limit import auth_rate_limit, standard_rate_limit
@@ -933,7 +933,8 @@ def logout():
 
 @auth_bp.route("/auth/change-password", methods=["POST"])
 @jwt_required()
-def change_password():
+@use_args(PasswordChangeSchema, location="json")
+def change_password(data):
     """
     Change user password.
     ---
@@ -943,16 +944,7 @@ def change_password():
       - in: body
         name: password_data
         schema:
-          type: object
-          required:
-            - current_password
-            - new_password
-          properties:
-            current_password:
-              type: string
-            new_password:
-              type: string
-              minLength: 6
+          $ref: '#/definitions/PasswordChangeSchema'
     responses:
       200:
         description: Password changed successfully
@@ -960,32 +952,53 @@ def change_password():
         description: Validation error
       401:
         description: Invalid current password
+      422:
+        description: Validation error
     security:
       - JWT: []
     """
-    data = request.json
+    try:
+        user_id, success = get_current_user_id()
+        if not success or user_id is None:
+            return SecurityAwareErrorHandler.handle_service_error(
+                Exception("Invalid token format"),
+                "authentication_error",
+                "Token validation",
+                401,
+            )
 
-    if not data or "current_password" not in data or "new_password" not in data:
-        return jsonify({"error": "Current password and new password required"}), 400
+        user = User.query.get(user_id)
 
-    if len(data["new_password"]) < 6:
-        return jsonify(
-            {"error": "New password must be at least 6 characters long"}
-        ), 400
+        if not user or not user.is_active:
+            return SecurityAwareErrorHandler.handle_service_error(
+                Exception("User not found or inactive"),
+                "authentication_error",
+                "User validation",
+                401,
+            )
 
-    user_id, success = get_current_user_id()
-    if not success or user_id is None:
-        return jsonify({"error": "Invalid token format"}), 401
+        if not user.check_password(data["current_password"]):
+            return SecurityAwareErrorHandler.handle_service_error(
+                Exception("Invalid current password"),
+                "authentication_error",
+                "Password verification",
+                401,
+            )
 
-    user = User.query.get(user_id)
+        user.set_password(data["new_password"])
+        db.session.commit()
 
-    if not user or not user.is_active:
-        return jsonify({"error": "User not found or inactive"}), 401
+        return SecurityAwareErrorHandler.create_success_response(
+            {"message": "Password changed successfully"}, "Password changed successfully", 200
+        )
 
-    if not user.check_password(data["current_password"]):
-        return jsonify({"error": "Invalid current password"}), 401
-
-    user.set_password(data["new_password"])
-    db.session.commit()
-
-    return jsonify({"message": "Password changed successfully"}), 200
+    except Exception as e:
+        current_app.logger.error(
+            f"Error changing password: {e}",
+            exc_info=True,
+            extra={"event": "password_change_error"},
+        )
+        db.session.rollback()
+        return SecurityAwareErrorHandler.handle_service_error(
+            e, "internal_error", "Password change", 500
+        )

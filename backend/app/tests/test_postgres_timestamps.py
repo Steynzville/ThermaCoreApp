@@ -41,7 +41,7 @@ class TestPostgreSQLTimestampTriggers:
             user = User(
                 username="postgres_test_user",
                 email="postgres@test.com",
-                password_hash=generate_password_hash("test_password_123"),
+                password_hash=generate_password_hash("test_password_123", method="pbkdf2:sha256"),
                 first_name="PostgreSQL",
                 last_name="Test",
                 role_id=1,
@@ -141,7 +141,7 @@ class TestPostgreSQLTimestampTriggers:
             user = User(
                 username="postgres_multi_test",
                 email="multi@postgres.test",
-                password_hash=generate_password_hash("test_password_123"),
+                password_hash=generate_password_hash("test_password_123", method="pbkdf2:sha256"),
                 first_name="Multi",
                 last_name="Test",
                 role_id=1,
