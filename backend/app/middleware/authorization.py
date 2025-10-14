@@ -9,8 +9,7 @@ from functools import wraps
 from flask import request, current_app
 from flask_jwt_extended import verify_jwt_in_request
 
-from app import db
-from app.models import User, Role, RoleEnum
+from app.models import User
 from app.utils.helpers import get_current_user_id
 from app.utils.error_handler import SecurityAwareErrorHandler
 from app.middleware.audit import audit_permission_check

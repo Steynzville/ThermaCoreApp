@@ -2,26 +2,24 @@
 
 import secrets
 from datetime import datetime, timezone
-from functools import wraps
 
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import (
     create_access_token,
     create_refresh_token,
     jwt_required,
-    verify_jwt_in_request,
 )
 from sqlalchemy.exc import IntegrityError
 from webargs.flaskparser import use_args
 
 from app import db
-from app.models import User, Role, RoleEnum
+from app.models import User, Role
 from app.utils.schemas import LoginSchema, UserCreateSchema, UserSchema, TokenSchema, PasswordChangeSchema
 from app.utils.helpers import get_current_user_id
 from app.utils.error_handler import SecurityAwareErrorHandler
 from app.middleware.rate_limit import auth_rate_limit, standard_rate_limit
 from app.middleware.request_id import track_request_id
-from app.middleware.authorization import permission_required, role_required
+from app.middleware.authorization import permission_required
 from app.middleware.audit import (
     audit_login_success,
     audit_login_failure,
