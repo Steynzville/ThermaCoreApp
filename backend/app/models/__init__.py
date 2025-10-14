@@ -144,8 +144,8 @@ class User(db.Model):
         return f'<User {self.username}>'
     
     def set_password(self, password):
-        """Create hashed password using bcrypt (shorter hash)"""
-        self.password_hash = generate_password_hash(password, method='bcrypt')
+        """Create hashed password using pbkdf2:sha256 (~90 char hash)"""
+        self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
     
     def check_password(self, password):
         """Check password against hash."""
