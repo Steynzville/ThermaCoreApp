@@ -227,7 +227,13 @@ def create_app(config_name=None):
 
     # Configure CORS if available
     if cors_available:
-        CORS(app, origins=app.config["CORS_ORIGINS"])
+        CORS(
+            app, 
+            origins=app.config["CORS_ORIGINS"],
+            supports_credentials=True,
+            allow_headers=["Content-Type", "Authorization"],
+            methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+        )
 
     # Set up middleware - PR2 Implementation + PR3 Audit Logging
     from app.middleware.request_id import setup_request_id_middleware

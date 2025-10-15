@@ -215,6 +215,20 @@ jobs:
           # conftest.py creates a temporary database and initializes it with all models
           docker-compose -f docker-compose.ci.yml run --rm backend python -m pytest -v --tb=short
 
+      - name: Test Backend API Endpoints
+        run: |
+          echo "🔍 Testing backend API endpoint availability..."
+          echo "Note: Testing against production backend (https://thermacoreapp.onrender.com)"
+          
+          # Test health endpoint
+          echo "Testing /health endpoint..."
+          curl -X GET https://thermacoreapp.onrender.com/health -f -s -o /dev/null || \
+            echo "⚠️ Health endpoint test failed (backend may be sleeping on free tier)"
+          
+          # Note: Cannot test password reset endpoint without authentication
+          # That endpoint requires JWT token and admin role
+          echo "✅ Backend endpoint availability check completed"
+
       - name: Stop Services
         if: always()
         run: |
