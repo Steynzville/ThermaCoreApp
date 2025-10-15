@@ -1,6 +1,7 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { vi } from 'vitest';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
+import { vi } from 'vitest';
+
 import AdminPanel from '../components/AdminPanel';
 import * as AuthContext from '../context/AuthContext.jsx';
 import * as apiFetch from '../utils/apiFetch';
@@ -121,9 +122,8 @@ describe('AdminPanel Component', () => {
     fireEvent.change(confirmPasswordInput, { target: { value: 'password456' } });
     
     // Check that Reset Password button is disabled when passwords don't match
-    const buttons = screen.getAllByRole('button', { name: /Reset Password/i });
-    // The last button should be the one in the modal (after the table buttons)
-    const modalResetButton = buttons[buttons.length - 1];
+    const modal = screen.getByTestId('password-reset-modal');
+    const modalResetButton = within(modal).getByRole('button', { name: /Reset Password/i });
     
     await waitFor(() => {
       expect(modalResetButton).toBeDisabled();
@@ -145,9 +145,8 @@ describe('AdminPanel Component', () => {
     fireEvent.change(confirmPasswordInput, { target: { value: '123' } });
     
     // Check that Reset Password button is disabled when password is too short
-    const buttons = screen.getAllByRole('button', { name: /Reset Password/i });
-    // The last button should be the one in the modal (after the table buttons)
-    const modalResetButton = buttons[buttons.length - 1];
+    const modal = screen.getByTestId('password-reset-modal');
+    const modalResetButton = within(modal).getByRole('button', { name: /Reset Password/i });
     
     await waitFor(() => {
       expect(modalResetButton).toBeDisabled();
@@ -176,8 +175,8 @@ describe('AdminPanel Component', () => {
     fireEvent.change(confirmPasswordInput, { target: { value: 'password123' } });
     
     // Check that Reset Password button is enabled when validation passes
-    const buttons = screen.getAllByRole('button', { name: /Reset Password/i });
-    const modalResetButton = buttons[buttons.length - 1];
+    const modal = screen.getByTestId('password-reset-modal');
+    const modalResetButton = within(modal).getByRole('button', { name: /Reset Password/i });
     
     await waitFor(() => {
       expect(modalResetButton).not.toBeDisabled();
@@ -229,5 +228,93 @@ describe('AdminPanel Component', () => {
     expect(screen.getByText('System Settings')).toBeInTheDocument();
     expect(screen.getByText('Email Notifications')).toBeInTheDocument();
     expect(screen.getByText('Auto Backup')).toBeInTheDocument();
+  });
+
+  it('should show password mismatch warning in real-time', async () => {
+    renderWithProviders(<AdminPanel />);
+    
+    // Navigate to Password Management and open modal
+    fireEvent.click(screen.getByText('Password Management'));
+    fireEvent.click(screen.getByText('Change My Password'));
+    
+    // Fill in valid password first
+    const newPasswordInput = screen.getByPlaceholderText('Enter new password');
+    const confirmPasswordInput = screen.getByPlaceholderText('Confirm new password');
+    
+    fireEvent.change(newPasswordInput, { target: { value: 'password123' } });
+    fireEvent.change(confirmPasswordInput, { target: { value: 'password456' } });
+    
+    // Check that password mismatch warning appears
+    await waitFor(() => {
+      expect(screen.getByText('Passwords do not match')).toBeInTheDocument();
+    });
+  });
+
+  it('should hide password mismatch warning when passwords match', async () => {
+    renderWithProviders(<AdminPanel />);
+    
+    // Navigate to Password Management and open modal
+    fireEvent.click(screen.getByText('Password Management'));
+    fireEvent.click(screen.getByText('Change My Password'));
+    
+    const newPasswordInput = screen.getByPlaceholderText('Enter new password');
+    const confirmPasswordInput = screen.getByPlaceholderText('Confirm new password');
+    
+    // First create mismatch
+    fireEvent.change(newPasswordInput, { target: { value: 'password123' } });
+    fireEvent.change(confirmPasswordInput, { target: { value: 'password456' } });
+    
+    await waitFor(() => {
+      expect(screen.getByText('Passwords do not match')).toBeInTheDocument();
+    });
+    
+    // Then fix the mismatch
+    fireEvent.change(confirmPasswordInput, { target: { value: 'password123' } });
+    
+    await waitFor(() => {
+      expect(screen.queryByText('Passwords do not match')).not.toBeInTheDocument();
+    });
+  });
+
+  it('should use validation state in form submission', async () => {
+    // Mock apiPost to prevent actual API calls
+    const mockApiPost = vi.fn(() => Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve({ success: true })
+    }));
+    vi.spyOn(apiFetch, 'apiPost').mockImplementation(mockApiPost);
+
+    renderWithProviders(<AdminPanel />);
+    
+    // Navigate to Password Management and open modal
+    fireEvent.click(screen.getByText('Password Management'));
+    fireEvent.click(screen.getByText('Change My Password'));
+    
+    const newPasswordInput = screen.getByPlaceholderText('Enter new password');
+    const confirmPasswordInput = screen.getByPlaceholderText('Confirm new password');
+    
+    // Try to submit with short password
+    fireEvent.change(newPasswordInput, { target: { value: '123' } });
+    fireEvent.change(confirmPasswordInput, { target: { value: '123' } });
+    
+    const modal = screen.getByTestId('password-reset-modal');
+    const modalResetButton = within(modal).getByRole('button', { name: /Reset Password/i });
+    
+    // Button should be disabled
+    expect(modalResetButton).toBeDisabled();
+    
+    // Try to submit with mismatched passwords
+    fireEvent.change(newPasswordInput, { target: { value: 'password123' } });
+    fireEvent.change(confirmPasswordInput, { target: { value: 'password456' } });
+    
+    // Button should still be disabled
+    expect(modalResetButton).toBeDisabled();
+    
+    // Submit with valid matching passwords
+    fireEvent.change(confirmPasswordInput, { target: { value: 'password123' } });
+    
+    await waitFor(() => {
+      expect(modalResetButton).not.toBeDisabled();
+    });
   });
 });

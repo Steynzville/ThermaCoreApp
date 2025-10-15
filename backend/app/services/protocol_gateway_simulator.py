@@ -170,6 +170,8 @@ class ProtocolGatewaySimulator:
                 new_value = random.uniform(
                     min_val * 0.5, max_val * 1.2
                 )  # Out of normal range
+                # Ensure anomalous values still stay within absolute bounds
+                new_value = max(min_val, min(max_val, new_value))
             quality = "UNCERTAIN"
 
         # Very rarely generate bad quality

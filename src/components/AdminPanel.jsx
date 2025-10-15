@@ -168,12 +168,12 @@ const AdminPanel = ({ className }) => {
   };
 
   const handlePasswordReset = async () => {
-    // Double-check validation before submitting
-    if (passwordFormData.newPassword.length < 6) {
+    // Use validation state variables for consistency
+    if (!isValidPassword) {
       setErrorMessage('Password must be at least 6 characters long');
       return;
     }
-    if (passwordFormData.newPassword !== passwordFormData.confirmPassword) {
+    if (!passwordsMatch) {
       setErrorMessage('Passwords do not match');
       return;
     }
@@ -593,7 +593,7 @@ const AdminPanel = ({ className }) => {
         {/* Password Reset Modal */}
         {passwordResetModal && selectedUserForReset && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-md">
+            <div className="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-md" data-testid="password-reset-modal">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
                 Reset Password
               </h3>
@@ -688,10 +688,18 @@ const AdminPanel = ({ className }) => {
                   </div>
                 )}
 
-                {passwordFormData.newPassword.length > 0 && passwordFormData.newPassword.length < 6 && (
+                {passwordFormData.newPassword.length > 0 && !isValidPassword && (
                   <div className="password-warning p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-md" role="alert" aria-live="polite">
                     <p className="text-xs text-yellow-800 dark:text-yellow-300">
                       Password must be at least 6 characters long
+                    </p>
+                  </div>
+                )}
+
+                {passwordFormData.confirmPassword.length > 0 && !passwordsMatch && (
+                  <div className="password-warning p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-md" role="alert" aria-live="polite">
+                    <p className="text-xs text-yellow-800 dark:text-yellow-300">
+                      Passwords do not match
                     </p>
                   </div>
                 )}
