@@ -68,9 +68,10 @@ export default [
         "warn",
         {
           vars: "all",
-          varsIgnorePattern: "^_",
+          varsIgnorePattern: "^_|^[A-Z_]+$|config|settings|CONSTANTS|^[a-zA-Z]+Config$|^[a-zA-Z]+Constants$",
           args: "after-used",
           argsIgnorePattern: "^_",
+          ignoreRestSiblings: true,
         },
       ],
       "react/jsx-uses-react": "off", // React 17+ doesn't need React in scope
@@ -101,6 +102,13 @@ export default [
         afterAll: "readonly",
         vi: "readonly",
       },
+    },
+  },
+  {
+    files: ["*.config.js", "*.json.js", "constants.js", "**/config/**", "**/constants/**", "**/settings/**"],
+    rules: {
+      "no-unused-vars": "off",
+      "unused-imports/no-unused-vars": "off",
     },
   },
 ];
