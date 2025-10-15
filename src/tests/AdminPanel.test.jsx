@@ -152,11 +152,10 @@ describe('AdminPanel Component', () => {
       expect(modalResetButton).toBeDisabled();
     });
     
-    // Check for validation warning - there will be multiple instances (info banner + warning)
-    // So we check that at least 2 exist (banner always present + warning message)
+    // Check for validation warning (static info banner removed per requirements)
     await waitFor(() => {
-      const errorMessages = screen.getAllByText('Password must be at least 6 characters long');
-      expect(errorMessages.length).toBeGreaterThanOrEqual(2);
+      const errorMessage = screen.getByText('Password must be at least 6 characters long');
+      expect(errorMessage).toBeInTheDocument();
     });
   });
 
