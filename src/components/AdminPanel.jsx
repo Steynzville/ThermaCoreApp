@@ -1,6 +1,10 @@
 import {
   Database,
   Edit,
+  Eye,
+  EyeOff,
+  Key,
+  Lock,
   Plus,
   Settings,
   Shield,
@@ -8,7 +12,10 @@ import {
   Users,
 } from "lucide-react";
 import React, { useState } from "react";
+import { toast } from "sonner";
 
+import { useAuth } from "../context/AuthContext";
+import { apiPost } from "../utils/apiFetch";
 import PageHeader from "./PageHeader";
 import { Button } from "./ui/button";
 import { Card, CardContent,CardHeader } from "./ui/card";
@@ -51,6 +58,7 @@ const systemStats = [
 ];
 
 const AdminPanel = ({ className }) => {
+  const { user: currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState("users");
   const [users, setUsers] = useState(initialUsers);
   const [editingUser, setEditingUser] = useState(null);
@@ -59,6 +67,18 @@ const AdminPanel = ({ className }) => {
     autoBackup: true,
     maintenanceMode: false,
   });
+
+  // Password Management State
+  const [passwordResetModal, setPasswordResetModal] = useState(false);
+  const [selectedUserForReset, setSelectedUserForReset] = useState(null);
+  const [passwordFormData, setPasswordFormData] = useState({
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordErrors, setPasswordErrors] = useState({});
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   const handleAddUser = () => {
     const name = prompt("Enter user's full name:");
@@ -103,6 +123,95 @@ const AdminPanel = ({ className }) => {
     }));
   };
 
+  // Password Management Functions
+  const openPasswordResetModal = (user) => {
+    setSelectedUserForReset(user);
+    setPasswordFormData({ newPassword: "", confirmPassword: "" });
+    setPasswordErrors({});
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
+    setPasswordResetModal(true);
+  };
+
+  const closePasswordResetModal = () => {
+    setPasswordResetModal(false);
+    setSelectedUserForReset(null);
+    setPasswordFormData({ newPassword: "", confirmPassword: "" });
+    setPasswordErrors({});
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
+  };
+
+  const validatePasswordForm = () => {
+    const errors = {};
+    
+    if (!passwordFormData.newPassword) {
+      errors.newPassword = "Password is required";
+    } else if (passwordFormData.newPassword.length < 6) {
+      errors.newPassword = "Password must be at least 6 characters long";
+    }
+
+    if (!passwordFormData.confirmPassword) {
+      errors.confirmPassword = "Please confirm your password";
+    } else if (passwordFormData.newPassword !== passwordFormData.confirmPassword) {
+      errors.confirmPassword = "Passwords do not match";
+    }
+
+    setPasswordErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handlePasswordReset = async () => {
+    if (!validatePasswordForm()) {
+      return;
+    }
+
+    setIsResettingPassword(true);
+
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://thermacoreapp.onrender.com';
+      const token = localStorage.getItem('thermacore_token');
+
+      const response = await apiPost(
+        `${API_BASE_URL}/api/users/${selectedUserForReset.id}/reset-password`,
+        { new_password: passwordFormData.newPassword },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      if (response.ok) {
+        toast.success(`Password reset successfully for ${selectedUserForReset.name}`);
+        closePasswordResetModal();
+      } else {
+        toast.error(result.error || result.message || "Failed to reset password");
+      }
+    } catch (error) {
+      console.error("Password reset error:", error);
+      toast.error(error.message || "Network error. Please try again.");
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
+
+  const handleSelfPasswordReset = () => {
+    if (currentUser) {
+      // Create a user object for self-password reset
+      const selfUser = {
+        id: currentUser.id || 1, // Fallback to 1 if id not available
+        name: currentUser.firstName && currentUser.lastName 
+          ? `${currentUser.firstName} ${currentUser.lastName}`
+          : currentUser.username,
+        email: currentUser.email || '',
+      };
+      openPasswordResetModal(selfUser);
+    }
+  };
+
   return (
     <div
       className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-6 ${className}`}
@@ -145,6 +254,7 @@ const AdminPanel = ({ className }) => {
             <nav className="-mb-px flex space-x-8">
               {[
                 { id: "users", label: "Users", icon: Users },
+                { id: "password-management", label: "Password Management", icon: Key },
                 { id: "settings", label: "Settings", icon: Settings },
               ].map((tab) => {
                 const IconComponent = tab.icon;
@@ -269,6 +379,91 @@ const AdminPanel = ({ className }) => {
           </Card>
         )}
 
+        {/* Password Management Tab */}
+        {activeTab === "password-management" && (
+          <div className="space-y-6">
+            <Card className="bg-white dark:bg-gray-900">
+              <CardHeader>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  Password Management
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  Reset passwords for users or update your own password
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
+                  <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
+                    Your Account
+                  </h4>
+                  <button
+                    onClick={handleSelfPasswordReset}
+                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <Lock className="h-4 w-4" />
+                    <span>Change My Password</span>
+                  </button>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
+                    User Password Reset
+                  </h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-gray-200 dark:border-gray-700">
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                            Name
+                          </th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                            Email
+                          </th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                            Role
+                          </th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {users.map((user) => (
+                          <tr
+                            key={user.id}
+                            className="border-b border-gray-100 dark:border-gray-800"
+                          >
+                            <td className="py-3 px-4 text-sm text-gray-900 dark:text-gray-100">
+                              {user.name}
+                            </td>
+                            <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                              {user.email}
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400">
+                                {user.role}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4">
+                              <button
+                                onClick={() => openPasswordResetModal(user)}
+                                className="flex items-center space-x-2 px-3 py-1 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
+                              >
+                                <Key className="h-3 w-3" />
+                                <span>Reset Password</span>
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         {/* Edit User Modal */}
         {editingUser && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -376,6 +571,118 @@ const AdminPanel = ({ className }) => {
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   Save
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Password Reset Modal */}
+        {passwordResetModal && selectedUserForReset && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-md">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                Reset Password
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Resetting password for: <span className="font-medium text-gray-900 dark:text-gray-100">{selectedUserForReset.name}</span>
+              </p>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    New Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showNewPassword ? "text" : "password"}
+                      value={passwordFormData.newPassword}
+                      onChange={(e) => {
+                        setPasswordFormData({ ...passwordFormData, newPassword: e.target.value });
+                        if (passwordErrors.newPassword) {
+                          setPasswordErrors({ ...passwordErrors, newPassword: "" });
+                        }
+                      }}
+                      className={`w-full px-3 py-2 pr-10 border ${
+                        passwordErrors.newPassword 
+                          ? "border-red-500 dark:border-red-500" 
+                          : "border-gray-300 dark:border-gray-600"
+                      } rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100`}
+                      placeholder="Enter new password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                    >
+                      {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  {passwordErrors.newPassword && (
+                    <p className="mt-1 text-xs text-red-600 dark:text-red-400">
+                      {passwordErrors.newPassword}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Confirm Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={passwordFormData.confirmPassword}
+                      onChange={(e) => {
+                        setPasswordFormData({ ...passwordFormData, confirmPassword: e.target.value });
+                        if (passwordErrors.confirmPassword) {
+                          setPasswordErrors({ ...passwordErrors, confirmPassword: "" });
+                        }
+                      }}
+                      className={`w-full px-3 py-2 pr-10 border ${
+                        passwordErrors.confirmPassword 
+                          ? "border-red-500 dark:border-red-500" 
+                          : "border-gray-300 dark:border-gray-600"
+                      } rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100`}
+                      placeholder="Confirm new password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  {passwordErrors.confirmPassword && (
+                    <p className="mt-1 text-xs text-red-600 dark:text-red-400">
+                      {passwordErrors.confirmPassword}
+                    </p>
+                  )}
+                </div>
+
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md">
+                  <p className="text-xs text-blue-800 dark:text-blue-300">
+                    Password must be at least 6 characters long
+                  </p>
+                </div>
+              </div>
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={closePasswordResetModal}
+                  disabled={isResettingPassword}
+                  className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handlePasswordReset}
+                  disabled={isResettingPassword}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                >
+                  {isResettingPassword && (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  )}
+                  <span>{isResettingPassword ? "Resetting..." : "Reset Password"}</span>
                 </button>
               </div>
             </div>
