@@ -32,7 +32,7 @@ export const apiFetch = async (url, options = {}, showToastOnError = true, redir
   } = options;
 
   // Get token from localStorage
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('thermacore_token');
   
   // Default headers
   const defaultHeaders = {

@@ -133,6 +133,9 @@ const AdminPanel = ({ className }) => {
     setPasswordErrors({});
     setShowNewPassword(false);
     setShowConfirmPassword(false);
+    setIsValidPassword(false);
+    setPasswordsMatch(false);
+    setErrorMessage("");
     setPasswordResetModal(true);
   };
 
@@ -183,16 +186,10 @@ const AdminPanel = ({ className }) => {
 
     try {
       const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://thermacoreapp.onrender.com';
-      const token = localStorage.getItem('thermacore_token');
 
       const response = await apiPost(
         `${API_BASE_URL}/api/users/${selectedUserForReset.id}/reset-password`,
-        { new_password: passwordFormData.newPassword },
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        }
+        { new_password: passwordFormData.newPassword }
       );
 
       const result = await response.json();
