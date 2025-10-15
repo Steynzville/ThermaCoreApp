@@ -711,9 +711,9 @@ const AdminPanel = ({ className }) => {
                   Cancel
                 </button>
                 <button
-                  type="submit"
+                  type="button"
                   onClick={handlePasswordReset}
-                  disabled={isResettingPassword}
+                  disabled={!isValidPassword || !passwordsMatch || isResettingPassword}
                   className={`px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 ${
                     isValidPassword && passwordsMatch && !isResettingPassword
                       ? 'bg-blue-600 text-white hover:bg-blue-700 active'
