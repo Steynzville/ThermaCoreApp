@@ -133,11 +133,11 @@ const AdminPanel = ({ className }) => {
     const isValidLength = newPass.length >= 6;
     const passwordsMatch = newPass === confirmPass && confirmPass.length > 0;
 
-    setValidation({
+    setValidation((prev) => ({
+      ...prev,
       isValidLength,
-      passwordsMatch,
-      isSubmitting: false
-    });
+      passwordsMatch
+    }));
   };
 
   // Password Management Functions
