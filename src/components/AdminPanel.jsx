@@ -140,6 +140,20 @@ const AdminPanel = ({ className }) => {
     }));
   };
 
+  // Helper functions for error display logic
+  const shouldShowLengthError = () => {
+    return !validation.apiError && 
+           passwordFormData.newPassword.length > 0 && 
+           !validation.isValidLength;
+  };
+
+  const shouldShowMismatchError = () => {
+    return !validation.apiError && 
+           validation.isValidLength && 
+           passwordFormData.confirmPassword.length > 0 && 
+           !validation.passwordsMatch;
+  };
+
   // Password Management Functions
   const openPasswordResetModal = (user) => {
     setSelectedUserForReset(user);
@@ -174,10 +188,10 @@ const AdminPanel = ({ className }) => {
       return;
     }
 
-    setValidation({
-      ...validation,
+    setValidation(prev => ({
+      ...prev,
       isSubmitting: true
-    });
+    }));
 
     try {
       const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://thermacoreapp.onrender.com';
@@ -199,11 +213,11 @@ const AdminPanel = ({ className }) => {
         closePasswordResetModal();
       } else {
         // Set validation with error state
-        setValidation({
-          ...validation,
+        setValidation(prev => ({
+          ...prev,
           isSubmitting: false,
           apiError: result.error || result.message || 'Failed to reset password'
-        });
+        }));
       }
     } catch (error) {
       console.error("Password reset error:", error);
@@ -218,11 +232,11 @@ const AdminPanel = ({ className }) => {
         errorMsg += error.message;
       }
       
-      setValidation({
-        ...validation,
+      setValidation(prev => ({
+        ...prev,
         isSubmitting: false,
         apiError: errorMsg
-      });
+      }));
     }
   };
 
@@ -683,7 +697,7 @@ const AdminPanel = ({ className }) => {
                   </div>
                 )}
 
-                {!validation.apiError && passwordFormData.newPassword.length > 0 && !validation.isValidLength && (
+                {shouldShowLengthError() && (
                   <div className="password-warning p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-md" role="alert" aria-live="polite">
                     <p className="text-xs text-yellow-800 dark:text-yellow-300">
                       Password must be at least 6 characters long
@@ -691,7 +705,7 @@ const AdminPanel = ({ className }) => {
                   </div>
                 )}
 
-                {!validation.apiError && validation.isValidLength && passwordFormData.confirmPassword.length > 0 && !validation.passwordsMatch && (
+                {shouldShowMismatchError() && (
                   <div className="password-warning p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-md" role="alert" aria-live="polite">
                     <p className="text-xs text-yellow-800 dark:text-yellow-300">
                       Passwords do not match
