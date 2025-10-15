@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 
@@ -122,9 +122,8 @@ describe('AdminPanel Component', () => {
     fireEvent.change(confirmPasswordInput, { target: { value: 'password456' } });
     
     // Check that Reset Password button is disabled when passwords don't match
-    const buttons = screen.getAllByRole('button', { name: /Reset Password/i });
-    // The last button should be the one in the modal (after the table buttons)
-    const modalResetButton = buttons[buttons.length - 1];
+    const modal = screen.getByTestId('password-reset-modal');
+    const modalResetButton = within(modal).getByRole('button', { name: /Reset Password/i });
     
     await waitFor(() => {
       expect(modalResetButton).toBeDisabled();
@@ -146,9 +145,8 @@ describe('AdminPanel Component', () => {
     fireEvent.change(confirmPasswordInput, { target: { value: '123' } });
     
     // Check that Reset Password button is disabled when password is too short
-    const buttons = screen.getAllByRole('button', { name: /Reset Password/i });
-    // The last button should be the one in the modal (after the table buttons)
-    const modalResetButton = buttons[buttons.length - 1];
+    const modal = screen.getByTestId('password-reset-modal');
+    const modalResetButton = within(modal).getByRole('button', { name: /Reset Password/i });
     
     await waitFor(() => {
       expect(modalResetButton).toBeDisabled();
@@ -177,8 +175,8 @@ describe('AdminPanel Component', () => {
     fireEvent.change(confirmPasswordInput, { target: { value: 'password123' } });
     
     // Check that Reset Password button is enabled when validation passes
-    const buttons = screen.getAllByRole('button', { name: /Reset Password/i });
-    const modalResetButton = buttons[buttons.length - 1];
+    const modal = screen.getByTestId('password-reset-modal');
+    const modalResetButton = within(modal).getByRole('button', { name: /Reset Password/i });
     
     await waitFor(() => {
       expect(modalResetButton).not.toBeDisabled();
@@ -299,8 +297,8 @@ describe('AdminPanel Component', () => {
     fireEvent.change(newPasswordInput, { target: { value: '123' } });
     fireEvent.change(confirmPasswordInput, { target: { value: '123' } });
     
-    const buttons = screen.getAllByRole('button', { name: /Reset Password/i });
-    const modalResetButton = buttons[buttons.length - 1];
+    const modal = screen.getByTestId('password-reset-modal');
+    const modalResetButton = within(modal).getByRole('button', { name: /Reset Password/i });
     
     // Button should be disabled
     expect(modalResetButton).toBeDisabled();

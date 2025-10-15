@@ -593,7 +593,7 @@ const AdminPanel = ({ className }) => {
         {/* Password Reset Modal */}
         {passwordResetModal && selectedUserForReset && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-md">
+            <div className="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-md" data-testid="password-reset-modal">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
                 Reset Password
               </h3>
