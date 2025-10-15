@@ -681,7 +681,7 @@ const AdminPanel = ({ className }) => {
                 </div>
 
                 {errorMessage && (
-                  <div className="error-message p-3 bg-red-50 dark:bg-red-900/20 rounded-md" data-testid="password-error">
+                  <div className="error-message p-3 bg-red-50 dark:bg-red-900/20 rounded-md" data-testid="password-error" role="alert">
                     <p className="text-xs text-red-600 dark:text-red-400">
                       {errorMessage}
                     </p>
@@ -689,7 +689,7 @@ const AdminPanel = ({ className }) => {
                 )}
 
                 {passwordFormData.newPassword.length > 0 && passwordFormData.newPassword.length < 6 && (
-                  <div className="password-warning p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-md">
+                  <div className="password-warning p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-md" role="alert" aria-live="polite">
                     <p className="text-xs text-yellow-800 dark:text-yellow-300">
                       Password must be at least 6 characters long
                     </p>
