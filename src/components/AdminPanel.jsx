@@ -77,11 +77,13 @@ const AdminPanel = ({ className }) => {
   });
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [passwordErrors, setPasswordErrors] = useState({});
-  const [isResettingPassword, setIsResettingPassword] = useState(false);
-  const [isValidPassword, setIsValidPassword] = useState(false);
-  const [passwordsMatch, setPasswordsMatch] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  
+  // Single validation state object for managing all validation
+  const [validation, setValidation] = useState({
+    isValidLength: false,
+    passwordsMatch: false,
+    isSubmitting: false
+  });
 
   const handleAddUser = () => {
     const name = prompt("Enter user's full name:");
@@ -126,16 +128,43 @@ const AdminPanel = ({ className }) => {
     }));
   };
 
+  // Real-time validation function that updates on every keystroke
+  const validateInRealTime = (newPass, confirmPass) => {
+    const isValidLength = newPass.length >= 6;
+    const passwordsMatch = newPass === confirmPass && confirmPass.length > 0;
+
+    setValidation((prev) => ({
+      ...prev,
+      isValidLength,
+      passwordsMatch
+    }));
+  };
+
+  // Helper functions for error display logic
+  const shouldShowLengthError = () => {
+    return !validation.apiError && 
+           passwordFormData.newPassword.length > 0 && 
+           !validation.isValidLength;
+  };
+
+  const shouldShowMismatchError = () => {
+    return !validation.apiError && 
+           validation.isValidLength && 
+           passwordFormData.confirmPassword.length > 0 && 
+           !validation.passwordsMatch;
+  };
+
   // Password Management Functions
   const openPasswordResetModal = (user) => {
     setSelectedUserForReset(user);
     setPasswordFormData({ newPassword: "", confirmPassword: "" });
-    setPasswordErrors({});
     setShowNewPassword(false);
     setShowConfirmPassword(false);
-    setIsValidPassword(false);
-    setPasswordsMatch(false);
-    setErrorMessage("");
+    setValidation({
+      isValidLength: false,
+      passwordsMatch: false,
+      isSubmitting: false
+    });
     setPasswordResetModal(true);
   };
 
@@ -143,53 +172,38 @@ const AdminPanel = ({ className }) => {
     setPasswordResetModal(false);
     setSelectedUserForReset(null);
     setPasswordFormData({ newPassword: "", confirmPassword: "" });
-    setPasswordErrors({});
     setShowNewPassword(false);
     setShowConfirmPassword(false);
-    setIsValidPassword(false);
-    setPasswordsMatch(false);
-    setErrorMessage("");
-  };
-
-  const validatePasswordForm = () => {
-    const errors = {};
-    
-    if (!passwordFormData.newPassword) {
-      errors.newPassword = "Password is required";
-    } else if (passwordFormData.newPassword.length < 6) {
-      errors.newPassword = "Password must be at least 6 characters long";
-    }
-
-    if (!passwordFormData.confirmPassword) {
-      errors.confirmPassword = "Please confirm your password";
-    } else if (passwordFormData.newPassword !== passwordFormData.confirmPassword) {
-      errors.confirmPassword = "Passwords do not match";
-    }
-
-    setPasswordErrors(errors);
-    return Object.keys(errors).length === 0;
+    setValidation({
+      isValidLength: false,
+      passwordsMatch: false,
+      isSubmitting: false
+    });
   };
 
   const handlePasswordReset = async () => {
-    // Use validation state variables for consistency
-    if (!isValidPassword) {
-      setErrorMessage('Password must be at least 6 characters long');
+    // Validation should already be checked by button disabled state
+    // But double-check here for safety
+    if (!validation.isValidLength || !validation.passwordsMatch) {
       return;
     }
-    if (!passwordsMatch) {
-      setErrorMessage('Passwords do not match');
-      return;
-    }
-    setErrorMessage('');
 
-    setIsResettingPassword(true);
+    setValidation(prev => ({
+      ...prev,
+      isSubmitting: true
+    }));
 
     try {
       const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://thermacoreapp.onrender.com';
 
       const response = await apiPost(
         `${API_BASE_URL}/api/users/${selectedUserForReset.id}/reset-password`,
-        { new_password: passwordFormData.newPassword }
+        { new_password: passwordFormData.newPassword },
+        {
+          showToastOnError: false, // We'll handle errors ourselves
+          retries: 2, // Retry failed requests twice
+          retryDelay: 1000 // Wait 1 second between retries
+        }
       );
 
       const result = await response.json();
@@ -198,13 +212,31 @@ const AdminPanel = ({ className }) => {
         toast.success(`Password reset successfully for ${selectedUserForReset.name}`);
         closePasswordResetModal();
       } else {
-        setErrorMessage('Failed to reset password: ' + (result.error || result.message || 'Unknown error'));
+        // Set validation with error state
+        setValidation(prev => ({
+          ...prev,
+          isSubmitting: false,
+          apiError: result.error || result.message || 'Failed to reset password'
+        }));
       }
     } catch (error) {
       console.error("Password reset error:", error);
-      setErrorMessage('Failed to reset password: ' + error.message);
-    } finally {
-      setIsResettingPassword(false);
+      
+      // Provide user-friendly error messages
+      let errorMsg = 'Failed to reset password. ';
+      if (error.message.includes('fetch') || error.message.includes('network')) {
+        errorMsg += 'Please check your internet connection and try again.';
+      } else if (error.message.includes('timeout')) {
+        errorMsg += 'The request timed out. Please try again.';
+      } else {
+        errorMsg += error.message;
+      }
+      
+      setValidation(prev => ({
+        ...prev,
+        isSubmitting: false,
+        apiError: errorMsg
+      }));
     }
   };
 
@@ -609,18 +641,10 @@ const AdminPanel = ({ className }) => {
                       onChange={(e) => {
                         const newPassword = e.target.value;
                         setPasswordFormData({ ...passwordFormData, newPassword });
-                        setIsValidPassword(newPassword.length >= 6);
-                        setPasswordsMatch(newPassword === passwordFormData.confirmPassword);
-                        if (passwordErrors.newPassword) {
-                          setPasswordErrors({ ...passwordErrors, newPassword: "" });
-                        }
-                        setErrorMessage('');
+                        // Update validation in real-time on every keystroke
+                        validateInRealTime(newPassword, passwordFormData.confirmPassword);
                       }}
-                      className={`w-full px-3 py-2 pr-10 border ${
-                        passwordErrors.newPassword 
-                          ? "border-red-500 dark:border-red-500" 
-                          : "border-gray-300 dark:border-gray-600"
-                      } rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100`}
+                      className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                       placeholder="Enter new password"
                     />
                     <button
@@ -631,11 +655,6 @@ const AdminPanel = ({ className }) => {
                       {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
-                  {passwordErrors.newPassword && (
-                    <p className="mt-1 text-xs text-red-600 dark:text-red-400">
-                      {passwordErrors.newPassword}
-                    </p>
-                  )}
                 </div>
 
                 <div>
@@ -649,17 +668,10 @@ const AdminPanel = ({ className }) => {
                       onChange={(e) => {
                         const newConfirmPassword = e.target.value;
                         setPasswordFormData({ ...passwordFormData, confirmPassword: newConfirmPassword });
-                        setPasswordsMatch(passwordFormData.newPassword === newConfirmPassword);
-                        if (passwordErrors.confirmPassword) {
-                          setPasswordErrors({ ...passwordErrors, confirmPassword: "" });
-                        }
-                        setErrorMessage('');
+                        // Update validation in real-time on every keystroke
+                        validateInRealTime(passwordFormData.newPassword, newConfirmPassword);
                       }}
-                      className={`w-full px-3 py-2 pr-10 border ${
-                        passwordErrors.confirmPassword 
-                          ? "border-red-500 dark:border-red-500" 
-                          : "border-gray-300 dark:border-gray-600"
-                      } rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100`}
+                      className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                       placeholder="Confirm new password"
                     />
                     <button
@@ -670,22 +682,22 @@ const AdminPanel = ({ className }) => {
                       {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
-                  {passwordErrors.confirmPassword && (
-                    <p className="mt-1 text-xs text-red-600 dark:text-red-400">
-                      {passwordErrors.confirmPassword}
-                    </p>
-                  )}
                 </div>
 
-                {errorMessage && (
+                {/* Single error/warning display with priority:
+                    1. API errors (only after validation passes)
+                    2. Password length validation (only when typing)
+                    3. Password match validation (only when typing confirm)
+                */}
+                {validation.apiError && (
                   <div className="error-message p-3 bg-red-50 dark:bg-red-900/20 rounded-md" data-testid="password-error" role="alert">
                     <p className="text-xs text-red-600 dark:text-red-400">
-                      {errorMessage}
+                      {validation.apiError}
                     </p>
                   </div>
                 )}
 
-                {passwordFormData.newPassword.length > 0 && !isValidPassword && (
+                {shouldShowLengthError() && (
                   <div className="password-warning p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-md" role="alert" aria-live="polite">
                     <p className="text-xs text-yellow-800 dark:text-yellow-300">
                       Password must be at least 6 characters long
@@ -693,7 +705,7 @@ const AdminPanel = ({ className }) => {
                   </div>
                 )}
 
-                {passwordFormData.confirmPassword.length > 0 && !passwordsMatch && (
+                {shouldShowMismatchError() && (
                   <div className="password-warning p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-md" role="alert" aria-live="polite">
                     <p className="text-xs text-yellow-800 dark:text-yellow-300">
                       Passwords do not match
@@ -701,16 +713,12 @@ const AdminPanel = ({ className }) => {
                   </div>
                 )}
 
-                <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md">
-                  <p className="text-xs text-blue-800 dark:text-blue-300">
-                    Password must be at least 6 characters long
-                  </p>
-                </div>
+                {/* Static info banner removed as it was causing confusion - validation is now shown dynamically only */}
               </div>
               <div className="flex justify-end space-x-3 mt-6">
                 <button
                   onClick={closePasswordResetModal}
-                  disabled={isResettingPassword}
+                  disabled={validation.isSubmitting}
                   className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-50"
                 >
                   Cancel
@@ -718,17 +726,17 @@ const AdminPanel = ({ className }) => {
                 <button
                   type="button"
                   onClick={handlePasswordReset}
-                  disabled={!isValidPassword || !passwordsMatch || isResettingPassword}
+                  disabled={!validation.isValidLength || !validation.passwordsMatch || validation.isSubmitting}
                   className={`px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 ${
-                    isValidPassword && passwordsMatch && !isResettingPassword
+                    validation.isValidLength && validation.passwordsMatch && !validation.isSubmitting
                       ? 'bg-blue-600 text-white hover:bg-blue-700 active'
                       : 'bg-gray-400 text-gray-200'
                   }`}
                 >
-                  {isResettingPassword && (
+                  {validation.isSubmitting && (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   )}
-                  <span>{isResettingPassword ? "Resetting..." : "Reset Password"}</span>
+                  <span>{validation.isSubmitting ? "Resetting..." : "Reset Password"}</span>
                 </button>
               </div>
             </div>

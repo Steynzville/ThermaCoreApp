@@ -72,10 +72,9 @@ describe('AdminPanel Password Reset Validation - Real-time Updates', () => {
     fireEvent.change(newPasswordInput, { target: { value: '12345' } });
     
     await waitFor(() => {
-      // Should have the warning message (not the static info banner)
-      const warnings = screen.getAllByText('Password must be at least 6 characters long');
-      // At least 2: one static info banner + one validation warning
-      expect(warnings.length).toBeGreaterThanOrEqual(2);
+      // Should have the validation warning (static info banner removed per requirements)
+      const warning = screen.getByText('Password must be at least 6 characters long');
+      expect(warning).toBeInTheDocument();
     });
     
     // Button should be disabled
@@ -98,19 +97,18 @@ describe('AdminPanel Password Reset Validation - Real-time Updates', () => {
     fireEvent.change(newPasswordInput, { target: { value: '12345' } });
     
     await waitFor(() => {
-      const warnings = screen.getAllByText('Password must be at least 6 characters long');
-      expect(warnings.length).toBeGreaterThanOrEqual(2);
+      const warning = screen.getByText('Password must be at least 6 characters long');
+      expect(warning).toBeInTheDocument();
     });
     
-    // Now type 6 characters - warning should disappear (only static info remains)
+    // Now type 6 characters - warning should disappear completely (no static info banner per requirements)
     fireEvent.change(newPasswordInput, { target: { value: '123456' } });
     fireEvent.change(confirmPasswordInput, { target: { value: '123456' } });
     
     await waitFor(() => {
-      // Should only have the static info banner, not the validation warning
-      const warnings = screen.getAllByText('Password must be at least 6 characters long');
-      // Only 1: the static info banner
-      expect(warnings.length).toBe(1);
+      // Warning should be completely gone (no static info banner)
+      const warning = screen.queryByText('Password must be at least 6 characters long');
+      expect(warning).not.toBeInTheDocument();
     });
     
     // Button should be enabled now
@@ -250,7 +248,12 @@ describe('AdminPanel Password Reset Validation - Real-time Updates', () => {
     await waitFor(() => {
       expect(mockApiPost).toHaveBeenCalledWith(
         expect.stringContaining('/api/users/'),
-        { new_password: 'newPassword123' }
+        { new_password: 'newPassword123' },
+        expect.objectContaining({
+          showToastOnError: false,
+          retries: 2,
+          retryDelay: 1000
+        })
       );
     });
   });
