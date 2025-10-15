@@ -120,15 +120,13 @@ describe('AdminPanel Component', () => {
     fireEvent.change(newPasswordInput, { target: { value: 'password123' } });
     fireEvent.change(confirmPasswordInput, { target: { value: 'password456' } });
     
-    // Click Reset Password button - find button by role within the modal
+    // Check that Reset Password button is disabled when passwords don't match
     const buttons = screen.getAllByRole('button', { name: /Reset Password/i });
     // The last button should be the one in the modal (after the table buttons)
     const modalResetButton = buttons[buttons.length - 1];
-    fireEvent.click(modalResetButton);
     
-    // Check for validation error
     await waitFor(() => {
-      expect(screen.getByText('Passwords do not match')).toBeInTheDocument();
+      expect(modalResetButton).toBeDisabled();
     });
   });
 
@@ -146,17 +144,43 @@ describe('AdminPanel Component', () => {
     fireEvent.change(newPasswordInput, { target: { value: '123' } });
     fireEvent.change(confirmPasswordInput, { target: { value: '123' } });
     
-    // Click Reset Password button - find button by role within the modal
+    // Check that Reset Password button is disabled when password is too short
     const buttons = screen.getAllByRole('button', { name: /Reset Password/i });
     // The last button should be the one in the modal (after the table buttons)
     const modalResetButton = buttons[buttons.length - 1];
-    fireEvent.click(modalResetButton);
     
-    // Check for validation error - there will be multiple instances (info banner + error)
-    // So we check that at least 2 exist (banner always present + error message after validation)
+    await waitFor(() => {
+      expect(modalResetButton).toBeDisabled();
+    });
+    
+    // Check for validation warning - there will be multiple instances (info banner + warning)
+    // So we check that at least 2 exist (banner always present + warning message)
     await waitFor(() => {
       const errorMessages = screen.getAllByText('Password must be at least 6 characters long');
       expect(errorMessages.length).toBeGreaterThanOrEqual(2);
+    });
+  });
+
+  it('should enable button when passwords are valid and match', async () => {
+    renderWithProviders(<AdminPanel />);
+    
+    // Navigate to Password Management and open modal
+    fireEvent.click(screen.getByText('Password Management'));
+    fireEvent.click(screen.getByText('Change My Password'));
+    
+    // Fill in valid matching passwords
+    const newPasswordInput = screen.getByPlaceholderText('Enter new password');
+    const confirmPasswordInput = screen.getByPlaceholderText('Confirm new password');
+    
+    fireEvent.change(newPasswordInput, { target: { value: 'password123' } });
+    fireEvent.change(confirmPasswordInput, { target: { value: 'password123' } });
+    
+    // Check that Reset Password button is enabled when validation passes
+    const buttons = screen.getAllByRole('button', { name: /Reset Password/i });
+    const modalResetButton = buttons[buttons.length - 1];
+    
+    await waitFor(() => {
+      expect(modalResetButton).not.toBeDisabled();
     });
   });
 

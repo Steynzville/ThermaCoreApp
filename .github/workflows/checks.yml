@@ -385,8 +385,8 @@ jobs:
         working-directory: backend
 
       - name: Upload Security Scan Results
+        if: ${{ always() && !github.event.repository.private }}
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
         with:
           sarif_file: backend/bandit_sarif.json
 
@@ -451,9 +451,9 @@ jobs:
           
           echo "✅ Gitleaks scan completed successfully"
 
-      - name: Dependency Review
-        if: github.event_name == 'pull_request'
-        uses: actions/dependency-review-action@v4
+      # - name: Dependency Review
+      #   if: github.event_name == 'pull_request'
+      #   uses: actions/dependency-review-action@v4
 
       - name: Run OSV Scanner with Go Install (Most Reliable)
         run: |

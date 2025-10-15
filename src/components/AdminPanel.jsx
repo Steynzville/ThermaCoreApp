@@ -79,6 +79,9 @@ const AdminPanel = ({ className }) => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordErrors, setPasswordErrors] = useState({});
   const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [isValidPassword, setIsValidPassword] = useState(false);
+  const [passwordsMatch, setPasswordsMatch] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const handleAddUser = () => {
     const name = prompt("Enter user's full name:");
@@ -140,6 +143,9 @@ const AdminPanel = ({ className }) => {
     setPasswordErrors({});
     setShowNewPassword(false);
     setShowConfirmPassword(false);
+    setIsValidPassword(false);
+    setPasswordsMatch(false);
+    setErrorMessage("");
   };
 
   const validatePasswordForm = () => {
@@ -162,9 +168,16 @@ const AdminPanel = ({ className }) => {
   };
 
   const handlePasswordReset = async () => {
-    if (!validatePasswordForm()) {
+    // Double-check validation before submitting
+    if (passwordFormData.newPassword.length < 6) {
+      setErrorMessage('Password must be at least 6 characters long');
       return;
     }
+    if (passwordFormData.newPassword !== passwordFormData.confirmPassword) {
+      setErrorMessage('Passwords do not match');
+      return;
+    }
+    setErrorMessage('');
 
     setIsResettingPassword(true);
 
@@ -188,11 +201,11 @@ const AdminPanel = ({ className }) => {
         toast.success(`Password reset successfully for ${selectedUserForReset.name}`);
         closePasswordResetModal();
       } else {
-        toast.error(result.error || result.message || "Failed to reset password");
+        setErrorMessage('Failed to reset password: ' + (result.error || result.message || 'Unknown error'));
       }
     } catch (error) {
       console.error("Password reset error:", error);
-      toast.error(error.message || "Network error. Please try again.");
+      setErrorMessage('Failed to reset password: ' + error.message);
     } finally {
       setIsResettingPassword(false);
     }
@@ -597,10 +610,14 @@ const AdminPanel = ({ className }) => {
                       type={showNewPassword ? "text" : "password"}
                       value={passwordFormData.newPassword}
                       onChange={(e) => {
-                        setPasswordFormData({ ...passwordFormData, newPassword: e.target.value });
+                        const newPassword = e.target.value;
+                        setPasswordFormData({ ...passwordFormData, newPassword });
+                        setIsValidPassword(newPassword.length >= 6);
+                        setPasswordsMatch(newPassword === passwordFormData.confirmPassword);
                         if (passwordErrors.newPassword) {
                           setPasswordErrors({ ...passwordErrors, newPassword: "" });
                         }
+                        setErrorMessage('');
                       }}
                       className={`w-full px-3 py-2 pr-10 border ${
                         passwordErrors.newPassword 
@@ -633,10 +650,13 @@ const AdminPanel = ({ className }) => {
                       type={showConfirmPassword ? "text" : "password"}
                       value={passwordFormData.confirmPassword}
                       onChange={(e) => {
-                        setPasswordFormData({ ...passwordFormData, confirmPassword: e.target.value });
+                        const newConfirmPassword = e.target.value;
+                        setPasswordFormData({ ...passwordFormData, confirmPassword: newConfirmPassword });
+                        setPasswordsMatch(passwordFormData.newPassword === newConfirmPassword);
                         if (passwordErrors.confirmPassword) {
                           setPasswordErrors({ ...passwordErrors, confirmPassword: "" });
                         }
+                        setErrorMessage('');
                       }}
                       className={`w-full px-3 py-2 pr-10 border ${
                         passwordErrors.confirmPassword 
@@ -660,6 +680,22 @@ const AdminPanel = ({ className }) => {
                   )}
                 </div>
 
+                {errorMessage && (
+                  <div className="error-message p-3 bg-red-50 dark:bg-red-900/20 rounded-md" data-testid="password-error" role="alert">
+                    <p className="text-xs text-red-600 dark:text-red-400">
+                      {errorMessage}
+                    </p>
+                  </div>
+                )}
+
+                {passwordFormData.newPassword.length > 0 && passwordFormData.newPassword.length < 6 && (
+                  <div className="password-warning p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-md" role="alert" aria-live="polite">
+                    <p className="text-xs text-yellow-800 dark:text-yellow-300">
+                      Password must be at least 6 characters long
+                    </p>
+                  </div>
+                )}
+
                 <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md">
                   <p className="text-xs text-blue-800 dark:text-blue-300">
                     Password must be at least 6 characters long
@@ -675,9 +711,14 @@ const AdminPanel = ({ className }) => {
                   Cancel
                 </button>
                 <button
+                  type="button"
                   onClick={handlePasswordReset}
-                  disabled={isResettingPassword}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                  disabled={!isValidPassword || !passwordsMatch || isResettingPassword}
+                  className={`px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 ${
+                    isValidPassword && passwordsMatch && !isResettingPassword
+                      ? 'bg-blue-600 text-white hover:bg-blue-700 active'
+                      : 'bg-gray-400 text-gray-200'
+                  }`}
                 >
                   {isResettingPassword && (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
