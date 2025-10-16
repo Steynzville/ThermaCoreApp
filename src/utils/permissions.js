@@ -97,6 +97,24 @@ export const isViewerOnly = (backendRole) => {
 };
 
 /**
+ * Check if user can view advanced analytics and SCADA analytics
+ * @param {string} backendRole - Backend role (admin, operator, or viewer)
+ * @returns {boolean} True if user can view analytics
+ */
+export const canViewAnalytics = (backendRole) => {
+  return ['admin', 'operator', 'viewer'].includes(backendRole);
+};
+
+/**
+ * Check if user can view protocol manager
+ * @param {string} backendRole - Backend role (admin, operator, or viewer)
+ * @returns {boolean} True if user can view protocols
+ */
+export const canViewProtocols = (backendRole) => {
+  return ['admin', 'operator', 'viewer'].includes(backendRole);
+};
+
+/**
  * Get all permissions for a given backend role
  * @param {string} backendRole - Backend role (admin, operator, or viewer)
  * @returns {Object} Object containing all permission flags
@@ -112,6 +130,8 @@ export const getPermissions = (backendRole) => {
     canViewUnits: canViewUnits(backendRole),
     canViewUsers: canViewUsers(backendRole),
     isViewerOnly: isViewerOnly(backendRole),
+    canViewAnalytics: canViewAnalytics(backendRole),
+    canViewProtocols: canViewProtocols(backendRole),
   };
 };
 
