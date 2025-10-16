@@ -12,6 +12,12 @@ const QuickActionTile = memo(({ action, handleQuickActionClick, permissions }) =
   if (action.requiresSales && !permissions?.canViewSales) {
     return null;
   }
+  if (action.requiresAnalytics && !permissions?.canViewAnalytics) {
+    return null;
+  }
+  if (action.requiresProtocols && !permissions?.canViewProtocols) {
+    return null;
+  }
   return (
     <div
       key={action.name}
@@ -33,6 +39,8 @@ const Dashboard = ({ userRole }) => {
     { name: "Generate Report", link: "/quick-action/generate-report" },
     { name: "Manage Users", link: "/admin", requiresAdminPanel: true },
     { name: "System Diagnostics", link: "/quick-action/system-diagnostics" },
+    { name: "Advanced Analytics", link: "/advanced-analytics", requiresAnalytics: true },
+    { name: "Protocol Manager", link: "/protocol-manager", requiresProtocols: true },
   ];
 
   const handleQuickActionClick = useCallback((link) => {

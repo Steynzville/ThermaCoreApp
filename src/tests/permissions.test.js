@@ -9,6 +9,8 @@ import {
   canViewUnits,
   canViewUsers,
   isViewerOnly,
+  canViewAnalytics,
+  canViewProtocols,
   getPermissions,
   getFrontendRole,
   getRoleDisplayName,
@@ -129,6 +131,22 @@ describe('Permission Helper Functions', () => {
     });
   });
 
+  describe('canViewAnalytics', () => {
+    it('should allow all roles to view analytics', () => {
+      expect(canViewAnalytics('admin')).toBe(true);
+      expect(canViewAnalytics('operator')).toBe(true);
+      expect(canViewAnalytics('viewer')).toBe(true);
+    });
+  });
+
+  describe('canViewProtocols', () => {
+    it('should allow all roles to view protocols', () => {
+      expect(canViewProtocols('admin')).toBe(true);
+      expect(canViewProtocols('operator')).toBe(true);
+      expect(canViewProtocols('viewer')).toBe(true);
+    });
+  });
+
   describe('getPermissions', () => {
     it('should return all permissions for admin role', () => {
       const permissions = getPermissions('admin');
@@ -142,6 +160,8 @@ describe('Permission Helper Functions', () => {
         canViewUnits: true,
         canViewUsers: true,
         isViewerOnly: false,
+        canViewAnalytics: true,
+        canViewProtocols: true,
       });
     });
 
@@ -157,6 +177,8 @@ describe('Permission Helper Functions', () => {
         canViewUnits: true,
         canViewUsers: true,
         isViewerOnly: false,
+        canViewAnalytics: true,
+        canViewProtocols: true,
       });
     });
 
@@ -172,6 +194,8 @@ describe('Permission Helper Functions', () => {
         canViewUnits: true,
         canViewUsers: true,
         isViewerOnly: true,
+        canViewAnalytics: true,
+        canViewProtocols: true,
       });
     });
   });
