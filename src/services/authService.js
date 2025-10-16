@@ -255,14 +255,18 @@ export const requestPasswordReset = async (email) => {
     const result = await response.json();
 
     if (response.ok && result.success) {
+      // Read nested message field from API response
+      const okMsg = result?.data?.message ?? result?.message;
       return {
         success: true,
-        message: result.message || "If the email exists, a password reset link has been sent",
+        message: okMsg || "If the email exists, a password reset link has been sent",
       };
     } else {
+      // Read error message from various possible locations
+      const errMsg = result?.error?.message ?? result?.data?.message ?? result?.message;
       return {
         success: false,
-        message: result.message || "Unable to process password reset request. Please try again.",
+        message: errMsg || "Unable to process password reset request. Please try again.",
       };
     }
   } catch (error) {

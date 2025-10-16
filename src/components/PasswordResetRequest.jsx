@@ -145,6 +145,8 @@ const PasswordResetRequest = () => {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className={styles.passwordToggleButton}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-pressed={showPassword}
               >
                 {showPassword ? <Eye size={20} /> : <EyeOff size={20} />}
               </button>

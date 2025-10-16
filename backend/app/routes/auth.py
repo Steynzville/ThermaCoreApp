@@ -845,10 +845,10 @@ def forgot_password(data):
             from datetime import timedelta
             reset_token = secrets.token_urlsafe(32)
             
-            # Ensure user object has reset_token attributes (for backward compatibility)
-            if not hasattr(user, 'reset_token'):
+            # Ensure user object has both reset_token fields (for backward compatibility)
+            if not all(hasattr(user, f) for f in ('reset_token', 'reset_token_expires')):
                 current_app.logger.error(
-                    "User model missing reset_token field. Run database migration.",
+                    "User model missing reset_token fields. Run database migration.",
                     extra={"event": "missing_reset_token_field"},
                 )
                 # Return success anyway to prevent email enumeration
