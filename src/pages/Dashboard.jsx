@@ -23,6 +23,8 @@ const Dashboard = ({ userRole }) => {
   const { units, loading } = useUnits();
 
   const quickActions = [
+    { name: "Advanced Analytics", link: "/advanced-analytics", adminOnly: true },
+    { name: "Protocol Manager", link: "/protocol-manager", adminOnly: true },
     { name: "Sales Analytics", link: "/analytics" },
     { name: "Generate Report", link: "/quick-action/generate-report" },
     { name: "Manage Users", link: "/admin", adminOnly: true },
