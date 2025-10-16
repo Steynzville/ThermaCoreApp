@@ -849,7 +849,8 @@ class TestSecurityEnhancements:
             warnings.warn("Database migration for reset_token fields not applied")
         
         # The important part is that the API returned success
-        assert "If the email exists" in data.get("message", "")
+        # Check message in the nested data structure
+        assert "If the email exists" in data.get("data", {}).get("message", "")
 
     def test_forgot_password_invalid_email(self, client):
         """Test forgot password with invalid email (should still return success for security)."""
