@@ -143,7 +143,8 @@ const LoginScreen = ({ error, setError }) => {
 
   const handleForgotPassword = useCallback(() => {
     console.log("Forgot password clicked!");
-  }, []);
+    navigate("/forgot-password");
+  }, [navigate]);
 
   return (
     <div className={styles.pageWrapper}>

@@ -242,32 +242,74 @@ export const register = (userData) => {
  * @param {string} email - User email
  * @returns {Promise<Object>} Password reset result
  */
-export const requestPasswordReset = (email) => {
-  // In the future, this would be replaced with:
-  // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  // return fetch(`${API_BASE_URL}/auth/password-reset`, {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify({ email })
-  // }).then(response => response.json());
+export const requestPasswordReset = async (email) => {
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://thermacoreapp.onrender.com';
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
 
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      const user = mockUsers.find((u) => u.email === email);
+    const result = await response.json();
 
-      if (user) {
-        resolve({
-          success: true,
-          message: "Password reset email sent",
-        });
-      } else {
-        reject({
-          success: false,
-          message: "Email not found",
-        });
-      }
-    }, 1000);
-  });
+    if (response.ok && result.success) {
+      return {
+        success: true,
+        message: result.message || "If the email exists, a password reset link has been sent",
+      };
+    } else {
+      return {
+        success: false,
+        message: result.message || "Unable to process password reset request. Please try again.",
+      };
+    }
+  } catch (error) {
+    console.error('Password reset request error:', error);
+    return {
+      success: false,
+      message: "Unable to process password reset request. Please try again.",
+    };
+  }
+};
+
+/**
+ * Reset password with token
+ * @param {string} token - Reset token
+ * @param {string} newPassword - New password
+ * @returns {Promise<Object>} Password reset result
+ */
+export const resetPassword = async (token, newPassword) => {
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://thermacoreapp.onrender.com';
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/auth/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, new_password: newPassword })
+    });
+
+    const result = await response.json();
+
+    if (response.ok && result.success) {
+      return {
+        success: true,
+        message: result.message || "Password reset successfully",
+      };
+    } else {
+      return {
+        success: false,
+        message: result.message || "Invalid or expired reset token. Please request a new one.",
+      };
+    }
+  } catch (error) {
+    console.error('Password reset error:', error);
+    return {
+      success: false,
+      message: "Unable to reset password. Please try again.",
+    };
+  }
 };
 
 /**

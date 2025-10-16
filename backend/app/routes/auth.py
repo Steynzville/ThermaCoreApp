@@ -14,7 +14,15 @@ from webargs.flaskparser import use_args
 
 from app import db
 from app.models import User, Role
-from app.utils.schemas import LoginSchema, UserCreateSchema, UserSchema, TokenSchema, PasswordChangeSchema
+from app.utils.schemas import (
+    LoginSchema,
+    UserCreateSchema,
+    UserSchema,
+    TokenSchema,
+    PasswordChangeSchema,
+    ForgotPasswordSchema,
+    PasswordResetSchema,
+)
 from app.utils.helpers import get_current_user_id
 from app.utils.error_handler import SecurityAwareErrorHandler
 from app.middleware.rate_limit import auth_rate_limit, standard_rate_limit
@@ -790,4 +798,192 @@ def change_password(data):
         db.session.rollback()
         return SecurityAwareErrorHandler.handle_service_error(
             e, "internal_error", "Password change", 500
+        )
+
+
+@auth_bp.route("/auth/forgot-password", methods=["POST"])
+@track_request_id
+@auth_rate_limit
+@use_args(ForgotPasswordSchema, location="json")
+def forgot_password(data):
+    """
+    Request password reset token.
+    ---
+    tags:
+      - Authentication
+    parameters:
+      - in: body
+        name: email_data
+        schema:
+          $ref: '#/definitions/ForgotPasswordSchema'
+    responses:
+      200:
+        description: Password reset email sent (or user not found - same response for security)
+      400:
+        description: Validation error
+      429:
+        description: Rate limit exceeded
+    """
+    try:
+        email = data.get("email")
+        
+        current_app.logger.info(
+            f"Password reset requested for email: {email}",
+            extra={
+                "event": "password_reset_request",
+                "email": email,
+                "ip_address": request.remote_addr,
+            },
+        )
+
+        # Find user by email
+        user = User.query.filter_by(email=email).first()
+
+        # Always return success response to prevent email enumeration
+        if user and user.is_active:
+            # Generate secure token
+            from datetime import timedelta
+            reset_token = secrets.token_urlsafe(32)
+            user.reset_token = reset_token
+            user.reset_token_expires = datetime.now(timezone.utc) + timedelta(hours=1)
+            
+            db.session.commit()
+
+            current_app.logger.info(
+                f"Password reset token generated for user: {user.username}",
+                extra={
+                    "event": "password_reset_token_generated",
+                    "user_id": user.id,
+                    "username": user.username,
+                },
+            )
+
+            # In production, send email with reset link here
+            # For now, we'll just log the token (DO NOT DO THIS IN PRODUCTION)
+            if current_app.config.get("DEBUG"):
+                current_app.logger.debug(
+                    f"Password reset token for {email}: {reset_token}",
+                    extra={"event": "password_reset_token_debug"},
+                )
+
+        # Always return success to prevent email enumeration
+        return SecurityAwareErrorHandler.create_success_response(
+            {"message": "If the email exists, a password reset link has been sent"},
+            "Password reset email sent",
+            200,
+        )
+
+    except Exception as e:
+        current_app.logger.error(
+            f"Error processing password reset request: {e}",
+            exc_info=True,
+            extra={"event": "password_reset_request_error"},
+        )
+        db.session.rollback()
+        return SecurityAwareErrorHandler.handle_service_error(
+            e, "internal_error", "Password reset request", 500
+        )
+
+
+@auth_bp.route("/auth/reset-password", methods=["POST"])
+@track_request_id
+@auth_rate_limit
+@use_args(PasswordResetSchema, location="json")
+def reset_password(data):
+    """
+    Reset password using token.
+    ---
+    tags:
+      - Authentication
+    parameters:
+      - in: body
+        name: reset_data
+        schema:
+          $ref: '#/definitions/PasswordResetSchema'
+    responses:
+      200:
+        description: Password reset successfully
+      400:
+        description: Invalid or expired token
+      429:
+        description: Rate limit exceeded
+    """
+    try:
+        token = data.get("token")
+        new_password = data.get("new_password")
+
+        current_app.logger.info(
+            "Password reset attempt with token",
+            extra={
+                "event": "password_reset_attempt",
+                "ip_address": request.remote_addr,
+            },
+        )
+
+        # Find user with valid token
+        user = User.query.filter_by(reset_token=token).first()
+
+        if not user:
+            current_app.logger.warning(
+                "Password reset failed: Invalid token",
+                extra={"event": "password_reset_invalid_token"},
+            )
+            return SecurityAwareErrorHandler.handle_service_error(
+                Exception("Invalid or expired reset token"),
+                "authentication_error",
+                "Password reset",
+                400,
+            )
+
+        # Check if token is expired
+        if not user.reset_token_expires or user.reset_token_expires < datetime.now(timezone.utc):
+            current_app.logger.warning(
+                f"Password reset failed: Expired token for user {user.username}",
+                extra={
+                    "event": "password_reset_expired_token",
+                    "username": user.username,
+                },
+            )
+            # Clear expired token
+            user.reset_token = None
+            user.reset_token_expires = None
+            db.session.commit()
+            
+            return SecurityAwareErrorHandler.handle_service_error(
+                Exception("Invalid or expired reset token"),
+                "authentication_error",
+                "Password reset",
+                400,
+            )
+
+        # Reset password
+        user.set_password(new_password)
+        user.reset_token = None
+        user.reset_token_expires = None
+        db.session.commit()
+
+        current_app.logger.info(
+            f"Password reset successful for user: {user.username}",
+            extra={
+                "event": "password_reset_success",
+                "user_id": user.id,
+                "username": user.username,
+            },
+        )
+
+        return SecurityAwareErrorHandler.create_success_response(
+            {"message": "Password reset successfully"},
+            "Password reset successfully",
+            200,
+        )
+
+    except Exception as e:
+        current_app.logger.error(
+            f"Error resetting password: {e}",
+            exc_info=True,
+            extra={"event": "password_reset_error"},
+        )
+        db.session.rollback()
+        return SecurityAwareErrorHandler.handle_service_error(
+            e, "internal_error", "Password reset", 500
         )
