@@ -844,6 +844,20 @@ def forgot_password(data):
             # Generate secure token
             from datetime import timedelta
             reset_token = secrets.token_urlsafe(32)
+            
+            # Ensure user object has reset_token attributes (for backward compatibility)
+            if not hasattr(user, 'reset_token'):
+                current_app.logger.error(
+                    "User model missing reset_token field. Run database migration.",
+                    extra={"event": "missing_reset_token_field"},
+                )
+                # Return success anyway to prevent email enumeration
+                return SecurityAwareErrorHandler.create_success_response(
+                    {"message": "If the email exists, a password reset link has been sent"},
+                    "Password reset email sent",
+                    200,
+                )
+            
             user.reset_token = reset_token
             user.reset_token_expires = datetime.now(timezone.utc) + timedelta(hours=1)
             
@@ -936,7 +950,15 @@ def reset_password(data):
             )
 
         # Check if token is expired
-        if not user.reset_token_expires or user.reset_token_expires < datetime.now(timezone.utc):
+        # Handle timezone comparison - ensure both datetimes are timezone-aware
+        current_time = datetime.now(timezone.utc)
+        
+        # If reset_token_expires is naive (no timezone), make it timezone-aware (UTC)
+        token_expires = user.reset_token_expires
+        if token_expires and token_expires.tzinfo is None:
+            token_expires = token_expires.replace(tzinfo=timezone.utc)
+        
+        if not token_expires or token_expires < current_time:
             current_app.logger.warning(
                 f"Password reset failed: Expired token for user {user.username}",
                 extra={
