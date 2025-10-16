@@ -21,7 +21,7 @@ import WaterIcon3D from "./WaterIcon3D";
 const GridView = ({ className }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { userRole } = useAuth();
+  const { userRole, permissions } = useAuth();
   const { units: contextUnits, loading } = useUnits();
 
   const [localUnits, setLocalUnits] = useState([]);
@@ -87,8 +87,9 @@ const GridView = ({ className }) => {
       lastMaintenance: `2024-0${(parseInt(unit.id.slice(-1)) % 9) + 2}-10`,
     }));
 
-    return userRole === "admin" ? mappedUnits : mappedUnits.slice(0, 6);
-  }, [contextUnits, userRole, alertsData]);
+    // Admins can see all units, others see limited units
+    return permissions?.canViewAllUnits ? mappedUnits : mappedUnits.slice(0, 6);
+  }, [contextUnits, permissions, alertsData]);
 
   useEffect(() => {
     setLocalUnits(processedUnits);
