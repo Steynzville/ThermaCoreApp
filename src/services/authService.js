@@ -91,7 +91,7 @@ export const login = async (identifier, password) => {
       };
     }
   } catch (error) {
-    // For any login failure (network, auth, etc), show authentication error
+    // For any login failure (network, auth, etc.), show authentication error
     console.error('Login error:', error);
     return {
       success: false,
