@@ -1,15 +1,24 @@
 import {
   Database,
+  Edit,
+  Eye,
+  EyeOff,
   Key,
+  Lock,
+  Plus,
   Settings,
   Shield,
+  Trash2,
   Users,
 } from "lucide-react";
-import { useState } from "react";
+import React, { useState } from "react";
 import { toast } from "sonner";
 
 import { useAuth } from "../context/AuthContext";
 import { apiPost } from "../utils/apiFetch";
+import PageHeader from "./PageHeader";
+import { Button } from "./ui/button";
+import { Card, CardContent, CardHeader } from "./ui/card";
 
 const initialUsers = [
   {
