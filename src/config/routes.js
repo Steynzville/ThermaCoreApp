@@ -103,13 +103,13 @@ const routes = [
     path: "/advanced-analytics",
     component: AdvancedAnalyticsDashboard,
     isProtected: true,
-    roles: ["admin", "user"],
+    roles: [],
   },
   {
     path: "/protocol-manager",
     component: MultiProtocolManager,
     isProtected: true,
-    roles: ["admin", "user"],
+    roles: [],
   },
   {
     path: "/system-health",

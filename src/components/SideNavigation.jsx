@@ -31,7 +31,7 @@ import playSound from "../utils/audioPlayer";
 
 const EnhancedSideNavigation = () => {
   const { isCollapsed, setIsCollapsed } = useSidebar();
-  const { userRole, logout } = useAuth();
+  const { userRole, permissions, logout } = useAuth();
   const { settings } = useSettings();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const location = useLocation();
@@ -116,7 +116,7 @@ const EnhancedSideNavigation = () => {
       icon: ChartBar,
       href: "/advanced-analytics",
       badge: null,
-      roles: ["admin", "user"],
+      requiresPermission: "canViewAnalytics",
     },
     {
       id: "protocol-manager",
@@ -124,7 +124,7 @@ const EnhancedSideNavigation = () => {
       icon: Cpu,
       href: "/protocol-manager",
       badge: null,
-      roles: ["admin", "user"],
+      requiresPermission: "canViewProtocols",
     },
     {
       id: "analytics",
@@ -160,9 +160,14 @@ const EnhancedSideNavigation = () => {
     },
   ];
 
-  const filteredNavItems = navigationItems.filter((item) =>
-    item.roles.includes(userRole),
-  );
+  const filteredNavItems = navigationItems.filter((item) => {
+    // If item requires a specific permission, check it
+    if (item.requiresPermission) {
+      return permissions?.[item.requiresPermission] === true;
+    }
+    // Otherwise, check role-based access
+    return item.roles?.includes(userRole);
+  });
 
   const handleNavClick = (item) => {
     navigate(item.href);
