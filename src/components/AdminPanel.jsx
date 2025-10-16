@@ -148,8 +148,20 @@ const AdminPanel = ({ className }) => {
 
   const handleCreateUser = async () => {
     // Validate form
-    if (!newUserFormData.username || !newUserFormData.email || !newUserFormData.password || !newUserFormData.roleId) {
-      toast.error('Please fill in all required fields');
+    if (!newUserFormData.username) {
+      toast.error('Username is required');
+      return;
+    }
+    if (!newUserFormData.email) {
+      toast.error('Email is required');
+      return;
+    }
+    if (!newUserFormData.password) {
+      toast.error('Password is required');
+      return;
+    }
+    if (!newUserFormData.roleId) {
+      toast.error('Role is required');
       return;
     }
 
