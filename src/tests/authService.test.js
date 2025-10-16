@@ -100,7 +100,7 @@ describe("authService", () => {
       const result = await login("wronguser", "wrongpass");
 
       expect(result.success).toBe(false);
-      expect(result.message).toBe("Invalid credentials");
+      expect(result.message).toBe("Invalid username or password. Please try again.");
     });
 
     it("should handle network errors gracefully", async () => {
@@ -111,7 +111,7 @@ describe("authService", () => {
       const result = await login("testuser", "password");
 
       expect(result.success).toBe(false);
-      expect(result.message).toContain("Network error");
+      expect(result.message).toBe("Invalid username or password. Please try again.");
     });
 
     it("should handle backend errors with proper error message", async () => {
@@ -128,7 +128,7 @@ describe("authService", () => {
       const result = await login("lockeduser", "password");
 
       expect(result.success).toBe(false);
-      expect(result.message).toBe("Account locked");
+      expect(result.message).toBe("Invalid username or password. Please try again.");
     });
 
     it("should handle role as object with name property", async () => {

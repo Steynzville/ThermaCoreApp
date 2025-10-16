@@ -87,15 +87,15 @@ export const login = async (identifier, password) => {
       // Backend returned error response
       return {
         success: false,
-        message: result.message || result.error || "Invalid credentials",
+        message: "Invalid username or password. Please try again.",
       };
     }
   } catch (error) {
-    // Network or other error
+    // For any login failure (network, auth, etc.), show authentication error
     console.error('Login error:', error);
     return {
       success: false,
-      message: "Network error. Please check your connection and try again.",
+      message: "Invalid username or password. Please try again.",
     };
   }
 };

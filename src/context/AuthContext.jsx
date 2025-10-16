@@ -58,12 +58,12 @@ export const AuthProvider = ({ children }) => {
         return { success: true, role: result.user.role };
       } else {
         setIsLoading(false);
-        return { success: false, error: result.message || "Invalid credentials!" };
+        return { success: false, error: result.message || "Invalid username or password. Please try again." };
       }
     } catch (error) {
       console.error('Login error:', error);
       setIsLoading(false);
-      return { success: false, error: "An error occurred during login. Please try again." };
+      return { success: false, error: "Invalid username or password. Please try again." };
     }
   };
 
