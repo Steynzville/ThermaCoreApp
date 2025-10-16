@@ -230,7 +230,7 @@ const AdminPanel = ({ className }) => {
       // Provide user-friendly error messages with backend connection details
       let errorMsg = 'Failed to reset password. ';
       
-      if (error.message.includes('fetch') || error.message.includes('Failed to fetch')) {
+      if (error.message.includes('Failed to fetch')) {
         errorMsg += 'Unable to connect to backend server. Please check that the backend is running and accessible.';
       } else if (error.message.includes('network')) {
         errorMsg += 'Network error occurred. Please check your internet connection and backend connectivity.';
