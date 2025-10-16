@@ -934,6 +934,14 @@ def reset_password(data):
             },
         )
 
+        # Defensive check for reset_token column existence
+        if not hasattr(User, 'reset_token'):
+            return SecurityAwareErrorHandler.handle_service_error(
+                Exception("Invalid or expired reset token"),
+                "authentication_error",
+                "Password reset",
+                400,
+            )
         # Find user with valid token
         user = User.query.filter_by(reset_token=token).first()
 
