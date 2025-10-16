@@ -41,7 +41,7 @@ class Config:
 
     # CORS Configuration
     CORS_ORIGINS = os.environ.get(
-        "CORS_ORIGINS", "http://localhost:3000,http://localhost:5173"
+        "CORS_ORIGINS", "http://localhost:3000,http://localhost:5173,https://thermacoreapp.netlify.app"
     ).split(",")
 
     # Pagination

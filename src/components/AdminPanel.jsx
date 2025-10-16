@@ -197,7 +197,7 @@ const AdminPanel = ({ className }) => {
       const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://thermacoreapp.onrender.com';
 
       const response = await apiPost(
-        `${API_BASE_URL}/api/users/${selectedUserForReset.id}/reset-password`,
+        `${API_BASE_URL}/api/v1/users/${selectedUserForReset.id}/reset-password`,
         { new_password: passwordFormData.newPassword },
         {
           showToastOnError: false, // We'll handle errors ourselves
@@ -220,16 +220,26 @@ const AdminPanel = ({ className }) => {
         }));
       }
     } catch (error) {
-      console.error("Password reset error:", error);
+      console.error('Password reset failed:', error);
+      console.error('Error details:', {
+        message: error.message,
+        name: error.name,
+        stack: error.stack
+      });
       
-      // Provide user-friendly error messages
+      // Provide user-friendly error messages with backend connection details
       let errorMsg = 'Failed to reset password. ';
-      if (error.message.includes('fetch') || error.message.includes('network')) {
-        errorMsg += 'Please check your internet connection and try again.';
+      
+      if (error.message.includes('Failed to fetch')) {
+        errorMsg += 'Unable to connect to backend server. Please check that the backend is running and accessible.';
+      } else if (error.message.includes('network')) {
+        errorMsg += 'Network error occurred. Please check your internet connection and backend connectivity.';
       } else if (error.message.includes('timeout')) {
-        errorMsg += 'The request timed out. Please try again.';
+        errorMsg += 'The request timed out. The backend server may be slow or unresponsive. Please try again.';
+      } else if (error.message.includes('CORS')) {
+        errorMsg += 'Cross-origin request blocked. Please verify backend CORS configuration allows requests from this domain.';
       } else {
-        errorMsg += error.message;
+        errorMsg += error.message || 'An unexpected error occurred. Please check the backend logs.';
       }
       
       setValidation(prev => ({

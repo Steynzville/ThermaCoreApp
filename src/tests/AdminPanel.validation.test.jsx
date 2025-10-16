@@ -247,7 +247,7 @@ describe('AdminPanel Password Reset Validation - Real-time Updates', () => {
     // Verify API was called with correct data
     await waitFor(() => {
       expect(mockApiPost).toHaveBeenCalledWith(
-        expect.stringContaining('/api/users/'),
+        expect.stringContaining('/api/v1/users/'),
         { new_password: 'newPassword123' },
         expect.objectContaining({
           showToastOnError: false,
