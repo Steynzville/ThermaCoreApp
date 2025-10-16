@@ -15,10 +15,10 @@ import React, { useState } from "react";
 import { toast } from "sonner";
 
 import { useAuth } from "../context/AuthContext";
-import { apiPost } from "../utils/apiFetch";
+import { apiGet, apiPost } from "../utils/apiFetch";
 import PageHeader from "./PageHeader";
 import { Button } from "./ui/button";
-import { Card, CardContent,CardHeader } from "./ui/card";
+import { Card, CardContent, CardHeader } from "./ui/card";
 
 const initialUsers = [
   {
@@ -68,6 +68,20 @@ const AdminPanel = ({ className }) => {
     maintenanceMode: false,
   });
 
+  // User Creation Modal State
+  const [createUserModal, setCreateUserModal] = useState(false);
+  const [newUserFormData, setNewUserFormData] = useState({
+    username: "",
+    email: "",
+    password: "",
+    firstName: "",
+    lastName: "",
+    roleId: "",
+  });
+  const [availableRoles, setAvailableRoles] = useState([]);
+  const [showCreatePassword, setShowCreatePassword] = useState(false);
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+
   // Password Management State
   const [passwordResetModal, setPasswordResetModal] = useState(false);
   const [selectedUserForReset, setSelectedUserForReset] = useState(null);
@@ -85,22 +99,125 @@ const AdminPanel = ({ className }) => {
     isSubmitting: false
   });
 
+  // Fetch available roles from backend
+  const fetchRoles = async () => {
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://thermacoreapp.onrender.com';
+      const response = await apiGet(
+        `${API_BASE_URL}/api/v1/roles`,
+        {
+          showToastOnError: false,
+        }
+      );
+      
+      if (response.ok) {
+        const roles = await response.json();
+        setAvailableRoles(roles);
+      }
+    } catch (error) {
+      console.error('Failed to fetch roles:', error);
+      // Set default roles if fetch fails
+      setAvailableRoles([
+        { id: 1, name: 'admin' },
+        { id: 2, name: 'operator' },
+        { id: 3, name: 'viewer' },
+      ]);
+    }
+  };
+
   const handleAddUser = () => {
-    const name = prompt("Enter user's full name:");
-    const email = prompt("Enter user's email:");
-    const company = prompt("Enter user's company:");
-    const phone = prompt("Enter user's phone number:");
-    if (name && email && company && phone) {
-      const newUser = {
-        id: users.length + 1,
-        name,
-        email,
-        company,
-        phone,
-        role: "Viewer",
-        status: "Active",
+    // Open the create user modal
+    setNewUserFormData({
+      username: "",
+      email: "",
+      password: "",
+      firstName: "",
+      lastName: "",
+      roleId: "",
+    });
+    setShowCreatePassword(false);
+    setCreateUserModal(true);
+    
+    // Fetch roles if not already loaded
+    if (availableRoles.length === 0) {
+      fetchRoles();
+    }
+  };
+
+  const handleCreateUser = async () => {
+    // Validate form
+    if (!newUserFormData.username) {
+      toast.error('Username is required');
+      return;
+    }
+    if (!newUserFormData.email) {
+      toast.error('Email is required');
+      return;
+    }
+    if (!newUserFormData.password) {
+      toast.error('Password is required');
+      return;
+    }
+    if (!newUserFormData.roleId) {
+      toast.error('Role is required');
+      return;
+    }
+
+    if (newUserFormData.password.length < 6) {
+      toast.error('Password must be at least 6 characters long');
+      return;
+    }
+
+    setIsCreatingUser(true);
+
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://thermacoreapp.onrender.com';
+      
+      const userData = {
+        username: newUserFormData.username,
+        email: newUserFormData.email,
+        password: newUserFormData.password,
+        first_name: newUserFormData.firstName,
+        last_name: newUserFormData.lastName,
+        role_id: parseInt(newUserFormData.roleId, 10),
       };
-      setUsers([...users, newUser]);
+
+      const response = await apiPost(
+        `${API_BASE_URL}/api/v1/auth/register`,
+        userData,
+        {
+          showToastOnError: false,
+          retries: 2,
+          retryDelay: 1000,
+        }
+      );
+
+      const result = await response.json();
+
+      if (response.ok) {
+        toast.success(`User ${newUserFormData.username} created successfully`);
+        setCreateUserModal(false);
+        
+        // Add the new user to the local state
+        const roleName = availableRoles.find(r => r.id === parseInt(newUserFormData.roleId, 10))?.name || 'viewer';
+        const newUser = {
+          id: result.data?.id || users.length + 1,
+          name: `${newUserFormData.firstName} ${newUserFormData.lastName}`.trim() || newUserFormData.username,
+          email: newUserFormData.email,
+          company: 'N/A',
+          phone: 'N/A',
+          role: roleName.charAt(0).toUpperCase() + roleName.slice(1),
+          status: 'Active',
+        };
+        setUsers([...users, newUser]);
+      } else {
+        toast.error(result.error || result.message || 'Failed to create user');
+      }
+    } catch (error) {
+      console.error('User creation failed:', error);
+      toast.error(error.message || 'Failed to create user. Please check backend connection.');
+    } finally {
+      setIsCreatingUser(false);
     }
   };
 
@@ -513,6 +630,136 @@ const AdminPanel = ({ className }) => {
                 </div>
               </CardContent>
             </Card>
+          </div>
+        )}
+
+        {/* Create User Modal */}
+        {createUserModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-md">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                Create New User
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Username <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={newUserFormData.username}
+                    onChange={(e) =>
+                      setNewUserFormData({ ...newUserFormData, username: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    placeholder="Enter username"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Email <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    value={newUserFormData.email}
+                    onChange={(e) =>
+                      setNewUserFormData({ ...newUserFormData, email: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    placeholder="Enter email"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Password <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showCreatePassword ? "text" : "password"}
+                      value={newUserFormData.password}
+                      onChange={(e) =>
+                        setNewUserFormData({ ...newUserFormData, password: e.target.value })
+                      }
+                      className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                      placeholder="Enter password (min 6 characters)"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCreatePassword(!showCreatePassword)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                    >
+                      {showCreatePassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    First Name
+                  </label>
+                  <input
+                    type="text"
+                    value={newUserFormData.firstName}
+                    onChange={(e) =>
+                      setNewUserFormData({ ...newUserFormData, firstName: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    placeholder="Enter first name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Last Name
+                  </label>
+                  <input
+                    type="text"
+                    value={newUserFormData.lastName}
+                    onChange={(e) =>
+                      setNewUserFormData({ ...newUserFormData, lastName: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    placeholder="Enter last name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Role <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={newUserFormData.roleId}
+                    onChange={(e) =>
+                      setNewUserFormData({ ...newUserFormData, roleId: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                  >
+                    <option value="">Select a role</option>
+                    {availableRoles.map((role) => (
+                      <option key={role.id} value={role.id}>
+                        {role.name.charAt(0).toUpperCase() + role.name.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => setCreateUserModal(false)}
+                  disabled={isCreatingUser}
+                  className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreateUser}
+                  disabled={isCreatingUser}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center space-x-2"
+                >
+                  {isCreatingUser && (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  )}
+                  <span>{isCreatingUser ? 'Creating...' : 'Create User'}</span>
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
