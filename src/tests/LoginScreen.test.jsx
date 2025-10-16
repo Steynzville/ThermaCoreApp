@@ -37,7 +37,7 @@ describe("LoginScreen - Error Handling", () => {
     // Mock failed login
     vi.spyOn(authService, "login").mockResolvedValue({
       success: false,
-      message: "Invalid credentials",
+      message: "Invalid username or password. Please try again.",
     });
 
     const mockSetError = vi.fn();
@@ -63,7 +63,7 @@ describe("LoginScreen - Error Handling", () => {
 
     // Verify error was set
     await waitFor(() => {
-      expect(mockSetError).toHaveBeenCalledWith("Invalid credentials");
+      expect(mockSetError).toHaveBeenCalledWith("Invalid username or password. Please try again.");
     });
 
     // Verify no navigation occurred
@@ -74,7 +74,7 @@ describe("LoginScreen - Error Handling", () => {
     // Mock failed login
     vi.spyOn(authService, "login").mockResolvedValue({
       success: false,
-      message: "Invalid password. Please try again.",
+      message: "Invalid username or password. Please try again.",
     });
 
     const mockSetError = vi.fn();
@@ -94,7 +94,7 @@ describe("LoginScreen - Error Handling", () => {
 
     await waitFor(() => {
       expect(mockSetError).toHaveBeenCalledWith(
-        "Invalid password. Please try again."
+        "Invalid username or password. Please try again."
       );
     });
 
@@ -106,7 +106,7 @@ describe("LoginScreen - Error Handling", () => {
     // Mock failed login
     vi.spyOn(authService, "login").mockResolvedValue({
       success: false,
-      message: "Invalid credentials",
+      message: "Invalid username or password. Please try again.",
     });
 
     const mockSetError = vi.fn();
