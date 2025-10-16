@@ -2,9 +2,14 @@ import React, { memo, useCallback,useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useUnits } from "../context/UnitContext";
+import { useAuth } from "../context/AuthContext";
 
-const QuickActionTile = memo(({ action, handleQuickActionClick, userRole }) => {
-  if (action.adminOnly && userRole !== "admin") {
+const QuickActionTile = memo(({ action, handleQuickActionClick, permissions }) => {
+  // Check permissions based on action requirements
+  if (action.requiresAdminPanel && !permissions?.canAccessAdminPanel) {
+    return null;
+  }
+  if (action.requiresSales && !permissions?.canViewSales) {
     return null;
   }
   return (
@@ -21,11 +26,12 @@ const QuickActionTile = memo(({ action, handleQuickActionClick, userRole }) => {
 const Dashboard = ({ userRole }) => {
   const navigate = useNavigate();
   const { units, loading } = useUnits();
+  const { permissions } = useAuth();
 
   const quickActions = [
-    { name: "Sales Analytics", link: "/analytics" },
+    { name: "Sales Analytics", link: "/analytics", requiresSales: true },
     { name: "Generate Report", link: "/quick-action/generate-report" },
-    { name: "Manage Users", link: "/admin", adminOnly: true },
+    { name: "Manage Users", link: "/admin", requiresAdminPanel: true },
     { name: "System Diagnostics", link: "/quick-action/system-diagnostics" },
   ];
 
@@ -34,13 +40,14 @@ const Dashboard = ({ userRole }) => {
   }, [navigate]);
 
   // Apply the same filtering logic as GridView for consistency
+  // Admins can see all units, others see limited units
   const filteredUnits = useMemo(() => {
-    if (userRole === "admin") {
+    if (permissions?.canViewAllUnits) {
       return units;
     } else {
       return units.slice(0, 6);
     }
-  }, [userRole, units]);
+  }, [permissions, units]);
 
   const {
     onlineCount,
@@ -96,7 +103,7 @@ const Dashboard = ({ userRole }) => {
               key={action.name}
               action={action}
               handleQuickActionClick={handleQuickActionClick}
-              userRole={userRole}
+              permissions={permissions}
             />
           ))}
         </div>

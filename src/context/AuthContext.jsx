@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
 import * as authService from "../services/authService";
+import { getPermissions, getFrontendRole } from "../utils/permissions";
 
 const AuthContext = createContext();
 
@@ -14,7 +15,9 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [userRole, setUserRole] = useState(null);
+  const [userRole, setUserRole] = useState(null); // Frontend role (admin/user)
+  const [backendRole, setBackendRole] = useState(null); // Backend role (admin/operator/viewer)
+  const [permissions, setPermissions] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -22,10 +25,20 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const savedUser = localStorage.getItem("thermacore_user");
     const savedRole = localStorage.getItem("thermacore_role");
+    const savedBackendRole = localStorage.getItem("thermacore_backend_role");
 
     if (savedUser && savedRole) {
-      setUser(JSON.parse(savedUser));
-      setUserRole(savedRole);
+      const parsedUser = JSON.parse(savedUser);
+      setUser(parsedUser);
+      
+      // Use backend role if available, otherwise fall back to saved role
+      const effectiveBackendRole = savedBackendRole || savedRole;
+      setBackendRole(effectiveBackendRole);
+      
+      // Set frontend role and permissions based on backend role
+      const frontendRole = getFrontendRole(effectiveBackendRole);
+      setUserRole(frontendRole);
+      setPermissions(getPermissions(effectiveBackendRole));
     }
     setIsLoading(false);
   }, []);
@@ -38,24 +51,37 @@ export const AuthProvider = ({ children }) => {
       const result = await authService.login(username, password);
       
       if (result.success) {
+        // Backend role is the actual role from the API (admin/operator/viewer)
+        const userBackendRole = result.user.role;
+        
+        // Frontend role is simplified (admin/user) for UI consistency
+        const userFrontendRole = getFrontendRole(userBackendRole);
+        
+        // Get permissions based on backend role
+        const userPermissions = getPermissions(userBackendRole);
+        
         const userData = { 
           username: result.user.username, 
-          role: result.user.role,
+          role: userFrontendRole, // Store frontend role for backward compatibility
+          backendRole: userBackendRole, // Store actual backend role
           email: result.user.email,
           firstName: result.user.firstName,
           lastName: result.user.lastName,
         };
         
         setUser(userData);
-        setUserRole(result.user.role);
+        setUserRole(userFrontendRole);
+        setBackendRole(userBackendRole);
+        setPermissions(userPermissions);
 
         // Persist to localStorage
         localStorage.setItem("thermacore_user", JSON.stringify(userData));
-        localStorage.setItem("thermacore_role", result.user.role);
+        localStorage.setItem("thermacore_role", userFrontendRole);
+        localStorage.setItem("thermacore_backend_role", userBackendRole);
         localStorage.setItem("thermacore_token", result.token);
         
         setIsLoading(false);
-        return { success: true, role: result.user.role };
+        return { success: true, role: userFrontendRole };
       } else {
         setIsLoading(false);
         return { success: false, error: result.message || "Invalid username or password. Please try again." };
@@ -71,17 +97,22 @@ export const AuthProvider = ({ children }) => {
     setIsLoggingOut(true);
     setUser(null);
     setUserRole(null);
+    setBackendRole(null);
+    setPermissions(null);
 
     // Clear from localStorage
     localStorage.removeItem("thermacore_user");
     localStorage.removeItem("thermacore_role");
+    localStorage.removeItem("thermacore_backend_role");
     localStorage.removeItem("thermacore_token");
     setIsLoggingOut(false);
   };
 
   const value = {
     user,
-    userRole,
+    userRole, // Frontend role (admin/user) for backward compatibility
+    backendRole, // Backend role (admin/operator/viewer) for permission checks
+    permissions, // Permission object for granular access control
     login,
     logout,
     isAuthenticated: !!user,
