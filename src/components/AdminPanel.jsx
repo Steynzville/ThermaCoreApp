@@ -15,7 +15,7 @@ import React, { useState } from "react";
 import { toast } from "sonner";
 
 import { useAuth } from "../context/AuthContext";
-import { apiPost } from "../utils/apiFetch";
+import { apiGet, apiPost } from "../utils/apiFetch";
 import PageHeader from "./PageHeader";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader } from "./ui/card";
@@ -103,11 +103,9 @@ const AdminPanel = ({ className }) => {
   const fetchRoles = async () => {
     try {
       const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://thermacoreapp.onrender.com';
-      const response = await apiPost(
+      const response = await apiGet(
         `${API_BASE_URL}/api/v1/roles`,
-        null,
         {
-          method: 'GET',
           showToastOnError: false,
         }
       );
