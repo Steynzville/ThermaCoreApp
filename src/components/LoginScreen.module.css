@@ -597,24 +597,13 @@
   padding: 12px 0 !important;
 }
 
-/* Dark mode styles for loginError */
-:global(html.dark) .loginError {
-  background-color: transparent;
-  border: none;
-  color: #ff4444;
+/* Light mode styles for loginError - visible state */
+:global(html:not(.dark)) .loginError.visible {
+  color: #dc2626 !important;
+  text-shadow: 0 0 10px rgba(220, 38, 38, 0.3);
 }
 
-/* Light mode styles for loginError */
-:global(html:not(.dark)) .loginError {
-  color: #dc2626;
-}
-
-/* Ensure error message is bright red for better contrast */
-.loginError.visible {
-  color: #ff3333 !important; /* Bright red for better contrast */
-  text-shadow: 0 0 10px rgba(255, 51, 51, 0.3);
-}
-
+/* Dark mode styles for loginError - visible state */
 :global(html.dark) .loginError.visible {
   color: #ff4444 !important;
   text-shadow: 0 0 12px rgba(255, 68, 68, 0.4);
