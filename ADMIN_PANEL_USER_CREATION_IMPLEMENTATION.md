@@ -205,7 +205,7 @@ The component uses the environment variable `VITE_API_BASE_URL` with a fallback 
 
 ### Security
 - Passwords are sent to backend for secure hashing
-- JWTauthentication required for user creation endpoint
+- JWT authentication required for user creation endpoint
 - Only admin users can create new users
 - Role-based access control enforced by backend
 
