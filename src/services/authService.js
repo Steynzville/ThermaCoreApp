@@ -295,12 +295,12 @@ export const resetPassword = async (token, newPassword) => {
     if (response.ok && result.success) {
       return {
         success: true,
-        message: result.message || "Password reset successfully",
+        message: result?.data?.message || result?.message || "Password reset successfully",
       };
     } else {
       return {
         success: false,
-        message: result.message || "Invalid or expired reset token. Please request a new one.",
+        message: result?.error?.message || result?.data?.message || result?.message || "Invalid or expired reset token. Please request a new one.",
       };
     }
   } catch (error) {
