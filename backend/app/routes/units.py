@@ -19,6 +19,7 @@ from app.utils.schemas import (
 )
 from app.middleware.authorization import permission_required
 from app.middleware.audit import audit_operation
+from app.middleware.client_isolation import apply_client_filter, get_current_user, check_client_access
 from app.utils.validation import validate_json_request
 
 
@@ -79,6 +80,9 @@ def get_units():
 
     # Build query
     query = Unit.query
+    
+    # Apply client isolation filter
+    query = apply_client_filter(query, Unit)
 
     # Apply filters
     if status:
@@ -142,6 +146,11 @@ def get_unit(unit_id):
       - JWT: []
     """
     unit = Unit.query.get_or_404(unit_id)
+    
+    # Check client access
+    if not check_client_access(unit.client_id):
+        return jsonify({"error": "Access denied to this unit"}), 403
+    
     unit_schema = UnitSchema()
     return jsonify(unit_schema.dump(unit)), 200
 
@@ -188,6 +197,22 @@ def create_unit():
     existing_unit = Unit.query.get(data["id"])
     if existing_unit:
         return jsonify({"error": "Unit ID already exists"}), 409
+
+    # Get current user to set client_id
+    current_user = get_current_user()
+    if not current_user:
+        return jsonify({"error": "Authentication required"}), 401
+    
+    # If client_id provided, verify access; otherwise use current user's client
+    if "client_id" in data:
+        # Check if user has access to specified client
+        if not check_client_access(data["client_id"]):
+            return jsonify({"error": "Access denied to specified client"}), 403
+    else:
+        # Non-admin users must have a client_id
+        if current_user.client_id is None:
+            return jsonify({"error": "Admin users must specify client_id for new units"}), 400
+        data["client_id"] = current_user.client_id
 
     # Create new unit
     unit = Unit(**data)
@@ -245,6 +270,11 @@ def update_unit(unit_id):
       - JWT: []
     """
     unit = Unit.query.get_or_404(unit_id)
+    
+    # Check client access
+    if not check_client_access(unit.client_id):
+        return jsonify({"error": "Access denied to this unit"}), 403
+    
     schema = UnitUpdateSchema()
 
     try:
@@ -296,6 +326,10 @@ def delete_unit(unit_id):
       - JWT: []
     """
     unit = Unit.query.get_or_404(unit_id)
+    
+    # Check client access
+    if not check_client_access(unit.client_id):
+        return jsonify({"error": "Access denied to this unit"}), 403
 
     db.session.delete(unit)
     db.session.commit()
@@ -331,6 +365,11 @@ def get_unit_sensors(unit_id):
       - JWT: []
     """
     unit = Unit.query.get_or_404(unit_id)
+    
+    # Check client access
+    if not check_client_access(unit.client_id):
+        return jsonify({"error": "Access denied to this unit"}), 403
+    
     sensors_schema = SensorSchema(many=True)
     return jsonify(sensors_schema.dump(unit.sensors)), 200
 
@@ -368,7 +407,12 @@ def create_unit_sensor(unit_id):
       - JWT: []
     """
     # Validate that the unit exists
-    Unit.query.get_or_404(unit_id)
+    unit = Unit.query.get_or_404(unit_id)
+    
+    # Check client access
+    if not check_client_access(unit.client_id):
+        return jsonify({"error": "Access denied to this unit"}), 403
+    
     schema = SensorCreateSchema()
 
     try:
@@ -428,7 +472,12 @@ def get_unit_readings(unit_id):
       - JWT: []
     """
     # Validate that the unit exists
-    Unit.query.get_or_404(unit_id)
+    unit = Unit.query.get_or_404(unit_id)
+    
+    # Check client access
+    if not check_client_access(unit.client_id):
+        return jsonify({"error": "Access denied to this unit"}), 403
+    
     hours_back = request.args.get("hours", 24, type=int)
     sensor_type = request.args.get("sensor_type")
 
@@ -497,6 +546,11 @@ def update_unit_status(unit_id):
       - JWT: []
     """
     unit = Unit.query.get_or_404(unit_id)
+    
+    # Check client access
+    if not check_client_access(unit.client_id):
+        return jsonify({"error": "Access denied to this unit"}), 403
+    
     try:
         data = UnitUpdateSchema(
             only=("status", "health_status", "has_alert", "has_alarm")
@@ -584,9 +638,13 @@ def get_units_stats():
     security:
       - JWT: []
     """
+    # Build base query with client filtering
+    query = Unit.query
+    query = apply_client_filter(query, Unit)
+    
     # Use single query with conditional aggregation for better performance
     # Make boolean comparisons explicit and portable across databases
-    result = db.session.query(
+    result = query.with_entities(
         db.func.count().label("total_units"),
         db.func.sum(db.case((Unit.status == "online", 1), else_=0)).label(
             "online_units"

@@ -374,6 +374,7 @@ def create_app(config_name=None):
     register_blueprint_safe('app.routes.auth', 'auth_bp', 'auth')
     register_blueprint_safe('app.routes.units', 'units_bp', 'units')
     register_blueprint_safe('app.routes.users', 'users_bp', 'users')
+    register_blueprint_safe('app.routes.clients', 'clients_bp', 'clients')
     register_blueprint_safe('app.routes.scada', 'scada_bp', 'scada')
     register_blueprint_safe('app.routes.analytics', 'analytics_bp', 'analytics')
     register_blueprint_safe('app.routes.historical', 'historical_bp', 'historical')

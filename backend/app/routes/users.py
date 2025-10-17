@@ -10,6 +10,7 @@ from app import db
 from app.models import User, Role
 from app.utils.schemas import UserSchema, UserUpdateSchema, RoleSchema
 from app.middleware.authorization import permission_required, role_required
+from app.middleware.client_isolation import apply_client_filter, get_current_user, check_client_access
 from app.utils.helpers import get_current_user_id
 from app.middleware.audit import audit_operation
 from app.middleware.rate_limit import rate_limit
@@ -66,6 +67,9 @@ def get_users():
 
     # Build query
     query = User.query.join(Role)
+    
+    # Apply client isolation filter
+    query = apply_client_filter(query, User)
 
     # Apply filters
     if role_name:
@@ -126,6 +130,11 @@ def get_user(user_id):
       - JWT: []
     """
     user = User.query.get_or_404(user_id)
+    
+    # Check client access (admin users can access all)
+    if user.client_id is not None and not check_client_access(user.client_id):
+        return jsonify({"error": "Access denied to this user"}), 403
+    
     user_schema = UserSchema()
     return jsonify(user_schema.dump(user)), 200
 
@@ -168,6 +177,11 @@ def update_user(user_id):
       - JWT: []
     """
     user = User.query.get_or_404(user_id)
+    
+    # Check client access (admin users can access all)
+    if user.client_id is not None and not check_client_access(user.client_id):
+        return jsonify({"error": "Access denied to this user"}), 403
+    
     current_user_id, success = get_current_user_id()
     if not success or current_user_id is None:
         return jsonify({"error": "Invalid token format"}), 401
@@ -242,6 +256,11 @@ def delete_user(user_id):
       - JWT: []
     """
     user = User.query.get_or_404(user_id)
+    
+    # Check client access (admin users can access all)
+    if user.client_id is not None and not check_client_access(user.client_id):
+        return jsonify({"error": "Access denied to this user"}), 403
+    
     current_user_id, success = get_current_user_id()
     if not success or current_user_id is None:
         return jsonify({"error": "Invalid token format"}), 401
@@ -282,6 +301,11 @@ def activate_user(user_id):
       - JWT: []
     """
     user = User.query.get_or_404(user_id)
+    
+    # Check client access (admin users can access all)
+    if user.client_id is not None and not check_client_access(user.client_id):
+        return jsonify({"error": "Access denied to this user"}), 403
+    
     user.is_active = True
     db.session.commit()
 
@@ -319,6 +343,11 @@ def deactivate_user(user_id):
       - JWT: []
     """
     user = User.query.get_or_404(user_id)
+    
+    # Check client access (admin users can access all)
+    if user.client_id is not None and not check_client_access(user.client_id):
+        return jsonify({"error": "Access denied to this user"}), 403
+    
     current_user_id, success = get_current_user_id()
     if not success or current_user_id is None:
         return jsonify({"error": "Invalid token format"}), 401
@@ -392,10 +421,14 @@ def get_users_stats():
     security:
       - JWT: []
     """
-    total_users = User.query.count()
+    # Build base query with client filtering
+    query = User.query
+    query = apply_client_filter(query, User)
+    
+    total_users = query.count()
     # Use explicit boolean filters that are portable across databases
-    active_users = User.query.filter(User.is_active.is_(True)).count()
-    inactive_users = User.query.filter(User.is_active.is_(False)).count()
+    active_users = query.filter(User.is_active.is_(True)).count()
+    inactive_users = query.filter(User.is_active.is_(False)).count()
 
     # Role counts
     admin_role = Role.query.filter(Role.name == "admin").first()
@@ -403,15 +436,15 @@ def get_users_stats():
     viewer_role = Role.query.filter(Role.name == "viewer").first()
 
     admin_users = (
-        User.query.filter(User.role_id == admin_role.id).count() if admin_role else 0
+        apply_client_filter(User.query, User).filter(User.role_id == admin_role.id).count() if admin_role else 0
     )
     operator_users = (
-        User.query.filter(User.role_id == operator_role.id).count()
+        apply_client_filter(User.query, User).filter(User.role_id == operator_role.id).count()
         if operator_role
         else 0
     )
     viewer_users = (
-        User.query.filter(User.role_id == viewer_role.id).count() if viewer_role else 0
+        apply_client_filter(User.query, User).filter(User.role_id == viewer_role.id).count() if viewer_role else 0
     )
 
     return jsonify(
@@ -462,6 +495,11 @@ def reset_user_password(user_id):
       - JWT: []
     """
     user = User.query.get_or_404(user_id)
+    
+    # Check client access (admin users can access all)
+    if user.client_id is not None and not check_client_access(user.client_id):
+        return jsonify({"error": "Access denied to this user"}), 403
+    
     data = request.json
 
     if not data or "new_password" not in data:

@@ -181,6 +181,33 @@ class Role(db.Model):
         return any(p.name.value == permission_value for p in self.permissions)
 
 
+class Client(db.Model):
+    """Client model for multi-tenancy."""
+
+    __tablename__ = "clients"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(200), unique=True, nullable=False)
+    description = Column(Text)
+    contact_name = Column(String(200))
+    contact_email = Column(String(120))
+    contact_phone = Column(String(50))
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(
+        DateTime, default=utc_now
+    )  # timezone-aware via utc_now() function
+    updated_at = Column(
+        DateTime, default=utc_now
+    )  # timezone-aware via utc_now() function
+
+    # Relationships
+    users = relationship("User", back_populates="client")
+    units = relationship("Unit", back_populates="client")
+
+    def __repr__(self):
+        return f"<Client {self.name}>"
+
+
 class User(db.Model):
     """User model."""
 
@@ -206,9 +233,11 @@ class User(db.Model):
 
     # Foreign Keys
     role_id = Column(Integer, ForeignKey("roles.id"), nullable=False)
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=True)  # NULL for admin users
 
     # Relationships
     role = relationship("Role", back_populates="users")
+    client = relationship("Client", back_populates="users")
 
     def __repr__(self):
         return f"<User {self.username}>"
@@ -272,6 +301,10 @@ class User(db.Model):
             return False
         return self.role.has_permission(permission)
 
+    def is_admin(self):
+        """Check if user is an admin (client_id is NULL)."""
+        return self.client_id is None
+
 
 class Unit(db.Model):
     """Unit model representing ThermaCore units."""
@@ -331,10 +364,14 @@ class Unit(db.Model):
         DateTime, default=utc_now
     )  # timezone-aware via utc_now() function
 
+    # Foreign Keys
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False)
+
     # Relationships
     sensors = relationship(
         "Sensor", back_populates="unit", cascade="all, delete-orphan"
     )
+    client = relationship("Client", back_populates="units")
 
     def __repr__(self):
         return f"<Unit {self.id}: {self.name}>"

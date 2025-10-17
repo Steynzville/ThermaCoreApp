@@ -18,6 +18,7 @@ from app.models import (
     Unit,
     Sensor,
     SensorReading,
+    Client,
     PermissionEnum,
     RoleEnum,
     UnitStatusEnum,
@@ -132,6 +133,42 @@ class RoleSchema(Schema):
     permissions = fields.Nested(PermissionSchema, many=True, dump_only=True)
 
 
+# Client schemas
+class ClientSchema(Schema):
+    """Client serialization schema."""
+
+    id = fields.Int(dump_only=True)
+    name = fields.Str(required=True, validate=validate.Length(min=1, max=200))
+    description = fields.Str()
+    contact_name = fields.Str(validate=validate.Length(max=200))
+    contact_email = fields.Email()
+    contact_phone = fields.Str(validate=validate.Length(max=50))
+    is_active = fields.Bool(dump_only=True)
+    created_at = DateTimeField(dump_only=True)
+    updated_at = DateTimeField(dump_only=True)
+
+
+class ClientCreateSchema(Schema):
+    """Schema for client creation."""
+
+    name = fields.Str(required=True, validate=validate.Length(min=1, max=200))
+    description = fields.Str()
+    contact_name = fields.Str(validate=validate.Length(max=200))
+    contact_email = fields.Email()
+    contact_phone = fields.Str(validate=validate.Length(max=50))
+
+
+class ClientUpdateSchema(Schema):
+    """Schema for client updates."""
+
+    name = fields.Str(validate=validate.Length(min=1, max=200))
+    description = fields.Str()
+    contact_name = fields.Str(validate=validate.Length(max=200))
+    contact_email = fields.Email()
+    contact_phone = fields.Str(validate=validate.Length(max=50))
+    is_active = fields.Bool()
+
+
 # User schemas
 class UserSchema(SQLAlchemyAutoSchema):
     """User serialization schema."""
@@ -145,6 +182,8 @@ class UserSchema(SQLAlchemyAutoSchema):
     username = fields.Str(required=True, validate=validate.Length(min=3, max=80))
     password = fields.Str(load_only=True, validate=validate.Length(min=6))
     role = fields.Nested(RoleSchema, dump_only=True)
+    client = fields.Nested(ClientSchema, dump_only=True)
+    client_id = fields.Int(allow_none=True)
 
     # Override datetime fields with custom field
     created_at = DateTimeField(dump_only=True)
@@ -171,6 +210,7 @@ class UserCreateSchema(Schema):
     first_name = fields.Str(validate=validate.Length(max=100))
     last_name = fields.Str(validate=validate.Length(max=100))
     role_id = fields.Int(required=True)
+    client_id = fields.Int(allow_none=True)  # NULL for admin users
 
 
 class UserUpdateSchema(Schema):
@@ -182,6 +222,7 @@ class UserUpdateSchema(Schema):
     last_name = fields.Str(validate=validate.Length(max=100))
     role_id = fields.Int()
     is_active = fields.Bool()
+    client_id = fields.Int(allow_none=True)
 
 
 class LoginSchema(Schema):
@@ -206,6 +247,8 @@ class UnitSchema(SQLAlchemyAutoSchema):
     install_date = DateTimeField(required=True)
     status = EnumField(UnitStatusEnum)
     health_status = EnumField(HealthStatusEnum)
+    client = fields.Nested(ClientSchema, dump_only=True)
+    client_id = fields.Int(required=True)
 
     # Override timestamp fields
     created_at = DateTimeField(dump_only=True)
@@ -237,6 +280,7 @@ class UnitCreateSchema(Schema):
     serial_number = fields.Str(required=True, validate=validate.Length(min=1, max=100))
     install_date = DateTimeField(required=True)
     location = fields.Str(validate=validate.Length(max=200))
+    client_id = fields.Int()  # Optional; will be set from current user if not provided
 
     # Status fields with sensible defaults for new units
     status = EnumField(UnitStatusEnum, load_default="offline")

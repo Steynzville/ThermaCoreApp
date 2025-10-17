@@ -90,6 +90,7 @@ def register(data):
         first_name=data.get("first_name"),
         last_name=data.get("last_name"),
         role_id=data["role_id"],
+        client_id=data.get("client_id"),  # Set client_id if provided
         permissions=role_permissions,  # Set permissions based on role
     )
     user.set_password(data["password"])
