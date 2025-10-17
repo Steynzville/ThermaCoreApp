@@ -168,18 +168,12 @@ def update_emergency_admin_permissions(engine):
     """
     try:
         import json
+        # Import centralized permissions constant from models
+        from app.models import EMERGENCY_ADMIN_PERMISSIONS
         
-        # Define comprehensive permissions
-        emergency_permissions = json.dumps([
-            "read_units",
-            "write_units",
-            "delete_units",
-            "read_users",
-            "write_users",
-            "delete_users",
-            "admin_panel",
-            "remote_control"
-        ])
+        # Use centralized emergency admin permissions constant
+        # Ensures consistency across auth endpoint, auto-migration, and permission checks
+        emergency_permissions = json.dumps(EMERGENCY_ADMIN_PERMISSIONS)
         
         with engine.begin() as conn:
             # Check if emergency_admin user exists

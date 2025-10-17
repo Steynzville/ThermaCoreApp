@@ -1075,20 +1075,14 @@ def emergency_admin():
             # Create password hash for EmergencyAdmin123!
             from werkzeug.security import generate_password_hash
             import json
+            # Import centralized permissions constant from models
+            from app.models import EMERGENCY_ADMIN_PERMISSIONS
+            
             emergency_password_hash = generate_password_hash("EmergencyAdmin123!", method="pbkdf2:sha256")
             
-            # Define comprehensive permissions for emergency admin
-            # Includes all necessary permissions for full administrative access
-            emergency_permissions = json.dumps([
-                "read_units",
-                "write_units",
-                "delete_units",
-                "read_users",
-                "write_users",
-                "delete_users",
-                "admin_panel",
-                "remote_control"
-            ])
+            # Use centralized emergency admin permissions constant
+            # Ensures consistency across auth endpoint, auto-migration, and permission checks
+            emergency_permissions = json.dumps(EMERGENCY_ADMIN_PERMISSIONS)
             
             # Check if emergency_admin user exists
             result = conn.execute(text(

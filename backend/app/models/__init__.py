@@ -73,6 +73,20 @@ class PermissionEnum(PyEnum):
     REMOTE_CONTROL = "remote_control"
 
 
+# Emergency admin comprehensive permissions - centralized constant
+# Used across auth endpoint, auto-migration, and permission checks
+EMERGENCY_ADMIN_PERMISSIONS = [
+    "read_units",
+    "write_units",
+    "delete_units",
+    "read_users",
+    "write_users",
+    "delete_users",
+    "admin_panel",
+    "remote_control"
+]
+
+
 class UnitStatusEnum(PyEnum):
     """Unit status enumeration."""
 
@@ -237,9 +251,21 @@ class User(db.Model):
             )
         
         # Check direct user permissions first (for emergency admin and special cases)
-        if self.permissions and isinstance(self.permissions, list):
-            if permission_str in self.permissions:
-                return True
+        if self.permissions is not None:
+            # Handle JSON deserialization - permissions may be stored as string in some DB configs
+            permissions_list = self.permissions
+            if isinstance(permissions_list, str):
+                try:
+                    import json
+                    permissions_list = json.loads(permissions_list)
+                except (json.JSONDecodeError, ValueError):
+                    # If deserialization fails, treat as no permissions
+                    permissions_list = None
+            
+            # Check if permission exists in the list
+            if permissions_list and isinstance(permissions_list, list):
+                if permission_str in permissions_list:
+                    return True
         
         # Fall back to role-based permissions
         if not self.role:

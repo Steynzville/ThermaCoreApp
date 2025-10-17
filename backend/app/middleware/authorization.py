@@ -102,28 +102,42 @@ def permission_required(permission):
 
             # Bypass permission checks for emergency_admin user
             # This allows the emergency admin to perform any action when active
+            # Validation: Ensure permissions field is properly configured before bypass
             if user.username == "emergency_admin" and user.is_active:
-                current_app.logger.info(
-                    f"Emergency admin bypass: Granting {permission} permission to {user.username}",
-                    extra={
-                        "event": "emergency_admin_bypass",
-                        "username": user.username,
-                        "permission": permission,
-                    },
-                )
-                # Audit successful permission check with bypass note
-                audit_permission_check(
-                    permission=permission,
-                    granted=True,
-                    user_id=user.id,
-                    username=user.username,
-                    resource=request.endpoint if request else None,
-                    details={
-                        "bypass": "emergency_admin",
-                        "user_role": user.role.name.value if user.role else "N/A",
-                    },
-                )
-                return f(*args, **kwargs)
+                # Validate that emergency_admin has permissions configured
+                # This prevents security issues if user exists but isn't properly set up
+                if not user.permissions:
+                    current_app.logger.warning(
+                        f"Emergency admin bypass denied: {user.username} has no permissions configured",
+                        extra={
+                            "event": "emergency_admin_bypass_denied",
+                            "username": user.username,
+                            "reason": "missing_permissions",
+                        },
+                    )
+                    # Continue to normal permission check instead of bypassing
+                else:
+                    current_app.logger.info(
+                        f"Emergency admin bypass: Granting {permission} permission to {user.username}",
+                        extra={
+                            "event": "emergency_admin_bypass",
+                            "username": user.username,
+                            "permission": permission,
+                        },
+                    )
+                    # Audit successful permission check with bypass note
+                    audit_permission_check(
+                        permission=permission,
+                        granted=True,
+                        user_id=user.id,
+                        username=user.username,
+                        resource=request.endpoint if request else None,
+                        details={
+                            "bypass": "emergency_admin",
+                            "user_role": user.role.name.value if user.role else "N/A",
+                        },
+                    )
+                    return f(*args, **kwargs)
             
             # Ensure user has a valid role
             if not _ensure_user_has_role(user):
@@ -240,28 +254,42 @@ def role_required(*roles):
 
             # Bypass role checks for emergency_admin user
             # This allows the emergency admin to access any role-restricted endpoint
+            # Validation: Ensure permissions field is properly configured before bypass
             if user.username == "emergency_admin" and user.is_active:
-                current_app.logger.info(
-                    f"Emergency admin bypass: Granting role access to {user.username}",
-                    extra={
-                        "event": "emergency_admin_role_bypass",
-                        "username": user.username,
-                        "required_roles": list(roles),
-                    },
-                )
-                # Audit successful role check with bypass note
-                audit_permission_check(
-                    permission=f"role:{','.join(roles)}",
-                    granted=True,
-                    user_id=user.id,
-                    username=user.username,
-                    resource=request.endpoint if request else None,
-                    details={
-                        "bypass": "emergency_admin",
-                        "user_role": user.role.name.value if user.role else "N/A",
-                    },
-                )
-                return f(*args, **kwargs)
+                # Validate that emergency_admin has permissions configured
+                # This prevents security issues if user exists but isn't properly set up
+                if not user.permissions:
+                    current_app.logger.warning(
+                        f"Emergency admin role bypass denied: {user.username} has no permissions configured",
+                        extra={
+                            "event": "emergency_admin_role_bypass_denied",
+                            "username": user.username,
+                            "reason": "missing_permissions",
+                        },
+                    )
+                    # Continue to normal role check instead of bypassing
+                else:
+                    current_app.logger.info(
+                        f"Emergency admin bypass: Granting role access to {user.username}",
+                        extra={
+                            "event": "emergency_admin_role_bypass",
+                            "username": user.username,
+                            "required_roles": list(roles),
+                        },
+                    )
+                    # Audit successful role check with bypass note
+                    audit_permission_check(
+                        permission=f"role:{','.join(roles)}",
+                        granted=True,
+                        user_id=user.id,
+                        username=user.username,
+                        resource=request.endpoint if request else None,
+                        details={
+                            "bypass": "emergency_admin",
+                            "user_role": user.role.name.value if user.role else "N/A",
+                        },
+                    )
+                    return f(*args, **kwargs)
             
             # Ensure user has a valid role
             if not _ensure_user_has_role(user):
