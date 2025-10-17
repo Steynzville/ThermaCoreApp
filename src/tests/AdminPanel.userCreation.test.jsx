@@ -132,6 +132,14 @@ describe('AdminPanel User Creation Form', () => {
       expect(screen.getByText('Create New User')).toBeInTheDocument();
     });
     
+    // Wait for roles to load
+    await waitFor(() => {
+      const selects = screen.getAllByRole('combobox');
+      const roleSelect = selects[0];
+      const options = roleSelect.querySelectorAll('option');
+      expect(options[0]).toHaveTextContent('Select a role');
+    });
+    
     // Find all select elements (role dropdown will be one of them)
     const selects = screen.getAllByRole('combobox');
     const roleSelect = selects[0]; // Should be the only select in the modal
