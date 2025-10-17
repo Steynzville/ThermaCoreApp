@@ -51,8 +51,10 @@ const AdminPanel = ({ className }) => {
     firstName: "",
     lastName: "",
     roleId: "",
+    clientId: "",
   });
   const [availableRoles, setAvailableRoles] = useState([]);
+  const [availableClients, setAvailableClients] = useState([]);
   const [showCreatePassword, setShowCreatePassword] = useState(false);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
 
@@ -128,6 +130,27 @@ const AdminPanel = ({ className }) => {
     }
   };
 
+  // Fetch available clients from backend
+  const fetchClients = async () => {
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://thermacoreapp.onrender.com';
+      const response = await apiGet(
+        `${API_BASE_URL}/api/v1/clients`,
+        {
+          showToastOnError: false,
+        }
+      );
+      
+      if (response.ok) {
+        const clientsData = await response.json();
+        setAvailableClients(clientsData.data || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch clients:', error);
+      setAvailableClients([]);
+    }
+  };
+
   // Fetch users on component mount
   useEffect(() => {
     fetchUsers();
@@ -142,6 +165,7 @@ const AdminPanel = ({ className }) => {
       firstName: "",
       lastName: "",
       roleId: "",
+      clientId: "",
     });
     setShowCreatePassword(false);
     setCreateUserModal(true);
@@ -149,6 +173,11 @@ const AdminPanel = ({ className }) => {
     // Fetch roles if not already loaded
     if (availableRoles.length === 0) {
       fetchRoles();
+    }
+    
+    // Fetch clients if not already loaded
+    if (availableClients.length === 0) {
+      fetchClients();
     }
   };
 
@@ -176,6 +205,13 @@ const AdminPanel = ({ className }) => {
       return;
     }
 
+    // Check if role is admin - if not, client is required
+    const selectedRole = availableRoles.find(r => r.id === parseInt(newUserFormData.roleId, 10));
+    if (selectedRole && selectedRole.name !== 'admin' && !newUserFormData.clientId) {
+      toast.error('Client is required for non-admin users');
+      return;
+    }
+
     setIsCreatingUser(true);
 
     try {
@@ -189,6 +225,14 @@ const AdminPanel = ({ className }) => {
         last_name: newUserFormData.lastName,
         role_id: parseInt(newUserFormData.roleId, 10),
       };
+
+      // Only include client_id if it's set (admin users should not have client_id)
+      if (newUserFormData.clientId) {
+        userData.client_id = parseInt(newUserFormData.clientId, 10);
+      } else if (selectedRole && selectedRole.name === 'admin') {
+        // Explicitly set null for admin users
+        userData.client_id = null;
+      }
 
       const response = await apiPost(
         `${API_BASE_URL}/api/v1/auth/register`,
@@ -770,6 +814,38 @@ const AdminPanel = ({ className }) => {
                     ))}
                   </select>
                 </div>
+                
+                {/* Only show client selection for non-admin roles */}
+                {newUserFormData.roleId && availableRoles.find(r => r.id === parseInt(newUserFormData.roleId))?.name !== 'admin' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Client <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={newUserFormData.clientId}
+                      onChange={(e) =>
+                        setNewUserFormData({ ...newUserFormData, clientId: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    >
+                      <option value="">Select a client</option>
+                      {availableClients.map((client) => (
+                        <option key={client.id} value={client.id}>
+                          {client.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                
+                {/* Show info for admin users */}
+                {newUserFormData.roleId && availableRoles.find(r => r.id === parseInt(newUserFormData.roleId))?.name === 'admin' && (
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-3">
+                    <p className="text-sm text-blue-800 dark:text-blue-300">
+                      <strong>Note:</strong> Admin users have access to all clients and are not assigned to a specific client.
+                    </p>
+                  </div>
+                )}
               </div>
               <div className="flex justify-end space-x-3 mt-6">
                 <button
