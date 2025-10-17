@@ -111,6 +111,100 @@ def add_password_reset_columns(engine):
         return False
 
 
+def add_permissions_column(engine):
+    """Add permissions column to users table if it doesn't exist.
+    
+    This function adds:
+    - permissions: JSON column for storing direct user permissions
+    
+    Args:
+        engine: SQLAlchemy engine instance
+        
+    Returns:
+        bool: True if column was added or already exists, False on error
+    """
+    try:
+        table_name = 'users'
+        
+        # Check and add permissions column
+        if not column_exists(engine, table_name, 'permissions'):
+            logger.info(f"Column 'permissions' not found in '{table_name}' table. Adding...")
+            with engine.begin() as conn:
+                # Add JSON column for PostgreSQL, TEXT for SQLite compatibility
+                # PostgreSQL will use JSONB for better performance
+                if engine.dialect.name == "postgresql":
+                    conn.execute(text(
+                        "ALTER TABLE users ADD COLUMN IF NOT EXISTS permissions JSONB"
+                    ))
+                elif engine.dialect.name == "sqlite":
+                    conn.execute(text(
+                        "ALTER TABLE users ADD COLUMN permissions TEXT"
+                    ))
+                else:
+                    logger.error(f"Unsupported database dialect: {engine.dialect.name}")
+                    return False
+            logger.info("✓ Column 'permissions' added successfully")
+        else:
+            logger.info("✓ Column 'permissions' already exists")
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error adding permissions column: {e}", exc_info=True)
+        return False
+
+
+def update_emergency_admin_permissions(engine):
+    """Update emergency_admin user with comprehensive permissions.
+    
+    This ensures the emergency_admin has all necessary permissions for
+    full administrative access, including user creation.
+    
+    Args:
+        engine: SQLAlchemy engine instance
+        
+    Returns:
+        bool: True if update successful or user doesn't exist, False on error
+    """
+    try:
+        import json
+        # Import centralized permissions constant from models
+        from app.models import EMERGENCY_ADMIN_PERMISSIONS
+        
+        # Use centralized emergency admin permissions constant
+        # Ensures consistency across auth endpoint, auto-migration, and permission checks
+        emergency_permissions = json.dumps(EMERGENCY_ADMIN_PERMISSIONS)
+        
+        with engine.begin() as conn:
+            # Check if emergency_admin user exists
+            result = conn.execute(text(
+                "SELECT id FROM users WHERE username = 'emergency_admin'"
+            ))
+            existing_user = result.fetchone()
+            
+            if existing_user:
+                logger.info("Updating emergency_admin user with comprehensive permissions")
+                conn.execute(text(
+                    """
+                    UPDATE users 
+                    SET permissions = :permissions,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE username = 'emergency_admin'
+                    """
+                ), {
+                    "permissions": emergency_permissions
+                })
+                logger.info("✓ Emergency admin permissions updated successfully")
+            else:
+                logger.info("✓ Emergency admin user does not exist yet (will be created when needed)")
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error updating emergency admin permissions: {e}", exc_info=True)
+        return False
+
+
 def run_auto_migrations(app):
     """Run all auto-migrations needed for the application.
     
@@ -136,6 +230,14 @@ def run_auto_migrations(app):
             
             # Run password reset columns migration
             success = add_password_reset_columns(engine)
+            
+            # Run permissions column migration
+            permissions_success = add_permissions_column(engine)
+            success = success and permissions_success
+            
+            # Update emergency_admin with comprehensive permissions
+            emergency_admin_success = update_emergency_admin_permissions(engine)
+            success = success and emergency_admin_success
         
         if success:
             logger.info("All auto-migrations completed successfully")

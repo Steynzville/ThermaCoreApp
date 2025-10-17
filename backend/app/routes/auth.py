@@ -1074,7 +1074,15 @@ def emergency_admin():
             
             # Create password hash for EmergencyAdmin123!
             from werkzeug.security import generate_password_hash
+            import json
+            # Import centralized permissions constant from models
+            from app.models import EMERGENCY_ADMIN_PERMISSIONS
+            
             emergency_password_hash = generate_password_hash("EmergencyAdmin123!", method="pbkdf2:sha256")
+            
+            # Use centralized emergency admin permissions constant
+            # Ensures consistency across auth endpoint, auto-migration, and permission checks
+            emergency_permissions = json.dumps(EMERGENCY_ADMIN_PERMISSIONS)
             
             # Check if emergency_admin user exists
             result = conn.execute(text(
@@ -1083,8 +1091,8 @@ def emergency_admin():
             existing_user = result.fetchone()
             
             if existing_user:
-                # Update existing user - only update core fields, avoid reset_token columns
-                logger.info("Updating existing emergency_admin user")
+                # Update existing user - grant comprehensive permissions
+                logger.info("Updating existing emergency_admin user with full permissions")
                 conn.execute(text(
                     """
                     UPDATE users 
@@ -1094,6 +1102,7 @@ def emergency_admin():
                         is_active = :is_active,
                         first_name = :first_name,
                         last_name = :last_name,
+                        permissions = :permissions,
                         updated_at = CURRENT_TIMESTAMP
                     WHERE username = :username
                     """
@@ -1104,16 +1113,17 @@ def emergency_admin():
                     "is_active": True,
                     "first_name": "Emergency",
                     "last_name": "Admin",
+                    "permissions": emergency_permissions,
                     "username": "emergency_admin"
                 })
-                logger.info("✓ Emergency admin user updated successfully")
+                logger.info("✓ Emergency admin user updated successfully with comprehensive permissions")
             else:
-                # Create new user - only use core columns, avoid reset_token columns
-                logger.info("Creating new emergency_admin user")
+                # Create new user - grant comprehensive permissions
+                logger.info("Creating new emergency_admin user with full permissions")
                 conn.execute(text(
                     """
-                    INSERT INTO users (username, email, password_hash, role_id, is_active, first_name, last_name, created_at, updated_at)
-                    VALUES (:username, :email, :password_hash, :role_id, :is_active, :first_name, :last_name, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                    INSERT INTO users (username, email, password_hash, role_id, is_active, first_name, last_name, permissions, created_at, updated_at)
+                    VALUES (:username, :email, :password_hash, :role_id, :is_active, :first_name, :last_name, :permissions, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                     """
                 ), {
                     "username": "emergency_admin",
@@ -1122,9 +1132,10 @@ def emergency_admin():
                     "role_id": admin_role_id,
                     "is_active": True,
                     "first_name": "Emergency",
-                    "last_name": "Admin"
+                    "last_name": "Admin",
+                    "permissions": emergency_permissions
                 })
-                logger.info("✓ Emergency admin user created successfully")
+                logger.info("✓ Emergency admin user created successfully with comprehensive permissions")
         
         logger.info(
             "Emergency admin account ready",
