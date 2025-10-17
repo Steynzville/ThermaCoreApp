@@ -6,7 +6,7 @@ import traceback
 from sqlalchemy import text, inspect
 
 from app import create_app, db
-from app.models import User, Role, Permission, Unit, Sensor, SensorReading  # noqa: F401
+from app.models import User, Role, Permission, Unit, Sensor, SensorReading, Client  # noqa: F401
 
 
 def _init_database():
@@ -73,6 +73,7 @@ def _init_database():
             "roles",
             "permissions",
             "role_permissions",
+            "clients",
             "units",
             "sensors",
             "sensor_readings",
@@ -194,6 +195,18 @@ def _create_test_data():
     db.session.add(viewer_role)
     db.session.commit()
 
+    # Create test clients
+    test_client = Client(
+        name="Test Client",
+        description="Test client organization",
+        contact_name="John Doe",
+        contact_email="john@testclient.com",
+        contact_phone="555-1234",
+        is_active=True,
+    )
+    db.session.add(test_client)
+    db.session.commit()
+
     # Create test users
     admin_user = User(
         username="admin",
@@ -202,6 +215,7 @@ def _create_test_data():
         last_name="User",
         role_id=admin_role.id,
         is_active=True,
+        client_id=None,  # Admin users have no client (can see all)
     )
     admin_user.set_password("admin123")
 
@@ -212,6 +226,7 @@ def _create_test_data():
         last_name="User",
         role_id=operator_role.id,
         is_active=True,
+        client_id=test_client.id,  # Operator belongs to test client
     )
     operator_user.set_password("operator123")
 
@@ -222,6 +237,7 @@ def _create_test_data():
         last_name="User",
         role_id=viewer_role.id,
         is_active=True,
+        client_id=test_client.id,  # Viewer belongs to test client
     )
     viewer_user.set_password("viewer123")
 
@@ -240,6 +256,7 @@ def _create_test_data():
         status=UnitStatusEnum.ONLINE,
         health_status=HealthStatusEnum.OPTIMAL,
         water_generation=True,
+        client_id=test_client.id,  # Unit belongs to test client
         client_name="Test Client",
         client_email="client@test.com",
         temp_outside=25.0,
