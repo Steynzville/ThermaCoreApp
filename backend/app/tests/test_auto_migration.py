@@ -1,7 +1,6 @@
 """Tests for auto-migration functionality."""
 
-import pytest
-from sqlalchemy import text, inspect
+from sqlalchemy import inspect
 from app.utils.auto_migration import (
     column_exists,
     add_password_reset_columns,
