@@ -7,7 +7,6 @@ missing columns and creates them via raw SQL when needed.
 
 import logging
 from sqlalchemy import text, inspect
-from flask import current_app
 
 
 logger = logging.getLogger(__name__)
