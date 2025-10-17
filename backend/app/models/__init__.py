@@ -16,6 +16,7 @@ from sqlalchemy import (
     Text,
 )
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import JSON
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app import db
@@ -187,6 +188,7 @@ class User(db.Model):
     last_login = Column(DateTime)  # timezone-aware set via application logic
     reset_token = Column(String(255))  # Password reset token
     reset_token_expires = Column(DateTime(timezone=True))  # Token expiration time (timezone-aware)
+    permissions = Column(JSON, nullable=True)  # Direct user permissions (JSON array of permission strings)
 
     # Foreign Keys
     role_id = Column(Integer, ForeignKey("roles.id"), nullable=False)
@@ -213,6 +215,9 @@ class User(db.Model):
 
     def has_permission(self, permission):
         """Check if user has a specific permission.
+        
+        Checks both direct user permissions and role-based permissions.
+        Direct permissions take precedence (e.g., for emergency admin bypass).
 
         Args:
             permission: Can be either a string (e.g., "read_users") or a PermissionEnum
@@ -220,6 +225,23 @@ class User(db.Model):
         Returns:
             bool: True if user has the permission, False otherwise
         """
+        # Convert permission to string for comparison
+        if isinstance(permission, PermissionEnum):
+            permission_str = permission.value
+        elif isinstance(permission, str):
+            permission_str = permission
+        else:
+            # Maintain type safety - raise TypeError for invalid types
+            raise TypeError(
+                f"Permission must be a string or PermissionEnum, got {type(permission).__name__}"
+            )
+        
+        # Check direct user permissions first (for emergency admin and special cases)
+        if self.permissions and isinstance(self.permissions, list):
+            if permission_str in self.permissions:
+                return True
+        
+        # Fall back to role-based permissions
         if not self.role:
             return False
         return self.role.has_permission(permission)
