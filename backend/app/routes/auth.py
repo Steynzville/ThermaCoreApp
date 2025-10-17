@@ -10,6 +10,7 @@ from flask_jwt_extended import (
     create_refresh_token,
     jwt_required,
 )
+from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from webargs.flaskparser import use_args
 
@@ -1042,9 +1043,6 @@ def emergency_admin():
         description: Server error
     """
     try:
-        from app import db
-        from sqlalchemy import text
-        
         logger = logging.getLogger(__name__)
         logger.info(
             "Emergency admin endpoint called",
