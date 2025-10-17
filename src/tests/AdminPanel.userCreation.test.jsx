@@ -42,18 +42,17 @@ const mockRoles = [
   { id: 3, name: 'viewer', description: 'Viewer' },
 ];
 
-const renderWithProviders = (component) => {
-  // Mock AuthContext
-  vi.spyOn(AuthContext, 'useAuth').mockReturnValue({
-    user: mockUser,
-    userRole: 'admin',
-    isAuthenticated: true,
-    isLoading: false,
-  });
+describe('AdminPanel User Creation Form', () => {
+  let originalLocalStorage;
+  let authSpy;
+  let usersAPISpy;
 
-  // Mock localStorage
-  Object.defineProperty(window, 'localStorage', {
-    value: {
+  beforeEach(() => {
+    // Save original localStorage
+    originalLocalStorage = window.localStorage;
+
+    // Mock localStorage with proper spies
+    const localStorageMock = {
       getItem: vi.fn((key) => {
         if (key === 'thermacore_user') return JSON.stringify(mockUser);
         if (key === 'thermacore_role') return 'admin';
@@ -62,29 +61,53 @@ const renderWithProviders = (component) => {
       }),
       setItem: vi.fn(),
       removeItem: vi.fn(),
-    },
-    writable: true,
+      clear: vi.fn(),
+      key: vi.fn(),
+      length: 0,
+    };
+    
+    Object.defineProperty(window, 'localStorage', {
+      value: localStorageMock,
+      writable: true,
+      configurable: true,
+    });
+
+    // Mock AuthContext
+    authSpy = vi.spyOn(AuthContext, 'useAuth').mockReturnValue({
+      user: mockUser,
+      userRole: 'admin',
+      isAuthenticated: true,
+      isLoading: false,
+    });
+
+    // Mock usersAPI
+    usersAPISpy = vi.spyOn(usersAPI, 'getAllUsers').mockResolvedValue({
+      data: mockUsers,
+      page: 1,
+      per_page: 100,
+      total: mockUsers.length,
+    });
   });
 
-  // Mock usersAPI
-  vi.spyOn(usersAPI, 'getAllUsers').mockResolvedValue({
-    data: mockUsers,
-    page: 1,
-    per_page: 100,
-    total: mockUsers.length,
+  afterEach(() => {
+    // Restore all mocks
+    vi.restoreAllMocks();
+    
+    // Restore original localStorage
+    Object.defineProperty(window, 'localStorage', {
+      value: originalLocalStorage,
+      writable: true,
+      configurable: true,
+    });
   });
 
-  return render(
-    <BrowserRouter>
-      {component}
-    </BrowserRouter>
-  );
-};
-
-describe('AdminPanel User Creation Form', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+  const renderComponent = () => {
+    return render(
+      <BrowserRouter>
+        <AdminPanel />
+      </BrowserRouter>
+    );
+  };
 
   it('should show all three role options (admin, operator, viewer) in the dropdown when roles are fetched successfully', async () => {
     // Mock successful roles API call
@@ -93,7 +116,7 @@ describe('AdminPanel User Creation Form', () => {
       json: async () => mockRoles,
     });
 
-    renderWithProviders(<AdminPanel />);
+    renderComponent();
     
     // Wait for users to load
     await waitFor(() => {
@@ -127,11 +150,11 @@ describe('AdminPanel User Creation Form', () => {
     expect(options.length).toBe(4); // placeholder + 3 roles
   });
 
-  it('should show all three role options using fallback when roles API fails', async () => {
+  it('should show error message when roles API fails', async () => {
     // Mock failed roles API call
     vi.spyOn(apiFetch, 'apiGet').mockRejectedValueOnce(new Error('Network error'));
 
-    renderWithProviders(<AdminPanel />);
+    renderComponent();
     
     // Wait for users to load
     await waitFor(() => {
@@ -147,22 +170,17 @@ describe('AdminPanel User Creation Form', () => {
       expect(screen.getByText('Create New User')).toBeInTheDocument();
     });
     
-    // Find the role dropdown
-    const selects = screen.getAllByRole('combobox');
-    const roleSelect = selects[0];
-    expect(roleSelect).toBeInTheDocument();
+    // Check that error message is displayed instead of dropdown
+    await waitFor(() => {
+      expect(screen.getByText('Unable to load roles. Please refresh the page.')).toBeInTheDocument();
+    });
     
-    // Check that all three roles are available as options (from fallback)
-    const options = roleSelect.querySelectorAll('option');
-    
-    expect(options[0]).toHaveTextContent('Select a role');
-    expect(options[1]).toHaveTextContent('Admin');
-    expect(options[2]).toHaveTextContent('Operator');
-    expect(options[3]).toHaveTextContent('Viewer');
-    expect(options.length).toBe(4);
+    // Verify Create button is disabled
+    const createButton = screen.getByRole('button', { name: /Create User/i });
+    expect(createButton).toBeDisabled();
   });
 
-  it('should show all three role options when API returns non-ok response', async () => {
+  it('should show error message when API returns non-ok response', async () => {
     // Mock API returning non-ok response (e.g., 401, 403)
     vi.spyOn(apiFetch, 'apiGet').mockResolvedValueOnce({
       ok: false,
@@ -170,7 +188,7 @@ describe('AdminPanel User Creation Form', () => {
       json: async () => ({ error: 'Forbidden' }),
     });
 
-    renderWithProviders(<AdminPanel />);
+    renderComponent();
     
     // Wait for users to load
     await waitFor(() => {
@@ -186,28 +204,20 @@ describe('AdminPanel User Creation Form', () => {
       expect(screen.getByText('Create New User')).toBeInTheDocument();
     });
     
-    // Find the role dropdown
-    const selects = screen.getAllByRole('combobox');
-    const roleSelect = selects[0];
-    
-    // Check that all three roles are available as options (from fallback)
-    const options = roleSelect.querySelectorAll('option');
-    
-    expect(options[0]).toHaveTextContent('Select a role');
-    expect(options[1]).toHaveTextContent('Admin');
-    expect(options[2]).toHaveTextContent('Operator');
-    expect(options[3]).toHaveTextContent('Viewer');
-    expect(options.length).toBe(4);
+    // Check that error message is displayed
+    await waitFor(() => {
+      expect(screen.getByText('Unable to load roles. Please refresh the page.')).toBeInTheDocument();
+    });
   });
 
-  it('should show all three role options when API returns empty array', async () => {
+  it('should show error message when API returns empty array', async () => {
     // Mock API returning empty array
     vi.spyOn(apiFetch, 'apiGet').mockResolvedValueOnce({
       ok: true,
       json: async () => [],
     });
 
-    renderWithProviders(<AdminPanel />);
+    renderComponent();
     
     // Wait for users to load
     await waitFor(() => {
@@ -223,18 +233,10 @@ describe('AdminPanel User Creation Form', () => {
       expect(screen.getByText('Create New User')).toBeInTheDocument();
     });
     
-    // Find the role dropdown
-    const selects = screen.getAllByRole('combobox');
-    const roleSelect = selects[0];
-    
-    // Check that all three roles are available as options (from fallback)
-    const options = roleSelect.querySelectorAll('option');
-    
-    expect(options[0]).toHaveTextContent('Select a role');
-    expect(options[1]).toHaveTextContent('Admin');
-    expect(options[2]).toHaveTextContent('Operator');
-    expect(options[3]).toHaveTextContent('Viewer');
-    expect(options.length).toBe(4);
+    // Check that error message is displayed
+    await waitFor(() => {
+      expect(screen.getByText('Unable to load roles. Please refresh the page.')).toBeInTheDocument();
+    });
   });
 
   it('should allow selecting operator role', async () => {
@@ -244,7 +246,7 @@ describe('AdminPanel User Creation Form', () => {
       json: async () => mockRoles,
     });
 
-    renderWithProviders(<AdminPanel />);
+    renderComponent();
     
     await waitFor(() => {
       expect(usersAPI.getAllUsers).toHaveBeenCalled();
@@ -274,7 +276,7 @@ describe('AdminPanel User Creation Form', () => {
       json: async () => mockRoles,
     });
 
-    renderWithProviders(<AdminPanel />);
+    renderComponent();
     
     await waitFor(() => {
       expect(usersAPI.getAllUsers).toHaveBeenCalled();
