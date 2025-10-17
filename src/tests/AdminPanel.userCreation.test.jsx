@@ -306,4 +306,45 @@ describe('AdminPanel User Creation Form', () => {
     // Verify the selection
     expect(roleSelect.value).toBe('3');
   });
+
+  it('should handle roles wrapped in {roles: [...]} format', async () => {
+    // Mock API returning roles in {roles: [...]} format
+    vi.spyOn(apiFetch, 'apiGet').mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ roles: mockRoles }),
+    });
+
+    renderComponent();
+    
+    await waitFor(() => {
+      expect(usersAPI.getAllUsers).toHaveBeenCalled();
+    });
+    
+    // Click Add User button
+    const addUserButton = screen.getByText('Add User');
+    fireEvent.click(addUserButton);
+    
+    await waitFor(() => {
+      expect(screen.getByText('Create New User')).toBeInTheDocument();
+    });
+    
+    // Wait for roles to load
+    await waitFor(() => {
+      const selects = screen.getAllByRole('combobox');
+      const roleSelect = selects[0];
+      const options = roleSelect.querySelectorAll('option');
+      expect(options[0]).toHaveTextContent('Select a role');
+    });
+    
+    // Find all select elements
+    const selects = screen.getAllByRole('combobox');
+    const roleSelect = selects[0];
+    
+    // Check that all three roles are available
+    const options = roleSelect.querySelectorAll('option');
+    expect(options[1]).toHaveTextContent('Admin');
+    expect(options[2]).toHaveTextContent('Operator');
+    expect(options[3]).toHaveTextContent('Viewer');
+    expect(options.length).toBe(4);
+  });
 });
