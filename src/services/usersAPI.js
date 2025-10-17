@@ -9,8 +9,13 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://thermacoreapp
 
 /**
  * Fetch all users from the backend API
- * @param {Object} options - Optional query parameters (page, per_page, role, active, search)
- * @returns {Promise<Object>} Response with users data
+ * @param {Object} options - Optional query parameters for filtering and pagination
+ * @param {number} [options.page=1] - Page number for pagination
+ * @param {number} [options.per_page=100] - Number of results per page (max 100)
+ * @param {string} [options.role] - Filter by role name (e.g., 'admin', 'operator', 'viewer')
+ * @param {boolean} [options.active] - Filter by active status (true/false)
+ * @param {string} [options.search] - Search query for username, email, first_name, or last_name
+ * @returns {Promise<Object>} Response with users data including pagination info
  */
 export const getAllUsers = async (options = {}) => {
   const { page = 1, per_page = 100, role, active, search } = options;

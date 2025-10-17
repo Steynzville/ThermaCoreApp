@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { useAuth } from "../context/AuthContext";
 import { deleteUser, getAllUsers } from "../services/usersAPI";
 import { apiGet, apiPost } from "../utils/apiFetch";
+import { formatRoleName, formatUserName } from "../utils/userUtils";
 import PageHeader from "./PageHeader";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader } from "./ui/card";
@@ -83,15 +84,11 @@ const AdminPanel = ({ className }) => {
       // Map backend response to frontend format
       const mappedUsers = result.data.map(user => ({
         id: user.id,
-        name: user.first_name && user.last_name 
-          ? `${user.first_name} ${user.last_name}`.trim()
-          : user.username,
+        name: formatUserName(user),
         email: user.email,
         company: 'N/A', // Backend doesn't provide company field
         phone: 'N/A', // Backend doesn't provide phone field
-        role: user.role?.name 
-          ? user.role.name.charAt(0).toUpperCase() + user.role.name.slice(1)
-          : 'Viewer',
+        role: formatRoleName(user.role),
         status: user.is_active ? 'Active' : 'Inactive',
       }));
       
