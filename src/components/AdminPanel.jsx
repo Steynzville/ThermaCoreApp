@@ -11,44 +11,15 @@ import {
   Trash2,
   Users,
 } from "lucide-react";
-import React, { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { useAuth } from "../context/AuthContext";
+import { deleteUser, getAllUsers } from "../services/usersAPI";
 import { apiGet, apiPost } from "../utils/apiFetch";
 import PageHeader from "./PageHeader";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader } from "./ui/card";
-
-const initialUsers = [
-  {
-    id: 1,
-    name: "John Doe",
-    email: "john@thermacore.com",
-    company: "ThermaCore Industries",
-    phone: "+1 (555) 123-4567",
-    role: "Admin",
-    status: "Active",
-  },
-  {
-    id: 2,
-    name: "Jane Smith",
-    email: "jane@thermacore.com",
-    company: "Energy Solutions Ltd",
-    phone: "+1 (555) 987-6543",
-    role: "Operator",
-    status: "Active",
-  },
-  {
-    id: 3,
-    name: "Mike Johnson",
-    email: "mike@thermacore.com",
-    company: "Green Power Corp",
-    phone: "+1 (555) 456-7890",
-    role: "Viewer",
-    status: "Inactive",
-  },
-];
 
 const systemStats = [
   { label: "Total Devices", value: "4", icon: Database },
@@ -60,7 +31,9 @@ const systemStats = [
 const AdminPanel = ({ className }) => {
   const { user: currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState("users");
-  const [users, setUsers] = useState(initialUsers);
+  const [users, setUsers] = useState([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [usersError, setUsersError] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
   const [systemSettings, setSystemSettings] = useState({
     emailNotifications: true,
@@ -99,6 +72,39 @@ const AdminPanel = ({ className }) => {
     isSubmitting: false
   });
 
+  // Fetch users from backend
+  const fetchUsers = async () => {
+    setIsLoadingUsers(true);
+    setUsersError(null);
+    
+    try {
+      const result = await getAllUsers({ per_page: 100 });
+      
+      // Map backend response to frontend format
+      const mappedUsers = result.data.map(user => ({
+        id: user.id,
+        name: user.first_name && user.last_name 
+          ? `${user.first_name} ${user.last_name}`.trim()
+          : user.username,
+        email: user.email,
+        company: 'N/A', // Backend doesn't provide company field
+        phone: 'N/A', // Backend doesn't provide phone field
+        role: user.role?.name 
+          ? user.role.name.charAt(0).toUpperCase() + user.role.name.slice(1)
+          : 'Viewer',
+        status: user.is_active ? 'Active' : 'Inactive',
+      }));
+      
+      setUsers(mappedUsers);
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+      setUsersError('Failed to load users. Please try again.');
+      toast.error('Failed to load users');
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  };
+
   // Fetch available roles from backend
   const fetchRoles = async () => {
     try {
@@ -124,6 +130,11 @@ const AdminPanel = ({ className }) => {
       ]);
     }
   };
+
+  // Fetch users on component mount
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
   const handleAddUser = () => {
     // Open the create user modal
@@ -198,18 +209,8 @@ const AdminPanel = ({ className }) => {
         toast.success(`User ${newUserFormData.username} created successfully`);
         setCreateUserModal(false);
         
-        // Add the new user to the local state
-        const roleName = availableRoles.find(r => r.id === parseInt(newUserFormData.roleId, 10))?.name || 'viewer';
-        const newUser = {
-          id: result.data?.id || users.length + 1,
-          name: `${newUserFormData.firstName} ${newUserFormData.lastName}`.trim() || newUserFormData.username,
-          email: newUserFormData.email,
-          company: 'N/A',
-          phone: 'N/A',
-          role: roleName.charAt(0).toUpperCase() + roleName.slice(1),
-          status: 'Active',
-        };
-        setUsers([...users, newUser]);
+        // Refresh the user list from the backend
+        await fetchUsers();
       } else {
         toast.error(result.error || result.message || 'Failed to create user');
       }
@@ -232,9 +233,17 @@ const AdminPanel = ({ className }) => {
     setEditingUser(null);
   };
 
-  const handleDeleteUser = (userId) => {
+  const handleDeleteUser = async (userId) => {
     if (window.confirm("Are you sure you want to delete this user?")) {
-      setUsers(users.filter((user) => user.id !== userId));
+      try {
+        await deleteUser(userId);
+        toast.success('User deleted successfully');
+        // Refresh the user list
+        await fetchUsers();
+      } catch (error) {
+        console.error('Failed to delete user:', error);
+        toast.error('Failed to delete user');
+      }
     }
   };
 
@@ -462,35 +471,59 @@ const AdminPanel = ({ className }) => {
               </button>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">
-                        Name
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">
-                        Email
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">
-                        Company
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">
-                        Phone
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">
-                        Role
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">
-                        Status
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.map((user) => (
+              {isLoadingUsers ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="flex flex-col items-center space-y-3">
+                    <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Loading users...</p>
+                  </div>
+                </div>
+              ) : usersError ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="flex flex-col items-center space-y-3">
+                    <p className="text-sm text-red-600 dark:text-red-400">{usersError}</p>
+                    <button
+                      onClick={fetchUsers}
+                      className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      Try Again
+                    </button>
+                  </div>
+                </div>
+              ) : users.length === 0 ? (
+                <div className="flex items-center justify-center py-12">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">No users found</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200 dark:border-gray-700">
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                          Name
+                        </th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                          Email
+                        </th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                          Company
+                        </th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                          Phone
+                        </th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                          Role
+                        </th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                          Status
+                        </th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users.map((user) => (
                       <tr
                         key={user.id}
                         className="border-b border-gray-100 dark:border-gray-800"
@@ -540,10 +573,11 @@ const AdminPanel = ({ className }) => {
                           </div>
                         </td>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

@@ -5,6 +5,7 @@ import { vi } from 'vitest';
 import AdminPanel from '../components/AdminPanel';
 import * as AuthContext from '../context/AuthContext.jsx';
 import * as apiFetch from '../utils/apiFetch';
+import * as usersAPI from '../services/usersAPI';
 
 // Mock sonner toast
 vi.mock('sonner', () => ({
@@ -22,6 +23,36 @@ const mockUser = {
   firstName: 'Admin',
   lastName: 'User',
 };
+
+const mockUsers = [
+  {
+    id: 1,
+    username: 'john_doe',
+    email: 'john@thermacore.com',
+    first_name: 'John',
+    last_name: 'Doe',
+    role: { name: 'admin' },
+    is_active: true,
+  },
+  {
+    id: 2,
+    username: 'jane_smith',
+    email: 'jane@thermacore.com',
+    first_name: 'Jane',
+    last_name: 'Smith',
+    role: { name: 'operator' },
+    is_active: true,
+  },
+  {
+    id: 3,
+    username: 'mike_johnson',
+    email: 'mike@thermacore.com',
+    first_name: 'Mike',
+    last_name: 'Johnson',
+    role: { name: 'viewer' },
+    is_active: false,
+  },
+];
 
 const renderWithProviders = (component) => {
   // Mock AuthContext
@@ -47,6 +78,19 @@ const renderWithProviders = (component) => {
     writable: true,
   });
 
+  // Mock usersAPI
+  vi.spyOn(usersAPI, 'getAllUsers').mockResolvedValue({
+    data: mockUsers,
+    page: 1,
+    per_page: 100,
+    total: mockUsers.length,
+  });
+
+  vi.spyOn(usersAPI, 'deleteUser').mockResolvedValue({
+    ok: true,
+    status: 204,
+  });
+
   return render(
     <BrowserRouter>
       {component}
@@ -57,12 +101,23 @@ const renderWithProviders = (component) => {
 describe('AdminPanel Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    
+    // Reset mock implementations
+    vi.spyOn(usersAPI, 'getAllUsers').mockResolvedValue({
+      data: mockUsers,
+      page: 1,
+      per_page: 100,
+      total: mockUsers.length,
+    });
   });
 
-  it('should render all three tabs: Users, Password Management, and Settings', () => {
+  it('should render all three tabs: Users, Password Management, and Settings', async () => {
     renderWithProviders(<AdminPanel />);
     
-    expect(screen.getByText('Users')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Users')).toBeInTheDocument();
+    });
+    
     expect(screen.getByText('Password Management')).toBeInTheDocument();
     expect(screen.getByText('Settings')).toBeInTheDocument();
   });
@@ -182,39 +237,60 @@ describe('AdminPanel Component', () => {
     });
   });
 
-  it('should list users in Password Management tab', () => {
+  it('should list users in Password Management tab', async () => {
     renderWithProviders(<AdminPanel />);
+    
+    // Wait for users to load
+    await waitFor(() => {
+      expect(usersAPI.getAllUsers).toHaveBeenCalled();
+    });
     
     // Navigate to Password Management tab
     fireEvent.click(screen.getByText('Password Management'));
     
     // Check if users are listed
-    expect(screen.getByText('John Doe')).toBeInTheDocument();
-    expect(screen.getByText('Jane Smith')).toBeInTheDocument();
-    expect(screen.getByText('Mike Johnson')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('John Doe')).toBeInTheDocument();
+      expect(screen.getByText('Jane Smith')).toBeInTheDocument();
+      expect(screen.getByText('Mike Johnson')).toBeInTheDocument();
+    });
   });
 
-  it('should have Reset Password button for each user', () => {
+  it('should have Reset Password button for each user', async () => {
     renderWithProviders(<AdminPanel />);
+    
+    // Wait for users to load
+    await waitFor(() => {
+      expect(usersAPI.getAllUsers).toHaveBeenCalled();
+    });
     
     // Navigate to Password Management tab
     fireEvent.click(screen.getByText('Password Management'));
     
     // Check for Reset Password buttons (3 users)
-    const resetButtons = screen.getAllByText('Reset Password');
-    expect(resetButtons.length).toBeGreaterThan(0);
+    await waitFor(() => {
+      const resetButtons = screen.getAllByText('Reset Password');
+      expect(resetButtons.length).toBeGreaterThan(0);
+    });
   });
 
-  it('should maintain existing Users tab functionality', () => {
+  it('should maintain existing Users tab functionality', async () => {
     renderWithProviders(<AdminPanel />);
+    
+    // Wait for users to load
+    await waitFor(() => {
+      expect(usersAPI.getAllUsers).toHaveBeenCalled();
+    });
     
     // Users tab should be active by default
     expect(screen.getByText('User Management')).toBeInTheDocument();
     expect(screen.getByText('Add User')).toBeInTheDocument();
     
     // Check if users are displayed in the table
-    expect(screen.getByText('john@thermacore.com')).toBeInTheDocument();
-    expect(screen.getByText('jane@thermacore.com')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('john@thermacore.com')).toBeInTheDocument();
+      expect(screen.getByText('jane@thermacore.com')).toBeInTheDocument();
+    });
   });
 
   it('should maintain existing Settings tab functionality', () => {
