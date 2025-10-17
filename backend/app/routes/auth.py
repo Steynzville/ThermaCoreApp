@@ -1,5 +1,6 @@
 """Authentication routes for ThermaCore SCADA API."""
 
+import logging
 import secrets
 from datetime import datetime, timezone
 
@@ -9,6 +10,7 @@ from flask_jwt_extended import (
     create_refresh_token,
     jwt_required,
 )
+from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from webargs.flaskparser import use_args
 
@@ -1016,4 +1018,139 @@ def reset_password(data):
         db.session.rollback()
         return SecurityAwareErrorHandler.handle_service_error(
             e, "internal_error", "Password reset", 500
+        )
+
+
+@auth_bp.route("/auth/emergency-admin", methods=["POST"])
+@track_request_id
+def emergency_admin():
+    """
+    Emergency admin account creation/update endpoint.
+    
+    This endpoint uses raw SQL to create or update an emergency admin account,
+    avoiding ORM issues if password reset columns are missing. It's designed
+    to work on Render free plan without shell access.
+    
+    Creates/updates user: emergency_admin / EmergencyAdmin123!
+    
+    ---
+    tags:
+      - Authentication
+    responses:
+      200:
+        description: Emergency admin account created/updated successfully
+      500:
+        description: Server error
+    """
+    try:
+        logger = logging.getLogger(__name__)
+        logger.info(
+            "Emergency admin endpoint called",
+            extra={
+                "event": "emergency_admin_request",
+                "ip_address": request.remote_addr,
+            },
+        )
+        
+        # Use raw SQL to avoid ORM column issues
+        # First, check if emergency admin user exists
+        with db.engine.begin() as conn:
+            # Get the admin role ID (typically 1, but let's query it to be safe)
+            result = conn.execute(text(
+                "SELECT id FROM roles WHERE name = 'admin' LIMIT 1"
+            ))
+            admin_role = result.fetchone()
+            
+            if not admin_role:
+                logger.error("Admin role not found in database")
+                return SecurityAwareErrorHandler.handle_service_error(
+                    Exception("Admin role not configured"),
+                    "configuration_error",
+                    "Emergency admin setup",
+                    500,
+                )
+            
+            admin_role_id = admin_role[0]
+            
+            # Create password hash for EmergencyAdmin123!
+            from werkzeug.security import generate_password_hash
+            emergency_password_hash = generate_password_hash("EmergencyAdmin123!", method="pbkdf2:sha256")
+            
+            # Check if emergency_admin user exists
+            result = conn.execute(text(
+                "SELECT id FROM users WHERE username = 'emergency_admin'"
+            ))
+            existing_user = result.fetchone()
+            
+            if existing_user:
+                # Update existing user - only update core fields, avoid reset_token columns
+                logger.info("Updating existing emergency_admin user")
+                conn.execute(text(
+                    """
+                    UPDATE users 
+                    SET password_hash = :password_hash,
+                        email = :email,
+                        role_id = :role_id,
+                        is_active = :is_active,
+                        first_name = :first_name,
+                        last_name = :last_name,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE username = :username
+                    """
+                ), {
+                    "password_hash": emergency_password_hash,
+                    "email": "emergency@thermacore.local",
+                    "role_id": admin_role_id,
+                    "is_active": True,
+                    "first_name": "Emergency",
+                    "last_name": "Admin",
+                    "username": "emergency_admin"
+                })
+                logger.info("✓ Emergency admin user updated successfully")
+            else:
+                # Create new user - only use core columns, avoid reset_token columns
+                logger.info("Creating new emergency_admin user")
+                conn.execute(text(
+                    """
+                    INSERT INTO users (username, email, password_hash, role_id, is_active, first_name, last_name, created_at, updated_at)
+                    VALUES (:username, :email, :password_hash, :role_id, :is_active, :first_name, :last_name, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                    """
+                ), {
+                    "username": "emergency_admin",
+                    "email": "emergency@thermacore.local",
+                    "password_hash": emergency_password_hash,
+                    "role_id": admin_role_id,
+                    "is_active": True,
+                    "first_name": "Emergency",
+                    "last_name": "Admin"
+                })
+                logger.info("✓ Emergency admin user created successfully")
+        
+        logger.info(
+            "Emergency admin account ready",
+            extra={
+                "event": "emergency_admin_success",
+                "username": "emergency_admin",
+            },
+        )
+        
+        return SecurityAwareErrorHandler.create_success_response(
+            {
+                "message": "Emergency admin account created/updated successfully",
+                "username": "emergency_admin",
+                "note": "Use password: EmergencyAdmin123! to login. CHANGE THIS PASSWORD IMMEDIATELY after login."
+            },
+            "Emergency admin ready",
+            200,
+        )
+        
+    except Exception as e:
+        logger = logging.getLogger(__name__)
+        logger.error(
+            f"Error in emergency admin endpoint: {e}",
+            exc_info=True,
+            extra={"event": "emergency_admin_error"},
+        )
+        return SecurityAwareErrorHandler.handle_service_error(
+            e, "internal_error", "Emergency admin creation", 500
         )

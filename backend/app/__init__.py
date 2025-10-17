@@ -315,6 +315,18 @@ def create_app(config_name=None):
         from app.models import User, Role, Permission, Unit, Sensor, SensorReading  # noqa: F401
     except ImportError:
         pass  # Models may not be importable without full dependencies
+    
+    # Run auto-migrations for environments without shell access (e.g., Render free plan)
+    # This ensures database schema is up to date even without manual migration execution
+    if not app.config.get("TESTING", False):
+        try:
+            from app.utils.auto_migration import run_auto_migrations
+            migration_logger = logging.getLogger(__name__)
+            migration_logger.info("Running auto-migrations for database schema...")
+            run_auto_migrations(app)
+        except Exception as e:
+            migration_logger = logging.getLogger(__name__)
+            migration_logger.warning(f"Auto-migration failed (non-critical): {e}")
 
     # Helper function to register blueprints with consistent error handling
     def register_blueprint_safe(module_path, blueprint_name, route_name, url_prefix=None):
