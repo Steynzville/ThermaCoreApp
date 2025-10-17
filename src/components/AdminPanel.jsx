@@ -115,7 +115,24 @@ const AdminPanel = ({ className }) => {
       
       if (response.ok) {
         const roles = await response.json();
-        setAvailableRoles(roles);
+        // Ensure we have valid roles data
+        if (Array.isArray(roles) && roles.length > 0) {
+          setAvailableRoles(roles);
+        } else {
+          // Set default roles if response is empty
+          setAvailableRoles([
+            { id: 1, name: 'admin' },
+            { id: 2, name: 'operator' },
+            { id: 3, name: 'viewer' },
+          ]);
+        }
+      } else {
+        // Set default roles if response is not ok
+        setAvailableRoles([
+          { id: 1, name: 'admin' },
+          { id: 2, name: 'operator' },
+          { id: 3, name: 'viewer' },
+        ]);
       }
     } catch (error) {
       console.error('Failed to fetch roles:', error);
