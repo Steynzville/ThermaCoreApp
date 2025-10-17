@@ -3,8 +3,6 @@
 import json
 import time
 
-import pytest
-
 from app.models import User, Role
 from app.utils.helpers import get_role_permissions
 
