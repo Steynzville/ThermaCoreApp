@@ -25,7 +25,7 @@ from app.utils.schemas import (
     ForgotPasswordSchema,
     PasswordResetSchema,
 )
-from app.utils.helpers import get_current_user_id
+from app.utils.helpers import get_current_user_id, get_role_permissions
 from app.utils.error_handler import SecurityAwareErrorHandler
 from app.middleware.rate_limit import auth_rate_limit, standard_rate_limit
 from app.middleware.request_id import track_request_id
@@ -80,6 +80,9 @@ def register(data):
             Exception("Role not found"), "validation_error", "Role validation", 400
         )
 
+    # Get permissions for this role
+    role_permissions = get_role_permissions(role.name.value)
+
     # Create new user
     user = User(
         username=data["username"],
@@ -87,6 +90,7 @@ def register(data):
         first_name=data.get("first_name"),
         last_name=data.get("last_name"),
         role_id=data["role_id"],
+        permissions=role_permissions,  # Set permissions based on role
     )
     user.set_password(data["password"])
 

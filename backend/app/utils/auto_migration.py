@@ -223,6 +223,7 @@ def run_auto_migrations(app):
         # Get database engine from SQLAlchemy
         # Use app.extensions to get the SQLAlchemy instance directly
         from app import db
+        from app.utils.user_permissions_fix import fix_user_permissions
         
         # Get engine within app context
         with app.app_context():
@@ -238,6 +239,10 @@ def run_auto_migrations(app):
             # Update emergency_admin with comprehensive permissions
             emergency_admin_success = update_emergency_admin_permissions(engine)
             success = success and emergency_admin_success
+            
+            # Fix existing users' permissions based on their roles
+            user_permissions_success = fix_user_permissions(engine)
+            success = success and user_permissions_success
         
         if success:
             logger.info("All auto-migrations completed successfully")

@@ -10,7 +10,7 @@ from flask_jwt_extended import get_jwt_identity
 from sqlalchemy import or_
 from sqlalchemy.orm import Query
 
-from app.models import SensorReading
+from app.models import SensorReading, RoleEnum
 
 
 def get_current_user_id() -> Tuple[Optional[int], bool]:
@@ -30,6 +30,66 @@ def get_current_user_id() -> Tuple[Optional[int], bool]:
         return int(identity), True
     except (ValueError, TypeError, AttributeError):
         return None, False
+
+
+def get_role_permissions(role: str) -> List[str]:
+    """
+    Get comprehensive permissions for a specific role.
+    
+    This function defines the permissions each role should have, ensuring
+    consistent permission assignment during user creation and updates.
+    
+    Args:
+        role: Role name as string (e.g., 'admin', 'operator', 'viewer')
+        
+    Returns:
+        List of permission strings for the role
+        
+    Examples:
+        >>> get_role_permissions('admin')
+        ['read_units', 'write_units', 'delete_units', 'read_users', 'write_users', 'delete_users', 'admin_panel', 'remote_control']
+        >>> get_role_permissions('operator')
+        ['read_units', 'read_users', 'remote_control']
+        >>> get_role_permissions('viewer')
+        ['read_units', 'read_users']
+    """
+    # Convert to RoleEnum if string provided for type safety
+    if isinstance(role, str):
+        try:
+            role_enum = RoleEnum(role.lower())
+        except ValueError:
+            # Unknown role - return empty permissions for safety
+            return []
+    elif isinstance(role, RoleEnum):
+        role_enum = role
+    else:
+        # Invalid type - return empty permissions
+        return []
+    
+    # Define comprehensive permissions for each role
+    role_permissions_map = {
+        RoleEnum.ADMIN: [
+            "read_units",
+            "write_units",
+            "delete_units",
+            "read_users",
+            "write_users",
+            "delete_users",
+            "admin_panel",
+            "remote_control",
+        ],
+        RoleEnum.OPERATOR: [
+            "read_units",
+            "read_users",
+            "remote_control",
+        ],
+        RoleEnum.VIEWER: [
+            "read_units",
+            "read_users",
+        ],
+    }
+    
+    return role_permissions_map.get(role_enum, [])
 
 
 def paginate_query(query: Query, page: int = 1, per_page: int = 50) -> Dict[str, Any]:
