@@ -2,6 +2,7 @@
 
 import json
 import jwt
+import time
 
 from app.models import User
 
@@ -551,11 +552,16 @@ class TestUserRegistration:
 
         operator_role = Role.query.filter_by(name=RoleEnum.OPERATOR).first()
 
+        # Use timestamp to ensure unique email/username across test runs
+        unique_id = int(time.time() * 1000)  # Milliseconds since epoch
+        username = f"operator_{unique_id}"
+        email = f"operator_{unique_id}@test.com"
+
         response = client.post(
             "/api/v1/auth/register",
             json={
-                "username": "newoperator",
-                "email": "newoperator@test.com",
+                "username": username,
+                "email": email,
                 "password": "operatorpass123",
                 "first_name": "New",
                 "last_name": "Operator",
@@ -569,11 +575,11 @@ class TestUserRegistration:
 
         assert response.status_code == 201
         data = unwrap_response(response)
-        assert data["username"] == "newoperator"
-        assert data["email"] == "newoperator@test.com"
+        assert data["username"] == username
+        assert data["email"] == email
 
         # Verify user was created with operator role
-        created_user = User.query.filter_by(username="newoperator").first()
+        created_user = User.query.filter_by(username=username).first()
         assert created_user is not None
         assert created_user.role_id == operator_role.id
         assert created_user.is_active is True
@@ -586,11 +592,16 @@ class TestUserRegistration:
 
         viewer_role = Role.query.filter_by(name=RoleEnum.VIEWER).first()
 
+        # Use timestamp to ensure unique email/username across test runs
+        unique_id = int(time.time() * 1000)  # Milliseconds since epoch
+        username = f"viewer_{unique_id}"
+        email = f"viewer_{unique_id}@test.com"
+
         response = client.post(
             "/api/v1/auth/register",
             json={
-                "username": "newviewer",
-                "email": "newviewer@test.com",
+                "username": username,
+                "email": email,
                 "password": "viewerpass123",
                 "first_name": "New",
                 "last_name": "Viewer",
@@ -604,11 +615,11 @@ class TestUserRegistration:
 
         assert response.status_code == 201
         data = unwrap_response(response)
-        assert data["username"] == "newviewer"
-        assert data["email"] == "newviewer@test.com"
+        assert data["username"] == username
+        assert data["email"] == email
 
         # Verify user was created with viewer role
-        created_user = User.query.filter_by(username="newviewer").first()
+        created_user = User.query.filter_by(username=username).first()
         assert created_user is not None
         assert created_user.role_id == viewer_role.id
         assert created_user.is_active is True
