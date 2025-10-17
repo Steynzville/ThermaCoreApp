@@ -185,6 +185,8 @@ class User(db.Model):
         DateTime, default=utc_now
     )  # timezone-aware via utc_now() function
     last_login = Column(DateTime)  # timezone-aware set via application logic
+    reset_token = Column(String(255))  # Password reset token
+    reset_token_expires = Column(DateTime(timezone=True))  # Token expiration time (timezone-aware)
 
     # Foreign Keys
     role_id = Column(Integer, ForeignKey("roles.id"), nullable=False)

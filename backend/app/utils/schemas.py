@@ -371,6 +371,19 @@ class PasswordChangeSchema(Schema):
     new_password = fields.Str(required=True, validate=validate.Length(min=6))
 
 
+class ForgotPasswordSchema(Schema):
+    """Forgot password request schema."""
+
+    email = fields.Email(required=True)
+
+
+class PasswordResetSchema(Schema):
+    """Password reset request schema."""
+
+    token = fields.Str(required=True, validate=validate.Length(min=1))
+    new_password = fields.Str(required=True, validate=validate.Length(min=6))
+
+
 # Query parameter validation schemas
 class HistoricalDataQuerySchema(Schema):
     """Schema for historical data query parameters."""

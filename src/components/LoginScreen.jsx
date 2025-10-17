@@ -141,9 +141,11 @@ const LoginScreen = ({ error, setError }) => {
     // For now, it just shows the dialog
   }, []);
 
-  const handleForgotPassword = useCallback(() => {
+  const handleForgotPassword = useCallback((e) => {
+    e.preventDefault();
     console.log("Forgot password clicked!");
-  }, []);
+    navigate("/forgot-password");
+  }, [navigate]);
 
   return (
     <div className={styles.pageWrapper}>
