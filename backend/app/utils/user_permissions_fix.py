@@ -5,6 +5,7 @@ based on their assigned roles, ensuring all users have the correct
 permissions for user management and other operations.
 """
 
+import json
 import logging
 from sqlalchemy import text
 
@@ -25,8 +26,6 @@ def fix_user_permissions(engine):
         bool: True if update successful, False on error
     """
     try:
-        import json
-        
         # Define role-based permissions (must match get_role_permissions)
         role_permissions_map = {
             'admin': [

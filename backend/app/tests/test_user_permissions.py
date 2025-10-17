@@ -1,6 +1,8 @@
 """Tests for user permissions and role-based access control."""
 
 import json
+import time
+
 import pytest
 
 from app.models import User, Role
@@ -80,6 +82,11 @@ class TestRolePermissions:
 class TestUserCreationWithPermissions:
     """Test user creation with proper permission assignment."""
 
+    @staticmethod
+    def generate_unique_suffix():
+        """Generate a unique suffix for test usernames to avoid conflicts."""
+        return str(int(time.time() * 1000))[-6:]
+
     def get_auth_token(self, client, username="admin", password="admin123"):
         """Helper method to get auth token."""
         response = client.post(
@@ -108,8 +115,7 @@ class TestUserCreationWithPermissions:
         assert admin_role is not None
 
         # Register a new admin user with unique username
-        import time
-        unique_suffix = str(int(time.time() * 1000))[-6:]
+        unique_suffix = self.generate_unique_suffix()
 
         response = client.post(
             "/api/v1/auth/register",
@@ -156,8 +162,7 @@ class TestUserCreationWithPermissions:
         assert operator_role is not None
 
         # Register a new operator user with unique username
-        import time
-        unique_suffix = str(int(time.time() * 1000))[-6:]
+        unique_suffix = self.generate_unique_suffix()
         
         response = client.post(
             "/api/v1/auth/register",
@@ -206,8 +211,7 @@ class TestUserCreationWithPermissions:
         assert viewer_role is not None
 
         # Register a new viewer user with unique username
-        import time
-        unique_suffix = str(int(time.time() * 1000))[-6:]
+        unique_suffix = self.generate_unique_suffix()
 
         response = client.post(
             "/api/v1/auth/register",
@@ -255,8 +259,7 @@ class TestUserCreationWithPermissions:
         admin_role = Role.query.filter_by(name="admin").first()
 
         # Register a new admin user with unique username
-        import time
-        unique_suffix = str(int(time.time() * 1000))[-6:]
+        unique_suffix = self.generate_unique_suffix()
 
         response = client.post(
             "/api/v1/auth/register",
