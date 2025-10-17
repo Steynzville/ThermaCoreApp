@@ -2,6 +2,7 @@
 
 import json
 import jwt
+import time
 
 from app.models import User
 
@@ -542,6 +543,86 @@ class TestUserRegistration:
         assert created_user.password_hash is not None, "Password hash should be set"
         assert created_user.created_at is not None, "Created timestamp should be set"
         assert created_user.updated_at is not None, "Updated timestamp should be set"
+
+    def test_register_operator_user(self, client, db_session):
+        """Test creating a user with operator role."""
+        token = self.get_auth_token(client)
+
+        from app.models import Role, RoleEnum, User
+
+        operator_role = Role.query.filter_by(name=RoleEnum.OPERATOR).first()
+
+        # Use timestamp to ensure unique email/username across test runs
+        unique_id = int(time.time() * 1000)  # Milliseconds since epoch
+        username = f"operator_{unique_id}"
+        email = f"operator_{unique_id}@test.com"
+
+        response = client.post(
+            "/api/v1/auth/register",
+            json={
+                "username": username,
+                "email": email,
+                "password": "operatorpass123",
+                "first_name": "New",
+                "last_name": "Operator",
+                "role_id": operator_role.id,
+            },
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+            },
+        )
+
+        assert response.status_code == 201
+        data = unwrap_response(response)
+        assert data["username"] == username
+        assert data["email"] == email
+
+        # Verify user was created with operator role
+        created_user = User.query.filter_by(username=username).first()
+        assert created_user is not None
+        assert created_user.role_id == operator_role.id
+        assert created_user.is_active is True
+
+    def test_register_viewer_user(self, client, db_session):
+        """Test creating a user with viewer role."""
+        token = self.get_auth_token(client)
+
+        from app.models import Role, RoleEnum, User
+
+        viewer_role = Role.query.filter_by(name=RoleEnum.VIEWER).first()
+
+        # Use timestamp to ensure unique email/username across test runs
+        unique_id = int(time.time() * 1000)  # Milliseconds since epoch
+        username = f"viewer_{unique_id}"
+        email = f"viewer_{unique_id}@test.com"
+
+        response = client.post(
+            "/api/v1/auth/register",
+            json={
+                "username": username,
+                "email": email,
+                "password": "viewerpass123",
+                "first_name": "New",
+                "last_name": "Viewer",
+                "role_id": viewer_role.id,
+            },
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+            },
+        )
+
+        assert response.status_code == 201
+        data = unwrap_response(response)
+        assert data["username"] == username
+        assert data["email"] == email
+
+        # Verify user was created with viewer role
+        created_user = User.query.filter_by(username=username).first()
+        assert created_user is not None
+        assert created_user.role_id == viewer_role.id
+        assert created_user.is_active is True
 
     def test_register_user_without_permission(self, client):
         """Test user registration without proper permissions."""

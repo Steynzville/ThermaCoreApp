@@ -55,6 +55,7 @@ const AdminPanel = ({ className }) => {
   const [availableRoles, setAvailableRoles] = useState([]);
   const [showCreatePassword, setShowCreatePassword] = useState(false);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [rolesLoadError, setRolesLoadError] = useState(false);
 
   // Password Management State
   const [passwordResetModal, setPasswordResetModal] = useState(false);
@@ -102,6 +103,10 @@ const AdminPanel = ({ className }) => {
     }
   };
 
+  // Fallback role names for display when API fails
+  // Note: These are for UI display only. Actual role_id will be resolved from API before submission
+  const FALLBACK_ROLE_NAMES = ['admin', 'operator', 'viewer'];
+
   // Fetch available roles from backend
   const fetchRoles = async () => {
     try {
@@ -115,16 +120,25 @@ const AdminPanel = ({ className }) => {
       
       if (response.ok) {
         const roles = await response.json();
-        setAvailableRoles(roles);
+        // Ensure we have valid roles data
+        if (Array.isArray(roles) && roles.length > 0) {
+          setAvailableRoles(roles);
+          setRolesLoadError(false);
+        } else {
+          // Mark that roles failed to load properly
+          setRolesLoadError(true);
+          setAvailableRoles([]);
+        }
+      } else {
+        // Mark that roles failed to load properly
+        setRolesLoadError(true);
+        setAvailableRoles([]);
       }
     } catch (error) {
       console.error('Failed to fetch roles:', error);
-      // Set default roles if fetch fails
-      setAvailableRoles([
-        { id: 1, name: 'admin' },
-        { id: 2, name: 'operator' },
-        { id: 3, name: 'viewer' },
-      ]);
+      // Mark that roles failed to load properly
+      setRolesLoadError(true);
+      setAvailableRoles([]);
     }
   };
 
@@ -146,8 +160,8 @@ const AdminPanel = ({ className }) => {
     setShowCreatePassword(false);
     setCreateUserModal(true);
     
-    // Fetch roles if not already loaded
-    if (availableRoles.length === 0) {
+    // Fetch roles if not already loaded or if previous load failed
+    if (availableRoles.length === 0 || rolesLoadError) {
       fetchRoles();
     }
   };
@@ -173,6 +187,12 @@ const AdminPanel = ({ className }) => {
 
     if (newUserFormData.password.length < 6) {
       toast.error('Password must be at least 6 characters long');
+      return;
+    }
+
+    // If roles failed to load, we cannot safely proceed
+    if (rolesLoadError) {
+      toast.error('Unable to create user. Please refresh the page and try again.');
       return;
     }
 
@@ -755,20 +775,29 @@ const AdminPanel = ({ className }) => {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Role <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    value={newUserFormData.roleId}
-                    onChange={(e) =>
-                      setNewUserFormData({ ...newUserFormData, roleId: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                  >
-                    <option value="">Select a role</option>
-                    {availableRoles.map((role) => (
-                      <option key={role.id} value={role.id}>
-                        {role.name.charAt(0).toUpperCase() + role.name.slice(1)}
+                  {rolesLoadError ? (
+                    <div className="w-full px-3 py-2 border border-red-300 dark:border-red-600 rounded-md bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400">
+                      Unable to load roles. Please refresh the page.
+                    </div>
+                  ) : (
+                    <select
+                      value={newUserFormData.roleId}
+                      onChange={(e) =>
+                        setNewUserFormData({ ...newUserFormData, roleId: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                      disabled={availableRoles.length === 0}
+                    >
+                      <option value="">
+                        {availableRoles.length === 0 ? 'Loading roles...' : 'Select a role'}
                       </option>
-                    ))}
-                  </select>
+                      {availableRoles.map((role) => (
+                        <option key={role.id} value={role.id}>
+                          {role.name.charAt(0).toUpperCase() + role.name.slice(1)}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               </div>
               <div className="flex justify-end space-x-3 mt-6">
@@ -781,8 +810,8 @@ const AdminPanel = ({ className }) => {
                 </button>
                 <button
                   onClick={handleCreateUser}
-                  disabled={isCreatingUser}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center space-x-2"
+                  disabled={isCreatingUser || rolesLoadError || availableRoles.length === 0}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
                 >
                   {isCreatingUser && (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
