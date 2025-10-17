@@ -543,6 +543,76 @@ class TestUserRegistration:
         assert created_user.created_at is not None, "Created timestamp should be set"
         assert created_user.updated_at is not None, "Updated timestamp should be set"
 
+    def test_register_operator_user(self, client, db_session):
+        """Test creating a user with operator role."""
+        token = self.get_auth_token(client)
+
+        from app.models import Role, RoleEnum, User
+
+        operator_role = Role.query.filter_by(name=RoleEnum.OPERATOR).first()
+
+        response = client.post(
+            "/api/v1/auth/register",
+            json={
+                "username": "operatoruser",
+                "email": "operator@test.com",
+                "password": "operatorpass123",
+                "first_name": "Operator",
+                "last_name": "User",
+                "role_id": operator_role.id,
+            },
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+            },
+        )
+
+        assert response.status_code == 201
+        data = unwrap_response(response)
+        assert data["username"] == "operatoruser"
+        assert data["email"] == "operator@test.com"
+
+        # Verify user was created with operator role
+        created_user = User.query.filter_by(username="operatoruser").first()
+        assert created_user is not None
+        assert created_user.role_id == operator_role.id
+        assert created_user.is_active is True
+
+    def test_register_viewer_user(self, client, db_session):
+        """Test creating a user with viewer role."""
+        token = self.get_auth_token(client)
+
+        from app.models import Role, RoleEnum, User
+
+        viewer_role = Role.query.filter_by(name=RoleEnum.VIEWER).first()
+
+        response = client.post(
+            "/api/v1/auth/register",
+            json={
+                "username": "vieweruser",
+                "email": "viewer@test.com",
+                "password": "viewerpass123",
+                "first_name": "Viewer",
+                "last_name": "User",
+                "role_id": viewer_role.id,
+            },
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+            },
+        )
+
+        assert response.status_code == 201
+        data = unwrap_response(response)
+        assert data["username"] == "vieweruser"
+        assert data["email"] == "viewer@test.com"
+
+        # Verify user was created with viewer role
+        created_user = User.query.filter_by(username="vieweruser").first()
+        assert created_user is not None
+        assert created_user.role_id == viewer_role.id
+        assert created_user.is_active is True
+
     def test_register_user_without_permission(self, client):
         """Test user registration without proper permissions."""
         # Try to register as viewer (no write_users permission)
