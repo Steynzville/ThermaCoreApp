@@ -132,9 +132,17 @@ def add_permissions_column(engine):
             with engine.begin() as conn:
                 # Add JSON column for PostgreSQL, TEXT for SQLite compatibility
                 # PostgreSQL will use JSONB for better performance
-                conn.execute(text(
-                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS permissions JSONB"
-                ))
+                if engine.dialect.name == "postgresql":
+                    conn.execute(text(
+                        "ALTER TABLE users ADD COLUMN IF NOT EXISTS permissions JSONB"
+                    ))
+                elif engine.dialect.name == "sqlite":
+                    conn.execute(text(
+                        "ALTER TABLE users ADD COLUMN permissions TEXT"
+                    ))
+                else:
+                    logger.error(f"Unsupported database dialect: {engine.dialect.name}")
+                    return False
             logger.info("✓ Column 'permissions' added successfully")
         else:
             logger.info("✓ Column 'permissions' already exists")
