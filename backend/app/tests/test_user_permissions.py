@@ -107,12 +107,15 @@ class TestUserCreationWithPermissions:
         admin_role = Role.query.filter_by(name="admin").first()
         assert admin_role is not None
 
-        # Register a new admin user
+        # Register a new admin user with unique username
+        import time
+        unique_suffix = str(int(time.time() * 1000))[-6:]
+
         response = client.post(
             "/api/v1/auth/register",
             json={
-                "username": "newadmin",
-                "email": "newadmin@test.com",
+                "username": f"newadmin{unique_suffix}",
+                "email": f"newadmin{unique_suffix}@test.com",
                 "password": "password123",
                 "first_name": "New",
                 "last_name": "Admin",
@@ -127,7 +130,7 @@ class TestUserCreationWithPermissions:
         assert response.status_code == 201
         
         # Verify the user was created with permissions
-        new_user = User.query.filter_by(username="newadmin").first()
+        new_user = User.query.filter_by(username=f"newadmin{unique_suffix}").first()
         assert new_user is not None
         assert new_user.permissions is not None
         
@@ -152,12 +155,15 @@ class TestUserCreationWithPermissions:
         operator_role = Role.query.filter_by(name="operator").first()
         assert operator_role is not None
 
-        # Register a new operator user
+        # Register a new operator user with unique username
+        import time
+        unique_suffix = str(int(time.time() * 1000))[-6:]
+        
         response = client.post(
             "/api/v1/auth/register",
             json={
-                "username": "newoperator",
-                "email": "newoperator@test.com",
+                "username": f"newoperator{unique_suffix}",
+                "email": f"newoperator{unique_suffix}@test.com",
                 "password": "password123",
                 "first_name": "New",
                 "last_name": "Operator",
@@ -172,7 +178,7 @@ class TestUserCreationWithPermissions:
         assert response.status_code == 201
         
         # Verify the user was created with permissions
-        new_user = User.query.filter_by(username="newoperator").first()
+        new_user = User.query.filter_by(username=f"newoperator{unique_suffix}").first()
         assert new_user is not None
         assert new_user.permissions is not None
         
@@ -199,12 +205,15 @@ class TestUserCreationWithPermissions:
         viewer_role = Role.query.filter_by(name="viewer").first()
         assert viewer_role is not None
 
-        # Register a new viewer user
+        # Register a new viewer user with unique username
+        import time
+        unique_suffix = str(int(time.time() * 1000))[-6:]
+
         response = client.post(
             "/api/v1/auth/register",
             json={
-                "username": "newviewer",
-                "email": "newviewer@test.com",
+                "username": f"newviewer{unique_suffix}",
+                "email": f"newviewer{unique_suffix}@test.com",
                 "password": "password123",
                 "first_name": "New",
                 "last_name": "Viewer",
@@ -219,7 +228,7 @@ class TestUserCreationWithPermissions:
         assert response.status_code == 201
         
         # Verify the user was created with permissions
-        new_user = User.query.filter_by(username="newviewer").first()
+        new_user = User.query.filter_by(username=f"newviewer{unique_suffix}").first()
         assert new_user is not None
         assert new_user.permissions is not None
         
@@ -245,12 +254,15 @@ class TestUserCreationWithPermissions:
         # Get admin role ID
         admin_role = Role.query.filter_by(name="admin").first()
 
-        # Register a new admin user
+        # Register a new admin user with unique username
+        import time
+        unique_suffix = str(int(time.time() * 1000))[-6:]
+
         response = client.post(
             "/api/v1/auth/register",
             json={
-                "username": "testadmin2",
-                "email": "testadmin2@test.com",
+                "username": f"testadmin2{unique_suffix}",
+                "email": f"testadmin2{unique_suffix}@test.com",
                 "password": "password123",
                 "first_name": "Test",
                 "last_name": "Admin2",
@@ -265,7 +277,7 @@ class TestUserCreationWithPermissions:
         assert response.status_code == 201
 
         # Login as the new admin
-        new_admin_token = self.get_auth_token(client, "testadmin2", "password123")
+        new_admin_token = self.get_auth_token(client, f"testadmin2{unique_suffix}", "password123")
         assert new_admin_token is not None
 
         # Try to access users endpoint
