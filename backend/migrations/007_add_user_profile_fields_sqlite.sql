@@ -30,7 +30,7 @@ ALTER TABLE users ADD COLUMN first_name VARCHAR(100);
 ALTER TABLE users ADD COLUMN last_name VARCHAR(100);
 
 -- Add is_active column with default value (in case it's missing from initial schema)
-ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT 1;
+ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT true;
 
 -- Add last_login column (in case it's missing from initial schema)
 ALTER TABLE users ADD COLUMN last_login TIMESTAMP;
