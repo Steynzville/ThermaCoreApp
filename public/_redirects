@@ -1,4 +1,0 @@
-# Proxy API calls to the backend
-/api/*  https://thermacoreapp.onrender.com/api/:splat  200
-# Redirect all other requests to index.html for SPA routing
-/*      /index.html    200
