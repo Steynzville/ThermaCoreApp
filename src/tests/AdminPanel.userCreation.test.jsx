@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 
@@ -128,17 +128,20 @@ describe('AdminPanel User Creation Form', () => {
     fireEvent.click(addUserButton);
     
     // Wait for modal to appear
+    const modal = await screen.findByText('Create New User');
+    expect(modal).toBeInTheDocument();
+    
+    // Wait for roles to load - find the Role label and get the associated select
+    const roleSelect = await screen.findByLabelText(/Role/i);
+    
+    // Wait for roles to populate
     await waitFor(() => {
-      expect(screen.getByText('Create New User')).toBeInTheDocument();
+      const options = within(roleSelect).getAllByRole('option');
+      expect(options[0]).toHaveTextContent('Select a role');
     });
     
-    // Find all select elements (role dropdown will be one of them)
-    const selects = screen.getAllByRole('combobox');
-    const roleSelect = selects[0]; // Should be the only select in the modal
-    expect(roleSelect).toBeInTheDocument();
-    
     // Check that all three roles are available as options
-    const options = roleSelect.querySelectorAll('option');
+    const options = within(roleSelect).getAllByRole('option');
     
     // First option should be placeholder
     expect(options[0]).toHaveTextContent('Select a role');
@@ -260,9 +263,8 @@ describe('AdminPanel User Creation Form', () => {
       expect(screen.getByText('Create New User')).toBeInTheDocument();
     });
     
-    // Select operator role
-    const selects = screen.getAllByRole('combobox');
-    const roleSelect = selects[0];
+    // Select operator role using label
+    const roleSelect = await screen.findByLabelText(/Role/i);
     fireEvent.change(roleSelect, { target: { value: '2' } });
     
     // Verify the selection
@@ -290,12 +292,48 @@ describe('AdminPanel User Creation Form', () => {
       expect(screen.getByText('Create New User')).toBeInTheDocument();
     });
     
-    // Select viewer role
-    const selects = screen.getAllByRole('combobox');
-    const roleSelect = selects[0];
+    // Select viewer role using label
+    const roleSelect = await screen.findByLabelText(/Role/i);
     fireEvent.change(roleSelect, { target: { value: '3' } });
     
     // Verify the selection
     expect(roleSelect.value).toBe('3');
+  });
+
+  it('should handle roles wrapped in {roles: [...]} format', async () => {
+    // Mock API returning roles in {roles: [...]} format
+    vi.spyOn(apiFetch, 'apiGet').mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ roles: mockRoles }),
+    });
+
+    renderComponent();
+    
+    await waitFor(() => {
+      expect(usersAPI.getAllUsers).toHaveBeenCalled();
+    });
+    
+    // Click Add User button
+    const addUserButton = screen.getByText('Add User');
+    fireEvent.click(addUserButton);
+    
+    const modal = await screen.findByText('Create New User');
+    expect(modal).toBeInTheDocument();
+    
+    // Find role select using label
+    const roleSelect = await screen.findByLabelText(/Role/i);
+    
+    // Wait for roles to load
+    await waitFor(() => {
+      const options = within(roleSelect).getAllByRole('option');
+      expect(options[0]).toHaveTextContent('Select a role');
+    });
+    
+    // Check that all three roles are available
+    const options = within(roleSelect).getAllByRole('option');
+    expect(options[1]).toHaveTextContent('Admin');
+    expect(options[2]).toHaveTextContent('Operator');
+    expect(options[3]).toHaveTextContent('Viewer');
+    expect(options.length).toBe(4);
   });
 });

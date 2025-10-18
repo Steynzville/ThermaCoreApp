@@ -103,13 +103,17 @@ const AdminPanel = ({ className }) => {
     }
   };
 
-  // Fallback role names for display when API fails
-  // Note: These are for UI display only. Actual role_id will be resolved from API before submission
-  const FALLBACK_ROLE_NAMES = ['admin', 'operator', 'viewer'];
+  // Fallback roles with proper format
+  const fallbackRoles = [
+    { value: 'admin', label: 'Admin' },
+    { value: 'operator', label: 'Operator' },
+    { value: 'viewer', label: 'Viewer' }
+  ];
 
   // Fetch available roles from backend
   const fetchRoles = async () => {
     try {
+      console.log('🔄 Fetching roles from API...');
       const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://thermacoreapp.onrender.com';
       const response = await apiGet(
         `${API_BASE_URL}/api/v1/roles`,
@@ -119,24 +123,39 @@ const AdminPanel = ({ className }) => {
       );
       
       if (response.ok) {
-        const roles = await response.json();
-        // Ensure we have valid roles data
-        if (Array.isArray(roles) && roles.length > 0) {
-          setAvailableRoles(roles);
-          setRolesLoadError(false);
+        const data = await response.json();
+        console.log('✅ Roles API response:', data);
+        
+        // Handle both direct array and {roles: [...]} format
+        let rolesArray;
+        if (data.roles && Array.isArray(data.roles)) {
+          rolesArray = data.roles;
+        } else if (Array.isArray(data)) {
+          rolesArray = data;
         } else {
-          // Mark that roles failed to load properly
+          console.warn('⚠️ Roles data is not in expected format');
+          setRolesLoadError(true);
+          setAvailableRoles([]);
+          return;
+        }
+        
+        // Ensure we have valid roles data
+        if (rolesArray.length > 0) {
+          setAvailableRoles(rolesArray);
+          setRolesLoadError(false);
+          console.log('📋 Roles set:', rolesArray);
+        } else {
+          console.warn('⚠️ Roles array is empty');
           setRolesLoadError(true);
           setAvailableRoles([]);
         }
       } else {
-        // Mark that roles failed to load properly
+        console.error('❌ Roles API failed:', response.status);
         setRolesLoadError(true);
         setAvailableRoles([]);
       }
     } catch (error) {
-      console.error('Failed to fetch roles:', error);
-      // Mark that roles failed to load properly
+      console.error('❌ Error fetching roles:', error);
       setRolesLoadError(true);
       setAvailableRoles([]);
     }
@@ -772,7 +791,7 @@ const AdminPanel = ({ className }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label htmlFor="user-role-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Role <span className="text-red-500">*</span>
                   </label>
                   {rolesLoadError ? (
@@ -781,6 +800,7 @@ const AdminPanel = ({ className }) => {
                     </div>
                   ) : (
                     <select
+                      id="user-role-select"
                       value={newUserFormData.roleId}
                       onChange={(e) =>
                         setNewUserFormData({ ...newUserFormData, roleId: e.target.value })
@@ -797,6 +817,21 @@ const AdminPanel = ({ className }) => {
                         </option>
                       ))}
                     </select>
+                  )}
+                  {/* Temporary debug display - shows loaded roles */}
+                  {availableRoles.length > 0 && !rolesLoadError && (
+                    <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+                      <p className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">
+                        Debug: Loaded Roles ({availableRoles.length})
+                      </p>
+                      <ul className="text-xs text-blue-600 dark:text-blue-400 space-y-1">
+                        {availableRoles.map((role) => (
+                          <li key={role.id}>
+                            • {role.name} (ID: {role.id})
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
                 </div>
               </div>
