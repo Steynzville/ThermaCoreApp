@@ -1,0 +1,562 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  --radius: 0.625rem;
+  --background: oklch(100% 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(98% 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(100% 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.145 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.145 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+/* Enhanced dialog text color for dark mode */
+.dark [data-slot="dialog-description"] {
+  color: oklch(0.8 0 0) !important;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  /* Hover effects using Tailwind utilities */
+  .card-hover {
+    @apply transition-all duration-300 cursor-pointer hover:-translate-y-0.5 hover:shadow-lg;
+  }
+
+  .button-hover {
+    @apply transition-all duration-300 cursor-pointer hover:-translate-y-px hover:shadow-md;
+  }
+
+  .nav-item-hover {
+    @apply transition-all duration-300 cursor-pointer hover:translate-x-1 hover:bg-blue-50 dark:hover:bg-blue-900/20;
+  }
+
+  .status-dial-hover {
+    @apply transition-all duration-300 cursor-pointer hover:scale-105 hover:shadow-lg;
+  }
+
+  .alert-item-hover {
+    @apply transition-all duration-300 cursor-pointer hover:-translate-y-px hover:shadow-md;
+  }
+
+  .grid-unit-hover {
+    @apply transition-all duration-300 cursor-pointer hover:-translate-y-1 hover:shadow-xl hover:border-blue-400;
+  }
+
+  .quick-action-hover {
+    @apply transition-all duration-300 cursor-pointer hover:-translate-y-0.5 hover:scale-105 hover:shadow-lg;
+  }
+
+  .system-health-hover {
+    @apply transition-all duration-300 cursor-pointer hover:-translate-y-px hover:shadow-md hover:shadow-blue-200 dark:hover:shadow-blue-800;
+  }
+
+  .clickable-tile {
+    @apply transition-all duration-300 cursor-pointer hover:-translate-y-0.5 hover:shadow-lg;
+  }
+
+  .icon-hover {
+    @apply transition-all duration-300 cursor-pointer hover:scale-110 hover:text-blue-600 dark:hover:text-blue-400;
+  }
+
+  .table-row-hover {
+    @apply transition-all duration-300 cursor-pointer hover:bg-blue-50 hover:translate-x-0.5 dark:hover:bg-blue-900/10;
+  }
+
+  .search-hover {
+    @apply transition-all duration-300 hover:shadow-md hover:border-blue-400;
+  }
+
+  .filter-hover {
+    @apply transition-all duration-300 hover:shadow-md hover:border-blue-400;
+  }
+}
+
+/* AG Grid Dark Theme Customization */
+.ag-theme-alpine-dark {
+  --ag-background-color: rgb(17 24 39);
+  --ag-header-background-color: rgb(31 41 55);
+  --ag-odd-row-background-color: rgb(17 24 39);
+  --ag-row-hover-color: rgb(55 65 81);
+  --ag-border-color: rgb(75 85 99);
+  --ag-header-column-separator-color: rgb(75 85 99);
+  --ag-font-color: rgb(243 244 246);
+  --ag-header-foreground-color: rgb(243 244 246);
+}
+
+/* Enhanced Grid View Styles */
+.enhanced-grid-container {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+/* Responsive AG Grid */
+@media (max-width: 768px) {
+  .ag-theme-alpine,
+  .ag-theme-alpine-dark {
+    font-size: 12px;
+  }
+}
+
+/* Custom scrollbar for dark mode */
+.dark .ag-theme-alpine-dark ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.dark .ag-theme-alpine-dark ::-webkit-scrollbar-track {
+  background: rgb(31 41 55);
+}
+
+.dark .ag-theme-alpine-dark ::-webkit-scrollbar-thumb {
+  background: rgb(75 85 99);
+  border-radius: 4px;
+}
+
+.dark .ag-theme-alpine-dark ::-webkit-scrollbar-thumb:hover {
+  background: rgb(107 114 128);
+}
+
+/* Analytics and System Health Styles */
+.analytics-container,
+.system-health-container,
+.config-container {
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-top: 20px;
+  background: var(--card);
+  color: var(--card-foreground);
+}
+
+.health-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.health-table th,
+.health-table td {
+  border: 1px solid var(--border);
+  padding: 8px;
+  text-align: left;
+}
+
+.health-table th {
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+}
+
+/* Configuration Form Styles */
+.config-container form {
+  max-width: 500px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--foreground);
+}
+
+.form-group input[type="text"],
+.form-group select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.form-group input[type="checkbox"] {
+  margin-right: 10px;
+}
+
+form button {
+  padding: 10px 20px;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+form button:hover {
+  opacity: 0.9;
+}
+
+/* Enhanced Light Mode Styles for Better Visibility */
+:root {
+  /* Improved border and shadow colors for light mode */
+  --border: oklch(0.85 0 0);
+  --input: oklch(0.85 0 0);
+  --ring: oklch(0.5 0 0);
+
+  /* Enhanced card and popover backgrounds for better contrast */
+  --card: oklch(100% 0 0);
+  --card-foreground: oklch(0.1 0 0);
+  --popover: oklch(100% 0 0);
+  --popover-foreground: oklch(0.1 0 0);
+
+  /* Improved muted colors for better readability */
+  --muted: oklch(0.94 0 0);
+  --muted-foreground: oklch(0.4 0 0);
+
+  /* Enhanced accent colors */
+  --accent: oklch(0.94 0 0);
+  --accent-foreground: oklch(0.1 0 0);
+
+  /* Better secondary colors */
+  --secondary: oklch(0.94 0 0);
+  --secondary-foreground: oklch(0.1 0 0);
+}
+
+/* Enhanced dialog and alert dialog styles for light mode */
+.light [data-slot="dialog-content"],
+.light [data-slot="alert-dialog-content"] {
+  background: oklch(100% 0 0);
+  color: oklch(0.1 0 0);
+  border: 2px solid oklch(0.8 0 0);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+/* Enhanced overlay for better visibility */
+.light [data-slot="dialog-overlay"],
+.light [data-slot="alert-dialog-overlay"] {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+/* Improved button styles for light mode */
+.light [data-slot="button"] {
+  border: 1px solid oklch(0.8 0 0);
+}
+
+.light [data-slot="button"][data-variant="outline"] {
+  background: oklch(100% 0 0);
+  color: oklch(0.1 0 0);
+  border: 2px solid oklch(0.7 0 0);
+}
+
+.light [data-slot="button"][data-variant="outline"]:hover {
+  background: oklch(0.95 0 0);
+  border-color: oklch(0.6 0 0);
+}
+
+/* Enhanced card styles for better visibility */
+.light [data-slot="card"] {
+  background: oklch(100% 0 0);
+  color: oklch(0.1 0 0);
+  border: 1px solid oklch(0.8 0 0);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Improved text contrast for light mode */
+.light .text-muted-foreground {
+  color: oklch(0.4 0 0) !important;
+}
+
+.light .text-card-foreground {
+  color: oklch(0.1 0 0) !important;
+}
+
+.light .text-popover-foreground {
+  color: oklch(0.1 0 0) !important;
+}
+
+/* Enhanced form elements for light mode */
+.light input,
+.light select,
+.light textarea {
+  background: oklch(100% 0 0);
+  color: oklch(0.1 0 0);
+  border: 1px solid oklch(0.8 0 0);
+}
+
+.light input:focus,
+.light select:focus,
+.light textarea:focus {
+  border-color: oklch(0.5 0 0);
+  box-shadow: 0 0 0 3px oklch(0.5 0 0 / 0.1);
+}
+
+/* Better switch component visibility */
+.light [data-slot="switch"] {
+  background: oklch(0.9 0 0);
+  border: 1px solid oklch(0.7 0 0);
+}
+
+.light [data-slot="switch"][data-state="checked"] {
+  background: oklch(0.2 0 0);
+}
+
+/* Enhanced alert card backgrounds for better contrast */
+.light .bg-red-50 {
+  background: oklch(98% 0.02 15) !important;
+  border-color: oklch(85% 0.1 15) !important;
+}
+
+.light .bg-yellow-50 {
+  background: oklch(98% 0.02 85) !important;
+  border-color: oklch(85% 0.1 85) !important;
+}
+
+.light .bg-blue-50 {
+  background: oklch(98% 0.02 240) !important;
+  border-color: oklch(85% 0.1 240) !important;
+}
+
+.light .bg-green-50 {
+  background: oklch(98% 0.02 140) !important;
+  border-color: oklch(85% 0.1 140) !important;
+}
+
+/* Improved text colors for alert cards */
+.light .text-red-600 {
+  color: oklch(0.4 0.15 15) !important;
+}
+
+.light .text-yellow-600 {
+  color: oklch(0.4 0.15 85) !important;
+}
+
+.light .text-blue-600 {
+  color: oklch(0.4 0.15 240) !important;
+}
+
+.light .text-green-600 {
+  color: oklch(0.4 0.15 140) !important;
+}
+
+.light .text-red-700 {
+  color: oklch(0.3 0.15 15) !important;
+}
+
+.light .text-yellow-700 {
+  color: oklch(0.3 0.15 85) !important;
+}
+
+.light .text-blue-700 {
+  color: oklch(0.3 0.15 240) !important;
+}
+
+.light .text-green-700 {
+  color: oklch(0.3 0.15 140) !important;
+}
+
+/* Theme Toggle Responsive Styles */
+.theme-toggle-responsive {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 9999;
+  /* Ensure the toggle never goes outside the viewport */
+  max-width: calc(100vw - 2rem);
+  max-height: calc(100vh - 2rem);
+}
+
+/* Mobile-specific adjustments for theme toggle */
+@media (max-width: 768px) {
+  .theme-toggle-responsive {
+    top: 0.75rem;
+    right: 0.75rem;
+    padding: 0.625rem !important;
+    /* Ensure it stays within mobile viewport */
+    max-width: calc(100vw - 1.5rem);
+    max-height: calc(100vh - 1.5rem);
+  }
+}
+
+/* Extra small screens (phones in portrait) */
+@media (max-width: 480px) {
+  .theme-toggle-responsive {
+    top: 0.5rem;
+    right: 0.5rem;
+    padding: 0.5rem !important;
+    /* Ensure it stays within small mobile viewport */
+    max-width: calc(100vw - 1rem);
+    max-height: calc(100vh - 1rem);
+  }
+}
+
+/* Prevent any element from causing horizontal overflow */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Ensure the root container doesn't exceed viewport */
+#root {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+/* Additional viewport constraints to prevent zoom issues */
+.min-h-screen {
+  min-height: 100vh;
+  min-height: 100dvh; /* Dynamic viewport height for mobile */
+}
+
+/* Ensure all containers respect viewport boundaries */
+.container,
+.max-w-full,
+.w-full {
+  max-width: 100vw !important;
+}
+
+/* Prevent any fixed positioned elements from causing overflow */
+[style*="position: fixed"],
+.fixed {
+  max-width: calc(100vw - 2rem) !important;
+  max-height: calc(100vh - 2rem) !important;
+}
+
+/* Mobile-specific viewport fixes */
+@media (max-width: 768px) {
+  [style*="position: fixed"],
+  .fixed {
+    max-width: calc(100vw - 1.5rem) !important;
+    max-height: calc(100vh - 1.5rem) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  [style*="position: fixed"],
+  .fixed {
+    max-width: calc(100vw - 1rem) !important;
+    max-height: calc(100vh - 1rem) !important;
+  }
+}
+
+/* Ensure touch-action is properly set for mobile */
+html {
+  touch-action: manipulation;
+}
+
+/* Prevent text selection on UI elements */
+button,
+.cursor-pointer {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}

@@ -1,0 +1,776 @@
+"""Flask application factory and initialization."""
+
+import os
+import logging
+from datetime import datetime
+
+# Import Flask and core extensions
+from flask import Flask, jsonify
+from flask_sqlalchemy import SQLAlchemy
+
+# Try to import optional extensions, but don't fail if they're not installed
+try:
+    from flask_cors import CORS
+
+    cors_available = True
+except ImportError:
+    cors_available = False
+
+try:
+    from flask_jwt_extended import JWTManager
+
+    jwt_available = True
+except ImportError:
+    jwt_available = False
+
+try:
+    from flask_migrate import Migrate
+
+    migrate_available = True
+except ImportError:
+    migrate_available = False
+
+try:
+    from flasgger import Swagger
+
+    swagger_available = True
+except ImportError:
+    swagger_available = False
+
+# Initialize core extensions
+db = SQLAlchemy()
+
+# Initialize optional extensions
+if migrate_available:
+    migrate = Migrate()
+else:
+    migrate = None
+
+if jwt_available:
+    jwt = JWTManager()
+else:
+    jwt = None
+
+if swagger_available:
+    swagger = None  # Will be initialized in create_app
+else:
+    swagger = None
+
+
+def _initialize_critical_service(
+    service,
+    service_name: str,
+    app,
+    logger,
+    init_method="init_app",
+    *args,
+    required=True,
+    **kwargs,
+):
+    """
+    Shared helper function for initializing services with consistent error handling.
+
+    This function now supports both required and optional services through the
+    service manager framework, enabling graceful degradation.
+
+    Args:
+        service: Service instance to initialize
+        service_name: Human-readable service name for logging
+        app: Flask application instance
+        logger: Logger instance
+        init_method: Method name to call for initialization (default: 'init_app')
+        required: Whether this service is required (True) or optional (False)
+        *args, **kwargs: Additional arguments to pass to the init method
+
+    Returns:
+        True if initialization succeeded, False otherwise
+
+    Raises:
+        RuntimeError: If service is required and initialization fails in production
+    """
+    from app.utils.service_manager import initialize_service, get_service_config
+
+    # Get service configuration (enabled/required status)
+    # Extract base service name (e.g., "OPC UA client" -> "opcua")
+    service_base_name = (
+        service_name.lower()
+        .replace("secure ", "")
+        .replace(" client", "")
+        .replace(" service", "")
+        .replace(" ", "_")
+        .replace("-", "_")
+    )
+    service_config = get_service_config(app, service_base_name)
+
+    # Override required flag if configured
+    if not service_config["enabled"]:
+        logger.info(
+            f"{service_name} is disabled via configuration, skipping initialization"
+        )
+        return False
+
+    # Use configured required status if available, otherwise use parameter
+    required = service_config.get("required", required)
+
+    try:
+        # Use the new service manager for initialization
+        return initialize_service(
+            service,
+            service_name,
+            app,
+            logger,
+            init_method,
+            *args,
+            required=required,
+            **kwargs,
+        )
+
+    except (ValueError, RuntimeError, ConnectionError, OSError, ImportError) as e:
+        # Security validation errors, connection issues, or configuration errors
+        if isinstance(e, ValueError):
+            logger.error(f"{service_name} configuration error: {e}", exc_info=True)
+        else:
+            logger.error(
+                f"{service_name} security validation failed: {e}", exc_info=True
+            )
+
+        # For backwards compatibility, also use environment detection error handling
+        from app.utils.environment import handle_environment_detection_error
+
+        should_continue, error_to_raise = handle_environment_detection_error(
+            service_name,
+            logger,
+            app,
+            e,
+            "security validation",
+            is_security_validation=True,
+        )
+
+        if error_to_raise:
+            raise error_to_raise
+        return should_continue
+
+    except Exception as e:
+        logger.error(f"Failed to initialize {service_name}: {e}", exc_info=True)
+
+        # For backwards compatibility, also use environment detection error handling
+        from app.utils.environment import handle_environment_detection_error
+
+        should_continue, error_to_raise = handle_environment_detection_error(
+            service_name, logger, app, e, "initialization", is_security_validation=False
+        )
+
+        if error_to_raise:
+            raise error_to_raise
+        return should_continue
+
+
+def create_app(config_name=None):
+    """Create Flask application using the application factory pattern."""
+    app = Flask(__name__)
+
+    # Load configuration with better environment selection
+    # Check for TESTING environment first - this takes priority over everything
+    if os.environ.get("TESTING", "false").lower() in ("true", "1"):
+        config_name = "testing"
+    elif config_name is None:
+        # Use FLASK_ENV, APP_ENV, or default to production
+        config_name = os.environ.get(
+            "FLASK_ENV", os.environ.get("APP_ENV", "production")
+        )
+
+        # Only use development if explicitly running in development AND FLASK_DEBUG is true/'1'
+        if config_name == "development":
+            flask_debug = os.environ.get("FLASK_DEBUG", "false").lower()
+            if flask_debug not in ("true", "1"):
+                config_name = "production"
+
+    from config import config
+
+    # Special handling for ProductionConfig - instantiate it to trigger validation
+    config_obj = config[config_name]
+    if config_name == "production":
+        # Instantiate ProductionConfig to run __init__ validation
+        config_obj = config_obj()
+
+    app.config.from_object(config_obj)
+
+    # SECURITY: Explicitly enforce debug mode based solely on config_name
+    # This overrides any environment variables such as FLASK_DEBUG.
+    # Production will never have debug enabled, regardless of environment variables.
+    if config_name == "production":
+        app.debug = False
+    elif config_name == "development":
+        # Development config should have debug enabled
+        app.debug = True
+    elif config_name == "testing":
+        # Testing config should have debug enabled for better test debugging
+        app.debug = True
+
+    # Configure logging level from config
+    log_level_str = app.config.get("LOG_LEVEL", "INFO")
+    log_level = getattr(logging, log_level_str.upper(), logging.INFO)
+    logging.basicConfig(level=log_level, force=True)
+    app.logger.setLevel(log_level)
+    # Also set root logger level to ensure it propagates
+    logging.getLogger().setLevel(log_level)
+
+    # Initialize core extensions
+    db.init_app(app)
+
+    # Initialize optional extensions
+    if migrate:
+        migrate.init_app(app, db)
+
+    if jwt:
+        jwt.init_app(app)
+
+    # Configure CORS if available
+    if cors_available:
+        CORS(
+            app, 
+            origins=app.config["CORS_ORIGINS"],
+            supports_credentials=True,
+            allow_headers=["Content-Type", "Authorization"],
+            methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+        )
+
+    # Set up middleware - PR2 Implementation + PR3 Audit Logging
+    from app.middleware.request_id import setup_request_id_middleware
+    from app.middleware.metrics import setup_metrics_middleware
+    from app.middleware.audit import setup_audit_middleware
+    from app.utils.error_handler import SecurityAwareErrorHandler
+    from app.utils.logging_filter import SanitizingFilter
+
+    # Import validation middleware to register webargs error handler
+    from app.middleware import validation  # noqa: F401
+
+    setup_request_id_middleware(app)
+    setup_metrics_middleware(app)
+    setup_audit_middleware(app)
+
+    # Add sanitization filter to all logger handlers to prevent log injection
+    # This sanitizes data at the logging layer without mutating request data
+    # Apply to root logger to ensure all application loggers are covered
+    root_logger = logging.getLogger()
+
+    # Add filter to existing handlers at app initialization
+    for handler in root_logger.handlers:
+        # Check for duplicates to prevent redundant processing on re-initialization
+        if not any(isinstance(f, SanitizingFilter) for f in handler.filters):
+            handler.addFilter(SanitizingFilter())
+
+    # Also add to app.logger handlers in case they're not in root logger
+    for handler in app.logger.handlers:
+        if not any(isinstance(f, SanitizingFilter) for f in handler.filters):
+            handler.addFilter(SanitizingFilter())
+
+    # NOTE: If you add new logging handlers programmatically after app initialization,
+    # you must manually add the SanitizingFilter to those handlers:
+    #   from app.utils.logging_filter import SanitizingFilter
+    #   handler.addFilter(SanitizingFilter())
+
+    # Register error handlers for proper domain exception handling with correlation IDs
+    SecurityAwareErrorHandler.register_error_handlers(app)
+
+    # Register middleware blueprints
+    from app.middleware.metrics import create_metrics_blueprint
+
+    app.register_blueprint(create_metrics_blueprint())
+
+    # Initialize Swagger if available and not in testing environment
+    if swagger_available and not app.config.get("TESTING", False):
+        swagger_template = {
+            "swagger": "2.0",
+            "info": {
+                "title": "ThermaCore SCADA API",
+                "description": "API for ThermaCore SCADA system integration and monitoring - Auto-generated from code docstrings",
+                "version": "1.0.0",
+                "contact": {
+                    "name": "ThermaCore API Team",
+                    "email": "api@thermacore.com",
+                },
+            },
+            "basePath": app.config.get("API_PREFIX", "/api/v1"),
+            "schemes": ["http", "https"],
+            "securityDefinitions": {
+                "JWT": {
+                    "type": "apiKey",
+                    "name": "Authorization",
+                    "in": "header",
+                    "description": "JWT Authorization header using the Bearer scheme. Example: 'Authorization: Bearer {token}'",
+                }
+            },
+        }
+        try:
+            Swagger(app, template=swagger_template)
+        except Exception as e:
+            # Log the error but don't fail app creation if Swagger fails
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Swagger initialization failed: {e}")
+
+    # Import models to ensure they are registered (only if db is configured)
+    # This is intentional to ensure SQLAlchemy models are loaded
+    try:
+        from app.models import User, Role, Permission, Unit, Sensor, SensorReading  # noqa: F401
+    except ImportError:
+        pass  # Models may not be importable without full dependencies
+    
+    # Run auto-migrations for environments without shell access (e.g., Render free plan)
+    # This ensures database schema is up to date even without manual migration execution
+    if not app.config.get("TESTING", False):
+        try:
+            from app.utils.auto_migration import run_auto_migrations
+            migration_logger = logging.getLogger(__name__)
+            migration_logger.info("Running auto-migrations for database schema...")
+            run_auto_migrations(app)
+        except Exception as e:
+            migration_logger = logging.getLogger(__name__)
+            migration_logger.warning(f"Auto-migration failed (non-critical): {e}")
+
+    # Helper function to register blueprints with consistent error handling
+    def register_blueprint_safe(module_path, blueprint_name, route_name, url_prefix=None):
+        """Register a blueprint with comprehensive error handling.
+        
+        Args:
+            module_path: Import path for the module (e.g., 'app.routes.auth')
+            blueprint_name: Name of the blueprint variable (e.g., 'auth_bp')
+            route_name: Display name for logging (e.g., 'auth')
+            url_prefix: Optional URL prefix override (defaults to app.config["API_PREFIX"])
+        
+        Returns:
+            tuple: (success: bool, is_import_error: bool)
+        """
+        nonlocal blueprints_registered, blueprints_failed
+        
+        try:
+            # Dynamic import of the blueprint
+            module = __import__(module_path, fromlist=[blueprint_name])
+            blueprint = getattr(module, blueprint_name)
+            
+            # Register with URL prefix
+            prefix = url_prefix if url_prefix is not None else app.config["API_PREFIX"]
+            app.register_blueprint(blueprint, url_prefix=prefix)
+            logger.info(f"Registered {route_name} routes")
+            blueprints_registered += 1
+            return True, False
+        except ImportError as e:
+            logger.error(f"Failed to import {route_name} routes: {e}", exc_info=True)
+            blueprints_failed += 1
+            return False, True
+        except Exception as e:
+            logger.error(f"Failed to register {route_name} routes: {e}", exc_info=True)
+            blueprints_failed += 1
+            return False, False
+
+    # Register blueprints with detailed logging
+    logger = logging.getLogger(__name__)
+    logger.info("Starting blueprint registration...")
+
+    blueprints_registered = 0
+    blueprints_failed = 0
+
+    # Register all blueprints using the helper function
+    register_blueprint_safe('app.routes.auth', 'auth_bp', 'auth')
+    register_blueprint_safe('app.routes.units', 'units_bp', 'units')
+    register_blueprint_safe('app.routes.users', 'users_bp', 'users')
+    register_blueprint_safe('app.routes.scada', 'scada_bp', 'scada')
+    register_blueprint_safe('app.routes.analytics', 'analytics_bp', 'analytics')
+    register_blueprint_safe('app.routes.historical', 'historical_bp', 'historical')
+    register_blueprint_safe('app.routes.multiprotocol', 'multiprotocol_bp', 'multiprotocol')
+    register_blueprint_safe('app.routes.remote_control', 'remote_control_bp', 'remote_control')
+    register_blueprint_safe('app.routes.services', 'services_bp', 'services')
+
+    # Initialize OPC-UA monitoring endpoints (special case - uses init function instead of blueprint)
+    try:
+        from app.routes.opcua_monitoring import init_opcua_monitoring
+
+        init_opcua_monitoring(app)
+        logger.info("Initialized OPC-UA monitoring endpoints")
+        blueprints_registered += 1
+    except ImportError as e:
+        logger.error(f"Failed to import opcua_monitoring routes: {e}", exc_info=True)
+        blueprints_failed += 1
+    except Exception as e:
+        logger.error(
+            f"Failed to initialize opcua_monitoring routes: {e}", exc_info=True
+        )
+        blueprints_failed += 1
+
+    # Log summary of blueprint registration
+    logger.info(
+        f"Blueprint registration complete: {blueprints_registered} registered, {blueprints_failed} failed"
+    )
+
+    # List all registered routes for verification
+    if blueprints_registered > 0:
+        route_count = len(list(app.url_map.iter_rules()))
+        logger.info(f"Total routes registered: {route_count}")
+        logger.debug(
+            "Registered blueprints: " + ", ".join([bp for bp in app.blueprints.keys()])
+        )
+    else:
+        logger.error(
+            "CRITICAL: No blueprints were registered! All API endpoints will return 404."
+        )
+        # In production, this should be a critical error
+        from app.utils.environment import is_production_environment
+
+        if is_production_environment(app):
+            raise RuntimeError(
+                "Failed to register any blueprints in production environment"
+            )
+
+    # Initialize SCADA services (Phase 2, 3 & 4)
+    if not app.config.get("TESTING", False):
+        try:
+            from app.services.mqtt_service import mqtt_client
+            from app.services.websocket_service import websocket_service
+            from app.services.realtime_processor import realtime_processor
+            from app.services.opcua_service import opcua_client
+            from app.services.secure_opcua_client import secure_opcua_client
+            from app.services.protocol_gateway_simulator import ProtocolGatewaySimulator
+            from app.services.data_storage_service import data_storage_service
+
+            # Phase 3 services
+            from app.services.anomaly_detection import anomaly_detection_service
+
+            # Phase 4 services
+            from app.services.modbus_service import modbus_service
+            from app.services.dnp3_service import dnp3_service
+
+            # Initialize services with app context and handle security validation errors
+            logger = logging.getLogger(__name__)
+
+            # Check if external services should be skipped
+            from app.utils.service_manager import should_skip_external_services
+
+            skip_external = should_skip_external_services()
+
+            if skip_external:
+                logger.info(
+                    "SKIP_EXTERNAL_SERVICES is set to 'true' - external services (MQTT, OPC-UA) will not be initialized"
+                )
+
+            # Initialize critical services using shared helper
+            # Data storage is always required
+            _initialize_critical_service(
+                data_storage_service,
+                "Data storage service",
+                app,
+                logger,
+                "init_app",
+                required=True,
+            )
+
+            # MQTT client - required by default, but can be configured as optional
+            # Skip MQTT if SKIP_EXTERNAL_SERVICES is set to true
+            if skip_external:
+                logger.info(
+                    "Skipping MQTT client initialization (external services disabled)"
+                )
+            else:
+                mqtt_required = app.config.get("SERVICE_MQTT_REQUIRED", True)
+                _initialize_critical_service(
+                    mqtt_client,
+                    "MQTT client",
+                    app,
+                    logger,
+                    "init_app",
+                    required=mqtt_required,
+                    data_storage_service=data_storage_service,
+                )
+
+            # Initialize secure OPC-UA client (preferred) with fallback to standard client
+            # OPC-UA is now optional in production by default
+            # Skip OPC-UA if SKIP_EXTERNAL_SERVICES is set to true
+            if skip_external:
+                logger.info(
+                    "Skipping OPC-UA client initialization (external services disabled)"
+                )
+                app.opcua_client = None
+                app.secure_opcua_client = None
+            else:
+                opcua_required = app.config.get("SERVICE_OPCUA_REQUIRED", False)
+                try:
+                    _initialize_critical_service(
+                        secure_opcua_client,
+                        "Secure OPC UA client",
+                        app,
+                        logger,
+                        "init_app",
+                        required=opcua_required,
+                        data_storage_service=data_storage_service,
+                    )
+                    app.secure_opcua_client = secure_opcua_client
+                    app.opcua_client = secure_opcua_client  # Also set standard reference for compatibility
+                    logger.info("Using secure OPC-UA client with security wrapper")
+                except Exception as secure_init_error:
+                    logger.warning(
+                        f"Secure OPC-UA client initialization failed, falling back to standard client: {secure_init_error}"
+                    )
+                    try:
+                        _initialize_critical_service(
+                            opcua_client,
+                            "OPC UA client",
+                            app,
+                            logger,
+                            "init_app",
+                            required=opcua_required,
+                            data_storage_service=data_storage_service,
+                        )
+                        app.opcua_client = opcua_client
+                        logger.info("Using standard OPC-UA client (fallback)")
+                    except Exception as standard_init_error:
+                        logger.error(
+                            f"Standard OPC-UA client initialization failed: {standard_init_error}",
+                            exc_info=True,
+                        )
+                        app.opcua_client = None
+                        # If OPC-UA is optional, log and continue
+                        if not opcua_required:
+                            logger.info(
+                                "OPC-UA client initialization failed but service is optional, continuing without it"
+                            )
+            # Initialize non-critical services (failures won't stop the app)
+            try:
+                websocket_service.init_app(app)
+                logger.info("WebSocket service initialized successfully")
+            except Exception as e:
+                logger.error(
+                    f"Failed to initialize WebSocket service: {e}", exc_info=True
+                )
+                logger.warning(f"WebSocket service initialization failed: {e}")
+
+            try:
+                realtime_processor.init_app(app)
+                logger.info("Real-time processor initialized successfully")
+            except Exception as e:
+                logger.error(
+                    f"Failed to initialize real-time processor: {e}", exc_info=True
+                )
+                logger.warning(f"Real-time processor initialization failed: {e}")
+
+            # Initialize Phase 3 services
+            try:
+                anomaly_detection_service.init_app(app)
+                logger.info("Anomaly detection service initialized successfully")
+            except Exception as e:
+                logger.warning(f"Anomaly detection service initialization failed: {e}")
+
+            # Initialize Phase 4 services
+            try:
+                modbus_service.init_app(app)
+                logger.info("Modbus service initialized successfully")
+            except Exception as e:
+                logger.warning(f"Modbus service initialization failed: {e}")
+
+            try:
+                dnp3_service.init_app(app)
+                logger.info("DNP3 service initialized successfully")
+            except Exception as e:
+                logger.warning(f"DNP3 service initialization failed: {e}")
+
+            # Initialize protocol simulator (not critical)
+            try:
+                protocol_simulator = ProtocolGatewaySimulator(
+                    mqtt_broker_host=app.config.get("MQTT_BROKER_HOST", "localhost"),
+                    mqtt_broker_port=app.config.get("MQTT_BROKER_PORT", 1883),
+                )
+                logger.info("Protocol simulator initialized successfully")
+            except Exception as e:
+                logger.warning(f"Protocol simulator initialization failed: {e}")
+                protocol_simulator = None
+
+            # Store references in app for easy access
+            # Set mqtt_client to None if external services are skipped or not defined
+            app.mqtt_client = (
+                None if skip_external or "mqtt_client" not in locals() else mqtt_client
+            )
+            app.websocket_service = websocket_service
+            app.realtime_processor = realtime_processor
+            # opcua_client is already set above (either secure, standard, or None if skipped)
+            app.protocol_simulator = protocol_simulator
+            app.data_storage_service = data_storage_service
+            # Phase 3 & 4 services
+            app.anomaly_detection_service = anomaly_detection_service
+            app.modbus_service = modbus_service
+            app.dnp3_service = dnp3_service
+
+            logger.info("SCADA services initialization completed")
+
+        except RuntimeError:
+            # Re-raise runtime errors (security validation failures)
+            raise
+        except ImportError as e:
+            logging.getLogger(__name__).warning(f"SCADA services not available: {e}")
+        except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.error(
+                f"Unexpected error during SCADA services initialization: {e}",
+                exc_info=True,
+            )
+            from app.utils.environment import is_production_environment
+
+            if is_production_environment(app):
+                raise RuntimeError(
+                    f"Critical initialization error in production: {e}"
+                ) from e
+
+    # Health check endpoint
+    @app.route("/health")
+    def health_check():
+        """Health check endpoint with explicit service status reporting."""
+        status = {
+            "status": "healthy",
+            "version": "1.0.0",
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+        services = {}
+        is_degraded = False
+        critical_services_down = []
+
+        # MQTT Service - Critical service
+        if hasattr(app, "mqtt_client") and app.mqtt_client is not None:
+            try:
+                mqtt_status = app.mqtt_client.get_status()
+                services["mqtt"] = mqtt_status
+                # Check if MQTT is operational
+                if not mqtt_status.get("available", False):
+                    is_degraded = True
+                    critical_services_down.append("mqtt")
+                elif not mqtt_status.get("connected", False):
+                    is_degraded = True
+                    app.logger.warning("MQTT service not connected")
+            except Exception as e:
+                # Only log first occurrence of error to reduce spam
+                if not hasattr(app, "_mqtt_error_logged"):
+                    app.logger.error(f"Error getting MQTT status: {e}", exc_info=True)
+                    app._mqtt_error_logged = True
+                services["mqtt"] = {
+                    "status": "error",
+                    "message": str(e),
+                    "available": False,
+                }
+                is_degraded = True
+                critical_services_down.append("mqtt")
+        else:
+            services["mqtt"] = {"status": "not_initialized", "available": False}
+            is_degraded = True
+            critical_services_down.append("mqtt")
+
+        if hasattr(app, "websocket_service") and app.websocket_service is not None:
+            try:
+                services["websocket"] = app.websocket_service.get_status()
+            except Exception as e:
+                services["websocket"] = {"status": "error", "message": str(e)}
+                is_degraded = True
+
+        if hasattr(app, "realtime_processor") and app.realtime_processor is not None:
+            try:
+                services["realtime_processor"] = app.realtime_processor.get_status()
+            except Exception as e:
+                services["realtime_processor"] = {"status": "error", "message": str(e)}
+                is_degraded = True
+
+        # OPC UA Service - Critical service
+        if hasattr(app, "opcua_client") and app.opcua_client is not None:
+            try:
+                opcua_status = app.opcua_client.get_status()
+                services["opcua"] = opcua_status
+                # Check if OPC UA is operational
+                if not opcua_status.get("available", False):
+                    is_degraded = True
+                    critical_services_down.append("opcua")
+                elif not opcua_status.get("connected", False):
+                    is_degraded = True
+                    app.logger.warning("OPC UA service not connected")
+            except Exception as e:
+                services["opcua"] = {
+                    "status": "error",
+                    "message": str(e),
+                    "available": False,
+                }
+                is_degraded = True
+                critical_services_down.append("opcua")
+                app.logger.error(f"Error getting OPC UA status: {e}", exc_info=True)
+        else:
+            services["opcua"] = {"status": "not_initialized", "available": False}
+            is_degraded = True
+            critical_services_down.append("opcua")
+
+        if hasattr(app, "protocol_simulator") and app.protocol_simulator is not None:
+            try:
+                services["protocol_simulator"] = app.protocol_simulator.get_status()
+            except Exception as e:
+                services["protocol_simulator"] = {"status": "error", "message": str(e)}
+                is_degraded = True
+
+        if (
+            hasattr(app, "data_storage_service")
+            and app.data_storage_service is not None
+        ):
+            try:
+                services["data_storage"] = app.data_storage_service.get_status()
+            except Exception as e:
+                services["data_storage"] = {"status": "error", "message": str(e)}
+                is_degraded = True
+
+        # Phase 3 & 4 services
+        if (
+            hasattr(app, "anomaly_detection_service")
+            and app.anomaly_detection_service is not None
+        ):
+            try:
+                services["anomaly_detection"] = (
+                    app.anomaly_detection_service.get_status()
+                )
+            except Exception as e:
+                services["anomaly_detection"] = {"status": "error", "message": str(e)}
+                is_degraded = True
+
+        if hasattr(app, "modbus_service") and app.modbus_service is not None:
+            try:
+                services["modbus"] = app.modbus_service.get_device_status()
+            except Exception as e:
+                services["modbus"] = {"status": "error", "message": str(e)}
+                is_degraded = True
+
+        # DNP3 Service - Phase 4 service (not critical)
+        if hasattr(app, "dnp3_service") and app.dnp3_service is not None:
+            try:
+                dnp3_status = app.dnp3_service.get_device_status()
+                services["dnp3"] = dnp3_status
+                # DNP3 is not critical - just log if unavailable
+                if not dnp3_status.get("available", True):
+                    app.logger.info("DNP3 service not available (non-critical)")
+            except Exception as e:
+                services["dnp3"] = {
+                    "status": "error",
+                    "message": str(e),
+                    "available": False,
+                }
+                app.logger.warning(f"Error getting DNP3 status: {e}")
+                # DNP3 errors don't mark the system as degraded
+        else:
+            services["dnp3"] = {"status": "not_initialized", "available": False}
+
+        # Update overall status based on service health
+        if is_degraded:
+            status["status"] = "degraded"
+            if critical_services_down:
+                status["critical_services_down"] = critical_services_down
+                status["message"] = (
+                    f"Critical services unavailable: {', '.join(critical_services_down)}"
+                )
+
+        # Add services to status
+        status["services"] = services
+
+        # Return 200 for healthy/degraded (app is running), 503 for critical failures
+        # Keep returning 200 even for degraded state to avoid Render restart loops
+        http_status = 200
+
+        return jsonify(status), http_status
+
+    return app
