@@ -1,6 +1,7 @@
 
 import { useAuth } from "../context/AuthContext";
 import { useSidebarMargin } from "../hooks/useSidebarMargin";
+import Spinner from "./common/Spinner";
 
 const ProtectedRoute = ({
   component: Component,

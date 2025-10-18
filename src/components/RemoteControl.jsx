@@ -2,7 +2,7 @@
 
 import React, {useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { AlertTriangle, ArrowLeft } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle } from "lucide-react";
 
 import { useAuth } from "../context/AuthContext";
 import { useSettings } from "../context/SettingsContext";

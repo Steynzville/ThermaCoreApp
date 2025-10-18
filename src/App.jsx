@@ -3,6 +3,7 @@ import "./App.css";
 import React, { useEffect, useRef, useState } from "react";
 import {
   BrowserRouter as Router,
+  Routes,
   useLocation,
 } from "react-router-dom";
 
