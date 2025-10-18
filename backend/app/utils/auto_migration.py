@@ -205,6 +205,131 @@ def update_emergency_admin_permissions(engine):
         return False
 
 
+def _validate_sql_identifier(identifier):
+    """Validate SQL identifier to prevent injection.
+    
+    Ensures identifier contains only alphanumeric characters and underscores,
+    and doesn't start with a number.
+    
+    Args:
+        identifier: The SQL identifier to validate
+        
+    Returns:
+        bool: True if valid, False otherwise
+    """
+    import re
+    # SQL identifiers should only contain alphanumeric and underscore, not start with number
+    return bool(re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', identifier))
+
+
+def add_user_profile_fields(engine):
+    """Add user profile fields to users table if they don't exist.
+    
+    This function adds fields for multi-tenancy and enhanced user management:
+    - phone_number: VARCHAR(20) for contact information
+    - company: VARCHAR(255) for company name (with DEFAULT 'Default')
+    - company_identifier: VARCHAR(255) for unique company identifier
+    - department: VARCHAR(100) for user department
+    - position: VARCHAR(100) for user job position
+    - first_name: VARCHAR(100) for user first name
+    - last_name: VARCHAR(100) for user last name
+    - is_active: BOOLEAN for account status (DEFAULT true)
+    - last_login: TIMESTAMP for tracking last login time
+    
+    Args:
+        engine: SQLAlchemy engine instance
+        
+    Returns:
+        bool: True if columns were added or already exist, False on error
+    """
+    try:
+        table_name = 'users'
+        columns_added = []
+        
+        # Define columns to add with their SQL definitions
+        # These are hardcoded constants for security - never use user input here
+        columns_to_add = [
+            ('phone_number', "VARCHAR(20)"),
+            ('company', "VARCHAR(255) DEFAULT 'Default'"),
+            ('company_identifier', "VARCHAR(255)"),
+            ('department', "VARCHAR(100)"),
+            ('position', "VARCHAR(100)"),
+            ('first_name', "VARCHAR(100)"),
+            ('last_name', "VARCHAR(100)"),
+            ('is_active', "BOOLEAN DEFAULT true"),
+            ('last_login', "TIMESTAMP"),
+        ]
+        
+        for column_name, column_def in columns_to_add:
+            # Validate column name to prevent SQL injection
+            if not _validate_sql_identifier(column_name):
+                logger.error(f"Invalid column name '{column_name}' - skipping for security")
+                continue
+                
+            if not column_exists(engine, table_name, column_name):
+                logger.info(f"Column '{column_name}' not found in '{table_name}' table. Adding...")
+                with engine.begin() as conn:
+                    # Note: DDL statements cannot use parameterized queries for identifiers
+                    # Column names are validated above and come from hardcoded list
+                    conn.execute(text(
+                        f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {column_name} {column_def}"
+                    ))
+                columns_added.append(column_name)
+                logger.info(f"✓ Column '{column_name}' added successfully")
+            else:
+                logger.info(f"✓ Column '{column_name}' already exists")
+        
+        # Create indexes for better query performance
+        # These are hardcoded constants for security - never use user input here
+        indexes_to_create = [
+            ('idx_users_company', 'company'),
+            ('idx_users_company_identifier', 'company_identifier'),
+        ]
+        
+        for index_name, column_name in indexes_to_create:
+            # Validate both index name and column name to prevent SQL injection
+            if not _validate_sql_identifier(index_name):
+                logger.error(f"Invalid index name '{index_name}' - skipping for security")
+                continue
+            if not _validate_sql_identifier(column_name):
+                logger.error(f"Invalid column name '{column_name}' for index - skipping for security")
+                continue
+                
+            try:
+                with engine.begin() as conn:
+                    # Check if index exists (PostgreSQL syntax)
+                    result = conn.execute(
+                        text("SELECT 1 FROM pg_indexes WHERE indexname = :index_name"),
+                        {"index_name": index_name}
+                    )
+                    index_exists = result.fetchone() is not None
+                    
+                    if not index_exists:
+                        logger.info(f"Creating index '{index_name}'...")
+                        # Note: DDL statements cannot use parameterized queries for identifiers
+                        # Index and column names are validated above and come from hardcoded list
+                        conn.execute(text(
+                            f"CREATE INDEX IF NOT EXISTS {index_name} ON users({column_name})"
+                        ))
+                        logger.info(f"✓ Index '{index_name}' created successfully")
+                    else:
+                        logger.info(f"✓ Index '{index_name}' already exists")
+            except Exception as idx_error:
+                # Index creation is not critical - log warning but continue
+                logger.warning(f"Could not create/verify index '{index_name}': {idx_error}")
+        
+        if columns_added:
+            logger.info(f"User profile fields migration complete: Added columns {columns_added}")
+        else:
+            logger.info("User profile fields migration complete: All required columns already exist")
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error adding user profile fields: {e}", exc_info=True)
+        return False
+
+
 def run_auto_migrations(app):
     """Run all auto-migrations needed for the application.
     
@@ -229,6 +354,9 @@ def run_auto_migrations(app):
         with app.app_context():
             engine = db.engine
             
+            # Run user profile fields migration (must run before other migrations)
+            user_profile_success = add_user_profile_fields(engine)
+            
             # Run password reset columns migration
             success = add_password_reset_columns(engine)
             
@@ -242,7 +370,7 @@ def run_auto_migrations(app):
             
             # Fix existing users' permissions based on their roles
             user_permissions_success = fix_user_permissions(engine)
-            success = success and user_permissions_success
+            success = success and user_permissions_success and user_profile_success
         
         if success:
             logger.info("All auto-migrations completed successfully")
