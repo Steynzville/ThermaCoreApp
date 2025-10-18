@@ -6,11 +6,29 @@ from app.utils.auto_migration import (
     add_password_reset_columns,
     add_user_profile_fields,
     run_auto_migrations,
+    _validate_sql_identifier,
 )
 
 
 class TestAutoMigration:
     """Test auto-migration functionality."""
+
+    def test_validate_sql_identifier(self):
+        """Test SQL identifier validation function."""
+        # Valid identifiers
+        assert _validate_sql_identifier('valid_column') is True
+        assert _validate_sql_identifier('column123') is True
+        assert _validate_sql_identifier('_private_column') is True
+        assert _validate_sql_identifier('CamelCase') is True
+        assert _validate_sql_identifier('snake_case_column') is True
+        
+        # Invalid identifiers
+        assert _validate_sql_identifier('123column') is False  # starts with number
+        assert _validate_sql_identifier('column-name') is False  # contains dash
+        assert _validate_sql_identifier('column name') is False  # contains space
+        assert _validate_sql_identifier('column;DROP') is False  # contains semicolon
+        assert _validate_sql_identifier('column*name') is False  # contains asterisk
+        assert _validate_sql_identifier('') is False  # empty string
 
     def test_column_exists_check(self, app, db_session):
         """Test column_exists helper function."""

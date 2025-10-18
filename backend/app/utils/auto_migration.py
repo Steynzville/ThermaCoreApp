@@ -205,6 +205,23 @@ def update_emergency_admin_permissions(engine):
         return False
 
 
+def _validate_sql_identifier(identifier):
+    """Validate SQL identifier to prevent injection.
+    
+    Ensures identifier contains only alphanumeric characters and underscores,
+    and doesn't start with a number.
+    
+    Args:
+        identifier: The SQL identifier to validate
+        
+    Returns:
+        bool: True if valid, False otherwise
+    """
+    import re
+    # SQL identifiers should only contain alphanumeric and underscore, not start with number
+    return bool(re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', identifier))
+
+
 def add_user_profile_fields(engine):
     """Add user profile fields to users table if they don't exist.
     
@@ -230,6 +247,7 @@ def add_user_profile_fields(engine):
         columns_added = []
         
         # Define columns to add with their SQL definitions
+        # These are hardcoded constants for security - never use user input here
         columns_to_add = [
             ('phone_number', "VARCHAR(20)"),
             ('company', "VARCHAR(255) DEFAULT 'Default'"),
@@ -243,9 +261,16 @@ def add_user_profile_fields(engine):
         ]
         
         for column_name, column_def in columns_to_add:
+            # Validate column name to prevent SQL injection
+            if not _validate_sql_identifier(column_name):
+                logger.error(f"Invalid column name '{column_name}' - skipping for security")
+                continue
+                
             if not column_exists(engine, table_name, column_name):
                 logger.info(f"Column '{column_name}' not found in '{table_name}' table. Adding...")
                 with engine.begin() as conn:
+                    # Note: DDL statements cannot use parameterized queries for identifiers
+                    # Column names are validated above and come from hardcoded list
                     conn.execute(text(
                         f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {column_name} {column_def}"
                     ))
@@ -255,12 +280,21 @@ def add_user_profile_fields(engine):
                 logger.info(f"✓ Column '{column_name}' already exists")
         
         # Create indexes for better query performance
+        # These are hardcoded constants for security - never use user input here
         indexes_to_create = [
             ('idx_users_company', 'company'),
             ('idx_users_company_identifier', 'company_identifier'),
         ]
         
         for index_name, column_name in indexes_to_create:
+            # Validate both index name and column name to prevent SQL injection
+            if not _validate_sql_identifier(index_name):
+                logger.error(f"Invalid index name '{index_name}' - skipping for security")
+                continue
+            if not _validate_sql_identifier(column_name):
+                logger.error(f"Invalid column name '{column_name}' for index - skipping for security")
+                continue
+                
             try:
                 with engine.begin() as conn:
                     # Check if index exists (PostgreSQL syntax)
@@ -272,6 +306,8 @@ def add_user_profile_fields(engine):
                     
                     if not index_exists:
                         logger.info(f"Creating index '{index_name}'...")
+                        # Note: DDL statements cannot use parameterized queries for identifiers
+                        # Index and column names are validated above and come from hardcoded list
                         conn.execute(text(
                             f"CREATE INDEX IF NOT EXISTS {index_name} ON users({column_name})"
                         ))
