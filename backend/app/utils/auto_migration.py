@@ -81,11 +81,17 @@ def add_password_reset_columns(engine):
         # because index inspection can be database-specific
         try:
             with engine.begin() as conn:
-                # Check if index exists (PostgreSQL syntax)
-                result = conn.execute(text(
-                    "SELECT 1 FROM pg_indexes WHERE indexname = 'idx_users_reset_token'"
-                ))
-                index_exists = result.fetchone() is not None
+                # Check if index exists - database-specific query
+                if engine.dialect.name == "postgresql":
+                    result = conn.execute(text(
+                        "SELECT 1 FROM pg_indexes WHERE indexname = 'idx_users_reset_token'"
+                    ))
+                    index_exists = result.fetchone() is not None
+                else:  # sqlite
+                    result = conn.execute(text(
+                        "SELECT name FROM sqlite_master WHERE type='index' AND name = 'idx_users_reset_token'"
+                    ))
+                    index_exists = result.fetchone() is not None
                 
                 if not index_exists:
                     logger.info("Creating index 'idx_users_reset_token'...")
@@ -297,12 +303,19 @@ def add_user_profile_fields(engine):
                 
             try:
                 with engine.begin() as conn:
-                    # Check if index exists (PostgreSQL syntax)
-                    result = conn.execute(
-                        text("SELECT 1 FROM pg_indexes WHERE indexname = :index_name"),
-                        {"index_name": index_name}
-                    )
-                    index_exists = result.fetchone() is not None
+                    # Check if index exists - database-specific query
+                    if engine.dialect.name == "postgresql":
+                        result = conn.execute(
+                            text("SELECT 1 FROM pg_indexes WHERE indexname = :index_name"),
+                            {"index_name": index_name}
+                        )
+                        index_exists = result.fetchone() is not None
+                    else:  # sqlite
+                        result = conn.execute(
+                            text("SELECT name FROM sqlite_master WHERE type='index' AND name = :index_name"),
+                            {"index_name": index_name}
+                        )
+                        index_exists = result.fetchone() is not None
                     
                     if not index_exists:
                         logger.info(f"Creating index '{index_name}'...")
