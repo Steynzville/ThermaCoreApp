@@ -2,13 +2,18 @@ import "./App.css";
 
 import React, { useEffect, useRef, useState } from "react";
 import {
+  BrowserRouter as Router,
   useLocation,
 } from "react-router-dom";
 
 // Removed static imports for UnitControl, UnitDetails, UserUnitDetails
 import routes from "./config/routes";
-import { useAuth } from "./context/AuthContext";
-import { useSettings } from "./context/SettingsContext";
+import Spinner from "./components/common/Spinner";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import { SettingsProvider, useSettings } from "./context/SettingsContext";
+import { SidebarProvider } from "./context/SidebarContext";
+import { ThemeProvider } from "./context/ThemeContext";
+import { UnitProvider } from "./context/UnitContext";
 import playSound from "./utils/audioPlayer";
 
 // Component to handle scroll to top on route change

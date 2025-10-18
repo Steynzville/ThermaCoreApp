@@ -34,7 +34,7 @@ describe("UserRegistrationForm", () => {
 
     expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/enter your password/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/first name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/last name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/phone number/i)).toBeInTheDocument();
@@ -73,7 +73,7 @@ describe("UserRegistrationForm", () => {
     fireEvent.change(screen.getByLabelText(/email/i), {
       target: { value: "test@example.com" },
     });
-    fireEvent.change(screen.getByLabelText(/password/i), {
+    fireEvent.change(screen.getByPlaceholderText(/enter your password/i), {
       target: { value: "password123" },
     });
     fireEvent.change(screen.getByLabelText(/first name/i), {
@@ -104,8 +104,14 @@ describe("UserRegistrationForm", () => {
     const inputs = screen.getAllByRole("textbox");
     inputs.forEach((input) => {
       const styles = window.getComputedStyle(input);
-      const minHeight = parseInt(styles.minHeight);
-      expect(minHeight).toBeGreaterThanOrEqual(44);
+      const minHeight = parseInt(styles.minHeight, 10);
+      // Check if minHeight is a valid number, otherwise use actual height
+      if (!isNaN(minHeight) && minHeight > 0) {
+        expect(minHeight).toBeGreaterThanOrEqual(44);
+      } else {
+        const height = parseInt(styles.height, 10);
+        expect(height).toBeGreaterThanOrEqual(44);
+      }
     });
   });
 });
