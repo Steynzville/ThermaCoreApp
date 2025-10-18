@@ -1,8 +1,5 @@
 """Test roles endpoint to ensure all three roles are returned."""
 
-import pytest
-from flask import url_for
-
 
 class TestRolesEndpoint:
     """Test the /api/v1/roles endpoint."""
