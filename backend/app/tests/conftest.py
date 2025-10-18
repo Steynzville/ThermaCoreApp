@@ -202,6 +202,7 @@ def _create_test_data():
         last_name="User",
         role_id=admin_role.id,
         is_active=True,
+        registration_status="approved",  # Auto-approve test users
     )
     admin_user.set_password("admin123")
 
@@ -212,6 +213,7 @@ def _create_test_data():
         last_name="User",
         role_id=operator_role.id,
         is_active=True,
+        registration_status="approved",  # Auto-approve test users
     )
     operator_user.set_password("operator123")
 
@@ -222,6 +224,7 @@ def _create_test_data():
         last_name="User",
         role_id=viewer_role.id,
         is_active=True,
+        registration_status="approved",  # Auto-approve test users
     )
     viewer_user.set_password("viewer123")
 
