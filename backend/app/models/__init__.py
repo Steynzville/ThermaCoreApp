@@ -192,6 +192,11 @@ class User(db.Model):
     password_hash = Column(Text, nullable=False)
     first_name = Column(String(100))
     last_name = Column(String(100))
+    phone_number = Column(String(50))
+    company = Column(String(200), index=True)
+    company_identifier = Column(String(100), index=True)
+    department = Column(String(100))
+    position = Column(String(100))
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(
         DateTime, default=utc_now

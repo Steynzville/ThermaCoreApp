@@ -47,6 +47,9 @@ def get_users():
       - in: query
         name: search
         type: string
+      - in: query
+        name: company
+        type: string
     responses:
       200:
         description: List of users
@@ -63,6 +66,7 @@ def get_users():
     role_name = request.args.get("role")
     active = request.args.get("active", type=bool)
     search = request.args.get("search", "").strip()
+    company = request.args.get("company", "").strip()
 
     # Build query
     query = User.query.join(Role)
@@ -73,6 +77,9 @@ def get_users():
 
     if active is not None:
         query = query.filter(User.is_active == active)
+
+    if company:
+        query = query.filter(User.company.ilike(f"%{company}%"))
 
     if search:
         search_filter = or_(
@@ -476,3 +483,146 @@ def reset_user_password(user_id):
     db.session.commit()
 
     return jsonify({"message": "Password reset successfully"}), 200
+
+
+@users_bp.route("/users/companies", methods=["GET"])
+@jwt_required()
+@permission_required("read_users")
+def get_companies():
+    """
+    Get list of unique companies.
+    ---
+    tags:
+      - Users
+    responses:
+      200:
+        description: List of unique company names
+        schema:
+          type: object
+          properties:
+            companies:
+              type: array
+              items:
+                type: string
+    security:
+      - JWT: []
+    """
+    from app.utils.user_batch_manager import UserBatchManager
+
+    companies = UserBatchManager.get_unique_companies()
+    return jsonify({"companies": companies}), 200
+
+
+@users_bp.route("/users/companies/stats", methods=["GET"])
+@jwt_required()
+@permission_required("read_users")
+def get_company_stats():
+    """
+    Get statistics about users grouped by company.
+    ---
+    tags:
+      - Users
+    responses:
+      200:
+        description: Company statistics
+        schema:
+          type: object
+          properties:
+            stats:
+              type: array
+              items:
+                type: object
+                properties:
+                  company:
+                    type: string
+                  total_users:
+                    type: integer
+                  active_users:
+                    type: integer
+                  inactive_users:
+                    type: integer
+    security:
+      - JWT: []
+    """
+    from app.utils.user_batch_manager import UserBatchManager
+
+    stats = UserBatchManager.get_company_statistics()
+    return jsonify({"stats": stats}), 200
+
+
+@users_bp.route("/users/batch/activate", methods=["POST"])
+@jwt_required()
+@permission_required("write_users")
+def batch_activate():
+    """
+    Activate multiple users.
+    ---
+    tags:
+      - Users
+    parameters:
+      - in: body
+        name: user_ids
+        schema:
+          type: object
+          required:
+            - user_ids
+          properties:
+            user_ids:
+              type: array
+              items:
+                type: integer
+    responses:
+      200:
+        description: Users activated successfully
+      400:
+        description: Invalid request
+    security:
+      - JWT: []
+    """
+    from app.utils.user_batch_manager import UserBatchManager
+
+    data = request.json
+    if not data or "user_ids" not in data:
+        return jsonify({"error": "user_ids required"}), 400
+
+    count = UserBatchManager.batch_activate_users(data["user_ids"])
+    return jsonify({"message": f"{count} users activated successfully"}), 200
+
+
+@users_bp.route("/users/batch/deactivate", methods=["POST"])
+@jwt_required()
+@permission_required("write_users")
+def batch_deactivate():
+    """
+    Deactivate multiple users.
+    ---
+    tags:
+      - Users
+    parameters:
+      - in: body
+        name: user_ids
+        schema:
+          type: object
+          required:
+            - user_ids
+          properties:
+            user_ids:
+              type: array
+              items:
+                type: integer
+    responses:
+      200:
+        description: Users deactivated successfully
+      400:
+        description: Invalid request
+    security:
+      - JWT: []
+    """
+    from app.utils.user_batch_manager import UserBatchManager
+
+    data = request.json
+    if not data or "user_ids" not in data:
+        return jsonify({"error": "user_ids required"}), 400
+
+    count = UserBatchManager.batch_deactivate_users(data["user_ids"])
+    return jsonify({"message": f"{count} users deactivated successfully"}), 200

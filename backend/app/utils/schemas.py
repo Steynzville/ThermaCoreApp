@@ -170,6 +170,10 @@ class UserCreateSchema(Schema):
     password = fields.Str(required=True, validate=validate.Length(min=6))
     first_name = fields.Str(validate=validate.Length(max=100))
     last_name = fields.Str(validate=validate.Length(max=100))
+    phone_number = fields.Str(validate=validate.Length(max=50))
+    company = fields.Str(validate=validate.Length(max=200))
+    department = fields.Str(validate=validate.Length(max=100))
+    position = fields.Str(validate=validate.Length(max=100))
     role_id = fields.Int(required=True)
 
 
@@ -180,6 +184,10 @@ class UserUpdateSchema(Schema):
     email = fields.Email()
     first_name = fields.Str(validate=validate.Length(max=100))
     last_name = fields.Str(validate=validate.Length(max=100))
+    phone_number = fields.Str(validate=validate.Length(max=50))
+    company = fields.Str(validate=validate.Length(max=200))
+    department = fields.Str(validate=validate.Length(max=100))
+    position = fields.Str(validate=validate.Length(max=100))
     role_id = fields.Int()
     is_active = fields.Bool()
 
