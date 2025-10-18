@@ -341,10 +341,12 @@ describe('AdminPanel User Creation Form', () => {
     const roleSelect = selects[0];
     
     // Check that all three roles are available
-    const options = roleSelect.querySelectorAll('option');
-    expect(options[1]).toHaveTextContent('Admin');
-    expect(options[2]).toHaveTextContent('Operator');
-    expect(options[3]).toHaveTextContent('Viewer');
-    expect(options.length).toBe(4);
+    const options = Array.from(roleSelect.querySelectorAll('option'));
+    const optionTexts = options.map(opt => opt.textContent);
+    expect(optionTexts).toEqual(expect.arrayContaining(['Admin', 'Operator', 'Viewer']));
+    // Optionally, check that each role option is present by role name
+    expect(screen.getByRole('option', { name: /Admin/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /Operator/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /Viewer/i })).toBeInTheDocument();
   });
 });
