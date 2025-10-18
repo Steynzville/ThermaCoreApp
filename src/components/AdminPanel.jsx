@@ -12,7 +12,7 @@ import {
   Users,
   UserCheck,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { toast } from "sonner";
 
 import PageHeader from "./PageHeader";
@@ -63,6 +63,9 @@ const AdminPanel = ({ className }) => {
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [rolesLoadError, setRolesLoadError] = useState(false);
 
+  // Mounted ref to prevent state updates after unmount
+  const isMountedRef = useRef(true);
+
   // Password Management State
   const [passwordResetModal, setPasswordResetModal] = useState(false);
   const [selectedUserForReset, setSelectedUserForReset] = useState(null);
@@ -82,8 +85,10 @@ const AdminPanel = ({ className }) => {
 
   // Fetch users from backend
   const fetchUsers = async () => {
-    setIsLoadingUsers(true);
-    setUsersError(null);
+    if (isMountedRef.current) {
+      setIsLoadingUsers(true);
+      setUsersError(null);
+    }
     
     try {
       const result = await getAllUsers({ per_page: 100 });
@@ -101,13 +106,19 @@ const AdminPanel = ({ className }) => {
         status: user.is_active ? 'Active' : 'Inactive',
       }));
       
-      setUsers(mappedUsers);
+      if (isMountedRef.current) {
+        setUsers(mappedUsers);
+      }
     } catch (error) {
       console.error('Failed to fetch users:', error);
-      setUsersError('Failed to load users. Please try again.');
-      toast.error('Failed to load users');
+      if (isMountedRef.current) {
+        setUsersError('Failed to load users. Please try again.');
+        toast.error('Failed to load users');
+      }
     } finally {
-      setIsLoadingUsers(false);
+      if (isMountedRef.current) {
+        setIsLoadingUsers(false);
+      }
     }
   };
 
@@ -142,36 +153,50 @@ const AdminPanel = ({ className }) => {
           rolesArray = data;
         } else {
           console.warn('⚠️ Roles data is not in expected format');
-          setRolesLoadError(true);
-          setAvailableRoles([]);
+          if (isMountedRef.current) {
+            setRolesLoadError(true);
+            setAvailableRoles([]);
+          }
           return;
         }
         
         // Ensure we have valid roles data
         if (rolesArray.length > 0) {
-          setAvailableRoles(rolesArray);
-          setRolesLoadError(false);
+          if (isMountedRef.current) {
+            setAvailableRoles(rolesArray);
+            setRolesLoadError(false);
+          }
           console.log('📋 Roles set:', rolesArray);
         } else {
           console.warn('⚠️ Roles array is empty');
-          setRolesLoadError(true);
-          setAvailableRoles([]);
+          if (isMountedRef.current) {
+            setRolesLoadError(true);
+            setAvailableRoles([]);
+          }
         }
       } else {
         console.error('❌ Roles API failed:', response.status);
-        setRolesLoadError(true);
-        setAvailableRoles([]);
+        if (isMountedRef.current) {
+          setRolesLoadError(true);
+          setAvailableRoles([]);
+        }
       }
     } catch (error) {
       console.error('❌ Error fetching roles:', error);
-      setRolesLoadError(true);
-      setAvailableRoles([]);
+      if (isMountedRef.current) {
+        setRolesLoadError(true);
+        setAvailableRoles([]);
+      }
     }
   };
 
   // Fetch users on component mount
   useEffect(() => {
+    isMountedRef.current = true;
     fetchUsers();
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
 
   const handleAddUser = () => {
@@ -227,7 +252,9 @@ const AdminPanel = ({ className }) => {
       return;
     }
 
-    setIsCreatingUser(true);
+    if (isMountedRef.current) {
+      setIsCreatingUser(true);
+    }
 
     try {
       const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://thermacoreapp.onrender.com';
@@ -259,7 +286,9 @@ const AdminPanel = ({ className }) => {
 
       if (response.ok) {
         toast.success(`User ${newUserFormData.username} created successfully`);
-        setCreateUserModal(false);
+        if (isMountedRef.current) {
+          setCreateUserModal(false);
+        }
         
         // Refresh the user list from the backend
         await fetchUsers();
@@ -270,7 +299,9 @@ const AdminPanel = ({ className }) => {
       console.error('User creation failed:', error);
       toast.error(error.message || 'Failed to create user. Please check backend connection.');
     } finally {
-      setIsCreatingUser(false);
+      if (isMountedRef.current) {
+        setIsCreatingUser(false);
+      }
     }
   };
 
@@ -366,10 +397,12 @@ const AdminPanel = ({ className }) => {
       return;
     }
 
-    setValidation(prev => ({
-      ...prev,
-      isSubmitting: true
-    }));
+    if (isMountedRef.current) {
+      setValidation(prev => ({
+        ...prev,
+        isSubmitting: true
+      }));
+    }
 
     try {
       const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://thermacoreapp.onrender.com';
@@ -388,14 +421,18 @@ const AdminPanel = ({ className }) => {
 
       if (response.ok) {
         toast.success(`Password reset successfully for ${selectedUserForReset.name}`);
-        closePasswordResetModal();
+        if (isMountedRef.current) {
+          closePasswordResetModal();
+        }
       } else {
         // Set validation with error state
-        setValidation(prev => ({
-          ...prev,
-          isSubmitting: false,
-          apiError: result.error || result.message || 'Failed to reset password'
-        }));
+        if (isMountedRef.current) {
+          setValidation(prev => ({
+            ...prev,
+            isSubmitting: false,
+            apiError: result.error || result.message || 'Failed to reset password'
+          }));
+        }
       }
     } catch (error) {
       console.error('Password reset failed:', error);
@@ -420,11 +457,13 @@ const AdminPanel = ({ className }) => {
         errorMsg += error.message || 'An unexpected error occurred. Please check the backend logs.';
       }
       
-      setValidation(prev => ({
-        ...prev,
-        isSubmitting: false,
-        apiError: errorMsg
-      }));
+      if (isMountedRef.current) {
+        setValidation(prev => ({
+          ...prev,
+          isSubmitting: false,
+          apiError: errorMsg
+        }));
+      }
     }
   };
 
