@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 
@@ -128,25 +128,20 @@ describe('AdminPanel User Creation Form', () => {
     fireEvent.click(addUserButton);
     
     // Wait for modal to appear
-    await waitFor(() => {
-      expect(screen.getByText('Create New User')).toBeInTheDocument();
-    });
+    const modal = await screen.findByText('Create New User');
+    expect(modal).toBeInTheDocument();
     
-    // Wait for roles to load
+    // Wait for roles to load - find the Role label and get the associated select
+    const roleSelect = await screen.findByLabelText(/Role/i);
+    
+    // Wait for roles to populate
     await waitFor(() => {
-      const selects = screen.getAllByRole('combobox');
-      const roleSelect = selects[0];
-      const options = roleSelect.querySelectorAll('option');
+      const options = within(roleSelect).getAllByRole('option');
       expect(options[0]).toHaveTextContent('Select a role');
     });
     
-    // Find all select elements (role dropdown will be one of them)
-    const selects = screen.getAllByRole('combobox');
-    const roleSelect = selects[0]; // Should be the only select in the modal
-    expect(roleSelect).toBeInTheDocument();
-    
     // Check that all three roles are available as options
-    const options = roleSelect.querySelectorAll('option');
+    const options = within(roleSelect).getAllByRole('option');
     
     // First option should be placeholder
     expect(options[0]).toHaveTextContent('Select a role');
@@ -268,9 +263,8 @@ describe('AdminPanel User Creation Form', () => {
       expect(screen.getByText('Create New User')).toBeInTheDocument();
     });
     
-    // Select operator role
-    const selects = screen.getAllByRole('combobox');
-    const roleSelect = selects[0];
+    // Select operator role using label
+    const roleSelect = await screen.findByLabelText(/Role/i);
     fireEvent.change(roleSelect, { target: { value: '2' } });
     
     // Verify the selection
@@ -298,9 +292,8 @@ describe('AdminPanel User Creation Form', () => {
       expect(screen.getByText('Create New User')).toBeInTheDocument();
     });
     
-    // Select viewer role
-    const selects = screen.getAllByRole('combobox');
-    const roleSelect = selects[0];
+    // Select viewer role using label
+    const roleSelect = await screen.findByLabelText(/Role/i);
     fireEvent.change(roleSelect, { target: { value: '3' } });
     
     // Verify the selection
@@ -324,29 +317,23 @@ describe('AdminPanel User Creation Form', () => {
     const addUserButton = screen.getByText('Add User');
     fireEvent.click(addUserButton);
     
-    await waitFor(() => {
-      expect(screen.getByText('Create New User')).toBeInTheDocument();
-    });
+    const modal = await screen.findByText('Create New User');
+    expect(modal).toBeInTheDocument();
+    
+    // Find role select using label
+    const roleSelect = await screen.findByLabelText(/Role/i);
     
     // Wait for roles to load
     await waitFor(() => {
-      const selects = screen.getAllByRole('combobox');
-      const roleSelect = selects[0];
-      const options = roleSelect.querySelectorAll('option');
+      const options = within(roleSelect).getAllByRole('option');
       expect(options[0]).toHaveTextContent('Select a role');
     });
     
-    // Find all select elements
-    const selects = screen.getAllByRole('combobox');
-    const roleSelect = selects[0];
-    
     // Check that all three roles are available
-    const options = Array.from(roleSelect.querySelectorAll('option'));
-    const optionTexts = options.map(opt => opt.textContent);
-    expect(optionTexts).toEqual(expect.arrayContaining(['Admin', 'Operator', 'Viewer']));
-    // Optionally, check that each role option is present by role name
-    expect(screen.getByRole('option', { name: /Admin/i })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: /Operator/i })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: /Viewer/i })).toBeInTheDocument();
+    const options = within(roleSelect).getAllByRole('option');
+    expect(options[1]).toHaveTextContent('Admin');
+    expect(options[2]).toHaveTextContent('Operator');
+    expect(options[3]).toHaveTextContent('Viewer');
+    expect(options.length).toBe(4);
   });
 });

@@ -133,7 +133,7 @@ const AdminPanel = ({ className }) => {
         } else if (Array.isArray(data)) {
           rolesArray = data;
         } else {
-          console.warn('⚠️ Roles data is not in expected format, using fallback');
+          console.warn('⚠️ Roles data is not in expected format');
           setRolesLoadError(true);
           setAvailableRoles([]);
           return;
@@ -145,7 +145,7 @@ const AdminPanel = ({ className }) => {
           setRolesLoadError(false);
           console.log('📋 Roles set:', rolesArray);
         } else {
-          console.warn('⚠️ Roles array is empty, using fallback');
+          console.warn('⚠️ Roles array is empty');
           setRolesLoadError(true);
           setAvailableRoles([]);
         }
@@ -791,7 +791,7 @@ const AdminPanel = ({ className }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label htmlFor="user-role-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Role <span className="text-red-500">*</span>
                   </label>
                   {rolesLoadError ? (
@@ -800,6 +800,7 @@ const AdminPanel = ({ className }) => {
                     </div>
                   ) : (
                     <select
+                      id="user-role-select"
                       value={newUserFormData.roleId}
                       onChange={(e) =>
                         setNewUserFormData({ ...newUserFormData, roleId: e.target.value })
@@ -818,7 +819,7 @@ const AdminPanel = ({ className }) => {
                     </select>
                   )}
                   {/* Temporary debug display - shows loaded roles */}
-                  {availableRoles.length > 0 && (
+                  {availableRoles.length > 0 && !rolesLoadError && (
                     <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
                       <p className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">
                         Debug: Loaded Roles ({availableRoles.length})
