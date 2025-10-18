@@ -264,9 +264,10 @@ def add_user_profile_fields(engine):
             try:
                 with engine.begin() as conn:
                     # Check if index exists (PostgreSQL syntax)
-                    result = conn.execute(text(
-                        f"SELECT 1 FROM pg_indexes WHERE indexname = '{index_name}'"
-                    ))
+                    result = conn.execute(
+                        text("SELECT 1 FROM pg_indexes WHERE indexname = :index_name"),
+                        {"index_name": index_name}
+                    )
                     index_exists = result.fetchone() is not None
                     
                     if not index_exists:
