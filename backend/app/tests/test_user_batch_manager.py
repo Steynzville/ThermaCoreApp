@@ -12,27 +12,27 @@ class TestUserBatchManager:
         # Get admin role
         admin_role = Role.query.filter_by(name="admin").first()
         
-        # Create test users with different companies
+        # Create test users with UNIQUE company names to avoid test data pollution
         user1 = User(
-            username="abb_user1",
-            email="user1@abb.com",
-            company="ABB Group",
+            username="test_batch_user1",
+            email="user1@testbatch.com",
+            company="TestBatchCompanyA",
             role_id=admin_role.id
         )
         user1.set_password("password123")
         
         user2 = User(
-            username="abb_user2",
-            email="user2@abb.com",
-            company="ABB Group",
+            username="test_batch_user2",
+            email="user2@testbatch.com",
+            company="TestBatchCompanyA",
             role_id=admin_role.id
         )
         user2.set_password("password123")
         
         user3 = User(
-            username="minecor_user",
-            email="user@minecor.com",
-            company="MineCor",
+            username="test_batch_user3",
+            email="user3@testbatch.com",
+            company="TestBatchCompanyB",
             role_id=admin_role.id
         )
         user3.set_password("password123")
@@ -40,12 +40,12 @@ class TestUserBatchManager:
         db_session.add_all([user1, user2, user3])
         db_session.commit()
         
-        # Test getting users by company
-        abb_users = UserBatchManager.get_users_by_company("ABB Group")
-        assert len(abb_users) == 3  # Includes testuser123 from test_enhanced_user_management
+        # Test getting users by company - now isolated from other tests
+        company_a_users = UserBatchManager.get_users_by_company("TestBatchCompanyA")
+        assert len(company_a_users) == 2
         
-        minecor_users = UserBatchManager.get_users_by_company("MineCor")
-        assert len(minecor_users) == 3  # Includes companyuser and minecoruser from test_enhanced_user_management
+        company_b_users = UserBatchManager.get_users_by_company("TestBatchCompanyB")
+        assert len(company_b_users) == 1
 
     def test_get_users_by_company_identifier(self, db_session):
         """Test getting users by company identifier."""
@@ -254,26 +254,27 @@ class TestUserBatchManager:
         """Test getting users by department."""
         admin_role = Role.query.filter_by(name="admin").first()
         
+        # Use UNIQUE department names to avoid test data pollution
         user1 = User(
-            username="dept_user1",
-            email="user1@dept.com",
-            department="Engineering",
+            username="test_dept_user1",
+            email="user1@testdept.com",
+            department="TestDepartmentA",
             role_id=admin_role.id
         )
         user1.set_password("password123")
         
         user2 = User(
-            username="dept_user2",
-            email="user2@dept.com",
-            department="Engineering",
+            username="test_dept_user2",
+            email="user2@testdept.com",
+            department="TestDepartmentA",
             role_id=admin_role.id
         )
         user2.set_password("password123")
         
         user3 = User(
-            username="dept_user3",
-            email="user3@dept.com",
-            department="Sales",
+            username="test_dept_user3",
+            email="user3@testdept.com",
+            department="TestDepartmentB",
             role_id=admin_role.id
         )
         user3.set_password("password123")
@@ -281,11 +282,12 @@ class TestUserBatchManager:
         db_session.add_all([user1, user2, user3])
         db_session.commit()
         
-        eng_users = UserBatchManager.get_users_by_department("Engineering")
-        assert len(eng_users) == 3  # Includes testuser123 from test_enhanced_user_management
+        # Test getting users by department - now isolated from other tests
+        dept_a_users = UserBatchManager.get_users_by_department("TestDepartmentA")
+        assert len(dept_a_users) == 2
         
-        sales_users = UserBatchManager.get_users_by_department("Sales")
-        assert len(sales_users) == 1
+        dept_b_users = UserBatchManager.get_users_by_department("TestDepartmentB")
+        assert len(dept_b_users) == 1
 
     def test_count_users_by_company(self, db_session):
         """Test counting users by company."""
