@@ -45,7 +45,7 @@ class TestUserBatchManager:
         assert len(abb_users) == 3  # Includes testuser123 from test_enhanced_user_management
         
         minecor_users = UserBatchManager.get_users_by_company("MineCor")
-        assert len(minecor_users) == 1
+        assert len(minecor_users) == 3  # Includes companyuser and minecoruser from test_enhanced_user_management
 
     def test_get_users_by_company_identifier(self, db_session):
         """Test getting users by company identifier."""
