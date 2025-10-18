@@ -1,6 +1,5 @@
 """Tests for user batch manager utility."""
 
-import pytest
 from app.models import User, Role
 from app.utils.user_batch_manager import UserBatchManager
 

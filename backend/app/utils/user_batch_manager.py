@@ -4,9 +4,9 @@ This module provides functionality for batch operations on users,
 particularly for company-based grouping and bulk actions.
 """
 
-from typing import List, Dict, Optional
+from typing import List, Optional
 from sqlalchemy import func
-from app.models import User, Role
+from app.models import User
 from app import db
 
 

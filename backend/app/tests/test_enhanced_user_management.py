@@ -1,6 +1,5 @@
 """Tests for enhanced user management features."""
 
-import pytest
 from app.models import User, Role
 
 
@@ -46,11 +45,6 @@ class TestUserProfileFields:
         )
 
         assert response.status_code == 201
-        data = response.json
-        if "data" in data:
-            user_data = data["data"]
-        else:
-            user_data = data
 
         # Verify user was created with all fields
         user = User.query.filter_by(username="testuser123").first()

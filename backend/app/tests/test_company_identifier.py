@@ -1,6 +1,5 @@
 """Tests for company identifier utility."""
 
-import pytest
 from app.utils.company_identifier import CompanyIdentifier
 
 
