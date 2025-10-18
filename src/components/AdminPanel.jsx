@@ -726,12 +726,14 @@ const AdminPanel = ({ className }) => {
 
         {/* Create User Modal */}
         {createUserModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-md">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                Create New User
-              </h3>
-              <div className="space-y-4">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-900 rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
+              <div className="sticky top-0 bg-white dark:bg-gray-900 p-6 pb-4 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  Create New User
+                </h3>
+              </div>
+              <div className="p-6 space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Username <span className="text-red-500">*</span>
@@ -743,6 +745,7 @@ const AdminPanel = ({ className }) => {
                       setNewUserFormData({ ...newUserFormData, username: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    style={{ minHeight: '44px', fontSize: '16px' }}
                     placeholder="Enter username"
                   />
                 </div>
@@ -757,6 +760,7 @@ const AdminPanel = ({ className }) => {
                       setNewUserFormData({ ...newUserFormData, email: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    style={{ minHeight: '44px', fontSize: '16px' }}
                     placeholder="Enter email"
                   />
                 </div>
@@ -772,12 +776,14 @@ const AdminPanel = ({ className }) => {
                         setNewUserFormData({ ...newUserFormData, password: e.target.value })
                       }
                       className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                      style={{ minHeight: '44px', fontSize: '16px' }}
                       placeholder="Enter password (min 6 characters)"
                     />
                     <button
                       type="button"
                       onClick={() => setShowCreatePassword(!showCreatePassword)}
                       className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                      style={{ minHeight: '44px', minWidth: '44px' }}
                     >
                       {showCreatePassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
@@ -794,6 +800,7 @@ const AdminPanel = ({ className }) => {
                       setNewUserFormData({ ...newUserFormData, firstName: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    style={{ minHeight: '44px', fontSize: '16px' }}
                     placeholder="Enter first name"
                   />
                 </div>
@@ -808,6 +815,7 @@ const AdminPanel = ({ className }) => {
                       setNewUserFormData({ ...newUserFormData, lastName: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    style={{ minHeight: '44px', fontSize: '16px' }}
                     placeholder="Enter last name"
                   />
                 </div>
@@ -822,6 +830,7 @@ const AdminPanel = ({ className }) => {
                       setNewUserFormData({ ...newUserFormData, phoneNumber: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    style={{ minHeight: '44px', fontSize: '16px' }}
                     placeholder="Enter phone number"
                   />
                 </div>
@@ -836,6 +845,7 @@ const AdminPanel = ({ className }) => {
                       setNewUserFormData({ ...newUserFormData, company: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    style={{ minHeight: '44px', fontSize: '16px' }}
                     placeholder="Enter company name"
                   />
                 </div>
@@ -850,6 +860,7 @@ const AdminPanel = ({ className }) => {
                       setNewUserFormData({ ...newUserFormData, department: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    style={{ minHeight: '44px', fontSize: '16px' }}
                     placeholder="Enter department"
                   />
                 </div>
@@ -864,6 +875,7 @@ const AdminPanel = ({ className }) => {
                       setNewUserFormData({ ...newUserFormData, position: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    style={{ minHeight: '44px', fontSize: '16px' }}
                     placeholder="Enter position"
                   />
                 </div>
@@ -883,6 +895,7 @@ const AdminPanel = ({ className }) => {
                         setNewUserFormData({ ...newUserFormData, roleId: e.target.value })
                       }
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                      style={{ minHeight: '44px', fontSize: '16px' }}
                       disabled={availableRoles.length === 0}
                     >
                       <option value="">
@@ -897,11 +910,12 @@ const AdminPanel = ({ className }) => {
                   )}
                 </div>
               </div>
-              <div className="flex justify-end space-x-3 mt-6">
+              <div className="sticky bottom-0 bg-white dark:bg-gray-900 p-6 pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
                 <button
                   onClick={() => setCreateUserModal(false)}
                   disabled={isCreatingUser}
                   className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-50"
+                  style={{ minHeight: '44px', fontSize: '16px' }}
                 >
                   Cancel
                 </button>
@@ -909,6 +923,7 @@ const AdminPanel = ({ className }) => {
                   onClick={handleCreateUser}
                   disabled={isCreatingUser || rolesLoadError || availableRoles.length === 0}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                  style={{ minHeight: '44px', fontSize: '16px' }}
                 >
                   {isCreatingUser && (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
