@@ -20,24 +20,85 @@ def init_database_on_startup():
     """Initialize database tables and seed default admin user on startup."""
     with app.app_context():
         try:
-            from app.models import User, Role, RoleEnum
+            from app.models import User, Role, Permission, RoleEnum, PermissionEnum
 
             # Create all database tables
             print("Initializing database tables...")
             db.create_all()
             print("✓ Database tables created successfully")
 
-            # Seed admin role if not present
+            # Seed permissions if not present
+            print("Seeding permissions...")
+            permissions_data = [
+                (PermissionEnum.READ_UNITS, "Read access to units and their data"),
+                (PermissionEnum.WRITE_UNITS, "Create and update units"),
+                (PermissionEnum.DELETE_UNITS, "Delete units"),
+                (PermissionEnum.READ_USERS, "Read access to user information"),
+                (PermissionEnum.WRITE_USERS, "Create and update users"),
+                (PermissionEnum.DELETE_USERS, "Delete users"),
+                (PermissionEnum.ADMIN_PANEL, "Access to administration panel"),
+                (PermissionEnum.REMOTE_CONTROL, "Remote control access to units (power, water production, auto settings, live video)"),
+            ]
+            
+            permissions_map = {}
+            for perm_enum, description in permissions_data:
+                permission = Permission.query.filter_by(name=perm_enum).first()
+                if not permission:
+                    permission = Permission(name=perm_enum, description=description)
+                    db.session.add(permission)
+                permissions_map[perm_enum] = permission
+            
+            db.session.commit()
+            print("✓ Permissions seeded successfully")
+
+            # Seed all three roles if not present
+            print("Seeding roles...")
+            
+            # Admin role with all permissions
             admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
             if not admin_role:
-                print("Creating default admin role...")
+                print("Creating admin role...")
                 admin_role = Role(
                     name=RoleEnum.ADMIN,
                     description="ThermaCore staff only - Full system administration with all permissions",
                 )
+                admin_role.permissions = list(permissions_map.values())
                 db.session.add(admin_role)
-                db.session.commit()
-                print("✓ Admin role created successfully")
+                print("✓ Admin role created")
+            
+            # Operator role with read + remote control
+            operator_role = Role.query.filter_by(name=RoleEnum.OPERATOR).first()
+            if not operator_role:
+                print("Creating operator role...")
+                operator_role = Role(
+                    name=RoleEnum.OPERATOR,
+                    description="Client power users - Read-only access with remote control capabilities",
+                )
+                operator_role.permissions = [
+                    permissions_map[PermissionEnum.READ_UNITS],
+                    permissions_map[PermissionEnum.READ_USERS],
+                    permissions_map[PermissionEnum.REMOTE_CONTROL],
+                ]
+                db.session.add(operator_role)
+                print("✓ Operator role created")
+            
+            # Viewer role with read-only access
+            viewer_role = Role.query.filter_by(name=RoleEnum.VIEWER).first()
+            if not viewer_role:
+                print("Creating viewer role...")
+                viewer_role = Role(
+                    name=RoleEnum.VIEWER,
+                    description="Client read-only users - View-only access to system data",
+                )
+                viewer_role.permissions = [
+                    permissions_map[PermissionEnum.READ_UNITS],
+                    permissions_map[PermissionEnum.READ_USERS],
+                ]
+                db.session.add(viewer_role)
+                print("✓ Viewer role created")
+            
+            db.session.commit()
+            print("✓ All roles seeded successfully")
 
             # Seed default admin user if not present
             admin_user = User.query.filter_by(username="Steyn_Admin").first()
