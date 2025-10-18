@@ -4,7 +4,7 @@
 
 -- Add approval workflow columns to users table
 ALTER TABLE users 
-ADD COLUMN registration_status VARCHAR(20) DEFAULT 'approved' NOT NULL,
+ADD COLUMN registration_status VARCHAR(20) DEFAULT 'pending' NOT NULL,
 ADD COLUMN approved_by INTEGER REFERENCES users(id),
 ADD COLUMN approved_at TIMESTAMP WITH TIME ZONE,
 ADD COLUMN rejection_reason TEXT,
