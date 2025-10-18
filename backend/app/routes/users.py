@@ -230,6 +230,17 @@ def update_user(user_id):
 def delete_user(user_id):
     """
     Delete a user (permanently removes from database).
+
+    .. warning::
+        This endpoint now performs a **hard delete** (permanent removal from the database).
+        If you previously relied on soft delete semantics (e.g., marking users as inactive or deleted),
+        please note that this is a breaking change. Deleted users cannot be recovered.
+
+        If you need to retain soft delete behavior, consider updating your integration to use the
+        `/users/<int:user_id>/deactivate` or similar endpoints, or implement a custom solution.
+
+        For migration guidance, review your usage of this endpoint and ensure that permanent deletion
+        is acceptable for your application.
     ---
     tags:
       - Users
