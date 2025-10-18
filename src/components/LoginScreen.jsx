@@ -10,6 +10,7 @@ import { useAuth } from "../context/AuthContext";
 import { useSettings } from "../context/SettingsContext";
 import { useTheme } from "../context/ThemeContext";
 import styles from "./LoginScreen.module.css";
+import SocialButton from "./SocialButton";
 import {
   Dialog,
   DialogContent,

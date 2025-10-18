@@ -12,6 +12,7 @@ import {
 // Removed static imports for UnitControl, UnitDetails, UserUnitDetails
 import routes from "./config/routes";
 import Spinner from "./components/common/Spinner";
+import LoginScreen from "./components/LoginScreen";
 import ThemeToggle from "./components/ThemeToggle";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { SettingsProvider, useSettings } from "./context/SettingsContext";
