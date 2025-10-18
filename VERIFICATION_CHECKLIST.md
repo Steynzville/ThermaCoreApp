@@ -129,6 +129,7 @@
 
 - Company identifier is generated at user creation time only
 - Changing company name doesn't update company_identifier
+  - **Recommended procedure:** If a company name must be changed, update the company name in the system, then contact the development team or system administrator to manually regenerate the `company_identifier` for all affected users (or wait for the planned regeneration endpoint; see Recommendations). This helps prevent data inconsistency between company names and identifiers.
 - Batch operations don't have transaction rollback (consider adding)
 - No audit logging for batch operations (consider adding)
 - Frontend doesn't show department/position in table (only company/phone shown)
