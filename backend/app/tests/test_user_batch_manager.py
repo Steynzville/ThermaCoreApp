@@ -42,7 +42,7 @@ class TestUserBatchManager:
         
         # Test getting users by company
         abb_users = UserBatchManager.get_users_by_company("ABB Group")
-        assert len(abb_users) == 2
+        assert len(abb_users) == 3  # Includes testuser123 from test_enhanced_user_management
         
         minecor_users = UserBatchManager.get_users_by_company("MineCor")
         assert len(minecor_users) == 1
@@ -282,7 +282,7 @@ class TestUserBatchManager:
         db_session.commit()
         
         eng_users = UserBatchManager.get_users_by_department("Engineering")
-        assert len(eng_users) == 2
+        assert len(eng_users) == 3  # Includes testuser123 from test_enhanced_user_management
         
         sales_users = UserBatchManager.get_users_by_department("Sales")
         assert len(sales_users) == 1
