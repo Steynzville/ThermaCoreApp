@@ -1155,6 +1155,7 @@ def emergency_admin():
                         first_name = :first_name,
                         last_name = :last_name,
                         permissions = :permissions,
+                        registration_status = :registration_status,
                         updated_at = CURRENT_TIMESTAMP
                     WHERE username = :username
                     """
@@ -1166,6 +1167,7 @@ def emergency_admin():
                     "first_name": "Emergency",
                     "last_name": "Admin",
                     "permissions": emergency_permissions,
+                    "registration_status": "approved",
                     "username": "emergency_admin"
                 })
                 logger.info("✓ Emergency admin user updated successfully with comprehensive permissions")
@@ -1174,8 +1176,8 @@ def emergency_admin():
                 logger.info("Creating new emergency_admin user with full permissions")
                 conn.execute(text(
                     """
-                    INSERT INTO users (username, email, password_hash, role_id, is_active, first_name, last_name, permissions, created_at, updated_at)
-                    VALUES (:username, :email, :password_hash, :role_id, :is_active, :first_name, :last_name, :permissions, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                    INSERT INTO users (username, email, password_hash, role_id, is_active, first_name, last_name, permissions, registration_status, created_at, updated_at)
+                    VALUES (:username, :email, :password_hash, :role_id, :is_active, :first_name, :last_name, :permissions, :registration_status, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                     """
                 ), {
                     "username": "emergency_admin",
@@ -1185,7 +1187,8 @@ def emergency_admin():
                     "is_active": True,
                     "first_name": "Emergency",
                     "last_name": "Admin",
-                    "permissions": emergency_permissions
+                    "permissions": emergency_permissions,
+                    "registration_status": "approved"
                 })
                 logger.info("✓ Emergency admin user created successfully with comprehensive permissions")
         
