@@ -1,5 +1,6 @@
 import { useCallback, useEffect,useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Volume2 } from "lucide-react";
 
 import appleLogoBlack from "../assets/apple-logo-black.svg";
 import appleLogoWhite from "../assets/apple-logo-white.svg";
