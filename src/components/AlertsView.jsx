@@ -4,6 +4,9 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { units } from "../data/mockUnits";
+import PageHeader from './PageHeader';
+import { Card, CardContent } from './ui/card';
+import { AlertTriangle, AlertCircle, Info, CheckCircle } from 'lucide-react';
 
 const alerts = [
   {
