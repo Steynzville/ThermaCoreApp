@@ -185,56 +185,46 @@ export const verifyToken = (token) => {
  * @param {Object} userData - User registration data
  * @returns {Promise<Object>} Registration result
  */
-export const register = (userData) => {
-  // In the future, this would be replaced with:
-  // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  // return fetch(`${API_BASE_URL}/auth/register`, {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify(userData)
-  // }).then(response => response.json());
-
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      // Check if user already exists
-      const existingUser = mockUsers.find(
-        (u) => u.username === userData.username || u.email === userData.email,
-      );
-
-      if (existingUser) {
-        reject({
-          success: false,
-          message: "User already exists",
-        });
-      } else {
-        const newUser = {
-          id: mockUsers.length + 1,
-          username: userData.username,
-          email: userData.email,
-          password: userData.password, // In real implementation, this would be hashed
-          role: userData.role || "user",
-          firstName: userData.firstName,
-          lastName: userData.lastName,
-          lastLogin: null,
-        };
-
-        mockUsers.push(newUser);
-
-        resolve({
-          success: true,
-          message: "Registration successful",
-          user: {
-            id: newUser.id,
-            username: newUser.username,
-            email: newUser.email,
-            role: newUser.role,
-            firstName: newUser.firstName,
-            lastName: newUser.lastName,
-          },
-        });
-      }
-    }, 800);
-  });
+export const register = async (userData) => {
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://thermacoreapp.onrender.com';
+  
+  // Convert camelCase to snake_case for backend
+  const backendData = {
+    username: userData.username,
+    email: userData.email,
+    password: userData.password,
+    first_name: userData.firstName,
+    last_name: userData.lastName,
+    phone_number: userData.phoneNumber || null,
+    company: userData.company || null,
+    department: userData.department || null,
+    position: userData.position || null,
+  };
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/auth/self-register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(backendData),
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || data.message || 'Registration failed');
+    }
+    
+    return {
+      success: true,
+      status: data.data?.status || 'pending',
+      message: data.message || 'Registration submitted for admin approval',
+      user: data.data,
+    };
+  } catch (error) {
+    throw new Error(error.message || 'Registration failed. Please try again.');
+  }
 };
 
 /**

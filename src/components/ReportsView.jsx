@@ -1,8 +1,5 @@
-import React from "react";
 
 import { reportTypes } from "../constants/reportSections";
-import PageHeader from "./PageHeader";
-import ReportConfigurator from "./reports/ReportConfigurator";
 
 const ReportsView = ({ className }) => {
   // Mock data for units and clients - these would typically come from an API

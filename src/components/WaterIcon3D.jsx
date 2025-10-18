@@ -1,4 +1,3 @@
-import React from "react";
 
 const WaterIcon3D = ({ waterLevel, className = "", greyedOut = false }) => {
   // Determine color based on water generation status

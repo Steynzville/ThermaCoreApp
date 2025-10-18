@@ -1,24 +1,7 @@
-import { Activity, BarChart3, TrendingUp, Zap } from "lucide-react";
-import React from "react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Legend,
-  Line,
-  LineChart,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+
+
 
 import { formatCurrency } from "../utils/formatCurrency";
-import PageHeader from "./PageHeader";
-import { Card, CardContent,CardHeader } from "./ui/card";
 
 const analyticsData = [
   { name: "Power-Box", sales: 4000, revenue: 2400 },

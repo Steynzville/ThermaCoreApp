@@ -1,11 +1,10 @@
-import { Bell, X } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import { useEffect,useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
 import { units } from "../data/mockUnits";
-import { getAllNotifications } from "../utils/notifications";
 import { deviceStatusService } from "../services/deviceStatusService";
+import { getAllNotifications } from "../utils/notifications";
 
 const NotificationBell = ({ className = "" }) => {
   const { userRole } = useAuth();

@@ -1,10 +1,6 @@
 
-import React, { useEffect,useState } from 'react';
+import { useEffect,useState } from 'react';
 
-import { Button } from './ui/button';
-import { Dialog, DialogContent, DialogFooter,DialogHeader, DialogTitle } from './ui/dialog';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
 
 const EnvironmentalAssumptions = ({ isOpen, onClose, onSave, currentAssumptions }) => {
   const [dieselPrice, setDieselPrice] = useState(currentAssumptions.dieselPricePerLiter);

@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from "react";
+import { useEffect,useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { resetPassword } from "../services/authService";
+
 import thermaCoreLogo from "../assets/thermacore-logo-new.png";
+import { resetPassword } from "../services/authService";
 import styles from "./LoginScreen.module.css";
-import { Eye, EyeOff } from "lucide-react";
 
 const PasswordResetRequest = () => {
   const [searchParams] = useSearchParams();

@@ -4,8 +4,8 @@ import { vi } from 'vitest';
 
 import AdminPanel from '../components/AdminPanel';
 import * as AuthContext from '../context/AuthContext.jsx';
-import * as apiFetch from '../utils/apiFetch';
 import * as usersAPI from '../services/usersAPI';
+import * as apiFetch from '../utils/apiFetch';
 
 // Mock sonner toast
 vi.mock('sonner', () => ({
