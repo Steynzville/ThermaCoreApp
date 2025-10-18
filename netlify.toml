@@ -1,9 +1,11 @@
 [build]
   publish = "dist"
-  command = "npm run build"
+  command = "pnpm install && pnpm run build"
 
 [build.environment]
   NODE_VERSION = "18"
+  # pnpm is specified in package.json packageManager field
+  # Netlify will automatically use the specified version
 
 [[redirects]]
   from = "/*"
