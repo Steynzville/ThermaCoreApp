@@ -9,11 +9,15 @@ import {
   useLocation,
 } from "react-router-dom";
 
-// Removed static imports for UnitControl, UnitDetails, UserUnitDetails
-import routes from "./config/routes";
 import Spinner from "./components/common/Spinner";
 import LoginScreen from "./components/LoginScreen";
+import ForgotPassword from "./components/ForgotPassword";
+import PasswordResetRequest from "./components/PasswordResetRequest";
+import ProtectedRoute from "./components/ProtectedRoute";
+import UserRegistrationForm from "./components/UserRegistrationForm";
+// Removed static imports for UnitControl, UnitDetails, UserUnitDetails
 import ThemeToggle from "./components/ThemeToggle";
+import routes from "./config/routes";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { SettingsProvider, useSettings } from "./context/SettingsContext";
 import { SidebarProvider } from "./context/SidebarContext";
@@ -141,9 +145,9 @@ const AppContent = () => {
           path="/login"
           element={<LoginScreen error={loginError} setError={setLoginError} />}
         />
-        <Route path="/register" element={<UserRegistrationForm />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<PasswordResetRequest />} />
+        <Route path="/register" element={<UserRegistrationForm />} />
 
         {/* Protected Routes from configuration */}
         {isAuthenticated &&
