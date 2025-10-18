@@ -50,6 +50,10 @@ const AdminPanel = ({ className }) => {
     password: "",
     firstName: "",
     lastName: "",
+    phoneNumber: "",
+    company: "",
+    department: "",
+    position: "",
     roleId: "",
   });
   const [availableRoles, setAvailableRoles] = useState([]);
@@ -87,8 +91,10 @@ const AdminPanel = ({ className }) => {
         id: user.id,
         name: formatUserName(user),
         email: user.email,
-        company: 'N/A', // Backend doesn't provide company field
-        phone: 'N/A', // Backend doesn't provide phone field
+        company: user.company || 'N/A',
+        phone: user.phone_number || 'N/A',
+        department: user.department || 'N/A',
+        position: user.position || 'N/A',
         role: formatRoleName(user.role),
         status: user.is_active ? 'Active' : 'Inactive',
       }));
@@ -174,6 +180,10 @@ const AdminPanel = ({ className }) => {
       password: "",
       firstName: "",
       lastName: "",
+      phoneNumber: "",
+      company: "",
+      department: "",
+      position: "",
       roleId: "",
     });
     setShowCreatePassword(false);
@@ -226,6 +236,10 @@ const AdminPanel = ({ className }) => {
         password: newUserFormData.password,
         first_name: newUserFormData.firstName,
         last_name: newUserFormData.lastName,
+        phone_number: newUserFormData.phoneNumber,
+        company: newUserFormData.company,
+        department: newUserFormData.department,
+        position: newUserFormData.position,
         role_id: parseInt(newUserFormData.roleId, 10),
       };
 
@@ -788,6 +802,62 @@ const AdminPanel = ({ className }) => {
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                     placeholder="Enter last name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    value={newUserFormData.phoneNumber}
+                    onChange={(e) =>
+                      setNewUserFormData({ ...newUserFormData, phoneNumber: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    placeholder="Enter phone number"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Company
+                  </label>
+                  <input
+                    type="text"
+                    value={newUserFormData.company}
+                    onChange={(e) =>
+                      setNewUserFormData({ ...newUserFormData, company: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    placeholder="Enter company name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Department
+                  </label>
+                  <input
+                    type="text"
+                    value={newUserFormData.department}
+                    onChange={(e) =>
+                      setNewUserFormData({ ...newUserFormData, department: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    placeholder="Enter department"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Position
+                  </label>
+                  <input
+                    type="text"
+                    value={newUserFormData.position}
+                    onChange={(e) =>
+                      setNewUserFormData({ ...newUserFormData, position: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    placeholder="Enter position"
                   />
                 </div>
                 <div>

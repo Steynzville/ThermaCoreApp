@@ -27,6 +27,7 @@ from app.utils.schemas import (
 )
 from app.utils.helpers import get_current_user_id, get_role_permissions
 from app.utils.error_handler import SecurityAwareErrorHandler
+from app.utils.company_identifier import CompanyIdentifier
 from app.middleware.rate_limit import auth_rate_limit, standard_rate_limit
 from app.middleware.request_id import track_request_id
 from app.middleware.authorization import permission_required
@@ -83,12 +84,24 @@ def register(data):
     # Get permissions for this role
     role_permissions = get_role_permissions(role.name.value)
 
+    # Generate company identifier if company is provided
+    company_identifier = None
+    if data.get("company"):
+        company_identifier = CompanyIdentifier.generate(
+            data["company"], data["email"]
+        )
+
     # Create new user
     user = User(
         username=data["username"],
         email=data["email"],
         first_name=data.get("first_name"),
         last_name=data.get("last_name"),
+        phone_number=data.get("phone_number"),
+        company=data.get("company"),
+        company_identifier=company_identifier,
+        department=data.get("department"),
+        position=data.get("position"),
         role_id=data["role_id"],
         permissions=role_permissions,  # Set permissions based on role
     )
