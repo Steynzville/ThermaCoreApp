@@ -16,7 +16,7 @@ Requirements:
 
 import os
 import sys
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine, inspect
 
 # Required columns with their expected specifications
 REQUIRED_COLUMNS = {
