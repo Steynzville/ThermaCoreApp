@@ -92,6 +92,7 @@ def register(data):
         )
 
     # Create new user
+    # Admin-created users (via register endpoint with auth) are auto-approved
     user = User(
         username=data["username"],
         email=data["email"],
@@ -104,6 +105,8 @@ def register(data):
         position=data.get("position"),
         role_id=data["role_id"],
         permissions=role_permissions,  # Set permissions based on role
+        registration_status='approved',  # Admin-created users are pre-approved
+        is_active=True  # Activate immediately
     )
     user.set_password(data["password"])
 
