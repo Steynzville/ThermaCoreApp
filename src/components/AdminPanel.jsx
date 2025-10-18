@@ -818,21 +818,6 @@ const AdminPanel = ({ className }) => {
                       ))}
                     </select>
                   )}
-                  {/* Temporary debug display - shows loaded roles */}
-                  {availableRoles.length > 0 && !rolesLoadError && (
-                    <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
-                      <p className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">
-                        Debug: Loaded Roles ({availableRoles.length})
-                      </p>
-                      <ul className="text-xs text-blue-600 dark:text-blue-400 space-y-1">
-                        {availableRoles.map((role) => (
-                          <li key={role.id}>
-                            • {role.name} (ID: {role.id})
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
                 </div>
               </div>
               <div className="flex justify-end space-x-3 mt-6">
