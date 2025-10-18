@@ -6,7 +6,7 @@ for batching users by organization (e.g., ABB, MineCor, AT&T).
 
 import hashlib
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class CompanyIdentifier:
@@ -48,7 +48,7 @@ class CompanyIdentifier:
         prefix = sanitized[:20] if sanitized else "COMPANY"
 
         # Create hash from company name, email (if provided), and timestamp for uniqueness
-        hash_input = f"{company_name.lower()}{email or ''}{datetime.utcnow().isoformat()}"
+        hash_input = f"{company_name.lower()}{email or ''}{datetime.now(timezone.utc).isoformat()}"
         hash_object = hashlib.sha256(hash_input.encode())
         hash_hex = hash_object.hexdigest()
 
