@@ -229,7 +229,7 @@ def update_user(user_id):
 @audit_operation("DELETE", "user")
 def delete_user(user_id):
     """
-    Delete a user (soft delete by deactivating).
+    Delete a user (permanently removes from database).
     ---
     tags:
       - Users
@@ -257,8 +257,8 @@ def delete_user(user_id):
     if user_id == current_user_id:
         return jsonify({"error": "Cannot delete your own account"}), 403
 
-    # Soft delete by deactivating the user
-    user.is_active = False
+    # Hard delete - permanently remove the user from the database
+    db.session.delete(user)
     db.session.commit()
 
     return "", 204
