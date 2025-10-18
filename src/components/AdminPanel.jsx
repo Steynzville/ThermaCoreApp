@@ -1,14 +1,8 @@
 import {
   Database,
-  Edit,
-  Eye,
-  EyeOff,
   Key,
-  Lock,
-  Plus,
   Settings,
   Shield,
-  Trash2,
   Users,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -18,9 +12,6 @@ import { useAuth } from "../context/AuthContext";
 import { deleteUser, getAllUsers } from "../services/usersAPI";
 import { apiGet, apiPost } from "../utils/apiFetch";
 import { formatRoleName, formatUserName } from "../utils/userUtils";
-import PageHeader from "./PageHeader";
-import { Button } from "./ui/button";
-import { Card, CardContent, CardHeader } from "./ui/card";
 
 const systemStats = [
   { label: "Total Devices", value: "4", icon: Database },

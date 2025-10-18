@@ -1,7 +1,5 @@
-import React, { useState } from "react";
+import { useState } from "react";
 
-import EyeIcon from "../EyeIcon";
-import EyeIconClosed from "../EyeIconClosed";
 
 const FormFieldGroup = ({
   id,

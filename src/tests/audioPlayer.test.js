@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+
 import playSound from '../utils/audioPlayer.js';
 
 // Mock fetch to prevent actual HTTP requests during tests

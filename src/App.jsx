@@ -2,26 +2,13 @@ import "./App.css";
 
 import React, { useEffect, useRef, useState } from "react";
 import {
-  BrowserRouter as Router,
-  Navigate,
-  Route,
-  Routes,
   useLocation,
 } from "react-router-dom";
 
-import Spinner from "./components/common/Spinner";
-import LoginScreen from "./components/LoginScreen";
-import ForgotPassword from "./components/ForgotPassword";
-import PasswordResetRequest from "./components/PasswordResetRequest";
-import ProtectedRoute from "./components/ProtectedRoute";
 // Removed static imports for UnitControl, UnitDetails, UserUnitDetails
-import ThemeToggle from "./components/ThemeToggle";
 import routes from "./config/routes";
-import { AuthProvider, useAuth } from "./context/AuthContext";
-import { SettingsProvider, useSettings } from "./context/SettingsContext";
-import { SidebarProvider } from "./context/SidebarContext";
-import { ThemeProvider } from "./context/ThemeContext";
-import { UnitProvider } from "./context/UnitContext";
+import { useAuth } from "./context/AuthContext";
+import { useSettings } from "./context/SettingsContext";
 import playSound from "./utils/audioPlayer";
 
 // Component to handle scroll to top on route change
@@ -144,6 +131,7 @@ const AppContent = () => {
           path="/login"
           element={<LoginScreen error={loginError} setError={setLoginError} />}
         />
+        <Route path="/register" element={<UserRegistrationForm />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<PasswordResetRequest />} />
 

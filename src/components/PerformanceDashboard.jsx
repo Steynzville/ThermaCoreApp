@@ -4,20 +4,16 @@ import {
   DollarSign,
   Droplets,
   Fuel,
-  Leaf,
   TrendingDown,
   TrendingUp,
   Wrench,
   Zap,
 } from "lucide-react";
-import React, { useState } from "react";
+import { useState } from "react";
 
 import { useAuth } from "../context/AuthContext";
 import { units } from "../data/mockUnits";
 import { formatCurrency } from "../utils/formatCurrency";
-import EnvironmentalAssumptions from "./EnvironmentalAssumptions";
-import FinancialAssumptions from "./FinancialAssumptions";
-import ROIAssumptions from "./ROIAssumptions";
 
 const PerformanceCard = ({
   icon: Icon,

@@ -1,26 +1,20 @@
 import {
-  ArrowLeft,
   Calendar,
   Clock,
   DollarSign,
   Droplets,
   Fuel,
-  Leaf,
   TrendingDown,
   TrendingUp,
   Wrench,
   Zap,
 } from "lucide-react";
-import React, { useEffect,useState } from "react";
+import { useEffect,useState } from "react";
 import { useLocation, useNavigate,useParams } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
 import { useUnits } from "../context/UnitContext";
 import { formatCurrency } from "../utils/formatCurrency";
-import Spinner from "./common/Spinner";
-import EnvironmentalAssumptions from "./EnvironmentalAssumptions";
-import FinancialAssumptions from "./FinancialAssumptions";
-import ROIAssumptions from "./ROIAssumptions";
 
 const PerformanceCard = ({
   icon: Icon,

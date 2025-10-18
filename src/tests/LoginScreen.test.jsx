@@ -1,10 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import LoginScreen from "../components/LoginScreen";
-import { AuthProvider } from "../context/AuthContext";
-import { SettingsProvider } from "../context/SettingsContext";
-import { ThemeProvider } from "../context/ThemeContext";
 import * as authService from "../services/authService";
 
 // Mock react-router-dom

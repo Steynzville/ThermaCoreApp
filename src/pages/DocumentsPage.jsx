@@ -1,4 +1,3 @@
-import React from "react";
 
 import documentList from "../constants/documents";
 import { useAuth } from "../context/AuthContext";

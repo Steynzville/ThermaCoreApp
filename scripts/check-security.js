@@ -4,8 +4,7 @@
  * This script should be run as part of CI/CD pipeline to prevent hardcoded credentials in production
  */
 
-import { readFileSync, existsSync } from 'fs';
-import path from 'path';
+import { existsSync,readFileSync } from 'fs';
 
 const SECURITY_PATTERNS = [
   /admin123/g,          // Old development password - ALWAYS flagged

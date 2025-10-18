@@ -1,5 +1,4 @@
-import { Eye, EyeOff, Fingerprint, Volume2, VolumeX } from "lucide-react";
-import React, { useCallback, useEffect,useState } from "react";
+import { useCallback, useEffect,useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import appleLogoBlack from "../assets/apple-logo-black.svg";
@@ -9,21 +8,9 @@ import thermaCoreLogo from "../assets/thermacore-logo-new.png";
 import { useAuth } from "../context/AuthContext";
 import { useSettings } from "../context/SettingsContext";
 import { useTheme } from "../context/ThemeContext";
-import playSound from "../utils/audioPlayer";
-import FormFieldGroup from "./common/FormFieldGroup";
 import styles from "./LoginScreen.module.css";
-import SocialButton from "./SocialButton";
-import { Button } from "./ui/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "./ui/dialog";
+
+
 
 const LoginScreen = ({ error, setError }) => {
   const [formData, setFormData] = useState({
@@ -344,6 +331,28 @@ const LoginScreen = ({ error, setError }) => {
               </DialogContent>
             </Dialog>
           </div>
+        </div>
+
+        <div className={styles.registerSection} style={{ marginTop: '24px', textAlign: 'center', paddingTop: '20px', borderTop: '1px solid #e5e7eb' }}>
+          <p style={{ fontSize: '14px', color: '#6b7280', margin: '0 0 8px 0' }}>
+            Don&apos;t have an account?{' '}
+            <button
+              type="button"
+              onClick={() => navigate('/register')}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#3b82f6',
+                cursor: 'pointer',
+                textDecoration: 'underline',
+                padding: 0,
+                fontSize: '14px',
+                fontWeight: '500'
+              }}
+            >
+              Create an account
+            </button>
+          </p>
         </div>
 
         {isLoading && (

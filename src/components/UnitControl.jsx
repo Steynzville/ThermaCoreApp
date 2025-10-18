@@ -1,22 +1,11 @@
-import {
-  AlertTriangle,
-  ArrowLeft,
-  Battery,
-  CheckCircle,
-  Droplets,
-  Gauge,
-  Power,
-  Settings,
-  Thermometer,
-  Zap,
-} from "lucide-react";
-import React, { useEffect,useState } from "react";
+
+
+import { useEffect,useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { useSettings } from "../context/SettingsContext";
 import { getUnitById } from "../services/unitService";
 import playSound from "../utils/audioPlayer";
-import { Card, CardContent,CardHeader } from "./ui/card";
 
 const UnitControl = ({ className }) => {
   const { formatTemperature, settings } = useSettings();
