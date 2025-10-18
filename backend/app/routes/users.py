@@ -637,3 +637,215 @@ def batch_deactivate():
 
     count = UserBatchManager.batch_deactivate_users(data["user_ids"])
     return jsonify({"message": f"{count} users deactivated successfully"}), 200
+
+
+@users_bp.route("/users/pending", methods=["GET"])
+@jwt_required()
+@permission_required("read_users")
+@audit_operation("READ", "users_pending")
+def get_pending_users():
+    """
+    Get all users with pending registration status.
+    ---
+    tags:
+      - Users
+    parameters:
+      - in: query
+        name: page
+        type: integer
+        default: 1
+      - in: query
+        name: per_page
+        type: integer
+        default: 50
+    responses:
+      200:
+        description: List of pending users
+      400:
+        description: Invalid parameters
+    security:
+      - JWT: []
+    """
+    # Parse query parameters
+    page = request.args.get("page", 1, type=int)
+    per_page = min(request.args.get("per_page", 50, type=int), 100)
+    
+    # Query pending users
+    query = User.query.filter_by(registration_status='pending')
+    
+    # Apply pagination
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    
+    users_schema = UserSchema(many=True)
+    
+    return jsonify(
+        {
+            "data": users_schema.dump(pagination.items),
+            "pagination": {
+                "page": pagination.page,
+                "per_page": pagination.per_page,
+                "total": pagination.total,
+                "pages": pagination.pages,
+            },
+        }
+    )
+
+
+@users_bp.route("/users/<int:user_id>/approve", methods=["POST"])
+@jwt_required()
+@permission_required("write_users")
+@audit_operation("UPDATE", "user_approval")
+def approve_user(user_id):
+    """
+    Approve a pending user registration.
+    ---
+    tags:
+      - Users
+    parameters:
+      - in: path
+        name: user_id
+        type: integer
+        required: true
+      - in: body
+        name: approval_data
+        schema:
+          type: object
+          required:
+            - role_id
+          properties:
+            role_id:
+              type: integer
+              description: Role to assign to the user
+            notes:
+              type: string
+              description: Approval notes
+    responses:
+      200:
+        description: User approved successfully
+      400:
+        description: Invalid request
+      404:
+        description: User not found
+    security:
+      - JWT: []
+    """
+    from datetime import datetime, timezone
+    from app.utils.helpers import get_role_permissions
+    
+    # Get the user to approve
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    
+    if user.registration_status != 'pending':
+        return jsonify({
+            "error": f"User registration status is '{user.registration_status}', not 'pending'"
+        }), 400
+    
+    # Get request data
+    data = request.json
+    if not data or "role_id" not in data:
+        return jsonify({"error": "role_id required"}), 400
+    
+    # Verify role exists
+    role = Role.query.get(data["role_id"])
+    if not role:
+        return jsonify({"error": "Role not found"}), 404
+    
+    # Get current user ID for audit trail
+    current_user_id = get_current_user_id()
+    
+    # Get permissions for the assigned role
+    role_permissions = get_role_permissions(role.name.value)
+    
+    # Update user
+    user.registration_status = 'approved'
+    user.role_id = data["role_id"]
+    user.permissions = role_permissions
+    user.is_active = True
+    user.approved_by = current_user_id
+    user.approved_at = datetime.now(timezone.utc)
+    
+    if data.get("notes"):
+        user.registration_notes = data["notes"]
+    
+    try:
+        db.session.commit()
+        
+        user_schema = UserSchema()
+        return jsonify({
+            "message": "User approved successfully",
+            "user": user_schema.dump(user)
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@users_bp.route("/users/<int:user_id>/reject", methods=["POST"])
+@jwt_required()
+@permission_required("write_users")
+@audit_operation("UPDATE", "user_rejection")
+def reject_user(user_id):
+    """
+    Reject a pending user registration.
+    ---
+    tags:
+      - Users
+    parameters:
+      - in: path
+        name: user_id
+        type: integer
+        required: true
+      - in: body
+        name: rejection_data
+        schema:
+          type: object
+          required:
+            - rejection_reason
+          properties:
+            rejection_reason:
+              type: string
+              description: Reason for rejection
+    responses:
+      200:
+        description: User rejected successfully
+      400:
+        description: Invalid request
+      404:
+        description: User not found
+    security:
+      - JWT: []
+    """
+    # Get the user to reject
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    
+    if user.registration_status != 'pending':
+        return jsonify({
+            "error": f"User registration status is '{user.registration_status}', not 'pending'"
+        }), 400
+    
+    # Get request data
+    data = request.json
+    if not data or "rejection_reason" not in data:
+        return jsonify({"error": "rejection_reason required"}), 400
+    
+    # Update user
+    user.registration_status = 'rejected'
+    user.rejection_reason = data["rejection_reason"]
+    user.is_active = False
+    
+    try:
+        db.session.commit()
+        
+        return jsonify({
+            "message": "User registration rejected",
+            "user_id": user.id
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500

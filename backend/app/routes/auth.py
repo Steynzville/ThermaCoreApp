@@ -204,6 +204,41 @@ def login(data):
             )
 
         if user and user.check_password(data["password"]) and user.is_active:
+            # Check if user registration is approved
+            if user.registration_status == 'pending':
+                current_app.logger.warning(
+                    f"Login attempt by pending user: {user.username}",
+                    extra={
+                        "event": "pending_user_login",
+                        "username": user.username,
+                        "user_id": user.id
+                    }
+                )
+                audit_login_failure(user.username, "Account pending approval")
+                return SecurityAwareErrorHandler.handle_service_error(
+                    Exception("Account pending admin approval"),
+                    "authentication_error",
+                    "Account not yet approved",
+                    403
+                )
+            
+            if user.registration_status == 'rejected':
+                current_app.logger.warning(
+                    f"Login attempt by rejected user: {user.username}",
+                    extra={
+                        "event": "rejected_user_login",
+                        "username": user.username,
+                        "user_id": user.id
+                    }
+                )
+                audit_login_failure(user.username, "Account rejected")
+                return SecurityAwareErrorHandler.handle_service_error(
+                    Exception("Account registration was rejected"),
+                    "authentication_error",
+                    "Account rejected",
+                    403
+                )
+            
             # Verify user has a role (critical requirement with enhanced validation)
             if not user.role or user.role_id is None:
                 current_app.logger.error(
@@ -1181,4 +1216,125 @@ def emergency_admin():
         )
         return SecurityAwareErrorHandler.handle_service_error(
             e, "internal_error", "Emergency admin creation", 500
+        )
+
+
+@auth_bp.route("/auth/self-register", methods=["POST"])
+@track_request_id
+@standard_rate_limit
+@use_args(UserCreateSchema, location="json")
+def self_register(data):
+    """
+    Public self-registration endpoint for new users.
+    Creates user with pending status for admin approval.
+    ---
+    tags:
+      - Authentication
+    parameters:
+      - in: body
+        name: user_data
+        schema:
+          type: object
+          required:
+            - username
+            - email
+            - password
+            - first_name
+            - last_name
+          properties:
+            username:
+              type: string
+            email:
+              type: string
+            password:
+              type: string
+            first_name:
+              type: string
+            last_name:
+              type: string
+            phone_number:
+              type: string
+            company:
+              type: string
+            department:
+              type: string
+            position:
+              type: string
+    responses:
+      201:
+        description: Registration submitted for approval
+      400:
+        description: Validation error
+      409:
+        description: User already exists
+      429:
+        description: Rate limit exceeded
+    """
+    logger = logging.getLogger(__name__)
+    
+    # Get viewer role (default for new registrations)
+    viewer_role = Role.query.filter_by(name='viewer').first()
+    if not viewer_role:
+        return SecurityAwareErrorHandler.handle_service_error(
+            Exception("Viewer role not found"), 
+            "configuration_error", 
+            "Role configuration", 
+            500
+        )
+    
+    # Generate company identifier if company is provided
+    company_identifier = None
+    if data.get("company"):
+        company_identifier = CompanyIdentifier.generate(
+            data["company"], data["email"]
+        )
+    
+    # Create new user with pending status and inactive state
+    user = User(
+        username=data["username"],
+        email=data["email"],
+        first_name=data.get("first_name"),
+        last_name=data.get("last_name"),
+        phone_number=data.get("phone_number"),
+        company=data.get("company"),
+        company_identifier=company_identifier,
+        department=data.get("department"),
+        position=data.get("position"),
+        role_id=viewer_role.id,  # Temporary role until approval
+        registration_status='pending',
+        is_active=False,  # Inactive until approved
+    )
+    user.set_password(data["password"])
+    
+    try:
+        db.session.add(user)
+        db.session.commit()
+        
+        logger.info(
+            f"New self-registration pending approval: {user.username} ({user.email})",
+            extra={"event": "self_registration", "user_id": user.id}
+        )
+        
+        return SecurityAwareErrorHandler.create_success_response(
+            {
+                "status": "pending",
+                "user_id": user.id,
+                "username": user.username,
+                "email": user.email
+            },
+            "Registration submitted for admin approval",
+            201
+        )
+        
+    except IntegrityError as e:
+        db.session.rollback()
+        if "username" in str(e.orig):
+            error_msg = "Username already exists"
+        elif "email" in str(e.orig):
+            error_msg = "Email already exists"
+        else:
+            error_msg = "Database constraint violation"
+        
+        return SecurityAwareErrorHandler.handle_service_error(
+            e, "validation_error", f"User registration: {error_msg}", 409
         )

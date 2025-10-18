@@ -1,9 +1,16 @@
 import {
   Database,
+  Edit,
+  Eye,
+  EyeOff,
   Key,
+  Lock,
+  Plus,
   Settings,
   Shield,
+  Trash2,
   Users,
+  UserCheck,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -12,6 +19,9 @@ import { useAuth } from "../context/AuthContext";
 import { deleteUser, getAllUsers } from "../services/usersAPI";
 import { apiGet, apiPost } from "../utils/apiFetch";
 import { formatRoleName, formatUserName } from "../utils/userUtils";
+import UserApprovalPanel from "./UserApprovalPanel";
+import { Card, CardContent, CardHeader } from "./ui/card";
+import { Button } from "./ui/button";
 
 const systemStats = [
   { label: "Total Devices", value: "4", icon: Database },
@@ -472,6 +482,7 @@ const AdminPanel = ({ className }) => {
           <div className="border-b border-gray-200 dark:border-gray-700">
             <nav className="-mb-px flex space-x-8">
               {[
+                { id: "approvals", label: "Pending Approvals", icon: UserCheck },
                 { id: "users", label: "Users", icon: Users },
                 { id: "password-management", label: "Password Management", icon: Key },
                 { id: "settings", label: "Settings", icon: Settings },
@@ -495,6 +506,11 @@ const AdminPanel = ({ className }) => {
             </nav>
           </div>
         </div>
+
+        {/* Approvals Tab */}
+        {activeTab === "approvals" && (
+          <UserApprovalPanel />
+        )}
 
         {/* Users Tab */}
         {activeTab === "users" && (

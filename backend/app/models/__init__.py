@@ -208,6 +208,17 @@ class User(db.Model):
     reset_token = Column(String(255))  # Password reset token
     reset_token_expires = Column(DateTime(timezone=True))  # Token expiration time (timezone-aware)
     permissions = Column(JSON, nullable=True)  # Direct user permissions (JSON array of permission strings)
+    
+    # Approval workflow fields
+    registration_status = Column(
+        String(20), 
+        default='pending',
+        nullable=False
+    )  # pending, approved, rejected, invited
+    approved_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    approved_at = Column(DateTime, nullable=True)
+    rejection_reason = Column(Text, nullable=True)
+    registration_notes = Column(Text, nullable=True)
 
     # Foreign Keys
     role_id = Column(Integer, ForeignKey("roles.id"), nullable=False)

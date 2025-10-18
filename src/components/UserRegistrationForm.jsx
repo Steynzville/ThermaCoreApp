@@ -81,10 +81,16 @@ const UserRegistrationForm = () => {
 
     try {
       // Call the register function from authService
-      await register(formData);
-      toast.success("Registration successful! Please log in.");
+      const result = await register(formData);
+      
+      if (result.status === 'pending') {
+        toast.success("Registration submitted! Your account is pending admin approval.");
+      } else {
+        toast.success("Registration successful! Please log in.");
+      }
+      
       // Navigate to login page after successful registration
-      navigate("/login");
+      setTimeout(() => navigate("/login"), 2000);
     } catch (error) {
       console.error("Registration error:", error);
       toast.error(error.message || "Registration failed. Please try again.");
