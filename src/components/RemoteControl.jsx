@@ -8,6 +8,7 @@ import { useAuth } from "../context/AuthContext";
 import { useSettings } from "../context/SettingsContext";
 import { useRemoteControl } from "../hooks/useRemoteControl";
 import playSound from "../utils/audioPlayer";
+import { Card, CardContent, CardHeader } from "./ui/card";
 
 
 
