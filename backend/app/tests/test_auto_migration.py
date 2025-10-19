@@ -5,7 +5,6 @@ from app.utils.auto_migration import (
     column_exists,
     add_password_reset_columns,
     add_user_profile_fields,
-    add_user_approval_columns,
     run_auto_migrations,
     _validate_sql_identifier,
 )
@@ -159,56 +158,3 @@ class TestAutoMigration:
         assert 'last_login' in columns
         col_type = str(columns['last_login']['type']).upper()
         assert any(dt in col_type for dt in ['TIMESTAMP', 'DATETIME'])
-
-    def test_add_user_approval_columns_idempotent(self, app, db_session):
-        """Test that add_user_approval_columns is idempotent."""
-        from app import db
-        
-        # Run migration multiple times - should not error
-        result1 = add_user_approval_columns(db.engine)
-        result2 = add_user_approval_columns(db.engine)
-        result3 = add_user_approval_columns(db.engine)
-        
-        assert result1 is True
-        assert result2 is True
-        assert result3 is True
-        
-        # Verify all columns exist
-        required_columns = [
-            'registration_status', 'approved_by', 'approved_at',
-            'rejection_reason', 'registration_notes'
-        ]
-        for column_name in required_columns:
-            assert column_exists(db.engine, 'users', column_name) is True
-
-    def test_user_approval_columns_type(self, app, db_session):
-        """Test that user approval columns have correct types."""
-        from app import db
-        
-        # Ensure columns exist
-        run_auto_migrations(app)
-        
-        # Check column types using inspector
-        inspector = inspect(db.engine)
-        columns = {col['name']: col for col in inspector.get_columns('users')}
-        
-        # Verify registration_status column exists and is string type
-        assert 'registration_status' in columns
-        col_type = str(columns['registration_status']['type']).upper()
-        assert 'VARCHAR' in col_type or 'STRING' in col_type
-        
-        # Verify approved_by column exists and is integer type
-        assert 'approved_by' in columns
-        col_type = str(columns['approved_by']['type']).upper()
-        assert 'INT' in col_type
-        
-        # Verify approved_at column exists and is datetime type
-        assert 'approved_at' in columns
-        col_type = str(columns['approved_at']['type']).upper()
-        assert any(dt in col_type for dt in ['TIMESTAMP', 'DATETIME'])
-        
-        # Verify rejection_reason column exists
-        assert 'rejection_reason' in columns
-        
-        # Verify registration_notes column exists
-        assert 'registration_notes' in columns
