@@ -507,7 +507,7 @@ jobs:
       - name: Run Frontend Type Checking
         run: pnpm type-check
 
-      - name: Run Frontend Linting
+      - name: Run Biome Linting and Formatting
         run: pnpm lint
 
       - name: Run Frontend Build Verification

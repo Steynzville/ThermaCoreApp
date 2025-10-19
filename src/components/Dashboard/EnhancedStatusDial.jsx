@@ -1,4 +1,5 @@
-import { useEffect, useMemo,useState } from "react";
+import { ChevronRight, Clock, TrendingDown, TrendingUp } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
 // Enhanced Status Dial Component with animations
 const EnhancedStatusDial = ({
@@ -22,7 +23,7 @@ const EnhancedStatusDial = ({
     // Generate a realistic timestamp based on current time
     const now = new Date();
     const minutesAgo = Math.floor(Math.random() * 10) + 1; // 1-10 minutes ago
-    const updatedTime = new Date(now.getTime() - minutesAgo * 60000);
+    const _updatedTime = new Date(now.getTime() - minutesAgo * 60000);
 
     return "live";
   }, [lastUpdated]);
@@ -61,11 +62,7 @@ const EnhancedStatusDial = ({
       onKeyDown={handleKeyDown}
       tabIndex={clickable ? 0 : -1}
       role={clickable ? "button" : "presentation"}
-      aria-label={
-        clickable
-          ? `${title}: ${count} items, ${percentage}% complete`
-          : undefined
-      }
+      aria-label={clickable ? `${title}: ${count} items, ${percentage}% complete` : undefined}
       whileHover={clickable ? { scale: 1.05 } : {}}
       whileTap={clickable ? { scale: 0.95 } : {}}
       initial={{ opacity: 0, y: 20 }}
@@ -190,7 +187,7 @@ const EnhancedStatusDial = ({
         <motion.div
           className="absolute inset-0 border-2 border-red-400 rounded-xl opacity-50"
           animate={{ scale: [1, 1.02, 1] }}
-          transition={{ duration: 2, repeat: Infinity }}
+          transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
         />
       )}
     </motion.div>

@@ -43,7 +43,7 @@ describe("authService", () => {
             username: "testuser",
             password: "password123",
           }),
-        })
+        }),
       );
 
       expect(result.success).toBe(true);
@@ -104,9 +104,7 @@ describe("authService", () => {
     });
 
     it("should handle network errors gracefully", async () => {
-      global.fetch = vi
-        .fn()
-        .mockRejectedValue(new Error("Network request failed"));
+      global.fetch = vi.fn().mockRejectedValue(new Error("Network request failed"));
 
       const result = await login("testuser", "password");
 

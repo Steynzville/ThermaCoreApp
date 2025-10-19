@@ -2,15 +2,7 @@ import { useState } from "react";
 
 import styles from "./LoginScreen.module.css";
 
-const FormField = ({
-  id,
-  label,
-  type,
-  value,
-  onChange,
-  placeholder,
-  required = false,
-}) => {
+const FormField = ({ id, label, type, value, onChange, placeholder, required = false }) => {
   const [showPassword, setShowPassword] = useState(false);
 
   const isPasswordField = type === "password";

@@ -78,33 +78,16 @@ const SettingsView = ({ className }) => {
   };
 
   return (
-    <div
-      className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-4 lg:p-6 xl:p-8 ${className}`}
-    >
+    <div className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-4 lg:p-6 xl:p-8 ${className}`}>
       <div className="max-w-4xl mx-auto lg:ml-0 xl:ml-4">
-        <PageHeader
-          title="Settings"
-          subtitle="Manage your account and application preferences"
-        />
+        <PageHeader title="Settings" subtitle="Manage your account and application preferences" />
 
         <div className="space-y-6">
           <ProfileSettings />
-          <NotificationSettings
-            settings={settings}
-            handleSettingChange={handleSettingChange}
-          />
-          <DisplaySettings
-            settings={settings}
-            handleSettingChange={handleSettingChange}
-          />
-          <DataRefreshSettings
-            settings={settings}
-            handleSettingChange={handleSettingChange}
-          />
-          <AlertSettings
-            settings={settings}
-            handleSettingChange={handleSettingChange}
-          />
+          <NotificationSettings settings={settings} handleSettingChange={handleSettingChange} />
+          <DisplaySettings settings={settings} handleSettingChange={handleSettingChange} />
+          <DataRefreshSettings settings={settings} handleSettingChange={handleSettingChange} />
+          <AlertSettings settings={settings} handleSettingChange={handleSettingChange} />
           <AudioSettings />
 
           <div className="flex justify-end space-x-4 mt-6">

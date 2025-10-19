@@ -1,14 +1,11 @@
-
 import { cn } from "@/lib/utils";
+import * as ProgressPrimitive from "@radix-ui/react-progress";
 
 function Progress({ className, value, ...props }) {
   return (
     <ProgressPrimitive.Root
       data-slot="progress"
-      className={cn(
-        "bg-primary/20 relative h-2 w-full overflow-hidden rounded-full",
-        className,
-      )}
+      className={cn("bg-primary/20 relative h-2 w-full overflow-hidden rounded-full", className)}
       {...props}
     >
       <ProgressPrimitive.Indicator

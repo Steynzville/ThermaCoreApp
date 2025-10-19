@@ -30,11 +30,11 @@ export const AuthProvider = ({ children }) => {
     if (savedUser && savedRole) {
       const parsedUser = JSON.parse(savedUser);
       setUser(parsedUser);
-      
+
       // Use backend role if available, otherwise fall back to saved role
       const effectiveBackendRole = savedBackendRole || savedRole;
       setBackendRole(effectiveBackendRole);
-      
+
       // Set frontend role and permissions based on backend role
       const frontendRole = getFrontendRole(effectiveBackendRole);
       setUserRole(frontendRole);
@@ -45,30 +45,36 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (username, password) => {
     setIsLoading(true);
-    
+    if (import.meta.env.DEV) console.log("[AuthContext] Starting login for user:", username);
+
     try {
       // Call the backend authentication API
       const result = await authService.login(username, password);
-      
+      console.log("[AuthContext] Login API result:", result);
+
       if (result.success) {
         // Backend role is the actual role from the API (admin/operator/viewer)
         const userBackendRole = result.user.role;
-        
+        console.log("[AuthContext] Backend role:", userBackendRole);
+
         // Frontend role is simplified (admin/user) for UI consistency
         const userFrontendRole = getFrontendRole(userBackendRole);
-        
+        console.log("[AuthContext] Frontend role:", userFrontendRole);
+
         // Get permissions based on backend role
         const userPermissions = getPermissions(userBackendRole);
-        
-        const userData = { 
-          username: result.user.username, 
+        console.log("[AuthContext] User permissions:", userPermissions);
+
+        const userData = {
+          username: result.user.username,
           role: userFrontendRole, // Store frontend role for backward compatibility
           backendRole: userBackendRole, // Store actual backend role
           email: result.user.email,
           firstName: result.user.firstName,
           lastName: result.user.lastName,
         };
-        
+
+        console.log("[AuthContext] Setting user data:", userData);
         setUser(userData);
         setUserRole(userFrontendRole);
         setBackendRole(userBackendRole);
@@ -79,15 +85,19 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem("thermacore_role", userFrontendRole);
         localStorage.setItem("thermacore_backend_role", userBackendRole);
         localStorage.setItem("thermacore_token", result.token);
-        
+
+        console.log("[AuthContext] User state updated and persisted to localStorage");
         setIsLoading(false);
         return { success: true, role: userFrontendRole };
-      } else {
-        setIsLoading(false);
-        return { success: false, error: result.message || "Invalid username or password. Please try again." };
       }
+      console.log("[AuthContext] Login failed:", result.message);
+      setIsLoading(false);
+      return {
+        success: false,
+        error: result.message || "Invalid username or password. Please try again.",
+      };
     } catch (error) {
-      console.error('Login error:', error);
+      console.error("[AuthContext] Login error:", error);
       setIsLoading(false);
       return { success: false, error: "Invalid username or password. Please try again." };
     }

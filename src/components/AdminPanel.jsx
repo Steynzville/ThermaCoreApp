@@ -9,20 +9,20 @@ import {
   Settings,
   Shield,
   Trash2,
-  Users,
   UserCheck,
+  Users,
 } from "lucide-react";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import PageHeader from "./PageHeader";
 import { useAuth } from "../context/AuthContext";
 import { deleteUser, getAllUsers } from "../services/usersAPI";
 import { apiGet, apiPost } from "../utils/apiFetch";
 import { formatRoleName, formatUserName } from "../utils/userUtils";
+import PageHeader from "./PageHeader";
 import UserApprovalPanel from "./UserApprovalPanel";
-import { Card, CardContent, CardHeader } from "./ui/card";
 import { Button } from "./ui/button";
+import { Card, CardContent, CardHeader } from "./ui/card";
 
 const systemStats = [
   { label: "Total Devices", value: "4", icon: Database },
@@ -75,12 +75,12 @@ const AdminPanel = ({ className }) => {
   });
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
+
   // Single validation state object for managing all validation
   const [validation, setValidation] = useState({
     isValidLength: false,
     passwordsMatch: false,
-    isSubmitting: false
+    isSubmitting: false,
   });
 
   // Fetch users from backend
@@ -89,31 +89,31 @@ const AdminPanel = ({ className }) => {
       setIsLoadingUsers(true);
       setUsersError(null);
     }
-    
+
     try {
       const result = await getAllUsers({ per_page: 100 });
-      
+
       // Map backend response to frontend format
-      const mappedUsers = result.data.map(user => ({
+      const mappedUsers = result.data.map((user) => ({
         id: user.id,
         name: formatUserName(user),
         email: user.email,
-        company: user.company || 'N/A',
-        phone: user.phone_number || 'N/A',
-        department: user.department || 'N/A',
-        position: user.position || 'N/A',
+        company: user.company || "N/A",
+        phone: user.phone_number || "N/A",
+        department: user.department || "N/A",
+        position: user.position || "N/A",
         role: formatRoleName(user.role),
-        status: user.is_active ? 'Active' : 'Inactive',
+        status: user.is_active ? "Active" : "Inactive",
       }));
-      
+
       if (isMountedRef.current) {
         setUsers(mappedUsers);
       }
     } catch (error) {
-      console.error('Failed to fetch users:', error);
+      console.error("Failed to fetch users:", error);
       if (isMountedRef.current) {
-        setUsersError('Failed to load users. Please try again.');
-        toast.error('Failed to load users');
+        setUsersError("Failed to load users. Please try again.");
+        toast.error("Failed to load users");
       }
     } finally {
       if (isMountedRef.current) {
@@ -123,28 +123,26 @@ const AdminPanel = ({ className }) => {
   };
 
   // Fallback roles with proper format
-  const fallbackRoles = [
-    { value: 'admin', label: 'Admin' },
-    { value: 'operator', label: 'Operator' },
-    { value: 'viewer', label: 'Viewer' }
+  const _fallbackRoles = [
+    { value: "admin", label: "Admin" },
+    { value: "operator", label: "Operator" },
+    { value: "viewer", label: "Viewer" },
   ];
 
   // Fetch available roles from backend
   const fetchRoles = async () => {
     try {
-      console.log('🔄 Fetching roles from API...');
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://thermacoreapp.onrender.com';
-      const response = await apiGet(
-        `${API_BASE_URL}/api/v1/roles`,
-        {
-          showToastOnError: false,
-        }
-      );
-      
+      console.log("🔄 Fetching roles from API...");
+      const API_BASE_URL =
+        import.meta.env.VITE_API_BASE_URL || "https://thermacoreapp.onrender.com";
+      const response = await apiGet(`${API_BASE_URL}/api/v1/roles`, {
+        showToastOnError: false,
+      });
+
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Roles API response:', data);
-        
+        console.log("✅ Roles API response:", data);
+
         // Handle both direct array and {roles: [...]} format
         let rolesArray;
         if (data.roles && Array.isArray(data.roles)) {
@@ -152,37 +150,37 @@ const AdminPanel = ({ className }) => {
         } else if (Array.isArray(data)) {
           rolesArray = data;
         } else {
-          console.warn('⚠️ Roles data is not in expected format');
+          console.warn("⚠️ Roles data is not in expected format");
           if (isMountedRef.current) {
             setRolesLoadError(true);
             setAvailableRoles([]);
           }
           return;
         }
-        
+
         // Ensure we have valid roles data
         if (rolesArray.length > 0) {
           if (isMountedRef.current) {
             setAvailableRoles(rolesArray);
             setRolesLoadError(false);
           }
-          console.log('📋 Roles set:', rolesArray);
+          console.log("📋 Roles set:", rolesArray);
         } else {
-          console.warn('⚠️ Roles array is empty');
+          console.warn("⚠️ Roles array is empty");
           if (isMountedRef.current) {
             setRolesLoadError(true);
             setAvailableRoles([]);
           }
         }
       } else {
-        console.error('❌ Roles API failed:', response.status);
+        console.error("❌ Roles API failed:", response.status);
         if (isMountedRef.current) {
           setRolesLoadError(true);
           setAvailableRoles([]);
         }
       }
     } catch (error) {
-      console.error('❌ Error fetching roles:', error);
+      console.error("❌ Error fetching roles:", error);
       if (isMountedRef.current) {
         setRolesLoadError(true);
         setAvailableRoles([]);
@@ -215,7 +213,7 @@ const AdminPanel = ({ className }) => {
     });
     setShowCreatePassword(false);
     setCreateUserModal(true);
-    
+
     // Fetch roles if not already loaded or if previous load failed
     if (availableRoles.length === 0 || rolesLoadError) {
       fetchRoles();
@@ -225,30 +223,30 @@ const AdminPanel = ({ className }) => {
   const handleCreateUser = async () => {
     // Validate form
     if (!newUserFormData.username) {
-      toast.error('Username is required');
+      toast.error("Username is required");
       return;
     }
     if (!newUserFormData.email) {
-      toast.error('Email is required');
+      toast.error("Email is required");
       return;
     }
     if (!newUserFormData.password) {
-      toast.error('Password is required');
+      toast.error("Password is required");
       return;
     }
     if (!newUserFormData.roleId) {
-      toast.error('Role is required');
+      toast.error("Role is required");
       return;
     }
 
     if (newUserFormData.password.length < 6) {
-      toast.error('Password must be at least 6 characters long');
+      toast.error("Password must be at least 6 characters long");
       return;
     }
 
     // If roles failed to load, we cannot safely proceed
     if (rolesLoadError) {
-      toast.error('Unable to create user. Please refresh the page and try again.');
+      toast.error("Unable to create user. Please refresh the page and try again.");
       return;
     }
 
@@ -257,8 +255,9 @@ const AdminPanel = ({ className }) => {
     }
 
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://thermacoreapp.onrender.com';
-      
+      const API_BASE_URL =
+        import.meta.env.VITE_API_BASE_URL || "https://thermacoreapp.onrender.com";
+
       const userData = {
         username: newUserFormData.username,
         email: newUserFormData.email,
@@ -269,18 +268,14 @@ const AdminPanel = ({ className }) => {
         company: newUserFormData.company,
         department: newUserFormData.department,
         position: newUserFormData.position,
-        role_id: parseInt(newUserFormData.roleId, 10),
+        role_id: Number.parseInt(newUserFormData.roleId, 10),
       };
 
-      const response = await apiPost(
-        `${API_BASE_URL}/api/v1/auth/register`,
-        userData,
-        {
-          showToastOnError: false,
-          retries: 2,
-          retryDelay: 1000,
-        }
-      );
+      const response = await apiPost(`${API_BASE_URL}/api/v1/auth/register`, userData, {
+        showToastOnError: false,
+        retries: 2,
+        retryDelay: 1000,
+      });
 
       const result = await response.json();
 
@@ -289,15 +284,15 @@ const AdminPanel = ({ className }) => {
         if (isMountedRef.current) {
           setCreateUserModal(false);
         }
-        
+
         // Refresh the user list from the backend
         await fetchUsers();
       } else {
-        toast.error(result.error || result.message || 'Failed to create user');
+        toast.error(result.error || result.message || "Failed to create user");
       }
     } catch (error) {
-      console.error('User creation failed:', error);
-      toast.error(error.message || 'Failed to create user. Please check backend connection.');
+      console.error("User creation failed:", error);
+      toast.error(error.message || "Failed to create user. Please check backend connection.");
     } finally {
       if (isMountedRef.current) {
         setIsCreatingUser(false);
@@ -310,9 +305,7 @@ const AdminPanel = ({ className }) => {
   };
 
   const handleSaveUser = (updatedUser) => {
-    setUsers(
-      users.map((user) => (user.id === updatedUser.id ? updatedUser : user)),
-    );
+    setUsers(users.map((user) => (user.id === updatedUser.id ? updatedUser : user)));
     setEditingUser(null);
   };
 
@@ -320,12 +313,12 @@ const AdminPanel = ({ className }) => {
     if (window.confirm("Are you sure you want to delete this user?")) {
       try {
         await deleteUser(userId);
-        toast.success('User deleted successfully');
+        toast.success("User deleted successfully");
         // Refresh the user list
         await fetchUsers();
       } catch (error) {
-        console.error('Failed to delete user:', error);
-        toast.error('Failed to delete user');
+        console.error("Failed to delete user:", error);
+        toast.error("Failed to delete user");
       }
     }
   };
@@ -345,22 +338,24 @@ const AdminPanel = ({ className }) => {
     setValidation((prev) => ({
       ...prev,
       isValidLength,
-      passwordsMatch
+      passwordsMatch,
     }));
   };
 
   // Helper functions for error display logic
   const shouldShowLengthError = () => {
-    return !validation.apiError && 
-           passwordFormData.newPassword.length > 0 && 
-           !validation.isValidLength;
+    return (
+      !validation.apiError && passwordFormData.newPassword.length > 0 && !validation.isValidLength
+    );
   };
 
   const shouldShowMismatchError = () => {
-    return !validation.apiError && 
-           validation.isValidLength && 
-           passwordFormData.confirmPassword.length > 0 && 
-           !validation.passwordsMatch;
+    return (
+      !validation.apiError &&
+      validation.isValidLength &&
+      passwordFormData.confirmPassword.length > 0 &&
+      !validation.passwordsMatch
+    );
   };
 
   // Password Management Functions
@@ -372,7 +367,7 @@ const AdminPanel = ({ className }) => {
     setValidation({
       isValidLength: false,
       passwordsMatch: false,
-      isSubmitting: false
+      isSubmitting: false,
     });
     setPasswordResetModal(true);
   };
@@ -386,7 +381,7 @@ const AdminPanel = ({ className }) => {
     setValidation({
       isValidLength: false,
       passwordsMatch: false,
-      isSubmitting: false
+      isSubmitting: false,
     });
   };
 
@@ -398,14 +393,15 @@ const AdminPanel = ({ className }) => {
     }
 
     if (isMountedRef.current) {
-      setValidation(prev => ({
+      setValidation((prev) => ({
         ...prev,
-        isSubmitting: true
+        isSubmitting: true,
       }));
     }
 
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://thermacoreapp.onrender.com';
+      const API_BASE_URL =
+        import.meta.env.VITE_API_BASE_URL || "https://thermacoreapp.onrender.com";
 
       const response = await apiPost(
         `${API_BASE_URL}/api/v1/users/${selectedUserForReset.id}/reset-password`,
@@ -413,8 +409,8 @@ const AdminPanel = ({ className }) => {
         {
           showToastOnError: false, // We'll handle errors ourselves
           retries: 2, // Retry failed requests twice
-          retryDelay: 1000 // Wait 1 second between retries
-        }
+          retryDelay: 1000, // Wait 1 second between retries
+        },
       );
 
       const result = await response.json();
@@ -427,41 +423,45 @@ const AdminPanel = ({ className }) => {
       } else {
         // Set validation with error state
         if (isMountedRef.current) {
-          setValidation(prev => ({
+          setValidation((prev) => ({
             ...prev,
             isSubmitting: false,
-            apiError: result.error || result.message || 'Failed to reset password'
+            apiError: result.error || result.message || "Failed to reset password",
           }));
         }
       }
     } catch (error) {
-      console.error('Password reset failed:', error);
-      console.error('Error details:', {
+      console.error("Password reset failed:", error);
+      console.error("Error details:", {
         message: error.message,
         name: error.name,
-        stack: error.stack
+        stack: error.stack,
       });
-      
+
       // Provide user-friendly error messages with backend connection details
-      let errorMsg = 'Failed to reset password. ';
-      
-      if (error.message.includes('Failed to fetch')) {
-        errorMsg += 'Unable to connect to backend server. Please check that the backend is running and accessible.';
-      } else if (error.message.includes('network')) {
-        errorMsg += 'Network error occurred. Please check your internet connection and backend connectivity.';
-      } else if (error.message.includes('timeout')) {
-        errorMsg += 'The request timed out. The backend server may be slow or unresponsive. Please try again.';
-      } else if (error.message.includes('CORS')) {
-        errorMsg += 'Cross-origin request blocked. Please verify backend CORS configuration allows requests from this domain.';
+      let errorMsg = "Failed to reset password. ";
+
+      if (error.message.includes("Failed to fetch")) {
+        errorMsg +=
+          "Unable to connect to backend server. Please check that the backend is running and accessible.";
+      } else if (error.message.includes("network")) {
+        errorMsg +=
+          "Network error occurred. Please check your internet connection and backend connectivity.";
+      } else if (error.message.includes("timeout")) {
+        errorMsg +=
+          "The request timed out. The backend server may be slow or unresponsive. Please try again.";
+      } else if (error.message.includes("CORS")) {
+        errorMsg +=
+          "Cross-origin request blocked. Please verify backend CORS configuration allows requests from this domain.";
       } else {
-        errorMsg += error.message || 'An unexpected error occurred. Please check the backend logs.';
+        errorMsg += error.message || "An unexpected error occurred. Please check the backend logs.";
       }
-      
+
       if (isMountedRef.current) {
-        setValidation(prev => ({
+        setValidation((prev) => ({
           ...prev,
           isSubmitting: false,
-          apiError: errorMsg
+          apiError: errorMsg,
         }));
       }
     }
@@ -472,24 +472,20 @@ const AdminPanel = ({ className }) => {
       // Create a user object for self-password reset
       const selfUser = {
         id: currentUser.id || 1, // Fallback to 1 if id not available
-        name: currentUser.firstName && currentUser.lastName 
-          ? `${currentUser.firstName} ${currentUser.lastName}`
-          : currentUser.username,
-        email: currentUser.email || '',
+        name:
+          currentUser.firstName && currentUser.lastName
+            ? `${currentUser.firstName} ${currentUser.lastName}`
+            : currentUser.username,
+        email: currentUser.email || "",
       };
       openPasswordResetModal(selfUser);
     }
   };
 
   return (
-    <div
-      className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-6 ${className}`}
-    >
+    <div className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-6 ${className}`}>
       <div className="max-w-6xl mx-auto">
-        <PageHeader
-          title="Admin Panel"
-          subtitle="Manage users, devices, and system settings"
-        />
+        <PageHeader title="Admin Panel" subtitle="Manage users, devices, and system settings" />
 
         {/* System Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -503,9 +499,7 @@ const AdminPanel = ({ className }) => {
                       <IconComponent className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-600 dark:text-gray-400">
-                        {stat.label}
-                      </p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">{stat.label}</p>
                       <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                         {stat.value}
                       </p>
@@ -548,9 +542,7 @@ const AdminPanel = ({ className }) => {
         </div>
 
         {/* Approvals Tab */}
-        {activeTab === "approvals" && (
-          <UserApprovalPanel />
-        )}
+        {activeTab === "approvals" && <UserApprovalPanel />}
 
         {/* Users Tab */}
         {activeTab === "users" && (
@@ -621,55 +613,52 @@ const AdminPanel = ({ className }) => {
                     </thead>
                     <tbody>
                       {users.map((user) => (
-                      <tr
-                        key={user.id}
-                        className="border-b border-gray-100 dark:border-gray-800"
-                      >
-                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-gray-100">
-                          {user.name}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                          {user.email}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                          {user.company}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                          {user.phone}
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400">
-                            {user.role}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span
-                            className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                              user.status === "Active"
-                                ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
-                                : "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400"
-                            }`}
-                          >
-                            {user.status}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center space-x-3">
-                            <button
-                              onClick={() => handleEditUser(user)}
-                              className="p-1 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+                        <tr key={user.id} className="border-b border-gray-100 dark:border-gray-800">
+                          <td className="py-3 px-4 text-sm text-gray-900 dark:text-gray-100">
+                            {user.name}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                            {user.email}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                            {user.company}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                            {user.phone}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400">
+                              {user.role}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span
+                              className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                                user.status === "Active"
+                                  ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
+                                  : "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400"
+                              }`}
                             >
-                              <Edit className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteUser(user.id)}
-                              className="p-1 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
+                              {user.status}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center space-x-3">
+                              <button
+                                onClick={() => handleEditUser(user)}
+                                className="p-1 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteUser(user.id)}
+                                className="p-1 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
                       ))}
                     </tbody>
                   </table>
@@ -785,7 +774,7 @@ const AdminPanel = ({ className }) => {
                       setNewUserFormData({ ...newUserFormData, username: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    style={{ minHeight: '44px', fontSize: '16px' }}
+                    style={{ minHeight: "44px", fontSize: "16px" }}
                     placeholder="Enter username"
                   />
                 </div>
@@ -800,7 +789,7 @@ const AdminPanel = ({ className }) => {
                       setNewUserFormData({ ...newUserFormData, email: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    style={{ minHeight: '44px', fontSize: '16px' }}
+                    style={{ minHeight: "44px", fontSize: "16px" }}
                     placeholder="Enter email"
                   />
                 </div>
@@ -816,16 +805,20 @@ const AdminPanel = ({ className }) => {
                         setNewUserFormData({ ...newUserFormData, password: e.target.value })
                       }
                       className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                      style={{ minHeight: '44px', fontSize: '16px' }}
+                      style={{ minHeight: "44px", fontSize: "16px" }}
                       placeholder="Enter password (min 6 characters)"
                     />
                     <button
                       type="button"
                       onClick={() => setShowCreatePassword(!showCreatePassword)}
                       className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                      style={{ minHeight: '44px', minWidth: '44px' }}
+                      style={{ minHeight: "44px", minWidth: "44px" }}
                     >
-                      {showCreatePassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showCreatePassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -840,7 +833,7 @@ const AdminPanel = ({ className }) => {
                       setNewUserFormData({ ...newUserFormData, firstName: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    style={{ minHeight: '44px', fontSize: '16px' }}
+                    style={{ minHeight: "44px", fontSize: "16px" }}
                     placeholder="Enter first name"
                   />
                 </div>
@@ -855,7 +848,7 @@ const AdminPanel = ({ className }) => {
                       setNewUserFormData({ ...newUserFormData, lastName: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    style={{ minHeight: '44px', fontSize: '16px' }}
+                    style={{ minHeight: "44px", fontSize: "16px" }}
                     placeholder="Enter last name"
                   />
                 </div>
@@ -870,7 +863,7 @@ const AdminPanel = ({ className }) => {
                       setNewUserFormData({ ...newUserFormData, phoneNumber: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    style={{ minHeight: '44px', fontSize: '16px' }}
+                    style={{ minHeight: "44px", fontSize: "16px" }}
                     placeholder="Enter phone number"
                   />
                 </div>
@@ -885,7 +878,7 @@ const AdminPanel = ({ className }) => {
                       setNewUserFormData({ ...newUserFormData, company: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    style={{ minHeight: '44px', fontSize: '16px' }}
+                    style={{ minHeight: "44px", fontSize: "16px" }}
                     placeholder="Enter company name"
                   />
                 </div>
@@ -900,7 +893,7 @@ const AdminPanel = ({ className }) => {
                       setNewUserFormData({ ...newUserFormData, department: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    style={{ minHeight: '44px', fontSize: '16px' }}
+                    style={{ minHeight: "44px", fontSize: "16px" }}
                     placeholder="Enter department"
                   />
                 </div>
@@ -915,12 +908,15 @@ const AdminPanel = ({ className }) => {
                       setNewUserFormData({ ...newUserFormData, position: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    style={{ minHeight: '44px', fontSize: '16px' }}
+                    style={{ minHeight: "44px", fontSize: "16px" }}
                     placeholder="Enter position"
                   />
                 </div>
                 <div>
-                  <label htmlFor="user-role-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label
+                    htmlFor="user-role-select"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >
                     Role <span className="text-red-500">*</span>
                   </label>
                   {rolesLoadError ? (
@@ -935,11 +931,11 @@ const AdminPanel = ({ className }) => {
                         setNewUserFormData({ ...newUserFormData, roleId: e.target.value })
                       }
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                      style={{ minHeight: '44px', fontSize: '16px' }}
+                      style={{ minHeight: "44px", fontSize: "16px" }}
                       disabled={availableRoles.length === 0}
                     >
                       <option value="">
-                        {availableRoles.length === 0 ? 'Loading roles...' : 'Select a role'}
+                        {availableRoles.length === 0 ? "Loading roles..." : "Select a role"}
                       </option>
                       {availableRoles.map((role) => (
                         <option key={role.id} value={role.id}>
@@ -955,7 +951,7 @@ const AdminPanel = ({ className }) => {
                   onClick={() => setCreateUserModal(false)}
                   disabled={isCreatingUser}
                   className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-50"
-                  style={{ minHeight: '44px', fontSize: '16px' }}
+                  style={{ minHeight: "44px", fontSize: "16px" }}
                 >
                   Cancel
                 </button>
@@ -963,12 +959,12 @@ const AdminPanel = ({ className }) => {
                   onClick={handleCreateUser}
                   disabled={isCreatingUser || rolesLoadError || availableRoles.length === 0}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-                  style={{ minHeight: '44px', fontSize: '16px' }}
+                  style={{ minHeight: "44px", fontSize: "16px" }}
                 >
                   {isCreatingUser && (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   )}
-                  <span>{isCreatingUser ? 'Creating...' : 'Create User'}</span>
+                  <span>{isCreatingUser ? "Creating..." : "Create User"}</span>
                 </button>
               </div>
             </div>
@@ -990,9 +986,7 @@ const AdminPanel = ({ className }) => {
                   <input
                     type="text"
                     value={editingUser.name}
-                    onChange={(e) =>
-                      setEditingUser({ ...editingUser, name: e.target.value })
-                    }
+                    onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   />
                 </div>
@@ -1003,9 +997,7 @@ const AdminPanel = ({ className }) => {
                   <input
                     type="email"
                     value={editingUser.email}
-                    onChange={(e) =>
-                      setEditingUser({ ...editingUser, email: e.target.value })
-                    }
+                    onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   />
                 </div>
@@ -1032,9 +1024,7 @@ const AdminPanel = ({ className }) => {
                   <input
                     type="tel"
                     value={editingUser.phone}
-                    onChange={(e) =>
-                      setEditingUser({ ...editingUser, phone: e.target.value })
-                    }
+                    onChange={(e) => setEditingUser({ ...editingUser, phone: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   />
                 </div>
@@ -1044,9 +1034,7 @@ const AdminPanel = ({ className }) => {
                   </label>
                   <select
                     value={editingUser.role}
-                    onChange={(e) =>
-                      setEditingUser({ ...editingUser, role: e.target.value })
-                    }
+                    onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   >
                     <option value="Admin">Admin</option>
@@ -1060,9 +1048,7 @@ const AdminPanel = ({ className }) => {
                   </label>
                   <select
                     value={editingUser.status}
-                    onChange={(e) =>
-                      setEditingUser({ ...editingUser, status: e.target.value })
-                    }
+                    onChange={(e) => setEditingUser({ ...editingUser, status: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   >
                     <option value="Active">Active</option>
@@ -1091,12 +1077,18 @@ const AdminPanel = ({ className }) => {
         {/* Password Reset Modal */}
         {passwordResetModal && selectedUserForReset && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-md" data-testid="password-reset-modal">
+            <div
+              className="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-md"
+              data-testid="password-reset-modal"
+            >
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
                 Reset Password
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Resetting password for: <span className="font-medium text-gray-900 dark:text-gray-100">{selectedUserForReset.name}</span>
+                Resetting password for:{" "}
+                <span className="font-medium text-gray-900 dark:text-gray-100">
+                  {selectedUserForReset.name}
+                </span>
               </p>
               <div className="space-y-4">
                 <div>
@@ -1121,7 +1113,11 @@ const AdminPanel = ({ className }) => {
                       onClick={() => setShowNewPassword(!showNewPassword)}
                       className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                     >
-                      {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showNewPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -1136,7 +1132,10 @@ const AdminPanel = ({ className }) => {
                       value={passwordFormData.confirmPassword}
                       onChange={(e) => {
                         const newConfirmPassword = e.target.value;
-                        setPasswordFormData({ ...passwordFormData, confirmPassword: newConfirmPassword });
+                        setPasswordFormData({
+                          ...passwordFormData,
+                          confirmPassword: newConfirmPassword,
+                        });
                         // Update validation in real-time on every keystroke
                         validateInRealTime(passwordFormData.newPassword, newConfirmPassword);
                       }}
@@ -1148,7 +1147,11 @@ const AdminPanel = ({ className }) => {
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                       className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                     >
-                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -1159,15 +1162,21 @@ const AdminPanel = ({ className }) => {
                     3. Password match validation (only when typing confirm)
                 */}
                 {validation.apiError && (
-                  <div className="error-message p-3 bg-red-50 dark:bg-red-900/20 rounded-md" data-testid="password-error" role="alert">
-                    <p className="text-xs text-red-600 dark:text-red-400">
-                      {validation.apiError}
-                    </p>
+                  <div
+                    className="error-message p-3 bg-red-50 dark:bg-red-900/20 rounded-md"
+                    data-testid="password-error"
+                    role="alert"
+                  >
+                    <p className="text-xs text-red-600 dark:text-red-400">{validation.apiError}</p>
                   </div>
                 )}
 
                 {shouldShowLengthError() && (
-                  <div className="password-warning p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-md" role="alert" aria-live="polite">
+                  <div
+                    className="password-warning p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-md"
+                    role="alert"
+                    aria-live="polite"
+                  >
                     <p className="text-xs text-yellow-800 dark:text-yellow-300">
                       Password must be at least 6 characters long
                     </p>
@@ -1175,7 +1184,11 @@ const AdminPanel = ({ className }) => {
                 )}
 
                 {shouldShowMismatchError() && (
-                  <div className="password-warning p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-md" role="alert" aria-live="polite">
+                  <div
+                    className="password-warning p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-md"
+                    role="alert"
+                    aria-live="polite"
+                  >
                     <p className="text-xs text-yellow-800 dark:text-yellow-300">
                       Passwords do not match
                     </p>
@@ -1195,11 +1208,17 @@ const AdminPanel = ({ className }) => {
                 <button
                   type="button"
                   onClick={handlePasswordReset}
-                  disabled={!validation.isValidLength || !validation.passwordsMatch || validation.isSubmitting}
+                  disabled={
+                    !validation.isValidLength ||
+                    !validation.passwordsMatch ||
+                    validation.isSubmitting
+                  }
                   className={`px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 ${
-                    validation.isValidLength && validation.passwordsMatch && !validation.isSubmitting
-                      ? 'bg-blue-600 text-white hover:bg-blue-700 active'
-                      : 'bg-gray-400 text-gray-200'
+                    validation.isValidLength &&
+                    validation.passwordsMatch &&
+                    !validation.isSubmitting
+                      ? "bg-blue-600 text-white hover:bg-blue-700 active"
+                      : "bg-gray-400 text-gray-200"
                   }`}
                 >
                   {validation.isSubmitting && (
@@ -1248,10 +1267,7 @@ const AdminPanel = ({ className }) => {
                       Automatically backup system data daily
                     </p>
                   </div>
-                  <Button
-                    onClick={() => handleToggleSetting("autoBackup")}
-                    className="ml-4"
-                  >
+                  <Button onClick={() => handleToggleSetting("autoBackup")} className="ml-4">
                     {systemSettings.autoBackup ? "Disable" : "Enable"}
                   </Button>
                 </div>
@@ -1265,10 +1281,7 @@ const AdminPanel = ({ className }) => {
                       Enable maintenance mode for system updates
                     </p>
                   </div>
-                  <Button
-                    onClick={() => handleToggleSetting("maintenanceMode")}
-                    className="ml-4"
-                  >
+                  <Button onClick={() => handleToggleSetting("maintenanceMode")} className="ml-4">
                     {systemSettings.maintenanceMode ? "Disable" : "Enable"}
                   </Button>
                 </div>

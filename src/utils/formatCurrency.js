@@ -5,7 +5,7 @@
  * @returns {string} Formatted currency string
  */
 export const formatCurrency = (amount, currency = "$") => {
-  if (typeof amount !== "number" || isNaN(amount)) {
+  if (typeof amount !== "number" || Number.isNaN(amount)) {
     return `${currency}0.00`;
   }
 
@@ -22,7 +22,7 @@ export const formatCurrency = (amount, currency = "$") => {
  * @returns {string} Formatted number string
  */
 export const formatNumber = (amount, decimals = 2) => {
-  if (typeof amount !== "number" || isNaN(amount)) {
+  if (typeof amount !== "number" || Number.isNaN(amount)) {
     return "0.00";
   }
 

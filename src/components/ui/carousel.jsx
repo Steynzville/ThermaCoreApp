@@ -1,7 +1,9 @@
 "use client";
 import useEmblaCarousel from "embla-carousel-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import * as React from "react";
 
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const CarouselContext = React.createContext(null);
@@ -84,8 +86,7 @@ function Carousel({
         carouselRef,
         api: api,
         opts,
-        orientation:
-          orientation || (opts?.axis === "y" ? "vertical" : "horizontal"),
+        orientation: orientation || (opts?.axis === "y" ? "vertical" : "horizontal"),
         scrollPrev,
         scrollNext,
         canScrollPrev,
@@ -110,17 +111,9 @@ function CarouselContent({ className, ...props }) {
   const { carouselRef, orientation } = useCarousel();
 
   return (
-    <div
-      ref={carouselRef}
-      className="overflow-hidden"
-      data-slot="carousel-content"
-    >
+    <div ref={carouselRef} className="overflow-hidden" data-slot="carousel-content">
       <div
-        className={cn(
-          "flex",
-          orientation === "horizontal" ? "-ml-4" : "-mt-4 flex-col",
-          className,
-        )}
+        className={cn("flex", orientation === "horizontal" ? "-ml-4" : "-mt-4 flex-col", className)}
         {...props}
       />
     </div>
@@ -145,12 +138,7 @@ function CarouselItem({ className, ...props }) {
   );
 }
 
-function CarouselPrevious({
-  className,
-  variant = "outline",
-  size = "icon",
-  ...props
-}) {
+function CarouselPrevious({ className, variant = "outline", size = "icon", ...props }) {
   const { orientation, scrollPrev, canScrollPrev } = useCarousel();
 
   return (
@@ -175,12 +163,7 @@ function CarouselPrevious({
   );
 }
 
-function CarouselNext({
-  className,
-  variant = "outline",
-  size = "icon",
-  ...props
-}) {
+function CarouselNext({ className, variant = "outline", size = "icon", ...props }) {
   const { orientation, scrollNext, canScrollNext } = useCarousel();
 
   return (
@@ -205,10 +188,4 @@ function CarouselNext({
   );
 }
 
-export {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-};
+export { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious };

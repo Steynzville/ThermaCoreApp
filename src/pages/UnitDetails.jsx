@@ -1,17 +1,10 @@
-import { memo,useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 
-import {
-  getUnitAlerts,
-  getUnitById,
-  getUnitDetails,
-} from "../services/unitService";
+import { getUnitAlerts, getUnitById, getUnitDetails } from "../services/unitService";
 
 const AlertListItem = memo(({ alert }) => (
-  <li
-    key={alert.id}
-    className={`alert-item status-${alert.severity.toLowerCase()}`}
-  >
+  <li key={alert.id} className={`alert-item status-${alert.severity.toLowerCase()}`}>
     <span>{new Date(alert.timestamp).toLocaleString()}</span>
     <span>{alert.description}</span>
     <span>Severity: {alert.severity}</span>
@@ -140,17 +133,13 @@ const UnitDetails = () => {
           <div className="overview-tab">
             <p>
               <strong>Status:</strong>{" "}
-              <span className={`status-${unit.status.toLowerCase()}`}>
-                {unit.status}
-              </span>
+              <span className={`status-${unit.status.toLowerCase()}`}>{unit.status}</span>
             </p>
             {/* If there is a current alert, display it on the overview */}
             {unit.status !== "Operational" && currentAlert && (
               <p>
                 <strong>Current Alert:</strong>{" "}
-                <span className="status-critical">
-                  {currentAlert.description}
-                </span>
+                <span className="status-critical">{currentAlert.description}</span>
               </p>
             )}
             <p>
@@ -174,5 +163,3 @@ const UnitDetails = () => {
 };
 
 export default UnitDetails;
-
-

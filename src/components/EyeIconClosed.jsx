@@ -1,4 +1,3 @@
-
 const EyeIconClosed = ({ className, ...props }) => {
   return (
     <svg

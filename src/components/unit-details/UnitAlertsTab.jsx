@@ -1,13 +1,15 @@
+import { AlertTriangle, CheckCircle, Clock } from "lucide-react";
 
 import { useAuth } from "../../context/AuthContext";
 import { getAllCurrentNotificationsForUnit } from "../../utils/notifications";
+import { Card, CardContent } from "../ui/card";
 
 const UnitAlertsTab = ({ unit, alertsHistory, getAlertTypeColor }) => {
   const { userRole } = useAuth();
-  
+
   // Get all current notifications for this unit with role-based filtering
   const currentNotifications = getAllCurrentNotificationsForUnit(unit.id, userRole);
-  
+
   // Helper function to get border color based on alert type
   const getBorderColor = (type) => {
     switch (type) {
@@ -42,22 +44,18 @@ const UnitAlertsTab = ({ unit, alertsHistory, getAlertTypeColor }) => {
 
   return (
     <div className="space-y-6">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-        Current Alerts
-      </h3>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Current Alerts</h3>
 
       {currentNotifications && currentNotifications.length > 0 ? (
         <>
           {currentNotifications.map((notification) => (
-            <Card 
-              key={notification.id} 
+            <Card
+              key={notification.id}
               className={`bg-white dark:bg-gray-900 border-l-4 ${getBorderColor(notification.type)}`}
             >
               <CardContent className="p-4">
                 <div className="flex items-start space-x-3">
-                  <AlertTriangle
-                    className={`h-5 w-5 mt-0.5 ${getIconColor(notification.type)}`}
-                  />
+                  <AlertTriangle className={`h-5 w-5 mt-0.5 ${getIconColor(notification.type)}`} />
                   <div>
                     <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
                       {notification.title}
@@ -78,9 +76,7 @@ const UnitAlertsTab = ({ unit, alertsHistory, getAlertTypeColor }) => {
         <Card className="bg-white dark:bg-gray-900">
           <CardContent className="p-4 text-center">
             <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              No active alerts
-            </p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">No active alerts</p>
           </CardContent>
         </Card>
       )}
@@ -95,9 +91,7 @@ const UnitAlertsTab = ({ unit, alertsHistory, getAlertTypeColor }) => {
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center space-x-2 mb-1">
-                  <h4
-                    className={`text-sm font-medium ${getAlertTypeColor(alert.type)}`}
-                  >
+                  <h4 className={`text-sm font-medium ${getAlertTypeColor(alert.type)}`}>
                     {alert.title}
                   </h4>
                   {alert.resolved && (
@@ -106,9 +100,7 @@ const UnitAlertsTab = ({ unit, alertsHistory, getAlertTypeColor }) => {
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
-                  {alert.message}
-                </p>
+                <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">{alert.message}</p>
                 <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-400">
                   <div className="flex items-center space-x-1">
                     <Clock className="h-3 w-3" />

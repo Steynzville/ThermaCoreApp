@@ -1,18 +1,24 @@
-import { useEffect,useState } from 'react';
+import { Filter, RefreshCw, Search } from "lucide-react";
+import { useEffect, useState } from "react";
 
-import { useAuth } from '../context/AuthContext';
-import { deviceStatusService } from '../services/deviceStatusService';
+import { useAuth } from "../context/AuthContext";
+import { deviceStatusService } from "../services/deviceStatusService";
+import DeviceStatusIndicator from "./DeviceStatusIndicator";
+import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Input } from "./ui/input";
 
 /**
  * Device Status Dashboard Component
  * Provides comprehensive device status monitoring and management
  */
-const DeviceStatusDashboard = ({ className = '' }) => {
+const DeviceStatusDashboard = ({ className = "" }) => {
   const { userRole } = useAuth();
   const [devices, setDevices] = useState([]);
   const [filteredDevices, setFilteredDevices] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(new Date());
 
@@ -20,14 +26,14 @@ const DeviceStatusDashboard = ({ className = '' }) => {
   useEffect(() => {
     const updateDevices = () => {
       const allDevices = deviceStatusService.getAllDeviceStatuses();
-      
+
       // Apply role-based filtering
-      const filteredByRole = allDevices.filter(device => {
-        if (userRole === 'admin') return true;
+      const filteredByRole = allDevices.filter((device) => {
+        if (userRole === "admin") return true;
         const unitMatch = device.id.match(/TC(\d+)/);
-        return unitMatch && parseInt(unitMatch[1]) <= 6;
+        return unitMatch && Number.parseInt(unitMatch[1]) <= 6;
       });
-      
+
       setDevices(filteredByRole);
       setLastUpdated(new Date());
     };
@@ -51,23 +57,30 @@ const DeviceStatusDashboard = ({ className = '' }) => {
 
     // Search filter
     if (searchTerm) {
-      filtered = filtered.filter(device =>
-        device.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        device.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        device.location?.toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(
+        (device) =>
+          device.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          device.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          device.location?.toLowerCase().includes(searchTerm.toLowerCase()),
       );
     }
 
     // Status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(device => {
+    if (statusFilter !== "all") {
+      filtered = filtered.filter((device) => {
         switch (statusFilter) {
-          case 'online': return device.isOnline;
-          case 'offline': return !device.isOnline;
-          case 'alerts': return device.hasAlert;
-          case 'alarms': return device.hasAlarm;
-          case 'maintenance': return device.status === 'maintenance';
-          default: return true;
+          case "online":
+            return device.isOnline;
+          case "offline":
+            return !device.isOnline;
+          case "alerts":
+            return device.hasAlert;
+          case "alarms":
+            return device.hasAlarm;
+          case "maintenance":
+            return device.status === "maintenance";
+          default:
+            return true;
         }
       });
     }
@@ -87,11 +100,11 @@ const DeviceStatusDashboard = ({ className = '' }) => {
   const getStatusCounts = () => {
     return {
       total: devices.length,
-      online: devices.filter(d => d.isOnline).length,
-      offline: devices.filter(d => !d.isOnline).length,
-      alerts: devices.filter(d => d.hasAlert).length,
-      alarms: devices.filter(d => d.hasAlarm).length,
-      maintenance: devices.filter(d => d.status === 'maintenance').length,
+      online: devices.filter((d) => d.isOnline).length,
+      offline: devices.filter((d) => !d.isOnline).length,
+      alerts: devices.filter((d) => d.hasAlert).length,
+      alarms: devices.filter((d) => d.hasAlarm).length,
+      maintenance: devices.filter((d) => d.status === "maintenance").length,
     };
   };
 
@@ -109,12 +122,8 @@ const DeviceStatusDashboard = ({ className = '' }) => {
             Last updated: {lastUpdated.toLocaleTimeString()}
           </p>
         </div>
-        <Button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="flex items-center gap-2"
-        >
-          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+        <Button onClick={handleRefresh} disabled={refreshing} className="flex items-center gap-2">
+          <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
           Refresh
         </Button>
       </div>
@@ -132,7 +141,7 @@ const DeviceStatusDashboard = ({ className = '' }) => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -146,7 +155,7 @@ const DeviceStatusDashboard = ({ className = '' }) => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -158,7 +167,7 @@ const DeviceStatusDashboard = ({ className = '' }) => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -172,7 +181,7 @@ const DeviceStatusDashboard = ({ className = '' }) => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -184,7 +193,7 @@ const DeviceStatusDashboard = ({ className = '' }) => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -211,7 +220,7 @@ const DeviceStatusDashboard = ({ className = '' }) => {
             className="pl-10"
           />
         </div>
-        
+
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4 text-gray-400" />
           <select
@@ -263,24 +272,27 @@ const DeviceStatusDashboard = ({ className = '' }) => {
                     size="sm"
                   />
                 </div>
-                
+
                 {device.batteryLevel !== undefined && (
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600 dark:text-gray-400">Battery:</span>
-                    <span className={`text-sm font-medium ${
-                      device.batteryLevel < 25 ? 'text-red-600' :
-                      device.batteryLevel < 50 ? 'text-yellow-600' : 'text-green-600'
-                    }`}>
+                    <span
+                      className={`text-sm font-medium ${
+                        device.batteryLevel < 25
+                          ? "text-red-600"
+                          : device.batteryLevel < 50
+                            ? "text-yellow-600"
+                            : "text-green-600"
+                      }`}
+                    >
                       {device.batteryLevel.toFixed(1)}%
                     </span>
                   </div>
                 )}
-                
+
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600 dark:text-gray-400">Last Seen:</span>
-                  <span className="text-sm">
-                    {device.lastSeen.toLocaleTimeString()}
-                  </span>
+                  <span className="text-sm">{device.lastSeen.toLocaleTimeString()}</span>
                 </div>
               </div>
             </CardContent>
@@ -292,9 +304,9 @@ const DeviceStatusDashboard = ({ className = '' }) => {
         <Card>
           <CardContent className="pt-6 text-center">
             <p className="text-gray-500 dark:text-gray-400">
-              {searchTerm || statusFilter !== 'all' 
-                ? 'No devices match the current filters.' 
-                : 'No devices found.'}
+              {searchTerm || statusFilter !== "all"
+                ? "No devices match the current filters."
+                : "No devices found."}
             </p>
           </CardContent>
         </Card>

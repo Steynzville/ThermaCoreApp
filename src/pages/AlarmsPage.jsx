@@ -1,4 +1,4 @@
-
+import AlarmsView from "../components/AlarmsView";
 
 const AlarmsPage = () => {
   return <AlarmsView />;

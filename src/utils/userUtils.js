@@ -9,7 +9,7 @@
  * @returns {string} Capitalized string
  */
 export const capitalize = (str) => {
-  if (!str) return '';
+  if (!str) return "";
   return str.charAt(0).toUpperCase() + str.slice(1);
 };
 
@@ -34,7 +34,7 @@ export const formatUserName = (user) => {
  * @param {string} [defaultRole='Viewer'] - Default role if none provided
  * @returns {string} Capitalized role name
  */
-export const formatRoleName = (role, defaultRole = 'Viewer') => {
-  const roleName = typeof role === 'string' ? role : role?.name;
+export const formatRoleName = (role, defaultRole = "Viewer") => {
+  const roleName = typeof role === "string" ? role : role?.name;
   return roleName ? capitalize(roleName) : defaultRole;
 };

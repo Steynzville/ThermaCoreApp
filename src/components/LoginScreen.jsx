@@ -1,5 +1,5 @@
 import { Eye, EyeOff, Fingerprint, Volume2, VolumeX } from "lucide-react";
-import React, { useCallback, useEffect,useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import appleLogoBlack from "../assets/apple-logo-black.svg";
@@ -9,8 +9,6 @@ import thermaCoreLogo from "../assets/thermacore-logo-new.png";
 import { useAuth } from "../context/AuthContext";
 import { useSettings } from "../context/SettingsContext";
 import { useTheme } from "../context/ThemeContext";
-import playSound from "../utils/audioPlayer";
-import FormFieldGroup from "./common/FormFieldGroup";
 import styles from "./LoginScreen.module.css";
 import SocialButton from "./SocialButton";
 import { Button } from "./ui/button";
@@ -113,20 +111,34 @@ const LoginScreen = ({ error, setError }) => {
         return;
       }
 
-      console.log("Attempting login with:", formData.username); // Debug log
+      console.log("[LoginScreen] Attempting login with:", formData.username);
 
       const result = await login(formData.username, formData.password);
 
-      console.log("Login result:", result); // Debug log
+      console.log("[LoginScreen] Login result:", result);
 
       if (result.success) {
-        console.log("Login successful, navigating to dashboard");
+        console.log("[LoginScreen] Login successful, navigating to dashboard");
+
+        // Primary navigation attempt
         navigate("/dashboard");
+
+        // Fallback redirect after a short delay if primary navigation doesn't work
+        setTimeout(() => {
+          console.log("[LoginScreen] Fallback redirect triggered");
+          const currentPath = window.location.pathname;
+          console.log("[LoginScreen] Current path:", currentPath);
+
+          if (currentPath === "/login" || currentPath === "/") {
+            console.log("[LoginScreen] Still on login page, forcing redirect with window.location");
+            window.location.href = "/dashboard";
+          }
+        }, 500);
       } else {
-        console.log("Login failed:", result.error); // Debug log
+        console.log("[LoginScreen] Login failed:", result.error);
         setError(result.error || "Invalid credentials!");
         // Keep form data intact for retry
-        console.log("Error set to:", result.error || "Invalid credentials!");
+        console.log("[LoginScreen] Error set to:", result.error || "Invalid credentials!");
       }
     },
     [formData.username, formData.password, login, navigate, setError],
@@ -141,11 +153,14 @@ const LoginScreen = ({ error, setError }) => {
     // For now, it just shows the dialog
   }, []);
 
-  const handleForgotPassword = useCallback((e) => {
-    e.preventDefault();
-    console.log("Forgot password clicked!");
-    navigate("/forgot-password");
-  }, [navigate]);
+  const handleForgotPassword = useCallback(
+    (e) => {
+      e.preventDefault();
+      console.log("Forgot password clicked!");
+      navigate("/forgot-password");
+    },
+    [navigate],
+  );
 
   return (
     <div className={styles.pageWrapper}>
@@ -168,7 +183,7 @@ const LoginScreen = ({ error, setError }) => {
           <img
             src={thermaCoreLogo}
             alt="ThermaCore Logo"
-            className={`${styles.logo} ${animateLogo ? styles.logoSpin : ''}`}
+            className={`${styles.logo} ${animateLogo ? styles.logoSpin : ""}`}
           />
         </div>
         <div className={styles.titleContainer}>
@@ -177,9 +192,7 @@ const LoginScreen = ({ error, setError }) => {
         </div>
         <p className={styles.loginPrompt}>Sign in to your account</p>
 
-        <div className={`${styles.loginError} ${error ? styles.visible : ""}`}>
-          {error}
-        </div>
+        <div className={`${styles.loginError} ${error ? styles.visible : ""}`}>{error}</div>
 
         <form onSubmit={handleSubmit}>
           <div className={styles.formGroup}>
@@ -226,9 +239,7 @@ const LoginScreen = ({ error, setError }) => {
               </button>
             </div>
             {!passwordValidation.isValid && passwordValidation.message && (
-              <div className={styles.passwordError}>
-                {passwordValidation.message}
-              </div>
+              <div className={styles.passwordError}>{passwordValidation.message}</div>
             )}
           </div>
 
@@ -237,11 +248,7 @@ const LoginScreen = ({ error, setError }) => {
               <input type="checkbox" />
               <span className={styles.checkboxLabel}>Keep me signed in</span>
             </label>
-            <a
-              href="#"
-              onClick={handleForgotPassword}
-              className={styles.forgotPasswordLink}
-            >
+            <a href="#" onClick={handleForgotPassword} className={styles.forgotPasswordLink}>
               Forgot Password?
             </a>
           </div>
@@ -271,9 +278,8 @@ const LoginScreen = ({ error, setError }) => {
               <DialogHeader>
                 <DialogTitle>Sign in with Google</DialogTitle>
                 <DialogDescription>
-                  Google sign-in is coming soon! We&apos;re working hard to
-                  bring you this convenient login option. Please use your
-                  username and password for now.
+                  Google sign-in is coming soon! We&apos;re working hard to bring you this
+                  convenient login option. Please use your username and password for now.
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter>
@@ -296,9 +302,8 @@ const LoginScreen = ({ error, setError }) => {
               <DialogHeader>
                 <DialogTitle>Sign in with Apple</DialogTitle>
                 <DialogDescription>
-                  Apple sign-in is coming soon! We&apos;re working hard to bring
-                  you this convenient login option. Please use your username and
-                  password for now.
+                  Apple sign-in is coming soon! We&apos;re working hard to bring you this convenient
+                  login option. Please use your username and password for now.
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter>
@@ -331,9 +336,8 @@ const LoginScreen = ({ error, setError }) => {
                 <DialogHeader>
                   <DialogTitle>Biometric Authentication</DialogTitle>
                   <DialogDescription>
-                    Biometric authentication is coming soon! We&apos;re working
-                    to bring you secure fingerprint and face recognition login
-                    options.
+                    Biometric authentication is coming soon! We&apos;re working to bring you secure
+                    fingerprint and face recognition login options.
                   </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
@@ -348,20 +352,9 @@ const LoginScreen = ({ error, setError }) => {
 
         {isLoading && (
           <div className={styles.loadingOverlay}>
-            <svg
-              width="100"
-              height="100"
-              viewBox="0 0 100 100"
-              xmlns="http://www.w3.org/2000/svg"
-            >
+            <svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
               <defs>
-                <filter
-                  id="subtleGlow"
-                  x="-20%"
-                  y="-20%"
-                  width="140%"
-                  height="140%"
-                >
+                <filter id="subtleGlow" x="-20%" y="-20%" width="140%" height="140%">
                   <feGaussianBlur stdDeviation="1.5" result="coloredBlur" />
                   <feMerge>
                     <feMergeNode in="coloredBlur" />
@@ -369,13 +362,7 @@ const LoginScreen = ({ error, setError }) => {
                   </feMerge>
                 </filter>
 
-                <filter
-                  id="neonBlueGlow"
-                  x="-50%"
-                  y="-50%"
-                  width="200%"
-                  height="200%"
-                >
+                <filter id="neonBlueGlow" x="-50%" y="-50%" width="200%" height="200%">
                   <feGaussianBlur stdDeviation="3" result="coloredBlur" />
                   <feMerge>
                     <feMergeNode in="coloredBlur" />
@@ -469,14 +456,7 @@ const LoginScreen = ({ error, setError }) => {
                 </circle>
               </g>
 
-              <circle
-                cx="50"
-                cy="50"
-                r="3"
-                fill="#ffd700"
-                opacity="0.8"
-                filter="url(#subtleGlow)"
-              >
+              <circle cx="50" cy="50" r="3" fill="#ffd700" opacity="0.8" filter="url(#subtleGlow)">
                 <animate
                   attributeName="opacity"
                   values="0.8;0.4;0.8"
@@ -487,21 +467,21 @@ const LoginScreen = ({ error, setError }) => {
             </svg>
           </div>
         )}
-        
+
         {/* Registration link */}
-        <div className={styles.registerSection} style={{ marginTop: '24px', textAlign: 'center' }}>
-          <span style={{ color: 'var(--text-secondary)' }}>Don't have an account? </span>
+        <div className={styles.registerSection} style={{ marginTop: "24px", textAlign: "center" }}>
+          <span style={{ color: "var(--text-secondary)" }}>Don't have an account? </span>
           <a
             href="/register"
             onClick={(e) => {
               e.preventDefault();
-              navigate('/register');
+              navigate("/register");
             }}
             style={{
-              color: 'var(--primary-color)',
-              textDecoration: 'none',
-              fontWeight: '500',
-              cursor: 'pointer'
+              color: "var(--primary-color)",
+              textDecoration: "none",
+              fontWeight: "500",
+              cursor: "pointer",
             }}
           >
             Create an account
@@ -513,5 +493,3 @@ const LoginScreen = ({ error, setError }) => {
 };
 
 export default LoginScreen;
-
-

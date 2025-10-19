@@ -1,7 +1,4 @@
-import { useEffect,useState } from "react";
-
-
-
+import { useEffect, useState } from "react";
 
 const generateMockData = (timeframe) => {
   const data = [];
@@ -47,11 +44,11 @@ const generateMockData = (timeframe) => {
     const timestamp = now - (points - 1 - i) * interval;
     data.push({
       time: new Date(timestamp).toLocaleString(),
-      power: parseFloat((Math.random() * 5 + 1).toFixed(2)),
-      tempIn: parseFloat((Math.random() * 20 + 15).toFixed(2)),
-      tempOut: parseFloat((Math.random() * 20 + 20).toFixed(2)),
-      pressure: parseFloat((Math.random() * 5 + 10).toFixed(2)),
-      waterLevel: parseFloat((Math.random() * 50 + 50).toFixed(2)),
+      power: Number.parseFloat((Math.random() * 5 + 1).toFixed(2)),
+      tempIn: Number.parseFloat((Math.random() * 20 + 15).toFixed(2)),
+      tempOut: Number.parseFloat((Math.random() * 20 + 20).toFixed(2)),
+      pressure: Number.parseFloat((Math.random() * 5 + 10).toFixed(2)),
+      waterLevel: Number.parseFloat((Math.random() * 50 + 50).toFixed(2)),
     });
   }
   return data;
@@ -68,9 +65,7 @@ const VitalSignGraph = ({ title, dataKey, color }) => {
   return (
     <Card className="bg-white dark:bg-gray-900">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          {title}
-        </h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
         <Select value={timeframe} onValueChange={setTimeframe}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Select Timeframe" />
@@ -103,11 +98,7 @@ const VitalSignGraph = ({ title, dataKey, color }) => {
                 stroke="#e0e0e0"
                 className="dark:stroke-gray-700"
               />
-              <XAxis
-                dataKey="time"
-                stroke="#888888"
-                className="dark:stroke-gray-400"
-              />
+              <XAxis dataKey="time" stroke="#888888" className="dark:stroke-gray-400" />
               <YAxis stroke="#888888" className="dark:stroke-gray-400" />
               <Tooltip
                 contentStyle={{
@@ -117,12 +108,7 @@ const VitalSignGraph = ({ title, dataKey, color }) => {
                 labelStyle={{ color: "var(--text-color)" }}
                 itemStyle={{ color: "var(--text-color)" }}
               />
-              <Line
-                type="monotone"
-                dataKey={dataKey}
-                stroke={color}
-                activeDot={{ r: 8 }}
-              />
+              <Line type="monotone" dataKey={dataKey} stroke={color} activeDot={{ r: 8 }} />
             </LineChart>
           </ResponsiveContainer>
         </div>

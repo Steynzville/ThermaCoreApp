@@ -1,8 +1,9 @@
-import PageHeader from './PageHeader';
-import { Card, CardContent } from './ui/card';
-import { Siren, AlertTriangle, Info, CheckCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Clock, Info, Siren } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+
 import { units } from "../data/mockUnits";
+import PageHeader from "./PageHeader";
+import { Card, CardContent } from "./ui/card";
 
 const AlarmsView = ({ className, userRole }) => {
   const navigate = useNavigate();
@@ -31,20 +32,21 @@ const AlarmsView = ({ className, userRole }) => {
   ];
 
   // Filter alarms based on user role
-  const alarms = userRole === "user" 
-    ? allAlarms.filter(alarm => alarm.device === "ThermaCore Unit 003")
-    : allAlarms;
+  const alarms =
+    userRole === "user"
+      ? allAlarms.filter((alarm) => alarm.device === "ThermaCore Unit 003")
+      : allAlarms;
 
   const handleAlarmClick = (alarm) => {
     // Extract unit number from device name (e.g., "ThermaCore Unit 003" -> 3)
     const unitMatch = alarm.device.match(/Unit (\d+)/);
     if (unitMatch) {
-      const unitNumber = unitMatch[1].padStart(3, '0'); // Convert to 3-digit format (e.g., "003")
+      const unitNumber = unitMatch[1].padStart(3, "0"); // Convert to 3-digit format (e.g., "003")
       const unitId = `TC${unitNumber}`;
-      
+
       // Find the actual unit data from mockUnits
-      const unitData = units.find(unit => unit.id === unitId);
-      
+      const unitData = units.find((unit) => unit.id === unitId);
+
       if (unitData) {
         // Add the specific alarm information to the unit data
         const unitWithAlarm = {
@@ -59,9 +61,11 @@ const AlarmsView = ({ className, userRole }) => {
         };
 
         if (userRole === "admin") {
-          navigate(`/unit-details/${parseInt(unitMatch[1])}`, { state: { unit: unitWithAlarm } });
+          navigate(`/unit-details/${Number.parseInt(unitMatch[1])}`, {
+            state: { unit: unitWithAlarm },
+          });
         } else {
-          navigate(`/unit/${parseInt(unitMatch[1])}`, { state: { unit: unitWithAlarm } });
+          navigate(`/unit/${Number.parseInt(unitMatch[1])}`, { state: { unit: unitWithAlarm } });
         }
       }
     }
@@ -98,9 +102,7 @@ const AlarmsView = ({ className, userRole }) => {
   };
 
   return (
-    <div
-      className={`min-h-screen bg-gray-50 dark:bg-gray-900 p-3 lg:p-4 xl:p-6 ${className}`}
-    >
+    <div className={`min-h-screen bg-gray-50 dark:bg-gray-900 p-3 lg:p-4 xl:p-6 ${className}`}>
       <div className="max-w-7xl mx-auto">
         <PageHeader
           title="Alarms!"
@@ -169,5 +171,3 @@ const AlarmsView = ({ className, userRole }) => {
 };
 
 export default AlarmsView;
-
-

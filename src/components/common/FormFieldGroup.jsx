@@ -1,6 +1,5 @@
 import { useState } from "react";
 
-
 const FormFieldGroup = ({
   id,
   label,
@@ -24,10 +23,7 @@ const FormFieldGroup = ({
   // Default styles for different contexts
   const getDefaultStyles = () => {
     // Check if we're in a login context (has specific styling)
-    if (
-      className.includes("formGroup") ||
-      inputClassName.includes("loginScreen")
-    ) {
+    if (className.includes("formGroup") || inputClassName.includes("loginScreen")) {
       return {
         container: "formGroup",
         label: "",
@@ -82,9 +78,7 @@ const FormFieldGroup = ({
           </button>
         )}
       </div>
-      {error && (
-        <div className={`${styles.error} ${errorClassName}`}>{error}</div>
-      )}
+      {error && <div className={`${styles.error} ${errorClassName}`}>{error}</div>}
     </div>
   );
 };

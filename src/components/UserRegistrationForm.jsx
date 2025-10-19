@@ -82,13 +82,13 @@ const UserRegistrationForm = () => {
     try {
       // Call the register function from authService
       const result = await register(formData);
-      
-      if (result.status === 'pending') {
+
+      if (result.status === "pending") {
         toast.success("Registration submitted! Your account is pending admin approval.");
       } else {
         toast.success("Registration successful! Please log in.");
       }
-      
+
       // Navigate to login page after successful registration
       setTimeout(() => navigate("/login"), 2000);
     } catch (error) {
@@ -127,9 +127,7 @@ const UserRegistrationForm = () => {
                 placeholder="Enter your username"
                 disabled={isSubmitting}
               />
-              {errors.username && (
-                <span className="error-message">{errors.username}</span>
-              )}
+              {errors.username && <span className="error-message">{errors.username}</span>}
             </div>
 
             {/* Email Field */}
@@ -146,9 +144,7 @@ const UserRegistrationForm = () => {
                 placeholder="Enter your email"
                 disabled={isSubmitting}
               />
-              {errors.email && (
-                <span className="error-message">{errors.email}</span>
-              )}
+              {errors.email && <span className="error-message">{errors.email}</span>}
             </div>
 
             {/* Password Field */}
@@ -186,9 +182,7 @@ const UserRegistrationForm = () => {
                   {showPassword ? "👁️" : "👁️‍🗨️"}
                 </button>
               </div>
-              {errors.password && (
-                <span className="error-message">{errors.password}</span>
-              )}
+              {errors.password && <span className="error-message">{errors.password}</span>}
             </div>
 
             {/* First Name Field */}
@@ -205,9 +199,7 @@ const UserRegistrationForm = () => {
                 placeholder="Enter your first name"
                 disabled={isSubmitting}
               />
-              {errors.firstName && (
-                <span className="error-message">{errors.firstName}</span>
-              )}
+              {errors.firstName && <span className="error-message">{errors.firstName}</span>}
             </div>
 
             {/* Last Name Field */}
@@ -224,9 +216,7 @@ const UserRegistrationForm = () => {
                 placeholder="Enter your last name"
                 disabled={isSubmitting}
               />
-              {errors.lastName && (
-                <span className="error-message">{errors.lastName}</span>
-              )}
+              {errors.lastName && <span className="error-message">{errors.lastName}</span>}
             </div>
 
             {/* Phone Number Field */}
@@ -295,11 +285,7 @@ const UserRegistrationForm = () => {
               >
                 Cancel
               </button>
-              <button
-                type="submit"
-                className="form-button primary"
-                disabled={isSubmitting}
-              >
+              <button type="submit" className="form-button primary" disabled={isSubmitting}>
                 {isSubmitting ? "Creating Account..." : "Create Account"}
               </button>
             </div>

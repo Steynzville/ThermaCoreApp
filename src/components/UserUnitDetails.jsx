@@ -1,6 +1,4 @@
-
-
-import {useState } from "react";
+import { useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
@@ -15,7 +13,7 @@ const UserUnitDetails = ({ className }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const unit = location.state?.unit;
-  const initialTab = searchParams.get('tab') || 'overview';
+  const initialTab = searchParams.get("tab") || "overview";
   const [activeTab, setActiveTab] = useState(initialTab);
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingLocation, setIsEditingLocation] = useState(false);
@@ -29,8 +27,7 @@ const UserUnitDetails = ({ className }) => {
   }
 
   // Check if unit is offline/switched off
-  const isOffline =
-    unit?.status === "offline" || unit?.status === "decommissioned";
+  const isOffline = unit?.status === "offline" || unit?.status === "decommissioned";
 
   const handleSaveName = async () => {
     if (unit) {
@@ -87,7 +84,7 @@ const UserUnitDetails = ({ className }) => {
   }
 
   // Mock historical data for the unit
-  const historicalData = [
+  const _historicalData = [
     {
       id: 1,
       timestamp: "2024-08-07 14:30",
@@ -160,7 +157,7 @@ const UserUnitDetails = ({ className }) => {
     },
   ];
 
-  const getTrendIcon = (trend) => {
+  const _getTrendIcon = (trend) => {
     switch (trend) {
       case "up":
         return <TrendingUp className="h-4 w-4 text-green-500" />;
@@ -171,7 +168,7 @@ const UserUnitDetails = ({ className }) => {
     }
   };
 
-  const getSeverityColor = (severity) => {
+  const _getSeverityColor = (severity) => {
     switch (severity) {
       case "critical":
         return "border-l-red-500 bg-red-50 dark:bg-red-900/20";
@@ -213,9 +210,7 @@ const UserUnitDetails = ({ className }) => {
   };
 
   return (
-    <div
-      className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-6 ${className}`}
-    >
+    <div className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-6 ${className}`}>
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-6">
@@ -233,8 +228,7 @@ const UserUnitDetails = ({ className }) => {
                 {unit.name} - Detailed View
               </h1>
               <p className="text-gray-600 dark:text-gray-400 mb-2">
-                Serial Number:{" "}
-                {unit.serialNumber || `${unit.name.toUpperCase()}-001`} •{" "}
+                Serial Number: {unit.serialNumber || `${unit.name.toUpperCase()}-001`} •{" "}
                 {unit.location}
               </p>
               <div className="flex items-center space-x-2 mb-4">
@@ -306,12 +300,10 @@ const UserUnitDetails = ({ className }) => {
                   <div className="flex items-center space-x-3">
                     <Zap className="h-8 w-8 text-white animate-bounce" />
                     <div>
-                      <h3 className="text-xl font-bold text-white">
-                        🚨 NH3 LEAK DETECTED 🚨
-                      </h3>
+                      <h3 className="text-xl font-bold text-white">🚨 NH3 LEAK DETECTED 🚨</h3>
                       <p className="text-red-100">
-                        Critical alarm: Toxic ammonia leak detected in system.
-                        Immediate attention required.
+                        Critical alarm: Toxic ammonia leak detected in system. Immediate attention
+                        required.
                       </p>
                     </div>
                   </div>
@@ -332,11 +324,9 @@ const UserUnitDetails = ({ className }) => {
                     <div className="flex items-center space-x-3">
                       <Power className="h-5 w-5 text-blue-500" />
                       <div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Power Output
-                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Power Output</p>
                         <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                          {parseFloat(unit.currentPower).toFixed(1)} kW
+                          {Number.parseFloat(unit.currentPower).toFixed(1)} kW
                         </p>
                       </div>
                     </div>
@@ -345,9 +335,7 @@ const UserUnitDetails = ({ className }) => {
                       <div className="flex items-center space-x-3">
                         <Droplets className="h-5 w-5 text-blue-500" />
                         <div>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            Water Level
-                          </p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Water Level</p>
                           <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                             {unit.water_level} L
                           </p>
@@ -358,9 +346,7 @@ const UserUnitDetails = ({ className }) => {
                     <div className="flex items-center space-x-3">
                       <Cloud className="h-5 w-5 text-gray-500" />
                       <div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Temp Outside
-                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Temp Outside</p>
                         <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                           {formatTemperature(unit.temp_outside)}
                         </p>
@@ -370,9 +356,7 @@ const UserUnitDetails = ({ className }) => {
                     <div className="flex items-center space-x-3">
                       <ThermometerSnowflake className="h-5 w-5 text-orange-500" />
                       <div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Temp In
-                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Temp In</p>
                         <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                           {isOffline ? "N/A" : formatTemperature(unit.temp_in)}
                         </p>
@@ -382,9 +366,7 @@ const UserUnitDetails = ({ className }) => {
                     <div className="flex items-center space-x-3">
                       <ThermometerSun className="h-5 w-5 text-orange-500" />
                       <div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Temp Out
-                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Temp Out</p>
                         <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                           {isOffline ? "N/A" : formatTemperature(unit.temp_out)}
                         </p>
@@ -394,9 +376,7 @@ const UserUnitDetails = ({ className }) => {
                     <div className="flex items-center space-x-3">
                       <Droplets className="h-5 w-5 text-cyan-500" />
                       <div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Humidity
-                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Humidity</p>
                         <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                           {unit.humidity}%
                         </p>
@@ -406,9 +386,7 @@ const UserUnitDetails = ({ className }) => {
                     <div className="flex items-center space-x-3">
                       <Gauge className="h-5 w-5 text-purple-500" />
                       <div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Pressure
-                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Pressure</p>
                         <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                           {isOffline ? "N/A" : `${unit.pressure} kPa`}
                         </p>
@@ -418,15 +396,13 @@ const UserUnitDetails = ({ className }) => {
                     <div className="flex items-center space-x-3">
                       <BatteryCharging className="h-5 w-5 text-green-500" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Battery Life
-                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Battery Life</p>
                         <div className="flex items-center space-x-2">
                           <div className="flex-1 max-w-24 bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
                             <div
                               className="bg-green-500 h-2.5 rounded-full"
                               style={{ width: `${unit.battery_level}%` }}
-                            ></div>
+                            />
                           </div>
                           <p className="text-lg font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
                             {unit.battery_level}%
@@ -451,9 +427,7 @@ const UserUnitDetails = ({ className }) => {
                     <div className="flex items-center space-x-3">
                       <Power className="h-4 w-4 text-gray-400" />
                       <div className="flex-1">
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Machine Name
-                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Machine Name</p>
                         {isEditingName ? (
                           <div className="flex items-center space-x-2 mt-1">
                             <input
@@ -461,7 +435,6 @@ const UserUnitDetails = ({ className }) => {
                               value={editedName}
                               onChange={(e) => setEditedName(e.target.value)}
                               className="text-sm font-medium text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 flex-1"
-                              autoFocus
                             />
                             <button
                               onClick={handleSaveName}
@@ -495,9 +468,7 @@ const UserUnitDetails = ({ className }) => {
                     <div className="flex items-center space-x-3">
                       <Calendar className="h-4 w-4 text-gray-400" />
                       <div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Install Date
-                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Install Date</p>
                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                           {unit.installDate || "2024-01-15"}
                         </p>
@@ -507,9 +478,7 @@ const UserUnitDetails = ({ className }) => {
                     <div className="flex items-center space-x-3">
                       <Wrench className="h-4 w-4 text-gray-400" />
                       <div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Last Maintenance
-                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Last Maintenance</p>
                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                           {unit.lastMaintenance || "2024-07-10"}
                         </p>
@@ -520,19 +489,14 @@ const UserUnitDetails = ({ className }) => {
                     <div className="flex items-center space-x-3">
                       <MapPin className="h-4 w-4 text-gray-400" />
                       <div className="flex-1">
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Location
-                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Location</p>
                         {isEditingLocation ? (
                           <div className="flex items-center space-x-2 mt-1">
                             <input
                               type="text"
                               value={editedLocation}
-                              onChange={(e) =>
-                                setEditedLocation(e.target.value)
-                              }
+                              onChange={(e) => setEditedLocation(e.target.value)}
                               className="text-sm font-medium text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 flex-1"
-                              autoFocus
                             />
                             <button
                               onClick={handleSaveLocation}
@@ -576,43 +540,21 @@ const UserUnitDetails = ({ className }) => {
 
         {activeTab === "history" && (
           <div className="space-y-6">
-            <VitalSignGraph
-              title="Power Output History"
-              dataKey="power"
-              color="#8884d8"
-            />
-            <VitalSignGraph
-              title="Temperature In History"
-              dataKey="tempIn"
-              color="#82ca9d"
-            />
-            <VitalSignGraph
-              title="Temperature Out History"
-              dataKey="tempOut"
-              color="#ffc658"
-            />
-            <VitalSignGraph
-              title="Pressure History"
-              dataKey="pressure"
-              color="#ff7300"
-            />
-            {unit && unit.watergeneration && (
-              <VitalSignGraph
-                title="Water Level History"
-                dataKey="waterLevel"
-                color="#0088FE"
-              />
+            <VitalSignGraph title="Power Output History" dataKey="power" color="#8884d8" />
+            <VitalSignGraph title="Temperature In History" dataKey="tempIn" color="#82ca9d" />
+            <VitalSignGraph title="Temperature Out History" dataKey="tempOut" color="#ffc658" />
+            <VitalSignGraph title="Pressure History" dataKey="pressure" color="#ff7300" />
+            {unit?.watergeneration && (
+              <VitalSignGraph title="Water Level History" dataKey="waterLevel" color="#0088FE" />
             )}
-
-
           </div>
         )}
 
         {activeTab === "alerts" && (
-          <UnitAlertsTab 
-            unit={unit} 
-            alertsHistory={alertsHistory} 
-            getAlertTypeColor={getAlertTypeColor} 
+          <UnitAlertsTab
+            unit={unit}
+            alertsHistory={alertsHistory}
+            getAlertTypeColor={getAlertTypeColor}
           />
         )}
       </div>

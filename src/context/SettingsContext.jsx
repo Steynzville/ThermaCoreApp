@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect,useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 const SettingsContext = createContext();
 
@@ -89,9 +89,5 @@ export const SettingsProvider = ({ children }) => {
     formatTemperature,
   };
 
-  return (
-    <SettingsContext.Provider value={value}>
-      {children}
-    </SettingsContext.Provider>
-  );
+  return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
 };

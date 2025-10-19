@@ -1,7 +1,10 @@
-import { useEffect,useState } from "react";
+import { Clock, Minus, TrendingDown, TrendingUp } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { useAuth } from "../context/AuthContext";
 import { getEventHistory } from "../services/unitService";
+import PageHeader from "./PageHeader";
+import { Card, CardContent } from "./ui/card";
 
 const getTrendIcon = (trend) => {
   switch (trend) {
@@ -46,17 +49,17 @@ const HistoryView = ({ className }) => {
         value: "Unresolved",
         trend: "stable",
         severity: "error",
-        type: "alarm"
+        type: "alarm",
       },
       {
-        id: "notif-014-nh3", 
+        id: "notif-014-nh3",
         device: "ThermaCore Unit 014",
         timestamp: "2025-09-09 15:15",
         event: "NH3 LEAK DETECTED",
         value: "Unresolved",
         trend: "stable",
         severity: "error",
-        type: "alarm"
+        type: "alarm",
       },
       {
         id: "notif-001-offline",
@@ -66,7 +69,7 @@ const HistoryView = ({ className }) => {
         value: "Unresolved",
         trend: "stable",
         severity: "error",
-        type: "alert"
+        type: "alert",
       },
       {
         id: "notif-002-water",
@@ -76,7 +79,7 @@ const HistoryView = ({ className }) => {
         value: "Unresolved",
         trend: "stable",
         severity: "warning",
-        type: "alert"
+        type: "alert",
       },
       {
         id: "notif-003-maintenance",
@@ -86,7 +89,7 @@ const HistoryView = ({ className }) => {
         value: "Completed",
         trend: "stable",
         severity: "info",
-        type: "alert"
+        type: "alert",
       },
       {
         id: "notif-004-system",
@@ -96,7 +99,7 @@ const HistoryView = ({ className }) => {
         value: "Completed",
         trend: "stable",
         severity: "info",
-        type: "alert"
+        type: "alert",
       },
       {
         id: "notif-005-temp",
@@ -106,7 +109,7 @@ const HistoryView = ({ className }) => {
         value: "Completed",
         trend: "stable",
         severity: "info",
-        type: "alert"
+        type: "alert",
       },
       {
         id: "notif-006-pressure",
@@ -116,15 +119,15 @@ const HistoryView = ({ className }) => {
         value: "Unresolved",
         trend: "stable",
         severity: "error",
-        type: "alert"
-      }
+        type: "alert",
+      },
     ];
 
     // Filter out 014 NH3 leak for user role
     if (userRole === "user") {
-      return allNotifications.filter(notif => notif.id !== "notif-014-nh3");
+      return allNotifications.filter((notif) => notif.id !== "notif-014-nh3");
     }
-    
+
     return allNotifications;
   };
 
@@ -181,14 +184,9 @@ const HistoryView = ({ className }) => {
 
   if (loading) {
     return (
-      <div
-        className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-6 ${className}`}
-      >
+      <div className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-6 ${className}`}>
         <div className="max-w-4xl mx-auto">
-          <PageHeader
-            title="Event History"
-            subtitle="Loading event history..."
-          />
+          <PageHeader title="Event History" subtitle="Loading event history..." />
         </div>
       </div>
     );
@@ -196,19 +194,14 @@ const HistoryView = ({ className }) => {
 
   const formattedEvents = eventHistory.map(formatEventForDisplay);
   const hardcodedNotifications = getHardcodedNotifications();
-  
+
   // Combine notifications and events, with notifications at the top
   const allItems = [...hardcodedNotifications, ...formattedEvents];
 
   return (
-    <div
-      className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-6 ${className}`}
-    >
+    <div className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-6 ${className}`}>
       <div className="max-w-4xl mx-auto">
-        <PageHeader
-          title="Event History"
-          subtitle="Recent events and changes across all devices"
-        />
+        <PageHeader title="Event History" subtitle="Recent events and changes across all devices" />
 
         <div className="space-y-4">
           {allItems.slice(0, eventsToShow + hardcodedNotifications.length).map((event) => (
@@ -226,17 +219,17 @@ const HistoryView = ({ className }) => {
                       {getTrendIcon(event.trend)}
                     </div>
 
-                    <p className="text-sm text-gray-700 dark:text-gray-300 mb-1">
-                      {event.event}
-                    </p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300 mb-1">{event.event}</p>
 
-                    <p className={`text-sm font-medium ${
-                      event.value === "Unresolved" 
-                        ? "text-red-600 dark:text-red-400" 
-                        : event.value === "Completed" && event.severity === "info"
-                        ? "text-blue-600 dark:text-blue-400"
-                        : "text-gray-900 dark:text-gray-100"
-                    }`}>
+                    <p
+                      className={`text-sm font-medium ${
+                        event.value === "Unresolved"
+                          ? "text-red-600 dark:text-red-400"
+                          : event.value === "Completed" && event.severity === "info"
+                            ? "text-blue-600 dark:text-blue-400"
+                            : "text-gray-900 dark:text-gray-100"
+                      }`}
+                    >
                       {event.value}
                     </p>
                   </div>

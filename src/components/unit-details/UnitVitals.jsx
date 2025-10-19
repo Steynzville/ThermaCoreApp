@@ -1,9 +1,24 @@
-
-
+import {
+  BatteryCharging,
+  Calendar,
+  Check,
+  Cloud,
+  Droplets,
+  Edit2,
+  Gauge,
+  MapPin,
+  Navigation,
+  Power,
+  ThermometerSnowflake,
+  ThermometerSun,
+  Wrench,
+  X,
+} from "lucide-react";
 import { useState } from "react";
 
 import { useSettings } from "../../context/SettingsContext";
 import { useUnits } from "../../context/UnitContext";
+import { Card, CardContent, CardHeader } from "../ui/card";
 
 const UnitVitals = ({ unit }) => {
   const { formatTemperature } = useSettings();
@@ -13,15 +28,11 @@ const UnitVitals = ({ unit }) => {
   const [isEditingGPS, setIsEditingGPS] = useState(false);
   const [editedName, setEditedName] = useState(unit.name || "");
   const [editedLocation, setEditedLocation] = useState(unit.location || "");
-  const [editedGPS, setEditedGPS] = useState(
-    unit.gpsCoordinates || "40.7128° N, 74.0060° W",
-  );
+  const [editedGPS, setEditedGPS] = useState(unit.gpsCoordinates || "40.7128° N, 74.0060° W");
 
   // Check if unit is offline/switched off or in maintenance
   const isOffline =
-    unit.status === "offline" ||
-    unit.status === "decommissioned" ||
-    unit.status === "maintenance";
+    unit.status === "offline" || unit.status === "decommissioned" || unit.status === "maintenance";
 
   const handleSaveName = async () => {
     try {
@@ -86,20 +97,16 @@ const UnitVitals = ({ unit }) => {
       {/* Current Status */}
       <Card className="bg-white dark:bg-gray-900">
         <CardHeader>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            Current Status
-          </h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Current Status</h3>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="flex items-center space-x-3">
               <Power className="h-5 w-5 text-blue-500" />
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Power Output
-                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Power Output</p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  {parseFloat(unit.currentPower).toFixed(1)} kW
+                  {Number.parseFloat(unit.currentPower).toFixed(1)} kW
                 </p>
               </div>
             </div>
@@ -108,9 +115,7 @@ const UnitVitals = ({ unit }) => {
               <div className="flex items-center space-x-3">
                 <Droplets className="h-5 w-5 text-blue-500" />
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Water Level
-                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Water Level</p>
                   <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                     {unit.water_level} L
                   </p>
@@ -121,9 +126,7 @@ const UnitVitals = ({ unit }) => {
             <div className="flex items-center space-x-3">
               <Cloud className="h-5 w-5 text-gray-500" />
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Temp Outside
-                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Temp Outside</p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   {formatTemperature(unit.temp_outside)}
                 </p>
@@ -133,9 +136,7 @@ const UnitVitals = ({ unit }) => {
             <div className="flex items-center space-x-3">
               <ThermometerSnowflake className="h-5 w-5 text-orange-500" />
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Temp In
-                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Temp In</p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   {isOffline ? "N/A" : formatTemperature(unit.temp_in)}
                 </p>
@@ -145,9 +146,7 @@ const UnitVitals = ({ unit }) => {
             <div className="flex items-center space-x-3">
               <ThermometerSun className="h-5 w-5 text-orange-500" />
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Temp Out
-                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Temp Out</p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   {isOffline ? "N/A" : formatTemperature(unit.temp_out)}
                 </p>
@@ -157,9 +156,7 @@ const UnitVitals = ({ unit }) => {
             <div className="flex items-center space-x-3">
               <Droplets className="h-5 w-5 text-cyan-500" />
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Humidity
-                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Humidity</p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   {unit.humidity}%
                 </p>
@@ -169,9 +166,7 @@ const UnitVitals = ({ unit }) => {
             <div className="flex items-center space-x-3">
               <Gauge className="h-5 w-5 text-purple-500" />
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Pressure
-                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Pressure</p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   {isOffline ? "N/A" : `${unit.pressure} kPa`}
                 </p>
@@ -181,15 +176,13 @@ const UnitVitals = ({ unit }) => {
             <div className="flex items-center space-x-3">
               <BatteryCharging className="h-5 w-5 text-green-500" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Battery Level
-                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Battery Level</p>
                 <div className="flex items-center space-x-2">
                   <div className="flex-1 max-w-24 bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
                     <div
                       className="bg-green-500 h-2.5 rounded-full"
                       style={{ width: `${unit.battery_level}%` }}
-                    ></div>
+                    />
                   </div>
                   <p className="text-lg font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
                     {unit.battery_level}%
@@ -216,9 +209,7 @@ const UnitVitals = ({ unit }) => {
             <div className="flex items-center space-x-3">
               <Power className="h-4 w-4 text-gray-400" />
               <div className="flex-1">
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Machine Name
-                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Machine Name</p>
                 {isEditingName ? (
                   <div className="flex items-center space-x-2 mt-1">
                     <input
@@ -226,7 +217,6 @@ const UnitVitals = ({ unit }) => {
                       value={editedName}
                       onChange={(e) => setEditedName(e.target.value)}
                       className="text-sm font-medium text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 flex-1"
-                      autoFocus
                     />
                     <button
                       onClick={handleSaveName}
@@ -260,9 +250,7 @@ const UnitVitals = ({ unit }) => {
             <div className="flex items-center space-x-3">
               <Calendar className="h-4 w-4 text-gray-400" />
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Install Date
-                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Install Date</p>
                 <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                   {unit.installDate}
                 </p>
@@ -272,9 +260,7 @@ const UnitVitals = ({ unit }) => {
             <div className="flex items-center space-x-3">
               <Wrench className="h-4 w-4 text-gray-400" />
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Last Maintenance
-                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Last Maintenance</p>
                 <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                   {unit.lastMaintenance}
                 </p>
@@ -285,9 +271,7 @@ const UnitVitals = ({ unit }) => {
             <div className="flex items-center space-x-3">
               <MapPin className="h-4 w-4 text-gray-400" />
               <div className="flex-1">
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Location
-                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Location</p>
                 {isEditingLocation ? (
                   <div className="flex items-center space-x-2 mt-1">
                     <input
@@ -295,7 +279,6 @@ const UnitVitals = ({ unit }) => {
                       value={editedLocation}
                       onChange={(e) => setEditedLocation(e.target.value)}
                       className="text-sm font-medium text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 flex-1"
-                      autoFocus
                     />
                     <button
                       onClick={handleSaveLocation}
@@ -332,7 +315,6 @@ const UnitVitals = ({ unit }) => {
                             onChange={(e) => setEditedGPS(e.target.value)}
                             className="text-xs text-gray-500 dark:text-gray-500 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 flex-1"
                             placeholder="Enter GPS coordinates"
-                            autoFocus
                           />
                           <button
                             onClick={handleSaveGPS}
@@ -350,8 +332,7 @@ const UnitVitals = ({ unit }) => {
                       ) : (
                         <div className="flex items-center space-x-2 flex-1">
                           <p className="text-xs text-gray-500 dark:text-gray-500 flex-1">
-                            GPS:{" "}
-                            {unit.gpsCoordinates || "40.7128° N, 74.0060° W"}
+                            GPS: {unit.gpsCoordinates || "40.7128° N, 74.0060° W"}
                           </p>
                           <button
                             onClick={() => setIsEditingGPS(true)}

@@ -1,5 +1,3 @@
-
-
 const StatusDial = ({
   title,
   count,
@@ -90,9 +88,7 @@ const StatusDial = ({
       >
         <Icon className={`w-8 h-8 ${currentColors.icon}`} />
       </div>
-      <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-        {count}
-      </h3>
+      <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{count}</h3>
       <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{title}</p>
       <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
         <motion.div
@@ -100,11 +96,9 @@ const StatusDial = ({
           initial={{ width: 0 }}
           animate={{ width: `${percentage}%` }}
           transition={{ duration: 0.5 }}
-        ></motion.div>
+        />
       </div>
-      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-        {percentage}% of Total
-      </p>
+      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{percentage}% of Total</p>
     </Card>
   );
 };

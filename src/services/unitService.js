@@ -3,11 +3,7 @@
 // Currently uses mock data but designed to be easily swappable with actual API calls
 
 import { units as mockUnits } from "../data/mockUnits";
-import {
-  mockEventHistory,
-  mockRecentActions,
-  mockUnitDetails,
-} from "../mockData";
+import { mockEventHistory, mockRecentActions, mockUnitDetails } from "../mockData";
 
 /**
  * Get all units
@@ -67,9 +63,7 @@ export const getAllAlerts = () => {
   // In the future, this would be replaced with:
   // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
   // return fetch(`${API_BASE_URL}/alerts`).then(response => response.json());
-  const allAlerts = Object.values(mockUnitDetails).flatMap(
-    (details) => details.alerts || [],
-  );
+  const allAlerts = Object.values(mockUnitDetails).flatMap((details) => details.alerts || []);
   return Promise.resolve(allAlerts);
 };
 
@@ -159,9 +153,7 @@ export const getUnitsWithAlerts = () => {
   // In the future, this would be replaced with:
   // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
   // return fetch(`${API_BASE_URL}/units/alerts`).then(response => response.json());
-  const unitsWithAlerts = mockUnits.filter(
-    (unit) => unit.alerts && unit.alerts.length > 0,
-  );
+  const unitsWithAlerts = mockUnits.filter((unit) => unit.alerts && unit.alerts.length > 0);
   return Promise.resolve(unitsWithAlerts);
 };
 

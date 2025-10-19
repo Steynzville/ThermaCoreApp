@@ -1,13 +1,8 @@
-
-
 const AnalyticsPlaceholder = () => {
   return (
     <div className="min-h-screen bg-blue-50 dark:bg-gray-950 p-6">
       <div className="max-w-6xl mx-auto">
-        <PageHeader
-          title="Analytics"
-          subtitle="Detailed performance metrics and trends"
-        />
+        <PageHeader title="Analytics" subtitle="Detailed performance metrics and trends" />
 
         {/* Placeholder Content */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
@@ -21,8 +16,7 @@ const AnalyticsPlaceholder = () => {
               </h3>
             </div>
             <p className="text-gray-600 dark:text-gray-400">
-              Comprehensive performance analytics and system metrics will be
-              displayed here.
+              Comprehensive performance analytics and system metrics will be displayed here.
             </p>
           </div>
 
@@ -36,8 +30,7 @@ const AnalyticsPlaceholder = () => {
               </h3>
             </div>
             <p className="text-gray-600 dark:text-gray-400">
-              Historical trends and predictive analytics for system
-              optimization.
+              Historical trends and predictive analytics for system optimization.
             </p>
           </div>
 
@@ -66,13 +59,13 @@ const AnalyticsPlaceholder = () => {
               Analytics Dashboard
             </h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
-              This is a placeholder for the analytics dashboard. Advanced
-              charts, graphs, and performance metrics will be implemented here.
+              This is a placeholder for the analytics dashboard. Advanced charts, graphs, and
+              performance metrics will be implemented here.
             </p>
             <div className="bg-blue-50 dark:bg-blue-900/10 rounded-lg p-4 max-w-lg mx-auto">
               <p className="text-sm text-blue-800 dark:text-blue-200">
-                <strong>Coming Soon:</strong> Interactive charts, performance
-                trends, system efficiency metrics, and predictive analytics.
+                <strong>Coming Soon:</strong> Interactive charts, performance trends, system
+                efficiency metrics, and predictive analytics.
               </p>
             </div>
           </div>
