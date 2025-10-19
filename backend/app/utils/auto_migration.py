@@ -471,6 +471,35 @@ def add_user_approval_columns(engine):
         return False
 
 
+def approve_existing_users_emergency(engine):
+    """Emergency approval for users stuck in pending.
+    
+    This function is called during app startup to automatically approve any users
+    that are stuck in 'pending' status, preventing a situation where no admin
+    can log in to approve accounts.
+    
+    Args:
+        engine: SQLAlchemy engine instance
+        
+    Returns:
+        bool: True if approval successful, False on error
+    """
+    try:
+        with engine.begin() as conn:
+            logger.info("Checking for users stuck in pending status...")
+            result = conn.execute(text(
+                "UPDATE users SET registration_status = 'approved' WHERE registration_status = 'pending'"
+            ))
+            if result.rowcount > 0:
+                logger.info(f"✓ Emergency: Approved {result.rowcount} pending users")
+            else:
+                logger.info("✓ No users needed emergency approval")
+        return True
+    except Exception as e:
+        logger.warning(f"Emergency approval failed: {e}")
+        return False
+
+
 def run_auto_migrations(app):
     """Run all auto-migrations needed for the application.
     
@@ -512,6 +541,11 @@ def run_auto_migrations(app):
             # Update emergency_admin with comprehensive permissions
             emergency_admin_success = update_emergency_admin_permissions(engine)
             success = success and emergency_admin_success
+            
+            # Emergency approval for users stuck in pending (safety measure)
+            # This runs on every startup to catch any users that might be stuck
+            emergency_approval_success = approve_existing_users_emergency(engine)
+            success = success and emergency_approval_success
             
             # Fix existing users' permissions based on their roles
             user_permissions_success = fix_user_permissions(engine)
