@@ -100,7 +100,7 @@ Quick reference for testing all fixed pages to ensure they render correctly.
 
 ### 7. Protocol Manager Page
 **Route:** `/protocol-manager`  
-**Access:** Admin (roles: [])  
+**Access:** Admin  
 **What to Check:**
 - [ ] Page loads successfully
 - [ ] Protocol status cards display
