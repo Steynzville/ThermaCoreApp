@@ -8,7 +8,9 @@ import {
   Server,
   XCircle,
 } from "lucide-react";
+import React from "react";
 
+import { Card, CardContent,CardHeader } from "./ui/card";
 
 const iconMap = {
   CheckCircle,
@@ -21,6 +23,7 @@ const iconMap = {
   Cpu,
 };
 import systemHealthData from "../data/systemHealthData";
+import PageHeader from "./PageHeader";
 
 const COLORS = {
   Operational: "#28a745",

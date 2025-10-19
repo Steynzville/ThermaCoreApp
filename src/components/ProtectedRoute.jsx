@@ -1,9 +1,10 @@
-
+import React from "react";
 import { Navigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
 import { useSidebarMargin } from "../hooks/useSidebarMargin";
-import Spinner from "./common/Spinner";
+import EnhancedSideNavigation from "./SideNavigation";
+import { Spinner } from "./ui/spinner";
 
 const ProtectedRoute = ({
   component: Component,

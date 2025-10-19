@@ -2,18 +2,53 @@ import { format } from "date-fns";
 import {
   Activity,
   AlertTriangle,
+  Building,
+  Calendar,
+  Clock,
   DollarSign,
+  Download,
+  Droplets,
   FileText,
+  Filter,
+  Gauge,
+  Pause,
+  Play,
   Shield,
+  Thermometer,
+  Users,
   Wrench,
+  Zap,
 } from "lucide-react";
-import {useState } from "react";
+import React, { useEffect,useState } from "react";
 
 import { useSettings } from "../../context/SettingsContext";
 import { cn } from "../../lib/utils";
 import playSound from "../../utils/audioPlayer";
-
-
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "../ui/alert-dialog";
+import { Button } from "../ui/button";
+import { Calendar as CalendarComponent } from "../ui/calendar";
+import { Card, CardContent,CardHeader } from "../ui/card";
+import { Checkbox } from "../ui/checkbox";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 
 const ReportConfigurator = ({
   allowedScopes = ["single", "multiple", "client", "master"],

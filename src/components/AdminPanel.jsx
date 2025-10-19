@@ -10,19 +10,17 @@ import {
   Shield,
   Trash2,
   Users,
-  UserCheck,
 } from "lucide-react";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import PageHeader from "./PageHeader";
 import { useAuth } from "../context/AuthContext";
 import { deleteUser, getAllUsers } from "../services/usersAPI";
 import { apiGet, apiPost } from "../utils/apiFetch";
 import { formatRoleName, formatUserName } from "../utils/userUtils";
-import UserApprovalPanel from "./UserApprovalPanel";
-import { Card, CardContent, CardHeader } from "./ui/card";
+import PageHeader from "./PageHeader";
 import { Button } from "./ui/button";
+import { Card, CardContent, CardHeader } from "./ui/card";
 
 const systemStats = [
   { label: "Total Devices", value: "4", icon: Database },
@@ -63,9 +61,6 @@ const AdminPanel = ({ className }) => {
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [rolesLoadError, setRolesLoadError] = useState(false);
 
-  // Mounted ref to prevent state updates after unmount
-  const isMountedRef = useRef(true);
-
   // Password Management State
   const [passwordResetModal, setPasswordResetModal] = useState(false);
   const [selectedUserForReset, setSelectedUserForReset] = useState(null);
@@ -85,10 +80,8 @@ const AdminPanel = ({ className }) => {
 
   // Fetch users from backend
   const fetchUsers = async () => {
-    if (isMountedRef.current) {
-      setIsLoadingUsers(true);
-      setUsersError(null);
-    }
+    setIsLoadingUsers(true);
+    setUsersError(null);
     
     try {
       const result = await getAllUsers({ per_page: 100 });
@@ -106,19 +99,13 @@ const AdminPanel = ({ className }) => {
         status: user.is_active ? 'Active' : 'Inactive',
       }));
       
-      if (isMountedRef.current) {
-        setUsers(mappedUsers);
-      }
+      setUsers(mappedUsers);
     } catch (error) {
       console.error('Failed to fetch users:', error);
-      if (isMountedRef.current) {
-        setUsersError('Failed to load users. Please try again.');
-        toast.error('Failed to load users');
-      }
+      setUsersError('Failed to load users. Please try again.');
+      toast.error('Failed to load users');
     } finally {
-      if (isMountedRef.current) {
-        setIsLoadingUsers(false);
-      }
+      setIsLoadingUsers(false);
     }
   };
 
@@ -153,50 +140,36 @@ const AdminPanel = ({ className }) => {
           rolesArray = data;
         } else {
           console.warn('⚠️ Roles data is not in expected format');
-          if (isMountedRef.current) {
-            setRolesLoadError(true);
-            setAvailableRoles([]);
-          }
+          setRolesLoadError(true);
+          setAvailableRoles([]);
           return;
         }
         
         // Ensure we have valid roles data
         if (rolesArray.length > 0) {
-          if (isMountedRef.current) {
-            setAvailableRoles(rolesArray);
-            setRolesLoadError(false);
-          }
+          setAvailableRoles(rolesArray);
+          setRolesLoadError(false);
           console.log('📋 Roles set:', rolesArray);
         } else {
           console.warn('⚠️ Roles array is empty');
-          if (isMountedRef.current) {
-            setRolesLoadError(true);
-            setAvailableRoles([]);
-          }
-        }
-      } else {
-        console.error('❌ Roles API failed:', response.status);
-        if (isMountedRef.current) {
           setRolesLoadError(true);
           setAvailableRoles([]);
         }
-      }
-    } catch (error) {
-      console.error('❌ Error fetching roles:', error);
-      if (isMountedRef.current) {
+      } else {
+        console.error('❌ Roles API failed:', response.status);
         setRolesLoadError(true);
         setAvailableRoles([]);
       }
+    } catch (error) {
+      console.error('❌ Error fetching roles:', error);
+      setRolesLoadError(true);
+      setAvailableRoles([]);
     }
   };
 
   // Fetch users on component mount
   useEffect(() => {
-    isMountedRef.current = true;
     fetchUsers();
-    return () => {
-      isMountedRef.current = false;
-    };
   }, []);
 
   const handleAddUser = () => {
@@ -252,9 +225,7 @@ const AdminPanel = ({ className }) => {
       return;
     }
 
-    if (isMountedRef.current) {
-      setIsCreatingUser(true);
-    }
+    setIsCreatingUser(true);
 
     try {
       const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://thermacoreapp.onrender.com';
@@ -286,9 +257,7 @@ const AdminPanel = ({ className }) => {
 
       if (response.ok) {
         toast.success(`User ${newUserFormData.username} created successfully`);
-        if (isMountedRef.current) {
-          setCreateUserModal(false);
-        }
+        setCreateUserModal(false);
         
         // Refresh the user list from the backend
         await fetchUsers();
@@ -299,9 +268,7 @@ const AdminPanel = ({ className }) => {
       console.error('User creation failed:', error);
       toast.error(error.message || 'Failed to create user. Please check backend connection.');
     } finally {
-      if (isMountedRef.current) {
-        setIsCreatingUser(false);
-      }
+      setIsCreatingUser(false);
     }
   };
 
@@ -397,12 +364,10 @@ const AdminPanel = ({ className }) => {
       return;
     }
 
-    if (isMountedRef.current) {
-      setValidation(prev => ({
-        ...prev,
-        isSubmitting: true
-      }));
-    }
+    setValidation(prev => ({
+      ...prev,
+      isSubmitting: true
+    }));
 
     try {
       const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://thermacoreapp.onrender.com';
@@ -421,18 +386,14 @@ const AdminPanel = ({ className }) => {
 
       if (response.ok) {
         toast.success(`Password reset successfully for ${selectedUserForReset.name}`);
-        if (isMountedRef.current) {
-          closePasswordResetModal();
-        }
+        closePasswordResetModal();
       } else {
         // Set validation with error state
-        if (isMountedRef.current) {
-          setValidation(prev => ({
-            ...prev,
-            isSubmitting: false,
-            apiError: result.error || result.message || 'Failed to reset password'
-          }));
-        }
+        setValidation(prev => ({
+          ...prev,
+          isSubmitting: false,
+          apiError: result.error || result.message || 'Failed to reset password'
+        }));
       }
     } catch (error) {
       console.error('Password reset failed:', error);
@@ -457,13 +418,11 @@ const AdminPanel = ({ className }) => {
         errorMsg += error.message || 'An unexpected error occurred. Please check the backend logs.';
       }
       
-      if (isMountedRef.current) {
-        setValidation(prev => ({
-          ...prev,
-          isSubmitting: false,
-          apiError: errorMsg
-        }));
-      }
+      setValidation(prev => ({
+        ...prev,
+        isSubmitting: false,
+        apiError: errorMsg
+      }));
     }
   };
 
@@ -522,7 +481,6 @@ const AdminPanel = ({ className }) => {
           <div className="border-b border-gray-200 dark:border-gray-700">
             <nav className="-mb-px flex space-x-8">
               {[
-                { id: "approvals", label: "Pending Approvals", icon: UserCheck },
                 { id: "users", label: "Users", icon: Users },
                 { id: "password-management", label: "Password Management", icon: Key },
                 { id: "settings", label: "Settings", icon: Settings },
@@ -546,11 +504,6 @@ const AdminPanel = ({ className }) => {
             </nav>
           </div>
         </div>
-
-        {/* Approvals Tab */}
-        {activeTab === "approvals" && (
-          <UserApprovalPanel />
-        )}
 
         {/* Users Tab */}
         {activeTab === "users" && (
@@ -766,14 +719,12 @@ const AdminPanel = ({ className }) => {
 
         {/* Create User Modal */}
         {createUserModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-900 rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
-              <div className="sticky top-0 bg-white dark:bg-gray-900 p-6 pb-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  Create New User
-                </h3>
-              </div>
-              <div className="p-6 space-y-4">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-md">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                Create New User
+              </h3>
+              <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Username <span className="text-red-500">*</span>
@@ -785,7 +736,6 @@ const AdminPanel = ({ className }) => {
                       setNewUserFormData({ ...newUserFormData, username: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    style={{ minHeight: '44px', fontSize: '16px' }}
                     placeholder="Enter username"
                   />
                 </div>
@@ -800,7 +750,6 @@ const AdminPanel = ({ className }) => {
                       setNewUserFormData({ ...newUserFormData, email: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    style={{ minHeight: '44px', fontSize: '16px' }}
                     placeholder="Enter email"
                   />
                 </div>
@@ -816,14 +765,12 @@ const AdminPanel = ({ className }) => {
                         setNewUserFormData({ ...newUserFormData, password: e.target.value })
                       }
                       className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                      style={{ minHeight: '44px', fontSize: '16px' }}
                       placeholder="Enter password (min 6 characters)"
                     />
                     <button
                       type="button"
                       onClick={() => setShowCreatePassword(!showCreatePassword)}
                       className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                      style={{ minHeight: '44px', minWidth: '44px' }}
                     >
                       {showCreatePassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
@@ -840,7 +787,6 @@ const AdminPanel = ({ className }) => {
                       setNewUserFormData({ ...newUserFormData, firstName: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    style={{ minHeight: '44px', fontSize: '16px' }}
                     placeholder="Enter first name"
                   />
                 </div>
@@ -855,7 +801,6 @@ const AdminPanel = ({ className }) => {
                       setNewUserFormData({ ...newUserFormData, lastName: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    style={{ minHeight: '44px', fontSize: '16px' }}
                     placeholder="Enter last name"
                   />
                 </div>
@@ -870,7 +815,6 @@ const AdminPanel = ({ className }) => {
                       setNewUserFormData({ ...newUserFormData, phoneNumber: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    style={{ minHeight: '44px', fontSize: '16px' }}
                     placeholder="Enter phone number"
                   />
                 </div>
@@ -885,7 +829,6 @@ const AdminPanel = ({ className }) => {
                       setNewUserFormData({ ...newUserFormData, company: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    style={{ minHeight: '44px', fontSize: '16px' }}
                     placeholder="Enter company name"
                   />
                 </div>
@@ -900,7 +843,6 @@ const AdminPanel = ({ className }) => {
                       setNewUserFormData({ ...newUserFormData, department: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    style={{ minHeight: '44px', fontSize: '16px' }}
                     placeholder="Enter department"
                   />
                 </div>
@@ -915,7 +857,6 @@ const AdminPanel = ({ className }) => {
                       setNewUserFormData({ ...newUserFormData, position: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    style={{ minHeight: '44px', fontSize: '16px' }}
                     placeholder="Enter position"
                   />
                 </div>
@@ -935,7 +876,6 @@ const AdminPanel = ({ className }) => {
                         setNewUserFormData({ ...newUserFormData, roleId: e.target.value })
                       }
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                      style={{ minHeight: '44px', fontSize: '16px' }}
                       disabled={availableRoles.length === 0}
                     >
                       <option value="">
@@ -950,12 +890,11 @@ const AdminPanel = ({ className }) => {
                   )}
                 </div>
               </div>
-              <div className="sticky bottom-0 bg-white dark:bg-gray-900 p-6 pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
+              <div className="flex justify-end space-x-3 mt-6">
                 <button
                   onClick={() => setCreateUserModal(false)}
                   disabled={isCreatingUser}
                   className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-50"
-                  style={{ minHeight: '44px', fontSize: '16px' }}
                 >
                   Cancel
                 </button>
@@ -963,7 +902,6 @@ const AdminPanel = ({ className }) => {
                   onClick={handleCreateUser}
                   disabled={isCreatingUser || rolesLoadError || availableRoles.length === 0}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-                  style={{ minHeight: '44px', fontSize: '16px' }}
                 >
                   {isCreatingUser && (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

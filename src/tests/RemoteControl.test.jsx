@@ -1,7 +1,6 @@
-import { render, screen, waitFor } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
-
+import { BrowserRouter } from 'react-router-dom';
 import RemoteControl from '../components/RemoteControl';
 import { SettingsProvider } from '../context/SettingsContext';
 import * as AuthContext from '../context/AuthContext.jsx';

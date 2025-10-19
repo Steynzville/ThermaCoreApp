@@ -1,20 +1,19 @@
-import { describe, expect,it } from 'vitest';
-
+import { describe, it, expect } from 'vitest';
 import {
-  canAccessAdminPanel,
   canControlUnits,
+  canViewSales,
+  canViewAllUnits,
   canManageUnits,
   canManageUsers,
-  canViewAllUnits,
-  canViewAnalytics,
-  canViewProtocols,
-  canViewSales,
+  canAccessAdminPanel,
   canViewUnits,
   canViewUsers,
-  getFrontendRole,
-  getPermissions,
-  getRoleDisplayName,
   isViewerOnly,
+  canViewAnalytics,
+  canViewProtocols,
+  getPermissions,
+  getFrontendRole,
+  getRoleDisplayName,
 } from '../utils/permissions';
 
 describe('Permission Helper Functions', () => {

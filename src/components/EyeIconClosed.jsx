@@ -1,3 +1,4 @@
+import React from "react";
 
 const EyeIconClosed = ({ className, ...props }) => {
   return (

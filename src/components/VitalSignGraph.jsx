@@ -1,7 +1,22 @@
-import { useEffect,useState } from "react";
+import React, { useEffect,useState } from "react";
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
-
-
+import { Card, CardContent, CardHeader } from "./ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
 
 const generateMockData = (timeframe) => {
   const data = [];

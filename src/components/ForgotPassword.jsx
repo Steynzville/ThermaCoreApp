@@ -1,8 +1,7 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-
-import thermaCoreLogo from "../assets/thermacore-logo-new.png";
 import { requestPasswordReset } from "../services/authService";
+import thermaCoreLogo from "../assets/thermacore-logo-new.png";
 import styles from "./LoginScreen.module.css";
 
 const ForgotPassword = () => {

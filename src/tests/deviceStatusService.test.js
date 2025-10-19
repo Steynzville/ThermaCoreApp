@@ -2,8 +2,7 @@
  * @vitest-environment jsdom
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { deviceStatusService } from '../services/deviceStatusService';
 
 // Mock the units data
