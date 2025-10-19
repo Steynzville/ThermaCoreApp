@@ -1,13 +1,6 @@
-import {
-  AlertTriangle,
-  CheckCircle,
-  Clock,
-  Database,
-  RefreshCw,
-  Wifi,
-  WifiOff,
-} from "lucide-react";
-import { useEffect, useState } from "react";
+
+
+import { useEffect,useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { units } from "../data/mockUnits";
@@ -84,7 +77,9 @@ const SynchronizeUnitsOverview = ({ className }) => {
       finalStates[unit.id] = {
         status: finalStatus,
         lastSync:
-          finalStatus === "synced" ? new Date().toISOString() : unitSyncStates[unit.id]?.lastSync,
+          finalStatus === "synced"
+            ? new Date().toISOString()
+            : unitSyncStates[unit.id]?.lastSync,
         dataSize: Math.floor(Math.random() * 500) + 100,
         healthStatus: unit.healthStatus,
         hasAlert: unit.hasAlert,
@@ -130,7 +125,9 @@ const SynchronizeUnitsOverview = ({ className }) => {
       updatedStates[unitId] = {
         status: finalStatus,
         lastSync:
-          finalStatus === "synced" ? new Date().toISOString() : updatedStates[unitId]?.lastSync,
+          finalStatus === "synced"
+            ? new Date().toISOString()
+            : updatedStates[unitId]?.lastSync,
         dataSize: Math.floor(Math.random() * 500) + 100,
         healthStatus: unit?.healthStatus,
         hasAlert: unit?.hasAlert,
@@ -219,7 +216,9 @@ const SynchronizeUnitsOverview = ({ className }) => {
   ).length;
 
   return (
-    <div className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-6 ${className}`}>
+    <div
+      className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-6 ${className}`}
+    >
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-6">
@@ -260,7 +259,9 @@ const SynchronizeUnitsOverview = ({ className }) => {
               <div className="flex items-center space-x-3">
                 <Database className="h-8 w-8 text-blue-500" />
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Total Units</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Total Units
+                  </p>
                   <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                     {units.length}
                   </p>
@@ -274,8 +275,12 @@ const SynchronizeUnitsOverview = ({ className }) => {
               <div className="flex items-center space-x-3">
                 <CheckCircle className="h-8 w-8 text-green-500" />
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Synchronized</p>
-                  <p className="text-2xl font-bold text-green-600">{syncedCount}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Synchronized
+                  </p>
+                  <p className="text-2xl font-bold text-green-600">
+                    {syncedCount}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -286,8 +291,12 @@ const SynchronizeUnitsOverview = ({ className }) => {
               <div className="flex items-center space-x-3">
                 <Clock className="h-8 w-8 text-yellow-500" />
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Pending</p>
-                  <p className="text-2xl font-bold text-yellow-600">{pendingCount}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Pending
+                  </p>
+                  <p className="text-2xl font-bold text-yellow-600">
+                    {pendingCount}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -298,8 +307,12 @@ const SynchronizeUnitsOverview = ({ className }) => {
               <div className="flex items-center space-x-3">
                 <AlertTriangle className="h-8 w-8 text-red-500" />
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Errors</p>
-                  <p className="text-2xl font-bold text-red-600">{errorCount}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Errors
+                  </p>
+                  <p className="text-2xl font-bold text-red-600">
+                    {errorCount}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -338,7 +351,9 @@ const SynchronizeUnitsOverview = ({ className }) => {
 
                 <button
                   onClick={handleSyncSelected}
-                  disabled={syncStatus === "syncing" || selectedUnits.size === 0}
+                  disabled={
+                    syncStatus === "syncing" || selectedUnits.size === 0
+                  }
                   className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Download className="h-4 w-4" />
@@ -435,14 +450,18 @@ const SynchronizeUnitsOverview = ({ className }) => {
 
                     <div className="flex items-center space-x-6">
                       <div className="text-right">
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Data Size</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Data Size
+                        </p>
                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                           {formatDataSize(syncState.dataSize)}
                         </p>
                       </div>
 
                       <div className="text-right">
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Last Sync</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Last Sync
+                        </p>
                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                           {formatDateTime(syncState.lastSync)}
                         </p>

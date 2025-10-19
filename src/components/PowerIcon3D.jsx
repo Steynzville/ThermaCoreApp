@@ -1,3 +1,4 @@
+
 const PowerIcon3D = ({ power, className = "" }) => {
   // Determine color based on power level
   const getPowerColor = (powerValue) => {
@@ -16,7 +17,7 @@ const PowerIcon3D = ({ power, className = "" }) => {
     return "border-green-700 dark:border-lime-400";
   };
 
-  const _getShadowColor = (powerValue) => {
+  const getShadowColor = (powerValue) => {
     if (powerValue === 0) return "shadow-gray-200/50 dark:shadow-gray-800/50";
     return "shadow-green-300/50 dark:shadow-lime-600/30";
   };

@@ -1,6 +1,12 @@
+
 import { cn } from "@/lib/utils";
 
-const Spinner = ({ className, size = "md", srLabel = "Loading...", ...props }) => {
+const Spinner = ({
+  className,
+  size = "md",
+  srLabel = "Loading...",
+  ...props
+}) => {
   const sizeClasses = {
     sm: { width: "50", height: "50", outerRadius: "20", innerRadius: "15" },
     md: { width: "75", height: "75", outerRadius: "30", innerRadius: "20" },
@@ -9,8 +15,8 @@ const Spinner = ({ className, size = "md", srLabel = "Loading...", ...props }) =
   };
 
   const { width, height, outerRadius, innerRadius } = sizeClasses[size];
-  const centerX = Number.parseInt(width) / 2;
-  const centerY = Number.parseInt(height) / 2;
+  const centerX = parseInt(width) / 2;
+  const centerY = parseInt(height) / 2;
 
   return (
     <div className={cn("inline-block", className)} {...props}>
@@ -31,7 +37,13 @@ const Spinner = ({ className, size = "md", srLabel = "Loading...", ...props }) =
             </feMerge>
           </filter>
 
-          <filter id="neonBlueGlow" x="-50%" y="-50%" width="200%" height="200%">
+          <filter
+            id="neonBlueGlow"
+            x="-50%"
+            y="-50%"
+            width="200%"
+            height="200%"
+          >
             <feGaussianBlur stdDeviation="3" result="coloredBlur" />
             <feMerge>
               <feMergeNode in="coloredBlur" />

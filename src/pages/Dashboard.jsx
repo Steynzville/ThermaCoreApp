@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo } from "react";
+import { memo, useCallback,useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
@@ -43,28 +43,42 @@ const Dashboard = ({ userRole }) => {
     { name: "Protocol Manager", link: "/protocol-manager", requiresProtocols: true },
   ];
 
-  const handleQuickActionClick = useCallback(
-    (link) => {
-      navigate(link);
-    },
-    [navigate],
-  );
+  const handleQuickActionClick = useCallback((link) => {
+    navigate(link);
+  }, [navigate]);
 
   // Apply the same filtering logic as GridView for consistency
   // Admins can see all units, others see limited units
   const filteredUnits = useMemo(() => {
     if (permissions?.canViewAllUnits) {
       return units;
+    } else {
+      return units.slice(0, 6);
     }
-    return units.slice(0, 6);
   }, [permissions, units]);
 
-  const { onlineCount, offlineCount, optimalCount, warningCount, criticalCount } = useMemo(() => {
-    const online = filteredUnits.filter((unit) => unit.status === "online").length;
-    const offline = filteredUnits.filter((unit) => unit.status === "offline").length;
-    const optimal = filteredUnits.filter((unit) => unit.healthStatus === "Optimal").length;
-    const warning = filteredUnits.filter((unit) => unit.healthStatus === "Warning").length;
-    const critical = filteredUnits.filter((unit) => unit.healthStatus === "Critical").length;
+  const {
+    onlineCount,
+    offlineCount,
+    optimalCount,
+    warningCount,
+    criticalCount,
+  } = useMemo(() => {
+    const online = filteredUnits.filter(
+      (unit) => unit.status === "online",
+    ).length;
+    const offline = filteredUnits.filter(
+      (unit) => unit.status === "offline",
+    ).length;
+    const optimal = filteredUnits.filter(
+      (unit) => unit.healthStatus === "Optimal",
+    ).length;
+    const warning = filteredUnits.filter(
+      (unit) => unit.healthStatus === "Warning",
+    ).length;
+    const critical = filteredUnits.filter(
+      (unit) => unit.healthStatus === "Critical",
+    ).length;
     return {
       onlineCount: online,
       offlineCount: offline,
@@ -107,3 +121,5 @@ const Dashboard = ({ userRole }) => {
 };
 
 export default Dashboard;
+
+

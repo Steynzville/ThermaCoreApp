@@ -1,19 +1,5 @@
-import { BarChart3, TrendingUp } from "lucide-react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Legend,
-  Line,
-  LineChart,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+
+
 
 import { formatCurrency } from "../utils/formatCurrency";
 
@@ -35,7 +21,15 @@ const categoryData = [
 
 const COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6"];
 
-const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }) => {
+const renderCustomizedLabel = ({
+  cx,
+  cy,
+  midAngle,
+  innerRadius,
+  outerRadius,
+  percent,
+  name,
+}) => {
   const RADIAN = Math.PI / 180;
   const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
   const x = cx + radius * Math.cos(-midAngle * RADIAN);
@@ -59,9 +53,14 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
 
 const ViewAnalytics = ({ className }) => {
   return (
-    <div className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-6 ${className}`}>
+    <div
+      className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-6 ${className}`}
+    >
       <div className="max-w-6xl mx-auto">
-        <PageHeader title="Sales Analytics" subtitle="Detailed performance metrics and trends" />
+        <PageHeader
+          title="Sales Analytics"
+          subtitle="Detailed performance metrics and trends"
+        />
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -75,7 +74,9 @@ const ViewAnalytics = ({ className }) => {
                   <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">
                     Total Sales
                   </h3>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">21,490</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    21,490
+                  </p>
                 </div>
               </div>
             </CardHeader>
@@ -109,7 +110,9 @@ const ViewAnalytics = ({ className }) => {
                   <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">
                     Active Units
                   </h3>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">10</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    10
+                  </p>
                 </div>
               </div>
             </CardHeader>
@@ -125,7 +128,9 @@ const ViewAnalytics = ({ className }) => {
                   <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">
                     Avg Growth
                   </h3>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">+12.5%</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    +12.5%
+                  </p>
                 </div>
               </div>
             </CardHeader>
@@ -151,7 +156,10 @@ const ViewAnalytics = ({ className }) => {
                     strokeDasharray="3 3"
                     className="stroke-gray-200 dark:stroke-gray-700"
                   />
-                  <XAxis dataKey="name" className="text-gray-600 dark:text-gray-400" />
+                  <XAxis
+                    dataKey="name"
+                    className="text-gray-600 dark:text-gray-400"
+                  />
                   <YAxis className="text-gray-600 dark:text-gray-400" />
                   <Tooltip
                     contentStyle={{
@@ -161,7 +169,12 @@ const ViewAnalytics = ({ className }) => {
                     }}
                   />
                   <Legend />
-                  <Line type="monotone" dataKey="sales" stroke="#8884d8" activeDot={{ r: 8 }} />
+                  <Line
+                    type="monotone"
+                    dataKey="sales"
+                    stroke="#8884d8"
+                    activeDot={{ r: 8 }}
+                  />
                   <Line type="monotone" dataKey="revenue" stroke="#82ca9d" />
                 </LineChart>
               </ResponsiveContainer>
@@ -185,7 +198,10 @@ const ViewAnalytics = ({ className }) => {
                     strokeDasharray="3 3"
                     className="stroke-gray-200 dark:stroke-gray-700"
                   />
-                  <XAxis dataKey="name" className="text-gray-600 dark:text-gray-400" />
+                  <XAxis
+                    dataKey="name"
+                    className="text-gray-600 dark:text-gray-400"
+                  />
                   <YAxis className="text-gray-600 dark:text-gray-400" />
                   <Tooltip
                     contentStyle={{
@@ -225,8 +241,11 @@ const ViewAnalytics = ({ className }) => {
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {categoryData.map((_entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  {categoryData.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={COLORS[index % COLORS.length]}
+                    />
                   ))}
                 </Pie>
                 <Tooltip

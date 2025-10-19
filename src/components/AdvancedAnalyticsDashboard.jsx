@@ -1,111 +1,53 @@
-import {
-  Activity,
-  AlertTriangle,
-  CheckCircle,
-  Clock,
-  TrendingDown,
-  TrendingUp,
-  Zap,
-} from "lucide-react";
-import { useEffect, useState } from "react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Legend,
-  Line,
-  LineChart,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import { Badge } from "./ui/badge";
-import { Button } from "./ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { useEffect,useState } from 'react';
+
 
 const AdvancedAnalyticsDashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedTimeRange, setSelectedTimeRange] = useState("24h");
-  const [selectedUnit, _setSelectedUnit] = useState("all");
+  const [selectedTimeRange, setSelectedTimeRange] = useState('24h');
+  const [selectedUnit, setSelectedUnit] = useState('all');
 
   // Mock data for demonstration - in real app, this would come from API
   useEffect(() => {
     const fetchDashboardData = async () => {
       setLoading(true);
-
+      
       // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       const mockData = {
         overview: {
           total_units: 12,
           active_units: 10,
           total_sensors: 48,
           recent_readings: 2856,
-          uptime_percentage: 83.3,
+          uptime_percentage: 83.3
         },
         trends: {
           current_week_readings: 19992,
           previous_week_readings: 18456,
-          trend_percentage: 8.3,
+          trend_percentage: 8.3
         },
         performance: {
           avg_temperature_24h: 67.8,
           max_temperature_24h: 89.4,
-          data_quality_score: 94.2,
+          data_quality_score: 94.2
         },
         unitsPerformance: [
-          {
-            unit_id: "UNIT001",
-            unit_name: "Boiler Alpha",
-            performance_score: 98,
-            status: "online",
-            reading_count: 144,
-          },
-          {
-            unit_id: "UNIT002",
-            unit_name: "Chiller Beta",
-            performance_score: 87,
-            status: "online",
-            reading_count: 140,
-          },
-          {
-            unit_id: "UNIT003",
-            unit_name: "HVAC Gamma",
-            performance_score: 92,
-            status: "online",
-            reading_count: 138,
-          },
-          {
-            unit_id: "UNIT004",
-            unit_name: "Pump Delta",
-            performance_score: 76,
-            status: "maintenance",
-            reading_count: 89,
-          },
-          {
-            unit_id: "UNIT005",
-            unit_name: "Compressor Epsilon",
-            performance_score: 45,
-            status: "offline",
-            reading_count: 12,
-          },
+          { unit_id: 'UNIT001', unit_name: 'Boiler Alpha', performance_score: 98, status: 'online', reading_count: 144 },
+          { unit_id: 'UNIT002', unit_name: 'Chiller Beta', performance_score: 87, status: 'online', reading_count: 140 },
+          { unit_id: 'UNIT003', unit_name: 'HVAC Gamma', performance_score: 92, status: 'online', reading_count: 138 },
+          { unit_id: 'UNIT004', unit_name: 'Pump Delta', performance_score: 76, status: 'maintenance', reading_count: 89 },
+          { unit_id: 'UNIT005', unit_name: 'Compressor Epsilon', performance_score: 45, status: 'offline', reading_count: 12 }
         ],
         temperatureTrends: [
-          { timestamp: "00:00", temperature: 65.2, pressure: 98.5 },
-          { timestamp: "04:00", temperature: 67.8, pressure: 102.1 },
-          { timestamp: "08:00", temperature: 72.4, pressure: 105.8 },
-          { timestamp: "12:00", temperature: 78.9, pressure: 108.2 },
-          { timestamp: "16:00", temperature: 81.3, pressure: 110.6 },
-          { timestamp: "20:00", temperature: 75.6, pressure: 106.9 },
-          { timestamp: "24:00", temperature: 69.1, pressure: 103.4 },
+          { timestamp: '00:00', temperature: 65.2, pressure: 98.5 },
+          { timestamp: '04:00', temperature: 67.8, pressure: 102.1 },
+          { timestamp: '08:00', temperature: 72.4, pressure: 105.8 },
+          { timestamp: '12:00', temperature: 78.9, pressure: 108.2 },
+          { timestamp: '16:00', temperature: 81.3, pressure: 110.6 },
+          { timestamp: '20:00', temperature: 75.6, pressure: 106.9 },
+          { timestamp: '24:00', temperature: 69.1, pressure: 103.4 }
         ],
         alertPatterns: {
           period_days: 7,
@@ -114,31 +56,31 @@ const AdvancedAnalyticsDashboard = () => {
           sensor_type_breakdown: {
             temperature: 12,
             pressure: 7,
-            flow: 4,
-          },
+            flow: 4
+          }
         },
         anomalies: [
           {
-            sensor_id: "SENS_001",
-            unit_id: "UNIT003",
-            sensor_type: "temperature",
+            sensor_id: 'SENS_001',
+            unit_id: 'UNIT003',
+            sensor_type: 'temperature',
             value: 95.2,
-            timestamp: "2024-01-15T14:32:00Z",
+            timestamp: '2024-01-15T14:32:00Z',
             anomaly_score: 4.2,
-            confidence: 89.5,
+            confidence: 89.5
           },
           {
-            sensor_id: "SENS_015",
-            unit_id: "UNIT002",
-            sensor_type: "pressure",
+            sensor_id: 'SENS_015',
+            unit_id: 'UNIT002',
+            sensor_type: 'pressure',
             value: 145.8,
-            timestamp: "2024-01-15T13:18:00Z",
+            timestamp: '2024-01-15T13:18:00Z',
             anomaly_score: 3.8,
-            confidence: 92.1,
-          },
-        ],
+            confidence: 92.1
+          }
+        ]
       };
-
+      
       setDashboardData(mockData);
       setLoading(false);
     };
@@ -146,24 +88,23 @@ const AdvancedAnalyticsDashboard = () => {
     fetchDashboardData();
   }, [selectedTimeRange, selectedUnit]);
 
-  const formatValue = (value, unit = "") => {
-    if (typeof value === "number") {
+  const formatValue = (value, unit = '') => {
+    if (typeof value === 'number') {
       return `${value.toFixed(1)}${unit}`;
     }
     return value;
   };
 
   const getPerformanceColor = (score) => {
-    if (score >= 90) return "text-green-600";
-    if (score >= 70) return "text-yellow-600";
-    return "text-red-600";
+    if (score >= 90) return 'text-green-600';
+    if (score >= 70) return 'text-yellow-600';
+    return 'text-red-600';
   };
 
   const getTrendIcon = (percentage) => {
     if (percentage > 0) {
       return <TrendingUp className="h-4 w-4 text-green-500" />;
-    }
-    if (percentage < 0) {
+    } else if (percentage < 0) {
       return <TrendingDown className="h-4 w-4 text-red-500" />;
     }
     return <Activity className="h-4 w-4 text-gray-500" />;
@@ -173,14 +114,14 @@ const AdvancedAnalyticsDashboard = () => {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading analytics dashboard...</p>
         </div>
       </div>
     );
   }
 
-  const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"];
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -252,10 +193,10 @@ const AdvancedAnalyticsDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {formatValue(dashboardData.performance.avg_temperature_24h, "°C")}
+                {formatValue(dashboardData.performance.avg_temperature_24h, '°C')}
               </div>
               <p className="text-xs text-muted-foreground">
-                Max: {formatValue(dashboardData.performance.max_temperature_24h, "°C")}
+                Max: {formatValue(dashboardData.performance.max_temperature_24h, '°C')}
               </p>
             </CardContent>
           </Card>
@@ -269,7 +210,9 @@ const AdvancedAnalyticsDashboard = () => {
               <div className="text-2xl font-bold">
                 {formatValue(dashboardData.performance.data_quality_score)}%
               </div>
-              <p className="text-xs text-muted-foreground">Based on reading frequency</p>
+              <p className="text-xs text-muted-foreground">
+                Based on reading frequency
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -297,12 +240,7 @@ const AdvancedAnalyticsDashboard = () => {
                       <YAxis />
                       <Tooltip />
                       <Legend />
-                      <Line
-                        type="monotone"
-                        dataKey="temperature"
-                        stroke="#8884d8"
-                        strokeWidth={2}
-                      />
+                      <Line type="monotone" dataKey="temperature" stroke="#8884d8" strokeWidth={2} />
                       <Line type="monotone" dataKey="pressure" stroke="#82ca9d" strokeWidth={2} />
                     </LineChart>
                   </ResponsiveContainer>
@@ -344,24 +282,14 @@ const AdvancedAnalyticsDashboard = () => {
                 <CardContent>
                   <div className="space-y-4">
                     {dashboardData.anomalies.map((anomaly, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between p-4 border rounded-lg"
-                      >
+                      <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <Badge variant="outline">{anomaly.sensor_type}</Badge>
                             <span className="text-sm text-gray-600">{anomaly.unit_id}</span>
                           </div>
                           <div className="text-lg font-semibold">
-                            {formatValue(
-                              anomaly.value,
-                              anomaly.sensor_type === "temperature"
-                                ? "°C"
-                                : anomaly.sensor_type === "pressure"
-                                  ? " PSI"
-                                  : "",
-                            )}
+                            {formatValue(anomaly.value, anomaly.sensor_type === 'temperature' ? '°C' : anomaly.sensor_type === 'pressure' ? ' PSI' : '')}
                           </div>
                           <div className="text-xs text-gray-500">
                             {new Date(anomaly.timestamp).toLocaleString()}
@@ -396,12 +324,10 @@ const AdvancedAnalyticsDashboard = () => {
                       <span className="text-sm">Avg Confidence</span>
                       <span className="font-semibold">
                         {formatValue(
-                          dashboardData.anomalies.length > 0
-                            ? dashboardData.anomalies.reduce((sum, a) => sum + a.confidence, 0) /
-                                dashboardData.anomalies.length
-                            : 0,
-                        )}
-                        %
+                          dashboardData.anomalies.length > 0 
+                            ? dashboardData.anomalies.reduce((sum, a) => sum + a.confidence, 0) / dashboardData.anomalies.length
+                            : 0
+                        )}%
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -411,15 +337,9 @@ const AdvancedAnalyticsDashboard = () => {
                     <div className="pt-2 border-t">
                       <div className="text-xs text-gray-500 mb-2">Methods Used</div>
                       <div className="space-y-1">
-                        <Badge variant="secondary" className="text-xs">
-                          Z-Score Analysis
-                        </Badge>
-                        <Badge variant="secondary" className="text-xs">
-                          IQR Detection
-                        </Badge>
-                        <Badge variant="secondary" className="text-xs">
-                          Moving Average
-                        </Badge>
+                        <Badge variant="secondary" className="text-xs">Z-Score Analysis</Badge>
+                        <Badge variant="secondary" className="text-xs">IQR Detection</Badge>
+                        <Badge variant="secondary" className="text-xs">Moving Average</Badge>
                       </div>
                     </div>
                   </div>
@@ -464,13 +384,11 @@ const AdvancedAnalyticsDashboard = () => {
                   <ResponsiveContainer width="100%" height={200}>
                     <PieChart>
                       <Pie
-                        data={Object.entries(dashboardData.alertPatterns.sensor_type_breakdown).map(
-                          ([key, value], index) => ({
-                            name: key,
-                            value,
-                            fill: COLORS[index % COLORS.length],
-                          }),
-                        )}
+                        data={Object.entries(dashboardData.alertPatterns.sensor_type_breakdown).map(([key, value], index) => ({
+                          name: key,
+                          value,
+                          fill: COLORS[index % COLORS.length]
+                        }))}
                         cx="50%"
                         cy="50%"
                         labelLine={false}
@@ -479,11 +397,9 @@ const AdvancedAnalyticsDashboard = () => {
                         fill="#8884d8"
                         dataKey="value"
                       >
-                        {Object.entries(dashboardData.alertPatterns.sensor_type_breakdown).map(
-                          (_entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ),
-                        )}
+                        {Object.entries(dashboardData.alertPatterns.sensor_type_breakdown).map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
                       </Pie>
                       <Tooltip />
                     </PieChart>
@@ -501,11 +417,8 @@ const AdvancedAnalyticsDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 gap-4">
-                  {dashboardData.unitsPerformance.map((unit, _index) => (
-                    <div
-                      key={unit.unit_id}
-                      className="flex items-center justify-between p-4 border rounded-lg"
-                    >
+                  {dashboardData.unitsPerformance.map((unit, index) => (
+                    <div key={unit.unit_id} className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
                           <span className="text-sm font-bold text-blue-600">
@@ -519,9 +432,7 @@ const AdvancedAnalyticsDashboard = () => {
                       </div>
                       <div className="flex items-center gap-6">
                         <div className="text-center">
-                          <div
-                            className={`text-lg font-bold ${getPerformanceColor(unit.performance_score)}`}
-                          >
+                          <div className={`text-lg font-bold ${getPerformanceColor(unit.performance_score)}`}>
                             {unit.performance_score}%
                           </div>
                           <div className="text-xs text-gray-500">Performance</div>
@@ -530,14 +441,9 @@ const AdvancedAnalyticsDashboard = () => {
                           <div className="text-lg font-bold">{unit.reading_count}</div>
                           <div className="text-xs text-gray-500">Readings</div>
                         </div>
-                        <Badge
-                          variant={
-                            unit.status === "online"
-                              ? "default"
-                              : unit.status === "maintenance"
-                                ? "secondary"
-                                : "destructive"
-                          }
+                        <Badge 
+                          variant={unit.status === 'online' ? 'default' : 
+                                  unit.status === 'maintenance' ? 'secondary' : 'destructive'}
                         >
                           {unit.status}
                         </Badge>

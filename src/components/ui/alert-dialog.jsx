@@ -1,6 +1,7 @@
 "use client";
 
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
+import * as React from "react";
 
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -10,11 +11,15 @@ function AlertDialog({ ...props }) {
 }
 
 function AlertDialogTrigger({ ...props }) {
-  return <AlertDialogPrimitive.Trigger data-slot="alert-dialog-trigger" {...props} />;
+  return (
+    <AlertDialogPrimitive.Trigger data-slot="alert-dialog-trigger" {...props} />
+  );
 }
 
 function AlertDialogPortal({ ...props }) {
-  return <AlertDialogPrimitive.Portal data-slot="alert-dialog-portal" {...props} />;
+  return (
+    <AlertDialogPrimitive.Portal data-slot="alert-dialog-portal" {...props} />
+  );
 }
 
 function AlertDialogOverlay({ className, ...props }) {
@@ -60,7 +65,10 @@ function AlertDialogFooter({ className, ...props }) {
   return (
     <div
       data-slot="alert-dialog-footer"
-      className={cn("flex flex-col-reverse gap-2 sm:flex-row sm:justify-end", className)}
+      className={cn(
+        "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
+        className,
+      )}
       {...props}
     />
   );
@@ -80,14 +88,22 @@ function AlertDialogDescription({ className, ...props }) {
   return (
     <AlertDialogPrimitive.Description
       data-slot="alert-dialog-description"
-      className={cn("text-muted-foreground text-sm dark:text-gray-100", className)}
+      className={cn(
+        "text-muted-foreground text-sm dark:text-gray-100",
+        className,
+      )}
       {...props}
     />
   );
 }
 
 function AlertDialogAction({ className, ...props }) {
-  return <AlertDialogPrimitive.Action className={cn(buttonVariants(), className)} {...props} />;
+  return (
+    <AlertDialogPrimitive.Action
+      className={cn(buttonVariants(), className)}
+      {...props}
+    />
+  );
 }
 
 function AlertDialogCancel({ className, ...props }) {

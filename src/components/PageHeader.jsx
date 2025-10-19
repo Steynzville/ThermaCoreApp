@@ -1,3 +1,4 @@
+
 const PageHeader = ({
   title,
   subtitle,
@@ -37,11 +38,15 @@ const PageHeader = ({
 
   return (
     <div className={`${sizeClasses.container} ${className}`}>
-      <div className={`flex items-start justify-between ${actions ? "flex-row" : ""}`}>
+      <div
+        className={`flex items-start justify-between ${actions ? "flex-row" : ""}`}
+      >
         <div className="flex-1">
           <div className="flex items-center space-x-2">
             {icon && <div className="flex-shrink-0">{icon}</div>}
-            <h1 className={`${sizeClasses.title} text-gray-800 dark:text-white ${titleClassName}`}>
+            <h1
+              className={`${sizeClasses.title} text-gray-800 dark:text-white ${titleClassName}`}
+            >
               {title}
             </h1>
           </div>

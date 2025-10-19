@@ -17,7 +17,7 @@ export const units = [
       name: "Alpha Industries Ltd",
       contact: "John Smith",
       email: "john.smith@alphaindustries.com",
-      phone: "+1-555-0101",
+      phone: "+1-555-0101"
     },
     location: "Site Alpha",
     status: "offline",
@@ -46,7 +46,7 @@ export const units = [
       name: "Beta Corporation",
       contact: "Sarah Johnson",
       email: "sarah.johnson@betacorp.com",
-      phone: "+1-555-0102",
+      phone: "+1-555-0102"
     },
     location: "Site Beta",
     status: "online",
@@ -75,7 +75,7 @@ export const units = [
       name: "Gamma Solutions Inc",
       contact: "Michael Brown",
       email: "michael.brown@gammasolutions.com",
-      phone: "+1-555-0103",
+      phone: "+1-555-0103"
     },
     location: "Site Gamma",
     status: "maintenance",
@@ -104,7 +104,7 @@ export const units = [
       name: "Delta Enterprises",
       contact: "Emily Davis",
       email: "emily.davis@deltaenterprises.com",
-      phone: "+1-555-0104",
+      phone: "+1-555-0104"
     },
     location: "Site Delta",
     status: "online",
@@ -133,7 +133,7 @@ export const units = [
       name: "Epsilon Technologies",
       contact: "David Wilson",
       email: "david.wilson@epsilontech.com",
-      phone: "+1-555-0105",
+      phone: "+1-555-0105"
     },
     location: "Site Epsilon",
     status: "online",
@@ -162,7 +162,7 @@ export const units = [
       name: "Zeta Manufacturing",
       contact: "Lisa Anderson",
       email: "lisa.anderson@zetamfg.com",
-      phone: "+1-555-0106",
+      phone: "+1-555-0106"
     },
     location: "Site Zeta",
     status: "online",
@@ -189,7 +189,7 @@ export const units = [
       name: "Eta Systems Ltd",
       contact: "Robert Taylor",
       email: "robert.taylor@etasystems.com",
-      phone: "+1-555-0107",
+      phone: "+1-555-0107"
     },
     location: "Site Eta",
     status: "online",
@@ -216,7 +216,7 @@ export const units = [
       name: "Theta Dynamics",
       contact: "Jennifer White",
       email: "jennifer.white@thetadynamics.com",
-      phone: "+1-555-0108",
+      phone: "+1-555-0108"
     },
     location: "Site Theta",
     status: "online",
@@ -243,7 +243,7 @@ export const units = [
       name: "Iota Industries",
       contact: "Christopher Lee",
       email: "christopher.lee@iotaindustries.com",
-      phone: "+1-555-0109",
+      phone: "+1-555-0109"
     },
     location: "Site Iota",
     status: "online",
@@ -270,7 +270,7 @@ export const units = [
       name: "Kappa Corporation",
       contact: "Amanda Martinez",
       email: "amanda.martinez@kappacorp.com",
-      phone: "+1-555-0110",
+      phone: "+1-555-0110"
     },
     location: "Site Kappa",
     status: "online",
@@ -297,7 +297,7 @@ export const units = [
       name: "Lambda Logistics",
       contact: "Daniel Garcia",
       email: "daniel.garcia@lambdalogistics.com",
-      phone: "+1-555-0111",
+      phone: "+1-555-0111"
     },
     location: "Site Lambda",
     status: "online",
@@ -324,7 +324,7 @@ export const units = [
       name: "Mu Manufacturing",
       contact: "Michelle Rodriguez",
       email: "michelle.rodriguez@mumfg.com",
-      phone: "+1-555-0112",
+      phone: "+1-555-0112"
     },
     location: "Site Mu",
     status: "online",
@@ -351,7 +351,7 @@ export const units = [
       name: "Nu Networks",
       contact: "Kevin Thompson",
       email: "kevin.thompson@nunetworks.com",
-      phone: "+1-555-0113",
+      phone: "+1-555-0113"
     },
     location: "Site Nu",
     status: "online",
@@ -380,7 +380,7 @@ export const units = [
       name: "Xi Enterprises",
       contact: "Rachel Clark",
       email: "rachel.clark@xienterprise.com",
-      phone: "+1-555-0114",
+      phone: "+1-555-0114"
     },
     location: "Site Xi",
     status: "online",
@@ -407,7 +407,7 @@ export const units = [
       name: "Omicron Operations",
       contact: "Steven Lewis",
       email: "steven.lewis@omicronops.com",
-      phone: "+1-555-0115",
+      phone: "+1-555-0115"
     },
     location: "Site Omicron",
     status: "online",
@@ -434,7 +434,7 @@ export const units = [
       name: "Pi Precision",
       contact: "Laura Walker",
       email: "laura.walker@piprecision.com",
-      phone: "+1-555-0116",
+      phone: "+1-555-0116"
     },
     location: "Site Pi",
     status: "online",
@@ -461,7 +461,7 @@ export const units = [
       name: "Rho Resources",
       contact: "Mark Hall",
       email: "mark.hall@rhoresources.com",
-      phone: "+1-555-0117",
+      phone: "+1-555-0117"
     },
     location: "Site Rho",
     status: "offline",
@@ -488,7 +488,7 @@ export const units = [
       name: "Sigma Solutions",
       contact: "Nancy Young",
       email: "nancy.young@sigmasolutions.com",
-      phone: "+1-555-0118",
+      phone: "+1-555-0118"
     },
     location: "Site Sigma",
     status: "online",
@@ -515,7 +515,7 @@ export const units = [
       name: "Tau Technologies",
       contact: "Brian King",
       email: "brian.king@tautech.com",
-      phone: "+1-555-0119",
+      phone: "+1-555-0119"
     },
     location: "Site Tau",
     status: "online",
@@ -542,7 +542,7 @@ export const units = [
       name: "Upsilon Utilities",
       contact: "Patricia Wright",
       email: "patricia.wright@upsilonutil.com",
-      phone: "+1-555-0120",
+      phone: "+1-555-0120"
     },
     location: "Site Upsilon",
     status: "online",

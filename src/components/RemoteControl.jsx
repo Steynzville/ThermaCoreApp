@@ -12,12 +12,13 @@ import {
   Settings,
   Wifi,
   WifiOff,
+  Zap,
 } from "lucide-react";
-import React, { useState } from "react";
+import React, { useEffect,useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { useAuth } from "../context/AuthContext";
 import { useSettings } from "../context/SettingsContext";
+import { useAuth } from "../context/AuthContext";
 import { useRemoteControl } from "../hooks/useRemoteControl";
 import playSound from "../utils/audioPlayer";
 import {
@@ -31,7 +32,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "./ui/alert-dialog";
-import { Card, CardContent, CardHeader } from "./ui/card";
+import { Card, CardContent,CardHeader } from "./ui/card";
 import { Switch } from "./ui/switch";
 
 const RemoteControl = ({ className, unit: propUnit, details }) => {
@@ -42,14 +43,14 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
 
   // Get unit from props (when used as tab) or from location state (when used as standalone page)
   const unit = propUnit || location.state?.unit;
-
+  
   // Remote control permissions and operations
-  const {
-    permissions,
-    isLoading: remoteControlLoading,
+  const { 
+    permissions, 
+    isLoading: remoteControlLoading, 
     error: remoteControlError,
     controlPower,
-    controlWaterProduction,
+    controlWaterProduction
   } = useRemoteControl(unit?.id);
 
   // Remote control states
@@ -57,13 +58,15 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
   const [waterProductionOn, setWaterProductionOn] = useState(
     unit?.watergeneration && unit?.waterProductionOn,
   );
-  const [autoSwitchEnabled, setAutoSwitchEnabled] = useState(unit?.autoSwitchEnabled);
-  const [isConnected, _setIsConnected] = useState(true);
+  const [autoSwitchEnabled, setAutoSwitchEnabled] = useState(
+    unit?.autoSwitchEnabled,
+  );
+  const [isConnected, setIsConnected] = useState(true);
   const [selectedCamera, setSelectedCamera] = useState("cam1");
   const [videoFeedActive, setVideoFeedActive] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [videoContainerRef, setVideoContainerRef] = useState(null);
-
+  
   // Remote control operation states
   const [powerControlLoading, setPowerControlLoading] = useState(false);
   const [waterControlLoading, setWaterControlLoading] = useState(false);
@@ -71,35 +74,33 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
   // Listen for fullscreen changes (moved before early return to avoid conditional hook call)
   React.useEffect(() => {
     // Guard for SSR safety
-    if (typeof document === "undefined") {
+    if (typeof document === 'undefined') {
       return;
     }
 
     const handleFullscreenChange = () => {
-      const isCurrentlyFullscreen = !!(
-        document.fullscreenElement ||
-        document.webkitFullscreenElement ||
-        document.msFullscreenElement
-      );
+      const isCurrentlyFullscreen = !!(document.fullscreenElement || 
+                                       document.webkitFullscreenElement || 
+                                       document.msFullscreenElement);
       setIsFullscreen(isCurrentlyFullscreen);
     };
 
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
     // Guard webkit and ms prefixed events only when necessary
-    if ("webkitFullscreenElement" in document) {
-      document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+    if ('webkitFullscreenElement' in document) {
+      document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
     }
-    if ("msFullscreenElement" in document) {
-      document.addEventListener("msfullscreenchange", handleFullscreenChange);
+    if ('msFullscreenElement' in document) {
+      document.addEventListener('msfullscreenchange', handleFullscreenChange);
     }
 
     return () => {
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
-      if ("webkitFullscreenElement" in document) {
-        document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      if ('webkitFullscreenElement' in document) {
+        document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
       }
-      if ("msFullscreenElement" in document) {
-        document.removeEventListener("msfullscreenchange", handleFullscreenChange);
+      if ('msFullscreenElement' in document) {
+        document.removeEventListener('msfullscreenchange', handleFullscreenChange);
       }
     };
   }, []);
@@ -150,11 +151,11 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
   const handleMachineToggle = async (checked) => {
     // All users now have access to remote control
     setPowerControlLoading(true);
-
+    
     try {
       // Call remote control API
       await controlPower(checked);
-
+      
       // Update local state only after successful remote operation
       setMachineOn(checked);
 
@@ -175,10 +176,12 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
         setWaterProductionOn(false);
         setAutoSwitchEnabled(false);
       }
-
-      console.log(`Machine ${checked ? "turned on" : "turned off"} for unit ${unit.name}`);
+      
+      console.log(
+        `Machine ${checked ? "turned on" : "turned off"} for unit ${unit.name}`,
+      );
     } catch (error) {
-      console.error("Failed to control machine power:", error);
+      console.error('Failed to control machine power:', error);
       // Optionally show error message to user
     } finally {
       setPowerControlLoading(false);
@@ -190,34 +193,36 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
 
     // Can't enable water production if machine is off
     if (checked && !machineOn) {
-      console.warn("Cannot enable water production when machine is offline");
+      console.warn('Cannot enable water production when machine is offline');
       return;
     }
 
     setWaterControlLoading(true);
-
+    
     try {
       // Call remote control API
       await controlWaterProduction(checked);
-
+      
       // Update local state only after successful remote operation
       setWaterProductionOn(checked);
-
+    
       // Play appropriate audio based on water state
       if (checked) {
         playSound("water-on.mp3", settings.soundEnabled, settings.volume);
       } else {
         playSound("water-off.mp3", settings.soundEnabled, settings.volume);
       }
-
+    
       // When machine control is toggled to "on" and water production is switched to "off", automatic control should automatically toggle to "off"
       if (machineOn && !checked) {
         setAutoSwitchEnabled(false);
       }
-
-      console.log(`Water production ${checked ? "enabled" : "disabled"} for unit ${unit.name}`);
+      
+      console.log(
+        `Water production ${checked ? "enabled" : "disabled"} for unit ${unit.name}`,
+      );
     } catch (error) {
-      console.error("Failed to control water production:", error);
+      console.error('Failed to control water production:', error);
       // Optionally show error message to user
     } finally {
       setWaterControlLoading(false);
@@ -227,7 +232,9 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
   const handleAutoSwitchToggle = (checked) => {
     setAutoSwitchEnabled(checked);
     playSound("cool-tones.mp3", settings.soundEnabled, settings.volume);
-    console.log(`Auto switch ${checked ? "enabled" : "disabled"} for unit ${unit.name}`);
+    console.log(
+      `Auto switch ${checked ? "enabled" : "disabled"} for unit ${unit.name}`,
+    );
   };
 
   const handleCameraChange = (cameraId) => {
@@ -238,7 +245,7 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
   const toggleVideoFeed = () => {
     const newVideoFeedState = !videoFeedActive;
     setVideoFeedActive(newVideoFeedState);
-
+    
     // Play video-on.mp3 when stopping the video feed, video-off.mp3 when starting
     if (newVideoFeedState) {
       // Starting video feed - play video-off.mp3
@@ -247,13 +254,13 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
       // Stopping video feed - play video-on.mp3
       playSound("video-on.mp3", settings.soundEnabled, settings.volume);
     }
-
+    
     console.log(`Video feed ${newVideoFeedState ? "enabled" : "disabled"} for unit ${unit.name}`);
   };
 
   const toggleFullscreen = async () => {
     // Guard for SSR safety
-    if (typeof document === "undefined") {
+    if (typeof document === 'undefined') {
       return;
     }
 
@@ -280,7 +287,7 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
         }
       }
     } catch (error) {
-      console.error("Fullscreen error:", error);
+      console.error('Fullscreen error:', error);
     }
   };
 
@@ -304,7 +311,9 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
     );
 
   return (
-    <div className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-6 ${className}`}>
+    <div
+      className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-6 ${className}`}
+    >
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-6">
@@ -342,14 +351,13 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                 </span>
               </div>
             </div>
-
+            
             {/* Permission indicator */}
             {permissions && (
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 rounded-full bg-green-500" />
                 <span className="text-sm text-gray-600 dark:text-gray-400">
-                  {permissions.role.charAt(0).toUpperCase() + permissions.role.slice(1)} • Remote
-                  Control
+                  {permissions.role.charAt(0).toUpperCase() + permissions.role.slice(1)} • Remote Control
                 </span>
               </div>
             )}
@@ -367,7 +375,8 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                     Connection Lost
                   </h3>
                   <p className="text-sm text-red-700 dark:text-red-300">
-                    Unable to communicate with the unit. Remote control functions are disabled.
+                    Unable to communicate with the unit. Remote control
+                    functions are disabled.
                   </p>
                 </div>
               </div>
@@ -399,37 +408,35 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                 </div>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <div
-                      className={`${powerControlLoading || remoteControlLoading ? "opacity-50" : "cursor-pointer"}`}
-                    >
-                      <Switch
-                        checked={machineOn}
-                        onCheckedChange={() => {}}
-                        disabled={
-                          powerControlLoading ||
-                          remoteControlLoading ||
-                          !permissions?.has_remote_control ||
-                          !isConnected
-                        }
+                    <div className={`${powerControlLoading || remoteControlLoading ? 'opacity-50' : 'cursor-pointer'}`}>
+                      <Switch 
+                        checked={machineOn} 
+                        onCheckedChange={() => {}} 
+                        disabled={powerControlLoading || remoteControlLoading || !permissions?.has_remote_control || !isConnected}
                       />
                       {(powerControlLoading || remoteControlLoading) && (
                         <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                          <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
                         </div>
                       )}
                     </div>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                      <AlertDialogTitle>
+                        Are you absolutely sure?
+                      </AlertDialogTitle>
                       <AlertDialogDescription>
-                        This action will {machineOn ? "turn off" : "turn on"} the machine power.
-                        This could have significant impact on unit operations.
+                        This action will {machineOn ? "turn off" : "turn on"}{" "}
+                        the machine power. This could have significant impact on
+                        unit operations.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => handleMachineToggle(!machineOn)}>
+                      <AlertDialogAction
+                        onClick={() => handleMachineToggle(!machineOn)}
+                      >
                         Continue
                       </AlertDialogAction>
                     </AlertDialogFooter>
@@ -477,39 +484,36 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                   </div>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <div
-                        className={`${waterControlLoading || remoteControlLoading ? "opacity-50" : "cursor-pointer"} relative`}
-                      >
+                      <div className={`${waterControlLoading || remoteControlLoading ? 'opacity-50' : 'cursor-pointer'} relative`}>
                         <Switch
                           checked={waterProductionOn}
                           onCheckedChange={() => {}}
-                          disabled={
-                            waterControlLoading ||
-                            remoteControlLoading ||
-                            !permissions?.has_remote_control ||
-                            !isConnected ||
-                            !machineOn
-                          }
+                          disabled={waterControlLoading || remoteControlLoading || !permissions?.has_remote_control || !isConnected || !machineOn}
                         />
                         {(waterControlLoading || remoteControlLoading) && (
                           <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                            <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
                           </div>
                         )}
                       </div>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogTitle>
+                          Are you absolutely sure?
+                        </AlertDialogTitle>
                         <AlertDialogDescription>
-                          This action will {waterProductionOn ? "disable" : "enable"} water
+                          This action will{" "}
+                          {waterProductionOn ? "disable" : "enable"} water
                           production. This could affect water levels.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
-                          onClick={() => handleWaterProductionToggle(!waterProductionOn)}
+                          onClick={() =>
+                            handleWaterProductionToggle(!waterProductionOn)
+                          }
                         >
                           Continue
                         </AlertDialogAction>
@@ -523,7 +527,8 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                       className={`w-3 h-3 rounded-full ${waterProductionOn && machineOn ? "bg-blue-500" : "bg-gray-400"}`}
                     />
                     <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      Status: {waterProductionOn && machineOn ? "Active" : "Inactive"}
+                      Status:{" "}
+                      {waterProductionOn && machineOn ? "Active" : "Inactive"}
                     </span>
                   </div>
                   <p className="text-xs text-gray-600 dark:text-gray-400">
@@ -553,7 +558,8 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                     Auto Switch On (Water Level &lt; 75%)
                   </h4>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Automatically turn on water production when tank level falls below 75%
+                    Automatically turn on water production when tank level falls
+                    below 75%
                   </p>
                 </div>
                 <AlertDialog>
@@ -562,26 +568,29 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                       <Switch
                         checked={autoSwitchEnabled}
                         onCheckedChange={() => {}}
-                        disabled={
-                          remoteControlLoading ||
-                          !permissions?.has_remote_control ||
-                          !isConnected ||
-                          !machineOn
-                        }
+                        disabled={remoteControlLoading || !permissions?.has_remote_control || !isConnected || !machineOn}
                       />
                     </div>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                      <AlertDialogTitle>
+                        Are you absolutely sure?
+                      </AlertDialogTitle>
                       <AlertDialogDescription>
-                        This action will {autoSwitchEnabled ? "disable" : "enable"} automatic
-                        control. This could affect water levels if not monitored.
+                        This action will{" "}
+                        {autoSwitchEnabled ? "disable" : "enable"} automatic
+                        control. This could affect water levels if not
+                        monitored.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => handleAutoSwitchToggle(!autoSwitchEnabled)}>
+                      <AlertDialogAction
+                        onClick={() =>
+                          handleAutoSwitchToggle(!autoSwitchEnabled)
+                        }
+                      >
                         Continue
                       </AlertDialogAction>
                     </AlertDialogFooter>
@@ -591,17 +600,27 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
               <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="text-center p-3 bg-blue-50 dark:bg-gray-800 rounded-lg">
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Current Level</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                      Current Level
+                    </p>
                     <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                       {unit?.water_level} L
                     </p>
                   </div>
                   <div className="text-center p-3 bg-blue-50 dark:bg-gray-800 rounded-lg">
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Trigger Level</p>
-                    <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">75%</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                      Trigger Level
+                    </p>
+                    <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                      75%
+                    </p>
                   </div>
                   <div className="text-center p-3 bg-blue-50 dark:bg-gray-800 rounded-lg">
-                    <p className={"text-xs text-gray-600 dark:text-gray-400 mb-1"}>Auto Status</p>
+                    <p
+                      className={`text-xs text-gray-600 dark:text-gray-400 mb-1`}
+                    >
+                      Auto Status
+                    </p>
                     <p
                       className={`text-lg font-semibold ${autoSwitchEnabled ? "text-green-600 dark:text-green-400" : "text-gray-500"}`}
                     >
@@ -648,7 +667,7 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                 ))}
               </select>
             </div>
-
+            
             <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
                 <div className="flex-1">
@@ -673,12 +692,12 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                   <span>{videoFeedActive ? "Stop Feed" : "Start Feed"}</span>
                 </button>
               </div>
-
+              
               {/* Video Feed Display Area */}
-              <div
+              <div 
                 ref={setVideoContainerRef}
                 className={`relative bg-gray-400 dark:bg-gray-800 rounded-lg aspect-video flex items-center justify-center border-2 border-dashed border-gray-400 dark:border-gray-600 ${
-                  isFullscreen ? "bg-black" : ""
+                  isFullscreen ? 'bg-black' : ''
                 }`}
               >
                 {videoFeedActive && isConnected ? (
@@ -689,11 +708,11 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                         Live Feed Active
                       </p>
                       <p className="text-sm text-white dark:text-gray-400 mt-1">
-                        {availableCameras.find((cam) => cam.id === selectedCamera)?.name}
+                        {availableCameras.find(cam => cam.id === selectedCamera)?.name}
                       </p>
-                      {availableCameras.find((cam) => cam.id === selectedCamera)?.position && (
+                      {availableCameras.find(cam => cam.id === selectedCamera)?.position && (
                         <p className="text-xs text-gray-200 dark:text-gray-500 mt-1">
-                          {availableCameras.find((cam) => cam.id === selectedCamera)?.position}
+                          {availableCameras.find(cam => cam.id === selectedCamera)?.position}
                         </p>
                       )}
                     </div>
@@ -716,13 +735,11 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                       {!isConnected ? "No Connection" : "Video Feed Inactive"}
                     </p>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                      {!isConnected
-                        ? "Unable to connect to cameras"
-                        : "Click 'Start Feed' to begin"}
+                      {!isConnected ? "Unable to connect to cameras" : "Click 'Start Feed' to begin"}
                     </p>
                   </div>
                 )}
-
+                
                 {/* Fullscreen Toggle Button */}
                 <button
                   onClick={toggleFullscreen}
@@ -736,30 +753,38 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                   )}
                 </button>
               </div>
-
+              
               {/* Camera Info */}
               <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div className="text-center p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Resolution</p>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">1080p</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                    Resolution
+                  </p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                    1080p
+                  </p>
                 </div>
                 <div className="text-center p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Frame Rate</p>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">30 FPS</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                    Frame Rate
+                  </p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                    30 FPS
+                  </p>
                 </div>
                 <div className="text-center p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Connection</p>
-                  <p
-                    className={`text-sm font-semibold ${isConnected ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
-                  >
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                    Connection
+                  </p>
+                  <p className={`text-sm font-semibold ${isConnected ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
                     {isConnected ? "Connected" : "Offline"}
                   </p>
                 </div>
                 <div className="text-center p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Status</p>
-                  <p
-                    className={`text-sm font-semibold ${videoFeedActive ? "text-purple-600 dark:text-purple-400" : "text-gray-500"}`}
-                  >
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                    Status
+                  </p>
+                  <p className={`text-sm font-semibold ${videoFeedActive ? "text-purple-600 dark:text-purple-400" : "text-gray-500"}`}>
                     {videoFeedActive ? "Active" : "Inactive"}
                   </p>
                 </div>
@@ -786,7 +811,9 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                     Manual control via remote interface
                   </p>
                 </div>
-                <span className="text-xs text-gray-500 dark:text-gray-400">2024-08-08 14:30</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  2024-08-08 14:30
+                </span>
               </div>
               <div className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700">
                 <div>
@@ -797,7 +824,9 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                     Manual control via remote interface
                   </p>
                 </div>
-                <span className="text-xs text-gray-500 dark:text-gray-400">2024-08-08 14:25</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  2024-08-08 14:25
+                </span>
               </div>
               <div className="flex items-center justify-between py-2">
                 <div>
@@ -808,7 +837,9 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                     Automatic control configuration updated
                   </p>
                 </div>
-                <span className="text-xs text-gray-500 dark:text-gray-400">2024-08-08 09:15</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  2024-08-08 09:15
+                </span>
               </div>
             </div>
           </CardContent>

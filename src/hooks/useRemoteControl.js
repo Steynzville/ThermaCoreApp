@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect,useState } from 'react';
 
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from '../context/AuthContext';
 
 /**
  * Hook to manage remote control permissions and operations
@@ -23,15 +23,15 @@ export const useRemoteControl = (unitId) => {
 
     try {
       // Fetch permissions from backend API
-      const token = localStorage.getItem("thermacore_token");
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
-
+      const token = localStorage.getItem('thermacore_token');
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+      
       const response = await fetch(`${API_BASE_URL}/remote-control/permissions`, {
-        method: "GET",
+        method: 'GET',
         headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
 
       if (!response.ok) {
@@ -41,8 +41,8 @@ export const useRemoteControl = (unitId) => {
       const data = await response.json();
       setPermissions(data);
     } catch (err) {
-      console.error("Failed to fetch remote control permissions:", err);
-      setError("Failed to fetch permissions");
+      console.error('Failed to fetch remote control permissions:', err);
+      setError('Failed to fetch permissions');
     } finally {
       setIsLoading(false);
     }
@@ -51,23 +51,23 @@ export const useRemoteControl = (unitId) => {
   // Control unit power
   const controlPower = async (powerOn) => {
     if (!permissions?.has_remote_control) {
-      throw new Error("Insufficient permissions for remote control");
+      throw new Error('Insufficient permissions for remote control');
     }
 
     setIsLoading(true);
     setError(null);
 
     try {
-      const token = localStorage.getItem("thermacore_token");
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
-
+      const token = localStorage.getItem('thermacore_token');
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+      
       const response = await fetch(`${API_BASE_URL}/remote-control/units/${unitId}/power`, {
-        method: "POST",
+        method: 'POST',
         headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ power_on: powerOn }),
+        body: JSON.stringify({ power_on: powerOn })
       });
 
       if (!response.ok) {
@@ -78,8 +78,8 @@ export const useRemoteControl = (unitId) => {
       const data = await response.json();
       return data;
     } catch (err) {
-      console.error("Failed to control power:", err);
-      setError("Failed to control power");
+      console.error('Failed to control power:', err);
+      setError('Failed to control power');
       throw err;
     } finally {
       setIsLoading(false);
@@ -89,40 +89,35 @@ export const useRemoteControl = (unitId) => {
   // Control water production
   const controlWaterProduction = async (waterProductionOn) => {
     if (!permissions?.has_remote_control) {
-      throw new Error("Insufficient permissions for remote control");
+      throw new Error('Insufficient permissions for remote control');
     }
 
     setIsLoading(true);
     setError(null);
 
     try {
-      const token = localStorage.getItem("thermacore_token");
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
-
-      const response = await fetch(
-        `${API_BASE_URL}/remote-control/units/${unitId}/water-production`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ water_production_on: waterProductionOn }),
+      const token = localStorage.getItem('thermacore_token');
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+      
+      const response = await fetch(`${API_BASE_URL}/remote-control/units/${unitId}/water-production`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         },
-      );
+        body: JSON.stringify({ water_production_on: waterProductionOn })
+      });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(
-          errorData.error || `Failed to control water production: ${response.status}`,
-        );
+        throw new Error(errorData.error || `Failed to control water production: ${response.status}`);
       }
 
       const data = await response.json();
       return data;
     } catch (err) {
-      console.error("Failed to control water production:", err);
-      setError("Failed to control water production");
+      console.error('Failed to control water production:', err);
+      setError('Failed to control water production');
       throw err;
     } finally {
       setIsLoading(false);
@@ -135,15 +130,15 @@ export const useRemoteControl = (unitId) => {
     setError(null);
 
     try {
-      const token = localStorage.getItem("thermacore_token");
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
-
+      const token = localStorage.getItem('thermacore_token');
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+      
       const response = await fetch(`${API_BASE_URL}/remote-control/units/${unitId}/status`, {
-        method: "GET",
+        method: 'GET',
         headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
 
       if (!response.ok) {
@@ -154,8 +149,8 @@ export const useRemoteControl = (unitId) => {
       const data = await response.json();
       return data;
     } catch (err) {
-      console.error("Failed to fetch unit status:", err);
-      setError("Failed to fetch unit status");
+      console.error('Failed to fetch unit status:', err);
+      setError('Failed to fetch unit status');
       throw err;
     } finally {
       setIsLoading(false);
@@ -174,6 +169,6 @@ export const useRemoteControl = (unitId) => {
     controlPower,
     controlWaterProduction,
     getUnitStatus,
-    refetchPermissions: fetchPermissions,
+    refetchPermissions: fetchPermissions
   };
 };

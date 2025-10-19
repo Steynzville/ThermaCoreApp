@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+
+import { useEffect,useState } from 'react';
+
 
 const EnvironmentalAssumptions = ({ isOpen, onClose, onSave, currentAssumptions }) => {
   const [dieselPrice, setDieselPrice] = useState(currentAssumptions.dieselPricePerLiter);
@@ -8,7 +10,7 @@ const EnvironmentalAssumptions = ({ isOpen, onClose, onSave, currentAssumptions 
   }, [currentAssumptions.dieselPricePerLiter]);
 
   const handleSave = () => {
-    onSave({ dieselPricePerLiter: Number.parseFloat(dieselPrice) });
+    onSave({ dieselPricePerLiter: parseFloat(dieselPrice) });
     onClose();
   };
 
@@ -43,3 +45,5 @@ const EnvironmentalAssumptions = ({ isOpen, onClose, onSave, currentAssumptions 
 };
 
 export default EnvironmentalAssumptions;
+
+

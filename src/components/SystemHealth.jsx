@@ -9,6 +9,7 @@ import {
   XCircle,
 } from "lucide-react";
 
+
 const iconMap = {
   CheckCircle,
   AlertTriangle,
@@ -37,7 +38,7 @@ const StatusIndicator = ({ status }) => (
       display: "inline-block",
       marginRight: "10px",
     }}
-  />
+  ></span>
 );
 
 const getStatusIcon = (status) => {
@@ -60,10 +61,14 @@ const SystemHealth = ({ className }) => {
   const degradedCount = systemHealthData.filter(
     (service) => service.status === "Degraded Performance",
   ).length;
-  const outageCount = systemHealthData.filter((service) => service.status === "Outage").length;
+  const outageCount = systemHealthData.filter(
+    (service) => service.status === "Outage",
+  ).length;
 
   return (
-    <div className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-6 ${className}`}>
+    <div
+      className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-6 ${className}`}
+    >
       <div className="max-w-6xl mx-auto">
         <PageHeader
           title="System Health Status"
@@ -97,7 +102,9 @@ const SystemHealth = ({ className }) => {
                   <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Degraded</h3>
+                  <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    Degraded
+                  </h3>
                   <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
                     {degradedCount}
                   </p>
@@ -113,8 +120,12 @@ const SystemHealth = ({ className }) => {
                   <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Outages</h3>
-                  <p className="text-2xl font-bold text-red-600 dark:text-red-400">{outageCount}</p>
+                  <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    Outages
+                  </h3>
+                  <p className="text-2xl font-bold text-red-600 dark:text-red-400">
+                    {outageCount}
+                  </p>
                 </div>
               </div>
             </CardHeader>
@@ -195,7 +206,7 @@ const SystemHealth = ({ className }) => {
                             className={`font-mono text-sm ${
                               service.responseTime === "N/A"
                                 ? "text-gray-500 dark:text-gray-400"
-                                : Number.parseInt(service.responseTime) > 200
+                                : parseInt(service.responseTime) > 200
                                   ? "text-yellow-600 dark:text-yellow-400"
                                   : "text-green-600 dark:text-green-400"
                             }`}
@@ -233,9 +244,14 @@ const SystemHealth = ({ className }) => {
                 <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-2">
                   99.8%
                 </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Last 30 days</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Last 30 days
+                </p>
                 <div className="mt-4 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                  <div className="bg-green-500 h-2 rounded-full" style={{ width: "99.8%" }} />
+                  <div
+                    className="bg-green-500 h-2 rounded-full"
+                    style={{ width: "99.8%" }}
+                  ></div>
                 </div>
               </div>
             </CardContent>
@@ -246,14 +262,18 @@ const SystemHealth = ({ className }) => {
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 Average Response Time
               </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Across all services</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Across all services
+              </p>
             </CardHeader>
             <CardContent>
               <div className="text-center">
                 <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-2">
                   125ms
                 </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Last 24 hours</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Last 24 hours
+                </p>
                 <div className="mt-4 flex items-center justify-center space-x-2">
                   <Activity className="h-4 w-4 text-blue-500" />
                   <span className="text-sm text-green-600 dark:text-green-400">
