@@ -1,8 +1,15 @@
+import { Minus, TrendingDown, TrendingUp } from "lucide-react";
 import { useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { useSettings } from "../context/SettingsContext";
-// Import subcomponents
+import RemoteControl from "./RemoteControl";
+import UnitAlertsTab from "./unit-details/UnitAlertsTab";
+import UnitClientTab from "./unit-details/UnitClientTab";
+import UnitHistoryTab from "./unit-details/UnitHistoryTab";
+import UnitOverviewTab from "./unit-details/UnitOverviewTab";
+import UnitStatusHeader from "./unit-details/UnitStatusHeader";
+import UnitTabNavigation from "./unit-details/UnitTabNavigation";
 
 const UnitDetails = ({ className }) => {
   const { formatTemperature } = useSettings();
