@@ -83,7 +83,7 @@ Quick reference for testing all fixed pages to ensure they render correctly.
 
 ---
 
-### 6. Scada Analytics/Sales Page
+### 6. SCADA Analytics/Sales Page
 **Route:** `/analytics`  
 **Access:** Admin  
 **What to Check:**
