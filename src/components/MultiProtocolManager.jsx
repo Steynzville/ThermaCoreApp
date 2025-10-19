@@ -1,7 +1,19 @@
-import { useEffect, useRef,useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import {
+  CheckCircle,
+  AlertCircle,
+  Activity,
+  WifiOff,
+  RefreshCw,
+  Router,
+  Zap,
+} from 'lucide-react';
 
 import { apiGetJson } from '@/utils/apiFetch';  // Use enhanced apiFetch utility with JSON helper
+import { Button } from './ui/button';
+import { Badge } from './ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 
 const MultiProtocolManager = () => {
   const [protocolsStatus, setProtocolsStatus] = useState(null);

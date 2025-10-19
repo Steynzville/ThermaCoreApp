@@ -1,5 +1,20 @@
 
-
+import { BarChart3, TrendingUp, DollarSign, ShoppingCart, Package } from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+} from "recharts";
 
 import { formatCurrency } from "../utils/formatCurrency";
 
