@@ -6,7 +6,6 @@ from app.utils.auto_migration import (
     add_password_reset_columns,
     add_user_profile_fields,
     add_user_approval_columns,
-    approve_existing_users_emergency,
     run_auto_migrations,
     _validate_sql_identifier,
 )

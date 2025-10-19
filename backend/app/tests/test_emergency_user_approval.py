@@ -1,6 +1,5 @@
 """Tests for emergency user approval functionality."""
 
-from sqlalchemy import text
 from app.utils.auto_migration import approve_existing_users_emergency
 
 
