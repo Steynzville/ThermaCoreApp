@@ -13,13 +13,13 @@ import {
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
+import { useAuth } from "../context/AuthContext";
+import { useUnits } from "../context/UnitContext";
+import { formatCurrency } from "../utils/formatCurrency";
 import EnvironmentalAssumptions from "./EnvironmentalAssumptions";
 import FinancialAssumptions from "./FinancialAssumptions";
 import ROIAssumptions from "./ROIAssumptions";
 import Spinner from "./common/Spinner";
-import { useAuth } from "../context/AuthContext";
-import { useUnits } from "../context/UnitContext";
-import { formatCurrency } from "../utils/formatCurrency";
 
 const PerformanceCard = ({
   icon: Icon,

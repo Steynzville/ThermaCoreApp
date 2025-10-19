@@ -2,8 +2,8 @@ import { Minus, TrendingDown, TrendingUp } from "lucide-react";
 import { useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
-import RemoteControl from "./RemoteControl";
 import { useSettings } from "../context/SettingsContext";
+import RemoteControl from "./RemoteControl";
 import UnitAlertsTab from "./unit-details/UnitAlertsTab";
 import UnitClientTab from "./unit-details/UnitClientTab";
 import UnitHistoryTab from "./unit-details/UnitHistoryTab";
