@@ -1,6 +1,9 @@
 
+import { AlertTriangle, CheckCircle, Clock } from "lucide-react";
+
 import { useAuth } from "../../context/AuthContext";
 import { getAllCurrentNotificationsForUnit } from "../../utils/notifications";
+import { Card, CardContent } from "../ui/card";
 
 const UnitAlertsTab = ({ unit, alertsHistory, getAlertTypeColor }) => {
   const { userRole } = useAuth();

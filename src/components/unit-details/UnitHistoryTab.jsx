@@ -1,4 +1,5 @@
 
+import VitalSignGraph from "../VitalSignGraph";
 
 const UnitHistoryTab = ({ unit }) => {
   return (
