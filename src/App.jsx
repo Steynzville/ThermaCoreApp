@@ -44,6 +44,17 @@ const AppContent = () => {
   const [loginError, setLoginError] = useState("");
   const [appError, setAppError] = useState(null);
 
+  // Debug logging for auth state changes
+  useEffect(() => {
+    console.log('[App] Auth state changed:', {
+      isAuthenticated,
+      userRole,
+      isLoading,
+      isLoggingOut,
+      user: user ? { username: user.username, role: user.role } : null,
+    });
+  }, [isAuthenticated, userRole, isLoading, isLoggingOut, user]);
+
   // Error boundary effect
   useEffect(() => {
     const handleError = (error) => {
@@ -156,6 +167,8 @@ const AppContent = () => {
               const componentMap = route.specialHandling
                 ? roleBasedComponents[route.specialHandling]
                 : null;
+
+              console.log('[App] Rendering protected route:', route.path, 'for role:', userRole);
 
               return (
                 <Route

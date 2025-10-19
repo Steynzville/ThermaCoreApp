@@ -22,6 +22,8 @@ const Dashboard = ({ className }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentView, setCurrentView] = useState("operator"); // "operator" or "performance"
 
+  console.log('[Dashboard] Component rendering with role:', userRole);
+
   // Filter units based on user role - User role only sees first 5 units
   const filteredUnits = userRole === "user" ? units.slice(0, 6) : units;
 
@@ -123,7 +125,21 @@ const Dashboard = ({ className }) => {
   return (
     <div
       className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-3 lg:p-4 xl:p-6 ${className}`}
+      style={{ backgroundColor: '#ffeb3b', minHeight: '100vh' }} // Temporary: obvious yellow background for debugging
     >
+      {/* Temporary debug banner */}
+      <div style={{
+        backgroundColor: '#f44336',
+        color: 'white',
+        padding: '20px',
+        fontSize: '24px',
+        fontWeight: 'bold',
+        textAlign: 'center',
+        marginBottom: '20px'
+      }}>
+        🎯 DASHBOARD IS RENDERING! Role: {userRole}
+      </div>
+      
       <div className="max-w-7xl mx-auto">
         {/* Toggle above header */}
         <div className="mb-6">

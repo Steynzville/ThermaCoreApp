@@ -113,20 +113,34 @@ const LoginScreen = ({ error, setError }) => {
         return;
       }
 
-      console.log("Attempting login with:", formData.username); // Debug log
+      console.log("[LoginScreen] Attempting login with:", formData.username);
 
       const result = await login(formData.username, formData.password);
 
-      console.log("Login result:", result); // Debug log
+      console.log("[LoginScreen] Login result:", result);
 
       if (result.success) {
-        console.log("Login successful, navigating to dashboard");
+        console.log("[LoginScreen] Login successful, navigating to dashboard");
+        
+        // Primary navigation attempt
         navigate("/dashboard");
+        
+        // Fallback redirect after a short delay if primary navigation doesn't work
+        setTimeout(() => {
+          console.log("[LoginScreen] Fallback redirect triggered");
+          const currentPath = window.location.pathname;
+          console.log("[LoginScreen] Current path:", currentPath);
+          
+          if (currentPath === "/login" || currentPath === "/") {
+            console.log("[LoginScreen] Still on login page, forcing redirect with window.location");
+            window.location.href = "/dashboard";
+          }
+        }, 500);
       } else {
-        console.log("Login failed:", result.error); // Debug log
+        console.log("[LoginScreen] Login failed:", result.error);
         setError(result.error || "Invalid credentials!");
         // Keep form data intact for retry
-        console.log("Error set to:", result.error || "Invalid credentials!");
+        console.log("[LoginScreen] Error set to:", result.error || "Invalid credentials!");
       }
     },
     [formData.username, formData.password, login, navigate, setError],
