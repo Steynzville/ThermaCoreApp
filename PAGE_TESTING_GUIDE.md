@@ -6,7 +6,7 @@ Quick reference for testing all fixed pages to ensure they render correctly.
 
 ### 1. Performance Dashboard/Analytics Page
 **Route:** `/advanced-analytics`  
-**Access:** Admin users (roles: [])  
+**Access:** Admin users  
 **What to Check:**
 - [ ] Page loads without blank screen
 - [ ] Overview cards display (Active Units, Data Points, etc.)
