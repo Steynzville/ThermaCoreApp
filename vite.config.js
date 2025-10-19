@@ -6,12 +6,7 @@ import { visualizer } from "rollup-plugin-visualizer";
 
 // https://vite.dev/config/
 export default defineConfig(() => {
-  const plugins = [
-    react({
-      jsxRuntime: 'automatic',
-    }), 
-    tailwindcss()
-  ];
+  const plugins = [react(), tailwindcss()];
 
   // Enable bundle analysis with: ANALYZE=1 vite build
   if (process.env.ANALYZE) {
@@ -48,14 +43,12 @@ export default defineConfig(() => {
               if (id.includes("react-router-dom")) {
                 return "react-router-dom-vendor";
               }
-              // Let Vite handle React and React-DOM bundling automatically
-              // to avoid module initialization order issues
-              // if (id.includes("react") && !id.includes("react-dom")) {
-              //   return "react-vendor";
-              // }
-              // if (id.includes("react-dom")) {
-              //   return "react-dom-vendor";
-              // }
+              if (id.includes("react") && !id.includes("react-dom")) {
+                return "react-vendor";
+              }
+              if (id.includes("react-dom")) {
+                return "react-dom-vendor";
+              }
               if (id.includes("recharts")) {
                 return "recharts-vendor";
               }
@@ -78,7 +71,8 @@ export default defineConfig(() => {
     optimizeDeps: {
       include: [
         "path-to-regexp",
-        "react-router-dom"
+        "react-router-dom",
+        "react-router"
       ],
     },
     test: {
