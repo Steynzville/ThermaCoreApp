@@ -1,3 +1,4 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -16,10 +17,6 @@ import {
 import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { useAuth } from "../context/AuthContext";
-import { useSettings } from "../context/SettingsContext";
-import { useRemoteControl } from "../hooks/useRemoteControl";
-import playSound from "../utils/audioPlayer";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,9 +27,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "./ui/alert-dialog";
-import { Card, CardContent, CardHeader } from "./ui/card";
-import { Switch } from "./ui/switch";
+} from "@/components/ui/alert-dialog";
+import { Switch } from "@/components/ui/switch";
+import { useAuth } from "../context/AuthContext";
+import { useSettings } from "../context/SettingsContext";
+import { useRemoteControl } from "../hooks/useRemoteControl";
+import playSound from "../utils/audioPlayer";
 
 const RemoteControl = ({ className, unit: propUnit, details }) => {
   const navigate = useNavigate();

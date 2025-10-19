@@ -1,3 +1,4 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle, CheckCircle, Filter, User, Zap } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -8,7 +9,6 @@ import PageHeader from "./PageHeader";
 import PowerIcon3D from "./PowerIcon3D";
 import SearchBar from "./SearchBar";
 import WaterIcon3D from "./WaterIcon3D";
-import { Card, CardContent, CardHeader } from "./ui/card";
 
 const GridView = ({ className }) => {
   const navigate = useNavigate();

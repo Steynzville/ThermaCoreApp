@@ -1,3 +1,4 @@
+import { Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const SearchBar = ({ placeholder = "Search units...", className = "", value = "", onSearch }) => {

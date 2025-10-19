@@ -1,5 +1,6 @@
 import { reportTypes } from "../constants/reportSections";
 import { units } from "../data/mockUnits";
+import PageHeader from "./PageHeader";
 
 const UserReportsView = ({ className }) => {
   const allowedScopes = ["single", "multiple", "master"];

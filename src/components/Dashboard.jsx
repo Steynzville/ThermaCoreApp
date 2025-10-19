@@ -12,6 +12,7 @@ import {
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import HighTechToggle from "@/components/ui/HighTechToggle";
 import { useAuth } from "../context/AuthContext";
 import { units } from "../data/mockUnits";
 import EnhancedStatusDial from "./Dashboard/EnhancedStatusDial";
@@ -19,7 +20,6 @@ import QuickActionCard from "./Dashboard/QuickActionCard";
 import UnitSummary from "./Dashboard/UnitSummary";
 import NotificationBell from "./NotificationBell";
 import PerformanceDashboard from "./PerformanceDashboard";
-import HighTechToggle from "./ui/HighTechToggle";
 
 // Enhanced Dashboard Component
 const Dashboard = ({ className }) => {

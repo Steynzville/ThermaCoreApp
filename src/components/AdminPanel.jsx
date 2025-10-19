@@ -1,3 +1,4 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Database,
   Edit,
@@ -15,14 +16,13 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { Button } from "@/components/ui/button";
 import { useAuth } from "../context/AuthContext";
 import { deleteUser, getAllUsers } from "../services/usersAPI";
 import { apiGet, apiPost } from "../utils/apiFetch";
 import { formatRoleName, formatUserName } from "../utils/userUtils";
 import PageHeader from "./PageHeader";
 import UserApprovalPanel from "./UserApprovalPanel";
-import { Button } from "./ui/button";
-import { Card, CardContent, CardHeader } from "./ui/card";
 
 const systemStats = [
   { label: "Total Devices", value: "4", icon: Database },
