@@ -13,12 +13,15 @@ currently in 'pending' status.
 
 import sys
 import os
+import logging
 
 # Add backend directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from app import create_app, db
 from sqlalchemy import text
+
+logger = logging.getLogger(__name__)
 
 
 def approve_all_existing_users(config_name=None):
@@ -38,40 +41,35 @@ def approve_all_existing_users(config_name=None):
     with app.app_context():
         try:
             with db.engine.begin() as conn:
-                # Get emergency_admin user ID for approved_by field
-                result = conn.execute(text(
-                    "SELECT id FROM users WHERE username = 'emergency_admin' LIMIT 1"
-                ))
+                # Get emergency_admin user ID for approved_by field (using parameterized query)
+                result = conn.execute(
+                    text("SELECT id FROM users WHERE username = :username LIMIT 1"),
+                    {"username": "emergency_admin"}
+                )
                 emergency_admin_row = result.fetchone()
                 emergency_admin_id = emergency_admin_row[0] if emergency_admin_row else None
                 
-                print("Starting emergency user approval process...")
-                print(f"Emergency admin ID: {emergency_admin_id or 'Not found'}")
+                logger.info("Starting emergency user approval process...")
+                logger.info(f"Emergency admin ID: {emergency_admin_id or 'Not found'}")
                 
-                # Update all pending users to approved status
-                if emergency_admin_id:
-                    result = conn.execute(text("""
+                # Update all pending users to approved status (using parameterized query)
+                result = conn.execute(
+                    text("""
                         UPDATE users 
                         SET registration_status = 'approved',
-                            approved_by = :admin_id,
-                            approved_at = CURRENT_TIMESTAMP
+                            approved_at = CURRENT_TIMESTAMP,
+                            approved_by = :admin_id
                         WHERE registration_status = 'pending'
-                    """), {"admin_id": emergency_admin_id})
-                else:
-                    # If emergency_admin doesn't exist, just approve without setting approved_by
-                    result = conn.execute(text("""
-                        UPDATE users 
-                        SET registration_status = 'approved',
-                            approved_at = CURRENT_TIMESTAMP
-                        WHERE registration_status = 'pending'
-                    """))
+                    """),
+                    {"admin_id": emergency_admin_id}
+                )
                 
                 count = result.rowcount
-                print(f"✓ All existing users approved ({count} users updated)")
+                logger.info(f"✓ All existing users approved ({count} users updated)")
                 return count
             
         except Exception as e:
-            print(f"✗ Error during emergency approval: {e}")
+            logger.error(f"✗ Error during emergency approval: {e}")
             raise
 
 

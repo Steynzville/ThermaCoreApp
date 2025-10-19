@@ -96,17 +96,40 @@ You should receive a successful response with an access token.
 
 ## Technical Details
 
+Both approval methods now consistently set:
+- `registration_status = 'approved'`
+- `approved_at = CURRENT_TIMESTAMP`
+- `approved_by = emergency_admin_id` (if available)
+
 The emergency approval makes the following SQL update:
 
 ```sql
 UPDATE users 
 SET registration_status = 'approved',
-    approved_by = (SELECT id FROM users WHERE username = 'emergency_admin' LIMIT 1),
-    approved_at = CURRENT_TIMESTAMP
-WHERE registration_status = 'pending'
+    approved_at = CURRENT_TIMESTAMP,
+    approved_by = (SELECT id FROM users WHERE username = 'emergency_admin' LIMIT 1)
+WHERE registration_status = 'pending';
 ```
 
 This ensures all pending users are immediately approved and can log in.
+
+### Automatic Startup Approval
+
+Runs via `approve_existing_users_emergency()` in `app/utils/auto_migration.py`
+
+**Requires:** `EMERGENCY_AUTO_APPROVE_ON_STARTUP=true` environment variable
+
+This is an opt-in security feature. Set the environment variable to enable automatic approval on startup:
+
+```bash
+export EMERGENCY_AUTO_APPROVE_ON_STARTUP=true
+```
+
+### Manual Script Approval
+
+Run: `python backend/emergency_user_approval.py`
+
+This can be executed at any time without requiring the environment variable.
 
 ## Future Prevention
 

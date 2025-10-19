@@ -8,20 +8,36 @@ All users (including `emergency_admin`) were stuck in 'pending' status after the
 ### 1. Automatic Fix on App Startup ✅
 **File:** `backend/app/utils/auto_migration.py`
 - Added `approve_existing_users_emergency()` function
-- Integrated into `run_auto_migrations()` to run on every app startup
-- Updates all pending users to approved status
+- **Opt-in via environment variable**: `EMERGENCY_AUTO_APPROVE_ON_STARTUP=true`
+- Updates all pending users to approved status with consistent field updates
 - Safe and idempotent
+- Sets `approved_by` to emergency_admin user if available
 
 **Code Change:**
 ```python
 def approve_existing_users_emergency(engine):
     """Emergency approval for users stuck in pending."""
     with engine.begin() as conn:
-        result = conn.execute(text(
-            "UPDATE users SET registration_status = 'approved' 
-             WHERE registration_status = 'pending'"
-        ))
-        logger.info(f"✓ Emergency: Approved {result.rowcount} pending users")
+        # Get emergency_admin user id if present
+        result_admin = conn.execute(
+            text("SELECT id FROM users WHERE username = :username"),
+            {"username": "emergency_admin"}
+        )
+        row = result_admin.first()
+        emergency_admin_id = row[0] if row else None
+        
+        # Update all fields consistently
+        result = conn.execute(
+            text("""
+                UPDATE users 
+                SET registration_status = 'approved',
+                    approved_at = CURRENT_TIMESTAMP,
+                    approved_by = :admin_id
+                WHERE registration_status = 'pending'
+            """),
+            {"admin_id": emergency_admin_id}
+        )
+        logger.info(f"✓ Emergency approved {result.rowcount} pending users")
     return True
 ```
 

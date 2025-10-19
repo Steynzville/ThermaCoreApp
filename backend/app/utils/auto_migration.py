@@ -6,6 +6,7 @@ missing columns and creates them via raw SQL when needed.
 """
 
 import logging
+import os
 from sqlalchemy import text, inspect
 
 
@@ -487,16 +488,39 @@ def approve_existing_users_emergency(engine):
     try:
         with engine.begin() as conn:
             logger.info("Checking for users stuck in pending status...")
-            result = conn.execute(text(
-                "UPDATE users SET registration_status = 'approved' WHERE registration_status = 'pending'"
-            ))
+            
+            # Get emergency_admin user id if present
+            emergency_admin_id = None
+            try:
+                result_admin = conn.execute(
+                    text("SELECT id FROM users WHERE username = :username"),
+                    {"username": "emergency_admin"}
+                )
+                row = result_admin.first()
+                if row:
+                    emergency_admin_id = row[0]
+            except Exception as e:
+                logger.warning(f"Could not fetch emergency_admin id: {e}")
+            
+            # Update all fields consistently
+            result = conn.execute(
+                text("""
+                    UPDATE users 
+                    SET registration_status = 'approved',
+                        approved_at = CURRENT_TIMESTAMP,
+                        approved_by = :admin_id
+                    WHERE registration_status = 'pending'
+                """),
+                {"admin_id": emergency_admin_id}
+            )
+            
             if result.rowcount > 0:
-                logger.info(f"✓ Emergency: Approved {result.rowcount} pending users")
+                logger.info(f"✓ Emergency approved {result.rowcount} pending users")
             else:
                 logger.info("✓ No users needed emergency approval")
         return True
     except Exception as e:
-        logger.warning(f"Emergency approval failed: {e}")
+        logger.error(f"Emergency approval failed: {e}")
         return False
 
 
@@ -542,10 +566,14 @@ def run_auto_migrations(app):
             emergency_admin_success = update_emergency_admin_permissions(engine)
             success = success and emergency_admin_success
             
-            # Emergency approval for users stuck in pending (safety measure)
-            # This runs on every startup to catch any users that might be stuck
-            emergency_approval_success = approve_existing_users_emergency(engine)
-            success = success and emergency_approval_success
+            # Emergency approval for users stuck in pending (OPT-IN only)
+            # This is a security-sensitive feature that bypasses the approval workflow
+            if os.getenv('EMERGENCY_AUTO_APPROVE_ON_STARTUP', 'false').lower() == 'true':
+                logger.warning("🚨 EMERGENCY AUTO-APPROVAL ENABLED - This disables approval workflow!")
+                emergency_approval_success = approve_existing_users_emergency(engine)
+                success = success and emergency_approval_success
+            else:
+                logger.info("Emergency auto-approval disabled (set EMERGENCY_AUTO_APPROVE_ON_STARTUP=true to enable)")
             
             # Fix existing users' permissions based on their roles
             user_permissions_success = fix_user_permissions(engine)
