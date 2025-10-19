@@ -1,6 +1,6 @@
 
-
 import { useNavigate } from "react-router-dom";
+import { Package, Wifi, WifiOff, Wrench, AlertTriangle, Zap } from "lucide-react";
 
 const UnitSummary = ({
   totalUnits,

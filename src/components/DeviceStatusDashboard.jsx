@@ -1,7 +1,13 @@
-import { useEffect,useState } from 'react';
+import { useEffect, useState } from 'react';
+import { RefreshCw, Search, Filter } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
 import { deviceStatusService } from '../services/deviceStatusService';
+import { Button } from './ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Badge } from './ui/badge';
+import { Input } from './ui/input';
+import DeviceStatusIndicator from './DeviceStatusIndicator';
 
 /**
  * Device Status Dashboard Component

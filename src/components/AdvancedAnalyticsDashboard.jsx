@@ -1,4 +1,33 @@
-import { useEffect,useState } from 'react';
+import { useEffect, useState } from 'react';
+import {
+  TrendingUp,
+  TrendingDown,
+  Activity,
+  CheckCircle,
+  Zap,
+  Clock,
+  AlertTriangle,
+} from 'lucide-react';
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
+import { Button } from './ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { Badge } from './ui/badge';
 
 
 const AdvancedAnalyticsDashboard = () => {
