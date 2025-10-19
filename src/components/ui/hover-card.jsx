@@ -7,17 +7,10 @@ function HoverCard({ ...props }) {
 }
 
 function HoverCardTrigger({ ...props }) {
-  return (
-    <HoverCardPrimitive.Trigger data-slot="hover-card-trigger" {...props} />
-  );
+  return <HoverCardPrimitive.Trigger data-slot="hover-card-trigger" {...props} />;
 }
 
-function HoverCardContent({
-  className,
-  align = "center",
-  sideOffset = 4,
-  ...props
-}) {
+function HoverCardContent({ className, align = "center", sideOffset = 4, ...props }) {
   return (
     <HoverCardPrimitive.Portal data-slot="hover-card-portal">
       <HoverCardPrimitive.Content
@@ -34,4 +27,4 @@ function HoverCardContent({
   );
 }
 
-export { HoverCard, HoverCardContent,HoverCardTrigger };
+export { HoverCard, HoverCardContent, HoverCardTrigger };

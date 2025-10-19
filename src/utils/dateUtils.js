@@ -11,13 +11,13 @@
  * @returns {string} Formatted date string
  */
 export function formatDisplayDate(date, options = {}) {
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
-  return dateObj.toLocaleString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
+  const dateObj = typeof date === "string" ? new Date(date) : date;
+  return dateObj.toLocaleString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
     ...options,
   });
 }

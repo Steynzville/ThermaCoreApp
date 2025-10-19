@@ -1,5 +1,3 @@
-
-
 const AlarmsPage = () => {
   return <AlarmsView />;
 };

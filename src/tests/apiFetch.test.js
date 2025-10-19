@@ -1,9 +1,9 @@
-import { afterEach,beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { apiFetch } from '../utils/apiFetch';
+import { apiFetch } from "../utils/apiFetch";
 
 // Mock sonner toast
-vi.mock('sonner', () => ({
+vi.mock("sonner", () => ({
   toast: {
     error: vi.fn(),
     warning: vi.fn(),
@@ -11,7 +11,7 @@ vi.mock('sonner', () => ({
   },
 }));
 
-describe('apiFetch network error retry logic', () => {
+describe("apiFetch network error retry logic", () => {
   beforeEach(() => {
     // Mock localStorage
     global.localStorage = {
@@ -19,7 +19,7 @@ describe('apiFetch network error retry logic', () => {
       setItem: vi.fn(),
       removeItem: vi.fn(),
     };
-    
+
     // Clear all mocks before each test
     vi.clearAllMocks();
   });
@@ -28,10 +28,10 @@ describe('apiFetch network error retry logic', () => {
     vi.restoreAllMocks();
   });
 
-  it('should retry on actual network errors (TypeError from fetch)', async () => {
+  it("should retry on actual network errors (TypeError from fetch)", async () => {
     // Simulate a network error that would come from fetch
-    const networkError = new TypeError('Failed to fetch');
-    
+    const networkError = new TypeError("Failed to fetch");
+
     let attempts = 0;
     global.fetch = vi.fn(() => {
       attempts++;
@@ -41,23 +41,23 @@ describe('apiFetch network error retry logic', () => {
       return Promise.resolve({
         ok: true,
         status: 200,
-        json: () => Promise.resolve({ data: 'success' }),
+        json: () => Promise.resolve({ data: "success" }),
       });
     });
 
-    const response = await apiFetch('/api/test', { 
+    const response = await apiFetch("/api/test", {
       retries: 2,
       retryDelay: 10,
-      showToastOnError: false 
+      showToastOnError: false,
     });
 
     expect(attempts).toBe(2);
     expect(response.ok).toBe(true);
   });
 
-  it('should NOT retry on JSON parsing errors', async () => {
-    const jsonError = new TypeError('Unexpected token in JSON');
-    
+  it("should NOT retry on JSON parsing errors", async () => {
+    const jsonError = new TypeError("Unexpected token in JSON");
+
     let attempts = 0;
     global.fetch = vi.fn(() => {
       attempts++;
@@ -65,20 +65,20 @@ describe('apiFetch network error retry logic', () => {
     });
 
     await expect(
-      apiFetch('/api/test', { 
+      apiFetch("/api/test", {
         retries: 2,
         retryDelay: 10,
-        showToastOnError: false 
-      })
-    ).rejects.toThrow('Unexpected token in JSON');
+        showToastOnError: false,
+      }),
+    ).rejects.toThrow("Unexpected token in JSON");
 
     // Should only attempt once, not retry
     expect(attempts).toBe(1);
   });
 
-  it('should NOT retry on programming errors (undefined)', async () => {
-    const programmingError = new TypeError('Cannot read property of undefined');
-    
+  it("should NOT retry on programming errors (undefined)", async () => {
+    const programmingError = new TypeError("Cannot read property of undefined");
+
     let attempts = 0;
     global.fetch = vi.fn(() => {
       attempts++;
@@ -86,20 +86,20 @@ describe('apiFetch network error retry logic', () => {
     });
 
     await expect(
-      apiFetch('/api/test', { 
+      apiFetch("/api/test", {
         retries: 2,
         retryDelay: 10,
-        showToastOnError: false 
-      })
-    ).rejects.toThrow('Cannot read property of undefined');
+        showToastOnError: false,
+      }),
+    ).rejects.toThrow("Cannot read property of undefined");
 
     // Should only attempt once, not retry
     expect(attempts).toBe(1);
   });
 
-  it('should NOT retry on null reference errors', async () => {
-    const nullError = new TypeError('Cannot read property of null');
-    
+  it("should NOT retry on null reference errors", async () => {
+    const nullError = new TypeError("Cannot read property of null");
+
     let attempts = 0;
     global.fetch = vi.fn(() => {
       attempts++;
@@ -107,20 +107,20 @@ describe('apiFetch network error retry logic', () => {
     });
 
     await expect(
-      apiFetch('/api/test', { 
+      apiFetch("/api/test", {
         retries: 2,
         retryDelay: 10,
-        showToastOnError: false 
-      })
-    ).rejects.toThrow('Cannot read property of null');
+        showToastOnError: false,
+      }),
+    ).rejects.toThrow("Cannot read property of null");
 
     // Should only attempt once, not retry
     expect(attempts).toBe(1);
   });
 
-  it('should NOT retry on function errors', async () => {
-    const functionError = new TypeError('x is not a function');
-    
+  it("should NOT retry on function errors", async () => {
+    const functionError = new TypeError("x is not a function");
+
     let attempts = 0;
     global.fetch = vi.fn(() => {
       attempts++;
@@ -128,24 +128,24 @@ describe('apiFetch network error retry logic', () => {
     });
 
     await expect(
-      apiFetch('/api/test', { 
+      apiFetch("/api/test", {
         retries: 2,
         retryDelay: 10,
-        showToastOnError: false 
-      })
-    ).rejects.toThrow('x is not a function');
+        showToastOnError: false,
+      }),
+    ).rejects.toThrow("x is not a function");
 
     // Should only attempt once, not retry
     expect(attempts).toBe(1);
   });
 
-  it('should retry on network connection errors (cross-browser)', async () => {
+  it("should retry on network connection errors (cross-browser)", async () => {
     // Test various network error messages from different browsers
     const networkErrors = [
-      new TypeError('Network request failed'), // React Native
-      new TypeError('Failed to fetch'), // Chrome/Firefox
-      new TypeError('NetworkError when attempting to fetch resource'), // Safari
-      new TypeError('Load failed'), // Safari
+      new TypeError("Network request failed"), // React Native
+      new TypeError("Failed to fetch"), // Chrome/Firefox
+      new TypeError("NetworkError when attempting to fetch resource"), // Safari
+      new TypeError("Load failed"), // Safari
     ];
 
     for (const error of networkErrors) {
@@ -158,14 +158,14 @@ describe('apiFetch network error retry logic', () => {
         return Promise.resolve({
           ok: true,
           status: 200,
-          json: () => Promise.resolve({ data: 'success' }),
+          json: () => Promise.resolve({ data: "success" }),
         });
       });
 
-      const response = await apiFetch('/api/test', { 
+      const response = await apiFetch("/api/test", {
         retries: 2,
         retryDelay: 10,
-        showToastOnError: false 
+        showToastOnError: false,
       });
 
       expect(attempts).toBe(2);
@@ -173,10 +173,10 @@ describe('apiFetch network error retry logic', () => {
     }
   });
 
-  it('should handle AbortError without retry', async () => {
-    const abortError = new Error('Aborted');
-    abortError.name = 'AbortError';
-    
+  it("should handle AbortError without retry", async () => {
+    const abortError = new Error("Aborted");
+    abortError.name = "AbortError";
+
     let attempts = 0;
     global.fetch = vi.fn(() => {
       attempts++;
@@ -184,18 +184,18 @@ describe('apiFetch network error retry logic', () => {
     });
 
     await expect(
-      apiFetch('/api/test', { 
+      apiFetch("/api/test", {
         retries: 2,
         retryDelay: 10,
-        showToastOnError: false 
-      })
-    ).rejects.toThrow('Request timeout');
+        showToastOnError: false,
+      }),
+    ).rejects.toThrow("Request timeout");
 
     // Should only attempt once, not retry (AbortError is timeout)
     expect(attempts).toBe(1);
   });
 
-  it('should retry server errors (500+)', async () => {
+  it("should retry server errors (500+)", async () => {
     let attempts = 0;
     global.fetch = vi.fn(() => {
       attempts++;
@@ -203,30 +203,30 @@ describe('apiFetch network error retry logic', () => {
         return Promise.resolve({
           ok: false,
           status: 500,
-          statusText: 'Internal Server Error',
-          json: () => Promise.resolve({ error: 'Server error' }),
+          statusText: "Internal Server Error",
+          json: () => Promise.resolve({ error: "Server error" }),
         });
       }
       return Promise.resolve({
         ok: true,
         status: 200,
-        json: () => Promise.resolve({ data: 'success' }),
+        json: () => Promise.resolve({ data: "success" }),
       });
     });
 
-    const response = await apiFetch('/api/test', { 
+    const response = await apiFetch("/api/test", {
       retries: 2,
       retryDelay: 10,
-      showToastOnError: false 
+      showToastOnError: false,
     });
 
     expect(attempts).toBe(2);
     expect(response.ok).toBe(true);
   });
 
-  it('should NOT retry on blob/arrayBuffer errors', async () => {
-    const blobError = new TypeError('Cannot read blob');
-    
+  it("should NOT retry on blob/arrayBuffer errors", async () => {
+    const blobError = new TypeError("Cannot read blob");
+
     let attempts = 0;
     global.fetch = vi.fn(() => {
       attempts++;
@@ -234,20 +234,20 @@ describe('apiFetch network error retry logic', () => {
     });
 
     await expect(
-      apiFetch('/api/test', { 
+      apiFetch("/api/test", {
         retries: 2,
         retryDelay: 10,
-        showToastOnError: false 
-      })
-    ).rejects.toThrow('Cannot read blob');
+        showToastOnError: false,
+      }),
+    ).rejects.toThrow("Cannot read blob");
 
     // Should only attempt once, not retry
     expect(attempts).toBe(1);
   });
 
-  it('should retry on generic network/fetch errors', async () => {
-    const networkError = new TypeError('A network error occurred');
-    
+  it("should retry on generic network/fetch errors", async () => {
+    const networkError = new TypeError("A network error occurred");
+
     let attempts = 0;
     global.fetch = vi.fn(() => {
       attempts++;
@@ -257,24 +257,24 @@ describe('apiFetch network error retry logic', () => {
       return Promise.resolve({
         ok: true,
         status: 200,
-        json: () => Promise.resolve({ data: 'success' }),
+        json: () => Promise.resolve({ data: "success" }),
       });
     });
 
-    const response = await apiFetch('/api/test', { 
+    const response = await apiFetch("/api/test", {
       retries: 2,
       retryDelay: 10,
-      showToastOnError: false 
+      showToastOnError: false,
     });
 
     expect(attempts).toBe(2);
     expect(response.ok).toBe(true);
   });
 
-  it('should handle error with undefined message gracefully', async () => {
+  it("should handle error with undefined message gracefully", async () => {
     const errorWithUndefinedMessage = new TypeError();
-    delete errorWithUndefinedMessage.message;
-    
+    errorWithUndefinedMessage.message = undefined;
+
     let attempts = 0;
     global.fetch = vi.fn(() => {
       attempts++;
@@ -282,21 +282,21 @@ describe('apiFetch network error retry logic', () => {
     });
 
     await expect(
-      apiFetch('/api/test', { 
+      apiFetch("/api/test", {
         retries: 2,
         retryDelay: 10,
-        showToastOnError: false 
-      })
+        showToastOnError: false,
+      }),
     ).rejects.toThrow();
 
     // Should only attempt once since message is undefined (not a network error)
     expect(attempts).toBe(1);
   });
 
-  it('should handle error with null message gracefully', async () => {
-    const errorWithNullMessage = new TypeError('test');
+  it("should handle error with null message gracefully", async () => {
+    const errorWithNullMessage = new TypeError("test");
     errorWithNullMessage.message = null;
-    
+
     let attempts = 0;
     global.fetch = vi.fn(() => {
       attempts++;
@@ -304,21 +304,21 @@ describe('apiFetch network error retry logic', () => {
     });
 
     await expect(
-      apiFetch('/api/test', { 
+      apiFetch("/api/test", {
         retries: 2,
         retryDelay: 10,
-        showToastOnError: false 
-      })
+        showToastOnError: false,
+      }),
     ).rejects.toThrow();
 
     // Should only attempt once since message is null (not a network error)
     expect(attempts).toBe(1);
   });
 
-  it('should handle error with number message gracefully', async () => {
+  it("should handle error with number message gracefully", async () => {
     const errorWithNumberMessage = new TypeError();
     errorWithNumberMessage.message = 123;
-    
+
     let attempts = 0;
     global.fetch = vi.fn(() => {
       attempts++;
@@ -326,21 +326,21 @@ describe('apiFetch network error retry logic', () => {
     });
 
     await expect(
-      apiFetch('/api/test', { 
+      apiFetch("/api/test", {
         retries: 2,
         retryDelay: 10,
-        showToastOnError: false 
-      })
+        showToastOnError: false,
+      }),
     ).rejects.toThrow();
 
     // Should only attempt once since message is a number (not a network error)
     expect(attempts).toBe(1);
   });
 
-  it('should handle error with object message gracefully', async () => {
+  it("should handle error with object message gracefully", async () => {
     const errorWithObjectMessage = new TypeError();
-    errorWithObjectMessage.message = { error: 'some error' };
-    
+    errorWithObjectMessage.message = { error: "some error" };
+
     let attempts = 0;
     global.fetch = vi.fn(() => {
       attempts++;
@@ -348,20 +348,20 @@ describe('apiFetch network error retry logic', () => {
     });
 
     await expect(
-      apiFetch('/api/test', { 
+      apiFetch("/api/test", {
         retries: 2,
         retryDelay: 10,
-        showToastOnError: false 
-      })
+        showToastOnError: false,
+      }),
     ).rejects.toThrow();
 
     // Should only attempt once since message is an object (not a network error)
     expect(attempts).toBe(1);
   });
 
-  it('should handle error with empty string message gracefully', async () => {
-    const errorWithEmptyMessage = new TypeError('');
-    
+  it("should handle error with empty string message gracefully", async () => {
+    const errorWithEmptyMessage = new TypeError("");
+
     let attempts = 0;
     global.fetch = vi.fn(() => {
       attempts++;
@@ -369,11 +369,11 @@ describe('apiFetch network error retry logic', () => {
     });
 
     await expect(
-      apiFetch('/api/test', { 
+      apiFetch("/api/test", {
         retries: 2,
         retryDelay: 10,
-        showToastOnError: false 
-      })
+        showToastOnError: false,
+      }),
     ).rejects.toThrow();
 
     // Should only attempt once since empty message doesn't match network patterns

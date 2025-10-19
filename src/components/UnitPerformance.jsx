@@ -9,8 +9,8 @@ import {
   Wrench,
   Zap,
 } from "lucide-react";
-import { useEffect,useState } from "react";
-import { useLocation, useNavigate,useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
 import { useUnits } from "../context/UnitContext";
@@ -30,16 +30,11 @@ const PerformanceCard = ({
 }) => {
   const colorClasses = {
     blue: "bg-white dark:bg-blue-900/20 border-blue-200 dark:border-blue-800",
-    green:
-      "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800",
-    orange:
-      "bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800",
-    purple:
-      "bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800",
-    darkpurple:
-      "bg-purple-100 dark:bg-purple-900/30 border-purple-300 dark:border-purple-700",
-    yellow:
-      "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800",
+    green: "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800",
+    orange: "bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800",
+    purple: "bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800",
+    darkpurple: "bg-purple-100 dark:bg-purple-900/30 border-purple-300 dark:border-purple-700",
+    yellow: "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800",
     red: "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800",
   };
 
@@ -53,8 +48,7 @@ const PerformanceCard = ({
     red: "text-red-600 dark:text-red-400",
   };
 
-  const TrendIcon =
-    trend === "up" ? TrendingUp : trend === "down" ? TrendingDown : null;
+  const TrendIcon = trend === "up" ? TrendingUp : trend === "down" ? TrendingDown : null;
 
   return (
     <div
@@ -72,18 +66,12 @@ const PerformanceCard = ({
               }`}
             />
           )}
-          {asterisk && (
-            <span className="text-xs text-gray-500 dark:text-gray-400">*</span>
-          )}
+          {asterisk && <span className="text-xs text-gray-500 dark:text-gray-400">*</span>}
         </div>
       </div>
-      <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-        {title}
-      </h3>
+      <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">{title}</h3>
       <div className="flex items-baseline space-x-2">
-        <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-          {value}
-        </span>
+        <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">{value}</span>
         <span className="text-sm text-gray-500 dark:text-gray-400">{unit}</span>
       </div>
       {dollarAmount && (
@@ -96,11 +84,7 @@ const PerformanceCard = ({
           {carbonSaved}
         </div>
       )}
-      {subtitle && (
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-          {subtitle}
-        </p>
-      )}
+      {subtitle && <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">{subtitle}</p>}
     </div>
   );
 };
@@ -116,8 +100,7 @@ const SummaryCard = ({
 }) => {
   const colorClasses = {
     blue: "bg-white dark:bg-blue-900/20 border-blue-200 dark:border-blue-800",
-    green:
-      "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800",
+    green: "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800",
   };
 
   const iconColorClasses = {
@@ -126,42 +109,26 @@ const SummaryCard = ({
   };
 
   return (
-    <div
-      className={`p-6 rounded-lg border ${colorClasses[color]} col-span-full`}
-    >
+    <div className={`p-6 rounded-lg border ${colorClasses[color]} col-span-full`}>
       <div className="flex items-center mb-4">
         <Icon className={`h-8 w-8 ${iconColorClasses[color]} mr-3`} />
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          {title}
-        </h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="text-center">
-          <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            {todayValue}
-          </div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{todayValue}</div>
           <div className="text-sm text-gray-500 dark:text-gray-400">{unit}</div>
-          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-            Today
-          </div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">Today</div>
         </div>
         <div className="text-center">
-          <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            {monthValue}
-          </div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{monthValue}</div>
           <div className="text-sm text-gray-500 dark:text-gray-400">{unit}</div>
-          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-            This Month
-          </div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">This Month</div>
         </div>
         <div className="text-center">
-          <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            {allTimeValue}
-          </div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{allTimeValue}</div>
           <div className="text-sm text-gray-500 dark:text-gray-400">{unit}</div>
-          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-            All Time
-          </div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">All Time</div>
         </div>
       </div>
     </div>
@@ -232,7 +199,7 @@ const UnitPerformance = ({ unit: propUnit, className, hideHeader = false }) => {
         setResolvedUnit(null);
         setIsLoading(false);
       } catch (error) {
-        console.error('Error resolving unit data:', error);
+        console.error("Error resolving unit data:", error);
         setResolvedUnit(null);
         setIsLoading(false);
       }
@@ -247,9 +214,7 @@ const UnitPerformance = ({ unit: propUnit, className, hideHeader = false }) => {
       <div className="min-h-screen bg-blue-50 dark:bg-gray-950 p-6 flex items-center justify-center">
         <div className="text-center">
           <Spinner size="lg" className="mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400">
-            Loading unit performance data...
-          </p>
+          <p className="text-gray-600 dark:text-gray-400">Loading unit performance data...</p>
         </div>
       </div>
     );
@@ -264,10 +229,9 @@ const UnitPerformance = ({ unit: propUnit, className, hideHeader = false }) => {
             Unit Not Found
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mb-4">
-            {params.id 
+            {params.id
               ? `Unit with ID "${params.id}" could not be found.`
-              : 'Please select a valid unit to view performance data.'
-            }
+              : "Please select a valid unit to view performance data."}
           </p>
           <button
             onClick={() => window.history.back()}
@@ -298,7 +262,7 @@ const UnitPerformance = ({ unit: propUnit, className, hideHeader = false }) => {
 
   // Mock performance data for this specific unit - in real app this would come from API
   // Scale the performance data based on this unit's current power output
-  const unitPowerRatio = unitCurrentPower / 50; // Assuming 50kW is max power for scaling
+  const _unitPowerRatio = unitCurrentPower / 50; // Assuming 50kW is max power for scaling
   const baseUnitPerformance = {
     power: {
       today: Math.max(12, unitCurrentPower * 24 * 0.8), // Minimum 12 kWh per day
@@ -332,16 +296,25 @@ const UnitPerformance = ({ unit: propUnit, className, hideHeader = false }) => {
   const totalPowerGeneratedToday = performanceData.power.today; // kWh from the card "Total Power Generated" today
   const unitParasiticLoadKWh = unitParasiticLoad * 24; // Convert kW to kWh for the day
   const unitUserLoadKWh = unitUserLoad * 24; // Convert kW to kWh for the day
-  const feedInPowerToday = Math.max(0, totalPowerGeneratedToday - unitParasiticLoadKWh - unitUserLoadKWh); // kWh
+  const _feedInPowerToday = Math.max(
+    0,
+    totalPowerGeneratedToday - unitParasiticLoadKWh - unitUserLoadKWh,
+  ); // kWh
 
   // Calculate money earned from feed-in
-  const moneyEarnedFromFeedIn = Math.max(0, unitFeedInLoad * 24 * financialAssumptions.feedInTariff);
+  const moneyEarnedFromFeedIn = Math.max(
+    0,
+    unitFeedInLoad * 24 * financialAssumptions.feedInTariff,
+  );
 
   // Calculate money saved by self-generating
   const moneySavedBySelfGenerating = unitUserLoadKWh * financialAssumptions.electricityCost;
 
   // Calculate total savings daily
-  const savingsDaily = Math.max(0, moneyEarnedFromFeedIn + moneySavedBySelfGenerating - financialAssumptions.rebate / 30);
+  const savingsDaily = Math.max(
+    0,
+    moneyEarnedFromFeedIn + moneySavedBySelfGenerating - financialAssumptions.rebate / 30,
+  );
 
   // Calculate savings monthly and all time
   const savingsMonthly = savingsDaily * 30;
@@ -373,7 +346,7 @@ const UnitPerformance = ({ unit: propUnit, className, hideHeader = false }) => {
   performanceData.paybackPeriod = paybackPeriod;
 
   // Unit-specific operational metrics (mock data - in real app from API)
-  const isOnline = unit.status === 'online';
+  const isOnline = unit.status === "online";
   performanceData.unitUptime = isOnline ? 99.2 : 0.0; // Unit uptime instead of fleet uptime
   performanceData.lastMaintenanceHours = 168; // Hours since last maintenance
   performanceData.daysSinceLastIssue = isOnline ? 12 : 0; // Days since last issue for this unit
@@ -385,9 +358,7 @@ const UnitPerformance = ({ unit: propUnit, className, hideHeader = false }) => {
   const co2PerLiterDiesel = 2.64;
 
   return (
-    <div
-      className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-3 lg:p-4 xl:p-6 ${className}`}
-    >
+    <div className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-3 lg:p-4 xl:p-6 ${className}`}>
       <div className="max-w-7xl mx-auto">
         {/* Back Navigation Button */}
         <button
@@ -410,16 +381,26 @@ const UnitPerformance = ({ unit: propUnit, className, hideHeader = false }) => {
                   Monitor individual unit power generation, efficiency, and environmental impact
                 </p>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 text-sm text-gray-500 dark:text-gray-400">
-                  <span><strong>Serial Number:</strong> {unit.serialNumber || unit.id}</span>
-                  <span><strong>Location:</strong> {unit.location || 'Not specified'}</span>
-                  <span><strong>Status:</strong> 
-                    <span className={`ml-1 px-2 py-1 rounded-full text-xs font-medium ${
-                      unit.status === 'online' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' :
-                      unit.status === 'offline' ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400' :
-                      unit.status === 'maintenance' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400' :
-                      'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
-                    }`}>
-                      {unit.status || 'unknown'}
+                  <span>
+                    <strong>Serial Number:</strong> {unit.serialNumber || unit.id}
+                  </span>
+                  <span>
+                    <strong>Location:</strong> {unit.location || "Not specified"}
+                  </span>
+                  <span>
+                    <strong>Status:</strong>
+                    <span
+                      className={`ml-1 px-2 py-1 rounded-full text-xs font-medium ${
+                        unit.status === "online"
+                          ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
+                          : unit.status === "offline"
+                            ? "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"
+                            : unit.status === "maintenance"
+                              ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400"
+                              : "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400"
+                      }`}
+                    >
+                      {unit.status || "unknown"}
                     </span>
                   </span>
                 </div>
@@ -436,15 +417,15 @@ const UnitPerformance = ({ unit: propUnit, className, hideHeader = false }) => {
                 Units
               </span>
               <span className="mx-2">/</span>
-              <span className="text-gray-900 dark:text-gray-100">
-                {unit.name} Performance
-              </span>
+              <span className="text-gray-900 dark:text-gray-100">{unit.name} Performance</span>
             </nav>
           </div>
         )}
 
         {/* Main Summary Cards */}
-        <div className={`grid gap-6 mb-8 ${unit.watergeneration ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
+        <div
+          className={`grid gap-6 mb-8 ${unit.watergeneration ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1"}`}
+        >
           <SummaryCard
             title="Power Generated"
             todayValue={Math.round(performanceData.power.today).toLocaleString()}
@@ -614,7 +595,11 @@ const UnitPerformance = ({ unit: propUnit, className, hideHeader = false }) => {
             <PerformanceCard
               icon={Clock}
               title="Payback Period"
-              value={performanceData.paybackPeriod > 0 ? `${performanceData.paybackPeriod.toFixed(1)} years` : 'N/A'}
+              value={
+                performanceData.paybackPeriod > 0
+                  ? `${performanceData.paybackPeriod.toFixed(1)} years`
+                  : "N/A"
+              }
               unit=""
               color="purple"
             />
@@ -692,12 +677,12 @@ const UnitPerformance = ({ unit: propUnit, className, hideHeader = false }) => {
               asterisk={true}
             />
           </div>
-          
+
           {/* Disclaimer */}
           <div className="mt-6 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
             <p className="text-xs text-gray-600 dark:text-gray-400">
-              * Environmental calculations are based on diesel generator
-              equivalency for comparative analysis.
+              * Environmental calculations are based on diesel generator equivalency for comparative
+              analysis.
             </p>
           </div>
         </div>

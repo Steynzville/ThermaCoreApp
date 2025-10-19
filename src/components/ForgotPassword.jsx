@@ -40,7 +40,7 @@ const ForgotPassword = () => {
       } else {
         setError(result.message);
       }
-    } catch (err) {
+    } catch (_err) {
       setError("An unexpected error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -55,11 +55,7 @@ const ForgotPassword = () => {
     <div className={styles.pageWrapper}>
       <div className={styles.loginContainer}>
         <div className={styles.logoContainer}>
-          <img
-            src={thermaCoreLogo}
-            alt="ThermaCore Logo"
-            className={styles.logo}
-          />
+          <img src={thermaCoreLogo} alt="ThermaCore Logo" className={styles.logo} />
         </div>
         <div className={styles.titleContainer}>
           <h1 className={styles.title}>Forgot Password?</h1>
@@ -69,16 +65,15 @@ const ForgotPassword = () => {
         </div>
 
         {message && (
-          <div className={`${styles.loginError} ${styles.visible}`} style={{ backgroundColor: '#10b981', color: 'white' }}>
+          <div
+            className={`${styles.loginError} ${styles.visible}`}
+            style={{ backgroundColor: "#10b981", color: "white" }}
+          >
             {message}
           </div>
         )}
 
-        {error && (
-          <div className={`${styles.loginError} ${styles.visible}`}>
-            {error}
-          </div>
-        )}
+        {error && <div className={`${styles.loginError} ${styles.visible}`}>{error}</div>}
 
         <form onSubmit={handleSubmit}>
           <div className={styles.formGroup}>
@@ -98,11 +93,7 @@ const ForgotPassword = () => {
             />
           </div>
 
-          <button
-            type="submit"
-            className={styles.btnSignin}
-            disabled={isSubmitting}
-          >
+          <button type="submit" className={styles.btnSignin} disabled={isSubmitting}>
             {isSubmitting ? "Sending..." : "Send Reset Link"}
           </button>
 
@@ -111,12 +102,12 @@ const ForgotPassword = () => {
             onClick={handleBackToLogin}
             className={styles.forgotPasswordLink}
             style={{
-              width: '100%',
-              textAlign: 'center',
-              marginTop: '1rem',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer'
+              width: "100%",
+              textAlign: "center",
+              marginTop: "1rem",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
             }}
           >
             Back to Login

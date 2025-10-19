@@ -1,7 +1,7 @@
 "use client";
 
 import * as ContextMenuPrimitive from "@radix-ui/react-context-menu";
-import { ChevronRightIcon, CheckIcon, CircleIcon } from "lucide-react";
+import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -10,21 +10,15 @@ function ContextMenu({ ...props }) {
 }
 
 function ContextMenuTrigger({ ...props }) {
-  return (
-    <ContextMenuPrimitive.Trigger data-slot="context-menu-trigger" {...props} />
-  );
+  return <ContextMenuPrimitive.Trigger data-slot="context-menu-trigger" {...props} />;
 }
 
 function ContextMenuGroup({ ...props }) {
-  return (
-    <ContextMenuPrimitive.Group data-slot="context-menu-group" {...props} />
-  );
+  return <ContextMenuPrimitive.Group data-slot="context-menu-group" {...props} />;
 }
 
 function ContextMenuPortal({ ...props }) {
-  return (
-    <ContextMenuPrimitive.Portal data-slot="context-menu-portal" {...props} />
-  );
+  return <ContextMenuPrimitive.Portal data-slot="context-menu-portal" {...props} />;
 }
 
 function ContextMenuSub({ ...props }) {
@@ -32,12 +26,7 @@ function ContextMenuSub({ ...props }) {
 }
 
 function ContextMenuRadioGroup({ ...props }) {
-  return (
-    <ContextMenuPrimitive.RadioGroup
-      data-slot="context-menu-radio-group"
-      {...props}
-    />
-  );
+  return <ContextMenuPrimitive.RadioGroup data-slot="context-menu-radio-group" {...props} />;
 }
 
 function ContextMenuSubTrigger({ className, inset, children, ...props }) {
@@ -146,10 +135,7 @@ function ContextMenuLabel({ className, inset, ...props }) {
     <ContextMenuPrimitive.Label
       data-slot="context-menu-label"
       data-inset={inset}
-      className={cn(
-        "text-foreground px-2 py-1.5 text-sm font-medium data-[inset]:pl-8",
-        className,
-      )}
+      className={cn("text-foreground px-2 py-1.5 text-sm font-medium data-[inset]:pl-8", className)}
       {...props}
     />
   );
@@ -169,10 +155,7 @@ function ContextMenuShortcut({ className, ...props }) {
   return (
     <span
       data-slot="context-menu-shortcut"
-      className={cn(
-        "text-muted-foreground ml-auto text-xs tracking-widest",
-        className,
-      )}
+      className={cn("text-muted-foreground ml-auto text-xs tracking-widest", className)}
       {...props}
     />
   );

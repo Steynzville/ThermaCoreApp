@@ -77,5 +77,3 @@ export const mockRecentActions = Array.from({ length: 50 }, (_, i) => ({
   timestamp: generateTimestamp((50 - i) * TIME_CONSTANTS.FIFTEEN_MINUTES), // Ensures chronological order: oldest first
   description: CONTROL_ACTION_DESCRIPTIONS[i % CONTROL_ACTION_DESCRIPTIONS.length],
 }));
-
-

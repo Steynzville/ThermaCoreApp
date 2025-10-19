@@ -1,5 +1,5 @@
+import { AlertCircle, CheckCircle, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
-import { CheckCircle, XCircle, Eye, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "./ui/button";
@@ -32,20 +32,21 @@ const UserApprovalPanel = () => {
   const fetchPendingUsers = async () => {
     setIsLoading(true);
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://thermacoreapp.onrender.com';
-      const token = localStorage.getItem('access_token');
-      
+      const API_BASE_URL =
+        import.meta.env.VITE_API_BASE_URL || "https://thermacoreapp.onrender.com";
+      const token = localStorage.getItem("access_token");
+
       const response = await fetch(`${API_BASE_URL}/api/v1/users/pending`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
       });
-      
+
       if (!response.ok) {
-        throw new Error('Failed to fetch pending users');
+        throw new Error("Failed to fetch pending users");
       }
-      
+
       const data = await response.json();
       setPendingUsers(data.data || []);
     } catch (error) {
@@ -58,28 +59,29 @@ const UserApprovalPanel = () => {
 
   const fetchRoles = async () => {
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://thermacoreapp.onrender.com';
-      const token = localStorage.getItem('access_token');
-      
+      const API_BASE_URL =
+        import.meta.env.VITE_API_BASE_URL || "https://thermacoreapp.onrender.com";
+      const token = localStorage.getItem("access_token");
+
       const response = await fetch(`${API_BASE_URL}/api/v1/roles`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
       });
-      
+
       if (!response.ok) {
-        throw new Error('Failed to fetch roles');
+        throw new Error("Failed to fetch roles");
       }
-      
+
       const data = await response.json();
       setAvailableRoles(data.data || []);
     } catch (error) {
       console.error("Error fetching roles:", error);
       setAvailableRoles([
-        { id: 1, name: 'admin', description: 'Administrator' },
-        { id: 2, name: 'operator', description: 'Operator' },
-        { id: 3, name: 'viewer', description: 'Viewer' },
+        { id: 1, name: "admin", description: "Administrator" },
+        { id: 2, name: "operator", description: "Operator" },
+        { id: 3, name: "viewer", description: "Viewer" },
       ]);
     }
   };
@@ -91,26 +93,27 @@ const UserApprovalPanel = () => {
     }
 
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://thermacoreapp.onrender.com';
-      const token = localStorage.getItem('access_token');
-      
+      const API_BASE_URL =
+        import.meta.env.VITE_API_BASE_URL || "https://thermacoreapp.onrender.com";
+      const token = localStorage.getItem("access_token");
+
       const response = await fetch(`${API_BASE_URL}/api/v1/users/${selectedUser.id}/approve`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          role_id: parseInt(selectedRole),
+          role_id: Number.parseInt(selectedRole),
           notes: approvalNotes,
         }),
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to approve user');
+        throw new Error(error.error || "Failed to approve user");
       }
-      
+
       toast.success(`User ${selectedUser.username} approved successfully`);
       setShowApproveDialog(false);
       setSelectedUser(null);
@@ -130,25 +133,26 @@ const UserApprovalPanel = () => {
     }
 
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://thermacoreapp.onrender.com';
-      const token = localStorage.getItem('access_token');
-      
+      const API_BASE_URL =
+        import.meta.env.VITE_API_BASE_URL || "https://thermacoreapp.onrender.com";
+      const token = localStorage.getItem("access_token");
+
       const response = await fetch(`${API_BASE_URL}/api/v1/users/${selectedUser.id}/reject`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           rejection_reason: rejectionReason,
         }),
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to reject user');
+        throw new Error(error.error || "Failed to reject user");
       }
-      
+
       toast.success(`User ${selectedUser.username} registration rejected`);
       setShowRejectDialog(false);
       setSelectedUser(null);
@@ -173,7 +177,7 @@ const UserApprovalPanel = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
       </div>
     );
   }
@@ -198,9 +202,7 @@ const UserApprovalPanel = () => {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <h3 className="text-lg font-semibold">
-            Pending User Approvals ({pendingUsers.length})
-          </h3>
+          <h3 className="text-lg font-semibold">Pending User Approvals ({pendingUsers.length})</h3>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -223,10 +225,8 @@ const UserApprovalPanel = () => {
                       {user.first_name} {user.last_name}
                     </td>
                     <td className="p-3">{user.email}</td>
-                    <td className="p-3">{user.company || 'N/A'}</td>
-                    <td className="p-3">
-                      {new Date(user.created_at).toLocaleDateString()}
-                    </td>
+                    <td className="p-3">{user.company || "N/A"}</td>
+                    <td className="p-3">{new Date(user.created_at).toLocaleDateString()}</td>
                     <td className="p-3">
                       <div className="flex gap-2 justify-end">
                         <Button
@@ -265,7 +265,7 @@ const UserApprovalPanel = () => {
               Assign a role to {selectedUser?.username} and approve their registration.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <div>
               <label className="block text-sm font-medium mb-2">
@@ -284,11 +284,9 @@ const UserApprovalPanel = () => {
                 ))}
               </select>
             </div>
-            
+
             <div>
-              <label className="block text-sm font-medium mb-2">
-                Approval Notes (Optional)
-              </label>
+              <label className="block text-sm font-medium mb-2">Approval Notes (Optional)</label>
               <textarea
                 value={approvalNotes}
                 onChange={(e) => setApprovalNotes(e.target.value)}
@@ -300,10 +298,18 @@ const UserApprovalPanel = () => {
 
             {selectedUser && (
               <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-md text-sm">
-                <p><strong>Email:</strong> {selectedUser.email}</p>
-                <p><strong>Name:</strong> {selectedUser.first_name} {selectedUser.last_name}</p>
-                <p><strong>Company:</strong> {selectedUser.company || 'N/A'}</p>
-                <p><strong>Department:</strong> {selectedUser.department || 'N/A'}</p>
+                <p>
+                  <strong>Email:</strong> {selectedUser.email}
+                </p>
+                <p>
+                  <strong>Name:</strong> {selectedUser.first_name} {selectedUser.last_name}
+                </p>
+                <p>
+                  <strong>Company:</strong> {selectedUser.company || "N/A"}
+                </p>
+                <p>
+                  <strong>Department:</strong> {selectedUser.department || "N/A"}
+                </p>
               </div>
             )}
           </div>
@@ -319,10 +325,7 @@ const UserApprovalPanel = () => {
             >
               Cancel
             </Button>
-            <Button
-              onClick={handleApprove}
-              className="bg-green-600 hover:bg-green-700"
-            >
+            <Button onClick={handleApprove} className="bg-green-600 hover:bg-green-700">
               Approve User
             </Button>
           </DialogFooter>
@@ -338,7 +341,7 @@ const UserApprovalPanel = () => {
               Please provide a reason for rejecting {selectedUser?.username}'s registration.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <div>
               <label className="block text-sm font-medium mb-2">
@@ -355,9 +358,15 @@ const UserApprovalPanel = () => {
 
             {selectedUser && (
               <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-md text-sm">
-                <p><strong>Email:</strong> {selectedUser.email}</p>
-                <p><strong>Name:</strong> {selectedUser.first_name} {selectedUser.last_name}</p>
-                <p><strong>Company:</strong> {selectedUser.company || 'N/A'}</p>
+                <p>
+                  <strong>Email:</strong> {selectedUser.email}
+                </p>
+                <p>
+                  <strong>Name:</strong> {selectedUser.first_name} {selectedUser.last_name}
+                </p>
+                <p>
+                  <strong>Company:</strong> {selectedUser.company || "N/A"}
+                </p>
               </div>
             )}
           </div>
@@ -372,10 +381,7 @@ const UserApprovalPanel = () => {
             >
               Cancel
             </Button>
-            <Button
-              onClick={handleReject}
-              variant="destructive"
-            >
+            <Button onClick={handleReject} variant="destructive">
               Reject Registration
             </Button>
           </DialogFooter>

@@ -14,9 +14,7 @@ const RemoteControl = lazy(() => import("../components/RemoteControl"));
 const UnitPerformance = lazy(() => import("../components/UnitPerformance"));
 const ViewAnalytics = lazy(() => import("../components/ViewAnalytics"));
 const SystemHealth = lazy(() => import("../components/SystemHealth"));
-const SynchronizeUnitsOverview = lazy(
-  () => import("../components/SynchronizeUnitsOverview"),
-);
+const SynchronizeUnitsOverview = lazy(() => import("../components/SynchronizeUnitsOverview"));
 // Phase 3 & 4 Components
 const AdvancedAnalyticsDashboard = lazy(() => import("../components/AdvancedAnalyticsDashboard"));
 const MultiProtocolManager = lazy(() => import("../components/MultiProtocolManager"));

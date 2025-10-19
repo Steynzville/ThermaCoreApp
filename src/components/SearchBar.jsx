@@ -1,11 +1,6 @@
-import { useEffect,useState } from "react";
+import { useEffect, useState } from "react";
 
-const SearchBar = ({
-  placeholder = "Search units...",
-  className = "",
-  value = "",
-  onSearch,
-}) => {
+const SearchBar = ({ placeholder = "Search units...", className = "", value = "", onSearch }) => {
   const [query, setQuery] = useState(value);
 
   // Update internal state when value prop changes

@@ -1,15 +1,14 @@
-
+import { AlertTriangle, CheckCircle, Filter, User, Zap } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Filter, CheckCircle, AlertTriangle, User, Zap } from "lucide-react";
 
 import { useAuth } from "../context/AuthContext";
 import { useUnits } from "../context/UnitContext";
 import PageHeader from "./PageHeader";
-import SearchBar from "./SearchBar";
-import { Card, CardHeader, CardContent } from "./ui/card";
 import PowerIcon3D from "./PowerIcon3D";
+import SearchBar from "./SearchBar";
 import WaterIcon3D from "./WaterIcon3D";
+import { Card, CardContent, CardHeader } from "./ui/card";
 
 const GridView = ({ className }) => {
   const navigate = useNavigate();
@@ -20,55 +19,58 @@ const GridView = ({ className }) => {
   const [localUnits, setLocalUnits] = useState([]);
 
   // Static alert data (moved outside useEffect to avoid recreation)
-  const alertsData = useMemo(() => ({
-    "TC001": {
-      type: "critical",
-      title: "Unit Offline",
-      message: "ThermaCore Unit 001 has gone offline and requires immediate attention",
-      timestamp: "2025-09-09 14:45",
-      acknowledged: false,
-    },
-    "TC002": {
-      type: "warning",
-      title: "Low Water Level",
-      message: "ThermaCore Unit 002 water level has dropped below 10%",
-      timestamp: "2025-09-09 14:15",
-      acknowledged: false,
-    },
-    "TC003": {
-      type: "info",
-      title: "Maintenance Scheduled",
-      message: "ThermaCore Unit 003 scheduled for routine maintenance tomorrow",
-      timestamp: "2025-09-09 13:30",
-      acknowledged: true,
-    },
-    "TC004": {
-      type: "success",
-      title: "System Restored",
-      message: "ThermaCore Unit 004 has been successfully restored to normal operation",
-      timestamp: "2025-09-09 12:00",
-      acknowledged: true,
-    },
-    "TC005": {
-      type: "warning",
-      title: "Temperature Alert",
-      message: "ThermaCore Unit 005 temperature has exceeded normal operating range",
-      timestamp: "2025-09-09 11:30",
-      acknowledged: false,
-    },
-    "TC006": {
-      type: "critical",
-      title: "Pressure Drop",
-      message: "ThermaCore Unit 006 experiencing significant pressure drop",
-      timestamp: "2025-09-09 10:15",
-      acknowledged: false,
-    },
-  }), []);
+  const alertsData = useMemo(
+    () => ({
+      TC001: {
+        type: "critical",
+        title: "Unit Offline",
+        message: "ThermaCore Unit 001 has gone offline and requires immediate attention",
+        timestamp: "2025-09-09 14:45",
+        acknowledged: false,
+      },
+      TC002: {
+        type: "warning",
+        title: "Low Water Level",
+        message: "ThermaCore Unit 002 water level has dropped below 10%",
+        timestamp: "2025-09-09 14:15",
+        acknowledged: false,
+      },
+      TC003: {
+        type: "info",
+        title: "Maintenance Scheduled",
+        message: "ThermaCore Unit 003 scheduled for routine maintenance tomorrow",
+        timestamp: "2025-09-09 13:30",
+        acknowledged: true,
+      },
+      TC004: {
+        type: "success",
+        title: "System Restored",
+        message: "ThermaCore Unit 004 has been successfully restored to normal operation",
+        timestamp: "2025-09-09 12:00",
+        acknowledged: true,
+      },
+      TC005: {
+        type: "warning",
+        title: "Temperature Alert",
+        message: "ThermaCore Unit 005 temperature has exceeded normal operating range",
+        timestamp: "2025-09-09 11:30",
+        acknowledged: false,
+      },
+      TC006: {
+        type: "critical",
+        title: "Pressure Drop",
+        message: "ThermaCore Unit 006 experiencing significant pressure drop",
+        timestamp: "2025-09-09 10:15",
+        acknowledged: false,
+      },
+    }),
+    [],
+  );
 
   // Memoized processed units to avoid expensive operations on every render
   const processedUnits = useMemo(() => {
     if (!contextUnits) return [];
-    
+
     const mappedUnits = contextUnits.map((unit) => ({
       ...unit,
       serialNumber: unit.serialNumber || `TC-2024-${unit.id}`,
@@ -76,8 +78,8 @@ const GridView = ({ className }) => {
       alerts: unit.hasAlert ? ["System alert detected"] : [],
       currentAlert: unit.hasAlert && alertsData[unit.id] ? alertsData[unit.id] : null,
       // Use static dates instead of random generation
-      installDate: `2024-0${(parseInt(unit.id.slice(-1)) % 9) + 1}-15`,
-      lastMaintenance: `2024-0${(parseInt(unit.id.slice(-1)) % 9) + 2}-10`,
+      installDate: `2024-0${(Number.parseInt(unit.id.slice(-1)) % 9) + 1}-15`,
+      lastMaintenance: `2024-0${(Number.parseInt(unit.id.slice(-1)) % 9) + 2}-10`,
     }));
 
     // Admins can see all units, others see limited units
@@ -164,9 +166,7 @@ const GridView = ({ className }) => {
   }
 
   return (
-    <div
-      className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-3 lg:p-4 xl:p-6 ${className}`}
-    >
+    <div className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-3 lg:p-4 xl:p-6 ${className}`}>
       <div className="max-w-6xl mx-auto">
         <PageHeader
           title={`Grid View - ${statusFilter === "All Status" ? "All Units" : statusFilter}`}
@@ -214,18 +214,21 @@ const GridView = ({ className }) => {
                   <div className="flex items-center space-x-3 mb-3">
                     {/* Power Icon */}
                     <PowerIcon3D power={unit.currentPower} />
-                    
+
                     {/* Water Icon - only show if unit has water generation */}
                     {unit.watergeneration && (
-                      <WaterIcon3D waterLevel={unit.water_level} greyedOut={unit.status !== "online" || !unit.watergeneration} />
+                      <WaterIcon3D
+                        waterLevel={unit.water_level}
+                        greyedOut={unit.status !== "online" || !unit.watergeneration}
+                      />
                     )}
                   </div>
-                  
+
                   {/* Unit name below icons */}
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 text-center mb-2">
                     {unit.name}
                   </h3>
-                  
+
                   {/* Status indicator */}
                   <div className="flex items-center space-x-2">
                     {unit.status === "online" ? (
@@ -251,9 +254,7 @@ const GridView = ({ className }) => {
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-3">
                   S/N: {unit.serialNumber}
                 </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  📍 {unit.location}
-                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">📍 {unit.location}</p>
               </CardHeader>
 
               <CardContent className="space-y-3">
@@ -273,9 +274,7 @@ const GridView = ({ className }) => {
                   <div className="p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
                     <div className="flex items-center space-x-1">
                       <Zap className="h-3 w-3 text-red-600 dark:text-red-400" />
-                      <p className="text-xs font-medium text-red-800 dark:text-red-200">
-                        Alarm!
-                      </p>
+                      <p className="text-xs font-medium text-red-800 dark:text-red-200">Alarm!</p>
                     </div>
                   </div>
                 )}

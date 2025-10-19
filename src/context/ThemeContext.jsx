@@ -26,9 +26,7 @@ export const ThemeProvider = ({ children }) => {
     let effectiveTheme = theme;
 
     if (theme === "auto") {
-      effectiveTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light";
+      effectiveTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     }
 
     setActualTheme(effectiveTheme);
@@ -73,9 +71,7 @@ export const ThemeProvider = ({ children }) => {
   };
 
   return (
-    <ThemeContext.Provider
-      value={{ theme, actualTheme, setTheme, toggleTheme }}
-    >
+    <ThemeContext.Provider value={{ theme, actualTheme, setTheme, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   );

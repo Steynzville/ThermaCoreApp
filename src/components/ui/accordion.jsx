@@ -47,4 +47,4 @@ function AccordionContent({ className, children, ...props }) {
   );
 }
 
-export { Accordion, AccordionContent,AccordionItem, AccordionTrigger };
+export { Accordion, AccordionContent, AccordionItem, AccordionTrigger };

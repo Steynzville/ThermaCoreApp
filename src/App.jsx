@@ -1,22 +1,16 @@
 import "./App.css";
 
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import {
-  BrowserRouter as Router,
-  Navigate,
-  Route,
-  Routes,
-  useLocation,
-} from "react-router-dom";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
+import { Navigate, Route, BrowserRouter as Router, Routes, useLocation } from "react-router-dom";
 
-import Spinner from "./components/common/Spinner";
-import LoginScreen from "./components/LoginScreen";
 import ForgotPassword from "./components/ForgotPassword";
+import LoginScreen from "./components/LoginScreen";
 import PasswordResetRequest from "./components/PasswordResetRequest";
 import ProtectedRoute from "./components/ProtectedRoute";
-import UserRegistrationForm from "./components/UserRegistrationForm";
 // Removed static imports for UnitControl, UnitDetails, UserUnitDetails
 import ThemeToggle from "./components/ThemeToggle";
+import UserRegistrationForm from "./components/UserRegistrationForm";
+import Spinner from "./components/common/Spinner";
 import routes from "./config/routes";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { SettingsProvider, useSettings } from "./context/SettingsContext";
@@ -37,8 +31,7 @@ const ScrollToTop = () => {
 };
 
 const AppContent = () => {
-  const { isAuthenticated, userRole, isLoading, isLoggingOut, user } =
-    useAuth();
+  const { isAuthenticated, userRole, isLoading, isLoggingOut, user } = useAuth();
   const { settings } = useSettings();
   const isInitialMount = useRef(true);
   const [loginError, setLoginError] = useState("");
@@ -46,7 +39,7 @@ const AppContent = () => {
 
   // Debug logging for auth state changes
   useEffect(() => {
-    console.log('[App] Auth state changed:', {
+    console.log("[App] Auth state changed:", {
       isAuthenticated,
       userRole,
       isLoading,
@@ -72,10 +65,7 @@ const AppContent = () => {
 
     return () => {
       window.removeEventListener("error", handleError);
-      window.removeEventListener(
-        "unhandledrejection",
-        handleUnhandledRejection,
-      );
+      window.removeEventListener("unhandledrejection", handleUnhandledRejection);
     };
   }, []);
 
@@ -168,7 +158,7 @@ const AppContent = () => {
                 ? roleBasedComponents[route.specialHandling]
                 : null;
 
-              console.log('[App] Rendering protected route:', route.path, 'for role:', userRole);
+              console.log("[App] Rendering protected route:", route.path, "for role:", userRole);
 
               return (
                 <Route
@@ -180,9 +170,7 @@ const AppContent = () => {
                         <div className="min-h-screen bg-blue-50 dark:bg-gray-950 flex items-center justify-center">
                           <div className="text-center">
                             <Spinner size="lg" className="mx-auto mb-4" />
-                            <p className="text-gray-600 dark:text-gray-400">
-                              Loading page...
-                            </p>
+                            <p className="text-gray-600 dark:text-gray-400">Loading page...</p>
                           </div>
                         </div>
                       }

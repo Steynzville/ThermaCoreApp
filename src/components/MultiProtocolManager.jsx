@@ -1,35 +1,27 @@
-import { useEffect, useRef, useState } from 'react';
-import { toast } from 'sonner';
-import {
-  CheckCircle,
-  AlertCircle,
-  Activity,
-  WifiOff,
-  RefreshCw,
-  Router,
-  Zap,
-} from 'lucide-react';
+import { Activity, AlertCircle, CheckCircle, RefreshCw, Router, WifiOff, Zap } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
-import { apiGetJson } from '@/utils/apiFetch';  // Use enhanced apiFetch utility with JSON helper
-import { Button } from './ui/button';
-import { Badge } from './ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { apiGetJson } from "@/utils/apiFetch"; // Use enhanced apiFetch utility with JSON helper
+import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 
 const MultiProtocolManager = () => {
   const [protocolsStatus, setProtocolsStatus] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedProtocol, setSelectedProtocol] = useState('modbus');
+  const [selectedProtocol, setSelectedProtocol] = useState("modbus");
   const [isAddDeviceOpen, setIsAddDeviceOpen] = useState(false);
   const [newDevice, setNewDevice] = useState({});
   const [refreshing, setRefreshing] = useState(false);
-  
+
   // Enhanced polling state management with exponential backoff and page visibility
-  const [pollingInterval, setPollingInterval] = useState(10000); // Default 10s
+  const [_pollingInterval, _setPollingInterval] = useState(10000); // Default 10s
   const [consecutiveErrors, setConsecutiveErrors] = useState(0);
   const [isPageVisible, setIsPageVisible] = useState(true);
   const [isPolling, setIsPolling] = useState(false); // Prevent concurrent polls
-  const timeoutRef = useRef(null);
-  const abortControllerRef = useRef(null);
+  const _timeoutRef = useRef(null);
+  const _abortControllerRef = useRef(null);
 
   // Page visibility handling
   useEffect(() => {
@@ -37,65 +29,65 @@ const MultiProtocolManager = () => {
       setIsPageVisible(!document.hidden);
     };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, []);
 
   // Check if we're in mock mode
-  const isMockMode = import.meta.env.VITE_MOCK_MODE === 'true';
+  const isMockMode = import.meta.env.VITE_MOCK_MODE === "true";
 
   const mockData = {
     timestamp: new Date().toISOString(),
     summary: {
       total_protocols: 5,
       active_protocols: 3,
-      supported_protocols: ['mqtt', 'opcua', 'modbus', 'dnp3', 'simulator']
+      supported_protocols: ["mqtt", "opcua", "modbus", "dnp3", "simulator"],
     },
     protocols: {
       mqtt: {
-        name: 'mqtt',
+        name: "mqtt",
         available: true,
         connected: true,
-        status: 'ready',
+        status: "ready",
         last_heartbeat: new Date(Date.now() - 30000).toISOString(),
-        version: '3.1.1',
+        version: "3.1.1",
         metrics: { messages_sent: 1247, messages_received: 2156 },
-        demo: true
+        demo: true,
       },
       opcua: {
-        name: 'opcua',
+        name: "opcua",
         available: true,
         connected: false,
-        status: 'error',
-        error: { code: 'CONNECTION_REFUSED', message: 'Server unreachable' },
-        version: '1.04',
-        demo: true
+        status: "error",
+        error: { code: "CONNECTION_REFUSED", message: "Server unreachable" },
+        version: "1.04",
+        demo: true,
       },
       modbus: {
-        name: 'modbus',
+        name: "modbus",
         available: true,
         connected: true,
-        status: 'ready',
+        status: "ready",
         last_heartbeat: new Date(Date.now() - 15000).toISOString(),
         metrics: { active_devices: 2, total_registers: 48 },
-        demo: true
+        demo: true,
       },
       dnp3: {
-        name: 'dnp3',
+        name: "dnp3",
         available: true,
         connected: true,
-        status: 'ready',
+        status: "ready",
         last_heartbeat: new Date(Date.now() - 45000).toISOString(),
         metrics: { active_outstations: 1, data_points: 24 },
-        demo: true
+        demo: true,
       },
       simulator: {
-        name: 'simulator',
+        name: "simulator",
         available: false,
         connected: false,
-        status: 'not_initialized'
-      }
-    }
+        status: "not_initialized",
+      },
+    },
   };
 
   const fetchProtocolsStatus = async () => {
@@ -112,20 +104,21 @@ const MultiProtocolManager = () => {
             connected: variance() ? false : mockData.protocols.mqtt.connected,
             metrics: {
               ...mockData.protocols.mqtt.metrics,
-              messages_sent: mockData.protocols.mqtt.metrics.messages_sent + Math.floor(Math.random() * 10)
-            }
-          }
-        }
+              messages_sent:
+                mockData.protocols.mqtt.metrics.messages_sent + Math.floor(Math.random() * 10),
+            },
+          },
+        },
       };
       return mockVariant;
     }
 
     // Use enhanced apiFetch with improved error handling and retry logic
-    return await apiGetJson('/api/v1/protocols/status', { 
-      timeout: 15000,  // 15 second timeout
-      retries: 2,      // Retry failed requests
+    return await apiGetJson("/api/v1/protocols/status", {
+      timeout: 15000, // 15 second timeout
+      retries: 2, // Retry failed requests
       retryDelay: 2000, // 2 second delay between retries
-      showToastOnError: false // We'll handle errors manually for better UX
+      showToastOnError: false, // We'll handle errors manually for better UX
     });
   };
 
@@ -134,34 +127,34 @@ const MultiProtocolManager = () => {
       setConsecutiveErrors(0); // Reset error count on successful attempt
       const data = await fetchProtocolsStatus();
       setProtocolsStatus(data);
-      
+
       // Show success toast only if we had previous errors
       if (consecutiveErrors > 0) {
         toast.success("Protocol status loaded successfully");
       }
     } catch (error) {
-      console.error('Failed to fetch protocols status:', error);
-      
+      console.error("Failed to fetch protocols status:", error);
+
       // Increment consecutive errors for exponential backoff
-      setConsecutiveErrors(prev => prev + 1);
-      
+      setConsecutiveErrors((prev) => prev + 1);
+
       if (!isMockMode) {
         // Enhanced error messaging based on error type
         let errorMessage = "Failed to load protocol status.";
-        if (error.message.includes('timeout')) {
+        if (error.message.includes("timeout")) {
           errorMessage = "Request timed out. The server may be busy.";
-        } else if (error.message.includes('Network')) {
+        } else if (error.message.includes("Network")) {
           errorMessage = "Network error. Check your internet connection.";
-        } else if (error.message.includes('Unauthorized')) {
+        } else if (error.message.includes("Unauthorized")) {
           errorMessage = "Session expired. Please log in again.";
         }
-        
+
         toast.error(errorMessage, {
           duration: 4000,
           action: {
             label: "Retry",
-            onClick: () => loadData()
-          }
+            onClick: () => loadData(),
+          },
         });
       }
     } finally {
@@ -172,14 +165,14 @@ const MultiProtocolManager = () => {
 
   const handleRefresh = async () => {
     if (refreshing || isPolling) return; // Prevent concurrent refreshes
-    
+
     setRefreshing(true);
     setConsecutiveErrors(0); // Reset error count on manual refresh
-    
+
     try {
       await loadData();
       toast.success("Protocol status refreshed", { duration: 2000 });
-    } catch (error) {
+    } catch (_error) {
       // Error handling is done in loadData, no need to handle here
     }
   };
@@ -193,8 +186,8 @@ const MultiProtocolManager = () => {
       // Dynamic polling interval based on consecutive errors (exponential backoff)
       const getPollingInterval = () => {
         const baseInterval = 10000; // 10 seconds
-        const maxInterval = 60000;  // 60 seconds max
-        return Math.min(baseInterval * Math.pow(1.5, consecutiveErrors), maxInterval);
+        const maxInterval = 60000; // 60 seconds max
+        return Math.min(baseInterval * 1.5 ** consecutiveErrors, maxInterval);
       };
 
       const scheduleNextPoll = () => {
@@ -223,27 +216,33 @@ const MultiProtocolManager = () => {
   }, [isMockMode, consecutiveErrors, isPageVisible, isPolling]);
 
   const getStatusIcon = (protocol) => {
-    if (protocol.connected && protocol.status === 'ready') {
+    if (protocol.connected && protocol.status === "ready") {
       return <CheckCircle className="h-5 w-5 text-green-500" />;
-    } else if (protocol.error || protocol.status === 'error') {
-      return <AlertCircle className="h-5 w-5 text-red-500" />;
-    } else if (protocol.available) {
-      return <Activity className="h-5 w-5 text-yellow-500" />;
-    } else {
-      return <WifiOff className="h-5 w-5 text-gray-400" />;
     }
+    if (protocol.error || protocol.status === "error") {
+      return <AlertCircle className="h-5 w-5 text-red-500" />;
+    }
+    if (protocol.available) {
+      return <Activity className="h-5 w-5 text-yellow-500" />;
+    }
+    return <WifiOff className="h-5 w-5 text-gray-400" />;
   };
 
   const getStatusBadge = (protocol) => {
-    if (protocol.connected && protocol.status === 'ready') {
-      return <Badge variant="default" className="bg-green-600">Active</Badge>;
-    } else if (protocol.error || protocol.status === 'error') {
-      return <Badge variant="destructive">Error</Badge>;
-    } else if (protocol.available) {
-      return <Badge variant="secondary">Available</Badge>;
-    } else {
-      return <Badge variant="outline">Inactive</Badge>;
+    if (protocol.connected && protocol.status === "ready") {
+      return (
+        <Badge variant="default" className="bg-green-600">
+          Active
+        </Badge>
+      );
     }
+    if (protocol.error || protocol.status === "error") {
+      return <Badge variant="destructive">Error</Badge>;
+    }
+    if (protocol.available) {
+      return <Badge variant="secondary">Available</Badge>;
+    }
+    return <Badge variant="outline">Inactive</Badge>;
   };
 
   const handleAddDevice = () => {
@@ -271,28 +270,24 @@ const MultiProtocolManager = () => {
           <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-800 mb-2">Failed to Load</h2>
           <p className="text-gray-600 mb-4">
-            {consecutiveErrors > 0 
+            {consecutiveErrors > 0
               ? `Failed to retrieve protocol status after ${consecutiveErrors} attempts.`
-              : "Could not retrieve protocol status."
-            }
+              : "Could not retrieve protocol status."}
           </p>
           <div className="flex gap-3 justify-center">
             <Button onClick={loadData} disabled={isPolling}>
-              <RefreshCw className={`h-4 w-4 mr-2 ${isPolling ? 'animate-spin' : ''}`} />
-              {isPolling ? 'Retrying...' : 'Try Again'}
+              <RefreshCw className={`h-4 w-4 mr-2 ${isPolling ? "animate-spin" : ""}`} />
+              {isPolling ? "Retrying..." : "Try Again"}
             </Button>
             {!isMockMode && (
-              <Button 
-                variant="outline" 
-                onClick={() => window.location.reload()}
-              >
+              <Button variant="outline" onClick={() => window.location.reload()}>
                 Reload Page
               </Button>
             )}
           </div>
           {consecutiveErrors > 0 && (
             <p className="text-sm text-gray-500 mt-3">
-              Next automatic retry in {Math.min(10 * Math.pow(1.5, consecutiveErrors), 60)} seconds
+              Next automatic retry in {Math.min(10 * 1.5 ** consecutiveErrors, 60)} seconds
             </p>
           )}
         </div>
@@ -323,13 +318,11 @@ const MultiProtocolManager = () => {
               Paused (tab inactive)
             </Badge>
           )}
-          <Button 
-            onClick={handleRefresh} 
-            disabled={refreshing || isPolling}
-            variant="outline"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${(refreshing || isPolling) ? 'animate-spin' : ''}`} />
-            {refreshing ? 'Refreshing...' : 'Refresh'}
+          <Button onClick={handleRefresh} disabled={refreshing || isPolling} variant="outline">
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${refreshing || isPolling ? "animate-spin" : ""}`}
+            />
+            {refreshing ? "Refreshing..." : "Refresh"}
           </Button>
         </div>
       </div>
@@ -341,7 +334,9 @@ const MultiProtocolManager = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Total Protocols</p>
-                <p className="text-2xl font-bold text-gray-800">{protocolsStatus.summary.total_protocols}</p>
+                <p className="text-2xl font-bold text-gray-800">
+                  {protocolsStatus.summary.total_protocols}
+                </p>
               </div>
               <Router className="h-8 w-8 text-blue-500" />
             </div>
@@ -353,7 +348,9 @@ const MultiProtocolManager = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Active Protocols</p>
-                <p className="text-2xl font-bold text-green-600">{protocolsStatus.summary.active_protocols}</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {protocolsStatus.summary.active_protocols}
+                </p>
               </div>
               <CheckCircle className="h-8 w-8 text-green-500" />
             </div>
@@ -367,9 +364,14 @@ const MultiProtocolManager = () => {
                 <p className="text-sm text-gray-600">Connection Rate</p>
                 <p className="text-2xl font-bold text-blue-600">
                   {/* PR1a: Guard against division by zero */}
-                  {protocolsStatus.summary.total_protocols > 0 
-                    ? Math.round((protocolsStatus.summary.active_protocols / protocolsStatus.summary.total_protocols) * 100)
-                    : 0}%
+                  {protocolsStatus.summary.total_protocols > 0
+                    ? Math.round(
+                        (protocolsStatus.summary.active_protocols /
+                          protocolsStatus.summary.total_protocols) *
+                          100,
+                      )
+                    : 0}
+                  %
                 </p>
               </div>
               <Activity className="h-8 w-8 text-blue-500" />
@@ -411,7 +413,7 @@ const MultiProtocolManager = () => {
                   <span className="text-gray-600">Status:</span>
                   <span className="font-medium">{protocol.status}</span>
                 </div>
-                
+
                 {protocol.version && (
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Version:</span>
@@ -442,7 +444,7 @@ const MultiProtocolManager = () => {
                     <p className="text-xs font-medium text-gray-700 mb-1">Metrics:</p>
                     {Object.entries(protocol.metrics).map(([key, value]) => (
                       <div key={key} className="flex justify-between text-xs text-gray-600">
-                        <span>{key.replace(/_/g, ' ')}:</span>
+                        <span>{key.replace(/_/g, " ")}:</span>
                         <span>{value}</span>
                       </div>
                     ))}
@@ -483,15 +485,18 @@ const MultiProtocolManager = () => {
           <div className="space-y-4">
             <div>
               <Label htmlFor="protocol">Protocol</Label>
-              <Select value={selectedProtocol} onValueChange={(value) => {
-                setSelectedProtocol(value);
-                setNewDevice({}); // Reset newDevice state when protocol changes
-              }}>
+              <Select
+                value={selectedProtocol}
+                onValueChange={(value) => {
+                  setSelectedProtocol(value);
+                  setNewDevice({}); // Reset newDevice state when protocol changes
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {protocolsStatus.summary.supported_protocols.map(protocol => (
+                  {protocolsStatus.summary.supported_protocols.map((protocol) => (
                     <SelectItem key={protocol} value={protocol}>
                       {protocol.toUpperCase()}
                     </SelectItem>
@@ -504,8 +509,8 @@ const MultiProtocolManager = () => {
               <Input
                 id="device-id"
                 placeholder="e.g., pump_001"
-                value={newDevice.id || ''}
-                onChange={(e) => setNewDevice({...newDevice, id: e.target.value})}
+                value={newDevice.id || ""}
+                onChange={(e) => setNewDevice({ ...newDevice, id: e.target.value })}
               />
             </div>
             <div>
@@ -513,8 +518,8 @@ const MultiProtocolManager = () => {
               <Input
                 id="host"
                 placeholder="192.168.1.100"
-                value={newDevice.host || ''}
-                onChange={(e) => setNewDevice({...newDevice, host: e.target.value})}
+                value={newDevice.host || ""}
+                onChange={(e) => setNewDevice({ ...newDevice, host: e.target.value })}
               />
             </div>
             <div>
@@ -523,8 +528,8 @@ const MultiProtocolManager = () => {
                 id="port"
                 type="number"
                 placeholder="502"
-                value={newDevice.port || ''}
-                onChange={(e) => setNewDevice({...newDevice, port: e.target.value})}
+                value={newDevice.port || ""}
+                onChange={(e) => setNewDevice({ ...newDevice, port: e.target.value })}
               />
             </div>
             <Button onClick={handleAddDevice} className="w-full">

@@ -1,14 +1,9 @@
-import * as React from "react";
-import {
-  Controller,
-  FormProvider,
-  useFormContext,
-  useFormState,
-} from "react-hook-form";
 import { Slot } from "@radix-ui/react-slot";
+import * as React from "react";
+import { Controller, FormProvider, useFormContext, useFormState } from "react-hook-form";
 
-import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 const Form = FormProvider;
 
@@ -52,11 +47,7 @@ function FormItem({ className, ...props }) {
 
   return (
     <FormItemContext.Provider value={{ id }}>
-      <div
-        data-slot="form-item"
-        className={cn("grid gap-2", className)}
-        {...props}
-      />
+      <div data-slot="form-item" className={cn("grid gap-2", className)} {...props} />
     </FormItemContext.Provider>
   );
 }
@@ -76,18 +67,13 @@ function FormLabel({ className, ...props }) {
 }
 
 function FormControl({ ...props }) {
-  const { error, formItemId, formDescriptionId, formMessageId } =
-    useFormField();
+  const { error, formItemId, formDescriptionId, formMessageId } = useFormField();
 
   return (
     <Slot
       data-slot="form-control"
       id={formItemId}
-      aria-describedby={
-        !error
-          ? `${formDescriptionId}`
-          : `${formDescriptionId} ${formMessageId}`
-      }
+      aria-describedby={!error ? `${formDescriptionId}` : `${formDescriptionId} ${formMessageId}`}
       aria-invalid={!!error}
       {...props}
     />
