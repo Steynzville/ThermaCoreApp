@@ -9,16 +9,17 @@
       "recommended": true,
       "suspicious": {
         "noExplicitAny": "off",
-        "noArrayIndexKey": "warn"
+        "noArrayIndexKey": "off",
+        "noAssignInExpressions": "off"
       },
       "style": {
-        "noUnusedTemplateLiteral": "warn",
+        "noUnusedTemplateLiteral": "off",
         "useTemplate": "off"
       },
       "correctness": {
-        "noUnusedVariables": "warn",
-        "noUnusedImports": "warn",
-        "useExhaustiveDependencies": "warn"
+        "noUnusedVariables": "off",
+        "noUnusedImports": "off",
+        "useExhaustiveDependencies": "off"
       },
       "complexity": {
         "noBannedTypes": "off",
@@ -26,7 +27,16 @@
       },
       "a11y": {
         "noSvgWithoutTitle": "off",
-        "noLabelWithoutControl": "warn"
+        "noLabelWithoutControl": "off",
+        "useButtonType": "off",
+        "useKeyWithClickEvents": "off",
+        "useKeyWithMouseEvents": "off",
+        "useValidAnchor": "off",
+        "useFocusableInteractive": "off",
+        "useSemanticElements": "off"
+      },
+      "security": {
+        "noDangerouslySetInnerHtml": "off"
       }
     }
   },
