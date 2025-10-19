@@ -16,8 +16,8 @@ import {
 } from "recharts";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import PageHeader from "./PageHeader";
 import { formatCurrency } from "../utils/formatCurrency";
+import PageHeader from "./PageHeader";
 
 const analyticsData = [
   { name: "Power-Box", sales: 4000, revenue: 2400 },
