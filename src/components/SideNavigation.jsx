@@ -13,7 +13,7 @@ import {
   Siren,
   Wifi,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect,useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
@@ -191,7 +191,9 @@ const EnhancedSideNavigation = () => {
         `}
         onClick={() => handleNavClick(item)}
       >
-        <Icon className={`h-5 w-5 ${isCollapsed ? "mx-auto" : "mr-3"} flex-shrink-0`} />
+        <Icon
+          className={`h-5 w-5 ${isCollapsed ? "mx-auto" : "mr-3"} flex-shrink-0`}
+        />
         {!isCollapsed && (
           <>
             <span className="font-medium flex-1">{item.label}</span>
@@ -223,28 +225,32 @@ const EnhancedSideNavigation = () => {
         onClick={() => setIsMobileOpen(!isMobileOpen)}
         className="lg:hidden fixed bottom-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg"
       >
-        {isMobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        {isMobileOpen ? (
+          <X className="h-5 w-5" />
+        ) : (
+          <Menu className="h-5 w-5" />
+        )}
       </button>
 
       {isMobileOpen && (
         <div
           className="lg:hidden fixed inset-0 z-40 bg-black"
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            width: "100vw",
-            height: "100vh",
-            minWidth: "100vw",
-            minHeight: "100vh",
-            maxWidth: "100vw",
-            maxHeight: "100vh",
+          style={{ 
+            position: 'fixed',
+            top: 0, 
+            left: 0, 
+            right: 0, 
+            bottom: 0, 
+            width: '100vw', 
+            height: '100vh',
+            minWidth: '100vw',
+            minHeight: '100vh',
+            maxWidth: '100vw',
+            maxHeight: '100vh',
             margin: 0,
             padding: 0,
-            backgroundColor: "rgb(0, 0, 0)",
-            zIndex: 40,
+            backgroundColor: 'rgb(0, 0, 0)',
+            zIndex: 40
           }}
           onClick={() => setIsMobileOpen(false)}
         />
@@ -267,8 +273,12 @@ const EnhancedSideNavigation = () => {
                 <Wifi className="h-4 w-4 text-white" />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">ThermaCore</h1>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Monitor</p>
+                <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                  ThermaCore
+                </h1>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Monitor
+                </p>
               </div>
             </div>
           )}
@@ -304,7 +314,9 @@ const EnhancedSideNavigation = () => {
                     <LogOut
                       className={`h-5 w-5 ${isCollapsed ? "mx-auto" : "mr-3"} flex-shrink-0`}
                     />
-                    {!isCollapsed && <span className="font-medium">Logout</span>}
+                    {!isCollapsed && (
+                      <span className="font-medium">Logout</span>
+                    )}
                   </button>
                 )}
                 {item.id === "settings" && userRole === "user" && (
@@ -315,7 +327,9 @@ const EnhancedSideNavigation = () => {
                     <LogOut
                       className={`h-5 w-5 ${isCollapsed ? "mx-auto" : "mr-3"} flex-shrink-0`}
                     />
-                    {!isCollapsed && <span className="font-medium">Logout</span>}
+                    {!isCollapsed && (
+                      <span className="font-medium">Logout</span>
+                    )}
                   </button>
                 )}
               </div>
@@ -324,8 +338,10 @@ const EnhancedSideNavigation = () => {
         </div>
 
         {!(
-          (userRole === "admin" && filteredNavItems.some((item) => item.id === "admin")) ||
-          (userRole === "user" && filteredNavItems.some((item) => item.id === "settings"))
+          (userRole === "admin" &&
+            filteredNavItems.some((item) => item.id === "admin")) ||
+          (userRole === "user" &&
+            filteredNavItems.some((item) => item.id === "settings"))
         ) && (
           <div className="border-t border-gray-200 dark:border-gray-700 p-4">
             {!isCollapsed && (
@@ -338,7 +354,9 @@ const EnhancedSideNavigation = () => {
                     System {userRole === "admin" ? "Admin" : "User"}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                    {userRole === "admin" ? "admin@thermacore.com" : "user@thermacore.com"}
+                    {userRole === "admin"
+                      ? "admin@thermacore.com"
+                      : "user@thermacore.com"}
                   </p>
                 </div>
               </div>
@@ -353,7 +371,9 @@ const EnhancedSideNavigation = () => {
               `}
             >
               <LogOut className="h-4 w-4" />
-              {!isCollapsed && <span className="text-sm font-medium">Logout</span>}
+              {!isCollapsed && (
+                <span className="text-sm font-medium">Logout</span>
+              )}
             </button>
           </div>
         )}

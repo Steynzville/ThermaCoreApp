@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect,useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
@@ -46,8 +46,8 @@ const NotificationBell = ({ className = "" }) => {
         type: "critical",
         title: "Unit Offline",
         message: "ThermaCore Unit 001 has gone offline and requires immediate attention",
-        timestamp: "2025-09-09 14:45",
-      },
+        timestamp: "2025-09-09 14:45"
+      }
     },
     {
       id: 2,
@@ -59,8 +59,8 @@ const NotificationBell = ({ className = "" }) => {
         type: "warning",
         title: "Low Water Level",
         message: "Water level has dropped below safe operating threshold",
-        timestamp: "2025-09-09 14:15",
-      },
+        timestamp: "2025-09-09 14:15"
+      }
     },
     {
       id: 3,
@@ -73,8 +73,8 @@ const NotificationBell = ({ className = "" }) => {
         type: "info",
         title: "Maintenance Scheduled",
         message: "Routine maintenance has been scheduled for this unit",
-        timestamp: "2025-09-09 13:30",
-      },
+        timestamp: "2025-09-09 13:30"
+      }
     },
     {
       id: 4,
@@ -87,8 +87,8 @@ const NotificationBell = ({ className = "" }) => {
         type: "success",
         title: "System Restored",
         message: "Unit has been successfully restored to normal operation",
-        timestamp: "2025-09-09 12:00",
-      },
+        timestamp: "2025-09-09 12:00"
+      }
     },
     {
       id: 5,
@@ -101,8 +101,8 @@ const NotificationBell = ({ className = "" }) => {
         type: "warning",
         title: "Temperature Alert",
         message: "Operating temperature has exceeded normal range",
-        timestamp: "2025-09-09 11:30",
-      },
+        timestamp: "2025-09-09 11:30"
+      }
     },
     {
       id: 6,
@@ -114,8 +114,8 @@ const NotificationBell = ({ className = "" }) => {
         type: "warning",
         title: "Pressure Drop",
         message: "System pressure has dropped below optimal levels",
-        timestamp: "2025-09-09 10:15",
-      },
+        timestamp: "2025-09-09 10:15"
+      }
     },
   ];
 
@@ -130,8 +130,8 @@ const NotificationBell = ({ className = "" }) => {
         type: "critical",
         title: "NH3 LEAK DETECTED",
         message: "Critical ammonia leak detected - immediate attention required",
-        timestamp: "2025-09-09 15:30",
-      },
+        timestamp: "2025-09-09 15:30"
+      }
     },
     {
       id: 8,
@@ -143,43 +143,40 @@ const NotificationBell = ({ className = "" }) => {
         type: "critical",
         title: "NH3 LEAK DETECTED",
         message: "Critical ammonia leak detected - immediate attention required",
-        timestamp: "2025-09-09 15:15",
-      },
+        timestamp: "2025-09-09 15:15"
+      }
     },
   ];
 
   // Filter alarms and alerts based on user role - user role only sees first 6 units (TC001-TC006)
-  const _userAlarms =
-    userRole === "admin"
-      ? alarms
-      : alarms.filter((alarm) => {
-          const unitMatch = alarm.message.match(/ThermaCore Unit (\d+)/);
-          return unitMatch && Number.parseInt(unitMatch[1]) <= 6;
-        });
+  const userAlarms = userRole === "admin" ? alarms : alarms.filter(alarm => {
+    const unitMatch = alarm.message.match(/ThermaCore Unit (\d+)/);
+    return unitMatch && parseInt(unitMatch[1]) <= 6;
+  });
 
-  const _userAlerts =
-    userRole === "admin"
-      ? alerts
-      : alerts.filter((alert) => {
-          const unitMatch = alert.message.match(/ThermaCore Unit (\d+)/);
-          return unitMatch && Number.parseInt(unitMatch[1]) <= 6;
-        });
+  const userAlerts = userRole === "admin" ? alerts : alerts.filter(alert => {
+    const unitMatch = alert.message.match(/ThermaCore Unit (\d+)/);
+    return unitMatch && parseInt(unitMatch[1]) <= 6;
+  });
 
   // Use the enhanced notification system
-  const unviewedCount = allNotifications.filter((n) => !viewedNotifications.has(n.id)).length;
+  const unviewedCount = allNotifications.filter(
+    (n) => !viewedNotifications.has(n.id),
+  ).length;
 
   const handleBellClick = () => {
     setIsOpen(!isOpen);
     if (!isOpen) {
       // Store notifications in localStorage when bell is clicked (opened)
-      const unresolvedNotifications = allNotifications.map((notification) => {
+      const unresolvedNotifications = allNotifications.map(notification => {
         if (notification.id === 3 || notification.id === 4 || notification.id === 5) {
-          return { ...notification, status: "completed" };
+          return { ...notification, status: 'completed' };
+        } else {
+          return { ...notification, status: 'unresolved' };
         }
-        return { ...notification, status: "unresolved" };
       });
-      localStorage.setItem("unresolvedNotifications", JSON.stringify(unresolvedNotifications));
-
+      localStorage.setItem('unresolvedNotifications', JSON.stringify(unresolvedNotifications));
+      
       // Mark all notifications as viewed when opening
       const allIds = new Set(allNotifications.map((n) => n.id));
       setViewedNotifications(allIds);
@@ -196,30 +193,28 @@ const NotificationBell = ({ className = "" }) => {
     if (!unitMatch && notification.alertData?.deviceId) {
       unitMatch = notification.alertData.deviceId.match(/TC(\d+)/);
     }
-
+    
     if (unitMatch) {
-      const unitNumber = Number.parseInt(unitMatch[1]); // Convert to integer to match system
-
+      const unitNumber = parseInt(unitMatch[1]); // Convert to integer to match system
+      
       // Find the actual unit data from mockUnits to ensure it exists
-      const unitId = `TC${unitMatch[1].padStart(3, "0")}`;
-      const unitData = units.find((unit) => unit.id === unitId);
-
+      const unitId = `TC${unitMatch[1].padStart(3, '0')}`;
+      const unitData = units.find(unit => unit.id === unitId);
+      
       if (unitData) {
         // Create enhanced unit data with the current alert from notification
         const enhancedUnit = {
           ...unitData,
-          currentAlert: notification.alertData,
+          currentAlert: notification.alertData
         };
-
+        
         // Determine which tab to open based on notification type
         const targetTab = notification.type === "alarm" ? "overview" : "alerts";
-
+        
         // Navigate based on user role - same logic as AlertsView/AlarmsView
         setIsOpen(false);
         if (userRole === "admin") {
-          navigate(`/unit-details/${unitNumber}?tab=${targetTab}`, {
-            state: { unit: enhancedUnit },
-          });
+          navigate(`/unit-details/${unitNumber}?tab=${targetTab}`, { state: { unit: enhancedUnit } });
         } else {
           navigate(`/unit/${unitNumber}?tab=${targetTab}`, { state: { unit: enhancedUnit } });
         }
@@ -231,16 +226,17 @@ const NotificationBell = ({ className = "" }) => {
 
   const handleViewAllNotifications = () => {
     // Store unresolved notifications in localStorage for the history page
-    const unresolvedNotifications = allNotifications.map((notification) => {
+    const unresolvedNotifications = allNotifications.map(notification => {
       if (notification.id === 3 || notification.id === 4 || notification.id === 5) {
-        return { ...notification, status: "completed" };
+        return { ...notification, status: 'completed' };
+      } else {
+        return { ...notification, status: 'unresolved' };
       }
-      return { ...notification, status: "unresolved" };
     });
-    localStorage.setItem("unresolvedNotifications", JSON.stringify(unresolvedNotifications));
-
+    localStorage.setItem('unresolvedNotifications', JSON.stringify(unresolvedNotifications));
+    
     setIsOpen(false);
-    navigate("/history");
+    navigate('/history');
   };
 
   return (
@@ -287,8 +283,8 @@ const NotificationBell = ({ className = "" }) => {
                       notification.type === "alarm"
                         ? "bg-red-100 dark:bg-red-900/30"
                         : notification.status === "completed"
-                          ? "bg-blue-100 dark:bg-blue-900/30"
-                          : ""
+                        ? "bg-blue-100 dark:bg-blue-900/30"
+                        : ""
                     }`}
                     onClick={() => handleNotificationClick(notification)}
                   >
@@ -298,8 +294,8 @@ const NotificationBell = ({ className = "" }) => {
                           notification.type === "alarm"
                             ? "bg-red-500"
                             : notification.status === "completed"
-                              ? "bg-blue-500"
-                              : "bg-orange-500"
+                            ? "bg-blue-500"
+                            : "bg-orange-500"
                         }`}
                       />
                       <div className="flex-1 min-w-0">
@@ -324,7 +320,7 @@ const NotificationBell = ({ className = "" }) => {
           </div>
 
           <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-            <button
+            <button 
               onClick={handleViewAllNotifications}
               className="w-full text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 font-medium"
             >
@@ -338,3 +334,4 @@ const NotificationBell = ({ className = "" }) => {
 };
 
 export default NotificationBell;
+

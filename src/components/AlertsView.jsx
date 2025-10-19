@@ -1,17 +1,20 @@
-import { AlertCircle, AlertTriangle, CheckCircle, Clock, Filter, Info } from "lucide-react";
+
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { units } from "../data/mockUnits";
-import PageHeader from "./PageHeader";
-import { Card, CardContent } from "./ui/card";
+import PageHeader from './PageHeader';
+import { Card, CardContent } from './ui/card';
+import { AlertTriangle, AlertCircle, Info, CheckCircle } from 'lucide-react';
 
 const alerts = [
   {
     id: 1,
     type: "critical",
     title: "Unit Offline",
-    message: "ThermaCore Unit 001 has gone offline and requires immediate attention",
+    message:
+      "ThermaCore Unit 001 has gone offline and requires immediate attention",
     device: "ThermaCore Unit 001",
     timestamp: "2025-09-09 14:45",
     acknowledged: false,
@@ -38,7 +41,8 @@ const alerts = [
     id: 4,
     type: "success",
     title: "System Restored",
-    message: "ThermaCore Unit 004 has been successfully restored to normal operation",
+    message:
+      "ThermaCore Unit 004 has been successfully restored to normal operation",
     device: "ThermaCore Unit 004",
     timestamp: "2025-09-09 12:00",
     acknowledged: true,
@@ -71,12 +75,12 @@ const AlertsView = ({ className, userRole }) => {
     // Extract unit number from device name (e.g., "ThermaCore Unit 001" -> 1)
     const unitMatch = alert.device.match(/Unit (\d+)/);
     if (unitMatch) {
-      const unitNumber = unitMatch[1].padStart(3, "0"); // Convert to 3-digit format (e.g., "001")
+      const unitNumber = unitMatch[1].padStart(3, '0'); // Convert to 3-digit format (e.g., "001")
       const unitId = `TC${unitNumber}`;
-
+      
       // Find the actual unit data from mockUnits
-      const unitData = units.find((unit) => unit.id === unitId);
-
+      const unitData = units.find(unit => unit.id === unitId);
+      
       if (unitData) {
         // Add the specific alert information to the unit data
         const unitWithAlert = {
@@ -91,13 +95,9 @@ const AlertsView = ({ className, userRole }) => {
         };
 
         if (userRole === "admin") {
-          navigate(`/unit-details/${Number.parseInt(unitMatch[1])}?tab=alerts`, {
-            state: { unit: unitWithAlert },
-          });
+          navigate(`/unit-details/${parseInt(unitMatch[1])}?tab=alerts`, { state: { unit: unitWithAlert } });
         } else {
-          navigate(`/unit/${Number.parseInt(unitMatch[1])}?tab=alerts`, {
-            state: { unit: unitWithAlert },
-          });
+          navigate(`/unit/${parseInt(unitMatch[1])}?tab=alerts`, { state: { unit: unitWithAlert } });
         }
       }
     }
@@ -145,7 +145,9 @@ const AlertsView = ({ className, userRole }) => {
   const resolvedCount = alerts.filter((a) => a.type === "success").length;
 
   return (
-    <div className={`min-h-screen bg-gray-50 dark:bg-gray-900 p-3 lg:p-4 xl:p-6 ${className}`}>
+    <div
+      className={`min-h-screen bg-gray-50 dark:bg-gray-900 p-3 lg:p-4 xl:p-6 ${className}`}
+    >
       <div className="max-w-7xl mx-auto">
         <PageHeader
           title="Alerts & Notifications"
@@ -161,7 +163,9 @@ const AlertsView = ({ className, userRole }) => {
             <CardContent className="p-4 lg:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-red-600 dark:text-red-400">Critical</p>
+                  <p className="text-sm font-medium text-red-600 dark:text-red-400">
+                    Critical
+                  </p>
                   <p className="text-2xl lg:text-3xl font-bold text-red-700 dark:text-red-300">
                     {criticalCount}
                   </p>
@@ -197,7 +201,9 @@ const AlertsView = ({ className, userRole }) => {
             <CardContent className="p-4 lg:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Info</p>
+                  <p className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                    Info
+                  </p>
                   <p className="text-2xl lg:text-3xl font-bold text-blue-700 dark:text-blue-300">
                     {infoCount}
                   </p>
@@ -214,7 +220,9 @@ const AlertsView = ({ className, userRole }) => {
             <CardContent className="p-4 lg:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-green-600 dark:text-green-400">Resolved</p>
+                  <p className="text-sm font-medium text-green-600 dark:text-green-400">
+                    Resolved
+                  </p>
                   <p className="text-2xl lg:text-3xl font-bold text-green-700 dark:text-green-300">
                     {resolvedCount}
                   </p>

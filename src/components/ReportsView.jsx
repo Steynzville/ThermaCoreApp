@@ -1,3 +1,4 @@
+
 import { reportTypes } from "../constants/reportSections";
 
 const ReportsView = ({ className }) => {
@@ -53,7 +54,9 @@ const ReportsView = ({ className }) => {
   };
 
   return (
-    <div className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-4 lg:p-6 xl:p-8 ${className}`}>
+    <div
+      className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-4 lg:p-6 xl:p-8 ${className}`}
+    >
       <div className="max-w-6xl mx-auto lg:ml-0 xl:ml-4">
         <PageHeader
           title="Reports"

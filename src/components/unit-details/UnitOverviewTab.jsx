@@ -1,7 +1,4 @@
-import { Zap } from "lucide-react";
 
-import { Card, CardContent } from "../ui/card";
-import UnitVitals from "./UnitVitals";
 
 const UnitOverviewTab = ({ unit }) => {
   return (
@@ -13,10 +10,12 @@ const UnitOverviewTab = ({ unit }) => {
             <div className="flex items-center space-x-3">
               <Zap className="h-8 w-8 text-white animate-bounce" />
               <div>
-                <h3 className="text-xl font-bold text-white">🚨 NH3 LEAK DETECTED 🚨</h3>
+                <h3 className="text-xl font-bold text-white">
+                  🚨 NH3 LEAK DETECTED 🚨
+                </h3>
                 <p className="text-red-100">
-                  Critical alarm: Toxic ammonia leak detected in system. Immediate attention
-                  required.
+                  Critical alarm: Toxic ammonia leak detected in system.
+                  Immediate attention required.
                 </p>
               </div>
             </div>

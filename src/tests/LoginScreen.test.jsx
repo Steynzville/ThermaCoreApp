@@ -51,7 +51,7 @@ describe("LoginScreen - Error Handling", () => {
     render(
       <TestWrapper>
         <LoginScreen error="" setError={mockSetError} />
-      </TestWrapper>,
+      </TestWrapper>
     );
 
     // Fill in the form
@@ -88,7 +88,7 @@ describe("LoginScreen - Error Handling", () => {
     render(
       <TestWrapper>
         <LoginScreen error="" setError={mockSetError} />
-      </TestWrapper>,
+      </TestWrapper>
     );
 
     const usernameInput = screen.getByPlaceholderText("Enter username");
@@ -100,7 +100,9 @@ describe("LoginScreen - Error Handling", () => {
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(mockSetError).toHaveBeenCalledWith("Invalid username or password. Please try again.");
+      expect(mockSetError).toHaveBeenCalledWith(
+        "Invalid username or password. Please try again."
+      );
     });
 
     // Ensure navigation did NOT happen
@@ -118,7 +120,7 @@ describe("LoginScreen - Error Handling", () => {
     render(
       <TestWrapper>
         <LoginScreen error="" setError={mockSetError} />
-      </TestWrapper>,
+      </TestWrapper>
     );
 
     const usernameInput = screen.getByPlaceholderText("Enter username");
@@ -158,7 +160,7 @@ describe("LoginScreen - Error Handling", () => {
     render(
       <TestWrapper>
         <LoginScreen error="" setError={mockSetError} />
-      </TestWrapper>,
+      </TestWrapper>
     );
 
     const usernameInput = screen.getByPlaceholderText("Enter username");
@@ -174,7 +176,7 @@ describe("LoginScreen - Error Handling", () => {
       () => {
         expect(mockNavigate).toHaveBeenCalledWith("/dashboard");
       },
-      { timeout: 3000 },
+      { timeout: 3000 }
     );
   });
 
@@ -183,7 +185,7 @@ describe("LoginScreen - Error Handling", () => {
     render(
       <TestWrapper>
         <LoginScreen error="Previous error" setError={mockSetError} />
-      </TestWrapper>,
+      </TestWrapper>
     );
 
     const usernameInput = screen.getByPlaceholderText("Enter username");

@@ -14,37 +14,35 @@ import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
 import { units } from "../data/mockUnits";
-import EnhancedStatusDial from "./Dashboard/EnhancedStatusDial";
-import QuickActionCard from "./Dashboard/QuickActionCard";
-import UnitSummary from "./Dashboard/UnitSummary";
-import NotificationBell from "./NotificationBell";
-import PerformanceDashboard from "./PerformanceDashboard";
-import HighTechToggle from "./ui/HighTechToggle";
 
 // Enhanced Dashboard Component
 const Dashboard = ({ className }) => {
   const navigate = useNavigate();
   const { userRole } = useAuth();
-  const [_searchQuery, _setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [currentView, setCurrentView] = useState("operator"); // "operator" or "performance"
-
-  console.log("[Dashboard] Component rendering with role:", userRole);
 
   // Filter units based on user role - User role only sees first 5 units
   const filteredUnits = userRole === "user" ? units.slice(0, 6) : units;
 
   // Dynamic data calculations from filtered units
   const totalUnits = filteredUnits.length;
-  const onlineUnits = filteredUnits.filter((unit) => unit.status === "online").length;
-  const offlineUnits = filteredUnits.filter((unit) => unit.status === "offline").length;
-  const maintenanceUnits = filteredUnits.filter((unit) => unit.status === "maintenance").length;
+  const onlineUnits = filteredUnits.filter(
+    (unit) => unit.status === "online",
+  ).length;
+  const offlineUnits = filteredUnits.filter(
+    (unit) => unit.status === "offline",
+  ).length;
+  const maintenanceUnits = filteredUnits.filter(
+    (unit) => unit.status === "maintenance",
+  ).length;
   const unitsWithAlerts = filteredUnits.filter((unit) => unit.hasAlert).length;
 
   // For alarms, we'll use hasAlarm property
   const alarmUnits = filteredUnits.filter((unit) => unit.hasAlarm).length;
 
   // Count alerts from AlertsView - should match the actual alerts displayed
-  const _alertCount = unitsWithAlerts; // Dynamic count based on units with alerts
+  const alertCount = unitsWithAlerts; // Dynamic count based on units with alerts
 
   const handleDialClick = (status) => {
     navigate(`/grid-view?status=${status}`);
@@ -77,7 +75,9 @@ const Dashboard = ({ className }) => {
   // If performance view is selected, render the PerformanceDashboard
   if (currentView === "performance") {
     return (
-      <div className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-3 lg:p-4 xl:p-6 ${className}`}>
+      <div
+        className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-3 lg:p-4 xl:p-6 ${className}`}
+      >
         <div className="max-w-7xl mx-auto">
           {/* Toggle above header */}
           <div className="mb-6">
@@ -107,7 +107,9 @@ const Dashboard = ({ className }) => {
                 Home
               </span>
               <span className="mx-2">/</span>
-              <span className="text-gray-900 dark:text-gray-100">Performance</span>
+              <span className="text-gray-900 dark:text-gray-100">
+                Performance
+              </span>
             </nav>
           </div>
 
@@ -119,7 +121,9 @@ const Dashboard = ({ className }) => {
   }
 
   return (
-    <div className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-3 lg:p-4 xl:p-6 ${className}`}>
+    <div
+      className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-3 lg:p-4 xl:p-6 ${className}`}
+    >
       <div className="max-w-7xl mx-auto">
         {/* Toggle above header */}
         <div className="mb-6">

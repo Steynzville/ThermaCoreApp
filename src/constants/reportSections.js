@@ -1,4 +1,11 @@
-import { Activity, AlertTriangle, DollarSign, FileText, Shield, Wrench } from "lucide-react";
+import {
+  Activity,
+  AlertTriangle,
+  DollarSign,
+  FileText,
+  Shield,
+  Wrench,
+} from "lucide-react";
 
 export const reportTypes = [
   {
@@ -75,21 +82,25 @@ export const reportSections = [
   {
     id: "maintenance",
     name: "Maintenance",
-    description: "Records of maintenance schedules, completed tasks, and recommendations.",
+    description:
+      "Records of maintenance schedules, completed tasks, and recommendations.",
   },
   {
     id: "performance",
     name: "Performance",
-    description: "Metrics on system uptime, downtime, fault analysis, and operational efficiency.",
+    description:
+      "Metrics on system uptime, downtime, fault analysis, and operational efficiency.",
   },
   {
     id: "compliance",
     name: "Compliance",
-    description: "Information on regulatory compliance and certification status.",
+    description:
+      "Information on regulatory compliance and certification status.",
   },
   {
     id: "salesRevenue",
     name: "Sales and Revenue",
-    description: "Financial data including sales figures and revenue generation.",
+    description:
+      "Financial data including sales figures and revenue generation.",
   },
 ];

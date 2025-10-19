@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect,useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import thermaCoreLogo from "../assets/thermacore-logo-new.png";
@@ -76,7 +76,7 @@ const PasswordResetRequest = () => {
       if (result.success) {
         setMessage(result.message);
         setFormData({ newPassword: "", confirmPassword: "" });
-
+        
         // Redirect to login after 2 seconds
         setTimeout(() => {
           navigate("/login");
@@ -84,7 +84,7 @@ const PasswordResetRequest = () => {
       } else {
         setError(result.message);
       }
-    } catch (_err) {
+    } catch (err) {
       setError("An unexpected error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -99,23 +99,30 @@ const PasswordResetRequest = () => {
     <div className={styles.pageWrapper}>
       <div className={styles.loginContainer}>
         <div className={styles.logoContainer}>
-          <img src={thermaCoreLogo} alt="ThermaCore Logo" className={styles.logo} />
+          <img
+            src={thermaCoreLogo}
+            alt="ThermaCore Logo"
+            className={styles.logo}
+          />
         </div>
         <div className={styles.titleContainer}>
           <h1 className={styles.title}>Reset Password</h1>
-          <p className={styles.companySubtitle}>Enter your new password</p>
+          <p className={styles.companySubtitle}>
+            Enter your new password
+          </p>
         </div>
 
         {message && (
-          <div
-            className={`${styles.loginError} ${styles.visible}`}
-            style={{ backgroundColor: "#10b981", color: "white" }}
-          >
+          <div className={`${styles.loginError} ${styles.visible}`} style={{ backgroundColor: '#10b981', color: 'white' }}>
             {message}
           </div>
         )}
 
-        {error && <div className={`${styles.loginError} ${styles.visible}`}>{error}</div>}
+        {error && (
+          <div className={`${styles.loginError} ${styles.visible}`}>
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
           <div className={styles.formGroup}>
@@ -174,7 +181,11 @@ const PasswordResetRequest = () => {
             </div>
           </div>
 
-          <button type="submit" className={styles.btnSignin} disabled={isSubmitting || !token}>
+          <button
+            type="submit"
+            className={styles.btnSignin}
+            disabled={isSubmitting || !token}
+          >
             {isSubmitting ? "Resetting..." : "Reset Password"}
           </button>
 
@@ -183,12 +194,12 @@ const PasswordResetRequest = () => {
             onClick={handleBackToLogin}
             className={styles.forgotPasswordLink}
             style={{
-              width: "100%",
-              textAlign: "center",
-              marginTop: "1rem",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
+              width: '100%',
+              textAlign: 'center',
+              marginTop: '1rem',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer'
             }}
           >
             Back to Login

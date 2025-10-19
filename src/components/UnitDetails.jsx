@@ -10,7 +10,7 @@ const UnitDetails = ({ className }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const unit = location.state?.unit;
-  const initialTab = searchParams.get("tab") || "overview";
+  const initialTab = searchParams.get('tab') || 'overview';
   const [activeTab, setActiveTab] = useState(initialTab);
 
   // Extend unit data with mock battery life and tank capacity
@@ -20,7 +20,7 @@ const UnitDetails = ({ className }) => {
   }
 
   // Mock historical data for the unit
-  const _historicalData = [
+  const historicalData = [
     {
       id: 1,
       timestamp: "2024-08-07 14:30",
@@ -94,7 +94,7 @@ const UnitDetails = ({ className }) => {
   ];
 
   // Helper functions
-  const _getTrendIcon = (trend) => {
+  const getTrendIcon = (trend) => {
     switch (trend) {
       case "up":
         return <TrendingUp className="h-4 w-4 text-green-500" />;
@@ -105,7 +105,7 @@ const UnitDetails = ({ className }) => {
     }
   };
 
-  const _getSeverityColor = (severity) => {
+  const getSeverityColor = (severity) => {
     switch (severity) {
       case "critical":
         return "border-l-red-500 bg-red-50 dark:bg-red-900/20";
@@ -148,7 +148,11 @@ const UnitDetails = ({ className }) => {
 
   const handleSendEmail = (email) => {
     if (email) {
-      if (window.confirm(`Do you want to open Outlook to send an email to ${email}?`)) {
+      if (
+        window.confirm(
+          `Do you want to open Outlook to send an email to ${email}?`,
+        )
+      ) {
         window.location.href = `mailto:${email}`;
       }
     } else {
@@ -167,7 +171,11 @@ const UnitDetails = ({ className }) => {
   };
 
   const handleScheduleMaintenance = () => {
-    if (window.confirm("Do you want to open your calendar to schedule maintenance?")) {
+    if (
+      window.confirm(
+        "Do you want to open your calendar to schedule maintenance?",
+      )
+    ) {
       // This is a placeholder. In a real app, you might integrate with a calendar API.
       alert("Opening calendar application (placeholder action).");
     }
@@ -192,7 +200,9 @@ const UnitDetails = ({ className }) => {
   }
 
   return (
-    <div className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-6 ${className}`}>
+    <div
+      className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-6 ${className}`}
+    >
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <UnitStatusHeader unit={unit} getStatusColor={getStatusColor} />

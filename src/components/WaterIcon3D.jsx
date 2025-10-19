@@ -1,3 +1,4 @@
+
 const WaterIcon3D = ({ waterLevel, className = "", greyedOut = false }) => {
   // Determine color based on water generation status
   const getWaterColor = (hasWater) => {
@@ -68,7 +69,7 @@ const WaterIcon3D = ({ waterLevel, className = "", greyedOut = false }) => {
                   }}
                 />
               </div>
-
+              
               {/* Droplet 2 */}
               <div className="absolute top-0 left-1/3 transform -translate-x-1/2">
                 <div
@@ -83,7 +84,7 @@ const WaterIcon3D = ({ waterLevel, className = "", greyedOut = false }) => {
                   }}
                 />
               </div>
-
+              
               {/* Droplet 3 */}
               <div className="absolute top-0 right-1/3 transform translate-x-1/2">
                 <div
@@ -165,3 +166,4 @@ const WaterIcon3D = ({ waterLevel, className = "", greyedOut = false }) => {
 };
 
 export default WaterIcon3D;
+

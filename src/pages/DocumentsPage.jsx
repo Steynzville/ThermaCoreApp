@@ -1,3 +1,4 @@
+
 import documentList from "../constants/documents";
 import { useAuth } from "../context/AuthContext";
 import { useSidebarMargin } from "../hooks/useSidebarMargin";
@@ -12,7 +13,9 @@ const DocumentsPage = () => {
   );
 
   return (
-    <div className={`transition-all duration-300 bg-blue-50 dark:bg-gray-900 ${sidebarMargin}`}>
+    <div
+      className={`transition-all duration-300 bg-blue-50 dark:bg-gray-900 ${sidebarMargin}`}
+    >
       <div className="p-6">
         <header className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">

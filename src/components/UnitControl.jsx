@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+
+
+import { useEffect,useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { useSettings } from "../context/SettingsContext";
@@ -125,7 +127,9 @@ const UnitControl = ({ className }) => {
 
   if (!hasMounted || !device) {
     return (
-      <div className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-6 ${className}`}>
+      <div
+        className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-6 ${className}`}
+      >
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
             {hasMounted ? "Device Not Found" : "Loading..."}
@@ -146,7 +150,9 @@ const UnitControl = ({ className }) => {
   const currentAlerts = generateAlerts();
 
   return (
-    <div className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-6 ${className}`}>
+    <div
+      className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-6 ${className}`}
+    >
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-6">
@@ -194,10 +200,12 @@ const UnitControl = ({ className }) => {
               <div className="flex items-center space-x-3">
                 <Zap className="h-8 w-8 text-white animate-bounce" />
                 <div>
-                  <h3 className="text-xl font-bold text-white">🚨 NH3 LEAK DETECTED 🚨</h3>
+                  <h3 className="text-xl font-bold text-white">
+                    🚨 NH3 LEAK DETECTED 🚨
+                  </h3>
                   <p className="text-red-100">
-                    Critical alarm: Toxic ammonia leak detected in system. Immediate attention
-                    required.
+                    Critical alarm: Toxic ammonia leak detected in system.
+                    Immediate attention required.
                   </p>
                 </div>
               </div>
@@ -218,7 +226,9 @@ const UnitControl = ({ className }) => {
                 <div className="flex items-center space-x-3">
                   <Power className="h-5 w-5 text-blue-500" />
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Power Output</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Power Output
+                    </p>
                     <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                       {systemPower ? device.powerOutput : 0} kW
                     </p>
@@ -228,9 +238,12 @@ const UnitControl = ({ className }) => {
                 <div className="flex items-center space-x-3">
                   <Droplets className="h-5 w-5 text-blue-500" />
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Water Level</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Water Level
+                    </p>
                     <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                      {device.waterLevel}% ({device.waterLiters}L / {device.tankCapacity}L)
+                      {device.waterLevel}% ({device.waterLiters}L /{" "}
+                      {device.tankCapacity}L)
                     </p>
                   </div>
                 </div>
@@ -238,7 +251,9 @@ const UnitControl = ({ className }) => {
                 <div className="flex items-center space-x-3">
                   <Thermometer className="h-5 w-5 text-orange-500" />
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Temp In</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Temp In
+                    </p>
                     <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                       {systemPower ? formatTemperature(device.tempIn) : "--"}
                     </p>
@@ -248,7 +263,9 @@ const UnitControl = ({ className }) => {
                 <div className="flex items-center space-x-3">
                   <Thermometer className="h-5 w-5 text-red-500" />
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Temp Out</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Temp Out
+                    </p>
                     <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                       {systemPower ? formatTemperature(device.tempOut) : "--"}
                     </p>
@@ -258,7 +275,9 @@ const UnitControl = ({ className }) => {
                 <div className="flex items-center space-x-3">
                   <Gauge className="h-5 w-5 text-purple-500" />
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Pressure</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Pressure
+                    </p>
                     <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                       {systemPower ? device.pressure : 0} bar
                     </p>
@@ -268,7 +287,9 @@ const UnitControl = ({ className }) => {
                 <div className="flex items-center space-x-3">
                   <Battery className="h-5 w-5 text-green-500" />
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Battery Life</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Battery Life
+                    </p>
                     <div className="flex items-center space-x-2">
                       <div className="w-16 h-2 bg-gray-200 dark:bg-gray-700 rounded-full">
                         <div
@@ -313,7 +334,9 @@ const UnitControl = ({ className }) => {
                 <button
                   onClick={() => handlePowerToggle(!systemPower)}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    systemPower ? "bg-green-600" : "bg-gray-300 dark:bg-gray-600"
+                    systemPower
+                      ? "bg-green-600"
+                      : "bg-gray-300 dark:bg-gray-600"
                   }`}
                 >
                   <span
@@ -345,7 +368,9 @@ const UnitControl = ({ className }) => {
                 >
                   <span
                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      autoWaterProduction && systemPower ? "translate-x-6" : "translate-x-1"
+                      autoWaterProduction && systemPower
+                        ? "translate-x-6"
+                        : "translate-x-1"
                     }`}
                   />
                 </button>
@@ -361,9 +386,14 @@ const UnitControl = ({ className }) => {
                   Active Alerts:
                 </h4>
                 {currentAlerts.map((alert) => (
-                  <div key={alert.id} className="flex items-start space-x-3 mb-1">
+                  <div
+                    key={alert.id}
+                    className="flex items-start space-x-3 mb-1"
+                  >
                     <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5" />
-                    <p className="text-sm text-red-700 dark:text-red-300">{alert.message}</p>
+                    <p className="text-sm text-red-700 dark:text-red-300">
+                      {alert.message}
+                    </p>
                   </div>
                 ))}
               </CardContent>
@@ -381,8 +411,8 @@ const UnitControl = ({ className }) => {
                       Low Water Level Alert
                     </h4>
                     <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                      Water level is at {device.waterLevel}% ({device.waterLiters}L), below the 75%
-                      threshold.
+                      Water level is at {device.waterLevel}% (
+                      {device.waterLiters}L), below the 75% threshold.
                       {autoWaterProduction && systemPower
                         ? " Auto water production will activate."
                         : " Consider enabling auto water production."}
@@ -402,7 +432,9 @@ const UnitControl = ({ className }) => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">System Power</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  System Power
+                </span>
                 <span
                   className={`text-sm font-medium ${systemPower ? "text-green-600" : "text-red-600"}`}
                 >
@@ -420,7 +452,9 @@ const UnitControl = ({ className }) => {
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">System Status</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  System Status
+                </span>
                 <span
                   className={`text-sm font-medium ${systemPower ? "text-green-600" : "text-red-600"}`}
                 >

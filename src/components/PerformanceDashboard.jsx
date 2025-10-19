@@ -29,11 +29,16 @@ const PerformanceCard = ({
 }) => {
   const colorClasses = {
     blue: "bg-white dark:bg-blue-900/20 border-blue-200 dark:border-blue-800",
-    green: "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800",
-    orange: "bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800",
-    purple: "bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800",
-    darkpurple: "bg-purple-100 dark:bg-purple-900/30 border-purple-300 dark:border-purple-700",
-    yellow: "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800",
+    green:
+      "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800",
+    orange:
+      "bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800",
+    purple:
+      "bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800",
+    darkpurple:
+      "bg-purple-100 dark:bg-purple-900/30 border-purple-300 dark:border-purple-700",
+    yellow:
+      "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800",
     red: "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800",
   };
 
@@ -47,7 +52,8 @@ const PerformanceCard = ({
     red: "text-red-600 dark:text-red-400",
   };
 
-  const TrendIcon = trend === "up" ? TrendingUp : trend === "down" ? TrendingDown : null;
+  const TrendIcon =
+    trend === "up" ? TrendingUp : trend === "down" ? TrendingDown : null;
 
   return (
     <div
@@ -65,12 +71,18 @@ const PerformanceCard = ({
               }`}
             />
           )}
-          {asterisk && <span className="text-xs text-gray-500 dark:text-gray-400">*</span>}
+          {asterisk && (
+            <span className="text-xs text-gray-500 dark:text-gray-400">*</span>
+          )}
         </div>
       </div>
-      <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">{title}</h3>
+      <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+        {title}
+      </h3>
       <div className="flex items-baseline space-x-2">
-        <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">{value}</span>
+        <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+          {value}
+        </span>
         <span className="text-sm text-gray-500 dark:text-gray-400">{unit}</span>
       </div>
       {dollarAmount && (
@@ -83,7 +95,11 @@ const PerformanceCard = ({
           {carbonSaved}
         </div>
       )}
-      {subtitle && <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">{subtitle}</p>}
+      {subtitle && (
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+          {subtitle}
+        </p>
+      )}
     </div>
   );
 };
@@ -99,7 +115,8 @@ const SummaryCard = ({
 }) => {
   const colorClasses = {
     blue: "bg-white dark:bg-blue-900/20 border-blue-200 dark:border-blue-800",
-    green: "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800",
+    green:
+      "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800",
   };
 
   const iconColorClasses = {
@@ -108,26 +125,42 @@ const SummaryCard = ({
   };
 
   return (
-    <div className={`p-6 rounded-lg border ${colorClasses[color]} col-span-full`}>
+    <div
+      className={`p-6 rounded-lg border ${colorClasses[color]} col-span-full`}
+    >
       <div className="flex items-center mb-4">
         <Icon className={`h-8 w-8 ${iconColorClasses[color]} mr-3`} />
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          {title}
+        </h3>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="text-center">
-          <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{todayValue}</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            {todayValue}
+          </div>
           <div className="text-sm text-gray-500 dark:text-gray-400">{unit}</div>
-          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">Today</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+            Today
+          </div>
         </div>
         <div className="text-center">
-          <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{monthValue}</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            {monthValue}
+          </div>
           <div className="text-sm text-gray-500 dark:text-gray-400">{unit}</div>
-          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">This Month</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+            This Month
+          </div>
         </div>
         <div className="text-center">
-          <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{allTimeValue}</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            {allTimeValue}
+          </div>
           <div className="text-sm text-gray-500 dark:text-gray-400">{unit}</div>
-          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">All Time</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+            All Time
+          </div>
         </div>
       </div>
     </div>
@@ -136,7 +169,8 @@ const SummaryCard = ({
 
 const PerformanceDashboard = ({ className, hideHeader = false }) => {
   const { userRole } = useAuth();
-  const [showFinancialAssumptions, setShowFinancialAssumptions] = useState(false);
+  const [showFinancialAssumptions, setShowFinancialAssumptions] =
+    useState(false);
   const [showROIAssumptions, setShowROIAssumptions] = useState(false);
   const [showEnvironmentalAssumptions, setShowEnvironmentalAssumptions] = useState(false);
   const [roiAssumptions, setRoiAssumptions] = useState({
@@ -155,13 +189,20 @@ const PerformanceDashboard = ({ className, hideHeader = false }) => {
   const filteredUnits = userRole === "user" ? units.slice(0, 6) : units;
 
   // Calculate aggregate power metrics from actual mockUnits data
-  const totalCurrentPower = filteredUnits.reduce((sum, unit) => sum + (unit.currentPower || 0), 0);
+  const totalCurrentPower = filteredUnits.reduce(
+    (sum, unit) => sum + (unit.currentPower || 0),
+    0,
+  );
   const totalParasiticLoad = filteredUnits.reduce(
     (sum, unit) => sum + (unit.parasiticLoad || 0),
     0,
   );
-  const totalUserLoad = filteredUnits.reduce((sum, unit) => sum + (unit.userLoad || 0), 0);
-  const totalFeedInLoad = totalCurrentPower - totalParasiticLoad - totalUserLoad;
+  const totalUserLoad = filteredUnits.reduce(
+    (sum, unit) => sum + (unit.userLoad || 0),
+    0,
+  );
+  const totalFeedInLoad =
+    totalCurrentPower - totalParasiticLoad - totalUserLoad;
 
   // Mock trend data - in real app this would come from API comparing current vs 5 minutes ago
   // All tiles will show trend arrows that update every 5 minutes
@@ -177,7 +218,7 @@ const PerformanceDashboard = ({ className, hideHeader = false }) => {
       month: 38420.8,
       allTime: 2847392.1,
     },
-    water: {
+      water: {
       today: 1617,
       month: 64680,
       allTime: 2134440,
@@ -190,7 +231,7 @@ const PerformanceDashboard = ({ className, hideHeader = false }) => {
       month: adminPerformanceData.power.month * 0.3,
       allTime: adminPerformanceData.power.allTime * 0.3,
     },
-    water: {
+      water: {
       today: 764,
       month: 30560,
       allTime: 987617,
@@ -198,9 +239,9 @@ const PerformanceDashboard = ({ className, hideHeader = false }) => {
   };
 
   // Debug logging to check userRole
-  console.log("Current userRole:", userRole);
-
-  const performanceData = userRole === "admin" ? adminPerformanceData : userPerformanceData;
+  console.log('Current userRole:', userRole);
+  
+  const performanceData = userRole === 'admin' ? adminPerformanceData : userPerformanceData;
 
   // Calculate diesel displaced based on total current power generation
   // Assuming 1 kW of power generation displaces approximately 0.25 liters of diesel per hour
@@ -220,17 +261,22 @@ const PerformanceDashboard = ({ className, hideHeader = false }) => {
   const totalPowerGeneratedToday = performanceData.power.today; // kWh from the card "Total Power Generated" today
   const totalParasiticLoadKWh = totalParasiticLoad * 24; // Convert kW to kWh for the day
   const totalUserLoadKWh = totalUserLoad * 24; // Convert kW to kWh for the day
-  const _feedInPowerToday = totalPowerGeneratedToday - totalParasiticLoadKWh - totalUserLoadKWh; // kWh
+  const feedInPowerToday =
+    totalPowerGeneratedToday - totalParasiticLoadKWh - totalUserLoadKWh; // kWh
 
   // Calculate money earned from feed-in
-  const moneyEarnedFromFeedIn = totalFeedInLoad * 24 * financialAssumptions.feedInTariff;
+  const moneyEarnedFromFeedIn =
+    totalFeedInLoad * 24 * financialAssumptions.feedInTariff;
 
   // Calculate money saved by self-generating
-  const moneySavedBySelfGenerating = totalUserLoadKWh * financialAssumptions.electricityCost;
+  const moneySavedBySelfGenerating =
+    totalUserLoadKWh * financialAssumptions.electricityCost;
 
   // Calculate total savings daily
   const savingsDaily =
-    moneyEarnedFromFeedIn + moneySavedBySelfGenerating - financialAssumptions.rebate / 30;
+    moneyEarnedFromFeedIn +
+    moneySavedBySelfGenerating -
+    financialAssumptions.rebate / 30;
 
   // Calculate savings monthly and all time
   const savingsMonthly = savingsDaily * 30;
@@ -269,7 +315,9 @@ const PerformanceDashboard = ({ className, hideHeader = false }) => {
   const co2PerLiterDiesel = 2.64;
 
   return (
-    <div className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-3 lg:p-4 xl:p-6 ${className}`}>
+    <div
+      className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-3 lg:p-4 xl:p-6 ${className}`}
+    >
       <div className="max-w-7xl mx-auto">
         {/* Header - only show if hideHeader is false */}
         {!hideHeader && (
@@ -291,7 +339,9 @@ const PerformanceDashboard = ({ className, hideHeader = false }) => {
                 Home
               </span>
               <span className="mx-2">/</span>
-              <span className="text-gray-900 dark:text-gray-100">Performance</span>
+              <span className="text-gray-900 dark:text-gray-100">
+                Performance
+              </span>
             </nav>
           </div>
         )}
@@ -307,7 +357,7 @@ const PerformanceDashboard = ({ className, hideHeader = false }) => {
             icon={Zap}
             color="blue"
           />
-          {filteredUnits.some((u) => u.watergeneration) && (
+          {filteredUnits.some(u => u.watergeneration) && (
             <SummaryCard
               title="Total Water Generated"
               todayValue={performanceData.water.today.toLocaleString()}
@@ -472,6 +522,8 @@ const PerformanceDashboard = ({ className, hideHeader = false }) => {
           </div>
         </div>
 
+
+
         {/* Environmental Impact */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
@@ -542,12 +594,12 @@ const PerformanceDashboard = ({ className, hideHeader = false }) => {
               asterisk={true}
             />
           </div>
-
+          
           {/* Disclaimer */}
           <div className="mt-6 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
             <p className="text-xs text-gray-600 dark:text-gray-400">
-              * Environmental calculations are based on diesel generator equivalency for comparative
-              analysis.
+              * Environmental calculations are based on diesel generator
+              equivalency for comparative analysis.
             </p>
           </div>
         </div>

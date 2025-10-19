@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback,useContext, useEffect, useMemo, useState } from "react";
 
 import {
   getAllUnits,
@@ -44,59 +44,49 @@ export const UnitProvider = ({ children }) => {
   // Update a specific unit's information
   const updateUnit = useCallback((unitId, updates) => {
     setUnits((prevUnits) =>
-      prevUnits.map((unit) => (unit.id === unitId ? { ...unit, ...updates } : unit)),
+      prevUnits.map((unit) =>
+        unit.id === unitId ? { ...unit, ...updates } : unit,
+      ),
     );
   }, []);
 
   // Update unit name
-  const updateUnitName = useCallback(
-    async (unitId, newName) => {
-      try {
-        await serviceUpdateUnitName(unitId, newName);
-        updateUnit(unitId, { name: newName });
-      } catch (error) {
-        console.error("Failed to update unit name:", error);
-        throw error;
-      }
-    },
-    [updateUnit],
-  );
+  const updateUnitName = useCallback(async (unitId, newName) => {
+    try {
+      await serviceUpdateUnitName(unitId, newName);
+      updateUnit(unitId, { name: newName });
+    } catch (error) {
+      console.error("Failed to update unit name:", error);
+      throw error;
+    }
+  }, [updateUnit]);
 
   // Update unit location
-  const updateUnitLocation = useCallback(
-    async (unitId, newLocation) => {
-      try {
-        await serviceUpdateUnitLocation(unitId, newLocation);
-        updateUnit(unitId, { location: newLocation });
-      } catch (error) {
-        console.error("Failed to update unit location:", error);
-        throw error;
-      }
-    },
-    [updateUnit],
-  );
+  const updateUnitLocation = useCallback(async (unitId, newLocation) => {
+    try {
+      await serviceUpdateUnitLocation(unitId, newLocation);
+      updateUnit(unitId, { location: newLocation });
+    } catch (error) {
+      console.error("Failed to update unit location:", error);
+      throw error;
+    }
+  }, [updateUnit]);
 
   // Update unit GPS coordinates
-  const updateUnitGPS = useCallback(
-    async (unitId, newGPS) => {
-      try {
-        await serviceUpdateUnitGPS(unitId, newGPS);
-        updateUnit(unitId, { gpsCoordinates: newGPS });
-      } catch (error) {
-        console.error("Failed to update unit GPS:", error);
-        throw error;
-      }
-    },
-    [updateUnit],
-  );
+  const updateUnitGPS = useCallback(async (unitId, newGPS) => {
+    try {
+      await serviceUpdateUnitGPS(unitId, newGPS);
+      updateUnit(unitId, { gpsCoordinates: newGPS });
+    } catch (error) {
+      console.error("Failed to update unit GPS:", error);
+      throw error;
+    }
+  }, [updateUnit]);
 
   // Get a specific unit by ID
-  const getUnit = useCallback(
-    (unitId) => {
-      return units.find((unit) => unit.id === unitId);
-    },
-    [units],
-  );
+  const getUnit = useCallback((unitId) => {
+    return units.find((unit) => unit.id === unitId);
+  }, [units]);
 
   // Refresh units data
   const refreshUnits = useCallback(async () => {
@@ -113,30 +103,17 @@ export const UnitProvider = ({ children }) => {
     }
   }, []);
 
-  const value = useMemo(
-    () => ({
-      units,
-      loading,
-      error,
-      updateUnit,
-      updateUnitName,
-      updateUnitLocation,
-      updateUnitGPS,
-      getUnit,
-      refreshUnits,
-    }),
-    [
-      units,
-      loading,
-      error,
-      updateUnit,
-      updateUnitName,
-      updateUnitLocation,
-      updateUnitGPS,
-      getUnit,
-      refreshUnits,
-    ],
-  );
+  const value = useMemo(() => ({
+    units,
+    loading,
+    error,
+    updateUnit,
+    updateUnitName,
+    updateUnitLocation,
+    updateUnitGPS,
+    getUnit,
+    refreshUnits,
+  }), [units, loading, error, updateUnit, updateUnitName, updateUnitLocation, updateUnitGPS, getUnit, refreshUnits]);
 
   return <UnitContext.Provider value={value}>{children}</UnitContext.Provider>;
 };

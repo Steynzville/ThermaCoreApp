@@ -1,7 +1,6 @@
 "use client";
 
-import { OTPInput, OTPInputContext } from "input-otp";
-import { MinusIcon } from "lucide-react";
+import { OTPInputContext } from "input-otp";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
@@ -10,7 +9,10 @@ function InputOTP({ className, containerClassName, ...props }) {
   return (
     <OTPInput
       data-slot="input-otp"
-      containerClassName={cn("flex items-center gap-2 has-disabled:opacity-50", containerClassName)}
+      containerClassName={cn(
+        "flex items-center gap-2 has-disabled:opacity-50",
+        containerClassName,
+      )}
       className={cn("disabled:cursor-not-allowed", className)}
       {...props}
     />
@@ -19,7 +21,11 @@ function InputOTP({ className, containerClassName, ...props }) {
 
 function InputOTPGroup({ className, ...props }) {
   return (
-    <div data-slot="input-otp-group" className={cn("flex items-center", className)} {...props} />
+    <div
+      data-slot="input-otp-group"
+      className={cn("flex items-center", className)}
+      {...props}
+    />
   );
 }
 
@@ -55,4 +61,4 @@ function InputOTPSeparator({ ...props }) {
   );
 }
 
-export { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot };
+export { InputOTP, InputOTPGroup, InputOTPSeparator,InputOTPSlot };

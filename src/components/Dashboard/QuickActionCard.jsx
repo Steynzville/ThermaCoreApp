@@ -1,8 +1,13 @@
-import { ChevronRight } from "lucide-react";
 import { useState } from "react";
 
 // Quick Action Card
-const QuickActionCard = ({ icon: Icon, title, description, onClick, color = "blue" }) => {
+const QuickActionCard = ({
+  icon: Icon,
+  title,
+  description,
+  onClick,
+  color = "blue",
+}) => {
   const [isHovered, setIsHovered] = useState(false);
 
   return (
@@ -27,7 +32,9 @@ const QuickActionCard = ({ icon: Icon, title, description, onClick, color = "blu
       >
         <Icon className="h-6 w-6" />
       </div>
-      <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">{title}</h3>
+      <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">
+        {title}
+      </h3>
       <p className="text-sm text-gray-600 dark:text-gray-400">{description}</p>
       <ChevronRight
         className={`

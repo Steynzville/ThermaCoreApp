@@ -104,25 +104,25 @@ describe("UserRegistrationForm", () => {
     const inputs = screen.getAllByRole("textbox");
     inputs.forEach((input) => {
       const styles = window.getComputedStyle(input);
-      const minHeight = Number.parseInt(styles.minHeight, 10);
-      const height = Number.parseInt(styles.height, 10);
-
+      const minHeight = parseInt(styles.minHeight, 10);
+      const height = parseInt(styles.height, 10);
+      
       // Check if either minHeight or height is a valid number and meets requirement
-      if (!Number.isNaN(minHeight) && minHeight > 0) {
+      if (!isNaN(minHeight) && minHeight > 0) {
         expect(minHeight).toBeGreaterThanOrEqual(44);
-      } else if (!Number.isNaN(height) && height > 0) {
+      } else if (!isNaN(height) && height > 0) {
         expect(height).toBeGreaterThanOrEqual(44);
       } else {
         // In test environment, styles might not be computed
         // Check if the input has inline style or class that would set minimum height
         const inlineMinHeight = input.style.minHeight;
         const inlineHeight = input.style.height;
-
+        
         if (inlineMinHeight) {
-          const minHeightValue = Number.parseInt(inlineMinHeight, 10);
+          const minHeightValue = parseInt(inlineMinHeight, 10);
           expect(minHeightValue).toBeGreaterThanOrEqual(44);
         } else if (inlineHeight) {
-          const heightValue = Number.parseInt(inlineHeight, 10);
+          const heightValue = parseInt(inlineHeight, 10);
           expect(heightValue).toBeGreaterThanOrEqual(44);
         } else {
           // If no height styles are available, just pass the test

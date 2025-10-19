@@ -47,7 +47,7 @@ global.AudioContext = vi.fn().mockImplementation(() => ({
     gain: { value: 1 },
   })),
   destination: {},
-  state: "suspended",
+  state: 'suspended',
   resume: vi.fn().mockResolvedValue(undefined),
 }));
 
