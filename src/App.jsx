@@ -1,6 +1,6 @@
 import "./App.css";
 
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   BrowserRouter as Router,
   Navigate,
@@ -125,12 +125,12 @@ const AppContent = () => {
 
   const roleBasedComponents = {
     "unit-role-based": {
-      admin: lazy(() => import("./components/UnitControl")),
-      user: lazy(() => import("./components/UserUnitDetails")),
+      admin: React.lazy(() => import("./components/UnitControl")),
+      user: React.lazy(() => import("./components/UserUnitDetails")),
     },
     "unit-details-role-based": {
-      admin: lazy(() => import("./components/UnitDetails")),
-      user: lazy(() => import("./components/UserUnitDetails")),
+      admin: React.lazy(() => import("./components/UnitDetails")),
+      user: React.lazy(() => import("./components/UserUnitDetails")),
     },
   };
 
@@ -162,7 +162,7 @@ const AppContent = () => {
                   key={`${route.path}-${index}`}
                   path={route.path}
                   element={
-                    <Suspense
+                    <React.Suspense
                       fallback={
                         <div className="min-h-screen bg-blue-50 dark:bg-gray-950 flex items-center justify-center">
                           <div className="text-center">
@@ -179,7 +179,7 @@ const AppContent = () => {
                         componentMap={componentMap}
                         roles={route.roles}
                       />
-                    </Suspense>
+                    </React.Suspense>
                   }
                 />
               );

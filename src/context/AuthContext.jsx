@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
 import * as authService from "../services/authService";
-import { getFrontendRole, getPermissions } from "../utils/permissions";
+import { getFrontendRole,getPermissions } from "../utils/permissions";
 
 const AuthContext = createContext();
 
