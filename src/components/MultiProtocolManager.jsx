@@ -3,9 +3,9 @@ import { Activity, AlertCircle, CheckCircle, RefreshCw, Router, WifiOff, Zap } f
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { apiGetJson } from "@/utils/apiFetch"; // Use enhanced apiFetch utility with JSON helper
-import { Badge } from "./ui/badge";
-import { Button } from "./ui/button";
 
 const MultiProtocolManager = () => {
   const [protocolsStatus, setProtocolsStatus] = useState(null);
