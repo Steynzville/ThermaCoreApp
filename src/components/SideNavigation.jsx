@@ -2,22 +2,16 @@ import {
   AlertTriangle,
   BarChart3,
   ChartBar,
-  ChevronLeft,
-  ChevronRight,
   Cpu,
   FileText,
   Grid3X3,
   History,
   LayoutDashboard,
-  LogOut,
-  Menu,
   Search,
   Settings,
   Shield,
   Siren,
-  User,
   Wifi,
-  X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";

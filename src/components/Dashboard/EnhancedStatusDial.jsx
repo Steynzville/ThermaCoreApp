@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import { ChevronRight, Clock, TrendingDown, TrendingUp } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 

@@ -2,17 +2,6 @@ import { Eye, EyeOff, Fingerprint, Volume2, VolumeX } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import appleLogoBlack from "../assets/apple-logo-black.svg";
 import appleLogoWhite from "../assets/apple-logo-white.svg";
 import googleLogo from "../assets/google-logo.svg";
@@ -22,6 +11,17 @@ import { useSettings } from "../context/SettingsContext";
 import { useTheme } from "../context/ThemeContext";
 import styles from "./LoginScreen.module.css";
 import SocialButton from "./SocialButton";
+import { Button } from "./ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "./ui/dialog";
 
 const LoginScreen = ({ error, setError }) => {
   const [formData, setFormData] = useState({
