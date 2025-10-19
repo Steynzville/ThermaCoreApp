@@ -81,11 +81,17 @@ def add_password_reset_columns(engine):
         # because index inspection can be database-specific
         try:
             with engine.begin() as conn:
-                # Check if index exists (PostgreSQL syntax)
-                result = conn.execute(text(
-                    "SELECT 1 FROM pg_indexes WHERE indexname = 'idx_users_reset_token'"
-                ))
-                index_exists = result.fetchone() is not None
+                # Check if index exists - database-specific query
+                if engine.dialect.name == "postgresql":
+                    result = conn.execute(text(
+                        "SELECT 1 FROM pg_indexes WHERE indexname = 'idx_users_reset_token'"
+                    ))
+                    index_exists = result.fetchone() is not None
+                else:  # sqlite
+                    result = conn.execute(text(
+                        "SELECT name FROM sqlite_master WHERE type='index' AND name = 'idx_users_reset_token'"
+                    ))
+                    index_exists = result.fetchone() is not None
                 
                 if not index_exists:
                     logger.info("Creating index 'idx_users_reset_token'...")
@@ -297,12 +303,19 @@ def add_user_profile_fields(engine):
                 
             try:
                 with engine.begin() as conn:
-                    # Check if index exists (PostgreSQL syntax)
-                    result = conn.execute(
-                        text("SELECT 1 FROM pg_indexes WHERE indexname = :index_name"),
-                        {"index_name": index_name}
-                    )
-                    index_exists = result.fetchone() is not None
+                    # Check if index exists - database-specific query
+                    if engine.dialect.name == "postgresql":
+                        result = conn.execute(
+                            text("SELECT 1 FROM pg_indexes WHERE indexname = :index_name"),
+                            {"index_name": index_name}
+                        )
+                        index_exists = result.fetchone() is not None
+                    else:  # sqlite
+                        result = conn.execute(
+                            text("SELECT name FROM sqlite_master WHERE type='index' AND name = :index_name"),
+                            {"index_name": index_name}
+                        )
+                        index_exists = result.fetchone() is not None
                     
                     if not index_exists:
                         logger.info(f"Creating index '{index_name}'...")
@@ -327,6 +340,134 @@ def add_user_profile_fields(engine):
         
     except Exception as e:
         logger.error(f"Error adding user profile fields: {e}", exc_info=True)
+        return False
+
+
+def add_user_approval_columns(engine):
+    """Add user approval workflow columns to users table if they don't exist.
+    
+    This function adds fields for user registration approval workflow:
+    - registration_status: VARCHAR(20) for approval status (pending, approved, rejected, invited)
+    - approved_by: INTEGER for the admin user ID who approved the registration
+    - approved_at: TIMESTAMP for when the registration was approved
+    - rejection_reason: TEXT for rejection explanation
+    - registration_notes: TEXT for admin notes about the registration
+    
+    Uses centralized column definitions from migration_constants to prevent drift.
+    
+    Args:
+        engine: SQLAlchemy engine instance
+        
+    Returns:
+        bool: True if columns were added or already exist, False on error
+    """
+    try:
+        # Import centralized constants to prevent drift
+        from app.utils.migration_constants import (
+            USER_APPROVAL_COLUMNS,
+            USER_APPROVAL_INDEX
+        )
+        
+        table_name = 'users'
+        columns_added = []
+        existing_columns = []
+        
+        # Get list of existing columns
+        inspector = inspect(engine)
+        current_columns = [col['name'] for col in inspector.get_columns(table_name)]
+        
+        # Add each column if it doesn't exist, using centralized definitions
+        for column_name, pg_def, sqlite_def in USER_APPROVAL_COLUMNS:
+            # Validate column name to prevent SQL injection
+            if not _validate_sql_identifier(column_name):
+                logger.error(f"Invalid column name '{column_name}' - skipping for security")
+                continue
+                
+            if column_name not in current_columns:
+                logger.info(f"Column '{column_name}' not found in '{table_name}' table. Adding...")
+                with engine.begin() as conn:
+                    # Note: DDL statements cannot use parameterized queries for identifiers
+                    # Column names are validated above and come from hardcoded list
+                    if engine.dialect.name == "postgresql":
+                        column_def = pg_def
+                        conn.execute(text(
+                            f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {column_name} {column_def}"
+                        ))
+                    elif engine.dialect.name == "sqlite":
+                        column_def = sqlite_def
+                        conn.execute(text(
+                            f"ALTER TABLE users ADD COLUMN {column_name} {column_def}"
+                        ))
+                    else:
+                        logger.error(f"Unsupported database dialect: {engine.dialect.name}")
+                        return False
+                columns_added.append(column_name)
+                logger.info(f"✓ Column '{column_name}' added successfully")
+            else:
+                existing_columns.append(column_name)
+                logger.info(f"✓ Column '{column_name}' already exists")
+        
+        # Create index for faster pending user queries
+        if _validate_sql_identifier(USER_APPROVAL_INDEX):
+            try:
+                with engine.begin() as conn:
+                    if engine.dialect.name == "postgresql":
+                        # Check if index exists (PostgreSQL syntax)
+                        result = conn.execute(
+                            text("SELECT 1 FROM pg_indexes WHERE indexname = :index_name"),
+                            {"index_name": USER_APPROVAL_INDEX}
+                        )
+                        index_exists = result.fetchone() is not None
+                    else:  # sqlite
+                        # Check if index exists (SQLite syntax)
+                        result = conn.execute(
+                            text("SELECT name FROM sqlite_master WHERE type='index' AND name = :index_name"),
+                            {"index_name": USER_APPROVAL_INDEX}
+                        )
+                        index_exists = result.fetchone() is not None
+                    
+                    if not index_exists:
+                        logger.info(f"Creating index '{USER_APPROVAL_INDEX}'...")
+                        if engine.dialect.name == "postgresql":
+                            conn.execute(text(
+                                f"CREATE INDEX IF NOT EXISTS {USER_APPROVAL_INDEX} ON users(registration_status)"
+                            ))
+                        else:  # sqlite
+                            conn.execute(text(
+                                f"CREATE INDEX IF NOT EXISTS {USER_APPROVAL_INDEX} ON users(registration_status)"
+                            ))
+                        logger.info(f"✓ Index '{USER_APPROVAL_INDEX}' created successfully")
+                    else:
+                        logger.info(f"✓ Index '{USER_APPROVAL_INDEX}' already exists")
+            except Exception as idx_error:
+                # Index creation is not critical - log warning but continue
+                logger.warning(f"Could not create/verify index '{USER_APPROVAL_INDEX}': {idx_error}")
+        
+        # IMPROVED BACKFILL: Always backfill when column exists with NULL/empty values
+        # regardless of whether it was just created or already existed
+        if 'registration_status' in columns_added or 'registration_status' in existing_columns:
+            try:
+                with engine.begin() as conn:
+                    logger.info("Backfilling existing users with 'approved' status...")
+                    result = conn.execute(text(
+                        "UPDATE users SET registration_status = 'approved' WHERE registration_status IS NULL OR registration_status = ''"
+                    ))
+                    if result.rowcount > 0:
+                        logger.info(f"✓ Backfilled {result.rowcount} existing users to 'approved' status")
+                    else:
+                        logger.info("✓ No users needed backfilling")
+            except Exception as update_error:
+                logger.warning(f"Could not backfill existing users: {update_error}")
+        
+        if columns_added:
+            logger.info(f"User approval workflow migration complete: Added columns {columns_added}")
+        else:
+            logger.info("User approval workflow migration complete: All required columns already exist")
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error adding user approval columns: {e}", exc_info=True)
         return False
 
 
@@ -363,6 +504,10 @@ def run_auto_migrations(app):
             # Run permissions column migration
             permissions_success = add_permissions_column(engine)
             success = success and permissions_success
+            
+            # Run user approval workflow migration
+            user_approval_success = add_user_approval_columns(engine)
+            success = success and user_approval_success
             
             # Update emergency_admin with comprehensive permissions
             emergency_admin_success = update_emergency_admin_permissions(engine)
