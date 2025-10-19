@@ -1,9 +1,9 @@
 /**
  * Test workflow configuration and CI/CD setup for frontend
  */
+import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { describe, expect,it } from 'vitest';
 
 describe('Workflow Configuration', () => {
   it('should have a valid workflow file', () => {

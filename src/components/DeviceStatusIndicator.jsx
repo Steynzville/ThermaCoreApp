@@ -1,4 +1,6 @@
-
+import { AlertTriangle, CheckCircle, Clock, WifiOff, Wrench } from "lucide-react";
+import React from "react";
+import { Badge } from "./ui/badge";
 
 /**
  * Device Status Indicator Component

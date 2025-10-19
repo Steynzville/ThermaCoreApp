@@ -1,5 +1,4 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { BrowserRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import LoginScreen from "../components/LoginScreen";
@@ -10,13 +9,9 @@ import * as authService from "../services/authService";
 
 // Mock react-router-dom
 const mockNavigate = vi.fn();
-vi.mock("react-router-dom", async () => {
-  const actual = await vi.importActual("react-router-dom");
-  return {
-    ...actual,
-    useNavigate: () => mockNavigate,
-  };
-});
+vi.mock("react-router-dom", () => ({
+  useNavigate: () => mockNavigate,
+}));
 
 // Mock audio player
 vi.mock("../utils/audioPlayer", () => ({
@@ -25,13 +20,11 @@ vi.mock("../utils/audioPlayer", () => ({
 
 // Test wrapper with all required providers
 const TestWrapper = ({ children }) => (
-  <BrowserRouter>
-    <ThemeProvider>
-      <SettingsProvider>
-        <AuthProvider>{children}</AuthProvider>
-      </SettingsProvider>
-    </ThemeProvider>
-  </BrowserRouter>
+  <ThemeProvider>
+    <SettingsProvider>
+      <AuthProvider>{children}</AuthProvider>
+    </SettingsProvider>
+  </ThemeProvider>
 );
 
 describe("LoginScreen - Error Handling", () => {

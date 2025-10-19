@@ -1,8 +1,18 @@
-import PageHeader from './PageHeader';
-import { Card, CardContent } from './ui/card';
-import { Siren, AlertTriangle, Info, CheckCircle } from 'lucide-react';
+import {
+  AlertCircle,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  Filter,
+  Info,
+  Siren,
+} from "lucide-react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+
 import { units } from "../data/mockUnits";
+import PageHeader from "./PageHeader";
+import { Card, CardContent,CardHeader } from "./ui/card";
 
 const AlarmsView = ({ className, userRole }) => {
   const navigate = useNavigate();

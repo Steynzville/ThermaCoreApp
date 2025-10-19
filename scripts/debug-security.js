@@ -3,7 +3,8 @@
  * Debug version of security check to understand what's being flagged
  */
 
-import { existsSync,readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
+import path from 'path';
 
 const SECURITY_PATTERNS = [
   /admin123/g,          // Old development password - ALWAYS flagged

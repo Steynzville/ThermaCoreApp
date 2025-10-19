@@ -316,7 +316,7 @@ class TestAuditIntegration:
         with app.app_context():
             # Create test user and role
             role = Role(name=RoleEnum.VIEWER, description="Test viewer role")
-            user = User(username="testuser", email="test@example.com", role=role, registration_status="approved")
+            user = User(username="testuser", email="test@example.com", role=role)
 
             with patch("app.middleware.audit.audit_permission_check") as mock_audit:
                 # Test permission check (this would normally be done in the decorator)

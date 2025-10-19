@@ -487,26 +487,6 @@ const LoginScreen = ({ error, setError }) => {
             </svg>
           </div>
         )}
-        
-        {/* Registration link */}
-        <div className={styles.registerSection} style={{ marginTop: '24px', textAlign: 'center' }}>
-          <span style={{ color: 'var(--text-secondary)' }}>Don't have an account? </span>
-          <a
-            href="/register"
-            onClick={(e) => {
-              e.preventDefault();
-              navigate('/register');
-            }}
-            style={{
-              color: 'var(--primary-color)',
-              textDecoration: 'none',
-              fontWeight: '500',
-              cursor: 'pointer'
-            }}
-          >
-            Create an account
-          </a>
-        </div>
       </div>
     </div>
   );

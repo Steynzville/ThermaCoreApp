@@ -14,7 +14,6 @@ import LoginScreen from "./components/LoginScreen";
 import ForgotPassword from "./components/ForgotPassword";
 import PasswordResetRequest from "./components/PasswordResetRequest";
 import ProtectedRoute from "./components/ProtectedRoute";
-import UserRegistrationForm from "./components/UserRegistrationForm";
 // Removed static imports for UnitControl, UnitDetails, UserUnitDetails
 import ThemeToggle from "./components/ThemeToggle";
 import routes from "./config/routes";
@@ -147,7 +146,6 @@ const AppContent = () => {
         />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<PasswordResetRequest />} />
-        <Route path="/register" element={<UserRegistrationForm />} />
 
         {/* Protected Routes from configuration */}
         {isAuthenticated &&
