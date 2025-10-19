@@ -45,7 +45,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (username, password) => {
     setIsLoading(true);
-    console.log("[AuthContext] Starting login for user:", username);
+    if (import.meta.env.DEV) console.log("[AuthContext] Starting login for user:", username);
 
     try {
       // Call the backend authentication API
