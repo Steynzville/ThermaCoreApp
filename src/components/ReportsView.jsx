@@ -1,3 +1,4 @@
+import PageHeader from "./PageHeader";
 import { reportTypes } from "../constants/reportSections";
 
 const ReportsView = ({ className }) => {

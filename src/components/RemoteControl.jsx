@@ -1,3 +1,4 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -31,7 +32,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "./ui/alert-dialog";
-import { Card, CardContent, CardHeader } from "./ui/card";
 import { Switch } from "./ui/switch";
 
 const RemoteControl = ({ className, unit: propUnit, details }) => {

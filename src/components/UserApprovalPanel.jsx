@@ -1,9 +1,9 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle, CheckCircle, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "./ui/button";
-import { Card, CardContent, CardHeader } from "./ui/card";
 import {
   Dialog,
   DialogContent,

@@ -1,3 +1,5 @@
+import PageHeader from "./PageHeader";
+
 const AnalyticsPlaceholder = () => {
   return (
     <div className="min-h-screen bg-blue-50 dark:bg-gray-950 p-6">

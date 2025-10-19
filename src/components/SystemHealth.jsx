@@ -1,3 +1,4 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Activity,
   AlertTriangle,
@@ -8,6 +9,8 @@ import {
   Server,
   XCircle,
 } from "lucide-react";
+
+import PageHeader from "./PageHeader";
 
 const iconMap = {
   CheckCircle,

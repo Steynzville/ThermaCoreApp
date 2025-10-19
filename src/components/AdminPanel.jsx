@@ -1,3 +1,4 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Database,
   Edit,
@@ -22,7 +23,6 @@ import { formatRoleName, formatUserName } from "../utils/userUtils";
 import PageHeader from "./PageHeader";
 import UserApprovalPanel from "./UserApprovalPanel";
 import { Button } from "./ui/button";
-import { Card, CardContent, CardHeader } from "./ui/card";
 
 const systemStats = [
   { label: "Total Devices", value: "4", icon: Database },

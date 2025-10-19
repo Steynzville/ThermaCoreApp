@@ -15,6 +15,8 @@ import {
   YAxis,
 } from "recharts";
 
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import PageHeader from "./PageHeader";
 import { formatCurrency } from "../utils/formatCurrency";
 
 const analyticsData = [

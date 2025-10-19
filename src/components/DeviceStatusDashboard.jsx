@@ -1,3 +1,4 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Filter, RefreshCw, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -6,7 +7,6 @@ import { deviceStatusService } from "../services/deviceStatusService";
 import DeviceStatusIndicator from "./DeviceStatusIndicator";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 
 /**
