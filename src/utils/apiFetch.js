@@ -76,9 +76,11 @@ export const apiFetch = async (
           toast.error("Session expired. Please log in again.");
         }
 
-        // Clear stored tokens
-        localStorage.removeItem("token");
-        localStorage.removeItem("refreshToken");
+        // Clear stored tokens - use correct keys with thermacore_ prefix
+        localStorage.removeItem("thermacore_token");
+        localStorage.removeItem("thermacore_user");
+        localStorage.removeItem("thermacore_role");
+        localStorage.removeItem("thermacore_backend_role");
 
         // Enhanced redirect handling - check for login page and avoid redirect loops
         if (
