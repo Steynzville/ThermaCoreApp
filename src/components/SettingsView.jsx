@@ -1,10 +1,6 @@
 import { useState } from "react";
 
 import { useTheme } from "../context/ThemeContext";
-import PageHeader from "./PageHeader";
-import DataRefreshSettings from "./settings/DataRefreshSettings";
-import NotificationSettings from "./settings/NotificationSettings";
-import ProfileSettings from "./settings/ProfileSettings";
 
 const SettingsView = ({ className }) => {
   const { theme, setTheme } = useTheme();

@@ -1,9 +1,9 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle, CheckCircle, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "./ui/button";
+import { Card, CardContent, CardHeader } from "./ui/card";
 import {
   Dialog,
   DialogContent,
@@ -11,7 +11,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "./ui/dialog";
 
 const UserApprovalPanel = () => {
   const [pendingUsers, setPendingUsers] = useState([]);
