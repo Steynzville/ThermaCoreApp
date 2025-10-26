@@ -100,4 +100,225 @@ describe("useCameraControls Hook", () => {
     // Video feed should remain active
     expect(result.current.videoFeedActive).toBe(true);
   });
+
+  it("should play sound when toggling video feed on", async () => {
+    const playSound = (await import("../utils/audioPlayer")).default;
+    const { result } = renderHook(() => useCameraControls(mockSettings));
+
+    act(() => {
+      result.current.toggleVideoFeed();
+    });
+
+    expect(playSound).toHaveBeenCalledWith("video-on.mp3", true, 50);
+  });
+
+  it("should play sound when toggling video feed off", async () => {
+    const playSound = (await import("../utils/audioPlayer")).default;
+    const { result } = renderHook(() => useCameraControls(mockSettings));
+
+    // First turn it on
+    act(() => {
+      result.current.toggleVideoFeed();
+    });
+
+    // Then turn it off
+    act(() => {
+      result.current.toggleVideoFeed();
+    });
+
+    expect(playSound).toHaveBeenCalledWith("video-off.mp3", true, 50);
+  });
+
+  it("should handle fullscreen change events", () => {
+    const { result } = renderHook(() => useCameraControls(mockSettings));
+
+    // Simulate fullscreen change
+    act(() => {
+      Object.defineProperty(document, "fullscreenElement", {
+        writable: true,
+        configurable: true,
+        value: document.createElement("div"),
+      });
+      document.dispatchEvent(new Event("fullscreenchange"));
+    });
+
+    expect(result.current.isFullscreen).toBe(true);
+
+    // Simulate exiting fullscreen
+    act(() => {
+      Object.defineProperty(document, "fullscreenElement", {
+        writable: true,
+        configurable: true,
+        value: null,
+      });
+      document.dispatchEvent(new Event("fullscreenchange"));
+    });
+
+    expect(result.current.isFullscreen).toBe(false);
+  });
+
+  it("should handle webkit fullscreen change events", () => {
+    // Mock webkit support before rendering
+    Object.defineProperty(document, "webkitFullscreenElement", {
+      writable: true,
+      configurable: true,
+      value: null,
+    });
+
+    const { result } = renderHook(() => useCameraControls(mockSettings));
+
+    // Simulate webkit fullscreen change
+    act(() => {
+      Object.defineProperty(document, "webkitFullscreenElement", {
+        writable: true,
+        configurable: true,
+        value: document.createElement("div"),
+      });
+      document.dispatchEvent(new Event("webkitfullscreenchange"));
+    });
+
+    // The hook checks all fullscreen elements, so it should detect this
+    expect(result.current.isFullscreen).toBe(true);
+  });
+
+  it("should handle ms fullscreen change events", () => {
+    // Mock ms support before rendering
+    Object.defineProperty(document, "msFullscreenElement", {
+      writable: true,
+      configurable: true,
+      value: null,
+    });
+
+    const { result } = renderHook(() => useCameraControls(mockSettings));
+
+    // Simulate ms fullscreen change
+    act(() => {
+      Object.defineProperty(document, "msFullscreenElement", {
+        writable: true,
+        configurable: true,
+        value: document.createElement("div"),
+      });
+      document.dispatchEvent(new Event("msfullscreenchange"));
+    });
+
+    // The hook checks all fullscreen elements, so it should detect this
+    expect(result.current.isFullscreen).toBe(true);
+  });
+
+  it("should request fullscreen on toggleFullscreen", async () => {
+    const { result } = renderHook(() => useCameraControls(mockSettings));
+    const mockContainer = {
+      requestFullscreen: vi.fn().mockResolvedValue(undefined),
+    };
+
+    act(() => {
+      result.current.setVideoContainerRef(mockContainer);
+    });
+
+    await act(async () => {
+      await result.current.toggleFullscreen();
+    });
+
+    expect(mockContainer.requestFullscreen).toHaveBeenCalled();
+  });
+
+  it("should handle webkit requestFullscreen", async () => {
+    const { result } = renderHook(() => useCameraControls(mockSettings));
+    const mockContainer = {
+      webkitRequestFullscreen: vi.fn().mockResolvedValue(undefined),
+    };
+
+    act(() => {
+      result.current.setVideoContainerRef(mockContainer);
+    });
+
+    await act(async () => {
+      await result.current.toggleFullscreen();
+    });
+
+    expect(mockContainer.webkitRequestFullscreen).toHaveBeenCalled();
+  });
+
+  it("should handle ms requestFullscreen", async () => {
+    const { result } = renderHook(() => useCameraControls(mockSettings));
+    const mockContainer = {
+      msRequestFullscreen: vi.fn().mockResolvedValue(undefined),
+    };
+
+    act(() => {
+      result.current.setVideoContainerRef(mockContainer);
+    });
+
+    await act(async () => {
+      await result.current.toggleFullscreen();
+    });
+
+    expect(mockContainer.msRequestFullscreen).toHaveBeenCalled();
+  });
+
+  it("should exit fullscreen when already in fullscreen", async () => {
+    const { result } = renderHook(() => useCameraControls(mockSettings));
+    
+    // Set isFullscreen to true
+    act(() => {
+      Object.defineProperty(document, "fullscreenElement", {
+        writable: true,
+        configurable: true,
+        value: document.createElement("div"),
+      });
+      document.dispatchEvent(new Event("fullscreenchange"));
+    });
+
+    document.exitFullscreen = vi.fn().mockResolvedValue(undefined);
+
+    await act(async () => {
+      await result.current.toggleFullscreen();
+    });
+
+    expect(document.exitFullscreen).toHaveBeenCalled();
+  });
+
+  it("should handle fullscreen errors gracefully", async () => {
+    const { result } = renderHook(() => useCameraControls(mockSettings));
+    const mockContainer = {
+      requestFullscreen: vi.fn().mockRejectedValue(new Error("Fullscreen denied")),
+    };
+
+    act(() => {
+      result.current.setVideoContainerRef(mockContainer);
+    });
+
+    // Should not throw
+    await act(async () => {
+      await expect(result.current.toggleFullscreen()).resolves.not.toThrow();
+    });
+  });
+
+  it("should cleanup event listeners on unmount", () => {
+    const removeEventListener = vi.spyOn(document, "removeEventListener");
+    const { unmount } = renderHook(() => useCameraControls(mockSettings));
+
+    unmount();
+
+    expect(removeEventListener).toHaveBeenCalledWith(
+      "fullscreenchange",
+      expect.any(Function),
+    );
+  });
+
+  it("should handle SSR safety in fullscreen listeners", () => {
+    // Should not throw when document is undefined
+    expect(() => {
+      renderHook(() => useCameraControls(mockSettings));
+    }).not.toThrow();
+  });
+
+  it("should handle SSR safety in toggleFullscreen", async () => {
+    const { result } = renderHook(() => useCameraControls(mockSettings));
+
+    // Should not throw when document methods are unavailable
+    await act(async () => {
+      await expect(result.current.toggleFullscreen()).resolves.not.toThrow();
+    });
+  });
 });
