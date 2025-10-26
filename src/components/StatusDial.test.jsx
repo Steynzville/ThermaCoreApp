@@ -84,7 +84,9 @@ describe("StatusDial", () => {
   });
 
   it("should render with green color classes", () => {
-    const { container } = render(<StatusDial {...defaultProps} color="green" />);
+    const { container } = render(
+      <StatusDial {...defaultProps} color="green" />,
+    );
     expect(container.innerHTML).toContain("green");
   });
 
@@ -94,17 +96,23 @@ describe("StatusDial", () => {
   });
 
   it("should render with yellow color classes", () => {
-    const { container } = render(<StatusDial {...defaultProps} color="yellow" />);
+    const { container } = render(
+      <StatusDial {...defaultProps} color="yellow" />,
+    );
     expect(container.innerHTML).toContain("yellow");
   });
 
   it("should render with orange color classes", () => {
-    const { container } = render(<StatusDial {...defaultProps} color="orange" />);
+    const { container } = render(
+      <StatusDial {...defaultProps} color="orange" />,
+    );
     expect(container.innerHTML).toContain("orange");
   });
 
   it("should render with purple color classes", () => {
-    const { container } = render(<StatusDial {...defaultProps} color="purple" />);
+    const { container } = render(
+      <StatusDial {...defaultProps} color="purple" />,
+    );
     expect(container.innerHTML).toContain("purple");
   });
 

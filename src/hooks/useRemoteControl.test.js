@@ -18,7 +18,7 @@ describe("useRemoteControl", () => {
     localStorage.clear();
     localStorage.setItem("thermacore_token", mockToken);
     import.meta.env.VITE_API_BASE_URL = mockApiBaseUrl;
-    
+
     mockUseAuth.mockReturnValue({
       isAuthenticated: true,
     });
@@ -66,7 +66,7 @@ describe("useRemoteControl", () => {
           headers: expect.objectContaining({
             Authorization: `Bearer ${mockToken}`,
           }),
-        })
+        }),
       );
     });
 
@@ -126,7 +126,9 @@ describe("useRemoteControl", () => {
       const { result } = renderHook(() => useRemoteControl(unitId));
 
       await waitFor(() => {
-        expect(result.current.permissions).toEqual({ has_remote_control: true });
+        expect(result.current.permissions).toEqual({
+          has_remote_control: true,
+        });
       });
 
       const response = await result.current.controlPower(true);
@@ -137,7 +139,7 @@ describe("useRemoteControl", () => {
         expect.objectContaining({
           method: "POST",
           body: JSON.stringify({ power_on: true }),
-        })
+        }),
       );
     });
 
@@ -150,11 +152,13 @@ describe("useRemoteControl", () => {
       const { result } = renderHook(() => useRemoteControl(unitId));
 
       await waitFor(() => {
-        expect(result.current.permissions).toEqual({ has_remote_control: false });
+        expect(result.current.permissions).toEqual({
+          has_remote_control: false,
+        });
       });
 
       await expect(result.current.controlPower(true)).rejects.toThrow(
-        "Insufficient permissions for remote control"
+        "Insufficient permissions for remote control",
       );
     });
 
@@ -175,8 +179,10 @@ describe("useRemoteControl", () => {
         expect(result.current.permissions?.has_remote_control).toBe(true);
       });
 
-      await expect(result.current.controlPower(true)).rejects.toThrow("Control failed");
-      
+      await expect(result.current.controlPower(true)).rejects.toThrow(
+        "Control failed",
+      );
+
       await waitFor(() => {
         expect(result.current.error).toBe("Failed to control power");
       });
@@ -200,7 +206,9 @@ describe("useRemoteControl", () => {
       const { result } = renderHook(() => useRemoteControl(unitId));
 
       await waitFor(() => {
-        expect(result.current.permissions).toEqual({ has_remote_control: true });
+        expect(result.current.permissions).toEqual({
+          has_remote_control: true,
+        });
       });
 
       const response = await result.current.controlWaterProduction(true);
@@ -211,7 +219,7 @@ describe("useRemoteControl", () => {
         expect.objectContaining({
           method: "POST",
           body: JSON.stringify({ water_production_on: true }),
-        })
+        }),
       );
     });
 
@@ -228,7 +236,7 @@ describe("useRemoteControl", () => {
       });
 
       await expect(result.current.controlWaterProduction(true)).rejects.toThrow(
-        "Insufficient permissions for remote control"
+        "Insufficient permissions for remote control",
       );
     });
 
@@ -250,7 +258,7 @@ describe("useRemoteControl", () => {
       });
 
       await expect(result.current.controlWaterProduction(true)).rejects.toThrow(
-        "Water control failed"
+        "Water control failed",
       );
     });
   });
@@ -286,7 +294,7 @@ describe("useRemoteControl", () => {
         `${mockApiBaseUrl}/remote-control/units/${unitId}/status`,
         expect.objectContaining({
           method: "GET",
-        })
+        }),
       );
     });
 
@@ -307,7 +315,9 @@ describe("useRemoteControl", () => {
         expect(result.current.permissions).toBeDefined();
       });
 
-      await expect(result.current.getUnitStatus()).rejects.toThrow("Status fetch failed");
+      await expect(result.current.getUnitStatus()).rejects.toThrow(
+        "Status fetch failed",
+      );
     });
   });
 

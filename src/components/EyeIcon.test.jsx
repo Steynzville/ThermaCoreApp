@@ -57,7 +57,9 @@ describe("EyeIconClosed", () => {
   });
 
   it("should pass through additional props", () => {
-    const { container } = render(<EyeIconClosed data-testid="eye-icon-closed" />);
+    const { container } = render(
+      <EyeIconClosed data-testid="eye-icon-closed" />,
+    );
     const svg = container.querySelector("svg");
     expect(svg).toHaveAttribute("data-testid", "eye-icon-closed");
   });

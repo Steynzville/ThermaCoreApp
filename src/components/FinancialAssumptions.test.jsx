@@ -22,11 +22,15 @@ describe("FinancialAssumptions", () => {
 
   it("should render financial assumptions modal when open", () => {
     render(<FinancialAssumptions {...defaultProps} />);
-    expect(screen.getByText(/Financial Impact Assumptions/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Financial Impact Assumptions/i),
+    ).toBeInTheDocument();
   });
 
   it("should not render when closed", () => {
-    const { container } = render(<FinancialAssumptions {...defaultProps} isOpen={false} />);
+    const { container } = render(
+      <FinancialAssumptions {...defaultProps} isOpen={false} />,
+    );
     expect(container.firstChild).toBeNull();
   });
 
@@ -38,6 +42,8 @@ describe("FinancialAssumptions", () => {
   it("should render with default assumptions when not provided", () => {
     const props = { ...defaultProps, currentAssumptions: null };
     render(<FinancialAssumptions {...props} />);
-    expect(screen.getByText(/Financial Impact Assumptions/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Financial Impact Assumptions/i),
+    ).toBeInTheDocument();
   });
 });

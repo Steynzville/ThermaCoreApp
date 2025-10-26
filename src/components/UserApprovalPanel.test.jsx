@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import UserApprovalPanel from "./UserApprovalPanel";
 import { toast } from "sonner";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import UserApprovalPanel from "./UserApprovalPanel";
 
 // Mock dependencies
 vi.mock("sonner", () => ({
@@ -100,7 +100,9 @@ describe("UserApprovalPanel", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    const { getPendingUsers, getRoles } = await import("../services/userService");
+    const { getPendingUsers, getRoles } = await import(
+      "../services/userService"
+    );
     getPendingUsers.mockResolvedValue({
       success: true,
       data: mockPendingUsers,
@@ -115,13 +117,15 @@ describe("UserApprovalPanel", () => {
     render(<UserApprovalPanel />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Pending User Registrations/)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Pending User Registrations/),
+      ).toBeInTheDocument();
     });
   });
 
   it("should fetch and display pending users on mount", async () => {
     const { getPendingUsers } = await import("../services/userService");
-    
+
     render(<UserApprovalPanel />);
 
     await waitFor(() => {
@@ -131,7 +135,7 @@ describe("UserApprovalPanel", () => {
 
   it("should display loading state", () => {
     render(<UserApprovalPanel />);
-    
+
     // Component should render even while loading
     expect(screen.getByText(/Pending User Registrations/)).toBeInTheDocument();
   });
@@ -163,7 +167,7 @@ describe("UserApprovalPanel", () => {
 
   it("should fetch roles on mount", async () => {
     const { getRoles } = await import("../services/userService");
-    
+
     render(<UserApprovalPanel />);
 
     await waitFor(() => {
@@ -181,7 +185,9 @@ describe("UserApprovalPanel", () => {
     render(<UserApprovalPanel />);
 
     await waitFor(() => {
-      expect(screen.getByText(/No pending user registrations/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/No pending user registrations/i),
+      ).toBeInTheDocument();
     });
   });
 
@@ -196,7 +202,7 @@ describe("UserApprovalPanel", () => {
 
   it("should refresh pending users when refresh button is clicked", async () => {
     const { getPendingUsers } = await import("../services/userService");
-    
+
     render(<UserApprovalPanel />);
 
     await waitFor(() => {

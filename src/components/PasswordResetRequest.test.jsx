@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import PasswordResetRequest from "./PasswordResetRequest";
 
 // Mock dependencies
@@ -29,9 +29,15 @@ describe("PasswordResetRequest", () => {
   it("should render password reset form", () => {
     render(<PasswordResetRequest />);
 
-    expect(screen.getByPlaceholderText("Enter new password")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("Confirm new password")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /reset password/i })).toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText("Enter new password"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText("Confirm new password"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /reset password/i }),
+    ).toBeInTheDocument();
   });
 
   it("should display error when no token in URL", async () => {
@@ -49,7 +55,9 @@ describe("PasswordResetRequest", () => {
     render(<PasswordResetRequest />);
 
     const passwordInput = screen.getByPlaceholderText("Enter new password");
-    fireEvent.change(passwordInput, { target: { name: "newPassword", value: "newpass123" } });
+    fireEvent.change(passwordInput, {
+      target: { name: "newPassword", value: "newpass123" },
+    });
 
     expect(passwordInput.value).toBe("newpass123");
   });
@@ -58,7 +66,9 @@ describe("PasswordResetRequest", () => {
     render(<PasswordResetRequest />);
 
     const confirmInput = screen.getByPlaceholderText("Confirm new password");
-    fireEvent.change(confirmInput, { target: { name: "confirmPassword", value: "newpass123" } });
+    fireEvent.change(confirmInput, {
+      target: { name: "confirmPassword", value: "newpass123" },
+    });
 
     expect(confirmInput.value).toBe("newpass123");
   });
@@ -66,7 +76,9 @@ describe("PasswordResetRequest", () => {
   it("should validate empty password fields", async () => {
     render(<PasswordResetRequest />);
 
-    const submitButton = screen.getByRole("button", { name: /reset password/i });
+    const submitButton = screen.getByRole("button", {
+      name: /reset password/i,
+    });
     fireEvent.click(submitButton);
 
     // Just verify the form exists, validation happens but we don't need to test the exact message
@@ -81,14 +93,22 @@ describe("PasswordResetRequest", () => {
     const passwordInput = screen.getByPlaceholderText("Enter new password");
     const confirmInput = screen.getByPlaceholderText("Confirm new password");
 
-    fireEvent.change(passwordInput, { target: { name: "newPassword", value: "short" } });
-    fireEvent.change(confirmInput, { target: { name: "confirmPassword", value: "short" } });
+    fireEvent.change(passwordInput, {
+      target: { name: "newPassword", value: "short" },
+    });
+    fireEvent.change(confirmInput, {
+      target: { name: "confirmPassword", value: "short" },
+    });
 
-    const submitButton = screen.getByRole("button", { name: /reset password/i });
+    const submitButton = screen.getByRole("button", {
+      name: /reset password/i,
+    });
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(screen.getByText(/Password must be at least 6 characters long/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Password must be at least 6 characters long/i),
+      ).toBeInTheDocument();
     });
   });
 
@@ -98,10 +118,16 @@ describe("PasswordResetRequest", () => {
     const passwordInput = screen.getByPlaceholderText("Enter new password");
     const confirmInput = screen.getByPlaceholderText("Confirm new password");
 
-    fireEvent.change(passwordInput, { target: { name: "newPassword", value: "password123" } });
-    fireEvent.change(confirmInput, { target: { name: "confirmPassword", value: "different456" } });
+    fireEvent.change(passwordInput, {
+      target: { name: "newPassword", value: "password123" },
+    });
+    fireEvent.change(confirmInput, {
+      target: { name: "confirmPassword", value: "different456" },
+    });
 
-    const submitButton = screen.getByRole("button", { name: /reset password/i });
+    const submitButton = screen.getByRole("button", {
+      name: /reset password/i,
+    });
     fireEvent.click(submitButton);
 
     await waitFor(() => {
@@ -111,17 +137,26 @@ describe("PasswordResetRequest", () => {
 
   it("should successfully reset password", async () => {
     const { resetPassword } = await import("../services/authService");
-    resetPassword.mockResolvedValueOnce({ success: true, message: "Password reset successful" });
+    resetPassword.mockResolvedValueOnce({
+      success: true,
+      message: "Password reset successful",
+    });
 
     render(<PasswordResetRequest />);
 
     const passwordInput = screen.getByPlaceholderText("Enter new password");
     const confirmInput = screen.getByPlaceholderText("Confirm new password");
 
-    fireEvent.change(passwordInput, { target: { name: "newPassword", value: "newpass123" } });
-    fireEvent.change(confirmInput, { target: { name: "confirmPassword", value: "newpass123" } });
+    fireEvent.change(passwordInput, {
+      target: { name: "newPassword", value: "newpass123" },
+    });
+    fireEvent.change(confirmInput, {
+      target: { name: "confirmPassword", value: "newpass123" },
+    });
 
-    const submitButton = screen.getByRole("button", { name: /reset password/i });
+    const submitButton = screen.getByRole("button", {
+      name: /reset password/i,
+    });
     fireEvent.click(submitButton);
 
     await waitFor(() => {
@@ -141,10 +176,16 @@ describe("PasswordResetRequest", () => {
     const passwordInput = screen.getByPlaceholderText("Enter new password");
     const confirmInput = screen.getByPlaceholderText("Confirm new password");
 
-    fireEvent.change(passwordInput, { target: { name: "newPassword", value: "newpass123" } });
-    fireEvent.change(confirmInput, { target: { name: "confirmPassword", value: "newpass123" } });
+    fireEvent.change(passwordInput, {
+      target: { name: "newPassword", value: "newpass123" },
+    });
+    fireEvent.change(confirmInput, {
+      target: { name: "confirmPassword", value: "newpass123" },
+    });
 
-    const submitButton = screen.getByRole("button", { name: /reset password/i });
+    const submitButton = screen.getByRole("button", {
+      name: /reset password/i,
+    });
     fireEvent.click(submitButton);
 
     await waitFor(() => {
@@ -158,10 +199,10 @@ describe("PasswordResetRequest", () => {
     const passwordInput = screen.getByLabelText(/New Password/i);
     expect(passwordInput).toHaveAttribute("type", "password");
 
-    const toggleButton = screen.getAllByRole("button").find(btn => 
-      btn.getAttribute("aria-label")?.includes("password")
-    );
-    
+    const toggleButton = screen
+      .getAllByRole("button")
+      .find((btn) => btn.getAttribute("aria-label")?.includes("password"));
+
     if (toggleButton) {
       fireEvent.click(toggleButton);
       // Password type should toggle
@@ -172,7 +213,9 @@ describe("PasswordResetRequest", () => {
   it("should clear error when user starts typing", async () => {
     render(<PasswordResetRequest />);
 
-    const submitButton = screen.getByRole("button", { name: /reset password/i });
+    const submitButton = screen.getByRole("button", {
+      name: /reset password/i,
+    });
     fireEvent.click(submitButton);
 
     // Wait a bit for any error to appear
@@ -181,7 +224,9 @@ describe("PasswordResetRequest", () => {
     });
 
     const passwordInput = screen.getByPlaceholderText("Enter new password");
-    fireEvent.change(passwordInput, { target: { name: "newPassword", value: "test" } });
+    fireEvent.change(passwordInput, {
+      target: { name: "newPassword", value: "test" },
+    });
 
     // Just verify the input was changed successfully
     expect(passwordInput.value).toBe("test");

@@ -1,9 +1,8 @@
-import { renderHook, act } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { act, renderHook } from "@testing-library/react";
 import { toast } from "sonner";
-
-import { usePasswordManagement } from "./usePasswordManagement";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiPost } from "../utils/apiFetch";
+import { usePasswordManagement } from "./usePasswordManagement";
 
 // Mock dependencies
 vi.mock("sonner", () => ({
@@ -249,10 +248,10 @@ describe("usePasswordManagement", () => {
         expect.objectContaining({
           showToastOnError: false,
           retries: 2,
-        })
+        }),
       );
       expect(toast.success).toHaveBeenCalledWith(
-        "Password reset successfully for John Doe"
+        "Password reset successfully for John Doe",
       );
       expect(result.current.passwordResetModal).toBe(false);
     });
@@ -301,7 +300,7 @@ describe("usePasswordManagement", () => {
       });
 
       expect(result.current.validation.apiError).toContain(
-        "Unable to connect to backend server"
+        "Unable to connect to backend server",
       );
     });
 
@@ -350,7 +349,9 @@ describe("usePasswordManagement", () => {
 
   describe("handleSelfPasswordReset", () => {
     it("should open modal for current user", () => {
-      const { result } = renderHook(() => usePasswordManagement(mockCurrentUser));
+      const { result } = renderHook(() =>
+        usePasswordManagement(mockCurrentUser),
+      );
 
       act(() => {
         result.current.handleSelfPasswordReset();
@@ -371,7 +372,9 @@ describe("usePasswordManagement", () => {
         email: "john@example.com",
       };
 
-      const { result } = renderHook(() => usePasswordManagement(userWithoutName));
+      const { result } = renderHook(() =>
+        usePasswordManagement(userWithoutName),
+      );
 
       act(() => {
         result.current.handleSelfPasswordReset();

@@ -25,7 +25,9 @@ vi.mock("./settings/AudioSettings", () => ({
 }));
 
 vi.mock("./settings/DataRefreshSettings", () => ({
-  default: () => <div data-testid="data-refresh-settings">Data Refresh Settings</div>,
+  default: () => (
+    <div data-testid="data-refresh-settings">Data Refresh Settings</div>
+  ),
 }));
 
 vi.mock("./settings/DisplaySettings", () => ({
@@ -33,7 +35,9 @@ vi.mock("./settings/DisplaySettings", () => ({
 }));
 
 vi.mock("./settings/NotificationSettings", () => ({
-  default: () => <div data-testid="notification-settings">Notification Settings</div>,
+  default: () => (
+    <div data-testid="notification-settings">Notification Settings</div>
+  ),
 }));
 
 vi.mock("./settings/ProfileSettings", () => ({
@@ -110,4 +114,3 @@ describe("SettingsView", () => {
     expect(screen.getByTestId("page-header")).toHaveTextContent("Settings");
   });
 });
-

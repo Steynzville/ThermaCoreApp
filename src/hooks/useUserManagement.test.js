@@ -1,10 +1,9 @@
-import { renderHook, waitFor, act } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { toast } from "sonner";
-
-import { useUserManagement } from "./useUserManagement";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { deleteUser, getAllUsers } from "../services/usersAPI";
 import { apiGet, apiPost } from "../utils/apiFetch";
+import { useUserManagement } from "./useUserManagement";
 
 // Mock dependencies
 vi.mock("sonner", () => ({
@@ -26,7 +25,8 @@ vi.mock("../utils/apiFetch", () => ({
 
 vi.mock("../utils/userUtils", () => ({
   formatRoleName: (role) => role?.name || "Unknown",
-  formatUserName: (user) => `${user.first_name || ""} ${user.last_name || ""}`.trim() || user.username,
+  formatUserName: (user) =>
+    `${user.first_name || ""} ${user.last_name || ""}`.trim() || user.username,
 }));
 
 describe("useUserManagement", () => {
@@ -126,7 +126,9 @@ describe("useUserManagement", () => {
         expect(result.current.isLoadingUsers).toBe(false);
       });
 
-      expect(result.current.usersError).toBe("Failed to load users. Please try again.");
+      expect(result.current.usersError).toBe(
+        "Failed to load users. Please try again.",
+      );
       expect(toast.error).toHaveBeenCalledWith("Failed to load users");
     });
 
@@ -181,7 +183,12 @@ describe("useUserManagement", () => {
     it("should fetch roles when opening modal", async () => {
       apiGet.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ roles: [{ id: 1, name: "Admin" }, { id: 2, name: "User" }] }),
+        json: async () => ({
+          roles: [
+            { id: 1, name: "Admin" },
+            { id: 2, name: "User" },
+          ],
+        }),
       });
 
       const { result } = renderHook(() => useUserManagement());
@@ -272,7 +279,9 @@ describe("useUserManagement", () => {
       result.current.newUserFormData.roleId = "1"; // Add roleId to pass that check
       await result.current.handleCreateUser();
 
-      expect(toast.error).toHaveBeenCalledWith("Password must be at least 6 characters long");
+      expect(toast.error).toHaveBeenCalledWith(
+        "Password must be at least 6 characters long",
+      );
     });
 
     it("should validate required role", async () => {
@@ -317,7 +326,9 @@ describe("useUserManagement", () => {
 
       await waitFor(() => {
         expect(apiPost).toHaveBeenCalled();
-        expect(toast.success).toHaveBeenCalledWith("User newuser created successfully");
+        expect(toast.success).toHaveBeenCalledWith(
+          "User newuser created successfully",
+        );
         expect(result.current.createUserModal).toBe(false);
       });
     });
@@ -356,7 +367,7 @@ describe("useUserManagement", () => {
       });
 
       const user = result.current.users[0];
-      
+
       act(() => {
         result.current.handleEditUser(user);
       });
@@ -374,7 +385,7 @@ describe("useUserManagement", () => {
       });
 
       const updatedUser = { ...result.current.users[0], name: "Updated Name" };
-      
+
       act(() => {
         result.current.handleSaveUser(updatedUser);
       });
