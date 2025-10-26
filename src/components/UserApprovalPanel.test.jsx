@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { toast } from "sonner";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { getPendingUsers, getRoles } from "../services/userService";
 import UserApprovalPanel from "./UserApprovalPanel";
 
 // Mock dependencies
@@ -98,11 +99,8 @@ describe("UserApprovalPanel", () => {
     { id: 2, name: "User" },
   ];
 
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks();
-    const { getPendingUsers, getRoles } = await import(
-      "../services/userService"
-    );
     getPendingUsers.mockResolvedValue({
       success: true,
       data: mockPendingUsers,
@@ -124,8 +122,6 @@ describe("UserApprovalPanel", () => {
   });
 
   it("should fetch and display pending users on mount", async () => {
-    const { getPendingUsers } = await import("../services/userService");
-
     render(<UserApprovalPanel />);
 
     await waitFor(() => {
@@ -141,7 +137,6 @@ describe("UserApprovalPanel", () => {
   });
 
   it("should handle fetch pending users error", async () => {
-    const { getPendingUsers } = await import("../services/userService");
     getPendingUsers.mockRejectedValueOnce(new Error("Network error"));
 
     render(<UserApprovalPanel />);
@@ -152,7 +147,6 @@ describe("UserApprovalPanel", () => {
   });
 
   it("should handle fetch pending users failure response", async () => {
-    const { getPendingUsers } = await import("../services/userService");
     getPendingUsers.mockResolvedValueOnce({
       success: false,
       message: "Not authorized",
@@ -166,8 +160,6 @@ describe("UserApprovalPanel", () => {
   });
 
   it("should fetch roles on mount", async () => {
-    const { getRoles } = await import("../services/userService");
-
     render(<UserApprovalPanel />);
 
     await waitFor(() => {
@@ -176,7 +168,6 @@ describe("UserApprovalPanel", () => {
   });
 
   it("should handle no pending users", async () => {
-    const { getPendingUsers } = await import("../services/userService");
     getPendingUsers.mockResolvedValueOnce({
       success: true,
       data: [],
@@ -201,8 +192,6 @@ describe("UserApprovalPanel", () => {
   });
 
   it("should refresh pending users when refresh button is clicked", async () => {
-    const { getPendingUsers } = await import("../services/userService");
-
     render(<UserApprovalPanel />);
 
     await waitFor(() => {

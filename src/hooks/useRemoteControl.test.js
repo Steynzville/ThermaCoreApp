@@ -26,10 +26,6 @@ describe("useRemoteControl", () => {
     global.fetch = vi.fn();
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   describe("Initial State", () => {
     it("should initialize with default state", async () => {
       const { result } = renderHook(() => useRemoteControl(unitId));
