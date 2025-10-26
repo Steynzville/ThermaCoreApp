@@ -1,7 +1,7 @@
 /**
  * Tests for Unit Details Tab Components
  *
- * Tests for unit detail tab components.
+ * Tests rendering and basic functionality of unit detail tab components.
  */
 
 import { render } from "@testing-library/react";
