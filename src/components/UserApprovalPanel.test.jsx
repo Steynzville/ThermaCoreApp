@@ -115,7 +115,7 @@ describe("UserApprovalPanel", () => {
     render(<UserApprovalPanel />);
 
     await waitFor(() => {
-      expect(screen.getByText(/User Approval/)).toBeInTheDocument();
+      expect(screen.getByText(/Pending User Registrations/)).toBeInTheDocument();
     });
   });
 
@@ -133,7 +133,7 @@ describe("UserApprovalPanel", () => {
     render(<UserApprovalPanel />);
     
     // Component should render even while loading
-    expect(screen.getByText(/User Approval/)).toBeInTheDocument();
+    expect(screen.getByText(/Pending User Registrations/)).toBeInTheDocument();
   });
 
   it("should handle fetch pending users error", async () => {
@@ -181,7 +181,7 @@ describe("UserApprovalPanel", () => {
     render(<UserApprovalPanel />);
 
     await waitFor(() => {
-      expect(screen.getByText(/No pending users/i)).toBeInTheDocument();
+      expect(screen.getByText(/No pending user registrations/i)).toBeInTheDocument();
     });
   });
 
@@ -190,7 +190,7 @@ describe("UserApprovalPanel", () => {
 
     await waitFor(() => {
       expect(screen.getByText("johndoe")).toBeInTheDocument();
-      expect(screen.getByText("jane doe")).toBeInTheDocument();
+      expect(screen.getByText("@janedoe")).toBeInTheDocument();
     });
   });
 
