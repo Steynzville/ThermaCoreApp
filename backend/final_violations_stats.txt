@@ -1,0 +1,45 @@
+226	PLC0415	import-outside-top-level
+116	TRY401 	verbose-log-message
+ 56	TRY300 	try-consider-else
+ 37	TRY301 	raise-within-try
+ 30	PTH118 	os-path-join
+ 24	DTZ003 	call-datetime-utcnow
+ 21	RUF059 	unused-unpacked-variable
+ 18	T201   	print
+ 13	PTH110 	os-path-exists
+ 13	PTH120 	os-path-dirname
+ 10	PLW1508	invalid-envvar-default
+  9	DTZ005 	call-datetime-now-without-tzinfo
+  8	PERF203	try-except-in-loop
+  7	DTZ001 	call-datetime-without-tzinfo
+  7	N806   	non-lowercase-variable-in-function
+  6	PTH108 	os-unlink
+  6	PTH123 	builtin-open
+  5	PTH202 	os-path-getsize
+  4	B007   	unused-loop-control-variable
+  4	B028   	no-explicit-stacklevel
+  4	PLR0912	too-many-branches
+  4	SIM102 	collapsible-if
+  3	PERF401	manual-list-comprehension
+  3	PLC0206	dict-index-missing-items
+  3	PT017  	pytest-assert-in-except
+  3	PTH100 	os-path-abspath
+  3	PTH103 	os-makedirs
+  3	SIM115 	open-file-with-context-handler
+  2	DTZ007 	call-datetime-strptime-without-zone
+  2	DTZ011 	call-date-today
+  2	F821   	undefined-name
+  2	N818   	error-suffix-on-exception-name
+  2	PLR0915	too-many-statements
+  2	PT003  	pytest-extraneous-scope-function
+  2	PTH119 	os-path-basename
+  2	RUF043 	pytest-raises-ambiguous-pattern
+  2	TRY002 	raise-vanilla-class
+  2	TRY201 	verbose-raise
+  1	B017   	assert-raises-exception
+  1	PLR0913	too-many-arguments
+  1	PT018  	pytest-composite-assertion
+  1	SIM103 	needless-bool
+  1	SIM105 	suppressible-exception
+Found 671 errors.
+No fixes available (51 hidden fixes can be enabled with the `--unsafe-fixes` option).

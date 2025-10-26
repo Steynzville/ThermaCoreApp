@@ -1,0 +1,75 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.2.6/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "ignoreUnknown": false,
+    "maxSize": 2097152
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "formatWithErrors": true
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "suspicious": {
+        "noUnknownAtRules": "off",
+        "noDuplicateProperties": "off",
+        "noArrayIndexKey": "warn",
+        "useIterableCallbackReturn": "warn",
+        "noDocumentCookie": "off",
+        "noAssignInExpressions": "warn",
+        "noConsole": "warn"
+      },
+      "a11y": {
+        "noLabelWithoutControl": "warn",
+        "useKeyWithClickEvents": "warn",
+        "useValidAnchor": "warn",
+        "useButtonType": "warn",
+        "noNoninteractiveElementToInteractiveRole": "warn",
+        "useAltText": "warn",
+        "noSvgWithoutTitle": "warn",
+        "noStaticElementInteractions": "warn",
+        "useFocusableInteractive": "warn",
+        "useSemanticElements": "off",
+        "useAriaPropsForRole": "off"
+      },
+      "complexity": {
+        "noForEach": "off",
+        "useLiteralKeys": "off"
+      },
+      "correctness": {
+        "useExhaustiveDependencies": "warn",
+        "useUniqueElementIds": "off",
+        "noUnusedVariables": "error",
+        "noUnusedImports": "error",
+        "noNestedComponentDefinitions": "warn",
+        "noUnusedFunctionParameters": "warn"
+      },
+      "style": {
+        "noNonNullAssertion": "warn",
+        "noDescendingSpecificity": "off"
+      },
+      "security": {
+        "noDangerouslySetInnerHtml": "off"
+      }
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double"
+    }
+  },
+  "css": {
+    "parser": {
+      "cssModules": true
+    }
+  }
+}

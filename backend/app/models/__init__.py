@@ -1,0 +1,501 @@
+"""Database models for ThermaCore SCADA system."""
+
+from datetime import datetime, timezone
+from enum import Enum as PyEnum
+
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Table,
+    Text,
+)
+from sqlalchemy.dialects.postgresql import JSON
+from sqlalchemy.orm import relationship
+from werkzeug.security import check_password_hash, generate_password_hash
+
+from app import db
+
+
+def utc_now():
+    """Get current UTC time as timezone-aware datetime.
+
+    This function enforces timezone-aware datetimes at the application level
+    by always returning UTC datetime objects. This approach works with both
+    PostgreSQL and SQLite, unlike using DateTime(timezone=True) which only
+    works with PostgreSQL.
+
+    For production PostgreSQL deployments, consider adding database triggers
+    to automatically update timestamp fields and enforce timezone constraints.
+    """
+    return datetime.now(timezone.utc)
+
+
+# Association table for many-to-many relationship between roles and permissions
+role_permissions = Table(
+    "role_permissions",
+    db.Model.metadata,
+    Column(
+        "role_id",
+        Integer,
+        ForeignKey("roles.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "permission_id",
+        Integer,
+        ForeignKey("permissions.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+)
+
+
+class RoleEnum(PyEnum):
+    """Role enumeration."""
+
+    ADMIN = "admin"
+    OPERATOR = "operator"
+    VIEWER = "viewer"
+
+
+class PermissionEnum(PyEnum):
+    """Permission enumeration."""
+
+    READ_UNITS = "read_units"
+    WRITE_UNITS = "write_units"
+    DELETE_UNITS = "delete_units"
+    READ_USERS = "read_users"
+    WRITE_USERS = "write_users"
+    DELETE_USERS = "delete_users"
+    ADMIN_PANEL = "admin_panel"
+    REMOTE_CONTROL = "remote_control"
+
+
+# Emergency admin comprehensive permissions - centralized constant
+# Used across auth endpoint, auto-migration, and permission checks
+EMERGENCY_ADMIN_PERMISSIONS = [
+    "read_units",
+    "write_units",
+    "delete_units",
+    "read_users",
+    "write_users",
+    "delete_users",
+    "admin_panel",
+    "remote_control",
+]
+
+
+class UnitStatusEnum(PyEnum):
+    """Unit status enumeration."""
+
+    ONLINE = "online"
+    OFFLINE = "offline"
+    MAINTENANCE = "maintenance"
+    ERROR = "error"
+
+
+class HealthStatusEnum(PyEnum):
+    """Health status enumeration."""
+
+    OPTIMAL = "optimal"
+    WARNING = "warning"
+    CRITICAL = "critical"
+
+
+class Permission(db.Model):
+    """Permission model."""
+
+    __tablename__ = "permissions"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(
+        Enum(
+            PermissionEnum,
+            native_enum=False,
+            values_callable=lambda x: [e.value for e in x],
+        ),
+        unique=True,
+        nullable=False,
+    )
+    description = Column(String(255))
+    created_at = Column(
+        DateTime,
+        default=utc_now,
+    )  # timezone-aware via utc_now() function
+
+    def __repr__(self):
+        return f"<Permission {self.name}>"
+
+
+class Role(db.Model):
+    """Role model."""
+
+    __tablename__ = "roles"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(
+        Enum(
+            RoleEnum,
+            native_enum=False,
+            values_callable=lambda x: [e.value for e in x],
+        ),
+        unique=True,
+        nullable=False,
+    )
+    description = Column(String(255))
+    created_at = Column(
+        DateTime,
+        default=utc_now,
+    )  # timezone-aware via utc_now() function
+
+    # Relationships
+    permissions = relationship(
+        "Permission",
+        secondary=role_permissions,
+        backref="roles",
+    )
+    users = relationship("User", back_populates="role")
+
+    def __repr__(self):
+        return f"<Role {self.name}>"
+
+    def has_permission(self, permission):
+        """Check if role has a specific permission.
+
+        Args:
+            permission: Must be either a string (e.g., "read_users") or a PermissionEnum
+
+        Returns:
+            bool: True if role has the permission, False otherwise
+
+        Raises:
+            TypeError: If permission is not a string or PermissionEnum
+
+        """
+        # Only allow string and PermissionEnum types for permission argument
+        if isinstance(permission, PermissionEnum):
+            permission_value = permission.value
+        elif isinstance(permission, str):
+            permission_value = permission
+        else:
+            # Raise TypeError for unsupported permission types to prevent silent failures
+            raise TypeError(
+                f"Permission must be a string or PermissionEnum, got {type(permission).__name__}",
+            )
+
+        return any(p.name.value == permission_value for p in self.permissions)
+
+
+class Tenant(db.Model):
+    """Tenant model for multi-tenancy support."""
+
+    __tablename__ = "tenants"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(255), unique=True, nullable=False, index=True)
+    slug = Column(
+        String(100), unique=True, nullable=False, index=True
+    )  # URL-safe identifier
+    description = Column(Text)
+
+    # Contact information
+    contact_name = Column(String(200))
+    contact_email = Column(String(120))
+    contact_phone = Column(String(50))
+
+    # Address information
+    address_line1 = Column(String(255))
+    address_line2 = Column(String(255))
+    city = Column(String(100))
+    state = Column(String(100))
+    postal_code = Column(String(20))
+    country = Column(String(100))
+
+    # Tenant settings
+    is_active = Column(Boolean, default=True, nullable=False)
+    max_users = Column(Integer)  # Optional limit on number of users
+    max_units = Column(Integer)  # Optional limit on number of units
+
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
+
+    # Relationships
+    users = relationship("User", back_populates="tenant")
+    units = relationship("Unit", back_populates="tenant")
+
+    def __repr__(self):
+        return f"<Tenant {self.name}>"
+
+
+class User(db.Model):
+    """User model."""
+
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True)
+    username = Column(String(80), unique=True, nullable=False, index=True)
+    email = Column(String(120), unique=True, nullable=False, index=True)
+    password_hash = Column(Text, nullable=False)
+    first_name = Column(String(100))
+    last_name = Column(String(100))
+    phone_number = Column(String(20))
+    company = Column(String(255), default="Default", index=True)
+    company_identifier = Column(String(255), index=True)
+    department = Column(String(100))
+    position = Column(String(100))
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(
+        DateTime,
+        default=utc_now,
+    )  # timezone-aware via utc_now() function
+    updated_at = Column(
+        DateTime,
+        default=utc_now,
+    )  # timezone-aware via utc_now() function
+    last_login = Column(DateTime)  # timezone-aware set via application logic
+    reset_token = Column(String(255))  # Password reset token
+    reset_token_expires = Column(
+        DateTime(timezone=True)
+    )  # Token expiration time (timezone-aware)
+    permissions = Column(
+        JSON, nullable=True
+    )  # Direct user permissions (JSON array of permission strings)
+
+    # Approval workflow fields
+    registration_status = Column(
+        String(20), default="approved", nullable=False
+    )  # Status: pending, approved, rejected
+    approval_date = Column(DateTime)  # When the user was approved
+    approved_by = Column(Integer)  # User ID of the admin who approved
+    rejection_reason = Column(Text)  # Reason for rejection if applicable
+
+    # Foreign Keys
+    role_id = Column(Integer, ForeignKey("roles.id"), nullable=False)
+    tenant_id = Column(
+        Integer, ForeignKey("tenants.id"), nullable=True, index=True
+    )  # Nullable for backward compatibility
+
+    # Relationships
+    role = relationship("Role", back_populates="users")
+    tenant = relationship("Tenant", back_populates="users")
+
+    def __repr__(self):
+        return f"<User {self.username}>"
+
+    def set_password(self, password):
+        """Create hashed password using pbkdf2:sha256 (typically 100+ character hash).
+
+        IMPORTANT: This application ONLY uses pbkdf2:sha256 for password hashing.
+        This method must ALWAYS be used for setting passwords to ensure consistency.
+        Direct assignment to password_hash is NOT recommended and should only be
+        used in tests with the same hashing method.
+        """
+        self.password_hash = generate_password_hash(password, method="pbkdf2:sha256")
+
+    def check_password(self, password):
+        """Check password against hash."""
+        return check_password_hash(self.password_hash, password)
+
+    def can_login(self):
+        """Check if user can login.
+
+        User can login if:
+        - Account is active (is_active = True)
+        - Registration status is approved
+
+        Returns:
+            bool: True if user can login, False otherwise
+
+        """
+        return self.is_active and self.registration_status == "approved"
+
+    def has_permission(self, permission):
+        """Check if user has a specific permission.
+
+        Checks both direct user permissions and role-based permissions.
+        Direct permissions take precedence (e.g., for emergency admin bypass).
+
+        Args:
+            permission: Can be either a string (e.g., "read_users") or a PermissionEnum
+
+        Returns:
+            bool: True if user has the permission, False otherwise
+
+        """
+        # Convert permission to string for comparison
+        if isinstance(permission, PermissionEnum):
+            permission_str = permission.value
+        elif isinstance(permission, str):
+            permission_str = permission
+        else:
+            # Maintain type safety - raise TypeError for invalid types
+            raise TypeError(
+                f"Permission must be a string or PermissionEnum, got {type(permission).__name__}",
+            )
+
+        # Check direct user permissions first (for emergency admin and special cases)
+        if self.permissions is not None:
+            # Handle JSON deserialization - permissions may be stored as string in some DB configs
+            permissions_list = self.permissions
+            if isinstance(permissions_list, str):
+                try:
+                    import json  # noqa: PLC0415 - Standard library, conditional parsing
+
+                    permissions_list = json.loads(permissions_list)
+                except (json.JSONDecodeError, ValueError):
+                    # If deserialization fails, treat as no permissions
+                    permissions_list = None
+
+            # Check if permission exists in the list
+            if permissions_list and isinstance(permissions_list, list):
+                if permission_str in permissions_list:
+                    return True
+
+        # Fall back to role-based permissions
+        if not self.role:
+            return False
+        return self.role.has_permission(permission)
+
+
+class Unit(db.Model):
+    """Unit model representing ThermaCore units."""
+
+    __tablename__ = "units"
+
+    id = Column(String(50), primary_key=True)  # TC001, TC002, etc.
+    name = Column(String(200), nullable=False)
+    serial_number = Column(String(100), unique=True, nullable=False)
+    install_date = Column(
+        DateTime,
+        nullable=False,
+    )  # timezone-aware set via application logic
+    last_maintenance = Column(DateTime)  # timezone-aware set via application logic
+    location = Column(String(200))
+    status = Column(
+        Enum(
+            UnitStatusEnum,
+            native_enum=False,
+            values_callable=lambda x: [e.value for e in x],
+        ),
+        default=UnitStatusEnum.OFFLINE,
+    )
+    health_status = Column(
+        Enum(
+            HealthStatusEnum,
+            native_enum=False,
+            values_callable=lambda x: [e.value for e in x],
+        ),
+        default=HealthStatusEnum.OPTIMAL,
+    )
+    water_generation = Column(Boolean, default=False)
+    has_alert = Column(Boolean, default=False)
+    has_alarm = Column(Boolean, default=False)
+
+    # Client information
+    client_name = Column(String(200))
+    client_contact = Column(String(200))
+    client_email = Column(String(120))
+    client_phone = Column(String(50))
+
+    # Current readings (latest values for quick access)
+    temp_outside = Column(Float)
+    temp_in = Column(Float)
+    temp_out = Column(Float)
+    humidity = Column(Float)
+    pressure = Column(Float)
+    water_level = Column(Float)
+    battery_level = Column(Float)
+    current_power = Column(Float, default=0.0)
+    parasitic_load = Column(Float, default=0.0)
+    user_load = Column(Float, default=0.0)
+
+    created_at = Column(
+        DateTime,
+        default=utc_now,
+    )  # timezone-aware via utc_now() function
+    updated_at = Column(
+        DateTime,
+        default=utc_now,
+    )  # timezone-aware via utc_now() function
+
+    # Foreign Keys
+    tenant_id = Column(
+        Integer, ForeignKey("tenants.id"), nullable=True, index=True
+    )  # Nullable for backward compatibility
+
+    # Relationships
+    sensors = relationship(
+        "Sensor",
+        back_populates="unit",
+        cascade="all, delete-orphan",
+    )
+    tenant = relationship("Tenant", back_populates="units")
+
+    def __repr__(self):
+        return f"<Unit {self.id}: {self.name}>"
+
+
+class Sensor(db.Model):
+    """Sensor model for unit sensors."""
+
+    __tablename__ = "sensors"
+
+    id = Column(Integer, primary_key=True)
+    unit_id = Column(String(50), ForeignKey("units.id"), nullable=False)
+    name = Column(String(100), nullable=False)
+    sensor_type = Column(
+        String(50),
+        nullable=False,
+    )  # temperature, humidity, pressure, etc.
+    unit_of_measurement = Column(String(20))  # °C, %, Pa, etc.
+    min_value = Column(Float)
+    max_value = Column(Float)
+    is_active = Column(Boolean, default=True)
+
+    created_at = Column(
+        DateTime,
+        default=utc_now,
+    )  # timezone-aware via utc_now() function
+    updated_at = Column(
+        DateTime,
+        default=utc_now,
+    )  # timezone-aware via utc_now() function
+
+    # Relationships
+    unit = relationship("Unit", back_populates="sensors")
+    readings = relationship(
+        "SensorReading",
+        back_populates="sensor",
+        cascade="all, delete-orphan",
+    )
+
+    def __repr__(self):
+        return f"<Sensor {self.name} ({self.sensor_type}) for Unit {self.unit_id}>"
+
+
+class SensorReading(db.Model):
+    """Sensor reading model for time-series data."""
+
+    __tablename__ = "sensor_readings"
+
+    id = Column(Integer, primary_key=True)
+    sensor_id = Column(Integer, ForeignKey("sensors.id"), nullable=False)
+    timestamp = Column(
+        DateTime,
+        default=utc_now,
+        nullable=False,
+        index=True,
+    )  # timezone-aware via utc_now() function
+    value = Column(Float, nullable=False)
+    quality = Column(String(20), default="GOOD")  # GOOD, BAD, UNCERTAIN
+
+    # Relationships
+    sensor = relationship("Sensor", back_populates="readings")
+
+    def __repr__(self):
+        return f"<SensorReading {self.sensor_id} at {self.timestamp}: {self.value}>"

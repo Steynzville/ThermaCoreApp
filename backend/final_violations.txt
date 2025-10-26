@@ -1,0 +1,673 @@
+app/__init__.py:68:5: PLC0415 `import` should be at the top-level of a file
+app/__init__.py:69:5: PLC0415 `import` should be at the top-level of a file
+app/__init__.py:70:5: PLC0415 `import` should be at the top-level of a file
+app/__init__.py:71:5: PLC0415 `import` should be at the top-level of a file
+app/__init__.py:72:5: PLC0415 `import` should be at the top-level of a file
+app/__init__.py:73:5: PLC0415 `import` should be at the top-level of a file
+app/__init__.py:74:5: PLC0415 `import` should be at the top-level of a file
+app/__init__.py:123:5: PLC0415 `import` should be at the top-level of a file
+app/__init__.py:163:69: TRY401 Redundant exception object included in `logging.exception` call
+app/__init__.py:166:63: TRY401 Redundant exception object included in `logging.exception` call
+app/__init__.py:170:9: PLC0415 `import` should be at the top-level of a file
+app/__init__.py:186:66: TRY401 Redundant exception object included in `logging.exception` call
+app/__init__.py:189:9: PLC0415 `import` should be at the top-level of a file
+app/__init__.py:202:5: PLC0415 `import` should be at the top-level of a file
+app/__init__.py:208:5: PLC0415 `import` should be at the top-level of a file
+app/__init__.py:235:5: PLC0415 `import` should be at the top-level of a file
+app/__init__.py:240:5: PLC0415 `import` should be at the top-level of a file
+app/__init__.py:245:5: PLC0415 `import` should be at the top-level of a file
+app/__init__.py:250:5: PLC0415 `import` should be at the top-level of a file
+app/__init__.py:255:5: PLC0415 `import` should be at the top-level of a file
+app/__init__.py:261:5: PLC0415 `import` should be at the top-level of a file
+app/__init__.py:266:5: PLC0415 `import` should be at the top-level of a file
+app/blueprint_registration.py:80:9: TRY300 Consider moving this statement to an `else` block
+app/blueprint_registration.py:82:71: TRY401 Redundant exception object included in `logging.exception` call
+app/blueprint_registration.py:86:62: TRY401 Redundant exception object included in `logging.exception` call
+app/branch_reduction.py:119:13: PERF203 `try`-`except` within a loop incurs performance overhead
+app/config_init.py:136:64: TRY401 Redundant exception object included in `logging.exception` call
+app/config_init.py:146:5: SIM105 Use `contextlib.suppress(ImportError)` instead of `try`-`except`-`pass`
+app/config_init.py:169:9: PLC0415 `import` should be at the top-level of a file
+app/config_init.py:178:77: TRY401 Redundant exception object included in `logging.exception` call
+app/exceptions.py:19:7: N818 Exception name `ThermaCoreException` should be named with an Error suffix
+app/function_decomposition.py:95:13: PERF203 `try`-`except` within a loop incurs performance overhead
+app/function_decomposition.py:139:13: PERF203 `try`-`except` within a loop incurs performance overhead
+app/function_decomposition.py:179:13: PERF203 `try`-`except` within a loop incurs performance overhead
+app/health_check_helpers.py:18:9: PLC0415 `import` should be at the top-level of a file
+app/health_check_helpers.py:45:5: PLR0912 Too many branches (16 > 15)
+app/health_check_helpers.py:54:5: PLC0415 `import` should be at the top-level of a file
+app/health_check_helpers.py:149:68: TRY401 Redundant exception object included in `logging.exception` call
+app/health_check_helpers.py:226:70: TRY401 Redundant exception object included in `logging.exception` call
+app/health_check_helpers.py:347:9: PLC0415 `import` should be at the top-level of a file
+app/middleware/audit.py:193:9: PLR0913 Too many arguments in function definition (11 > 8)
+app/middleware/audit.py:287:60: TRY401 Redundant exception object included in `logging.exception` call
+app/middleware/audit.py:450:17: TRY300 Consider moving this statement to an `else` block
+app/middleware/audit.py:474:5: N806 Variable `EXCLUDED_ENDPOINTS` in function should be lowercase
+app/middleware/audit.py:475:5: N806 Variable `EXCLUDED_PATHS` in function should be lowercase
+app/middleware/metrics.py:52:7: N818 Exception name `SyntheticHTTPException` should be named with an Error suffix
+app/middleware/metrics.py:377:5: PLC0415 `import` should be at the top-level of a file
+app/middleware/rate_limit.py:203:17: PLC0415 `import` should be at the top-level of a file
+app/middleware/request_id.py:218:13: TRY300 Consider moving this statement to an `else` block
+app/middleware/tenant.py:98:62: TRY401 Redundant exception object included in `logging.exception` call
+app/models/__init__.py:333:13: SIM102 Use a single `if` statement instead of nested `if` statements
+app/protocols/registry.py:27:15: B007 Loop control variable `attr` not used within loop body
+app/protocols/registry.py:136:81: TRY401 Redundant exception object included in `logging.exception` call
+app/refactor_helpers.py:42:9: TRY300 Consider moving this statement to an `else` block
+app/refactor_helpers.py:45:53: TRY401 Redundant exception object included in `logging.exception` call
+app/refactor_helpers.py:82:9: TRY300 Consider moving this statement to an `else` block
+app/refactor_helpers.py:84:67: TRY401 Redundant exception object included in `logging.exception` call
+app/refactor_helpers.py:87:69: TRY401 Redundant exception object included in `logging.exception` call
+app/refactor_helpers.py:97:5: PLC0415 `import` should be at the top-level of a file
+app/routes/analytics.py:248:9: PLC0206 Extracting value from dictionary without calling `.items()`
+app/routes/auth.py:301:17: TRY301 Abstract `raise` to an inner function
+app/routes/auth.py:303:13: PLC0415 `import` should be at the top-level of a file
+app/routes/auth.py:322:17: TRY301 Abstract `raise` to an inner function
+app/routes/auth.py:339:59: TRY401 Redundant exception object included in `logging.exception` call
+app/routes/auth.py:350:54: TRY401 Redundant exception object included in `logging.exception` call
+app/routes/auth.py:367:52: TRY401 Redundant exception object included in `logging.exception` call
+app/routes/auth.py:383:71: TRY401 Redundant exception object included in `logging.exception` call
+app/routes/auth.py:433:57: TRY401 Redundant exception object included in `logging.exception` call
+app/routes/auth.py:493:17: TRY301 Abstract `raise` to an inner function
+app/routes/auth.py:497:50: TRY401 Redundant exception object included in `logging.exception` call
+app/routes/auth.py:543:54: TRY401 Redundant exception object included in `logging.exception` call
+app/routes/auth.py:675:41: TRY401 Redundant exception object included in `logging.exception` call
+app/routes/auth.py:724:13: PLC0415 `import` should be at the top-level of a file
+app/routes/auth.py:773:57: TRY401 Redundant exception object included in `logging.exception` call
+app/routes/auth.py:891:42: TRY401 Redundant exception object included in `logging.exception` call
+app/routes/auth.py:953:13: PLC0415 `import` should be at the top-level of a file
+app/routes/auth.py:958:13: PLC0415 `import` should be at the top-level of a file
+app/routes/auth.py:1045:51: TRY401 Redundant exception object included in `logging.exception` call
+app/routes/auth_helpers.py:50:9: TRY300 Consider moving this statement to an `else` block
+app/routes/auth_helpers.py:53:51: TRY401 Redundant exception object included in `logging.exception` call
+app/routes/auth_helpers.py:151:13: TRY301 Abstract `raise` to an inner function
+app/routes/auth_helpers.py:154:63: TRY401 Redundant exception object included in `logging.exception` call
+app/routes/auth_helpers.py:170:75: TRY401 Redundant exception object included in `logging.exception` call
+app/routes/auth_helpers.py:195:52: TRY401 Redundant exception object included in `logging.exception` call
+app/routes/auth_helpers.py:207:63: TRY401 Redundant exception object included in `logging.exception` call
+app/routes/auth_helpers.py:224:13: TRY301 Abstract `raise` to an inner function
+app/routes/auth_helpers.py:226:13: TRY301 Abstract `raise` to an inner function
+app/routes/auth_helpers.py:255:13: TRY301 Abstract `raise` to an inner function
+app/routes/auth_helpers.py:257:9: TRY300 Consider moving this statement to an `else` block
+app/routes/auth_helpers.py:261:47: TRY401 Redundant exception object included in `logging.exception` call
+app/routes/auth_helpers.py:276:58: TRY401 Redundant exception object included in `logging.exception` call
+app/routes/auth_helpers.py:311:50: TRY401 Redundant exception object included in `logging.exception` call
+app/routes/historical.py:129:17: PERF401 Use a list comprehension to create a transformed list
+app/routes/historical.py:472:17: PERF401 Use `list.extend` to create a transformed list
+app/routes/historical.py:494:13: PERF401 Use a list comprehension to create a transformed list
+app/routes/multiprotocol.py:115:78: TRY401 Redundant exception object included in `logging.exception` call
+app/routes/opcua_monitoring.py:49:70: TRY401 Redundant exception object included in `logging.exception` call
+app/routes/opcua_monitoring.py:97:70: TRY401 Redundant exception object included in `logging.exception` call
+app/routes/opcua_monitoring.py:143:72: TRY401 Redundant exception object included in `logging.exception` call
+app/routes/opcua_monitoring.py:201:60: TRY401 Redundant exception object included in `logging.exception` call
+app/routes/scada.py:650:9: SIM102 Use a single `if` statement instead of nested `if` statements
+app/routes/tenants.py:353:9: TRY300 Consider moving this statement to an `else` block
+app/routes/tenants.py:357:54: TRY401 Redundant exception object included in `logging.exception` call
+app/routes/users.py:513:5: PLC0415 `import` should be at the top-level of a file
+app/routes/users.py:551:5: PLC0415 `import` should be at the top-level of a file
+app/routes/users.py:587:5: PLC0415 `import` should be at the top-level of a file
+app/routes/users.py:627:5: PLC0415 `import` should be at the top-level of a file
+app/routes/users.py:723:5: PLC0415 `import` should be at the top-level of a file
+app/routes/users.py:766:75: TRY401 Redundant exception object included in `logging.exception` call
+app/routes/users.py:845:74: TRY401 Redundant exception object included in `logging.exception` call
+app/service_init.py:22:9: PLC0415 `import` should be at the top-level of a file
+app/service_init.py:25:9: PLC0415 `import` should be at the top-level of a file
+app/service_init.py:32:9: PLC0415 `import` should be at the top-level of a file
+app/service_init.py:36:9: PLC0415 `import` should be at the top-level of a file
+app/service_init.py:40:9: PLC0415 `import` should be at the top-level of a file
+app/service_init.py:81:75: TRY401 Redundant exception object included in `logging.exception` call
+app/service_init.py:103:71: TRY401 Redundant exception object included in `logging.exception` call
+app/service_init.py:211:66: TRY401 Redundant exception object included in `logging.exception` call
+app/services/anomaly_detection.py:180:17: TRY301 Abstract `raise` to an inner function
+app/services/anomaly_detection.py:208:37: RUF059 Unpacked variable `iqr_stats` is never used
+app/services/anomaly_detection.py:214:35: RUF059 Unpacked variable `ma_stats` is never used
+app/services/anomaly_detection.py:251:13: TRY300 Consider moving this statement to an `else` block
+app/services/anomaly_detection.py:254:65: TRY401 Redundant exception object included in `logging.exception` call
+app/services/anomaly_detection.py:275:17: TRY301 Abstract `raise` to an inner function
+app/services/anomaly_detection.py:336:13: PLC0206 Extracting value from dictionary without calling `.items()`
+app/services/anomaly_detection.py:359:65: TRY401 Redundant exception object included in `logging.exception` call
+app/services/data_storage_service.py:149:13: TRY300 Consider moving this statement to an `else` block
+app/services/data_storage_service.py:154:66: TRY401 Redundant exception object included in `logging.exception` call
+app/services/data_storage_service.py:158:60: TRY401 Redundant exception object included in `logging.exception` call
+app/services/data_storage_service.py:211:13: TRY300 Consider moving this statement to an `else` block
+app/services/data_storage_service.py:238:86: TRY401 Redundant exception object included in `logging.exception` call
+app/services/dnp3_service.py:133:17: TRY300 Consider moving this statement to an `else` block
+app/services/dnp3_service.py:252:13: TRY300 Consider moving this statement to an `else` block
+app/services/dnp3_service.py:255:85: TRY401 Redundant exception object included in `logging.exception` call
+app/services/dnp3_service.py:278:13: TRY300 Consider moving this statement to an `else` block
+app/services/dnp3_service.py:292:13: TRY300 Consider moving this statement to an `else` block
+app/services/dnp3_service.py:594:13: TRY300 Consider moving this statement to an `else` block
+app/services/dnp3_service.py:597:72: TRY401 Redundant exception object included in `logging.exception` call
+app/services/dnp3_service.py:619:13: TRY300 Consider moving this statement to an `else` block
+app/services/dnp3_service.py:622:75: TRY401 Redundant exception object included in `logging.exception` call
+app/services/dnp3_service.py:656:13: TRY300 Consider moving this statement to an `else` block
+app/services/dnp3_service.py:659:79: TRY401 Redundant exception object included in `logging.exception` call
+app/services/dnp3_service.py:686:13: TRY300 Consider moving this statement to an `else` block
+app/services/dnp3_service.py:689:84: TRY401 Redundant exception object included in `logging.exception` call
+app/services/dnp3_service.py:721:13: TRY300 Consider moving this statement to an `else` block
+app/services/dnp3_service.py:724:89: TRY401 Redundant exception object included in `logging.exception` call
+app/services/dnp3_service.py:735:17: TRY301 Abstract `raise` to an inner function
+app/services/dnp3_service.py:739:17: TRY301 Abstract `raise` to an inner function
+app/services/dnp3_service.py:742:17: TRY301 Abstract `raise` to an inner function
+app/services/dnp3_service.py:745:17: TRY301 Abstract `raise` to an inner function
+app/services/dnp3_service.py:999:77: TRY401 Redundant exception object included in `logging.exception` call
+app/services/dnp3_service.py:1014:17: TRY301 Abstract `raise` to an inner function
+app/services/dnp3_service.py:1018:17: TRY301 Abstract `raise` to an inner function
+app/services/dnp3_service.py:1021:17: TRY301 Abstract `raise` to an inner function
+app/services/dnp3_service.py:1032:17: TRY301 Abstract `raise` to an inner function
+app/services/dnp3_service.py:1039:13: TRY300 Consider moving this statement to an `else` block
+app/services/dnp3_service.py:1042:83: TRY401 Redundant exception object included in `logging.exception` call
+app/services/dnp3_service.py:1049:17: TRY301 Abstract `raise` to an inner function
+app/services/dnp3_service.py:1053:17: TRY301 Abstract `raise` to an inner function
+app/services/dnp3_service.py:1056:17: TRY301 Abstract `raise` to an inner function
+app/services/dnp3_service.py:1063:13: TRY300 Consider moving this statement to an `else` block
+app/services/dnp3_service.py:1066:89: TRY401 Redundant exception object included in `logging.exception` call
+app/services/modbus_service.py:73:13: TRY300 Consider moving this statement to an `else` block
+app/services/modbus_service.py:75:69: TRY401 Redundant exception object included in `logging.exception` call
+app/services/modbus_service.py:151:78: F821 Undefined name `unit_id`
+app/services/modbus_service.py:153:57: F821 Undefined name `unit_id`
+app/services/modbus_service.py:402:13: TRY300 Consider moving this statement to an `else` block
+app/services/modbus_service.py:405:74: TRY401 Redundant exception object included in `logging.exception` call
+app/services/modbus_service.py:425:13: TRY300 Consider moving this statement to an `else` block
+app/services/modbus_service.py:428:77: TRY401 Redundant exception object included in `logging.exception` call
+app/services/modbus_service.py:449:13: TRY300 Consider moving this statement to an `else` block
+app/services/modbus_service.py:452:81: TRY401 Redundant exception object included in `logging.exception` call
+app/services/modbus_service.py:465:13: TRY300 Consider moving this statement to an `else` block
+app/services/modbus_service.py:468:86: TRY401 Redundant exception object included in `logging.exception` call
+app/services/modbus_service.py:497:13: TRY300 Consider moving this statement to an `else` block
+app/services/modbus_service.py:500:87: TRY401 Redundant exception object included in `logging.exception` call
+app/services/modbus_service.py:507:17: TRY301 Abstract `raise` to an inner function
+app/services/modbus_service.py:511:17: TRY301 Abstract `raise` to an inner function
+app/services/modbus_service.py:514:17: TRY301 Abstract `raise` to an inner function
+app/services/modbus_service.py:597:77: TRY401 Redundant exception object included in `logging.exception` call
+app/services/modbus_service.py:617:17: TRY301 Abstract `raise` to an inner function
+app/services/modbus_service.py:621:17: TRY301 Abstract `raise` to an inner function
+app/services/modbus_service.py:674:17: TRY301 Abstract `raise` to an inner function
+app/services/modbus_service.py:685:13: TRY300 Consider moving this statement to an `else` block
+app/services/modbus_service.py:786:13: TRY300 Consider moving this statement to an `else` block
+app/services/modbus_service.py:789:67: TRY401 Redundant exception object included in `logging.exception` call
+app/services/mqtt_service.py:50:16: PTH110 `os.path.exists()` should be replaced by `Path.exists()`
+app/services/mqtt_service.py:53:12: PTH202 `os.path.getsize` should be replaced by `Path.stat().st_size`
+app/services/mqtt_service.py:86:66: TRY401 Redundant exception object included in `logging.exception` call
+app/services/mqtt_service.py:108:69: TRY401 Redundant exception object included in `logging.exception` call
+app/services/mqtt_service.py:162:61: TRY401 Redundant exception object included in `logging.exception` call
+app/services/mqtt_service.py:178:72: TRY401 Redundant exception object included in `logging.exception` call
+app/services/mqtt_service.py:189:67: TRY401 Redundant exception object included in `logging.exception` call
+app/services/mqtt_service.py:209:64: TRY401 Redundant exception object included in `logging.exception` call
+app/services/mqtt_service.py:221:67: TRY401 Redundant exception object included in `logging.exception` call
+app/services/mqtt_service.py:269:64: TRY401 Redundant exception object included in `logging.exception` call
+app/services/mqtt_service.py:289:69: TRY401 Redundant exception object included in `logging.exception` call
+app/services/mqtt_service.py:361:13: TRY300 Consider moving this statement to an `else` block
+app/services/mqtt_service.py:370:62: TRY401 Redundant exception object included in `logging.exception` call
+app/services/mqtt_service.py:393:21: PLC0415 `import` should be at the top-level of a file
+app/services/mqtt_service.py:412:67: TRY401 Redundant exception object included in `logging.exception` call
+app/services/mqtt_service.py:433:13: TRY300 Consider moving this statement to an `else` block
+app/services/mqtt_service.py:435:59: TRY401 Redundant exception object included in `logging.exception` call
+app/services/opcua_service.py:179:9: PLC0415 `import` should be at the top-level of a file
+app/services/opcua_service.py:183:16: PTH110 `os.path.exists()` should be replaced by `Path.exists()`
+app/services/opcua_service.py:191:18: PTH123 `open()` should be replaced by `Path.open()`
+app/services/opcua_service.py:222:21: TRY301 Abstract `raise` to an inner function
+app/services/opcua_service.py:230:21: TRY301 Abstract `raise` to an inner function
+app/services/opcua_service.py:243:88: TRY401 Redundant exception object included in `logging.exception` call
+app/services/opcua_service.py:252:17: TRY301 Abstract `raise` to an inner function
+app/services/opcua_service.py:260:17: TRY301 Abstract `raise` to an inner function
+app/services/opcua_service.py:348:67: TRY401 Redundant exception object included in `logging.exception` call
+app/services/opcua_service.py:376:21: SIM102 Use a single `if` statement instead of nested `if` statements
+app/services/opcua_service.py:385:33: TRY301 Abstract `raise` to an inner function
+app/services/opcua_service.py:394:33: TRY301 Abstract `raise` to an inner function
+app/services/opcua_service.py:414:33: TRY301 Abstract `raise` to an inner function
+app/services/opcua_service.py:427:33: TRY301 Abstract `raise` to an inner function
+app/services/opcua_service.py:469:68: TRY401 Redundant exception object included in `logging.exception` call
+app/services/opcua_service.py:471:31: TRY201 Use `raise` without specifying exception name
+app/services/opcua_service.py:475:65: TRY401 Redundant exception object included in `logging.exception` call
+app/services/opcua_service.py:478:27: TRY201 Use `raise` without specifying exception name
+app/services/opcua_service.py:499:69: TRY401 Redundant exception object included in `logging.exception` call
+app/services/opcua_service.py:522:13: TRY300 Consider moving this statement to an `else` block
+app/services/opcua_service.py:538:64: TRY401 Redundant exception object included in `logging.exception` call
+app/services/opcua_service.py:611:13: TRY300 Consider moving this statement to an `else` block
+app/services/opcua_service.py:614:72: TRY401 Redundant exception object included in `logging.exception` call
+app/services/opcua_service.py:667:64: TRY401 Redundant exception object included in `logging.exception` call
+app/services/opcua_service.py:731:25: PLC0415 `import` should be at the top-level of a file
+app/services/opcua_service.py:754:64: TRY401 Redundant exception object included in `logging.exception` call
+app/services/opcua_service.py:780:13: PERF203 `try`-`except` within a loop incurs performance overhead
+app/services/opcua_service.py:781:67: TRY401 Redundant exception object included in `logging.exception` call
+app/services/opcua_service.py:824:17: PERF203 `try`-`except` within a loop incurs performance overhead
+app/services/opcua_service.py:825:66: TRY401 Redundant exception object included in `logging.exception` call
+app/services/opcua_service.py:828:13: TRY300 Consider moving this statement to an `else` block
+app/services/opcua_service.py:831:64: TRY401 Redundant exception object included in `logging.exception` call
+app/services/protocol_gateway_simulator.py:112:13: TRY300 Consider moving this statement to an `else` block
+app/services/protocol_gateway_simulator.py:115:67: TRY401 Redundant exception object included in `logging.exception` call
+app/services/protocol_gateway_simulator.py:227:63: TRY401 Redundant exception object included in `logging.exception` call
+app/services/protocol_gateway_simulator.py:278:13: PERF203 `try`-`except` within a loop incurs performance overhead
+app/services/protocol_gateway_simulator.py:279:63: TRY401 Redundant exception object included in `logging.exception` call
+app/services/realtime_processor.py:94:17: PERF203 `try`-`except` within a loop incurs performance overhead
+app/services/realtime_processor.py:95:71: TRY401 Redundant exception object included in `logging.exception` call
+app/services/realtime_processor.py:98:63: TRY401 Redundant exception object included in `logging.exception` call
+app/services/secure_opcua_wrapper.py:108:13: PLC0415 `import` should be at the top-level of a file
+app/services/secure_opcua_wrapper.py:189:13: TRY300 Consider moving this statement to an `else` block
+app/services/secure_opcua_wrapper.py:229:13: TRY300 Consider moving this statement to an `else` block
+app/services/secure_opcua_wrapper.py:236:63: TRY401 Redundant exception object included in `logging.exception` call
+app/services/secure_opcua_wrapper.py:292:17: TRY300 Consider moving this statement to an `else` block
+app/services/secure_opcua_wrapper.py:296:76: TRY401 Redundant exception object included in `logging.exception` call
+app/tests/conftest.py:32:27: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/tests/conftest.py:33:17: PTH120 `os.path.dirname()` should be replaced by `Path.parent`
+app/tests/conftest.py:37:20: PTH110 `os.path.exists()` should be replaced by `Path.exists()`
+app/tests/conftest.py:38:17: TRY301 Abstract `raise` to an inner function
+app/tests/conftest.py:40:18: PTH123 `open()` should be replaced by `Path.open()`
+app/tests/conftest.py:90:13: TRY301 Abstract `raise` to an inner function
+app/tests/conftest.py:147:17: PT003 `scope='function'` is implied in `@pytest.fixture()`
+app/tests/conftest.py:153:17: PT003 `scope='function'` is implied in `@pytest.fixture()`
+app/tests/conftest.py:163:5: PLC0415 `import` should be at the top-level of a file
+app/tests/conftest.py:165:5: PLC0415 `import` should be at the top-level of a file
+app/tests/conftest.py:244:22: DTZ001 `datetime.datetime()` called without a `tzinfo` argument
+app/tests/conftest.py:286:5: PLC0415 `import` should be at the top-level of a file
+app/tests/conftest.py:307:5: PLC0415 `import` should be at the top-level of a file
+app/tests/test_approval_workflow.py:13:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_audit_logging.py:362:17: PLC0415 `import` should be at the top-level of a file
+app/tests/test_audit_logging.py:394:21: PLC0415 `import` should be at the top-level of a file
+app/tests/test_audit_logging.py:419:13: PLC0415 `import` should be at the top-level of a file
+app/tests/test_auth.py:340:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_auth.py:378:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_auth.py:502:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_auth.py:551:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_auth.py:591:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_auth.py:632:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_auth.py:656:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_auth.py:734:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_auth.py:736:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_auth.py:930:13: PLC0415 `import` should be at the top-level of a file
+app/tests/test_auth.py:931:13: B028 No explicit `stacklevel` keyword argument found
+app/tests/test_auth.py:963:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_auth.py:964:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_auth.py:1010:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_auth.py:1011:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_auto_migration.py:41:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_auto_migration.py:52:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_auto_migration.py:74:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_auto_migration.py:80:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_auto_migration.py:102:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_auto_migration.py:124:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_auto_migration.py:170:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_auto_migration.py:181:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_auto_migration.py:197:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_auto_migration.py:229:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_auto_migration.py:248:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_auto_migration.py:267:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_auto_migration.py:291:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_auto_migration.py:299:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_centralized_validation.py:12:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_centralized_validation.py:34:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_centralized_validation.py:53:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_centralized_validation.py:69:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_centralized_validation.py:88:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_centralized_validation.py:103:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_centralized_validation.py:130:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_centralized_validation.py:154:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_centralized_validation.py:156:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_certificate_generation.py:12:20: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/tests/test_certificate_generation.py:12:33: PTH120 `os.path.dirname()` should be replaced by `Path.parent`
+app/tests/test_certificate_generation.py:22:25: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/tests/test_certificate_generation.py:23:24: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/tests/test_certificate_generation.py:28:20: PTH110 `os.path.exists()` should be replaced by `Path.exists()`
+app/tests/test_certificate_generation.py:29:20: PTH110 `os.path.exists()` should be replaced by `Path.exists()`
+app/tests/test_certificate_generation.py:30:20: PTH202 `os.path.getsize` should be replaced by `Path.stat().st_size`
+app/tests/test_certificate_generation.py:31:20: PTH202 `os.path.getsize` should be replaced by `Path.stat().st_size`
+app/tests/test_certificate_generation.py:36:25: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/tests/test_certificate_generation.py:37:24: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/tests/test_certificate_generation.py:45:20: PTH110 `os.path.exists()` should be replaced by `Path.exists()`
+app/tests/test_certificate_generation.py:48:13: PLC0415 `import` should be at the top-level of a file
+app/tests/test_certificate_generation.py:58:22: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/tests/test_certificate_generation.py:59:25: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/tests/test_certificate_generation.py:60:24: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/tests/test_certificate_generation.py:63:24: PTH110 `os.path.exists()` should be replaced by `Path.exists()`
+app/tests/test_certificate_generation.py:68:20: PTH110 `os.path.exists()` should be replaced by `Path.exists()`
+app/tests/test_certificate_generation.py:69:20: PTH110 `os.path.exists()` should be replaced by `Path.exists()`
+app/tests/test_certificate_generation.py:70:20: PTH110 `os.path.exists()` should be replaced by `Path.exists()`
+app/tests/test_certificate_generation.py:75:25: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/tests/test_certificate_generation.py:76:24: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/tests/test_certificate_generation.py:81:13: PLC0415 `import` should be at the top-level of a file
+app/tests/test_certificate_generation.py:95:25: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/tests/test_certificate_generation.py:96:24: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/tests/test_certificate_generation.py:101:13: PLC0415 `import` should be at the top-level of a file
+app/tests/test_certificate_generation.py:127:25: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/tests/test_certificate_generation.py:128:24: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/tests/test_certificate_generation.py:133:13: PLC0415 `import` should be at the top-level of a file
+app/tests/test_certificate_generation.py:134:13: PLC0415 `import` should be at the top-level of a file
+app/tests/test_certificate_generation.py:155:29: DTZ007 Naive datetime constructed using `datetime.datetime.strptime()` without %z
+app/tests/test_certificate_generation.py:158:28: DTZ007 Naive datetime constructed using `datetime.datetime.strptime()` without %z
+app/tests/test_certificate_generation.py:167:25: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/tests/test_certificate_generation.py:168:24: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/tests/test_certificate_generation.py:173:13: PLC0415 `import` should be at the top-level of a file
+app/tests/test_certificate_generation.py:186:25: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/tests/test_certificate_generation.py:187:24: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/tests/test_certificate_generation.py:192:13: PLC0415 `import` should be at the top-level of a file
+app/tests/test_certificate_generation.py:203:25: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/tests/test_certificate_generation.py:204:24: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/tests/test_certificate_generation.py:209:13: PLC0415 `import` should be at the top-level of a file
+app/tests/test_certificate_timezone_improvements.py:43:20: DTZ001 `datetime.datetime()` called without a `tzinfo` argument
+app/tests/test_certificate_timezone_improvements.py:134:13: PT017 Found assertion on exception `e` in `except` block, use `pytest.raises()` instead
+app/tests/test_certificate_timezone_improvements.py:137:13: PT017 Found assertion on exception `e` in `except` block, use `pytest.raises()` instead
+app/tests/test_certificate_timezone_improvements.py:167:31: RUF043 Pattern passed to `match=` contains metacharacters but is neither escaped nor raw
+app/tests/test_datetime_field.py:56:14: DTZ001 `datetime.datetime()` called without a `tzinfo` argument
+app/tests/test_datetime_improvements.py:48:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_datetime_improvements.py:87:57: DTZ001 `datetime.datetime()` called without a `tzinfo` argument
+app/tests/test_datetime_improvements.py:178:57: DTZ001 `datetime.datetime()` called without a `tzinfo` argument
+app/tests/test_deployment_fixes.py:193:13: PTH108 `os.unlink()` should be replaced by `Path.unlink()`
+app/tests/test_deployment_fixes.py:194:13: PTH108 `os.unlink()` should be replaced by `Path.unlink()`
+app/tests/test_deployment_fixes.py:195:13: PTH108 `os.unlink()` should be replaced by `Path.unlink()`
+app/tests/test_deployment_fixes.py:274:13: PTH108 `os.unlink()` should be replaced by `Path.unlink()`
+app/tests/test_deployment_fixes.py:275:13: PTH108 `os.unlink()` should be replaced by `Path.unlink()`
+app/tests/test_deployment_fixes.py:276:13: PTH108 `os.unlink()` should be replaced by `Path.unlink()`
+app/tests/test_dnp3_performance.py:203:22: DTZ001 `datetime.datetime()` called without a `tzinfo` argument
+app/tests/test_dnp3_performance.py:225:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_dnp3_performance.py:235:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_enhanced_permissions.py:13:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_enhanced_permissions.py:24:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_enhanced_permissions.py:34:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_enhanced_permissions.py:75:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_enhanced_permissions.py:118:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_enhanced_permissions.py:171:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_enhanced_permissions.py:220:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_enhanced_permissions.py:250:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_improvements.py:120:30: DTZ003 `datetime.datetime.utcnow()` used
+app/tests/test_improvements.py:151:30: DTZ003 `datetime.datetime.utcnow()` used
+app/tests/test_integration.py:124:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_logging_mqtt_health_fixes.py:115:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_logging_mqtt_health_fixes.py:136:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_logging_mqtt_health_fixes.py:168:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_logging_mqtt_health_fixes.py:175:19: TRY002 Create your own exception
+app/tests/test_logging_mqtt_health_fixes.py:183:17: TRY301 Abstract `raise` to an inner function
+app/tests/test_logging_mqtt_health_fixes.py:183:23: TRY002 Create your own exception
+app/tests/test_mqtt_service.py:242:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_mqtt_service.py:243:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_mqtt_service.py:244:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_mqtt_service.py:246:28: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/tests/test_mqtt_service.py:246:41: PTH120 `os.path.dirname()` should be replaced by `Path.parent`
+app/tests/test_mqtt_service.py:247:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_mqtt_service.py:251:23: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/tests/test_mqtt_service.py:252:22: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/tests/test_mqtt_service.py:253:27: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/tests/test_mqtt_service.py:254:26: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+app/tests/test_multitenancy.py:27:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_multitenancy.py:77:18: B017 Do not assert blind exception: `Exception`
+app/tests/test_multitenancy.py:155:13: PLC0415 `import` should be at the top-level of a file
+app/tests/test_multitenancy.py:167:30: DTZ003 `datetime.datetime.utcnow()` used
+app/tests/test_multitenancy.py:179:13: PLC0415 `import` should be at the top-level of a file
+app/tests/test_multitenancy.py:185:30: DTZ003 `datetime.datetime.utcnow()` used
+app/tests/test_multitenancy.py:243:13: PLC0415 `import` should be at the top-level of a file
+app/tests/test_multitenancy.py:256:30: DTZ003 `datetime.datetime.utcnow()` used
+app/tests/test_multitenancy.py:264:30: DTZ003 `datetime.datetime.utcnow()` used
+app/tests/test_postgres_timestamps.py:79:30: DTZ003 `datetime.datetime.utcnow()` used
+app/tests/test_postgres_timestamps.py:107:30: DTZ003 `datetime.datetime.utcnow()` used
+app/tests/test_pr2_middleware.py:86:13: B007 Loop control variable `i` not used within loop body
+app/tests/test_pr2_middleware.py:176:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_pr2_middleware.py:199:13: PLC0415 `import` should be at the top-level of a file
+app/tests/test_pr2_middleware.py:262:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_pr2_middleware.py:288:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_pr2_middleware.py:335:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_pr2_middleware.py:443:17: B007 Loop control variable `endpoint_key` not used within loop body
+app/tests/test_pr2_middleware.py:600:5: PLC0415 `import` should be at the top-level of a file
+app/tests/test_pr2_middleware.py:601:5: PLC0415 `import` should be at the top-level of a file
+app/tests/test_pr2_middleware.py:631:5: PLC0415 `import` should be at the top-level of a file
+app/tests/test_pr2_middleware.py:633:5: PLC0415 `import` should be at the top-level of a file
+app/tests/test_pr2_middleware.py:681:5: PLC0415 `import` should be at the top-level of a file
+app/tests/test_production_config_validation.py:16:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_production_config_validation.py:22:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_production_config_validation.py:41:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_production_config_validation.py:65:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_production_config_validation.py:92:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_production_config_validation.py:120:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_production_config_validation.py:150:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_production_config_validation.py:181:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_production_config_validation.py:210:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_production_config_validation.py:239:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_protocol_simulation_integration.py:203:13: PLC0415 `import` should be at the top-level of a file
+app/tests/test_protocol_simulation_integration.py:231:17: B007 Loop control variable `i` not used within loop body
+app/tests/test_protocol_simulation_integration.py:252:13: PLC0415 `import` should be at the top-level of a file
+app/tests/test_protocol_simulation_integration.py:258:30: DTZ011 `datetime.date.today()` used
+app/tests/test_protocol_status_normalization.py:231:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_protocol_status_normalization.py:242:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_reviewer_batch_1_3_improvements.py:70:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_reviewer_batch_1_3_improvements.py:72:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_reviewer_batch_1_3_improvements.py:73:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_reviewer_batch_1_3_improvements.py:74:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_reviewer_batch_1_3_improvements.py:75:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_reviewer_batch_1_3_improvements.py:97:31: DTZ003 `datetime.datetime.utcnow()` used
+app/tests/test_reviewer_batch_1_3_improvements.py:98:30: DTZ003 `datetime.datetime.utcnow()` used
+app/tests/test_reviewer_batch_1_3_improvements.py:111:21: SIM115 Use a context manager for opening files
+app/tests/test_reviewer_batch_1_3_improvements.py:120:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_reviewer_batch_1_3_improvements.py:122:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_reviewer_batch_1_3_improvements.py:123:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_reviewer_batch_1_3_improvements.py:124:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_reviewer_batch_1_3_improvements.py:125:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_reviewer_batch_1_3_improvements.py:142:31: DTZ003 `datetime.datetime.utcnow()` used
+app/tests/test_reviewer_batch_1_3_improvements.py:143:30: DTZ003 `datetime.datetime.utcnow()` used
+app/tests/test_reviewer_batch_1_3_improvements.py:147:21: SIM115 Use a context manager for opening files
+app/tests/test_reviewer_batch_1_3_improvements.py:258:21: SIM115 Use a context manager for opening files
+app/tests/test_sanitization_middleware.py:181:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_sanitization_middleware.py:183:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_sanitization_middleware.py:215:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_sanitization_middleware.py:217:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_sanitization_middleware.py:246:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_sanitization_middleware.py:248:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_sanitization_middleware.py:271:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_sanitization_middleware.py:273:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_sanitization_middleware.py:298:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_sanitization_middleware.py:300:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_sanitization_middleware.py:327:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_sanitization_middleware.py:329:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_sanitization_middleware.py:352:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_sanitization_middleware.py:354:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_sanitization_middleware.py:378:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_sanitization_middleware.py:380:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_sanitization_middleware.py:400:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_sanitization_middleware.py:402:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_scada_integration.py:36:13: PLC0415 `import` should be at the top-level of a file
+app/tests/test_scada_integration.py:38:13: PLC0415 `import` should be at the top-level of a file
+app/tests/test_scada_integration.py:44:30: DTZ011 `datetime.date.today()` used
+app/tests/test_scada_integration.py:52:13: PLC0415 `import` should be at the top-level of a file
+app/tests/test_scada_integration.py:146:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_scada_integration.py:167:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_scada_integration.py:182:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_scada_integration.py:183:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_scada_security.py:39:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_scada_security.py:40:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_scada_security.py:42:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_scada_security.py:73:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_scada_security.py:74:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_scada_security.py:76:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_scada_security.py:104:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_scada_security.py:105:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_scada_security.py:107:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_secure_logging_integration.py:25:17: RUF059 Unpacked variable `response` is never used
+app/tests/test_secure_logging_integration.py:25:27: RUF059 Unpacked variable `status_code` is never used
+app/tests/test_secure_logging_integration.py:45:17: RUF059 Unpacked variable `response` is never used
+app/tests/test_secure_logging_integration.py:45:27: RUF059 Unpacked variable `status_code` is never used
+app/tests/test_secure_logging_integration.py:69:17: RUF059 Unpacked variable `response` is never used
+app/tests/test_secure_logging_integration.py:69:27: RUF059 Unpacked variable `status_code` is never used
+app/tests/test_secure_logging_integration.py:85:13: PLC0415 `import` should be at the top-level of a file
+app/tests/test_secure_logging_integration.py:95:17: RUF059 Unpacked variable `response` is never used
+app/tests/test_secure_logging_integration.py:95:27: RUF059 Unpacked variable `status_code` is never used
+app/tests/test_secure_logging_integration.py:119:17: RUF059 Unpacked variable `response` is never used
+app/tests/test_secure_logging_integration.py:119:27: RUF059 Unpacked variable `status_code` is never used
+app/tests/test_secure_logging_integration.py:145:27: RUF059 Unpacked variable `status_code` is never used
+app/tests/test_secure_logging_integration.py:165:17: RUF059 Unpacked variable `response` is never used
+app/tests/test_secure_logging_integration.py:165:27: RUF059 Unpacked variable `status_code` is never used
+app/tests/test_security_hardening_improvements.py:25:26: DTZ005 `datetime.datetime.now()` called without a `tz` argument
+app/tests/test_security_hardening_improvements.py:35:26: DTZ005 `datetime.datetime.now()` called without a `tz` argument
+app/tests/test_security_hardening_improvements.py:45:26: DTZ005 `datetime.datetime.now()` called without a `tz` argument
+app/tests/test_security_hardening_improvements.py:59:26: DTZ005 `datetime.datetime.now()` called without a `tz` argument
+app/tests/test_security_hardening_improvements.py:71:13: PT017 Found assertion on exception `e` in `except` block, use `pytest.raises()` instead
+app/tests/test_security_hardening_improvements.py:88:26: DTZ005 `datetime.datetime.now()` called without a `tz` argument
+app/tests/test_security_hardening_improvements.py:98:26: DTZ005 `datetime.datetime.now()` called without a `tz` argument
+app/tests/test_security_hardening_improvements.py:213:27: RUF043 Pattern passed to `match=` contains metacharacters but is neither escaped nor raw
+app/tests/test_security_hardening_improvements.py:226:26: DTZ005 `datetime.datetime.now()` called without a `tz` argument
+app/tests/test_security_hardening_improvements.py:256:26: DTZ005 `datetime.datetime.now()` called without a `tz` argument
+app/tests/test_security_hardening_improvements.py:308:26: DTZ005 `datetime.datetime.now()` called without a `tz` argument
+app/tests/test_security_improvements.py:55:23: RUF059 Unpacked variable `status_code` is never used
+app/tests/test_security_improvements.py:78:23: RUF059 Unpacked variable `status_code` is never used
+app/tests/test_security_improvements.py:187:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_security_improvements.py:188:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_security_improvements.py:190:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_service_manager.py:195:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_service_manager.py:221:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_service_manager.py:303:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_service_manager_integration.py:148:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_service_manager_integration.py:240:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_skip_external_services.py:57:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_skip_external_services.py:71:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_sql_improvements.py:20:30: DTZ003 `datetime.datetime.utcnow()` used
+app/tests/test_sql_improvements.py:31:30: DTZ003 `datetime.datetime.utcnow()` used
+app/tests/test_tenant_middleware.py:36:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_tenant_middleware.py:161:13: PLC0415 `import` should be at the top-level of a file
+app/tests/test_tenant_middleware.py:166:30: DTZ003 `datetime.datetime.utcnow()` used
+app/tests/test_tenant_middleware.py:173:30: DTZ003 `datetime.datetime.utcnow()` used
+app/tests/test_tenant_middleware.py:198:13: PLC0415 `import` should be at the top-level of a file
+app/tests/test_tenant_middleware.py:203:30: DTZ003 `datetime.datetime.utcnow()` used
+app/tests/test_tenant_middleware.py:210:30: DTZ003 `datetime.datetime.utcnow()` used
+app/tests/test_tenant_middleware.py:236:21: RUF059 Unpacked variable `tenant2_id` is never used
+app/tests/test_tenant_middleware.py:239:13: PLC0415 `import` should be at the top-level of a file
+app/tests/test_tenant_middleware.py:244:30: DTZ003 `datetime.datetime.utcnow()` used
+app/tests/test_tenant_middleware.py:259:21: RUF059 Unpacked variable `tenant2_id` is never used
+app/tests/test_tenant_middleware.py:262:13: PLC0415 `import` should be at the top-level of a file
+app/tests/test_tenant_middleware.py:267:30: DTZ003 `datetime.datetime.utcnow()` used
+app/tests/test_tenant_middleware.py:286:13: PLC0415 `import` should be at the top-level of a file
+app/tests/test_tenant_middleware.py:291:30: DTZ003 `datetime.datetime.utcnow()` used
+app/tests/test_tenant_middleware.py:312:21: RUF059 Unpacked variable `tenant2_id` is never used
+app/tests/test_tenant_middleware.py:315:13: PLC0415 `import` should be at the top-level of a file
+app/tests/test_tenant_middleware.py:327:34: DTZ003 `datetime.datetime.utcnow()` used
+app/tests/test_tenant_middleware.py:338:9: RUF059 Unpacked variable `tenant1_id` is never used
+app/tests/test_tenant_middleware.py:341:13: PLC0415 `import` should be at the top-level of a file
+app/tests/test_tenant_middleware.py:353:34: DTZ003 `datetime.datetime.utcnow()` used
+app/tests/test_timestamp_validation.py:41:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_timestamp_validation.py:43:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_timestamp_validation.py:104:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_timestamp_validation.py:106:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_timestamp_validation.py:148:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_timestamp_validation.py:150:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_timestamp_validation.py:182:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_timestamp_validation.py:189:26: DTZ001 `datetime.datetime()` called without a `tzinfo` argument
+app/tests/test_timestamp_validation.py:242:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_units.py:240:26: DTZ003 `datetime.datetime.utcnow()` used
+app/tests/test_validation_decorator.py:17:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_validation_decorator.py:23:9: PLC0415 `import` should be at the top-level of a file
+app/tests/test_validation_decorator.py:31:13: PLC0415 `import` should be at the top-level of a file
+app/tests/test_validation_decorator.py:39:13: PLC0415 `import` should be at the top-level of a file
+app/tests/test_validation_decorator.py:75:9: PT018 Assertion should be broken down into multiple parts
+app/tests/test_workflow.py:148:5: PLC0415 `import` should be at the top-level of a file
+app/tests/timestamp_helpers.py:116:9: PLC0415 `import` should be at the top-level of a file
+app/tests/timestamp_helpers.py:123:9: PLC0415 `import` should be at the top-level of a file
+app/tests/timestamp_helpers.py:125:9: PLC0415 `import` should be at the top-level of a file
+app/tests/timestamp_helpers.py:140:9: TRY300 Consider moving this statement to an `else` block
+app/utils/auto_migration.py:32:9: TRY300 Consider moving this statement to an `else` block
+app/utils/auto_migration.py:34:62: TRY401 Redundant exception object included in `logging.exception` call
+app/utils/auto_migration.py:104:64: TRY401 Redundant exception object included in `logging.exception` call
+app/utils/auto_migration.py:111:9: TRY300 Consider moving this statement to an `else` block
+app/utils/auto_migration.py:114:58: TRY401 Redundant exception object included in `logging.exception` call
+app/utils/auto_migration.py:155:9: TRY300 Consider moving this statement to an `else` block
+app/utils/auto_migration.py:158:62: TRY401 Redundant exception object included in `logging.exception` call
+app/utils/auto_migration.py:179:9: PLC0415 `import` should be at the top-level of a file
+app/utils/auto_migration.py:210:9: TRY300 Consider moving this statement to an `else` block
+app/utils/auto_migration.py:213:73: TRY401 Redundant exception object included in `logging.exception` call
+app/utils/auto_migration.py:363:66: TRY401 Redundant exception object included in `logging.exception` call
+app/utils/auto_migration.py:370:9: TRY300 Consider moving this statement to an `else` block
+app/utils/auto_migration.py:373:75: TRY401 Redundant exception object included in `logging.exception` call
+app/utils/auto_migration.py:490:83: TRY401 Redundant exception object included in `logging.exception` call
+app/utils/auto_migration.py:497:9: TRY300 Consider moving this statement to an `else` block
+app/utils/auto_migration.py:500:63: TRY401 Redundant exception object included in `logging.exception` call
+app/utils/auto_migration.py:519:61: TRY401 Redundant exception object included in `logging.exception` call
+app/utils/auto_migration.py:608:9: TRY300 Consider moving this statement to an `else` block
+app/utils/auto_migration.py:611:59: TRY401 Redundant exception object included in `logging.exception` call
+app/utils/auto_migration.py:665:9: TRY300 Consider moving this statement to an `else` block
+app/utils/auto_migration.py:668:68: TRY401 Redundant exception object included in `logging.exception` call
+app/utils/auto_migration.py:722:9: TRY300 Consider moving this statement to an `else` block
+app/utils/auto_migration.py:725:68: TRY401 Redundant exception object included in `logging.exception` call
+app/utils/auto_migration.py:765:9: TRY300 Consider moving this statement to an `else` block
+app/utils/auto_migration.py:768:67: TRY401 Redundant exception object included in `logging.exception` call
+app/utils/auto_migration.py:827:9: TRY300 Consider moving this statement to an `else` block
+app/utils/auto_migration.py:830:60: TRY401 Redundant exception object included in `logging.exception` call
+app/utils/error_handler.py:44:9: PLC0415 `import` should be at the top-level of a file
+app/utils/error_handler.py:437:13: PLC0415 `import` should be at the top-level of a file
+app/utils/helpers.py:185:9: TRY300 Consider moving this statement to an `else` block
+app/utils/service_manager.py:234:9: SIM103 Return the condition directly
+app/utils/service_manager.py:309:9: TRY300 Consider moving this statement to an `else` block
+app/utils/service_manager.py:320:66: TRY401 Redundant exception object included in `logging.exception` call
+app/utils/user_permissions_fix.py:101:9: TRY300 Consider moving this statement to an `else` block
+app/utils/user_permissions_fix.py:104:60: TRY401 Redundant exception object included in `logging.exception` call
+config.py:35:62: PLW1508 Invalid type for environment variable default; expected `str` or `None`
+config.py:56:46: PLW1508 Invalid type for environment variable default; expected `str` or `None`
+config.py:59:43: PLW1508 Invalid type for environment variable default; expected `str` or `None`
+config.py:64:44: PLW1508 Invalid type for environment variable default; expected `str` or `None`
+config.py:88:72: PLW1508 Invalid type for environment variable default; expected `str` or `None`
+config.py:95:63: PLW1508 Invalid type for environment variable default; expected `str` or `None`
+config.py:99:59: PLW1508 Invalid type for environment variable default; expected `str` or `None`
+config.py:118:75: PLW1508 Invalid type for environment variable default; expected `str` or `None`
+config.py:119:77: PLW1508 Invalid type for environment variable default; expected `str` or `None`
+config.py:127:57: PLW1508 Invalid type for environment variable default; expected `str` or `None`
+config.py:183:13: B028 No explicit `stacklevel` keyword argument found
+config.py:189:13: B028 No explicit `stacklevel` keyword argument found
+config.py:195:13: B028 No explicit `stacklevel` keyword argument found
+config.py:207:9: PLR0912 Too many branches (21 > 15)
+config.py:314:9: SIM102 Use a single `if` statement instead of nested `if` statements
+generate_certs.py:8:5: T201 `print` found
+generate_certs.py:39:9: PTH103 `os.makedirs()` should be replaced by `Path.mkdir(parents=True)`
+generate_certs.py:40:13: PTH120 `os.path.dirname()` should be replaced by `Path.parent`
+generate_certs.py:40:43: PTH120 `os.path.dirname()` should be replaced by `Path.parent`
+generate_certs.py:43:9: PTH103 `os.makedirs()` should be replaced by `Path.mkdir(parents=True)`
+generate_certs.py:44:13: PTH120 `os.path.dirname()` should be replaced by `Path.parent`
+generate_certs.py:44:42: PTH120 `os.path.dirname()` should be replaced by `Path.parent`
+generate_certs.py:49:14: PTH123 `open()` should be replaced by `Path.open()`
+generate_certs.py:51:9: T201 `print` found
+generate_certs.py:54:14: PTH123 `open()` should be replaced by `Path.open()`
+generate_certs.py:56:9: T201 `print` found
+generate_certs.py:58:9: TRY300 Consider moving this statement to an `else` block
+generate_certs.py:61:9: T201 `print` found
+generate_certs.py:67:5: T201 `print` found
+generate_certs.py:83:12: PTH110 `os.path.exists()` should be replaced by `Path.exists()`
+generate_certs.py:84:9: PTH103 `os.makedirs()` should be replaced by `Path.mkdir(parents=True)`
+generate_certs.py:99:5: T201 `print` found
+generate_certs.py:104:5: T201 `print` found
+generate_certs.py:106:23: PTH110 `os.path.exists()` should be replaced by `Path.exists()`
+generate_certs.py:106:53: PTH202 `os.path.getsize` should be replaced by `Path.stat().st_size`
+generate_certs.py:107:22: PTH110 `os.path.exists()` should be replaced by `Path.exists()`
+generate_certs.py:107:51: PTH202 `os.path.getsize` should be replaced by `Path.stat().st_size`
+generate_certs.py:109:9: T201 `print` found
+generate_certs.py:110:27: PTH119 `os.path.basename()` should be replaced by `Path.name`
+generate_certs.py:110:74: PTH119 `os.path.basename()` should be replaced by `Path.name`
+health_check.py:18:20: PTH100 `os.path.abspath()` should be replaced by `Path.resolve()`
+health_check.py:18:36: PTH120 `os.path.dirname()` should be replaced by `Path.parent`
+health_check.py:37:5: PLR0912 Too many branches (18 > 15)
+health_check.py:37:5: PLR0915 Too many statements (61 > 60)
+health_check.py:130:44: TRY401 Redundant exception object included in `logging.exception` call
+run.py:9:20: PTH120 `os.path.dirname()` should be replaced by `Path.parent`
+run.py:20:5: PLR0915 Too many statements (73 > 60)
+run.py:64:17: PLC0206 Extracting value from dictionary without calling `.items()`
+run.py:176:5: T201 `print` found
+run.py:180:23: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+run.py:181:13: PTH120 `os.path.dirname()` should be replaced by `Path.parent`
+run.py:183:14: PTH123 `open()` should be replaced by `Path.open()`
+run.py:190:9: T201 `print` found
+run.py:193:21: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+run.py:194:13: PTH120 `os.path.dirname()` should be replaced by `Path.parent`
+run.py:196:14: PTH123 `open()` should be replaced by `Path.open()`
+run.py:203:9: T201 `print` found
+run.py:204:9: T201 `print` found
+run.py:205:9: T201 `print` found
+run.py:209:9: T201 `print` found
+run.py:222:9: T201 `print` found
+run.py:235:9: T201 `print` found
+run.py:251:9: T201 `print` found
+run.py:254:9: T201 `print` found
+scripts/create_first_admin.py:10:20: PTH100 `os.path.abspath()` should be replaced by `Path.resolve()`
+scripts/create_first_admin.py:10:36: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+scripts/create_first_admin.py:10:49: PTH120 `os.path.dirname()` should be replaced by `Path.parent`
+scripts/create_first_admin.py:19:5: N806 Variable `ADMIN_USERNAME` in function should be lowercase
+scripts/create_first_admin.py:20:5: N806 Variable `ADMIN_PASSWORD` in function should be lowercase
+scripts/create_first_admin.py:21:5: N806 Variable `ADMIN_EMAIL` in function should be lowercase
+scripts/create_first_admin.py:22:5: N806 Variable `ADMIN_FIRST_NAME` in function should be lowercase
+scripts/create_first_admin.py:23:5: N806 Variable `ADMIN_LAST_NAME` in function should be lowercase
+scripts/create_first_admin.py:84:13: TRY300 Consider moving this statement to an `else` block
+scripts/verify_approval_workflow.py:15:20: PTH100 `os.path.abspath()` should be replaced by `Path.resolve()`
+scripts/verify_approval_workflow.py:15:36: PTH118 `os.path.join()` should be replaced by `Path` with `/` operator
+scripts/verify_approval_workflow.py:15:49: PTH120 `os.path.dirname()` should be replaced by `Path.parent`
+scripts/verify_user_schema.py:53:5: PLR0912 Too many branches (18 > 15)
+Found 671 errors.
+No fixes available (51 hidden fixes can be enabled with the `--unsafe-fixes` option).

@@ -1,0 +1,108 @@
+# Pre-commit hooks for ThermaCore SCADA Platform
+# Install: pip install pre-commit && pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  # Ruff - Fast Python linter and formatter
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.1
+    hooks:
+      # Run the linter
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+        name: Ruff Linter (with auto-fix)
+        description: Run Ruff linter with automatic fixes
+        
+      # Run the formatter
+      - id: ruff-format
+        name: Ruff Formatter
+        description: Format code with Ruff
+
+  # Security checks
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.10
+    hooks:
+      - id: bandit
+        args: ['-c', 'backend/.bandit', '-r', 'backend/app']
+        name: Bandit Security Scan
+        description: Check for common security issues
+        pass_filenames: false
+
+  # Git checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        name: Trim Trailing Whitespace
+        description: Remove trailing whitespace
+        
+      - id: end-of-file-fixer
+        name: Fix End of Files
+        description: Ensure files end with newline
+        
+      - id: check-yaml
+        name: Check YAML
+        description: Validate YAML files
+        
+      - id: check-json
+        name: Check JSON
+        description: Validate JSON files
+        
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+        name: Check Large Files
+        description: Prevent large files from being committed
+        
+      - id: check-merge-conflict
+        name: Check Merge Conflicts
+        description: Check for merge conflict strings
+        
+      - id: detect-private-key
+        name: Detect Private Keys
+        description: Prevent committing private keys
+        
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+        name: Fix Line Endings
+        description: Ensure consistent line endings (LF)
+
+  # Python-specific checks
+  - repo: https://github.com/pre-commit/pygrep-hooks
+    rev: v1.10.0
+    hooks:
+      - id: python-check-blanket-noqa
+        name: Check Blanket noqa
+        description: Enforce specific noqa codes
+        
+      - id: python-check-blanket-type-ignore
+        name: Check Blanket type-ignore
+        description: Enforce specific type-ignore codes
+        
+      - id: python-no-eval
+        name: No eval()
+        description: Prevent use of eval()
+        
+      - id: python-no-log-warn
+        name: No log.warn()
+        description: Use log.warning() instead
+
+# Configuration
+default_language_version:
+  python: python3.10
+
+# Files to exclude
+exclude: |
+  (?x)^(
+    backend/migrations/|
+    backend/.*/tests/fixtures/|
+    .*\.min\.js$|
+    .*\.min\.css$|
+    node_modules/|
+    dist/|
+    build/|
+    \.git/
+  )$
+
+# Global settings
+fail_fast: false
+minimum_pre_commit_version: '3.0.0'

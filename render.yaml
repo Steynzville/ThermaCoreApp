@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: thermacore-backend
+    env: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn run:app --bind 0.0.0.0:$PORT
+    healthCheckPath: /health
+    healthCheckInterval: 30
+    healthCheckTimeout: 10
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: thermacore-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "false"
+      - key: FLASK_ENV
+        value: "production"
+      - key: LOG_LEVEL
+        value: "INFO"
+      # IMPORTANT: Set CORS_ORIGINS to allow frontend domain
+      # Example: CORS_ORIGINS=https://your-app.netlify.app,https://thermacoreapp.onrender.com
+      # Set this in Render dashboard under "Environment" tab
+      # - key: CORS_ORIGINS
+      #   value: "https://your-app.netlify.app"
+
+databases:
+  - name: thermacore-db
+    databaseName: thermacore
+    user: thermacore_user
+    plan: free

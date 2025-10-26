@@ -1,0 +1,208 @@
+[project]
+name = "thermacore"
+version = "1.0.0"
+description = "ThermaCore SCADA Platform"
+requires-python = ">=3.10"
+
+[tool.ruff]
+# Target Python 3.10+ for modern syntax
+target-version = "py310"
+
+# Set line length to 88 (Black default)
+line-length = 88
+
+# Exclude common directories
+exclude = [
+    ".git",
+    ".venv",
+    "venv",
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    "build",
+    "dist",
+    "*.egg-info",
+    "migrations",  # Database migrations often have specific formatting
+]
+
+[tool.ruff.lint]
+# Enable comprehensive rule sets for Phase 1
+select = [
+    "E",     # pycodestyle errors
+    "W",     # pycodestyle warnings
+    "F",     # Pyflakes
+    "I",     # isort
+    "N",     # pep8-naming
+    "UP",    # pyupgrade
+    "YTT",   # flake8-2020
+    "B",     # flake8-bugbear
+    "A",     # flake8-builtins
+    "COM",   # flake8-commas
+    "C4",    # flake8-comprehensions
+    "DTZ",   # flake8-datetimez
+    "T10",   # flake8-debugger
+    "EM",    # flake8-errmsg
+    "ISC",   # flake8-implicit-str-concat
+    "ICN",   # flake8-import-conventions
+    "G",     # flake8-logging-format
+    "PIE",   # flake8-pie
+    "T20",   # flake8-print
+    "PT",    # flake8-pytest-style
+    "Q",     # flake8-quotes
+    "RSE",   # flake8-raise
+    "RET",   # flake8-return
+    "SIM",   # flake8-simplify
+    "TID",   # flake8-tidy-imports
+    "ARG",   # flake8-unused-arguments
+    "PTH",   # flake8-use-pathlib
+    "ERA",   # eradicate (commented-out code)
+    "PL",    # Pylint
+    "TRY",   # tryceratops
+    "FLY",   # flynt
+    "PERF",  # Perflint
+    "RUF",   # Ruff-specific rules
+]
+
+# Ignore specific rules that are too strict or not applicable
+ignore = [
+    "E501",    # Line too long (handled by formatter)
+    "TRY003",  # Avoid specifying long messages outside exception class
+    "PLR2004", # Magic value used in comparison
+    "ARG002",  # Unused method argument (common in Flask routes)
+    "ARG001",  # Unused function argument (common in decorators)
+    "B008",    # Do not perform function calls in argument defaults (Flask uses this pattern)
+    "N805",    # First argument of a method should be named `self` (pydantic uses `cls`)
+    "N815",    # Variable in class scope should not be mixedCase (common in models)
+    "EM101",   # Exception must not use a string literal (too restrictive)
+    "EM102",   # Exception must not use an f-string literal (too restrictive)
+    "G004",    # Logging statement uses f-string (too restrictive)
+    "TRY400",  # Use `logging.exception` instead of `logging.error` (too restrictive)
+    "PLW0603", # Using the global statement (sometimes necessary)
+    "PLR0911", # Too many return statements
+    "SIM108",  # Use ternary operator (not always more readable)
+    "PT011",   # pytest.raises() is too broad (false positives)
+    "RET505",  # Unnecessary `else` after `return` (can harm readability)
+    "RET504",  # Unnecessary variable assignment before `return`
+]
+
+# Allow autofix for all enabled rules (when `--fix` is provided)
+fixable = ["ALL"]
+unfixable = []
+
+# Allow unused variables when underscore-prefixed
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.lint.per-file-ignores]
+# Ignore certain rules in test files
+"app/tests/**/*.py" = [
+    "ARG001",  # Unused function argument (fixtures)
+    "ARG002",  # Unused method argument
+    "S101",    # Use of assert detected
+    "S105",    # Hardcoded passwords in test fixtures
+    "S107",    # Hardcoded passwords in test fixtures
+    "S603",    # Subprocess calls for testing certificate generation
+    "S607",    # Subprocess calls for testing certificate generation
+    "PLR2004", # Magic value used in comparison
+    "PT011",   # pytest.raises() is too broad
+    "SIM117",  # Use a single `with` statement (not always clearer in tests)
+    "SLF001",  # Private member access (common in tests for testing internals)
+]
+
+# Ignore certain rules in __init__.py files
+"__init__.py" = [
+    "F401",    # Imported but unused (common in __init__)
+    "E402",    # Module level import not at top of file
+]
+
+# Ignore rules in migration files if they exist
+"migrations/*.py" = [
+    "F401",    # Imported but unused
+    "E501",    # Line too long
+]
+
+# Ignore rules in scripts
+"scripts/*.py" = [
+    "T20",     # Print found
+    "T201",    # Print found
+]
+
+# Ignore ARG002 in schemas - Marshmallow API requires specific parameter names
+"app/utils/schemas.py" = [
+    "ARG002",  # Unused method arguments (Marshmallow API contract)
+]
+
+# Config file can be longer
+"config.py" = [
+    "E501",    # Line too long
+]
+
+# Allow complexity exceptions for remaining complex service functions
+# These functions handle complex protocol logic and will be refactored in future phases
+"app/services/dnp3_service.py" = [
+    "C901",    # Function is too complex
+    "PLR0912", # Too many branches
+    "PLR0915", # Too many statements
+]
+
+"app/services/mqtt_service.py" = [
+    "C901",    # Function is too complex
+    "PLR0912", # Too many branches
+    "PLR0915", # Too many statements
+]
+
+"app/services/opcua_service.py" = [
+    "C901",    # Function is too complex
+    "PLR0912", # Too many branches
+    "PLR0915", # Too many statements
+]
+
+"app/services/modbus_service.py" = [
+    "PLR0912", # Too many branches
+]
+
+"app/protocols/registry.py" = [
+    "PLR0912", # Too many branches
+]
+
+"app/utils/helpers.py" = [
+    "C901",    # Function is too complex
+    "PLR0912", # Too many branches
+]
+
+"app/utils/auto_migration.py" = [
+    "PLR0912", # Too many branches
+    "PLR0915", # Too many statements
+]
+
+[tool.ruff.lint.isort]
+# Use the isort defaults for sorting imports
+known-first-party = ["app"]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+
+[tool.ruff.lint.mccabe]
+# Set maximum complexity to 15 (default is 10, this is more realistic)
+max-complexity = 15
+
+[tool.ruff.lint.pylint]
+# Set max arguments to 8 (default is 5, too strict for real-world code)
+max-args = 8
+# Set max branches to 15 (default is 12)
+max-branches = 15
+# Set max statements to 60 (default is 50)
+max-statements = 60
+
+[tool.ruff.format]
+# Use double quotes for strings
+quote-style = "double"
+
+# Indent with spaces, not tabs
+indent-style = "space"
+
+# Respect magic trailing commas
+skip-magic-trailing-comma = false
+
+# Auto-detect line endings
+line-ending = "auto"
+
+# Enable auto-formatting of code examples in docstrings
+docstring-code-format = true

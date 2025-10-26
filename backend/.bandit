@@ -1,0 +1,19 @@
+# Bandit configuration file for ThermaCoreApp
+# https://bandit.readthedocs.io/en/latest/config.html
+
+# Tests to skip
+# B101: assert_used - pytest uses bare assert statements in tests  
+# B311: random - low risk pseudo-random generator usage
+# B105: hardcoded_password_string - test fixtures may contain test passwords
+# B107: hardcoded_password_default - test defaults 
+# B108: hardcoded_temp_file - test file paths
+# B104: hardcoded_bind_all_interfaces - test server configs
+# B110: try_except_pass - acceptable in some error handling scenarios
+skips: ['B101', 'B311', 'B105', 'B107', 'B108', 'B104', 'B110']
+
+# Directories to exclude from scanning
+exclude_dirs: 
+  - '/app/tests/'
+  - '/tests/'
+  - '/.pytest_cache/'
+  - '/__pycache__/'
