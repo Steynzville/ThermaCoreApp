@@ -226,7 +226,7 @@ pnpm test:e2e
 
 This project enforces minimum test coverage thresholds to ensure code quality:
 
-- **Frontend**: Minimum 70% line coverage
+- **Frontend**: Minimum 60% line coverage
 - **Backend**: Minimum 60% line coverage
 
 #### Running Coverage Tests Locally

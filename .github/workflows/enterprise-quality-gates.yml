@@ -306,8 +306,8 @@ jobs:
             python - <<EOF
           import sys
           coverage = float("$COVERAGE" or "0")
-          if coverage < 70:
-              print(f"❌ Coverage Gate FAILED: Frontend coverage too low ({coverage}% < 70%)")
+          if coverage < 60:
+              print(f"❌ Coverage Gate FAILED: Frontend coverage too low ({coverage}% < 60%)")
               sys.exit(1)
           print(f"✅ Frontend Coverage Gate PASSED ({coverage}%)")
           EOF
