@@ -1,13 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-import * as authService from "../services/authService";
-
-// Mock authService
-vi.mock("../services/authService");
+import { beforeEach, describe, expect, it } from "vitest";
 
 describe("AuthContext - Keep Me Signed In Coverage", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     localStorage.clear();
     sessionStorage.clear();
   });
