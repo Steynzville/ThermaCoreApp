@@ -55,8 +55,7 @@ describe("UnitContext", () => {
         ({ result } = renderHook(() => useUnits(), { wrapper }));
       });
 
-      expect(result.current.loading).toBe(true);
-
+      // After act, the async operation has completed
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
       });

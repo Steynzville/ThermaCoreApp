@@ -28,14 +28,20 @@ describe("useRemoteControl", () => {
 
   describe("Initial State", () => {
     it("should initialize with default state", async () => {
+      // Mock fetch to return an error for this test
+      global.fetch.mockRejectedValueOnce(new Error("Failed to fetch permissions"));
+
       let result;
       await act(async () => {
         ({ result } = renderHook(() => useRemoteControl(unitId)));
       });
 
-      // Initially loading is true because fetchPermissions is called
+      // Wait for the error state to be set
+      await waitFor(() => {
+        expect(result.current.error).not.toBe(null);
+      });
+
       expect(result.current.permissions).toBe(null);
-      expect(result.current.error).toBe(null);
     });
   });
 

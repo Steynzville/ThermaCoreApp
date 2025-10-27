@@ -73,8 +73,17 @@ describe("useUserManagement", () => {
         ({ result } = renderHook(() => useUserManagement()));
       });
 
-      expect(result.current.users).toEqual([]);
-      expect(result.current.isLoadingUsers).toBe(true); // Loading initially
+      // After act, effects have run and data is loaded
+      await waitFor(() => {
+        expect(result.current.isLoadingUsers).toBe(false);
+      });
+
+      expect(result.current.users).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ id: 1 }),
+          expect.objectContaining({ id: 2 }),
+        ]),
+      );
       expect(result.current.usersError).toBe(null);
       expect(result.current.editingUser).toBe(null);
       expect(result.current.createUserModal).toBe(false);
