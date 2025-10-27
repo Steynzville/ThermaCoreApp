@@ -222,6 +222,31 @@ pnpm test --coverage
 pnpm test:e2e
 ```
 
+### Test Coverage Standards
+
+This project enforces minimum test coverage thresholds to ensure code quality:
+
+- **Frontend**: Minimum 70% line coverage
+- **Backend**: Minimum 60% line coverage
+
+#### Running Coverage Tests Locally
+
+```bash
+# Run frontend tests with coverage threshold enforcement
+pnpm run test:coverage:frontend
+
+# Run backend tests with coverage threshold enforcement  
+pnpm run test:coverage:backend
+
+# Run both frontend and backend coverage tests
+pnpm run test:coverage:ci
+
+# CI test command (runs all coverage tests)
+pnpm run test:ci
+```
+
+Coverage tests will fail if the code does not meet the minimum thresholds, ensuring that new code is adequately tested before merging.
+
 ### Test Coverage
 
 - **Overall**: ~90% coverage
