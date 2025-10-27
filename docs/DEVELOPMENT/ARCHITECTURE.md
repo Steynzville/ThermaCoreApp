@@ -157,14 +157,14 @@ class DevelopmentConfig(Config):
     DEBUG = True
     # For local development, use local PostgreSQL or Neon
     # Example Neon connection string (replace placeholders):
-    # postgres://[user]:[password]@[neon-hostname].neon.tech/[dbname]?sslmode=require
+    # postgres://[user]:[password]@[your-endpoint].ap-southeast-2.aws.neon.tech/[dbname]?sslmode=require
     SQLALCHEMY_DATABASE_URI = 'postgresql://localhost/thermacore_dev'
     
 class ProductionConfig(Config):
     DEBUG = False
     # Production uses Neon PostgreSQL (Sydney region)
     # Example Neon connection string (replace placeholders):
-    # postgres://[user]:[password]@[neon-hostname].ap-southeast-2.aws.neon.tech/[dbname]?sslmode=require
+    # postgres://[user]:[password]@[your-endpoint].ap-southeast-2.aws.neon.tech/[dbname]?sslmode=require
     # TLS enforcement
     MQTT_TLS_ENABLED = True
     OPCUA_SECURITY_POLICY = 'Basic256Sha256'

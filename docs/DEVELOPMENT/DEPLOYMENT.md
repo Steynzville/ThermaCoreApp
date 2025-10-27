@@ -207,12 +207,12 @@ ThermaCore uses Neon PostgreSQL for cloud database hosting. Neon provides server
 After creating your project, Neon will provide a connection string:
 
 ```
-postgres://[user]:[password]@[endpoint].ap-southeast-2.aws.neon.tech/[dbname]?sslmode=require
+postgres://[user]:[password]@[your-endpoint].ap-southeast-2.aws.neon.tech/[dbname]?sslmode=require
 ```
 
 **Example:**
 ```
-postgres://[YOUR_DB_USER]:[YOUR_DB_PASSWORD]@[your-endpoint].ap-southeast-2.aws.neon.tech/thermacore_db?sslmode=require
+postgres://[user]:[password]@[your-endpoint].ap-southeast-2.aws.neon.tech/thermacore_db?sslmode=require
 ```
 
 **Important Notes:**
@@ -228,14 +228,14 @@ Update your backend environment configuration:
 1. Go to Render Dashboard → Service → Environment
 2. Update `DATABASE_URL` environment variable:
    ```
-   postgres://[user]:[password]@[endpoint].ap-southeast-2.aws.neon.tech/[dbname]?sslmode=require
+   postgres://[user]:[password]@[your-endpoint].ap-southeast-2.aws.neon.tech/[dbname]?sslmode=require
    ```
 3. Save (triggers auto-redeploy)
 
 **For Local Development:**
 Create/update `.env` file in backend directory:
 ```env
-DATABASE_URL=postgres://[user]:[password]@[endpoint].ap-southeast-2.aws.neon.tech/[dbname]?sslmode=require
+DATABASE_URL=postgres://[user]:[password]@[your-endpoint].ap-southeast-2.aws.neon.tech/[dbname]?sslmode=require
 ```
 
 ### Step 4: Initialize Database Schema
@@ -246,7 +246,7 @@ render shell thermacore-backend
 flask init-db
 
 # Or using local connection
-export DATABASE_URL="postgres://[user]:[password]@[endpoint].ap-southeast-2.aws.neon.tech/[dbname]?sslmode=require"
+export DATABASE_URL="postgres://[user]:[password]@[your-endpoint].ap-southeast-2.aws.neon.tech/[dbname]?sslmode=require"
 cd backend
 flask init-db
 ```
@@ -725,8 +725,8 @@ JWT_SECRET_KEY=<64-char-random-hex>
 
 # Database (Neon PostgreSQL)
 # Example connection string (replace placeholders):
-# postgres://[user]:[password]@[endpoint].ap-southeast-2.aws.neon.tech/[dbname]?sslmode=require
-DATABASE_URL=postgres://[YOUR_DB_USER]:[YOUR_DB_PASSWORD]@[your-endpoint].ap-southeast-2.aws.neon.tech/thermacore_db?sslmode=require
+# postgres://[user]:[password]@[your-endpoint].ap-southeast-2.aws.neon.tech/[dbname]?sslmode=require
+DATABASE_URL=postgres://[user]:[password]@[your-endpoint].ap-southeast-2.aws.neon.tech/thermacore_db?sslmode=require
 
 # CORS (comma-separated)
 CORS_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
