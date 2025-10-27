@@ -17,10 +17,10 @@ describe("AspectRatio", () => {
   it("renders children correctly", () => {
     const { getByAltText } = render(
       <AspectRatio ratio={4 / 3}>
-        <img src="test.jpg" alt="test image" />
+        <img src="test.jpg" alt="test content" />
       </AspectRatio>,
     );
-    expect(getByAltText("test image")).toBeInTheDocument();
+    expect(getByAltText("test content")).toBeInTheDocument();
   });
 
   it("accepts additional props", () => {
