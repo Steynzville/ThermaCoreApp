@@ -183,14 +183,11 @@ class ProductionReadinessValidator:
         )
 
         if not is_test_env:
-            secret_key_lower = secret_key.lower()
-            jwt_secret_lower = jwt_secret.lower()
-
             secret_key_safe = not any(
-                re.search(pattern, secret_key_lower) for pattern in dangerous_patterns
+                re.search(pattern, secret_key.lower()) for pattern in dangerous_patterns
             )
             jwt_secret_safe = not any(
-                re.search(pattern, jwt_secret_lower) for pattern in dangerous_patterns
+                re.search(pattern, jwt_secret.lower()) for pattern in dangerous_patterns
             )
         else:
             # In test environments, allow test secrets but still warn
