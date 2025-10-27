@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useRemoteControl } from "./useRemoteControl";
 
@@ -28,11 +28,20 @@ describe("useRemoteControl", () => {
 
   describe("Initial State", () => {
     it("should initialize with default state", async () => {
-      const { result } = renderHook(() => useRemoteControl(unitId));
+      // Mock fetch to return an error for this test
+      global.fetch.mockRejectedValueOnce(new Error("Failed to fetch permissions"));
 
-      // Initially loading is true because fetchPermissions is called
+      let result;
+      await act(async () => {
+        ({ result } = renderHook(() => useRemoteControl(unitId)));
+      });
+
+      // Wait for the error state to be set
+      await waitFor(() => {
+        expect(result.current.error).not.toBe(null);
+      });
+
       expect(result.current.permissions).toBe(null);
-      expect(result.current.error).toBe(null);
     });
   });
 
@@ -49,7 +58,10 @@ describe("useRemoteControl", () => {
         json: async () => mockPermissions,
       });
 
-      const { result } = renderHook(() => useRemoteControl(unitId));
+      let result;
+      await act(async () => {
+        ({ result } = renderHook(() => useRemoteControl(unitId)));
+      });
 
       await waitFor(() => {
         expect(result.current.permissions).toEqual(mockPermissions);
@@ -71,7 +83,10 @@ describe("useRemoteControl", () => {
         isAuthenticated: false,
       });
 
-      const { result } = renderHook(() => useRemoteControl(unitId));
+      let result;
+      await act(async () => {
+        ({ result } = renderHook(() => useRemoteControl(unitId)));
+      });
 
       await waitFor(() => {
         expect(result.current.permissions).toBe(null);

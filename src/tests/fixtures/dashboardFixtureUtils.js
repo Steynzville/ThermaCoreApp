@@ -140,32 +140,42 @@ export const createMockProtocolWebSocket = (protocolType) => {
     }),
     dispatchEvent: vi.fn((event) => {
       if (listeners.has(event.type)) {
-        listeners.get(event.type).forEach((callback) => callback(event));
+        listeners.get(event.type).forEach((callback) => {
+          callback(event);
+        });
       }
     }),
     // Helper methods for testing
     simulateMessage: (data) => {
       const event = new MessageEvent("message", { data });
       if (listeners.has("message")) {
-        listeners.get("message").forEach((callback) => callback(event));
+        listeners.get("message").forEach((callback) => {
+          callback(event);
+        });
       }
     },
     simulateOpen: () => {
       const event = new Event("open");
       if (listeners.has("open")) {
-        listeners.get("open").forEach((callback) => callback(event));
+        listeners.get("open").forEach((callback) => {
+          callback(event);
+        });
       }
     },
     simulateClose: () => {
       const event = new CloseEvent("close");
       if (listeners.has("close")) {
-        listeners.get("close").forEach((callback) => callback(event));
+        listeners.get("close").forEach((callback) => {
+          callback(event);
+        });
       }
     },
     simulateError: (error = new Error("WebSocket error")) => {
       const event = new ErrorEvent("error", { error });
       if (listeners.has("error")) {
-        listeners.get("error").forEach((callback) => callback(event));
+        listeners.get("error").forEach((callback) => {
+          callback(event);
+        });
       }
     },
   };
