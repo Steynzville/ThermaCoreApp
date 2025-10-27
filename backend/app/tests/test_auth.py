@@ -1051,3 +1051,145 @@ class TestSecurityEnhancements:
 
         # Should return validation error
         assert response.status_code == 422
+
+    def test_login_with_keep_me_signed_in_true(self, client):
+        """Test login with keep_me_signed_in=True returns longer token expiry."""
+        response = client.post(
+            "/api/v1/auth/login",
+            json={
+                "username": "admin",
+                "password": "admin123",
+                "keep_me_signed_in": True,
+            },
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert response.status_code == 200
+        data = unwrap_response(response)
+
+        assert "access_token" in data
+        assert "refresh_token" in data
+        assert "expires_in" in data
+
+        # With keep_me_signed_in=True, expires_in should be 30 days (in seconds)
+        # 30 days = 30 * 24 * 60 * 60 = 2,592,000 seconds
+        expected_expiry = 30 * 24 * 60 * 60
+        assert data["expires_in"] == expected_expiry
+
+        # Verify token is valid and has correct expiry
+        token = data["access_token"]
+        decoded = jwt.decode(
+            token,
+            options={"verify_signature": False},
+        )
+        assert "exp" in decoded
+        assert "iat" in decoded
+
+        # Token expiry should be approximately 30 days from now
+        token_lifetime = decoded["exp"] - decoded["iat"]
+        # Allow 5 second tolerance
+        assert abs(token_lifetime - expected_expiry) < 5
+
+    def test_login_with_keep_me_signed_in_false(self, client):
+        """Test login with keep_me_signed_in=False returns standard token expiry."""
+        response = client.post(
+            "/api/v1/auth/login",
+            json={
+                "username": "admin",
+                "password": "admin123",
+                "keep_me_signed_in": False,
+            },
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert response.status_code == 200
+        data = unwrap_response(response)
+
+        assert "access_token" in data
+        assert "refresh_token" in data
+        assert "expires_in" in data
+
+        # With keep_me_signed_in=False, expires_in should be 24 hours (in seconds)
+        # 24 hours = 24 * 60 * 60 = 86,400 seconds
+        expected_expiry = 24 * 60 * 60
+        assert data["expires_in"] == expected_expiry
+
+        # Verify token is valid and has correct expiry
+        token = data["access_token"]
+        decoded = jwt.decode(
+            token,
+            options={"verify_signature": False},
+        )
+        assert "exp" in decoded
+        assert "iat" in decoded
+
+        # Token expiry should be approximately 24 hours from now
+        token_lifetime = decoded["exp"] - decoded["iat"]
+        # Allow 5 second tolerance
+        assert abs(token_lifetime - expected_expiry) < 5
+
+    def test_login_without_keep_me_signed_in_defaults_to_false(self, client):
+        """Test login without keep_me_signed_in parameter defaults to 24 hour expiry."""
+        response = client.post(
+            "/api/v1/auth/login",
+            json={"username": "admin", "password": "admin123"},
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert response.status_code == 200
+        data = unwrap_response(response)
+
+        assert "access_token" in data
+        assert "expires_in" in data
+
+        # Default should be 24 hours
+        expected_expiry = 24 * 60 * 60
+        assert data["expires_in"] == expected_expiry
+
+    def test_keep_me_signed_in_token_validation(self, client):
+        """Test that tokens created with keep_me_signed_in are valid."""
+        # Login with keep_me_signed_in=True
+        response = client.post(
+            "/api/v1/auth/login",
+            json={
+                "username": "admin",
+                "password": "admin123",
+                "keep_me_signed_in": True,
+            },
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert response.status_code == 200
+        data = unwrap_response(response)
+        token = data["access_token"]
+
+        # Use the token to access a protected endpoint
+        response = client.get(
+            "/api/v1/auth/me",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 200
+        user_data = unwrap_response(response)
+        assert user_data["username"] == "admin"
+
+    def test_keep_me_signed_in_with_invalid_type(self, client):
+        """Test that keep_me_signed_in handles invalid types gracefully."""
+        # Test with string instead of boolean
+        response = client.post(
+            "/api/v1/auth/login",
+            json={
+                "username": "admin",
+                "password": "admin123",
+                "keep_me_signed_in": "true",  # String instead of boolean
+            },
+            headers={"Content-Type": "application/json"},
+        )
+
+        # Should either accept it (if schema coerces) or return validation error
+        assert response.status_code in [200, 422]
+
+        if response.status_code == 200:
+            # If accepted, verify it works correctly
+            data = unwrap_response(response)
+            assert "access_token" in data
