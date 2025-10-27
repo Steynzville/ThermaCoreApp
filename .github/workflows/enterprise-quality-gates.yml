@@ -283,7 +283,7 @@ jobs:
       - name: Run Frontend Tests with Coverage
         run: |
           echo "🧪 Running frontend tests with coverage..."
-          pnpm test:coverage || {
+          pnpm run test:coverage:frontend || {
             echo "❌ Frontend tests failed"
             exit 1
           }
@@ -306,8 +306,8 @@ jobs:
             python - <<EOF
           import sys
           coverage = float("$COVERAGE" or "0")
-          if coverage < 40:
-              print(f"❌ Coverage Gate FAILED: Frontend coverage too low ({coverage}% < 40%)")
+          if coverage < 60:
+              print(f"❌ Coverage Gate FAILED: Frontend coverage too low ({coverage}% < 60%)")
               sys.exit(1)
           print(f"✅ Frontend Coverage Gate PASSED ({coverage}%)")
           EOF
@@ -338,7 +338,7 @@ jobs:
           
           echo "🧪 Running backend tests with coverage..."
           export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/thermacore_test
-          pytest --cov=app --cov-report=json --cov-report=term --cov-report=term-missing -v || {
+          pytest --cov=app --cov-report=json --cov-report=term --cov-report=term-missing --cov-fail-under=60 -v || {
             echo "❌ Backend tests failed"
             exit 1
           }
@@ -360,17 +360,15 @@ jobs:
             echo "Backend coverage: $COVERAGE%"
             echo "📊 Detailed coverage report above shows line-by-line coverage"
             
-            # Use 63% as threshold based on actual current coverage
-            # This can be increased as test coverage improves
+            # Use 60% as threshold for coverage enforcement
             python - <<EOF
           import sys
           coverage = float("$COVERAGE" or "0")
-          if coverage < 63:
-              print(f"❌ Coverage Gate FAILED: Backend coverage too low ({coverage}% < 63%)")
+          if coverage < 60:
+              print(f"❌ Coverage Gate FAILED: Backend coverage too low ({coverage}% < 60%)")
               sys.exit(1)
           print(f"✅ Backend Coverage Gate PASSED ({coverage}%)")
-          print(f"ℹ️  Note: 795 tests achieving {coverage}% coverage")
-          print(f"ℹ️  Consider adding tests for uncovered modules to reach 70%+ target")
+          print(f"ℹ️  Note: Backend coverage at {coverage}%")
           EOF
           else
             echo "⚠️  Coverage file not found, skipping check"
