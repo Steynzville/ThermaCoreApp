@@ -273,7 +273,9 @@ Coverage tests will fail if the code does not meet the minimum thresholds, ensur
 
 **Backend (.env)**:
 ```env
-DATABASE_URL=postgresql://user:pass@host:5432/db
+# Example Neon connection string (replace placeholders):
+# postgres://[user]:[password]@[neon-hostname].neon.tech/[dbname]?sslmode=require
+DATABASE_URL=postgresql://user:pass@ep-cool-darkness-123456.ap-southeast-2.aws.neon.tech/thermacore_db?sslmode=require
 SECRET_KEY=your-secret-key
 JWT_SECRET_KEY=your-jwt-secret
 CORS_ORIGINS=https://your-frontend.netlify.app
@@ -330,7 +332,7 @@ Check the **[Troubleshooting Guide](docs/OPERATIONS/TROUBLESHOOTING.md)** for co
 - ✅ **Production Ready**: Core functionality stable
 - ✅ **Actively Maintained**: Regular updates and improvements
 - ✅ **Well Documented**: Comprehensive documentation
-- ✅ **Tested**: 90% test coverage
+- ✅ **Tested**: 71.25% test coverage
 
 ---
 
@@ -351,8 +353,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📞 Contact
 
 **ThermaCore Renewable Technologies**  
-Email: info@thermacore.com  
-Website: https://thermacore.com
+Email: info@thermacore.com.au  
+Website: https://thermacore.com.au
 
 ---
 

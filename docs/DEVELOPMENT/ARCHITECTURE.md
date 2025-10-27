@@ -1,9 +1,12 @@
 # ThermaCoreApp Architecture
 
 > **Last Updated**: October 2024  
-> **Status**: Current and Verified
+> **Status**: Current and Verified  
+> **Database**: Migrated to Neon PostgreSQL (Sydney region)
 
 ThermaCoreApp is a full-stack industrial SCADA (Supervisory Control and Data Acquisition) application designed for monitoring and managing renewable energy thermal systems. This document provides a comprehensive overview of the system architecture, design patterns, and technical implementation.
+
+**Architecture Diagram**: See [detailed production architecture diagram](../images/architecture-neon.txt) showing the complete infrastructure with Neon database integration.
 
 ## Table of Contents
 
@@ -33,6 +36,7 @@ ThermaCoreApp follows a modern client-server architecture with clear separation 
 ┌────────────────────────▼────────────────────────────────────────┐
 │                    Frontend Layer                               │
 │              React SPA (Vite + TypeScript)                      │
+│                    Hosted on Netlify                            │
 │   ┌──────────────┐  ┌──────────────┐  ┌──────────────┐        │
 │   │  Dashboard   │  │  Analytics   │  │  Admin Panel │        │
 │   └──────────────┘  └──────────────┘  └──────────────┘        │
@@ -43,6 +47,7 @@ ThermaCoreApp follows a modern client-server architecture with clear separation 
 ┌────────────────────────▼────────────────────────────────────────┐
 │                    Backend Layer                                │
 │                 Flask API (Python 3.9+)                         │
+│                    Hosted on Render                             │
 │   ┌──────────────┐  ┌──────────────┐  ┌──────────────┐        │
 │   │   Routes     │  │   Services   │  │  Middleware  │        │
 │   └──────────────┘  └──────────────┘  └──────────────┘        │
@@ -52,16 +57,16 @@ ThermaCoreApp follows a modern client-server architecture with clear separation 
          ▼                   ▼                   ▼
 ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
 │   PostgreSQL    │  │  MQTT Broker    │  │  Industrial     │
-│   Database      │  │  (Real-time)    │  │  Protocols      │
-│                 │  │                 │  │  OPC UA/Modbus  │
+│   (Neon - AU)   │  │  (Real-time)    │  │  Protocols      │
+│  Sydney Region  │  │                 │  │  OPC UA/Modbus  │
 └─────────────────┘  └─────────────────┘  └─────────────────┘
 ```
 
 ### Key Components
 
-- **Frontend**: React SPA providing user interface
-- **Backend**: Flask REST API handling business logic
-- **Database**: PostgreSQL for persistent storage
+- **Frontend**: React SPA providing user interface (Netlify)
+- **Backend**: Flask REST API handling business logic (Render)
+- **Database**: PostgreSQL on Neon (Sydney region) for persistent storage
 - **Message Broker**: MQTT for real-time data ingestion
 - **Industrial Protocols**: OPC UA, Modbus, DNP3 integration
 
@@ -150,10 +155,16 @@ class Config:
 
 class DevelopmentConfig(Config):
     DEBUG = True
+    # For local development, use local PostgreSQL or Neon
+    # Example Neon connection string (replace placeholders):
+    # postgres://[user]:[password]@[neon-hostname].neon.tech/[dbname]?sslmode=require
     SQLALCHEMY_DATABASE_URI = 'postgresql://localhost/thermacore_dev'
     
 class ProductionConfig(Config):
     DEBUG = False
+    # Production uses Neon PostgreSQL (Sydney region)
+    # Example Neon connection string (replace placeholders):
+    # postgres://[user]:[password]@[neon-hostname].ap-southeast-2.aws.neon.tech/[dbname]?sslmode=require
     # TLS enforcement
     MQTT_TLS_ENABLED = True
     OPCUA_SECURITY_POLICY = 'Basic256Sha256'

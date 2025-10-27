@@ -1,0 +1,152 @@
+ThermaCore SCADA Platform - Production Architecture
+===================================================
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                           END USERS                                 │
+│                      (Web Browser Clients)                          │
+└────────────────────────────┬────────────────────────────────────────┘
+                             │
+                             │ HTTPS / WSS
+                             │
+┌────────────────────────────▼─────────────────────────────────────────┐
+│                     FRONTEND LAYER                                   │
+│                                                                      │
+│   ┌──────────────────────────────────────────────────────────────┐  │
+│   │           React SPA (Vite + JavaScript)                      │  │
+│   │              Hosted on Netlify CDN                           │  │
+│   │                                                              │  │
+│   │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │  │
+│   │  │Dashboard │  │Analytics │  │  Admin   │  │  Units   │   │  │
+│   │  │  View    │  │   View   │  │  Panel   │  │  View    │   │  │
+│   │  └──────────┘  └──────────┘  └──────────┘  └──────────┘   │  │
+│   └──────────────────────────────────────────────────────────────┘  │
+└────────────────────────────┬─────────────────────────────────────────┘
+                             │
+                             │ REST API (HTTPS)
+                             │ WebSocket (WSS)
+                             │
+┌────────────────────────────▼─────────────────────────────────────────┐
+│                     BACKEND LAYER                                    │
+│                                                                      │
+│   ┌──────────────────────────────────────────────────────────────┐  │
+│   │          Flask API (Python 3.9+)                             │  │
+│   │           Hosted on Render.com                               │  │
+│   │                                                              │  │
+│   │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │  │
+│   │  │   REST   │  │WebSockets│  │   Auth   │  │ Services │   │  │
+│   │  │   API    │  │ (Socket. │  │   JWT    │  │  MQTT/   │   │  │
+│   │  │          │  │   IO)    │  │          │  │  OPC UA  │   │  │
+│   │  └──────────┘  └──────────┘  └──────────┘  └──────────┘   │  │
+│   │                                                              │  │
+│   │  ┌──────────────────────────────────────────────────────┐   │  │
+│   │  │         Business Logic & Middleware                  │   │  │
+│   │  │  • Role-Based Access Control (RBAC)                 │   │  │
+│   │  │  • Audit Logging                                    │   │  │
+│   │  │  • Input Validation (Marshmallow)                   │   │  │
+│   │  │  • Rate Limiting                                    │   │  │
+│   │  └──────────────────────────────────────────────────────┘   │  │
+│   └──────────────────────────────────────────────────────────────┘  │
+└───────┬──────────────────┬──────────────────┬─────────────────────────┘
+        │                  │                  │
+        │                  │                  │
+        ▼                  ▼                  ▼
+┌───────────────┐  ┌───────────────┐  ┌───────────────────────┐
+│   DATABASE    │  │  MQTT BROKER  │  │ INDUSTRIAL PROTOCOLS  │
+│               │  │               │  │                       │
+│  PostgreSQL   │  │  Real-time    │  │  • OPC UA Server      │
+│  on Neon      │  │  Message      │  │  • Modbus RTU/TCP     │
+│               │  │  Broker       │  │  • DNP3               │
+│ ┌───────────┐ │  │               │  │  • Custom Protocols   │
+│ │  Region:  │ │  │               │  │                       │
+│ │  Sydney   │ │  │               │  └───────────────────────┘
+│ │  (AU)     │ │  │               │
+│ │           │ │  │               │
+│ │ Endpoint: │ │  │               │
+│ │ *.ap-     │ │  │               │
+│ │ southeast-│ │  │               │
+│ │ 2.aws.    │ │  │               │
+│ │ neon.tech │ │  │               │
+│ └───────────┘ │  │               │
+│               │  │               │
+│ Features:     │  │               │
+│ • Serverless  │  │               │
+│ • Auto-scale  │  │               │
+│ • Branching   │  │               │
+│ • SSL Req'd   │  │               │
+└───────────────┘  └───────────────┘
+
+═══════════════════════════════════════════════════════════════════════
+
+KEY INFRASTRUCTURE COMPONENTS:
+
+1. Frontend (Netlify)
+   - Static site hosting with global CDN
+   - Automatic HTTPS with Let's Encrypt
+   - Continuous deployment from GitHub
+   - Build command: pnpm install && pnpm run build
+   - Environment: VITE_API_BASE_URL, VITE_WS_URL
+
+2. Backend (Render.com)
+   - Web service with auto-scaling
+   - Health checks and automatic restarts
+   - Container-based deployment
+   - Gunicorn WSGI server (4 workers)
+   - Environment: DATABASE_URL, SECRET_KEY, JWT_SECRET_KEY, CORS_ORIGINS
+
+3. Database (Neon PostgreSQL - Sydney)
+   - Serverless PostgreSQL database
+   - Hosted in AWS Sydney (ap-southeast-2)
+   - Auto-suspend when idle (free tier)
+   - Connection pooling built-in
+   - SSL/TLS required for all connections
+   - Format: postgres://[user]:[pass]@[endpoint].ap-southeast-2.aws.neon.tech/[db]?sslmode=require
+
+═══════════════════════════════════════════════════════════════════════
+
+DATA FLOW:
+
+1. User Login Flow:
+   Browser → Netlify (SPA) → Render (Flask API) → Neon (Verify credentials)
+   Neon → Render (User data) → Render (Generate JWT) → Browser (Store token)
+
+2. Real-time Sensor Data Flow:
+   Industrial Device → MQTT Broker → Flask (MQTT Service) 
+   → Neon (Store reading) → Flask (WebSocket emit) → Browser (Update UI)
+
+3. API Request Flow:
+   Browser → Netlify → Render (Verify JWT) → Render (Check permissions)
+   → Neon (Query data) → Render (Format response) → Browser (Display)
+
+═══════════════════════════════════════════════════════════════════════
+
+SECURITY LAYERS:
+
+1. Transport Security
+   - All connections use HTTPS/WSS (TLS 1.2+)
+   - Neon requires SSL for database connections
+   - CORS configured for trusted origins only
+
+2. Authentication & Authorization
+   - JWT tokens (access + refresh)
+   - Role-based access control (Admin, Operator, Viewer)
+   - Granular permission system
+   - Password hashing with bcrypt
+
+3. Data Security
+   - Input validation on all endpoints
+   - SQL injection prevention via SQLAlchemy ORM
+   - Audit logging of all actions
+   - Rate limiting on API endpoints
+
+═══════════════════════════════════════════════════════════════════════
+
+DEPLOYMENT REGIONS:
+
+- Frontend (Netlify): Global CDN
+- Backend (Render): Auto-selected region (typically US or EU)
+- Database (Neon): ap-southeast-2 (Sydney, Australia)
+
+Note: For optimal performance, consider deploying backend closer to database
+region or using Neon's connection pooling for reduced latency.
+
+═══════════════════════════════════════════════════════════════════════

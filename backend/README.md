@@ -118,8 +118,10 @@ psql thermacore_db -c "CREATE EXTENSION IF NOT EXISTS timescaledb;"
 # Copy environment configuration
 cp .env.example .env
 
-# Edit .env with your database credentials
-# DATABASE_URL=postgresql://username:password@localhost:5432/thermacore_db
+# Edit .env with your Neon database credentials
+# Example Neon connection string (replace placeholders):
+# postgres://[user]:[password]@[neon-hostname].neon.tech/[dbname]?sslmode=require
+# DATABASE_URL=postgresql://username:password@ep-cool-darkness-123456.ap-southeast-2.aws.neon.tech/thermacore_db?sslmode=require
 ```
 
 ### 3. Initialize Database
@@ -389,7 +391,9 @@ When the server is running, visit:
 ```bash
 # Production configuration
 FLASK_ENV=production
-DATABASE_URL=postgresql://user:pass@host:5432/thermacore_db
+# Example Neon connection string (replace placeholders):
+# postgres://[user]:[password]@[neon-hostname].neon.tech/[dbname]?sslmode=require
+DATABASE_URL=postgresql://user:pass@ep-cool-darkness-123456.ap-southeast-2.aws.neon.tech/thermacore_db?sslmode=require
 SECRET_KEY=your-super-secret-key
 JWT_SECRET_KEY=your-jwt-secret-key
 ```

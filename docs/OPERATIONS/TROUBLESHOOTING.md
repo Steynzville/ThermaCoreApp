@@ -338,6 +338,94 @@ ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
    WHERE timestamp < NOW() - INTERVAL '90 days';
    ```
 
+### Problem: Neon Database Connection Issues
+
+**Symptoms**:
+- Error: "SSL connection required"
+- Error: "connection timeout"
+- Error: "database does not exist"
+
+**Neon-Specific Diagnosis**:
+
+```bash
+# 1. Verify connection string format
+echo $DATABASE_URL
+# Should include ?sslmode=require for Neon:
+# postgres://user:pass@endpoint.ap-southeast-2.aws.neon.tech/dbname?sslmode=require
+
+# 2. Test Neon connection
+psql "$DATABASE_URL" -c "SELECT version();"
+```
+
+**Solutions**:
+
+1. **Missing SSL Mode**
+   ```bash
+   # Neon requires SSL - ensure sslmode=require is set
+   export DATABASE_URL="postgres://user:pass@endpoint.neon.tech/db?sslmode=require"
+   ```
+
+2. **Connection Limit Reached**
+   ```bash
+   # Check active connections in Neon dashboard
+   # Free tier: limited connections
+   # Solution: Close idle connections or upgrade tier
+   
+   # View active connections
+   psql "$DATABASE_URL" -c "
+   SELECT count(*) as connections, 
+          max(backend_start) as oldest_connection
+   FROM pg_stat_activity;
+   "
+   ```
+
+3. **Database Auto-Suspended (Free Tier)**
+   ```bash
+   # Neon free tier auto-suspends after inactivity
+   # First query after suspend may be slow (cold start)
+   # This is normal - subsequent queries will be fast
+   
+   # To minimize impact:
+   # - Implement connection retry logic
+   # - Add health check endpoint that keeps DB active
+   # - Consider upgrading to paid tier for always-on
+   ```
+
+4. **Wrong Region/Endpoint**
+   ```bash
+   # Ensure using correct Neon endpoint
+   # Sydney region should contain: .ap-southeast-2.aws.neon.tech
+   # Example: ep-cool-darkness-123456.ap-southeast-2.aws.neon.tech
+   
+   # Verify in Neon dashboard: Project → Connection Details
+   ```
+
+5. **Network/Firewall Issues**
+   ```bash
+   # Test connectivity to Neon endpoint
+   nc -zv ep-cool-darkness-123456.ap-southeast-2.aws.neon.tech 5432
+   
+   # Neon uses port 5432 over SSL
+   # Ensure outbound connections to Neon are allowed
+   ```
+
+**Neon Performance Tips**:
+
+1. **Connection Pooling**
+   - Neon has built-in connection pooling
+   - Use pooled connection string for better performance
+   - Available in Neon dashboard: Connection Details → Pooled connection
+
+2. **Monitoring**
+   - Check Neon dashboard for query performance
+   - Monitor connection usage
+   - Review storage and compute usage
+
+3. **Branching for Testing**
+   - Use Neon database branches for dev/staging
+   - Test migrations on branches before production
+   - Instant branch creation - no data copy needed
+
 ---
 
 ## Connection Issues

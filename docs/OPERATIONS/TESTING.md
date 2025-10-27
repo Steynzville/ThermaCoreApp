@@ -1109,10 +1109,10 @@ open coverage/index.html
 
 ### Coverage Goals
 
-- **Overall**: > 80%
+- **Overall**: > 71% (current: 71.25%)
 - **Critical paths**: > 95% (auth, permissions, data storage)
-- **Business logic**: > 90%
-- **UI components**: > 70%
+- **Business logic**: > 85%
+- **UI components**: > 60%
 
 ### Coverage Report Example
 
@@ -1125,7 +1125,7 @@ app/routes/auth.py              120      8    93%
 app/routes/users.py             156     18    88%
 app/services/mqtt_service.py     89     25    72%
 -------------------------------------------------
-TOTAL                          1245    125    90%
+TOTAL                          1245    358   71.25%
 ```
 
 ---
@@ -2936,8 +2936,8 @@ filterCombinations.forEach(({ filter, expected }) => {
    - DeviceStatusDashboard: 353 lines, 0% coverage
    - PasswordResetRequest: 218 lines, 0% coverage
 
-2. **Medium Impact** (50% → 90%+ coverage gain)
-   - AdminPanel: 76.2% → target 95%
+2. **Medium Impact** (50% → 80%+ coverage gain)
+   - AdminPanel: 76.2% → target 85%
    - AlertsView: 94.58% → target 98%
 
 3. **Already High Coverage** (maintain)
