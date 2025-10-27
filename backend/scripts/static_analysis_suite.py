@@ -27,7 +27,9 @@ class StaticAnalysisSuite:
     """Comprehensive static analysis suite."""
 
     def __init__(
-        self, output_dir: str = "analysis_reports", fail_on_medium: bool = False,
+        self,
+        output_dir: str = "analysis_reports",
+        fail_on_medium: bool = False,
     ):
         """
         Initialize analysis suite.
@@ -61,7 +63,8 @@ class StaticAnalysisSuite:
         try:
             result = subprocess.run(
                 command,
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=300,  # 5 minute timeout
             )
@@ -88,7 +91,8 @@ class StaticAnalysisSuite:
         missing_tools = []
         for tool_name, check_cmd in required_tools.items():
             returncode, stdout, _stderr = self.run_command(
-                check_cmd, f"Check {tool_name}",
+                check_cmd,
+                f"Check {tool_name}",
             )
             if returncode != 0:
                 missing_tools.append(tool_name)
@@ -224,7 +228,8 @@ class StaticAnalysisSuite:
 
         # Cyclomatic complexity
         _returncode, stdout, _stderr = self.run_command(
-            ["radon", "cc", "app", "-a", "-nb"], "Cyclomatic Complexity Analysis",
+            ["radon", "cc", "app", "-a", "-nb"],
+            "Cyclomatic Complexity Analysis",
         )
 
         with output_file.open("w") as f:
@@ -234,7 +239,8 @@ class StaticAnalysisSuite:
 
         # Maintainability index
         _returncode2, stdout2, _stderr2 = self.run_command(
-            ["radon", "mi", "app", "-nb"], "Maintainability Index Analysis",
+            ["radon", "mi", "app", "-nb"],
+            "Maintainability Index Analysis",
         )
 
         with output_file.open("a") as f:
@@ -310,7 +316,9 @@ class StaticAnalysisSuite:
             f.write("Most used imports:\n")
 
             sorted_imports = sorted(
-                import_counts.items(), key=lambda x: x[1], reverse=True,
+                import_counts.items(),
+                key=lambda x: x[1],
+                reverse=True,
             )
             for module, count in sorted_imports[:20]:
                 f.write(f"  {module}: {count}\n")
@@ -424,7 +432,8 @@ def main():
     args = parser.parse_args()
 
     suite = StaticAnalysisSuite(
-        output_dir=args.output_dir, fail_on_medium=args.fail_on_medium,
+        output_dir=args.output_dir,
+        fail_on_medium=args.fail_on_medium,
     )
 
     success = suite.run_all_analyses()

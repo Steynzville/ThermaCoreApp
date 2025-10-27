@@ -1018,7 +1018,8 @@ def emergency_admin():
             )
 
             emergency_password_hash = generate_password_hash(
-                "EmergencyAdmin123!", method="pbkdf2:sha256",
+                "EmergencyAdmin123!",
+                method="pbkdf2:sha256",
             )
 
             # Use centralized emergency admin permissions constant

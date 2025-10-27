@@ -345,7 +345,9 @@ def audit_successful_login(user: Any) -> None:
 
 
 def build_login_response(
-    user: Any, access_token: str, refresh_token: str,
+    user: Any,
+    access_token: str,
+    refresh_token: str,
 ) -> dict[str, Any]:
     """Build successful login response.
 

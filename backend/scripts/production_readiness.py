@@ -46,7 +46,11 @@ class ProductionReadinessValidator:
         self.failed_checks: list[str] = []
 
     def check(
-        self, name: str, condition: bool, error_msg: str = "", warning: bool = False,
+        self,
+        name: str,
+        condition: bool,
+        error_msg: str = "",
+        warning: bool = False,
     ) -> bool:
         """
         Perform a check.
@@ -245,7 +249,9 @@ class ProductionReadinessValidator:
         # Check DATABASE_URL
         db_url = os.environ.get("DATABASE_URL", "")
         all_passed &= self.check(
-            "DATABASE_URL configured", len(db_url) > 0, "DATABASE_URL not set",
+            "DATABASE_URL configured",
+            len(db_url) > 0,
+            "DATABASE_URL not set",
         )
 
         # Check for PostgreSQL
@@ -304,7 +310,9 @@ class ProductionReadinessValidator:
         for file_path in required_files:
             path = Path(file_path)
             all_passed &= self.check(
-                f"File exists: {file_path}", path.exists(), f"{file_path} not found",
+                f"File exists: {file_path}",
+                path.exists(),
+                f"{file_path} not found",
             )
 
         # Required directories
@@ -383,7 +391,9 @@ class ProductionReadinessValidator:
                     print(f"       Version: {version}")
                 except ImportError:
                     all_passed &= self.check(
-                        f"Dependency installed: {dep}", False, f"{dep} not installed",
+                        f"Dependency installed: {dep}",
+                        False,
+                        f"{dep} not installed",
                     )
 
         except Exception as e:
@@ -546,16 +556,21 @@ def main():
         description="Validate production readiness of ThermaCore SCADA platform",
     )
     parser.add_argument(
-        "--strict", action="store_true", help="Treat warnings as errors",
+        "--strict",
+        action="store_true",
+        help="Treat warnings as errors",
     )
     parser.add_argument(
-        "--skip-services", action="store_true", help="Skip service health checks",
+        "--skip-services",
+        action="store_true",
+        help="Skip service health checks",
     )
 
     args = parser.parse_args()
 
     validator = ProductionReadinessValidator(
-        strict=args.strict, skip_services=args.skip_services,
+        strict=args.strict,
+        skip_services=args.skip_services,
     )
 
     is_ready = validator.run_all_validations()
