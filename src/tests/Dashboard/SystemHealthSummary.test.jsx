@@ -8,10 +8,11 @@ describe("SystemHealthSummary", () => {
     expect(screen.getByText("System Health")).toBeInTheDocument();
   });
 
-  it("displays health score percentage", () => {
-    render(<SystemHealthSummary />);
-    const healthScore = screen.getByText(/\d+%/);
+  it("displays health score", () => {
+    const { container } = render(<SystemHealthSummary />);
+    const healthScore = container.querySelector('.text-3xl');
     expect(healthScore).toBeInTheDocument();
+    expect(healthScore.textContent).toMatch(/\d+%/);
   });
 
   it("shows online units count", () => {
