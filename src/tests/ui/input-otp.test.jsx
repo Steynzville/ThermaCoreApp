@@ -1,5 +1,5 @@
-import { render } from "@testing-library/react";
-import { beforeAll, describe, expect, it } from "vitest";
+import { cleanup, render } from "@testing-library/react";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   InputOTP,
   InputOTPGroup,
@@ -14,7 +14,14 @@ describe("InputOTP Components", () => {
       unobserve() {}
       disconnect() {}
     };
+    vi.useFakeTimers();
   });
+
+  afterEach(() => {
+    cleanup();
+    vi.clearAllTimers();
+  });
+
   it("renders InputOTP", () => {
     const { container } = render(
       <InputOTP maxLength={6}>
