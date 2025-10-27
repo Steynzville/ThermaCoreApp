@@ -1,5 +1,5 @@
 import { render } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import {
   InputOTP,
   InputOTPGroup,
@@ -8,6 +8,13 @@ import {
 } from "../../components/ui/input-otp";
 
 describe("InputOTP Components", () => {
+  beforeAll(() => {
+    global.ResizeObserver = class ResizeObserver {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+  });
   it("renders InputOTP", () => {
     const { container } = render(
       <InputOTP maxLength={6}>

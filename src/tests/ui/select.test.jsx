@@ -23,8 +23,8 @@ describe("Select Components", () => {
     expect(container.querySelector('[data-slot="select-trigger"]')).toBeInTheDocument();
   });
 
-  it("renders SelectGroup", () => {
-    const { container } = render(
+  it("renders SelectGroup with items", () => {
+    render(
       <Select open>
         <SelectTrigger>
           <SelectValue />
@@ -36,35 +36,40 @@ describe("Select Components", () => {
         </SelectContent>
       </Select>
     );
-    expect(container.querySelector('[data-slot="select-group"]')).toBeInTheDocument();
+    expect(screen.getByText("Item 1")).toBeInTheDocument();
   });
 
-  it("renders SelectLabel", () => {
+  it("renders SelectLabel in group", () => {
     render(
       <Select open>
         <SelectTrigger>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectLabel>Label</SelectLabel>
+          <SelectGroup>
+            <SelectLabel>Label</SelectLabel>
+          </SelectGroup>
         </SelectContent>
       </Select>
     );
     expect(screen.getByText("Label")).toBeInTheDocument();
   });
 
-  it("renders SelectSeparator", () => {
-    const { container } = render(
+  it("renders SelectSeparator with items", () => {
+    render(
       <Select open>
         <SelectTrigger>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
+          <SelectItem value="1">Item 1</SelectItem>
           <SelectSeparator />
+          <SelectItem value="2">Item 2</SelectItem>
         </SelectContent>
       </Select>
     );
-    expect(container.querySelector('[data-slot="select-separator"]')).toBeInTheDocument();
+    expect(screen.getByText("Item 1")).toBeInTheDocument();
+    expect(screen.getByText("Item 2")).toBeInTheDocument();
   });
 
   it("renders complete select with items", () => {

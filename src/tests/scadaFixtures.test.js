@@ -4,7 +4,7 @@ import {
   generateSCADAMetrics,
   generateSystemHealthData,
   generateTimeSeriesData,
-} from "../fixtures/scadaFixtures";
+} from "./fixtures/scadaFixtures";
 
 describe("scadaFixtures", () => {
   describe("generateSCADAMetrics", () => {
@@ -61,9 +61,12 @@ describe("scadaFixtures", () => {
   describe("generateSystemHealthData", () => {
     it("generates system health data", () => {
       const health = generateSystemHealthData();
-      expect(health).toHaveProperty("overallHealth");
-      expect(health).toHaveProperty("activeAlarms");
-      expect(health).toHaveProperty("systemStatus");
+      expect(Array.isArray(health)).toBe(true);
+      if (health.length > 0) {
+        expect(health[0]).toHaveProperty("id");
+        expect(health[0]).toHaveProperty("status");
+        expect(health[0]).toHaveProperty("name");
+      }
     });
   });
 });

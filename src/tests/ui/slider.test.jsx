@@ -1,8 +1,15 @@
 import { render } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { Slider } from "../../components/ui/slider";
 
 describe("Slider", () => {
+  beforeAll(() => {
+    global.ResizeObserver = class ResizeObserver {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+  });
   it("renders slider component", () => {
     const { container } = render(<Slider defaultValue={[50]} />);
     expect(container.querySelector('[data-slot="slider"]')).toBeInTheDocument();
