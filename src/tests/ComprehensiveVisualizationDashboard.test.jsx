@@ -7,8 +7,8 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import ComprehensiveVisualizationDashboard from "../components/visualization/ComprehensiveVisualizationDashboard";
-import { TenantProvider } from "../context/TenantContext";
 import { AuthProvider } from "../context/AuthContext";
+import { TenantProvider } from "../context/TenantContext";
 
 // Mock useRealtimeData hook
 vi.mock("../hooks/useRealtimeData", () => ({

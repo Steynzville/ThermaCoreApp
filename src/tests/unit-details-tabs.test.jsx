@@ -5,8 +5,8 @@
  */
 
 import { render } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
+import { describe, expect, it, vi } from "vitest";
 import UnitHistoryTab from "../components/unit-details/UnitHistoryTab";
 import UnitStatusHeader from "../components/unit-details/UnitStatusHeader";
 
@@ -50,7 +50,7 @@ describe("UnitStatusHeader Component", () => {
     const { container } = render(
       <MemoryRouter>
         <UnitStatusHeader unit={mockUnit} getStatusColor={mockGetStatusColor} />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
     expect(container).toBeTruthy();
   });

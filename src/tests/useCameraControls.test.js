@@ -258,7 +258,7 @@ describe("useCameraControls Hook", () => {
 
   it("should exit fullscreen when already in fullscreen", async () => {
     const { result } = renderHook(() => useCameraControls(mockSettings));
-    
+
     // Set isFullscreen to true
     act(() => {
       Object.defineProperty(document, "fullscreenElement", {
@@ -281,7 +281,9 @@ describe("useCameraControls Hook", () => {
   it("should handle fullscreen errors gracefully", async () => {
     const { result } = renderHook(() => useCameraControls(mockSettings));
     const mockContainer = {
-      requestFullscreen: vi.fn().mockRejectedValue(new Error("Fullscreen denied")),
+      requestFullscreen: vi
+        .fn()
+        .mockRejectedValue(new Error("Fullscreen denied")),
     };
 
     act(() => {
