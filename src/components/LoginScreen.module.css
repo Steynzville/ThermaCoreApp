@@ -142,7 +142,7 @@
     transform 0.2s ease;
 }
 
-/* Focus states with yellow/gold rings */
+/* Focus states with yellow/gold rings - unified for both light and dark modes */
 .formGroup input:focus,
 .formInput:focus,
 .inputFocused {
@@ -202,12 +202,12 @@
   -webkit-text-fill-color: #000000;
 }
 
-/* Light mode focus states */
+/* Light mode focus states - unified with dark mode to use yellow */
 :global(html:not(.dark)) .formGroup input:focus,
 :global(html:not(.dark)) .formInput:focus,
 :global(html:not(.dark)) .inputFocused {
-  border: 2px solid #00ff00; /* Neon green color */
-  box-shadow: 0 0 0 2px rgba(0, 255, 0, 0.3); /* Neon green with transparency */
+  border: 2px solid #ffd700; /* Yellow color */
+  box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.3); /* Yellow with transparency */
 }
 
 /* Light mode error state */
@@ -325,11 +325,16 @@
 
 .forgotPasswordLink {
   color: #a0aec0;
-  text-decoration: none;
+  text-decoration: underline;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 14px;
 }
 
 .forgotPasswordLink:hover {
-  text-decoration: underline;
+  opacity: 0.8;
 }
 
 /* === BUTTONS === */
@@ -609,7 +614,7 @@
   text-shadow: 0 0 12px rgba(255, 68, 68, 0.4);
 }
 
-/* Enhanced 3D input effects on focus */
+/* Enhanced 3D input effects on focus - unified with yellow for both modes */
 .inputFocused {
   transform: translateY(-1px);
   box-shadow:
@@ -621,9 +626,9 @@
 :global(html:not(.dark)) .inputFocused {
   transform: translateY(-1px);
   box-shadow:
-    0 0 0 2px rgba(0, 255, 0, 0.3),
+    0 0 0 2px rgba(255, 215, 0, 0.3),
     inset 0 1px 3px rgba(0, 0, 0, 0.15),
-    0 4px 8px rgba(0, 255, 0, 0.2);
+    0 4px 8px rgba(255, 215, 0, 0.2);
 }
 
 /* 3D Button Effects */
@@ -743,4 +748,38 @@
 
 :global(.dark) .registerLink:active {
   color: #bfdbfe;
+}
+
+/* Forgot Password Page Title Styles */
+.forgotPasswordTitle {
+  color: #f8fafc;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.2;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+:global(html:not(.dark)) .forgotPasswordTitle {
+  color: #1f2937;
+}
+
+/* Back to Login Button Styles */
+.backToLoginButton {
+  width: 100%;
+  text-align: center;
+  margin-top: 1rem;
+  color: #a0aec0;
+  text-decoration: underline;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.backToLoginButton:hover {
+  opacity: 0.8;
 }

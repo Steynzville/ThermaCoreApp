@@ -301,8 +301,11 @@ def login(data):
         # Update last login timestamp
         update_last_login(user)
 
-        # Create JWT tokens
-        access_token, refresh_token, error = create_jwt_tokens(user)
+        # Get keep_me_signed_in parameter (defaults to False)
+        keep_me_signed_in = data.get("keep_me_signed_in", False)
+
+        # Create JWT tokens with appropriate expiry
+        access_token, refresh_token, error = create_jwt_tokens(user, keep_me_signed_in)
         if error:
             return error
 
@@ -322,12 +325,18 @@ def login(data):
 
             token_schema = TokenSchema()
 
+            # Calculate expires_in based on keep_me_signed_in
+            from datetime import timedelta
+            
+            if keep_me_signed_in:
+                expires_in_seconds = timedelta(days=30).total_seconds()
+            else:
+                expires_in_seconds = timedelta(hours=24).total_seconds()
+
             response_data = {
                 "access_token": access_token,
                 "refresh_token": refresh_token,
-                "expires_in": current_app.config[
-                    "JWT_ACCESS_TOKEN_EXPIRES"
-                ].total_seconds(),
+                "expires_in": expires_in_seconds,
                 "user": user,
             }
 

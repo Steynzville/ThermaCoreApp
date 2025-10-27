@@ -61,7 +61,7 @@ const ForgotPassword = () => {
           />
         </div>
         <div className={styles.titleContainer}>
-          <h1 className={styles.title}>Forgot Password?</h1>
+          <h1 className={styles.forgotPasswordTitle}>Forgot Password?</h1>
           <p className={styles.companySubtitle}>
             Enter your email to receive a password reset link
           </p>
@@ -111,15 +111,7 @@ const ForgotPassword = () => {
           <button
             type="button"
             onClick={handleBackToLogin}
-            className={styles.forgotPasswordLink}
-            style={{
-              width: "100%",
-              textAlign: "center",
-              marginTop: "1rem",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-            }}
+            className={styles.backToLoginButton}
           >
             Back to Login
           </button>

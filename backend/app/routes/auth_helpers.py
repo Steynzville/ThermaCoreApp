@@ -217,11 +217,13 @@ def update_last_login(user: Any) -> None:
 
 def create_jwt_tokens(
     user: Any,
+    keep_me_signed_in: bool = False,
 ) -> tuple[str | None, str | None, tuple[Any, int] | None]:
     """Create JWT access and refresh tokens for user.
 
     Args:
         user: User object
+        keep_me_signed_in: If True, set token expiry to 30 days, else 24 hours
 
     Returns:
         Tuple of (access_token, refresh_token, error_response)
@@ -248,12 +250,23 @@ def create_jwt_tokens(
                 "username": user.username,
                 "user_id": user_id_str,
                 "role": role_value,
+                "keep_me_signed_in": keep_me_signed_in,
             },
         )
+
+        # Set expiry based on keep_me_signed_in
+        # 30 days if keep_me_signed_in is True, 24 hours otherwise
+        from datetime import timedelta
+        
+        if keep_me_signed_in:
+            expires_delta = timedelta(days=30)
+        else:
+            expires_delta = timedelta(hours=24)
 
         access_token = create_access_token(
             identity=user_id_str,
             additional_claims=additional_claims,
+            expires_delta=expires_delta,
         )
         refresh_token = create_refresh_token(
             identity=user_id_str,

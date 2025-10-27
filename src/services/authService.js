@@ -38,9 +38,10 @@ let authToken = null;
  * Authenticate user with username/email and password
  * @param {string} identifier - Username or email
  * @param {string} password - User password
+ * @param {boolean} keepMeSignedIn - Whether to request extended JWT expiry
  * @returns {Promise<Object>} Authentication result
  */
-export const login = async (identifier, password) => {
+export const login = async (identifier, password, keepMeSignedIn = false) => {
   const API_BASE_URL =
     import.meta.env.VITE_API_BASE_URL || "https://thermacoreapp.onrender.com";
 
@@ -56,7 +57,11 @@ export const login = async (identifier, password) => {
     const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: identifier, password: password }),
+      body: JSON.stringify({ 
+        username: identifier, 
+        password: password,
+        keep_me_signed_in: keepMeSignedIn 
+      }),
     });
 
     const result = await response.json();

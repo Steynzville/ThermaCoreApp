@@ -21,13 +21,23 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  // Load authentication state from localStorage on component mount
+  // Load authentication state from localStorage or sessionStorage on component mount
   useEffect(() => {
-    const savedUser = localStorage.getItem("thermacore_user");
-    const savedRole = localStorage.getItem("thermacore_role");
-    const savedBackendRole = localStorage.getItem("thermacore_backend_role");
+    // Try localStorage first (for "keep me signed in")
+    let savedUser = localStorage.getItem("thermacore_user");
+    let savedRole = localStorage.getItem("thermacore_role");
+    let savedBackendRole = localStorage.getItem("thermacore_backend_role");
+    let savedToken = localStorage.getItem("thermacore_token");
 
-    if (savedUser && savedRole) {
+    // If not in localStorage, try sessionStorage (session-only login)
+    if (!savedUser) {
+      savedUser = sessionStorage.getItem("thermacore_user");
+      savedRole = sessionStorage.getItem("thermacore_role");
+      savedBackendRole = sessionStorage.getItem("thermacore_backend_role");
+      savedToken = sessionStorage.getItem("thermacore_token");
+    }
+
+    if (savedUser && savedRole && savedToken) {
       const parsedUser = JSON.parse(savedUser);
       setUser(parsedUser);
 
@@ -43,12 +53,12 @@ export const AuthProvider = ({ children }) => {
     setIsLoading(false);
   }, []);
 
-  const login = async (username, password) => {
+  const login = async (username, password, keepMeSignedIn = false) => {
     setIsLoading(true);
 
     try {
       // Call the backend authentication API
-      const result = await authService.login(username, password);
+      const result = await authService.login(username, password, keepMeSignedIn);
 
       if (result.success) {
         // Backend role is the actual role from the API (admin/operator/viewer)
@@ -75,11 +85,21 @@ export const AuthProvider = ({ children }) => {
         setBackendRole(userBackendRole);
         setPermissions(userPermissions);
 
-        // Persist to localStorage
-        localStorage.setItem("thermacore_user", JSON.stringify(userData));
-        localStorage.setItem("thermacore_role", userFrontendRole);
-        localStorage.setItem("thermacore_backend_role", userBackendRole);
-        localStorage.setItem("thermacore_token", result.token);
+        // Determine which storage to use based on keepMeSignedIn
+        const storage = keepMeSignedIn ? localStorage : sessionStorage;
+
+        // Clear the other storage to prevent conflicts
+        const otherStorage = keepMeSignedIn ? sessionStorage : localStorage;
+        otherStorage.removeItem("thermacore_user");
+        otherStorage.removeItem("thermacore_role");
+        otherStorage.removeItem("thermacore_backend_role");
+        otherStorage.removeItem("thermacore_token");
+
+        // Persist to selected storage
+        storage.setItem("thermacore_user", JSON.stringify(userData));
+        storage.setItem("thermacore_role", userFrontendRole);
+        storage.setItem("thermacore_backend_role", userBackendRole);
+        storage.setItem("thermacore_token", result.token);
 
         setIsLoading(false);
         return { success: true, role: userFrontendRole };
@@ -107,11 +127,15 @@ export const AuthProvider = ({ children }) => {
     setBackendRole(null);
     setPermissions(null);
 
-    // Clear from localStorage
+    // Clear from both localStorage and sessionStorage
     localStorage.removeItem("thermacore_user");
     localStorage.removeItem("thermacore_role");
     localStorage.removeItem("thermacore_backend_role");
     localStorage.removeItem("thermacore_token");
+    sessionStorage.removeItem("thermacore_user");
+    sessionStorage.removeItem("thermacore_role");
+    sessionStorage.removeItem("thermacore_backend_role");
+    sessionStorage.removeItem("thermacore_token");
     setIsLoggingOut(false);
   };
 
