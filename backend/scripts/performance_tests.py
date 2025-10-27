@@ -192,7 +192,7 @@ class ThermaCoreCRUDUser(HttpUser):
                 "name": f"Updated Unit {unit_id}",
                 "status": secure_random.choice(["online", "offline", "maintenance"]),
                 "health_status": secure_random.choice(
-                    ["optimal", "warning", "critical"]
+                    ["optimal", "warning", "critical"],
                 ),
                 "temp_outside": round(secure_random.uniform(-10, 40), 1),
                 "humidity": round(secure_random.uniform(30, 90), 1),

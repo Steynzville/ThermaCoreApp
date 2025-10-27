@@ -10,9 +10,10 @@ This script verifies that:
 
 import os
 import sys
+from pathlib import Path
 
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from sqlalchemy import inspect
 
@@ -86,7 +87,7 @@ def verify_existing_users_approved():
 
         if total_users == 0:
             print(
-                "⚠ No users found in database (this is expected for a fresh installation)"
+                "⚠ No users found in database (this is expected for a fresh installation)",
             )
             return True
 
@@ -106,7 +107,7 @@ def verify_existing_users_approved():
             else:
                 no_status_users += 1
                 print(
-                    f"⚠ User '{user.username}' has unexpected status: {user.registration_status}"
+                    f"⚠ User '{user.username}' has unexpected status: {user.registration_status}",
                 )
 
         print("\nUsers by status:")
@@ -147,7 +148,7 @@ def verify_user_can_login():
 
         if len(approved_users) == 0:
             print(
-                "⚠ No approved users found (this is expected for a fresh installation)"
+                "⚠ No approved users found (this is expected for a fresh installation)",
             )
             return True
 

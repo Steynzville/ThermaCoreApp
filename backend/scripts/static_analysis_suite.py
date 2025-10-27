@@ -14,21 +14,20 @@ Usage:
     python static_analysis_suite.py [--fail-on-medium] [--output-dir reports]
 """
 
-import sys
-import os
+import argparse
 import json
 import subprocess
-import argparse
+import sys
+from datetime import datetime, timezone
 from pathlib import Path
-from datetime import datetime
-from typing import Dict, List, Any
+from typing import Any
 
 
 class StaticAnalysisSuite:
     """Comprehensive static analysis suite."""
 
     def __init__(
-        self, output_dir: str = "analysis_reports", fail_on_medium: bool = False
+        self, output_dir: str = "analysis_reports", fail_on_medium: bool = False,
     ):
         """
         Initialize analysis suite.
@@ -40,10 +39,10 @@ class StaticAnalysisSuite:
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
         self.fail_on_medium = fail_on_medium
-        self.results: Dict[str, Any] = {}
-        self.failed_checks: List[str] = []
+        self.results: dict[str, Any] = {}
+        self.failed_checks: list[str] = []
 
-    def run_command(self, command: List[str], description: str) -> tuple:
+    def run_command(self, command: list[str], description: str) -> tuple:
         """
         Run a command and capture output.
 
@@ -62,7 +61,7 @@ class StaticAnalysisSuite:
         try:
             result = subprocess.run(
                 command,
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=300,  # 5 minute timeout
             )
@@ -88,8 +87,8 @@ class StaticAnalysisSuite:
 
         missing_tools = []
         for tool_name, check_cmd in required_tools.items():
-            returncode, stdout, stderr = self.run_command(
-                check_cmd, f"Check {tool_name}"
+            returncode, stdout, _stderr = self.run_command(
+                check_cmd, f"Check {tool_name}",
             )
             if returncode != 0:
                 missing_tools.append(tool_name)
@@ -109,7 +108,7 @@ class StaticAnalysisSuite:
         """Run Bandit security vulnerability scan."""
         output_file = self.output_dir / "bandit_report.json"
 
-        returncode, stdout, stderr = self.run_command(
+        _returncode, _stdout, _stderr = self.run_command(
             [
                 "bandit",
                 "-r",
@@ -126,7 +125,7 @@ class StaticAnalysisSuite:
 
         # Bandit returns non-zero if issues found, but still creates report
         if output_file.exists():
-            with open(output_file, "r") as f:
+            with output_file.open() as f:
                 report = json.load(f)
 
             high_severity = [
@@ -151,7 +150,7 @@ class StaticAnalysisSuite:
                 "report_file": str(output_file),
             }
 
-            print(f"\n📊 Bandit Results:")
+            print("\n📊 Bandit Results:")
             print(f"   HIGH:   {len(high_severity)}")
             print(f"   MEDIUM: {len(medium_severity)}")
             print(f"   LOW:    {len(low_severity)}")
@@ -159,7 +158,7 @@ class StaticAnalysisSuite:
 
             if high_severity:
                 print(
-                    f"\n❌ CRITICAL: {len(high_severity)} high severity vulnerabilities found"
+                    f"\n❌ CRITICAL: {len(high_severity)} high severity vulnerabilities found",
                 )
                 for issue in high_severity[:3]:
                     print(f"   - {issue.get('test_id')}: {issue.get('issue_text')}")
@@ -169,15 +168,15 @@ class StaticAnalysisSuite:
 
             if self.fail_on_medium and medium_severity:
                 print(
-                    f"\n⚠️  {len(medium_severity)} medium severity vulnerabilities found"
+                    f"\n⚠️  {len(medium_severity)} medium severity vulnerabilities found",
                 )
                 self.failed_checks.append("bandit_medium")
                 return False
 
-            print(f"\n✅ Security scan passed")
+            print("\n✅ Security scan passed")
             return True
         else:
-            print(f"❌ Bandit scan failed to generate report")
+            print("❌ Bandit scan failed to generate report")
             self.failed_checks.append("bandit_failed")
             return False
 
@@ -185,13 +184,13 @@ class StaticAnalysisSuite:
         """Run Ruff code quality analysis."""
         output_file = self.output_dir / "ruff_report.json"
 
-        returncode, stdout, stderr = self.run_command(
+        _returncode, stdout, stderr = self.run_command(
             ["ruff", "check", "app", "--output-format=json"],
             "Ruff Code Quality Analysis",
         )
 
         # Write JSON output to file
-        with open(output_file, "w") as f:
+        with output_file.open("w") as f:
             f.write(stdout)
             if stderr:
                 f.write("\n\nSTDERR:\n")
@@ -207,7 +206,7 @@ class StaticAnalysisSuite:
 
         self.results["ruff"] = {"issues": issue_count, "report_file": str(output_file)}
 
-        print(f"\n📊 Ruff Results:")
+        print("\n📊 Ruff Results:")
         print(f"   Issues: {issue_count}")
         print(f"   Report: {output_file}")
 
@@ -216,7 +215,7 @@ class StaticAnalysisSuite:
             self.failed_checks.append("ruff_excessive")
             return False
 
-        print(f"\n✅ Code quality check passed")
+        print("\n✅ Code quality check passed")
         return True
 
     def run_complexity_analysis(self):
@@ -224,21 +223,21 @@ class StaticAnalysisSuite:
         output_file = self.output_dir / "complexity_report.txt"
 
         # Cyclomatic complexity
-        returncode, stdout, stderr = self.run_command(
-            ["radon", "cc", "app", "-a", "-nb"], "Cyclomatic Complexity Analysis"
+        _returncode, stdout, _stderr = self.run_command(
+            ["radon", "cc", "app", "-a", "-nb"], "Cyclomatic Complexity Analysis",
         )
 
-        with open(output_file, "w") as f:
+        with output_file.open("w") as f:
             f.write("=== CYCLOMATIC COMPLEXITY ===\n\n")
             f.write(stdout)
             f.write("\n\n")
 
         # Maintainability index
-        returncode2, stdout2, stderr2 = self.run_command(
-            ["radon", "mi", "app", "-nb"], "Maintainability Index Analysis"
+        _returncode2, stdout2, _stderr2 = self.run_command(
+            ["radon", "mi", "app", "-nb"], "Maintainability Index Analysis",
         )
 
-        with open(output_file, "a") as f:
+        with output_file.open("a") as f:
             f.write("=== MAINTAINABILITY INDEX ===\n\n")
             f.write(stdout2)
 
@@ -263,20 +262,20 @@ class StaticAnalysisSuite:
             "report_file": str(output_file),
         }
 
-        print(f"\n📊 Complexity Results:")
+        print("\n📊 Complexity Results:")
         print(f"   Functions with CC > 10: {len(complex_functions)}")
         print(
-            f"   Functions with CC > 15: {len([f for f in complex_functions if f[1] > 15])}"
+            f"   Functions with CC > 15: {len([f for f in complex_functions if f[1] > 15])}",
         )
         print(f"   Report: {output_file}")
 
         if len([f for f in complex_functions if f[1] > 20]) > 0:
-            print(f"\n⚠️  Warning: Functions with very high complexity (>20) detected")
+            print("\n⚠️  Warning: Functions with very high complexity (>20) detected")
             for func, score in complex_functions[:3]:
                 if score > 20:
                     print(f"   - {func[:60]}... (CC: {score})")
 
-        print(f"\n✅ Complexity analysis complete")
+        print("\n✅ Complexity analysis complete")
         return True
 
     def run_import_analysis(self):
@@ -286,18 +285,17 @@ class StaticAnalysisSuite:
         print("=" * 60)
 
         import_counts = {}
-        unused_imports = []
 
         # Simple import analysis
         for py_file in Path("app").rglob("*.py"):
             try:
-                with open(py_file, "r") as f:
+                with py_file.open() as f:
                     content = f.read()
                     lines = content.split("\n")
 
                     for line in lines:
                         line = line.strip()
-                        if line.startswith("import ") or line.startswith("from "):
+                        if line.startswith(("import ", "from ")):
                             module = line.split()[1] if len(line.split()) > 1 else ""
                             if module:
                                 import_counts[module] = import_counts.get(module, 0) + 1
@@ -306,13 +304,13 @@ class StaticAnalysisSuite:
 
         # Write report
         output_file = self.output_dir / "import_analysis.txt"
-        with open(output_file, "w") as f:
+        with output_file.open("w") as f:
             f.write("=== IMPORT ANALYSIS ===\n\n")
             f.write(f"Total unique imports: {len(import_counts)}\n\n")
             f.write("Most used imports:\n")
 
             sorted_imports = sorted(
-                import_counts.items(), key=lambda x: x[1], reverse=True
+                import_counts.items(), key=lambda x: x[1], reverse=True,
             )
             for module, count in sorted_imports[:20]:
                 f.write(f"  {module}: {count}\n")
@@ -322,10 +320,10 @@ class StaticAnalysisSuite:
             "report_file": str(output_file),
         }
 
-        print(f"\n📊 Import Analysis Results:")
+        print("\n📊 Import Analysis Results:")
         print(f"   Unique imports: {len(import_counts)}")
         print(f"   Report: {output_file}")
-        print(f"\n✅ Import analysis complete")
+        print("\n✅ Import analysis complete")
         return True
 
     def generate_summary_report(self):
@@ -333,13 +331,13 @@ class StaticAnalysisSuite:
         summary_file = self.output_dir / "analysis_summary.json"
 
         summary = {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "results": self.results,
             "failed_checks": self.failed_checks,
             "overall_status": "PASSED" if not self.failed_checks else "FAILED",
         }
 
-        with open(summary_file, "w") as f:
+        with summary_file.open("w") as f:
             json.dump(summary, f, indent=2)
 
         print("\n" + "=" * 60)
@@ -347,26 +345,26 @@ class StaticAnalysisSuite:
         print("=" * 60)
 
         if "bandit" in self.results:
-            print(f"\n🔒 Security (Bandit):")
+            print("\n🔒 Security (Bandit):")
             print(f"   High:   {self.results['bandit']['high']}")
             print(f"   Medium: {self.results['bandit']['medium']}")
             print(f"   Low:    {self.results['bandit']['low']}")
 
         if "ruff" in self.results:
-            print(f"\n📝 Code Quality (Ruff):")
+            print("\n📝 Code Quality (Ruff):")
             print(f"   Issues: {self.results['ruff']['issues']}")
 
         if "complexity" in self.results:
-            print(f"\n📊 Complexity (Radon):")
+            print("\n📊 Complexity (Radon):")
             print(
-                f"   Complex functions (CC>10): {self.results['complexity']['complex_functions']}"
+                f"   Complex functions (CC>10): {self.results['complexity']['complex_functions']}",
             )
             print(
-                f"   High complexity (CC>15):   {self.results['complexity']['high_complexity']}"
+                f"   High complexity (CC>15):   {self.results['complexity']['high_complexity']}",
             )
 
         if "imports" in self.results:
-            print(f"\n📦 Imports:")
+            print("\n📦 Imports:")
             print(f"   Unique imports: {self.results['imports']['unique_imports']}")
 
         print(f"\n📄 Summary Report: {summary_file}")
@@ -374,10 +372,10 @@ class StaticAnalysisSuite:
 
         if self.failed_checks:
             print(f"\n❌ FAILED CHECKS: {', '.join(self.failed_checks)}")
-            print(f"\n⚠️  Static analysis completed with failures")
+            print("\n⚠️  Static analysis completed with failures")
             return False
         else:
-            print(f"\n✅ All static analysis checks passed!")
+            print("\n✅ All static analysis checks passed!")
             return True
 
     def run_all_analyses(self) -> bool:
@@ -410,7 +408,7 @@ class StaticAnalysisSuite:
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
-        description="Run comprehensive static analysis on ThermaCore SCADA platform"
+        description="Run comprehensive static analysis on ThermaCore SCADA platform",
     )
     parser.add_argument(
         "--fail-on-medium",
@@ -426,7 +424,7 @@ def main():
     args = parser.parse_args()
 
     suite = StaticAnalysisSuite(
-        output_dir=args.output_dir, fail_on_medium=args.fail_on_medium
+        output_dir=args.output_dir, fail_on_medium=args.fail_on_medium,
     )
 
     success = suite.run_all_analyses()
