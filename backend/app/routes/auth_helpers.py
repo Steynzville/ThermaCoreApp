@@ -1,7 +1,7 @@
 """Helper functions for auth route refactoring."""
 
 import secrets
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from flask import current_app, request
@@ -50,7 +50,7 @@ def fetch_user(username: str) -> tuple[Any | None, tuple[Any, int] | None]:
         return user, None
     except Exception as db_error:
         current_app.logger.exception(
-            f"Database error during login query: {db_error}",
+            "Database error during login query",
             extra={
                 "event": "database_error",
                 "operation": "user_query",
@@ -198,7 +198,7 @@ def update_last_login(user: Any) -> None:
         )
     except Exception as db_error:
         current_app.logger.exception(
-            f"Database error updating last login: {db_error}",
+            "Database error updating last login",
             extra={
                 "event": "last_login_update_failed",
                 "username": user.username,
@@ -208,9 +208,9 @@ def update_last_login(user: Any) -> None:
         # Rollback the session to prevent inconsistent state
         try:
             db.session.rollback()
-        except Exception as rollback_error:
+        except Exception:
             current_app.logger.exception(
-                f"Failed to rollback after last_login error: {rollback_error}",
+                "Failed to rollback after last_login error",
             )
         # Continue with login even if last_login update fails
 
@@ -256,8 +256,6 @@ def create_jwt_tokens(
 
         # Set expiry based on keep_me_signed_in
         # 30 days if keep_me_signed_in is True, 24 hours otherwise
-        from datetime import timedelta
-        
         if keep_me_signed_in:
             expires_delta = timedelta(days=30)
         else:
@@ -280,7 +278,7 @@ def create_jwt_tokens(
 
     except (ValueError, ValidationException, AttributeError) as error:
         current_app.logger.exception(
-            f"Error during token generation: {error}",
+            "Error during token generation",
             extra={
                 "event": "token_generation_failed",
                 "username": user.username,
@@ -299,7 +297,7 @@ def create_jwt_tokens(
         )
     except Exception as error:
         current_app.logger.exception(
-            f"Unexpected error during token generation: {error}",
+            "Unexpected error during token generation",
             extra={
                 "event": "token_generation_failed",
                 "username": user.username,
@@ -339,15 +337,15 @@ def audit_successful_login(user: Any) -> None:
             user_agent=request.headers.get("User-Agent"),
             outcome="success",
         )
-    except Exception as audit_error:
+    except Exception:
         current_app.logger.exception(
-            f"Failed to audit successful login: {audit_error}",
+            "Failed to audit successful login",
             extra={"event": "audit_failure", "username": user.username},
         )
 
 
 def build_login_response(
-    user: Any, access_token: str, refresh_token: str
+    user: Any, access_token: str, refresh_token: str,
 ) -> dict[str, Any]:
     """Build successful login response.
 

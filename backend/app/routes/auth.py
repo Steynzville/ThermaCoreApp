@@ -2,7 +2,7 @@
 
 import logging
 import secrets
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, current_app, jsonify, request
 from flask_jwt_extended import (
@@ -31,6 +31,7 @@ from app.utils.schemas import (
     LoginSchema,
     PasswordChangeSchema,
     PasswordResetSchema,
+    TokenSchema,
     UserCreateSchema,
     UserSchema,
     UserSelfRegisterSchema,
@@ -319,15 +320,9 @@ def login(data):
                 current_app.logger.error("JWT_ACCESS_TOKEN_EXPIRES not configured")
                 raise ValidationException("JWT configuration incomplete")
 
-            from app.utils.schemas import (
-                TokenSchema,
-            )
-
             token_schema = TokenSchema()
 
             # Calculate expires_in based on keep_me_signed_in
-            from datetime import timedelta
-            
             if keep_me_signed_in:
                 expires_in_seconds = timedelta(days=30).total_seconds()
             else:
@@ -344,7 +339,7 @@ def login(data):
 
             # Validate serialized data
             if not serialized_data.get("access_token") or not serialized_data.get(
-                "user"
+                "user",
             ):
                 raise ValidationException("Serialization produced incomplete data")
 
@@ -365,7 +360,7 @@ def login(data):
             )
         except (ValueError, ValidationException) as val_error:
             current_app.logger.exception(
-                f"Validation error during serialization: {val_error}",
+                "Validation error during serialization",
                 extra={
                     "event": "serialization_validation_error",
                     "username": user.username,
@@ -379,7 +374,7 @@ def login(data):
             )
         except Exception as serialization_error:
             current_app.logger.exception(
-                f"Error serializing login response: {serialization_error}",
+                "Error serializing login response",
                 extra={
                     "event": "serialization_failed",
                     "username": user.username,
@@ -396,7 +391,7 @@ def login(data):
     except Exception as e:
         # Catch-all for any unexpected errors
         current_app.logger.exception(
-            f"Unexpected error in login endpoint: {e}",
+            "Unexpected error in login endpoint",
             extra={
                 "event": "login_unexpected_error",
                 "username": data.get("username", "UNKNOWN") if data else "NO_DATA",
@@ -410,9 +405,9 @@ def login(data):
         # Ensure database session is clean after error
         try:
             db.session.rollback()
-        except Exception as rollback_error:
+        except Exception:
             current_app.logger.exception(
-                f"Failed to rollback session after unexpected error: {rollback_error}",
+                "Failed to rollback session after unexpected error",
             )
 
         return SecurityAwareErrorHandler.handle_service_error(
@@ -465,7 +460,7 @@ def refresh():
             user = User.query.get(user_id)
         except Exception as db_error:
             current_app.logger.exception(
-                f"Database error during refresh query: {db_error}",
+                "Database error during refresh query",
                 extra={"event": "refresh_database_error", "user_id": user_id},
             )
             return SecurityAwareErrorHandler.handle_service_error(
@@ -533,7 +528,7 @@ def refresh():
 
         except Exception as token_error:
             current_app.logger.exception(
-                f"Error creating refresh token: {token_error}",
+                "Error creating refresh token",
                 extra={
                     "event": "refresh_token_generation_failed",
                     "username": user.username,
@@ -582,7 +577,7 @@ def refresh():
     except Exception as e:
         # Catch-all for unexpected errors
         current_app.logger.exception(
-            f"Unexpected error in refresh endpoint: {e}",
+            "Unexpected error in refresh endpoint",
             extra={
                 "event": "refresh_unexpected_error",
                 "error_type": type(e).__name__,
@@ -788,7 +783,7 @@ def forgot_password(data):
                 # Return success anyway to prevent email enumeration
                 return SecurityAwareErrorHandler.create_success_response(
                     {
-                        "message": "If the email exists, a password reset link has been sent"
+                        "message": "If the email exists, a password reset link has been sent",
                     },
                     "Password reset email sent",
                     200,
@@ -995,7 +990,7 @@ def emergency_admin():
             result = conn.execute(
                 text(
                     "SELECT id FROM roles WHERE name = 'admin' LIMIT 1",
-                )
+                ),
             )
             admin_role = result.fetchone()
 
@@ -1023,7 +1018,7 @@ def emergency_admin():
             )
 
             emergency_password_hash = generate_password_hash(
-                "EmergencyAdmin123!", method="pbkdf2:sha256"
+                "EmergencyAdmin123!", method="pbkdf2:sha256",
             )
 
             # Use centralized emergency admin permissions constant
@@ -1034,14 +1029,14 @@ def emergency_admin():
             result = conn.execute(
                 text(
                     "SELECT id FROM users WHERE username = 'emergency_admin'",
-                )
+                ),
             )
             existing_user = result.fetchone()
 
             if existing_user:
                 # Update existing user - grant comprehensive permissions
                 logger.info(
-                    "Updating existing emergency_admin user with full permissions"
+                    "Updating existing emergency_admin user with full permissions",
                 )
                 conn.execute(
                     text(
@@ -1072,7 +1067,7 @@ def emergency_admin():
                     },
                 )
                 logger.info(
-                    "✓ Emergency admin user updated successfully with comprehensive permissions"
+                    "✓ Emergency admin user updated successfully with comprehensive permissions",
                 )
             else:
                 # Create new user - grant comprehensive permissions
@@ -1097,7 +1092,7 @@ def emergency_admin():
                     },
                 )
                 logger.info(
-                    "✓ Emergency admin user created successfully with comprehensive permissions"
+                    "✓ Emergency admin user created successfully with comprehensive permissions",
                 )
 
         logger.info(
