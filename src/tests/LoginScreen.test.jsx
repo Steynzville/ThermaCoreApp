@@ -58,7 +58,7 @@ describe("LoginScreen - Error Handling", () => {
 
     // Wait for login to complete
     await waitFor(() => {
-      expect(authService.login).toHaveBeenCalledWith("wronguser", "wrongpass");
+      expect(authService.login).toHaveBeenCalledWith("wronguser", "wrongpass", false);
     });
 
     // Verify error was set

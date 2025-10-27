@@ -58,7 +58,11 @@ export const AuthProvider = ({ children }) => {
 
     try {
       // Call the backend authentication API
-      const result = await authService.login(username, password, keepMeSignedIn);
+      const result = await authService.login(
+        username,
+        password,
+        keepMeSignedIn,
+      );
 
       if (result.success) {
         // Backend role is the actual role from the API (admin/operator/viewer)

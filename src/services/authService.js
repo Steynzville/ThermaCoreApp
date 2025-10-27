@@ -57,10 +57,10 @@ export const login = async (identifier, password, keepMeSignedIn = false) => {
     const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        username: identifier, 
+      body: JSON.stringify({
+        username: identifier,
         password: password,
-        keep_me_signed_in: keepMeSignedIn 
+        keep_me_signed_in: keepMeSignedIn,
       }),
     });
 

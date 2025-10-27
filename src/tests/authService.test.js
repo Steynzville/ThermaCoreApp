@@ -42,6 +42,7 @@ describe("authService", () => {
           body: JSON.stringify({
             username: "testuser",
             password: "password123",
+            keep_me_signed_in: false,
           }),
         }),
       );
@@ -162,6 +163,45 @@ describe("authService", () => {
 
       expect(result.success).toBe(true);
       expect(result.user.role).toBe("user");
+    });
+
+    it("should send keep_me_signed_in parameter when true", async () => {
+      const mockResponse = {
+        success: true,
+        data: {
+          access_token: "token-persistent",
+          user: {
+            id: 4,
+            username: "persistent-user",
+            email: "persistent@example.com",
+            role: "user",
+            first_name: "Persistent",
+            last_name: "User",
+          },
+        },
+      };
+
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => mockResponse,
+      });
+
+      const result = await login("persistent-user", "password", true);
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining("/api/v1/auth/login"),
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({
+            username: "persistent-user",
+            password: "password",
+            keep_me_signed_in: true,
+          }),
+        }),
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.token).toBe("token-persistent");
     });
   });
 });

@@ -111,7 +111,11 @@ const LoginScreen = ({ error, setError }) => {
         return;
       }
 
-      const result = await login(formData.username, formData.password, keepMeSignedIn);
+      const result = await login(
+        formData.username,
+        formData.password,
+        keepMeSignedIn,
+      );
 
       if (result.success) {
         navigate("/dashboard");
@@ -119,7 +123,14 @@ const LoginScreen = ({ error, setError }) => {
         setError(result.error || "Invalid credentials!");
       }
     },
-    [formData.username, formData.password, keepMeSignedIn, login, navigate, setError],
+    [
+      formData.username,
+      formData.password,
+      keepMeSignedIn,
+      login,
+      navigate,
+      setError,
+    ],
   );
 
   const handleSocialLogin = useCallback(async (_provider) => {
@@ -223,8 +234,8 @@ const LoginScreen = ({ error, setError }) => {
 
           <div className={styles.extraOptionsRow}>
             <label className={styles.checkboxContainer}>
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 checked={keepMeSignedIn}
                 onChange={(e) => setKeepMeSignedIn(e.target.checked)}
               />
