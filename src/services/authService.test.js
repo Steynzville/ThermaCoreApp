@@ -69,6 +69,7 @@ describe("authService", () => {
           body: JSON.stringify({
             username: "testuser",
             password: "password",
+            keep_me_signed_in: false,
           }),
         }),
       );

@@ -29,7 +29,9 @@ describe("useRemoteControl", () => {
   describe("Initial State", () => {
     it("should initialize with default state", async () => {
       // Mock fetch to return an error for this test
-      global.fetch.mockRejectedValueOnce(new Error("Failed to fetch permissions"));
+      global.fetch.mockRejectedValueOnce(
+        new Error("Failed to fetch permissions"),
+      );
 
       let result;
       await act(async () => {

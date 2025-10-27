@@ -16,15 +16,14 @@ Usage:
     python production_readiness.py [--strict] [--skip-services]
 """
 
-import sys
+import argparse
+import json
 import os
 import re
-import json
-import subprocess
+import sys
+from datetime import datetime, timezone
 from pathlib import Path
-from datetime import datetime
-from typing import Dict, List, Any, Tuple
-import argparse
+from typing import Any
 
 
 class ProductionReadinessValidator:
@@ -40,14 +39,18 @@ class ProductionReadinessValidator:
         """
         self.strict = strict
         self.skip_services = skip_services
-        self.results: Dict[str, Any] = {}
-        self.warnings: List[str] = []
-        self.errors: List[str] = []
-        self.passed_checks: List[str] = []
-        self.failed_checks: List[str] = []
+        self.results: dict[str, Any] = {}
+        self.warnings: list[str] = []
+        self.errors: list[str] = []
+        self.passed_checks: list[str] = []
+        self.failed_checks: list[str] = []
 
     def check(
-        self, name: str, condition: bool, error_msg: str = "", warning: bool = False
+        self,
+        name: str,
+        condition: bool,
+        error_msg: str = "",
+        warning: bool = False,
     ) -> bool:
         """
         Perform a check.
@@ -65,19 +68,18 @@ class ProductionReadinessValidator:
             print(f"  ✅ {name}")
             self.passed_checks.append(name)
             return True
-        else:
-            if warning:
-                print(f"  ⚠️  {name}: {error_msg}")
-                self.warnings.append(f"{name}: {error_msg}")
-                if self.strict:
-                    self.failed_checks.append(name)
-                    return False
-                return True
-            else:
-                print(f"  ❌ {name}: {error_msg}")
-                self.errors.append(f"{name}: {error_msg}")
+        elif warning:
+            print(f"  ⚠️  {name}: {error_msg}")
+            self.warnings.append(f"{name}: {error_msg}")
+            if self.strict:
                 self.failed_checks.append(name)
                 return False
+            return True
+        else:
+            print(f"  ❌ {name}: {error_msg}")
+            self.errors.append(f"{name}: {error_msg}")
+            self.failed_checks.append(name)
+            return False
 
     def validate_environment(self) -> bool:
         """Validate environment configuration."""
@@ -131,7 +133,7 @@ class ProductionReadinessValidator:
             )
 
         self.results["environment"] = {
-            "required_vars_set": all([os.environ.get(v) for v in required_vars]),
+            "required_vars_set": all(os.environ.get(v) for v in required_vars),
             "flask_env": flask_env,
             "env_file_exists": env_file.exists(),
         }
@@ -181,13 +183,11 @@ class ProductionReadinessValidator:
         )
 
         if not is_test_env:
-            import re
-
             secret_key_safe = not any(
-                re.search(pattern, secret_key_lower) for pattern in dangerous_patterns
+                re.search(pattern, secret_key.lower()) for pattern in dangerous_patterns
             )
             jwt_secret_safe = not any(
-                re.search(pattern, jwt_secret_lower) for pattern in dangerous_patterns
+                re.search(pattern, jwt_secret.lower()) for pattern in dangerous_patterns
             )
         else:
             # In test environments, allow test secrets but still warn
@@ -246,13 +246,13 @@ class ProductionReadinessValidator:
         # Check DATABASE_URL
         db_url = os.environ.get("DATABASE_URL", "")
         all_passed &= self.check(
-            "DATABASE_URL configured", len(db_url) > 0, "DATABASE_URL not set"
+            "DATABASE_URL configured",
+            len(db_url) > 0,
+            "DATABASE_URL not set",
         )
 
         # Check for PostgreSQL
-        is_postgres = db_url.startswith("postgresql://") or db_url.startswith(
-            "postgres://"
-        )
+        is_postgres = db_url.startswith(("postgresql://", "postgres://"))
         all_passed &= self.check(
             "PostgreSQL database",
             is_postgres,
@@ -307,7 +307,9 @@ class ProductionReadinessValidator:
         for file_path in required_files:
             path = Path(file_path)
             all_passed &= self.check(
-                f"File exists: {file_path}", path.exists(), f"{file_path} not found"
+                f"File exists: {file_path}",
+                path.exists(),
+                f"{file_path} not found",
             )
 
         # Required directories
@@ -343,8 +345,8 @@ class ProductionReadinessValidator:
             )
 
         self.results["files"] = {
-            "required_files_present": all([Path(f).exists() for f in required_files]),
-            "required_dirs_present": all([Path(d).exists() for d in required_dirs]),
+            "required_files_present": all(Path(f).exists() for f in required_files),
+            "required_dirs_present": all(Path(d).exists() for d in required_dirs),
         }
 
         return all_passed
@@ -359,8 +361,6 @@ class ProductionReadinessValidator:
 
         try:
             # Check Python version
-            import sys
-
             python_version = sys.version_info
             version_str = (
                 f"{python_version.major}.{python_version.minor}.{python_version.micro}"
@@ -388,7 +388,9 @@ class ProductionReadinessValidator:
                     print(f"       Version: {version}")
                 except ImportError:
                     all_passed &= self.check(
-                        f"Dependency installed: {dep}", False, f"{dep} not installed"
+                        f"Dependency installed: {dep}",
+                        False,
+                        f"{dep} not installed",
                     )
 
         except Exception as e:
@@ -421,8 +423,8 @@ class ProductionReadinessValidator:
         # - Check external service availability
         # - Verify API endpoints respond
 
-        print("  ℹ️  Service health checks require running services")
-        print("  ℹ️  Use --skip-services to skip these checks")
+        print("  INFO: Service health checks require running services")
+        print("  INFO: Use --skip-services to skip these checks")
 
         self.results["services"] = {"skipped": self.skip_services}
 
@@ -453,10 +455,10 @@ class ProductionReadinessValidator:
 
         self.results["benchmarks"] = {
             "protocol_benchmark_exists": Path(
-                "benchmarks/protocol_performance.py"
+                "benchmarks/protocol_performance.py",
             ).exists(),
             "critical_path_benchmark_exists": Path(
-                "benchmarks/critical_path_benchmark.py"
+                "benchmarks/critical_path_benchmark.py",
             ).exists(),
         }
 
@@ -479,18 +481,18 @@ class ProductionReadinessValidator:
         print(f"Warnings: {warnings} ⚠️")
 
         if failed > 0:
-            print(f"\n❌ FAILED CHECKS:")
+            print("\n❌ FAILED CHECKS:")
             for check in self.failed_checks:
                 print(f"   - {check}")
 
         if warnings > 0:
-            print(f"\n⚠️  WARNINGS:")
+            print("\n⚠️  WARNINGS:")
             for warning in self.warnings[:10]:  # Show first 10
                 print(f"   - {warning}")
 
         # Generate JSON report
         report = {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "overall_status": "READY" if failed == 0 else "NOT READY",
             "summary": {
                 "total_checks": total_checks,
@@ -505,7 +507,7 @@ class ProductionReadinessValidator:
         }
 
         report_file = Path("production_readiness_report.json")
-        with open(report_file, "w") as f:
+        with report_file.open("w") as f:
             json.dump(report, f, indent=2)
 
         print(f"\n📄 Report saved to: {report_file}")
@@ -548,19 +550,24 @@ class ProductionReadinessValidator:
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
-        description="Validate production readiness of ThermaCore SCADA platform"
+        description="Validate production readiness of ThermaCore SCADA platform",
     )
     parser.add_argument(
-        "--strict", action="store_true", help="Treat warnings as errors"
+        "--strict",
+        action="store_true",
+        help="Treat warnings as errors",
     )
     parser.add_argument(
-        "--skip-services", action="store_true", help="Skip service health checks"
+        "--skip-services",
+        action="store_true",
+        help="Skip service health checks",
     )
 
     args = parser.parse_args()
 
     validator = ProductionReadinessValidator(
-        strict=args.strict, skip_services=args.skip_services
+        strict=args.strict,
+        skip_services=args.skip_services,
     )
 
     is_ready = validator.run_all_validations()

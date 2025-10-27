@@ -214,6 +214,7 @@ class LoginSchema(Schema):
 
     username = fields.Str(required=True)
     password = fields.Str(required=True)
+    keep_me_signed_in = fields.Bool(required=False, load_default=False)
 
 
 # Unit schemas

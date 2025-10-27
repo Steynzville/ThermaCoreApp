@@ -103,10 +103,10 @@ def verify_database_schema():
                         "name": column_name,
                         "expected": expected_type,
                         "actual": col_type_str,
-                    }
+                    },
                 )
                 print(
-                    f"⚠ Column '{column_name}' exists but type mismatch: expected {expected_type}, got {col_type_str}"
+                    f"⚠ Column '{column_name}' exists but type mismatch: expected {expected_type}, got {col_type_str}",
                 )
 
     # Check indexes
@@ -138,7 +138,7 @@ def verify_database_schema():
         print(f"\n⚠️ Type mismatches ({len(mismatched_columns)}):")
         for col in mismatched_columns:
             print(
-                f"   - {col['name']}: expected {col['expected']}, got {col['actual']}"
+                f"   - {col['name']}: expected {col['expected']}, got {col['actual']}",
             )
 
     if missing_indexes:

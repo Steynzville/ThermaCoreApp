@@ -5,9 +5,10 @@ Creates an initial admin user with specific credentials.
 
 import os
 import sys
+from pathlib import Path
 
 # Add parent directory to path to import app modules
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app import create_app, db
 from app.models import Role, RoleEnum, User
@@ -16,11 +17,11 @@ from app.models import Role, RoleEnum, User
 def create_first_admin():
     """Create the first admin user if no admin exists."""
     # Admin credentials as specified
-    ADMIN_USERNAME = "Steyn_Admin"
-    ADMIN_PASSWORD = os.environ.get("FIRST_ADMIN_PASSWORD", "Steiner1!")
-    ADMIN_EMAIL = "Steyn.Enslin@ThermaCore.com.au"
-    ADMIN_FIRST_NAME = "Steyn"
-    ADMIN_LAST_NAME = "Enslin"
+    admin_username = "Steyn_Admin"
+    admin_password = os.environ.get("FIRST_ADMIN_PASSWORD", "Steiner1!")
+    admin_email = "Steyn.Enslin@ThermaCore.com.au"
+    admin_first_name = "Steyn"
+    admin_last_name = "Enslin"
 
     app = create_app("production")
 
@@ -45,27 +46,27 @@ def create_first_admin():
             return 0
 
         # Check if username or email already exists
-        existing_username = User.query.filter_by(username=ADMIN_USERNAME).first()
+        existing_username = User.query.filter_by(username=admin_username).first()
         if existing_username:
-            print(f"❌ Error: Username '{ADMIN_USERNAME}' already exists.")
+            print(f"❌ Error: Username '{admin_username}' already exists.")
             return 1
 
-        existing_email = User.query.filter_by(email=ADMIN_EMAIL).first()
+        existing_email = User.query.filter_by(email=admin_email).first()
         if existing_email:
-            print(f"❌ Error: Email '{ADMIN_EMAIL}' already exists.")
+            print(f"❌ Error: Email '{admin_email}' already exists.")
             return 1
 
         # Create the admin user
         try:
             admin_user = User(
-                username=ADMIN_USERNAME,
-                email=ADMIN_EMAIL,
-                first_name=ADMIN_FIRST_NAME,
-                last_name=ADMIN_LAST_NAME,
+                username=admin_username,
+                email=admin_email,
+                first_name=admin_first_name,
+                last_name=admin_last_name,
                 role_id=admin_role.id,
                 is_active=True,
             )
-            admin_user.set_password(ADMIN_PASSWORD)
+            admin_user.set_password(admin_password)
 
             db.session.add(admin_user)
             db.session.commit()
@@ -74,9 +75,9 @@ def create_first_admin():
             print("=" * 70)
             print("✅ First admin user created!")
             print("=" * 70)
-            print(f"Username: {ADMIN_USERNAME}")
+            print(f"Username: {admin_username}")
             print("Password: [HIDDEN]")
-            print(f"Email: {ADMIN_EMAIL}")
+            print(f"Email: {admin_email}")
             print("=" * 70)
             print("⚠️  Please login and change password immediately.")
             print("=" * 70)
