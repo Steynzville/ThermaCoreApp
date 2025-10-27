@@ -395,7 +395,7 @@ psql "$DATABASE_URL" -c "SELECT version();"
    ```bash
    # Ensure using correct Neon endpoint
    # Sydney region should contain: .ap-southeast-2.aws.neon.tech
-   # Example: ep-cool-darkness-123456.ap-southeast-2.aws.neon.tech
+   # Example: [your-endpoint].ap-southeast-2.aws.neon.tech
    
    # Verify in Neon dashboard: Project → Connection Details
    ```
@@ -403,7 +403,7 @@ psql "$DATABASE_URL" -c "SELECT version();"
 5. **Network/Firewall Issues**
    ```bash
    # Test connectivity to Neon endpoint
-   nc -zv ep-cool-darkness-123456.ap-southeast-2.aws.neon.tech 5432
+   nc -zv [your-endpoint].ap-southeast-2.aws.neon.tech 5432
    
    # Neon uses port 5432 over SSL
    # Ensure outbound connections to Neon are allowed

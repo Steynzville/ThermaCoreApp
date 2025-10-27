@@ -275,7 +275,7 @@ Coverage tests will fail if the code does not meet the minimum thresholds, ensur
 ```env
 # Example Neon connection string (replace placeholders):
 # postgres://[user]:[password]@[neon-hostname].neon.tech/[dbname]?sslmode=require
-DATABASE_URL=postgresql://user:pass@ep-cool-darkness-123456.ap-southeast-2.aws.neon.tech/thermacore_db?sslmode=require
+DATABASE_URL=postgresql://[YOUR_DB_USER]:[YOUR_DB_PASSWORD]@[your-endpoint].ap-southeast-2.aws.neon.tech/thermacore_db?sslmode=require
 SECRET_KEY=your-secret-key
 JWT_SECRET_KEY=your-jwt-secret
 CORS_ORIGINS=https://your-frontend.netlify.app

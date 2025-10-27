@@ -212,7 +212,7 @@ postgres://[user]:[password]@[endpoint].ap-southeast-2.aws.neon.tech/[dbname]?ss
 
 **Example:**
 ```
-postgres://thermacore_user:AbCdEf123456@ep-cool-darkness-123456.ap-southeast-2.aws.neon.tech/thermacore_db?sslmode=require
+postgres://[YOUR_DB_USER]:[YOUR_DB_PASSWORD]@[your-endpoint].ap-southeast-2.aws.neon.tech/thermacore_db?sslmode=require
 ```
 
 **Important Notes:**
@@ -726,7 +726,7 @@ JWT_SECRET_KEY=<64-char-random-hex>
 # Database (Neon PostgreSQL)
 # Example connection string (replace placeholders):
 # postgres://[user]:[password]@[endpoint].ap-southeast-2.aws.neon.tech/[dbname]?sslmode=require
-DATABASE_URL=postgres://thermacore_user:your_password@ep-cool-darkness-123456.ap-southeast-2.aws.neon.tech/thermacore_db?sslmode=require
+DATABASE_URL=postgres://[YOUR_DB_USER]:[YOUR_DB_PASSWORD]@[your-endpoint].ap-southeast-2.aws.neon.tech/thermacore_db?sslmode=require
 
 # CORS (comma-separated)
 CORS_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
