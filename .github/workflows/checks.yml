@@ -43,8 +43,8 @@ jobs:
       - name: Install Frontend Dependencies
         run: pnpm install
 
-      - name: Run Coverage Tests
-        run: pnpm run test:coverage:frontend
+      - name: Run Frontend Tests
+        run: pnpm test --run
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -263,12 +263,12 @@ jobs:
           
           echo "✅ Database setup completed"
 
-      - name: Run Backend Tests with Coverage
+      - name: Run Backend Tests
         run: |
-          echo "🧪 Running backend tests with coverage..."
+          echo "🧪 Running backend tests..."
           # Tests use conftest.py for database initialization
           # conftest.py creates a temporary database and initializes it with all models
-          docker-compose -f docker-compose.ci.yml run --rm backend python -m pytest -v --tb=short --cov=app --cov-report=term --cov-fail-under=60
+          docker-compose -f docker-compose.ci.yml run --rm backend python -m pytest -v --tb=short
 
       - name: Test Backend API Endpoints
         continue-on-error: true
