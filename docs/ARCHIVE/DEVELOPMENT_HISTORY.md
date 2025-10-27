@@ -296,7 +296,7 @@ CORS_ORIGINS = [
 ### Test Coverage Evolution
 
 **Initial**: ~40% coverage, mostly integration tests  
-**Current**: ~90% coverage with comprehensive suite
+**Current**: ~71.25% coverage (updated to reflect current coverage)
 
 **Test Breakdown**:
 - Unit tests: ~150 tests

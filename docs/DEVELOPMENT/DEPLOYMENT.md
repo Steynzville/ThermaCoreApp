@@ -39,7 +39,7 @@ ThermaCoreApp deployment architecture:
                  │
                  │
 ┌────────────────▼────────────────────────────────┐
-│      Database (Render PostgreSQL/External)      │
+│      Database (Neon PostgreSQL - Sydney)        │
 │         TimescaleDB-compatible                  │
 └─────────────────────────────────────────────────┘
 ```
@@ -47,7 +47,7 @@ ThermaCoreApp deployment architecture:
 **Recommended Setup:**
 - **Frontend**: Netlify or Vercel (free tier)
 - **Backend**: Render.com (free or starter tier)
-- **Database**: Render PostgreSQL (free tier for development)
+- **Database**: Neon PostgreSQL (free tier for development, Sydney region)
 
 ---
 
@@ -180,6 +180,144 @@ Expected response:
   "database": "connected",
   "timestamp": "2024-10-23T10:45:00Z"
 }
+```
+
+---
+
+## Neon PostgreSQL Database Setup
+
+### Overview
+
+ThermaCore uses Neon PostgreSQL for cloud database hosting. Neon provides serverless PostgreSQL with the following benefits:
+- **Serverless**: Auto-scaling and auto-suspend during inactivity
+- **Sydney Region**: Low latency for Australian deployments
+- **Branching**: Database branching for development/staging
+- **Free Tier**: Generous free tier for development
+
+### Step 1: Create Neon Account and Project
+
+1. Sign up at [Neon.tech](https://neon.tech)
+2. Create a new project:
+   - **Project Name**: ThermaCore SCADA
+   - **Region**: AWS Sydney (ap-southeast-2) - recommended for Australian deployments
+   - **PostgreSQL Version**: 15 or higher
+
+### Step 2: Get Connection String
+
+After creating your project, Neon will provide a connection string:
+
+```
+postgres://[user]:[password]@[your-endpoint].ap-southeast-2.aws.neon.tech/[dbname]?sslmode=require
+```
+
+**Example:**
+```
+postgres://[user]:[password]@[your-endpoint].ap-southeast-2.aws.neon.tech/thermacore_db?sslmode=require
+```
+
+**Important Notes:**
+- Always use `?sslmode=require` for secure connections
+- The endpoint hostname includes the region (e.g., `ap-southeast-2`)
+- Store connection strings securely (environment variables, secrets manager)
+
+### Step 3: Configure Backend for Neon
+
+Update your backend environment configuration:
+
+**For Render.com:**
+1. Go to Render Dashboard → Service → Environment
+2. Update `DATABASE_URL` environment variable:
+   ```
+   postgres://[user]:[password]@[your-endpoint].ap-southeast-2.aws.neon.tech/[dbname]?sslmode=require
+   ```
+3. Save (triggers auto-redeploy)
+
+**For Local Development:**
+Create/update `.env` file in backend directory:
+```env
+DATABASE_URL=postgres://[user]:[password]@[your-endpoint].ap-southeast-2.aws.neon.tech/[dbname]?sslmode=require
+```
+
+### Step 4: Initialize Database Schema
+
+```bash
+# Using Render Shell
+render shell thermacore-backend
+flask init-db
+
+# Or using local connection
+export DATABASE_URL="postgres://[user]:[password]@[your-endpoint].ap-southeast-2.aws.neon.tech/[dbname]?sslmode=require"
+cd backend
+flask init-db
+```
+
+### Step 5: Verify Connection
+
+```bash
+# Test connection from backend
+python -c "
+import psycopg2
+import os
+conn = psycopg2.connect(os.environ['DATABASE_URL'])
+print('Connection successful!')
+conn.close()
+"
+```
+
+### Neon-Specific Features
+
+**Database Branching:**
+- Create branches for staging/testing
+- Branches are isolated copies of your database
+- Useful for testing migrations before production
+
+**Connection Pooling:**
+- Neon uses connection pooling by default
+- No need for additional connection pooling setup
+- Handles scaling automatically
+
+**Monitoring:**
+- View database metrics in Neon dashboard
+- Monitor query performance
+- Track connection usage
+
+### Troubleshooting Neon Connection
+
+**Issue: Connection timeout**
+```bash
+# Ensure sslmode=require is included
+DATABASE_URL="postgres://user:pass@endpoint.neon.tech/db?sslmode=require"
+```
+
+**Issue: SSL certificate verification failed**
+```bash
+# Neon requires SSL - never use sslmode=disable in production
+# For development testing only, you can use:
+DATABASE_URL="postgres://user:pass@endpoint.neon.tech/db?sslmode=prefer"
+```
+
+**Issue: Too many connections**
+- Neon free tier has connection limits
+- Check active connections in Neon dashboard
+- Ensure application properly closes connections
+- Consider upgrading to paid tier for higher limits
+
+### Migration from Render PostgreSQL to Neon
+
+If migrating from Render PostgreSQL:
+
+```bash
+# 1. Backup existing Render database
+pg_dump $RENDER_DATABASE_URL > backup.sql
+
+# 2. Restore to Neon
+psql "$NEON_DATABASE_URL" < backup.sql
+
+# 3. Update environment variables
+# Update DATABASE_URL in Render service to point to Neon
+
+# 4. Verify migration
+psql "$NEON_DATABASE_URL" -c "SELECT COUNT(*) FROM users;"
 ```
 
 ---
@@ -585,8 +723,10 @@ DEBUG=False
 SECRET_KEY=<64-char-random-hex>
 JWT_SECRET_KEY=<64-char-random-hex>
 
-# Database
-DATABASE_URL=postgresql://user:pass@host:5432/db
+# Database (Neon PostgreSQL)
+# Example connection string (replace placeholders):
+# postgres://[user]:[password]@[your-endpoint].ap-southeast-2.aws.neon.tech/[dbname]?sslmode=require
+DATABASE_URL=postgres://[user]:[password]@[your-endpoint].ap-southeast-2.aws.neon.tech/thermacore_db?sslmode=require
 
 # CORS (comma-separated)
 CORS_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
