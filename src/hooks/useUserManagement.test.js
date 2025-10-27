@@ -67,8 +67,11 @@ describe("useUserManagement", () => {
   });
 
   describe("Initial State", () => {
-    it("should initialize with default state", () => {
-      const { result } = renderHook(() => useUserManagement());
+    it("should initialize with default state", async () => {
+      let result;
+      await act(async () => {
+        ({ result } = renderHook(() => useUserManagement()));
+      });
 
       expect(result.current.users).toEqual([]);
       expect(result.current.isLoadingUsers).toBe(true); // Loading initially
@@ -79,8 +82,11 @@ describe("useUserManagement", () => {
       expect(result.current.isCreatingUser).toBe(false);
     });
 
-    it("should have initial form data with empty fields", () => {
-      const { result } = renderHook(() => useUserManagement());
+    it("should have initial form data with empty fields", async () => {
+      let result;
+      await act(async () => {
+        ({ result } = renderHook(() => useUserManagement()));
+      });
 
       expect(result.current.newUserFormData).toEqual({
         username: "",

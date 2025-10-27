@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { UnitProvider, useUnits } from "./UnitContext";
 
@@ -50,7 +50,10 @@ describe("UnitContext", () => {
       getAllUnits.mockResolvedValue(mockUnits);
 
       const wrapper = ({ children }) => <UnitProvider>{children}</UnitProvider>;
-      const { result } = renderHook(() => useUnits(), { wrapper });
+      let result;
+      await act(async () => {
+        ({ result } = renderHook(() => useUnits(), { wrapper }));
+      });
 
       expect(result.current.loading).toBe(true);
 
@@ -67,7 +70,10 @@ describe("UnitContext", () => {
       getAllUnits.mockRejectedValue(new Error(errorMessage));
 
       const wrapper = ({ children }) => <UnitProvider>{children}</UnitProvider>;
-      const { result } = renderHook(() => useUnits(), { wrapper });
+      let result;
+      await act(async () => {
+        ({ result } = renderHook(() => useUnits(), { wrapper }));
+      });
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
