@@ -29,7 +29,7 @@ describe("Breadcrumb Components", () => {
     const { container } = render(
       <BreadcrumbList>
         <BreadcrumbItem>Home</BreadcrumbItem>
-      </BreadcrumbList>
+      </BreadcrumbList>,
     );
     const item = container.querySelector('[data-slot="breadcrumb-item"]');
     expect(item).toBeInTheDocument();
@@ -38,7 +38,7 @@ describe("Breadcrumb Components", () => {
 
   it("renders BreadcrumbLink with anchor", () => {
     const { container } = render(
-      <BreadcrumbLink href="/home">Home</BreadcrumbLink>
+      <BreadcrumbLink href="/home">Home</BreadcrumbLink>,
     );
     const link = container.querySelector("a");
     expect(link).toBeInTheDocument();
@@ -54,7 +54,9 @@ describe("Breadcrumb Components", () => {
 
   it("renders BreadcrumbSeparator with default icon", () => {
     const { container } = render(<BreadcrumbSeparator />);
-    const separator = container.querySelector('[data-slot="breadcrumb-separator"]');
+    const separator = container.querySelector(
+      '[data-slot="breadcrumb-separator"]',
+    );
     expect(separator).toBeInTheDocument();
     expect(separator).toHaveAttribute("role", "presentation");
   });
@@ -76,7 +78,7 @@ describe("Breadcrumb Components", () => {
             <BreadcrumbPage>Current</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
-      </Breadcrumb>
+      </Breadcrumb>,
     );
     expect(screen.getByRole("link", { name: "Current" })).toBeInTheDocument();
   });

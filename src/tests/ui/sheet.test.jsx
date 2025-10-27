@@ -16,19 +16,25 @@ describe("Sheet Components", () => {
     const { container } = render(
       <Sheet>
         <SheetTrigger>Open</SheetTrigger>
-      </Sheet>
+      </Sheet>,
     );
-    expect(container.querySelector('[data-slot="sheet-trigger"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="sheet-trigger"]'),
+    ).toBeInTheDocument();
   });
 
   it("renders SheetHeader", () => {
     const { container } = render(<SheetHeader>Header</SheetHeader>);
-    expect(container.querySelector('[data-slot="sheet-header"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="sheet-header"]'),
+    ).toBeInTheDocument();
   });
 
   it("renders SheetFooter", () => {
     const { container } = render(<SheetFooter>Footer</SheetFooter>);
-    expect(container.querySelector('[data-slot="sheet-footer"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="sheet-footer"]'),
+    ).toBeInTheDocument();
   });
 
   it("renders complete sheet structure", () => {
@@ -44,7 +50,7 @@ describe("Sheet Components", () => {
             <SheetClose>Close</SheetClose>
           </SheetFooter>
         </SheetContent>
-      </Sheet>
+      </Sheet>,
     );
     expect(screen.getByText("Sheet Title")).toBeInTheDocument();
     expect(screen.getByText("Sheet description text")).toBeInTheDocument();

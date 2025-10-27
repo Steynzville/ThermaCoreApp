@@ -16,19 +16,25 @@ describe("Drawer Components", () => {
     const { container } = render(
       <Drawer>
         <DrawerTrigger>Open</DrawerTrigger>
-      </Drawer>
+      </Drawer>,
     );
-    expect(container.querySelector('[data-slot="drawer-trigger"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="drawer-trigger"]'),
+    ).toBeInTheDocument();
   });
 
   it("renders DrawerHeader", () => {
     const { container } = render(<DrawerHeader>Header</DrawerHeader>);
-    expect(container.querySelector('[data-slot="drawer-header"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="drawer-header"]'),
+    ).toBeInTheDocument();
   });
 
   it("renders DrawerFooter", () => {
     const { container } = render(<DrawerFooter>Footer</DrawerFooter>);
-    expect(container.querySelector('[data-slot="drawer-footer"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="drawer-footer"]'),
+    ).toBeInTheDocument();
   });
 
   it("renders complete drawer structure", () => {
@@ -43,7 +49,7 @@ describe("Drawer Components", () => {
             <DrawerClose>Close</DrawerClose>
           </DrawerFooter>
         </DrawerContent>
-      </Drawer>
+      </Drawer>,
     );
     expect(screen.getByText("Drawer Title")).toBeInTheDocument();
     expect(screen.getByText("Drawer description text")).toBeInTheDocument();

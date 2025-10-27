@@ -5,16 +5,20 @@ import { ToggleGroup, ToggleGroupItem } from "../../components/ui/toggle-group";
 describe("ToggleGroup Components", () => {
   it("renders ToggleGroup container", () => {
     const { container } = render(<ToggleGroup type="single" />);
-    expect(container.querySelector('[data-slot="toggle-group"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="toggle-group"]'),
+    ).toBeInTheDocument();
   });
 
   it("renders ToggleGroupItem", () => {
     const { container } = render(
       <ToggleGroup type="single">
         <ToggleGroupItem value="option1">Option 1</ToggleGroupItem>
-      </ToggleGroup>
+      </ToggleGroup>,
     );
-    expect(container.querySelector('[data-slot="toggle-group-item"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="toggle-group-item"]'),
+    ).toBeInTheDocument();
   });
 
   it("renders multiple toggle items", () => {
@@ -22,7 +26,7 @@ describe("ToggleGroup Components", () => {
       <ToggleGroup type="single">
         <ToggleGroupItem value="bold">Bold</ToggleGroupItem>
         <ToggleGroupItem value="italic">Italic</ToggleGroupItem>
-      </ToggleGroup>
+      </ToggleGroup>,
     );
     expect(screen.getByText("Bold")).toBeInTheDocument();
     expect(screen.getByText("Italic")).toBeInTheDocument();

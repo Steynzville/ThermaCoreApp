@@ -12,18 +12,22 @@ describe("Popover Components", () => {
     const { container } = render(
       <Popover>
         <PopoverTrigger>Open</PopoverTrigger>
-      </Popover>
+      </Popover>,
     );
-    expect(container.querySelector('[data-slot="popover-trigger"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="popover-trigger"]'),
+    ).toBeInTheDocument();
   });
 
   it("renders PopoverAnchor", () => {
     const { container } = render(
       <Popover>
         <PopoverAnchor>Anchor</PopoverAnchor>
-      </Popover>
+      </Popover>,
     );
-    expect(container.querySelector('[data-slot="popover-anchor"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="popover-anchor"]'),
+    ).toBeInTheDocument();
   });
 
   it("renders complete popover", () => {
@@ -31,7 +35,7 @@ describe("Popover Components", () => {
       <Popover open>
         <PopoverTrigger>Trigger</PopoverTrigger>
         <PopoverContent>Content</PopoverContent>
-      </Popover>
+      </Popover>,
     );
     expect(screen.getByText("Trigger")).toBeInTheDocument();
     expect(screen.getByText("Content")).toBeInTheDocument();

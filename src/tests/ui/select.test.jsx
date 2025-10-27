@@ -18,9 +18,11 @@ describe("Select Components", () => {
         <SelectTrigger>
           <SelectValue placeholder="Select" />
         </SelectTrigger>
-      </Select>
+      </Select>,
     );
-    expect(container.querySelector('[data-slot="select-trigger"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="select-trigger"]'),
+    ).toBeInTheDocument();
   });
 
   it("renders SelectGroup with items", () => {
@@ -34,7 +36,7 @@ describe("Select Components", () => {
             <SelectItem value="1">Item 1</SelectItem>
           </SelectGroup>
         </SelectContent>
-      </Select>
+      </Select>,
     );
     expect(screen.getByText("Item 1")).toBeInTheDocument();
   });
@@ -50,7 +52,7 @@ describe("Select Components", () => {
             <SelectLabel>Label</SelectLabel>
           </SelectGroup>
         </SelectContent>
-      </Select>
+      </Select>,
     );
     expect(screen.getByText("Label")).toBeInTheDocument();
   });
@@ -66,7 +68,7 @@ describe("Select Components", () => {
           <SelectSeparator />
           <SelectItem value="2">Item 2</SelectItem>
         </SelectContent>
-      </Select>
+      </Select>,
     );
     expect(screen.getByText("Item 1")).toBeInTheDocument();
     expect(screen.getByText("Item 2")).toBeInTheDocument();
@@ -85,7 +87,7 @@ describe("Select Components", () => {
             <SelectItem value="option2">Option 2</SelectItem>
           </SelectGroup>
         </SelectContent>
-      </Select>
+      </Select>,
     );
     expect(screen.getByText("Option 1")).toBeInTheDocument();
     expect(screen.getByText("Option 2")).toBeInTheDocument();

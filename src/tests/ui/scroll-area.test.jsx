@@ -7,25 +7,31 @@ describe("ScrollArea Components", () => {
     const { container } = render(
       <ScrollArea>
         <div>Content</div>
-      </ScrollArea>
+      </ScrollArea>,
     );
-    expect(container.querySelector('[data-slot="scroll-area"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="scroll-area"]'),
+    ).toBeInTheDocument();
   });
 
   it("renders viewport with content", () => {
     const { container } = render(
       <ScrollArea>
         <div>Scrollable content</div>
-      </ScrollArea>
+      </ScrollArea>,
     );
-    expect(container.querySelector('[data-slot="scroll-area-viewport"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="scroll-area-viewport"]'),
+    ).toBeInTheDocument();
   });
 
   it("renders without errors", () => {
-    expect(() => render(
-      <ScrollArea>
-        <div>Content</div>
-      </ScrollArea>
-    )).not.toThrow();
+    expect(() =>
+      render(
+        <ScrollArea>
+          <div>Content</div>
+        </ScrollArea>,
+      ),
+    ).not.toThrow();
   });
 });

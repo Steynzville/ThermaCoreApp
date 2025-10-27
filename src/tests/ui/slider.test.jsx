@@ -16,7 +16,9 @@ describe("Slider", () => {
   });
 
   it("renders with custom min and max", () => {
-    const { container } = render(<Slider min={0} max={100} defaultValue={[25]} />);
+    const { container } = render(
+      <Slider min={0} max={100} defaultValue={[25]} />,
+    );
     expect(container.querySelector('[data-slot="slider"]')).toBeInTheDocument();
   });
 

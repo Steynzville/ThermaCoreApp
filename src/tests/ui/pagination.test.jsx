@@ -29,9 +29,11 @@ describe("Pagination Components", () => {
     const { container } = render(
       <PaginationContent>
         <PaginationItem>1</PaginationItem>
-      </PaginationContent>
+      </PaginationContent>,
     );
-    expect(container.querySelector('[data-slot="pagination-item"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="pagination-item"]'),
+    ).toBeInTheDocument();
   });
 
   it("renders PaginationLink", () => {
@@ -40,7 +42,7 @@ describe("Pagination Components", () => {
         <PaginationItem>
           <PaginationLink href="/page/1">1</PaginationLink>
         </PaginationItem>
-      </PaginationContent>
+      </PaginationContent>,
     );
     expect(screen.getByText("1")).toBeInTheDocument();
   });
@@ -77,7 +79,7 @@ describe("Pagination Components", () => {
             <PaginationNext href="/next" />
           </PaginationItem>
         </PaginationContent>
-      </Pagination>
+      </Pagination>,
     );
     expect(screen.getByLabelText("Go to previous page")).toBeInTheDocument();
     expect(screen.getByLabelText("Go to next page")).toBeInTheDocument();

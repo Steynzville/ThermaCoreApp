@@ -11,7 +11,9 @@ describe("Calendar", () => {
 
   it("renders with selected date", () => {
     const selected = new Date(2024, 0, 15);
-    const { container } = render(<Calendar mode="single" selected={selected} />);
+    const { container } = render(
+      <Calendar mode="single" selected={selected} />,
+    );
     expect(container.querySelector(".rdp")).toBeInTheDocument();
   });
 

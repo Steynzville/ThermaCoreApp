@@ -16,7 +16,7 @@ describe("UnitSettings", () => {
       <UnitSettings
         settings={mockSettings}
         handleSettingChange={mockHandleSettingChange}
-      />
+      />,
     );
     expect(screen.getByText("Unit Settings")).toBeInTheDocument();
   });
@@ -26,7 +26,7 @@ describe("UnitSettings", () => {
       <UnitSettings
         settings={mockSettings}
         handleSettingChange={mockHandleSettingChange}
-      />
+      />,
     );
     expect(screen.getByLabelText(/Temperature Unit/i)).toBeInTheDocument();
   });
@@ -36,7 +36,7 @@ describe("UnitSettings", () => {
       <UnitSettings
         settings={mockSettings}
         handleSettingChange={mockHandleSettingChange}
-      />
+      />,
     );
     const select = screen.getByLabelText(/Temperature Unit/i);
     expect(select).toHaveValue("celsius");

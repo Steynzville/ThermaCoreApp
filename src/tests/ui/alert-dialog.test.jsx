@@ -17,19 +17,25 @@ describe("AlertDialog Components", () => {
     const { container } = render(
       <AlertDialog>
         <AlertDialogTrigger>Open</AlertDialogTrigger>
-      </AlertDialog>
+      </AlertDialog>,
     );
-    expect(container.querySelector('[data-slot="alert-dialog-trigger"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="alert-dialog-trigger"]'),
+    ).toBeInTheDocument();
   });
 
   it("renders AlertDialogHeader", () => {
     const { container } = render(<AlertDialogHeader>Header</AlertDialogHeader>);
-    expect(container.querySelector('[data-slot="alert-dialog-header"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="alert-dialog-header"]'),
+    ).toBeInTheDocument();
   });
 
   it("renders AlertDialogFooter", () => {
     const { container } = render(<AlertDialogFooter>Footer</AlertDialogFooter>);
-    expect(container.querySelector('[data-slot="alert-dialog-footer"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="alert-dialog-footer"]'),
+    ).toBeInTheDocument();
   });
 
   it("renders complete alert dialog structure", () => {
@@ -47,10 +53,12 @@ describe("AlertDialog Components", () => {
             <AlertDialogAction>Continue</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </AlertDialog>
+      </AlertDialog>,
     );
     expect(screen.getByText("Are you sure?")).toBeInTheDocument();
-    expect(screen.getByText("This action cannot be undone.")).toBeInTheDocument();
+    expect(
+      screen.getByText("This action cannot be undone."),
+    ).toBeInTheDocument();
     expect(screen.getByText("Cancel")).toBeInTheDocument();
     expect(screen.getByText("Continue")).toBeInTheDocument();
   });

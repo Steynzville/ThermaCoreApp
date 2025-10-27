@@ -11,7 +11,7 @@ describe("HoverCard Components", () => {
     render(
       <HoverCard>
         <HoverCardTrigger>Hover me</HoverCardTrigger>
-      </HoverCard>
+      </HoverCard>,
     );
     expect(screen.getByText("Hover me")).toBeInTheDocument();
   });
@@ -20,9 +20,11 @@ describe("HoverCard Components", () => {
     const { container } = render(
       <HoverCard>
         <HoverCardTrigger>Hover me</HoverCardTrigger>
-      </HoverCard>
+      </HoverCard>,
     );
-    expect(container.querySelector('[data-slot="hover-card-trigger"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="hover-card-trigger"]'),
+    ).toBeInTheDocument();
   });
 
   it("renders complete hover card", () => {
@@ -30,7 +32,7 @@ describe("HoverCard Components", () => {
       <HoverCard>
         <HoverCardTrigger>Trigger</HoverCardTrigger>
         <HoverCardContent>Content</HoverCardContent>
-      </HoverCard>
+      </HoverCard>,
     );
     expect(screen.getByText("Trigger")).toBeInTheDocument();
   });

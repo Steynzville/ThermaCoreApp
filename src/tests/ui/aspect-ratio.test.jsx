@@ -7,16 +7,18 @@ describe("AspectRatio", () => {
     const { container } = render(
       <AspectRatio ratio={16 / 9}>
         <img src="test.jpg" alt="test" />
-      </AspectRatio>
+      </AspectRatio>,
     );
-    expect(container.querySelector('[data-slot="aspect-ratio"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="aspect-ratio"]'),
+    ).toBeInTheDocument();
   });
 
   it("renders children correctly", () => {
     const { getByAltText } = render(
       <AspectRatio ratio={4 / 3}>
         <img src="test.jpg" alt="test image" />
-      </AspectRatio>
+      </AspectRatio>,
     );
     expect(getByAltText("test image")).toBeInTheDocument();
   });
@@ -25,8 +27,10 @@ describe("AspectRatio", () => {
     const { container } = render(
       <AspectRatio ratio={1} className="custom-class">
         <div>Content</div>
-      </AspectRatio>
+      </AspectRatio>,
     );
-    expect(container.querySelector('[data-slot="aspect-ratio"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="aspect-ratio"]'),
+    ).toBeInTheDocument();
   });
 });

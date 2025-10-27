@@ -59,7 +59,7 @@ describe("Card Components", () => {
         </CardHeader>
         <CardContent>Main content</CardContent>
         <CardFooter>Footer content</CardFooter>
-      </Card>
+      </Card>,
     );
     expect(screen.getByText("Card Title")).toBeInTheDocument();
     expect(screen.getByText("Card description")).toBeInTheDocument();

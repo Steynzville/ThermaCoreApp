@@ -9,16 +9,20 @@ import {
 describe("Resizable Components", () => {
   it("renders ResizablePanelGroup", () => {
     const { container } = render(<ResizablePanelGroup />);
-    expect(container.querySelector('[data-slot="resizable-panel-group"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="resizable-panel-group"]'),
+    ).toBeInTheDocument();
   });
 
   it("renders ResizablePanel", () => {
     const { container } = render(
       <ResizablePanelGroup>
         <ResizablePanel />
-      </ResizablePanelGroup>
+      </ResizablePanelGroup>,
     );
-    expect(container.querySelector('[data-slot="resizable-panel"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="resizable-panel"]'),
+    ).toBeInTheDocument();
   });
 
   it("renders ResizableHandle", () => {
@@ -27,8 +31,10 @@ describe("Resizable Components", () => {
         <ResizablePanel />
         <ResizableHandle />
         <ResizablePanel />
-      </ResizablePanelGroup>
+      </ResizablePanelGroup>,
     );
-    expect(container.querySelector('[data-slot="resizable-handle"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="resizable-handle"]'),
+    ).toBeInTheDocument();
   });
 });

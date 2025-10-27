@@ -21,27 +21,33 @@ describe("Table Components", () => {
     const { container } = render(
       <Table>
         <TableHeader />
-      </Table>
+      </Table>,
     );
-    expect(container.querySelector('[data-slot="table-header"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="table-header"]'),
+    ).toBeInTheDocument();
   });
 
   it("renders TableBody", () => {
     const { container } = render(
       <Table>
         <TableBody />
-      </Table>
+      </Table>,
     );
-    expect(container.querySelector('[data-slot="table-body"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="table-body"]'),
+    ).toBeInTheDocument();
   });
 
   it("renders TableFooter", () => {
     const { container } = render(
       <Table>
         <TableFooter />
-      </Table>
+      </Table>,
     );
-    expect(container.querySelector('[data-slot="table-footer"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="table-footer"]'),
+    ).toBeInTheDocument();
   });
 
   it("renders TableRow", () => {
@@ -50,9 +56,11 @@ describe("Table Components", () => {
         <TableBody>
           <TableRow />
         </TableBody>
-      </Table>
+      </Table>,
     );
-    expect(container.querySelector('[data-slot="table-row"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="table-row"]'),
+    ).toBeInTheDocument();
   });
 
   it("renders TableHead", () => {
@@ -63,7 +71,7 @@ describe("Table Components", () => {
             <TableHead>Name</TableHead>
           </TableRow>
         </TableHeader>
-      </Table>
+      </Table>,
     );
     expect(screen.getByText("Name")).toBeInTheDocument();
   });
@@ -76,7 +84,7 @@ describe("Table Components", () => {
             <TableCell>Data</TableCell>
           </TableRow>
         </TableBody>
-      </Table>
+      </Table>,
     );
     expect(screen.getByText("Data")).toBeInTheDocument();
   });
@@ -85,7 +93,7 @@ describe("Table Components", () => {
     render(
       <Table>
         <TableCaption>Table Caption</TableCaption>
-      </Table>
+      </Table>,
     );
     expect(screen.getByText("Table Caption")).toBeInTheDocument();
   });
@@ -112,7 +120,7 @@ describe("Table Components", () => {
             <TableCell>1</TableCell>
           </TableRow>
         </TableFooter>
-      </Table>
+      </Table>,
     );
     expect(screen.getByText("Employee List")).toBeInTheDocument();
     expect(screen.getByText("John Doe")).toBeInTheDocument();

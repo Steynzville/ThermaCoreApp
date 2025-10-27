@@ -21,9 +21,11 @@ describe("InputOTP Components", () => {
         <InputOTPGroup>
           <InputOTPSlot index={0} />
         </InputOTPGroup>
-      </InputOTP>
+      </InputOTP>,
     );
-    expect(container.querySelector('[data-slot="input-otp"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="input-otp"]'),
+    ).toBeInTheDocument();
   });
 
   it("renders InputOTPGroup", () => {
@@ -32,13 +34,17 @@ describe("InputOTP Components", () => {
         <InputOTPGroup>
           <InputOTPSlot index={0} />
         </InputOTPGroup>
-      </InputOTP>
+      </InputOTP>,
     );
-    expect(container.querySelector('[data-slot="input-otp-group"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="input-otp-group"]'),
+    ).toBeInTheDocument();
   });
 
   it("renders InputOTPSeparator", () => {
     const { container } = render(<InputOTPSeparator />);
-    expect(container.querySelector('[data-slot="input-otp-separator"]')).toBeInTheDocument();
+    expect(
+      container.querySelector('[data-slot="input-otp-separator"]'),
+    ).toBeInTheDocument();
   });
 });

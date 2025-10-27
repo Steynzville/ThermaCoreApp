@@ -10,7 +10,7 @@ describe("SystemHealthSummary", () => {
 
   it("displays health score", () => {
     const { container } = render(<SystemHealthSummary />);
-    const healthScore = container.querySelector('.text-3xl');
+    const healthScore = container.querySelector(".text-3xl");
     expect(healthScore).toBeInTheDocument();
     expect(healthScore.textContent).toMatch(/\d+%/);
   });
