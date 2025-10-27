@@ -105,6 +105,12 @@ describe("Dashboard", () => {
       if (key === "thermacore_role") {
         return "admin";
       }
+      if (key === "thermacore_backend_role") {
+        return "admin";
+      }
+      if (key === "thermacore_token") {
+        return "mock-jwt-token";
+      }
       return null;
     });
   });
@@ -300,6 +306,9 @@ describe("Dashboard", () => {
         }
         if (key === "thermacore_role" || key === "thermacore_backend_role") {
           return "user";
+        }
+        if (key === "thermacore_token") {
+          return "mock-jwt-token";
         }
         return null;
       });
