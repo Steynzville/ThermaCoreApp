@@ -578,7 +578,7 @@ jobs:
         run: pnpm biome format --write .
 
       - name: Run Biome Lint Fixes
-        run: pnpm biome check --write .
+        run: pnpm biome check .
 
       - name: Run Biome Verification
         run: pnpm biome check .
