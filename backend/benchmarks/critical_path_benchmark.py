@@ -103,7 +103,6 @@ class CriticalPathBenchmark:
         logger.info("  Max:       %.3fms", max_time)
         logger.info("  Std Dev:   %.3fms", std_dev)
         logger.info("  Status:    %s", status)
-        logger.info("  Status:    %s", status)
 
         if avg_time <= target_ms:
             self.passed_benchmarks.append(name)
@@ -519,6 +518,3 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
-
-if __name__ == "__main__":
-    exit(main())
