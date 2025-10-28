@@ -101,6 +101,8 @@ pytest -k "test_login"
 
 ### Test Fixtures
 
+> **Note:** The code examples below contain test credentials (e.g., 'TestPass123!') which are examples only for testing purposes. These are NOT real credentials and are safe to include in documentation.
+
 **conftest.py**:
 ```python
 import pytest
@@ -309,6 +311,8 @@ describe('Button Component', () => {
 ```
 
 ### Example Service Test
+
+> **Note:** The code examples below contain test tokens (e.g., 'token123') which are examples only for testing purposes. These are NOT real credentials.
 
 **authService.test.js**:
 ```javascript
@@ -1264,23 +1268,33 @@ All code changes must pass through automated quality gates:
 
 ## Enterprise Workflow
 
-### Quality Gates Workflow
+### Quality Gates Workflows
 
-The enterprise quality gates workflow runs on:
-- Every push to `main` branch
-- Every pull request to `main`
-- Daily scheduled runs (2 AM UTC)
+The enterprise quality gates are now split into separate, parallel workflows for faster execution:
 
-**Workflow File:** `.github/workflows/enterprise-quality-gates.yml`
+**Workflow Files:**
 
-**Jobs:**
+1. **Security Quality Gate**: `.github/workflows/security-quality-gate.yml`
+   - Security vulnerability scanning (Bandit, Gitleaks)
+   - Runs on every PR, push to main, and daily at 2 AM UTC
 
-1. **security-gate**: Security vulnerability scanning
-2. **backend-gate**: Backend code quality checks
-3. **frontend-gate**: Frontend code quality checks
-4. **test-coverage-gate**: Test coverage validation
-5. **performance-gate**: Performance benchmarks
-6. **enterprise-validation**: Summary report generation
+2. **Backend Quality Gate**: `.github/workflows/backend-quality-gate.yml`
+   - Backend code quality checks (Ruff, mypy, complexity analysis)
+   - Runs on every PR, push to main, and daily at 2 AM UTC
+
+3. **Frontend Quality Gate**: `.github/workflows/frontend-quality-gate.yml`
+   - Frontend quality checks (TypeScript, Biome, build verification)
+   - Runs on every PR, push to main, and daily at 2 AM UTC
+
+4. **Test Coverage Gate**: `.github/workflows/test-coverage-gate.yml`
+   - Test coverage validation (frontend & backend with 60% thresholds)
+   - Runs on every PR, push to main, and daily at 2 AM UTC
+
+5. **Performance Quality Gate**: `.github/workflows/performance-quality-gate.yml`
+   - Performance benchmarks and response time checks
+   - Runs on every PR, push to main, and daily at 2 AM UTC
+
+All workflows run in parallel for faster feedback on pull requests.
 
 ### Running Quality Checks Locally
 

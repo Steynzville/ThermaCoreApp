@@ -109,7 +109,7 @@ Benchmarks are evaluated primarily on average performance, as this represents ty
 
 The benchmark suites are integrated into:
 
-1. **Enterprise Quality Gates**: `.github/workflows/enterprise-quality-gates.yml`
+1. **Performance Quality Gate**: `.github/workflows/performance-quality-gate.yml`
    - Runs on every PR and push to main
    - Daily scheduled runs
 
