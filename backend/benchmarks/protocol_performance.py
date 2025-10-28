@@ -37,7 +37,11 @@ class ProtocolPerformanceBenchmark:
         self.failed_benchmarks: list[str] = []
 
     def run_benchmark(
-        self, name: str, func, iterations: int = 1000, target_ms: float = 50.0
+        self,
+        name: str,
+        func,
+        iterations: int = 1000,
+        target_ms: float = 50.0,
     ):
         """
         Run a benchmark test.
@@ -108,7 +112,10 @@ class ProtocolPerformanceBenchmark:
             json.dumps(data)
 
         self.run_benchmark(
-            "Message Serialization", serialize, iterations=10000, target_ms=10.0
+            "Message Serialization",
+            serialize,
+            iterations=10000,
+            target_ms=10.0,
         )
 
     def benchmark_message_deserialization(self):
@@ -122,14 +129,17 @@ class ProtocolPerformanceBenchmark:
                 "value": 72.5,
                 "status": "online",
                 "metadata": {"quality": "good", "source": "mqtt"},
-            }
+            },
         )
 
         def deserialize():
             json.loads(message)
 
         self.run_benchmark(
-            "Message Deserialization", deserialize, iterations=10000, target_ms=10.0
+            "Message Deserialization",
+            deserialize,
+            iterations=10000,
+            target_ms=10.0,
         )
 
     def benchmark_protocol_registry_lookup(self):
@@ -148,7 +158,10 @@ class ProtocolPerformanceBenchmark:
             return protocol
 
         self.run_benchmark(
-            "Protocol Registry Lookup", lookup, iterations=100000, target_ms=1.0
+            "Protocol Registry Lookup",
+            lookup,
+            iterations=100000,
+            target_ms=1.0,
         )
 
     def benchmark_message_validation(self):
@@ -172,7 +185,10 @@ class ProtocolPerformanceBenchmark:
             return is_valid
 
         self.run_benchmark(
-            "Message Validation", validate, iterations=10000, target_ms=5.0
+            "Message Validation",
+            validate,
+            iterations=10000,
+            target_ms=5.0,
         )
 
     def benchmark_protocol_message_processing(self):
@@ -185,7 +201,7 @@ class ProtocolPerformanceBenchmark:
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "value": 72.5,
                 "status": "online",
-            }
+            },
         )
 
         def process():
@@ -194,7 +210,8 @@ class ProtocolPerformanceBenchmark:
 
             # Validate
             is_valid = isinstance(data.get("unit_id"), str) and isinstance(
-                data.get("value"), (int, float)
+                data.get("value"),
+                (int, float),
             )
 
             # Process (simulate)
@@ -208,7 +225,10 @@ class ProtocolPerformanceBenchmark:
             return None
 
         self.run_benchmark(
-            "Complete Message Processing", process, iterations=5000, target_ms=50.0
+            "Complete Message Processing",
+            process,
+            iterations=5000,
+            target_ms=50.0,
         )
 
     def benchmark_connection_simulation(self):
@@ -225,7 +245,7 @@ class ProtocolPerformanceBenchmark:
 
             # Simulate validation and setup
             is_valid = all(
-                [config.get("host"), config.get("port"), config.get("client_id")]
+                [config.get("host"), config.get("port"), config.get("client_id")],
             )
 
             if is_valid:
@@ -256,14 +276,17 @@ class ProtocolPerformanceBenchmark:
                 "value": float(raw_data["raw_value"]),
                 "unit": raw_data["unit"],
                 "timestamp": datetime.fromisoformat(
-                    raw_data["timestamp"].replace("Z", "+00:00")
+                    raw_data["timestamp"].replace("Z", "+00:00"),
                 ),
             }
 
             return transformed
 
         self.run_benchmark(
-            "Data Transformation", transform, iterations=10000, target_ms=20.0
+            "Data Transformation",
+            transform,
+            iterations=10000,
+            target_ms=20.0,
         )
 
     def run_all_benchmarks(self):
@@ -323,7 +346,9 @@ class ProtocolPerformanceBenchmark:
             )
             logger.info("   Median:  %.3fms", result["median_ms"])
             logger.info(
-                "   Range:   %.3fms - %.3fms", result["min_ms"], result["max_ms"]
+                "   Range:   %.3fms - %.3fms",
+                result["min_ms"],
+                result["max_ms"],
             )
 
         # Save results to file

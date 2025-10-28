@@ -74,9 +74,9 @@ def test_nested_sanitization():
     sanitized = SecureLogger.sanitize_dict(data)
     assert sanitized["user"]["username"] == "admin", "Username was modified"
     assert sanitized["user"]["password"] == "[REDACTED]", "Nested password not redacted"
-    assert (
-        sanitized["user"]["settings"]["api_key"] == "[REDACTED]"
-    ), "Nested API key not redacted"
+    assert sanitized["user"]["settings"]["api_key"] == "[REDACTED]", (
+        "Nested API key not redacted"
+    )
     print("✓ Nested sanitization works")
 
     print()

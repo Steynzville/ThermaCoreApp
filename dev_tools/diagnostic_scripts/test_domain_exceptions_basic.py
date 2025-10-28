@@ -139,15 +139,15 @@ def test_exception_attributes():
             print(f"    - Context: {exception.context}")
             print(f"    - Details keys: {list(exception.details.keys())}")
 
-            assert (
-                exception.status_code == expected_status
-            ), f"Status code mismatch for {exception.__class__.__name__}"
-            assert (
-                exception.error_type == expected_type
-            ), f"Error type mismatch for {exception.__class__.__name__}"
-            assert isinstance(
-                exception.details, dict
-            ), f"Details should be dict for {exception.__class__.__name__}"
+            assert exception.status_code == expected_status, (
+                f"Status code mismatch for {exception.__class__.__name__}"
+            )
+            assert exception.error_type == expected_type, (
+                f"Error type mismatch for {exception.__class__.__name__}"
+            )
+            assert isinstance(exception.details, dict), (
+                f"Details should be dict for {exception.__class__.__name__}"
+            )
 
         print("✓ All exception attribute tests passed")
         return True

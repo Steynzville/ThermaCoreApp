@@ -567,5 +567,5 @@ if __name__ == "__main__":
     - Throughput > 100 requests/second
     - Error rate < 1%
     - Database query time < 100ms for simple reads
-    """
+    """,
     )

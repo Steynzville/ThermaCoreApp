@@ -333,7 +333,10 @@ class TestRoleRequiredAuditLogging:
     """Test cases for role_required decorator audit logging."""
 
     def get_auth_token(
-        self, client, username="admin", password="admin123"
+        self,
+        client,
+        username="admin",
+        password="admin123",
     ):  # nosec B106
         """Helper method to get auth token."""
         response = client.post(

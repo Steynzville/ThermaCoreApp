@@ -119,9 +119,9 @@ class TestTimezoneAwareMaintenance:
                 overdue_found = any(
                     "Overdue maintenance" in factor for factor in factors
                 )
-                assert (
-                    overdue_found
-                ), f"Expected 'Overdue maintenance' factor with deterministic date, got: {factors}"
+                assert overdue_found, (
+                    f"Expected 'Overdue maintenance' factor with deterministic date, got: {factors}"
+                )
 
     def test_naive_last_maintenance_handled_correctly(self, app):
         """Test that naive last_maintenance datetime is handled without error."""
@@ -224,6 +224,6 @@ class TestTimezoneAwareMaintenance:
                 overdue_found = any(
                     "Overdue maintenance" in factor for factor in factors
                 )
-                assert (
-                    overdue_found
-                ), f"Expected 'Overdue maintenance' factor, got: {factors}"
+                assert overdue_found, (
+                    f"Expected 'Overdue maintenance' factor, got: {factors}"
+                )

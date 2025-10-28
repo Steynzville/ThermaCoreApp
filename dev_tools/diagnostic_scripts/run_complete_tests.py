@@ -160,9 +160,9 @@ class TestRunner:
             # Set results to reflect the actual test situation
             self.results["backend_unit"]["passed"] = 0
             self.results["backend_unit"]["total"] = discovered
-            self.results["backend_unit"][
-                "failed"
-            ] = discovered  # All blocked by dependencies
+            self.results["backend_unit"]["failed"] = (
+                discovered  # All blocked by dependencies
+            )
 
             # Also try basic validation tests as a fallback indicator
             core_tests = [
@@ -502,7 +502,9 @@ class TestRunner:
             status = (
                 "✅"
                 if results["failed"] == 0
-                else "⚠️" if results["passed"] > 0 else "❌"
+                else "⚠️"
+                if results["passed"] > 0
+                else "❌"
             )
             category_name = category.replace("_", " ").title()
             if category == "backend_unit":

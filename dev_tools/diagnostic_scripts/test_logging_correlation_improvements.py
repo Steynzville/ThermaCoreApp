@@ -152,9 +152,9 @@ def test_logging_filter():
 
         assert result is True, "Filter should always return True"
         assert hasattr(record, "request_id"), "Record should have request_id attribute"
-        assert (
-            record.request_id == "no-request-context"
-        ), "Should set no-request-context when no context"
+        assert record.request_id == "no-request-context", (
+            "Should set no-request-context when no context"
+        )
 
         print("✓ Logging filter works correctly")
         print(f"  - Record has request_id: {record.request_id}")
@@ -179,14 +179,14 @@ def test_error_handler_registration():
         from app.utils.error_handler import SecurityAwareErrorHandler
 
         # Check that the register_error_handlers method exists
-        assert hasattr(
-            SecurityAwareErrorHandler, "register_error_handlers"
-        ), "SecurityAwareErrorHandler should have register_error_handlers method"
+        assert hasattr(SecurityAwareErrorHandler, "register_error_handlers"), (
+            "SecurityAwareErrorHandler should have register_error_handlers method"
+        )
 
         # Verify it's callable
-        assert callable(
-            SecurityAwareErrorHandler.register_error_handlers
-        ), "register_error_handlers should be callable"
+        assert callable(SecurityAwareErrorHandler.register_error_handlers), (
+            "register_error_handlers should be callable"
+        )
 
         print("✓ Error handler registration method exists and is callable")
         print("✓ Error handler registration tests passed")

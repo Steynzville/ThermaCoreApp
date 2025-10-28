@@ -70,9 +70,9 @@ def assert_timestamp_updated(original_timestamp, updated_timestamp):
 
     """
     assert updated_timestamp is not None, "Updated timestamp should not be None"
-    assert (
-        updated_timestamp >= original_timestamp
-    ), f"Updated timestamp ({updated_timestamp}) should be >= original ({original_timestamp})"
+    assert updated_timestamp >= original_timestamp, (
+        f"Updated timestamp ({updated_timestamp}) should be >= original ({original_timestamp})"
+    )
 
 
 def assert_timestamp_unchanged(original_timestamp, current_timestamp):
@@ -83,9 +83,9 @@ def assert_timestamp_unchanged(original_timestamp, current_timestamp):
         current_timestamp: The current timestamp value
 
     """
-    assert (
-        current_timestamp == original_timestamp
-    ), f"Timestamp should not have changed: original={original_timestamp}, current={current_timestamp}"
+    assert current_timestamp == original_timestamp, (
+        f"Timestamp should not have changed: original={original_timestamp}, current={current_timestamp}"
+    )
 
 
 def is_using_postgres_tests():

@@ -46,7 +46,7 @@ def safe_service_init(
         )
         if required:
             raise RuntimeError(
-                f"Required service {service_name} failed to initialize: {e}"
+                f"Required service {service_name} failed to initialize: {e}",
             ) from e
         return False
 

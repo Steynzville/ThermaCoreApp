@@ -97,7 +97,7 @@ class ModbusClient:
             reg_addr = address + i
             if reg_addr < 100:  # Temperature registers
                 value = int(
-                    (20 + secure_random.uniform(0, 60)) * 100
+                    (20 + secure_random.uniform(0, 60)) * 100,
                 )  # 20-80°C scaled by 100
             elif reg_addr < 200:  # Pressure registers
                 value = int(
@@ -166,7 +166,10 @@ class ModbusClient:
         return True
 
     def write_single_register(
-        self, address: int, _value: int, unit_id: int = 1
+        self,
+        address: int,
+        _value: int,
+        unit_id: int = 1,
     ) -> bool:
         """Write single holding register."""
         if not self.connected:
@@ -482,7 +485,7 @@ class ModbusService:
 
         except Exception as e:
             logger.exception(
-                f"Failed to disconnect from Modbus device {device_id}: {e}"
+                f"Failed to disconnect from Modbus device {device_id}: {e}",
             )
             return False
 
@@ -518,7 +521,7 @@ class ModbusService:
 
         except Exception as e:
             logger.exception(
-                f"Failed to add register config for device {device_id}: {e}"
+                f"Failed to add register config for device {device_id}: {e}",
             )
             return False
 

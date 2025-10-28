@@ -442,7 +442,7 @@ def get_unit_readings(unit_id):
     # Calculate start time in Python for better portability and security
     # Use timezone-aware UTC datetimes for consistency
     from datetime import (
-        datetime,  # noqa: PLC0415 - Conditional import
+        datetime,
         timedelta,
         timezone,
     )
@@ -544,7 +544,7 @@ def update_unit_status(unit_id):
         return (
             jsonify(
                 {
-                    "error": f"Invalid health_status. Must be one of: {valid_health_statuses}"
+                    "error": f"Invalid health_status. Must be one of: {valid_health_statuses}",
                 },
             ),
             400,

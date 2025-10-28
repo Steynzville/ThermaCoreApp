@@ -110,7 +110,7 @@ class SecureOPCUAWrapper:
                 return is_production_environment(self._client._app)
         except Exception as e:
             logger.debug(
-                f"Failed to check production environment: {e.__class__.__name__}"
+                f"Failed to check production environment: {e.__class__.__name__}",
             )
         return False
 

@@ -162,9 +162,9 @@ class TestModbusSensitiveLogging:
                     "address 100" in call.lower() or "100" in call
                     for call in debug_calls
                 )
-                assert (
-                    has_address
-                ), "Expected address to be logged when sensitive logging enabled"
+                assert has_address, (
+                    "Expected address to be logged when sensitive logging enabled"
+                )
         finally:
             # Clean up
             del os.environ["MODBUS_LOG_SENSITIVE_DATA"]
@@ -215,9 +215,9 @@ class TestModbusSensitiveLogging:
                     "address 100" in call.lower() or "100" in call
                     for call in info_calls
                 )
-                assert (
-                    has_address
-                ), "Expected address to be logged when sensitive logging enabled"
+                assert has_address, (
+                    "Expected address to be logged when sensitive logging enabled"
+                )
         finally:
             # Clean up
             del os.environ["MODBUS_LOG_SENSITIVE_DATA"]

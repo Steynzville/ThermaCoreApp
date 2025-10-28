@@ -80,7 +80,7 @@ def _check_environment_mismatch(
     production_envs = ("production", "prod", "staging", "stage")
 
     return bool(
-        debug_enabled and (flask_env in production_envs or app_env in production_envs)
+        debug_enabled and (flask_env in production_envs or app_env in production_envs),
     )
 
 

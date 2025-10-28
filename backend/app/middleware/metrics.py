@@ -226,9 +226,9 @@ class MetricsCollector:
 
                     summary["endpoints"][escape(key)] = stats
                     endpoint_stats.append(stats)
-                    summary["error_summary"]["error_rate_by_endpoint"][
-                        escape(key)
-                    ] = error_rate
+                    summary["error_summary"]["error_rate_by_endpoint"][escape(key)] = (
+                        error_rate
+                    )
 
             # Sort by call count for top endpoints
             summary["top_endpoints"] = sorted(

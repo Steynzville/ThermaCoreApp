@@ -135,12 +135,12 @@ def test_workflow_has_required_jobs():
 
     workflow_content = workflow_path.read_text()
 
-    assert (
-        "build-and-test:" in workflow_content
-    ), "Workflow should have build-and-test job"
-    assert (
-        "python-quality-and-security:" in workflow_content
-    ), "Workflow should have python-quality-and-security job"
+    assert "build-and-test:" in workflow_content, (
+        "Workflow should have build-and-test job"
+    )
+    assert "python-quality-and-security:" in workflow_content, (
+        "Workflow should have python-quality-and-security job"
+    )
 
 
 def test_python_environment():

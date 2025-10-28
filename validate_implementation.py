@@ -4,6 +4,7 @@ Final validation script for logging refinement and domain exception handling.
 
 This script validates that all the key components work together correctly.
 """
+
 import os
 import sys
 

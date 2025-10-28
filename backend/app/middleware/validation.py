@@ -113,7 +113,9 @@ class RequestValidator:
                                     "details": {"error": "Malformed JSON syntax"},
                                 },
                                 "request_id": getattr(
-                                    g, "request_id", str(uuid.uuid4())
+                                    g,
+                                    "request_id",
+                                    str(uuid.uuid4()),
                                 ),
                                 "timestamp": datetime.now(timezone.utc).isoformat()
                                 + "Z",

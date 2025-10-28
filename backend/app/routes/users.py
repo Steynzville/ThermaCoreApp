@@ -451,7 +451,9 @@ def get_users_stats():
 @jwt_required()
 @role_required("admin")
 @rate_limit(
-    limit=10, window_seconds=3600, per="user"
+    limit=10,
+    window_seconds=3600,
+    per="user",
 )  # 10 password resets per hour per admin user
 def reset_user_password(user_id):
     """Reset a user's password (admin only).
@@ -742,7 +744,7 @@ def approve_user(user_id):
             jsonify(
                 {
                     "error": f"User is not in pending status (current status: {user.registration_status})",
-                }
+                },
             ),
             400,
         )
@@ -772,7 +774,7 @@ def approve_user(user_id):
                 {
                     "message": "User approved successfully",
                     "user": user_schema.dump(user),
-                }
+                },
             ),
             200,
         )
@@ -832,7 +834,7 @@ def reject_user(user_id):
             jsonify(
                 {
                     "error": f"User is not in pending status (current status: {user.registration_status})",
-                }
+                },
             ),
             400,
         )
@@ -861,7 +863,7 @@ def reject_user(user_id):
                 {
                     "message": "User rejected successfully",
                     "user": user_schema.dump(user),
-                }
+                },
             ),
             200,
         )

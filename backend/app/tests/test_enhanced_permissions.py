@@ -98,9 +98,9 @@ class TestEnhancedPermissionHandling:
         actual_permissions = {perm.value for perm in all_permission_enums}
 
         # Exact count assertion instead of weak count > 0
-        assert (
-            len(all_permission_enums) == 8
-        ), f"Expected exactly 8 permissions, got {len(all_permission_enums)}"
+        assert len(all_permission_enums) == 8, (
+            f"Expected exactly 8 permissions, got {len(all_permission_enums)}"
+        )
 
         # Set-based comparison for exact matching
         assert actual_permissions == expected_permissions, (
@@ -115,7 +115,8 @@ class TestEnhancedPermissionHandling:
         for permission in all_permission_enums:
             result = admin_role.has_permission(permission)
             assert isinstance(
-                result, bool
+                result,
+                bool,
             ), f"Permission {permission.value} should return boolean"
 
     def test_string_permission_validation(self, client, db_session):
@@ -140,9 +141,9 @@ class TestEnhancedPermissionHandling:
         actual_permission_strings = {perm.value for perm in PermissionEnum}
 
         # Exact count assertion instead of weak count > 0
-        assert (
-            len(actual_permission_strings) == 8
-        ), f"Expected exactly 8 permissions, got {len(actual_permission_strings)}"
+        assert len(actual_permission_strings) == 8, (
+            f"Expected exactly 8 permissions, got {len(actual_permission_strings)}"
+        )
 
         # Set-based comparison with meaningful diff output
         assert actual_permission_strings == expected_permission_strings, (
@@ -157,7 +158,8 @@ class TestEnhancedPermissionHandling:
         for permission in expected_permission_strings:
             result = admin_role.has_permission(permission)
             assert isinstance(
-                result, bool
+                result,
+                bool,
             ), f"Permission string '{permission}' should return boolean"
 
         # Invalid string permissions should return False (not raise error)
@@ -194,9 +196,9 @@ class TestEnhancedPermissionHandling:
         actual_permissions = {p.value for p in all_permissions}
 
         # Exact count assertion
-        assert (
-            len(all_permissions) == 8
-        ), f"Expected exactly 8 permissions, got {len(all_permissions)}"
+        assert len(all_permissions) == 8, (
+            f"Expected exactly 8 permissions, got {len(all_permissions)}"
+        )
 
         # Exact set comparison with meaningful diff
         assert actual_permissions == expected_permissions, (
@@ -240,9 +242,9 @@ class TestEnhancedPermissionHandling:
         ]
 
         # Exact count assertion for test coverage
-        assert (
-            len(invalid_types) == 9
-        ), f"Expected exactly 9 invalid types to test, got {len(invalid_types)}"
+        assert len(invalid_types) == 9, (
+            f"Expected exactly 9 invalid types to test, got {len(invalid_types)}"
+        )
 
         for invalid_type in invalid_types:
             with pytest.raises(
@@ -270,27 +272,28 @@ class TestEnhancedPermissionHandling:
 
         for role, role_name in roles_with_remote_control:
             # Test with string permission
-            assert (
-                role.has_permission("remote_control") is True
-            ), f"{role_name} role should have remote_control permission (string)"
+            assert role.has_permission("remote_control") is True, (
+                f"{role_name} role should have remote_control permission (string)"
+            )
 
             # Test with enum permission
-            assert (
-                role.has_permission(PermissionEnum.REMOTE_CONTROL) is True
-            ), f"{role_name} role should have remote_control permission (enum)"
+            assert role.has_permission(PermissionEnum.REMOTE_CONTROL) is True, (
+                f"{role_name} role should have remote_control permission (enum)"
+            )
 
         # Test that Viewer does NOT have remote control permission (security requirement)
-        assert (
-            viewer_role.has_permission("remote_control") is False
-        ), "Viewer role should NOT have remote_control permission (string)"
-        assert (
-            viewer_role.has_permission(PermissionEnum.REMOTE_CONTROL) is False
-        ), "Viewer role should NOT have remote_control permission (enum)"
+        assert viewer_role.has_permission("remote_control") is False, (
+            "Viewer role should NOT have remote_control permission (string)"
+        )
+        assert viewer_role.has_permission(PermissionEnum.REMOTE_CONTROL) is False, (
+            "Viewer role should NOT have remote_control permission (enum)"
+        )
 
         # Verify that the remote control permission exists in the enum
         assert hasattr(
-            PermissionEnum, "REMOTE_CONTROL"
+            PermissionEnum,
+            "REMOTE_CONTROL",
         ), "REMOTE_CONTROL should exist in PermissionEnum"
-        assert (
-            PermissionEnum.REMOTE_CONTROL.value == "remote_control"
-        ), "REMOTE_CONTROL enum value should be 'remote_control'"
+        assert PermissionEnum.REMOTE_CONTROL.value == "remote_control", (
+            "REMOTE_CONTROL enum value should be 'remote_control'"
+        )

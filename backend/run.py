@@ -151,13 +151,13 @@ def init_database_on_startup():
                             )
                             app.logger.warning("=" * 70)
                             app.logger.warning(
-                                "⚠️  IMPORTANT: No DEFAULT_ADMIN_PASSWORD set!"
+                                "⚠️  IMPORTANT: No DEFAULT_ADMIN_PASSWORD set!",
                             )
                             app.logger.warning(
-                                f"Generated random password: {default_password}"
+                                f"Generated random password: {default_password}",
                             )
                             app.logger.warning(
-                                "SAVE THIS PASSWORD - It will not be shown again!"
+                                "SAVE THIS PASSWORD - It will not be shown again!",
                             )
                             app.logger.warning("=" * 70)
 
@@ -177,11 +177,11 @@ def init_database_on_startup():
                         app.logger.info("=" * 70)
                         app.logger.info("   Username: Steyn_Admin")
                         app.logger.info(
-                            "   Password: [Set via DEFAULT_ADMIN_PASSWORD or auto-generated above]"
+                            "   Password: [Set via DEFAULT_ADMIN_PASSWORD or auto-generated above]",
                         )
                         app.logger.info("=" * 70)
                         app.logger.warning(
-                            "Please change the password after first login"
+                            "Please change the password after first login",
                         )
                         app.logger.info("=" * 70)
 

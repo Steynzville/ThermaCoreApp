@@ -61,9 +61,9 @@ def test_fresh_database():
         assert admin_user is not None, "Admin user not found"
         assert admin_user.username == "Steyn_Admin", "Admin user has wrong username"
         assert admin_user.is_active, "Admin user is not active"
-        assert admin_user.check_password(
-            "TestPassword123!"
-        ), "Admin password is incorrect"
+        assert admin_user.check_password("TestPassword123!"), (
+            "Admin password is incorrect"
+        )
         print(f"✓ Admin user created: {admin_user.username}")
         print("✓ Admin user password verified")
 
@@ -108,9 +108,9 @@ def test_admin_credentials():
         admin = User.query.filter_by(username="Steyn_Admin").first()
 
         # Test correct password (using the test password we set in environment)
-        assert admin.check_password(
-            "TestPassword123!"
-        ), "Correct password should authenticate"
+        assert admin.check_password("TestPassword123!"), (
+            "Correct password should authenticate"
+        )
         print("✓ Correct password authenticates successfully")
 
         # Test wrong password

@@ -462,7 +462,7 @@ class MQTTClient:
             "broker_port": self.broker_port,
             "client_id": self.client_id,
             "subscribed_topics": sorted(
-                self._subscribed_topics
+                self._subscribed_topics,
             ),  # Sort topics for deterministic ordering
             "metrics": {
                 "subscribed_topics_count": len(self._subscribed_topics),

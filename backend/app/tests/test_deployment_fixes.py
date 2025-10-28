@@ -198,9 +198,9 @@ class TestMQTTCertificateValidation:
 
                 # Verify error was logged for empty files
                 error_calls = [str(call) for call in mock_logger.error.call_args_list]
-                assert any(
-                    "is empty" in str(call) for call in error_calls
-                ), f"Expected 'is empty' in error logs, got: {error_calls}"
+                assert any("is empty" in str(call) for call in error_calls), (
+                    f"Expected 'is empty' in error logs, got: {error_calls}"
+                )
         finally:
             # Clean up temporary files
             os.unlink(ca_path)
@@ -236,9 +236,9 @@ class TestMQTTCertificateValidation:
 
             # Verify error was logged for missing files
             error_calls = [str(call) for call in mock_logger.error.call_args_list]
-            assert any(
-                "does not exist" in str(call) for call in error_calls
-            ), f"Expected 'does not exist' in error logs, got: {error_calls}"
+            assert any("does not exist" in str(call) for call in error_calls), (
+                f"Expected 'does not exist' in error logs, got: {error_calls}"
+            )
 
     def test_valid_certificate_files_pass_validation(self):
         """Test that valid certificate files with content pass validation."""

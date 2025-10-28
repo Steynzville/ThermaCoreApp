@@ -44,7 +44,11 @@ class CriticalPathBenchmark:
         self.secure_random = random.SystemRandom()
 
     def run_benchmark(
-        self, name: str, func, iterations: int = 100, target_ms: float = 100.0
+        self,
+        name: str,
+        func,
+        iterations: int = 100,
+        target_ms: float = 100.0,
     ):
         """
         Run a benchmark test.
@@ -137,7 +141,10 @@ class CriticalPathBenchmark:
             return {"token": encoded, "user_id": "user_123"}
 
         self.run_benchmark(
-            "User Authentication Flow", authenticate, iterations=500, target_ms=100.0
+            "User Authentication Flow",
+            authenticate,
+            iterations=500,
+            target_ms=100.0,
         )
 
     def benchmark_sensor_data_ingestion(self):
@@ -160,7 +167,7 @@ class CriticalPathBenchmark:
                     reading.get("sensor_id"),
                     reading.get("value") is not None,
                     isinstance(reading.get("value"), (int, float)),
-                ]
+                ],
             )
 
             if not is_valid:
@@ -169,7 +176,7 @@ class CriticalPathBenchmark:
             # Transform
             processed = {
                 "id": hashlib.sha256(
-                    f"{reading['sensor_id']}{reading['timestamp']}".encode()
+                    f"{reading['sensor_id']}{reading['timestamp']}".encode(),
                 ).hexdigest()[:16],
                 "unit_id": reading["unit_id"],
                 "sensor_id": reading["sensor_id"],
@@ -221,7 +228,10 @@ class CriticalPathBenchmark:
             return results[:10]
 
         self.run_benchmark(
-            "Real-time Data Query", query_recent_data, iterations=1000, target_ms=200.0
+            "Real-time Data Query",
+            query_recent_data,
+            iterations=1000,
+            target_ms=200.0,
         )
 
     def benchmark_alert_processing(self):
@@ -264,7 +274,10 @@ class CriticalPathBenchmark:
             return None
 
         self.run_benchmark(
-            "Alert Processing", process_alert, iterations=1000, target_ms=100.0
+            "Alert Processing",
+            process_alert,
+            iterations=1000,
+            target_ms=100.0,
         )
 
     def benchmark_dashboard_aggregation(self):
@@ -284,7 +297,7 @@ class CriticalPathBenchmark:
                                 datetime.now(tz=timezone.utc)
                                 - timedelta(minutes=self.secure_random.randint(0, 60))
                             ).isoformat(),
-                        }
+                        },
                     )
 
         def aggregate_dashboard_data():
@@ -329,7 +342,7 @@ class CriticalPathBenchmark:
             {
                 "unit_id": f"TC{i:03d}",
                 "status": self.secure_random.choice(
-                    ["online", "offline", "maintenance"]
+                    ["online", "offline", "maintenance"],
                 ),
                 "health": self.secure_random.choice(["optimal", "warning", "critical"]),
                 "last_seen": (
@@ -356,7 +369,7 @@ class CriticalPathBenchmark:
                     "online": len([u for u in units if u["status"] == "online"]),
                     "offline": len([u for u in units if u["status"] == "offline"]),
                     "maintenance": len(
-                        [u for u in units if u["status"] == "maintenance"]
+                        [u for u in units if u["status"] == "maintenance"],
                     ),
                 },
             }
@@ -392,7 +405,7 @@ class CriticalPathBenchmark:
 
             for row in export_data:
                 csv_lines.append(
-                    f"{row['timestamp']},{row['unit_id']},{row['sensor_id']},{row['value']}"
+                    f"{row['timestamp']},{row['unit_id']},{row['sensor_id']},{row['value']}",
                 )
 
             # Join to single string
@@ -401,7 +414,10 @@ class CriticalPathBenchmark:
             return csv_content
 
         self.run_benchmark(
-            "Data Export Preparation", prepare_export, iterations=100, target_ms=300.0
+            "Data Export Preparation",
+            prepare_export,
+            iterations=100,
+            target_ms=300.0,
         )
 
     def run_all_benchmarks(self):
@@ -462,7 +478,9 @@ class CriticalPathBenchmark:
             logger.info("   Median:  %.3fms", result["median_ms"])
             logger.info("   P95:     %.3fms", result["p95_ms"])
             logger.info(
-                "   Range:   %.3fms - %.3fms", result["min_ms"], result["max_ms"]
+                "   Range:   %.3fms - %.3fms",
+                result["min_ms"],
+                result["max_ms"],
             )
 
         # Save results to file

@@ -743,7 +743,7 @@ class DNP3Service:
 
         except Exception as e:
             logger.exception(
-                f"Failed to add data point config for device {device_id}: {e}"
+                f"Failed to add data point config for device {device_id}: {e}",
             )
             return False
 
@@ -1103,7 +1103,7 @@ class DNP3Service:
 
         except Exception as e:
             logger.exception(
-                f"Failed to perform integrity poll on device {device_id}: {e}"
+                f"Failed to perform integrity poll on device {device_id}: {e}",
             )
             return False
 

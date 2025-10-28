@@ -86,9 +86,9 @@ class TestTimestampConsistency:
         time_diff = abs(
             (created_user.updated_at - created_user.created_at).total_seconds(),
         )
-        assert (
-            time_diff < 1.0
-        ), f"Created and updated timestamps should be close, diff: {time_diff} seconds"
+        assert time_diff < 1.0, (
+            f"Created and updated timestamps should be close, diff: {time_diff} seconds"
+        )
 
     def test_user_registration_without_optional_fields(self, client, db_session):
         """Test registration works correctly when optional fields are not provided."""
@@ -243,18 +243,18 @@ class TestTimestampConsistency:
 
         # Check User model
         user_updated_at_column = User.__table__.columns["updated_at"]
-        assert (
-            user_updated_at_column.onupdate is None
-        ), "User.updated_at should not have onupdate parameter"
+        assert user_updated_at_column.onupdate is None, (
+            "User.updated_at should not have onupdate parameter"
+        )
 
         # Check Unit model
         unit_updated_at_column = Unit.__table__.columns["updated_at"]
-        assert (
-            unit_updated_at_column.onupdate is None
-        ), "Unit.updated_at should not have onupdate parameter"
+        assert unit_updated_at_column.onupdate is None, (
+            "Unit.updated_at should not have onupdate parameter"
+        )
 
         # Check Sensor model
         sensor_updated_at_column = Sensor.__table__.columns["updated_at"]
-        assert (
-            sensor_updated_at_column.onupdate is None
-        ), "Sensor.updated_at should not have onupdate parameter"
+        assert sensor_updated_at_column.onupdate is None, (
+            "Sensor.updated_at should not have onupdate parameter"
+        )

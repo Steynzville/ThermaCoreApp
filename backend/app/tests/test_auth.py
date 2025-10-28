@@ -536,9 +536,9 @@ class TestUserRegistration:
 
         # Verify user was actually created in the database with correct details
         created_user = User.query.filter_by(username="newuser").first()
-        assert (
-            created_user is not None
-        ), "User should exist in database after registration"
+        assert created_user is not None, (
+            "User should exist in database after registration"
+        )
         assert created_user.username == "newuser", "Username should match"
         assert created_user.email == "newuser@test.com", "Email should match"
         assert created_user.first_name == "New", "First name should match"
@@ -1021,7 +1021,7 @@ class TestSecurityEnhancements:
         reset_token = secrets.token_urlsafe(32)
         user.reset_token = reset_token
         user.reset_token_expires = datetime.now(timezone.utc) - timedelta(
-            hours=1
+            hours=1,
         )  # Expired
         db_session.commit()
 

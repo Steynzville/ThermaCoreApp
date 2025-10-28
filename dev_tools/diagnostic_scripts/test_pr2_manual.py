@@ -110,9 +110,9 @@ def test_error_handler():
     # Test error message lookup
     messages = SecurityAwareErrorHandler.GENERIC_MESSAGES
     assert "validation_error" in messages, "Should have validation_error message"
-    assert (
-        "rate_limit_exceeded" not in messages
-    ), "Should not have specific rate limit message"
+    assert "rate_limit_exceeded" not in messages, (
+        "Should not have specific rate limit message"
+    )
 
     print("✅ SecurityAwareErrorHandler message system verified")
 

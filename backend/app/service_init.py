@@ -168,7 +168,7 @@ def _initialize_opcua_clients(
     """
     if skip_external:
         logger.info(
-            "Skipping OPC-UA client initialization (external services disabled)"
+            "Skipping OPC-UA client initialization (external services disabled)",
         )
         app.opcua_client = None
         app.secure_opcua_client = None

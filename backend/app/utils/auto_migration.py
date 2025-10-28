@@ -57,14 +57,14 @@ def add_password_reset_columns(engine):
         # Check and add reset_token column
         if not column_exists(engine, table_name, "reset_token"):
             logger.info(
-                f"Column 'reset_token' not found in '{table_name}' table. Adding..."
+                f"Column 'reset_token' not found in '{table_name}' table. Adding...",
             )
             with engine.begin() as conn:
                 # PostgreSQL syntax with IF NOT EXISTS for safety
                 conn.execute(
                     text(
                         "ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token VARCHAR(255)",
-                    )
+                    ),
                 )
             columns_added.append("reset_token")
             logger.info("✓ Column 'reset_token' added successfully")
@@ -74,14 +74,14 @@ def add_password_reset_columns(engine):
         # Check and add reset_token_expires column
         if not column_exists(engine, table_name, "reset_token_expires"):
             logger.info(
-                f"Column 'reset_token_expires' not found in '{table_name}' table. Adding..."
+                f"Column 'reset_token_expires' not found in '{table_name}' table. Adding...",
             )
             with engine.begin() as conn:
                 # Use TIMESTAMPTZ for PostgreSQL (timezone-aware)
                 conn.execute(
                     text(
                         "ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMPTZ",
-                    )
+                    ),
                 )
             columns_added.append("reset_token_expires")
             logger.info("✓ Column 'reset_token_expires' added successfully")
@@ -97,7 +97,7 @@ def add_password_reset_columns(engine):
                 result = conn.execute(
                     text(
                         "SELECT 1 FROM pg_indexes WHERE indexname = 'idx_users_reset_token'",
-                    )
+                    ),
                 )
                 index_exists = result.fetchone() is not None
 
@@ -106,7 +106,7 @@ def add_password_reset_columns(engine):
                     conn.execute(
                         text(
                             "CREATE INDEX IF NOT EXISTS idx_users_reset_token ON users(reset_token)",
-                        )
+                        ),
                     )
                     logger.info("✓ Index 'idx_users_reset_token' created successfully")
                 else:
@@ -146,7 +146,7 @@ def add_permissions_column(engine):
         # Check and add permissions column
         if not column_exists(engine, table_name, "permissions"):
             logger.info(
-                f"Column 'permissions' not found in '{table_name}' table. Adding..."
+                f"Column 'permissions' not found in '{table_name}' table. Adding...",
             )
             with engine.begin() as conn:
                 # Add JSON column for PostgreSQL, TEXT for SQLite compatibility
@@ -155,13 +155,13 @@ def add_permissions_column(engine):
                     conn.execute(
                         text(
                             "ALTER TABLE users ADD COLUMN IF NOT EXISTS permissions JSONB",
-                        )
+                        ),
                     )
                 elif engine.dialect.name == "sqlite":
                     conn.execute(
                         text(
                             "ALTER TABLE users ADD COLUMN permissions TEXT",
-                        )
+                        ),
                     )
                 else:
                     logger.error(f"Unsupported database dialect: {engine.dialect.name}")
@@ -205,13 +205,13 @@ def update_emergency_admin_permissions(engine):
             result = conn.execute(
                 text(
                     "SELECT id FROM users WHERE username = 'emergency_admin'",
-                )
+                ),
             )
             existing_user = result.fetchone()
 
             if existing_user:
                 logger.info(
-                    "Updating emergency_admin user with comprehensive permissions"
+                    "Updating emergency_admin user with comprehensive permissions",
                 )
                 conn.execute(
                     text(
@@ -229,7 +229,7 @@ def update_emergency_admin_permissions(engine):
                 logger.info("✓ Emergency admin permissions updated successfully")
             else:
                 logger.info(
-                    "✓ Emergency admin user does not exist yet (will be created when needed)"
+                    "✓ Emergency admin user does not exist yet (will be created when needed)",
                 )
 
         return True
@@ -265,14 +265,14 @@ def add_user_approval_columns(engine):
         # Check and add registration_status column
         if not column_exists(engine, table_name, "registration_status"):
             logger.info(
-                f"Column 'registration_status' not found in '{table_name}' table. Adding..."
+                f"Column 'registration_status' not found in '{table_name}' table. Adding...",
             )
             with engine.begin() as conn:
                 # Add with default 'approved' to ensure existing users maintain access
                 conn.execute(
                     text(
                         "ALTER TABLE users ADD COLUMN IF NOT EXISTS registration_status VARCHAR(20) DEFAULT 'approved'",
-                    )
+                    ),
                 )
             columns_added.append("registration_status")
             logger.info("✓ Column 'registration_status' added successfully")
@@ -282,20 +282,20 @@ def add_user_approval_columns(engine):
         # Check and add approval_date column
         if not column_exists(engine, table_name, "approval_date"):
             logger.info(
-                f"Column 'approval_date' not found in '{table_name}' table. Adding..."
+                f"Column 'approval_date' not found in '{table_name}' table. Adding...",
             )
             with engine.begin() as conn:
                 if engine.dialect.name == "postgresql":
                     conn.execute(
                         text(
                             "ALTER TABLE users ADD COLUMN IF NOT EXISTS approval_date TIMESTAMP",
-                        )
+                        ),
                     )
                 else:  # SQLite
                     conn.execute(
                         text(
                             "ALTER TABLE users ADD COLUMN approval_date TIMESTAMP",
-                        )
+                        ),
                     )
             columns_added.append("approval_date")
             logger.info("✓ Column 'approval_date' added successfully")
@@ -305,20 +305,20 @@ def add_user_approval_columns(engine):
         # Check and add approved_by column
         if not column_exists(engine, table_name, "approved_by"):
             logger.info(
-                f"Column 'approved_by' not found in '{table_name}' table. Adding..."
+                f"Column 'approved_by' not found in '{table_name}' table. Adding...",
             )
             with engine.begin() as conn:
                 if engine.dialect.name == "postgresql":
                     conn.execute(
                         text(
                             "ALTER TABLE users ADD COLUMN IF NOT EXISTS approved_by INTEGER",
-                        )
+                        ),
                     )
                 else:  # SQLite
                     conn.execute(
                         text(
                             "ALTER TABLE users ADD COLUMN approved_by INTEGER",
-                        )
+                        ),
                     )
             columns_added.append("approved_by")
             logger.info("✓ Column 'approved_by' added successfully")
@@ -328,20 +328,20 @@ def add_user_approval_columns(engine):
         # Check and add rejection_reason column
         if not column_exists(engine, table_name, "rejection_reason"):
             logger.info(
-                f"Column 'rejection_reason' not found in '{table_name}' table. Adding..."
+                f"Column 'rejection_reason' not found in '{table_name}' table. Adding...",
             )
             with engine.begin() as conn:
                 if engine.dialect.name == "postgresql":
                     conn.execute(
                         text(
                             "ALTER TABLE users ADD COLUMN IF NOT EXISTS rejection_reason TEXT",
-                        )
+                        ),
                     )
                 else:  # SQLite
                     conn.execute(
                         text(
                             "ALTER TABLE users ADD COLUMN rejection_reason TEXT",
-                        )
+                        ),
                     )
             columns_added.append("rejection_reason")
             logger.info("✓ Column 'rejection_reason' added successfully")
@@ -360,7 +360,7 @@ def add_user_approval_columns(engine):
                     approval_date = created_at
                 WHERE registration_status IS NULL OR registration_status = 'approved'
                 """,
-                )
+                ),
             )
             rows_updated = result.rowcount
             logger.info(f"✓ Updated {rows_updated} existing users to approved status")
@@ -373,7 +373,7 @@ def add_user_approval_columns(engine):
                     result = conn.execute(
                         text(
                             "SELECT 1 FROM pg_indexes WHERE indexname = 'idx_users_registration_status'",
-                        )
+                        ),
                     )
                     index_exists = result.fetchone() is not None
                     if not index_exists:
@@ -381,23 +381,23 @@ def add_user_approval_columns(engine):
                         conn.execute(
                             text(
                                 "CREATE INDEX IF NOT EXISTS idx_users_registration_status ON users(registration_status)",
-                            )
+                            ),
                         )
                         logger.info(
-                            "✓ Index 'idx_users_registration_status' created successfully"
+                            "✓ Index 'idx_users_registration_status' created successfully",
                         )
                     else:
                         logger.info(
-                            "✓ Index 'idx_users_registration_status' already exists"
+                            "✓ Index 'idx_users_registration_status' already exists",
                         )
                 else:  # SQLite
                     conn.execute(
                         text(
                             "CREATE INDEX IF NOT EXISTS idx_users_registration_status ON users(registration_status)",
-                        )
+                        ),
                     )
                     logger.info(
-                        "✓ Index 'idx_users_registration_status' created/verified"
+                        "✓ Index 'idx_users_registration_status' created/verified",
                     )
 
                 # Check and create index on approved_by
@@ -405,7 +405,7 @@ def add_user_approval_columns(engine):
                     result = conn.execute(
                         text(
                             "SELECT 1 FROM pg_indexes WHERE indexname = 'idx_users_approved_by'",
-                        )
+                        ),
                     )
                     index_exists = result.fetchone() is not None
                     if not index_exists:
@@ -413,10 +413,10 @@ def add_user_approval_columns(engine):
                         conn.execute(
                             text(
                                 "CREATE INDEX IF NOT EXISTS idx_users_approved_by ON users(approved_by)",
-                            )
+                            ),
                         )
                         logger.info(
-                            "✓ Index 'idx_users_approved_by' created successfully"
+                            "✓ Index 'idx_users_approved_by' created successfully",
                         )
                     else:
                         logger.info("✓ Index 'idx_users_approved_by' already exists")
@@ -424,7 +424,7 @@ def add_user_approval_columns(engine):
                     conn.execute(
                         text(
                             "CREATE INDEX IF NOT EXISTS idx_users_approved_by ON users(approved_by)",
-                        )
+                        ),
                     )
                     logger.info("✓ Index 'idx_users_approved_by' created/verified")
         except Exception as idx_error:
@@ -433,11 +433,11 @@ def add_user_approval_columns(engine):
 
         if columns_added:
             logger.info(
-                f"User approval workflow migration complete: Added columns {columns_added}"
+                f"User approval workflow migration complete: Added columns {columns_added}",
             )
         else:
             logger.info(
-                "User approval workflow migration complete: All required columns already exist"
+                "User approval workflow migration complete: All required columns already exist",
             )
 
         return True
@@ -509,13 +509,13 @@ def add_user_profile_fields(engine):
             # Validate column name to prevent SQL injection
             if not _validate_sql_identifier(column_name):
                 logger.error(
-                    f"Invalid column name '{column_name}' - skipping for security"
+                    f"Invalid column name '{column_name}' - skipping for security",
                 )
                 continue
 
             if not column_exists(engine, table_name, column_name):
                 logger.info(
-                    f"Column '{column_name}' not found in '{table_name}' table. Adding..."
+                    f"Column '{column_name}' not found in '{table_name}' table. Adding...",
                 )
                 with engine.begin() as conn:
                     # Note: DDL statements cannot use parameterized queries for identifiers
@@ -523,7 +523,7 @@ def add_user_profile_fields(engine):
                     conn.execute(
                         text(
                             f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {column_name} {column_def}",
-                        )
+                        ),
                     )
                 columns_added.append(column_name)
                 logger.info(f"✓ Column '{column_name}' added successfully")
@@ -541,12 +541,12 @@ def add_user_profile_fields(engine):
             # Validate both index name and column name to prevent SQL injection
             if not _validate_sql_identifier(index_name):
                 logger.error(
-                    f"Invalid index name '{index_name}' - skipping for security"
+                    f"Invalid index name '{index_name}' - skipping for security",
                 )
                 continue
             if not _validate_sql_identifier(column_name):
                 logger.error(
-                    f"Invalid column name '{column_name}' for index - skipping for security"
+                    f"Invalid column name '{column_name}' for index - skipping for security",
                 )
                 continue
 
@@ -566,7 +566,7 @@ def add_user_profile_fields(engine):
                         conn.execute(
                             text(
                                 f"CREATE INDEX IF NOT EXISTS {index_name} ON users({column_name})",
-                            )
+                            ),
                         )
                         logger.info(f"✓ Index '{index_name}' created successfully")
                     else:
@@ -574,16 +574,16 @@ def add_user_profile_fields(engine):
             except Exception as idx_error:
                 # Index creation is not critical - log warning but continue
                 logger.exception(
-                    f"Could not create/verify index '{index_name}': {idx_error}"
+                    f"Could not create/verify index '{index_name}': {idx_error}",
                 )
 
         if columns_added:
             logger.info(
-                f"User profile fields migration complete: Added columns {columns_added}"
+                f"User profile fields migration complete: Added columns {columns_added}",
             )
         else:
             logger.info(
-                "User profile fields migration complete: All required columns already exist"
+                "User profile fields migration complete: All required columns already exist",
             )
 
         return True
@@ -655,20 +655,24 @@ def add_tenants_table(engine):
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
                     """,
-                    )
+                    ),
                 )
 
                 # Create indexes
                 conn.execute(
-                    text("CREATE INDEX IF NOT EXISTS idx_tenants_name ON tenants(name)")
-                )
-                conn.execute(
-                    text("CREATE INDEX IF NOT EXISTS idx_tenants_slug ON tenants(slug)")
+                    text(
+                        "CREATE INDEX IF NOT EXISTS idx_tenants_name ON tenants(name)"
+                    ),
                 )
                 conn.execute(
                     text(
-                        "CREATE INDEX IF NOT EXISTS idx_tenants_is_active ON tenants(is_active)"
-                    )
+                        "CREATE INDEX IF NOT EXISTS idx_tenants_slug ON tenants(slug)"
+                    ),
+                )
+                conn.execute(
+                    text(
+                        "CREATE INDEX IF NOT EXISTS idx_tenants_is_active ON tenants(is_active)",
+                    ),
                 )
 
             elif engine.dialect.name == "sqlite":
@@ -697,20 +701,24 @@ def add_tenants_table(engine):
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
                     """,
-                    )
+                    ),
                 )
 
                 # Create indexes
                 conn.execute(
-                    text("CREATE INDEX IF NOT EXISTS idx_tenants_name ON tenants(name)")
-                )
-                conn.execute(
-                    text("CREATE INDEX IF NOT EXISTS idx_tenants_slug ON tenants(slug)")
+                    text(
+                        "CREATE INDEX IF NOT EXISTS idx_tenants_name ON tenants(name)"
+                    ),
                 )
                 conn.execute(
                     text(
-                        "CREATE INDEX IF NOT EXISTS idx_tenants_is_active ON tenants(is_active)"
-                    )
+                        "CREATE INDEX IF NOT EXISTS idx_tenants_slug ON tenants(slug)"
+                    ),
+                )
+                conn.execute(
+                    text(
+                        "CREATE INDEX IF NOT EXISTS idx_tenants_is_active ON tenants(is_active)",
+                    ),
                 )
             else:
                 logger.error(f"Unsupported database dialect: {engine.dialect.name}")
@@ -750,14 +758,14 @@ def add_tenant_id_to_users(engine):
                     ALTER TABLE users
                     ADD COLUMN IF NOT EXISTS tenant_id INTEGER REFERENCES tenants(id)
                     """,
-                    )
+                    ),
                 )
 
                 # Create index for tenant_id
                 conn.execute(
                     text(
-                        "CREATE INDEX IF NOT EXISTS idx_users_tenant_id ON users(tenant_id)"
-                    )
+                        "CREATE INDEX IF NOT EXISTS idx_users_tenant_id ON users(tenant_id)",
+                    ),
                 )
 
             elif engine.dialect.name == "sqlite":
@@ -772,14 +780,14 @@ def add_tenant_id_to_users(engine):
                     ALTER TABLE users
                     ADD COLUMN tenant_id INTEGER REFERENCES tenants(id)
                     """,
-                    )
+                    ),
                 )
 
                 # Create index for tenant_id
                 conn.execute(
                     text(
-                        "CREATE INDEX IF NOT EXISTS idx_users_tenant_id ON users(tenant_id)"
-                    )
+                        "CREATE INDEX IF NOT EXISTS idx_users_tenant_id ON users(tenant_id)",
+                    ),
                 )
             else:
                 logger.error(f"Unsupported database dialect: {engine.dialect.name}")
@@ -819,14 +827,14 @@ def add_tenant_id_to_units(engine):
                     ALTER TABLE units
                     ADD COLUMN IF NOT EXISTS tenant_id INTEGER REFERENCES tenants(id)
                     """,
-                    )
+                    ),
                 )
 
                 # Create index for tenant_id
                 conn.execute(
                     text(
-                        "CREATE INDEX IF NOT EXISTS idx_units_tenant_id ON units(tenant_id)"
-                    )
+                        "CREATE INDEX IF NOT EXISTS idx_units_tenant_id ON units(tenant_id)",
+                    ),
                 )
 
             elif engine.dialect.name == "sqlite":
@@ -841,14 +849,14 @@ def add_tenant_id_to_units(engine):
                     ALTER TABLE units
                     ADD COLUMN tenant_id INTEGER REFERENCES tenants(id)
                     """,
-                    )
+                    ),
                 )
 
                 # Create index for tenant_id
                 conn.execute(
                     text(
-                        "CREATE INDEX IF NOT EXISTS idx_units_tenant_id ON units(tenant_id)"
-                    )
+                        "CREATE INDEX IF NOT EXISTS idx_units_tenant_id ON units(tenant_id)",
+                    ),
                 )
             else:
                 logger.error(f"Unsupported database dialect: {engine.dialect.name}")
@@ -897,7 +905,7 @@ def add_multi_tenancy_support(engine):
             logger.info("✓ Multi-tenancy migration completed successfully")
         else:
             logger.warning(
-                "Some multi-tenancy migrations failed - check logs for details"
+                "Some multi-tenancy migrations failed - check logs for details",
             )
 
         return success

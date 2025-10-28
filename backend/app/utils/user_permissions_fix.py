@@ -63,7 +63,7 @@ def fix_user_permissions(engine):
                 JOIN roles r ON u.role_id = r.id
                 WHERE u.username != 'emergency_admin'
                 """,
-                )
+                ),
             )
             users = result.fetchall()
 
@@ -99,7 +99,7 @@ def fix_user_permissions(engine):
                 )
 
                 logger.info(
-                    f"Updated permissions for user '{username}' (role: {role_name})"
+                    f"Updated permissions for user '{username}' (role: {role_name})",
                 )
                 updated_count += 1
 

@@ -30,7 +30,7 @@ def create_health_check_endpoint(app: Any) -> Any:
                     "version": "2.9.0",
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                     "coverage": COVERAGE_DATA,
-                }
+                },
             ),
             200,
         )
@@ -365,7 +365,9 @@ def check_database(app: Any, services: dict[str, Any]) -> bool:
 
 
 def _get_service_status(
-    services: dict[str, Any], service_name: str, default_status: str
+    services: dict[str, Any],
+    service_name: str,
+    default_status: str,
 ) -> str:
     """Extract and simplify service status.
 
@@ -415,10 +417,14 @@ def create_detailed_health_check_endpoint(app: Any) -> Any:
             "database": _get_service_status(services, "database", "connected"),
             "websocket": _get_service_status(services, "websocket", "ready"),
             "anomaly_detection": _get_service_status(
-                services, "anomaly_detection", "initialized"
+                services,
+                "anomaly_detection",
+                "initialized",
             ),
             "protocol_simulator": _get_service_status(
-                services, "protocol_simulator", "active"
+                services,
+                "protocol_simulator",
+                "active",
             ),
         }
 
@@ -430,7 +436,7 @@ def create_detailed_health_check_endpoint(app: Any) -> Any:
                     "services": services_status,
                     "tests_passing": TESTS_PASSING,
                     "coverage": COVERAGE_DATA,
-                }
+                },
             ),
             200,
         )

@@ -824,7 +824,7 @@ class OPCUAClient:
                             node_info["value"] = child.get_value()
                         except Exception as e:
                             logger.debug(
-                                f"Failed to read node value: {e.__class__.__name__}"
+                                f"Failed to read node value: {e.__class__.__name__}",
                             )
 
                     nodes.append(node_info)
