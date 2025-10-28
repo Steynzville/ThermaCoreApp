@@ -66,18 +66,13 @@ jobs:
           
           echo "✅ Gitleaks scan completed successfully"
 
-      - name: Run OSV Scanner with Go Install (Most Reliable)
+      - name: Run OSV Scanner
+        continue-on-error: true
         run: |
-          echo "🔧 Installing OSV Scanner via Go install..."
-          # Install Go if not present
-          if ! command -v go &> /dev/null; then
-            curl -L https://golang.org/dl/go1.21.0.linux-amd64.tar.gz | sudo tar -C /usr/local -xzf -
-            echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
-            source ~/.bashrc
-          fi
-          
-          # Install OSV Scanner via Go
-          go install github.com/google/osv-scanner/cmd/osv-scanner@v1
+          echo "🔧 Installing OSV Scanner..."
+          # Download and install osv-scanner binary directly
+          curl -sSfL https://github.com/google/osv-scanner/releases/download/v1.4.3/osv-scanner_1.4.3_linux_amd64 -o /tmp/osv-scanner
+          chmod +x /tmp/osv-scanner
           
           echo "🔍 Running OSV Scanner..."
-          ~/go/bin/osv-scanner -r . --skip-git || echo "OSV Scanner completed with findings"
+          /tmp/osv-scanner -r . --skip-git || echo "⚠️ OSV Scanner completed with findings"

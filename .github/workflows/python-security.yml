@@ -180,7 +180,8 @@ jobs:
         working-directory: backend
 
       - name: Upload Security Scan Results
-        if: ${{ always() && !github.event.repository.private }}
+        if: always()
+        continue-on-error: true
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: backend/bandit_sarif.json
