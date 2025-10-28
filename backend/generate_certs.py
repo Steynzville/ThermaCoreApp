@@ -1,11 +1,17 @@
+import logging
 import os
 import subprocess
 import sys
+from pathlib import Path
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+logger = logging.getLogger(__name__)
 
 try:
     from OpenSSL import crypto
 except ImportError:
-    print("Installing pyOpenSSL...")
+    logger.info("Installing pyOpenSSL...")
     subprocess.run(
         [sys.executable, "-m", "pip", "install", "pyopenssl"],
         check=True,
@@ -36,35 +42,31 @@ def generate_self_signed_cert(cert_file, key_file, common_name="thermacore.local
         cert.sign(k, "sha256")
 
         # Ensure directory exists
-        os.makedirs(
-            os.path.dirname(cert_file) if os.path.dirname(cert_file) else ".",
-            exist_ok=True,
-        )
-        os.makedirs(
-            os.path.dirname(key_file) if os.path.dirname(key_file) else ".",
-            exist_ok=True,
-        )
+        cert_path = Path(cert_file)
+        key_path = Path(key_file)
+        cert_path.parent.mkdir(parents=True, exist_ok=True)
+        key_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Save certificate
-        with open(cert_file, "wb") as f:
+        with cert_path.open("wb") as f:
             f.write(crypto.dump_certificate(crypto.FILETYPE_PEM, cert))
-        print(f"✓ Generated certificate: {cert_file}")
+        logger.info("✓ Generated certificate: %s", cert_file)
 
         # Save private key
-        with open(key_file, "wb") as f:
+        with key_path.open("wb") as f:
             f.write(crypto.dump_privatekey(crypto.FILETYPE_PEM, k))
-        print(f"✓ Generated private key: {key_file}")
+        logger.info("✓ Generated private key: %s", key_file)
 
         return True
 
     except Exception as e:
-        print(f"✗ Failed to generate certificates: {e}")
+        logger.error("✗ Failed to generate certificates: %s", e)
         return False
 
 
 def ensure_certificates():
     """Ensure all required certificate files exist"""
-    print("🔐 Generating MQTT and OPC-UA certificates...")
+    logger.info("🔐 Generating MQTT and OPC-UA certificates...")
 
     cert_dir = "/tmp"
     certificates_to_generate = [
@@ -79,14 +81,16 @@ def ensure_certificates():
     ]
 
     # Also create the same certificates in current directory for local development
-    local_cert_dir = "certs"
-    if not os.path.exists(local_cert_dir):
-        os.makedirs(local_cert_dir, exist_ok=True)
+    local_cert_dir = Path("certs")
+    local_cert_dir.mkdir(exist_ok=True)
 
     local_certificates = [
-        (f"{local_cert_dir}/ca.crt", f"{local_cert_dir}/ca.key"),
-        (f"{local_cert_dir}/client.crt", f"{local_cert_dir}/client.key"),
-        (f"{local_cert_dir}/client_cert.pem", f"{local_cert_dir}/client_key.pem"),
+        (str(local_cert_dir / "ca.crt"), str(local_cert_dir / "ca.key")),
+        (str(local_cert_dir / "client.crt"), str(local_cert_dir / "client.key")),
+        (
+            str(local_cert_dir / "client_cert.pem"),
+            str(local_cert_dir / "client_key.pem"),
+        ),
     ]
 
     all_certificates = certificates_to_generate + local_certificates
@@ -96,18 +100,27 @@ def ensure_certificates():
         if generate_self_signed_cert(cert_file, key_file):
             success_count += 1
 
-    print(
-        f"🎉 Successfully generated {success_count}/{len(all_certificates)} certificate pairs",
+    logger.info(
+        "🎉 Successfully generated %d/%d certificate pairs",
+        success_count,
+        len(all_certificates),
     )
 
     # Verify the certificates exist and have content
-    print("\n📋 Certificate verification:")
+    logger.info("\n📋 Certificate verification:")
     for cert_file, key_file in certificates_to_generate:
-        cert_exists = os.path.exists(cert_file) and os.path.getsize(cert_file) > 0
-        key_exists = os.path.exists(key_file) and os.path.getsize(key_file) > 0
+        cert_path = Path(cert_file)
+        key_path = Path(key_file)
+        cert_exists = cert_path.exists() and cert_path.stat().st_size > 0
+        key_exists = key_path.exists() and key_path.stat().st_size > 0
         status = "✓" if cert_exists and key_exists else "✗"
-        print(
-            f"  {status} {os.path.basename(cert_file)}: {cert_exists} | {os.path.basename(key_file)}: {key_exists}",
+        logger.info(
+            "  %s %s: %s | %s: %s",
+            status,
+            cert_path.name,
+            cert_exists,
+            key_path.name,
+            key_exists,
         )
 
     return success_count > 0

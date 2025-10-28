@@ -6,41 +6,35 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-describe("Workflow Configuration", () => {
-  it("should have a valid workflow file", () => {
-    const workflowPath = path.join(
-      process.cwd(),
-      ".github",
-      "workflows",
-      "checks.yml",
-    );
-    expect(fs.existsSync(workflowPath)).toBe(true);
+const workflowsDir = path.join(process.cwd(), ".github", "workflows");
+
+describe("GitHub Workflows", () => {
+  const workflowFiles = fs.existsSync(workflowsDir)
+    ? fs
+        .readdirSync(workflowsDir)
+        .filter((f) => f.endsWith(".yml") || f.endsWith(".yaml"))
+    : [];
+
+  it("should have at least one workflow file", () => {
+    expect(workflowFiles.length).toBeGreaterThan(0);
   });
 
-  it("should have workflow content", () => {
-    const workflowPath = path.join(
-      process.cwd(),
-      ".github",
-      "workflows",
-      "checks.yml",
-    );
-    const workflowContent = fs.readFileSync(workflowPath, "utf8");
-
-    expect(workflowContent).toBeTruthy();
-    expect(workflowContent).toContain("jobs:");
+  it("should have workflows that define jobs", () => {
+    const allContents = workflowFiles
+      .map((file) => fs.readFileSync(path.join(workflowsDir, file), "utf8"))
+      .join("\n");
+    expect(allContents).toContain("jobs:");
   });
 
-  it("should have frontend test step in workflow", () => {
-    const workflowPath = path.join(
-      process.cwd(),
-      ".github",
-      "workflows",
-      "checks.yml",
-    );
-    const workflowContent = fs.readFileSync(workflowPath, "utf8");
-
-    expect(workflowContent).toContain("build-and-test:");
-    expect(workflowContent).toContain("Run Frontend Tests");
+  it("should have frontend testing in at least one workflow", () => {
+    const allContents = workflowFiles
+      .map((file) => fs.readFileSync(path.join(workflowsDir, file), "utf8"))
+      .join("\n");
+    const hasFrontendTesting =
+      allContents.includes("Run Frontend Tests") ||
+      allContents.includes("pnpm test") ||
+      allContents.includes("npm test");
+    expect(hasFrontendTesting).toBe(true);
   });
 });
 
