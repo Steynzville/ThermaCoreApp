@@ -36,7 +36,6 @@ const analyticsData = [
     sales: 8,
     revenue: 360000,
     avgPrice: 45000,
-    percentage: 40,
     fill: "#3B82F6",
   },
   {
@@ -44,7 +43,6 @@ const analyticsData = [
     sales: 7,
     revenue: 4097688,
     avgPrice: 585384,
-    percentage: 35,
     fill: "#10B981",
   },
   {
@@ -52,7 +50,6 @@ const analyticsData = [
     sales: 5,
     revenue: 7317300,
     avgPrice: 1463460,
-    percentage: 25,
     fill: "#F59E0B",
   },
 ];
@@ -63,7 +60,6 @@ const summaryData = {
   totalRevenue: 11774988,
   activeUnits: 17,
   avgGrowth: "+8.5%",
-  avgPrice: 588749,
 };
 
 // Update category distribution
