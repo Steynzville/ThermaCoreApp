@@ -1,15 +1,13 @@
 """Tests for certificate generation functionality."""
 
-import os
-
-# Import the certificate generation module
 import sys
 import tempfile
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 import generate_certs
 
 
@@ -19,22 +17,22 @@ class TestCertificateGeneration:
     def test_generate_self_signed_cert_creates_files(self):
         """Test that certificate generation creates both cert and key files."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            cert_file = os.path.join(tmpdir, "test.crt")
-            key_file = os.path.join(tmpdir, "test.key")
+            cert_file = str(Path(tmpdir) / "test.crt")
+            key_file = str(Path(tmpdir) / "test.key")
 
             result = generate_certs.generate_self_signed_cert(cert_file, key_file)
 
             assert result is True
-            assert os.path.exists(cert_file)
-            assert os.path.exists(key_file)
-            assert os.path.getsize(cert_file) > 0
-            assert os.path.getsize(key_file) > 0
+            assert Path(cert_file).exists()
+            assert Path(key_file).exists()
+            assert Path(cert_file).stat().st_size > 0
+            assert Path(key_file).stat().st_size > 0
 
     def test_generate_self_signed_cert_with_custom_common_name(self):
         """Test certificate generation with custom common name."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            cert_file = os.path.join(tmpdir, "test.crt")
-            key_file = os.path.join(tmpdir, "test.key")
+            cert_file = str(Path(tmpdir) / "test.crt")
+            key_file = str(Path(tmpdir) / "test.key")
             custom_cn = "custom.example.com"
 
             result = generate_certs.generate_self_signed_cert(
@@ -44,7 +42,7 @@ class TestCertificateGeneration:
             )
 
             assert result is True
-            assert os.path.exists(cert_file)
+            assert Path(cert_file).exists()
 
             # Verify the common name in the certificate
             import subprocess
@@ -58,25 +56,25 @@ class TestCertificateGeneration:
     def test_generate_self_signed_cert_creates_directory(self):
         """Test that certificate generation creates parent directories if needed."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            subdir = os.path.join(tmpdir, "certs", "test")
-            cert_file = os.path.join(subdir, "test.crt")
-            key_file = os.path.join(subdir, "test.key")
+            subdir = Path(tmpdir) / "certs" / "test"
+            cert_file = str(subdir / "test.crt")
+            key_file = str(subdir / "test.key")
 
             # Directory should not exist yet
-            assert not os.path.exists(subdir)
+            assert not subdir.exists()
 
             result = generate_certs.generate_self_signed_cert(cert_file, key_file)
 
             assert result is True
-            assert os.path.exists(subdir)
-            assert os.path.exists(cert_file)
-            assert os.path.exists(key_file)
+            assert subdir.exists()
+            assert Path(cert_file).exists()
+            assert Path(key_file).exists()
 
     def test_generated_certificate_is_valid(self):
         """Test that generated certificate is valid and can be parsed."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            cert_file = os.path.join(tmpdir, "test.crt")
-            key_file = os.path.join(tmpdir, "test.key")
+            cert_file = str(Path(tmpdir) / "test.crt")
+            key_file = str(Path(tmpdir) / "test.key")
 
             generate_certs.generate_self_signed_cert(cert_file, key_file)
 
@@ -95,8 +93,8 @@ class TestCertificateGeneration:
     def test_generated_key_is_valid(self):
         """Test that generated private key is valid and can be parsed."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            cert_file = os.path.join(tmpdir, "test.crt")
-            key_file = os.path.join(tmpdir, "test.key")
+            cert_file = str(Path(tmpdir) / "test.crt")
+            key_file = str(Path(tmpdir) / "test.key")
 
             generate_certs.generate_self_signed_cert(cert_file, key_file)
 
@@ -115,8 +113,8 @@ class TestCertificateGeneration:
     def test_ensure_certificates_creates_all_required_certs(self):
         """Test that ensure_certificates creates all required certificate pairs."""
         with tempfile.TemporaryDirectory():
-            # Mock the local cert directory
-            with patch("generate_certs.os.path.exists") as mock_exists:
+            # Mock the pathlib.Path.exists method
+            with patch("generate_certs.Path.exists") as mock_exists:
                 mock_exists.return_value = False
 
                 # We can't easily test the /tmp generation in isolation,
@@ -127,8 +125,8 @@ class TestCertificateGeneration:
     def test_certificate_has_correct_validity_period(self):
         """Test that certificate has 1 year validity period."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            cert_file = os.path.join(tmpdir, "test.crt")
-            key_file = os.path.join(tmpdir, "test.key")
+            cert_file = str(Path(tmpdir) / "test.crt")
+            key_file = str(Path(tmpdir) / "test.key")
 
             generate_certs.generate_self_signed_cert(cert_file, key_file)
 
@@ -169,8 +167,8 @@ class TestCertificateGeneration:
     def test_certificate_has_correct_organization_info(self):
         """Test that certificate has correct organization information."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            cert_file = os.path.join(tmpdir, "test.crt")
-            key_file = os.path.join(tmpdir, "test.key")
+            cert_file = str(Path(tmpdir) / "test.crt")
+            key_file = str(Path(tmpdir) / "test.key")
 
             generate_certs.generate_self_signed_cert(cert_file, key_file)
 
@@ -189,8 +187,8 @@ class TestCertificateGeneration:
     def test_certificate_uses_sha256_signature(self):
         """Test that certificate uses SHA256 signature algorithm."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            cert_file = os.path.join(tmpdir, "test.crt")
-            key_file = os.path.join(tmpdir, "test.key")
+            cert_file = str(Path(tmpdir) / "test.crt")
+            key_file = str(Path(tmpdir) / "test.key")
 
             generate_certs.generate_self_signed_cert(cert_file, key_file)
 
@@ -207,8 +205,8 @@ class TestCertificateGeneration:
     def test_certificate_is_2048_bit_rsa(self):
         """Test that certificate uses 2048-bit RSA key."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            cert_file = os.path.join(tmpdir, "test.crt")
-            key_file = os.path.join(tmpdir, "test.key")
+            cert_file = str(Path(tmpdir) / "test.crt")
+            key_file = str(Path(tmpdir) / "test.key")
 
             generate_certs.generate_self_signed_cert(cert_file, key_file)
 
