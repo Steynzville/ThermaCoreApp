@@ -1,6 +1,12 @@
+// Product Line Mapping:
+// Power-Box: TC001-TC008 (8 units - 40%)
+// Power-Plus: TC009-TC015 (7 units - 35%)
+// Titan: TC016-TC020 (5 units - 25%)
+
 export const units = [
   {
     id: "TC001",
+    productLine: "Power-Box",
     watergeneration: true,
     temp_outside: 31.4,
     humidity: 63.4,
@@ -30,6 +36,7 @@ export const units = [
   },
   {
     id: "TC002",
+    productLine: "Power-Box",
     watergeneration: true,
     temp_outside: 15.3,
     humidity: 54.9,
@@ -59,6 +66,7 @@ export const units = [
   },
   {
     id: "TC003",
+    productLine: "Power-Box",
     watergeneration: true,
     temp_outside: 15.1,
     humidity: 42.7,
@@ -88,6 +96,7 @@ export const units = [
   },
   {
     id: "TC004",
+    productLine: "Power-Box",
     watergeneration: false,
     temp_outside: 33.4,
     humidity: 58.4,
@@ -117,6 +126,7 @@ export const units = [
   },
   {
     id: "TC005",
+    productLine: "Power-Box",
     watergeneration: true,
     temp_outside: 33.7,
     humidity: 42.6,
@@ -146,6 +156,7 @@ export const units = [
   },
   {
     id: "TC006",
+    productLine: "Power-Box",
     watergeneration: true,
     temp_outside: 29.5,
     humidity: 59.7,
@@ -175,6 +186,7 @@ export const units = [
   },
   {
     id: "TC007",
+    productLine: "Power-Box",
     watergeneration: true,
     temp_outside: 18.1,
     humidity: 71.6,
@@ -202,6 +214,7 @@ export const units = [
   },
   {
     id: "TC008",
+    productLine: "Power-Box",
     watergeneration: false,
     temp_outside: 23.4,
     humidity: 63.8,
@@ -229,6 +242,7 @@ export const units = [
   },
   {
     id: "TC009",
+    productLine: "Power-Plus",
     watergeneration: true,
     temp_outside: 35.1,
     humidity: 88.5,
@@ -256,6 +270,7 @@ export const units = [
   },
   {
     id: "TC010",
+    productLine: "Power-Plus",
     watergeneration: true,
     temp_outside: 26.8,
     humidity: 59.9,
@@ -283,6 +298,7 @@ export const units = [
   },
   {
     id: "TC011",
+    productLine: "Power-Plus",
     watergeneration: true,
     temp_outside: 29.5,
     humidity: 45.7,
@@ -310,6 +326,7 @@ export const units = [
   },
   {
     id: "TC012",
+    productLine: "Power-Plus",
     watergeneration: false,
     temp_outside: 38.5,
     humidity: 67.0,
@@ -337,6 +354,7 @@ export const units = [
   },
   {
     id: "TC013",
+    productLine: "Power-Plus",
     watergeneration: true,
     temp_outside: 37.1,
     humidity: 46.7,
@@ -364,6 +382,7 @@ export const units = [
   },
   {
     id: "TC014",
+    productLine: "Power-Plus",
     watergeneration: false,
     temp_outside: 11.0,
     humidity: 76.0,
@@ -393,6 +412,7 @@ export const units = [
   },
   {
     id: "TC015",
+    productLine: "Power-Plus",
     watergeneration: true,
     temp_outside: 34.3,
     humidity: 38.3,
@@ -420,6 +440,7 @@ export const units = [
   },
   {
     id: "TC016",
+    productLine: "Titan",
     watergeneration: true,
     temp_outside: 19.8,
     humidity: 89.9,
@@ -447,6 +468,7 @@ export const units = [
   },
   {
     id: "TC017",
+    productLine: "Titan",
     watergeneration: false,
     temp_outside: 17.9,
     humidity: 32.1,
@@ -474,6 +496,7 @@ export const units = [
   },
   {
     id: "TC018",
+    productLine: "Titan",
     watergeneration: false,
     temp_outside: 32.1,
     humidity: 83.0,
@@ -501,6 +524,7 @@ export const units = [
   },
   {
     id: "TC019",
+    productLine: "Titan",
     watergeneration: true,
     temp_outside: 13.9,
     humidity: 50.8,
@@ -528,6 +552,7 @@ export const units = [
   },
   {
     id: "TC020",
+    productLine: "Titan",
     watergeneration: false,
     temp_outside: 35.3,
     humidity: 45.8,
