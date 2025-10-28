@@ -27,7 +27,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "./ui/alert-dialog";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { Switch } from "./ui/switch";
@@ -80,6 +79,11 @@ const RemoteControl = ({ className, unit: propUnit }) => {
   // Remote control operation states
   const [powerControlLoading, setPowerControlLoading] = useState(false);
   const [waterControlLoading, setWaterControlLoading] = useState(false);
+
+  // Dialog open states
+  const [powerDialogOpen, setPowerDialogOpen] = useState(false);
+  const [waterDialogOpen, setWaterDialogOpen] = useState(false);
+  const [autoSwitchDialogOpen, setAutoSwitchDialogOpen] = useState(false);
 
   // Listen for fullscreen changes (moved before early return to avoid conditional hook call)
   React.useEffect(() => {
@@ -400,43 +404,45 @@ const RemoteControl = ({ className, unit: propUnit }) => {
                     Turn the entire machine on or off
                   </p>
                 </div>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <div
-                      className={`${powerControlLoading || remoteControlLoading ? "opacity-50" : "cursor-pointer"}`}
-                    >
-                      <Switch
-                        checked={machineOn}
-                        onCheckedChange={() => {}}
-                        disabled={
-                          powerControlLoading ||
-                          remoteControlLoading ||
-                          !permissions?.has_remote_control ||
-                          !isConnected
-                        }
-                      />
-                      {(powerControlLoading || remoteControlLoading) && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                        </div>
-                      )}
+                <div className="relative">
+                  <Switch
+                    checked={machineOn}
+                    onCheckedChange={() => setPowerDialogOpen(true)}
+                    disabled={
+                      powerControlLoading ||
+                      remoteControlLoading ||
+                      !permissions?.has_remote_control ||
+                      !isConnected
+                    }
+                  />
+                  {(powerControlLoading || remoteControlLoading) && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
                     </div>
-                  </AlertDialogTrigger>
+                  )}
+                </div>
+                <AlertDialog
+                  open={powerDialogOpen}
+                  onOpenChange={setPowerDialogOpen}
+                >
                   <AlertDialogContent>
                     <AlertDialogHeader>
                       <AlertDialogTitle>
-                        Are you absolutely sure?
+                        Machine Power Confirmation
                       </AlertDialogTitle>
                       <AlertDialogDescription>
-                        This action will {machineOn ? "turn off" : "turn on"}{" "}
-                        the machine power. This could have significant impact on
-                        unit operations.
+                        Are you sure you want to{" "}
+                        {machineOn ? "turn off" : "turn on"} the machine power?
+                        This could have significant impact on unit operations.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
                       <AlertDialogAction
-                        onClick={() => handleMachineToggle(!machineOn)}
+                        onClick={() => {
+                          handleMachineToggle(!machineOn);
+                          setPowerDialogOpen(false);
+                        }}
                       >
                         Continue
                       </AlertDialogAction>
@@ -483,46 +489,46 @@ const RemoteControl = ({ className, unit: propUnit }) => {
                       Enable or disable water production
                     </p>
                   </div>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <div
-                        className={`${waterControlLoading || remoteControlLoading ? "opacity-50" : "cursor-pointer"} relative`}
-                      >
-                        <Switch
-                          checked={waterProductionOn}
-                          onCheckedChange={() => {}}
-                          disabled={
-                            waterControlLoading ||
-                            remoteControlLoading ||
-                            !permissions?.has_remote_control ||
-                            !isConnected ||
-                            !machineOn
-                          }
-                        />
-                        {(waterControlLoading || remoteControlLoading) && (
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                          </div>
-                        )}
+                  <div className="relative">
+                    <Switch
+                      checked={waterProductionOn}
+                      onCheckedChange={() => setWaterDialogOpen(true)}
+                      disabled={
+                        waterControlLoading ||
+                        remoteControlLoading ||
+                        !permissions?.has_remote_control ||
+                        !isConnected ||
+                        !machineOn
+                      }
+                    />
+                    {(waterControlLoading || remoteControlLoading) && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
                       </div>
-                    </AlertDialogTrigger>
+                    )}
+                  </div>
+                  <AlertDialog
+                    open={waterDialogOpen}
+                    onOpenChange={setWaterDialogOpen}
+                  >
                     <AlertDialogContent>
                       <AlertDialogHeader>
                         <AlertDialogTitle>
-                          Are you absolutely sure?
+                          Water Production Confirmation
                         </AlertDialogTitle>
                         <AlertDialogDescription>
-                          This action will{" "}
+                          Are you sure you want to{" "}
                           {waterProductionOn ? "disable" : "enable"} water
-                          production. This could affect water levels.
+                          production? This could affect water levels.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
-                          onClick={() =>
-                            handleWaterProductionToggle(!waterProductionOn)
-                          }
+                          onClick={() => {
+                            handleWaterProductionToggle(!waterProductionOn);
+                            setWaterDialogOpen(false);
+                          }}
                         >
                           Continue
                         </AlertDialogAction>
@@ -571,39 +577,46 @@ const RemoteControl = ({ className, unit: propUnit }) => {
                     below 75%
                   </p>
                 </div>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <div className="cursor-pointer">
-                      <Switch
-                        checked={autoSwitchEnabled}
-                        onCheckedChange={() => {}}
-                        disabled={
-                          remoteControlLoading ||
-                          !permissions?.has_remote_control ||
-                          !isConnected ||
-                          !machineOn
-                        }
-                      />
+                <div className="relative">
+                  <Switch
+                    checked={autoSwitchEnabled}
+                    onCheckedChange={() => setAutoSwitchDialogOpen(true)}
+                    disabled={
+                      remoteControlLoading ||
+                      !permissions?.has_remote_control ||
+                      !isConnected ||
+                      !machineOn
+                    }
+                  />
+                  {remoteControlLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
                     </div>
-                  </AlertDialogTrigger>
+                  )}
+                </div>
+                <AlertDialog
+                  open={autoSwitchDialogOpen}
+                  onOpenChange={setAutoSwitchDialogOpen}
+                >
                   <AlertDialogContent>
                     <AlertDialogHeader>
                       <AlertDialogTitle>
-                        Are you absolutely sure?
+                        Auto-switch Confirmation
                       </AlertDialogTitle>
                       <AlertDialogDescription>
-                        This action will{" "}
+                        Are you sure you want to{" "}
                         {autoSwitchEnabled ? "disable" : "enable"} automatic
-                        control. This could affect water levels if not
+                        control? This could affect water levels if not
                         monitored.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
                       <AlertDialogAction
-                        onClick={() =>
-                          handleAutoSwitchToggle(!autoSwitchEnabled)
-                        }
+                        onClick={() => {
+                          handleAutoSwitchToggle(!autoSwitchEnabled);
+                          setAutoSwitchDialogOpen(false);
+                        }}
                       >
                         Continue
                       </AlertDialogAction>
