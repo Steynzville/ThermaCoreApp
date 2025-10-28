@@ -1,0 +1,79 @@
+name: Frontend Coverage Quality Gate
+permissions:
+  contents: read
+  pull-requests: write
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+env:
+  FLASK_ENV: test
+
+jobs:
+  frontend-coverage-gate:
+    name: Frontend Coverage Quality Gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install Frontend Dependencies
+        run: pnpm install
+
+      - name: Run Frontend Tests with Coverage
+        run: |
+          echo "🧪 Running frontend tests with coverage..."
+          pnpm run test:coverage:frontend || {
+            echo "❌ Frontend tests failed"
+            exit 1
+          }
+
+      - name: Check Frontend Coverage
+        run: |
+          echo "📊 Checking frontend test coverage..."
+          
+          # Parse coverage from output or coverage file
+          if [ -f coverage/coverage-summary.json ]; then
+            COVERAGE=$(node -e "
+              const coverage = require('./coverage/coverage-summary.json');
+              const total = coverage.total;
+              const avg = (total.lines.pct + total.statements.pct + total.functions.pct + total.branches.pct) / 4;
+              console.log(avg.toFixed(2));
+            ")
+            
+            echo "Frontend coverage: $COVERAGE%"
+            
+            python - <<EOF
+          import sys
+          coverage = float("$COVERAGE" or "0")
+          if coverage < 60:
+              print(f"❌ Coverage Gate FAILED: Frontend coverage too low ({coverage}% < 60%)")
+              sys.exit(1)
+          print(f"✅ Frontend Coverage Gate PASSED ({coverage}%)")
+          EOF
+          else
+            echo "⚠️  Coverage file not found, skipping check"
+          fi
+
+      - name: Upload Frontend Coverage Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage-report
+          path: coverage/

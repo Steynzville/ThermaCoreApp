@@ -31,7 +31,8 @@ The enterprise quality gates are implemented as separate, parallel workflows for
 - **Security Quality Gate**: `security-quality-gate.yml`
 - **Backend Quality Gate**: `backend-quality-gate.yml`
 - **Frontend Quality Gate**: `frontend-quality-gate.yml`
-- **Test Coverage Gate**: `test-coverage-gate.yml`
+- **Frontend Coverage Gate**: `frontend-coverage-gate.yml`
+- **Backend Coverage Gate**: `backend-coverage-gate.yml`
 - **Performance Quality Gate**: `performance-quality-gate.yml`
 
 These workflows provide continuous validation of:

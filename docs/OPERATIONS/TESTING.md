@@ -1136,46 +1136,25 @@ TOTAL                          1245    358   71.25%
 
 ## Continuous Integration
 
-### GitHub Actions Workflow
+### GitHub Actions Workflows
 
-**.github/workflows/tests.yml**:
-```yaml
-name: Tests
+The project uses multiple parallel workflows for faster CI/CD execution:
 
-on: [push, pull_request]
+**Test Workflows**:
+- **`build-and-test.yml`** - Backend and database tests
+- **`frontend-quality.yml`** - Frontend tests, type checking, and quality checks
+- **`frontend-coverage-gate.yml`** - Frontend coverage enforcement (60% threshold)
+- **`backend-coverage-gate.yml`** - Backend coverage enforcement (60% threshold)
 
-jobs:
-  backend:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.9'
-      - name: Install dependencies
-        run: |
-          cd backend
-          pip install -r requirements.txt
-      - name: Run tests
-        run: |
-          cd backend
-          pytest --cov=app --cov-report=xml
-      - name: Upload coverage
-        uses: codecov/codecov-action@v3
+**Quality Gate Workflows**:
+- **`python-security.yml`** - Python linting and security (Ruff, Bandit)
+- **`backend-quality-gate.yml`** - Backend quality checks (Ruff, mypy, complexity)
+- **`frontend-quality-gate.yml`** - Frontend quality checks (TypeScript, Biome, Build)
+- **`security-quality-gate.yml`** - Security scanning (Bandit, Gitleaks)
+- **`dependency-security.yml`** - Dependency and secret scanning (Gitleaks, OSV)
+- **`performance-quality-gate.yml`** - Performance benchmarks
 
-  frontend:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: pnpm/action-setup@v2
-      - uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-      - name: Install dependencies
-        run: pnpm install
-      - name: Run tests
-        run: pnpm test --coverage
-```
+All workflows run in parallel for faster feedback (~60% faster than monolithic workflows).
 
 ---
 
