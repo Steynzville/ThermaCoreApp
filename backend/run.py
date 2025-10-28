@@ -131,6 +131,20 @@ def init_database_on_startup():
                         )
                     else:
                         app.logger.info("Creating default admin user...")
+                        # Get password from environment or generate a secure random one
+                        default_password = os.environ.get("DEFAULT_ADMIN_PASSWORD")
+                        if not default_password:
+                            import secrets
+                            import string
+                            # Generate a secure random password
+                            alphabet = string.ascii_letters + string.digits + "!@#$%^&*()"
+                            default_password = ''.join(secrets.choice(alphabet) for _ in range(16))
+                            app.logger.warning("=" * 70)
+                            app.logger.warning("⚠️  IMPORTANT: No DEFAULT_ADMIN_PASSWORD set!")
+                            app.logger.warning(f"Generated random password: {default_password}")
+                            app.logger.warning("SAVE THIS PASSWORD - It will not be shown again!")
+                            app.logger.warning("=" * 70)
+                        
                         admin_user = User(
                             username="Steyn_Admin",
                             email="admin@thermacore.com",
@@ -139,14 +153,14 @@ def init_database_on_startup():
                             role_id=admin_role.id,
                             is_active=True,
                         )
-                        admin_user.set_password("password")
+                        admin_user.set_password(default_password)
                         db.session.add(admin_user)
                         db.session.commit()
                         app.logger.info("=" * 70)
                         app.logger.info("✅ Default admin user created!")
                         app.logger.info("=" * 70)
                         app.logger.info("   Username: Steyn_Admin")
-                        app.logger.info("   Password: password")
+                        app.logger.info("   Password: [Set via DEFAULT_ADMIN_PASSWORD or auto-generated above]")
                         app.logger.info("=" * 70)
                         app.logger.warning(
                             "Please change the password after first login"
