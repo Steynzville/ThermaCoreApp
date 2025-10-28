@@ -72,7 +72,7 @@ vi.mock("./ui/select", () => ({
   SelectValue: ({ placeholder }) => <div>{placeholder}</div>,
   SelectContent: ({ children }) => <div>{children}</div>,
   SelectItem: ({ children, value, onSelect }) => (
-    <button onClick={() => onSelect && onSelect(value)}>{children}</button>
+    <button onClick={() => onSelect?.(value)}>{children}</button>
   ),
 }));
 
