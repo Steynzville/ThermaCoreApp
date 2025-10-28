@@ -1,12 +1,14 @@
 """Main application entry point for ThermaCore SCADA API."""
 
-import os
+import logging
 import sys
+from pathlib import Path
 
+import click
 from sqlalchemy import text
 
 # Add backend to Python path for proper imports in both development and deployment
-sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, str(Path(__file__).parent))
 
 from app import create_app, db
 
@@ -14,6 +16,9 @@ from app import create_app, db
 # Flask's create_app() reads FLASK_ENV, FLASK_DEBUG, and other environment variables
 # to select the appropriate configuration (see app/__init__.py lines 112-122)
 app = create_app()
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 
 # Initialize database on startup
@@ -188,46 +193,36 @@ init_database_on_startup()
 @app.cli.command()
 def init_db():
     """Initialize the database with tables and seed data."""
-    import sys  # noqa: PLC0415 - Standard library, conditional usage
-
-    print("Creating database tables...")
+    click.echo("Creating database tables...")
 
     try:
         # Read and execute schema file
-        schema_path = os.path.join(
-            os.path.dirname(__file__),
-            "migrations",
-            "001_initial_schema.sql",
-        )
-        with open(schema_path) as f:
+        schema_path = Path(__file__).parent / "migrations" / "001_initial_schema.sql"
+        with schema_path.open() as f:
             schema_sql = f.read()
 
         # Execute entire schema at once to preserve PL/pgSQL functions
         db.session.execute(text(schema_sql))
 
         db.session.commit()
-        print("✓ Database schema created successfully")
+        click.echo("✓ Database schema created successfully")
 
         # Read and execute seed data
-        seed_path = os.path.join(
-            os.path.dirname(__file__),
-            "migrations",
-            "002_seed_data.sql",
-        )
-        with open(seed_path) as f:
+        seed_path = Path(__file__).parent / "migrations" / "002_seed_data.sql"
+        with seed_path.open() as f:
             seed_sql = f.read()
 
         # Execute entire seed file at once
         db.session.execute(text(seed_sql))
 
         db.session.commit()
-        print("✓ Seed data inserted successfully")
-        print("\nDatabase initialization completed!")
-        print("Default admin user: admin / admin123")
+        click.echo("✓ Seed data inserted successfully")
+        click.echo("\nDatabase initialization completed!")
+        click.echo("Default admin user: admin / admin123")
 
     except Exception as e:
         db.session.rollback()
-        print(f"✗ Error initializing database: {e}")
+        click.echo(f"✗ Error initializing database: {e}")
         sys.exit(1)
 
 
@@ -240,11 +235,11 @@ def create_admin():
 
     admin_role = Role.query.filter_by(name="admin").first()
     if not admin_role:
-        print("Error: Admin role not found. Please run 'flask init-db' first.")
+        click.echo("Error: Admin role not found. Please run 'flask init-db' first.")
         return
 
-    username = input("Enter admin username: ")
-    email = input("Enter admin email: ")
+    username = click.prompt("Enter admin username")
+    email = click.prompt("Enter admin email")
     password = getpass.getpass("Enter admin password: ")
 
     # Check if user already exists
@@ -253,7 +248,7 @@ def create_admin():
     ).first()
 
     if existing_user:
-        print("Error: User with this username or email already exists.")
+        click.echo("Error: User with this username or email already exists.")
         return
 
     # Create admin user
@@ -269,10 +264,10 @@ def create_admin():
     try:
         db.session.add(admin_user)
         db.session.commit()
-        print(f"✓ Admin user '{username}' created successfully!")
+        click.echo(f"✓ Admin user '{username}' created successfully!")
     except Exception as e:
         db.session.rollback()
-        print(f"✗ Error creating admin user: {e}")
+        click.echo(f"✗ Error creating admin user: {e}")
 
 
 if __name__ == "__main__":
