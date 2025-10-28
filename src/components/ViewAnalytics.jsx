@@ -19,20 +19,69 @@ import { formatCurrency } from "../utils/formatCurrency";
 import PageHeader from "./PageHeader";
 import { Card, CardContent, CardHeader } from "./ui/card";
 
+// Format revenue to handle millions and thousands
+const formatRevenue = (amount) => {
+  if (amount >= 1000000) {
+    return `$${(amount / 1000000).toFixed(2)}M`;
+  }
+  if (amount >= 1000) {
+    return `$${(amount / 1000).toFixed(0)}K`;
+  }
+  return `$${amount}`;
+};
+
+// REALISTIC SALES DATA BASED ON ACTUAL 20 UNITS
 const analyticsData = [
-  { name: "Power-Box", sales: 4000, revenue: 2400 },
-  { name: "Power-Plus", sales: 3000, revenue: 1398 },
-  { name: "Titan", sales: 2000, revenue: 9800 },
-  { name: "Titan-Max", sales: 2780, revenue: 3908 },
-  { name: "Titan-X", sales: 1890, revenue: 4800 },
+  { 
+    name: 'Power-Box', 
+    sales: 8,
+    revenue: 360000,
+    avgPrice: 45000,
+    percentage: 40,
+    fill: '#3B82F6'
+  },
+  { 
+    name: 'Power-Plus', 
+    sales: 7,
+    revenue: 4097688, 
+    avgPrice: 585384,
+    percentage: 35,
+    fill: '#10B981'
+  },
+  { 
+    name: 'Titan', 
+    sales: 5,
+    revenue: 7317300,
+    avgPrice: 1463460,
+    percentage: 25,
+    fill: '#F59E0B'
+  }
 ];
 
+// Update summary metrics
+const summaryData = {
+  totalSales: 20,
+  totalRevenue: 11774988,
+  activeUnits: 17,
+  avgGrowth: '+8.5%',
+  avgPrice: 588749
+};
+
+// Update category distribution
 const categoryData = [
-  { name: "Power-Box", value: 2 },
-  { name: "Power-Plus", value: 4 },
-  { name: "Titan", value: 1 },
-  { name: "Titan-Max", value: 1 },
-  { name: "Titan-X", value: 2 },
+  { name: 'Power-Box', value: 8 },
+  { name: 'Power-Plus', value: 7 },
+  { name: 'Titan', value: 5 }
+];
+
+// Update monthly trend to show realistic growth
+const monthlyTrend = [
+  { month: 'Jan', units: 3, revenue: 1766248 },
+  { month: 'Feb', units: 5, revenue: 2943746 },
+  { month: 'Mar', units: 8, revenue: 4709994 },
+  { month: 'Apr', units: 12, revenue: 7064991 },
+  { month: 'May', units: 16, revenue: 9419988 },
+  { month: 'Jun', units: 20, revenue: 11774988 }
 ];
 
 const COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6"];
@@ -88,10 +137,10 @@ const ViewAnalytics = ({ className }) => {
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                    Total Sales
+                    Total Units
                   </h3>
                   <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                    21,490
+                    {summaryData.totalSales}
                   </p>
                 </div>
               </div>
@@ -109,7 +158,7 @@ const ViewAnalytics = ({ className }) => {
                     Total Revenue
                   </h3>
                   <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                    {formatCurrency(34398)}
+                    {formatRevenue(summaryData.totalRevenue)}
                   </p>
                 </div>
               </div>
@@ -127,7 +176,7 @@ const ViewAnalytics = ({ className }) => {
                     Active Units
                   </h3>
                   <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                    10
+                    {summaryData.activeUnits}
                   </p>
                 </div>
               </div>
@@ -145,7 +194,7 @@ const ViewAnalytics = ({ className }) => {
                     Avg Growth
                   </h3>
                   <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                    +12.5%
+                    {summaryData.avgGrowth}
                   </p>
                 </div>
               </div>
