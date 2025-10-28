@@ -204,25 +204,25 @@ const ViewAnalytics = ({ className }) => {
 
         {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Sales Analytics Line Chart */}
+          {/* Monthly Growth Trend Chart */}
           <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
             <CardHeader>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                Product Sales Analytics
+                Monthly Growth Trend
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Monthly product sales and revenue trends
+                Cumulative units sold and revenue over time
               </p>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={analyticsData}>
+                <LineChart data={monthlyTrend}>
                   <CartesianGrid
                     strokeDasharray="3 3"
                     className="stroke-gray-200 dark:stroke-gray-700"
                   />
                   <XAxis
-                    dataKey="name"
+                    dataKey="month"
                     className="text-gray-600 dark:text-gray-400"
                   />
                   <YAxis className="text-gray-600 dark:text-gray-400" />
@@ -232,15 +232,27 @@ const ViewAnalytics = ({ className }) => {
                       border: "1px solid var(--border)",
                       borderRadius: "8px",
                     }}
+                    formatter={(value, name) => {
+                      if (name === 'revenue') {
+                        return [formatRevenue(value), 'Revenue'];
+                      }
+                      return [value, 'Units'];
+                    }}
                   />
                   <Legend />
                   <Line
                     type="monotone"
-                    dataKey="sales"
+                    dataKey="units"
                     stroke="#8884d8"
                     activeDot={{ r: 8 }}
+                    name="Units"
                   />
-                  <Line type="monotone" dataKey="revenue" stroke="#82ca9d" />
+                  <Line 
+                    type="monotone" 
+                    dataKey="revenue" 
+                    stroke="#82ca9d"
+                    name="Revenue"
+                  />
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>
@@ -277,6 +289,83 @@ const ViewAnalytics = ({ className }) => {
                   />
                   <Legend />
                   <Bar dataKey="value" fill="#8884d8" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Revenue Analysis Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Revenue by Product Bar Chart */}
+          <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
+            <CardHeader>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                Revenue by Product Line
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Total revenue breakdown by product category
+              </p>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={analyticsData}>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    className="stroke-gray-200 dark:stroke-gray-700"
+                  />
+                  <XAxis
+                    dataKey="name"
+                    className="text-gray-600 dark:text-gray-400"
+                  />
+                  <YAxis className="text-gray-600 dark:text-gray-400" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "var(--background)",
+                      border: "1px solid var(--border)",
+                      borderRadius: "8px",
+                    }}
+                    formatter={(value) => formatRevenue(value)}
+                  />
+                  <Legend />
+                  <Bar dataKey="revenue" name="Revenue" fill="#10B981" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Average Price by Product */}
+          <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
+            <CardHeader>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                Average Price by Product Line
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Average unit price for each product category
+              </p>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={analyticsData}>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    className="stroke-gray-200 dark:stroke-gray-700"
+                  />
+                  <XAxis
+                    dataKey="name"
+                    className="text-gray-600 dark:text-gray-400"
+                  />
+                  <YAxis className="text-gray-600 dark:text-gray-400" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "var(--background)",
+                      border: "1px solid var(--border)",
+                      borderRadius: "8px",
+                    }}
+                    formatter={(value) => formatRevenue(value)}
+                  />
+                  <Legend />
+                  <Bar dataKey="avgPrice" name="Avg Price" fill="#F59E0B" />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
