@@ -1,0 +1,84 @@
+name: Frontend Quality Gate
+permissions:
+  contents: read
+  pull-requests: write
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  frontend-gate:
+    name: Frontend Quality Gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run Type Checking
+        run: |
+          echo "🔍 Running TypeScript type checking..."
+          pnpm type-check 2>&1 | tee type_check_output.txt
+          
+          if grep -q "error TS" type_check_output.txt; then
+            ERROR_COUNT=$(grep -c "error TS" type_check_output.txt)
+            echo "❌ Frontend Gate FAILED: $ERROR_COUNT TypeScript errors"
+            exit 1
+          fi
+          
+          echo "✅ Type Check Gate PASSED"
+
+      - name: Run Biome Checks
+        run: |
+          echo "🔍 Running Biome linter and formatter..."
+          pnpm biome check --write src/ components/ || true
+          echo "✅ Biome formatting applied"
+
+      - name: Verify Biome Check
+        run: |
+          echo "🔍 Verifying Biome check on frontend directories..."
+          pnpm biome check src/ components/ --diagnostic-level=error || {
+            echo "❌ Frontend Gate FAILED: Biome check failed"
+            exit 1
+          }
+          echo "✅ Biome Gate PASSED"
+
+      - name: Build Check
+        run: |
+          echo "🏗️  Running build verification..."
+          pnpm build || {
+            echo "❌ Frontend Gate FAILED: Build failed"
+            exit 1
+          }
+          echo "✅ Build Gate PASSED"
+
+      - name: Bundle Size Analysis
+        run: |
+          echo "📦 Analyzing bundle size..."
+          BUILD_SIZE=$(du -sh dist | cut -f1)
+          echo "Build size: $BUILD_SIZE"
+          
+          # Check if dist directory is too large (>10MB)
+          DIST_SIZE_KB=$(du -sk dist | cut -f1)
+          if [ $DIST_SIZE_KB -gt 10240 ]; then
+            echo "⚠️  Warning: Large bundle size detected ($BUILD_SIZE)"
+          fi
+          echo "✅ Bundle size check complete"
