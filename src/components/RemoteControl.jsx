@@ -577,16 +577,23 @@ const RemoteControl = ({ className, unit: propUnit }) => {
                     below 75%
                   </p>
                 </div>
-                <Switch
-                  checked={autoSwitchEnabled}
-                  onCheckedChange={() => setAutoSwitchDialogOpen(true)}
-                  disabled={
-                    remoteControlLoading ||
-                    !permissions?.has_remote_control ||
-                    !isConnected ||
-                    !machineOn
-                  }
-                />
+                <div className="relative">
+                  <Switch
+                    checked={autoSwitchEnabled}
+                    onCheckedChange={() => setAutoSwitchDialogOpen(true)}
+                    disabled={
+                      remoteControlLoading ||
+                      !permissions?.has_remote_control ||
+                      !isConnected ||
+                      !machineOn
+                    }
+                  />
+                  {remoteControlLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                  )}
+                </div>
                 <AlertDialog
                   open={autoSwitchDialogOpen}
                   onOpenChange={setAutoSwitchDialogOpen}
