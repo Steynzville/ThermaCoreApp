@@ -6,6 +6,7 @@ import pytest
 
 from app import create_app
 
+
 class TestScadaSecurityIntegration:
     """Integration tests for SCADA endpoint security."""
 
@@ -130,9 +131,9 @@ class TestScadaSecurityIntegration:
             assert "*" not in prod_origins, "Production must not allow wildcard CORS"
 
             # Production must use HTTPS only
-            assert all(origin.startswith("https://") for origin in prod_origins), (
-                "Production CORS origins must use HTTPS only"
-            )
+            assert all(
+                origin.startswith("https://") for origin in prod_origins
+            ), "Production CORS origins must use HTTPS only"
 
             # Development can use HTTP, production cannot
             assert any(

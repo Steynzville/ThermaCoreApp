@@ -3,6 +3,7 @@
 from datetime import datetime
 from unittest.mock import Mock
 
+
 class TestHealthCheckEndpoint:
     """Test health check endpoint with various scenarios."""
 
@@ -35,6 +36,7 @@ class TestHealthCheckEndpoint:
         assert "timestamp" in data
         # Should not raise exception
         datetime.fromisoformat(data["timestamp"])
+
 
 class TestDetailedHealthCheckEndpoint:
     """Test detailed health check endpoint with various scenarios."""

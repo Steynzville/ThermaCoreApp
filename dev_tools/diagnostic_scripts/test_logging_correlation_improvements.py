@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Test logging refinement and domain exception handling improvements."""
 
-import sys
 import logging
+import sys
 import uuid
 from unittest.mock import patch
 
 # Add the app directory to the path
 sys.path.insert(0, ".")
+
 
 def test_domain_exception_handling():
     """Test that ThermaCoreException instances are properly handled."""
@@ -15,11 +16,11 @@ def test_domain_exception_handling():
 
     try:
         from app.exceptions import (
-            ThermaCoreException,
             AuthenticationException,
             DatabaseException,
-            UnitOfflineException,
             SensorNotFoundException,
+            ThermaCoreException,
+            UnitOfflineException,
         )
 
         # Test basic ThermaCoreException
@@ -65,13 +66,14 @@ def test_domain_exception_handling():
         print(f"✗ Domain exception test failed: {e}")
         return False
 
+
 def test_correlation_id_handling():
     """Test correlation ID handling in error responses."""
     print("\nTesting Correlation ID Handling...")
 
     try:
-        from app.utils.error_handler import SecurityAwareErrorHandler
         from app.exceptions import ValidationException
+        from app.utils.error_handler import SecurityAwareErrorHandler
 
         # Mock Flask's g object for request context
         class MockG:
@@ -123,6 +125,7 @@ def test_correlation_id_handling():
         traceback.print_exc()
         return False
 
+
 def test_logging_filter():
     """Test that RequestIDFilter adds correlation ID to log records."""
     print("\nTesting Logging Filter...")
@@ -149,9 +152,9 @@ def test_logging_filter():
 
         assert result is True, "Filter should always return True"
         assert hasattr(record, "request_id"), "Record should have request_id attribute"
-        assert record.request_id == "no-request-context", (
-            "Should set no-request-context when no context"
-        )
+        assert (
+            record.request_id == "no-request-context"
+        ), "Should set no-request-context when no context"
 
         print("✓ Logging filter works correctly")
         print(f"  - Record has request_id: {record.request_id}")
@@ -167,6 +170,7 @@ def test_logging_filter():
         traceback.print_exc()
         return False
 
+
 def test_error_handler_registration():
     """Test that error handler registration works."""
     print("\nTesting Error Handler Registration...")
@@ -175,14 +179,14 @@ def test_error_handler_registration():
         from app.utils.error_handler import SecurityAwareErrorHandler
 
         # Check that the register_error_handlers method exists
-        assert hasattr(SecurityAwareErrorHandler, "register_error_handlers"), (
-            "SecurityAwareErrorHandler should have register_error_handlers method"
-        )
+        assert hasattr(
+            SecurityAwareErrorHandler, "register_error_handlers"
+        ), "SecurityAwareErrorHandler should have register_error_handlers method"
 
         # Verify it's callable
-        assert callable(SecurityAwareErrorHandler.register_error_handlers), (
-            "register_error_handlers should be callable"
-        )
+        assert callable(
+            SecurityAwareErrorHandler.register_error_handlers
+        ), "register_error_handlers should be callable"
 
         print("✓ Error handler registration method exists and is callable")
         print("✓ Error handler registration tests passed")
@@ -191,6 +195,7 @@ def test_error_handler_registration():
     except Exception as e:
         print(f"✗ Error handler registration test failed: {e}")
         return False
+
 
 def main():
     """Run all tests."""
@@ -233,6 +238,7 @@ def main():
     else:
         print(f"✗ {total - passed} tests failed. Please check the implementation.")
         return False
+
 
 if __name__ == "__main__":
     success = main()

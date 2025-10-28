@@ -17,6 +17,7 @@ from app.middleware.tenant import (
 )
 from app.models import Role, Tenant, Unit
 
+
 @pytest.fixture
 def app():
     """Create application for testing."""
@@ -46,10 +47,12 @@ def app():
         db.session.remove()
         db.drop_all()
 
+
 @pytest.fixture
 def client(app):
     """Create test client."""
     return app.test_client()
+
 
 @pytest.fixture
 def tenants(app):
@@ -66,6 +69,7 @@ def tenants(app):
 
         # Return IDs instead of objects to avoid detached instance errors
         return tenant1_id, tenant2_id
+
 
 class TestTenantContext:
     """Test tenant context functions."""
@@ -105,6 +109,7 @@ class TestTenantContext:
                 assert is_admin_with_cross_tenant_access() is False
                 assert get_current_tenant_id() == 456
 
+
 class TestTenantValidation:
     """Test tenant validation functions."""
 
@@ -143,6 +148,7 @@ class TestTenantValidation:
                 # Cannot access any tenant
                 assert validate_tenant_access(123) is False
                 assert validate_tenant_access(456) is False
+
 
 class TestTenantFilter:
     """Test tenant filtering on queries."""
@@ -224,6 +230,7 @@ class TestTenantFilter:
                 assert len(units) == 1
                 assert units[0].tenant_id == tenant1_id
 
+
 class TestTenantIsolation:
     """Test tenant isolation enforcement."""
 
@@ -301,6 +308,7 @@ class TestTenantIsolation:
                 # Cannot access different tenant's object
                 with pytest.raises(ValueError, match="Access denied"):
                     ensure_tenant_isolation(unit)
+
 
 class TestSetTenantForNewObject:
     """Test automatic tenant assignment for new objects."""

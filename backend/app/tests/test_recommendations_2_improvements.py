@@ -6,6 +6,7 @@ import pytest
 
 from app.utils.helpers import parse_timestamp
 
+
 class TestTimestampParsing:
     """Test robust timestamp parsing improvements."""
 
@@ -58,6 +59,7 @@ class TestTimestampParsing:
         # The offset should be -5 hours
         assert result.utcoffset().total_seconds() == -5 * 3600
 
+
 class TestQueryParameterValidation:
     """Test robust query parameter parsing."""
 
@@ -94,6 +96,7 @@ class TestQueryParameterValidation:
         days = 500
         valid = 1 <= days <= 365
         assert not valid
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

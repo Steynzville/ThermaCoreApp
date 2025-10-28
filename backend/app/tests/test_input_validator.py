@@ -2,6 +2,7 @@
 
 from app.utils.input_validator import InputValidator
 
+
 class TestSQLInjectionDetection:
     """Test SQL injection detection."""
 
@@ -29,6 +30,7 @@ class TestSQLInjectionDetection:
         """Test that numeric input passes."""
         safe_input = "12345"
         assert InputValidator.check_sql_injection(safe_input) is False
+
 
 class TestXSSDetection:
     """Test XSS detection."""
@@ -58,6 +60,7 @@ class TestXSSDetection:
         safe_input = "Hello, this is a normal message"
         assert InputValidator.check_xss(safe_input) is False
 
+
 class TestPathTraversalDetection:
     """Test path traversal detection."""
 
@@ -81,6 +84,7 @@ class TestPathTraversalDetection:
         safe_input = "files/document.pdf"
         assert InputValidator.check_path_traversal(safe_input) is False
 
+
 class TestCommandInjectionDetection:
     """Test command injection detection."""
 
@@ -103,6 +107,7 @@ class TestCommandInjectionDetection:
         """Test that safe filename passes."""
         safe_input = "document.pdf"
         assert InputValidator.check_command_injection(safe_input) is False
+
 
 class TestComprehensiveValidation:
     """Test comprehensive input validation."""
@@ -149,6 +154,7 @@ class TestComprehensiveValidation:
         assert is_valid is True
         assert error_msg is None
 
+
 class TestSanitizeForLogging:
     """Test input sanitization for logging."""
 
@@ -191,6 +197,7 @@ class TestSanitizeForLogging:
         """Test sanitization of None."""
         sanitized = InputValidator.sanitize_for_logging(None)
         assert sanitized == "None"
+
 
 class TestIdentifierValidation:
     """Test identifier validation."""
@@ -244,6 +251,7 @@ class TestIdentifierValidation:
         assert is_valid is False
         assert "must be a string" in error_msg.lower()
 
+
 class TestEmailValidation:
     """Test email validation."""
 
@@ -296,6 +304,7 @@ class TestEmailValidation:
 
         assert is_valid is False
         assert "must be a string" in error_msg.lower()
+
 
 class TestNumericRangeValidation:
     """Test numeric range validation."""

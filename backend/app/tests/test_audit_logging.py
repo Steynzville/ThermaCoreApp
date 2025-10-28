@@ -15,6 +15,7 @@ from app.middleware.audit import (
 )
 from app.models import Role, RoleEnum, User
 
+
 class TestAuditLogger:
     """Test cases for the AuditLogger class."""
 
@@ -157,6 +158,7 @@ class TestAuditLogger:
                 logger_method = getattr(mock_logger, expected_method)
                 assert logger_method.called
 
+
 class TestAuditDecorators:
     """Test cases for audit decorators."""
 
@@ -239,6 +241,7 @@ class TestAuditDecorators:
                 details=None,
             )
 
+
 class TestAuditMiddleware:
     """Test cases for audit middleware setup."""
 
@@ -262,6 +265,7 @@ class TestAuditMiddleware:
 
                 # Note: This test may not trigger the audit due to endpoint filtering
                 # In a real scenario, we'd test with an actual API endpoint
+
 
 class TestAuditEventTypes:
     """Test audit event type definitions."""
@@ -295,6 +299,7 @@ class TestAuditEventTypes:
         for severity in required_severities:
             assert hasattr(AuditSeverity, severity)
 
+
 class TestAuditIntegration:
     """Integration tests for audit logging with the application."""
 
@@ -323,10 +328,13 @@ class TestAuditIntegration:
                 # We can verify the function exists and is importable
                 assert callable(mock_audit)
 
+
 class TestRoleRequiredAuditLogging:
     """Test cases for role_required decorator audit logging."""
 
-    def get_auth_token(self, client, username="admin", password="admin123"):  # nosec B106
+    def get_auth_token(
+        self, client, username="admin", password="admin123"
+    ):  # nosec B106
         """Helper method to get auth token."""
         response = client.post(
             "/api/v1/auth/login",

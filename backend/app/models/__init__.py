@@ -21,6 +21,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from app import db
 
+
 def utc_now():
     """Get current UTC time as timezone-aware datetime.
 
@@ -33,6 +34,7 @@ def utc_now():
     to automatically update timestamp fields and enforce timezone constraints.
     """
     return datetime.now(timezone.utc)
+
 
 # Association table for many-to-many relationship between roles and permissions
 role_permissions = Table(
@@ -52,12 +54,14 @@ role_permissions = Table(
     ),
 )
 
+
 class RoleEnum(PyEnum):
     """Role enumeration."""
 
     ADMIN = "admin"
     OPERATOR = "operator"
     VIEWER = "viewer"
+
 
 class PermissionEnum(PyEnum):
     """Permission enumeration."""
@@ -70,6 +74,7 @@ class PermissionEnum(PyEnum):
     DELETE_USERS = "delete_users"
     ADMIN_PANEL = "admin_panel"
     REMOTE_CONTROL = "remote_control"
+
 
 # Emergency admin comprehensive permissions - centralized constant
 # Used across auth endpoint, auto-migration, and permission checks
@@ -84,6 +89,7 @@ EMERGENCY_ADMIN_PERMISSIONS = [
     "remote_control",
 ]
 
+
 class UnitStatusEnum(PyEnum):
     """Unit status enumeration."""
 
@@ -92,12 +98,14 @@ class UnitStatusEnum(PyEnum):
     MAINTENANCE = "maintenance"
     ERROR = "error"
 
+
 class HealthStatusEnum(PyEnum):
     """Health status enumeration."""
 
     OPTIMAL = "optimal"
     WARNING = "warning"
     CRITICAL = "critical"
+
 
 class Permission(db.Model):
     """Permission model."""
@@ -122,6 +130,7 @@ class Permission(db.Model):
 
     def __repr__(self):
         return f"<Permission {self.name}>"
+
 
 class Role(db.Model):
     """Role model."""
@@ -181,6 +190,7 @@ class Role(db.Model):
 
         return any(p.name.value == permission_value for p in self.permissions)
 
+
 class Tenant(db.Model):
     """Tenant model for multi-tenancy support."""
 
@@ -220,6 +230,7 @@ class Tenant(db.Model):
 
     def __repr__(self):
         return f"<Tenant {self.name}>"
+
 
 class User(db.Model):
     """User model."""
@@ -350,6 +361,7 @@ class User(db.Model):
             return False
         return self.role.has_permission(permission)
 
+
 class Unit(db.Model):
     """Unit model representing ThermaCore units."""
 
@@ -427,6 +439,7 @@ class Unit(db.Model):
     def __repr__(self):
         return f"<Unit {self.id}: {self.name}>"
 
+
 class Sensor(db.Model):
     """Sensor model for unit sensors."""
 
@@ -463,6 +476,7 @@ class Sensor(db.Model):
 
     def __repr__(self):
         return f"<Sensor {self.name} ({self.sensor_type}) for Unit {self.unit_id}>"
+
 
 class SensorReading(db.Model):
     """Sensor reading model for time-series data."""

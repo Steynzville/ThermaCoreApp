@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 # Use SystemRandom for cryptographically secure random number generation
 secure_random = random.SystemRandom()
 
+
 class ProtocolGatewaySimulator:
     """Simulates a protocol gateway that generates test SCADA data."""
 

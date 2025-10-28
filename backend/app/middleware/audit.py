@@ -106,6 +106,7 @@ SENSITIVE_PATTERNS = [
     (re.compile(r"Bearer\s+([a-zA-Z0-9\-._~+/]+=*)", re.IGNORECASE), "Bearer ***"),
 ]
 
+
 def redact_sensitive_data(data, sensitive_keys=None, sensitive_patterns=None):
     """Recursively redact sensitive information from data structures.
 
@@ -150,6 +151,7 @@ def redact_sensitive_data(data, sensitive_keys=None, sensitive_patterns=None):
         return redacted_str
     return data
 
+
 class AuditEventType(Enum):
     """Audit event types for different operations."""
 
@@ -175,6 +177,7 @@ class AuditEventType(Enum):
     CONFIGURATION_CHANGE = "configuration_change"
     SYSTEM_ERROR = "system_error"
 
+
 class AuditSeverity(Enum):
     """Severity levels for audit events."""
 
@@ -182,6 +185,7 @@ class AuditSeverity(Enum):
     WARNING = "warning"
     ERROR = "error"
     CRITICAL = "critical"
+
 
 class AuditLogger:
     """Centralized audit logging functionality."""
@@ -363,6 +367,7 @@ class AuditLogger:
             details=details,
         )
 
+
 def audit_operation(
     operation: str,
     resource: str,
@@ -463,6 +468,7 @@ def audit_operation(
 
     return decorator
 
+
 def setup_audit_middleware(app):
     """Set up audit logging middleware for the Flask app."""
     # Define endpoints/paths to exclude from audit logging
@@ -503,6 +509,7 @@ def setup_audit_middleware(app):
 
     return app
 
+
 # Convenience functions for common audit scenarios
 def audit_login_success(username: str, details: dict | None = None):
     """Audit successful login."""
@@ -512,6 +519,7 @@ def audit_login_success(username: str, details: dict | None = None):
         outcome="success",
         details=details,
     )
+
 
 def audit_login_failure(username: str, reason: str, details: dict | None = None):
     """Audit failed login."""
@@ -523,6 +531,7 @@ def audit_login_failure(username: str, reason: str, details: dict | None = None)
         outcome="failure",
         details=audit_details,
     )
+
 
 def audit_permission_check(
     permission: str,

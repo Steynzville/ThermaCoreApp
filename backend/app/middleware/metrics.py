@@ -48,6 +48,7 @@ HTTP_STATUS_TO_EXCEPTION_NAME = {
     505: "HTTPVersionNotSupported",
 }
 
+
 class SyntheticHTTPException(Exception):
     """Exception-like object for tracking HTTP errors in metrics.
 
@@ -61,6 +62,7 @@ class SyntheticHTTPException(Exception):
         self.code = code
         # Set the class name to match the HTTP exception type
         self.__class__.__name__ = exception_name
+
 
 class MetricsCollector:
     """Thread-safe metrics collector for API performance monitoring."""
@@ -224,9 +226,9 @@ class MetricsCollector:
 
                     summary["endpoints"][escape(key)] = stats
                     endpoint_stats.append(stats)
-                    summary["error_summary"]["error_rate_by_endpoint"][escape(key)] = (
-                        error_rate
-                    )
+                    summary["error_summary"]["error_rate_by_endpoint"][
+                        escape(key)
+                    ] = error_rate
 
             # Sort by call count for top endpoints
             summary["top_endpoints"] = sorted(
@@ -278,17 +280,23 @@ class MetricsCollector:
                 "endpoint": escape(endpoint),
                 "calls": metrics["calls"],
                 "total_time": round(metrics["total_time"], 4),
-                "avg_response_time": round(metrics["total_time"] / metrics["calls"], 4)
-                if metrics["calls"] > 0
-                else 0,
-                "min_response_time": round(metrics["min_time"], 4)
-                if metrics["min_time"] != float("inf")
-                else 0,
+                "avg_response_time": (
+                    round(metrics["total_time"] / metrics["calls"], 4)
+                    if metrics["calls"] > 0
+                    else 0
+                ),
+                "min_response_time": (
+                    round(metrics["min_time"], 4)
+                    if metrics["min_time"] != float("inf")
+                    else 0
+                ),
                 "max_response_time": round(metrics["max_time"], 4),
                 "errors": metrics["errors"],
-                "error_rate": round((metrics["errors"] / metrics["calls"]) * 100, 2)
-                if metrics["calls"] > 0
-                else 0,
+                "error_rate": (
+                    round((metrics["errors"] / metrics["calls"]) * 100, 2)
+                    if metrics["calls"] > 0
+                    else 0
+                ),
                 "status_codes": dict(self.status_codes.get(endpoint, {})),
             }
 
@@ -326,8 +334,10 @@ class MetricsCollector:
         upper = sorted_data[int(index) + 1]
         return lower + (upper - lower) * (index - int(index))
 
+
 # Global metrics collector instance
 _metrics_collector = None
+
 
 def get_metrics_collector() -> MetricsCollector:
     """Get or create metrics collector instance."""
@@ -336,6 +346,7 @@ def get_metrics_collector() -> MetricsCollector:
         _metrics_collector = MetricsCollector()
     return _metrics_collector
 
+
 def reset_metrics_collector():
     """Reset the global metrics collector. Useful for testing to ensure clean state."""
     global _metrics_collector
@@ -343,6 +354,7 @@ def reset_metrics_collector():
         _metrics_collector.reset()
     else:
         _metrics_collector = MetricsCollector()
+
 
 def collect_metrics(f: Callable) -> Callable:
     """Decorator to collect metrics for route handlers.
@@ -364,6 +376,7 @@ def collect_metrics(f: Callable) -> Callable:
 
     return decorated_function
 
+
 def setup_metrics_middleware(app):
     """Set up metrics collection middleware for the Flask app."""
     # Check if middleware has already been set up to avoid duplicate registration
@@ -372,9 +385,7 @@ def setup_metrics_middleware(app):
     app.metrics_middleware_setup = True
 
     # Use Flask signal to catch exceptions (including HTTPExceptions)
-    from flask import (
-        got_request_exception,
-    )
+    from flask import got_request_exception
 
     def handle_exception(sender, exception, **extra):
         """Store exception in g for teardown_request to access."""
@@ -452,6 +463,7 @@ def setup_metrics_middleware(app):
         # If neither exc nor response, request was likely aborted before after_request
 
     return app
+
 
 # Metrics endpoint helpers
 def create_metrics_blueprint():

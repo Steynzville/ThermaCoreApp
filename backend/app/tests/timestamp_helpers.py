@@ -13,6 +13,7 @@ import os
 import time
 from datetime import datetime, timezone
 
+
 def simulate_db_trigger_update(obj):
     """Simulate database trigger behavior for SQLite in tests.
 
@@ -35,6 +36,7 @@ def simulate_db_trigger_update(obj):
             time.sleep(0.01)
         obj.updated_at = datetime.now(timezone.utc)
 
+
 def create_test_model_with_utc(model_class, **kwargs):
     """Create a test model instance with UTC timestamps.
 
@@ -56,6 +58,7 @@ def create_test_model_with_utc(model_class, **kwargs):
 
     return instance
 
+
 def assert_timestamp_updated(original_timestamp, updated_timestamp):
     """Assert that a timestamp has been updated properly.
 
@@ -67,9 +70,10 @@ def assert_timestamp_updated(original_timestamp, updated_timestamp):
 
     """
     assert updated_timestamp is not None, "Updated timestamp should not be None"
-    assert updated_timestamp >= original_timestamp, (
-        f"Updated timestamp ({updated_timestamp}) should be >= original ({original_timestamp})"
-    )
+    assert (
+        updated_timestamp >= original_timestamp
+    ), f"Updated timestamp ({updated_timestamp}) should be >= original ({original_timestamp})"
+
 
 def assert_timestamp_unchanged(original_timestamp, current_timestamp):
     """Assert that a timestamp has not been changed.
@@ -79,9 +83,10 @@ def assert_timestamp_unchanged(original_timestamp, current_timestamp):
         current_timestamp: The current timestamp value
 
     """
-    assert current_timestamp == original_timestamp, (
-        f"Timestamp should not have changed: original={original_timestamp}, current={current_timestamp}"
-    )
+    assert (
+        current_timestamp == original_timestamp
+    ), f"Timestamp should not have changed: original={original_timestamp}, current={current_timestamp}"
+
 
 def is_using_postgres_tests():
     """Check if tests are configured to run against PostgreSQL.
@@ -91,6 +96,7 @@ def is_using_postgres_tests():
 
     """
     return os.environ.get("USE_POSTGRES_TESTS", "false").lower() in ("true", "1")
+
 
 def detect_database_dialect():
     """Detect the database dialect at runtime by examining the current database connection.
@@ -137,6 +143,7 @@ def detect_database_dialect():
         # If we can't detect, fall back to environment variable check
         return "postgresql" if is_using_postgres_tests() else "sqlite"
 
+
 def is_using_postgres_dialect():
     """Check if the current database dialect is PostgreSQL using runtime detection.
 
@@ -149,6 +156,7 @@ def is_using_postgres_dialect():
     dialect = detect_database_dialect()
     return dialect == "postgresql"
 
+
 def get_postgres_test_url():
     """Get the PostgreSQL test database URL from environment.
 
@@ -157,6 +165,7 @@ def get_postgres_test_url():
 
     """
     return os.environ.get("POSTGRES_TEST_URL")
+
 
 def sleep_for_sqlite_if_needed(seconds=0.01):
     """Add delay for SQLite tests to prevent race conditions.

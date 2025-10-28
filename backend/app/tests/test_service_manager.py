@@ -11,6 +11,7 @@ from app.utils.service_manager import (
     initialize_service,
 )
 
+
 class TestServiceManager:
     """Test the ServiceManager class."""
 
@@ -167,6 +168,7 @@ class TestServiceManager:
         should_raise = manager.should_raise_error("disabled", is_production=True)
         assert should_raise is False
 
+
 class TestInitializeService:
     """Test the initialize_service function."""
 
@@ -253,6 +255,7 @@ class TestInitializeService:
         if manager_name in service_manager._services:
             del service_manager._services[manager_name]
 
+
 class TestGetServiceConfig:
     """Test the get_service_config function."""
 
@@ -278,6 +281,7 @@ class TestGetServiceConfig:
 
         assert config["enabled"] is False
         assert config["required"] is True
+
 
 class TestServiceManagerIntegration:
     """Integration tests for service manager with Flask app."""

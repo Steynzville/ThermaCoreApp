@@ -26,6 +26,7 @@ logger = SecureLogger.get_secure_logger(__name__)
 # Constant for service unavailability warning message
 SERVICE_UNAVAILABLE_MSG = "service will be unavailable"
 
+
 class OPCUAClient:
     """OPC UA client for connecting to industrial automation systems."""
 
@@ -178,9 +179,7 @@ class OPCUAClient:
         import os  # noqa: PLC0415 - Conditional import
 
         from cryptography import x509  # noqa: PLC0415 - Conditional import
-        from cryptography.hazmat.backends import (
-            default_backend,
-        )
+        from cryptography.hazmat.backends import default_backend
 
         if not os.path.exists(self.trust_cert_file):
             # Sanitize path in error messages for security
@@ -734,9 +733,7 @@ class OPCUAClient:
                 if success:
                     # Also trigger real-time processing
                     try:
-                        from app.services.realtime_processor import (
-                            realtime_processor,
-                        )
+                        from app.services.realtime_processor import realtime_processor
 
                         realtime_processor.process_sensor_data(
                             processed_data["unit_id"],
@@ -857,6 +854,7 @@ class OPCUAClient:
             "node_mappings": len(self._node_mappings),
             "mappings": self._node_mappings.copy() if opcua_available else {},
         }
+
 
 # Global OPC UA client instance
 opcua_client = OPCUAClient()

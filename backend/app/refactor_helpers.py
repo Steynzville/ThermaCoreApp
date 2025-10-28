@@ -8,6 +8,7 @@ by extracting common patterns into reusable components.
 import logging
 from typing import Any
 
+
 def safe_service_init(
     service: Any,
     service_name: str,
@@ -48,6 +49,7 @@ def safe_service_init(
                 f"Required service {service_name} failed to initialize: {e}"
             ) from e
         return False
+
 
 def safe_blueprint_register(
     app: Any,
@@ -91,15 +93,14 @@ def safe_blueprint_register(
         logger.exception(f"Failed to register {route_name} routes: {e}")
         return False, False
 
+
 def setup_logging_sanitization(app: Any) -> None:
     """Set up log sanitization filters across all handlers.
 
     Args:
         app: Flask application instance
     """
-    from app.utils.logging_filter import (
-        SanitizingFilter,
-    )
+    from app.utils.logging_filter import SanitizingFilter
 
     root_logger = logging.getLogger()
 
@@ -113,6 +114,7 @@ def setup_logging_sanitization(app: Any) -> None:
     for handler in app.logger.handlers:
         if not any(isinstance(f, SanitizingFilter) for f in handler.filters):
             handler.addFilter(SanitizingFilter())
+
 
 def configure_debug_mode(app: Any, config_name: str) -> None:
     """Configure Flask debug mode based on environment.
@@ -129,6 +131,7 @@ def configure_debug_mode(app: Any, config_name: str) -> None:
     elif config_name in ("development", "testing"):
         # Development and testing configs should have debug enabled
         app.debug = True
+
 
 def setup_logging_level(app: Any, logger: logging.Logger) -> None:
     """Configure logging levels from app configuration.

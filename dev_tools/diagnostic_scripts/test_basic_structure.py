@@ -1,11 +1,12 @@
 """Simple test to verify basic Flask app structure."""
 
-import sys
 import os
+import sys
 
 # Add the backend directory to Python path
 backend_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, backend_dir)
+
 
 def test_basic_imports():
     """Test that basic modules can be imported."""
@@ -40,6 +41,7 @@ def test_basic_imports():
     except Exception as e:
         print(f"✗ Error: {e}")
         return False
+
 
 if __name__ == "__main__":
     print("Testing ThermaCore SCADA API Backend Structure...")

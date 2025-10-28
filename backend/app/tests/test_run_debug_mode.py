@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 from app import create_app
 
+
 class TestDebugModeConfiguration:
     """Test that app.debug is correctly set based on FLASK_ENV."""
 
@@ -12,15 +13,15 @@ class TestDebugModeConfiguration:
         """Test that app.debug is True when using TestingConfig for better debugging."""
         with patch.dict(os.environ, {"FLASK_ENV": "testing"}, clear=True):
             app = create_app()
-            assert app.debug is True, (
-                "TestingConfig should set app.debug=True for test debugging"
-            )
-            assert app.config["DEBUG"] is True, (
-                "TestingConfig should set DEBUG=True for test debugging"
-            )
-            assert app.config["TESTING"] is True, (
-                "TestingConfig should set TESTING=True"
-            )
+            assert (
+                app.debug is True
+            ), "TestingConfig should set app.debug=True for test debugging"
+            assert (
+                app.config["DEBUG"] is True
+            ), "TestingConfig should set DEBUG=True for test debugging"
+            assert (
+                app.config["TESTING"] is True
+            ), "TestingConfig should set TESTING=True"
 
     def test_debug_disabled_with_production_config(self):
         """Test that app.debug is False when using ProductionConfig."""
@@ -49,9 +50,9 @@ class TestDebugModeConfiguration:
         ):
             app = create_app()
             assert app.debug is False, "ProductionConfig should set app.debug=False"
-            assert app.config["DEBUG"] is False, (
-                "ProductionConfig should set DEBUG=False"
-            )
+            assert (
+                app.config["DEBUG"] is False
+            ), "ProductionConfig should set DEBUG=False"
 
     def test_flask_env_development_without_debug_flag(self):
         """Test that FLASK_ENV=development alone falls back to production config."""
@@ -76,9 +77,9 @@ class TestDebugModeConfiguration:
             clear=True,
         ):
             app = create_app()  # Should fall back to production
-            assert app.config["DEBUG"] is False, (
-                "Should use production config without FLASK_DEBUG"
-            )
+            assert (
+                app.config["DEBUG"] is False
+            ), "Should use production config without FLASK_DEBUG"
 
     def test_flask_env_development_with_debug_flag(self):
         """Test that FLASK_ENV=development with FLASK_DEBUG=1 enables debug mode."""
@@ -89,9 +90,9 @@ class TestDebugModeConfiguration:
             clear=True,
         ):
             app = create_app()  # Should use DevelopmentConfig
-            assert app.config["DEBUG"] is True, (
-                "Should use DevelopmentConfig with both flags"
-            )
+            assert (
+                app.config["DEBUG"] is True
+            ), "Should use DevelopmentConfig with both flags"
 
     def test_debug_flag_alone_is_not_enough(self):
         """Test that FLASK_DEBUG=1 alone is not enough to enable debug mode."""
@@ -120,9 +121,9 @@ class TestDebugModeConfiguration:
             clear=True,
         ):
             app = create_app()
-            assert app.debug is False, (
-                "FLASK_DEBUG=1 alone should not enable debug mode"
-            )
-            assert app.config["DEBUG"] is False, (
-                "FLASK_DEBUG=1 alone should not set DEBUG=True"
-            )
+            assert (
+                app.debug is False
+            ), "FLASK_DEBUG=1 alone should not enable debug mode"
+            assert (
+                app.config["DEBUG"] is False
+            ), "FLASK_DEBUG=1 alone should not set DEBUG=True"

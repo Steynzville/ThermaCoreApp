@@ -15,6 +15,7 @@ from app.services.mqtt_service import MQTTClient
 from app.services.opcua_service import OPCUAClient
 from app.services.protocol_gateway_simulator import ProtocolGatewaySimulator
 
+
 class TestProtocolSimulationIntegration:
     """Integration tests for protocol simulation with real adapters."""
 

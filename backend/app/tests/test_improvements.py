@@ -16,6 +16,7 @@ from app.tests.timestamp_helpers import (
 )
 from app.utils.schemas import EnumField
 
+
 class TestEnumFieldValidation:
     """Test enhanced enum field validation."""
 
@@ -71,6 +72,7 @@ class TestEnumFieldValidation:
         assert "optimal" in error_msg
         assert "warning" in error_msg
         assert "critical" in error_msg
+
 
 class TestTimestampUpdates:
     """Test automatic timestamp updates."""

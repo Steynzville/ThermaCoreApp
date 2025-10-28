@@ -11,24 +11,27 @@ from sqlalchemy import and_
 
 from app.models import (
     Sensor,
-    SensorReading,
+    SensorReading,  # Use timezone-aware datetime
     Unit,
     db,
     utc_now,
-)  # Use timezone-aware datetime
+)
 
 logger = logging.getLogger(__name__)
+
 
 # Simple statistics functions to replace numpy
 def mean(values: list[float]) -> float:
     """Calculate mean of values."""
     return sum(values) / len(values) if values else 0.0
 
+
 def std_dev(values: list[float]) -> float:
     """Calculate standard deviation of values."""
     if len(values) < 2:
         return 0.0
     return statistics.stdev(values)
+
 
 def percentile(values: list[float], p: float) -> float:
     """Calculate percentile of values."""
@@ -41,6 +44,7 @@ def percentile(values: list[float], p: float) -> float:
     if f == len(sorted_values) - 1:
         return sorted_values[f]
     return sorted_values[f] * (1 - c) + sorted_values[f + 1] * c
+
 
 @dataclass
 class AnomalyResult:
@@ -57,6 +61,7 @@ class AnomalyResult:
     method: str
     baseline_mean: float
     baseline_std: float
+
 
 class StatisticalAnomalyDetector:
     """Statistical anomaly detection using Z-score and IQR methods."""
@@ -113,6 +118,7 @@ class StatisticalAnomalyDetector:
 
         return is_anomaly, anomaly_score, {"q1": q1, "q3": q3, "iqr": iqr}
 
+
 class MovingAverageAnomalyDetector:
     """Anomaly detection using moving average and deviation."""
 
@@ -145,6 +151,7 @@ class MovingAverageAnomalyDetector:
             deviation,
             {"moving_avg": moving_avg, "moving_std": moving_std},
         )
+
 
 class AnomalyDetectionService:
     """Main anomaly detection service integrating multiple detection methods."""
@@ -422,6 +429,7 @@ class AnomalyDetectionService:
         )
 
         return [float(reading.value) for reading in readings]
+
 
 # Global anomaly detection service instance
 anomaly_detection_service = AnomalyDetectionService()

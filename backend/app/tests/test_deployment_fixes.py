@@ -8,6 +8,7 @@ from unittest.mock import Mock, patch
 from app.services.mqtt_service import MQTTClient
 from app.utils.secure_logger import SecureLogger, SecureLoggerAdapter
 
+
 class TestSecureLoggerFallback:
     """Test secure logger fallback mechanism for missing request_id."""
 
@@ -84,6 +85,7 @@ class TestSecureLoggerFallback:
         # This should not raise an exception
         secure_logger.critical("Test critical during startup")
 
+
 class TestMQTTAuthenticationFallback:
     """Test MQTT service continues without authentication in production."""
 
@@ -142,6 +144,7 @@ class TestMQTTAuthenticationFallback:
                         "MQTT running without authentication in production - security reduced",
                     )
 
+
 class TestMQTTCertificateValidation:
     """Test MQTT certificate validation with detailed error messages."""
 
@@ -195,9 +198,9 @@ class TestMQTTCertificateValidation:
 
                 # Verify error was logged for empty files
                 error_calls = [str(call) for call in mock_logger.error.call_args_list]
-                assert any("is empty" in str(call) for call in error_calls), (
-                    f"Expected 'is empty' in error logs, got: {error_calls}"
-                )
+                assert any(
+                    "is empty" in str(call) for call in error_calls
+                ), f"Expected 'is empty' in error logs, got: {error_calls}"
         finally:
             # Clean up temporary files
             os.unlink(ca_path)
@@ -233,9 +236,9 @@ class TestMQTTCertificateValidation:
 
             # Verify error was logged for missing files
             error_calls = [str(call) for call in mock_logger.error.call_args_list]
-            assert any("does not exist" in str(call) for call in error_calls), (
-                f"Expected 'does not exist' in error logs, got: {error_calls}"
-            )
+            assert any(
+                "does not exist" in str(call) for call in error_calls
+            ), f"Expected 'does not exist' in error logs, got: {error_calls}"
 
     def test_valid_certificate_files_pass_validation(self):
         """Test that valid certificate files with content pass validation."""

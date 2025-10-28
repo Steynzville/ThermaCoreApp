@@ -6,6 +6,7 @@ from typing import Any
 from app.refactor_helpers import safe_service_init
 from app.utils.environment import is_production_environment
 
+
 def initialize_all_services(app: Any, logger: logging.Logger) -> None:
     """Initialize all SCADA services.
 
@@ -18,27 +19,17 @@ def initialize_all_services(app: Any, logger: logging.Logger) -> None:
 
     try:
         # Import services - inside function to avoid circular imports
-        from app.services.anomaly_detection import (
-            anomaly_detection_service,
-        )
-        from app.services.data_storage_service import (
-            data_storage_service,
-        )
+        from app.services.anomaly_detection import anomaly_detection_service
+        from app.services.data_storage_service import data_storage_service
         from app.services.dnp3_service import dnp3_service  # noqa: PLC0415
         from app.services.modbus_service import modbus_service  # noqa: PLC0415
         from app.services.mqtt_service import mqtt_client  # noqa: PLC0415
         from app.services.opcua_service import opcua_client  # noqa: PLC0415
-        from app.services.protocol_gateway_simulator import (
-            ProtocolGatewaySimulator,
-        )
+        from app.services.protocol_gateway_simulator import ProtocolGatewaySimulator
         from app.services.realtime_processor import realtime_processor  # noqa: PLC0415
-        from app.services.secure_opcua_client import (
-            secure_opcua_client,
-        )
+        from app.services.secure_opcua_client import secure_opcua_client
         from app.services.websocket_service import websocket_service  # noqa: PLC0415
-        from app.utils.service_manager import (
-            should_skip_external_services,
-        )
+        from app.utils.service_manager import should_skip_external_services
 
         skip_external = should_skip_external_services()
 
@@ -115,6 +106,7 @@ def initialize_all_services(app: Any, logger: logging.Logger) -> None:
                 f"Critical initialization error in production: {e}",
             ) from e
 
+
 def _initialize_critical_services(
     app: Any,
     logger: logging.Logger,
@@ -154,6 +146,7 @@ def _initialize_critical_services(
             "init_app",
             required=mqtt_required,
         )
+
 
 def _initialize_opcua_clients(
     app: Any,
@@ -223,6 +216,7 @@ def _initialize_opcua_clients(
                 logger.info(
                     "OPC-UA client initialization failed but service is optional, continuing without it",
                 )
+
 
 def _initialize_optional_services(
     app: Any,

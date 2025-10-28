@@ -13,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from app import create_app, db
 from app.models import Role, RoleEnum, User
 
+
 def create_first_admin():
     """Create the first admin user if no admin exists."""
     # Admin credentials - password MUST be provided via environment variable
@@ -93,6 +94,7 @@ def create_first_admin():
             db.session.rollback()
             print(f"❌ Error creating admin user: {e!s}")
             return 1
+
 
 if __name__ == "__main__":
     exit_code = create_first_admin()

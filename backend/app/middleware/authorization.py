@@ -14,6 +14,7 @@ from app.models import User
 from app.utils.error_handler import SecurityAwareErrorHandler
 from app.utils.helpers import get_current_user_id
 
+
 def _ensure_user_has_role(user):
     """Ensure user has a valid role assigned.
 
@@ -39,6 +40,7 @@ def _ensure_user_has_role(user):
         )
         return False
     return True
+
 
 def permission_required(permission):
     """Decorator to check if user has required permission.
@@ -191,6 +193,7 @@ def permission_required(permission):
         return decorated_function
 
     return decorator
+
 
 def role_required(*roles):
     """Decorator to check if user has required role.

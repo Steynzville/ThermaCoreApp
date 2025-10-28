@@ -10,6 +10,7 @@ logger = SecureLogger.get_secure_logger(__name__)
 
 opcua_monitoring = Blueprint("opcua_monitoring", __name__, url_prefix="/api/opcua")
 
+
 @opcua_monitoring.route("/security/status", methods=["GET"])
 def get_opcua_security_status():
     """Get comprehensive OPC-UA security status.
@@ -46,12 +47,16 @@ def get_opcua_security_status():
 
     except Exception as e:
         logger.exception(f"Error retrieving OPC-UA security status: {e}")
-        return jsonify(
-            {
-                "error": "Failed to retrieve security status",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            },
-        ), 500
+        return (
+            jsonify(
+                {
+                    "error": "Failed to retrieve security status",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                },
+            ),
+            500,
+        )
+
 
 @opcua_monitoring.route("/security/events", methods=["GET"])
 def get_opcua_security_events():
@@ -84,22 +89,29 @@ def get_opcua_security_events():
 
         logger.info(f"Retrieved {len(events)} OPC-UA security events")
 
-        return jsonify(
-            {
-                "events": events,
-                "count": len(events),
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            },
-        ), 200
+        return (
+            jsonify(
+                {
+                    "events": events,
+                    "count": len(events),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                },
+            ),
+            200,
+        )
 
     except Exception as e:
         logger.exception(f"Error retrieving OPC-UA security events: {e}")
-        return jsonify(
-            {
-                "error": "Failed to retrieve security events",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            },
-        ), 500
+        return (
+            jsonify(
+                {
+                    "error": "Failed to retrieve security events",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                },
+            ),
+            500,
+        )
+
 
 @opcua_monitoring.route("/connection/status", methods=["GET"])
 def get_opcua_connection_status():
@@ -116,35 +128,45 @@ def get_opcua_connection_status():
         elif hasattr(current_app, "opcua_client"):
             client = current_app.opcua_client
         else:
-            return jsonify(
-                {
-                    "connected": False,
-                    "available": False,
-                    "message": "OPC-UA client not initialized",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                },
-            ), 200
+            return (
+                jsonify(
+                    {
+                        "connected": False,
+                        "available": False,
+                        "message": "OPC-UA client not initialized",
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                    },
+                ),
+                200,
+            )
 
         status = client.get_status()
 
-        return jsonify(
-            {
-                "connected": status.get("connected", False),
-                "available": status.get("available", False),
-                "server_url": status.get("server_url"),
-                "subscribed_nodes": status.get("subscribed_nodes", 0),
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            },
-        ), 200
+        return (
+            jsonify(
+                {
+                    "connected": status.get("connected", False),
+                    "available": status.get("available", False),
+                    "server_url": status.get("server_url"),
+                    "subscribed_nodes": status.get("subscribed_nodes", 0),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                },
+            ),
+            200,
+        )
 
     except Exception as e:
         logger.exception(f"Error retrieving OPC-UA connection status: {e}")
-        return jsonify(
-            {
-                "error": "Failed to retrieve connection status",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            },
-        ), 500
+        return (
+            jsonify(
+                {
+                    "error": "Failed to retrieve connection status",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                },
+            ),
+            500,
+        )
+
 
 @opcua_monitoring.route("/nodes", methods=["GET"])
 def get_opcua_nodes():
@@ -161,14 +183,17 @@ def get_opcua_nodes():
         elif hasattr(current_app, "opcua_client"):
             client = current_app.opcua_client
         else:
-            return jsonify(
-                {
-                    "nodes": [],
-                    "count": 0,
-                    "message": "OPC-UA client not initialized",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                },
-            ), 200
+            return (
+                jsonify(
+                    {
+                        "nodes": [],
+                        "count": 0,
+                        "message": "OPC-UA client not initialized",
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                    },
+                ),
+                200,
+            )
 
         status = client.get_status()
         mappings = status.get("mappings", {})
@@ -186,22 +211,29 @@ def get_opcua_nodes():
                 },
             )
 
-        return jsonify(
-            {
-                "nodes": nodes,
-                "count": len(nodes),
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            },
-        ), 200
+        return (
+            jsonify(
+                {
+                    "nodes": nodes,
+                    "count": len(nodes),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                },
+            ),
+            200,
+        )
 
     except Exception as e:
         logger.exception(f"Error retrieving OPC-UA nodes: {e}")
-        return jsonify(
-            {
-                "error": "Failed to retrieve nodes",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            },
-        ), 500
+        return (
+            jsonify(
+                {
+                    "error": "Failed to retrieve nodes",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                },
+            ),
+            500,
+        )
+
 
 def init_opcua_monitoring(app):
     """Initialize OPC-UA monitoring blueprint.

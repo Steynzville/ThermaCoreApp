@@ -11,6 +11,7 @@ This script checks that:
 import os
 import sys
 
+
 def check_conftest_changes():
     """Check that the conftest.py file has the expected debugging improvements."""
 
@@ -112,6 +113,7 @@ def check_conftest_changes():
         print(f"\n✗ {failed} required features are missing!")
         return False
 
+
 def main():
     """Main validation function."""
     try:
@@ -138,6 +140,7 @@ def main():
 
         traceback.print_exc()
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -3,6 +3,7 @@
 from app import db
 from app.models import Role, User
 
+
 class TestApprovalWorkflowMigration:
     """Tests for approval workflow database migration."""
 
@@ -48,6 +49,7 @@ class TestApprovalWorkflowMigration:
             # Cleanup
             db.session.delete(user)
             db.session.commit()
+
 
 class TestUserCanLogin:
     """Tests for User.can_login() method."""
@@ -136,6 +138,7 @@ class TestUserCanLogin:
             db.session.delete(user)
             db.session.commit()
 
+
 class TestSelfRegistration:
     """Tests for self-registration endpoint."""
 
@@ -201,6 +204,7 @@ class TestSelfRegistration:
         # webargs returns 422 for validation errors
         assert response.status_code in [400, 422]
 
+
 class TestPendingUserLogin:
     """Tests for pending user login attempts."""
 
@@ -241,6 +245,7 @@ class TestPendingUserLogin:
             user = User.query.filter_by(username="pending_login_test").first()
             db.session.delete(user)
             db.session.commit()
+
 
 class TestApprovalEndpoints:
     """Tests for user approval/rejection endpoints."""
@@ -408,6 +413,7 @@ class TestApprovalEndpoints:
             user = User.query.get(user_id)
             db.session.delete(user)
             db.session.commit()
+
 
 class TestAdminRegistrationUnchanged:
     """Tests to ensure admin registration endpoint is unchanged."""

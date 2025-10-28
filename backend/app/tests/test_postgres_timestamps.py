@@ -30,6 +30,7 @@ pytestmark = pytest.mark.skipif(
     reason="PostgreSQL tests only run when USE_POSTGRES_TESTS=true",
 )
 
+
 class TestPostgreSQLTimestampTriggers:
     """Test timestamp triggers directly with PostgreSQL database."""
 
@@ -173,6 +174,7 @@ class TestPostgreSQLTimestampTriggers:
 
             # Verify ordering
             assert first_updated_at <= second_updated_at <= third_updated_at
+
 
 class TestPostgreSQLConfiguration:
     """Test PostgreSQL test configuration."""

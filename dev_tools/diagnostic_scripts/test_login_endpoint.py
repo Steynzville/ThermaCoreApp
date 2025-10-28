@@ -12,10 +12,12 @@ Example:
     python test_login_endpoint.py https://thermacoreapp.onrender.com admin admin123
 """
 
-import sys
 import json
+import sys
+
 import requests
 from requests.exceptions import RequestException
+
 
 def test_login(base_url, username, password):
     """Test the login endpoint and display the response."""
@@ -103,6 +105,7 @@ def test_login(base_url, username, password):
         print(f"\n{'=' * 60}\n")
         return False
 
+
 def main():
     """Main entry point."""
 
@@ -127,6 +130,7 @@ def main():
 
     # Exit with appropriate code
     sys.exit(0 if success else 1)
+
 
 if __name__ == "__main__":
     main()

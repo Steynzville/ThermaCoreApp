@@ -1,24 +1,25 @@
 #!/usr/bin/env python3
 """Manual test script for PR2 middleware functionality."""
 
-import sys
 import json
+import sys
 import uuid
 
 # Add the backend directory to Python path
 sys.path.insert(0, "/home/runner/work/ThermaCoreApp/ThermaCoreApp/backend")
 
 try:
-    from app.middleware.validation import RequestValidator
+    from app.middleware.metrics import MetricsCollector
     from app.middleware.rate_limit import RateLimiter
     from app.middleware.request_id import RequestIDManager
-    from app.middleware.metrics import MetricsCollector
+    from app.middleware.validation import RequestValidator
     from app.utils.error_handler import SecurityAwareErrorHandler
 
     print("✅ All middleware imports successful")
 except ImportError as e:
     print(f"❌ Import failed: {e}")
     sys.exit(1)
+
 
 def test_request_validator():
     """Test request validation functionality."""
@@ -30,6 +31,7 @@ def test_request_validator():
 
     # The validation methods require Flask context, so we'll just test initialization
     print("✅ RequestValidator basic functionality verified")
+
 
 def test_rate_limiter():
     """Test rate limiting functionality."""
@@ -60,6 +62,7 @@ def test_rate_limiter():
 
     print("✅ RateLimiter functionality verified")
 
+
 def test_request_id_manager():
     """Test request ID management."""
     print("\n🧪 Testing RequestIDManager...")
@@ -77,6 +80,7 @@ def test_request_id_manager():
         assert False, "Generated request ID should be valid UUID"
 
     print("✅ RequestIDManager functionality verified")
+
 
 def test_metrics_collector():
     """Test metrics collection."""
@@ -98,6 +102,7 @@ def test_metrics_collector():
     assert summary["overview"]["total_requests"] == 2, "Should have 2 requests recorded"
     print("✅ MetricsCollector functionality verified")
 
+
 def test_error_handler():
     """Test enhanced error handler."""
     print("\n🧪 Testing SecurityAwareErrorHandler...")
@@ -105,11 +110,12 @@ def test_error_handler():
     # Test error message lookup
     messages = SecurityAwareErrorHandler.GENERIC_MESSAGES
     assert "validation_error" in messages, "Should have validation_error message"
-    assert "rate_limit_exceeded" not in messages, (
-        "Should not have specific rate limit message"
-    )
+    assert (
+        "rate_limit_exceeded" not in messages
+    ), "Should not have specific rate limit message"
 
     print("✅ SecurityAwareErrorHandler message system verified")
+
 
 def test_integration():
     """Test integration between components."""
@@ -137,6 +143,7 @@ def test_integration():
     )
 
     print("✅ Component integration verified")
+
 
 if __name__ == "__main__":
     print("🚀 Starting PR2 Middleware Tests")

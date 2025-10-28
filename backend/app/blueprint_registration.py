@@ -7,6 +7,7 @@ from app.refactor_helpers import safe_blueprint_register
 from app.routes.opcua_monitoring import init_opcua_monitoring
 from app.utils.environment import is_production_environment
 
+
 def register_all_blueprints(app: Any, logger: logging.Logger) -> tuple[int, int]:
     """Register all application blueprints.
 
@@ -66,6 +67,7 @@ def register_all_blueprints(app: Any, logger: logging.Logger) -> tuple[int, int]
 
     return blueprints_registered, blueprints_failed
 
+
 def _register_opcua_monitoring(app: Any, logger: logging.Logger) -> bool:
     """Register OPC-UA monitoring endpoints.
 
@@ -86,6 +88,7 @@ def _register_opcua_monitoring(app: Any, logger: logging.Logger) -> bool:
     except Exception as e:
         logger.exception(f"Failed to initialize opcua_monitoring routes: {e}")
         return False
+
 
 def _verify_blueprint_registration(
     app: Any,

@@ -1,5 +1,6 @@
 """Tests for secure error message handling in historical and analytics routes."""
 
+
 class TestErrorMessageSecurity:
     """Test that error responses don't expose sensitive exception details."""
 

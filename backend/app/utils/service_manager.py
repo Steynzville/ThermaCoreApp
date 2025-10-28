@@ -13,6 +13,7 @@ import os
 from enum import Enum
 from typing import Any
 
+
 class ServiceStatus(Enum):
     """Service status enumeration."""
 
@@ -22,11 +23,13 @@ class ServiceStatus(Enum):
     ERROR = "error"
     NOT_INITIALIZED = "not_initialized"
 
+
 class ServiceType(Enum):
     """Service type classification."""
 
     REQUIRED = "required"  # Core services that must be available
     OPTIONAL = "optional"  # Services that can fail without crashing the app
+
 
 class ServiceManager:
     """Centralized service management for tracking and monitoring services."""
@@ -234,8 +237,10 @@ class ServiceManager:
         # Optional services never raise
         return False
 
+
 # Global service manager instance
 service_manager = ServiceManager()
+
 
 def should_skip_external_services() -> bool:
     """Check if external services should be skipped based on environment variable.
@@ -246,6 +251,7 @@ def should_skip_external_services() -> bool:
     """
     skip_env = os.getenv("SKIP_EXTERNAL_SERVICES", "false").lower()
     return skip_env == "true"
+
 
 def initialize_service(
     service: Any,
@@ -353,6 +359,7 @@ def initialize_service(
             f"Optional service '{service_name}' failed to initialize, continuing without it",
         )
         return False
+
 
 def get_service_config(app: Any, service_name: str) -> dict[str, bool]:
     """Get service configuration from app config.

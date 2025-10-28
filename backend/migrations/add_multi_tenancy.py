@@ -8,6 +8,7 @@ This migration adds:
 
 from sqlalchemy import inspect, text
 
+
 def validate_sql_identifier(identifier):
     """Validate SQL identifier to prevent SQL injection.
 
@@ -24,6 +25,7 @@ def validate_sql_identifier(identifier):
     if not identifier[0].isalpha() and identifier[0] != "_":
         return False
     return all(c.isalnum() or c in ("_", ".") for c in identifier)
+
 
 def column_exists(connection, table_name, column_name):
     """Check if a column exists in a table.
@@ -46,6 +48,7 @@ def column_exists(connection, table_name, column_name):
     columns = [col["name"] for col in inspector.get_columns(table_name)]
     return column_name in columns
 
+
 def table_exists(connection, table_name):
     """Check if a table exists in the database.
 
@@ -62,6 +65,7 @@ def table_exists(connection, table_name):
 
     inspector = inspect(connection)
     return table_name in inspector.get_table_names()
+
 
 def add_tenants_table(connection):
     """Create the tenants table if it doesn't exist.
@@ -108,6 +112,7 @@ def add_tenants_table(connection):
 
     print("Tenants table created successfully")
 
+
 def add_tenant_id_to_users(connection):
     """Add tenant_id column to users table if it doesn't exist.
 
@@ -133,6 +138,7 @@ def add_tenant_id_to_users(connection):
 
     print("tenant_id column added to users table successfully")
 
+
 def add_tenant_id_to_units(connection):
     """Add tenant_id column to units table if it doesn't exist.
 
@@ -157,6 +163,7 @@ def add_tenant_id_to_units(connection):
     connection.execute(text("CREATE INDEX idx_units_tenant_id ON units(tenant_id)"))
 
     print("tenant_id column added to units table successfully")
+
 
 def create_default_tenant(connection):
     """Create a default tenant for existing data.
@@ -191,6 +198,7 @@ def create_default_tenant(connection):
         ),
     )
     print("Default tenant created successfully")
+
 
 def migrate_existing_data(connection):
     """Migrate existing users and units to the default tenant.
@@ -238,6 +246,7 @@ def migrate_existing_data(connection):
     units_updated = result.rowcount
     print(f"Updated {units_updated} units with default tenant")
 
+
 def run_migration(connection):
     """Run the multi-tenancy migration.
 
@@ -272,6 +281,7 @@ def run_migration(connection):
         connection.rollback()
         raise
 
+
 if __name__ == "__main__":
     import sys
 
@@ -282,6 +292,8 @@ if __name__ == "__main__":
     # with app.app_context():
     #     with db.engine.connect() as connection:
     #         run_migration(connection)
-    print("ERROR: This migration script should be run from the Flask application context")
+    print(
+        "ERROR: This migration script should be run from the Flask application context"
+    )
     print("See the script for example usage")
     sys.exit(1)

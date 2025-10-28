@@ -5,6 +5,7 @@ from unittest.mock import Mock, patch
 
 from app.middleware.request_id import RequestAwareFormatter, RequestIDFilter
 
+
 class TestRequestAwareFormatter:
     """Test RequestAwareFormatter handles missing request_id gracefully."""
 
@@ -77,6 +78,7 @@ class TestRequestAwareFormatter:
         assert "Warning message" in formatted
         assert "no-request-context" in formatted
 
+
 class TestRequestIDFilter:
     """Test RequestIDFilter adds request_id to log records."""
 
@@ -101,6 +103,7 @@ class TestRequestIDFilter:
         assert hasattr(record, "request_id")
         # Should use fallback when no request context
         assert record.request_id == "no-request-context"
+
 
 class TestMQTTErrorCaching:
     """Test MQTT error logging is cached to reduce spam."""

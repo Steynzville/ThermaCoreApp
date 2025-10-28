@@ -18,6 +18,7 @@ PROTOCOLS_API_VERSION = "1.1.0"
 
 multiprotocol_bp = Blueprint("multiprotocol", __name__)
 
+
 @multiprotocol_bp.route("/protocols/status", methods=["GET"])
 @jwt_required()
 @permission_required("read_units")
@@ -118,8 +119,10 @@ def get_protocols_status():
             "Failed to get protocols status",
         )
 
+
 # Retaining legacy endpoints below (unchanged) for device operations and conversions
 # so that this PR focuses solely on status normalization.
+
 
 @multiprotocol_bp.route("/protocols/modbus/devices", methods=["GET"])
 @jwt_required()
@@ -152,6 +155,7 @@ def list_modbus_devices():
             e,
             "Failed to list Modbus devices",
         )
+
 
 @multiprotocol_bp.route("/protocols/modbus/devices", methods=["POST"])
 @jwt_required()
@@ -197,15 +201,19 @@ def add_modbus_device():
             timeout=data.get("timeout", 5.0),
         )
         if success:
-            return jsonify(
-                {
-                    "message": f"Modbus device {data['device_id']} added successfully",
-                    "device_id": data["device_id"],
-                },
-            ), 201
+            return (
+                jsonify(
+                    {
+                        "message": f"Modbus device {data['device_id']} added successfully",
+                        "device_id": data["device_id"],
+                    },
+                ),
+                201,
+            )
         return jsonify({"error": "Failed to add Modbus device"}), 500
     except Exception as e:
         return SecurityAwareErrorHandler.handle_error(e, "Failed to add Modbus device")
+
 
 @multiprotocol_bp.route(
     "/protocols/modbus/devices/<device_id>/connect",
@@ -231,6 +239,7 @@ def connect_modbus_device(device_id):
             "Failed to connect to Modbus device",
         )
 
+
 @multiprotocol_bp.route("/protocols/modbus/devices/<device_id>/data", methods=["GET"])
 @jwt_required()
 @permission_required("read_units")
@@ -245,6 +254,7 @@ def read_modbus_device_data(device_id):
             "Failed to read Modbus device data",
         )
 
+
 @multiprotocol_bp.route("/protocols/dnp3/devices", methods=["GET"])
 @jwt_required()
 @permission_required("read_units")
@@ -255,6 +265,7 @@ def list_dnp3_devices():
         return jsonify(current_app.dnp3_service.get_device_status())
     except Exception as e:
         return SecurityAwareErrorHandler.handle_error(e, "Failed to list DNP3 devices")
+
 
 @multiprotocol_bp.route("/protocols/dnp3/devices", methods=["POST"])
 @jwt_required()
@@ -277,15 +288,19 @@ def add_dnp3_device():
             app_timeout=data.get("app_timeout", 5.0),
         )
         if success:
-            return jsonify(
-                {
-                    "message": f"DNP3 device {data['device_id']} added successfully",
-                    "device_id": data["device_id"],
-                },
-            ), 201
+            return (
+                jsonify(
+                    {
+                        "message": f"DNP3 device {data['device_id']} added successfully",
+                        "device_id": data["device_id"],
+                    },
+                ),
+                201,
+            )
         return jsonify({"error": "Failed to add DNP3 device"}), 500
     except Exception as e:
         return SecurityAwareErrorHandler.handle_error(e, "Failed to add DNP3 device")
+
 
 @multiprotocol_bp.route("/protocols/dnp3/devices/<device_id>/connect", methods=["POST"])
 @jwt_required()
@@ -308,6 +323,7 @@ def connect_dnp3_device(device_id):
             "Failed to connect to DNP3 device",
         )
 
+
 @multiprotocol_bp.route("/protocols/dnp3/devices/<device_id>/data", methods=["GET"])
 @jwt_required()
 @permission_required("read_units")
@@ -321,6 +337,7 @@ def read_dnp3_device_data(device_id):
             e,
             "Failed to read DNP3 device data",
         )
+
 
 @multiprotocol_bp.route(
     "/protocols/dnp3/devices/<device_id>/integrity-poll",
@@ -345,6 +362,7 @@ def perform_dnp3_integrity_poll(device_id):
             e,
             "Failed to perform DNP3 integrity poll",
         )
+
 
 @multiprotocol_bp.route("/protocols/unified/devices", methods=["GET"])
 @jwt_required()
@@ -406,6 +424,7 @@ def get_unified_devices_status():
             "Failed to get unified devices status",
         )
 
+
 @multiprotocol_bp.route("/protocols/convert/data", methods=["POST"])
 @jwt_required()
 @permission_required("admin_panel")
@@ -441,11 +460,14 @@ def convert_protocol_data():
         elif source_protocol == target_protocol:
             converted_data = source_data
         else:
-            return jsonify(
-                {
-                    "error": f"Conversion from {source_protocol} to {target_protocol} not supported",
-                },
-            ), 400
+            return (
+                jsonify(
+                    {
+                        "error": f"Conversion from {source_protocol} to {target_protocol} not supported",
+                    },
+                ),
+                400,
+            )
         return jsonify(
             {
                 "source_protocol": source_protocol,
@@ -461,7 +483,9 @@ def convert_protocol_data():
             "Failed to convert protocol data",
         )
 
+
 # DNP3 Performance Monitoring Endpoints
+
 
 @multiprotocol_bp.route("/protocols/dnp3/performance/metrics", methods=["GET"])
 @jwt_required()
@@ -480,6 +504,7 @@ def get_dnp3_performance_metrics():
             "Failed to get DNP3 performance metrics",
         )
 
+
 @multiprotocol_bp.route("/protocols/dnp3/performance/summary", methods=["GET"])
 @jwt_required()
 @permission_required("read_units")
@@ -496,6 +521,7 @@ def get_dnp3_performance_summary():
             e,
             "Failed to get DNP3 performance summary",
         )
+
 
 @multiprotocol_bp.route(
     "/protocols/dnp3/devices/<device_id>/performance",
@@ -518,6 +544,7 @@ def get_dnp3_device_performance(device_id):
             e,
             f"Failed to get performance stats for DNP3 device {device_id}",
         )
+
 
 @multiprotocol_bp.route("/protocols/dnp3/performance/config", methods=["POST"])
 @jwt_required()
@@ -557,6 +584,7 @@ def configure_dnp3_performance():
             e,
             "Failed to configure DNP3 performance",
         )
+
 
 @multiprotocol_bp.route("/protocols/dnp3/performance/metrics", methods=["DELETE"])
 @jwt_required()

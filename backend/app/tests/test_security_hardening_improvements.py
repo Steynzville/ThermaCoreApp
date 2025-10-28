@@ -9,6 +9,7 @@ from app.services.data_storage_service import DataStorageService
 from app.services.mqtt_service import MQTTClient
 from app.services.opcua_service import OPCUAClient
 
+
 class TestSecurityHardeningImprovements:
     """Test security hardening and validation improvements."""
 

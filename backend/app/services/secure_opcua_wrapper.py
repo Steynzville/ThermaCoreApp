@@ -20,6 +20,7 @@ from app.utils.secure_logger import SecureLogger
 
 logger = SecureLogger.get_secure_logger(__name__)
 
+
 class SecureOPCUAWrapper:
     """Secure wrapper for OPC-UA operations with enhanced security features.
 
@@ -103,9 +104,7 @@ class SecureOPCUAWrapper:
     def _should_sanitize_for_production(self) -> bool:
         """Determine if node ID should be sanitized for production environment."""
         try:
-            from app.utils.environment import (
-                is_production_environment,
-            )
+            from app.utils.environment import is_production_environment
 
             if self._client and hasattr(self._client, "_app"):
                 return is_production_environment(self._client._app)
@@ -269,6 +268,7 @@ class SecureOPCUAWrapper:
         """Reset connection attempt counter (for testing/admin purposes)."""
         self._connection_attempts = 0
         logger.info("Connection attempts counter reset")
+
 
 def secure_operation(operation_name: str):
     """Decorator for securing OPC-UA operations with logging.

@@ -1,5 +1,6 @@
 """Test roles endpoint to ensure all three roles are returned."""
 
+
 class TestRolesEndpoint:
     """Test the /api/v1/roles endpoint."""
 
@@ -42,9 +43,9 @@ class TestRolesEndpoint:
         expected_roles = {"admin", "operator", "viewer"}
 
         # Assert all three expected roles are present
-        assert role_names == expected_roles, (
-            f"Expected {expected_roles}, got {role_names}"
-        )
+        assert (
+            role_names == expected_roles
+        ), f"Expected {expected_roles}, got {role_names}"
 
     def test_get_roles_has_correct_structure(self, client):
         """Test that each role has the expected fields."""
@@ -68,15 +69,15 @@ class TestRolesEndpoint:
 
             # Check permission structure
             for permission in role["permissions"]:
-                assert "id" in permission, (
-                    f"Permission missing 'id' field: {permission}"
-                )
-                assert "name" in permission, (
-                    f"Permission missing 'name' field: {permission}"
-                )
-                assert "description" in permission, (
-                    f"Permission missing 'description' field: {permission}"
-                )
+                assert (
+                    "id" in permission
+                ), f"Permission missing 'id' field: {permission}"
+                assert (
+                    "name" in permission
+                ), f"Permission missing 'name' field: {permission}"
+                assert (
+                    "description" in permission
+                ), f"Permission missing 'description' field: {permission}"
 
     def test_get_roles_requires_authentication(self, client):
         """Test that the roles endpoint requires authentication."""
@@ -120,24 +121,24 @@ class TestRolesEndpoint:
             "remote_control",
         }
 
-        assert expected_admin_permissions.issubset(admin_permissions), (
-            f"Admin missing expected permissions: {expected_admin_permissions - admin_permissions}"
-        )
+        assert expected_admin_permissions.issubset(
+            admin_permissions
+        ), f"Admin missing expected permissions: {expected_admin_permissions - admin_permissions}"
 
         # Test operator role permissions
         operator_role = roles_dict.get("operator")
         assert operator_role is not None, "Operator role not found"
         operator_permissions = {perm["name"] for perm in operator_role["permissions"]}
         expected_operator_permissions = {"read_units", "read_users", "remote_control"}
-        assert operator_permissions == expected_operator_permissions, (
-            f"Operator permissions mismatch. Expected: {expected_operator_permissions}, got: {operator_permissions}"
-        )
+        assert (
+            operator_permissions == expected_operator_permissions
+        ), f"Operator permissions mismatch. Expected: {expected_operator_permissions}, got: {operator_permissions}"
 
         # Test viewer role permissions
         viewer_role = roles_dict.get("viewer")
         assert viewer_role is not None, "Viewer role not found"
         viewer_permissions = {perm["name"] for perm in viewer_role["permissions"]}
         expected_viewer_permissions = {"read_units", "read_users"}
-        assert viewer_permissions == expected_viewer_permissions, (
-            f"Viewer permissions mismatch. Expected: {expected_viewer_permissions}, got: {viewer_permissions}"
-        )
+        assert (
+            viewer_permissions == expected_viewer_permissions
+        ), f"Viewer permissions mismatch. Expected: {expected_viewer_permissions}, got: {viewer_permissions}"

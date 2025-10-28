@@ -26,6 +26,7 @@ from app.utils.validation import validate_json_request
 units_bp = Blueprint("units", __name__)
 logger = logging.getLogger(__name__)
 
+
 @units_bp.route("/units", methods=["GET"])
 @jwt_required()
 @permission_required("read_units")
@@ -106,17 +107,21 @@ def get_units():
 
     units_schema = UnitSchema(many=True)
 
-    return jsonify(
-        {
-            "data": units_schema.dump(pagination.items),
-            "page": page,
-            "per_page": per_page,
-            "total": pagination.total,
-            "pages": pagination.pages,
-            "has_next": pagination.has_next,
-            "has_prev": pagination.has_prev,
-        },
-    ), 200
+    return (
+        jsonify(
+            {
+                "data": units_schema.dump(pagination.items),
+                "page": page,
+                "per_page": per_page,
+                "total": pagination.total,
+                "pages": pagination.pages,
+                "has_next": pagination.has_next,
+                "has_prev": pagination.has_prev,
+            },
+        ),
+        200,
+    )
+
 
 @units_bp.route("/units/<string:unit_id>", methods=["GET"])
 @jwt_required()
@@ -144,6 +149,7 @@ def get_unit(unit_id):
     unit = Unit.query.get_or_404(unit_id)
     unit_schema = UnitSchema()
     return jsonify(unit_schema.dump(unit)), 200
+
 
 @units_bp.route("/units", methods=["POST"])
 @jwt_required()
@@ -212,6 +218,7 @@ def create_unit():
             return jsonify({"error": "Serial number already exists"}), 409
         return jsonify({"error": "Database constraint violation"}), 409
 
+
 @units_bp.route("/units/<string:unit_id>", methods=["PUT"])
 @jwt_required()
 @permission_required("write_units")
@@ -275,6 +282,7 @@ def update_unit(unit_id):
         db.session.rollback()
         return jsonify({"error": "Database constraint violation"}), 409
 
+
 @units_bp.route("/units/<string:unit_id>", methods=["DELETE"])
 @jwt_required()
 @permission_required("delete_units")
@@ -303,6 +311,7 @@ def delete_unit(unit_id):
     db.session.commit()
 
     return "", 204
+
 
 @units_bp.route("/units/<string:unit_id>/sensors", methods=["GET"])
 @jwt_required()
@@ -333,6 +342,7 @@ def get_unit_sensors(unit_id):
     unit = Unit.query.get_or_404(unit_id)
     sensors_schema = SensorSchema(many=True)
     return jsonify(sensors_schema.dump(unit.sensors)), 200
+
 
 @units_bp.route("/units/<string:unit_id>/sensors", methods=["POST"])
 @jwt_required()
@@ -388,6 +398,7 @@ def create_unit_sensor(unit_id):
     sensor_schema = SensorSchema()
     return jsonify(sensor_schema.dump(sensor)), 201
 
+
 @units_bp.route("/units/<string:unit_id>/readings", methods=["GET"])
 @jwt_required()
 @permission_required("read_units")
@@ -430,8 +441,8 @@ def get_unit_readings(unit_id):
 
     # Calculate start time in Python for better portability and security
     # Use timezone-aware UTC datetimes for consistency
-    from datetime import (  # noqa: PLC0415 - Conditional import
-        datetime,
+    from datetime import (
+        datetime,  # noqa: PLC0415 - Conditional import
         timedelta,
         timezone,
     )
@@ -452,6 +463,7 @@ def get_unit_readings(unit_id):
 
     readings_schema = SensorReadingSchema(many=True)
     return jsonify(readings_schema.dump(readings)), 200
+
 
 @units_bp.route("/units/<string:unit_id>/status", methods=["PATCH"])
 @jwt_required()
@@ -521,16 +533,22 @@ def update_unit_status(unit_id):
     )
 
     if "status" in data and status_value not in valid_statuses:
-        return jsonify(
-            {"error": f"Invalid status. Must be one of: {valid_statuses}"},
-        ), 400
+        return (
+            jsonify(
+                {"error": f"Invalid status. Must be one of: {valid_statuses}"},
+            ),
+            400,
+        )
 
     if "health_status" in data and health_status_value not in valid_health_statuses:
-        return jsonify(
-            {
-                "error": f"Invalid health_status. Must be one of: {valid_health_statuses}"
-            },
-        ), 400
+        return (
+            jsonify(
+                {
+                    "error": f"Invalid health_status. Must be one of: {valid_health_statuses}"
+                },
+            ),
+            400,
+        )
 
     # Update fields
     for field in ["status", "health_status", "has_alert", "has_alarm"]:
@@ -544,6 +562,7 @@ def update_unit_status(unit_id):
 
     unit_schema = UnitSchema()
     return jsonify(unit_schema.dump(unit)), 200
+
 
 @units_bp.route("/units/stats", methods=["GET"])
 @jwt_required()
@@ -614,17 +633,20 @@ def get_units_stats():
         ),
     ).first()
 
-    return jsonify(
-        {
-            "total_units": result.total_units or 0,
-            "online_units": result.online_units or 0,
-            "offline_units": result.offline_units or 0,
-            "maintenance_units": result.maintenance_units or 0,
-            "error_units": result.error_units or 0,
-            "critical_health": result.critical_health or 0,
-            "warning_health": result.warning_health or 0,
-            "optimal_health": result.optimal_health or 0,
-            "units_with_alerts": result.units_with_alerts or 0,
-            "units_with_alarms": result.units_with_alarms or 0,
-        },
-    ), 200
+    return (
+        jsonify(
+            {
+                "total_units": result.total_units or 0,
+                "online_units": result.online_units or 0,
+                "offline_units": result.offline_units or 0,
+                "maintenance_units": result.maintenance_units or 0,
+                "error_units": result.error_units or 0,
+                "critical_health": result.critical_health or 0,
+                "warning_health": result.warning_health or 0,
+                "optimal_health": result.optimal_health or 0,
+                "units_with_alerts": result.units_with_alerts or 0,
+                "units_with_alarms": result.units_with_alarms or 0,
+            },
+        ),
+        200,
+    )

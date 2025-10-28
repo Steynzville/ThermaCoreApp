@@ -8,6 +8,7 @@ from flask import Flask
 
 from app.utils.secure_logger import SecureLogger, SecureLoggerAdapter
 
+
 class TestSecureLoggerFormattingImprovements:
     """Test secure logger handles various formatting issues gracefully."""
 
@@ -84,6 +85,7 @@ class TestSecureLoggerFormattingImprovements:
 
         # Should not raise - will use last resort fallback
         secure_logger.critical("Test critical message")
+
 
 class TestMQTTServiceInitializationLogging:
     """Test MQTT service initialization provides explicit logging."""
@@ -183,6 +185,7 @@ class TestMQTTServiceInitializationLogging:
                 raise Exception("Callback error")
             except Exception:
                 mock_logger.error.assert_not_called()  # Should not be called in successful path
+
 
 class TestHealthCheckLogicImprovements:
     """Test health check logic for service status reporting."""

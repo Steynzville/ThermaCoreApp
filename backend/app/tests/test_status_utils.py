@@ -15,6 +15,7 @@ from app.utils.status_utils import (
     utc_now,
 )
 
+
 class TestStatusUtilities:
     """Test the status utility functions."""
 
@@ -201,6 +202,7 @@ class TestStatusUtilities:
         assert error["message"] is None
         assert error["context"] == {}
         assert "timestamp" in error
+
 
 if __name__ == "__main__":
     pytest.main([__file__])

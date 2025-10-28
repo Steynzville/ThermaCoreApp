@@ -18,6 +18,7 @@ except ImportError:
     )
     from OpenSSL import crypto
 
+
 def generate_self_signed_cert(cert_file, key_file, common_name="thermacore.local"):
     """Generate self-signed certificate for development/production"""
     try:
@@ -61,6 +62,7 @@ def generate_self_signed_cert(cert_file, key_file, common_name="thermacore.local
     except Exception as e:
         logger.error("✗ Failed to generate certificates: %s", e)
         return False
+
 
 def ensure_certificates():
     """Ensure all required certificate files exist"""
@@ -122,6 +124,7 @@ def ensure_certificates():
         )
 
     return success_count > 0
+
 
 if __name__ == "__main__":
     ensure_certificates()

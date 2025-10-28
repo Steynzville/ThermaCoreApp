@@ -14,6 +14,7 @@ from app.utils.error_handler import SecurityAwareErrorHandler
 # Create remote control blueprint
 remote_control_bp = Blueprint("remote_control", __name__)
 
+
 @remote_control_bp.route(
     "/remote-control/units/<string:unit_id>/power",
     methods=["POST"],
@@ -87,6 +88,7 @@ def control_unit_power(unit_id):
             500,
         )
 
+
 @remote_control_bp.route(
     "/remote-control/units/<string:unit_id>/water-production",
     methods=["POST"],
@@ -117,9 +119,12 @@ def control_water_production(unit_id):
 
         # Check if unit is online (can't control water production if offline)
         if unit.status != UnitStatusEnum.ONLINE and water_production_on:
-            return jsonify(
-                {"error": "Cannot enable water production on offline unit"},
-            ), 400
+            return (
+                jsonify(
+                    {"error": "Cannot enable water production on offline unit"},
+                ),
+                400,
+            )
 
         # Update water generation
         old_value = unit.water_generation
@@ -161,6 +166,7 @@ def control_water_production(unit_id):
             500,
         )
 
+
 @remote_control_bp.route(
     "/remote-control/units/<string:unit_id>/status",
     methods=["GET"],
@@ -181,9 +187,9 @@ def get_remote_control_status(unit_id):
                 "status": unit.status.value,
                 "water_generation": unit.water_generation,
                 "power_on": unit.status == UnitStatusEnum.ONLINE,
-                "last_updated": unit.updated_at.isoformat()
-                if unit.updated_at
-                else None,
+                "last_updated": (
+                    unit.updated_at.isoformat() if unit.updated_at else None
+                ),
             },
         )
 
@@ -194,6 +200,7 @@ def get_remote_control_status(unit_id):
             "Get remote control status",
             500,
         )
+
 
 @remote_control_bp.route("/remote-control/permissions", methods=["GET"])
 @jwt_required()

@@ -17,6 +17,7 @@ from app.utils.schemas import RoleSchema, UserSchema, UserUpdateSchema
 
 users_bp = Blueprint("users", __name__)
 
+
 @users_bp.route("/users", methods=["GET"])
 @jwt_required()
 @permission_required("read_users")
@@ -96,17 +97,21 @@ def get_users():
 
     users_schema = UserSchema(many=True)
 
-    return jsonify(
-        {
-            "data": users_schema.dump(pagination.items),
-            "page": page,
-            "per_page": per_page,
-            "total": pagination.total,
-            "pages": pagination.pages,
-            "has_next": pagination.has_next,
-            "has_prev": pagination.has_prev,
-        },
-    ), 200
+    return (
+        jsonify(
+            {
+                "data": users_schema.dump(pagination.items),
+                "page": page,
+                "per_page": per_page,
+                "total": pagination.total,
+                "pages": pagination.pages,
+                "has_next": pagination.has_next,
+                "has_prev": pagination.has_prev,
+            },
+        ),
+        200,
+    )
+
 
 @users_bp.route("/users/<int:user_id>", methods=["GET"])
 @jwt_required()
@@ -134,6 +139,7 @@ def get_user(user_id):
     user = User.query.get_or_404(user_id)
     user_schema = UserSchema()
     return jsonify(user_schema.dump(user)), 200
+
 
 @users_bp.route("/users/<int:user_id>", methods=["PUT"])
 @jwt_required()
@@ -221,6 +227,7 @@ def update_user(user_id):
             return jsonify({"error": "Email already exists"}), 409
         return jsonify({"error": "Database constraint violation"}), 409
 
+
 @users_bp.route("/users/<int:user_id>", methods=["DELETE"])
 @jwt_required()
 @permission_required("delete_users")
@@ -271,6 +278,7 @@ def delete_user(user_id):
 
     return "", 204
 
+
 @users_bp.route("/users/<int:user_id>/activate", methods=["PATCH"])
 @jwt_required()
 @permission_required("write_users")
@@ -303,6 +311,7 @@ def activate_user(user_id):
 
     user_schema = UserSchema()
     return jsonify(user_schema.dump(user)), 200
+
 
 @users_bp.route("/users/<int:user_id>/deactivate", methods=["PATCH"])
 @jwt_required()
@@ -347,6 +356,7 @@ def deactivate_user(user_id):
     user_schema = UserSchema()
     return jsonify(user_schema.dump(user)), 200
 
+
 @users_bp.route("/roles", methods=["GET"])
 @jwt_required()
 @permission_required("read_users")
@@ -369,6 +379,7 @@ def get_roles():
     roles = Role.query.all()
     roles_schema = RoleSchema(many=True)
     return jsonify(roles_schema.dump(roles)), 200
+
 
 @users_bp.route("/users/stats", methods=["GET"])
 @jwt_required()
@@ -421,16 +432,20 @@ def get_users_stats():
         User.query.filter(User.role_id == viewer_role.id).count() if viewer_role else 0
     )
 
-    return jsonify(
-        {
-            "total_users": total_users,
-            "active_users": active_users,
-            "inactive_users": inactive_users,
-            "admin_users": admin_users,
-            "operator_users": operator_users,
-            "viewer_users": viewer_users,
-        },
-    ), 200
+    return (
+        jsonify(
+            {
+                "total_users": total_users,
+                "active_users": active_users,
+                "inactive_users": inactive_users,
+                "admin_users": admin_users,
+                "operator_users": operator_users,
+                "viewer_users": viewer_users,
+            },
+        ),
+        200,
+    )
+
 
 @users_bp.route("/users/<int:user_id>/reset-password", methods=["POST"])
 @jwt_required()
@@ -475,14 +490,18 @@ def reset_user_password(user_id):
         return jsonify({"error": "New password required"}), 400
 
     if len(data["new_password"]) < 6:
-        return jsonify(
-            {"error": "New password must be at least 6 characters long"},
-        ), 400
+        return (
+            jsonify(
+                {"error": "New password must be at least 6 characters long"},
+            ),
+            400,
+        )
 
     user.set_password(data["new_password"])
     db.session.commit()
 
     return jsonify({"message": "Password reset successfully"}), 200
+
 
 @users_bp.route("/users/companies", methods=["GET"])
 @jwt_required()
@@ -505,12 +524,11 @@ def get_companies():
     security:
       - JWT: []
     """
-    from app.utils.user_batch_manager import (
-        UserBatchManager,
-    )
+    from app.utils.user_batch_manager import UserBatchManager
 
     companies = UserBatchManager.get_unique_companies()
     return jsonify({"companies": companies}), 200
+
 
 @users_bp.route("/users/companies/stats", methods=["GET"])
 @jwt_required()
@@ -542,12 +560,11 @@ def get_company_stats():
     security:
       - JWT: []
     """
-    from app.utils.user_batch_manager import (
-        UserBatchManager,
-    )
+    from app.utils.user_batch_manager import UserBatchManager
 
     stats = UserBatchManager.get_company_statistics()
     return jsonify({"stats": stats}), 200
+
 
 @users_bp.route("/users/batch/activate", methods=["POST"])
 @jwt_required()
@@ -577,9 +594,7 @@ def batch_activate():
     security:
       - JWT: []
     """
-    from app.utils.user_batch_manager import (
-        UserBatchManager,
-    )
+    from app.utils.user_batch_manager import UserBatchManager
 
     data = request.json
     if not data or "user_ids" not in data:
@@ -587,6 +602,7 @@ def batch_activate():
 
     count = UserBatchManager.batch_activate_users(data["user_ids"])
     return jsonify({"message": f"{count} users activated successfully"}), 200
+
 
 @users_bp.route("/users/batch/deactivate", methods=["POST"])
 @jwt_required()
@@ -616,9 +632,7 @@ def batch_deactivate():
     security:
       - JWT: []
     """
-    from app.utils.user_batch_manager import (
-        UserBatchManager,
-    )
+    from app.utils.user_batch_manager import UserBatchManager
 
     data = request.json
     if not data or "user_ids" not in data:
@@ -626,6 +640,7 @@ def batch_deactivate():
 
     count = UserBatchManager.batch_deactivate_users(data["user_ids"])
     return jsonify({"message": f"{count} users deactivated successfully"}), 200
+
 
 @users_bp.route("/users/pending", methods=["GET"])
 @jwt_required()
@@ -667,17 +682,21 @@ def get_pending_users():
 
     users_schema = UserSchema(many=True)
 
-    return jsonify(
-        {
-            "data": users_schema.dump(pagination.items),
-            "page": page,
-            "per_page": per_page,
-            "total": pagination.total,
-            "pages": pagination.pages,
-            "has_next": pagination.has_next,
-            "has_prev": pagination.has_prev,
-        },
-    ), 200
+    return (
+        jsonify(
+            {
+                "data": users_schema.dump(pagination.items),
+                "page": page,
+                "per_page": per_page,
+                "total": pagination.total,
+                "pages": pagination.pages,
+                "has_next": pagination.has_next,
+                "has_prev": pagination.has_prev,
+            },
+        ),
+        200,
+    )
+
 
 @users_bp.route("/users/<int:user_id>/approve", methods=["POST"])
 @jwt_required()
@@ -710,9 +729,7 @@ def approve_user(user_id):
     """
     from datetime import datetime, timezone  # noqa: PLC0415 - Conditional import
 
-    from app.utils.helpers import (
-        get_role_permissions,
-    )
+    from app.utils.helpers import get_role_permissions
 
     # Get the user to approve
     user = User.query.get(user_id)
@@ -721,11 +738,14 @@ def approve_user(user_id):
 
     # Check if user is in pending status
     if user.registration_status != "pending":
-        return jsonify(
-            {
-                "error": f"User is not in pending status (current status: {user.registration_status})",
-            }
-        ), 400
+        return (
+            jsonify(
+                {
+                    "error": f"User is not in pending status (current status: {user.registration_status})",
+                }
+            ),
+            400,
+        )
 
     # Get the current admin user ID
     current_user_id, success = get_current_user_id()
@@ -747,18 +767,22 @@ def approve_user(user_id):
         db.session.refresh(user)
 
         user_schema = UserSchema()
-        return jsonify(
-            {
-                "message": "User approved successfully",
-                "user": user_schema.dump(user),
-            }
-        ), 200
+        return (
+            jsonify(
+                {
+                    "message": "User approved successfully",
+                    "user": user_schema.dump(user),
+                }
+            ),
+            200,
+        )
 
     except Exception as e:
         db.session.rollback()
         # Log the error internally but don't expose stack trace to user
         current_app.logger.exception(f"Failed to approve user {user_id}: {e!s}")
         return jsonify({"error": "Failed to approve user"}), 500
+
 
 @users_bp.route("/users/<int:user_id>/reject", methods=["POST"])
 @jwt_required()
@@ -804,11 +828,14 @@ def reject_user(user_id):
 
     # Check if user is in pending status
     if user.registration_status != "pending":
-        return jsonify(
-            {
-                "error": f"User is not in pending status (current status: {user.registration_status})",
-            }
-        ), 400
+        return (
+            jsonify(
+                {
+                    "error": f"User is not in pending status (current status: {user.registration_status})",
+                }
+            ),
+            400,
+        )
 
     # Get rejection reason from request
     data = request.json or {}
@@ -829,12 +856,15 @@ def reject_user(user_id):
         db.session.refresh(user)
 
         user_schema = UserSchema()
-        return jsonify(
-            {
-                "message": "User rejected successfully",
-                "user": user_schema.dump(user),
-            }
-        ), 200
+        return (
+            jsonify(
+                {
+                    "message": "User rejected successfully",
+                    "user": user_schema.dump(user),
+                }
+            ),
+            200,
+        )
 
     except Exception as e:
         db.session.rollback()

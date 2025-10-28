@@ -6,6 +6,7 @@ import sys
 # Add the app directory to the path
 sys.path.insert(0, ".")
 
+
 def test_domain_exceptions_basic():
     """Test domain exceptions without Flask dependencies."""
     print("Testing Domain Exceptions (Basic)...")
@@ -13,12 +14,12 @@ def test_domain_exceptions_basic():
     try:
         # Test direct import of exceptions module
         from app.exceptions import (
-            ThermaCoreException,
             AuthenticationException,
             DatabaseException,
-            UnitOfflineException,
-            SensorNotFoundException,
             InvalidDataException,
+            SensorNotFoundException,
+            ThermaCoreException,
+            UnitOfflineException,
         )
 
         # Test basic ThermaCoreException
@@ -96,20 +97,21 @@ def test_domain_exceptions_basic():
         traceback.print_exc()
         return False
 
+
 def test_exception_attributes():
     """Test that all exceptions have the required attributes."""
     print("\nTesting Exception Attributes...")
 
     try:
         from app.exceptions import (
-            ValidationException,
             AuthenticationException,
-            ProtocolException,
+            DNP3Exception,
+            ModbusException,
             MQTTException,
             OPCUAException,
-            ModbusException,
-            DNP3Exception,
+            ProtocolException,
             TimeoutException,
+            ValidationException,
         )
 
         # Test various exception types
@@ -137,15 +139,15 @@ def test_exception_attributes():
             print(f"    - Context: {exception.context}")
             print(f"    - Details keys: {list(exception.details.keys())}")
 
-            assert exception.status_code == expected_status, (
-                f"Status code mismatch for {exception.__class__.__name__}"
-            )
-            assert exception.error_type == expected_type, (
-                f"Error type mismatch for {exception.__class__.__name__}"
-            )
-            assert isinstance(exception.details, dict), (
-                f"Details should be dict for {exception.__class__.__name__}"
-            )
+            assert (
+                exception.status_code == expected_status
+            ), f"Status code mismatch for {exception.__class__.__name__}"
+            assert (
+                exception.error_type == expected_type
+            ), f"Error type mismatch for {exception.__class__.__name__}"
+            assert isinstance(
+                exception.details, dict
+            ), f"Details should be dict for {exception.__class__.__name__}"
 
         print("✓ All exception attribute tests passed")
         return True
@@ -156,6 +158,7 @@ def test_exception_attributes():
 
         traceback.print_exc()
         return False
+
 
 def main():
     """Run basic tests without Flask."""
@@ -196,6 +199,7 @@ def main():
     else:
         print(f"✗ {total - passed} tests failed. Please check the implementation.")
         return False
+
 
 if __name__ == "__main__":
     success = main()

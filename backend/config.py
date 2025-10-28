@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
+
 class Config:
     """Base configuration class."""
 
@@ -167,6 +168,7 @@ class Config:
         os.environ.get("MODBUS_LOG_SENSITIVE_DATA", "false").lower() == "true"
     )
 
+
 class DevelopmentConfig(Config):
     """Development configuration."""
 
@@ -199,6 +201,7 @@ class DevelopmentConfig(Config):
                 "JWT_SECRET_KEY not set in environment, using default (not secure for production)",
                 stacklevel=2,
             )
+
 
 class ProductionConfig(Config):
     """Production configuration."""
@@ -364,6 +367,7 @@ class ProductionConfig(Config):
         # Require explicit production environment settings
         return flask_env == "production" and app_env == "production"
 
+
 class TestingConfig(Config):
     """Testing configuration."""
 
@@ -408,6 +412,7 @@ class TestingConfig(Config):
 
     # Disable validation for tests
     VALIDATE_JSON_REQUESTS = True  # Keep enabled but with test-friendly behavior
+
 
 # Configuration dictionary
 config = {

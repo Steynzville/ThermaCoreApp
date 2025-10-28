@@ -3,6 +3,7 @@
 import pytest
 from marshmallow import ValidationError
 
+
 class TestCentralizedValidation:
     """Test centralized validation schemas and error handling."""
 
@@ -143,6 +144,7 @@ class TestCentralizedValidation:
         with pytest.raises(ValidationError) as exc_info:
             schema.load({"format": "xml"})
         assert "format" in exc_info.value.messages
+
 
 class TestSecurityAwareErrorHandler:
     """Test SecurityAwareErrorHandler methods."""

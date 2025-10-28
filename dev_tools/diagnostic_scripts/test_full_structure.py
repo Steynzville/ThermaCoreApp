@@ -4,12 +4,13 @@ Simple test runner that works without external dependencies.
 Tests basic application structure and validates core components.
 """
 
-import sys
 import os
+import sys
 
 # Add the backend directory to Python path
 backend_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, backend_dir)
+
 
 def test_python_environment():
     """Test Python environment and basic capabilities."""
@@ -33,6 +34,7 @@ def test_python_environment():
 
     return True
 
+
 def test_basic_imports():
     """Test that basic modules can be imported."""
     print("Testing Basic Imports...")
@@ -53,6 +55,7 @@ def test_basic_imports():
     except Exception as e:
         print(f"✗ Import test failed: {e}")
         return False
+
 
 def test_app_structure():
     """Test application structure without dependencies."""
@@ -86,6 +89,7 @@ def test_app_structure():
 
     return True
 
+
 def test_configuration_structure():
     """Test configuration structure."""
     print("Testing Configuration Structure...")
@@ -111,6 +115,7 @@ def test_configuration_structure():
     except Exception as e:
         print(f"✗ Configuration test failed: {e}")
         return False
+
 
 def test_models_structure():
     """Test models structure."""
@@ -141,6 +146,7 @@ def test_models_structure():
         print(f"✗ Models structure test failed: {e}")
         return False
 
+
 def test_routes_structure():
     """Test routes structure."""
     print("Testing Routes Structure...")
@@ -161,6 +167,7 @@ def test_routes_structure():
     except Exception as e:
         print(f"✗ Routes structure test failed: {e}")
         return False
+
 
 def test_test_structure():
     """Test test structure."""
@@ -188,6 +195,7 @@ def test_test_structure():
     except Exception as e:
         print(f"✗ Test structure check failed: {e}")
         return False
+
 
 def run_all_tests():
     """Run all basic tests."""
@@ -230,6 +238,7 @@ def run_all_tests():
         print("❌ Some tests FAILED!")
         print("Please fix issues before proceeding with full test suite.")
         return False
+
 
 if __name__ == "__main__":
     success = run_all_tests()

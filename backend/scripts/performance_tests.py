@@ -8,6 +8,7 @@ from locust import HttpUser, between, task
 # Use SystemRandom for cryptographically secure random number generation
 secure_random = random.SystemRandom()
 
+
 class ThermaCoreSCADAUser(HttpUser):
     """Simulates a user interacting with the ThermaCore SCADA API."""
 
@@ -124,6 +125,7 @@ class ThermaCoreSCADAUser(HttpUser):
         """Get current user info."""
         self.client.get("/api/v1/auth/me", headers=self.headers)
 
+
 class ThermaCoreCRUDUser(HttpUser):
     """Simulates a user performing CRUD operations."""
 
@@ -215,6 +217,7 @@ class ThermaCoreCRUDUser(HttpUser):
         for unit_id in self.created_units:
             self.client.delete(f"/api/v1/units/{unit_id}", headers=self.headers)
 
+
 class ThermaCoreSensorDataUser(HttpUser):
     """Simulates sensor data operations - time-series heavy."""
 
@@ -294,6 +297,7 @@ class ThermaCoreSensorDataUser(HttpUser):
             json=sensor_data,
             headers=self.headers,
         )
+
 
 class ThermaCoreDNP3PerformanceUser(HttpUser):
     """Simulates DNP3 protocol operations for performance testing."""
@@ -425,6 +429,7 @@ class ThermaCoreDNP3PerformanceUser(HttpUser):
             headers=self.headers,
         )
 
+
 class ThermaCoreDNP3OptimizationUser(HttpUser):
     """Tests DNP3 optimization features specifically."""
 
@@ -527,9 +532,11 @@ class ThermaCoreDNP3OptimizationUser(HttpUser):
             headers=self.headers,
         )
 
+
 # Performance test scenarios
 if __name__ == "__main__":
-    print("""
+    print(
+        """
     Performance Testing Scripts for ThermaCore SCADA API
 
     To run these tests, use Locust:
@@ -560,4 +567,5 @@ if __name__ == "__main__":
     - Throughput > 100 requests/second
     - Error rate < 1%
     - Database query time < 100ms for simple reads
-    """)
+    """
+    )

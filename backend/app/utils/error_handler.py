@@ -11,6 +11,7 @@ from app.utils.secure_logger import SecureLogger
 
 logger = SecureLogger.get_secure_logger(__name__)
 
+
 class SecurityAwareErrorHandler:
     """Handles errors securely by providing generic user messages while logging details."""
 
@@ -40,9 +41,7 @@ class SecurityAwareErrorHandler:
 
         """
         # Import here to avoid circular imports
-        from app.exceptions import (
-            ThermaCoreException,
-        )
+        from app.exceptions import ThermaCoreException
 
         if not isinstance(exception, ThermaCoreException):
             # Fallback for non-domain exceptions
@@ -156,9 +155,11 @@ class SecurityAwareErrorHandler:
             "error": {
                 "code": error_code,
                 "message": generic_message,
-                "details": {"context": context, "correlation_id": request_id}
-                if context
-                else {"correlation_id": request_id},
+                "details": (
+                    {"context": context, "correlation_id": request_id}
+                    if context
+                    else {"correlation_id": request_id}
+                ),
             },
             "request_id": request_id,
             "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
@@ -395,20 +396,26 @@ class SecurityAwareErrorHandler:
                 "context": context,
             },
         )
-        return jsonify(
-            {
-                "success": False,
-                "error": {
-                    "code": "NOT_FOUND_ERROR",
-                    "message": SecurityAwareErrorHandler.GENERIC_MESSAGES[
-                        "not_found_error"
-                    ],
-                    "details": {"resource_type": context, "correlation_id": request_id},
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": {
+                        "code": "NOT_FOUND_ERROR",
+                        "message": SecurityAwareErrorHandler.GENERIC_MESSAGES[
+                            "not_found_error"
+                        ],
+                        "details": {
+                            "resource_type": context,
+                            "correlation_id": request_id,
+                        },
+                    },
+                    "request_id": request_id,
+                    "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
                 },
-                "request_id": request_id,
-                "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
-            },
-        ), 404
+            ),
+            404,
+        )
 
     @staticmethod
     def handle_service_unavailable(service_name: str) -> tuple[Any, int]:
@@ -422,23 +429,26 @@ class SecurityAwareErrorHandler:
                 "service_name": service_name,
             },
         )
-        return jsonify(
-            {
-                "success": False,
-                "error": {
-                    "code": "SERVICE_UNAVAILABLE",
-                    "message": SecurityAwareErrorHandler.GENERIC_MESSAGES[
-                        "service_unavailable"
-                    ],
-                    "details": {
-                        "service_name": service_name,
-                        "correlation_id": request_id,
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "error": {
+                        "code": "SERVICE_UNAVAILABLE",
+                        "message": SecurityAwareErrorHandler.GENERIC_MESSAGES[
+                            "service_unavailable"
+                        ],
+                        "details": {
+                            "service_name": service_name,
+                            "correlation_id": request_id,
+                        },
                     },
+                    "request_id": request_id,
+                    "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
                 },
-                "request_id": request_id,
-                "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
-            },
-        ), 503
+            ),
+            503,
+        )
 
     @staticmethod
     def create_success_response(
@@ -468,9 +478,7 @@ class SecurityAwareErrorHandler:
         def handle_exception(e):
             """Global exception handler for all uncaught exceptions."""
             # Import domain exception to check type
-            from app.exceptions import (
-                ThermaCoreException,
-            )
+            from app.exceptions import ThermaCoreException
 
             if isinstance(e, ThermaCoreException):
                 # Handle domain exceptions with proper correlation
@@ -530,22 +538,25 @@ class SecurityAwareErrorHandler:
                 log_message.format(request_id=request_id),
                 extra={"request_id": request_id, "error_type": "authentication_error"},
             )
-            return jsonify(
-                {
-                    "success": False,
-                    "error": {
-                        "code": "VALIDATION_ERROR",
-                        "message": "Request data validation failed",
-                        "details": {
-                            "field_errors": {"authorization": [error_message]},
-                            "location": "headers",
-                            "correlation_id": request_id,
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": {
+                            "code": "VALIDATION_ERROR",
+                            "message": "Request data validation failed",
+                            "details": {
+                                "field_errors": {"authorization": [error_message]},
+                                "location": "headers",
+                                "correlation_id": request_id,
+                            },
                         },
+                        "request_id": request_id,
+                        "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
                     },
-                    "request_id": request_id,
-                    "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
-                },
-            ), status_code
+                ),
+                status_code,
+            )
 
         # Register JWT error handlers if flask-jwt-extended is available
         # In Flask-JWT-Extended v4+, we need to use the jwt object's callbacks

@@ -4,6 +4,7 @@ import json
 
 from app.models import Sensor
 
+
 class TestIntegrationWorkflows:
     """Test complete integration workflows."""
 

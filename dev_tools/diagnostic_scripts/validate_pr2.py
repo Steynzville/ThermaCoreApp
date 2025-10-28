@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Basic validation test for PR2 middleware files."""
 
-import sys
-import os
 import ast
+import os
+import sys
 
 # Add the backend directory to Python path
 sys.path.insert(0, "/home/runner/work/ThermaCoreApp/ThermaCoreApp/backend")
+
 
 def validate_python_syntax(file_path):
     """Validate that a Python file has correct syntax."""
@@ -17,6 +18,7 @@ def validate_python_syntax(file_path):
         return True, None
     except SyntaxError as e:
         return False, str(e)
+
 
 def test_file_syntax():
     """Test syntax of all PR2 middleware files."""
@@ -50,6 +52,7 @@ def test_file_syntax():
 
     return all_passed
 
+
 def test_core_functionality():
     """Test basic functionality that doesn't require Flask."""
     print("\n🧪 Testing core functionality...")
@@ -57,8 +60,8 @@ def test_core_functionality():
     try:
         # Test basic imports and class definitions
         import uuid
-        from datetime import datetime
         from collections import defaultdict, deque
+        from datetime import datetime
         from threading import Lock
 
         print("✅ Core Python imports successful")
@@ -95,6 +98,7 @@ def test_core_functionality():
         print(f"❌ Core functionality test failed: {e}")
         return False
 
+
 def test_file_structure():
     """Test that all required files exist with expected structure."""
     print("\n🧪 Testing file structure...")
@@ -128,6 +132,7 @@ def test_file_structure():
 
     return all_exist
 
+
 def test_configuration_updates():
     """Test that configuration files were updated."""
     print("\n🧪 Testing configuration updates...")
@@ -157,6 +162,7 @@ def test_configuration_updates():
     except Exception as e:
         print(f"❌ Configuration test failed: {e}")
         return False
+
 
 if __name__ == "__main__":
     print("🚀 Starting PR2 Middleware Validation Tests")

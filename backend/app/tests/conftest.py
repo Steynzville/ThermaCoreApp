@@ -12,6 +12,7 @@ from app.models import Permission, Role, Sensor, SensorReading, Unit, User  # no
 
 logger = logging.getLogger(__name__)
 
+
 def _init_database():
     """Initialize database with schema."""
     # Check if we're using PostgreSQL for tests
@@ -123,6 +124,7 @@ def _init_database():
         # Re-raise the exception to fail the test setup
         raise
 
+
 @pytest.fixture(scope="session")
 def app():
     """Create application for the tests."""
@@ -145,10 +147,12 @@ def app():
         _create_test_data()
         yield app
 
+
 @pytest.fixture(scope="function")
 def client(app):
     """Create test client."""
     return app.test_client()
+
 
 @pytest.fixture(scope="function")
 def db_session(app):
@@ -156,6 +160,7 @@ def db_session(app):
     with app.app_context():
         yield db.session
         db.session.rollback()
+
 
 def _create_test_data():
     """Create test data for tests."""
@@ -269,6 +274,7 @@ def _create_test_data():
     db.session.add(test_sensor)
     db.session.commit()
 
+
 @pytest.fixture
 def admin_user():
     """Return admin user credentials for testing."""
@@ -277,6 +283,7 @@ def admin_user():
         "email": "admin@test.com",
         "password": "admin123",
     }
+
 
 @pytest.fixture
 def admin_token(app):
@@ -297,6 +304,7 @@ def admin_token(app):
             },
         )
         return token
+
 
 @pytest.fixture
 def viewer_token(app):

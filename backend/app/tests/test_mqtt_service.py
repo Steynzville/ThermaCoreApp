@@ -8,6 +8,7 @@ import pytest
 
 from app.services.mqtt_service import MQTTClient
 
+
 class TestMQTTClient:
     """Test MQTT client functionality."""
 

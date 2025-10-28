@@ -13,6 +13,7 @@ from app.services.dnp3_service import (
     dnp3_performance_monitor,
 )
 
+
 class TestDNP3PerformanceMetrics:
     """Test DNP3 performance metrics collection."""
 
@@ -78,6 +79,7 @@ class TestDNP3PerformanceMetrics:
         assert "no_data" in stats
         assert stats["operation"] == "nonexistent"
 
+
 class TestDNP3PerformanceMonitor:
     """Test DNP3 performance monitoring decorator."""
 
@@ -126,6 +128,7 @@ class TestDNP3PerformanceMonitor:
         assert stats["count"] == 1
         assert stats["errors"] == 1
         assert stats["success_rate"] == 0.0
+
 
 class TestDNP3ServiceOptimizations:
     """Test DNP3Service optimization features."""
@@ -212,6 +215,7 @@ class TestDNP3ServiceOptimizations:
 
         # Cleanup time should be updated
         assert service._last_cache_cleanup == future_time
+
 
 class TestDNP3CachetoolsIntegration:
     """Test DNP3Service cachetools integration (TTLCache usage)."""

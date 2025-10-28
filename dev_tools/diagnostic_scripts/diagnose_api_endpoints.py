@@ -17,11 +17,13 @@ Examples:
     python backend/diagnose_api_endpoints.py http://localhost:5000 admin admin123
 """
 
-import sys
 import json
+import sys
+from typing import Optional, Tuple
+
 import requests
 from requests.exceptions import RequestException
-from typing import Optional, Tuple
+
 
 class Colors:
     """ANSI color codes for terminal output"""
@@ -31,6 +33,7 @@ class Colors:
     YELLOW = "\033[1;33m"
     BLUE = "\033[0;34m"
     RESET = "\033[0m"
+
 
 class APITester:
     """API endpoint testing and diagnostic tool"""
@@ -428,6 +431,7 @@ class APITester:
 
         return all(self.results.values())
 
+
 def main():
     """Main entry point"""
 
@@ -455,6 +459,7 @@ def main():
 
     # Exit with appropriate code
     sys.exit(0 if success else 1)
+
 
 if __name__ == "__main__":
     main()

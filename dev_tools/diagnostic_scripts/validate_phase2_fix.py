@@ -8,9 +8,10 @@ This script verifies that all the issues mentioned in the problem statement are 
 3. Database test fixtures work as designed
 """
 
+import json
 import os
 import sys
-import json
+
 
 def test_database_creation():
     """Test that database tables are created correctly."""
@@ -18,8 +19,9 @@ def test_database_creation():
     print("TEST 1: Database Migrations")
     print("=" * 70)
 
-    from app import create_app, db
     from sqlalchemy import inspect
+
+    from app import create_app, db
 
     # Test with development config
     os.environ["FLASK_ENV"] = "development"
@@ -64,6 +66,7 @@ def test_database_creation():
 
         return True
 
+
 def test_authentication_flow():
     """Test that authentication returns proper JWT tokens."""
     print("\n" + "=" * 70)
@@ -73,7 +76,7 @@ def test_authentication_flow():
     os.environ["TESTING"] = "true"
 
     from app import create_app, db
-    from app.models import User, Role, Permission, PermissionEnum, RoleEnum
+    from app.models import Permission, PermissionEnum, Role, RoleEnum, User
 
     app = create_app("testing")
 
@@ -155,6 +158,7 @@ def test_authentication_flow():
             print("\n✅ PASSED: Authentication flow returns proper JWT tokens")
             return True
 
+
 def test_database_fixtures():
     """Test that conftest.py creates all required tables."""
     print("\n" + "=" * 70)
@@ -164,9 +168,10 @@ def test_database_fixtures():
     os.environ["TESTING"] = "true"
 
     # Import test fixtures
-    from app.tests.conftest import _init_database
-    from app import create_app, db
     from sqlalchemy import inspect
+
+    from app import create_app, db
+    from app.tests.conftest import _init_database
 
     app = create_app("testing")
 
@@ -208,6 +213,7 @@ def test_database_fixtures():
             traceback.print_exc()
             return False
 
+
 def main():
     """Run all validation tests."""
     print("\n" + "#" * 70)
@@ -246,6 +252,7 @@ def main():
         print("⚠️  SOME TESTS FAILED - Please review the output above")
         print("=" * 70)
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

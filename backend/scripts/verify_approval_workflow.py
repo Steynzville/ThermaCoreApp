@@ -20,6 +20,7 @@ from sqlalchemy import inspect
 from app import create_app, db
 from app.models import User
 
+
 def verify_approval_columns():
     """Verify that approval workflow columns exist in the users table."""
     print("\n" + "=" * 70)
@@ -60,6 +61,7 @@ def verify_approval_columns():
             print("\n✗ Some required columns are missing")
 
         return all_exist
+
 
 def verify_existing_users_approved():
     """Verify that all existing users have 'approved' registration status."""
@@ -124,6 +126,7 @@ def verify_existing_users_approved():
         print("    2. Migration issue (if all users should be approved)")
         return False
 
+
 def verify_user_can_login():
     """Verify that approved users can pass the can_login() check."""
     print("\n" + "=" * 70)
@@ -169,6 +172,7 @@ def verify_user_can_login():
         print("  This may be expected if they are inactive")
         return True  # This is not a critical failure
 
+
 def verify_pending_users_cannot_login():
     """Verify that pending users cannot login."""
     print("\n" + "=" * 70)
@@ -210,6 +214,7 @@ def verify_pending_users_cannot_login():
         print(f"\n✗ SECURITY ISSUE: {can_login_count} pending users can login!")
         return False
 
+
 def main():
     """Run all verification checks."""
     print("\n" + "=" * 70)
@@ -241,6 +246,7 @@ def main():
     print("\n✗ SOME VERIFICATIONS FAILED")
     print("Please review the failed checks above.")
     return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

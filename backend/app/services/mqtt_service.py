@@ -13,6 +13,7 @@ from app.utils.secure_logger import SecureLogger
 
 logger = SecureLogger.get_secure_logger(__name__)
 
+
 class MQTTClient:
     """MQTT client for subscribing to SCADA data topics."""
 
@@ -392,9 +393,7 @@ class MQTTClient:
             if success:
                 # Process data for real-time streaming after successful storage
                 try:
-                    from app.services.realtime_processor import (
-                        realtime_processor,
-                    )
+                    from app.services.realtime_processor import realtime_processor
 
                     realtime_processor.process_sensor_data(
                         data["unit_id"],
@@ -471,6 +470,7 @@ class MQTTClient:
             },
             "demo": False,  # MQTT is a real protocol implementation
         }
+
 
 # Global MQTT client instance
 mqtt_client = MQTTClient()

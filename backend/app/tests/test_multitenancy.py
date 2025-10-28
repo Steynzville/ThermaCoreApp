@@ -7,6 +7,7 @@ import pytest
 from app import create_app, db
 from app.models import Role, Tenant, Unit, User
 
+
 @pytest.fixture
 def app():
     """Create application for testing."""
@@ -37,10 +38,12 @@ def app():
         db.session.remove()
         db.drop_all()
 
+
 @pytest.fixture
 def client(app):
     """Create test client."""
     return app.test_client()
+
 
 class TestTenantModel:
     """Test Tenant model."""
@@ -99,6 +102,7 @@ class TestTenantModel:
             assert user.tenant == tenant
             assert user in tenant.users
 
+
 class TestMultiTenancyUserModel:
     """Test User model with multi-tenancy."""
 
@@ -141,6 +145,7 @@ class TestMultiTenancyUserModel:
 
             assert user.tenant_id is None
             assert user.tenant is None
+
 
 class TestMultiTenancyUnitModel:
     """Test Unit model with multi-tenancy."""
@@ -186,6 +191,7 @@ class TestMultiTenancyUnitModel:
 
             assert unit.tenant_id is None
             assert unit.tenant is None
+
 
 class TestTenantIsolation:
     """Test tenant data isolation."""

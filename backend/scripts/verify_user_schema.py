@@ -49,6 +49,7 @@ REQUIRED_INDEXES = [
     "idx_users_company_identifier",
 ]
 
+
 def verify_database_schema():
     """Verify that the database schema matches requirements."""
     # Get database URL from environment
@@ -149,6 +150,7 @@ def verify_database_schema():
     print("   backend/migrations/008_add_user_profile_fields_comprehensive.sql")
 
     return 1
+
 
 if __name__ == "__main__":
     sys.exit(verify_database_schema())

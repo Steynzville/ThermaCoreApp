@@ -4,10 +4,11 @@ Simple validation test for DNP3 optimization implementation.
 This script tests the basic functionality without requiring Flask.
 """
 
-import sys
 import os
+import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "app"))
+
 
 def test_dnp3_optimization_components():
     """Test DNP3 optimization components in isolation."""
@@ -16,13 +17,13 @@ def test_dnp3_optimization_components():
     try:
         # Test imports
         from app.services.dnp3_service import (
-            DNP3PerformanceMetrics,
             DNP3ConnectionPool,
             DNP3DataCache,
-            DNP3Service,
-            DNP3Device,
             DNP3DataType,
+            DNP3Device,
+            DNP3PerformanceMetrics,
             DNP3Quality,
+            DNP3Service,
         )
 
         print("✅ All imports successful")
@@ -96,16 +97,18 @@ def test_dnp3_optimization_components():
         traceback.print_exc()
         return False
 
+
 def test_performance_monitor_decorator():
     """Test the performance monitoring decorator."""
     print("\n--- Testing Performance Monitor Decorator ---")
 
     try:
+        import time
+
         from app.services.dnp3_service import (
             DNP3PerformanceMetrics,
             dnp3_performance_monitor,
         )
-        import time
 
         class TestService:
             def __init__(self):
@@ -131,6 +134,7 @@ def test_performance_monitor_decorator():
     except Exception as e:
         print(f"❌ Error testing decorator: {e}")
         return False
+
 
 def main():
     """Run validation tests."""
@@ -160,6 +164,7 @@ def main():
         print("❌ SOME TESTS FAILED - Check implementation")
         sys.exit(1)
     print("=" * 60)
+
 
 if __name__ == "__main__":
     main()

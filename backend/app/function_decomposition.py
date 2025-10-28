@@ -10,6 +10,7 @@ from typing import Any, TypeVar
 
 T = TypeVar("T")
 
+
 class FunctionDecomposer:
     """Utility class for decomposing large functions."""
 
@@ -95,6 +96,7 @@ class FunctionDecomposer:
                 errors.append(str(e))
         return errors
 
+
 class StepExecutor:
     """Execute a series of steps in sequence."""
 
@@ -155,6 +157,7 @@ class StepExecutor:
         step_result = self.results.get(step_name, {})
         return step_result.get("result")
 
+
 def organize_into_phases(
     phases: list[tuple[str, list[Callable[[], Any]]]],
 ) -> dict[str, list[Any]]:
@@ -177,6 +180,7 @@ def organize_into_phases(
                 phase_results.append({"error": str(e)})
         results[phase_name] = phase_results
     return results
+
 
 def extract_section(
     name: str,

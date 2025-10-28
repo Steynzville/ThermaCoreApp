@@ -5,20 +5,14 @@ import secrets
 from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, current_app, jsonify, request
-from flask_jwt_extended import (
-    create_access_token,
-    jwt_required,
-)
+from flask_jwt_extended import create_access_token, jwt_required
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from webargs.flaskparser import use_args
 
 from app import db
 from app.exceptions import ValidationException
-from app.middleware.audit import (
-    AuditEventType,
-    AuditLogger,
-)
+from app.middleware.audit import AuditEventType, AuditLogger
 from app.middleware.authorization import permission_required
 from app.middleware.rate_limit import auth_rate_limit, standard_rate_limit
 from app.middleware.request_id import track_request_id
@@ -38,6 +32,7 @@ from app.utils.schemas import (
 )
 
 auth_bp = Blueprint("auth", __name__)
+
 
 @auth_bp.route("/auth/register", methods=["POST"])
 @track_request_id
@@ -136,6 +131,7 @@ def register(data):
             409,
         )
 
+
 @auth_bp.route("/auth/self-register", methods=["POST"])
 @track_request_id
 @standard_rate_limit
@@ -229,6 +225,7 @@ def self_register(data):
             f"User registration: {error_msg}",
             409,
         )
+
 
 @auth_bp.route("/auth/login", methods=["POST"])
 @track_request_id
@@ -414,6 +411,7 @@ def login(data):
             500,
         )
 
+
 @auth_bp.route("/auth/refresh", methods=["POST"])
 @jwt_required(refresh=True)
 def refresh():
@@ -561,14 +559,17 @@ def refresh():
             extra={"event": "refresh_success", "username": user.username},
         )
 
-        return jsonify(
-            {
-                "access_token": access_token,
-                "expires_in": current_app.config[
-                    "JWT_ACCESS_TOKEN_EXPIRES"
-                ].total_seconds(),
-            },
-        ), 200
+        return (
+            jsonify(
+                {
+                    "access_token": access_token,
+                    "expires_in": current_app.config[
+                        "JWT_ACCESS_TOKEN_EXPIRES"
+                    ].total_seconds(),
+                },
+            ),
+            200,
+        )
 
     except Exception as e:
         # Catch-all for unexpected errors
@@ -586,6 +587,7 @@ def refresh():
             "Token refresh processing",
             500,
         )
+
 
 @auth_bp.route("/auth/me", methods=["GET"])
 @jwt_required()
@@ -626,6 +628,7 @@ def get_current_user():
     user_schema = UserSchema()
     return jsonify(user_schema.dump(user)), 200
 
+
 @auth_bp.route("/auth/logout", methods=["POST"])
 @jwt_required()
 def logout():
@@ -642,6 +645,7 @@ def logout():
     # In a production environment, you would typically blacklist the token
     # For now, we rely on client-side token removal
     return jsonify({"message": "Logout successful"}), 200
+
 
 @auth_bp.route("/auth/change-password", methods=["POST"])
 @jwt_required()
@@ -718,6 +722,7 @@ def change_password(data):
             500,
         )
 
+
 @auth_bp.route("/auth/forgot-password", methods=["POST"])
 @track_request_id
 @auth_rate_limit
@@ -758,9 +763,7 @@ def forgot_password(data):
         # Always return success response to prevent email enumeration
         if user and user.is_active:
             # Generate secure token
-            from datetime import (
-                timedelta,
-            )
+            from datetime import timedelta
 
             reset_token = secrets.token_urlsafe(32)
 
@@ -822,6 +825,7 @@ def forgot_password(data):
             "Password reset request",
             500,
         )
+
 
 @auth_bp.route("/auth/reset-password", methods=["POST"])
 @track_request_id
@@ -943,6 +947,7 @@ def reset_password(data):
             500,
         )
 
+
 @auth_bp.route("/auth/emergency-admin", methods=["POST"])
 @track_request_id
 def emergency_admin():
@@ -998,14 +1003,10 @@ def emergency_admin():
             # Create password hash for EmergencyAdmin123!
             import json  # noqa: PLC0415 - Standard library, conditional usage
 
-            from werkzeug.security import (
-                generate_password_hash,
-            )
+            from werkzeug.security import generate_password_hash
 
             # Import centralized permissions constant from models
-            from app.models import (
-                EMERGENCY_ADMIN_PERMISSIONS,
-            )
+            from app.models import EMERGENCY_ADMIN_PERMISSIONS
 
             emergency_password_hash = generate_password_hash(
                 "EmergencyAdmin123!",

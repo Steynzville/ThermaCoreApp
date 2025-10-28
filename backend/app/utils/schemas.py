@@ -28,9 +28,11 @@ from app.models import (
 # Setup logger for datetime parsing errors
 logger = logging.getLogger(__name__)
 
+
 def _utc_now():
     """Helper function to get current UTC datetime for field defaults."""
     return datetime.now(timezone.utc)
+
 
 class DateTimeField(fields.DateTime):
     """Custom DateTime field that ensures robust datetime serialization.
@@ -70,6 +72,7 @@ class DateTimeField(fields.DateTime):
         # If it's already a datetime object, use the parent method directly
         return super()._serialize(value, attr, obj, **kwargs)
 
+
 class EnumField(fields.Field):
     """Custom field for handling enum serialization."""
 
@@ -100,12 +103,14 @@ class EnumField(fields.Field):
                 raise ValidationError(error_msg) from e
         return value
 
+
 # Base schemas with common fields
 class TimestampSchema(Schema):
     """Base schema with timestamp fields."""
 
     created_at = DateTimeField(dump_only=True)
     updated_at = DateTimeField(dump_only=True)
+
 
 # Permission schemas
 class PermissionSchema(Schema):
@@ -116,6 +121,7 @@ class PermissionSchema(Schema):
     description = fields.Str(dump_only=True)
     created_at = DateTimeField(dump_only=True)
 
+
 # Role schemas
 class RoleSchema(Schema):
     """Role serialization schema."""
@@ -125,6 +131,7 @@ class RoleSchema(Schema):
     description = fields.Str(dump_only=True)
     created_at = DateTimeField(dump_only=True)
     permissions = fields.Nested(PermissionSchema, many=True, dump_only=True)
+
 
 # User schemas
 class UserSchema(SQLAlchemyAutoSchema):
@@ -156,6 +163,7 @@ class UserSchema(SQLAlchemyAutoSchema):
             return user
         return User(**data)
 
+
 class UserCreateSchema(Schema):
     """Schema for user creation."""
 
@@ -169,6 +177,7 @@ class UserCreateSchema(Schema):
     department = fields.Str(validate=validate.Length(max=100))
     position = fields.Str(validate=validate.Length(max=100))
     role_id = fields.Int(required=True)
+
 
 class UserSelfRegisterSchema(Schema):
     """Schema for user self-registration (public endpoint)."""
@@ -184,6 +193,7 @@ class UserSelfRegisterSchema(Schema):
     position = fields.Str(validate=validate.Length(max=100))
     # Note: role_id is NOT included - self-registered users default to viewer role
 
+
 class UserUpdateSchema(Schema):
     """Schema for user updates."""
 
@@ -198,12 +208,14 @@ class UserUpdateSchema(Schema):
     role_id = fields.Int()
     is_active = fields.Bool()
 
+
 class LoginSchema(Schema):
     """Schema for user login."""
 
     username = fields.Str(required=True)
     password = fields.Str(required=True)
     keep_me_signed_in = fields.Bool(required=False, load_default=False)
+
 
 # Unit schemas
 class UnitSchema(SQLAlchemyAutoSchema):
@@ -245,6 +257,7 @@ class UnitSchema(SQLAlchemyAutoSchema):
         exclude=("unit",),
     )
 
+
 class UnitCreateSchema(Schema):
     """Schema for unit creation."""
 
@@ -263,6 +276,7 @@ class UnitCreateSchema(Schema):
     client_contact = fields.Str(validate=validate.Length(max=200))
     client_email = fields.Email()
     client_phone = fields.Str(validate=validate.Length(max=50))
+
 
 class UnitUpdateSchema(Schema):
     """Schema for unit updates."""
@@ -294,6 +308,7 @@ class UnitUpdateSchema(Schema):
     parasitic_load = fields.Float(validate=validate.Range(min=0.0))
     user_load = fields.Float(validate=validate.Range(min=0.0))
 
+
 # Sensor schemas
 class SensorSchema(SQLAlchemyAutoSchema):
     """Sensor serialization schema."""
@@ -308,6 +323,7 @@ class SensorSchema(SQLAlchemyAutoSchema):
     unit_of_measurement = fields.Str(validate=validate.Length(max=20))
     unit = fields.Nested(UnitSchema, dump_only=True, exclude=("sensors",))
 
+
 class SensorCreateSchema(Schema):
     """Schema for sensor creation."""
 
@@ -319,6 +335,7 @@ class SensorCreateSchema(Schema):
     unit_of_measurement = fields.Str(validate=validate.Length(max=20))
     min_value = fields.Float()
     max_value = fields.Float()
+
 
 # Sensor reading schemas
 class SensorReadingSchema(SQLAlchemyAutoSchema):
@@ -333,6 +350,7 @@ class SensorReadingSchema(SQLAlchemyAutoSchema):
     quality = fields.Str(validate=validate.OneOf(["GOOD", "BAD", "UNCERTAIN"]))
     sensor = fields.Nested(SensorSchema, dump_only=True)
 
+
 class SensorReadingCreateSchema(Schema):
     """Schema for sensor reading creation."""
 
@@ -343,6 +361,7 @@ class SensorReadingCreateSchema(Schema):
         load_default="GOOD",
         validate=validate.OneOf(["GOOD", "BAD", "UNCERTAIN"]),
     )
+
 
 # Response schemas
 class PaginatedResponseSchema(Schema):
@@ -356,12 +375,14 @@ class PaginatedResponseSchema(Schema):
     has_next = fields.Bool()
     has_prev = fields.Bool()
 
+
 class ErrorSchema(Schema):
     """Schema for error responses."""
 
     error = fields.Str()
     message = fields.Str()
     details = fields.Dict(load_default=None)
+
 
 # Authentication response schemas
 class TokenSchema(Schema):
@@ -372,22 +393,26 @@ class TokenSchema(Schema):
     expires_in = fields.Int()
     user = fields.Nested(UserSchema, exclude=("password_hash",))
 
+
 class PasswordChangeSchema(Schema):
     """Password change request schema."""
 
     current_password = fields.Str(required=True, validate=validate.Length(min=1))
     new_password = fields.Str(required=True, validate=validate.Length(min=6))
 
+
 class ForgotPasswordSchema(Schema):
     """Forgot password request schema."""
 
     email = fields.Email(required=True)
+
 
 class PasswordResetSchema(Schema):
     """Password reset request schema."""
 
     token = fields.Str(required=True, validate=validate.Length(min=1))
     new_password = fields.Str(required=True, validate=validate.Length(min=6))
+
 
 # Query parameter validation schemas
 class HistoricalDataQuerySchema(Schema):
@@ -420,6 +445,7 @@ class HistoricalDataQuerySchema(Schema):
                 field_name="start_date",
             )
 
+
 class StatisticsQuerySchema(Schema):
     """Schema for statistics query parameters."""
 
@@ -429,6 +455,7 @@ class StatisticsQuerySchema(Schema):
         load_default=30,
     )
     sensor_type = fields.Str(required=False)
+
 
 class TrendsQuerySchema(Schema):
     """Schema for trends query parameters."""
@@ -440,6 +467,7 @@ class TrendsQuerySchema(Schema):
     )
     sensor_type = fields.Str(required=False)
 
+
 class PerformanceQuerySchema(Schema):
     """Schema for performance query parameters."""
 
@@ -449,6 +477,7 @@ class PerformanceQuerySchema(Schema):
         load_default=24,
     )
 
+
 class AlertPatternsQuerySchema(Schema):
     """Schema for alert patterns query parameters."""
 
@@ -457,6 +486,7 @@ class AlertPatternsQuerySchema(Schema):
         validate=validate.Range(min=1, max=365),
         load_default=30,
     )
+
 
 class CompareUnitsSchema(Schema):
     """Schema for comparing units historical data."""
@@ -483,6 +513,7 @@ class CompareUnitsSchema(Schema):
                 "start_date must be before end_date",
                 field_name="start_date",
             )
+
 
 class ExportDataQuerySchema(Schema):
     """Schema for export data query parameters."""

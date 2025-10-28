@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 from app.utils.service_manager import should_skip_external_services
 
+
 class TestSkipExternalServices:
     """Test the SKIP_EXTERNAL_SERVICES environment variable functionality."""
 
@@ -40,6 +41,7 @@ class TestSkipExternalServices:
 
         with patch.dict(os.environ, {"SKIP_EXTERNAL_SERVICES": "yes"}):
             assert should_skip_external_services() is False
+
 
 class TestAppInitializationWithSkip:
     """Test Flask app initialization with SKIP_EXTERNAL_SERVICES."""

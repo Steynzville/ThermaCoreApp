@@ -8,6 +8,7 @@ from werkzeug.exceptions import BadRequest
 
 logger = logging.getLogger(__name__)
 
+
 def validate_json_request(f):
     """Decorator to validate JSON request data.
 
@@ -40,12 +41,15 @@ def validate_json_request(f):
             logger.warning(f"Bad JSON request in {f.__name__}: {err!s}")
             # All BadRequest exceptions from JSON parsing are treated as invalid format
             # Empty string with Content-Type: application/json is malformed JSON
-            return jsonify(
-                {
-                    "error": "Invalid JSON format",
-                    "details": "Request body must contain valid JSON",
-                },
-            ), 400
+            return (
+                jsonify(
+                    {
+                        "error": "Invalid JSON format",
+                        "details": "Request body must contain valid JSON",
+                    },
+                ),
+                400,
+            )
 
         return f(*args, **kwargs)
 

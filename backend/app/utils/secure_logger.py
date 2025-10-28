@@ -7,6 +7,7 @@ from typing import Any, ClassVar
 # Module-level fallback logger for when request_id formatting fails
 _FALLBACK_LOGGER = logging.getLogger("fallback")
 
+
 class SecureLogger:
     """Utility class for sanitizing log messages to prevent sensitive data leakage."""
 
@@ -226,6 +227,7 @@ class SecureLogger:
         """
         logger = logging.getLogger(name)
         return SecureLoggerAdapter(logger, cls)
+
 
 class SecureLoggerAdapter(logging.LoggerAdapter):
     """Logger adapter that automatically sanitizes sensitive data from log messages."""

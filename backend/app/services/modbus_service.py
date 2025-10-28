@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 # Use SystemRandom for cryptographically secure random number generation
 secure_random = random.SystemRandom()
 
+
 def _is_sensitive_logging_enabled() -> bool:
     """Check if sensitive Modbus data logging is enabled.
 
@@ -22,8 +23,10 @@ def _is_sensitive_logging_enabled() -> bool:
     """
     return os.getenv("MODBUS_LOG_SENSITIVE_DATA", "false").lower() == "true"
 
+
 # Mock Modbus implementation for demonstration
 # In a real implementation, you would use pymodbus library
+
 
 @dataclass
 class ModbusDevice:
@@ -37,6 +40,7 @@ class ModbusDevice:
     timeout: float = 5.0
     is_connected: bool = False
 
+
 @dataclass
 class ModbusRegister:
     """Modbus register configuration."""
@@ -48,6 +52,7 @@ class ModbusRegister:
     scale_factor: float = 1.0
     offset: float = 0.0
     sensor_type: str = "generic"
+
 
 class ModbusClient:
     """Mock Modbus TCP client for demonstration."""
@@ -196,6 +201,7 @@ class ModbusClient:
             logger.info(f"Writing {len(values)} register(s) to device (unit {unit_id})")
         # Simulate atomic write operation
         return True
+
 
 class ModbusService:
     """Modbus protocol service for industrial device communication."""
@@ -901,6 +907,7 @@ class ModbusService:
             "demo": is_demo_mode,  # Environment-aware demo flag
             "devices": devices_summary,
         }
+
 
 # Global Modbus service instance
 modbus_service = ModbusService()

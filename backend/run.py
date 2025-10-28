@@ -20,6 +20,7 @@ app = create_app()
 # Configure logging
 logger = logging.getLogger(__name__)
 
+
 # Initialize database on startup
 def init_database_on_startup():
     """Initialize database tables and seed default data with self-healing capabilities."""
@@ -140,13 +141,24 @@ def init_database_on_startup():
                         if not default_password:
                             import secrets
                             import string
+
                             # Generate a secure random password
-                            alphabet = string.ascii_letters + string.digits + "!@#$%^&*()"
-                            default_password = ''.join(secrets.choice(alphabet) for _ in range(16))
+                            alphabet = (
+                                string.ascii_letters + string.digits + "!@#$%^&*()"
+                            )
+                            default_password = "".join(
+                                secrets.choice(alphabet) for _ in range(16)
+                            )
                             app.logger.warning("=" * 70)
-                            app.logger.warning("⚠️  IMPORTANT: No DEFAULT_ADMIN_PASSWORD set!")
-                            app.logger.warning(f"Generated random password: {default_password}")
-                            app.logger.warning("SAVE THIS PASSWORD - It will not be shown again!")
+                            app.logger.warning(
+                                "⚠️  IMPORTANT: No DEFAULT_ADMIN_PASSWORD set!"
+                            )
+                            app.logger.warning(
+                                f"Generated random password: {default_password}"
+                            )
+                            app.logger.warning(
+                                "SAVE THIS PASSWORD - It will not be shown again!"
+                            )
                             app.logger.warning("=" * 70)
 
                         admin_user = User(
@@ -164,7 +176,9 @@ def init_database_on_startup():
                         app.logger.info("✅ Default admin user created!")
                         app.logger.info("=" * 70)
                         app.logger.info("   Username: Steyn_Admin")
-                        app.logger.info("   Password: [Set via DEFAULT_ADMIN_PASSWORD or auto-generated above]")
+                        app.logger.info(
+                            "   Password: [Set via DEFAULT_ADMIN_PASSWORD or auto-generated above]"
+                        )
                         app.logger.info("=" * 70)
                         app.logger.warning(
                             "Please change the password after first login"
@@ -184,8 +198,10 @@ def init_database_on_startup():
 
             traceback.print_exc()
 
+
 # Run database initialization
 init_database_on_startup()
+
 
 @app.cli.command()
 def init_db():
@@ -221,6 +237,7 @@ def init_db():
         db.session.rollback()
         click.echo(f"✗ Error initializing database: {e}")
         sys.exit(1)
+
 
 @app.cli.command()
 def create_admin():
@@ -264,6 +281,7 @@ def create_admin():
     except Exception as e:
         db.session.rollback()
         click.echo(f"✗ Error creating admin user: {e}")
+
 
 if __name__ == "__main__":
     # Use Flask's built-in debug configuration

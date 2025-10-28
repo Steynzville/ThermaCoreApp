@@ -7,6 +7,7 @@ import pytest
 
 from app.services.opcua_service import OPCUAClient
 
+
 class TestCertificateTimezoneHandling:
     """Test certificate datetime normalization for robust timezone handling."""
 
@@ -97,9 +98,9 @@ class TestCertificateTimezoneHandling:
             result = opcua_client._normalize_certificate_datetime(iso_string)
             assert result.tzinfo == timezone.utc, f"Failed for format: {iso_string}"
             # All should normalize to UTC properly
-            assert isinstance(result, datetime), (
-                f"Failed to return datetime for: {iso_string}"
-            )
+            assert isinstance(
+                result, datetime
+            ), f"Failed to return datetime for: {iso_string}"
 
     def test_normalize_certificate_datetime_with_none(self):
         """Test normalization with None input (should raise ValueError)."""
@@ -130,10 +131,11 @@ class TestCertificateTimezoneHandling:
             opcua_client._normalize_certificate_datetime("2024-13-45T99:99:99Z")
         except ValueError as e:
             # Should have error chaining (from e)
-            assert e.__cause__ is not None, (
-                "Expected error chaining with 'from e' not found"
-            )
+            assert (
+                e.__cause__ is not None
+            ), "Expected error chaining with 'from e' not found"
             assert "Invalid certificate datetime format" in str(e)
+
 
 class TestSecurityPolicyFallbackConfiguration:
     """Test explicit security policy fallback configuration."""
@@ -200,9 +202,9 @@ class TestSecurityPolicyFallbackConfiguration:
                         for call in mock_logger.warning.call_args_list
                         if "DEVELOPMENT ONLY" in str(call)
                     ]
-                    assert len(fallback_warning_calls) > 0, (
-                        "Expected development-only fallback warning not found"
-                    )
+                    assert (
+                        len(fallback_warning_calls) > 0
+                    ), "Expected development-only fallback warning not found"
 
                     warning_message = str(fallback_warning_calls[0])
                     assert "DEVELOPMENT ONLY" in warning_message

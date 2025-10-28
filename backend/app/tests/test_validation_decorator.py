@@ -7,6 +7,7 @@ from flask import Blueprint, jsonify
 
 from app.utils.validation import validate_json_request
 
+
 class TestValidationDecorator:
     """Test the validate_json_request decorator."""
 
@@ -128,6 +129,7 @@ class TestValidationDecorator:
         data = json.loads(response.data)
         assert data["success"] is True
         assert data["data"]["partial"] == "data"
+
 
 class TestUnitsValidation:
     """Test that units endpoints properly use the validation decorator."""

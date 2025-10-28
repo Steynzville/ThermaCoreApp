@@ -33,6 +33,7 @@ except ImportError as e:
     )
     sys.exit(1)
 
+
 def main():
     """Quick health check."""
     logger.info("🔍 ThermaCore Backend Health Check")
@@ -128,6 +129,7 @@ def main():
     except Exception as e:
         logger.exception(f"❌ FATAL ERROR: {e}")
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

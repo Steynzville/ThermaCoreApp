@@ -7,6 +7,7 @@ from typing import Any
 COVERAGE_DATA = {"frontend": "61.12%", "backend": "63.12%"}
 TESTS_PASSING = 2317
 
+
 def create_health_check_endpoint(app: Any) -> Any:
     """Create health check endpoint function.
 
@@ -36,6 +37,7 @@ def create_health_check_endpoint(app: Any) -> Any:
 
     return health_check
 
+
 def check_all_services(app: Any) -> tuple[dict[str, Any], bool, list[str]]:
     """Check status of all services.
 
@@ -45,9 +47,7 @@ def check_all_services(app: Any) -> tuple[dict[str, Any], bool, list[str]]:
     Returns:
         tuple: (services_dict, is_degraded, critical_services_down)
     """
-    from app.utils.service_manager import (
-        should_skip_external_services,
-    )
+    from app.utils.service_manager import should_skip_external_services
 
     services = {}
     is_degraded = False
@@ -123,6 +123,7 @@ def check_all_services(app: Any) -> tuple[dict[str, Any], bool, list[str]]:
 
     return services, is_degraded, critical_services_down
 
+
 def check_mqtt_service(app: Any, services: dict[str, Any]) -> tuple[bool, bool]:
     """Check MQTT service status.
 
@@ -161,6 +162,7 @@ def check_mqtt_service(app: Any, services: dict[str, Any]) -> tuple[bool, bool]:
 
     return False, False
 
+
 def check_websocket_service(app: Any, services: dict[str, Any]) -> bool:
     """Check WebSocket service status.
 
@@ -179,6 +181,7 @@ def check_websocket_service(app: Any, services: dict[str, Any]) -> bool:
             return True
     return False
 
+
 def check_realtime_processor(app: Any, services: dict[str, Any]) -> bool:
     """Check realtime processor status.
 
@@ -196,6 +199,7 @@ def check_realtime_processor(app: Any, services: dict[str, Any]) -> bool:
             services["realtime_processor"] = {"status": "error", "message": str(e)}
             return True
     return False
+
 
 def check_opcua_service(app: Any, services: dict[str, Any]) -> tuple[bool, bool]:
     """Check OPC-UA service status.
@@ -235,6 +239,7 @@ def check_opcua_service(app: Any, services: dict[str, Any]) -> tuple[bool, bool]
 
     return False, False
 
+
 def check_data_storage_service(app: Any, services: dict[str, Any]) -> bool:
     """Check data storage service status.
 
@@ -252,6 +257,7 @@ def check_data_storage_service(app: Any, services: dict[str, Any]) -> bool:
             services["data_storage"] = {"status": "error", "message": str(e)}
             return True
     return False
+
 
 def check_dnp3_service(app: Any, services: dict[str, Any]) -> bool:
     """Check DNP3 service status.
@@ -271,6 +277,7 @@ def check_dnp3_service(app: Any, services: dict[str, Any]) -> bool:
             return True
     return False
 
+
 def check_modbus_service(app: Any, services: dict[str, Any]) -> bool:
     """Check Modbus service status.
 
@@ -288,6 +295,7 @@ def check_modbus_service(app: Any, services: dict[str, Any]) -> bool:
             services["modbus"] = {"status": "error", "message": str(e)}
             return True
     return False
+
 
 def check_anomaly_detection_service(app: Any, services: dict[str, Any]) -> bool:
     """Check anomaly detection service status.
@@ -310,6 +318,7 @@ def check_anomaly_detection_service(app: Any, services: dict[str, Any]) -> bool:
             return True
     return False
 
+
 def check_protocol_simulator(app: Any, services: dict[str, Any]) -> bool:
     """Check protocol simulator status.
 
@@ -328,6 +337,7 @@ def check_protocol_simulator(app: Any, services: dict[str, Any]) -> bool:
             return True
     return False
 
+
 def check_database(app: Any, services: dict[str, Any]) -> bool:
     """Check database status.
 
@@ -339,9 +349,7 @@ def check_database(app: Any, services: dict[str, Any]) -> bool:
         bool: True if degraded
     """
     try:
-        from app import (
-            db,
-        )
+        from app import db
 
         db.session.execute(db.text("SELECT 1"))
         services["database"] = {"status": "healthy", "available": True}
@@ -354,6 +362,7 @@ def check_database(app: Any, services: dict[str, Any]) -> bool:
         return True
 
     return False
+
 
 def _get_service_status(
     services: dict[str, Any], service_name: str, default_status: str
@@ -382,6 +391,7 @@ def _get_service_status(
         return "error"
 
     return default_status
+
 
 def create_detailed_health_check_endpoint(app: Any) -> Any:
     """Create detailed health check endpoint function.

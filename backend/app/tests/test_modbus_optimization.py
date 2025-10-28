@@ -7,6 +7,7 @@ import pytest
 
 from app.services.modbus_service import ModbusClient, ModbusService
 
+
 class TestModbusAtomicWrite:
     """Test Modbus atomic write optimization for float32."""
 

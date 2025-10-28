@@ -4,6 +4,7 @@ import logging
 
 from app.middleware.validation import sanitize
 
+
 class SanitizingFilter(logging.Filter):
     """Logging filter that sanitizes messages and arguments before logging.
 

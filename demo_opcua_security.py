@@ -5,11 +5,12 @@ Demonstration script for OPC-UA Security Implementation
 This script shows how the secure OPC-UA wrapper and monitoring endpoints work.
 """
 
-import sys
 import os
+import sys
 
 # Add backend to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "backend"))
+
 
 def demonstrate_secure_wrapper():
     """Demonstrate secure OPC-UA wrapper features."""
@@ -41,9 +42,13 @@ def demonstrate_secure_wrapper():
 
         # Demonstrate security event logging
         print("\n📋 Security Event Logging:")
-        wrapper.log_security_event('demo_event', {'action': 'test', 'result': 'success'})
-        wrapper.log_security_event('connection_attempt', {'attempt': 1})
-        wrapper.log_security_event('node_read', {'node': 'ns=2;i=123', 'quality': 'GOOD'})
+        wrapper.log_security_event(
+            "demo_event", {"action": "test", "result": "success"}
+        )
+        wrapper.log_security_event("connection_attempt", {"attempt": 1})
+        wrapper.log_security_event(
+            "node_read", {"node": "ns=2;i=123", "quality": "GOOD"}
+        )
 
         events = wrapper.get_security_events(limit=5)
         print(f"  Logged {len(events)} security events")
@@ -62,6 +67,7 @@ def demonstrate_secure_wrapper():
         print(f"⚠️  Import error (expected without dependencies): {e}")
         print("   This is normal in a test environment without Flask installed.\n")
 
+
 def demonstrate_secure_client():
     """Demonstrate secure OPC-UA client features."""
     print("=" * 70)
@@ -71,7 +77,8 @@ def demonstrate_secure_client():
     try:
         # Verify the module can be imported
         import importlib.util
-        spec = importlib.util.find_spec('app.services.secure_opcua_client')
+
+        spec = importlib.util.find_spec("app.services.secure_opcua_client")
 
         # Note: This will fail without proper dependencies, but we can show the structure
         if spec:
@@ -97,6 +104,7 @@ def demonstrate_secure_client():
     except ImportError as e:
         print(f"⚠️  Import error (expected without dependencies): {e}\n")
 
+
 def demonstrate_monitoring_endpoints():
     """Demonstrate monitoring endpoints."""
     print("=" * 70)
@@ -119,13 +127,13 @@ def demonstrate_monitoring_endpoints():
                     "security": {
                         "wrapper_enabled": True,
                         "connection_attempts": 0,
-                        "max_connection_attempts": 3
-                    }
+                        "max_connection_attempts": 3,
+                    },
                 },
                 "recent_security_events": [
                     {"event_type": "connection_established", "details": {}}
-                ]
-            }
+                ],
+            },
         },
         {
             "method": "GET",
@@ -136,12 +144,12 @@ def demonstrate_monitoring_endpoints():
                     {
                         "timestamp": "2024-01-01T00:00:00Z",
                         "event_type": "connection_established",
-                        "details": {"success": True}
+                        "details": {"success": True},
                     }
                 ],
                 "count": 1,
-                "timestamp": "2024-01-01T00:00:00Z"
-            }
+                "timestamp": "2024-01-01T00:00:00Z",
+            },
         },
         {
             "method": "GET",
@@ -152,8 +160,8 @@ def demonstrate_monitoring_endpoints():
                 "available": True,
                 "server_url": "opc.tcp://localhost:4840",
                 "subscribed_nodes": 5,
-                "timestamp": "2024-01-01T00:00:00Z"
-            }
+                "timestamp": "2024-01-01T00:00:00Z",
+            },
         },
         {
             "method": "GET",
@@ -166,13 +174,13 @@ def demonstrate_monitoring_endpoints():
                         "unit_id": "unit1",
                         "sensor_type": "temperature",
                         "scale_factor": 1.0,
-                        "offset": 0.0
+                        "offset": 0.0,
                     }
                 ],
                 "count": 1,
-                "timestamp": "2024-01-01T00:00:00Z"
-            }
-        }
+                "timestamp": "2024-01-01T00:00:00Z",
+            },
+        },
     ]
 
     for i, endpoint in enumerate(endpoints, 1):
@@ -181,12 +189,14 @@ def demonstrate_monitoring_endpoints():
         print("   Example Response:")
 
         import json
-        response_json = json.dumps(endpoint['response'], indent=6)
-        for line in response_json.split('\n'):
+
+        response_json = json.dumps(endpoint["response"], indent=6)
+        for line in response_json.split("\n"):
             print(f"   {line}")
         print()
 
     print("✅ All 4 monitoring endpoints available!\n")
+
 
 def demonstrate_integration():
     """Demonstrate integration with Flask app."""
@@ -232,6 +242,7 @@ def demonstrate_integration():
 
     print("✅ Seamless integration with backward compatibility!\n")
 
+
 def main():
     """Run all demonstrations."""
     print("\n" + "🎯" * 35)
@@ -264,6 +275,7 @@ def main():
     print("\n" + "=" * 70)
     print("🎉 All demonstrations completed successfully!")
     print("=" * 70 + "\n")
+
 
 if __name__ == "__main__":
     main()

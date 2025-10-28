@@ -4,11 +4,12 @@ Final validation script for logging refinement and domain exception handling.
 
 This script validates that all the key components work together correctly.
 """
-import sys
 import os
+import sys
 
 # Add the app directory to the path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "backend"))
+
 
 def validate_file_modifications():
     """Validate that all required files have been properly modified."""
@@ -17,47 +18,45 @@ def validate_file_modifications():
 
     validations = [
         {
-            'file': 'backend/app/utils/error_handler.py',
-            'checks': [
-                'handle_thermacore_exception',
-                'register_error_handlers',
-                'correlation_id',
-                'ThermaCoreException',
-                'structured logging'
-            ]
+            "file": "backend/app/utils/error_handler.py",
+            "checks": [
+                "handle_thermacore_exception",
+                "register_error_handlers",
+                "correlation_id",
+                "ThermaCoreException",
+                "structured logging",
+            ],
         },
         {
-            'file': 'backend/app/middleware/request_id.py',
-            'checks': [
-                'correlation_id',
-                'structured logging',
-                'ThermaCoreException',
-                'handle_thermacore_exception',
-                'enhanced logging'
-            ]
+            "file": "backend/app/middleware/request_id.py",
+            "checks": [
+                "correlation_id",
+                "structured logging",
+                "ThermaCoreException",
+                "handle_thermacore_exception",
+                "enhanced logging",
+            ],
         },
         {
-            'file': 'backend/app/__init__.py',
-            'checks': [
-                'SecurityAwareErrorHandler.register_error_handlers(app)'
-            ]
+            "file": "backend/app/__init__.py",
+            "checks": ["SecurityAwareErrorHandler.register_error_handlers(app)"],
         },
         {
-            'file': 'backend/app/exceptions.py',
-            'checks': [
-                'ThermaCoreException',
-                'error_type',
-                'status_code',
-                'context',
-                'details'
-            ]
-        }
+            "file": "backend/app/exceptions.py",
+            "checks": [
+                "ThermaCoreException",
+                "error_type",
+                "status_code",
+                "context",
+                "details",
+            ],
+        },
     ]
 
     all_valid = True
 
     for validation in validations:
-        file_path = validation['file']
+        file_path = validation["file"]
         print(f"Checking {file_path}...")
 
         if not os.path.exists(file_path):
@@ -66,11 +65,11 @@ def validate_file_modifications():
             continue
 
         try:
-            with open(file_path, 'r') as f:
+            with open(file_path, "r") as f:
                 content = f.read()
 
             file_valid = True
-            for check in validation['checks']:
+            for check in validation["checks"]:
                 if check in content:
                     print(f"  ✅ Contains: {check}")
                 else:
@@ -91,44 +90,55 @@ def validate_file_modifications():
 
     return all_valid
 
+
 def validate_domain_exceptions():
     """Validate domain exceptions work correctly."""
     print("🧪 Validating Domain Exceptions...")
     print("-" * 50)
 
     try:
-        sys.path.append('backend/app')
+        sys.path.append("backend/app")
         from exceptions import (
-            ThermaCoreException, ValidationException, AuthenticationException,
-            UnitOfflineException, DatabaseException, TimeoutException
+            AuthenticationException,
+            DatabaseException,
+            ThermaCoreException,
+            TimeoutException,
+            UnitOfflineException,
+            ValidationException,
         )
 
         # Test exception creation and attributes
         test_cases = [
             (
-                ThermaCoreException("Test error", error_type="test_error", status_code=418),
-                {"error_type": "test_error", "status_code": 418, "context": "ThermaCoreException"}
+                ThermaCoreException(
+                    "Test error", error_type="test_error", status_code=418
+                ),
+                {
+                    "error_type": "test_error",
+                    "status_code": 418,
+                    "context": "ThermaCoreException",
+                },
             ),
             (
                 ValidationException("Invalid data", field="test_field"),
-                {"error_type": "validation_error", "status_code": 400}
+                {"error_type": "validation_error", "status_code": 400},
             ),
             (
                 AuthenticationException("Auth failed"),
-                {"error_type": "authentication_error", "status_code": 401}
+                {"error_type": "authentication_error", "status_code": 401},
             ),
             (
                 UnitOfflineException("unit_123"),
-                {"error_type": "service_unavailable", "status_code": 503}
+                {"error_type": "service_unavailable", "status_code": 503},
             ),
             (
                 DatabaseException("DB error"),
-                {"error_type": "database_error", "status_code": 500}
+                {"error_type": "database_error", "status_code": 500},
             ),
             (
                 TimeoutException("Test op", 30.0),
-                {"error_type": "timeout_error", "status_code": 504}
-            )
+                {"error_type": "timeout_error", "status_code": 504},
+            ),
         ]
 
         all_valid = True
@@ -141,7 +151,9 @@ def validate_domain_exceptions():
                 if actual_value == expected_value:
                     print(f"  ✅ {attr_name}: {actual_value}")
                 else:
-                    print(f"  ❌ {attr_name}: expected {expected_value}, got {actual_value}")
+                    print(
+                        f"  ❌ {attr_name}: expected {expected_value}, got {actual_value}"
+                    )
                     all_valid = False
 
             # Check that details is a dict
@@ -158,8 +170,10 @@ def validate_domain_exceptions():
     except Exception as e:
         print(f"❌ Error testing domain exceptions: {e}")
         import traceback
+
         traceback.print_exc()
         return False
+
 
 def validate_implementation_completeness():
     """Validate that the implementation is complete."""
@@ -174,7 +188,7 @@ def validate_implementation_completeness():
         "Enhanced request ID middleware with domain exception support",
         "Proper error type classification (ERROR vs WARNING)",
         "Standardized error response envelope with correlation_id in details",
-        "Request ID flow through all error handling paths"
+        "Request ID flow through all error handling paths",
     ]
 
     print("✅ Implementation Features Completed:")
@@ -186,7 +200,7 @@ def validate_implementation_completeness():
         "Flask app factory with SecurityAwareErrorHandler.register_error_handlers()",
         "@track_request_id decorator with domain exception handling",
         "RequestIDFilter with correlation_id in log records",
-        "Enhanced error response envelopes across all handlers"
+        "Enhanced error response envelopes across all handlers",
     ]
 
     for i, point in enumerate(integration_points, 1):
@@ -194,16 +208,17 @@ def validate_implementation_completeness():
 
     return True
 
+
 def validate_documentation():
     """Validate that documentation has been created."""
     print("📚 Validating Documentation...")
     print("-" * 50)
 
     docs = [
-        'LOGGING_DOMAIN_EXCEPTION_IMPLEMENTATION.md',
-        'backend/demonstrate_improvements.py',
-        'backend/test_domain_exceptions_basic.py',
-        'backend/test_logging_correlation_improvements.py'
+        "LOGGING_DOMAIN_EXCEPTION_IMPLEMENTATION.md",
+        "backend/demonstrate_improvements.py",
+        "backend/test_domain_exceptions_basic.py",
+        "backend/test_logging_correlation_improvements.py",
     ]
 
     all_exist = True
@@ -217,6 +232,7 @@ def validate_documentation():
 
     return all_exist
 
+
 def main():
     """Run complete validation."""
     print("=" * 70)
@@ -227,7 +243,7 @@ def main():
         ("File Modifications", validate_file_modifications),
         ("Domain Exceptions", validate_domain_exceptions),
         ("Implementation Completeness", validate_implementation_completeness),
-        ("Documentation", validate_documentation)
+        ("Documentation", validate_documentation),
     ]
 
     results = []
@@ -272,6 +288,7 @@ def main():
         success = False
 
     return success
+
 
 if __name__ == "__main__":
     success = main()

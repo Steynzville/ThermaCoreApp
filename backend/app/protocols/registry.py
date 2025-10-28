@@ -18,6 +18,7 @@ REGISTRY: list[tuple[str, str]] = [
     ("simulator", "protocol_simulator"),
 ]
 
+
 def validate_registry() -> None:
     """PR1a: Validate registry for duplicate protocol names."""
     protocol_names: set[str] = set()
@@ -32,8 +33,10 @@ def validate_registry() -> None:
     if duplicates:
         raise ValueError(f"Duplicate protocol names found in registry: {duplicates}")
 
+
 # PR1a: Validate registry at module import time
 validate_registry()
+
 
 def _fallback(name: str) -> ProtocolStatus:
     return ProtocolStatus(
@@ -42,6 +45,7 @@ def _fallback(name: str) -> ProtocolStatus:
         connected=False,
         status="not_initialized",
     )
+
 
 def collect_protocol_status() -> list[dict]:
     """Collect normalized status dictionaries for all registered protocols.
@@ -148,6 +152,7 @@ def collect_protocol_status() -> list[dict]:
 
         statuses.append(status_obj.to_dict())
     return statuses
+
 
 def get_protocols_list() -> list[str]:
     """PR1a: Get list of supported protocol names."""

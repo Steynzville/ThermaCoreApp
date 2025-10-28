@@ -8,6 +8,7 @@ import hashlib
 import re
 from datetime import datetime, timezone
 
+
 class CompanyIdentifier:
     """Utility class for generating and validating company identifiers."""
 

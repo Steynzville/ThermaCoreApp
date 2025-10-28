@@ -10,11 +10,11 @@ from webargs.flaskparser import use_args
 from app.middleware.authorization import permission_required
 from app.models import (
     Sensor,
-    SensorReading,
+    SensorReading,  # Use timezone-aware datetime
     Unit,
     db,
     utc_now,
-)  # Use timezone-aware datetime
+)
 from app.utils.error_handler import SecurityAwareErrorHandler
 from app.utils.schemas import (
     CompareUnitsSchema,
@@ -25,6 +25,7 @@ from app.utils.schemas import (
 
 # Create historical data blueprint
 historical_bp = Blueprint("historical", __name__)
+
 
 @historical_bp.route("/historical/data/<unit_id>", methods=["GET"])
 @jwt_required()
@@ -211,6 +212,7 @@ def get_historical_data(args, unit_id):
             "Failed to get historical data",
         )
 
+
 @historical_bp.route("/historical/compare/units", methods=["POST"])
 @jwt_required()
 @permission_required("read_units")
@@ -375,6 +377,7 @@ def compare_units_historical(args):
             "Failed to compare units historical data",
         )
 
+
 @historical_bp.route("/historical/export/<unit_id>", methods=["GET"])
 @jwt_required()
 @permission_required("read_units")
@@ -518,6 +521,7 @@ def export_historical_data(args, unit_id):
             "Failed to export historical data",
         )
 
+
 @historical_bp.route("/historical/statistics/<unit_id>", methods=["GET"])
 @jwt_required()
 @permission_required("read_units")
@@ -595,12 +599,14 @@ def get_historical_statistics(args, unit_id):
                 "average": round(float(stat.avg_value), 2) if stat.avg_value else 0,
                 "minimum": round(float(stat.min_value), 2) if stat.min_value else 0,
                 "maximum": round(float(stat.max_value), 2) if stat.max_value else 0,
-                "standard_deviation": round(float(stat.std_dev), 2)
-                if stat.std_dev
-                else 0,
-                "range": round(float(stat.max_value - stat.min_value), 2)
-                if stat.max_value and stat.min_value
-                else 0,
+                "standard_deviation": (
+                    round(float(stat.std_dev), 2) if stat.std_dev else 0
+                ),
+                "range": (
+                    round(float(stat.max_value - stat.min_value), 2)
+                    if stat.max_value and stat.min_value
+                    else 0
+                ),
             }
 
         return jsonify(

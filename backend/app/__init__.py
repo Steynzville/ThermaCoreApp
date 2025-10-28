@@ -58,6 +58,7 @@ if swagger_available:
 else:
     swagger = None
 
+
 def _setup_middleware(app):
     """Set up middleware for the application.
 
@@ -86,6 +87,7 @@ def _setup_middleware(app):
 
     # Register error handlers
     SecurityAwareErrorHandler.register_error_handlers(app)
+
 
 def _initialize_critical_service(
     service,
@@ -198,6 +200,7 @@ def _initialize_critical_service(
         if error_to_raise:
             raise error_to_raise from e
         return should_continue
+
 
 def create_app(config_name=None):
     """Create Flask application using the application factory pattern."""

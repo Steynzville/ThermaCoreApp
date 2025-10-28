@@ -31,6 +31,7 @@ from typing import Any
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
+
 class CriticalPathBenchmark:
     """Benchmark suite for critical system paths."""
 
@@ -197,7 +198,9 @@ class CriticalPathBenchmark:
             {
                 "sensor_id": f"TEMP_{i}",
                 "value": round(self.secure_random.uniform(60.0, 80.0), 2),
-                "timestamp": (datetime.now(tz=timezone.utc) - timedelta(minutes=i)).isoformat(),
+                "timestamp": (
+                    datetime.now(tz=timezone.utc) - timedelta(minutes=i)
+                ).isoformat(),
             }
             for i in range(100)
         ]
@@ -373,7 +376,9 @@ class CriticalPathBenchmark:
         # Simulate data to export
         export_data = [
             {
-                "timestamp": (datetime.now(tz=timezone.utc) - timedelta(hours=i)).isoformat(),
+                "timestamp": (
+                    datetime.now(tz=timezone.utc) - timedelta(hours=i)
+                ).isoformat(),
                 "unit_id": f"TC{i % 10:03d}",
                 "sensor_id": f"TEMP_{i % 5}",
                 "value": round(self.secure_random.uniform(60.0, 80.0), 2),
@@ -479,6 +484,7 @@ class CriticalPathBenchmark:
 
         logger.info("\n📊 Results saved to: critical_path_results.json")
 
+
 def main():
     """Main entry point."""
     benchmark = CriticalPathBenchmark()
@@ -491,6 +497,7 @@ def main():
 
     logger.info("\n✅ All benchmarks passed!")
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())

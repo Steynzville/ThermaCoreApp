@@ -25,7 +25,11 @@ checks = [
         "Environment variable support",
         'os.environ.get("FIRST_ADMIN_PASSWORD"' in admin_content,
     ),
-    ("No hardcoded password (SECURE)", '"Steiner1!"' not in admin_content and 'DEFAULT_ADMIN_PASSWORD' not in admin_content),
+    (
+        "No hardcoded password (SECURE)",
+        '"Steiner1!"' not in admin_content
+        and "DEFAULT_ADMIN_PASSWORD" not in admin_content,
+    ),
 ]
 
 for check_name, passed in checks:

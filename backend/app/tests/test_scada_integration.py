@@ -11,6 +11,7 @@ from app.models import Sensor, SensorReading, Unit
 from app.services.mqtt_service import mqtt_client
 from app.services.realtime_processor import realtime_processor
 
+
 class TestSCADAIntegration:
     """Integration tests for the complete SCADA data pipeline."""
 

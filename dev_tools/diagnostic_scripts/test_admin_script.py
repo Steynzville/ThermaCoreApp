@@ -50,4 +50,3 @@ print("\nThe admin script is properly secured:")
 print("1. Password output shows '[HIDDEN]' instead of the actual password")
 print("2. Environment variable FIRST_ADMIN_PASSWORD is REQUIRED (no default)")
 print("3. No hardcoded passwords in the codebase (security best practice)")
-

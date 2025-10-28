@@ -10,11 +10,11 @@ from webargs.flaskparser import use_args
 from app.middleware.authorization import permission_required
 from app.models import (
     Sensor,
-    SensorReading,
+    SensorReading,  # Use timezone-aware datetime
     Unit,
     db,
     utc_now,
-)  # Use timezone-aware datetime
+)
 from app.utils.error_handler import SecurityAwareErrorHandler
 from app.utils.schemas import (
     AlertPatternsQuerySchema,
@@ -24,6 +24,7 @@ from app.utils.schemas import (
 
 # Create analytics blueprint
 analytics_bp = Blueprint("analytics", __name__)
+
 
 @analytics_bp.route("/analytics/dashboard/summary", methods=["GET"])
 @jwt_required()
@@ -123,9 +124,9 @@ def get_dashboard_summary():
                 "active_units": active_units,
                 "total_sensors": total_sensors,
                 "recent_readings": recent_readings,
-                "uptime_percentage": (active_units / total_units * 100)
-                if total_units > 0
-                else 0,
+                "uptime_percentage": (
+                    (active_units / total_units * 100) if total_units > 0 else 0
+                ),
             },
             "trends": {
                 "current_week_readings": current_week_readings,
@@ -141,12 +142,14 @@ def get_dashboard_summary():
             "performance": {
                 "avg_temperature_24h": round(float(avg_temperature), 2),
                 "max_temperature_24h": round(float(max_temperature), 2),
-                "data_quality_score": min(
-                    100,
-                    (recent_readings / (active_units * 24)) * 100,
-                )
-                if active_units > 0
-                else 0,
+                "data_quality_score": (
+                    min(
+                        100,
+                        (recent_readings / (active_units * 24)) * 100,
+                    )
+                    if active_units > 0
+                    else 0
+                ),
             },
         }
 
@@ -157,6 +160,7 @@ def get_dashboard_summary():
             e,
             "Failed to generate dashboard summary",
         )
+
 
 @analytics_bp.route("/analytics/trends/<unit_id>", methods=["GET"])
 @jwt_required()
@@ -260,6 +264,7 @@ def get_unit_trends(args, unit_id):
     except Exception as e:
         return SecurityAwareErrorHandler.handle_error(e, "Failed to get unit trends")
 
+
 @analytics_bp.route("/analytics/performance/units", methods=["GET"])
 @jwt_required()
 @permission_required("read_units")
@@ -336,15 +341,21 @@ def get_units_performance(args):
                     "unit_name": unit_data.name,
                     "status": unit_data.status,
                     "reading_count": unit_data.reading_count or 0,
-                    "avg_value": round(float(unit_data.avg_value), 2)
-                    if unit_data.avg_value
-                    else 0,
-                    "max_value": round(float(unit_data.max_value), 2)
-                    if unit_data.max_value
-                    else 0,
-                    "min_value": round(float(unit_data.min_value), 2)
-                    if unit_data.min_value
-                    else 0,
+                    "avg_value": (
+                        round(float(unit_data.avg_value), 2)
+                        if unit_data.avg_value
+                        else 0
+                    ),
+                    "max_value": (
+                        round(float(unit_data.max_value), 2)
+                        if unit_data.max_value
+                        else 0
+                    ),
+                    "min_value": (
+                        round(float(unit_data.min_value), 2)
+                        if unit_data.min_value
+                        else 0
+                    ),
                     "performance_score": max(0, performance_score),
                 },
             )
@@ -358,18 +369,18 @@ def get_units_performance(args):
                 "units": units_performance,
                 "summary": {
                     "total_units": len(units_performance),
-                    "avg_performance": sum(
-                        u["performance_score"] for u in units_performance
-                    )
-                    / len(units_performance)
-                    if units_performance
-                    else 0,
-                    "best_performing": units_performance[0]
-                    if units_performance
-                    else None,
-                    "worst_performing": units_performance[-1]
-                    if units_performance
-                    else None,
+                    "avg_performance": (
+                        sum(u["performance_score"] for u in units_performance)
+                        / len(units_performance)
+                        if units_performance
+                        else 0
+                    ),
+                    "best_performing": (
+                        units_performance[0] if units_performance else None
+                    ),
+                    "worst_performing": (
+                        units_performance[-1] if units_performance else None
+                    ),
                 },
             },
         )
@@ -379,6 +390,7 @@ def get_units_performance(args):
             e,
             "Failed to get units performance",
         )
+
 
 @analytics_bp.route("/analytics/alerts/patterns", methods=["GET"])
 @jwt_required()
@@ -471,9 +483,9 @@ def get_alert_patterns(args):
                 "avg_alerts_per_day": round(avg_alerts_per_day, 2),
                 "daily_patterns": patterns,
                 "sensor_type_breakdown": sensor_totals,
-                "most_problematic_sensor": max(sensor_totals, key=sensor_totals.get)
-                if sensor_totals
-                else None,
+                "most_problematic_sensor": (
+                    max(sensor_totals, key=sensor_totals.get) if sensor_totals else None
+                ),
             },
         )
 

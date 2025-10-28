@@ -3,6 +3,7 @@
 import re
 from typing import Any, ClassVar
 
+
 class InputValidator:
     """Provides methods to validate and sanitize user input."""
 
