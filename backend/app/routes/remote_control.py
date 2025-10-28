@@ -14,7 +14,6 @@ from app.utils.error_handler import SecurityAwareErrorHandler
 # Create remote control blueprint
 remote_control_bp = Blueprint("remote_control", __name__)
 
-
 @remote_control_bp.route(
     "/remote-control/units/<string:unit_id>/power",
     methods=["POST"],
@@ -87,7 +86,6 @@ def control_unit_power(unit_id):
             "Remote power control",
             500,
         )
-
 
 @remote_control_bp.route(
     "/remote-control/units/<string:unit_id>/water-production",
@@ -163,7 +161,6 @@ def control_water_production(unit_id):
             500,
         )
 
-
 @remote_control_bp.route(
     "/remote-control/units/<string:unit_id>/status",
     methods=["GET"],
@@ -197,7 +194,6 @@ def get_remote_control_status(unit_id):
             "Get remote control status",
             500,
         )
-
 
 @remote_control_bp.route("/remote-control/permissions", methods=["GET"])
 @jwt_required()

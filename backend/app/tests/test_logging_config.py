@@ -9,7 +9,6 @@ from app.logging_config import (
     log_exception_with_context,
 )
 
-
 class TestLoggingConfig:
     """Test logging configuration functions."""
 

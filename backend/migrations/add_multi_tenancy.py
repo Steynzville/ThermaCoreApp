@@ -8,13 +8,12 @@ This migration adds:
 
 from sqlalchemy import inspect, text
 
-
 def validate_sql_identifier(identifier):
     """Validate SQL identifier to prevent SQL injection.
-    
+
     Args:
         identifier: String to validate as SQL identifier
-        
+
     Returns:
         bool: True if valid, False otherwise
     """
@@ -26,15 +25,14 @@ def validate_sql_identifier(identifier):
         return False
     return all(c.isalnum() or c in ("_", ".") for c in identifier)
 
-
 def column_exists(connection, table_name, column_name):
     """Check if a column exists in a table.
-    
+
     Args:
         connection: SQLAlchemy connection
         table_name: Name of the table
         column_name: Name of the column
-        
+
     Returns:
         bool: True if column exists, False otherwise
     """
@@ -43,40 +41,38 @@ def column_exists(connection, table_name, column_name):
         raise ValueError(f"Invalid table name: {table_name}")
     if not validate_sql_identifier(column_name):
         raise ValueError(f"Invalid column name: {column_name}")
-    
+
     inspector = inspect(connection)
     columns = [col["name"] for col in inspector.get_columns(table_name)]
     return column_name in columns
 
-
 def table_exists(connection, table_name):
     """Check if a table exists in the database.
-    
+
     Args:
         connection: SQLAlchemy connection
         table_name: Name of the table
-        
+
     Returns:
         bool: True if table exists, False otherwise
     """
     # Validate input to prevent SQL injection
     if not validate_sql_identifier(table_name):
         raise ValueError(f"Invalid table name: {table_name}")
-    
+
     inspector = inspect(connection)
     return table_name in inspector.get_table_names()
 
-
 def add_tenants_table(connection):
     """Create the tenants table if it doesn't exist.
-    
+
     Args:
         connection: SQLAlchemy connection
     """
     if table_exists(connection, "tenants"):
         print("Tenants table already exists, skipping creation")
         return
-    
+
     print("Creating tenants table...")
     connection.execute(
         text(
@@ -104,70 +100,67 @@ def add_tenants_table(connection):
             """,
         ),
     )
-    
+
     # Create indexes
     connection.execute(text("CREATE INDEX idx_tenants_name ON tenants(name)"))
     connection.execute(text("CREATE INDEX idx_tenants_slug ON tenants(slug)"))
     connection.execute(text("CREATE INDEX idx_tenants_is_active ON tenants(is_active)"))
-    
-    print("Tenants table created successfully")
 
+    print("Tenants table created successfully")
 
 def add_tenant_id_to_users(connection):
     """Add tenant_id column to users table if it doesn't exist.
-    
+
     Args:
         connection: SQLAlchemy connection
     """
     if column_exists(connection, "users", "tenant_id"):
         print("tenant_id column already exists in users table, skipping")
         return
-    
+
     print("Adding tenant_id column to users table...")
     connection.execute(
         text(
             """
-            ALTER TABLE users 
+            ALTER TABLE users
             ADD COLUMN tenant_id INTEGER REFERENCES tenants(id)
             """,
         ),
     )
-    
+
     # Create index for tenant_id
     connection.execute(text("CREATE INDEX idx_users_tenant_id ON users(tenant_id)"))
-    
-    print("tenant_id column added to users table successfully")
 
+    print("tenant_id column added to users table successfully")
 
 def add_tenant_id_to_units(connection):
     """Add tenant_id column to units table if it doesn't exist.
-    
+
     Args:
         connection: SQLAlchemy connection
     """
     if column_exists(connection, "units", "tenant_id"):
         print("tenant_id column already exists in units table, skipping")
         return
-    
+
     print("Adding tenant_id column to units table...")
     connection.execute(
         text(
             """
-            ALTER TABLE units 
+            ALTER TABLE units
             ADD COLUMN tenant_id INTEGER REFERENCES tenants(id)
             """,
         ),
     )
-    
+
     # Create index for tenant_id
     connection.execute(text("CREATE INDEX idx_units_tenant_id ON units(tenant_id)"))
-    
-    print("tenant_id column added to units table successfully")
 
+    print("tenant_id column added to units table successfully")
 
 def create_default_tenant(connection):
     """Create a default tenant for existing data.
-    
+
     Args:
         connection: SQLAlchemy connection
     """
@@ -176,11 +169,11 @@ def create_default_tenant(connection):
         text("SELECT COUNT(*) FROM tenants WHERE slug = 'default'"),
     )
     count = result.scalar()
-    
+
     if count > 0:
         print("Default tenant already exists, skipping creation")
         return
-    
+
     print("Creating default tenant...")
     connection.execute(
         text(
@@ -199,10 +192,9 @@ def create_default_tenant(connection):
     )
     print("Default tenant created successfully")
 
-
 def migrate_existing_data(connection):
     """Migrate existing users and units to the default tenant.
-    
+
     Args:
         connection: SQLAlchemy connection
     """
@@ -211,19 +203,19 @@ def migrate_existing_data(connection):
         text("SELECT id FROM tenants WHERE slug = 'default'"),
     )
     tenant_row = result.fetchone()
-    
+
     if not tenant_row:
         print("Default tenant not found, skipping data migration")
         return
-    
+
     default_tenant_id = tenant_row[0]
-    
+
     # Update users with NULL tenant_id
     result = connection.execute(
         text(
             """
-            UPDATE users 
-            SET tenant_id = :tenant_id 
+            UPDATE users
+            SET tenant_id = :tenant_id
             WHERE tenant_id IS NULL
             """,
         ),
@@ -231,13 +223,13 @@ def migrate_existing_data(connection):
     )
     users_updated = result.rowcount
     print(f"Updated {users_updated} users with default tenant")
-    
+
     # Update units with NULL tenant_id
     result = connection.execute(
         text(
             """
-            UPDATE units 
-            SET tenant_id = :tenant_id 
+            UPDATE units
+            SET tenant_id = :tenant_id
             WHERE tenant_id IS NULL
             """,
         ),
@@ -246,45 +238,43 @@ def migrate_existing_data(connection):
     units_updated = result.rowcount
     print(f"Updated {units_updated} units with default tenant")
 
-
 def run_migration(connection):
     """Run the multi-tenancy migration.
-    
+
     Args:
         connection: SQLAlchemy connection
     """
     print("Starting multi-tenancy migration...")
-    
+
     try:
         # Step 1: Create tenants table
         add_tenants_table(connection)
-        
+
         # Step 2: Add tenant_id to users table
         add_tenant_id_to_users(connection)
-        
+
         # Step 3: Add tenant_id to units table
         add_tenant_id_to_units(connection)
-        
+
         # Step 4: Create default tenant
         create_default_tenant(connection)
-        
+
         # Step 5: Migrate existing data
         migrate_existing_data(connection)
-        
+
         # Commit the transaction
         connection.commit()
-        
+
         print("Multi-tenancy migration completed successfully!")
-        
+
     except Exception as e:
         print(f"Migration failed: {e}")
         connection.rollback()
         raise
 
-
 if __name__ == "__main__":
     import sys
-    
+
     # This script is meant to be run from the Flask application context
     # Example usage:
     # from app import create_app, db

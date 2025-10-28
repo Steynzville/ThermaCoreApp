@@ -16,7 +16,6 @@ from app.protocols.base import ProtocolStatus
 from app.protocols.registry import _fallback, collect_protocol_status
 from app.utils.status_utils import utc_now  # Import from status_utils
 
-
 class TestProtocolStatusBase:
     """Test the ProtocolStatus data class."""
 
@@ -66,7 +65,6 @@ class TestProtocolStatusBase:
         assert "time_since_last_heartbeat" in result
         assert "is_recovering" in result
         assert "health_score" in result
-
 
 class TestProtocolRegistry:
     """Test the protocol registry collection functionality."""
@@ -178,7 +176,6 @@ class TestProtocolRegistry:
         assert mqtt_status["error"]["code"] == "STATUS_FETCH_ERROR"
         assert "Connection timeout" in mqtt_status["error"]["message"]
 
-
 class TestThermaCoreExceptions:
     """Test the ThermaCore exception hierarchy."""
 
@@ -224,7 +221,6 @@ class TestThermaCoreExceptions:
         assert exc.status_code == 503
         assert exc.details["service_name"] == "Test Service"
 
-
 class TestExceptionIntegration:
     """Test how exceptions integrate with SecurityAwareErrorHandler."""
 
@@ -262,7 +258,6 @@ class TestExceptionIntegration:
         assert (
             "temporarily unavailable" in response.get_json()["error"]["message"].lower()
         )
-
 
 if __name__ == "__main__":
     pytest.main([__file__])

@@ -22,7 +22,6 @@ from typing import Any
 # Note: This creates a circular import risk, but since we only need the enum
 # and not the ProtocolStatus class, it should be manageable
 
-
 class AvailabilityLevel(Enum):
     """Enhanced availability levels for more granular status reporting."""
 
@@ -31,7 +30,6 @@ class AvailabilityLevel(Enum):
     AVAILABLE = 2  # Service initialized but not connected
     FULLY_AVAILABLE = 3  # Service initialized and connected with healthy heartbeat
 
-
 def utc_now() -> datetime:
     """Get current UTC time as timezone-aware datetime.
 
@@ -39,7 +37,6 @@ def utc_now() -> datetime:
     timezone-aware UTC datetimes consistently with the rest of the application.
     """
     return datetime.now(timezone.utc)
-
 
 def is_heartbeat_stale(
     last_heartbeat: datetime | None,
@@ -61,7 +58,6 @@ def is_heartbeat_stale(
     time_diff = utc_now() - last_heartbeat
     return time_diff.total_seconds() > heartbeat_timeout_seconds
 
-
 def get_time_since_last_heartbeat(
     last_heartbeat: datetime | None,
 ) -> float | None:
@@ -80,7 +76,6 @@ def get_time_since_last_heartbeat(
     time_diff = utc_now() - last_heartbeat
     return time_diff.total_seconds()
 
-
 def is_recovering(retry_count: int, status: str) -> bool:
     """Check if protocol is in recovery state (has retry attempts).
 
@@ -93,7 +88,6 @@ def is_recovering(retry_count: int, status: str) -> bool:
 
     """
     return retry_count > 0 and status in ["reconnecting", "initializing"]
-
 
 def compute_health_score(
     available: bool,
@@ -140,7 +134,6 @@ def compute_health_score(
         score -= min(retry_count * 2, 10.0)
 
     return max(0.0, min(100.0, score))
-
 
 def compute_availability_level(
     available: bool,
@@ -198,7 +191,6 @@ def compute_availability_level(
 
     # Fallback: available but not connected
     return AvailabilityLevel.AVAILABLE if available else AvailabilityLevel.UNAVAILABLE
-
 
 def record_error(
     error_code: str,

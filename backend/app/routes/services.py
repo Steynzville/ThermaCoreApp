@@ -9,7 +9,6 @@ from app.utils.service_manager import service_manager
 
 services_bp = Blueprint("services", __name__)
 
-
 @services_bp.route("/services/status", methods=["GET"])
 def get_services_status():
     """Get the status of all registered services.

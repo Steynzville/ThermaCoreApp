@@ -7,7 +7,6 @@ for security-critical use cases.
 import secrets
 import string
 
-
 def generate_secure_token(length: int = 32) -> str:
     """Generate a cryptographically secure random token.
 
@@ -19,7 +18,6 @@ def generate_secure_token(length: int = 32) -> str:
     """
     return secrets.token_urlsafe(length)
 
-
 def generate_secure_hex(length: int = 32) -> str:
     """Generate a cryptographically secure random hex string.
 
@@ -30,7 +28,6 @@ def generate_secure_hex(length: int = 32) -> str:
         A secure random hex string
     """
     return secrets.token_hex(length)
-
 
 def generate_secure_password(length: int = 16) -> str:
     """Generate a cryptographically secure random password.
@@ -52,7 +49,6 @@ def generate_secure_password(length: int = 16) -> str:
         password = "".join(secrets.choice(alphabet) for _ in range(length))
         if any(c.isdigit() for c in password):
             return password
-
 
 def generate_secure_int(min_value: int = 0, max_value: int = 100) -> int:
     """Generate a cryptographically secure random integer.

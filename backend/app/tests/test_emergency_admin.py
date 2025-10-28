@@ -4,14 +4,12 @@ import json
 
 from app.models import User
 
-
 def unwrap_response(response):
     """Helper to extract data from standardized API response envelope."""
     data = json.loads(response.data)
     if "data" in data and "success" in data:
         return data["data"]
     return data
-
 
 class TestEmergencyAdmin:
     """Test emergency admin endpoint."""

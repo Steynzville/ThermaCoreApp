@@ -9,7 +9,6 @@ import os
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "app"))
 
-
 def test_dnp3_optimization_components():
     """Test DNP3 optimization components in isolation."""
     print("Testing DNP3 optimization components...")
@@ -97,7 +96,6 @@ def test_dnp3_optimization_components():
         traceback.print_exc()
         return False
 
-
 def test_performance_monitor_decorator():
     """Test the performance monitoring decorator."""
     print("\n--- Testing Performance Monitor Decorator ---")
@@ -134,7 +132,6 @@ def test_performance_monitor_decorator():
         print(f"❌ Error testing decorator: {e}")
         return False
 
-
 def main():
     """Run validation tests."""
     print("=" * 60)
@@ -163,7 +160,6 @@ def main():
         print("❌ SOME TESTS FAILED - Check implementation")
         sys.exit(1)
     print("=" * 60)
-
 
 if __name__ == "__main__":
     main()

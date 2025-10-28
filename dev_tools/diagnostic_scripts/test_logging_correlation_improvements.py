@@ -9,7 +9,6 @@ from unittest.mock import patch
 # Add the app directory to the path
 sys.path.insert(0, ".")
 
-
 def test_domain_exception_handling():
     """Test that ThermaCoreException instances are properly handled."""
     print("Testing Domain Exception Handling...")
@@ -65,7 +64,6 @@ def test_domain_exception_handling():
     except Exception as e:
         print(f"✗ Domain exception test failed: {e}")
         return False
-
 
 def test_correlation_id_handling():
     """Test correlation ID handling in error responses."""
@@ -125,7 +123,6 @@ def test_correlation_id_handling():
         traceback.print_exc()
         return False
 
-
 def test_logging_filter():
     """Test that RequestIDFilter adds correlation ID to log records."""
     print("\nTesting Logging Filter...")
@@ -170,7 +167,6 @@ def test_logging_filter():
         traceback.print_exc()
         return False
 
-
 def test_error_handler_registration():
     """Test that error handler registration works."""
     print("\nTesting Error Handler Registration...")
@@ -195,7 +191,6 @@ def test_error_handler_registration():
     except Exception as e:
         print(f"✗ Error handler registration test failed: {e}")
         return False
-
 
 def main():
     """Run all tests."""
@@ -238,7 +233,6 @@ def main():
     else:
         print(f"✗ {total - passed} tests failed. Please check the implementation.")
         return False
-
 
 if __name__ == "__main__":
     success = main()

@@ -12,7 +12,6 @@ from app.exceptions import ValidationException
 from app.models import User
 from app.utils.error_handler import SecurityAwareErrorHandler
 
-
 def validate_login_credentials(data: dict[str, Any]) -> tuple[Any, int] | None:
     """Validate login credentials presence.
 
@@ -34,7 +33,6 @@ def validate_login_credentials(data: dict[str, Any]) -> tuple[Any, int] | None:
             400,
         )
     return None
-
 
 def fetch_user(username: str) -> tuple[Any | None, tuple[Any, int] | None]:
     """Fetch user from database with error handling.
@@ -63,7 +61,6 @@ def fetch_user(username: str) -> tuple[Any | None, tuple[Any, int] | None]:
             "Database connection failed",
             500,
         )
-
 
 def check_user_can_login(user: Any) -> tuple[Any, int] | None:
     """Check if user is allowed to login.
@@ -118,7 +115,6 @@ def check_user_can_login(user: Any) -> tuple[Any, int] | None:
                 401,
             )
     return None
-
 
 def validate_user_role(user: Any) -> tuple[Any, int] | None:
     """Validate that user has a properly configured role.
@@ -181,7 +177,6 @@ def validate_user_role(user: Any) -> tuple[Any, int] | None:
         )
     return None
 
-
 def update_last_login(user: Any) -> None:
     """Update user's last login timestamp.
 
@@ -213,7 +208,6 @@ def update_last_login(user: Any) -> None:
                 "Failed to rollback after last_login error",
             )
         # Continue with login even if last_login update fails
-
 
 def create_jwt_tokens(
     user: Any,
@@ -314,7 +308,6 @@ def create_jwt_tokens(
             ),
         )
 
-
 def audit_successful_login(user: Any) -> None:
     """Audit successful login event.
 
@@ -342,7 +335,6 @@ def audit_successful_login(user: Any) -> None:
             "Failed to audit successful login",
             extra={"event": "audit_failure", "username": user.username},
         )
-
 
 def build_login_response(
     user: Any,
@@ -373,7 +365,6 @@ def build_login_response(
         },
     }
 
-
 def log_login_attempt(username: str) -> None:
     """Log login attempt with context.
 
@@ -389,7 +380,6 @@ def log_login_attempt(username: str) -> None:
             "user_agent": request.headers.get("User-Agent", "UNKNOWN"),
         },
     )
-
 
 def handle_invalid_credentials(username: str) -> tuple[Any, int]:
     """Handle invalid login credentials.

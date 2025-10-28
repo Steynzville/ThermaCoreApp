@@ -26,7 +26,6 @@ from typing import Any
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
-
 class ProtocolPerformanceBenchmark:
     """Benchmark suite for protocol operations."""
 
@@ -346,7 +345,6 @@ class ProtocolPerformanceBenchmark:
 
         logger.info("\n📊 Results saved to: %s", output_file)
 
-
 def main():
     """Main entry point."""
     benchmark = ProtocolPerformanceBenchmark()
@@ -359,7 +357,6 @@ def main():
 
     logger.info("\n✅ All benchmarks passed!")
     return 0
-
 
 if __name__ == "__main__":
     exit(main())

@@ -48,7 +48,6 @@ HTTP_STATUS_TO_EXCEPTION_NAME = {
     505: "HTTPVersionNotSupported",
 }
 
-
 class SyntheticHTTPException(Exception):
     """Exception-like object for tracking HTTP errors in metrics.
 
@@ -62,7 +61,6 @@ class SyntheticHTTPException(Exception):
         self.code = code
         # Set the class name to match the HTTP exception type
         self.__class__.__name__ = exception_name
-
 
 class MetricsCollector:
     """Thread-safe metrics collector for API performance monitoring."""
@@ -328,10 +326,8 @@ class MetricsCollector:
         upper = sorted_data[int(index) + 1]
         return lower + (upper - lower) * (index - int(index))
 
-
 # Global metrics collector instance
 _metrics_collector = None
-
 
 def get_metrics_collector() -> MetricsCollector:
     """Get or create metrics collector instance."""
@@ -340,7 +336,6 @@ def get_metrics_collector() -> MetricsCollector:
         _metrics_collector = MetricsCollector()
     return _metrics_collector
 
-
 def reset_metrics_collector():
     """Reset the global metrics collector. Useful for testing to ensure clean state."""
     global _metrics_collector
@@ -348,7 +343,6 @@ def reset_metrics_collector():
         _metrics_collector.reset()
     else:
         _metrics_collector = MetricsCollector()
-
 
 def collect_metrics(f: Callable) -> Callable:
     """Decorator to collect metrics for route handlers.
@@ -369,7 +363,6 @@ def collect_metrics(f: Callable) -> Callable:
         return f(*args, **kwargs)
 
     return decorated_function
-
 
 def setup_metrics_middleware(app):
     """Set up metrics collection middleware for the Flask app."""
@@ -459,7 +452,6 @@ def setup_metrics_middleware(app):
         # If neither exc nor response, request was likely aborted before after_request
 
     return app
-
 
 # Metrics endpoint helpers
 def create_metrics_blueprint():

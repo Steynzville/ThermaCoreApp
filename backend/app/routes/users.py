@@ -17,7 +17,6 @@ from app.utils.schemas import RoleSchema, UserSchema, UserUpdateSchema
 
 users_bp = Blueprint("users", __name__)
 
-
 @users_bp.route("/users", methods=["GET"])
 @jwt_required()
 @permission_required("read_users")
@@ -109,7 +108,6 @@ def get_users():
         },
     ), 200
 
-
 @users_bp.route("/users/<int:user_id>", methods=["GET"])
 @jwt_required()
 @permission_required("read_users")
@@ -136,7 +134,6 @@ def get_user(user_id):
     user = User.query.get_or_404(user_id)
     user_schema = UserSchema()
     return jsonify(user_schema.dump(user)), 200
-
 
 @users_bp.route("/users/<int:user_id>", methods=["PUT"])
 @jwt_required()
@@ -224,7 +221,6 @@ def update_user(user_id):
             return jsonify({"error": "Email already exists"}), 409
         return jsonify({"error": "Database constraint violation"}), 409
 
-
 @users_bp.route("/users/<int:user_id>", methods=["DELETE"])
 @jwt_required()
 @permission_required("delete_users")
@@ -275,7 +271,6 @@ def delete_user(user_id):
 
     return "", 204
 
-
 @users_bp.route("/users/<int:user_id>/activate", methods=["PATCH"])
 @jwt_required()
 @permission_required("write_users")
@@ -308,7 +303,6 @@ def activate_user(user_id):
 
     user_schema = UserSchema()
     return jsonify(user_schema.dump(user)), 200
-
 
 @users_bp.route("/users/<int:user_id>/deactivate", methods=["PATCH"])
 @jwt_required()
@@ -353,7 +347,6 @@ def deactivate_user(user_id):
     user_schema = UserSchema()
     return jsonify(user_schema.dump(user)), 200
 
-
 @users_bp.route("/roles", methods=["GET"])
 @jwt_required()
 @permission_required("read_users")
@@ -376,7 +369,6 @@ def get_roles():
     roles = Role.query.all()
     roles_schema = RoleSchema(many=True)
     return jsonify(roles_schema.dump(roles)), 200
-
 
 @users_bp.route("/users/stats", methods=["GET"])
 @jwt_required()
@@ -440,7 +432,6 @@ def get_users_stats():
         },
     ), 200
 
-
 @users_bp.route("/users/<int:user_id>/reset-password", methods=["POST"])
 @jwt_required()
 @role_required("admin")
@@ -493,7 +484,6 @@ def reset_user_password(user_id):
 
     return jsonify({"message": "Password reset successfully"}), 200
 
-
 @users_bp.route("/users/companies", methods=["GET"])
 @jwt_required()
 @permission_required("read_users")
@@ -521,7 +511,6 @@ def get_companies():
 
     companies = UserBatchManager.get_unique_companies()
     return jsonify({"companies": companies}), 200
-
 
 @users_bp.route("/users/companies/stats", methods=["GET"])
 @jwt_required()
@@ -559,7 +548,6 @@ def get_company_stats():
 
     stats = UserBatchManager.get_company_statistics()
     return jsonify({"stats": stats}), 200
-
 
 @users_bp.route("/users/batch/activate", methods=["POST"])
 @jwt_required()
@@ -600,7 +588,6 @@ def batch_activate():
     count = UserBatchManager.batch_activate_users(data["user_ids"])
     return jsonify({"message": f"{count} users activated successfully"}), 200
 
-
 @users_bp.route("/users/batch/deactivate", methods=["POST"])
 @jwt_required()
 @permission_required("write_users")
@@ -639,7 +626,6 @@ def batch_deactivate():
 
     count = UserBatchManager.batch_deactivate_users(data["user_ids"])
     return jsonify({"message": f"{count} users deactivated successfully"}), 200
-
 
 @users_bp.route("/users/pending", methods=["GET"])
 @jwt_required()
@@ -692,7 +678,6 @@ def get_pending_users():
             "has_prev": pagination.has_prev,
         },
     ), 200
-
 
 @users_bp.route("/users/<int:user_id>/approve", methods=["POST"])
 @jwt_required()
@@ -774,7 +759,6 @@ def approve_user(user_id):
         # Log the error internally but don't expose stack trace to user
         current_app.logger.exception(f"Failed to approve user {user_id}: {e!s}")
         return jsonify({"error": "Failed to approve user"}), 500
-
 
 @users_bp.route("/users/<int:user_id>/reject", methods=["POST"])
 @jwt_required()

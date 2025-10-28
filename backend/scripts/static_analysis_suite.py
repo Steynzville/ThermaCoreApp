@@ -22,7 +22,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
 class StaticAnalysisSuite:
     """Comprehensive static analysis suite."""
 
@@ -411,7 +410,6 @@ class StaticAnalysisSuite:
         # Generate summary
         return self.generate_summary_report()
 
-
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
@@ -438,7 +436,6 @@ def main():
     success = suite.run_all_analyses()
 
     return 0 if success else 1
-
 
 if __name__ == "__main__":
     sys.exit(main())

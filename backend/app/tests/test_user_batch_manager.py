@@ -3,7 +3,6 @@
 from app.models import Role, User
 from app.utils.user_batch_manager import UserBatchManager
 
-
 class TestUserBatchManager:
     """Test user batch operations."""
 

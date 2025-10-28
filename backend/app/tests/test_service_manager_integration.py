@@ -12,7 +12,6 @@ from app.utils.service_manager import (
     service_manager,
 )
 
-
 class TestProductionScenarios:
     """Test production scenarios for service management."""
 
@@ -186,7 +185,6 @@ class TestProductionScenarios:
         assert config.SERVICE_MQTT_ENABLED is True
         assert config.SERVICE_MQTT_REQUIRED is True
 
-
 class TestServiceManagerHealthReporting:
     """Test service manager health reporting."""
 
@@ -244,7 +242,6 @@ class TestServiceManagerHealthReporting:
 
         health = manager.get_overall_health()
         assert health == "healthy"  # Disabled services don't affect health
-
 
 class TestBackwardsCompatibility:
     """Test backwards compatibility with existing code."""

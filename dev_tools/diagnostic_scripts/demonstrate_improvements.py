@@ -13,7 +13,6 @@ from unittest.mock import Mock
 # Add the app directory to the path
 sys.path.insert(0, "app")
 
-
 def demonstrate_domain_exceptions():
     """Demonstrate various domain exceptions and their attributes."""
     print("=" * 70)
@@ -77,7 +76,6 @@ def demonstrate_domain_exceptions():
 
         traceback.print_exc()
         return False
-
 
 def demonstrate_error_handling():
     """Demonstrate how the enhanced error handler processes domain exceptions."""
@@ -155,7 +153,6 @@ def demonstrate_error_handling():
         traceback.print_exc()
         return False
 
-
 def demonstrate_logging_features():
     """Demonstrate enhanced logging with correlation IDs."""
     print("\n" + "=" * 70)
@@ -192,7 +189,6 @@ def demonstrate_logging_features():
 
     print("\n✓ Logging features demonstration completed")
     return True
-
 
 def demonstrate_integration_points():
     """Show how the components integrate together."""
@@ -241,7 +237,6 @@ def demonstrate_integration_points():
     print("\n✓ Integration demonstration completed")
     return True
 
-
 def main():
     """Run the complete demonstration."""
     print("ThermaCore SCADA API - Logging Refinement & Domain Exception Handling")
@@ -285,7 +280,6 @@ def main():
         print(f"\n✗ {total - passed} demonstrations failed.")
 
     return passed == total
-
 
 if __name__ == "__main__":
     success = main()

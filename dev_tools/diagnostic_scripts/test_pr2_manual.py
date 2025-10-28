@@ -20,7 +20,6 @@ except ImportError as e:
     print(f"❌ Import failed: {e}")
     sys.exit(1)
 
-
 def test_request_validator():
     """Test request validation functionality."""
     print("\n🧪 Testing RequestValidator...")
@@ -31,7 +30,6 @@ def test_request_validator():
 
     # The validation methods require Flask context, so we'll just test initialization
     print("✅ RequestValidator basic functionality verified")
-
 
 def test_rate_limiter():
     """Test rate limiting functionality."""
@@ -62,7 +60,6 @@ def test_rate_limiter():
 
     print("✅ RateLimiter functionality verified")
 
-
 def test_request_id_manager():
     """Test request ID management."""
     print("\n🧪 Testing RequestIDManager...")
@@ -80,7 +77,6 @@ def test_request_id_manager():
         assert False, "Generated request ID should be valid UUID"
 
     print("✅ RequestIDManager functionality verified")
-
 
 def test_metrics_collector():
     """Test metrics collection."""
@@ -102,7 +98,6 @@ def test_metrics_collector():
     assert summary["overview"]["total_requests"] == 2, "Should have 2 requests recorded"
     print("✅ MetricsCollector functionality verified")
 
-
 def test_error_handler():
     """Test enhanced error handler."""
     print("\n🧪 Testing SecurityAwareErrorHandler...")
@@ -115,7 +110,6 @@ def test_error_handler():
     )
 
     print("✅ SecurityAwareErrorHandler message system verified")
-
 
 def test_integration():
     """Test integration between components."""
@@ -143,7 +137,6 @@ def test_integration():
     )
 
     print("✅ Component integration verified")
-
 
 if __name__ == "__main__":
     print("🚀 Starting PR2 Middleware Tests")

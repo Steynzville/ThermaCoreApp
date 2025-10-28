@@ -20,7 +20,6 @@ from app.models import Tenant, Unit, User
 tenants_bp = Blueprint("tenants", __name__)
 logger = logging.getLogger(__name__)
 
-
 # Marshmallow schemas for request/response validation
 class TenantSchema(Schema):
     """Schema for tenant serialization."""
@@ -44,7 +43,6 @@ class TenantSchema(Schema):
     created_at = fields.DateTime(dump_only=True)
     updated_at = fields.DateTime(dump_only=True)
 
-
 class TenantCreateSchema(Schema):
     """Schema for tenant creation."""
 
@@ -64,7 +62,6 @@ class TenantCreateSchema(Schema):
     max_users = fields.Int(allow_none=True)
     max_units = fields.Int(allow_none=True)
 
-
 class TenantUpdateSchema(Schema):
     """Schema for tenant updates."""
 
@@ -83,7 +80,6 @@ class TenantUpdateSchema(Schema):
     is_active = fields.Bool()
     max_users = fields.Int(allow_none=True)
     max_units = fields.Int(allow_none=True)
-
 
 @tenants_bp.route("/tenants", methods=["GET"])
 @jwt_required()
@@ -144,7 +140,6 @@ def get_tenants():
         },
     )
 
-
 @tenants_bp.route("/tenants/<int:tenant_id>", methods=["GET"])
 @jwt_required()
 @permission_required("admin_panel")
@@ -185,7 +180,6 @@ def get_tenant(tenant_id):
     }
 
     return jsonify({"data": tenant_data})
-
 
 @tenants_bp.route("/tenants", methods=["POST"])
 @jwt_required()
@@ -236,7 +230,6 @@ def create_tenant():
         return jsonify(
             {"error": "Tenant with this name or slug already exists"},
         ), 409
-
 
 @tenants_bp.route("/tenants/<int:tenant_id>", methods=["PUT", "PATCH"])
 @jwt_required()
@@ -295,7 +288,6 @@ def update_tenant(tenant_id):
         return jsonify(
             {"error": "Tenant with this name or slug already exists"},
         ), 409
-
 
 @tenants_bp.route("/tenants/<int:tenant_id>", methods=["DELETE"])
 @jwt_required()
@@ -357,7 +349,6 @@ def delete_tenant(tenant_id):
         logger.exception(f"Failed to delete tenant: {e}")
         return jsonify({"error": "Failed to delete tenant"}), 500
 
-
 @tenants_bp.route("/tenants/current", methods=["GET"])
 @jwt_required()
 def get_current_tenant():
@@ -393,7 +384,6 @@ def get_current_tenant():
     # Serialize and return
     tenant_schema = TenantSchema()
     return jsonify({"data": tenant_schema.dump(tenant)})
-
 
 @tenants_bp.route("/tenants/switch", methods=["POST"])
 @jwt_required()

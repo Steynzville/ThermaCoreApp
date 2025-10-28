@@ -20,7 +20,6 @@ from app.utils.secure_logger import SecureLogger
 
 logger = SecureLogger.get_secure_logger(__name__)
 
-
 class SecureOPCUAWrapper:
     """Secure wrapper for OPC-UA operations with enhanced security features.
 
@@ -270,7 +269,6 @@ class SecureOPCUAWrapper:
         """Reset connection attempt counter (for testing/admin purposes)."""
         self._connection_attempts = 0
         logger.info("Connection attempts counter reset")
-
 
 def secure_operation(operation_name: str):
     """Decorator for securing OPC-UA operations with logging.

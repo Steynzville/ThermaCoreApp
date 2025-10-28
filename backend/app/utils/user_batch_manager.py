@@ -9,7 +9,6 @@ from sqlalchemy import func
 from app import db
 from app.models import User
 
-
 class UserBatchManager:
     """Manager class for batch user operations."""
 

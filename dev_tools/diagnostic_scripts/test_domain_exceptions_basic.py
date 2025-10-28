@@ -6,7 +6,6 @@ import sys
 # Add the app directory to the path
 sys.path.insert(0, ".")
 
-
 def test_domain_exceptions_basic():
     """Test domain exceptions without Flask dependencies."""
     print("Testing Domain Exceptions (Basic)...")
@@ -97,7 +96,6 @@ def test_domain_exceptions_basic():
         traceback.print_exc()
         return False
 
-
 def test_exception_attributes():
     """Test that all exceptions have the required attributes."""
     print("\nTesting Exception Attributes...")
@@ -159,7 +157,6 @@ def test_exception_attributes():
         traceback.print_exc()
         return False
 
-
 def main():
     """Run basic tests without Flask."""
     print("=" * 70)
@@ -199,7 +196,6 @@ def main():
     else:
         print(f"✗ {total - passed} tests failed. Please check the implementation.")
         return False
-
 
 if __name__ == "__main__":
     success = main()

@@ -12,7 +12,6 @@ import os
 import sys
 import json
 
-
 def test_database_creation():
     """Test that database tables are created correctly."""
     print("\n" + "=" * 70)
@@ -64,7 +63,6 @@ def test_database_creation():
             print(f"  • {table}: {len(columns)} columns")
 
         return True
-
 
 def test_authentication_flow():
     """Test that authentication returns proper JWT tokens."""
@@ -157,7 +155,6 @@ def test_authentication_flow():
             print("\n✅ PASSED: Authentication flow returns proper JWT tokens")
             return True
 
-
 def test_database_fixtures():
     """Test that conftest.py creates all required tables."""
     print("\n" + "=" * 70)
@@ -211,7 +208,6 @@ def test_database_fixtures():
             traceback.print_exc()
             return False
 
-
 def main():
     """Run all validation tests."""
     print("\n" + "#" * 70)
@@ -250,7 +246,6 @@ def main():
         print("⚠️  SOME TESTS FAILED - Please review the output above")
         print("=" * 70)
         return 1
-
 
 if __name__ == "__main__":
     sys.exit(main())

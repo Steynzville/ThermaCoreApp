@@ -7,7 +7,6 @@ import pytest
 from app import create_app
 from app.utils.error_handler import SecurityAwareErrorHandler
 
-
 class TestSecureLoggingIntegration:
     """Test secure logging integration with error handler."""
 

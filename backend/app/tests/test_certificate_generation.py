@@ -12,7 +12,6 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 import generate_certs
 
-
 class TestCertificateGeneration:
     """Test certificate generation functionality."""
 

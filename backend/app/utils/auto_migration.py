@@ -13,7 +13,6 @@ from app.utils.user_permissions_fix import fix_user_permissions
 
 logger = logging.getLogger(__name__)
 
-
 def column_exists(engine, table_name, column_name):
     """Check if a column exists in a table.
 
@@ -33,7 +32,6 @@ def column_exists(engine, table_name, column_name):
     except Exception as e:
         logger.exception(f"Error checking if column exists: {e}")
         return False
-
 
 def add_password_reset_columns(engine):
     """Add password reset columns to users table if they don't exist.
@@ -126,7 +124,6 @@ def add_password_reset_columns(engine):
         logger.exception(f"Error during auto-migration: {e}")
         return False
 
-
 def add_permissions_column(engine):
     """Add permissions column to users table if it doesn't exist.
 
@@ -175,7 +172,6 @@ def add_permissions_column(engine):
     except Exception as e:
         logger.exception(f"Error adding permissions column: {e}")
         return False
-
 
 def update_emergency_admin_permissions(engine):
     """Update emergency_admin user with comprehensive permissions.
@@ -239,7 +235,6 @@ def update_emergency_admin_permissions(engine):
     except Exception as e:
         logger.exception(f"Error updating emergency admin permissions: {e}")
         return False
-
 
 def add_user_approval_columns(engine):
     """Add user approval workflow columns to users table if they don't exist.
@@ -448,7 +443,6 @@ def add_user_approval_columns(engine):
         logger.exception(f"Error during user approval columns migration: {e}")
         return False
 
-
 def _validate_sql_identifier(identifier):
     """Validate SQL identifier to prevent injection.
 
@@ -466,7 +460,6 @@ def _validate_sql_identifier(identifier):
 
     # SQL identifiers should only contain alphanumeric and underscore, not start with number
     return bool(re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", identifier))
-
 
 def add_user_profile_fields(engine):
     """Add user profile fields to users table if they don't exist.
@@ -594,7 +587,6 @@ def add_user_profile_fields(engine):
         logger.exception(f"Error adding user profile fields: {e}")
         return False
 
-
 def table_exists(engine, table_name):
     """Check if a table exists in the database.
 
@@ -612,7 +604,6 @@ def table_exists(engine, table_name):
     except Exception as e:
         logger.exception(f"Error checking if table exists: {e}")
         return False
-
 
 def add_tenants_table(engine):
     """Create the tenants table if it doesn't exist.
@@ -725,7 +716,6 @@ def add_tenants_table(engine):
         logger.exception(f"Error creating tenants table: {e}")
         return False
 
-
 def add_tenant_id_to_users(engine):
     """Add tenant_id column to users table if it doesn't exist.
 
@@ -793,7 +783,6 @@ def add_tenant_id_to_users(engine):
     except Exception as e:
         logger.exception(f"Error adding tenant_id to users table: {e}")
         return False
-
 
 def add_tenant_id_to_units(engine):
     """Add tenant_id column to units table if it doesn't exist.
@@ -863,7 +852,6 @@ def add_tenant_id_to_units(engine):
         logger.exception(f"Error adding tenant_id to units table: {e}")
         return False
 
-
 def add_multi_tenancy_support(engine):
     """Add multi-tenancy support to the database schema.
 
@@ -907,7 +895,6 @@ def add_multi_tenancy_support(engine):
     except Exception as e:
         logger.exception(f"Error during multi-tenancy migration: {e}")
         return False
-
 
 def run_auto_migrations(app):
     """Run all auto-migrations needed for the application.

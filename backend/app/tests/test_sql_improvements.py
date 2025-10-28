@@ -5,7 +5,6 @@ from datetime import datetime
 from app import db
 from app.models import HealthStatusEnum, Unit, UnitStatusEnum
 
-
 class TestSQLQueryImprovements:
     """Test the improved SQL query patterns."""
 

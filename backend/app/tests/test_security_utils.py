@@ -9,7 +9,6 @@ from app.security_utils import (
     generate_secure_token,
 )
 
-
 class TestSecurityUtils:
     """Test security utility functions."""
 

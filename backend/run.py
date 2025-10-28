@@ -20,7 +20,6 @@ app = create_app()
 # Configure logging
 logger = logging.getLogger(__name__)
 
-
 # Initialize database on startup
 def init_database_on_startup():
     """Initialize database tables and seed default data with self-healing capabilities."""
@@ -149,7 +148,7 @@ def init_database_on_startup():
                             app.logger.warning(f"Generated random password: {default_password}")
                             app.logger.warning("SAVE THIS PASSWORD - It will not be shown again!")
                             app.logger.warning("=" * 70)
-                        
+
                         admin_user = User(
                             username="Steyn_Admin",
                             email="admin@thermacore.com",
@@ -185,10 +184,8 @@ def init_database_on_startup():
 
             traceback.print_exc()
 
-
 # Run database initialization
 init_database_on_startup()
-
 
 @app.cli.command()
 def init_db():
@@ -224,7 +221,6 @@ def init_db():
         db.session.rollback()
         click.echo(f"✗ Error initializing database: {e}")
         sys.exit(1)
-
 
 @app.cli.command()
 def create_admin():
@@ -268,7 +264,6 @@ def create_admin():
     except Exception as e:
         db.session.rollback()
         click.echo(f"✗ Error creating admin user: {e}")
-
 
 if __name__ == "__main__":
     # Use Flask's built-in debug configuration

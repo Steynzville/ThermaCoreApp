@@ -2,7 +2,6 @@
 
 from app.models import Role, User
 
-
 class TestUserProfileFields:
     """Test new user profile fields in registration and user management."""
 

@@ -26,7 +26,6 @@ from app.utils.schemas import (
 # Create historical data blueprint
 historical_bp = Blueprint("historical", __name__)
 
-
 @historical_bp.route("/historical/data/<unit_id>", methods=["GET"])
 @jwt_required()
 @permission_required("read_units")
@@ -212,7 +211,6 @@ def get_historical_data(args, unit_id):
             "Failed to get historical data",
         )
 
-
 @historical_bp.route("/historical/compare/units", methods=["POST"])
 @jwt_required()
 @permission_required("read_units")
@@ -377,7 +375,6 @@ def compare_units_historical(args):
             "Failed to compare units historical data",
         )
 
-
 @historical_bp.route("/historical/export/<unit_id>", methods=["GET"])
 @jwt_required()
 @permission_required("read_units")
@@ -520,7 +517,6 @@ def export_historical_data(args, unit_id):
             e,
             "Failed to export historical data",
         )
-
 
 @historical_bp.route("/historical/statistics/<unit_id>", methods=["GET"])
 @jwt_required()

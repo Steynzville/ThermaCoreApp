@@ -1,6 +1,5 @@
 """Test roles endpoint to ensure all three roles are returned."""
 
-
 class TestRolesEndpoint:
     """Test the /api/v1/roles endpoint."""
 

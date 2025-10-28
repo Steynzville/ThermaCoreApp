@@ -2,7 +2,6 @@
 
 from app.utils.secure_logger import SecureLogger
 
-
 class TestEnhancedSensitivePatterns:
     """Test enhanced sensitive data patterns in SecureLogger."""
 
@@ -120,7 +119,6 @@ class TestEnhancedSensitivePatterns:
         assert "mysecret123" not in sanitized
         assert "client_secret=***" in sanitized
 
-
 class TestEnhancedDictSanitization:
     """Test enhanced dictionary sanitization with new sensitive keys."""
 
@@ -230,7 +228,6 @@ class TestEnhancedDictSanitization:
         assert sanitized["Session"] == "[REDACTED]"
         assert sanitized["CREDENTIALS"] == "[REDACTED]"
         assert sanitized["Cvv"] == "[REDACTED]"
-
 
 class TestMultipleSensitivePatternsInSameMessage:
     """Test handling of multiple sensitive patterns in the same message."""

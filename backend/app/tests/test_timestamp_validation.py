@@ -9,7 +9,6 @@ from app.tests.timestamp_helpers import (
     simulate_db_trigger_update,
 )
 
-
 def unwrap_response(response):
     """Helper to extract data from standardized API response envelope.
 
@@ -22,7 +21,6 @@ def unwrap_response(response):
         return data["data"]
     # Otherwise return as-is (for error responses)
     return data
-
 
 class TestTimestampConsistency:
     """Test timestamp handling consistency across environments."""

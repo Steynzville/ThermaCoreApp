@@ -7,7 +7,6 @@ from cachetools import TTLCache
 from app.models import utc_now
 from app.services.dnp3_service import DNP3Service
 
-
 class TestDNP3CacheLookupOptimization:
     """Test DNP3 cache lookup optimization using .get() method."""
 

@@ -8,7 +8,6 @@ import pytest
 from app import create_app
 from app.utils.helpers import generate_health_score, parse_timestamp
 
-
 class TestParseTimestampImprovements:
     """Test improvements to parse_timestamp function."""
 
@@ -56,7 +55,6 @@ class TestParseTimestampImprovements:
         assert "Converting naive datetime" in log_message
         assert "Assuming original timestamp was UTC" in log_message
 
-
 class TestEnvironmentLogicImprovements:
     """Test improvements to environment configuration logic."""
 
@@ -73,7 +71,6 @@ class TestEnvironmentLogicImprovements:
         # Create a fresh app instance to test the environment logic
         test_app = create_app("production")  # Explicit production
         assert test_app.config["TESTING"]
-
 
 class TestTimezoneAwareMaintenance:
     """Test timezone-aware maintenance calculations."""

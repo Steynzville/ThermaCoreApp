@@ -28,7 +28,6 @@ secure_random = random.SystemRandom()
 # Mock DNP3 implementation for demonstration
 # In a real implementation, you would use pydnp3 or similar library
 
-
 class DNP3PerformanceMetrics:
     """Performance metrics tracking for DNP3 operations."""
 
@@ -106,7 +105,6 @@ class DNP3PerformanceMetrics:
             operations = set(self.operation_counts.keys())
             return {op: self.get_operation_stats(op) for op in operations}
 
-
 def dnp3_performance_monitor(operation_name: str | None = None):
     """Decorator to monitor DNP3 operation performance."""
 
@@ -148,7 +146,6 @@ def dnp3_performance_monitor(operation_name: str | None = None):
 
     return decorator
 
-
 class DNP3DataType(Enum):
     """DNP3 data point types."""
 
@@ -159,7 +156,6 @@ class DNP3DataType(Enum):
     COUNTER = "counter"
     FROZEN_COUNTER = "frozen_counter"
 
-
 class DNP3Quality(Enum):
     """DNP3 quality flags."""
 
@@ -169,7 +165,6 @@ class DNP3Quality(Enum):
     REMOTE_FORCE = "remote_force"
     OVER_RANGE = "over_range"
     REFERENCE_ERR = "reference_err"
-
 
 @dataclass
 class DNP3DataPoint:
@@ -184,7 +179,6 @@ class DNP3DataPoint:
     deadband: float = 0.0  # For analog inputs
     unit: str = ""
 
-
 @dataclass
 class DNP3Device:
     """DNP3 device configuration."""
@@ -198,7 +192,6 @@ class DNP3Device:
     app_timeout: float = 5.0
     is_connected: bool = False
 
-
 @dataclass
 class DNP3Reading:
     """DNP3 data point reading."""
@@ -211,7 +204,6 @@ class DNP3Reading:
     sensor_type: str
     description: str
 
-
 @dataclass
 class DNP3CachedReading:
     """Cached DNP3 reading with timestamp for optimization."""
@@ -223,7 +215,6 @@ class DNP3CachedReading:
     def is_expired(self) -> bool:
         """Check if the cached reading has expired."""
         return (utc_now() - self.cached_at).total_seconds() > self.cache_ttl
-
 
 class MockDNP3Master:
     """Mock DNP3 Master implementation with performance optimizations."""
@@ -527,7 +518,6 @@ class MockDNP3Master:
             outstation_address in self.connected_outstations
             and self.connected_outstations[outstation_address]["connected"]
         )
-
 
 class DNP3Service:
     """DNP3 protocol service with performance optimizations for SCADA communication."""
@@ -1384,7 +1374,6 @@ class DNP3Service:
             "demo": is_demo_mode,  # Environment-aware demo flag
             "devices": devices_summary,
         }
-
 
 # Global DNP3 service instance
 dnp3_service = DNP3Service()

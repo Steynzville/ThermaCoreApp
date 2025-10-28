@@ -11,7 +11,6 @@ from app.utils.secure_logger import SecureLogger
 
 logger = SecureLogger.get_secure_logger(__name__)
 
-
 class DataStorageService:
     """Service for handling sensor data storage and processing logic."""
 
@@ -248,7 +247,6 @@ class DataStorageService:
 
         """
         return {"service": "active", "app_context": self._app is not None}
-
 
 # Global data storage service instance
 data_storage_service = DataStorageService()

@@ -11,7 +11,6 @@ from app.middleware.validation import validate_query_params
 # Note: collect_metrics is deprecated - kept for backward compatibility but not used
 from app.utils.error_handler import SecurityAwareErrorHandler
 
-
 # Example schema for validation
 class ExampleRequestSchema(Schema):
     """Example schema showing validation features."""
@@ -21,10 +20,8 @@ class ExampleRequestSchema(Schema):
     age = fields.Int(validate=validate.Range(min=1, max=150))
     tags = fields.List(fields.Str(), missing=[])
 
-
 # Create blueprint
 example_bp = Blueprint("example", __name__, url_prefix="/api/v1/examples")
-
 
 @example_bp.route("/comprehensive", methods=["POST"])
 @track_request_id
@@ -79,7 +76,6 @@ def comprehensive_example(validated_data):
         200,
     )
 
-
 @example_bp.route("/rate-limited", methods=["GET"])
 @track_request_id
 @rate_limit(limit=5, window_seconds=60, per="ip")  # Custom rate limit: 5 per minute
@@ -94,7 +90,6 @@ def rate_limited_example():
         "Rate limited endpoint accessed",
         200,
     )
-
 
 @example_bp.route("/metrics-demo", methods=["GET", "POST", "PUT"])
 @track_request_id
@@ -123,7 +118,6 @@ def metrics_demo():
         200,
     )
 
-
 @example_bp.route("/validation-demo", methods=["POST"])
 @track_request_id
 @standard_rate_limit
@@ -145,7 +139,6 @@ def validation_demo(validated_data):
         "Input validation successful",
         200,
     )
-
 
 # Function to register the example blueprint
 def register_example_routes(app):

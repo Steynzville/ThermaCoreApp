@@ -6,7 +6,6 @@ from typing import Any
 from app.refactor_helpers import safe_service_init
 from app.utils.environment import is_production_environment
 
-
 def initialize_all_services(app: Any, logger: logging.Logger) -> None:
     """Initialize all SCADA services.
 
@@ -116,7 +115,6 @@ def initialize_all_services(app: Any, logger: logging.Logger) -> None:
                 f"Critical initialization error in production: {e}",
             ) from e
 
-
 def _initialize_critical_services(
     app: Any,
     logger: logging.Logger,
@@ -156,7 +154,6 @@ def _initialize_critical_services(
             "init_app",
             required=mqtt_required,
         )
-
 
 def _initialize_opcua_clients(
     app: Any,
@@ -226,7 +223,6 @@ def _initialize_opcua_clients(
                 logger.info(
                     "OPC-UA client initialization failed but service is optional, continuing without it",
                 )
-
 
 def _initialize_optional_services(
     app: Any,

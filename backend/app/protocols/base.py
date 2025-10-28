@@ -27,7 +27,6 @@ StatusType = Literal[
     "reconnecting",
 ]
 
-
 @dataclass
 class ProtocolStatus:
     """Normalized status representation for any protocol adapter.

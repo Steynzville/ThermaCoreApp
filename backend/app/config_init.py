@@ -6,7 +6,6 @@ from typing import Any
 
 from config import config
 
-
 def determine_config_name(config_name: str | None = None) -> str:
     """Determine configuration name from environment.
 
@@ -35,7 +34,6 @@ def determine_config_name(config_name: str | None = None) -> str:
 
     return config_name
 
-
 def load_config_object(config_name: str) -> Any:
     """Load and instantiate configuration object.
 
@@ -52,7 +50,6 @@ def load_config_object(config_name: str) -> Any:
         config_obj = config_obj()
 
     return config_obj
-
 
 def initialize_core_extensions(app: Any) -> None:
     """Initialize core Flask extensions.
@@ -75,7 +72,6 @@ def initialize_core_extensions(app: Any) -> None:
     if jwt:
         jwt.init_app(app)
 
-
 def configure_cors(app: Any) -> None:
     """Configure CORS if available.
 
@@ -94,7 +90,6 @@ def configure_cors(app: Any) -> None:
         )
     except ImportError:
         pass
-
 
 def initialize_swagger(app: Any) -> None:
     """Initialize Swagger documentation if available and not in testing.
@@ -138,7 +133,6 @@ def initialize_swagger(app: Any) -> None:
     except ImportError:
         pass
 
-
 def import_models() -> None:
     """Import models to ensure they are registered.
 
@@ -155,7 +149,6 @@ def import_models() -> None:
         )
     except ImportError:
         pass  # Models may not be importable without full dependencies
-
 
 def run_auto_migrations(app: Any) -> None:
     """Run database auto-migrations if not in testing mode.

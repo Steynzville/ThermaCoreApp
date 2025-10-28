@@ -5,7 +5,6 @@ from unittest.mock import Mock, patch
 from app import _initialize_critical_service
 from app.utils.environment import handle_environment_detection_error
 
-
 class TestErrorPropagationImprovements:
     """Test improved error propagation following reviewer recommendations."""
 

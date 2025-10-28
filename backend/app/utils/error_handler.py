@@ -11,7 +11,6 @@ from app.utils.secure_logger import SecureLogger
 
 logger = SecureLogger.get_secure_logger(__name__)
 
-
 class SecurityAwareErrorHandler:
     """Handles errors securely by providing generic user messages while logging details."""
 

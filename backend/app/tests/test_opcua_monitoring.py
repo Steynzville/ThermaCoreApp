@@ -7,7 +7,6 @@ from flask import Flask
 
 from app.routes.opcua_monitoring import init_opcua_monitoring
 
-
 @pytest.fixture
 def app():
     """Create test Flask application."""
@@ -16,12 +15,10 @@ def app():
     init_opcua_monitoring(app)
     return app
 
-
 @pytest.fixture
 def client(app):
     """Create test client."""
     return app.test_client()
-
 
 class TestOPCUAMonitoringEndpoints:
     """Test OPC-UA monitoring endpoints."""
@@ -200,7 +197,6 @@ class TestOPCUAMonitoringEndpoints:
         assert response.status_code == 500
         data = response.get_json()
         assert "error" in data
-
 
 class TestInitOPCUAMonitoring:
     """Test OPC-UA monitoring initialization."""

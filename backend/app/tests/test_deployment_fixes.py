@@ -8,7 +8,6 @@ from unittest.mock import Mock, patch
 from app.services.mqtt_service import MQTTClient
 from app.utils.secure_logger import SecureLogger, SecureLoggerAdapter
 
-
 class TestSecureLoggerFallback:
     """Test secure logger fallback mechanism for missing request_id."""
 
@@ -85,7 +84,6 @@ class TestSecureLoggerFallback:
         # This should not raise an exception
         secure_logger.critical("Test critical during startup")
 
-
 class TestMQTTAuthenticationFallback:
     """Test MQTT service continues without authentication in production."""
 
@@ -143,7 +141,6 @@ class TestMQTTAuthenticationFallback:
                     mock_logger.warning.assert_called_with(
                         "MQTT running without authentication in production - security reduced",
                     )
-
 
 class TestMQTTCertificateValidation:
     """Test MQTT certificate validation with detailed error messages."""

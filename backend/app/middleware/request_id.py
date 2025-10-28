@@ -11,7 +11,6 @@ from app.utils.secure_logger import SecureLogger
 
 logger = SecureLogger.get_secure_logger(__name__)
 
-
 class RequestIDManager:
     """Manages request ID generation and tracking across the application."""
 
@@ -79,7 +78,6 @@ class RequestIDManager:
             request_id = RequestIDManager.set_request_id()
         return request_id
 
-
 class RequestIDFilter(logging.Filter):
     """Logging filter to include request ID in log records."""
 
@@ -95,7 +93,6 @@ class RequestIDFilter(logging.Filter):
 
         return True
 
-
 class RequestAwareFormatter(logging.Formatter):
     """Custom formatter that gracefully handles missing request_id field."""
 
@@ -104,7 +101,6 @@ class RequestAwareFormatter(logging.Formatter):
         if not hasattr(record, "request_id"):
             record.request_id = "no-request-context"
         return super().format(record)
-
 
 def init_request_id_logging(app):
     """Initialize request ID logging for the application."""
@@ -155,7 +151,6 @@ def init_request_id_logging(app):
             root_logger.addHandler(stream_handler)
             root_logger.setLevel(log_level)
 
-
 def request_id_required(f: Callable) -> Callable:
     """Decorator to ensure request has a request ID."""
 
@@ -166,7 +161,6 @@ def request_id_required(f: Callable) -> Callable:
         return f(*args, **kwargs)
 
     return decorated_function
-
 
 def track_request_id(f: Callable) -> Callable:
     """Decorator to track request ID and add it to response headers.
@@ -236,12 +230,10 @@ def track_request_id(f: Callable) -> Callable:
 
     return decorated_function
 
-
 # Middleware for automatic request ID handling
 def request_id_middleware():
     """Flask before_request handler to set up request IDs."""
     RequestIDManager.set_request_id()
-
 
 def setup_request_id_middleware(app):
     """Set up request ID middleware for the Flask app."""

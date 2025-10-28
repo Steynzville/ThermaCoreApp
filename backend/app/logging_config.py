@@ -8,7 +8,6 @@ import logging
 import sys
 from typing import Any
 
-
 def configure_logging(
     level: str = "INFO",
     log_file: str | None = None,
@@ -38,7 +37,6 @@ def configure_logging(
         handlers=handlers,
     )
 
-
 def log_exception_with_context(
     logger: logging.Logger,
     exception: Exception,
@@ -62,7 +60,6 @@ def log_exception_with_context(
         message = f"{message} | Context: {context_str}"
 
     log_method(message, exc_info=True)
-
 
 def create_logger(name: str, level: str = "INFO") -> logging.Logger:
     """Create a configured logger instance.

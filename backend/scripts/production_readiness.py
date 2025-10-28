@@ -25,7 +25,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-
 class ProductionReadinessValidator:
     """Validates production readiness of the ThermaCore platform."""
 
@@ -546,7 +545,6 @@ class ProductionReadinessValidator:
         # Generate report
         return self.generate_readiness_report()
 
-
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
@@ -573,7 +571,6 @@ def main():
     is_ready = validator.run_all_validations()
 
     return 0 if is_ready else 1
-
 
 if __name__ == "__main__":
     sys.exit(main())

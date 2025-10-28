@@ -8,7 +8,6 @@ Common patterns include lookup tables, strategy pattern, and guard clauses.
 from collections.abc import Callable
 from typing import Any
 
-
 class BranchReducer:
     """Utility class for reducing conditional branches using various patterns."""
 
@@ -91,7 +90,6 @@ class BranchReducer:
                 continue
         return results
 
-
 def create_status_checker(
     status_checks: dict[str, Callable[[], tuple[str, str | None]]],
 ) -> Callable[[], dict[str, Any]]:
@@ -125,7 +123,6 @@ def create_status_checker(
         return results
 
     return check_all_status
-
 
 def create_validator_chain(
     validators: list[tuple[str, Callable[[Any], tuple[bool, str | None]]]],

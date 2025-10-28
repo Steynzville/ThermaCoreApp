@@ -8,7 +8,6 @@ objects.
 from dataclasses import dataclass, field
 from typing import Any
 
-
 @dataclass
 class AuditEventParams:
     """Parameters for audit event logging.
@@ -49,7 +48,6 @@ class AuditEventParams:
             "error_message": self.error_message,
         }
 
-
 @dataclass
 class ServiceInitConfig:
     """Configuration for service initialization.
@@ -74,7 +72,6 @@ class ServiceInitConfig:
             Configuration value
         """
         return self.config_overrides.get(key, default)
-
 
 @dataclass
 class DataProcessingParams:
@@ -101,7 +98,6 @@ class DataProcessingParams:
         """
         return (value * self.scale_factor) + self.offset
 
-
 @dataclass
 class CertificateLoadConfig:
     """Configuration for certificate loading operations.
@@ -127,7 +123,6 @@ class CertificateLoadConfig:
             "key": self.key_path,
             "trust": self.trust_path,
         }
-
 
 class ParameterBuilder:
     """Builder pattern for constructing parameter objects.
@@ -180,7 +175,6 @@ class ParameterBuilder:
             Instance of the parameter class
         """
         return self.param_class(**self.params)
-
 
 def group_related_params(
     params: dict[str, Any],

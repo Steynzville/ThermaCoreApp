@@ -10,7 +10,6 @@ from app.models import User
 # Test constants
 MAX_TEST_USERNAME_LENGTH = 1000  # Maximum username length for DoS protection testing
 
-
 def unwrap_response(response):
     """Helper to extract data from standardized API response envelope.
 
@@ -23,7 +22,6 @@ def unwrap_response(response):
         return data["data"]
     # Otherwise return as-is (for error responses)
     return data
-
 
 class TestAuthentication:
     """Test authentication endpoints."""
@@ -219,7 +217,6 @@ class TestAuthentication:
 
         assert response.status_code == 200
 
-
 class TestTokenSecurity:
     """Test JWT token security enhancements."""
 
@@ -277,7 +274,6 @@ class TestTokenSecurity:
 
         # Verify jti claim is present in refresh token
         assert "jti" in decoded, "Refresh token should include jti (JWT ID) claim"
-
 
 class TestErrorHandling:
     """Test error handling improvements using SecurityAwareErrorHandler."""
@@ -405,7 +401,6 @@ class TestErrorHandling:
             admin_user.is_active = True
             db_session.commit()
 
-
 class TestEdgeCases:
     """Test edge cases and error scenarios."""
 
@@ -481,7 +476,6 @@ class TestEdgeCases:
 
         # Should return 401 for missing token
         assert response.status_code == 401
-
 
 class TestUserRegistration:
     """Test user registration functionality."""
@@ -681,7 +675,6 @@ class TestUserRegistration:
         # Check for "already exists" in either error or details.context
         error_text = str(data).lower()
         assert "already exists" in error_text or "duplicate" in error_text
-
 
 class TestSecurityEnhancements:
     """Test security enhancements and attack prevention."""

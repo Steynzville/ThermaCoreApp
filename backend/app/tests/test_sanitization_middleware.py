@@ -5,7 +5,6 @@ from flask import Flask, jsonify
 
 from app.middleware.validation import sanitize
 
-
 class TestSanitizeFunction:
     """Test the sanitize() function."""
 
@@ -171,7 +170,6 @@ class TestSanitizeFunction:
         assert result_shallow["level3"] == {
             "[deeply nested structure]": "[deeply nested structure]",
         }
-
 
 class TestLoggingFilter:
     """Test the SanitizingFilter for logging."""
@@ -391,7 +389,6 @@ class TestLoggingFilter:
             # This should not raise an error
             app.logger.info("Test message with unit_id=%s", "unit\n123")
 
-
 class TestIntegrationWithoutRequestMutation:
     """Test that the application works without mutating request objects."""
 
@@ -424,7 +421,6 @@ class TestIntegrationWithoutRequestMutation:
             # Flask handles URL decoding, so %0A becomes \n
             assert data["unit_id"] == "unit123\nmalicious"
             assert data["original"] is True
-
 
 @pytest.fixture
 def app():

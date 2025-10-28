@@ -5,7 +5,6 @@ from typing import Any
 
 from flask import current_app
 
-
 def _get_environment_from_config(config: dict[str, Any]) -> str | None:
     """Extract environment information from config object.
 
@@ -18,7 +17,6 @@ def _get_environment_from_config(config: dict[str, Any]) -> str | None:
     """
     return config.get("FLASK_ENV", "").lower()
 
-
 def _is_debug_enabled(config: dict[str, Any]) -> bool:
     """Check if DEBUG is enabled in config.
 
@@ -30,7 +28,6 @@ def _is_debug_enabled(config: dict[str, Any]) -> bool:
 
     """
     return config.get("DEBUG", False)
-
 
 def _get_effective_app_config(app=None) -> dict[str, Any] | None:
     """Get the effective application configuration.
@@ -52,7 +49,6 @@ def _get_effective_app_config(app=None) -> dict[str, Any] | None:
         pass
 
     return None
-
 
 def _check_environment_mismatch(
     flask_env: str,
@@ -83,7 +79,6 @@ def _check_environment_mismatch(
         debug_enabled and (flask_env in production_envs or app_env in production_envs)
     )
 
-
 def is_testing_environment(app=None) -> bool:
     """Check if running in testing environment.
 
@@ -112,7 +107,6 @@ def is_testing_environment(app=None) -> bool:
     # Check app configuration using helper (second priority)
     config = _get_effective_app_config(app)
     return bool(config and config.get("TESTING", False))
-
 
 def is_production_environment(app=None) -> bool:
     """Robust production environment detection.
@@ -189,7 +183,6 @@ def is_production_environment(app=None) -> bool:
     # explicit environment variables (FLASK_ENV=development, DEBUG=1) for local runs.
     return True
 
-
 def is_development_environment(app=None) -> bool:
     """Check if running in development environment.
 
@@ -252,7 +245,6 @@ def is_development_environment(app=None) -> bool:
                 return True
 
     return False
-
 
 def handle_environment_detection_error(
     service_name: str,

@@ -8,7 +8,6 @@ from flask_socketio import SocketIO, emit, join_room, leave_room
 
 logger = logging.getLogger(__name__)
 
-
 class WebSocketService:
     """WebSocket service for real-time communication with frontend clients."""
 
@@ -278,7 +277,6 @@ class WebSocketService:
             "clients": list(self._connected_clients.keys()),
             "service_status": "active" if self.socketio else "inactive",
         }
-
 
 # Global WebSocket service instance
 websocket_service = WebSocketService()

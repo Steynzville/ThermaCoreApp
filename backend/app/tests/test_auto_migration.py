@@ -15,7 +15,6 @@ from app.utils.auto_migration import (
     table_exists,
 )
 
-
 class TestAutoMigration:
     """Test auto-migration functionality."""
 

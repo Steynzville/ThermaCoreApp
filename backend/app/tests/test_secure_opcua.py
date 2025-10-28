@@ -8,7 +8,6 @@ import pytest
 from app.services.secure_opcua_client import SecureOPCUAClient
 from app.services.secure_opcua_wrapper import SecureOPCUAWrapper, secure_operation
 
-
 class TestSecureOPCUAWrapper:
     """Test secure OPC-UA wrapper functionality."""
 
@@ -176,7 +175,6 @@ class TestSecureOPCUAWrapper:
 
         assert wrapper._connection_attempts == 0
 
-
 class TestSecureOperationDecorator:
     """Test secure operation decorator."""
 
@@ -205,7 +203,6 @@ class TestSecureOperationDecorator:
 
         with pytest.raises(ValueError, match="Test error"):
             obj.test_method()
-
 
 class TestSecureOPCUAClient:
     """Test secure OPC-UA client."""
@@ -279,7 +276,6 @@ class TestSecureOPCUAClient:
             result = client.subscribe_to_node("", "unit1", "temperature")
 
             assert result is False
-
 
 class TestIntegration:
     """Integration tests for secure OPC-UA components."""

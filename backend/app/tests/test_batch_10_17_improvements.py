@@ -13,7 +13,6 @@ from app.utils.environment import (
     is_testing_environment,
 )
 
-
 class TestEnvironmentDetection:
     """Test robust environment detection."""
 
@@ -103,7 +102,6 @@ class TestEnvironmentDetection:
             assert is_production_environment(mock_app) is False
             assert is_development_environment(mock_app) is False
 
-
 class TestOPCUASecurityPolicyValidation:
     """Test OPC UA security policy validation improvements."""
 
@@ -157,7 +155,6 @@ class TestOPCUASecurityPolicyValidation:
 
         with pytest.raises(ValueError, match="Invalid OPC UA security policy"):
             client._validate_security_policy("InvalidPolicy", require_strong=True)
-
 
 class TestCriticalServiceInitialization:
     """Test shared critical service initialization helper."""

@@ -12,7 +12,6 @@ from sqlalchemy.orm import Query
 
 from app.models import RoleEnum, SensorReading
 
-
 def get_current_user_id() -> tuple[int | None, bool]:
     """Safely convert JWT identity to integer user ID with error handling.
 
@@ -30,7 +29,6 @@ def get_current_user_id() -> tuple[int | None, bool]:
         return int(identity), True
     except (ValueError, TypeError, AttributeError):
         return None, False
-
 
 def get_role_permissions(role: str) -> list[str]:
     """Get comprehensive permissions for a specific role.
@@ -91,7 +89,6 @@ def get_role_permissions(role: str) -> list[str]:
 
     return role_permissions_map.get(role_enum, [])
 
-
 def paginate_query(query: Query, page: int = 1, per_page: int = 50) -> dict[str, Any]:
     """Paginate a SQLAlchemy query and return formatted result.
 
@@ -118,7 +115,6 @@ def paginate_query(query: Query, page: int = 1, per_page: int = 50) -> dict[str,
         "has_prev": pagination.has_prev,
     }
 
-
 def validate_json_request():
     """Decorator to validate JSON request data."""
 
@@ -137,7 +133,6 @@ def validate_json_request():
 
     return decorator
 
-
 def format_timestamp(dt: datetime) -> str:
     """Format datetime to ISO string.
 
@@ -151,7 +146,6 @@ def format_timestamp(dt: datetime) -> str:
     if dt:
         return dt.isoformat()
     return None
-
 
 def parse_timestamp(timestamp_str: str) -> datetime:
     """Parse ISO timestamp string to datetime using robust dateutil parser.
@@ -186,7 +180,6 @@ def parse_timestamp(timestamp_str: str) -> datetime:
     except (ValueError, TypeError) as e:
         raise ValueError(f"Invalid timestamp format: {timestamp_str}") from e
 
-
 def calculate_time_range(hours_back: int = 24) -> tuple[datetime, datetime]:
     """Calculate timezone-aware UTC time range for queries.
 
@@ -201,7 +194,6 @@ def calculate_time_range(hours_back: int = 24) -> tuple[datetime, datetime]:
     end_time = datetime.now(timezone.utc)
     start_time = end_time - timedelta(hours=hours_back)
     return start_time, end_time
-
 
 def build_search_filter(model, search_fields: list[str], search_term: str):
     """Build SQLAlchemy filter for text search across multiple fields.
@@ -225,7 +217,6 @@ def build_search_filter(model, search_fields: list[str], search_term: str):
             search_conditions.append(field.ilike(f"%{search_term}%"))
 
     return or_(*search_conditions) if search_conditions else None
-
 
 def validate_unit_readings(readings_data: dict[str, float]) -> list[str]:
     """Validate unit sensor readings data.
@@ -263,7 +254,6 @@ def validate_unit_readings(readings_data: dict[str, float]) -> list[str]:
 
     return errors
 
-
 def get_recent_sensor_readings(
     unit_id: str,
     sensor_type: str | None = None,
@@ -295,7 +285,6 @@ def get_recent_sensor_readings(
         query = query.filter(Sensor.sensor_type == sensor_type)
 
     return query.order_by(SensorReading.timestamp.desc()).limit(limit).all()
-
 
 def calculate_unit_efficiency(unit_id: str, hours_back: int = 24) -> dict[str, float]:
     """Calculate basic efficiency metrics for a unit.
@@ -351,7 +340,6 @@ def calculate_unit_efficiency(unit_id: str, hours_back: int = 24) -> dict[str, f
         )
 
     return metrics
-
 
 def generate_health_score(unit_id: str) -> dict[str, Any]:
     """Generate a health score for a unit based on various factors.

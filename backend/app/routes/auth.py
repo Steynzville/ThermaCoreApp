@@ -39,7 +39,6 @@ from app.utils.schemas import (
 
 auth_bp = Blueprint("auth", __name__)
 
-
 @auth_bp.route("/auth/register", methods=["POST"])
 @track_request_id
 @standard_rate_limit
@@ -137,7 +136,6 @@ def register(data):
             409,
         )
 
-
 @auth_bp.route("/auth/self-register", methods=["POST"])
 @track_request_id
 @standard_rate_limit
@@ -231,7 +229,6 @@ def self_register(data):
             f"User registration: {error_msg}",
             409,
         )
-
 
 @auth_bp.route("/auth/login", methods=["POST"])
 @track_request_id
@@ -417,7 +414,6 @@ def login(data):
             500,
         )
 
-
 @auth_bp.route("/auth/refresh", methods=["POST"])
 @jwt_required(refresh=True)
 def refresh():
@@ -591,7 +587,6 @@ def refresh():
             500,
         )
 
-
 @auth_bp.route("/auth/me", methods=["GET"])
 @jwt_required()
 def get_current_user():
@@ -631,7 +626,6 @@ def get_current_user():
     user_schema = UserSchema()
     return jsonify(user_schema.dump(user)), 200
 
-
 @auth_bp.route("/auth/logout", methods=["POST"])
 @jwt_required()
 def logout():
@@ -648,7 +642,6 @@ def logout():
     # In a production environment, you would typically blacklist the token
     # For now, we rely on client-side token removal
     return jsonify({"message": "Logout successful"}), 200
-
 
 @auth_bp.route("/auth/change-password", methods=["POST"])
 @jwt_required()
@@ -724,7 +717,6 @@ def change_password(data):
             "Password change",
             500,
         )
-
 
 @auth_bp.route("/auth/forgot-password", methods=["POST"])
 @track_request_id
@@ -830,7 +822,6 @@ def forgot_password(data):
             "Password reset request",
             500,
         )
-
 
 @auth_bp.route("/auth/reset-password", methods=["POST"])
 @track_request_id
@@ -951,7 +942,6 @@ def reset_password(data):
             "Password reset",
             500,
         )
-
 
 @auth_bp.route("/auth/emergency-admin", methods=["POST"])
 @track_request_id

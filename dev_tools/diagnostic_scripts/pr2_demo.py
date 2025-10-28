@@ -14,7 +14,6 @@ Run this script to see examples of the API responses with the new middleware.
 
 import json
 
-
 def show_examples():
     print("🚀 PR2 Middleware Features Demo")
     print("=" * 60)
@@ -149,9 +148,9 @@ def show_examples():
 @validate_schema(LoginSchema)        # Validate JSON against schema
 def login():
     data = g.validated_data          # Access validated data from middleware
-    
+
     # Login logic here...
-    
+
     return SecurityAwareErrorHandler.create_success_response(
         token_data, 'Login successful', 200
     )
@@ -162,7 +161,6 @@ def login():
     print("🎉 PR2 Implementation Complete!")
     print("All middleware components are ready for production use.")
     print("\nFor full documentation, see: PR2_IMPLEMENTATION_DOCUMENTATION.md")
-
 
 if __name__ == "__main__":
     show_examples()

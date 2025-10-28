@@ -9,7 +9,6 @@ from app.services.modbus_service import (
     _is_sensitive_logging_enabled,
 )
 
-
 class TestModbusSensitiveLogging:
     """Test Modbus sensitive logging configuration and behavior."""
 

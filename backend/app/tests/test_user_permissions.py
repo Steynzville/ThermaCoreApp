@@ -6,7 +6,6 @@ import time
 from app.models import Role, User
 from app.utils.helpers import get_role_permissions
 
-
 class TestRolePermissions:
     """Test role-based permission assignment."""
 
@@ -75,7 +74,6 @@ class TestRolePermissions:
         permissions_mixed = get_role_permissions("Admin")
 
         assert permissions_lower == permissions_upper == permissions_mixed
-
 
 class TestUserCreationWithPermissions:
     """Test user creation with proper permission assignment."""

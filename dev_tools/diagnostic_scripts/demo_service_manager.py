@@ -18,13 +18,11 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from app.utils.service_manager import ServiceManager, ServiceType
 
-
 def print_header(text):
     """Print a formatted header."""
     print("\n" + "=" * 80)
     print(f"  {text}")
     print("=" * 80 + "\n")
-
 
 def demo_service_classification():
     """Demo 1: Service Classification"""
@@ -49,7 +47,6 @@ def demo_service_classification():
     print("-" * 80)
     print("  REQUIRED services: Must be available or app won't start (in production)")
     print("  OPTIONAL services: Can fail gracefully without crashing the app")
-
 
 def demo_graceful_degradation():
     """Demo 2: Graceful Degradation for Optional Services"""
@@ -87,7 +84,6 @@ def demo_graceful_degradation():
     print("  ✓ MQTT continues to collect data")
     print("  ✓ System marked as 'degraded' but operational")
 
-
 def demo_production_safety():
     """Demo 3: Production Safety with Required Services"""
     print_header("DEMO 3: Production Safety")
@@ -108,7 +104,6 @@ def demo_production_safety():
     should_raise = manager.should_raise_error("optional_service", is_production=True)
     print(f"  Should app crash? {should_raise}")
     print("  → NO - Application continues with degraded functionality\n")
-
 
 def demo_health_monitoring():
     """Demo 4: Health Monitoring"""
@@ -165,7 +160,6 @@ def demo_health_monitoring():
     print("⚠ Some optional services degraded")
     print("→ System operational but with reduced capabilities")
 
-
 def demo_configuration():
     """Demo 5: Configuration-Driven Setup"""
     print_header("DEMO 5: Configuration-Driven Setup")
@@ -217,7 +211,6 @@ def demo_configuration():
                 print(f"  {service:10} Required: {value}")
         print()
 
-
 def main():
     """Run all demos."""
     print("\n" + "╔" + "=" * 78 + "╗")
@@ -246,7 +239,6 @@ def main():
     print("  GET /health                      - Overall application health")
     print("  GET /api/v1/services/status      - Detailed service status")
     print()
-
 
 if __name__ == "__main__":
     main()

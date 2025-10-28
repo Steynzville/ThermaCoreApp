@@ -10,7 +10,6 @@ logger = SecureLogger.get_secure_logger(__name__)
 
 opcua_monitoring = Blueprint("opcua_monitoring", __name__, url_prefix="/api/opcua")
 
-
 @opcua_monitoring.route("/security/status", methods=["GET"])
 def get_opcua_security_status():
     """Get comprehensive OPC-UA security status.
@@ -53,7 +52,6 @@ def get_opcua_security_status():
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             },
         ), 500
-
 
 @opcua_monitoring.route("/security/events", methods=["GET"])
 def get_opcua_security_events():
@@ -103,7 +101,6 @@ def get_opcua_security_events():
             },
         ), 500
 
-
 @opcua_monitoring.route("/connection/status", methods=["GET"])
 def get_opcua_connection_status():
     """Get OPC-UA connection status.
@@ -148,7 +145,6 @@ def get_opcua_connection_status():
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             },
         ), 500
-
 
 @opcua_monitoring.route("/nodes", methods=["GET"])
 def get_opcua_nodes():
@@ -206,7 +202,6 @@ def get_opcua_nodes():
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             },
         ), 500
-
 
 def init_opcua_monitoring(app):
     """Initialize OPC-UA monitoring blueprint.

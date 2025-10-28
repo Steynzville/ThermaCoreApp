@@ -9,7 +9,6 @@ from app import create_app
 from app.services.data_storage_service import data_storage_service
 from app.utils.error_handler import SecurityAwareErrorHandler
 
-
 class TestSecurityImprovements:
     """Test security improvements implemented."""
 

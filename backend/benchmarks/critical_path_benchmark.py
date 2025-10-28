@@ -31,7 +31,6 @@ from typing import Any
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
-
 class CriticalPathBenchmark:
     """Benchmark suite for critical system paths."""
 
@@ -480,7 +479,6 @@ class CriticalPathBenchmark:
 
         logger.info("\n📊 Results saved to: critical_path_results.json")
 
-
 def main():
     """Main entry point."""
     benchmark = CriticalPathBenchmark()
@@ -494,10 +492,8 @@ def main():
     logger.info("\n✅ All benchmarks passed!")
     return 0
 
-
 if __name__ == "__main__":
     sys.exit(main())
-
 
 if __name__ == "__main__":
     exit(main())

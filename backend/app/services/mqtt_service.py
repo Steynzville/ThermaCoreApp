@@ -13,7 +13,6 @@ from app.utils.secure_logger import SecureLogger
 
 logger = SecureLogger.get_secure_logger(__name__)
 
-
 class MQTTClient:
     """MQTT client for subscribing to SCADA data topics."""
 
@@ -472,7 +471,6 @@ class MQTTClient:
             },
             "demo": False,  # MQTT is a real protocol implementation
         }
-
 
 # Global MQTT client instance
 mqtt_client = MQTTClient()

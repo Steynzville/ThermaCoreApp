@@ -6,7 +6,6 @@ import pytest
 
 from app import create_app
 
-
 class TestScadaSecurityIntegration:
     """Integration tests for SCADA endpoint security."""
 

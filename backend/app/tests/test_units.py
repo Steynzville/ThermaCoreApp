@@ -5,7 +5,6 @@ from datetime import datetime
 
 from app.models import Unit
 
-
 def unwrap_response(response):
     """Helper to extract data from standardized API response envelope.
 
@@ -18,7 +17,6 @@ def unwrap_response(response):
         return data["data"]
     # Otherwise return as-is (for error responses)
     return data
-
 
 class TestUnitsAPI:
     """Test units API endpoints."""
@@ -328,7 +326,6 @@ class TestUnitsAPI:
         assert data["has_alert"] is True
         assert data["has_alarm"] is True
 
-
 class TestUnitSensors:
     """Test unit sensors functionality."""
 
@@ -401,7 +398,6 @@ class TestUnitSensors:
         data = unwrap_response(response)
 
         assert isinstance(data, list)
-
 
 class TestUnitsPermissions:
     """Test units API permissions."""

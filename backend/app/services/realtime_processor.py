@@ -9,7 +9,6 @@ from app.services.websocket_service import websocket_service
 
 logger = logging.getLogger(__name__)
 
-
 class RealTimeDataProcessor:
     """Service for processing and routing real-time SCADA data."""
 
@@ -340,7 +339,6 @@ class RealTimeDataProcessor:
             "mqtt_status": mqtt_client.get_status(),
             "websocket_status": websocket_service.get_status(),
         }
-
 
 # Global real-time data processor instance
 realtime_processor = RealTimeDataProcessor()

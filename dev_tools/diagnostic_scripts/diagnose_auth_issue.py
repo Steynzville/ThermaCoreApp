@@ -30,33 +30,27 @@ from app.models import User, Role, Permission, RoleEnum
 from sqlalchemy import inspect, text
 from sqlalchemy.exc import OperationalError
 
-
 def print_header(title):
     """Print a formatted header."""
     print("\n" + "=" * 80)
     print(f" {title}")
     print("=" * 80)
 
-
 def print_success(message):
     """Print a success message."""
     print(f"✅ {message}")
-
 
 def print_error(message):
     """Print an error message."""
     print(f"❌ {message}")
 
-
 def print_warning(message):
     """Print a warning message."""
     print(f"⚠️  {message}")
 
-
 def print_info(message):
     """Print an info message."""
     print(f"ℹ️  {message}")
-
 
 def check_database_connection(app):
     """Check if database is accessible."""
@@ -79,7 +73,6 @@ def check_database_connection(app):
     except Exception as e:
         print_error(f"Unexpected error connecting to database: {e}")
         return False
-
 
 def check_tables_exist(app):
     """Check if required tables exist."""
@@ -112,7 +105,6 @@ def check_tables_exist(app):
     except Exception as e:
         print_error(f"Error checking tables: {e}")
         return False
-
 
 def check_roles_and_permissions(app):
     """Check if roles and permissions are populated."""
@@ -173,7 +165,6 @@ def check_roles_and_permissions(app):
 
         traceback.print_exc()
         return False
-
 
 def check_admin_user(app):
     """Check if default admin user exists and is properly configured."""
@@ -250,7 +241,6 @@ def check_admin_user(app):
         traceback.print_exc()
         return False
 
-
 def check_environment_variables():
     """Check if required environment variables are set."""
     print_header("5. Environment Variables Check")
@@ -291,7 +281,6 @@ def check_environment_variables():
             print_warning(f"  {var}: NOT SET ({description})")
 
     return all_good
-
 
 def test_login_logic(app):
     """Test the login logic without making HTTP request."""
@@ -380,7 +369,6 @@ def test_login_logic(app):
         traceback.print_exc()
         return False
 
-
 def main():
     """Run all diagnostic checks."""
     print("\n" + "=" * 80)
@@ -440,7 +428,6 @@ def main():
         print("4. If admin user is missing: Run create_first_admin.py")
         print("5. After fixes, re-run this diagnostic script")
         return 1
-
 
 if __name__ == "__main__":
     sys.exit(main())

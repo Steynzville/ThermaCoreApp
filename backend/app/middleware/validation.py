@@ -17,7 +17,6 @@ CONTROL_CHARS = dict.fromkeys(range(32))
 CONTROL_CHARS[0x2028] = None
 CONTROL_CHARS[0x2029] = None
 
-
 def sanitize(value: Any, depth: int = 0, max_depth: int = 10) -> Any:
     """Sanitize input to prevent log injection and other security issues.
 
@@ -67,7 +66,6 @@ def sanitize(value: Any, depth: int = 0, max_depth: int = 10) -> Any:
         return [sanitize(item, depth + 1, max_depth) for item in value]
     # Return other types as-is
     return value
-
 
 class RequestValidator:
     """Comprehensive request validation middleware with error envelope support."""
@@ -149,10 +147,8 @@ class RequestValidator:
             ), 413
         return None
 
-
 # Legacy validate_schema decorator removed - all routes now use webargs @use_args decorator
 # This ensures a single, consistent validation strategy across the entire codebase
-
 
 # Configure webargs error handler to use our standardized error format
 @parser.error_handler
@@ -187,7 +183,6 @@ def handle_webargs_error(error, req, schema, *, error_status_code, error_headers
     # Use 422 (Unprocessable Entity) as default for validation errors (webargs convention)
     response = make_response(jsonify(error_response), error_status_code or 422)
     abort(response)
-
 
 def validate_query_params(**param_validators):
     """Decorator to validate query parameters with custom validators.
@@ -233,7 +228,6 @@ def validate_query_params(**param_validators):
         return decorated_function
 
     return decorator
-
 
 def validate_path_params(**param_validators):
     """Decorator to validate path parameters with custom validators.

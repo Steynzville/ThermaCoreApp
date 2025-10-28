@@ -26,7 +26,6 @@ from app.utils.validation import validate_json_request
 units_bp = Blueprint("units", __name__)
 logger = logging.getLogger(__name__)
 
-
 @units_bp.route("/units", methods=["GET"])
 @jwt_required()
 @permission_required("read_units")
@@ -119,7 +118,6 @@ def get_units():
         },
     ), 200
 
-
 @units_bp.route("/units/<string:unit_id>", methods=["GET"])
 @jwt_required()
 @permission_required("read_units")
@@ -146,7 +144,6 @@ def get_unit(unit_id):
     unit = Unit.query.get_or_404(unit_id)
     unit_schema = UnitSchema()
     return jsonify(unit_schema.dump(unit)), 200
-
 
 @units_bp.route("/units", methods=["POST"])
 @jwt_required()
@@ -215,7 +212,6 @@ def create_unit():
             return jsonify({"error": "Serial number already exists"}), 409
         return jsonify({"error": "Database constraint violation"}), 409
 
-
 @units_bp.route("/units/<string:unit_id>", methods=["PUT"])
 @jwt_required()
 @permission_required("write_units")
@@ -279,7 +275,6 @@ def update_unit(unit_id):
         db.session.rollback()
         return jsonify({"error": "Database constraint violation"}), 409
 
-
 @units_bp.route("/units/<string:unit_id>", methods=["DELETE"])
 @jwt_required()
 @permission_required("delete_units")
@@ -308,7 +303,6 @@ def delete_unit(unit_id):
     db.session.commit()
 
     return "", 204
-
 
 @units_bp.route("/units/<string:unit_id>/sensors", methods=["GET"])
 @jwt_required()
@@ -339,7 +333,6 @@ def get_unit_sensors(unit_id):
     unit = Unit.query.get_or_404(unit_id)
     sensors_schema = SensorSchema(many=True)
     return jsonify(sensors_schema.dump(unit.sensors)), 200
-
 
 @units_bp.route("/units/<string:unit_id>/sensors", methods=["POST"])
 @jwt_required()
@@ -394,7 +387,6 @@ def create_unit_sensor(unit_id):
 
     sensor_schema = SensorSchema()
     return jsonify(sensor_schema.dump(sensor)), 201
-
 
 @units_bp.route("/units/<string:unit_id>/readings", methods=["GET"])
 @jwt_required()
@@ -460,7 +452,6 @@ def get_unit_readings(unit_id):
 
     readings_schema = SensorReadingSchema(many=True)
     return jsonify(readings_schema.dump(readings)), 200
-
 
 @units_bp.route("/units/<string:unit_id>/status", methods=["PATCH"])
 @jwt_required()
@@ -553,7 +544,6 @@ def update_unit_status(unit_id):
 
     unit_schema = UnitSchema()
     return jsonify(unit_schema.dump(unit)), 200
-
 
 @units_bp.route("/units/stats", methods=["GET"])
 @jwt_required()

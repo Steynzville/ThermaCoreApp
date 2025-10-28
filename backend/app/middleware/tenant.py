@@ -18,7 +18,6 @@ from app.models import User
 
 logger = logging.getLogger(__name__)
 
-
 def get_current_tenant_id():
     """Get the current tenant ID from request context.
 
@@ -35,7 +34,6 @@ def get_current_tenant_id():
 
     return None
 
-
 def set_current_tenant(tenant_id):
     """Set the current tenant ID in request context.
 
@@ -43,7 +41,6 @@ def set_current_tenant(tenant_id):
         tenant_id: Tenant ID to set (can be None for cross-tenant access)
     """
     g.tenant_id = tenant_id
-
 
 def is_admin_with_cross_tenant_access():
     """Check if current user is an admin with cross-tenant access.
@@ -55,7 +52,6 @@ def is_admin_with_cross_tenant_access():
         return g.is_cross_tenant_admin
 
     return False
-
 
 def setup_tenant_context():
     """Setup tenant context for the current request.
@@ -98,7 +94,6 @@ def setup_tenant_context():
         logger.exception(f"Error setting up tenant context: {e}")
         # Don't fail the request, just log the error
 
-
 def tenant_filter(query, model):
     """Apply tenant filtering to a SQLAlchemy query.
 
@@ -137,7 +132,6 @@ def tenant_filter(query, model):
     logger.warning("No tenant_id found for non-admin user, returning empty results")
     return query.filter(model.tenant_id == -1)  # Non-existent tenant
 
-
 def tenant_required(f):
     """Decorator to ensure tenant context is set for the request.
 
@@ -155,7 +149,6 @@ def tenant_required(f):
 
     return decorated_function
 
-
 def validate_tenant_access(tenant_id):
     """Validate that the current user can access the specified tenant.
 
@@ -172,7 +165,6 @@ def validate_tenant_access(tenant_id):
     # Non-admin users can only access their own tenant
     current_tenant = get_current_tenant_id()
     return current_tenant == tenant_id
-
 
 def get_tenant_from_request():
     """Get tenant ID from request parameters.
@@ -193,7 +185,6 @@ def get_tenant_from_request():
 
     # Return current tenant
     return get_current_tenant_id()
-
 
 def ensure_tenant_isolation(obj):
     """Ensure an object belongs to the current tenant.
@@ -226,7 +217,6 @@ def ensure_tenant_isolation(obj):
         )
 
     return True
-
 
 def set_tenant_for_new_object(obj):
     """Set tenant ID for a new object being created.

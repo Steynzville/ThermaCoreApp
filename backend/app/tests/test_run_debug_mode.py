@@ -5,7 +5,6 @@ from unittest.mock import patch
 
 from app import create_app
 
-
 class TestDebugModeConfiguration:
     """Test that app.debug is correctly set based on FLASK_ENV."""
 

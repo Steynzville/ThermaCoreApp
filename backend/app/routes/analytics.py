@@ -25,7 +25,6 @@ from app.utils.schemas import (
 # Create analytics blueprint
 analytics_bp = Blueprint("analytics", __name__)
 
-
 @analytics_bp.route("/analytics/dashboard/summary", methods=["GET"])
 @jwt_required()
 @permission_required("read_units")
@@ -159,7 +158,6 @@ def get_dashboard_summary():
             "Failed to generate dashboard summary",
         )
 
-
 @analytics_bp.route("/analytics/trends/<unit_id>", methods=["GET"])
 @jwt_required()
 @permission_required("read_units")
@@ -261,7 +259,6 @@ def get_unit_trends(args, unit_id):
 
     except Exception as e:
         return SecurityAwareErrorHandler.handle_error(e, "Failed to get unit trends")
-
 
 @analytics_bp.route("/analytics/performance/units", methods=["GET"])
 @jwt_required()
@@ -382,7 +379,6 @@ def get_units_performance(args):
             e,
             "Failed to get units performance",
         )
-
 
 @analytics_bp.route("/analytics/alerts/patterns", methods=["GET"])
 @jwt_required()

@@ -12,7 +12,6 @@ from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 
-
 def fix_user_permissions(engine):
     """Fix permissions for all existing users based on their roles.
 

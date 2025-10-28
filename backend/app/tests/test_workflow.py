@@ -12,7 +12,6 @@ MAX_REPO_ROOT_SEARCH_DEPTH = 10
 # Skip message for when workflow file is not accessible
 WORKFLOW_FILE_SKIP_MESSAGE = "Workflow file not accessible in this environment (e.g., Docker container without repository mount)"
 
-
 def find_workflow_file(filename="checks.yml"):
     """Find a workflow file using robust path resolution with multiple fallbacks.
 
@@ -94,7 +93,6 @@ def find_workflow_file(filename="checks.yml"):
         + f"Test file location: {test_file}",
     )
 
-
 def _get_workflow_path():
     """Get the path to the workflow file using robust path resolution.
 
@@ -106,14 +104,12 @@ def _get_workflow_path():
     except FileNotFoundError:
         return None
 
-
 def test_workflow_file_exists():
     """Test that the GitHub Actions workflow file exists."""
     workflow_path = _get_workflow_path()
     if workflow_path is None:
         pytest.skip(WORKFLOW_FILE_SKIP_MESSAGE)
     assert workflow_path.exists(), f"Workflow file should exist at {workflow_path}"
-
 
 def test_workflow_file_has_content():
     """Test that the workflow file has valid content."""
@@ -125,7 +121,6 @@ def test_workflow_file_has_content():
 
     assert workflow_content, "Workflow file should have content"
     assert "jobs:" in workflow_content, "Workflow should have jobs defined"
-
 
 def test_workflow_has_required_jobs():
     """Test that the workflow has required jobs."""
@@ -142,13 +137,11 @@ def test_workflow_has_required_jobs():
         "Workflow should have python-quality-and-security job"
     )
 
-
 def test_python_environment():
     """Test that Python environment is set up correctly for tests."""
     import sys
 
     assert sys.version_info >= (3, 8), "Python version should be 3.8 or higher"
-
 
 def test_backend_structure():
     """Test that backend structure is correct."""

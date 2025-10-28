@@ -12,7 +12,6 @@ from pathlib import Path
 backend_dir = Path(__file__).parent
 sys.path.insert(0, str(backend_dir))
 
-
 class TestRunner:
     def __init__(self):
         self.results = {
@@ -575,7 +574,6 @@ class TestRunner:
         print("\n🏁 Test Execution Complete!")
         return overall_success
 
-
 def main():
     """Main test execution."""
     runner = TestRunner()
@@ -589,7 +587,6 @@ def main():
             "\n⚠️ PARTIAL SUCCESS: Core functionality verified, some tests need dependencies"
         )
         return 0  # Return 0 since core functionality is working
-
 
 if __name__ == "__main__":
     sys.exit(main())

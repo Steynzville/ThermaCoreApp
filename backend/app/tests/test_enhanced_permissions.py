@@ -4,7 +4,6 @@ import pytest
 
 from app.models import PermissionEnum, Role, User
 
-
 class TestEnhancedPermissionHandling:
     """Test enhanced permission handling with strict type validation."""
 

@@ -26,7 +26,6 @@ logger = SecureLogger.get_secure_logger(__name__)
 # Constant for service unavailability warning message
 SERVICE_UNAVAILABLE_MSG = "service will be unavailable"
 
-
 class OPCUAClient:
     """OPC UA client for connecting to industrial automation systems."""
 
@@ -858,7 +857,6 @@ class OPCUAClient:
             "node_mappings": len(self._node_mappings),
             "mappings": self._node_mappings.copy() if opcua_available else {},
         }
-
 
 # Global OPC UA client instance
 opcua_client = OPCUAClient()

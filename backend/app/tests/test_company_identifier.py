@@ -2,7 +2,6 @@
 
 from app.utils.company_identifier import CompanyIdentifier
 
-
 class TestCompanyIdentifier:
     """Test company identifier generation and validation."""
 

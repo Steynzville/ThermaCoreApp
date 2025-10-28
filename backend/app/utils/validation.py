@@ -8,7 +8,6 @@ from werkzeug.exceptions import BadRequest
 
 logger = logging.getLogger(__name__)
 
-
 def validate_json_request(f):
     """Decorator to validate JSON request data.
 

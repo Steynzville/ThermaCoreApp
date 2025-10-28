@@ -11,7 +11,6 @@ from app.utils.error_handler import SecurityAwareErrorHandler
 # Create SCADA blueprint
 scada_bp = Blueprint("scada", __name__)
 
-
 @scada_bp.route("/scada/status", methods=["GET"])
 @jwt_required()
 @permission_required("read_units")
@@ -49,7 +48,6 @@ def get_scada_status():
 
     return jsonify(status)
 
-
 @scada_bp.route("/scada/mqtt/connect", methods=["POST"])
 @jwt_required()
 @permission_required("admin_panel")
@@ -75,7 +73,6 @@ def mqtt_connect():
     except Exception as e:
         return SecurityAwareErrorHandler.handle_mqtt_error(e, "connection")
 
-
 @scada_bp.route("/scada/mqtt/disconnect", methods=["POST"])
 @jwt_required()
 @permission_required("admin_panel")
@@ -98,7 +95,6 @@ def mqtt_disconnect():
         return SecurityAwareErrorHandler.handle_service_unavailable("MQTT client")
     except Exception as e:
         return SecurityAwareErrorHandler.handle_mqtt_error(e, "disconnection")
-
 
 @scada_bp.route("/scada/mqtt/subscribe", methods=["POST"])
 @jwt_required()
@@ -154,7 +150,6 @@ def mqtt_subscribe():
 
     except Exception as e:
         return SecurityAwareErrorHandler.handle_mqtt_error(e, "subscription")
-
 
 @scada_bp.route("/scada/mqtt/publish", methods=["POST"])
 @jwt_required()
@@ -220,7 +215,6 @@ def mqtt_publish():
     except Exception as e:
         return SecurityAwareErrorHandler.handle_mqtt_error(e, "message publishing")
 
-
 @scada_bp.route("/scada/alerts/rules", methods=["GET"])
 @jwt_required()
 @permission_required("read_units")
@@ -246,7 +240,6 @@ def get_alert_rules():
     return SecurityAwareErrorHandler.handle_service_unavailable(
         "Real-time processor",
     )
-
 
 @scada_bp.route("/scada/alerts/rules", methods=["POST"])
 @jwt_required()
@@ -330,7 +323,6 @@ def add_alert_rule():
             500,
         )
 
-
 @scada_bp.route("/scada/websocket/clients", methods=["GET"])
 @jwt_required()
 @permission_required("read_units")
@@ -352,7 +344,6 @@ def get_websocket_clients():
         clients = current_app.websocket_service.get_connected_clients()
         return jsonify(clients)
     return SecurityAwareErrorHandler.handle_service_unavailable("WebSocket service")
-
 
 @scada_bp.route("/scada/opcua/connect", methods=["POST"])
 @jwt_required()
@@ -382,7 +373,6 @@ def opcua_connect():
     except Exception as e:
         return SecurityAwareErrorHandler.handle_opcua_error(e, "server connection")
 
-
 @scada_bp.route("/scada/opcua/disconnect", methods=["POST"])
 @jwt_required()
 @permission_required("admin_panel")
@@ -402,7 +392,6 @@ def opcua_disconnect():
         current_app.opcua_client.disconnect()
         return jsonify({"status": "disconnected"})
     return SecurityAwareErrorHandler.handle_service_unavailable("OPC UA client")
-
 
 @scada_bp.route("/scada/opcua/browse", methods=["GET"])
 @jwt_required()
@@ -443,7 +432,6 @@ def opcua_browse():
         return jsonify(nodes)
     except Exception as e:
         return SecurityAwareErrorHandler.handle_opcua_error(e, "server browsing")
-
 
 @scada_bp.route("/scada/opcua/subscribe", methods=["POST"])
 @jwt_required()
@@ -522,7 +510,6 @@ def opcua_subscribe():
     except Exception as e:
         return SecurityAwareErrorHandler.handle_opcua_error(e, "node subscription")
 
-
 @scada_bp.route("/scada/opcua/read", methods=["POST"])
 @jwt_required()
 @permission_required("read_units")
@@ -579,7 +566,6 @@ def opcua_read_node():
     except Exception as e:
         return SecurityAwareErrorHandler.handle_opcua_error(e, "node value reading")
 
-
 @scada_bp.route("/scada/opcua/poll", methods=["POST"])
 @jwt_required()
 @permission_required("admin_panel")
@@ -606,9 +592,7 @@ def opcua_poll():
     except Exception as e:
         return SecurityAwareErrorHandler.handle_opcua_error(e, "node polling")
 
-
 # Protocol Gateway Simulator Routes
-
 
 @scada_bp.route("/scada/simulator/status", methods=["GET"])
 @jwt_required()
@@ -633,7 +617,6 @@ def get_simulator_status():
     return SecurityAwareErrorHandler.handle_service_unavailable(
         "Protocol simulator",
     )
-
 
 @scada_bp.route("/scada/simulator/start", methods=["POST"])
 @jwt_required()
@@ -685,7 +668,6 @@ def start_simulator():
             500,
         )
 
-
 @scada_bp.route("/scada/simulator/stop", methods=["POST"])
 @jwt_required()
 @permission_required("admin_panel")
@@ -707,7 +689,6 @@ def stop_simulator():
     return SecurityAwareErrorHandler.handle_service_unavailable(
         "Protocol simulator",
     )
-
 
 @scada_bp.route("/scada/simulator/inject", methods=["POST"])
 @jwt_required()
@@ -782,9 +763,7 @@ def inject_test_scenario():
             500,
         )
 
-
 # Device Status Monitoring Routes
-
 
 @scada_bp.route("/scada/devices/status", methods=["GET"])
 @jwt_required()
@@ -843,7 +822,6 @@ def get_all_devices_status():
         },
     )
 
-
 @scada_bp.route("/scada/devices/<device_id>/status", methods=["GET"])
 @jwt_required()
 @permission_required("read_units")
@@ -885,7 +863,6 @@ def get_device_status(device_id):
             return jsonify(dnp3_status["devices"][device_id])
 
     return SecurityAwareErrorHandler.handle_not_found("Device", device_id)
-
 
 @scada_bp.route("/scada/devices/status/history", methods=["GET"])
 @jwt_required()

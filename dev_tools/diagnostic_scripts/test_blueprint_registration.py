@@ -10,7 +10,6 @@ from io import StringIO
 backend_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, backend_dir)
 
-
 def test_blueprint_registration_logging():
     """Test that blueprint registration produces detailed logs."""
     print("\n=== Testing Blueprint Registration Logging ===\n")
@@ -117,7 +116,6 @@ def test_blueprint_registration_logging():
             del os.environ["SKIP_EXTERNAL_SERVICES"]
         if "TESTING" in os.environ:
             del os.environ["TESTING"]
-
 
 def test_blueprint_failure_handling():
     """Test that blueprint registration handles failures gracefully."""
@@ -230,7 +228,6 @@ def test_blueprint_failure_handling():
             del os.environ["SKIP_EXTERNAL_SERVICES"]
         if "TESTING" in os.environ:
             del os.environ["TESTING"]
-
 
 if __name__ == "__main__":
     print("=" * 70)

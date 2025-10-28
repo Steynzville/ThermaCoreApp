@@ -5,7 +5,6 @@ from typing import Any
 from app.services.opcua_service import OPCUAClient, logger
 from app.services.secure_opcua_wrapper import SecureOPCUAWrapper, secure_operation
 
-
 class SecureOPCUAClient(OPCUAClient):
     """Enhanced OPC-UA client with comprehensive security wrapper.
 
@@ -126,7 +125,6 @@ class SecureOPCUAClient(OPCUAClient):
         """Reset security state (for administrative purposes)."""
         self._security_wrapper.reset_connection_attempts()
         logger.info("Security state reset for OPC-UA client")
-
 
 # Global secure OPC-UA client instance
 secure_opcua_client = SecureOPCUAClient()

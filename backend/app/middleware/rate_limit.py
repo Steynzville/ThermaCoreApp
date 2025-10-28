@@ -10,7 +10,6 @@ from typing import ClassVar
 import redis
 from flask import current_app, g, jsonify, request
 
-
 class RateLimiter:
     """Redis-based rate limiter with sliding window algorithm."""
 
@@ -162,10 +161,8 @@ class RateLimiter:
             "fallback": True,
         }
 
-
 # Global rate limiter instance
 _rate_limiter = None
-
 
 def get_rate_limiter() -> RateLimiter:
     """Get or create rate limiter instance."""
@@ -185,7 +182,6 @@ def get_rate_limiter() -> RateLimiter:
             _rate_limiter = RateLimiter()
 
     return _rate_limiter
-
 
 def rate_limit(
     limit: int,
@@ -292,7 +288,6 @@ def rate_limit(
 
     return decorator
 
-
 # Common rate limiting configurations
 class RateLimitConfig:
     """Predefined rate limiting configurations."""
@@ -335,17 +330,14 @@ class RateLimitConfig:
         "window_seconds": 3600,
     }  # 10000 per hour
 
-
 # Convenience decorators
 def standard_rate_limit(f):
     """Apply standard rate limiting (100 req/min per IP)."""
     return rate_limit(**RateLimitConfig.STANDARD, per="ip")(f)
 
-
 def auth_rate_limit(f):
     """Apply authentication rate limiting (10 req/min per IP)."""
     return rate_limit(**RateLimitConfig.AUTH_ENDPOINT, per="ip")(f)
-
 
 def user_rate_limit(f):
     """Apply user-based rate limiting (1000 req/hour per user)."""

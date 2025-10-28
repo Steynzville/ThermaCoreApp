@@ -5,7 +5,6 @@ from unittest.mock import patch
 
 import pytest
 
-
 class TestProductionConfigValidation:
     """Test ProductionConfig validation timing."""
 

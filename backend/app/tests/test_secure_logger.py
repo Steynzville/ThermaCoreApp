@@ -4,7 +4,6 @@ import logging
 
 from app.utils.secure_logger import SecureLogger, SecureLoggerAdapter
 
-
 class TestSecureLogger:
     """Test SecureLogger sensitive data redaction functionality."""
 
@@ -273,7 +272,6 @@ class TestSecureLogger:
         assert "password=***" in sanitized
         assert "token=***" in sanitized
         assert "api_key=***" in sanitized
-
 
 class TestSecureLoggerIntegration:
     """Integration tests for SecureLogger with error handling."""

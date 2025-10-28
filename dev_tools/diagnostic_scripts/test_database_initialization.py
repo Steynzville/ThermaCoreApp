@@ -22,7 +22,6 @@ os.environ["SKIP_EXTERNAL_SERVICES"] = "true"
 # Set a test password for the default admin user
 os.environ["DEFAULT_ADMIN_PASSWORD"] = "TestPassword123!"
 
-
 def test_fresh_database():
     """Test initialization with a fresh database."""
     print("\n" + "=" * 70)
@@ -66,7 +65,6 @@ def test_fresh_database():
 
     print("\n✅ TEST 1 PASSED: Fresh database initialization works correctly\n")
 
-
 def test_idempotency():
     """Test that initialization is idempotent."""
     print("=" * 70)
@@ -88,7 +86,6 @@ def test_idempotency():
         print(f"✓ No duplicate users (count: {len(admin_users)})")
 
     print("\n✅ TEST 2 PASSED: Initialization is idempotent\n")
-
 
 def test_admin_credentials():
     """Test that admin credentials work for authentication."""
@@ -118,7 +115,6 @@ def test_admin_credentials():
         print("✓ All user properties correct")
 
     print("\n✅ TEST 3 PASSED: Admin credentials work correctly\n")
-
 
 def main():
     """Run all tests."""
@@ -152,7 +148,6 @@ def main():
 
         traceback.print_exc()
         return 1
-
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -7,7 +7,6 @@ import pytest
 
 from app.services.opcua_service import OPCUAClient
 
-
 class TestCertificateTimezoneHandling:
     """Test certificate datetime normalization for robust timezone handling."""
 
@@ -135,7 +134,6 @@ class TestCertificateTimezoneHandling:
                 "Expected error chaining with 'from e' not found"
             )
             assert "Invalid certificate datetime format" in str(e)
-
 
 class TestSecurityPolicyFallbackConfiguration:
     """Test explicit security policy fallback configuration."""

@@ -15,7 +15,6 @@ from app.utils.environment import (
     is_production_environment,
 )
 
-
 class TestEnvironmentMismatchDetection:
     """Test environment mismatch detection to prevent staging being classified as development."""
 
@@ -62,7 +61,6 @@ class TestEnvironmentMismatchDetection:
                 match="Dangerous environment mismatch detected",
             ):
                 is_development_environment(mock_app)
-
 
 class TestOPCUACertificateLoading:
     """Test actual OPC UA certificate loading instead of just file existence checking."""
@@ -339,7 +337,6 @@ class TestOPCUACertificateLoading:
                             "service will be unavailable" in str(call)
                             for call in warning_calls
                         )
-
 
 class TestImprovedExceptionHandling:
     """Test improved exception handling that doesn't mask actionable failures."""

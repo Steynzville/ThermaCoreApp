@@ -21,7 +21,6 @@ from app.middleware.request_id import (
 from app.middleware.validation import RequestValidator
 from app.utils.error_handler import SecurityAwareErrorHandler
 
-
 class TestRequestValidator:
     """Test request validation middleware."""
 
@@ -65,7 +64,6 @@ class TestRequestValidator:
             data = json.loads(response.data)
             assert not data["success"]
             assert data["error"]["code"] == "PAYLOAD_TOO_LARGE"
-
 
 class TestRateLimiter:
     """Test rate limiting functionality."""
@@ -115,7 +113,6 @@ class TestRateLimiter:
             data = json.loads(response3[0].data)
             assert not data["success"]
             assert data["error"]["code"] == "RATE_LIMIT_EXCEEDED"
-
 
 class TestRequestIDManager:
     """Test request ID management."""
@@ -207,7 +204,6 @@ class TestRequestIDManager:
             response = test_route()
             # Should have request ID in headers
             assert "X-Request-ID" in response.headers
-
 
 class TestMetricsCollector:
     """Test metrics collection functionality."""
@@ -543,7 +539,6 @@ class TestMetricsCollector:
                 assert "<iframe" not in record["error"]
                 assert "<svg" not in record["error"]
 
-
 class TestSecurityAwareErrorHandler:
     """Test enhanced error handler with envelope format."""
 
@@ -591,7 +586,6 @@ class TestSecurityAwareErrorHandler:
             assert response_data["request_id"] == "test-id"
             assert "timestamp" in response_data
 
-
 @pytest.fixture
 def app():
     """Create test Flask app."""
@@ -599,7 +593,6 @@ def app():
     app.config["TESTING"] = True
     app.config["SECRET_KEY"] = "test-secret"
     return app
-
 
 def test_integration_middleware_stack(app):
     """Test that all middleware components work together."""
@@ -630,7 +623,6 @@ def test_integration_middleware_stack(app):
         # Check headers
         assert "X-Request-ID" in response.headers
         assert "X-RateLimit-Limit" in response.headers
-
 
 def test_metrics_werkzeug_http_exceptions(app):
     """Test that metrics properly capture Werkzeug HTTPException status codes."""
@@ -680,7 +672,6 @@ def test_metrics_werkzeug_http_exceptions(app):
         assert ("NotFound", 404) in errors_data
         assert ("BadRequest", 400) in errors_data
         assert ("Forbidden", 403) in errors_data
-
 
 def test_metrics_no_double_counting_same_route(app):
     """Test that metrics don't double-count requests to the same route."""
