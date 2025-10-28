@@ -201,7 +201,9 @@ describe("RemoteControl Component", () => {
       renderWithProviders(<RemoteControl unit={onlineUnit} />);
 
       await waitFor(() => {
-        expect(screen.getByText("Water Production Control")).toBeInTheDocument();
+        expect(
+          screen.getByText("Water Production Control"),
+        ).toBeInTheDocument();
       });
 
       // Find and click the water production switch
@@ -237,7 +239,9 @@ describe("RemoteControl Component", () => {
 
       // Check that the dialog opens with correct title
       await waitFor(() => {
-        expect(screen.getByText("Auto-switch Confirmation")).toBeInTheDocument();
+        expect(
+          screen.getByText("Auto-switch Confirmation"),
+        ).toBeInTheDocument();
       });
     });
   });
@@ -330,7 +334,9 @@ describe("RemoteControl Component", () => {
       renderWithProviders(<RemoteControl unit={mockUnit} />);
 
       await waitFor(() => {
-        expect(screen.getByText("Operator • Remote Control")).toBeInTheDocument();
+        expect(
+          screen.getByText("Operator • Remote Control"),
+        ).toBeInTheDocument();
       });
 
       // Check that toggles are enabled for operator
