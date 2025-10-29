@@ -12,9 +12,9 @@
  * - Loading states
  */
 
-import { render, screen, waitFor, act } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SystemHealth from "@/components/SystemHealth";
 
 // Mock the statusMonitor service
@@ -65,7 +65,7 @@ describe("SystemHealth", () => {
     // Clean up any fake timers if they were set
     try {
       vi.useRealTimers();
-    } catch (e) {
+    } catch (_e) {
       // Ignore if real timers are already in use
     }
   });
@@ -404,7 +404,7 @@ describe("SystemHealth", () => {
       await waitFor(() => {
         expect(checkAllStatus).toHaveBeenCalledTimes(1);
       });
-      
+
       // Verify the component rendered successfully
       await waitFor(() => {
         expect(screen.getByText("Frontend Hosting")).toBeInTheDocument();
@@ -569,7 +569,9 @@ describe("SystemHealth", () => {
       render(<SystemHealth />);
 
       await waitFor(() => {
-        expect(screen.getByText(/1 service experiencing outages/i)).toBeInTheDocument();
+        expect(
+          screen.getByText(/1 service experiencing outages/i),
+        ).toBeInTheDocument();
       });
     });
   });

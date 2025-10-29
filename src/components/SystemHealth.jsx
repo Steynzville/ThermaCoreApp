@@ -10,6 +10,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { logger } from "../lib/logger";
 import { checkAllStatus } from "../services/statusMonitor";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import "./SystemHealth.css";
@@ -72,7 +73,7 @@ const SystemHealth = ({ className }) => {
       setSystemHealthData(statusData);
       setLastUpdated(new Date());
     } catch (error) {
-      console.error("Error fetching system status:", error);
+      logger.error("Error fetching system status", error);
     } finally {
       setLoading(false);
       setRefreshing(false);
