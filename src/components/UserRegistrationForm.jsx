@@ -110,7 +110,7 @@ const UserRegistrationForm = () => {
               className="h-16 w-auto"
             />
           </div>
-          <CardTitle className="text-3xl font-bold text-[#2563eb] dark:text-[#2563eb]">
+          <CardTitle className="text-3xl font-bold text-blue-600 dark:text-blue-400">
             Create Your Account
           </CardTitle>
           <p className="text-sm text-gray-600 dark:text-gray-400">

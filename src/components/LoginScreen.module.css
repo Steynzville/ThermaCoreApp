@@ -763,7 +763,7 @@
 }
 
 :global(html:not(.dark)) .forgotPasswordTitle {
-  color: #f8fafc;
+  color: #1f2937;
 }
 
 /* Back to Login Button Styles */
