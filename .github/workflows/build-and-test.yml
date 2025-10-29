@@ -1,0 +1,287 @@
+name: Build and Test Backend
+permissions:
+  contents: write
+  pull-requests: write
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  SECRET_KEY: dummy-test-secret-key-123-for-github-actions
+  JWT_SECRET_KEY: dummy-jwt-secret-key-456-for-github-actions
+  FLASK_ENV: test
+  FLASK_APP: app.py
+  DATABASE_URL: postgresql://thermacore_user:thermacore_pass@db:5432/thermacore
+  # MQTT environment variables to prevent production config errors
+  MQTT_CERT_PATH: /dummy/path/to/cert.pem
+  MQTT_KEY_PATH: /dummy/path/to/key.pem
+  MQTT_CA_PATH: /dummy/path/to/ca.pem
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: image=moby/buildkit:buildx-stable-1
+        continue-on-error: true
+        
+      - name: Retry Docker Buildx Setup if Failed
+        if: failure()
+        run: |
+          echo "⚠️ Docker Buildx setup failed, retrying..."
+          for i in {1..3}; do
+            echo "Retry attempt $i/3..."
+            docker buildx create --use --name builder-retry || true
+            docker buildx inspect --bootstrap && break
+            sleep 10
+          done
+
+      - name: Set up Docker Compose with Retry
+        run: |
+          sudo systemctl start docker
+          docker --version
+          
+          # Install docker-compose with retry logic
+          for i in {1..3}; do
+            echo "🔧 Installing docker-compose (attempt $i/3)..."
+            if sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose; then
+              sudo chmod +x /usr/local/bin/docker-compose
+              if docker-compose --version; then
+                echo "✅ docker-compose installed successfully"
+                break
+              fi
+            fi
+            echo "⚠️ Installation attempt $i failed, retrying..."
+            sleep 5
+          done
+          
+          # Verify installation
+          if ! command -v docker-compose &> /dev/null; then
+            echo "❌ docker-compose installation failed after retries"
+            exit 1
+          fi
+          
+          docker-compose --version
+
+      - name: Check Docker Compose Configuration and Services
+        run: |
+          echo "📋 Checking docker-compose.yml file..."
+          ls -la docker-compose.yml || echo "❌ docker-compose.yml not found"
+          echo "📋 Available services:"
+          docker-compose config --services || echo "❌ Cannot parse docker-compose.yml"
+          
+          echo "🔍 Checking for database service names..."
+          SERVICES=$(docker-compose config --services)
+          echo "Available services: $SERVICES"
+          
+          if echo "$SERVICES" | grep -q "timescaledb"; then
+            echo "✅ Found 'timescaledb' service"
+            DB_SERVICE="timescaledb"
+          elif echo "$SERVICES" | grep -q "db"; then
+            echo "✅ Found 'db' service" 
+            DB_SERVICE="db"
+          elif echo "$SERVICES" | grep -q "postgres"; then
+            echo "✅ Found 'postgres' service"
+            DB_SERVICE="postgres"
+          elif echo "$SERVICES" | grep -q "database"; then
+            echo "✅ Found 'database' service"
+            DB_SERVICE="database"
+          else
+            echo "❌ No database service found. Available: $SERVICES"
+            exit 1
+          fi
+          
+          echo "📊 Using database service: $DB_SERVICE"
+
+      - name: Fix Locust Version in Requirements
+        run: |
+          cd backend
+          if grep -q "locust==2.35.0" requirements.txt; then
+            echo "🔧 Fixing locust version from 2.35.0 to 2.20.1"
+            sed -i 's/locust==2.35.0/locust==2.20.1/' requirements.txt
+            echo "✅ Updated requirements.txt"
+            cat requirements.txt | grep locust
+          fi
+
+      - name: Create Temporary Docker Compose Without Frontend
+        run: |
+          echo "🔧 Creating temporary docker-compose.ci.yml without frontend..."
+          # Create a temporary compose file that excludes the frontend service
+          docker-compose config > docker-compose.ci.yml
+          
+          # Remove frontend service from the config
+          python3 -c "
+          import yaml
+          with open('docker-compose.ci.yml', 'r') as f:
+              config = yaml.safe_load(f)
+          
+          # Remove frontend service if it exists
+          if 'services' in config and 'frontend' in config['services']:
+              del config['services']['frontend']
+              print('✅ Removed frontend service from docker-compose.ci.yml')
+          else:
+              print('ℹ️  No frontend service found in docker-compose.yml')
+          
+          # Write the modified config
+          with open('docker-compose.ci.yml', 'w') as f:
+              yaml.dump(config, f)
+          "
+          
+          echo "📋 Temporary docker-compose.ci.yml created:"
+          cat docker-compose.ci.yml | head -20
+
+      - name: Build Database and Backend Only (Using CI Compose)
+        run: |
+          echo "🏗️ Building database and backend services using CI compose file..."
+          
+          # Function to retry docker-compose build
+          retry_build() {
+            local service=$1
+            local max_attempts=3
+            local attempt=1
+            
+            while [ $attempt -le $max_attempts ]; do
+              echo "Building $service (attempt $attempt/$max_attempts)..."
+              if docker-compose -f docker-compose.ci.yml build $service; then
+                echo "✅ $service built successfully"
+                return 0
+              fi
+              echo "⚠️ Build attempt $attempt failed for $service"
+              attempt=$((attempt + 1))
+              if [ $attempt -le $max_attempts ]; then
+                echo "Retrying in 10 seconds..."
+                sleep 10
+              fi
+            done
+            
+            echo "❌ Failed to build $service after $max_attempts attempts"
+            return 1
+          }
+          
+          # Build database first to ensure it's ready
+          retry_build $DB_SERVICE
+          
+          # Then build backend
+          retry_build backend
+
+      - name: Start Database with Simplified Health Check
+        run: |
+          # Determine database service name
+          SERVICES=$(docker-compose -f docker-compose.ci.yml config --services)
+          if echo "$SERVICES" | grep -q "timescaledb"; then
+            DB_SERVICE="timescaledb"
+          elif echo "$SERVICES" | grep -q "db"; then
+            DB_SERVICE="db"
+          elif echo "$SERVICES" | grep -q "postgres"; then
+            DB_SERVICE="postgres"
+          elif echo "$SERVICES" | grep -q "database"; then
+            DB_SERVICE="database"
+          else
+            echo "❌ Cannot determine database service"
+            exit 1
+          fi
+          
+          echo "🚀 Starting database service: $DB_SERVICE"
+          docker-compose -f docker-compose.ci.yml up -d $DB_SERVICE
+          
+          echo "⏳ Waiting for database to start (simple wait)..."
+          # Simple sleep to allow database to initialize
+          sleep 30
+          
+          echo "🔧 Testing database connection..."
+          # Try multiple connection attempts with simpler method
+          for i in {1..10}; do
+            if docker-compose -f docker-compose.ci.yml exec -T $DB_SERVICE psql -U postgres -c "SELECT version();" 2>/dev/null; then
+              echo "✅ Database is ready and responding"
+              break
+            else
+              echo "⏳ Database not ready yet, attempt $i/10..."
+              sleep 10
+            fi
+          done
+          
+          # Final connection test
+          if docker-compose -f docker-compose.ci.yml exec -T $DB_SERVICE psql -U postgres -c "SELECT 1;" 2>/dev/null; then
+            echo "🎉 Database connection successful!"
+          else
+            echo "❌ Database failed to start properly"
+            echo "📋 Checking database logs:"
+            docker-compose -f docker-compose.ci.yml logs $DB_SERVICE
+            exit 1
+          fi
+
+      - name: Initialize Test Database (Fixed Transaction Issue)
+        run: |
+          SERVICES=$(docker-compose -f docker-compose.ci.yml config --services)
+          if echo "$SERVICES" | grep -q "timescaledb"; then
+            DB_SERVICE="timescaledb"
+          elif echo "$SERVICES" | grep -q "db"; then
+            DB_SERVICE="db"
+          elif echo "$SERVICES" | grep -q "postgres"; then
+            DB_SERVICE="postgres"
+          elif echo "$SERVICES" | grep -q "database"; then
+            DB_SERVICE="database"
+          else
+            echo "❌ Cannot determine database service"
+            exit 1
+          fi
+          
+          echo "🔧 Initializing test database on service: $DB_SERVICE"
+          # Use single commands to avoid transaction blocks
+          docker-compose -f docker-compose.ci.yml exec -T $DB_SERVICE psql -U postgres -c "DROP DATABASE IF EXISTS thermacore;" || echo "⚠️ Could not drop database (might not exist)"
+          docker-compose -f docker-compose.ci.yml exec -T $DB_SERVICE psql -U postgres -c "DROP USER IF EXISTS thermacore_user;" || echo "⚠️ Could not drop user (might not exist)"
+          docker-compose -f docker-compose.ci.yml exec -T $DB_SERVICE psql -U postgres -c "CREATE USER thermacore_user WITH PASSWORD 'thermacore_pass';" || echo "⚠️ User might already exist"
+          docker-compose -f docker-compose.ci.yml exec -T $DB_SERVICE psql -U postgres -c "CREATE DATABASE thermacore OWNER thermacore_user;" || echo "⚠️ Database might already exist"
+          docker-compose -f docker-compose.ci.yml exec -T $DB_SERVICE psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE thermacore TO thermacore_user;" || echo "⚠️ Grant might already exist"
+          
+          echo "✅ Database setup completed"
+
+      - name: Run Backend Tests
+        run: |
+          echo "🧪 Running backend tests..."
+          # Tests use conftest.py for database initialization
+          # conftest.py creates a temporary database and initializes it with all models
+          docker-compose -f docker-compose.ci.yml run --rm backend python -m pytest -v --tb=short
+
+      - name: Test Backend API Endpoints
+        continue-on-error: true
+        run: |
+          echo "🔍 Testing backend API endpoint availability..."
+          echo "Note: Testing against production backend (https://thermacoreapp.onrender.com)"
+          
+          # Test health endpoint
+          echo "Testing /health endpoint..."
+          curl -X GET https://thermacoreapp.onrender.com/health -f -s -o /dev/null && \
+            echo "✅ Health check passed" || \
+            echo "❌ Health check failed (backend may be sleeping on free tier)"
+          
+          # Note: Cannot test password reset endpoint without authentication
+          # That endpoint requires JWT token and admin role
+          echo "✅ Backend endpoint availability check completed"
+
+      - name: Stop Services
+        if: always()
+        run: |
+          if command -v docker-compose &> /dev/null; then
+            docker-compose -f docker-compose.ci.yml down --remove-orphans --timeout 30 || echo "⚠️ Docker compose down failed but continuing..."
+          else
+            echo "⚠️ docker-compose command not found, skipping cleanup"
+            docker ps -aq | xargs -r docker rm -f || echo "⚠️ Docker container cleanup failed"
+          fi
+
+      - name: Cleanup Temporary Files
+        if: always()
+        run: |
+          rm -f docker-compose.ci.yml || echo "No temporary file to clean up"
