@@ -13,8 +13,8 @@
  */
 
 import { render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import SystemHealth from "@/components/SystemHealth";
 
 // Mock the statusMonitor service
@@ -417,7 +417,9 @@ describe("SystemHealth", () => {
       render(<SystemHealth />);
 
       await waitFor(() => {
-        expect(screen.getByRole("button", { name: /Refresh/i })).toBeInTheDocument();
+        expect(
+          screen.getByRole("button", { name: /Refresh/i }),
+        ).toBeInTheDocument();
       });
     });
 
@@ -449,7 +451,9 @@ describe("SystemHealth", () => {
       render(<SystemHealth />);
 
       await waitFor(() => {
-        expect(screen.getByRole("button", { name: /Refresh/i })).toBeInTheDocument();
+        expect(
+          screen.getByRole("button", { name: /Refresh/i }),
+        ).toBeInTheDocument();
       });
 
       const refreshButton = screen.getByRole("button", { name: /Refresh/i });
@@ -470,7 +474,9 @@ describe("SystemHealth", () => {
       render(<SystemHealth />);
 
       await waitFor(() => {
-        expect(screen.getByRole("button", { name: /Refresh/i })).toBeInTheDocument();
+        expect(
+          screen.getByRole("button", { name: /Refresh/i }),
+        ).toBeInTheDocument();
       });
 
       const refreshButton = screen.getByRole("button", { name: /Refresh/i });

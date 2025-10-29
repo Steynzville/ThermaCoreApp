@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import {
   Activity,
   AlertTriangle,
@@ -10,9 +9,9 @@ import {
   Server,
   XCircle,
 } from "lucide-react";
-
-import { Card, CardContent, CardHeader } from "./ui/card";
+import { useEffect, useState } from "react";
 import { checkAllStatus } from "../services/statusMonitor";
+import { Card, CardContent, CardHeader } from "./ui/card";
 import "./SystemHealth.css";
 
 const iconMap = {
