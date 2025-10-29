@@ -55,11 +55,13 @@ class TestRemoteControlEndpoints:
         """Test getting remote control permissions for operator user."""
         # Create operator user
         from app.models import Role, RoleEnum
+        import uuid
 
         operator_role = Role.query.filter_by(name=RoleEnum.OPERATOR).first()
+        unique_suffix = str(uuid.uuid4())[:8]
         operator_user = User(
-            username="test_operator",
-            email="operator@test.com",
+            username=f"test_operator_{unique_suffix}",
+            email=f"operator_{unique_suffix}@test.com",
             role_id=operator_role.id,
             is_active=True,
         )
@@ -67,7 +69,7 @@ class TestRemoteControlEndpoints:
         db_session.add(operator_user)
         db_session.commit()
 
-        token = self.get_auth_token(client, "test_operator", "operator123")
+        token = self.get_auth_token(client, f"test_operator_{unique_suffix}", "operator123")
 
         response = client.get(
             "/api/v1/remote-control/permissions",
@@ -87,11 +89,13 @@ class TestRemoteControlEndpoints:
         """Test getting remote control permissions for viewer user."""
         # Create viewer user
         from app.models import Role, RoleEnum
+        import uuid
 
         viewer_role = Role.query.filter_by(name=RoleEnum.VIEWER).first()
+        unique_suffix = str(uuid.uuid4())[:8]
         viewer_user = User(
-            username="test_viewer",
-            email="viewer@test.com",
+            username=f"test_viewer_{unique_suffix}",
+            email=f"viewer_{unique_suffix}@test.com",
             role_id=viewer_role.id,
             is_active=True,
         )
@@ -99,7 +103,7 @@ class TestRemoteControlEndpoints:
         db_session.add(viewer_user)
         db_session.commit()
 
-        token = self.get_auth_token(client, "test_viewer", "viewer123")
+        token = self.get_auth_token(client, f"test_viewer_{unique_suffix}", "viewer123")
 
         response = client.get(
             "/api/v1/remote-control/permissions",
@@ -129,9 +133,15 @@ class TestRemoteControlEndpoints:
         token = self.get_auth_token(client)
 
         # Create test unit
+        from datetime import datetime
+        import uuid
+
+        unit_id = f"TEST-{str(uuid.uuid4())[:8]}"
         test_unit = Unit(
-            id="TEST001",
+            id=unit_id,
             name="Test Unit",
+            serial_number=f"SN-{unit_id}",
+            install_date=datetime(2024, 1, 15),
             location="Test Location",
             status=UnitStatusEnum.OFFLINE,
             water_generation=False,
@@ -141,7 +151,7 @@ class TestRemoteControlEndpoints:
 
         # Turn power on
         response = client.post(
-            "/api/v1/remote-control/units/TEST001/power",
+            f"/api/v1/remote-control/units/{unit_id}/power",
             json={"power_on": True},
             headers={
                 "Authorization": f"Bearer {token}",
@@ -156,7 +166,7 @@ class TestRemoteControlEndpoints:
         assert data["status"] == "online"
 
         # Verify database was updated
-        unit = Unit.query.get("TEST001")
+        unit = Unit.query.get(unit_id)
         assert unit.status == UnitStatusEnum.ONLINE
 
     def test_control_unit_power_turn_off(self, client, db_session):
@@ -164,9 +174,15 @@ class TestRemoteControlEndpoints:
         token = self.get_auth_token(client)
 
         # Create test unit that's online with water generation
+        from datetime import datetime
+        import uuid
+
+        unit_id = f"TEST-{str(uuid.uuid4())[:8]}"
         test_unit = Unit(
-            id="TEST002",
+            id=unit_id,
             name="Test Unit 2",
+            serial_number=f"SN-{unit_id}",
+            install_date=datetime(2024, 1, 15),
             location="Test Location",
             status=UnitStatusEnum.ONLINE,
             water_generation=True,
@@ -176,7 +192,7 @@ class TestRemoteControlEndpoints:
 
         # Turn power off
         response = client.post(
-            "/api/v1/remote-control/units/TEST002/power",
+            f"/api/v1/remote-control/units/{unit_id}/power",
             json={"power_on": False},
             headers={
                 "Authorization": f"Bearer {token}",
@@ -192,7 +208,7 @@ class TestRemoteControlEndpoints:
         assert data["water_generation"] is False
 
         # Verify database was updated
-        unit = Unit.query.get("TEST002")
+        unit = Unit.query.get(unit_id)
         assert unit.status == UnitStatusEnum.OFFLINE
         assert unit.water_generation is False
 
@@ -200,11 +216,13 @@ class TestRemoteControlEndpoints:
         """Test controlling unit power without proper permissions."""
         # Create viewer user
         from app.models import Role, RoleEnum
+        import uuid
 
         viewer_role = Role.query.filter_by(name=RoleEnum.VIEWER).first()
+        unique_suffix = str(uuid.uuid4())[:8]
         viewer_user = User(
-            username="test_viewer_power",
-            email="viewer_power@test.com",
+            username=f"test_viewer_power_{unique_suffix}",
+            email=f"viewer_power_{unique_suffix}@test.com",
             role_id=viewer_role.id,
             is_active=True,
         )
@@ -212,7 +230,7 @@ class TestRemoteControlEndpoints:
         db_session.add(viewer_user)
         db_session.commit()
 
-        token = self.get_auth_token(client, "test_viewer_power", "viewer123")
+        token = self.get_auth_token(client, f"test_viewer_power_{unique_suffix}", "viewer123")
 
         response = client.post(
             "/api/v1/remote-control/units/TEST001/power",
@@ -260,9 +278,15 @@ class TestRemoteControlEndpoints:
         token = self.get_auth_token(client)
 
         # Create test unit that's online
+        from datetime import datetime
+        import uuid
+
+        unit_id = f"TEST-{str(uuid.uuid4())[:8]}"
         test_unit = Unit(
-            id="TEST003",
+            id=unit_id,
             name="Test Unit 3",
+            serial_number=f"SN-{unit_id}",
+            install_date=datetime(2024, 1, 15),
             location="Test Location",
             status=UnitStatusEnum.ONLINE,
             water_generation=False,
@@ -272,7 +296,7 @@ class TestRemoteControlEndpoints:
 
         # Turn water production on
         response = client.post(
-            "/api/v1/remote-control/units/TEST003/water-production",
+            f"/api/v1/remote-control/units/{unit_id}/water-production",
             json={"water_production_on": True},
             headers={
                 "Authorization": f"Bearer {token}",
@@ -286,7 +310,7 @@ class TestRemoteControlEndpoints:
         assert data["water_production_on"] is True
 
         # Verify database was updated
-        unit = Unit.query.get("TEST003")
+        unit = Unit.query.get(unit_id)
         assert unit.water_generation is True
 
     def test_control_water_production_unit_offline(self, client, db_session):
@@ -294,9 +318,15 @@ class TestRemoteControlEndpoints:
         token = self.get_auth_token(client)
 
         # Create test unit that's offline
+        from datetime import datetime
+        import uuid
+
+        unit_id = f"TEST-{str(uuid.uuid4())[:8]}"
         test_unit = Unit(
-            id="TEST004",
+            id=unit_id,
             name="Test Unit 4",
+            serial_number=f"SN-{unit_id}",
+            install_date=datetime(2024, 1, 15),
             location="Test Location",
             status=UnitStatusEnum.OFFLINE,
             water_generation=False,
@@ -306,7 +336,7 @@ class TestRemoteControlEndpoints:
 
         # Try to turn water production on
         response = client.post(
-            "/api/v1/remote-control/units/TEST004/water-production",
+            f"/api/v1/remote-control/units/{unit_id}/water-production",
             json={"water_production_on": True},
             headers={
                 "Authorization": f"Bearer {token}",
@@ -322,11 +352,13 @@ class TestRemoteControlEndpoints:
         """Test controlling water production without proper permissions."""
         # Create viewer user
         from app.models import Role, RoleEnum
+        import uuid
 
         viewer_role = Role.query.filter_by(name=RoleEnum.VIEWER).first()
+        unique_suffix = str(uuid.uuid4())[:8]
         viewer_user = User(
-            username="test_viewer_water",
-            email="viewer_water@test.com",
+            username=f"test_viewer_water_{unique_suffix}",
+            email=f"viewer_water_{unique_suffix}@test.com",
             role_id=viewer_role.id,
             is_active=True,
         )
@@ -334,7 +366,7 @@ class TestRemoteControlEndpoints:
         db_session.add(viewer_user)
         db_session.commit()
 
-        token = self.get_auth_token(client, "test_viewer_water", "viewer123")
+        token = self.get_auth_token(client, f"test_viewer_water_{unique_suffix}", "viewer123")
 
         response = client.post(
             "/api/v1/remote-control/units/TEST003/water-production",
@@ -352,9 +384,15 @@ class TestRemoteControlEndpoints:
         token = self.get_auth_token(client)
 
         # Create test unit
+        from datetime import datetime
+        import uuid
+
+        unit_id = f"TEST-{str(uuid.uuid4())[:8]}"
         test_unit = Unit(
-            id="TEST005",
+            id=unit_id,
             name="Test Unit 5",
+            serial_number=f"SN-{unit_id}",
+            install_date=datetime(2024, 1, 15),
             location="Test Location",
             status=UnitStatusEnum.ONLINE,
             water_generation=True,
@@ -363,7 +401,7 @@ class TestRemoteControlEndpoints:
         db_session.commit()
 
         response = client.get(
-            "/api/v1/remote-control/units/TEST005/status",
+            f"/api/v1/remote-control/units/{unit_id}/status",
             headers={
                 "Authorization": f"Bearer {token}",
                 "Content-Type": "application/json",
@@ -372,7 +410,7 @@ class TestRemoteControlEndpoints:
 
         assert response.status_code == 200
         data = json.loads(response.data)
-        assert data["unit_id"] == "TEST005"
+        assert data["unit_id"] == unit_id
         assert data["status"] == "online"
         assert data["water_generation"] is True
         assert data["power_on"] is True
