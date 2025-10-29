@@ -19,7 +19,6 @@ from app.utils.secure_logger import SecureLogger
 
 logger = SecureLogger.get_secure_logger(__name__)
 
-
 # Sensitive fields that should be redacted in audit logs
 SENSITIVE_FIELDS = {
     "password",

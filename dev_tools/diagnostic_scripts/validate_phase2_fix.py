@@ -8,9 +8,9 @@ This script verifies that all the issues mentioned in the problem statement are 
 3. Database test fixtures work as designed
 """
 
+import json
 import os
 import sys
-import json
 
 
 def test_database_creation():
@@ -19,8 +19,9 @@ def test_database_creation():
     print("TEST 1: Database Migrations")
     print("=" * 70)
 
-    from app import create_app, db
     from sqlalchemy import inspect
+
+    from app import create_app, db
 
     # Test with development config
     os.environ["FLASK_ENV"] = "development"
@@ -75,7 +76,7 @@ def test_authentication_flow():
     os.environ["TESTING"] = "true"
 
     from app import create_app, db
-    from app.models import User, Role, Permission, PermissionEnum, RoleEnum
+    from app.models import Permission, PermissionEnum, Role, RoleEnum, User
 
     app = create_app("testing")
 
@@ -167,9 +168,10 @@ def test_database_fixtures():
     os.environ["TESTING"] = "true"
 
     # Import test fixtures
-    from app.tests.conftest import _init_database
-    from app import create_app, db
     from sqlalchemy import inspect
+
+    from app import create_app, db
+    from app.tests.conftest import _init_database
 
     app = create_app("testing")
 

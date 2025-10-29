@@ -4,8 +4,8 @@ Comprehensive Test Runner for ThermaCore Application
 Runs all available tests and ensures 100% completion of testable components.
 """
 
-import sys
 import subprocess
+import sys
 from pathlib import Path
 
 # Add backend directory to path for imports
@@ -238,7 +238,7 @@ class TestRunner:
 
     def _test_database_schema(self):
         """Test database schema definitions."""
-        from app.models import User, Unit
+        from app.models import Unit, User
 
         # Check key model attributes
         return (
@@ -313,7 +313,7 @@ class TestRunner:
 
     def _test_model_relationships(self):
         """Test model relationship definitions."""
-        from app.models import User, Role, Unit, Sensor
+        from app.models import Role, Sensor, Unit, User
 
         # Check that relationships are defined
         return (

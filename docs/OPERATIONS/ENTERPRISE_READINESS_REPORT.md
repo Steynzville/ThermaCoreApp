@@ -21,13 +21,21 @@ The ThermaCore SCADA platform has successfully implemented comprehensive enterpr
 
 ## 1. Enterprise Quality Gates
 
-### 1.1 Automated Quality Workflow
+### 1.1 Automated Quality Workflows
 
 **Status**: ✅ Implemented
 
-**Location**: `.github/workflows/enterprise-quality-gates.yml`
+**Location**: `.github/workflows/` (split into multiple parallel workflows)
 
-The enterprise quality gates workflow provides continuous validation of:
+The enterprise quality gates are implemented as separate, parallel workflows for faster execution:
+- **Security Quality Gate**: `security-quality-gate.yml`
+- **Backend Quality Gate**: `backend-quality-gate.yml`
+- **Frontend Quality Gate**: `frontend-quality-gate.yml`
+- **Frontend Coverage Gate**: `frontend-coverage-gate.yml`
+- **Backend Coverage Gate**: `backend-coverage-gate.yml`
+- **Performance Quality Gate**: `performance-quality-gate.yml`
+
+These workflows provide continuous validation of:
 - Security vulnerabilities
 - Code quality standards
 - Test coverage requirements
@@ -38,6 +46,8 @@ The enterprise quality gates workflow provides continuous validation of:
 - Every push to `main` branch
 - Every pull request to `main`
 - Daily scheduled runs (2 AM UTC)
+
+All workflows run in parallel for faster feedback.
 
 ### 1.2 Gate Components
 
@@ -414,8 +424,18 @@ Use this checklist before each production deployment:
 
 ### 8.3 Workflows
 
-- ✅ **Quality Gates**: `.github/workflows/enterprise-quality-gates.yml`
-- ✅ **Code Checks**: `.github/workflows/checks.yml`
+**Code Quality & Testing Workflows:**
+- ✅ **Build and Test**: `.github/workflows/build-and-test.yml`
+- ✅ **Frontend Quality**: `.github/workflows/frontend-quality.yml`
+- ✅ **Python Security**: `.github/workflows/python-security.yml`
+- ✅ **Dependency Security**: `.github/workflows/dependency-security.yml`
+
+**Enterprise Quality Gate Workflows:**
+- ✅ **Security Quality Gate**: `.github/workflows/security-quality-gate.yml`
+- ✅ **Backend Quality Gate**: `.github/workflows/backend-quality-gate.yml`
+- ✅ **Frontend Quality Gate**: `.github/workflows/frontend-quality-gate.yml`
+- ✅ **Test Coverage Gate**: `.github/workflows/test-coverage-gate.yml`
+- ✅ **Performance Quality Gate**: `.github/workflows/performance-quality-gate.yml`
 
 ---
 

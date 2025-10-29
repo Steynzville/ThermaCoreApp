@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Test logging refinement and domain exception handling improvements."""
 
-import sys
 import logging
+import sys
 import uuid
 from unittest.mock import patch
 
@@ -16,11 +16,11 @@ def test_domain_exception_handling():
 
     try:
         from app.exceptions import (
-            ThermaCoreException,
             AuthenticationException,
             DatabaseException,
-            UnitOfflineException,
             SensorNotFoundException,
+            ThermaCoreException,
+            UnitOfflineException,
         )
 
         # Test basic ThermaCoreException
@@ -72,8 +72,8 @@ def test_correlation_id_handling():
     print("\nTesting Correlation ID Handling...")
 
     try:
-        from app.utils.error_handler import SecurityAwareErrorHandler
         from app.exceptions import ValidationException
+        from app.utils.error_handler import SecurityAwareErrorHandler
 
         # Mock Flask's g object for request context
         class MockG:

@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """Manual test script for PR2 middleware functionality."""
 
-import sys
 import json
+import sys
 import uuid
 
 # Add the backend directory to Python path
 sys.path.insert(0, "/home/runner/work/ThermaCoreApp/ThermaCoreApp/backend")
 
 try:
-    from app.middleware.validation import RequestValidator
+    from app.middleware.metrics import MetricsCollector
     from app.middleware.rate_limit import RateLimiter
     from app.middleware.request_id import RequestIDManager
-    from app.middleware.metrics import MetricsCollector
+    from app.middleware.validation import RequestValidator
     from app.utils.error_handler import SecurityAwareErrorHandler
 
     print("✅ All middleware imports successful")

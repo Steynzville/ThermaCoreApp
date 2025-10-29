@@ -149,9 +149,9 @@ def show_examples():
 @validate_schema(LoginSchema)        # Validate JSON against schema
 def login():
     data = g.validated_data          # Access validated data from middleware
-    
+
     # Login logic here...
-    
+
     return SecurityAwareErrorHandler.create_success_response(
         token_data, 'Login successful', 200
     )

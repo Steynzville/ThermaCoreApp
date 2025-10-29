@@ -45,7 +45,7 @@ for key in [
     os.environ.pop(key, None)
 
 print("   Importing config module without production env vars...")
-from config import ProductionConfig, DevelopmentConfig, TestingConfig  # noqa: E402
+from config import DevelopmentConfig, ProductionConfig, TestingConfig  # noqa: E402
 
 print("\n3. Validation still enforced when ProductionConfig is instantiated")
 print("-" * 70)

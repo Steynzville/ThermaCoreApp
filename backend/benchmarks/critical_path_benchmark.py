@@ -16,13 +16,20 @@ Performance Targets:
 - Dashboard aggregation: < 500ms
 """
 
-import time
-import json
-import statistics
 import hashlib
-from typing import List, Dict, Any
-from datetime import datetime, timedelta
+import json
+import logging
 import random
+import statistics
+import sys
+import time
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from typing import Any
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+logger = logging.getLogger(__name__)
 
 
 class CriticalPathBenchmark:
@@ -30,14 +37,18 @@ class CriticalPathBenchmark:
 
     def __init__(self):
         """Initialize benchmark suite."""
-        self.results: Dict[str, Any] = {}
-        self.passed_benchmarks: List[str] = []
-        self.failed_benchmarks: List[str] = []
+        self.results: dict[str, Any] = {}
+        self.passed_benchmarks: list[str] = []
+        self.failed_benchmarks: list[str] = []
         # Use SystemRandom for secure randomization
         self.secure_random = random.SystemRandom()
 
     def run_benchmark(
-        self, name: str, func, iterations: int = 100, target_ms: float = 100.0
+        self,
+        name: str,
+        func,
+        iterations: int = 100,
+        target_ms: float = 100.0,
     ):
         """
         Run a benchmark test.
@@ -48,12 +59,12 @@ class CriticalPathBenchmark:
             iterations: Number of iterations to run
             target_ms: Target time in milliseconds
         """
-        print(f"\n{'=' * 60}")
-        print(f"Running: {name}")
-        print(f"Iterations: {iterations}, Target: {target_ms}ms")
-        print(f"{'=' * 60}")
+        logger.info("=" * 60)
+        logger.info("Running: %s", name)
+        logger.info("Iterations: %d, Target: %.1fms", iterations, target_ms)
+        logger.info("=" * 60)
 
-        times: List[float] = []
+        times: list[float] = []
 
         for i in range(iterations):
             start = time.perf_counter()
@@ -84,14 +95,14 @@ class CriticalPathBenchmark:
 
         status = "✅ PASS" if avg_time <= target_ms else "❌ FAIL"
 
-        print(f"\nResults:")
-        print(f"  Average:   {avg_time:.3f}ms")
-        print(f"  Median:    {median_time:.3f}ms")
-        print(f"  P95:       {p95:.3f}ms")
-        print(f"  Min:       {min_time:.3f}ms")
-        print(f"  Max:       {max_time:.3f}ms")
-        print(f"  Std Dev:   {std_dev:.3f}ms")
-        print(f"  Status:    {status}")
+        logger.info("\nResults:")
+        logger.info("  Average:   %.3fms", avg_time)
+        logger.info("  Median:    %.3fms", median_time)
+        logger.info("  P95:       %.3fms", p95)
+        logger.info("  Min:       %.3fms", min_time)
+        logger.info("  Max:       %.3fms", max_time)
+        logger.info("  Std Dev:   %.3fms", std_dev)
+        logger.info("  Status:    %s", status)
 
         if avg_time <= target_ms:
             self.passed_benchmarks.append(name)
@@ -119,7 +130,7 @@ class CriticalPathBenchmark:
             token_data = {
                 "user_id": "user_123",
                 "username": "testuser",
-                "exp": (datetime.now() + timedelta(hours=1)).isoformat(),
+                "exp": (datetime.now(tz=timezone.utc) + timedelta(hours=1)).isoformat(),
             }
             token = json.dumps(token_data)
 
@@ -129,7 +140,10 @@ class CriticalPathBenchmark:
             return {"token": encoded, "user_id": "user_123"}
 
         self.run_benchmark(
-            "User Authentication Flow", authenticate, iterations=500, target_ms=100.0
+            "User Authentication Flow",
+            authenticate,
+            iterations=500,
+            target_ms=100.0,
         )
 
     def benchmark_sensor_data_ingestion(self):
@@ -140,7 +154,7 @@ class CriticalPathBenchmark:
             reading = {
                 "unit_id": "TC001",
                 "sensor_id": f"TEMP_{self.secure_random.randint(1, 100)}",
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(tz=timezone.utc).isoformat(),
                 "value": round(self.secure_random.uniform(60.0, 80.0), 2),
                 "quality": "good",
             }
@@ -152,7 +166,7 @@ class CriticalPathBenchmark:
                     reading.get("sensor_id"),
                     reading.get("value") is not None,
                     isinstance(reading.get("value"), (int, float)),
-                ]
+                ],
             )
 
             if not is_valid:
@@ -161,13 +175,13 @@ class CriticalPathBenchmark:
             # Transform
             processed = {
                 "id": hashlib.sha256(
-                    f"{reading['sensor_id']}{reading['timestamp']}".encode()
+                    f"{reading['sensor_id']}{reading['timestamp']}".encode(),
                 ).hexdigest()[:16],
                 "unit_id": reading["unit_id"],
                 "sensor_id": reading["sensor_id"],
                 "value": reading["value"],
                 "timestamp": reading["timestamp"],
-                "processed_at": datetime.now().isoformat(),
+                "processed_at": datetime.now(tz=timezone.utc).isoformat(),
             }
 
             # Simulate database write (just json serialization)
@@ -190,14 +204,16 @@ class CriticalPathBenchmark:
             {
                 "sensor_id": f"TEMP_{i}",
                 "value": round(self.secure_random.uniform(60.0, 80.0), 2),
-                "timestamp": (datetime.now() - timedelta(minutes=i)).isoformat(),
+                "timestamp": (
+                    datetime.now(tz=timezone.utc) - timedelta(minutes=i)
+                ).isoformat(),
             }
             for i in range(100)
         ]
 
         def query_recent_data():
             # Query last 10 readings
-            cutoff_time = datetime.now() - timedelta(minutes=10)
+            cutoff_time = datetime.now(tz=timezone.utc) - timedelta(minutes=10)
 
             results = [
                 reading
@@ -211,7 +227,10 @@ class CriticalPathBenchmark:
             return results[:10]
 
         self.run_benchmark(
-            "Real-time Data Query", query_recent_data, iterations=1000, target_ms=200.0
+            "Real-time Data Query",
+            query_recent_data,
+            iterations=1000,
+            target_ms=200.0,
         )
 
     def benchmark_alert_processing(self):
@@ -222,7 +241,7 @@ class CriticalPathBenchmark:
             reading = {
                 "sensor_id": "TEMP_001",
                 "value": 85.5,  # Above threshold
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(tz=timezone.utc).isoformat(),
             }
 
             # Check thresholds
@@ -254,7 +273,10 @@ class CriticalPathBenchmark:
             return None
 
         self.run_benchmark(
-            "Alert Processing", process_alert, iterations=1000, target_ms=100.0
+            "Alert Processing",
+            process_alert,
+            iterations=1000,
+            target_ms=100.0,
         )
 
     def benchmark_dashboard_aggregation(self):
@@ -271,10 +293,10 @@ class CriticalPathBenchmark:
                             "sensor_id": f"TEMP_{sensor_id}",
                             "value": round(self.secure_random.uniform(60.0, 80.0), 2),
                             "timestamp": (
-                                datetime.now()
+                                datetime.now(tz=timezone.utc)
                                 - timedelta(minutes=self.secure_random.randint(0, 60))
                             ).isoformat(),
-                        }
+                        },
                     )
 
         def aggregate_dashboard_data():
@@ -319,11 +341,11 @@ class CriticalPathBenchmark:
             {
                 "unit_id": f"TC{i:03d}",
                 "status": self.secure_random.choice(
-                    ["online", "offline", "maintenance"]
+                    ["online", "offline", "maintenance"],
                 ),
                 "health": self.secure_random.choice(["optimal", "warning", "critical"]),
                 "last_seen": (
-                    datetime.now()
+                    datetime.now(tz=timezone.utc)
                     - timedelta(minutes=self.secure_random.randint(0, 60))
                 ).isoformat(),
             }
@@ -346,7 +368,7 @@ class CriticalPathBenchmark:
                     "online": len([u for u in units if u["status"] == "online"]),
                     "offline": len([u for u in units if u["status"] == "offline"]),
                     "maintenance": len(
-                        [u for u in units if u["status"] == "maintenance"]
+                        [u for u in units if u["status"] == "maintenance"],
                     ),
                 },
             }
@@ -366,7 +388,9 @@ class CriticalPathBenchmark:
         # Simulate data to export
         export_data = [
             {
-                "timestamp": (datetime.now() - timedelta(hours=i)).isoformat(),
+                "timestamp": (
+                    datetime.now(tz=timezone.utc) - timedelta(hours=i)
+                ).isoformat(),
                 "unit_id": f"TC{i % 10:03d}",
                 "sensor_id": f"TEMP_{i % 5}",
                 "value": round(self.secure_random.uniform(60.0, 80.0), 2),
@@ -380,7 +404,7 @@ class CriticalPathBenchmark:
 
             for row in export_data:
                 csv_lines.append(
-                    f"{row['timestamp']},{row['unit_id']},{row['sensor_id']},{row['value']}"
+                    f"{row['timestamp']},{row['unit_id']},{row['sensor_id']},{row['value']}",
                 )
 
             # Join to single string
@@ -389,15 +413,18 @@ class CriticalPathBenchmark:
             return csv_content
 
         self.run_benchmark(
-            "Data Export Preparation", prepare_export, iterations=100, target_ms=300.0
+            "Data Export Preparation",
+            prepare_export,
+            iterations=100,
+            target_ms=300.0,
         )
 
     def run_all_benchmarks(self):
         """Run all critical path benchmarks."""
-        print("\n" + "=" * 60)
-        print("CRITICAL PATH BENCHMARK SUITE")
-        print("ThermaCore SCADA Platform")
-        print("=" * 60)
+        logger.info("\n" + "=" * 60)
+        logger.info("CRITICAL PATH BENCHMARK SUITE")
+        logger.info("ThermaCore SCADA Platform")
+        logger.info("=" * 60)
 
         self.benchmark_authentication_flow()
         self.benchmark_sensor_data_ingestion()
@@ -411,44 +438,55 @@ class CriticalPathBenchmark:
 
     def print_summary(self):
         """Print benchmark summary."""
-        print("\n" + "=" * 60)
-        print("BENCHMARK SUMMARY")
-        print("=" * 60)
+        logger.info("\n" + "=" * 60)
+        logger.info("BENCHMARK SUMMARY")
+        logger.info("=" * 60)
 
         total_tests = len(self.results)
         passed = len(self.passed_benchmarks)
         failed = len(self.failed_benchmarks)
 
-        print(f"\nTotal Benchmarks: {total_tests}")
-        print(f"Passed: {passed} ✅")
-        print(f"Failed: {failed} ❌")
-        print(f"Success Rate: {(passed / total_tests) * 100:.1f}%")
+        logger.info("\nTotal Benchmarks: %d", total_tests)
+        logger.info("Passed: %d ✅", passed)
+        logger.info("Failed: %d ❌", failed)
+        logger.info("Success Rate: %.1f%%", (passed / total_tests) * 100)
 
         if self.failed_benchmarks:
-            print("\n❌ Failed Benchmarks:")
+            logger.info("\n❌ Failed Benchmarks:")
             for name in self.failed_benchmarks:
                 result = self.results[name]
-                print(
-                    f"  - {name}: {result['avg_ms']}ms (target: {result['target_ms']}ms)"
+                logger.info(
+                    "  - %s: %.3fms (target: %.3fms)",
+                    name,
+                    result["avg_ms"],
+                    result["target_ms"],
                 )
 
-        print("\n" + "=" * 60)
-        print("DETAILED RESULTS")
-        print("=" * 60)
+        logger.info("\n" + "=" * 60)
+        logger.info("DETAILED RESULTS")
+        logger.info("=" * 60)
 
         for name, result in self.results.items():
             status = "✅" if result["passed"] else "❌"
-            print(f"\n{status} {name}")
-            print(f"   Average: {result['avg_ms']}ms (target: {result['target_ms']}ms)")
-            print(f"   Median:  {result['median_ms']}ms")
-            print(f"   P95:     {result['p95_ms']}ms")
-            print(f"   Range:   {result['min_ms']}ms - {result['max_ms']}ms")
+            logger.info("\n%s %s", status, name)
+            logger.info(
+                "   Average: %.3fms (target: %.3fms)",
+                result["avg_ms"],
+                result["target_ms"],
+            )
+            logger.info("   Median:  %.3fms", result["median_ms"])
+            logger.info("   P95:     %.3fms", result["p95_ms"])
+            logger.info(
+                "   Range:   %.3fms - %.3fms",
+                result["min_ms"],
+                result["max_ms"],
+            )
 
         # Save results to file
-        with open("critical_path_results.json", "w") as f:
+        with Path("critical_path_results.json").open("w") as f:
             json.dump(
                 {
-                    "timestamp": datetime.now().isoformat(),
+                    "timestamp": datetime.now(tz=timezone.utc).isoformat(),
                     "summary": {
                         "total": total_tests,
                         "passed": passed,
@@ -461,7 +499,7 @@ class CriticalPathBenchmark:
                 indent=2,
             )
 
-        print(f"\n📊 Results saved to: critical_path_results.json")
+        logger.info("\n📊 Results saved to: critical_path_results.json")
 
 
 def main():
@@ -471,12 +509,12 @@ def main():
 
     # Exit with error code if any benchmarks failed
     if benchmark.failed_benchmarks:
-        print("\n⚠️  Some benchmarks did not meet performance targets")
+        logger.warning("\n⚠️  Some benchmarks did not meet performance targets")
         return 1
 
-    print("\n✅ All benchmarks passed!")
+    logger.info("\n✅ All benchmarks passed!")
     return 0
 
 
 if __name__ == "__main__":
-    exit(main())
+    sys.exit(main())

@@ -231,7 +231,8 @@ def main():
     demo_configuration()
 
     print_header("KEY BENEFITS")
-    print("""
+    print(
+        """
   ✅ NO MORE CRASHES from optional services like OPC-UA
   ✅ CLEAR VISIBILITY into service health via API endpoints
   ✅ GRACEFUL DEGRADATION when external services fail
@@ -239,7 +240,8 @@ def main():
   ✅ PRODUCTION-SAFE defaults (OPC-UA optional, MQTT required)
   ✅ BACKWARDS COMPATIBLE with existing code
   ✅ EASY DEBUGGING with comprehensive status reporting
-    """)
+    """
+    )
 
     print("\nAPI Endpoints:")
     print("-" * 80)

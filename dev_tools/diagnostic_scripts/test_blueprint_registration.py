@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Test blueprint registration with detailed logging."""
 
-import sys
-import os
 import logging
+import os
+import sys
 from io import StringIO
 
 # Add backend to Python path

@@ -10,11 +10,11 @@ from webargs.flaskparser import use_args
 from app.middleware.authorization import permission_required
 from app.models import (
     Sensor,
-    SensorReading,
+    SensorReading,  # Use timezone-aware datetime
     Unit,
     db,
     utc_now,
-)  # Use timezone-aware datetime
+)
 from app.utils.error_handler import SecurityAwareErrorHandler
 from app.utils.schemas import (
     CompareUnitsSchema,
@@ -599,12 +599,14 @@ def get_historical_statistics(args, unit_id):
                 "average": round(float(stat.avg_value), 2) if stat.avg_value else 0,
                 "minimum": round(float(stat.min_value), 2) if stat.min_value else 0,
                 "maximum": round(float(stat.max_value), 2) if stat.max_value else 0,
-                "standard_deviation": round(float(stat.std_dev), 2)
-                if stat.std_dev
-                else 0,
-                "range": round(float(stat.max_value - stat.min_value), 2)
-                if stat.max_value and stat.min_value
-                else 0,
+                "standard_deviation": (
+                    round(float(stat.std_dev), 2) if stat.std_dev else 0
+                ),
+                "range": (
+                    round(float(stat.max_value - stat.min_value), 2)
+                    if stat.max_value and stat.min_value
+                    else 0
+                ),
             }
 
         return jsonify(

@@ -17,11 +17,12 @@ Examples:
     python backend/diagnose_api_endpoints.py http://localhost:5000 admin admin123
 """
 
-import sys
 import json
+import sys
+from typing import Optional, Tuple
+
 import requests
 from requests.exceptions import RequestException
-from typing import Optional, Tuple
 
 
 class Colors:

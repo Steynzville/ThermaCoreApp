@@ -114,9 +114,10 @@ class TestEnhancedPermissionHandling:
         # Validate each permission works correctly
         for permission in all_permission_enums:
             result = admin_role.has_permission(permission)
-            assert isinstance(result, bool), (
-                f"Permission {permission.value} should return boolean"
-            )
+            assert isinstance(
+                result,
+                bool,
+            ), f"Permission {permission.value} should return boolean"
 
     def test_string_permission_validation(self, client, db_session):
         """Test string permission validation against known values."""
@@ -156,9 +157,10 @@ class TestEnhancedPermissionHandling:
         # Validate each permission string works correctly
         for permission in expected_permission_strings:
             result = admin_role.has_permission(permission)
-            assert isinstance(result, bool), (
-                f"Permission string '{permission}' should return boolean"
-            )
+            assert isinstance(
+                result,
+                bool,
+            ), f"Permission string '{permission}' should return boolean"
 
         # Invalid string permissions should return False (not raise error)
         invalid_permissions = [
@@ -288,9 +290,10 @@ class TestEnhancedPermissionHandling:
         )
 
         # Verify that the remote control permission exists in the enum
-        assert hasattr(PermissionEnum, "REMOTE_CONTROL"), (
-            "REMOTE_CONTROL should exist in PermissionEnum"
-        )
+        assert hasattr(
+            PermissionEnum,
+            "REMOTE_CONTROL",
+        ), "REMOTE_CONTROL should exist in PermissionEnum"
         assert PermissionEnum.REMOTE_CONTROL.value == "remote_control", (
             "REMOTE_CONTROL enum value should be 'remote_control'"
         )

@@ -233,9 +233,12 @@ def create_tenant():
     except IntegrityError as e:
         db.session.rollback()
         logger.error(f"Failed to create tenant: {e}")
-        return jsonify(
-            {"error": "Tenant with this name or slug already exists"},
-        ), 409
+        return (
+            jsonify(
+                {"error": "Tenant with this name or slug already exists"},
+            ),
+            409,
+        )
 
 
 @tenants_bp.route("/tenants/<int:tenant_id>", methods=["PUT", "PATCH"])
@@ -292,9 +295,12 @@ def update_tenant(tenant_id):
     except IntegrityError as e:
         db.session.rollback()
         logger.error(f"Failed to update tenant: {e}")
-        return jsonify(
-            {"error": "Tenant with this name or slug already exists"},
-        ), 409
+        return (
+            jsonify(
+                {"error": "Tenant with this name or slug already exists"},
+            ),
+            409,
+        )
 
 
 @tenants_bp.route("/tenants/<int:tenant_id>", methods=["DELETE"])
@@ -330,22 +336,28 @@ def delete_tenant(tenant_id):
     # Check for associated users
     user_count = User.query.filter_by(tenant_id=tenant_id).count()
     if user_count > 0:
-        return jsonify(
-            {
-                "error": f"Cannot delete tenant with {user_count} associated users. "
-                "Deactivate the tenant instead or reassign users first.",
-            },
-        ), 409
+        return (
+            jsonify(
+                {
+                    "error": f"Cannot delete tenant with {user_count} associated users. "
+                    "Deactivate the tenant instead or reassign users first.",
+                },
+            ),
+            409,
+        )
 
     # Check for associated units
     unit_count = Unit.query.filter_by(tenant_id=tenant_id).count()
     if unit_count > 0:
-        return jsonify(
-            {
-                "error": f"Cannot delete tenant with {unit_count} associated units. "
-                "Deactivate the tenant instead or reassign units first.",
-            },
-        ), 409
+        return (
+            jsonify(
+                {
+                    "error": f"Cannot delete tenant with {unit_count} associated units. "
+                    "Deactivate the tenant instead or reassign units first.",
+                },
+            ),
+            409,
+        )
 
     try:
         db.session.delete(tenant)

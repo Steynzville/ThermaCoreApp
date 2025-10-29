@@ -535,7 +535,8 @@ class ThermaCoreDNP3OptimizationUser(HttpUser):
 
 # Performance test scenarios
 if __name__ == "__main__":
-    print("""
+    print(
+        """
     Performance Testing Scripts for ThermaCore SCADA API
 
     To run these tests, use Locust:
@@ -566,4 +567,5 @@ if __name__ == "__main__":
     - Throughput > 100 requests/second
     - Error rate < 1%
     - Database query time < 100ms for simple reads
-    """)
+    """,
+    )

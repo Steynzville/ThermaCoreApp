@@ -4,8 +4,8 @@ Simple test runner that works without external dependencies.
 Tests basic application structure and validates core components.
 """
 
-import sys
 import os
+import sys
 
 # Add the backend directory to Python path
 backend_dir = os.path.dirname(os.path.abspath(__file__))

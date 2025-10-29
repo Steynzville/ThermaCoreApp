@@ -98,9 +98,10 @@ class TestCertificateTimezoneHandling:
             result = opcua_client._normalize_certificate_datetime(iso_string)
             assert result.tzinfo == timezone.utc, f"Failed for format: {iso_string}"
             # All should normalize to UTC properly
-            assert isinstance(result, datetime), (
-                f"Failed to return datetime for: {iso_string}"
-            )
+            assert isinstance(
+                result,
+                datetime,
+            ), f"Failed to return datetime for: {iso_string}"
 
     def test_normalize_certificate_datetime_with_none(self):
         """Test normalization with None input (should raise ValueError)."""

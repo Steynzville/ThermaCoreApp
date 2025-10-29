@@ -1,7 +1,7 @@
 """Simple test to verify basic Flask app structure."""
 
-import sys
 import os
+import sys
 
 # Add the backend directory to Python path
 backend_dir = os.path.dirname(os.path.abspath(__file__))

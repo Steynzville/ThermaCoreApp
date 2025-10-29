@@ -167,9 +167,7 @@ def run_auto_migrations(app: Any) -> None:
         return
 
     try:
-        from app.utils.auto_migration import (
-            run_auto_migrations as run_migrations,
-        )
+        from app.utils.auto_migration import run_auto_migrations as run_migrations
 
         migration_logger = logging.getLogger(__name__)
         migration_logger.info("Running auto-migrations for database schema...")

@@ -19,16 +19,17 @@ Environment variables needed:
     SECRET_KEY - Flask secret key
 """
 
-import sys
 import os
+import sys
 
 # Add parent directory to path to import app modules
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
-from app import create_app, db
-from app.models import User, Role, Permission, RoleEnum
 from sqlalchemy import inspect, text
 from sqlalchemy.exc import OperationalError
+
+from app import create_app, db
+from app.models import Permission, Role, RoleEnum, User
 
 
 def print_header(title):

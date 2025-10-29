@@ -11,11 +11,11 @@ from sqlalchemy import and_
 
 from app.models import (
     Sensor,
-    SensorReading,
+    SensorReading,  # Use timezone-aware datetime
     Unit,
     db,
     utc_now,
-)  # Use timezone-aware datetime
+)
 
 logger = logging.getLogger(__name__)
 

@@ -1,18 +1,31 @@
 import json
 
 RISKY_KEYWORDS = [
-    'auth', 'token', 'password', 'input', 'user', 'permission', 'secure', 'admin', 'validate', 'check'
+    "auth",
+    "token",
+    "password",
+    "input",
+    "user",
+    "permission",
+    "secure",
+    "admin",
+    "validate",
+    "check",
 ]
+
 
 def is_risky(assert_text):
     return any(kw in assert_text.lower() for kw in RISKY_KEYWORDS)
+
 
 def main():
     try:
         with open("bandit_report.json") as f:
             report = json.load(f)
     except FileNotFoundError:
-        print("Error: bandit_report.json not found. Please run Bandit with JSON output first.")
+        print(
+            "Error: bandit_report.json not found. Please run Bandit with JSON output first."
+        )
         return
 
     risky_count = 0
@@ -30,6 +43,7 @@ def main():
                 ok_count += 1
 
     print(f"\nSummary: {risky_count} RISKY asserts, {ok_count} OK asserts.")
+
 
 if __name__ == "__main__":
     main()

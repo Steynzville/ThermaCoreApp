@@ -104,15 +104,13 @@ class SecureOPCUAWrapper:
     def _should_sanitize_for_production(self) -> bool:
         """Determine if node ID should be sanitized for production environment."""
         try:
-            from app.utils.environment import (
-                is_production_environment,
-            )
+            from app.utils.environment import is_production_environment
 
             if self._client and hasattr(self._client, "_app"):
                 return is_production_environment(self._client._app)
         except Exception as e:
             logger.debug(
-                f"Failed to check production environment: {e.__class__.__name__}"
+                f"Failed to check production environment: {e.__class__.__name__}",
             )
         return False
 

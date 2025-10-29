@@ -7,16 +7,20 @@ This script demonstrates that:
 2. Default admin role is seeded
 3. Default admin user is seeded
 4. The implementation is idempotent
+
+NOTE: This test sets a test password via environment variable.
 """
 
-import sys
 import os
+import sys
 
 # Set environment for testing
 os.environ["TESTING"] = "false"
 os.environ["FLASK_ENV"] = "development"
 os.environ["FLASK_DEBUG"] = "1"
 os.environ["SKIP_EXTERNAL_SERVICES"] = "true"
+# Set a test password for the default admin user
+os.environ["DEFAULT_ADMIN_PASSWORD"] = "TestPassword123!"
 
 
 def test_fresh_database():
@@ -33,7 +37,8 @@ def test_fresh_database():
 
     # Import app (triggers initialization)
     from run import app, db
-    from app.models import User, Role, RoleEnum
+
+    from app.models import Role, RoleEnum, User
 
     with app.app_context():
         # Check tables
@@ -56,7 +61,9 @@ def test_fresh_database():
         assert admin_user is not None, "Admin user not found"
         assert admin_user.username == "Steyn_Admin", "Admin user has wrong username"
         assert admin_user.is_active, "Admin user is not active"
-        assert admin_user.check_password("password"), "Admin password is incorrect"
+        assert admin_user.check_password("TestPassword123!"), (
+            "Admin password is incorrect"
+        )
         print(f"✓ Admin user created: {admin_user.username}")
         print("✓ Admin user password verified")
 
@@ -71,7 +78,8 @@ def test_idempotency():
 
     # Import app again (triggers initialization again)
     from run import app
-    from app.models import User, Role, RoleEnum
+
+    from app.models import Role, RoleEnum, User
 
     with app.app_context():
         # Check for duplicates
@@ -93,13 +101,16 @@ def test_admin_credentials():
     print("=" * 70)
 
     from run import app
+
     from app.models import User
 
     with app.app_context():
         admin = User.query.filter_by(username="Steyn_Admin").first()
 
-        # Test correct password
-        assert admin.check_password("password"), "Correct password should authenticate"
+        # Test correct password (using the test password we set in environment)
+        assert admin.check_password("TestPassword123!"), (
+            "Correct password should authenticate"
+        )
         print("✓ Correct password authenticates successfully")
 
         # Test wrong password

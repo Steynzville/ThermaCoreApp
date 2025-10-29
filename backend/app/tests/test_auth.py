@@ -1021,7 +1021,7 @@ class TestSecurityEnhancements:
         reset_token = secrets.token_urlsafe(32)
         user.reset_token = reset_token
         user.reset_token_expires = datetime.now(timezone.utc) - timedelta(
-            hours=1
+            hours=1,
         )  # Expired
         db_session.commit()
 

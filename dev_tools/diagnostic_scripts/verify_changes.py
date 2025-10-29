@@ -25,7 +25,11 @@ checks = [
         "Environment variable support",
         'os.environ.get("FIRST_ADMIN_PASSWORD"' in admin_content,
     ),
-    ("Default password preserved", '"Steiner1!"' in admin_content),
+    (
+        "No hardcoded password (SECURE)",
+        '"Steiner1!"' not in admin_content
+        and "DEFAULT_ADMIN_PASSWORD" not in admin_content,
+    ),
 ]
 
 for check_name, passed in checks:
@@ -130,8 +134,9 @@ print("\n" + "=" * 70)
 print("✅ All verification checks passed!")
 print("=" * 70)
 print("\nSummary of changes:")
-print("1. Admin script now hides password and supports environment variable")
+print("1. Admin script now hides password and REQUIRES environment variable (secure)")
 print("2. Created reusable @validate_json_request decorator")
 print("3. Refactored 4 endpoints to use the decorator")
 print("4. Reduced code duplication by ~40 lines")
+print("5. No hardcoded passwords in codebase (security best practice)")
 print("\nAll existing functionality is preserved!")

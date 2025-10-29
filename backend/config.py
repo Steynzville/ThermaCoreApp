@@ -32,7 +32,7 @@ class Config:
         os.environ.get("JWT_SECRET_KEY") or "dev-jwt-secret-change-in-production"
     )
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(
-        hours=int(os.environ.get("JWT_ACCESS_TOKEN_EXPIRES", 1)),
+        hours=int(os.environ.get("JWT_ACCESS_TOKEN_EXPIRES", "1")),
     )
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
 
@@ -54,15 +54,15 @@ class Config:
     REDIS_URL = os.environ.get("REDIS_URL")  # Optional Redis for rate limiting
     RATE_LIMIT_ENABLED = os.environ.get("RATE_LIMIT_ENABLED", "true").lower() == "true"
     DEFAULT_RATE_LIMIT = int(
-        os.environ.get("DEFAULT_RATE_LIMIT", 100),
+        os.environ.get("DEFAULT_RATE_LIMIT", "100"),
     )  # requests per minute
     AUTH_RATE_LIMIT = int(
-        os.environ.get("AUTH_RATE_LIMIT", 10),
+        os.environ.get("AUTH_RATE_LIMIT", "10"),
     )  # auth requests per minute
 
     # Request validation - PR2 Implementation
     MAX_REQUEST_SIZE = int(
-        os.environ.get("MAX_REQUEST_SIZE", 1024 * 1024),
+        os.environ.get("MAX_REQUEST_SIZE", str(1024 * 1024)),
     )  # 1MB default
     VALIDATE_JSON_REQUESTS = (
         os.environ.get("VALIDATE_JSON_REQUESTS", "true").lower() == "true"
@@ -87,18 +87,18 @@ class Config:
         """
         return {
             "MQTT_BROKER_HOST": os.environ.get("MQTT_BROKER_HOST", "localhost"),
-            "MQTT_BROKER_PORT": int(os.environ.get("MQTT_BROKER_PORT", 1883)),
+            "MQTT_BROKER_PORT": int(os.environ.get("MQTT_BROKER_PORT", "1883")),
             "MQTT_USERNAME": os.environ.get("MQTT_USERNAME"),
             "MQTT_PASSWORD": os.environ.get("MQTT_PASSWORD"),
         }
 
     # MQTT Configuration with security enforcement
     MQTT_BROKER_HOST = os.environ.get("MQTT_BROKER_HOST", "localhost")
-    MQTT_BROKER_PORT = int(os.environ.get("MQTT_BROKER_PORT", 1883))
+    MQTT_BROKER_PORT = int(os.environ.get("MQTT_BROKER_PORT", "1883"))
     MQTT_USERNAME = os.environ.get("MQTT_USERNAME")
     MQTT_PASSWORD = os.environ.get("MQTT_PASSWORD")
     MQTT_CLIENT_ID = os.environ.get("MQTT_CLIENT_ID", "thermacore_backend")
-    MQTT_KEEPALIVE = int(os.environ.get("MQTT_KEEPALIVE", 60))
+    MQTT_KEEPALIVE = int(os.environ.get("MQTT_KEEPALIVE", "60"))
     MQTT_USE_TLS = os.environ.get("MQTT_USE_TLS", "false").lower() == "true"
     MQTT_CA_CERTS = os.environ.get("MQTT_CA_CERTS")  # Path to CA certificate file
     MQTT_CERT_FILE = os.environ.get("MQTT_CERT_FILE")  # Path to client certificate file
@@ -118,8 +118,8 @@ class Config:
         "WEBSOCKET_CORS_ORIGINS",
         _default_websocket_origins,
     ).split(",")
-    WEBSOCKET_PING_TIMEOUT = int(os.environ.get("WEBSOCKET_PING_TIMEOUT", 60))
-    WEBSOCKET_PING_INTERVAL = int(os.environ.get("WEBSOCKET_PING_INTERVAL", 25))
+    WEBSOCKET_PING_TIMEOUT = int(os.environ.get("WEBSOCKET_PING_TIMEOUT", "60"))
+    WEBSOCKET_PING_INTERVAL = int(os.environ.get("WEBSOCKET_PING_INTERVAL", "25"))
 
     # OPC UA Configuration with enhanced security
     OPCUA_SERVER_URL = os.environ.get("OPCUA_SERVER_URL", "opc.tcp://localhost:4840")
@@ -127,7 +127,7 @@ class Config:
     OPCUA_PASSWORD = os.environ.get("OPCUA_PASSWORD")
     OPCUA_SECURITY_POLICY = os.environ.get("OPCUA_SECURITY_POLICY", "None")
     OPCUA_SECURITY_MODE = os.environ.get("OPCUA_SECURITY_MODE", "None")
-    OPCUA_TIMEOUT = int(os.environ.get("OPCUA_TIMEOUT", 30))
+    OPCUA_TIMEOUT = int(os.environ.get("OPCUA_TIMEOUT", "30"))
     OPCUA_CERT_FILE = os.environ.get("OPCUA_CERT_FILE")  # Path to client certificate
     OPCUA_PRIVATE_KEY_FILE = os.environ.get(
         "OPCUA_PRIVATE_KEY_FILE",
@@ -185,18 +185,21 @@ class DevelopmentConfig(Config):
 
             warnings.warn(
                 "SECRET_KEY not set in environment, using default (not secure for production)",
+                stacklevel=2,
             )
         if os.environ.get("DATABASE_URL") is None:
             import warnings  # noqa: PLC0415 - Conditional import
 
             warnings.warn(
                 "DATABASE_URL not set in environment, using default SQLite database",
+                stacklevel=2,
             )
         if os.environ.get("JWT_SECRET_KEY") is None:
             import warnings  # noqa: PLC0415 - Conditional import
 
             warnings.warn(
                 "JWT_SECRET_KEY not set in environment, using default (not secure for production)",
+                stacklevel=2,
             )
 
 

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Basic validation test for PR2 middleware files."""
 
-import sys
-import os
 import ast
+import os
+import sys
 
 # Add the backend directory to Python path
 sys.path.insert(0, "/home/runner/work/ThermaCoreApp/ThermaCoreApp/backend")
@@ -60,8 +60,8 @@ def test_core_functionality():
     try:
         # Test basic imports and class definitions
         import uuid
-        from datetime import datetime
         from collections import defaultdict, deque
+        from datetime import datetime
         from threading import Lock
 
         print("✅ Core Python imports successful")

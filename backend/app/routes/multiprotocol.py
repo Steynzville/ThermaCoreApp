@@ -201,12 +201,15 @@ def add_modbus_device():
             timeout=data.get("timeout", 5.0),
         )
         if success:
-            return jsonify(
-                {
-                    "message": f"Modbus device {data['device_id']} added successfully",
-                    "device_id": data["device_id"],
-                },
-            ), 201
+            return (
+                jsonify(
+                    {
+                        "message": f"Modbus device {data['device_id']} added successfully",
+                        "device_id": data["device_id"],
+                    },
+                ),
+                201,
+            )
         return jsonify({"error": "Failed to add Modbus device"}), 500
     except Exception as e:
         return SecurityAwareErrorHandler.handle_error(e, "Failed to add Modbus device")
@@ -285,12 +288,15 @@ def add_dnp3_device():
             app_timeout=data.get("app_timeout", 5.0),
         )
         if success:
-            return jsonify(
-                {
-                    "message": f"DNP3 device {data['device_id']} added successfully",
-                    "device_id": data["device_id"],
-                },
-            ), 201
+            return (
+                jsonify(
+                    {
+                        "message": f"DNP3 device {data['device_id']} added successfully",
+                        "device_id": data["device_id"],
+                    },
+                ),
+                201,
+            )
         return jsonify({"error": "Failed to add DNP3 device"}), 500
     except Exception as e:
         return SecurityAwareErrorHandler.handle_error(e, "Failed to add DNP3 device")
@@ -454,11 +460,14 @@ def convert_protocol_data():
         elif source_protocol == target_protocol:
             converted_data = source_data
         else:
-            return jsonify(
-                {
-                    "error": f"Conversion from {source_protocol} to {target_protocol} not supported",
-                },
-            ), 400
+            return (
+                jsonify(
+                    {
+                        "error": f"Conversion from {source_protocol} to {target_protocol} not supported",
+                    },
+                ),
+                400,
+            )
         return jsonify(
             {
                 "source_protocol": source_protocol,

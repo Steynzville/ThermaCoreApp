@@ -12,8 +12,9 @@ Example:
     python test_login_endpoint.py https://thermacoreapp.onrender.com admin admin123
 """
 
-import sys
 import json
+import sys
+
 import requests
 from requests.exceptions import RequestException
 

@@ -85,9 +85,7 @@ def check_user_can_login(user: Any) -> tuple[Any, int] | None:
                     "reason": "inactive_account",
                 },
             )
-            from app.middleware.audit import (  # noqa: PLC0415
-                audit_login_failure,
-            )
+            from app.middleware.audit import audit_login_failure  # noqa: PLC0415
 
             audit_login_failure(user.username, "inactive_account")
             return SecurityAwareErrorHandler.handle_service_error(
@@ -106,9 +104,7 @@ def check_user_can_login(user: Any) -> tuple[Any, int] | None:
                     "registration_status": user.registration_status,
                 },
             )
-            from app.middleware.audit import (  # noqa: PLC0415
-                audit_login_failure,
-            )
+            from app.middleware.audit import audit_login_failure  # noqa: PLC0415
 
             audit_login_failure(user.username, "pending_approval")
             return SecurityAwareErrorHandler.handle_service_error(
@@ -408,9 +404,7 @@ def handle_invalid_credentials(username: str) -> tuple[Any, int]:
             "reason": "invalid_credentials",
         },
     )
-    from app.middleware.audit import (  # noqa: PLC0415
-        audit_login_failure,
-    )
+    from app.middleware.audit import audit_login_failure  # noqa: PLC0415
 
     audit_login_failure(username, "invalid_credentials")
     return SecurityAwareErrorHandler.handle_service_error(

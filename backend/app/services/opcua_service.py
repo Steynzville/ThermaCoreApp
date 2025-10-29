@@ -179,9 +179,7 @@ class OPCUAClient:
         import os  # noqa: PLC0415 - Conditional import
 
         from cryptography import x509  # noqa: PLC0415 - Conditional import
-        from cryptography.hazmat.backends import (
-            default_backend,
-        )
+        from cryptography.hazmat.backends import default_backend
 
         if not os.path.exists(self.trust_cert_file):
             # Sanitize path in error messages for security
@@ -735,9 +733,7 @@ class OPCUAClient:
                 if success:
                     # Also trigger real-time processing
                     try:
-                        from app.services.realtime_processor import (
-                            realtime_processor,
-                        )
+                        from app.services.realtime_processor import realtime_processor
 
                         realtime_processor.process_sensor_data(
                             processed_data["unit_id"],
@@ -828,7 +824,7 @@ class OPCUAClient:
                             node_info["value"] = child.get_value()
                         except Exception as e:
                             logger.debug(
-                                f"Failed to read node value: {e.__class__.__name__}"
+                                f"Failed to read node value: {e.__class__.__name__}",
                             )
 
                     nodes.append(node_info)

@@ -46,7 +46,7 @@ def safe_service_init(
         )
         if required:
             raise RuntimeError(
-                f"Required service {service_name} failed to initialize: {e}"
+                f"Required service {service_name} failed to initialize: {e}",
             ) from e
         return False
 
@@ -100,9 +100,7 @@ def setup_logging_sanitization(app: Any) -> None:
     Args:
         app: Flask application instance
     """
-    from app.utils.logging_filter import (
-        SanitizingFilter,
-    )
+    from app.utils.logging_filter import SanitizingFilter
 
     root_logger = logging.getLogger()
 

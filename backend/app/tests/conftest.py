@@ -27,7 +27,7 @@ def _init_database():
     try:
         if use_postgres:
             logger.info(
-                "Using PostgreSQL migration script for schema initialization..."
+                "Using PostgreSQL migration script for schema initialization...",
             )
             # Use PostgreSQL migration script for PostgreSQL tests
             schema_path = os.path.join(
@@ -51,7 +51,7 @@ def _init_database():
             # For SQLite tests, use SQLAlchemy's create_all() which properly handles
             # enum types and other SQLAlchemy-specific features
             logger.info(
-                "Using SQLAlchemy create_all() for SQLite schema initialization..."
+                "Using SQLAlchemy create_all() for SQLite schema initialization...",
             )
             logger.info(
                 f"SQLAlchemy models to create: {list(db.Model.metadata.tables.keys())}",

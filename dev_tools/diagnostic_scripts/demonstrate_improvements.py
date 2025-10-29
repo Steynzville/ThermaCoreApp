@@ -22,15 +22,15 @@ def demonstrate_domain_exceptions():
 
     try:
         from exceptions import (
-            ValidationException,
             AuthenticationException,
-            UnitOfflineException,
-            SensorNotFoundException,
+            ConfigurationException,
             DatabaseException,
             MQTTConnectionException,
             OPCUAConnectionException,
+            SensorNotFoundException,
             TimeoutException,
-            ConfigurationException,
+            UnitOfflineException,
+            ValidationException,
         )
 
         # Create various domain exceptions to show their properties
@@ -97,7 +97,7 @@ def demonstrate_error_handling():
     print(f"Simulating request with correlation ID: {test_request_id}")
 
     try:
-        from exceptions import ValidationException, AuthenticationException
+        from exceptions import AuthenticationException, ValidationException
 
         # Mock the response structure that would be returned
         def simulate_error_response(exception, error_type, status_code):

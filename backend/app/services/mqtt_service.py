@@ -393,9 +393,7 @@ class MQTTClient:
             if success:
                 # Process data for real-time streaming after successful storage
                 try:
-                    from app.services.realtime_processor import (
-                        realtime_processor,
-                    )
+                    from app.services.realtime_processor import realtime_processor
 
                     realtime_processor.process_sensor_data(
                         data["unit_id"],
@@ -464,7 +462,7 @@ class MQTTClient:
             "broker_port": self.broker_port,
             "client_id": self.client_id,
             "subscribed_topics": sorted(
-                self._subscribed_topics
+                self._subscribed_topics,
             ),  # Sort topics for deterministic ordering
             "metrics": {
                 "subscribed_topics_count": len(self._subscribed_topics),

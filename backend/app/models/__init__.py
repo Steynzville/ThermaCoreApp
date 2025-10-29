@@ -199,7 +199,10 @@ class Tenant(db.Model):
     id = Column(Integer, primary_key=True)
     name = Column(String(255), unique=True, nullable=False, index=True)
     slug = Column(
-        String(100), unique=True, nullable=False, index=True
+        String(100),
+        unique=True,
+        nullable=False,
+        index=True,
     )  # URL-safe identifier
     description = Column(Text)
 
@@ -260,15 +263,18 @@ class User(db.Model):
     last_login = Column(DateTime)  # timezone-aware set via application logic
     reset_token = Column(String(255))  # Password reset token
     reset_token_expires = Column(
-        DateTime(timezone=True)
+        DateTime(timezone=True),
     )  # Token expiration time (timezone-aware)
     permissions = Column(
-        JSON, nullable=True
+        JSON,
+        nullable=True,
     )  # Direct user permissions (JSON array of permission strings)
 
     # Approval workflow fields
     registration_status = Column(
-        String(20), default="approved", nullable=False
+        String(20),
+        default="approved",
+        nullable=False,
     )  # Status: pending, approved, rejected
     approval_date = Column(DateTime)  # When the user was approved
     approved_by = Column(Integer)  # User ID of the admin who approved
@@ -277,7 +283,10 @@ class User(db.Model):
     # Foreign Keys
     role_id = Column(Integer, ForeignKey("roles.id"), nullable=False)
     tenant_id = Column(
-        Integer, ForeignKey("tenants.id"), nullable=True, index=True
+        Integer,
+        ForeignKey("tenants.id"),
+        nullable=True,
+        index=True,
     )  # Nullable for backward compatibility
 
     # Relationships
@@ -425,7 +434,10 @@ class Unit(db.Model):
 
     # Foreign Keys
     tenant_id = Column(
-        Integer, ForeignKey("tenants.id"), nullable=True, index=True
+        Integer,
+        ForeignKey("tenants.id"),
+        nullable=True,
+        index=True,
     )  # Nullable for backward compatibility
 
     # Relationships

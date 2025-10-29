@@ -121,7 +121,9 @@ class TestRolesEndpoint:
             "remote_control",
         }
 
-        assert expected_admin_permissions.issubset(admin_permissions), (
+        assert expected_admin_permissions.issubset(
+            admin_permissions,
+        ), (
             f"Admin missing expected permissions: {expected_admin_permissions - admin_permissions}"
         )
 

@@ -63,6 +63,7 @@ class StaticAnalysisSuite:
         try:
             result = subprocess.run(
                 command,
+                check=False,
                 capture_output=True,
                 text=True,
                 timeout=300,  # 5 minute timeout

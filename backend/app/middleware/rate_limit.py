@@ -217,9 +217,7 @@ def rate_limit(
                 identifier = request.remote_addr or "unknown"
             elif per == "user":
                 # Try to get user from JWT token
-                from flask_jwt_extended import (
-                    get_jwt_identity,
-                )
+                from flask_jwt_extended import get_jwt_identity
 
                 try:
                     identity = get_jwt_identity()
@@ -244,24 +242,27 @@ def rate_limit(
             )
 
             if not is_allowed:
-                return jsonify(
-                    {
-                        "success": False,
-                        "error": {
-                            "code": "RATE_LIMIT_EXCEEDED",
-                            "message": "Rate limit exceeded. Please try again later.",
-                            "details": {
-                                "limit": rate_info["limit"],
-                                "window_seconds": rate_info["window_seconds"],
-                                "reset_time": rate_info["reset_time"],
-                                "retry_after": rate_info["reset_time"]
-                                - int(time.time()),
+                return (
+                    jsonify(
+                        {
+                            "success": False,
+                            "error": {
+                                "code": "RATE_LIMIT_EXCEEDED",
+                                "message": "Rate limit exceeded. Please try again later.",
+                                "details": {
+                                    "limit": rate_info["limit"],
+                                    "window_seconds": rate_info["window_seconds"],
+                                    "reset_time": rate_info["reset_time"],
+                                    "retry_after": rate_info["reset_time"]
+                                    - int(time.time()),
+                                },
                             },
+                            "request_id": getattr(g, "request_id", str(uuid.uuid4())),
+                            "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
                         },
-                        "request_id": getattr(g, "request_id", str(uuid.uuid4())),
-                        "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
-                    },
-                ), 429
+                    ),
+                    429,
+                )
 
             # Add rate limit headers to response
             response = f(*args, **kwargs)

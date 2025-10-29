@@ -14,12 +14,12 @@ def test_domain_exceptions_basic():
     try:
         # Test direct import of exceptions module
         from app.exceptions import (
-            ThermaCoreException,
             AuthenticationException,
             DatabaseException,
-            UnitOfflineException,
-            SensorNotFoundException,
             InvalidDataException,
+            SensorNotFoundException,
+            ThermaCoreException,
+            UnitOfflineException,
         )
 
         # Test basic ThermaCoreException
@@ -104,14 +104,14 @@ def test_exception_attributes():
 
     try:
         from app.exceptions import (
-            ValidationException,
             AuthenticationException,
-            ProtocolException,
+            DNP3Exception,
+            ModbusException,
             MQTTException,
             OPCUAException,
-            ModbusException,
-            DNP3Exception,
+            ProtocolException,
             TimeoutException,
+            ValidationException,
         )
 
         # Test various exception types

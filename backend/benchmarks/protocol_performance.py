@@ -14,11 +14,17 @@ Benchmark Targets:
 - Serialization: < 10ms per message
 """
 
-import time
 import json
+import logging
 import statistics
-from typing import List, Dict, Any
-from datetime import datetime
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+logger = logging.getLogger(__name__)
 
 
 class ProtocolPerformanceBenchmark:
@@ -26,12 +32,16 @@ class ProtocolPerformanceBenchmark:
 
     def __init__(self):
         """Initialize benchmark suite."""
-        self.results: Dict[str, Any] = {}
-        self.passed_benchmarks: List[str] = []
-        self.failed_benchmarks: List[str] = []
+        self.results: dict[str, Any] = {}
+        self.passed_benchmarks: list[str] = []
+        self.failed_benchmarks: list[str] = []
 
     def run_benchmark(
-        self, name: str, func, iterations: int = 1000, target_ms: float = 50.0
+        self,
+        name: str,
+        func,
+        iterations: int = 1000,
+        target_ms: float = 50.0,
     ):
         """
         Run a benchmark test.
@@ -42,12 +52,12 @@ class ProtocolPerformanceBenchmark:
             iterations: Number of iterations to run
             target_ms: Target time in milliseconds
         """
-        print(f"\n{'=' * 60}")
-        print(f"Running: {name}")
-        print(f"Iterations: {iterations}, Target: {target_ms}ms")
-        print(f"{'=' * 60}")
+        logger.info("=" * 60)
+        logger.info("Running: %s", name)
+        logger.info("Iterations: %d, Target: %.1fms", iterations, target_ms)
+        logger.info("=" * 60)
 
-        times: List[float] = []
+        times: list[float] = []
 
         for i in range(iterations):
             start = time.perf_counter()
@@ -74,13 +84,13 @@ class ProtocolPerformanceBenchmark:
 
         status = "✅ PASS" if avg_time <= target_ms else "❌ FAIL"
 
-        print(f"\nResults:")
-        print(f"  Average:   {avg_time:.3f}ms")
-        print(f"  Median:    {median_time:.3f}ms")
-        print(f"  Min:       {min_time:.3f}ms")
-        print(f"  Max:       {max_time:.3f}ms")
-        print(f"  Std Dev:   {std_dev:.3f}ms")
-        print(f"  Status:    {status}")
+        logger.info("\nResults:")
+        logger.info("  Average:   %.3fms", avg_time)
+        logger.info("  Median:    %.3fms", median_time)
+        logger.info("  Min:       %.3fms", min_time)
+        logger.info("  Max:       %.3fms", max_time)
+        logger.info("  Std Dev:   %.3fms", std_dev)
+        logger.info("  Status:    %s", status)
 
         if avg_time <= target_ms:
             self.passed_benchmarks.append(name)
@@ -94,7 +104,7 @@ class ProtocolPerformanceBenchmark:
             data = {
                 "unit_id": "TC001",
                 "sensor_id": "TEMP_001",
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "value": 72.5,
                 "status": "online",
                 "metadata": {"quality": "good", "source": "mqtt"},
@@ -102,7 +112,10 @@ class ProtocolPerformanceBenchmark:
             json.dumps(data)
 
         self.run_benchmark(
-            "Message Serialization", serialize, iterations=10000, target_ms=10.0
+            "Message Serialization",
+            serialize,
+            iterations=10000,
+            target_ms=10.0,
         )
 
     def benchmark_message_deserialization(self):
@@ -112,18 +125,21 @@ class ProtocolPerformanceBenchmark:
             {
                 "unit_id": "TC001",
                 "sensor_id": "TEMP_001",
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "value": 72.5,
                 "status": "online",
                 "metadata": {"quality": "good", "source": "mqtt"},
-            }
+            },
         )
 
         def deserialize():
             json.loads(message)
 
         self.run_benchmark(
-            "Message Deserialization", deserialize, iterations=10000, target_ms=10.0
+            "Message Deserialization",
+            deserialize,
+            iterations=10000,
+            target_ms=10.0,
         )
 
     def benchmark_protocol_registry_lookup(self):
@@ -142,7 +158,10 @@ class ProtocolPerformanceBenchmark:
             return protocol
 
         self.run_benchmark(
-            "Protocol Registry Lookup", lookup, iterations=100000, target_ms=1.0
+            "Protocol Registry Lookup",
+            lookup,
+            iterations=100000,
+            target_ms=1.0,
         )
 
     def benchmark_message_validation(self):
@@ -152,7 +171,7 @@ class ProtocolPerformanceBenchmark:
             data = {
                 "unit_id": "TC001",
                 "sensor_id": "TEMP_001",
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "value": 72.5,
             }
 
@@ -166,7 +185,10 @@ class ProtocolPerformanceBenchmark:
             return is_valid
 
         self.run_benchmark(
-            "Message Validation", validate, iterations=10000, target_ms=5.0
+            "Message Validation",
+            validate,
+            iterations=10000,
+            target_ms=5.0,
         )
 
     def benchmark_protocol_message_processing(self):
@@ -176,10 +198,10 @@ class ProtocolPerformanceBenchmark:
             {
                 "unit_id": "TC001",
                 "sensor_id": "TEMP_001",
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "value": 72.5,
                 "status": "online",
-            }
+            },
         )
 
         def process():
@@ -188,7 +210,8 @@ class ProtocolPerformanceBenchmark:
 
             # Validate
             is_valid = isinstance(data.get("unit_id"), str) and isinstance(
-                data.get("value"), (int, float)
+                data.get("value"),
+                (int, float),
             )
 
             # Process (simulate)
@@ -202,7 +225,10 @@ class ProtocolPerformanceBenchmark:
             return None
 
         self.run_benchmark(
-            "Complete Message Processing", process, iterations=5000, target_ms=50.0
+            "Complete Message Processing",
+            process,
+            iterations=5000,
+            target_ms=50.0,
         )
 
     def benchmark_connection_simulation(self):
@@ -219,7 +245,7 @@ class ProtocolPerformanceBenchmark:
 
             # Simulate validation and setup
             is_valid = all(
-                [config.get("host"), config.get("port"), config.get("client_id")]
+                [config.get("host"), config.get("port"), config.get("client_id")],
             )
 
             if is_valid:
@@ -250,22 +276,25 @@ class ProtocolPerformanceBenchmark:
                 "value": float(raw_data["raw_value"]),
                 "unit": raw_data["unit"],
                 "timestamp": datetime.fromisoformat(
-                    raw_data["timestamp"].replace("Z", "+00:00")
+                    raw_data["timestamp"].replace("Z", "+00:00"),
                 ),
             }
 
             return transformed
 
         self.run_benchmark(
-            "Data Transformation", transform, iterations=10000, target_ms=20.0
+            "Data Transformation",
+            transform,
+            iterations=10000,
+            target_ms=20.0,
         )
 
     def run_all_benchmarks(self):
         """Run all benchmarks."""
-        print("\n" + "=" * 60)
-        print("PROTOCOL PERFORMANCE BENCHMARK SUITE")
-        print("ThermaCore SCADA Platform")
-        print("=" * 60)
+        logger.info("\n" + "=" * 60)
+        logger.info("PROTOCOL PERFORMANCE BENCHMARK SUITE")
+        logger.info("ThermaCore SCADA Platform")
+        logger.info("=" * 60)
 
         self.benchmark_message_serialization()
         self.benchmark_message_deserialization()
@@ -279,43 +308,55 @@ class ProtocolPerformanceBenchmark:
 
     def print_summary(self):
         """Print benchmark summary."""
-        print("\n" + "=" * 60)
-        print("BENCHMARK SUMMARY")
-        print("=" * 60)
+        logger.info("\n" + "=" * 60)
+        logger.info("BENCHMARK SUMMARY")
+        logger.info("=" * 60)
 
         total_tests = len(self.results)
         passed = len(self.passed_benchmarks)
         failed = len(self.failed_benchmarks)
 
-        print(f"\nTotal Benchmarks: {total_tests}")
-        print(f"Passed: {passed} ✅")
-        print(f"Failed: {failed} ❌")
-        print(f"Success Rate: {(passed / total_tests) * 100:.1f}%")
+        logger.info("\nTotal Benchmarks: %d", total_tests)
+        logger.info("Passed: %d ✅", passed)
+        logger.info("Failed: %d ❌", failed)
+        logger.info("Success Rate: %.1f%%", (passed / total_tests) * 100)
 
         if self.failed_benchmarks:
-            print("\n❌ Failed Benchmarks:")
+            logger.info("\n❌ Failed Benchmarks:")
             for name in self.failed_benchmarks:
                 result = self.results[name]
-                print(
-                    f"  - {name}: {result['avg_ms']}ms (target: {result['target_ms']}ms)"
+                logger.info(
+                    "  - %s: %.3fms (target: %.3fms)",
+                    name,
+                    result["avg_ms"],
+                    result["target_ms"],
                 )
 
-        print("\n" + "=" * 60)
-        print("DETAILED RESULTS")
-        print("=" * 60)
+        logger.info("\n" + "=" * 60)
+        logger.info("DETAILED RESULTS")
+        logger.info("=" * 60)
 
         for name, result in self.results.items():
             status = "✅" if result["passed"] else "❌"
-            print(f"\n{status} {name}")
-            print(f"   Average: {result['avg_ms']}ms (target: {result['target_ms']}ms)")
-            print(f"   Median:  {result['median_ms']}ms")
-            print(f"   Range:   {result['min_ms']}ms - {result['max_ms']}ms")
+            logger.info("\n%s %s", status, name)
+            logger.info(
+                "   Average: %.3fms (target: %.3fms)",
+                result["avg_ms"],
+                result["target_ms"],
+            )
+            logger.info("   Median:  %.3fms", result["median_ms"])
+            logger.info(
+                "   Range:   %.3fms - %.3fms",
+                result["min_ms"],
+                result["max_ms"],
+            )
 
         # Save results to file
-        with open("protocol_performance_results.json", "w") as f:
+        output_file = Path("protocol_performance_results.json")
+        with output_file.open("w") as f:
             json.dump(
                 {
-                    "timestamp": datetime.now().isoformat(),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
                     "summary": {
                         "total": total_tests,
                         "passed": passed,
@@ -328,7 +369,7 @@ class ProtocolPerformanceBenchmark:
                 indent=2,
             )
 
-        print(f"\n📊 Results saved to: protocol_performance_results.json")
+        logger.info("\n📊 Results saved to: %s", output_file)
 
 
 def main():
@@ -338,10 +379,10 @@ def main():
 
     # Exit with error code if any benchmarks failed
     if benchmark.failed_benchmarks:
-        print("\n⚠️  Some benchmarks did not meet performance targets")
+        logger.warning("\n⚠️  Some benchmarks did not meet performance targets")
         return 1
 
-    print("\n✅ All benchmarks passed!")
+    logger.info("\n✅ All benchmarks passed!")
     return 0
 
 

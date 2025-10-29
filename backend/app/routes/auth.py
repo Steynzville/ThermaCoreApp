@@ -5,20 +5,14 @@ import secrets
 from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, current_app, jsonify, request
-from flask_jwt_extended import (
-    create_access_token,
-    jwt_required,
-)
+from flask_jwt_extended import create_access_token, jwt_required
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from webargs.flaskparser import use_args
 
 from app import db
 from app.exceptions import ValidationException
-from app.middleware.audit import (
-    AuditEventType,
-    AuditLogger,
-)
+from app.middleware.audit import AuditEventType, AuditLogger
 from app.middleware.authorization import permission_required
 from app.middleware.rate_limit import auth_rate_limit, standard_rate_limit
 from app.middleware.request_id import track_request_id
@@ -565,14 +559,17 @@ def refresh():
             extra={"event": "refresh_success", "username": user.username},
         )
 
-        return jsonify(
-            {
-                "access_token": access_token,
-                "expires_in": current_app.config[
-                    "JWT_ACCESS_TOKEN_EXPIRES"
-                ].total_seconds(),
-            },
-        ), 200
+        return (
+            jsonify(
+                {
+                    "access_token": access_token,
+                    "expires_in": current_app.config[
+                        "JWT_ACCESS_TOKEN_EXPIRES"
+                    ].total_seconds(),
+                },
+            ),
+            200,
+        )
 
     except Exception as e:
         # Catch-all for unexpected errors
@@ -766,9 +763,7 @@ def forgot_password(data):
         # Always return success response to prevent email enumeration
         if user and user.is_active:
             # Generate secure token
-            from datetime import (
-                timedelta,
-            )
+            from datetime import timedelta
 
             reset_token = secrets.token_urlsafe(32)
 
@@ -1008,14 +1003,10 @@ def emergency_admin():
             # Create password hash for EmergencyAdmin123!
             import json  # noqa: PLC0415 - Standard library, conditional usage
 
-            from werkzeug.security import (
-                generate_password_hash,
-            )
+            from werkzeug.security import generate_password_hash
 
             # Import centralized permissions constant from models
-            from app.models import (
-                EMERGENCY_ADMIN_PERMISSIONS,
-            )
+            from app.models import EMERGENCY_ADMIN_PERMISSIONS
 
             emergency_password_hash = generate_password_hash(
                 "EmergencyAdmin123!",

@@ -30,7 +30,7 @@ def create_health_check_endpoint(app: Any) -> Any:
                     "version": "2.9.0",
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                     "coverage": COVERAGE_DATA,
-                }
+                },
             ),
             200,
         )
@@ -47,9 +47,7 @@ def check_all_services(app: Any) -> tuple[dict[str, Any], bool, list[str]]:
     Returns:
         tuple: (services_dict, is_degraded, critical_services_down)
     """
-    from app.utils.service_manager import (
-        should_skip_external_services,
-    )
+    from app.utils.service_manager import should_skip_external_services
 
     services = {}
     is_degraded = False
@@ -351,9 +349,7 @@ def check_database(app: Any, services: dict[str, Any]) -> bool:
         bool: True if degraded
     """
     try:
-        from app import (
-            db,
-        )
+        from app import db
 
         db.session.execute(db.text("SELECT 1"))
         services["database"] = {"status": "healthy", "available": True}
@@ -369,7 +365,9 @@ def check_database(app: Any, services: dict[str, Any]) -> bool:
 
 
 def _get_service_status(
-    services: dict[str, Any], service_name: str, default_status: str
+    services: dict[str, Any],
+    service_name: str,
+    default_status: str,
 ) -> str:
     """Extract and simplify service status.
 
@@ -419,10 +417,14 @@ def create_detailed_health_check_endpoint(app: Any) -> Any:
             "database": _get_service_status(services, "database", "connected"),
             "websocket": _get_service_status(services, "websocket", "ready"),
             "anomaly_detection": _get_service_status(
-                services, "anomaly_detection", "initialized"
+                services,
+                "anomaly_detection",
+                "initialized",
             ),
             "protocol_simulator": _get_service_status(
-                services, "protocol_simulator", "active"
+                services,
+                "protocol_simulator",
+                "active",
             ),
         }
 
@@ -434,7 +436,7 @@ def create_detailed_health_check_endpoint(app: Any) -> Any:
                     "services": services_status,
                     "tests_passing": TESTS_PASSING,
                     "coverage": COVERAGE_DATA,
-                }
+                },
             ),
             200,
         )

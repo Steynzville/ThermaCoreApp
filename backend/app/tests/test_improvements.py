@@ -85,7 +85,8 @@ class TestTimestampUpdates:
                 username="test_timestamp_user",
                 email="timestamp@test.com",
                 password_hash=generate_password_hash(
-                    "test_password_123", method="pbkdf2:sha256"
+                    "test_password_123",
+                    method="pbkdf2:sha256",
                 ),
                 first_name="Test",
                 last_name="User",
@@ -190,7 +191,8 @@ class TestTimestampUpdates:
                 username="test_created_user",
                 email="created@test.com",
                 password_hash=generate_password_hash(
-                    "test_password_123", method="pbkdf2:sha256"
+                    "test_password_123",
+                    method="pbkdf2:sha256",
                 ),
                 first_name="Created",
                 last_name="User",

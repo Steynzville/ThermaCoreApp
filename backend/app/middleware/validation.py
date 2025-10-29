@@ -76,21 +76,24 @@ class RequestValidator:
     def validate_json_content_type():
         """Validate that request has proper JSON content type for POST/PUT requests."""
         if request.method in ["POST", "PUT", "PATCH"] and not request.is_json:
-            return jsonify(
-                {
-                    "success": False,
-                    "error": {
-                        "code": "INVALID_CONTENT_TYPE",
-                        "message": "Content-Type must be application/json",
-                        "details": {
-                            "expected": "application/json",
-                            "received": request.content_type,
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": {
+                            "code": "INVALID_CONTENT_TYPE",
+                            "message": "Content-Type must be application/json",
+                            "details": {
+                                "expected": "application/json",
+                                "received": request.content_type,
+                            },
                         },
+                        "request_id": getattr(g, "request_id", str(uuid.uuid4())),
+                        "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
                     },
-                    "request_id": getattr(g, "request_id", str(uuid.uuid4())),
-                    "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
-                },
-            ), 400
+                ),
+                400,
+            )
         return None
 
     @staticmethod
@@ -100,53 +103,67 @@ class RequestValidator:
             try:
                 # Force JSON parsing to catch malformed JSON early
                 if request.data and not request.json:
-                    return jsonify(
+                    return (
+                        jsonify(
+                            {
+                                "success": False,
+                                "error": {
+                                    "code": "INVALID_JSON",
+                                    "message": "Request body must contain valid JSON",
+                                    "details": {"error": "Malformed JSON syntax"},
+                                },
+                                "request_id": getattr(
+                                    g,
+                                    "request_id",
+                                    str(uuid.uuid4()),
+                                ),
+                                "timestamp": datetime.now(timezone.utc).isoformat()
+                                + "Z",
+                            },
+                        ),
+                        400,
+                    )
+            except Exception:
+                return (
+                    jsonify(
                         {
                             "success": False,
                             "error": {
                                 "code": "INVALID_JSON",
                                 "message": "Request body must contain valid JSON",
-                                "details": {"error": "Malformed JSON syntax"},
+                                "details": {"error": "JSON parsing failed"},
                             },
                             "request_id": getattr(g, "request_id", str(uuid.uuid4())),
                             "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
                         },
-                    ), 400
-            except Exception:
-                return jsonify(
-                    {
-                        "success": False,
-                        "error": {
-                            "code": "INVALID_JSON",
-                            "message": "Request body must contain valid JSON",
-                            "details": {"error": "JSON parsing failed"},
-                        },
-                        "request_id": getattr(g, "request_id", str(uuid.uuid4())),
-                        "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
-                    },
-                ), 400
+                    ),
+                    400,
+                )
         return None
 
     @staticmethod
     def validate_request_size(max_size: int = 1024 * 1024):  # 1MB default
         """Validate request payload size."""
         if request.content_length and request.content_length > max_size:
-            return jsonify(
-                {
-                    "success": False,
-                    "error": {
-                        "code": "PAYLOAD_TOO_LARGE",
-                        "message": "Request payload exceeds maximum allowed size",
-                        "details": {
-                            "max_size": max_size,
-                            "received_size": request.content_length,
-                            "size_unit": "bytes",
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": {
+                            "code": "PAYLOAD_TOO_LARGE",
+                            "message": "Request payload exceeds maximum allowed size",
+                            "details": {
+                                "max_size": max_size,
+                                "received_size": request.content_length,
+                                "size_unit": "bytes",
+                            },
                         },
+                        "request_id": getattr(g, "request_id", str(uuid.uuid4())),
+                        "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
                     },
-                    "request_id": getattr(g, "request_id", str(uuid.uuid4())),
-                    "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
-                },
-            ), 413
+                ),
+                413,
+            )
         return None
 
 
@@ -215,18 +232,21 @@ def validate_query_params(**param_validators):
                         errors[param_name] = f"Validation error: {e!s}"
 
             if errors:
-                return jsonify(
-                    {
-                        "success": False,
-                        "error": {
-                            "code": "QUERY_PARAM_VALIDATION_ERROR",
-                            "message": "Query parameter validation failed",
-                            "details": {"field_errors": errors},
+                return (
+                    jsonify(
+                        {
+                            "success": False,
+                            "error": {
+                                "code": "QUERY_PARAM_VALIDATION_ERROR",
+                                "message": "Query parameter validation failed",
+                                "details": {"field_errors": errors},
+                            },
+                            "request_id": getattr(g, "request_id", str(uuid.uuid4())),
+                            "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
                         },
-                        "request_id": getattr(g, "request_id", str(uuid.uuid4())),
-                        "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
-                    },
-                ), 400
+                    ),
+                    400,
+                )
 
             return f(*args, **kwargs)
 
@@ -260,18 +280,21 @@ def validate_path_params(**param_validators):
                         errors[param_name] = f"Validation error: {e!s}"
 
             if errors:
-                return jsonify(
-                    {
-                        "success": False,
-                        "error": {
-                            "code": "PATH_PARAM_VALIDATION_ERROR",
-                            "message": "Path parameter validation failed",
-                            "details": {"field_errors": errors},
+                return (
+                    jsonify(
+                        {
+                            "success": False,
+                            "error": {
+                                "code": "PATH_PARAM_VALIDATION_ERROR",
+                                "message": "Path parameter validation failed",
+                                "details": {"field_errors": errors},
+                            },
+                            "request_id": getattr(g, "request_id", str(uuid.uuid4())),
+                            "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
                         },
-                        "request_id": getattr(g, "request_id", str(uuid.uuid4())),
-                        "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
-                    },
-                ), 400
+                    ),
+                    400,
+                )
 
             return f(*args, **kwargs)
 

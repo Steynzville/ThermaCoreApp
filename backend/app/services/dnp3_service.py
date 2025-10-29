@@ -14,9 +14,7 @@ from typing import Any
 
 from cachetools import TTLCache
 
-from app.exceptions import (
-    ConfigurationException,
-)
+from app.exceptions import ConfigurationException
 from app.models import utc_now  # Use timezone-aware datetime
 
 logger = logging.getLogger(__name__)
@@ -745,7 +743,7 @@ class DNP3Service:
 
         except Exception as e:
             logger.exception(
-                f"Failed to add data point config for device {device_id}: {e}"
+                f"Failed to add data point config for device {device_id}: {e}",
             )
             return False
 
@@ -1105,7 +1103,7 @@ class DNP3Service:
 
         except Exception as e:
             logger.exception(
-                f"Failed to perform integrity poll on device {device_id}: {e}"
+                f"Failed to perform integrity poll on device {device_id}: {e}",
             )
             return False
 

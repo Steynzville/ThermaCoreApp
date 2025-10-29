@@ -141,9 +141,11 @@ class WebSocketService:
             "status_response",
             {
                 "client_id": client_id,
-                "connected_at": client_info.get("connected_at", "").isoformat()
-                if client_info.get("connected_at")
-                else None,
+                "connected_at": (
+                    client_info.get("connected_at", "").isoformat()
+                    if client_info.get("connected_at")
+                    else None
+                ),
                 "subscribed_units": client_info.get("subscribed_units", []),
                 "server_time": datetime.now(timezone.utc).isoformat(),
             },

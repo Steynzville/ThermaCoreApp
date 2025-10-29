@@ -119,9 +119,12 @@ def control_water_production(unit_id):
 
         # Check if unit is online (can't control water production if offline)
         if unit.status != UnitStatusEnum.ONLINE and water_production_on:
-            return jsonify(
-                {"error": "Cannot enable water production on offline unit"},
-            ), 400
+            return (
+                jsonify(
+                    {"error": "Cannot enable water production on offline unit"},
+                ),
+                400,
+            )
 
         # Update water generation
         old_value = unit.water_generation
@@ -184,9 +187,9 @@ def get_remote_control_status(unit_id):
                 "status": unit.status.value,
                 "water_generation": unit.water_generation,
                 "power_on": unit.status == UnitStatusEnum.ONLINE,
-                "last_updated": unit.updated_at.isoformat()
-                if unit.updated_at
-                else None,
+                "last_updated": (
+                    unit.updated_at.isoformat() if unit.updated_at else None
+                ),
             },
         )
 

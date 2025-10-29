@@ -279,7 +279,9 @@ class TestUserCreationWithPermissions:
 
         # Login as the new admin
         new_admin_token = self.get_auth_token(
-            client, f"testadmin2{unique_suffix}", "password123"
+            client,
+            f"testadmin2{unique_suffix}",
+            "password123",
         )
         assert new_admin_token is not None
 

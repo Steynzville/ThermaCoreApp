@@ -16,9 +16,15 @@ from app.models import Role, RoleEnum, User
 
 def create_first_admin():
     """Create the first admin user if no admin exists."""
-    # Admin credentials as specified
+    # Admin credentials - password MUST be provided via environment variable
     admin_username = "Steyn_Admin"
-    admin_password = os.environ.get("FIRST_ADMIN_PASSWORD", "Steiner1!")
+    admin_password = os.environ.get("FIRST_ADMIN_PASSWORD")
+    if not admin_password:
+        print("❌ Error: FIRST_ADMIN_PASSWORD environment variable is required.")
+        print("   Please set a secure password using:")
+        print("   export FIRST_ADMIN_PASSWORD='your-secure-password'")
+        return 1
+
     admin_email = "Steyn.Enslin@ThermaCore.com.au"
     admin_first_name = "Steyn"
     admin_last_name = "Enslin"
