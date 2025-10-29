@@ -8,13 +8,16 @@ const api = axios.create({
 });
 
 // Add this function
-export const setAuthToken = (token) => {
+export const setAuthToken = (token, keepMeSignedIn = true) => {
   if (token) {
     api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-    localStorage.setItem("authToken", token);
+    // Store token in appropriate storage based on keepMeSignedIn
+    const storage = keepMeSignedIn ? localStorage : sessionStorage;
+    storage.setItem("authToken", token);
   } else {
     delete api.defaults.headers.common["Authorization"];
     localStorage.removeItem("authToken");
+    sessionStorage.removeItem("authToken");
   }
 };
 

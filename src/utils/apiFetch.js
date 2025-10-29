@@ -1,6 +1,8 @@
 // Enhanced API fetch utility with 401 handling, toast notifications, and improved error/redirect handling
 import { toast } from "sonner";
 
+import { getAuthTokenWithSource } from "./authToken";
+
 // Pre-convert network error patterns to lowercase for performance optimization
 // This avoids repeated toLowerCase() calls during error checking
 const NETWORK_ERROR_PATTERNS = [
@@ -36,8 +38,15 @@ export const apiFetch = async (
     ...fetchOptions
   } = options;
 
-  // Get token from localStorage
-  const token = localStorage.getItem("thermacore_token");
+  // Get token from localStorage or sessionStorage
+  const { token, source } = getAuthTokenWithSource();
+
+  // Debug logging in development
+  if (import.meta.env.DEV && url.includes("/tenants/current")) {
+    console.log("[API Debug] Making request to:", url);
+    console.log("[API Debug] Token found:", !!token);
+    console.log("[API Debug] Token source:", source);
+  }
 
   // Default headers
   const defaultHeaders = {
@@ -47,6 +56,8 @@ export const apiFetch = async (
   // Add authorization header if token exists
   if (token) {
     defaultHeaders.Authorization = `Bearer ${token}`;
+  } else if (import.meta.env.DEV && url.includes("/tenants")) {
+    console.warn("[API Debug] No token found for tenant endpoint request!");
   }
 
   // Merge headers
