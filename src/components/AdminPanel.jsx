@@ -571,28 +571,28 @@ const AdminPanel = ({ className }) => {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full">
+                  <table className="w-full min-w-full">
                     <thead>
                       <tr className="border-b border-gray-200 dark:border-gray-700">
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
                           Name
                         </th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
                           Email
                         </th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
                           Company
                         </th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
                           Phone
                         </th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
                           Role
                         </th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
                           Status
                         </th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
                           Actions
                         </th>
                       </tr>
@@ -603,26 +603,26 @@ const AdminPanel = ({ className }) => {
                           key={user.id}
                           className="border-b border-gray-100 dark:border-gray-800"
                         >
-                          <td className="py-3 px-4 text-sm text-gray-900 dark:text-gray-100">
+                          <td className="py-3 px-4 text-sm text-gray-900 dark:text-gray-100 max-w-[200px] truncate">
                             {user.name}
                           </td>
-                          <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                          <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 max-w-[200px] truncate">
                             {user.email}
                           </td>
-                          <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                          <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 max-w-[150px] truncate">
                             {user.company}
                           </td>
-                          <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                          <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
                             {user.phone}
                           </td>
                           <td className="py-3 px-4">
-                            <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400">
+                            <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400 whitespace-nowrap">
                               {user.role}
                             </span>
                           </td>
                           <td className="py-3 px-4">
                             <span
-                              className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                              className={`inline-flex px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap ${
                                 user.status === "Active"
                                   ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
                                   : "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400"
@@ -632,7 +632,7 @@ const AdminPanel = ({ className }) => {
                             </span>
                           </td>
                           <td className="py-3 px-4">
-                            <div className="flex items-center space-x-3">
+                            <div className="flex items-center space-x-3 whitespace-nowrap">
                               <button
                                 type="button"
                                 onClick={() => handleEditUser(user)}
@@ -694,19 +694,19 @@ const AdminPanel = ({ className }) => {
                     User Password Reset
                   </h4>
                   <div className="overflow-x-auto">
-                    <table className="w-full">
+                    <table className="w-full min-w-full">
                       <thead>
                         <tr className="border-b border-gray-200 dark:border-gray-700">
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
                             Name
                           </th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
                             Email
                           </th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
                             Role
                           </th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
                             Actions
                           </th>
                         </tr>
@@ -717,14 +717,14 @@ const AdminPanel = ({ className }) => {
                             key={user.id}
                             className="border-b border-gray-100 dark:border-gray-800"
                           >
-                            <td className="py-3 px-4 text-sm text-gray-900 dark:text-gray-100">
+                            <td className="py-3 px-4 text-sm text-gray-900 dark:text-gray-100 max-w-[200px] truncate">
                               {user.name}
                             </td>
-                            <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                            <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 max-w-[200px] truncate">
                               {user.email}
                             </td>
                             <td className="py-3 px-4">
-                              <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400">
+                              <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400 whitespace-nowrap">
                                 {user.role}
                               </span>
                             </td>
@@ -732,7 +732,7 @@ const AdminPanel = ({ className }) => {
                               <button
                                 type="button"
                                 onClick={() => openPasswordResetModal(user)}
-                                className="flex items-center space-x-2 px-3 py-1 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
+                                className="flex items-center space-x-2 px-3 py-1 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors whitespace-nowrap"
                               >
                                 <Key className="h-3 w-3" />
                                 <span>Reset Password</span>
