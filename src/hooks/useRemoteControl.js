@@ -2,6 +2,18 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 
 /**
+ * Get authentication token from storage
+ * Checks both localStorage and sessionStorage
+ */
+const getAuthToken = () => {
+  return (
+    localStorage.getItem("thermacore_token") ||
+    sessionStorage.getItem("thermacore_token") ||
+    localStorage.getItem("authToken")
+  );
+};
+
+/**
  * Hook to manage remote control permissions and operations
  */
 export const useRemoteControl = (unitId) => {
@@ -22,7 +34,7 @@ export const useRemoteControl = (unitId) => {
 
     try {
       // Fetch permissions from backend API
-      const token = localStorage.getItem("thermacore_token");
+      const token = getAuthToken();
       const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
       const response = await fetch(
@@ -59,7 +71,7 @@ export const useRemoteControl = (unitId) => {
     setError(null);
 
     try {
-      const token = localStorage.getItem("thermacore_token");
+      const token = getAuthToken();
       const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
       const response = await fetch(
@@ -101,7 +113,7 @@ export const useRemoteControl = (unitId) => {
     setError(null);
 
     try {
-      const token = localStorage.getItem("thermacore_token");
+      const token = getAuthToken();
       const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
       const response = await fetch(
@@ -140,7 +152,7 @@ export const useRemoteControl = (unitId) => {
     setError(null);
 
     try {
-      const token = localStorage.getItem("thermacore_token");
+      const token = getAuthToken();
       const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
       const response = await fetch(
