@@ -35,6 +35,7 @@ def register_all_blueprints(app: Any, logger: logging.Logger) -> tuple[int, int]
         ("app.routes.multiprotocol", "multiprotocol_bp", "multiprotocol"),
         ("app.routes.remote_control", "remote_control_bp", "remote_control"),
         ("app.routes.services", "services_bp", "services"),
+        ("app.routes.health", "health_bp", "health"),
     ]
 
     # Register each blueprint
