@@ -1,6 +1,8 @@
 // Enhanced API fetch utility with 401 handling, toast notifications, and improved error/redirect handling
 import { toast } from "sonner";
 
+import { getAuthToken } from "./authToken";
+
 // Pre-convert network error patterns to lowercase for performance optimization
 // This avoids repeated toLowerCase() calls during error checking
 const NETWORK_ERROR_PATTERNS = [
@@ -37,10 +39,7 @@ export const apiFetch = async (
   } = options;
 
   // Get token from localStorage or sessionStorage
-  const token =
-    localStorage.getItem("thermacore_token") ||
-    sessionStorage.getItem("thermacore_token") ||
-    localStorage.getItem("authToken");
+  const token = getAuthToken();
 
   // Debug logging in development
   if (import.meta.env.DEV && url.includes("/tenants/current")) {

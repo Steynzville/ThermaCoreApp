@@ -1,17 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-
-/**
- * Get authentication token from storage
- * Checks both localStorage and sessionStorage
- */
-const getAuthToken = () => {
-  return (
-    localStorage.getItem("thermacore_token") ||
-    sessionStorage.getItem("thermacore_token") ||
-    localStorage.getItem("authToken")
-  );
-};
+import { getAuthToken } from "../utils/authToken";
 
 /**
  * Hook to manage remote control permissions and operations
