@@ -7,72 +7,100 @@
  * - Real-time status updates
  * - Service status display
  * - Status counting and aggregation
+ * - Auto-refresh functionality
+ * - Manual refresh button
+ * - Loading states
  */
 
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import userEvent from "@testing-library/user-event";
 import SystemHealth from "@/components/SystemHealth";
 
-// Mock system health data
-vi.mock("@/data/systemHealthData", () => ({
-  default: [
-    {
-      name: "Frontend Hosting",
-      provider: "Netlify",
-      status: "Operational",
-      responseTime: "80ms",
-      icon: "Globe",
-    },
-    {
-      name: "Backend API",
-      provider: "Render",
-      status: "Operational",
-      responseTime: "120ms",
-      icon: "Server",
-    },
-    {
-      name: "Database",
-      provider: "TimescaleDB",
-      status: "Degraded Performance",
-      responseTime: "90ms",
-      icon: "Database",
-    },
-    {
-      name: "Real-time Messaging",
-      provider: "Mosquitto MQTT Broker",
-      status: "Outage",
-      responseTime: "150ms",
-      icon: "Activity",
-    },
-  ],
+// Mock the statusMonitor service
+vi.mock("@/services/statusMonitor", () => ({
+  checkAllStatus: vi.fn(),
 }));
+
+import { checkAllStatus } from "@/services/statusMonitor";
+
+const mockHealthData = [
+  {
+    name: "Frontend Hosting",
+    provider: "Netlify",
+    status: "Operational",
+    responseTime: "80ms",
+    icon: "Globe",
+  },
+  {
+    name: "Backend API",
+    provider: "Render",
+    status: "Operational",
+    responseTime: "120ms",
+    icon: "Server",
+  },
+  {
+    name: "Database",
+    provider: "TimescaleDB",
+    status: "Degraded Performance",
+    responseTime: "90ms",
+    icon: "Database",
+  },
+  {
+    name: "Real-time Messaging",
+    provider: "Mosquitto MQTT Broker",
+    status: "Outage",
+    responseTime: "150ms",
+    icon: "Activity",
+  },
+];
 
 describe("SystemHealth", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers();
+    checkAllStatus.mockResolvedValue(mockHealthData);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   describe("Component Rendering", () => {
-    it("should render system health component", () => {
+    it("should render system health component", async () => {
       render(<SystemHealth />);
 
-      expect(screen.getByText("System Health Status")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("System Health Status")).toBeInTheDocument();
+      });
     });
 
-    it("should display page header", () => {
+    it("should display page header", async () => {
       render(<SystemHealth />);
 
-      expect(screen.getByText("System Health Status")).toBeInTheDocument();
-      expect(screen.getByText(/Real-time monitoring/i)).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("System Health Status")).toBeInTheDocument();
+        expect(
+          screen.getByText(/Real-time monitoring of all infrastructure/i),
+        ).toBeInTheDocument();
+      });
     });
 
-    it("should render service cards", () => {
+    it("should show loading state initially", () => {
       render(<SystemHealth />);
 
-      expect(screen.getByText("Frontend Hosting")).toBeInTheDocument();
-      expect(screen.getByText("Backend API")).toBeInTheDocument();
-      expect(screen.getByText("Database")).toBeInTheDocument();
-      expect(screen.getByText("Real-time Messaging")).toBeInTheDocument();
+      expect(screen.getByText(/Loading system status/i)).toBeInTheDocument();
+    });
+
+    it("should render service cards after loading", async () => {
+      render(<SystemHealth />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Frontend Hosting")).toBeInTheDocument();
+        expect(screen.getByText("Backend API")).toBeInTheDocument();
+        expect(screen.getByText("Database")).toBeInTheDocument();
+        expect(screen.getByText("Real-time Messaging")).toBeInTheDocument();
+      });
     });
 
     it("should apply custom className", () => {
@@ -83,43 +111,50 @@ describe("SystemHealth", () => {
   });
 
   describe("Health Indicator Display", () => {
-    it("should display operational status indicators", () => {
+    it("should display operational status indicators", async () => {
       render(<SystemHealth />);
 
-      // Check for operational services
-      expect(screen.getByText("Frontend Hosting")).toBeInTheDocument();
-      expect(screen.getByText("Backend API")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("Frontend Hosting")).toBeInTheDocument();
+        expect(screen.getByText("Backend API")).toBeInTheDocument();
+      });
     });
 
-    it("should display degraded performance indicators", () => {
+    it("should display degraded performance indicators", async () => {
       render(<SystemHealth />);
 
-      expect(screen.getByText("Database")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("Database")).toBeInTheDocument();
+      });
     });
 
-    it("should display outage indicators", () => {
+    it("should display outage indicators", async () => {
       render(<SystemHealth />);
 
-      expect(screen.getByText("Real-time Messaging")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("Real-time Messaging")).toBeInTheDocument();
+      });
     });
 
-    it("should show status icons", () => {
+    it("should show status icons", async () => {
       const { container } = render(<SystemHealth />);
 
-      // Check for status icons (CheckCircle, AlertTriangle, XCircle)
-      const icons = container.querySelectorAll("svg");
-      expect(icons.length).toBeGreaterThan(0);
+      await waitFor(() => {
+        const icons = container.querySelectorAll("svg");
+        expect(icons.length).toBeGreaterThan(0);
+      });
     });
 
-    it("should display colored status indicators", () => {
+    it("should display colored status indicators", async () => {
       render(<SystemHealth />);
 
-      // Check for status text indicators (multiple instances expected)
-      expect(screen.getAllByText("Operational").length).toBeGreaterThan(0);
-      expect(
-        screen.getAllByText("Degraded Performance").length,
-      ).toBeGreaterThan(0);
-      expect(screen.getAllByText("Outage").length).toBeGreaterThan(0);
+      await waitFor(() => {
+        expect(screen.getAllByText("Operational").length).toBeGreaterThan(0);
+        expect(
+          screen.getAllByText("Degraded Performance").length,
+        ).toBeGreaterThan(0);
+        expect(screen.getAllByText("Outage").length).toBeGreaterThan(0);
+      });
     });
   });
 
@@ -321,34 +356,229 @@ describe("SystemHealth", () => {
     });
   });
 
-  describe("Dark Mode", () => {
-    it("should have dark mode classes", () => {
-      const { container } = render(<SystemHealth />);
+  describe("Live Status Updates", () => {
+    it("should call checkAllStatus on mount", async () => {
+      render(<SystemHealth />);
 
-      // Should have dark mode background
-      expect(container.querySelector(".dark\\:bg-gray-950")).toBeTruthy();
+      await waitFor(() => {
+        expect(checkAllStatus).toHaveBeenCalledTimes(1);
+      });
     });
 
-    it("should render in light mode", () => {
+    it("should auto-refresh every 30 seconds", async () => {
+      render(<SystemHealth />);
+
+      await waitFor(() => {
+        expect(checkAllStatus).toHaveBeenCalledTimes(1);
+      });
+
+      // Fast-forward 30 seconds
+      vi.advanceTimersByTime(30000);
+
+      await waitFor(() => {
+        expect(checkAllStatus).toHaveBeenCalledTimes(2);
+      });
+
+      // Fast-forward another 30 seconds
+      vi.advanceTimersByTime(30000);
+
+      await waitFor(() => {
+        expect(checkAllStatus).toHaveBeenCalledTimes(3);
+      });
+    });
+
+    it("should display last updated timestamp", async () => {
+      render(<SystemHealth />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Last updated:/i)).toBeInTheDocument();
+      });
+    });
+
+    it("should update timestamp on refresh", async () => {
+      const user = userEvent.setup({ delay: null });
+      render(<SystemHealth />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Last updated:/i)).toBeInTheDocument();
+      });
+
+      const refreshButton = screen.getByRole("button", { name: /Refresh/i });
+      await user.click(refreshButton);
+
+      await waitFor(() => {
+        expect(checkAllStatus).toHaveBeenCalledTimes(2);
+      });
+    });
+  });
+
+  describe("Manual Refresh", () => {
+    it("should show refresh button", async () => {
+      render(<SystemHealth />);
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /Refresh/i })).toBeInTheDocument();
+      });
+    });
+
+    it("should call checkAllStatus when refresh button is clicked", async () => {
+      const user = userEvent.setup({ delay: null });
+      render(<SystemHealth />);
+
+      await waitFor(() => {
+        expect(checkAllStatus).toHaveBeenCalledTimes(1);
+      });
+
+      const refreshButton = screen.getByRole("button", { name: /Refresh/i });
+      await user.click(refreshButton);
+
+      await waitFor(() => {
+        expect(checkAllStatus).toHaveBeenCalledTimes(2);
+      });
+    });
+
+    it("should show refreshing state when refresh is in progress", async () => {
+      const user = userEvent.setup({ delay: null });
+      checkAllStatus.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            setTimeout(() => resolve(mockHealthData), 100);
+          }),
+      );
+
+      render(<SystemHealth />);
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /Refresh/i })).toBeInTheDocument();
+      });
+
+      const refreshButton = screen.getByRole("button", { name: /Refresh/i });
+      await user.click(refreshButton);
+
+      expect(screen.getByText(/Refreshing/i)).toBeInTheDocument();
+    });
+
+    it("should disable refresh button while refreshing", async () => {
+      const user = userEvent.setup({ delay: null });
+      checkAllStatus.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            setTimeout(() => resolve(mockHealthData), 100);
+          }),
+      );
+
+      render(<SystemHealth />);
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /Refresh/i })).toBeInTheDocument();
+      });
+
+      const refreshButton = screen.getByRole("button", { name: /Refresh/i });
+      await user.click(refreshButton);
+
+      expect(refreshButton).toBeDisabled();
+    });
+  });
+
+  describe("Overall Status Banner", () => {
+    it("should show operational banner when all services are operational", async () => {
+      const allOperational = [
+        {
+          name: "Frontend Hosting",
+          provider: "Netlify",
+          status: "Operational",
+          responseTime: "80ms",
+          icon: "Globe",
+        },
+        {
+          name: "Backend API",
+          provider: "Render",
+          status: "Operational",
+          responseTime: "120ms",
+          icon: "Server",
+        },
+      ];
+      checkAllStatus.mockResolvedValue(allOperational);
+
+      render(<SystemHealth />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Operational")).toBeInTheDocument();
+        expect(screen.getByText("All systems operational")).toBeInTheDocument();
+      });
+    });
+
+    it("should show degraded banner when some services are degraded", async () => {
+      render(<SystemHealth />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Degraded")).toBeInTheDocument();
+        expect(
+          screen.getByText(/experiencing degraded performance/i),
+        ).toBeInTheDocument();
+      });
+    });
+
+    it("should show outage banner when some services are down", async () => {
+      render(<SystemHealth />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Outage")).toBeInTheDocument();
+        expect(screen.getByText(/experiencing outages/i)).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe("Info Banner", () => {
+    it("should display info banner about live monitoring", async () => {
+      render(<SystemHealth />);
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(/Live Infrastructure Monitoring/i),
+        ).toBeInTheDocument();
+        expect(
+          screen.getByText(/real-time status of infrastructure components/i),
+        ).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe("Dark Mode", () => {
+    it("should have dark mode classes", async () => {
       const { container } = render(<SystemHealth />);
 
-      expect(container.querySelector(".bg-blue-50")).toBeTruthy();
+      await waitFor(() => {
+        // Should have dark mode background
+        expect(container.querySelector(".dark\\:bg-gray-950")).toBeTruthy();
+      });
+    });
+
+    it("should render in light mode", async () => {
+      const { container } = render(<SystemHealth />);
+
+      await waitFor(() => {
+        expect(container.querySelector(".bg-blue-50")).toBeTruthy();
+      });
     });
   });
 
   describe("Real-time Updates", () => {
-    it("should display response times", () => {
+    it("should display response times", async () => {
       render(<SystemHealth />);
 
-      expect(screen.getByText("80ms")).toBeInTheDocument();
-      expect(screen.getByText("150ms")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("80ms")).toBeInTheDocument();
+        expect(screen.getByText("150ms")).toBeInTheDocument();
+      });
     });
 
-    it("should show all service providers", () => {
+    it("should show all service providers", async () => {
       render(<SystemHealth />);
 
-      // Providers should be displayed
-      expect(screen.getByText("Netlify")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("Netlify")).toBeInTheDocument();
+      });
     });
   });
 });
