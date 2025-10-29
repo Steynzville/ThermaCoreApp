@@ -801,6 +801,37 @@ Check system health status.
 }
 ```
 
+### Infrastructure Health
+
+Check infrastructure health status for monitoring (public endpoint).
+
+**Endpoint**: `GET /api/v1/health`  
+**Auth**: Not Required
+
+**Response (200 - Operational)**:
+```json
+{
+  "status": "operational",
+  "database": {
+    "status": "operational",
+    "connected": true
+  },
+  "timestamp": "2024-10-29T00:30:00.000000+00:00"
+}
+```
+
+**Response (503 - Degraded)**:
+```json
+{
+  "status": "degraded",
+  "database": {
+    "status": "degraded",
+    "connected": false
+  },
+  "timestamp": "2024-10-29T00:30:00.000000+00:00"
+}
+```
+
 ### Audit Logs
 
 Retrieve audit logs.
