@@ -3,7 +3,6 @@
 import os
 
 import pytest
-from flask import g
 
 from app import create_app, db
 from app.models import Role, RoleEnum, Tenant, User

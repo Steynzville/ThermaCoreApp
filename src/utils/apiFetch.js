@@ -1,7 +1,7 @@
 // Enhanced API fetch utility with 401 handling, toast notifications, and improved error/redirect handling
 import { toast } from "sonner";
 
-import { getAuthToken } from "./authToken";
+import { getAuthToken, getAuthTokenWithSource } from "./authToken";
 
 // Pre-convert network error patterns to lowercase for performance optimization
 // This avoids repeated toLowerCase() calls during error checking
@@ -39,22 +39,13 @@ export const apiFetch = async (
   } = options;
 
   // Get token from localStorage or sessionStorage
-  const token = getAuthToken();
+  const { token, source } = getAuthTokenWithSource();
 
   // Debug logging in development
   if (import.meta.env.DEV && url.includes("/tenants/current")) {
     console.log("[API Debug] Making request to:", url);
     console.log("[API Debug] Token found:", !!token);
-    console.log(
-      "[API Debug] Token source:",
-      localStorage.getItem("thermacore_token")
-        ? "localStorage:thermacore_token"
-        : sessionStorage.getItem("thermacore_token")
-          ? "sessionStorage:thermacore_token"
-          : localStorage.getItem("authToken")
-            ? "localStorage:authToken"
-            : "none",
-    );
+    console.log("[API Debug] Token source:", source);
   }
 
   // Default headers

@@ -1,29 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { getAuthToken, hasAuthToken } from "./authToken";
+import { describe, it, expect, beforeEach } from "vitest";
+import { getAuthToken, getAuthTokenWithSource, hasAuthToken } from "./authToken";
 
 describe("authToken utility", () => {
-  // Store original values to restore after tests
-  let originalLocalStorage;
-  let originalSessionStorage;
-
   beforeEach(() => {
-    // Save original storage
-    originalLocalStorage = { ...localStorage };
-    originalSessionStorage = { ...sessionStorage };
-
     // Clear all storage before each test
     localStorage.clear();
     sessionStorage.clear();
-  });
-
-  afterEach(() => {
-    // Restore original storage after each test
-    Object.keys(originalLocalStorage).forEach((key) => {
-      localStorage.setItem(key, originalLocalStorage[key]);
-    });
-    Object.keys(originalSessionStorage).forEach((key) => {
-      sessionStorage.setItem(key, originalSessionStorage[key]);
-    });
   });
 
   describe("getAuthToken", () => {
@@ -157,6 +139,48 @@ describe("authToken utility", () => {
 
       // Should prefer new token
       expect(getAuthToken()).toBe("new-token");
+    });
+  });
+
+  describe("getAuthTokenWithSource", () => {
+    it("should return token and source from localStorage thermacore_token", () => {
+      localStorage.setItem("thermacore_token", "test-token");
+      
+      const result = getAuthTokenWithSource();
+      expect(result.token).toBe("test-token");
+      expect(result.source).toBe("localStorage:thermacore_token");
+    });
+
+    it("should return token and source from sessionStorage thermacore_token", () => {
+      sessionStorage.setItem("thermacore_token", "session-token");
+      
+      const result = getAuthTokenWithSource();
+      expect(result.token).toBe("session-token");
+      expect(result.source).toBe("sessionStorage:thermacore_token");
+    });
+
+    it("should return token and source from localStorage authToken", () => {
+      localStorage.setItem("authToken", "auth-token");
+      
+      const result = getAuthTokenWithSource();
+      expect(result.token).toBe("auth-token");
+      expect(result.source).toBe("localStorage:authToken");
+    });
+
+    it("should return null token and 'none' source when no token exists", () => {
+      const result = getAuthTokenWithSource();
+      expect(result.token).toBeNull();
+      expect(result.source).toBe("none");
+    });
+
+    it("should prioritize localStorage thermacore_token over others", () => {
+      localStorage.setItem("thermacore_token", "local-thermacore");
+      sessionStorage.setItem("thermacore_token", "session-thermacore");
+      localStorage.setItem("authToken", "local-auth");
+      
+      const result = getAuthTokenWithSource();
+      expect(result.token).toBe("local-thermacore");
+      expect(result.source).toBe("localStorage:thermacore_token");
     });
   });
 });

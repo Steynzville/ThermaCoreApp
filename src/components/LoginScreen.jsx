@@ -121,7 +121,7 @@ const LoginScreen = ({ error, setError }) => {
       if (result.success) {
         // CRITICAL: Set token globally for axios instance
         if (result.token) {
-          setAuthToken(result.token);
+          setAuthToken(result.token, keepMeSignedIn);
           
           // Debug logging in development to confirm token is set
           if (import.meta.env.DEV) {
