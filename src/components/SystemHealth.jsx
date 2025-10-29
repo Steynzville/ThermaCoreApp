@@ -151,14 +151,14 @@ const SystemHealth = ({ className }) => {
                 : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
           }`}
         >
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center space-x-3">
               {overallStatus.color === "green" ? (
-                <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+                <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400 flex-shrink-0" />
               ) : overallStatus.color === "yellow" ? (
-                <AlertTriangle className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+                <AlertTriangle className="h-6 w-6 text-yellow-600 dark:text-yellow-400 flex-shrink-0" />
               ) : (
-                <XCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
+                <XCircle className="h-6 w-6 text-red-600 dark:text-red-400 flex-shrink-0" />
               )}
               <div>
                 <h3
@@ -185,16 +185,16 @@ const SystemHealth = ({ className }) => {
                 </p>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
               {lastUpdated && (
-                <span className="text-sm text-gray-600 dark:text-gray-400">
+                <span className="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
                   Last updated: {lastUpdated.toLocaleTimeString()}
                 </span>
               )}
               <button
                 onClick={handleManualRefresh}
                 disabled={refreshing}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg transition-colors"
+                className="flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg transition-colors whitespace-nowrap w-full sm:w-auto"
                 type="button"
               >
                 <RefreshCw
@@ -440,7 +440,7 @@ const SystemHealth = ({ className }) => {
                     ? Math.round(
                         systemHealthData.reduce((sum, service) => {
                           const time = parseInt(service.responseTime, 10);
-                          return sum + (isNaN(time) ? 0 : time);
+                          return sum + (Number.isNaN(time) ? 0 : time);
                         }, 0) / systemHealthData.length,
                       )
                     : 0}

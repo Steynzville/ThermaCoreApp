@@ -131,7 +131,7 @@ export async function checkDatabaseStatus() {
 
       return {
         name: "Database",
-        provider: "TimescaleDB",
+        provider: "Neon PostgreSQL",
         status: dbConnected ? "Operational" : "Degraded Performance",
         responseTime: `${responseTime}ms`,
         icon: "Database",
@@ -141,7 +141,7 @@ export async function checkDatabaseStatus() {
     const endTime2 = performance.now();
     return {
       name: "Database",
-      provider: "TimescaleDB",
+      provider: "Neon PostgreSQL",
       status: "Degraded Performance",
       responseTime: `${Math.round(endTime2 - startTime)}ms`,
       icon: "Database",
@@ -153,7 +153,7 @@ export async function checkDatabaseStatus() {
 
     return {
       name: "Database",
-      provider: "TimescaleDB",
+      provider: "Neon PostgreSQL",
       status: "Outage",
       responseTime: `${responseTime}ms`,
       icon: "Database",
