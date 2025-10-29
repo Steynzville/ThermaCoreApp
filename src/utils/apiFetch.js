@@ -36,8 +36,11 @@ export const apiFetch = async (
     ...fetchOptions
   } = options;
 
-  // Get token from localStorage
-  const token = localStorage.getItem("thermacore_token");
+  // Get token from localStorage or sessionStorage
+  const token =
+    localStorage.getItem("thermacore_token") ||
+    sessionStorage.getItem("thermacore_token") ||
+    localStorage.getItem("authToken");
 
   // Default headers
   const defaultHeaders = {
