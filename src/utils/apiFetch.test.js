@@ -29,6 +29,15 @@ const localStorageMock = {
 };
 global.localStorage = localStorageMock;
 
+// Mock sessionStorage
+const sessionStorageMock = {
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
+};
+global.sessionStorage = sessionStorageMock;
+
 // Mock window.location and history
 const mockLocation = {
   pathname: "/test",
@@ -47,6 +56,7 @@ describe("apiFetch", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorageMock.getItem.mockReturnValue(null);
+    sessionStorageMock.getItem.mockReturnValue(null);
     mockLocation.pathname = "/test";
     mockLocation.search = "";
   });
@@ -92,6 +102,90 @@ describe("apiFetch", () => {
         expect.objectContaining({
           headers: expect.objectContaining({
             Authorization: "Bearer test-token",
+          }),
+        }),
+      );
+    });
+
+    it("should retrieve token from sessionStorage when not in localStorage", async () => {
+      // Mock getAuthToken behavior: check localStorage first, then sessionStorage
+      localStorageMock.getItem.mockImplementation((key) => {
+        if (key === "thermacore_token") return null;
+        if (key === "authToken") return null;
+        return null;
+      });
+      sessionStorageMock.getItem.mockImplementation((key) => {
+        if (key === "thermacore_token") return "session-token";
+        return null;
+      });
+
+      global.fetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({}),
+      });
+
+      await apiFetch("/api/test");
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        "/api/test",
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: "Bearer session-token",
+          }),
+        }),
+      );
+    });
+
+    it("should prefer localStorage thermacore_token over sessionStorage", async () => {
+      localStorageMock.getItem.mockImplementation((key) => {
+        if (key === "thermacore_token") return "local-token";
+        return null;
+      });
+      sessionStorageMock.getItem.mockImplementation((key) => {
+        if (key === "thermacore_token") return "session-token";
+        return null;
+      });
+
+      global.fetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({}),
+      });
+
+      await apiFetch("/api/test");
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        "/api/test",
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: "Bearer local-token",
+          }),
+        }),
+      );
+    });
+
+    it("should fallback to localStorage authToken if thermacore_token not found", async () => {
+      localStorageMock.getItem.mockImplementation((key) => {
+        if (key === "thermacore_token") return null;
+        if (key === "authToken") return "auth-token-fallback";
+        return null;
+      });
+      sessionStorageMock.getItem.mockReturnValue(null);
+
+      global.fetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({}),
+      });
+
+      await apiFetch("/api/test");
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        "/api/test",
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: "Bearer auth-token-fallback",
           }),
         }),
       );
