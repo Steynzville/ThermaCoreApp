@@ -1,6 +1,8 @@
 """Unit tests for remote control API endpoints."""
 
 import json
+import uuid
+from datetime import datetime
 
 from app.models import Unit, UnitStatusEnum, User
 
@@ -55,7 +57,6 @@ class TestRemoteControlEndpoints:
         """Test getting remote control permissions for operator user."""
         # Create operator user
         from app.models import Role, RoleEnum
-        import uuid
 
         operator_role = Role.query.filter_by(name=RoleEnum.OPERATOR).first()
         unique_suffix = str(uuid.uuid4())[:8]
@@ -89,7 +90,6 @@ class TestRemoteControlEndpoints:
         """Test getting remote control permissions for viewer user."""
         # Create viewer user
         from app.models import Role, RoleEnum
-        import uuid
 
         viewer_role = Role.query.filter_by(name=RoleEnum.VIEWER).first()
         unique_suffix = str(uuid.uuid4())[:8]
@@ -133,9 +133,6 @@ class TestRemoteControlEndpoints:
         token = self.get_auth_token(client)
 
         # Create test unit
-        from datetime import datetime
-        import uuid
-
         unit_id = f"TEST-{str(uuid.uuid4())[:8]}"
         test_unit = Unit(
             id=unit_id,
@@ -174,9 +171,6 @@ class TestRemoteControlEndpoints:
         token = self.get_auth_token(client)
 
         # Create test unit that's online with water generation
-        from datetime import datetime
-        import uuid
-
         unit_id = f"TEST-{str(uuid.uuid4())[:8]}"
         test_unit = Unit(
             id=unit_id,
@@ -216,7 +210,6 @@ class TestRemoteControlEndpoints:
         """Test controlling unit power without proper permissions."""
         # Create viewer user
         from app.models import Role, RoleEnum
-        import uuid
 
         viewer_role = Role.query.filter_by(name=RoleEnum.VIEWER).first()
         unique_suffix = str(uuid.uuid4())[:8]
@@ -278,9 +271,6 @@ class TestRemoteControlEndpoints:
         token = self.get_auth_token(client)
 
         # Create test unit that's online
-        from datetime import datetime
-        import uuid
-
         unit_id = f"TEST-{str(uuid.uuid4())[:8]}"
         test_unit = Unit(
             id=unit_id,
@@ -318,9 +308,6 @@ class TestRemoteControlEndpoints:
         token = self.get_auth_token(client)
 
         # Create test unit that's offline
-        from datetime import datetime
-        import uuid
-
         unit_id = f"TEST-{str(uuid.uuid4())[:8]}"
         test_unit = Unit(
             id=unit_id,
@@ -352,7 +339,6 @@ class TestRemoteControlEndpoints:
         """Test controlling water production without proper permissions."""
         # Create viewer user
         from app.models import Role, RoleEnum
-        import uuid
 
         viewer_role = Role.query.filter_by(name=RoleEnum.VIEWER).first()
         unique_suffix = str(uuid.uuid4())[:8]
@@ -384,9 +370,6 @@ class TestRemoteControlEndpoints:
         token = self.get_auth_token(client)
 
         # Create test unit
-        from datetime import datetime
-        import uuid
-
         unit_id = f"TEST-{str(uuid.uuid4())[:8]}"
         test_unit = Unit(
             id=unit_id,
