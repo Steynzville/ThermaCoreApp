@@ -132,7 +132,7 @@ describe("statusMonitor Service", () => {
       const result = await checkDatabaseStatus();
 
       expect(result.name).toBe("Database");
-      expect(result.provider).toBe("TimescaleDB");
+      expect(result.provider).toBe("Neon PostgreSQL");
       expect(result.status).toBe("Operational");
       expect(result.icon).toBe("Database");
     });

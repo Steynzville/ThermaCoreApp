@@ -41,7 +41,7 @@ const mockHealthData = [
   },
   {
     name: "Database",
-    provider: "TimescaleDB",
+    provider: "Neon PostgreSQL",
     status: "Degraded Performance",
     responseTime: "90ms",
     icon: "Database",
@@ -223,7 +223,7 @@ describe("SystemHealth", () => {
       await waitFor(() => {
         expect(screen.getByText("Netlify")).toBeInTheDocument();
         expect(screen.getByText("Render")).toBeInTheDocument();
-        expect(screen.getByText("TimescaleDB")).toBeInTheDocument();
+        expect(screen.getByText("Neon PostgreSQL")).toBeInTheDocument();
         expect(screen.getByText("Mosquitto MQTT Broker")).toBeInTheDocument();
       });
     });
