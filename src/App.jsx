@@ -63,17 +63,6 @@ const AppContent = () => {
     };
   }, []);
 
-  // Initialize token on app start
-  useEffect(() => {
-    const savedToken =
-      localStorage.getItem("authToken") ||
-      localStorage.getItem("thermacore_token") ||
-      sessionStorage.getItem("thermacore_token");
-    if (savedToken) {
-      setAuthToken(savedToken);
-    }
-  }, []);
-
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;

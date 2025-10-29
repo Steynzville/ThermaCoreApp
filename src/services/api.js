@@ -18,8 +18,11 @@ export const setAuthToken = (token) => {
   }
 };
 
-// Initialize token on load
-const savedToken = localStorage.getItem("authToken");
+// Initialize token on load - check all possible token storage locations
+const savedToken =
+  localStorage.getItem("authToken") ||
+  localStorage.getItem("thermacore_token") ||
+  sessionStorage.getItem("thermacore_token");
 if (savedToken) {
   setAuthToken(savedToken);
 }
