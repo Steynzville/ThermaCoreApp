@@ -257,16 +257,16 @@ const MultiProtocolManager = () => {
   const getStatusIcon = (protocol) => {
     if (protocol.connected && protocol.status === "ready") {
       return (
-        <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+        <CheckCircle className="h-5 w-5 text-green-600 dark:text-[#00ff00]" />
       );
     } else if (protocol.error || protocol.status === "error") {
-      return <AlertCircle className="h-5 w-5 text-destructive" />;
+      return <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />;
     } else if (protocol.available) {
       return (
-        <Activity className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+        <Activity className="h-5 w-5 text-yellow-600 dark:text-yellow-300" />
       );
     } else {
-      return <WifiOff className="h-5 w-5 text-muted-foreground" />;
+      return <WifiOff className="h-5 w-5 text-gray-600 dark:text-gray-400" />;
     }
   };
 
@@ -416,11 +416,11 @@ const MultiProtocolManager = () => {
                 <p className="text-sm text-muted-foreground truncate">
                   Active Protocols
                 </p>
-                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                <p className="text-2xl font-bold text-green-600 dark:text-[#00ff00]">
                   {protocolsStatus.summary.active_protocols}
                 </p>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400 flex-shrink-0 ml-2" />
+              <CheckCircle className="h-8 w-8 text-green-600 dark:text-[#00ff00] flex-shrink-0 ml-2" />
             </div>
           </CardContent>
         </Card>
@@ -460,7 +460,7 @@ const MultiProtocolManager = () => {
                   {new Date(protocolsStatus.timestamp).toLocaleTimeString()}
                 </p>
               </div>
-              <Zap className="h-8 w-8 text-yellow-600 dark:text-yellow-400 flex-shrink-0 ml-2" />
+              <Zap className="h-8 w-8 text-yellow-600 dark:text-yellow-300 flex-shrink-0 ml-2" />
             </div>
           </CardContent>
         </Card>
