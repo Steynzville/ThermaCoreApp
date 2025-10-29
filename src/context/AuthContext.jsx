@@ -106,7 +106,7 @@ export const AuthProvider = ({ children }) => {
         storage.setItem("thermacore_token", result.token);
 
         setIsLoading(false);
-        return { success: true, role: userFrontendRole };
+        return { success: true, role: userFrontendRole, token: result.token };
       } else {
         setIsLoading(false);
         return {
