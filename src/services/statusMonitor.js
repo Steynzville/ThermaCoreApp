@@ -65,7 +65,7 @@ async function checkEndpoint(url, method = "GET", timeout = 5000) {
 
 /**
  * Check frontend hosting status
- * @returns {Promise<{name: string, provider: string, status: string, responseTime: number, icon: string}>}
+ * @returns {Promise<{name: string, provider: string, status: string, responseTime: string, icon: string}>}
  */
 export async function checkFrontendStatus() {
   // For frontend, we check if we can access the current host
@@ -84,7 +84,7 @@ export async function checkFrontendStatus() {
 
 /**
  * Check backend API status
- * @returns {Promise<{name: string, provider: string, status: string, responseTime: number, icon: string}>}
+ * @returns {Promise<{name: string, provider: string, status: string, responseTime: string, icon: string}>}
  */
 export async function checkBackendStatus() {
   const result = await checkEndpoint(`${API_BASE_URL}/api/v1/health`);
@@ -108,7 +108,7 @@ export async function checkBackendStatus() {
 
 /**
  * Check database status via backend health endpoint
- * @returns {Promise<{name: string, provider: string, status: string, responseTime: number, icon: string}>}
+ * @returns {Promise<{name: string, provider: string, status: string, responseTime: string, icon: string}>}
  */
 export async function checkDatabaseStatus() {
   const startTime = performance.now();
@@ -165,11 +165,11 @@ export async function checkDatabaseStatus() {
 /**
  * Check WebSocket/MQTT status
  * Note: This is a simplified check - actual WebSocket connection would require more setup
- * @returns {Promise<{name: string, provider: string, status: string, responseTime: number, icon: string}>}
+ * @returns {Promise<{name: string, provider: string, status: string, responseTime: string, icon: string}>}
  */
 export async function checkWebSocketStatus() {
   // For now, we check if the backend is accessible as a proxy for WebSocket availability
-  const result = await checkEndpoint(`${API_BASE_URL}/health`, "GET");
+  const result = await checkEndpoint(`${API_BASE_URL}/api/v1/health`, "GET");
 
   let status = "Operational";
   if (result.status === "degraded") {

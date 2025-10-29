@@ -56,7 +56,7 @@ def health_check():
         # Attempt to execute a simple query to verify database connectivity
         db.session.execute(db.text("SELECT 1"))
         db.session.commit()
-    except Exception as e:
+    except Exception:
         db_status = "degraded"
         db_connected = False
         status_code = 503

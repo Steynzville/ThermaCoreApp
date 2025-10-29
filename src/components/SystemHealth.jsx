@@ -9,7 +9,7 @@ import {
   Server,
   XCircle,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { logger } from "../lib/logger";
 import { checkAllStatus } from "../services/statusMonitor";
 import { Card, CardContent, CardHeader } from "./ui/card";
@@ -66,7 +66,7 @@ const SystemHealth = ({ className }) => {
   const [lastUpdated, setLastUpdated] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchStatus = async () => {
+  const fetchStatus = useCallback(async () => {
     try {
       setRefreshing(true);
       const statusData = await checkAllStatus();
@@ -78,7 +78,7 @@ const SystemHealth = ({ className }) => {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     // Initial fetch
@@ -90,7 +90,7 @@ const SystemHealth = ({ className }) => {
     }, 30000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchStatus]);
 
   const handleManualRefresh = () => {
     fetchStatus();

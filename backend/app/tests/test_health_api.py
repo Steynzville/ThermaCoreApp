@@ -1,9 +1,5 @@
 """Tests for /api/v1/health endpoint."""
 
-from unittest.mock import Mock
-
-import pytest
-
 
 class TestHealthAPIEndpoint:
     """Test /api/v1/health endpoint for infrastructure monitoring."""
