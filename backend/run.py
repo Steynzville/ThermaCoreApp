@@ -1,6 +1,7 @@
 """Main application entry point for ThermaCore SCADA API."""
 
 import logging
+import os
 import sys
 from pathlib import Path
 
