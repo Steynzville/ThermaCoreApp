@@ -1,7 +1,7 @@
 // Enhanced API fetch utility with 401 handling, toast notifications, and improved error/redirect handling
 import { toast } from "sonner";
 
-import { getAuthToken, getAuthTokenWithSource } from "./authToken";
+import { getAuthTokenWithSource } from "./authToken";
 
 // Pre-convert network error patterns to lowercase for performance optimization
 // This avoids repeated toLowerCase() calls during error checking
