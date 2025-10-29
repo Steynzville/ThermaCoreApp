@@ -24,10 +24,10 @@ export const useRemoteControl = (unitId) => {
     try {
       // Fetch permissions from backend API
       const token = getAuthToken();
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
       const response = await fetch(
-        `${API_BASE_URL}/remote-control/permissions`,
+        `${API_BASE_URL}/api/v1/remote-control/permissions`,
         {
           method: "GET",
           headers: {
@@ -61,10 +61,10 @@ export const useRemoteControl = (unitId) => {
 
     try {
       const token = getAuthToken();
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
       const response = await fetch(
-        `${API_BASE_URL}/remote-control/units/${unitId}/power`,
+        `${API_BASE_URL}/api/v1/remote-control/units/${unitId}/power`,
         {
           method: "POST",
           headers: {
@@ -103,10 +103,10 @@ export const useRemoteControl = (unitId) => {
 
     try {
       const token = getAuthToken();
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
       const response = await fetch(
-        `${API_BASE_URL}/remote-control/units/${unitId}/water-production`,
+        `${API_BASE_URL}/api/v1/remote-control/units/${unitId}/water-production`,
         {
           method: "POST",
           headers: {
@@ -142,10 +142,10 @@ export const useRemoteControl = (unitId) => {
 
     try {
       const token = getAuthToken();
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
       const response = await fetch(
-        `${API_BASE_URL}/remote-control/units/${unitId}/status`,
+        `${API_BASE_URL}/api/v1/remote-control/units/${unitId}/status`,
         {
           method: "GET",
           headers: {

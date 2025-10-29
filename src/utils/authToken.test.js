@@ -1,5 +1,9 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { getAuthToken, getAuthTokenWithSource, hasAuthToken } from "./authToken";
+import { beforeEach, describe, expect, it } from "vitest";
+import {
+  getAuthToken,
+  getAuthTokenWithSource,
+  hasAuthToken,
+} from "./authToken";
 
 describe("authToken utility", () => {
   beforeEach(() => {
@@ -145,7 +149,7 @@ describe("authToken utility", () => {
   describe("getAuthTokenWithSource", () => {
     it("should return token and source from localStorage thermacore_token", () => {
       localStorage.setItem("thermacore_token", "test-token");
-      
+
       const result = getAuthTokenWithSource();
       expect(result.token).toBe("test-token");
       expect(result.source).toBe("localStorage:thermacore_token");
@@ -153,7 +157,7 @@ describe("authToken utility", () => {
 
     it("should return token and source from sessionStorage thermacore_token", () => {
       sessionStorage.setItem("thermacore_token", "session-token");
-      
+
       const result = getAuthTokenWithSource();
       expect(result.token).toBe("session-token");
       expect(result.source).toBe("sessionStorage:thermacore_token");
@@ -161,7 +165,7 @@ describe("authToken utility", () => {
 
     it("should return token and source from localStorage authToken", () => {
       localStorage.setItem("authToken", "auth-token");
-      
+
       const result = getAuthTokenWithSource();
       expect(result.token).toBe("auth-token");
       expect(result.source).toBe("localStorage:authToken");
@@ -177,7 +181,7 @@ describe("authToken utility", () => {
       localStorage.setItem("thermacore_token", "local-thermacore");
       sessionStorage.setItem("thermacore_token", "session-thermacore");
       localStorage.setItem("authToken", "local-auth");
-      
+
       const result = getAuthTokenWithSource();
       expect(result.token).toBe("local-thermacore");
       expect(result.source).toBe("localStorage:thermacore_token");
