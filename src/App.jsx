@@ -22,7 +22,6 @@ import { SidebarProvider } from "./context/SidebarContext";
 import { TenantProvider } from "./context/TenantContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { UnitProvider } from "./context/UnitContext";
-import { setAuthToken } from "./services/api";
 import playSound from "./utils/audioPlayer";
 
 // Component to handle scroll to top on route change
