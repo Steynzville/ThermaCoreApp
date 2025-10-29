@@ -42,6 +42,22 @@ export const apiFetch = async (
     sessionStorage.getItem("thermacore_token") ||
     localStorage.getItem("authToken");
 
+  // Debug logging in development
+  if (import.meta.env.DEV && url.includes("/tenants/current")) {
+    console.log("[API Debug] Making request to:", url);
+    console.log("[API Debug] Token found:", !!token);
+    console.log(
+      "[API Debug] Token source:",
+      localStorage.getItem("thermacore_token")
+        ? "localStorage:thermacore_token"
+        : sessionStorage.getItem("thermacore_token")
+          ? "sessionStorage:thermacore_token"
+          : localStorage.getItem("authToken")
+            ? "localStorage:authToken"
+            : "none",
+    );
+  }
+
   // Default headers
   const defaultHeaders = {
     "Content-Type": "application/json",
@@ -50,6 +66,8 @@ export const apiFetch = async (
   // Add authorization header if token exists
   if (token) {
     defaultHeaders.Authorization = `Bearer ${token}`;
+  } else if (import.meta.env.DEV && url.includes("/tenants")) {
+    console.warn("[API Debug] No token found for tenant endpoint request!");
   }
 
   // Merge headers
