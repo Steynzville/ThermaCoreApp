@@ -9,6 +9,7 @@ import thermaCoreLogo from "../assets/thermacore-logo-new.png";
 import { useAuth } from "../context/AuthContext";
 import { useSettings } from "../context/SettingsContext";
 import { useTheme } from "../context/ThemeContext";
+import { setAuthToken } from "../services/api";
 import styles from "./LoginScreen.module.css";
 import SocialButton from "./SocialButton";
 import { Button } from "./ui/button";
@@ -118,6 +119,10 @@ const LoginScreen = ({ error, setError }) => {
       );
 
       if (result.success) {
+        // CRITICAL: Set token globally for axios instance
+        if (result.token) {
+          setAuthToken(result.token);
+        }
         navigate("/dashboard");
       } else {
         setError(result.error || "Invalid credentials!");
