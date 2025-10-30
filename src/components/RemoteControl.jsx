@@ -33,7 +33,7 @@ import {
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { Switch } from "./ui/switch";
 
-const RemoteControl = ({ className, unit: propUnit, details }) => {
+const RemoteControl = ({ className, unit: propUnit }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { settings } = useSettings();
