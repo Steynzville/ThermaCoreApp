@@ -397,14 +397,14 @@ const MultiProtocolManager = () => {
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div className="min-w-0 flex-1">
-                <p className="text-sm text-muted-foreground truncate">
+                <p className="text-sm text-foreground/70 truncate">
                   Total Protocols
                 </p>
                 <p className="text-2xl font-bold text-foreground">
                   {protocolsStatus.summary.total_protocols}
                 </p>
               </div>
-              <Router className="h-8 w-8 text-primary flex-shrink-0 ml-2" />
+              <Router className="h-8 w-8 text-primary dark:text-primary-foreground flex-shrink-0 ml-2" />
             </div>
           </CardContent>
         </Card>
@@ -413,7 +413,7 @@ const MultiProtocolManager = () => {
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div className="min-w-0 flex-1">
-                <p className="text-sm text-muted-foreground truncate">
+                <p className="text-sm text-foreground/70 truncate">
                   Active Protocols
                 </p>
                 <p className="text-2xl font-bold text-green-600 dark:text-[#00ff00]">
@@ -429,7 +429,7 @@ const MultiProtocolManager = () => {
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div className="min-w-0 flex-1">
-                <p className="text-sm text-muted-foreground truncate">
+                <p className="text-sm text-foreground/70 truncate">
                   Connection Rate
                 </p>
                 <p className="text-2xl font-bold text-primary">
@@ -444,7 +444,7 @@ const MultiProtocolManager = () => {
                   %
                 </p>
               </div>
-              <Activity className="h-8 w-8 text-primary flex-shrink-0 ml-2" />
+              <Activity className="h-8 w-8 text-primary dark:text-primary-foreground flex-shrink-0 ml-2" />
             </div>
           </CardContent>
         </Card>
@@ -453,7 +453,7 @@ const MultiProtocolManager = () => {
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div className="min-w-0 flex-1">
-                <p className="text-sm text-muted-foreground truncate">
+                <p className="text-sm text-foreground/70 truncate">
                   Last Updated
                 </p>
                 <p className="text-sm font-medium text-foreground break-words">

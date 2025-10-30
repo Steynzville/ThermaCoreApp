@@ -486,7 +486,7 @@ const AdminPanel = ({ className }) => {
         {/* Tabs */}
         <div className="mb-6">
           <div className="border-b border-gray-200 dark:border-gray-700">
-            <nav className="-mb-px flex space-x-8">
+            <nav className="-mb-px flex flex-wrap gap-x-4 gap-y-2">
               {[
                 { id: "users", label: "Users", icon: Users },
                 {
@@ -507,7 +507,7 @@ const AdminPanel = ({ className }) => {
                     type="button"
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center space-x-2 py-2 px-1 border-b-2 font-medium text-sm ${
+                    className={`flex items-center space-x-1 py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
                       activeTab === tab.id
                         ? "border-blue-500 text-blue-600 dark:text-blue-400"
                         : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
