@@ -179,6 +179,10 @@ const RemoteControl = ({ className, unit: propUnit }) => {
     // All users now have access to remote control
     setPowerControlLoading(true);
 
+    // Store previous states for potential rollback
+    const previousWaterProduction = waterProductionOn;
+    const previousAutoSwitch = autoSwitchEnabled;
+
     // Optimistic update: Update local state and play sound immediately
     setMachineOn(checked);
 
@@ -209,6 +213,11 @@ const RemoteControl = ({ className, unit: propUnit }) => {
       if (unit) {
         unit.status = !checked ? "online" : "offline";
       }
+      // Restore dependent toggles to their previous states
+      if (!checked) {
+        setWaterProductionOn(previousWaterProduction);
+        setAutoSwitchEnabled(previousAutoSwitch);
+      }
       // Optionally show error message to user
     } finally {
       setPowerControlLoading(false);
@@ -224,6 +233,9 @@ const RemoteControl = ({ className, unit: propUnit }) => {
     }
 
     setWaterControlLoading(true);
+
+    // Store previous state for potential rollback
+    const previousAutoSwitch = autoSwitchEnabled;
 
     // Optimistic update: Update local state and play sound immediately
     setWaterProductionOn(checked);
@@ -246,6 +258,10 @@ const RemoteControl = ({ className, unit: propUnit }) => {
     } catch (_error) {
       // Revert state if API call fails
       setWaterProductionOn(!checked);
+      // Restore auto switch to its previous state
+      if (machineOn && !checked) {
+        setAutoSwitchEnabled(previousAutoSwitch);
+      }
       // Optionally show error message to user
     } finally {
       setWaterControlLoading(false);
