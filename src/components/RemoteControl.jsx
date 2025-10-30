@@ -12,9 +12,8 @@ import {
   Settings,
   Wifi,
   WifiOff,
-  Zap,
 } from "lucide-react";
-import React, { useEffect,useState } from "react";
+import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { useSettings } from "../context/SettingsContext";
@@ -30,7 +29,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "./ui/alert-dialog";
-import { Card, CardContent,CardHeader } from "./ui/card";
+import { Card, CardContent, CardHeader } from "./ui/card";
 import { Switch } from "./ui/switch";
 
 const RemoteControl = ({ className, unit: propUnit, details }) => {
@@ -49,7 +48,7 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
   const [autoSwitchEnabled, setAutoSwitchEnabled] = useState(
     unit?.autoSwitchEnabled,
   );
-  const [isConnected, setIsConnected] = useState(true);
+  const [isConnected, _setIsConnected] = useState(true);
   const [selectedCamera, setSelectedCamera] = useState("cam1");
   const [videoFeedActive, setVideoFeedActive] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -58,33 +57,44 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
   // Listen for fullscreen changes (moved before early return to avoid conditional hook call)
   React.useEffect(() => {
     // Guard for SSR safety
-    if (typeof document === 'undefined') {
+    if (typeof document === "undefined") {
       return;
     }
 
     const handleFullscreenChange = () => {
-      const isCurrentlyFullscreen = !!(document.fullscreenElement || 
-                                       document.webkitFullscreenElement || 
-                                       document.msFullscreenElement);
+      const isCurrentlyFullscreen = !!(
+        document.fullscreenElement ||
+        document.webkitFullscreenElement ||
+        document.msFullscreenElement
+      );
       setIsFullscreen(isCurrentlyFullscreen);
     };
 
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
     // Guard webkit and ms prefixed events only when necessary
-    if ('webkitFullscreenElement' in document) {
-      document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    if ("webkitFullscreenElement" in document) {
+      document.addEventListener(
+        "webkitfullscreenchange",
+        handleFullscreenChange,
+      );
     }
-    if ('msFullscreenElement' in document) {
-      document.addEventListener('msfullscreenchange', handleFullscreenChange);
+    if ("msFullscreenElement" in document) {
+      document.addEventListener("msfullscreenchange", handleFullscreenChange);
     }
 
     return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-      if ('webkitFullscreenElement' in document) {
-        document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      if ("webkitFullscreenElement" in document) {
+        document.removeEventListener(
+          "webkitfullscreenchange",
+          handleFullscreenChange,
+        );
       }
-      if ('msFullscreenElement' in document) {
-        document.removeEventListener('msfullscreenchange', handleFullscreenChange);
+      if ("msFullscreenElement" in document) {
+        document.removeEventListener(
+          "msfullscreenchange",
+          handleFullscreenChange,
+        );
       }
     };
   }, []);
@@ -127,47 +137,37 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
       setWaterProductionOn(false);
       setAutoSwitchEnabled(false);
     }
-    console.log(
-      `Machine ${checked ? "turned on" : "turned off"} for unit ${unit.name}`,
-    );
   };
 
   const handleWaterProductionToggle = (checked) => {
     setWaterProductionOn(checked);
-    
+
     // Play appropriate audio based on water state
     if (checked) {
       playSound("water-on.mp3", settings.soundEnabled, settings.volume);
     } else {
       playSound("water-off.mp3", settings.soundEnabled, settings.volume);
     }
-    
+
     // When machine control is toggled to "on" and water production is switched to "off", automatic control should automatically toggle to "off"
     if (machineOn && !checked) {
       setAutoSwitchEnabled(false);
     }
-    console.log(
-      `Water production ${checked ? "enabled" : "disabled"} for unit ${unit.name}`,
-    );
   };
 
   const handleAutoSwitchToggle = (checked) => {
     setAutoSwitchEnabled(checked);
     playSound("cool-tones.mp3", settings.soundEnabled, settings.volume);
-    console.log(
-      `Auto switch ${checked ? "enabled" : "disabled"} for unit ${unit.name}`,
-    );
   };
 
   const handleCameraChange = (cameraId) => {
     setSelectedCamera(cameraId);
-    console.log(`Camera switched to ${cameraId} for unit ${unit.name}`);
   };
 
   const toggleVideoFeed = () => {
     const newVideoFeedState = !videoFeedActive;
     setVideoFeedActive(newVideoFeedState);
-    
+
     // Play video-on.mp3 when stopping the video feed, video-off.mp3 when starting
     if (newVideoFeedState) {
       // Starting video feed - play video-off.mp3
@@ -176,13 +176,11 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
       // Stopping video feed - play video-on.mp3
       playSound("video-on.mp3", settings.soundEnabled, settings.volume);
     }
-    
-    console.log(`Video feed ${newVideoFeedState ? "enabled" : "disabled"} for unit ${unit.name}`);
   };
 
   const toggleFullscreen = async () => {
     // Guard for SSR safety
-    if (typeof document === 'undefined') {
+    if (typeof document === "undefined") {
       return;
     }
 
@@ -208,9 +206,7 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
           await document.msExitFullscreen();
         }
       }
-    } catch (error) {
-      console.error('Fullscreen error:', error);
-    }
+    } catch (_error) {}
   };
 
   const availableCameras = [
@@ -563,7 +559,7 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                 ))}
               </select>
             </div>
-            
+
             <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
                 <div className="flex-1">
@@ -571,7 +567,9 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                     Video Feed Status
                   </h4>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {videoFeedActive ? "Live feed is active" : "Click to start live feed"}
+                    {videoFeedActive
+                      ? "Live feed is active"
+                      : "Click to start live feed"}
                   </p>
                 </div>
                 <button
@@ -588,12 +586,12 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                   <span>{videoFeedActive ? "Stop Feed" : "Start Feed"}</span>
                 </button>
               </div>
-              
+
               {/* Video Feed Display Area */}
-              <div 
+              <div
                 ref={setVideoContainerRef}
                 className={`relative bg-gray-400 dark:bg-gray-800 rounded-lg aspect-video flex items-center justify-center border-2 border-dashed border-gray-400 dark:border-gray-600 ${
-                  isFullscreen ? 'bg-black' : ''
+                  isFullscreen ? "bg-black" : ""
                 }`}
               >
                 {videoFeedActive && isConnected ? (
@@ -604,19 +602,25 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                         Live Feed Active
                       </p>
                       <p className="text-sm text-white dark:text-gray-400 mt-1">
-                        {availableCameras.find(cam => cam.id === selectedCamera)?.name}
+                        {
+                          availableCameras.find(
+                            (cam) => cam.id === selectedCamera,
+                          )?.name
+                        }
                       </p>
-                      {availableCameras.find(cam => cam.id === selectedCamera)?.position && (
+                      {availableCameras.find((cam) => cam.id === selectedCamera)
+                        ?.position && (
                         <p className="text-xs text-gray-200 dark:text-gray-500 mt-1">
-                          {availableCameras.find(cam => cam.id === selectedCamera)?.position}
+                          {
+                            availableCameras.find(
+                              (cam) => cam.id === selectedCamera,
+                            )?.position
+                          }
                         </p>
                       )}
                     </div>
                     <button
-                      onClick={() => {
-                        // Refresh/reconnect logic would go here
-                        console.log("Refreshing video feed");
-                      }}
+                      onClick={() => {}}
                       className="mt-4 px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg transition-colors flex items-center space-x-1 mx-auto"
                       data-testid="button-refresh-feed"
                     >
@@ -631,11 +635,13 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                       {!isConnected ? "No Connection" : "Video Feed Inactive"}
                     </p>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                      {!isConnected ? "Unable to connect to cameras" : "Click 'Start Feed' to begin"}
+                      {!isConnected
+                        ? "Unable to connect to cameras"
+                        : "Click 'Start Feed' to begin"}
                     </p>
                   </div>
                 )}
-                
+
                 {/* Fullscreen Toggle Button */}
                 <button
                   onClick={toggleFullscreen}
@@ -649,7 +655,7 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                   )}
                 </button>
               </div>
-              
+
               {/* Camera Info */}
               <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div className="text-center p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
@@ -672,7 +678,9 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                   <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
                     Connection
                   </p>
-                  <p className={`text-sm font-semibold ${isConnected ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+                  <p
+                    className={`text-sm font-semibold ${isConnected ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
+                  >
                     {isConnected ? "Connected" : "Offline"}
                   </p>
                 </div>
@@ -680,7 +688,9 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                   <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
                     Status
                   </p>
-                  <p className={`text-sm font-semibold ${videoFeedActive ? "text-purple-600 dark:text-purple-400" : "text-gray-500"}`}>
+                  <p
+                    className={`text-sm font-semibold ${videoFeedActive ? "text-purple-600 dark:text-purple-400" : "text-gray-500"}`}
+                  >
                     {videoFeedActive ? "Active" : "Inactive"}
                   </p>
                 </div>
