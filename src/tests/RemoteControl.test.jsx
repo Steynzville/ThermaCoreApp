@@ -571,5 +571,126 @@ describe("RemoteControl Component", () => {
         );
       });
     });
+
+    test("Machine power toggle reverts state when API fails", async () => {
+      const user = userEvent.setup();
+      const mockControlPower = vi.fn().mockRejectedValue(new Error("API Error"));
+
+      vi.spyOn(RemoteControlHook, "useRemoteControl").mockReturnValue({
+        permissions: {
+          has_remote_control: true,
+          role: "admin",
+          permissions: {
+            read_units: true,
+            write_units: true,
+            remote_control: true,
+          },
+        },
+        isLoading: false,
+        error: null,
+        controlPower: mockControlPower,
+        controlWaterProduction: vi.fn().mockResolvedValue({ success: true }),
+      });
+
+      renderWithProviders(<RemoteControl unit={mockUnit} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Machine Control")).toBeInTheDocument();
+      });
+
+      // Find the machine power switch
+      const switches = screen.getAllByRole("switch");
+      const machinePowerSwitch = switches[0];
+
+      // Store initial state for comparison
+      const initialState = machinePowerSwitch.getAttribute("data-state");
+
+      // Click the switch to open dialog
+      await user.click(machinePowerSwitch);
+
+      // Dialog should open
+      await waitFor(() => {
+        expect(
+          screen.getByText("Machine Power Confirmation"),
+        ).toBeInTheDocument();
+      });
+
+      // Click Continue button
+      const continueButton = screen.getByRole("button", { name: /continue/i });
+      await user.click(continueButton);
+
+      // Wait for API call
+      await waitFor(() => {
+        expect(mockControlPower).toHaveBeenCalled();
+      });
+
+      // State should revert back to initial state after API failure
+      await waitFor(() => {
+        expect(machinePowerSwitch).toHaveAttribute("data-state", initialState);
+      });
+    });
+
+    test("Water production toggle reverts state when API fails", async () => {
+      const user = userEvent.setup();
+      const mockControlWaterProduction = vi
+        .fn()
+        .mockRejectedValue(new Error("API Error"));
+
+      vi.spyOn(RemoteControlHook, "useRemoteControl").mockReturnValue({
+        permissions: {
+          has_remote_control: true,
+          role: "admin",
+          permissions: {
+            read_units: true,
+            write_units: true,
+            remote_control: true,
+          },
+        },
+        isLoading: false,
+        error: null,
+        controlPower: vi.fn().mockResolvedValue({ success: true }),
+        controlWaterProduction: mockControlWaterProduction,
+      });
+
+      const onlineUnit = { ...mockUnit, status: "online" };
+      renderWithProviders(<RemoteControl unit={onlineUnit} />);
+
+      await waitFor(() => {
+        expect(
+          screen.getByText("Water Production Control"),
+        ).toBeInTheDocument();
+      });
+
+      // Find the water production switch
+      const switches = screen.getAllByRole("switch");
+      const waterProductionSwitch = switches[1];
+
+      // Initial state should be OFF
+      expect(waterProductionSwitch).toHaveAttribute("data-state", "unchecked");
+
+      // Click the switch to open dialog
+      await user.click(waterProductionSwitch);
+
+      // Dialog should open
+      await waitFor(() => {
+        expect(
+          screen.getByText("Water Production Confirmation"),
+        ).toBeInTheDocument();
+      });
+
+      // Click Continue button
+      const continueButton = screen.getByRole("button", { name: /continue/i });
+      await user.click(continueButton);
+
+      // Wait for API call
+      await waitFor(() => {
+        expect(mockControlWaterProduction).toHaveBeenCalledWith(true);
+      });
+
+      // State should revert back to OFF after API failure
+      await waitFor(() => {
+        expect(waterProductionSwitch).toHaveAttribute("data-state", "unchecked");
+      });
+    });
   });
 });
