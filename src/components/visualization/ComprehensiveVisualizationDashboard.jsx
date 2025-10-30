@@ -151,10 +151,30 @@ const ComprehensiveVisualizationDashboard = ({ embedded = false }) => {
           className="w-full"
         >
           <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 sm:w-auto sm:inline-flex h-10 p-1 bg-muted text-muted-foreground items-center justify-center rounded-md">
-            <TabsTrigger value="overview" className="min-h-[36px] px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">Overview</TabsTrigger>
-            <TabsTrigger value="gauges" className="min-h-[36px] px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">Gauges</TabsTrigger>
-            <TabsTrigger value="trends" className="min-h-[36px] px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">Trends</TabsTrigger>
-            <TabsTrigger value="process" className="min-h-[36px] px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">Process Flow</TabsTrigger>
+            <TabsTrigger
+              value="overview"
+              className="min-h-[36px] px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+            >
+              Overview
+            </TabsTrigger>
+            <TabsTrigger
+              value="gauges"
+              className="min-h-[36px] px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+            >
+              Gauges
+            </TabsTrigger>
+            <TabsTrigger
+              value="trends"
+              className="min-h-[36px] px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+            >
+              Trends
+            </TabsTrigger>
+            <TabsTrigger
+              value="process"
+              className="min-h-[36px] px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+            >
+              Process Flow
+            </TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}

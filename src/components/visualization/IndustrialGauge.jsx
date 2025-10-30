@@ -230,7 +230,12 @@ const IndustrialGauge = ({
         </div>
       </CardHeader>
       <CardContent className="flex flex-col items-center pb-4">
-        <canvas ref={canvasRef} width={size} height={size} className="mb-2 max-w-full h-auto" />
+        <canvas
+          ref={canvasRef}
+          width={size}
+          height={size}
+          className="mb-2 max-w-full h-auto"
+        />
         {showValue && (
           <div className="text-center">
             <div className="text-3xl font-bold">
