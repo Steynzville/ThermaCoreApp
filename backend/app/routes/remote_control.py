@@ -56,7 +56,7 @@ def control_unit_power(unit_id):
 
         # Audit log the control operation
         AuditLogger.log_event(
-            event_type=AuditEventType.DATA_OPERATION,
+            event_type=AuditEventType.UPDATE,
             user_id=get_jwt_identity(),
             resource="unit",
             resource_id=unit_id,
@@ -135,7 +135,7 @@ def control_water_production(unit_id):
 
         # Audit log the control operation
         AuditLogger.log_event(
-            event_type=AuditEventType.DATA_OPERATION,
+            event_type=AuditEventType.UPDATE,
             user_id=get_jwt_identity(),
             resource="unit",
             resource_id=unit_id,

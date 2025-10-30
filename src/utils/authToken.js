@@ -18,7 +18,10 @@ export const getAuthTokenWithSource = () => {
 
   const sessionThermacore = sessionStorage.getItem("thermacore_token");
   if (sessionThermacore) {
-    return { token: sessionThermacore, source: "sessionStorage:thermacore_token" };
+    return {
+      token: sessionThermacore,
+      source: "sessionStorage:thermacore_token",
+    };
   }
 
   const localAuth = localStorage.getItem("authToken");
@@ -48,4 +51,3 @@ export const getAuthToken = () => {
 export const hasAuthToken = () => {
   return !!getAuthToken();
 };
-

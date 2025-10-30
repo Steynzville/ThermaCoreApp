@@ -70,7 +70,7 @@ describe("useRemoteControl", () => {
       });
 
       expect(global.fetch).toHaveBeenCalledWith(
-        `${mockApiBaseUrl}/remote-control/permissions`,
+        `${mockApiBaseUrl}/api/v1/remote-control/permissions`,
         expect.objectContaining({
           method: "GET",
           headers: expect.objectContaining({
@@ -148,7 +148,7 @@ describe("useRemoteControl", () => {
 
       expect(response).toEqual(mockResponse);
       expect(global.fetch).toHaveBeenLastCalledWith(
-        `${mockApiBaseUrl}/remote-control/units/${unitId}/power`,
+        `${mockApiBaseUrl}/api/v1/remote-control/units/${unitId}/power`,
         expect.objectContaining({
           method: "POST",
           body: JSON.stringify({ power_on: true }),
@@ -228,7 +228,7 @@ describe("useRemoteControl", () => {
 
       expect(response).toEqual(mockResponse);
       expect(global.fetch).toHaveBeenCalledWith(
-        `${mockApiBaseUrl}/remote-control/units/${unitId}/water-production`,
+        `${mockApiBaseUrl}/api/v1/remote-control/units/${unitId}/water-production`,
         expect.objectContaining({
           method: "POST",
           body: JSON.stringify({ water_production_on: true }),
@@ -304,7 +304,7 @@ describe("useRemoteControl", () => {
 
       expect(status).toEqual(mockStatus);
       expect(global.fetch).toHaveBeenCalledWith(
-        `${mockApiBaseUrl}/remote-control/units/${unitId}/status`,
+        `${mockApiBaseUrl}/api/v1/remote-control/units/${unitId}/status`,
         expect.objectContaining({
           method: "GET",
         }),
