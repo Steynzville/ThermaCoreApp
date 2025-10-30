@@ -16,8 +16,10 @@ import {
 import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
+import { useAuth } from "../context/AuthContext";
 import { useSettings } from "../context/SettingsContext";
 import playSound from "../utils/audioPlayer";
+import { canControlUnits } from "../utils/permissions";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,6 +38,10 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { settings } = useSettings();
+  const { backendRole } = useAuth();
+
+  // Check if user has permission to control units
+  const hasControlPermission = canControlUnits(backendRole);
 
   // Get unit from props (when used as tab) or from location state (when used as standalone page)
   const unit = propUnit || location.state?.unit;
@@ -312,33 +318,40 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                     Turn the entire machine on or off
                   </p>
                 </div>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <div className="cursor-pointer">
-                      <Switch checked={machineOn} onCheckedChange={() => {}} />
-                    </div>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>
-                        Are you absolutely sure?
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This action will {machineOn ? "turn off" : "turn on"}{" "}
-                        the machine power. This could have significant impact on
-                        unit operations.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => handleMachineToggle(!machineOn)}
-                      >
-                        Continue
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                {hasControlPermission ? (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <div className="cursor-pointer">
+                        <Switch
+                          checked={machineOn}
+                          onCheckedChange={() => {}}
+                        />
+                      </div>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>
+                          Are you absolutely sure?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action will {machineOn ? "turn off" : "turn on"}{" "}
+                          the machine power. This could have significant impact
+                          on unit operations.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleMachineToggle(!machineOn)}
+                        >
+                          Continue
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                ) : (
+                  <Switch checked={machineOn} disabled={true} />
+                )}
               </div>
               <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
                 <div className="flex items-center space-x-2 mb-2">
@@ -379,39 +392,43 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                       Enable or disable water production
                     </p>
                   </div>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <div className="cursor-pointer">
-                        <Switch
-                          checked={waterProductionOn}
-                          onCheckedChange={() => {}}
-                          disabled={!isConnected || !machineOn}
-                        />
-                      </div>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>
-                          Are you absolutely sure?
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This action will{" "}
-                          {waterProductionOn ? "disable" : "enable"} water
-                          production. This could affect water levels.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() =>
-                            handleWaterProductionToggle(!waterProductionOn)
-                          }
-                        >
-                          Continue
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  {hasControlPermission ? (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <div className="cursor-pointer">
+                          <Switch
+                            checked={waterProductionOn}
+                            onCheckedChange={() => {}}
+                            disabled={!isConnected || !machineOn}
+                          />
+                        </div>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>
+                            Are you absolutely sure?
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action will{" "}
+                            {waterProductionOn ? "disable" : "enable"} water
+                            production. This could affect water levels.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() =>
+                              handleWaterProductionToggle(!waterProductionOn)
+                            }
+                          >
+                            Continue
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  ) : (
+                    <Switch checked={waterProductionOn} disabled={true} />
+                  )}
                 </div>
                 <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
                   <div className="flex items-center space-x-2 mb-2">
@@ -454,40 +471,44 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                     below 75%
                   </p>
                 </div>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <div className="cursor-pointer">
-                      <Switch
-                        checked={autoSwitchEnabled}
-                        onCheckedChange={() => {}}
-                        disabled={!isConnected || !machineOn}
-                      />
-                    </div>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>
-                        Are you absolutely sure?
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This action will{" "}
-                        {autoSwitchEnabled ? "disable" : "enable"} automatic
-                        control. This could affect water levels if not
-                        monitored.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() =>
-                          handleAutoSwitchToggle(!autoSwitchEnabled)
-                        }
-                      >
-                        Continue
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                {hasControlPermission ? (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <div className="cursor-pointer">
+                        <Switch
+                          checked={autoSwitchEnabled}
+                          onCheckedChange={() => {}}
+                          disabled={!isConnected || !machineOn}
+                        />
+                      </div>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>
+                          Are you absolutely sure?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action will{" "}
+                          {autoSwitchEnabled ? "disable" : "enable"} automatic
+                          control. This could affect water levels if not
+                          monitored.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() =>
+                            handleAutoSwitchToggle(!autoSwitchEnabled)
+                          }
+                        >
+                          Continue
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                ) : (
+                  <Switch checked={autoSwitchEnabled} disabled={true} />
+                )}
               </div>
               <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
