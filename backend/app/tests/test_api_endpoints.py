@@ -2,9 +2,9 @@
 
 import json
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
-from app.models import Unit, UnitStatusEnum, User
+from app.models import Role, RoleEnum, Unit, UnitStatusEnum, User
 
 
 def unwrap_response(response):
@@ -56,8 +56,6 @@ class TestRemoteControlEndpoints:
     def test_get_remote_control_permissions_operator(self, client, db_session):
         """Test getting remote control permissions for operator user."""
         # Create operator user
-        from app.models import Role, RoleEnum
-
         operator_role = Role.query.filter_by(name=RoleEnum.OPERATOR).first()
         unique_suffix = str(uuid.uuid4())[:8]
         operator_user = User(
@@ -89,8 +87,6 @@ class TestRemoteControlEndpoints:
     def test_get_remote_control_permissions_viewer(self, client, db_session):
         """Test getting remote control permissions for viewer user."""
         # Create viewer user
-        from app.models import Role, RoleEnum
-
         viewer_role = Role.query.filter_by(name=RoleEnum.VIEWER).first()
         unique_suffix = str(uuid.uuid4())[:8]
         viewer_user = User(
@@ -138,7 +134,7 @@ class TestRemoteControlEndpoints:
             id=unit_id,
             name="Test Unit",
             serial_number=f"SN-{unit_id}",
-            install_date=datetime(2024, 1, 15),
+            install_date=datetime(2024, 1, 15, tzinfo=timezone.utc),
             location="Test Location",
             status=UnitStatusEnum.OFFLINE,
             water_generation=False,
@@ -176,7 +172,7 @@ class TestRemoteControlEndpoints:
             id=unit_id,
             name="Test Unit 2",
             serial_number=f"SN-{unit_id}",
-            install_date=datetime(2024, 1, 15),
+            install_date=datetime(2024, 1, 15, tzinfo=timezone.utc),
             location="Test Location",
             status=UnitStatusEnum.ONLINE,
             water_generation=True,
@@ -209,8 +205,6 @@ class TestRemoteControlEndpoints:
     def test_control_unit_power_unauthorized(self, client, db_session):
         """Test controlling unit power without proper permissions."""
         # Create viewer user
-        from app.models import Role, RoleEnum
-
         viewer_role = Role.query.filter_by(name=RoleEnum.VIEWER).first()
         unique_suffix = str(uuid.uuid4())[:8]
         viewer_user = User(
@@ -276,7 +270,7 @@ class TestRemoteControlEndpoints:
             id=unit_id,
             name="Test Unit 3",
             serial_number=f"SN-{unit_id}",
-            install_date=datetime(2024, 1, 15),
+            install_date=datetime(2024, 1, 15, tzinfo=timezone.utc),
             location="Test Location",
             status=UnitStatusEnum.ONLINE,
             water_generation=False,
@@ -313,7 +307,7 @@ class TestRemoteControlEndpoints:
             id=unit_id,
             name="Test Unit 4",
             serial_number=f"SN-{unit_id}",
-            install_date=datetime(2024, 1, 15),
+            install_date=datetime(2024, 1, 15, tzinfo=timezone.utc),
             location="Test Location",
             status=UnitStatusEnum.OFFLINE,
             water_generation=False,
@@ -338,8 +332,6 @@ class TestRemoteControlEndpoints:
     def test_control_water_production_unauthorized(self, client, db_session):
         """Test controlling water production without proper permissions."""
         # Create viewer user
-        from app.models import Role, RoleEnum
-
         viewer_role = Role.query.filter_by(name=RoleEnum.VIEWER).first()
         unique_suffix = str(uuid.uuid4())[:8]
         viewer_user = User(
@@ -375,7 +367,7 @@ class TestRemoteControlEndpoints:
             id=unit_id,
             name="Test Unit 5",
             serial_number=f"SN-{unit_id}",
-            install_date=datetime(2024, 1, 15),
+            install_date=datetime(2024, 1, 15, tzinfo=timezone.utc),
             location="Test Location",
             status=UnitStatusEnum.ONLINE,
             water_generation=True,
