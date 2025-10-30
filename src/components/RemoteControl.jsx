@@ -13,7 +13,7 @@ import {
   Wifi,
   WifiOff,
 } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useSettings } from "../context/SettingsContext";
@@ -33,23 +33,31 @@ import {
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { Switch } from "./ui/switch";
 
+const ConnectionPill = ({ isConnected }) =>
+  isConnected ? (
+    <div className="flex items-center space-x-2 text-green-600 dark:text-green-400">
+      <Wifi className="h-4 w-4" />
+      <span className="text-sm font-medium">Connected</span>
+    </div>
+  ) : (
+    <div className="flex items-center space-x-2 text-red-600 dark:text-red-400">
+      <WifiOff className="h-4 w-4" />
+      <span className="text-sm font-medium">Disconnected</span>
+    </div>
+  );
+
 const RemoteControl = ({ className, unit: propUnit }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { settings } = useSettings();
-  const { isAuthenticated, userRole } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   // Get unit from props (when used as tab) or from location state (when used as standalone page)
   const unit = propUnit || location.state?.unit;
 
   // Remote control permissions and operations
-  const {
-    permissions,
-    isLoading: remoteControlLoading,
-    error: remoteControlError,
-    controlPower,
-    controlWaterProduction,
-  } = useRemoteControl(unit?.id);
+  const { permissions, controlPower, controlWaterProduction } =
+    useRemoteControl(unit?.id);
 
   // Remote control states
   const [machineOn, setMachineOn] = useState(unit?.status === "online");
@@ -59,7 +67,7 @@ const RemoteControl = ({ className, unit: propUnit }) => {
   const [autoSwitchEnabled, setAutoSwitchEnabled] = useState(
     unit?.autoSwitchEnabled,
   );
-  const [isConnected, setIsConnected] = useState(true);
+  const [isConnected, _setIsConnected] = useState(true);
   const [selectedCamera, setSelectedCamera] = useState("cam1");
   const [videoFeedActive, setVideoFeedActive] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -122,6 +130,7 @@ const RemoteControl = ({ className, unit: propUnit }) => {
             Unit Not Found
           </h1>
           <button
+            type="button"
             onClick={() => (propUnit ? navigate("/grid-view") : navigate(-1))}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
@@ -145,6 +154,7 @@ const RemoteControl = ({ className, unit: propUnit }) => {
             Please log in to access remote control features.
           </p>
           <button
+            type="button"
             onClick={() => navigate("/login")}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
@@ -185,12 +195,7 @@ const RemoteControl = ({ className, unit: propUnit }) => {
         setWaterProductionOn(false);
         setAutoSwitchEnabled(false);
       }
-
-      console.log(
-        `Machine ${checked ? "turned on" : "turned off"} for unit ${unit.name}`,
-      );
-    } catch (error) {
-      console.error("Failed to control machine power:", error);
+    } catch (_error) {
       // Optionally show error message to user
     } finally {
       setPowerControlLoading(false);
@@ -202,7 +207,6 @@ const RemoteControl = ({ className, unit: propUnit }) => {
 
     // Can't enable water production if machine is off
     if (checked && !machineOn) {
-      console.warn("Cannot enable water production when machine is offline");
       return;
     }
 
@@ -226,12 +230,7 @@ const RemoteControl = ({ className, unit: propUnit }) => {
       if (machineOn && !checked) {
         setAutoSwitchEnabled(false);
       }
-
-      console.log(
-        `Water production ${checked ? "enabled" : "disabled"} for unit ${unit.name}`,
-      );
-    } catch (error) {
-      console.error("Failed to control water production:", error);
+    } catch (_error) {
       // Optionally show error message to user
     } finally {
       setWaterControlLoading(false);
@@ -241,14 +240,10 @@ const RemoteControl = ({ className, unit: propUnit }) => {
   const handleAutoSwitchToggle = (checked) => {
     setAutoSwitchEnabled(checked);
     playSound("cool-tones.mp3", settings.soundEnabled, settings.volume);
-    console.log(
-      `Auto switch ${checked ? "enabled" : "disabled"} for unit ${unit.name}`,
-    );
   };
 
   const handleCameraChange = (cameraId) => {
     setSelectedCamera(cameraId);
-    console.log(`Camera switched to ${cameraId} for unit ${unit.name}`);
   };
 
   const toggleVideoFeed = () => {
@@ -263,10 +258,6 @@ const RemoteControl = ({ className, unit: propUnit }) => {
       // Stopping video feed - play video-on.mp3
       playSound("video-on.mp3", settings.soundEnabled, settings.volume);
     }
-
-    console.log(
-      `Video feed ${newVideoFeedState ? "enabled" : "disabled"} for unit ${unit.name}`,
-    );
   };
 
   const toggleFullscreen = async () => {
@@ -297,9 +288,7 @@ const RemoteControl = ({ className, unit: propUnit }) => {
           await document.msExitFullscreen();
         }
       }
-    } catch (error) {
-      console.error("Fullscreen error:", error);
-    }
+    } catch (_error) {}
   };
 
   const availableCameras = [
@@ -307,19 +296,6 @@ const RemoteControl = ({ className, unit: propUnit }) => {
     { id: "cam2", name: "Alternate Cam 1", position: "" },
     { id: "cam3", name: "Alternate Cam 2", position: "" },
   ];
-
-  const ConnectionPill = () =>
-    isConnected ? (
-      <div className="flex items-center space-x-2 text-green-600 dark:text-green-400">
-        <Wifi className="h-4 w-4" />
-        <span className="text-sm font-medium">Connected</span>
-      </div>
-    ) : (
-      <div className="flex items-center space-x-2 text-red-600 dark:text-red-400">
-        <WifiOff className="h-4 w-4" />
-        <span className="text-sm font-medium">Disconnected</span>
-      </div>
-    );
 
   return (
     <div
@@ -329,6 +305,7 @@ const RemoteControl = ({ className, unit: propUnit }) => {
         {/* Header */}
         <div className="mb-6">
           <button
+            type="button"
             onClick={() => navigate(-1)}
             className="flex items-center space-x-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 mb-4"
           >
@@ -348,7 +325,7 @@ const RemoteControl = ({ className, unit: propUnit }) => {
           {/* Status row placed neatly below the heading */}
           <div className="flex items-center justify-between mt-4">
             <div className="flex items-center space-x-4">
-              <ConnectionPill />
+              <ConnectionPill isConnected={isConnected} />
               <div className="flex items-center space-x-2">
                 {unit.status === "online" ? (
                   <CheckCircle className="h-6 w-6 text-green-500" />
@@ -574,7 +551,7 @@ const RemoteControl = ({ className, unit: propUnit }) => {
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    Auto Switch On (Water Level < 75%)
+                    Auto Switch On (Water Level &lt; 75%)
                   </h4>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     Automatically turn on water production when tank level falls
@@ -700,6 +677,7 @@ const RemoteControl = ({ className, unit: propUnit }) => {
                   </p>
                 </div>
                 <button
+                  type="button"
                   onClick={toggleVideoFeed}
                   disabled={!isConnected}
                   className={`w-full sm:w-auto px-4 py-2 rounded-lg transition-colors flex items-center justify-center space-x-2 ${
@@ -747,10 +725,8 @@ const RemoteControl = ({ className, unit: propUnit }) => {
                       )}
                     </div>
                     <button
-                      onClick={() => {
-                        // Refresh/reconnect logic would go here
-                        console.log("Refreshing video feed");
-                      }}
+                      type="button"
+                      onClick={() => {}}
                       className="mt-4 px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg transition-colors flex items-center space-x-1 mx-auto"
                       data-testid="button-refresh-feed"
                     >
@@ -774,6 +750,7 @@ const RemoteControl = ({ className, unit: propUnit }) => {
 
                 {/* Fullscreen Toggle Button */}
                 <button
+                  type="button"
                   onClick={toggleFullscreen}
                   className="absolute top-3 right-3 p-2 bg-white/80 dark:bg-gray-800/80 hover:bg-white/90 dark:hover:bg-gray-700/90 text-gray-700 dark:text-gray-200 rounded-lg transition-all duration-200 backdrop-blur-sm shadow-md border border-gray-200/50 dark:border-gray-600/50"
                   title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}

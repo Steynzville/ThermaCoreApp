@@ -125,12 +125,6 @@ const LoginScreen = ({ error, setError }) => {
 
           // Debug logging in development to confirm token is set
           if (import.meta.env.DEV) {
-            console.log("[Auth Debug] Login successful, token set");
-            console.log(
-              "[Auth Debug] Token stored in:",
-              keepMeSignedIn ? "localStorage" : "sessionStorage",
-            );
-            console.log("[Auth Debug] Token present:", !!result.token);
           }
         }
         navigate("/dashboard");
