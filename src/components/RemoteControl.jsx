@@ -440,8 +440,8 @@ const RemoteControl = ({ className, unit: propUnit }) => {
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
                       <AlertDialogAction
                         onClick={async () => {
-                          setPowerDialogOpen(false);
                           await handleMachineToggle(!machineOn);
+                          setPowerDialogOpen(false);
                         }}
                       >
                         Continue
@@ -526,10 +526,10 @@ const RemoteControl = ({ className, unit: propUnit }) => {
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
                           onClick={async () => {
-                            setWaterDialogOpen(false);
                             await handleWaterProductionToggle(
                               !waterProductionOn,
                             );
+                            setWaterDialogOpen(false);
                           }}
                         >
                           Continue
