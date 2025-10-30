@@ -68,7 +68,9 @@ class TestRemoteControlEndpoints:
         db_session.add(operator_user)
         db_session.commit()
 
-        token = self.get_auth_token(client, f"test_operator_{unique_suffix}", "operator123")
+        token = self.get_auth_token(
+            client, f"test_operator_{unique_suffix}", "operator123",
+        )
 
         response = client.get(
             "/api/v1/remote-control/permissions",
@@ -99,7 +101,9 @@ class TestRemoteControlEndpoints:
         db_session.add(viewer_user)
         db_session.commit()
 
-        token = self.get_auth_token(client, f"test_viewer_{unique_suffix}", "viewer123")
+        token = self.get_auth_token(
+            client, f"test_viewer_{unique_suffix}", "viewer123",
+        )
 
         response = client.get(
             "/api/v1/remote-control/permissions",
@@ -217,7 +221,9 @@ class TestRemoteControlEndpoints:
         db_session.add(viewer_user)
         db_session.commit()
 
-        token = self.get_auth_token(client, f"test_viewer_power_{unique_suffix}", "viewer123")
+        token = self.get_auth_token(
+            client, f"test_viewer_power_{unique_suffix}", "viewer123",
+        )
 
         response = client.post(
             "/api/v1/remote-control/units/TEST001/power",
@@ -344,7 +350,9 @@ class TestRemoteControlEndpoints:
         db_session.add(viewer_user)
         db_session.commit()
 
-        token = self.get_auth_token(client, f"test_viewer_water_{unique_suffix}", "viewer123")
+        token = self.get_auth_token(
+            client, f"test_viewer_water_{unique_suffix}", "viewer123",
+        )
 
         response = client.post(
             "/api/v1/remote-control/units/TEST003/water-production",
