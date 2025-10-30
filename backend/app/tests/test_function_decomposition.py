@@ -1,6 +1,5 @@
 """Tests for function decomposition utilities."""
 
-import pytest
 
 from app.function_decomposition import (
     FunctionDecomposer,
@@ -38,7 +37,7 @@ class TestFunctionDecomposer:
 
         items = [("item1", "value1"), ("item2", "value2")]
         successful, failed = FunctionDecomposer.extract_registration(
-            registry, items, register_fn
+            registry, items, register_fn,
         )
 
         assert successful == 2
@@ -57,7 +56,7 @@ class TestFunctionDecomposer:
 
         items = [("item1", "value1"), ("fail", "value2"), ("item3", "value3")]
         successful, failed = FunctionDecomposer.extract_registration(
-            registry, items, register_fn
+            registry, items, register_fn,
         )
 
         assert successful == 2

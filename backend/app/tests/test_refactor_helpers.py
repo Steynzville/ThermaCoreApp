@@ -1,7 +1,7 @@
 """Tests for refactor helper functions."""
 
 import logging
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -12,6 +12,7 @@ from app.refactor_helpers import (
     setup_logging_level,
     setup_logging_sanitization,
 )
+from app.utils.logging_filter import SanitizingFilter
 
 
 class TestSafeServiceInit:
@@ -38,7 +39,7 @@ class TestSafeServiceInit:
         app = Mock()
 
         result = safe_service_init(
-            service, "TestService", app, logger, timeout=30, retry=True
+            service, "TestService", app, logger, timeout=30, retry=True,
         )
 
         assert result is True
@@ -52,7 +53,7 @@ class TestSafeServiceInit:
         app = Mock()
 
         result = safe_service_init(
-            service, "TestService", app, logger, init_method="initialize"
+            service, "TestService", app, logger, init_method="initialize",
         )
 
         assert result is True
@@ -97,7 +98,7 @@ class TestSafeBlueprintRegister:
             mock_import.return_value = mock_module
 
             success, is_import_error = safe_blueprint_register(
-                app, "app.routes.test", "test_bp", "test", logger
+                app, "app.routes.test", "test_bp", "test", logger,
             )
 
             assert success is True
@@ -116,8 +117,8 @@ class TestSafeBlueprintRegister:
             mock_module.test_bp = mock_blueprint
             mock_import.return_value = mock_module
 
-            success, is_import_error = safe_blueprint_register(
-                app, "app.routes.test", "test_bp", "test", logger, url_prefix="/custom"
+            success, _is_import_error = safe_blueprint_register(
+                app, "app.routes.test", "test_bp", "test", logger, url_prefix="/custom",
             )
 
             assert success is True
@@ -130,7 +131,7 @@ class TestSafeBlueprintRegister:
 
         with patch("builtins.__import__", side_effect=ImportError("Module not found")):
             success, is_import_error = safe_blueprint_register(
-                app, "app.routes.missing", "test_bp", "test", logger
+                app, "app.routes.missing", "test_bp", "test", logger,
             )
 
             assert success is False
@@ -150,7 +151,7 @@ class TestSafeBlueprintRegister:
             mock_import.return_value = mock_module
 
             success, is_import_error = safe_blueprint_register(
-                app, "app.routes.test", "test_bp", "test", logger
+                app, "app.routes.test", "test_bp", "test", logger,
             )
 
             assert success is False
@@ -181,8 +182,6 @@ class TestSetupLoggingSanitization:
 
     def test_setup_logging_sanitization_no_duplicates(self):
         """Test that sanitization filter is not added twice."""
-        from app.utils.logging_filter import SanitizingFilter
-
         app = Mock()
         app.logger = logging.getLogger("test_app")
         app.logger.handlers = []

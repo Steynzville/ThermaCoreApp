@@ -1,6 +1,5 @@
 """Tests for parameter grouping utilities."""
 
-import pytest
 
 from app.parameter_grouping import (
     AuditEventParams,

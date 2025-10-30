@@ -1,22 +1,21 @@
 """Tests for domain-specific exceptions."""
 
-import pytest
 
 from app.exceptions import (
     AuthenticationException,
     AuthorizationException,
     ConfigurationException,
-    DNP3Exception,
     DatabaseConnectionException,
     DatabaseException,
     DatabaseIntegrityException,
+    DNP3Exception,
     InsufficientPermissionsException,
     InvalidCredentialsException,
     InvalidDataException,
-    MQTTConnectionException,
-    MQTTException,
     MissingConfigurationException,
     ModbusException,
+    MQTTConnectionException,
+    MQTTException,
     OPCUAConnectionException,
     OPCUAException,
     ResourceNotFoundException,
