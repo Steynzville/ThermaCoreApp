@@ -179,31 +179,36 @@ const RemoteControl = ({ className, unit: propUnit }) => {
     // All users now have access to remote control
     setPowerControlLoading(true);
 
+    // Optimistic update: Update local state and play sound immediately
+    setMachineOn(checked);
+
+    // Play appropriate audio based on power state
+    if (checked) {
+      playSound("power-on.mp3", settings.soundEnabled, settings.volume);
+    } else {
+      playSound("power-off.mp3", settings.soundEnabled, settings.volume);
+    }
+
+    // Update unit status based on power state
+    if (unit) {
+      unit.status = checked ? "online" : "offline";
+    }
+
+    // When machine control is toggled to "off", water production and automatic controls should both automatically toggle to "off"
+    if (!checked) {
+      setWaterProductionOn(false);
+      setAutoSwitchEnabled(false);
+    }
+
     try {
       // Call remote control API
       await controlPower(checked);
-
-      // Update local state only after successful remote operation
-      setMachineOn(checked);
-
-      // Play appropriate audio based on power state
-      if (checked) {
-        playSound("power-on.mp3", settings.soundEnabled, settings.volume);
-      } else {
-        playSound("power-off.mp3", settings.soundEnabled, settings.volume);
-      }
-
-      // Update unit status based on power state
-      if (unit) {
-        unit.status = checked ? "online" : "offline";
-      }
-
-      // When machine control is toggled to "off", water production and automatic controls should both automatically toggle to "off"
-      if (!checked) {
-        setWaterProductionOn(false);
-        setAutoSwitchEnabled(false);
-      }
     } catch (_error) {
+      // Revert state if API call fails
+      setMachineOn(!checked);
+      if (unit) {
+        unit.status = !checked ? "online" : "offline";
+      }
       // Optionally show error message to user
     } finally {
       setPowerControlLoading(false);
@@ -220,25 +225,27 @@ const RemoteControl = ({ className, unit: propUnit }) => {
 
     setWaterControlLoading(true);
 
+    // Optimistic update: Update local state and play sound immediately
+    setWaterProductionOn(checked);
+
+    // Play appropriate audio based on water state
+    if (checked) {
+      playSound("water-on.mp3", settings.soundEnabled, settings.volume);
+    } else {
+      playSound("water-off.mp3", settings.soundEnabled, settings.volume);
+    }
+
+    // When machine control is toggled to "on" and water production is switched to "off", automatic control should automatically toggle to "off"
+    if (machineOn && !checked) {
+      setAutoSwitchEnabled(false);
+    }
+
     try {
       // Call remote control API
       await controlWaterProduction(checked);
-
-      // Update local state only after successful remote operation
-      setWaterProductionOn(checked);
-
-      // Play appropriate audio based on water state
-      if (checked) {
-        playSound("water-on.mp3", settings.soundEnabled, settings.volume);
-      } else {
-        playSound("water-off.mp3", settings.soundEnabled, settings.volume);
-      }
-
-      // When machine control is toggled to "on" and water production is switched to "off", automatic control should automatically toggle to "off"
-      if (machineOn && !checked) {
-        setAutoSwitchEnabled(false);
-      }
     } catch (_error) {
+      // Revert state if API call fails
+      setWaterProductionOn(!checked);
       // Optionally show error message to user
     } finally {
       setWaterControlLoading(false);
