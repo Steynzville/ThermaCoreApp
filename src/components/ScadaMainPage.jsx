@@ -112,13 +112,22 @@ const ScadaMainPage = ({ className = "" }) => {
             className="space-y-6"
           >
             <TabsList className="grid w-full grid-cols-3 sm:w-auto sm:inline-flex h-10 p-1 bg-muted text-muted-foreground items-center justify-center rounded-md">
-              <TabsTrigger value="visualization" className="min-h-[36px] px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">
+              <TabsTrigger
+                value="visualization"
+                className="min-h-[36px] px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+              >
                 Visualization
               </TabsTrigger>
-              <TabsTrigger value="alerts" className="min-h-[36px] px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">
+              <TabsTrigger
+                value="alerts"
+                className="min-h-[36px] px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+              >
                 Alerts
               </TabsTrigger>
-              <TabsTrigger value="analytics" className="min-h-[36px] px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm">
+              <TabsTrigger
+                value="analytics"
+                className="min-h-[36px] px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+              >
                 Analytics
               </TabsTrigger>
             </TabsList>
