@@ -39,13 +39,10 @@ export const apiFetch = async (
   } = options;
 
   // Get token from localStorage or sessionStorage
-  const { token, source } = getAuthTokenWithSource();
+  const { token } = getAuthTokenWithSource();
 
   // Debug logging in development
   if (import.meta.env.DEV && url.includes("/tenants/current")) {
-    console.log("[API Debug] Making request to:", url);
-    console.log("[API Debug] Token found:", !!token);
-    console.log("[API Debug] Token source:", source);
   }
 
   // Default headers
@@ -57,7 +54,6 @@ export const apiFetch = async (
   if (token) {
     defaultHeaders.Authorization = `Bearer ${token}`;
   } else if (import.meta.env.DEV && url.includes("/tenants")) {
-    console.warn("[API Debug] No token found for tenant endpoint request!");
   }
 
   // Merge headers
