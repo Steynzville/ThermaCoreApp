@@ -126,6 +126,8 @@ ThermaCoreApp implements a comprehensive user management system with:
 
 **Typical Users**: Managers, stakeholders, auditors
 
+**Note**: Viewer role users can view remote control status and unit information but cannot execute control commands such as toggling machine power, water production, or automatic controls.
+
 ### Permission Matrix
 
 | Resource | Admin | Operator | Viewer |
@@ -133,7 +135,8 @@ ThermaCoreApp implements a comprehensive user management system with:
 | View Units | ✅ | ✅ | ✅ |
 | Edit Units | ✅ | ✅ | ❌ |
 | Delete Units | ✅ | ❌ | ❌ |
-| Control Units | ✅ | ✅ | ❌ |
+| Remote Control (Power, Water, Auto) | ✅ | ✅ | ❌ |
+| View Remote Control Status | ✅ | ✅ | ✅ |
 | View Sensors | ✅ | ✅ | ✅ |
 | Edit Sensors | ✅ | ✅ | ❌ |
 | View Analytics | ✅ | ✅ | ✅ |
@@ -157,17 +160,50 @@ def update_unit(id):
 
 **Frontend (JavaScript)**:
 ```javascript
-const { user } = useAuth();
+import { useAuth } from "../context/AuthContext";
+import { canControlUnits } from "../utils/permissions";
 
-function canEditUnit() {
-  return user.role.permissions.includes('write_units');
-}
+const { backendRole } = useAuth();
+
+// Check if user can control units (machine power, water production, etc.)
+const hasControlPermission = canControlUnits(backendRole);
 
 // In component
-{canEditUnit() && (
-  <Button onClick={handleEdit}>Edit Unit</Button>
+{hasControlPermission ? (
+  <AlertDialog>
+    <Switch checked={powerOn} onCheckedChange={handleToggle} />
+    {/* Confirmation dialog */}
+  </AlertDialog>
+) : (
+  <Switch checked={powerOn} disabled={true} />
 )}
 ```
+
+### Remote Control Permissions
+
+Remote control features (machine power, water production, automatic controls) are restricted based on user roles to ensure operational safety.
+
+**Access Control**:
+- **Admin** ✅ - Full remote control access
+- **Operator** ✅ - Full remote control access
+- **Viewer** ❌ - Read-only access (controls disabled)
+
+**Implementation**:
+The `canControlUnits()` permission helper function checks the user's backend role and returns `true` for Admin and Operator roles, `false` for Viewer role.
+
+```javascript
+// Located in: src/utils/permissions.js
+export const canControlUnits = (backendRole) => {
+  return backendRole === "admin" || backendRole === "operator";
+};
+```
+
+**UI Behavior**:
+- **Authorized users** (Admin/Operator): See interactive switches with confirmation dialogs
+- **Unauthorized users** (Viewer): See disabled switches with current state visible
+
+**Security**:
+Permission checks occur at the component level before any control action is permitted. All control switches are disabled for Viewer role users, preventing unauthorized toggle attempts.
 
 ---
 

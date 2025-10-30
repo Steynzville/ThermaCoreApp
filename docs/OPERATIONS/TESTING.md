@@ -2540,38 +2540,64 @@ describe("SideNavigation - Role-Based Menu Items", () => {
 
 **Conditional Feature Availability**:
 ```javascript
-// Module-level mock setup
-let mockPermissions = { canControl: true, role: "admin" };
-let mockIsLoading = false;
-
-vi.mock("../hooks/useRemoteControl", () => ({
-  useRemoteControl: () => ({
-    permissions: mockPermissions,
-    isLoading: mockIsLoading,
-  }),
+// Mock the AuthContext with different roles
+vi.mock("../context/AuthContext", () => ({
+  useAuth: vi.fn(),
 }));
 
+import { useAuth } from "../context/AuthContext";
+
 describe("Permission-Based Features", () => {
-  beforeEach(() => {
-    // Reset to defaults
-    mockPermissions = { canControl: true, role: "admin" };
-    mockIsLoading = false;
+  const mockUnit = {
+    id: "unit-123",
+    name: "Test Unit",
+    status: "online",
+    watergeneration: true,
+  };
+
+  it("should enable remote control for Admin role", () => {
+    useAuth.mockReturnValue({
+      backendRole: "admin",
+      user: { username: "admin" },
+    });
+    
+    render(<RemoteControl unit={mockUnit} />);
+    
+    const switches = screen.getAllByRole("switch");
+    // Admin should have all controls enabled
+    expect(switches[0]).not.toBeDisabled(); // Machine power
+    expect(switches[1]).not.toBeDisabled(); // Water production
+    expect(switches[2]).not.toBeDisabled(); // Auto switch
   });
 
-  it("should enable remote control for users with permission", () => {
+  it("should enable remote control for Operator role", () => {
+    useAuth.mockReturnValue({
+      backendRole: "operator",
+      user: { username: "operator" },
+    });
+    
     render(<RemoteControl unit={mockUnit} />);
     
-    const powerSwitch = screen.getByRole("switch", { name: /machine power/i });
-    expect(powerSwitch).not.toBeDisabled();
+    const switches = screen.getAllByRole("switch");
+    // Operator should have all controls enabled
+    expect(switches[0]).not.toBeDisabled();
+    expect(switches[1]).not.toBeDisabled();
+    expect(switches[2]).not.toBeDisabled();
   });
   
-  it("should disable remote control for users without permission", () => {
-    mockPermissions = { canControl: false, role: "viewer" };
+  it("should disable remote control for Viewer role (Security)", () => {
+    useAuth.mockReturnValue({
+      backendRole: "viewer",
+      user: { username: "viewer" },
+    });
     
     render(<RemoteControl unit={mockUnit} />);
     
-    const powerSwitch = screen.getByRole("switch", { name: /machine power/i });
-    expect(powerSwitch).toBeDisabled();
+    const switches = screen.getAllByRole("switch");
+    // Viewer should have all controls disabled
+    expect(switches[0]).toBeDisabled(); // Machine power
+    expect(switches[1]).toBeDisabled(); // Water production
+    expect(switches[2]).toBeDisabled(); // Auto switch
   });
 });
 ```
