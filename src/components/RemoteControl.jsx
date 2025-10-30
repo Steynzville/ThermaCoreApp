@@ -325,6 +325,7 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                         <Switch
                           checked={machineOn}
                           onCheckedChange={() => {}}
+                          aria-label="Machine Power"
                         />
                       </div>
                     </AlertDialogTrigger>
@@ -350,7 +351,11 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                     </AlertDialogContent>
                   </AlertDialog>
                 ) : (
-                  <Switch checked={machineOn} disabled={true} />
+                  <Switch
+                    checked={machineOn}
+                    disabled={true}
+                    aria-label="Machine Power"
+                  />
                 )}
               </div>
               <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
@@ -400,6 +405,7 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                             checked={waterProductionOn}
                             onCheckedChange={() => {}}
                             disabled={!isConnected || !machineOn}
+                            aria-label="Water Production"
                           />
                         </div>
                       </AlertDialogTrigger>
@@ -427,7 +433,11 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                       </AlertDialogContent>
                     </AlertDialog>
                   ) : (
-                    <Switch checked={waterProductionOn} disabled={true} />
+                    <Switch
+                      checked={waterProductionOn}
+                      disabled={true}
+                      aria-label="Water Production"
+                    />
                   )}
                 </div>
                 <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
@@ -479,6 +489,7 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                           checked={autoSwitchEnabled}
                           onCheckedChange={() => {}}
                           disabled={!isConnected || !machineOn}
+                          aria-label="Auto Switch"
                         />
                       </div>
                     </AlertDialogTrigger>
@@ -507,7 +518,11 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                     </AlertDialogContent>
                   </AlertDialog>
                 ) : (
-                  <Switch checked={autoSwitchEnabled} disabled={true} />
+                  <Switch
+                    checked={autoSwitchEnabled}
+                    disabled={true}
+                    aria-label="Auto Switch"
+                  />
                 )}
               </div>
               <div className="pt-4 border-t border-gray-200 dark:border-gray-700">

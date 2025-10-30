@@ -117,8 +117,9 @@ describe("RemoteControl Component", () => {
     it("should allow admin to toggle machine power", async () => {
       renderComponent(mockUnit, "admin");
 
-      const switches = screen.getAllByRole("switch");
-      const machinePowerSwitch = switches[0];
+      const machinePowerSwitch = screen.getByRole("switch", {
+        name: /machine power/i,
+      });
 
       expect(machinePowerSwitch).not.toBeDisabled();
     });
@@ -126,8 +127,9 @@ describe("RemoteControl Component", () => {
     it("should allow admin to toggle water production", async () => {
       renderComponent(mockUnit, "admin");
 
-      const switches = screen.getAllByRole("switch");
-      const waterProductionSwitch = switches[1];
+      const waterProductionSwitch = screen.getByRole("switch", {
+        name: /water production/i,
+      });
 
       expect(waterProductionSwitch).not.toBeDisabled();
     });
@@ -135,8 +137,9 @@ describe("RemoteControl Component", () => {
     it("should allow admin to toggle auto switch", async () => {
       renderComponent(mockUnit, "admin");
 
-      const switches = screen.getAllByRole("switch");
-      const autoSwitchControl = switches[2];
+      const autoSwitchControl = screen.getByRole("switch", {
+        name: /auto switch/i,
+      });
 
       expect(autoSwitchControl).not.toBeDisabled();
     });
@@ -146,8 +149,9 @@ describe("RemoteControl Component", () => {
     it("should allow operator to toggle machine power", async () => {
       renderComponent(mockUnit, "operator");
 
-      const switches = screen.getAllByRole("switch");
-      const machinePowerSwitch = switches[0];
+      const machinePowerSwitch = screen.getByRole("switch", {
+        name: /machine power/i,
+      });
 
       expect(machinePowerSwitch).not.toBeDisabled();
     });
@@ -155,8 +159,9 @@ describe("RemoteControl Component", () => {
     it("should allow operator to toggle water production", async () => {
       renderComponent(mockUnit, "operator");
 
-      const switches = screen.getAllByRole("switch");
-      const waterProductionSwitch = switches[1];
+      const waterProductionSwitch = screen.getByRole("switch", {
+        name: /water production/i,
+      });
 
       expect(waterProductionSwitch).not.toBeDisabled();
     });
@@ -164,8 +169,9 @@ describe("RemoteControl Component", () => {
     it("should allow operator to toggle auto switch", async () => {
       renderComponent(mockUnit, "operator");
 
-      const switches = screen.getAllByRole("switch");
-      const autoSwitchControl = switches[2];
+      const autoSwitchControl = screen.getByRole("switch", {
+        name: /auto switch/i,
+      });
 
       expect(autoSwitchControl).not.toBeDisabled();
     });
@@ -175,8 +181,9 @@ describe("RemoteControl Component", () => {
     it("should NOT allow viewer to toggle machine power", async () => {
       renderComponent(mockUnit, "viewer");
 
-      const switches = screen.getAllByRole("switch");
-      const machinePowerSwitch = switches[0];
+      const machinePowerSwitch = screen.getByRole("switch", {
+        name: /machine power/i,
+      });
 
       expect(machinePowerSwitch).toBeDisabled();
     });
@@ -184,8 +191,9 @@ describe("RemoteControl Component", () => {
     it("should NOT allow viewer to toggle water production", async () => {
       renderComponent(mockUnit, "viewer");
 
-      const switches = screen.getAllByRole("switch");
-      const waterProductionSwitch = switches[1];
+      const waterProductionSwitch = screen.getByRole("switch", {
+        name: /water production/i,
+      });
 
       expect(waterProductionSwitch).toBeDisabled();
     });
@@ -193,8 +201,9 @@ describe("RemoteControl Component", () => {
     it("should NOT allow viewer to toggle auto switch", async () => {
       renderComponent(mockUnit, "viewer");
 
-      const switches = screen.getAllByRole("switch");
-      const autoSwitchControl = switches[2];
+      const autoSwitchControl = screen.getByRole("switch", {
+        name: /auto switch/i,
+      });
 
       expect(autoSwitchControl).toBeDisabled();
     });
@@ -202,12 +211,16 @@ describe("RemoteControl Component", () => {
     it("should disable all control switches for viewer role", async () => {
       renderComponent(mockUnit, "viewer");
 
-      const switches = screen.getAllByRole("switch");
-
       // All control switches should be disabled for viewer
-      expect(switches[0]).toBeDisabled(); // Machine power
-      expect(switches[1]).toBeDisabled(); // Water production
-      expect(switches[2]).toBeDisabled(); // Auto switch
+      expect(
+        screen.getByRole("switch", { name: /machine power/i }),
+      ).toBeDisabled();
+      expect(
+        screen.getByRole("switch", { name: /water production/i }),
+      ).toBeDisabled();
+      expect(
+        screen.getByRole("switch", { name: /auto switch/i }),
+      ).toBeDisabled();
     });
   });
 
@@ -216,8 +229,9 @@ describe("RemoteControl Component", () => {
       const user = userEvent.setup();
       renderComponent(mockUnit, "admin");
 
-      const switches = screen.getAllByRole("switch");
-      const machinePowerSwitch = switches[0];
+      const machinePowerSwitch = screen.getByRole("switch", {
+        name: /machine power/i,
+      });
 
       await user.click(machinePowerSwitch);
 
@@ -232,8 +246,9 @@ describe("RemoteControl Component", () => {
       const user = userEvent.setup();
       renderComponent(mockUnit, "viewer");
 
-      const switches = screen.getAllByRole("switch");
-      const machinePowerSwitch = switches[0];
+      const machinePowerSwitch = screen.getByRole("switch", {
+        name: /machine power/i,
+      });
 
       // Try to click the disabled switch
       await user.click(machinePowerSwitch);
@@ -250,8 +265,9 @@ describe("RemoteControl Component", () => {
       const user = userEvent.setup();
       renderComponent(mockUnit, "operator");
 
-      const switches = screen.getAllByRole("switch");
-      const waterProductionSwitch = switches[1];
+      const waterProductionSwitch = screen.getByRole("switch", {
+        name: /water production/i,
+      });
 
       await user.click(waterProductionSwitch);
 
@@ -265,8 +281,9 @@ describe("RemoteControl Component", () => {
     it("should not allow viewer to interact with water production switch", async () => {
       renderComponent(mockUnit, "viewer");
 
-      const switches = screen.getAllByRole("switch");
-      const waterProductionSwitch = switches[1];
+      const waterProductionSwitch = screen.getByRole("switch", {
+        name: /water production/i,
+      });
 
       expect(waterProductionSwitch).toBeDisabled();
     });
@@ -277,8 +294,9 @@ describe("RemoteControl Component", () => {
       const user = userEvent.setup();
       renderComponent(mockUnit, "admin");
 
-      const switches = screen.getAllByRole("switch");
-      const autoSwitchControl = switches[2];
+      const autoSwitchControl = screen.getByRole("switch", {
+        name: /auto switch/i,
+      });
 
       await user.click(autoSwitchControl);
 
@@ -292,8 +310,9 @@ describe("RemoteControl Component", () => {
     it("should not allow viewer to interact with auto switch", async () => {
       renderComponent(mockUnit, "viewer");
 
-      const switches = screen.getAllByRole("switch");
-      const autoSwitchControl = switches[2];
+      const autoSwitchControl = screen.getByRole("switch", {
+        name: /auto switch/i,
+      });
 
       expect(autoSwitchControl).toBeDisabled();
     });
@@ -397,12 +416,16 @@ describe("RemoteControl Component", () => {
     it("should correctly identify viewer lacks control permission", () => {
       renderComponent(mockUnit, "viewer");
 
-      const switches = screen.getAllByRole("switch");
-
-      // All control switches should be disabled for viewer (first 3 switches)
-      expect(switches[0]).toBeDisabled(); // Machine power
-      expect(switches[1]).toBeDisabled(); // Water production
-      expect(switches[2]).toBeDisabled(); // Auto switch
+      // All control switches should be disabled for viewer
+      expect(
+        screen.getByRole("switch", { name: /machine power/i }),
+      ).toBeDisabled();
+      expect(
+        screen.getByRole("switch", { name: /water production/i }),
+      ).toBeDisabled();
+      expect(
+        screen.getByRole("switch", { name: /auto switch/i }),
+      ).toBeDisabled();
     });
   });
 
