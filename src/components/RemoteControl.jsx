@@ -574,7 +574,7 @@ const RemoteControl = ({ className, unit: propUnit }) => {
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    Auto Switch On (Water Level &lt; 75%)
+                    Auto Switch On (Water Level < 75%)
                   </h4>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     Automatically turn on water production when tank level falls
