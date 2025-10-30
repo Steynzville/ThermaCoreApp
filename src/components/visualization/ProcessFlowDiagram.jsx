@@ -249,24 +249,24 @@ const ProcessFlowDiagram = ({
           </CardTitle>
 
           {/* Legend */}
-          <div className="flex items-center gap-4 text-xs">
+          <div className="flex items-center gap-2 text-xs">
             <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded-full bg-green-500" />
+              <div className="w-2 h-2 rounded-full bg-green-500" />
               <span>Running</span>
             </div>
             <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded-full bg-yellow-500" />
+              <div className="w-2 h-2 rounded-full bg-yellow-500" />
               <span>Warning</span>
             </div>
             <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded-full bg-red-500" />
+              <div className="w-2 h-2 rounded-full bg-red-500" />
               <span>Critical</span>
             </div>
           </div>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="border rounded-lg overflow-auto bg-gray-50 dark:bg-gray-900">
+        <div className="border rounded-lg overflow-x-auto bg-gray-50 dark:bg-gray-900">
           <svg
             aria-label="Icon"
             role="img"
@@ -299,7 +299,7 @@ const ProcessFlowDiagram = ({
         </div>
 
         {/* Summary statistics */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
           <div className="p-2 bg-green-50 dark:bg-green-950/20 rounded">
             <div className="text-xs text-muted-foreground">Running</div>
             <div className="text-lg font-bold text-green-600">

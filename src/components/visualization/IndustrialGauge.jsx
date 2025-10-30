@@ -20,7 +20,7 @@ const IndustrialGauge = ({
     normal: 70,
     high: 90,
   },
-  size = 200,
+  size = 180,
   showValue = true,
   showThresholds = true,
   animated = true,
@@ -230,14 +230,14 @@ const IndustrialGauge = ({
         </div>
       </CardHeader>
       <CardContent className="flex flex-col items-center pb-4">
-        <canvas ref={canvasRef} width={size} height={size} className="mb-2" />
+        <canvas ref={canvasRef} width={size} height={size} className="mb-2 max-w-full h-auto" />
         {showValue && (
           <div className="text-center">
-            <div className="text-2xl font-bold">
+            <div className="text-3xl font-bold">
               {value.toFixed(precision)}
               {unit}
             </div>
-            <div className="text-xs text-muted-foreground mt-1">
+            <div className="text-sm text-muted-foreground mt-1">
               Range: {min}
               {unit} - {max}
               {unit}

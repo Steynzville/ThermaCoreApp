@@ -355,18 +355,18 @@ const AdvancedAlertDashboard = ({ embedded = false }) => {
                     key={alert.id}
                     className={`border-l-4 ${getSeverityColor(alert.severity)} p-4 rounded-lg`}
                   >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-start gap-3 flex-1">
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
                         {getSeverityIcon(alert.severity)}
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold">{alert.type}</h3>
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-1">
+                            <h3 className="text-lg font-bold">{alert.type}</h3>
                             {getStatusBadge(alert.status, alert.acknowledged)}
                           </div>
-                          <p className="text-sm text-muted-foreground mb-2">
+                          <p className="text-base text-muted-foreground mb-2">
                             {alert.message}
                           </p>
-                          <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
                             <span className="flex items-center gap-1">
                               <Clock className="h-3 w-3" />
                               {formatTimeAgo(alert.timestamp)}
@@ -394,6 +394,7 @@ const AdvancedAlertDashboard = ({ embedded = false }) => {
                               setSelectedAlert(alert);
                               setAcknowledgeDialogOpen(true);
                             }}
+                            className="w-full sm:w-auto mt-2 sm:mt-0"
                           >
                             Acknowledge
                           </Button>
