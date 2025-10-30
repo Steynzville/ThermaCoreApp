@@ -1,6 +1,5 @@
 """Tests for domain-specific exceptions."""
 
-
 from app.exceptions import (
     AuthenticationException,
     AuthorizationException,

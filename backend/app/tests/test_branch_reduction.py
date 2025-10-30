@@ -35,7 +35,11 @@ class TestBranchReducer:
 
         lookup = {"key1": lambda: "result1"}
 
-        result = BranchReducer.lookup_pattern("unknown", lookup, default=default_handler)
+        result = BranchReducer.lookup_pattern(
+            "unknown",
+            lookup,
+            default=default_handler,
+        )
 
         assert result == "default"
 
@@ -66,7 +70,13 @@ class TestBranchReducer:
 
         lookup = {"format": handler}
 
-        result = BranchReducer.lookup_pattern("format", lookup, None, name="John", age=30)
+        result = BranchReducer.lookup_pattern(
+            "format",
+            lookup,
+            None,
+            name="John",
+            age=30,
+        )
 
         assert result == "John-30"
 
@@ -126,7 +136,9 @@ class TestBranchReducer:
             return "result3"
 
         results = BranchReducer.chain_of_responsibility(
-            [handler1, handler2, handler3], "data", stop_on_first=True,
+            [handler1, handler2, handler3],
+            "data",
+            stop_on_first=True,
         )
 
         assert len(results) == 1
@@ -142,7 +154,9 @@ class TestBranchReducer:
             return "result2"
 
         results = BranchReducer.chain_of_responsibility(
-            [handler1, handler2], "data", stop_on_first=False,
+            [handler1, handler2],
+            "data",
+            stop_on_first=False,
         )
 
         assert len(results) == 2

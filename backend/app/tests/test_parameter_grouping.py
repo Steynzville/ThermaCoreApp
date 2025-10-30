@@ -1,6 +1,5 @@
 """Tests for parameter grouping utilities."""
 
-
 from app.parameter_grouping import (
     AuditEventParams,
     CertificateLoadConfig,
