@@ -5,34 +5,15 @@ This module adds targeted tests for middleware components with insufficient cove
 - Validation middleware (50% coverage)
 """
 
-import json
 import uuid
 
 from app.middleware.validation import sanitize
 from app.models import Role, RoleEnum, User
-
-
-def unwrap_response(response):
-    """Helper to extract data from standardized API response envelope."""
-    data = json.loads(response.data)
-    if "data" in data and "success" in data:
-        return data["data"]
-    return data
+from app.tests.test_utils import get_auth_token, unwrap_response
 
 
 class TestAuthorizationMiddleware:
     """Test authorization middleware to increase coverage."""
-
-    def get_auth_token(self, client, username="admin", password="admin123"):
-        """Helper method to get auth token."""
-        response = client.post(
-            "/api/v1/auth/login",
-            json={"username": username, "password": password},
-            headers={"Content-Type": "application/json"},
-        )
-        assert response.status_code == 200
-        data = unwrap_response(response)
-        return data["access_token"]
 
     def test_permission_required_with_invalid_token(self, client, db_session):
         """Test permission_required decorator with invalid token."""
@@ -273,20 +254,9 @@ class TestValidationMiddleware:
 class TestTenantMiddleware:
     """Test tenant middleware to increase coverage."""
 
-    def get_auth_token(self, client, username="admin", password="admin123"):
-        """Helper method to get auth token."""
-        response = client.post(
-            "/api/v1/auth/login",
-            json={"username": username, "password": password},
-            headers={"Content-Type": "application/json"},
-        )
-        assert response.status_code == 200
-        data = unwrap_response(response)
-        return data["access_token"]
-
     def test_tenant_middleware_admin_access(self, client, db_session):
         """Test tenant middleware grants admin cross-tenant access."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         # Admin should be able to access tenant endpoints
         response = client.get(

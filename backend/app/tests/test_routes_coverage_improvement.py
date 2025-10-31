@@ -16,14 +16,7 @@ from app.models import (
     Unit,
     UnitStatusEnum,
 )
-
-
-def unwrap_response(response):
-    """Helper to extract data from standardized API response envelope."""
-    data = json.loads(response.data)
-    if "data" in data and "success" in data:
-        return data["data"]
-    return data
+from app.tests.test_utils import get_auth_token
 
 
 def create_test_unit(
@@ -50,20 +43,9 @@ def create_test_unit(
 class TestHistoricalDataRoutes:
     """Test historical data routes to increase coverage."""
 
-    def get_auth_token(self, client, username="admin", password="admin123"):
-        """Helper method to get auth token."""
-        response = client.post(
-            "/api/v1/auth/login",
-            json={"username": username, "password": password},
-            headers={"Content-Type": "application/json"},
-        )
-        assert response.status_code in [200, 503]
-        data = unwrap_response(response)
-        return data["access_token"]
-
     def test_get_historical_data_unit_not_found(self, client, db_session):
         """Test historical data endpoint with non-existent unit."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.get(
             "/api/v1/historical/data/NONEXISTENT_UNIT",
@@ -77,7 +59,7 @@ class TestHistoricalDataRoutes:
 
     def test_get_historical_statistics_unit_not_found(self, client, db_session):
         """Test statistics endpoint with non-existent unit."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.get(
             "/api/v1/historical/statistics/NONEXISTENT_UNIT",
@@ -91,7 +73,7 @@ class TestHistoricalDataRoutes:
 
     def test_get_historical_export_unit_not_found(self, client, db_session):
         """Test export endpoint with non-existent unit."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.get(
             "/api/v1/historical/export/NONEXISTENT_UNIT",
@@ -105,7 +87,7 @@ class TestHistoricalDataRoutes:
 
     def test_compare_units_missing_units(self, client, db_session):
         """Test compare units endpoint with insufficient units."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.post(
             "/api/v1/historical/compare/units",
@@ -126,20 +108,9 @@ class TestHistoricalDataRoutes:
 class TestAnalyticsRoutes:
     """Test analytics routes to increase coverage."""
 
-    def get_auth_token(self, client, username="admin", password="admin123"):
-        """Helper method to get auth token."""
-        response = client.post(
-            "/api/v1/auth/login",
-            json={"username": username, "password": password},
-            headers={"Content-Type": "application/json"},
-        )
-        assert response.status_code in [200, 503]
-        data = unwrap_response(response)
-        return data["access_token"]
-
     def test_get_dashboard_summary(self, client, db_session):
         """Test analytics dashboard summary endpoint."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.get(
             "/api/v1/analytics/dashboard/summary",
@@ -156,7 +127,7 @@ class TestAnalyticsRoutes:
 
     def test_get_trends_unit_not_found(self, client, db_session):
         """Test trends endpoint with non-existent unit."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.get(
             "/api/v1/analytics/trends/NONEXISTENT_UNIT",
@@ -170,7 +141,7 @@ class TestAnalyticsRoutes:
 
     def test_get_performance_units(self, client, db_session):
         """Test performance units endpoint."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.get(
             "/api/v1/analytics/performance/units",
@@ -185,7 +156,7 @@ class TestAnalyticsRoutes:
 
     def test_get_alert_patterns(self, client, db_session):
         """Test alert patterns endpoint."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.get(
             "/api/v1/analytics/alerts/patterns",
@@ -202,20 +173,9 @@ class TestAnalyticsRoutes:
 class TestScadaRoutes:
     """Test SCADA routes to increase coverage."""
 
-    def get_auth_token(self, client, username="admin", password="admin123"):
-        """Helper method to get auth token."""
-        response = client.post(
-            "/api/v1/auth/login",
-            json={"username": username, "password": password},
-            headers={"Content-Type": "application/json"},
-        )
-        assert response.status_code in [200, 503]
-        data = unwrap_response(response)
-        return data["access_token"]
-
     def test_get_scada_status(self, client, db_session):
         """Test SCADA status endpoint."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.get(
             "/api/v1/scada/status",
@@ -229,7 +189,7 @@ class TestScadaRoutes:
 
     def test_mqtt_connect(self, client, db_session):
         """Test MQTT connect endpoint."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.post(
             "/api/v1/scada/mqtt/connect",
@@ -244,7 +204,7 @@ class TestScadaRoutes:
 
     def test_mqtt_disconnect(self, client, db_session):
         """Test MQTT disconnect endpoint."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.post(
             "/api/v1/scada/mqtt/disconnect",
@@ -259,7 +219,7 @@ class TestScadaRoutes:
 
     def test_mqtt_subscribe_missing_topic(self, client, db_session):
         """Test MQTT subscribe without topic."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.post(
             "/api/v1/scada/mqtt/subscribe",
@@ -275,7 +235,7 @@ class TestScadaRoutes:
 
     def test_mqtt_publish_missing_params(self, client, db_session):
         """Test MQTT publish without required parameters."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.post(
             "/api/v1/scada/mqtt/publish",
@@ -291,7 +251,7 @@ class TestScadaRoutes:
 
     def test_get_alert_rules(self, client, db_session):
         """Test get alert rules endpoint."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.get(
             "/api/v1/scada/alerts/rules",
@@ -305,7 +265,7 @@ class TestScadaRoutes:
 
     def test_create_alert_rule_missing_params(self, client, db_session):
         """Test create alert rule without parameters."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.post(
             "/api/v1/scada/alerts/rules",
@@ -321,7 +281,7 @@ class TestScadaRoutes:
 
     def test_get_websocket_clients(self, client, db_session):
         """Test get websocket clients endpoint."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.get(
             "/api/v1/scada/websocket/clients",
@@ -335,7 +295,7 @@ class TestScadaRoutes:
 
     def test_opcua_connect_missing_params(self, client, db_session):
         """Test OPC UA connect without parameters."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.post(
             "/api/v1/scada/opcua/connect",
@@ -351,7 +311,7 @@ class TestScadaRoutes:
 
     def test_opcua_disconnect(self, client, db_session):
         """Test OPC UA disconnect endpoint."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.post(
             "/api/v1/scada/opcua/disconnect",
@@ -366,7 +326,7 @@ class TestScadaRoutes:
 
     def test_opcua_browse_missing_params(self, client, db_session):
         """Test OPC UA browse without parameters."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.get(
             "/api/v1/scada/opcua/browse",
@@ -381,7 +341,7 @@ class TestScadaRoutes:
 
     def test_opcua_read_missing_params(self, client, db_session):
         """Test OPC UA read without parameters."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.post(
             "/api/v1/scada/opcua/read",
@@ -397,7 +357,7 @@ class TestScadaRoutes:
 
     def test_opcua_subscribe_missing_params(self, client, db_session):
         """Test OPC UA subscribe without parameters."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.post(
             "/api/v1/scada/opcua/subscribe",
@@ -413,7 +373,7 @@ class TestScadaRoutes:
 
     def test_opcua_poll_missing_params(self, client, db_session):
         """Test OPC UA poll without parameters."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.post(
             "/api/v1/scada/opcua/poll",
@@ -429,7 +389,7 @@ class TestScadaRoutes:
 
     def test_get_simulator_status(self, client, db_session):
         """Test simulator status endpoint."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.get(
             "/api/v1/scada/simulator/status",
@@ -443,7 +403,7 @@ class TestScadaRoutes:
 
     def test_start_simulator_missing_params(self, client, db_session):
         """Test start simulator without parameters."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.post(
             "/api/v1/scada/simulator/start",
@@ -459,7 +419,7 @@ class TestScadaRoutes:
 
     def test_stop_simulator(self, client, db_session):
         """Test stop simulator endpoint."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.post(
             "/api/v1/scada/simulator/stop",
@@ -474,7 +434,7 @@ class TestScadaRoutes:
 
     def test_inject_simulator_data_missing_params(self, client, db_session):
         """Test inject simulator data without parameters."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.post(
             "/api/v1/scada/simulator/inject",
@@ -490,7 +450,7 @@ class TestScadaRoutes:
 
     def test_get_devices_status(self, client, db_session):
         """Test get devices status endpoint."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.get(
             "/api/v1/scada/devices/status",
@@ -504,7 +464,7 @@ class TestScadaRoutes:
 
     def test_get_device_status_not_found(self, client, db_session):
         """Test get device status for non-existent device."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.get(
             "/api/v1/scada/devices/NONEXISTENT/status",
@@ -518,7 +478,7 @@ class TestScadaRoutes:
 
     def test_get_devices_status_history(self, client, db_session):
         """Test get devices status history endpoint."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.get(
             "/api/v1/scada/devices/status/history",
@@ -534,20 +494,9 @@ class TestScadaRoutes:
 class TestMultiprotocolRoutes:
     """Test multiprotocol routes to increase coverage."""
 
-    def get_auth_token(self, client, username="admin", password="admin123"):
-        """Helper method to get auth token."""
-        response = client.post(
-            "/api/v1/auth/login",
-            json={"username": username, "password": password},
-            headers={"Content-Type": "application/json"},
-        )
-        assert response.status_code in [200, 503]
-        data = unwrap_response(response)
-        return data["access_token"]
-
     def test_get_protocols_status(self, client, db_session):
         """Test protocols status endpoint."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.get(
             "/api/v1/protocols/status",
@@ -561,7 +510,7 @@ class TestMultiprotocolRoutes:
 
     def test_get_modbus_devices(self, client, db_session):
         """Test get Modbus devices endpoint."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.get(
             "/api/v1/protocols/modbus/devices",
@@ -575,7 +524,7 @@ class TestMultiprotocolRoutes:
 
     def test_create_modbus_device_missing_params(self, client, db_session):
         """Test create Modbus device without parameters."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.post(
             "/api/v1/protocols/modbus/devices",
@@ -591,7 +540,7 @@ class TestMultiprotocolRoutes:
 
     def test_get_modbus_device_data_not_found(self, client, db_session):
         """Test get Modbus device data for non-existent device."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.get(
             "/api/v1/protocols/modbus/devices/NONEXISTENT/data",
@@ -605,7 +554,7 @@ class TestMultiprotocolRoutes:
 
     def test_get_dnp3_devices(self, client, db_session):
         """Test get DNP3 devices endpoint."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.get(
             "/api/v1/protocols/dnp3/devices",
@@ -619,7 +568,7 @@ class TestMultiprotocolRoutes:
 
     def test_create_dnp3_device_missing_params(self, client, db_session):
         """Test create DNP3 device without parameters."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.post(
             "/api/v1/protocols/dnp3/devices",
@@ -635,7 +584,7 @@ class TestMultiprotocolRoutes:
 
     def test_connect_dnp3_device_not_found(self, client, db_session):
         """Test connect DNP3 device for non-existent device."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.post(
             "/api/v1/protocols/dnp3/devices/NONEXISTENT/connect",
@@ -649,7 +598,7 @@ class TestMultiprotocolRoutes:
 
     def test_get_dnp3_device_data_not_found(self, client, db_session):
         """Test get DNP3 device data for non-existent device."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.get(
             "/api/v1/protocols/dnp3/devices/NONEXISTENT/data",
@@ -663,7 +612,7 @@ class TestMultiprotocolRoutes:
 
     def test_get_unified_devices(self, client, db_session):
         """Test get unified devices endpoint."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.get(
             "/api/v1/protocols/unified/devices",
@@ -677,7 +626,7 @@ class TestMultiprotocolRoutes:
 
     def test_convert_data_missing_params(self, client, db_session):
         """Test convert data endpoint without parameters."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.post(
             "/api/v1/protocols/convert/data",
@@ -693,7 +642,7 @@ class TestMultiprotocolRoutes:
 
     def test_get_dnp3_performance_metrics(self, client, db_session):
         """Test get DNP3 performance metrics endpoint."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.get(
             "/api/v1/protocols/dnp3/performance/metrics",
@@ -707,7 +656,7 @@ class TestMultiprotocolRoutes:
 
     def test_get_dnp3_performance_summary(self, client, db_session):
         """Test get DNP3 performance summary endpoint."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.get(
             "/api/v1/protocols/dnp3/performance/summary",
@@ -721,7 +670,7 @@ class TestMultiprotocolRoutes:
 
     def test_configure_dnp3_performance_missing_params(self, client, db_session):
         """Test configure DNP3 performance without parameters."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.post(
             "/api/v1/protocols/dnp3/performance/config",
@@ -737,7 +686,7 @@ class TestMultiprotocolRoutes:
 
     def test_delete_dnp3_performance_metrics(self, client, db_session):
         """Test delete DNP3 performance metrics endpoint."""
-        token = self.get_auth_token(client)
+        token = get_auth_token(client)
 
         response = client.delete(
             "/api/v1/protocols/dnp3/performance/metrics",
