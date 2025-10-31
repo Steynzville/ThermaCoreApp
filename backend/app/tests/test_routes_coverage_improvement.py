@@ -27,7 +27,10 @@ def unwrap_response(response):
 
 
 def create_test_unit(
-    db_session, name=None, location=None, status=UnitStatusEnum.ONLINE,
+    db_session,
+    name=None,
+    location=None,
+    status=UnitStatusEnum.ONLINE,
 ):
     """Helper to create a test unit with required fields."""
     unique_id = str(uuid.uuid4())[:8].upper()
