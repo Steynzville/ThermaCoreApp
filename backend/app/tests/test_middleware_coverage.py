@@ -8,10 +8,8 @@ This module adds targeted tests for middleware components with insufficient cove
 import json
 import uuid
 
-from flask import g
-
 from app.middleware.validation import sanitize
-from app.models import Permission, Role, RoleEnum, User
+from app.models import Role, RoleEnum, User
 
 
 def unwrap_response(response):
