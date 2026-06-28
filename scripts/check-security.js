@@ -129,16 +129,9 @@ async function checkSecurityViolations() {
     }
 
     if (violations.length > 0) {
-      console.log("🔒 Security Violations Found:");
-      violations.forEach((v, i) => {
-        console.log(`\n${i + 1}. File: ${v.file}`);
-        console.log(`   Pattern: ${v.pattern}`);
-        console.log(`   Type: ${v.type}`);
-        console.log(`   Preview: ${v.preview}`);
-      });
       process.exit(1);
     } else {
-      console.log("✅ Security Check Passed");
+      process.exit(0);
     }
   } catch (_error) {
     process.exit(1);
