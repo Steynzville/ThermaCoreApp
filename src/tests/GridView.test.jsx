@@ -353,9 +353,7 @@ describe("GridView", () => {
       fireEvent.change(statusFilter, { target: { value: "Online" } });
 
       await waitFor(() => {
-        const selectedOption = screen.getByRole("option", { selected: true });
-        expect(selectedOption.textContent).toBe("Online");
-        
+        expect(statusFilter.value).toBe("Online");
         const onlineUnits = screen.getAllByText(/ThermaCore Unit 00[1456]/);
         expect(onlineUnits.length).toBeGreaterThan(0);
       });
@@ -373,9 +371,7 @@ describe("GridView", () => {
       fireEvent.change(statusFilter, { target: { value: "Offline" } });
 
       await waitFor(() => {
-        const selectedOption = screen.getByRole("option", { selected: true });
-        expect(selectedOption.textContent).toBe("Offline");
-        
+        expect(statusFilter.value).toBe("Offline");
         const offlineUnits = screen.getAllByText("ThermaCore Unit 002");
         expect(offlineUnits.length).toBeGreaterThan(0);
       });
@@ -393,9 +389,7 @@ describe("GridView", () => {
       fireEvent.change(statusFilter, { target: { value: "Maintenance" } });
 
       await waitFor(() => {
-        const selectedOption = screen.getByRole("option", { selected: true });
-        expect(selectedOption.textContent).toBe("Maintenance");
-        
+        expect(statusFilter.value).toBe("Maintenance");
         const maintenanceUnits = screen.getAllByText("ThermaCore Unit 003");
         expect(maintenanceUnits.length).toBeGreaterThan(0);
       });
@@ -413,9 +407,7 @@ describe("GridView", () => {
       fireEvent.change(statusFilter, { target: { value: "Alerts" } });
 
       await waitFor(() => {
-        const selectedOption = screen.getByRole("option", { selected: true });
-        expect(selectedOption.textContent).toBe("Alerts");
-        
+        expect(statusFilter.value).toBe("Alerts");
         const alertUnits = screen.getAllByText(/ThermaCore Unit 00[15]/);
         expect(alertUnits.length).toBeGreaterThan(0);
       });
@@ -433,9 +425,7 @@ describe("GridView", () => {
       fireEvent.change(statusFilter, { target: { value: "Alarms" } });
 
       await waitFor(() => {
-        const selectedOption = screen.getByRole("option", { selected: true });
-        expect(selectedOption.textContent).toBe("Alarms");
-        
+        expect(statusFilter.value).toBe("Alarms");
         const alarmUnits = screen.getAllByText(/ThermaCore Unit 00[26]/);
         expect(alarmUnits.length).toBeGreaterThan(0);
       });
@@ -451,8 +441,8 @@ describe("GridView", () => {
       );
 
       await waitFor(() => {
-        const selectedOption = screen.getByRole("option", { selected: true });
-        expect(selectedOption.textContent).toBe("Online");
+        const statusFilters = screen.getAllByRole("combobox");
+        expect(statusFilters[0].value).toBe("Online");
       });
     });
 
@@ -464,8 +454,8 @@ describe("GridView", () => {
       );
 
       await waitFor(() => {
-        const selectedOption = screen.getByRole("option", { selected: true });
-        expect(selectedOption.textContent).toBe("Alerts");
+        const statusFilters = screen.getAllByRole("combobox");
+        expect(statusFilters[0].value).toBe("Alerts");
       });
     });
 
