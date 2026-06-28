@@ -9,9 +9,9 @@ const mockUsers = import.meta.env.DEV
   ? [
       {
         id: 1,
-        username: ["admin"].join(""), // Obfuscated to avoid security pattern detection
+        username: "admin",
         email: "admin@thermacore.com",
-        password: ["dev_", "admin_", "credential"].join(""), // Development only
+        password: "dev_admin_credential", // Development only
         role: "admin",
         firstName: "Admin",
         lastName: "User",
@@ -19,9 +19,9 @@ const mockUsers = import.meta.env.DEV
       },
       {
         id: 2,
-        username: ["user"].join(""), // Obfuscated to avoid security pattern detection
+        username: "user",
         email: "user@thermacore.com",
-        password: ["dev_", "user_", "credential"].join(""), // Development only
+        password: "dev_user_credential", // Development only
         role: "user",
         firstName: "Regular",
         lastName: "User",
@@ -42,36 +42,39 @@ let authToken = null;
  * @returns {Promise<Object>} Authentication result
  */
 export const login = async (identifier, password, keepMeSignedIn = false) => {
-  const targetUser = String.fromCharCode(97, 100, 109, 105, 110); // "admin"
-  const targetPass = String.fromCharCode(97, 100, 109, 105, 110, 49, 50, 51); // "admin123"
+  // Try development fallback first (only in DEV mode)
+  if (import.meta.env.DEV) {
+    // Check against mock users
+    const mockUser = mockUsers.find(
+      (u) => (u.username === identifier || u.email === identifier) && 
+             u.password === password
+    );
 
-  if (identifier === targetUser && password === targetPass) {
-    authToken = "mock_admin_token_123";
-    currentUser = {
-      id: 1,
-      username: targetUser,
-      email: "admin@thermacore.com",
-      role: "admin",
-      firstName: "Admin",
-      lastName: "User",
-    };
-    return {
-      success: true,
-      user: currentUser,
-      token: authToken,
-      message: "Login successful (Sandbox Fallback)",
-    };
+    if (mockUser) {
+      authToken = "mock_dev_token_" + Date.now();
+      currentUser = {
+        id: mockUser.id,
+        username: mockUser.username,
+        email: mockUser.email,
+        role: mockUser.role,
+        firstName: mockUser.firstName,
+        lastName: mockUser.lastName,
+      };
+      return {
+        success: true,
+        user: currentUser,
+        token: authToken,
+        message: "Login successful (Development Mode)",
+      };
+    }
   }
 
   const API_BASE_URL =
     import.meta.env.VITE_API_BASE_URL || "https://thermacoreapp.onrender.com";
 
-  // Debug logging to diagnose the issue
-  if (import.meta.env.DEV) {
-  }
-
   // Warn if API_BASE_URL is not configured (in production this should be set)
-  if (!API_BASE_URL) {
+  if (!API_BASE_URL && import.meta.env.DEV) {
+    console.warn("VITE_API_BASE_URL not configured, using default");
   }
 
   try {
@@ -128,13 +131,6 @@ export const login = async (identifier, password, keepMeSignedIn = false) => {
  * @returns {Promise<Object>} Logout result
  */
 export const logout = () => {
-  // In the future, this would be replaced with:
-  // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  // return fetch(`${API_BASE_URL}/auth/logout`, {
-  //   method: 'POST',
-  //   headers: { 'Authorization': `Bearer ${authToken}` }
-  // }).then(response => response.json());
-
   return new Promise((resolve) => {
     setTimeout(() => {
       currentUser = null;
@@ -153,12 +149,6 @@ export const logout = () => {
  * @returns {Object|null} Current user object or null if not authenticated
  */
 export const getCurrentUser = () => {
-  // In the future, this would be replaced with:
-  // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  // return fetch(`${API_BASE_URL}/auth/me`, {
-  //   headers: { 'Authorization': `Bearer ${authToken}` }
-  // }).then(response => response.json());
-
   return Promise.resolve(currentUser);
 };
 
@@ -184,13 +174,6 @@ export const getAuthToken = () => {
  * @returns {Promise<Object>} Verification result
  */
 export const verifyToken = (token) => {
-  // In the future, this would be replaced with:
-  // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  // return fetch(`${API_BASE_URL}/auth/verify`, {
-  //   method: 'POST',
-  //   headers: { 'Authorization': `Bearer ${token}` }
-  // }).then(response => response.json());
-
   return new Promise((resolve) => {
     setTimeout(() => {
       const isValid = token === authToken && currentUser !== null;
@@ -209,14 +192,6 @@ export const verifyToken = (token) => {
  * @returns {Promise<Object>} Registration result
  */
 export const register = (userData) => {
-  // In the future, this would be replaced with:
-  // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  // return fetch(`${API_BASE_URL}/auth/register`, {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify(userData)
-  // }).then(response => response.json());
-
   return new Promise((resolve, reject) => {
     setTimeout(() => {
       // Check if user already exists
@@ -398,17 +373,6 @@ export const resetPassword = async (token, newPassword) => {
  * @returns {Promise<Object>} Update result
  */
 export const updateProfile = (profileData) => {
-  // In the future, this would be replaced with:
-  // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  // return fetch(`${API_BASE_URL}/auth/profile`, {
-  //   method: 'PUT',
-  //   headers: {
-  //     'Content-Type': 'application/json',
-  //     'Authorization': `Bearer ${authToken}`
-  //   },
-  //   body: JSON.stringify(profileData)
-  // }).then(response => response.json());
-
   return new Promise((resolve, reject) => {
     setTimeout(() => {
       if (!currentUser) {
