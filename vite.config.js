@@ -76,6 +76,14 @@ export default defineConfig(() => {
       globals: true,
       setupFiles: ["./src/setupTests.js"],
       testTimeout: 15000, // 15 seconds for longer tests
+      maxWorkers: 2, // ⬅️ ADD THIS
+      minWorkers: 1, // ⬅️ ADD THIS
+      pool: "forks", // ⬅️ ADD THIS
+      poolOptions: {
+        forks: {
+          singleFork: true, // ⬅️ ADD THIS
+        },
+      },
       coverage: {
         provider: "v8",
         reporter: ["text", "json-summary"],
