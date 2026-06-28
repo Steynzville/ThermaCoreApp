@@ -136,8 +136,8 @@ describe("MultiTimeframeTrendChart", () => {
         <MultiTimeframeTrendChart data={mockData} metrics={mockMetrics} />,
       );
 
-      const chartElements = screen.getAllByTestId("line-chart");
-      expect(chartElements.length).toBeGreaterThan(0);
+      const charts = screen.getAllByTestId("line-chart");
+      expect(charts.length).toBeGreaterThan(0);
     });
 
     it("should render area chart when selected", async () => {
@@ -150,8 +150,8 @@ describe("MultiTimeframeTrendChart", () => {
       );
 
       await waitFor(() => {
-        const chartElements = screen.getAllByTestId("area-chart");
-        expect(chartElements.length).toBeGreaterThan(0);
+        const charts = screen.getAllByTestId("area-chart");
+        expect(charts.length).toBeGreaterThan(0);
       });
     });
 
@@ -165,8 +165,8 @@ describe("MultiTimeframeTrendChart", () => {
       );
 
       await waitFor(() => {
-        const chartElements = screen.getAllByTestId("bar-chart");
-        expect(chartElements.length).toBeGreaterThan(0);
+        const charts = screen.getAllByTestId("bar-chart");
+        expect(charts.length).toBeGreaterThan(0);
       });
     });
 
@@ -180,8 +180,8 @@ describe("MultiTimeframeTrendChart", () => {
       );
 
       await waitFor(() => {
-        const chartElements = screen.getAllByTestId("composed-chart");
-        expect(chartElements.length).toBeGreaterThan(0);
+        const charts = screen.getAllByTestId("composed-chart");
+        expect(charts.length).toBeGreaterThan(0);
       });
     });
   });
@@ -229,8 +229,9 @@ describe("MultiTimeframeTrendChart", () => {
     it("should handle empty data array", () => {
       render(<MultiTimeframeTrendChart data={[]} metrics={mockMetrics} />);
 
-      const chart = screen.getByTestId("line-chart");
-      expect(chart).toHaveAttribute("data-length", "0");
+      const charts = screen.getAllByTestId("line-chart");
+      expect(charts.length).toBeGreaterThan(0);
+      expect(charts[0]).toHaveAttribute("data-length", "0");
     });
 
     it("should handle missing data prop", () => {
@@ -245,8 +246,9 @@ describe("MultiTimeframeTrendChart", () => {
         <MultiTimeframeTrendChart data={mockData} metrics={mockMetrics} />,
       );
 
-      const chart = screen.getByTestId("line-chart");
-      expect(chart).toHaveAttribute("data-length", "3");
+      const charts = screen.getAllByTestId("line-chart");
+      expect(charts.length).toBeGreaterThan(0);
+      expect(charts[0]).toHaveAttribute("data-length", "3");
     });
 
     it("should handle large datasets", () => {
@@ -260,8 +262,9 @@ describe("MultiTimeframeTrendChart", () => {
         <MultiTimeframeTrendChart data={largeData} metrics={mockMetrics} />,
       );
 
-      const chart = screen.getByTestId("line-chart");
-      expect(chart).toHaveAttribute("data-length", "1000");
+      const charts = screen.getAllByTestId("line-chart");
+      expect(charts.length).toBeGreaterThan(0);
+      expect(charts[0]).toHaveAttribute("data-length", "1000");
     });
   });
 
@@ -571,8 +574,9 @@ describe("MultiTimeframeTrendChart", () => {
         <MultiTimeframeTrendChart data={singlePoint} metrics={mockMetrics} />,
       );
 
-      const chart = screen.getByTestId("line-chart");
-      expect(chart).toHaveAttribute("data-length", "1");
+      const charts = screen.getAllByTestId("line-chart");
+      expect(charts.length).toBeGreaterThan(0);
+      expect(charts[0]).toHaveAttribute("data-length", "1");
     });
 
     it("should handle NaN values in data", () => {
