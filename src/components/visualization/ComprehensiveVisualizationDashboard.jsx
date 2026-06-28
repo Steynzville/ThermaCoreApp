@@ -13,14 +13,16 @@ import {
   useRealtimeHistoricalData,
   useRealtimeMetrics,
 } from "../../hooks/useRealtimeData";
-import { Card } from "../ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import IndustrialGauge from "./IndustrialGauge";
 import MultiTimeframeTrendChart from "./MultiTimeframeTrendChart";
 import ProcessFlowDiagram from "./ProcessFlowDiagram";
 
-const ComprehensiveVisualizationDashboard = ({ embedded = false }) => {
-  const [selectedTab, setSelectedTab] = useState("overview");
+const ComprehensiveVisualizationDashboard = ({
+  embedded = false,
+  defaultTab = "overview",
+}) => {
+  const [selectedTab, setSelectedTab] = useState(defaultTab);
 
   // Real-time data hooks
   const { metrics } = useRealtimeMetrics({
@@ -150,32 +152,35 @@ const ComprehensiveVisualizationDashboard = ({ embedded = false }) => {
           onValueChange={setSelectedTab}
           className="w-full"
         >
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 sm:w-auto sm:inline-flex h-10 p-1 bg-muted text-muted-foreground items-center justify-center rounded-md">
-            <TabsTrigger
-              value="overview"
-              className="min-h-[36px] px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-            >
-              Overview
-            </TabsTrigger>
-            <TabsTrigger
-              value="gauges"
-              className="min-h-[36px] px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-            >
-              Gauges
-            </TabsTrigger>
-            <TabsTrigger
-              value="trends"
-              className="min-h-[36px] px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-            >
-              Trends
-            </TabsTrigger>
-            <TabsTrigger
-              value="process"
-              className="min-h-[36px] px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-            >
-              Process Flow
-            </TabsTrigger>
-          </TabsList>
+          {/* Only show tabs when not embedded and defaultTab is "overview" */}
+          {!embedded && defaultTab === "overview" && (
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 sm:w-auto sm:inline-flex h-10 p-1 bg-muted text-muted-foreground items-center justify-center rounded-md">
+              <TabsTrigger
+                value="overview"
+                className="min-h-[36px] px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+              >
+                Overview
+              </TabsTrigger>
+              <TabsTrigger
+                value="gauges"
+                className="min-h-[36px] px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+              >
+                Gauges
+              </TabsTrigger>
+              <TabsTrigger
+                value="trends"
+                className="min-h-[36px] px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+              >
+                Trends
+              </TabsTrigger>
+              <TabsTrigger
+                value="process"
+                className="min-h-[36px] px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+              >
+                Process Flow
+              </TabsTrigger>
+            </TabsList>
+          )}
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6 mt-6">
@@ -185,7 +190,7 @@ const ComprehensiveVisualizationDashboard = ({ embedded = false }) => {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <IndustrialGauge
                   title="Temperature"
-                  value={metrics?.temperature?.current || 70}
+                  value={parseFloat(metrics?.temperature?.current || 70)}
                   min={0}
                   max={100}
                   unit="°C"
@@ -194,7 +199,7 @@ const ComprehensiveVisualizationDashboard = ({ embedded = false }) => {
                 />
                 <IndustrialGauge
                   title="Pressure"
-                  value={105}
+                  value={parseFloat(metrics?.pressure?.current || 105)}
                   min={0}
                   max={150}
                   unit="PSI"
@@ -203,7 +208,11 @@ const ComprehensiveVisualizationDashboard = ({ embedded = false }) => {
                 />
                 <IndustrialGauge
                   title="Flow Rate"
-                  value={45.5}
+                  value={parseFloat(
+                    metrics?.flow_rate_inlet?.current ||
+                      metrics?.flowRateInlet?.current ||
+                      45.5,
+                  )}
                   min={0}
                   max={100}
                   unit="L/min"
@@ -249,7 +258,7 @@ const ComprehensiveVisualizationDashboard = ({ embedded = false }) => {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <IndustrialGauge
                   title="Temperature Zone 1"
-                  value={72.3}
+                  value={parseFloat(metrics?.temperature?.current || 72.3)}
                   min={0}
                   max={100}
                   unit="°C"
@@ -257,7 +266,11 @@ const ComprehensiveVisualizationDashboard = ({ embedded = false }) => {
                 />
                 <IndustrialGauge
                   title="Temperature Zone 2"
-                  value={68.5}
+                  value={parseFloat(
+                    (
+                      parseFloat(metrics?.temperature?.current || 72.3) * 0.95
+                    ).toFixed(1),
+                  )}
                   min={0}
                   max={100}
                   unit="°C"
@@ -265,7 +278,7 @@ const ComprehensiveVisualizationDashboard = ({ embedded = false }) => {
                 />
                 <IndustrialGauge
                   title="Pressure Main Line"
-                  value={105}
+                  value={parseFloat(metrics?.pressure?.current || 105)}
                   min={0}
                   max={150}
                   unit="PSI"
@@ -273,7 +286,11 @@ const ComprehensiveVisualizationDashboard = ({ embedded = false }) => {
                 />
                 <IndustrialGauge
                   title="Pressure Secondary"
-                  value={98}
+                  value={parseFloat(
+                    (
+                      parseFloat(metrics?.pressure?.current || 105) * 0.93
+                    ).toFixed(1),
+                  )}
                   min={0}
                   max={150}
                   unit="PSI"
@@ -281,7 +298,11 @@ const ComprehensiveVisualizationDashboard = ({ embedded = false }) => {
                 />
                 <IndustrialGauge
                   title="Flow Rate Inlet"
-                  value={45.5}
+                  value={parseFloat(
+                    metrics?.flow_rate_inlet?.current ||
+                      metrics?.flowRateInlet?.current ||
+                      45.5,
+                  )}
                   min={0}
                   max={100}
                   unit="L/min"
@@ -289,7 +310,11 @@ const ComprehensiveVisualizationDashboard = ({ embedded = false }) => {
                 />
                 <IndustrialGauge
                   title="Flow Rate Outlet"
-                  value={42.1}
+                  value={parseFloat(
+                    metrics?.flow_rate_outlet?.current ||
+                      metrics?.flowRateOutlet?.current ||
+                      42.1,
+                  )}
                   min={0}
                   max={100}
                   unit="L/min"
@@ -366,40 +391,6 @@ const ComprehensiveVisualizationDashboard = ({ embedded = false }) => {
               width={800}
               height={600}
             />
-
-            {/* Process Statistics */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card className="p-4">
-                <div className="text-sm text-muted-foreground">Total Nodes</div>
-                <div className="text-2xl font-bold">{processNodes.length}</div>
-              </Card>
-              <Card className="p-4">
-                <div className="text-sm text-muted-foreground">Running</div>
-                <div className="text-2xl font-bold text-green-600">
-                  {
-                    processNodes.filter(
-                      (n) => processLiveData[n.id]?.status === "running",
-                    ).length
-                  }
-                </div>
-              </Card>
-              <Card className="p-4">
-                <div className="text-sm text-muted-foreground">Warnings</div>
-                <div className="text-2xl font-bold text-yellow-600">
-                  {
-                    processNodes.filter(
-                      (n) => processLiveData[n.id]?.status === "warning",
-                    ).length
-                  }
-                </div>
-              </Card>
-              <Card className="p-4">
-                <div className="text-sm text-muted-foreground">Connections</div>
-                <div className="text-2xl font-bold">
-                  {processConnections.length}
-                </div>
-              </Card>
-            </div>
           </TabsContent>
         </Tabs>
       </div>

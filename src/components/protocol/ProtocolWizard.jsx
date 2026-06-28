@@ -23,6 +23,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -32,9 +39,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { apiPostJson } from "@/utils/apiFetch";
 
 const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
+  const isDesktop = useMediaQuery("(min-width: 768px)");
   const [currentStep, setCurrentStep] = useState(0);
   const [protocol, setProtocol] = useState("");
   const [testing, setTesting] = useState(false);
@@ -103,6 +112,17 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
 
   const getCurrentSteps = () => steps[protocol] || steps.modbus;
 
+  const isStepValid = () => {
+    // Step 0: Protocol selection - required
+    if (currentStep === 0) {
+      return Boolean(protocol);
+    }
+
+    // Allow navigation through all other steps
+    // Field validation will be handled when saving or testing connection
+    return true;
+  };
+
   const testConnection = async () => {
     setTesting(true);
     setTestResult(null);
@@ -168,7 +188,7 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
       return (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Select Protocol</h3>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {["modbus", "opcua", "dnp3", "mqtt"].map((p) => (
               <Card
                 key={p}
@@ -242,7 +262,7 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
                 placeholder="192.168.1.100"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="port">Port</Label>
                 <Input
@@ -350,7 +370,7 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
         return (
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">DNP3 Addresses</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="master-addr">Master Address</Label>
                 <Input
@@ -432,7 +452,7 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
                 placeholder="broker.hivemq.com"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="broker-port">Port</Label>
                 <Input
@@ -575,11 +595,8 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
           <h3 className="text-xl font-semibold">Configuration Complete!</h3>
           <p className="text-muted-foreground">
             Your {protocol.toUpperCase()} device has been configured
-            successfully.
+            successfully. Click the Save button below to finish.
           </p>
-          <Button onClick={saveConfiguration} className="w-full">
-            Save Configuration
-          </Button>
         </div>
       );
     }
@@ -587,9 +604,92 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
     return null;
   };
 
+  if (!isDesktop) {
+    return (
+      <Drawer open={isOpen} onOpenChange={handleClose}>
+        <DrawerContent className="h-[90vh]">
+          <DrawerHeader className="text-left">
+            <DrawerTitle>Protocol Configuration</DrawerTitle>
+            <DrawerDescription>
+              Step-by-step guide to configure your protocol
+            </DrawerDescription>
+          </DrawerHeader>
+
+          <div className="p-4 h-full overflow-y-auto">
+            <div className="mb-6">
+              <div className="flex justify-between items-center mb-4">
+                {getCurrentSteps().map((step, index) => (
+                  <div
+                    key={`${protocol}-${index}`}
+                    className={`flex-1 text-center ${
+                      index <= currentStep
+                        ? "text-primary"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    <div
+                      className={`w-8 h-8 mx-auto rounded-full flex items-center justify-center text-sm font-bold mb-1 ${
+                        index <= currentStep
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted border"
+                      }`}
+                    >
+                      {index + 1}
+                    </div>
+                    <span className="text-xs hidden sm:inline">
+                      {step.title}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="h-1 bg-muted rounded-full">
+                <div
+                  className="h-1 bg-primary rounded-full transition-all duration-500"
+                  style={{
+                    width: `${
+                      (currentStep / (getCurrentSteps().length - 1)) * 100
+                    }%`,
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="min-h-[300px]">{renderStepContent()}</div>
+
+            <div className="flex justify-between mt-6">
+              <Button
+                variant="outline"
+                onClick={handleBack}
+                disabled={currentStep === 0}
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Button>
+              {currentStep < getCurrentSteps().length - 1 && (
+                <Button onClick={handleNext} disabled={!isStepValid()}>
+                  Next
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              )}
+              {currentStep === getCurrentSteps().length - 1 && (
+                <Button
+                  onClick={saveConfiguration}
+                  disabled={testResult?.success === false}
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Save Configuration
+                </Button>
+              )}
+            </div>
+          </div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl w-full">
         <DialogHeader>
           <DialogTitle>Protocol Configuration Wizard</DialogTitle>
           <DialogDescription>
@@ -598,9 +698,9 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
         </DialogHeader>
 
         {/* Progress Steps */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-y-4 gap-x-2 mb-6 p-2 bg-muted/40 rounded-lg">
           {getCurrentSteps().map((step, stepIndex) => (
-            <div key={step.id || step.label} className="flex items-center">
+            <div key={stepIndex} className="flex items-center">
               <div className="flex flex-col items-center">
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold ${
@@ -645,16 +745,21 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
-          <Button
-            onClick={handleNext}
-            disabled={
-              currentStep === getCurrentSteps().length - 1 ||
-              (currentStep === 0 && !protocol)
-            }
-          >
-            Next
-            <ArrowRight className="h-4 w-4 ml-2" />
-          </Button>
+          {currentStep < getCurrentSteps().length - 1 && (
+            <Button onClick={handleNext} disabled={!isStepValid()}>
+              Next
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          )}
+          {currentStep === getCurrentSteps().length - 1 && (
+            <Button
+              onClick={saveConfiguration}
+              disabled={testResult && !testResult.success}
+            >
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Save Configuration
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>

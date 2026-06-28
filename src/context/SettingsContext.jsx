@@ -1,95 +1,70 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 
-const SettingsContext = createContext();
+const SettingsContext = createContext(null);
+
+export const SettingsProvider = ({ children }) => {
+  const [settings, setSettings] = useState(() => {
+    const saved = localStorage.getItem("thermacore_settings");
+    return saved ? JSON.parse(saved) : {
+      soundEnabled: true,
+      volume: 0.8,
+      refreshInterval: 5000,
+      temperatureUnit: "C",
+      theme: "dark"
+    };
+  });
+
+  useEffect(() => {
+    localStorage.setItem("thermacore_settings", JSON.stringify(settings));
+  }, [settings]);
+
+  const updateSettings = (newSettings) => {
+    setSettings((prev) => ({ ...prev, ...newSettings }));
+  };
+
+  const formatTemperature = (celsiusVal) => {
+    if (celsiusVal === undefined || celsiusVal === null) return "--";
+    const numericVal = parseFloat(celsiusVal);
+    if (isNaN(numericVal)) return "--";
+    
+    if (settings.temperatureUnit === "F") {
+      const fahrenheit = (numericVal * 9) / 5 + 32;
+      return `${fahrenheit.toFixed(1)}°F`;
+    }
+    return `${numericVal.toFixed(1)}°C`;
+  };
+
+  return (
+    <SettingsContext.Provider value={{ settings, updateSettings, formatTemperature }}>
+      {children}
+    </SettingsContext.Provider>
+  );
+};
 
 export const useSettings = () => {
   const context = useContext(SettingsContext);
   if (!context) {
-    throw new Error("useSettings must be used within a SettingsProvider");
+    const defaultSettings = {
+      soundEnabled: true,
+      volume: 0.8,
+      refreshInterval: 5000,
+      temperatureUnit: "C",
+      theme: "dark"
+    };
+    return {
+      settings: defaultSettings,
+      updateSettings: () => {},
+      formatTemperature: (celsiusVal) => {
+        if (celsiusVal === undefined || celsiusVal === null) return "--";
+        const numericVal = parseFloat(celsiusVal);
+        if (isNaN(numericVal)) return "--";
+        if (defaultSettings.temperatureUnit === "F") {
+          const fahrenheit = (numericVal * 9) / 5 + 32;
+          return `${fahrenheit.toFixed(1)}°F`;
+        }
+        return `${numericVal.toFixed(1)}°C`;
+      }
+    };
   }
   return context;
-};
-
-export const SettingsProvider = ({ children }) => {
-  const [settings, setSettings] = useState({
-    soundEnabled: true,
-    volume: 0.35, // Default volume (0.0 to 1.0)
-    temperatureUnit: "celsius", // 'celsius' or 'fahrenheit'
-  });
-
-  // Load settings from localStorage on mount
-  useEffect(() => {
-    const savedSettings = localStorage.getItem("thermacore-settings");
-    if (savedSettings) {
-      try {
-        const parsed = JSON.parse(savedSettings);
-        setSettings((prev) => ({ ...prev, ...parsed }));
-      } catch (_error) {}
-    }
-  }, []);
-
-  // Save settings to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem("thermacore-settings", JSON.stringify(settings));
-  }, [settings]);
-
-  const updateSetting = (key, value) => {
-    setSettings((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
-  };
-
-  const toggleSound = () => {
-    updateSetting("soundEnabled", !settings.soundEnabled);
-  };
-
-  const toggleTemperatureUnit = () => {
-    updateSetting(
-      "temperatureUnit",
-      settings.temperatureUnit === "celsius" ? "fahrenheit" : "celsius",
-    );
-  };
-
-  const setTemperatureUnit = (unit) => {
-    updateSetting("temperatureUnit", unit);
-  };
-
-  const setVolume = (volume) => {
-    updateSetting("volume", volume);
-  };
-
-  const convertTemperature = (celsius) => {
-    if (settings.temperatureUnit === "fahrenheit") {
-      return (celsius * 9) / 5 + 32;
-    }
-    return celsius;
-  };
-
-  const formatTemperature = (celsius, showUnit = true) => {
-    if (celsius === null || celsius === undefined) {
-      return "N/A";
-    }
-    const converted = convertTemperature(celsius);
-    const rounded = Math.round(converted * 10) / 10; // Round to 1 decimal place
-    const unit = settings.temperatureUnit === "celsius" ? "°C" : "°F";
-    return showUnit ? `${rounded}${unit}` : rounded;
-  };
-
-  const value = {
-    settings,
-    updateSetting,
-    toggleSound,
-    toggleTemperatureUnit,
-    setTemperatureUnit,
-    setVolume,
-    convertTemperature,
-    formatTemperature,
-  };
-
-  return (
-    <SettingsContext.Provider value={value}>
-      {children}
-    </SettingsContext.Provider>
-  );
 };

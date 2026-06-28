@@ -5,8 +5,16 @@
  * and real-time status indicators for industrial processes.
  */
 
-import { Activity, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
-import { useMemo } from "react";
+import {
+  Activity,
+  AlertTriangle,
+  CheckCircle,
+  Minus,
+  Plus,
+  XCircle,
+} from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 
 const ProcessFlowDiagram = ({
@@ -18,6 +26,153 @@ const ProcessFlowDiagram = ({
   height = 600,
   onNodeClick,
 }) => {
+  const [zoom, setZoom] = useState(1);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const containerRef = useRef(null);
+  const lastDistanceRef = useRef(null);
+  const isPinchingRef = useRef(false);
+  const isPanningRef = useRef(false);
+  const lastPanPointRef = useRef(null);
+
+  // Handle mouse and touch interactions for zoom and pan
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    // Mouse drag for panning
+    const handleMouseDown = (e) => {
+      // Only pan if zoomed in (zoom > 1)
+      if (zoom > 1 && e.button === 0) {
+        isPanningRef.current = true;
+        setIsPanning(true);
+        lastPanPointRef.current = { x: e.clientX, y: e.clientY };
+        e.preventDefault();
+      }
+    };
+
+    const handleMouseMove = (e) => {
+      if (isPanningRef.current && lastPanPointRef.current) {
+        const deltaX = e.clientX - lastPanPointRef.current.x;
+        const deltaY = e.clientY - lastPanPointRef.current.y;
+
+        setPanOffset((prev) => ({
+          x: prev.x + deltaX,
+          y: prev.y + deltaY,
+        }));
+
+        lastPanPointRef.current = { x: e.clientX, y: e.clientY };
+      }
+    };
+
+    const handleMouseUp = () => {
+      isPanningRef.current = false;
+      setIsPanning(false);
+      lastPanPointRef.current = null;
+    };
+
+    // Touch handlers for pinch-to-zoom and single-touch panning
+    const handleTouchStart = (e) => {
+      if (e.touches.length === 2) {
+        // Two-finger pinch for zoom
+        isPinchingRef.current = true;
+        const distance = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY,
+        );
+        lastDistanceRef.current = distance;
+      } else if (e.touches.length === 1 && zoom > 1) {
+        // Single-finger drag for panning (only when zoomed)
+        isPanningRef.current = true;
+        setIsPanning(true);
+        lastPanPointRef.current = {
+          x: e.touches[0].clientX,
+          y: e.touches[0].clientY,
+        };
+      }
+    };
+
+    const handleTouchMove = (e) => {
+      if (e.touches.length === 2) {
+        // Handle pinch zoom
+        e.preventDefault();
+        const distance = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY,
+        );
+
+        if (lastDistanceRef.current) {
+          const scale = distance / lastDistanceRef.current;
+          setZoom((prevZoom) => Math.min(Math.max(prevZoom * scale, 0.5), 3));
+        }
+        lastDistanceRef.current = distance;
+      } else if (
+        e.touches.length === 1 &&
+        isPanningRef.current &&
+        lastPanPointRef.current
+      ) {
+        // Handle single-finger panning
+        e.preventDefault();
+        const deltaX = e.touches[0].clientX - lastPanPointRef.current.x;
+        const deltaY = e.touches[0].clientY - lastPanPointRef.current.y;
+
+        setPanOffset((prev) => ({
+          x: prev.x + deltaX,
+          y: prev.y + deltaY,
+        }));
+
+        lastPanPointRef.current = {
+          x: e.touches[0].clientX,
+          y: e.touches[0].clientY,
+        };
+      }
+    };
+
+    const handleTouchEnd = () => {
+      isPinchingRef.current = false;
+      lastDistanceRef.current = null;
+      isPanningRef.current = false;
+      setIsPanning(false);
+      lastPanPointRef.current = null;
+    };
+
+    // Add mouse event listeners
+    container.addEventListener("mousedown", handleMouseDown);
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+
+    // Add touch event listeners
+    container.addEventListener("touchstart", handleTouchStart, {
+      passive: false,
+    });
+    container.addEventListener("touchmove", handleTouchMove, {
+      passive: false,
+    });
+    container.addEventListener("touchend", handleTouchEnd);
+
+    return () => {
+      container.removeEventListener("mousedown", handleMouseDown);
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      container.removeEventListener("touchstart", handleTouchStart);
+      container.removeEventListener("touchmove", handleTouchMove);
+      container.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, [zoom]);
+
+  const handleZoomIn = () => {
+    setZoom((prevZoom) => Math.min(prevZoom + 0.25, 3));
+  };
+
+  const handleZoomOut = () => {
+    setZoom((prevZoom) => Math.max(prevZoom - 0.25, 0.5));
+  };
+
+  const handleZoomReset = () => {
+    setZoom(1);
+    setPanOffset({ x: 0, y: 0 });
+  };
+
   // Calculate node positions if not provided
   const positionedNodes = useMemo(() => {
     return nodes.map((node, index) => {
@@ -123,8 +278,7 @@ const ProcessFlowDiagram = ({
               y={midY - 12}
               width={60}
               height={24}
-              fill="white"
-              stroke="#3b82f6"
+              className="fill-card stroke-blue-500"
               strokeWidth={1}
               rx={4}
             />
@@ -133,7 +287,7 @@ const ProcessFlowDiagram = ({
               y={midY + 5}
               textAnchor="middle"
               fontSize="12"
-              fill="#3b82f6"
+              className="fill-blue-500"
               fontWeight="600"
             >
               {flowRate.toFixed(1)} L/s
@@ -182,11 +336,10 @@ const ProcessFlowDiagram = ({
           y={-40}
           width={120}
           height={80}
-          fill="white"
+          className="fill-card hover:opacity-80"
           stroke={statusColor}
           strokeWidth={3}
           rx={8}
-          className="hover:opacity-80"
         />
 
         {/* Status indicator */}
@@ -218,7 +371,7 @@ const ProcessFlowDiagram = ({
           textAnchor="middle"
           fontSize="13"
           fontWeight="600"
-          className="fill-foreground"
+          fill="var(--card-foreground)"
         >
           {node.label}
         </text>
@@ -230,7 +383,7 @@ const ProcessFlowDiagram = ({
             y={30}
             textAnchor="middle"
             fontSize="11"
-            className="fill-muted-foreground"
+            fill="var(--card-foreground)"
           >
             {nodeData.value.toFixed(1)} {nodeData.unit || ""}
           </text>
@@ -243,39 +396,91 @@ const ProcessFlowDiagram = ({
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-foreground dark:text-white">
             <Activity className="h-5 w-5" />
-            {title}
+            <span>{title}</span>
           </CardTitle>
 
           {/* Legend */}
-          <div className="flex items-center gap-2 text-xs">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs text-foreground dark:text-white">
             <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-green-500" />
-              <span>Running</span>
+              <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
+              <span className="whitespace-nowrap">Running</span>
             </div>
             <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-yellow-500" />
-              <span>Warning</span>
+              <div className="w-2 h-2 rounded-full bg-yellow-500 flex-shrink-0" />
+              <span className="whitespace-nowrap">Warning</span>
             </div>
             <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-red-500" />
-              <span>Critical</span>
+              <div className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
+              <span className="whitespace-nowrap">Critical</span>
             </div>
           </div>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="border rounded-lg overflow-x-auto bg-gray-50 dark:bg-gray-900">
+        {/* Zoom Controls */}
+        <div className="flex items-center justify-end gap-2 mb-3 md:hidden">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleZoomOut}
+            disabled={zoom <= 0.5}
+            className="h-8 w-8 p-0"
+          >
+            <Minus className="h-4 w-4" />
+          </Button>
+          <span className="text-sm text-muted-foreground min-w-[4rem] text-center">
+            {Math.round(zoom * 100)}%
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleZoomReset}
+            className="h-8 px-2 text-xs"
+          >
+            Reset
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleZoomIn}
+            disabled={zoom >= 3}
+            className="h-8 w-8 p-0"
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+        {/* Container for SVG with pan/zoom support - overflow hidden to contain content */}
+        <div
+          ref={containerRef}
+          className="border rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-900"
+          style={{
+            touchAction: "none",
+            cursor: isPanning ? "grabbing" : zoom > 1 ? "grab" : "default",
+            position: "relative",
+            overflow: "hidden",
+          }}
+        >
           <svg
-            aria-label="Icon"
+            aria-label={title}
             role="img"
             width={width}
             height={height}
             viewBox={`0 0 ${width} ${height}`}
-            className="min-w-full"
+            className="w-full h-auto"
+            style={{
+              minWidth: "300px",
+              transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})`,
+              transformOrigin: "center center",
+              transition:
+                isPinchingRef.current || isPanning
+                  ? "none"
+                  : "transform 0.2s ease",
+              userSelect: "none",
+            }}
           >
-            <title>Icon</title>
+            <title>{title}</title>
             {/* Define arrow marker */}
             <defs>
               <marker
@@ -299,10 +504,12 @@ const ProcessFlowDiagram = ({
         </div>
 
         {/* Summary statistics */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
-          <div className="p-2 bg-green-50 dark:bg-green-950/20 rounded">
-            <div className="text-xs text-muted-foreground">Running</div>
-            <div className="text-lg font-bold text-green-600">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mt-4">
+          <div className="p-3 sm:p-4 bg-green-50 dark:bg-green-950/20 rounded">
+            <div className="text-xs sm:text-sm text-gray-700 dark:text-gray-200 font-medium">
+              Running
+            </div>
+            <div className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">
               {
                 positionedNodes.filter(
                   (n) => (liveData[n.id]?.status || n.status) === "running",
@@ -310,9 +517,11 @@ const ProcessFlowDiagram = ({
               }
             </div>
           </div>
-          <div className="p-2 bg-yellow-50 dark:bg-yellow-950/20 rounded">
-            <div className="text-xs text-muted-foreground">Warning</div>
-            <div className="text-lg font-bold text-yellow-600">
+          <div className="p-3 sm:p-4 bg-yellow-50 dark:bg-yellow-950/20 rounded">
+            <div className="text-xs sm:text-sm text-gray-700 dark:text-gray-200 font-medium">
+              Warning
+            </div>
+            <div className="text-xl sm:text-2xl font-bold text-yellow-600 dark:text-yellow-400">
               {
                 positionedNodes.filter(
                   (n) => (liveData[n.id]?.status || n.status) === "warning",
@@ -320,9 +529,11 @@ const ProcessFlowDiagram = ({
               }
             </div>
           </div>
-          <div className="p-2 bg-red-50 dark:bg-red-950/20 rounded">
-            <div className="text-xs text-muted-foreground">Critical</div>
-            <div className="text-lg font-bold text-red-600">
+          <div className="p-3 sm:p-4 bg-red-50 dark:bg-red-950/20 rounded">
+            <div className="text-xs sm:text-sm text-gray-700 dark:text-gray-200 font-medium">
+              Critical
+            </div>
+            <div className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">
               {
                 positionedNodes.filter(
                   (n) => (liveData[n.id]?.status || n.status) === "critical",
@@ -330,9 +541,13 @@ const ProcessFlowDiagram = ({
               }
             </div>
           </div>
-          <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded">
-            <div className="text-xs text-muted-foreground">Total Nodes</div>
-            <div className="text-lg font-bold">{positionedNodes.length}</div>
+          <div className="p-3 sm:p-4 bg-gray-50 dark:bg-gray-800 rounded">
+            <div className="text-xs sm:text-sm text-gray-700 dark:text-gray-200 font-medium">
+              Total Nodes
+            </div>
+            <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+              {positionedNodes.length}
+            </div>
           </div>
         </div>
       </CardContent>

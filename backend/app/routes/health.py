@@ -70,7 +70,7 @@ def health_check():
                     "connected": db_connected,
                 },
                 "timestamp": datetime.now(timezone.utc).isoformat(),
-            }
+            },
         ),
         status_code,
     )

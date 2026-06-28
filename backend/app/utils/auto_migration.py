@@ -661,12 +661,12 @@ def add_tenants_table(engine):
                 # Create indexes
                 conn.execute(
                     text(
-                        "CREATE INDEX IF NOT EXISTS idx_tenants_name ON tenants(name)"
+                        "CREATE INDEX IF NOT EXISTS idx_tenants_name ON tenants(name)",
                     ),
                 )
                 conn.execute(
                     text(
-                        "CREATE INDEX IF NOT EXISTS idx_tenants_slug ON tenants(slug)"
+                        "CREATE INDEX IF NOT EXISTS idx_tenants_slug ON tenants(slug)",
                     ),
                 )
                 conn.execute(
@@ -707,12 +707,12 @@ def add_tenants_table(engine):
                 # Create indexes
                 conn.execute(
                     text(
-                        "CREATE INDEX IF NOT EXISTS idx_tenants_name ON tenants(name)"
+                        "CREATE INDEX IF NOT EXISTS idx_tenants_name ON tenants(name)",
                     ),
                 )
                 conn.execute(
                     text(
-                        "CREATE INDEX IF NOT EXISTS idx_tenants_slug ON tenants(slug)"
+                        "CREATE INDEX IF NOT EXISTS idx_tenants_slug ON tenants(slug)",
                     ),
                 )
                 conn.execute(

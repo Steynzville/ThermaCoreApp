@@ -165,6 +165,29 @@ describe("Alert Service", () => {
       expect(result.success).toBe(false);
       expect(result.error).toBeDefined();
     });
+
+    it("should handle acknowledgment errors gracefully without message property", async () => {
+      global.fetch = vi.fn(() => Promise.reject({}));
+
+      const result = await acknowledgeAlert({
+        alertId: "alert-1",
+        userId: "user-1",
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Failed to acknowledge alert");
+    });
+  });
+
+  describe("subscribeToAlerts", () => {
+    it("should subscribe to alerts and return unsubscribe function", async () => {
+      const { default: websocketService } = await import("../services/websocketService");
+      const callback = vi.fn();
+      const unsub = alertService.subscribeToAlerts(callback, "tenant-1");
+
+      expect(websocketService.subscribe).toHaveBeenCalledWith("alerts", callback);
+      expect(unsub).toBeDefined();
+    });
   });
 
   describe("Default export", () => {
@@ -231,6 +254,28 @@ describe("Alert Service", () => {
       expect(result.error).toContain("Network error");
       expect(result.data).toBeNull();
     });
+
+    it("should handle fetch errors gracefully without message property", async () => {
+      const { apiGetJson } = await import("../utils/apiFetch");
+      apiGetJson.mockRejectedValueOnce({});
+
+      const result = await alertService.getCurrentAlerts();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Failed to fetch current alerts");
+      expect(result.data).toBeNull();
+    });
+
+    it("should fallback to raw response if data is undefined", async () => {
+      const { apiGetJson } = await import("../utils/apiFetch");
+      const mockRawResponse = [{ id: "raw-alert-1" }];
+      apiGetJson.mockResolvedValueOnce(mockRawResponse);
+
+      const result = await alertService.getCurrentAlerts();
+
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual(mockRawResponse);
+    });
   });
 
   describe("getAlertHistory", () => {
@@ -256,6 +301,27 @@ describe("Alert Service", () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toContain("Database error");
+    });
+
+    it("should handle history fetch errors gracefully without message property", async () => {
+      const { apiGetJson } = await import("../utils/apiFetch");
+      apiGetJson.mockRejectedValueOnce({});
+
+      const result = await alertService.getAlertHistory();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Failed to fetch alert history");
+    });
+
+    it("should fallback to raw response if data is undefined in history fetch", async () => {
+      const { apiGetJson } = await import("../utils/apiFetch");
+      const mockRawResponse = [{ id: "raw-alert-history-1" }];
+      apiGetJson.mockResolvedValueOnce(mockRawResponse);
+
+      const result = await alertService.getAlertHistory();
+
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual(mockRawResponse);
     });
   });
 
@@ -295,6 +361,27 @@ describe("Alert Service", () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toContain("Stats error");
+    });
+
+    it("should handle statistics fetch errors gracefully without message property", async () => {
+      const { apiGetJson } = await import("../utils/apiFetch");
+      apiGetJson.mockRejectedValueOnce({});
+
+      const result = await alertService.getAlertStatistics();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Failed to fetch alert statistics");
+    });
+
+    it("should fallback to raw response if data is undefined in statistics fetch", async () => {
+      const { apiGetJson } = await import("../utils/apiFetch");
+      const mockRawResponse = { total: 42 };
+      apiGetJson.mockResolvedValueOnce(mockRawResponse);
+
+      const result = await alertService.getAlertStatistics();
+
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual(mockRawResponse);
     });
   });
 });

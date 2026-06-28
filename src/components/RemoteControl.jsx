@@ -34,7 +34,21 @@ import {
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { Switch } from "./ui/switch";
 
-const RemoteControl = ({ className, unit: propUnit, details }) => {
+// Connection status pill component
+const ConnectionPill = ({ isConnected }) =>
+  isConnected ? (
+    <div className="flex items-center space-x-2 text-green-600 dark:text-green-400">
+      <Wifi className="h-4 w-4" />
+      <span className="text-sm font-medium">Connected</span>
+    </div>
+  ) : (
+    <div className="flex items-center space-x-2 text-red-600 dark:text-red-400">
+      <WifiOff className="h-4 w-4" />
+      <span className="text-sm font-medium">Disconnected</span>
+    </div>
+  );
+
+const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { settings } = useSettings();
@@ -113,6 +127,7 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
             Unit Not Found
           </h1>
           <button
+            type="button"
             onClick={() => (propUnit ? navigate("/grid-view") : navigate(-1))}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
@@ -221,19 +236,6 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
     { id: "cam3", name: "Alternate Cam 2", position: "" },
   ];
 
-  const ConnectionPill = () =>
-    isConnected ? (
-      <div className="flex items-center space-x-2 text-green-600 dark:text-green-400">
-        <Wifi className="h-4 w-4" />
-        <span className="text-sm font-medium">Connected</span>
-      </div>
-    ) : (
-      <div className="flex items-center space-x-2 text-red-600 dark:text-red-400">
-        <WifiOff className="h-4 w-4" />
-        <span className="text-sm font-medium">Disconnected</span>
-      </div>
-    );
-
   return (
     <div
       className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-6 ${className}`}
@@ -242,6 +244,7 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
         {/* Header */}
         <div className="mb-6">
           <button
+            type="button"
             onClick={() => navigate(-1)}
             className="flex items-center space-x-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 mb-4"
           >
@@ -260,7 +263,7 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
 
           {/* Status row placed neatly below the heading */}
           <div className="flex items-center space-x-4 mt-4">
-            <ConnectionPill />
+            <ConnectionPill isConnected={isConnected} />
             <div className="flex items-center space-x-2">
               {unit.status === "online" ? (
                 <CheckCircle className="h-6 w-6 text-green-500" />
@@ -609,6 +612,7 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                   </p>
                 </div>
                 <button
+                  type="button"
                   onClick={toggleVideoFeed}
                   disabled={!isConnected}
                   className={`w-full sm:w-auto px-4 py-2 rounded-lg transition-colors flex items-center justify-center space-x-2 ${
@@ -656,6 +660,7 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
                       )}
                     </div>
                     <button
+                      type="button"
                       onClick={() => {}}
                       className="mt-4 px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg transition-colors flex items-center space-x-1 mx-auto"
                       data-testid="button-refresh-feed"
@@ -680,6 +685,7 @@ const RemoteControl = ({ className, unit: propUnit, details }) => {
 
                 {/* Fullscreen Toggle Button */}
                 <button
+                  type="button"
                   onClick={toggleFullscreen}
                   className="absolute top-3 right-3 p-2 bg-white/80 dark:bg-gray-800/80 hover:bg-white/90 dark:hover:bg-gray-700/90 text-gray-700 dark:text-gray-200 rounded-lg transition-all duration-200 backdrop-blur-sm shadow-md border border-gray-200/50 dark:border-gray-600/50"
                   title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}

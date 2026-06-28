@@ -24,7 +24,9 @@ vi.mock("../components/Dashboard/EnhancedStatusDial", () => ({
     <div
       data-testid={`status-dial-${title.toLowerCase().replace(/\s+/g, "-")}`}
       onClick={clickable ? onClick : undefined}
+      onKeyDown={clickable ? (e) => e.key === "Enter" && onClick() : undefined}
       role={clickable ? "button" : "presentation"}
+      tabIndex={clickable ? 0 : undefined}
     >
       <span>{title}</span>
       <span>{count}</span>
@@ -35,6 +37,7 @@ vi.mock("../components/Dashboard/EnhancedStatusDial", () => ({
 vi.mock("../components/Dashboard/QuickActionCard", () => ({
   default: ({ title, onClick }) => (
     <button
+      type="button"
       data-testid={`quick-action-${title.toLowerCase().replace(/\s+/g, "-")}`}
       onClick={onClick}
     >
@@ -68,6 +71,7 @@ vi.mock("../components/PerformanceDashboard", () => ({
 vi.mock("../components/ui/HighTechToggle", () => ({
   default: ({ isPerformance, onToggle }) => (
     <button
+      type="button"
       data-testid="view-toggle"
       onClick={() => onToggle(isPerformance ? "operator" : "performance")}
     >

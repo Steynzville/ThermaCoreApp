@@ -1,6 +1,7 @@
 import { Navigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
+import { getFrontendRole } from "../utils/permissions";
 import EnhancedSideNavigation from "./SideNavigation";
 import { Spinner } from "./ui/spinner";
 
@@ -29,16 +30,19 @@ const ProtectedRoute = ({
     return <Navigate to="/login" replace />;
   }
 
+  // Normalize userRole to frontend role for routing checks and component mapping
+  const frontendRole = getFrontendRole(userRole);
+
   // Check if user has required role
-  if (roles.length > 0 && !roles.includes(userRole)) {
+  if (roles.length > 0 && !roles.includes(frontendRole)) {
     return <Navigate to="/dashboard" replace />;
   }
 
   // Determine which component to render based on componentMap or default to Component
   // If componentMap is provided, use the component specified for the user's role.
   // Otherwise, use the default Component prop.
-  const ComponentToRender = componentMap?.[userRole]
-    ? componentMap[userRole]
+  const ComponentToRender = componentMap?.[frontendRole]
+    ? componentMap[frontendRole]
     : Component;
 
   if (!ComponentToRender) {

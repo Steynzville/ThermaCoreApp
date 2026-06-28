@@ -134,7 +134,7 @@ class TestTenantCurrentEndpoint:
         assert data["data"]["name"] == "Test Company"
 
     def test_current_tenant_admin_no_tenant(
-        self, client, admin_user, admin_auth_headers
+        self, client, admin_user, admin_auth_headers,
     ):
         """Test that admin user without tenant returns appropriate response."""
         response = client.get("/api/v1/tenants/current", headers=admin_auth_headers)

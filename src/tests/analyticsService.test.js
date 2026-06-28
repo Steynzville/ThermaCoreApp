@@ -289,6 +289,32 @@ describe("Analytics Service", () => {
       expect(result.success).toBe(true);
       expect(result.data).toEqual(mockHealth);
     });
+
+    it("should handle fetch errors gracefully", async () => {
+      const { apiGetJson } = await import("../utils/apiFetch");
+      apiGetJson.mockRejectedValueOnce(new Error("Database offline"));
+
+      const result = await analyticsService.getEquipmentHealth({
+        tenantId: "tenant-123",
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Database offline");
+      expect(result.data).toBeNull();
+    });
+
+    it("should handle fetch errors gracefully without message property", async () => {
+      const { apiGetJson } = await import("../utils/apiFetch");
+      apiGetJson.mockRejectedValueOnce({});
+
+      const result = await analyticsService.getEquipmentHealth({
+        tenantId: "tenant-123",
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Failed to fetch equipment health");
+      expect(result.data).toBeNull();
+    });
   });
 
   describe("getEnergyConsumption", () => {
@@ -315,6 +341,32 @@ describe("Analytics Service", () => {
       });
 
       expect(result.success).toBe(true);
+    });
+
+    it("should handle fetch errors gracefully", async () => {
+      const { apiGetJson } = await import("../utils/apiFetch");
+      apiGetJson.mockRejectedValueOnce(new Error("Network failure"));
+
+      const result = await analyticsService.getEnergyConsumption({
+        tenantId: "tenant-123",
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Network failure");
+      expect(result.data).toBeNull();
+    });
+
+    it("should handle fetch errors gracefully without message property", async () => {
+      const { apiGetJson } = await import("../utils/apiFetch");
+      apiGetJson.mockRejectedValueOnce({});
+
+      const result = await analyticsService.getEnergyConsumption({
+        tenantId: "tenant-123",
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Failed to fetch energy consumption");
+      expect(result.data).toBeNull();
     });
   });
 

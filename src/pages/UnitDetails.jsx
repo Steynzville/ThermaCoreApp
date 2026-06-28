@@ -1,5 +1,6 @@
 import { memo, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
+import RemoteControl from "../components/RemoteControl";
 
 import {
   getUnitAlerts,

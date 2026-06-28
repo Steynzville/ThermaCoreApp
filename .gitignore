@@ -32,3 +32,4 @@ coverage/
 # Large JSON reports
 backend/bandit_sarif.json
 bandit_report.json
+scada-tab-demo.html

@@ -6,6 +6,7 @@ import {
   Route,
   BrowserRouter as Router,
   Routes,
+  useLocation,
 } from "react-router-dom";
 
 import Spinner from "./components/common/Spinner";
@@ -26,9 +27,11 @@ import playSound from "./utils/audioPlayer";
 
 // Component to handle scroll to top on route change
 const ScrollToTop = () => {
+  const { pathname } = useLocation();
+
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, []);
+  }, [pathname]);
 
   return null;
 };

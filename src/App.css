@@ -122,6 +122,9 @@
   body {
     @apply bg-background text-foreground;
   }
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-foreground;
+  }
 }
 
 @layer components {
@@ -299,7 +302,7 @@ form button:hover {
 }
 
 /* Enhanced Light Mode Styles for Better Visibility */
-:root {
+:root:not(.dark) {
   /* Improved border and shadow colors for light mode */
   --border: oklch(0.85 0 0);
   --input: oklch(0.85 0 0);

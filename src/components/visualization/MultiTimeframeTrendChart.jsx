@@ -332,7 +332,7 @@ const MultiTimeframeTrendChart = ({
     <Card>
       <CardHeader>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-foreground dark:text-white">
             <TrendingUp className="h-5 w-5" />
             {title}
           </CardTitle>
@@ -359,9 +359,13 @@ const MultiTimeframeTrendChart = ({
                 value={selectedChartType}
                 onValueChange={setSelectedChartType}
               >
-                <TabsList>
+                <TabsList className="bg-background dark:bg-card-foreground/10 border border-border dark:border-border/50">
                   {CHART_TYPES.map((type) => (
-                    <TabsTrigger key={type.value} value={type.value}>
+                    <TabsTrigger
+                      key={type.value}
+                      value={type.value}
+                      className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm data-[state=active]:border-primary dark:data-[state=active]:bg-primary dark:data-[state=active]:text-primary-foreground dark:data-[state=active]:shadow-sm dark:data-[state=active]:border-primary"
+                    >
                       {type.label}
                     </TabsTrigger>
                   ))}
@@ -410,7 +414,7 @@ const MultiTimeframeTrendChart = ({
         </ResponsiveContainer>
 
         {/* Data Points Info */}
-        <div className="text-xs text-muted-foreground text-center mt-2">
+        <div className="text-xs text-muted-foreground dark:text-white text-center mt-2">
           {formattedData.length} data points over{" "}
           {TIMEFRAME_OPTIONS.find(
             (t) => t.value === selectedTimeframe,

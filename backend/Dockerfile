@@ -9,7 +9,12 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     libpq-dev \
     gcc \
+    curl \
     && rm -rf /var/lib/apt/lists/*
+
+# Create a non-root user
+RUN addgroup --system --gid 1001 appgroup && \
+    adduser --system --uid 1001 --gid 1001 appuser
 
 # Copy requirements file
 COPY requirements.txt .
@@ -21,7 +26,14 @@ RUN pip install --no-cache-dir --trusted-host pypi.org --trusted-host files.pyth
 COPY . .
 
 # Create directory for certificates if it doesn't exist
-RUN mkdir -p /app/certs
+RUN mkdir -p /app/certs && chown -R appuser:appgroup /app
+
+# Switch to non-root user
+USER appuser
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:5000/health || exit 1
 
 # Expose port 5000 for the Flask app
 EXPOSE 5000

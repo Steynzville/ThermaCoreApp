@@ -14,6 +14,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { useSettings } from "../context/SettingsContext";
+import { useRealtimeMetrics } from "../hooks/useRealtimeData";
 import { getUnitById } from "../services/unitService";
 import playSound from "../utils/audioPlayer";
 import { Card, CardContent, CardHeader } from "./ui/card";
@@ -28,6 +29,9 @@ const UnitControl = ({ className }) => {
   const [systemPower, setSystemPower] = useState(false);
   const [autoWaterProduction, setAutoWaterProduction] = useState(true);
   const [hasMounted, setHasMounted] = useState(false);
+
+  // Real-time data hooks for live values
+  const { metrics } = useRealtimeMetrics({ useMockData: true });
 
   useEffect(() => {
     setHasMounted(true);
@@ -51,6 +55,8 @@ const UnitControl = ({ className }) => {
           tankCapacity: 800,
           waterLevel: 65,
           powerOutput: 15,
+          flowRateInlet: 45.5,
+          flowRateOutlet: 42.1,
           ...deviceData,
         };
         fullDeviceData.waterLiters = Math.round(
@@ -62,6 +68,56 @@ const UnitControl = ({ className }) => {
 
     loadUnitData();
   }, [id, location.state]);
+
+  useEffect(() => {
+    if (metrics && systemPower && device) {
+      setDevice((prev) => {
+        if (!prev) return prev;
+        const tempBase = parseFloat(metrics.temperature?.current) || 70;
+        const pressureBase = parseFloat(metrics.pressure?.current) || 100;
+        const flowInBase = parseFloat(
+          metrics.flow_rate_inlet?.current ||
+            metrics.flowRateInlet?.current ||
+            45.5,
+        );
+        const flowOutBase = parseFloat(
+          metrics.flow_rate_outlet?.current ||
+            metrics.flowRateOutlet?.current ||
+            42.1,
+        );
+
+        const idOffset = (prev.id?.toString() || "").charCodeAt(0) || 0;
+
+        return {
+          ...prev,
+          tempIn:
+            prev.tempIn !== undefined
+              ? +(tempBase * 0.4 + (idOffset % 5)).toFixed(1)
+              : undefined,
+          tempOut:
+            prev.tempOut !== undefined
+              ? +(tempBase * 0.1 + (idOffset % 3)).toFixed(1)
+              : undefined,
+          pressure:
+            prev.pressure !== undefined
+              ? +(pressureBase * 0.15 + (idOffset % 2)).toFixed(1)
+              : undefined,
+          flowRateInlet: +(flowInBase + (idOffset % 5) - 2.5).toFixed(1),
+          flowRateOutlet: +(flowOutBase + (idOffset % 3) - 1.5).toFixed(1),
+        };
+      });
+    }
+  }, [metrics, systemPower]);
+
+  const getFlowRateColor = (val) => {
+    if (val === undefined || val === null || !systemPower)
+      return "text-gray-900 dark:text-gray-100";
+    const num = parseFloat(val);
+    if (num >= 90 || num < 10)
+      return "text-red-600 dark:text-red-400 font-bold";
+    if (num >= 70) return "text-yellow-600 dark:text-yellow-400 font-semibold";
+    return "text-green-600 dark:text-green-400 font-medium";
+  };
 
   useEffect(() => {
     if (hasMounted && device) {
@@ -288,7 +344,39 @@ const UnitControl = ({ className }) => {
                       Pressure
                     </p>
                     <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                      {systemPower ? device.pressure : 0} bar
+                      {systemPower ? `${device.pressure} bar` : 0}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-3">
+                  <Droplets className="h-5 w-5 text-cyan-500 animate-pulse" />
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Flow Rate Inlet
+                    </p>
+                    <p
+                      className={`text-lg ${getFlowRateColor(device.flowRateInlet)}`}
+                    >
+                      {systemPower
+                        ? `${device.flowRateInlet || 45.5} L/min`
+                        : "--"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-3">
+                  <Droplets className="h-5 w-5 text-blue-500 animate-pulse" />
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Flow Rate Outlet
+                    </p>
+                    <p
+                      className={`text-lg ${getFlowRateColor(device.flowRateOutlet)}`}
+                    >
+                      {systemPower
+                        ? `${device.flowRateOutlet || 42.1} L/min`
+                        : "--"}
                     </p>
                   </div>
                 </div>

@@ -54,14 +54,17 @@ const COLORS = [
   "#ec4899",
 ];
 
-const PerformanceAnalyticsDashboard = ({ embedded = false }) => {
+const PerformanceAnalyticsDashboard = ({
+  embedded = false,
+  defaultTab = "performance",
+}) => {
   const { currentTenant } = useTenant();
   const [loading, setLoading] = useState(true);
   const [selectedTimeframe, setSelectedTimeframe] = useState("7d");
   const [performanceMetrics, setPerformanceMetrics] = useState(null);
   const [equipmentHealth, setEquipmentHealth] = useState(null);
   const [energyData, setEnergyData] = useState(null);
-  const [activeTab, setActiveTab] = useState("performance");
+  const [activeTab, setActiveTab] = useState(defaultTab);
 
   const loadAnalyticsData = useCallback(async () => {
     setLoading(true);
@@ -81,6 +84,13 @@ const PerformanceAnalyticsDashboard = ({ embedded = false }) => {
   useEffect(() => {
     loadAnalyticsData();
   }, [loadAnalyticsData]);
+
+  // Update active tab when defaultTab changes
+  useEffect(() => {
+    if (defaultTab !== activeTab) {
+      setActiveTab(defaultTab);
+    }
+  }, [defaultTab, activeTab]);
 
   const handleExportReport = async (reportType, format) => {
     const result = await analyticsService.generateReport({
@@ -164,40 +174,16 @@ const PerformanceAnalyticsDashboard = ({ embedded = false }) => {
           </div>
         )}
 
-        {/* Timeframe and Export controls - show when embedded */}
-        {embedded && (
-          <div className="flex items-center justify-end gap-2 mb-4">
-            <Select
-              value={selectedTimeframe}
-              onValueChange={setSelectedTimeframe}
-            >
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7d">Last 7 Days</SelectItem>
-                <SelectItem value="30d">Last 30 Days</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleExportReport("performance", "csv")}
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </Button>
-          </div>
-        )}
-
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
-            <TabsTrigger value="performance">Performance</TabsTrigger>
-            <TabsTrigger value="health">Equipment Health</TabsTrigger>
-            <TabsTrigger value="energy">Energy</TabsTrigger>
-            <TabsTrigger value="predictive">Predictive</TabsTrigger>
-          </TabsList>
+          {!embedded && (
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
+              <TabsTrigger value="performance">Performance</TabsTrigger>
+              <TabsTrigger value="health">Equipment Health</TabsTrigger>
+              <TabsTrigger value="energy">Energy</TabsTrigger>
+              <TabsTrigger value="predictive">Predictive</TabsTrigger>
+            </TabsList>
+          )}
 
           {/* Performance Tab */}
           <TabsContent value="performance" className="space-y-6 mt-6">
@@ -207,10 +193,10 @@ const PerformanceAnalyticsDashboard = ({ embedded = false }) => {
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-gray-600 dark:text-gray-300">
                         Efficiency
                       </p>
-                      <p className="text-2xl font-bold">
+                      <p className="text-2xl font-bold text-foreground dark:text-white">
                         {performanceMetrics?.overall.efficiency}%
                       </p>
                     </div>
@@ -223,8 +209,10 @@ const PerformanceAnalyticsDashboard = ({ embedded = false }) => {
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Uptime</p>
-                      <p className="text-2xl font-bold">
+                      <p className="text-sm text-gray-600 dark:text-gray-300">
+                        Uptime
+                      </p>
+                      <p className="text-2xl font-bold text-foreground dark:text-white">
                         {performanceMetrics?.overall.uptime}%
                       </p>
                     </div>
@@ -237,10 +225,10 @@ const PerformanceAnalyticsDashboard = ({ embedded = false }) => {
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-gray-600 dark:text-gray-300">
                         Availability
                       </p>
-                      <p className="text-2xl font-bold">
+                      <p className="text-2xl font-bold text-foreground dark:text-white">
                         {performanceMetrics?.overall.availability}%
                       </p>
                     </div>
@@ -253,8 +241,10 @@ const PerformanceAnalyticsDashboard = ({ embedded = false }) => {
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Quality</p>
-                      <p className="text-2xl font-bold">
+                      <p className="text-sm text-gray-600 dark:text-gray-300">
+                        Quality
+                      </p>
+                      <p className="text-2xl font-bold text-foreground dark:text-white">
                         {performanceMetrics?.overall.quality}%
                       </p>
                     </div>
@@ -267,15 +257,35 @@ const PerformanceAnalyticsDashboard = ({ embedded = false }) => {
             {/* Performance Trends */}
             <Card>
               <CardHeader>
-                <CardTitle>Performance Trends</CardTitle>
+                <CardTitle className="text-foreground dark:text-white">
+                  Performance Trends
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
                   <AreaChart data={performanceMetrics?.trends.efficiency}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="hour" />
-                    <YAxis domain={[0, 100]} />
-                    <Tooltip />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      className="stroke-gray-200 dark:stroke-gray-700"
+                    />
+                    <XAxis
+                      dataKey="hour"
+                      className="text-gray-600 dark:text-gray-400"
+                      tick={{ fill: "currentColor" }}
+                    />
+                    <YAxis
+                      domain={[0, 100]}
+                      className="text-gray-600 dark:text-gray-400"
+                      tick={{ fill: "currentColor" }}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "var(--background)",
+                        border: "1px solid var(--border)",
+                        borderRadius: "8px",
+                        color: "var(--foreground)",
+                      }}
+                    />
                     <Legend />
                     <Area
                       type="monotone"
@@ -293,16 +303,23 @@ const PerformanceAnalyticsDashboard = ({ embedded = false }) => {
             {/* Device Performance */}
             <Card>
               <CardHeader>
-                <CardTitle>Device Performance</CardTitle>
+                <CardTitle className="text-foreground dark:text-white">
+                  Device Performance
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   {performanceMetrics?.byDevice.map((device) => (
-                    <div key={device.id} className="p-4 border rounded-lg">
+                    <div
+                      key={device.id}
+                      className="p-4 border rounded-lg bg-card dark:bg-gray-800"
+                    >
                       <div className="flex items-center justify-between mb-2">
                         <div>
-                          <h3 className="font-semibold">{device.name}</h3>
-                          <p className="text-sm text-muted-foreground">
+                          <h3 className="font-semibold text-foreground dark:text-white">
+                            {device.name}
+                          </h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-300">
                             {device.id}
                           </p>
                         </div>
@@ -316,18 +333,20 @@ const PerformanceAnalyticsDashboard = ({ embedded = false }) => {
                       </div>
                       <div className="grid grid-cols-2 gap-4 mt-2">
                         <div>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs text-gray-600 dark:text-gray-300">
                             Efficiency
                           </p>
-                          <p className="text-lg font-bold">
+                          <p className="text-lg font-bold text-foreground dark:text-white">
                             {device.efficiency}%
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs text-gray-600 dark:text-gray-300">
                             Uptime
                           </p>
-                          <p className="text-lg font-bold">{device.uptime}%</p>
+                          <p className="text-lg font-bold text-foreground dark:text-white">
+                            {device.uptime}%
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -342,7 +361,9 @@ const PerformanceAnalyticsDashboard = ({ embedded = false }) => {
             {/* Overall Health */}
             <Card>
               <CardHeader>
-                <CardTitle>Overall System Health</CardTitle>
+                <CardTitle className="text-foreground dark:text-white">
+                  Overall System Health
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
@@ -352,23 +373,23 @@ const PerformanceAnalyticsDashboard = ({ embedded = false }) => {
                     >
                       {equipmentHealth?.overall.score}
                     </p>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
                       Status: {getHealthStatus(equipmentHealth?.overall.score)}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
                       Last Maintenance
                     </p>
-                    <p className="text-sm font-medium">
+                    <p className="text-sm font-medium text-foreground dark:text-white">
                       {new Date(
                         equipmentHealth?.overall.lastMaintenance,
                       ).toLocaleDateString()}
                     </p>
-                    <p className="text-sm text-muted-foreground mt-2">
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
                       Next Maintenance
                     </p>
-                    <p className="text-sm font-medium">
+                    <p className="text-sm font-medium text-foreground dark:text-white">
                       {new Date(
                         equipmentHealth?.overall.nextMaintenance,
                       ).toLocaleDateString()}
@@ -384,7 +405,9 @@ const PerformanceAnalyticsDashboard = ({ embedded = false }) => {
                 <Card key={device.id}>
                   <CardHeader>
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">{device.name}</CardTitle>
+                      <CardTitle className="text-lg text-foreground dark:text-white">
+                        {device.name}
+                      </CardTitle>
                       <Badge
                         variant={
                           device.status === "healthy" ? "success" : "warning"
@@ -398,7 +421,7 @@ const PerformanceAnalyticsDashboard = ({ embedded = false }) => {
                     <div className="space-y-4">
                       <div>
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm text-muted-foreground">
+                          <span className="text-sm text-gray-600 dark:text-gray-300">
                             Health Score
                           </span>
                           <span
@@ -410,36 +433,36 @@ const PerformanceAnalyticsDashboard = ({ embedded = false }) => {
                       </div>
 
                       <div>
-                        <p className="text-sm font-medium mb-2">
+                        <p className="text-sm font-medium text-foreground dark:text-white mb-2">
                           Sensor Status
                         </p>
                         <div className="grid grid-cols-3 gap-2">
-                          <div className="text-center p-2 bg-muted rounded">
-                            <p className="text-xs text-muted-foreground">
+                          <div className="text-center p-2 bg-muted dark:bg-gray-700 rounded">
+                            <p className="text-xs text-gray-600 dark:text-gray-300">
                               Temp
                             </p>
                             <p
-                              className={`text-sm font-medium ${device.sensors.temperature === "good" ? "text-green-600" : "text-yellow-600"}`}
+                              className={`text-sm font-medium ${device.sensors.temperature === "good" ? "text-green-600 dark:text-green-400" : "text-yellow-600 dark:text-yellow-400"}`}
                             >
                               {device.sensors.temperature}
                             </p>
                           </div>
-                          <div className="text-center p-2 bg-muted rounded">
-                            <p className="text-xs text-muted-foreground">
+                          <div className="text-center p-2 bg-muted dark:bg-gray-700 rounded">
+                            <p className="text-xs text-gray-600 dark:text-gray-300">
                               Press
                             </p>
                             <p
-                              className={`text-sm font-medium ${device.sensors.pressure === "good" ? "text-green-600" : "text-yellow-600"}`}
+                              className={`text-sm font-medium ${device.sensors.pressure === "good" ? "text-green-600 dark:text-green-400" : "text-yellow-600 dark:text-yellow-400"}`}
                             >
                               {device.sensors.pressure}
                             </p>
                           </div>
-                          <div className="text-center p-2 bg-muted rounded">
-                            <p className="text-xs text-muted-foreground">
+                          <div className="text-center p-2 bg-muted dark:bg-gray-700 rounded">
+                            <p className="text-xs text-gray-600 dark:text-gray-300">
                               Flow
                             </p>
                             <p
-                              className={`text-sm font-medium ${device.sensors.flow === "good" ? "text-green-600" : "text-yellow-600"}`}
+                              className={`text-sm font-medium ${device.sensors.flow === "good" ? "text-green-600 dark:text-green-400" : "text-yellow-600 dark:text-yellow-400"}`}
                             >
                               {device.sensors.flow}
                             </p>
@@ -449,8 +472,8 @@ const PerformanceAnalyticsDashboard = ({ embedded = false }) => {
 
                       <div className="flex items-center gap-4 text-sm">
                         <div className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-muted-foreground">
+                          <Calendar className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                          <span className="text-gray-600 dark:text-gray-300">
                             Maintenance in {device.predictions.maintenanceDue}{" "}
                             days
                           </span>
@@ -471,9 +494,15 @@ const PerformanceAnalyticsDashboard = ({ embedded = false }) => {
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Total</p>
-                      <p className="text-2xl font-bold">{energyData?.total}</p>
-                      <p className="text-xs text-muted-foreground">kWh</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">
+                        Total
+                      </p>
+                      <p className="text-2xl font-bold text-foreground dark:text-white">
+                        {energyData?.total}
+                      </p>
+                      <p className="text-xs text-gray-600 dark:text-gray-300">
+                        kWh
+                      </p>
                     </div>
                     <Zap className="h-8 w-8 text-yellow-500" />
                   </div>
@@ -483,9 +512,15 @@ const PerformanceAnalyticsDashboard = ({ embedded = false }) => {
               <Card>
                 <CardContent className="pt-6">
                   <div>
-                    <p className="text-sm text-muted-foreground">Average</p>
-                    <p className="text-2xl font-bold">{energyData?.average}</p>
-                    <p className="text-xs text-muted-foreground">kWh/day</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                      Average
+                    </p>
+                    <p className="text-2xl font-bold text-foreground dark:text-white">
+                      {energyData?.average}
+                    </p>
+                    <p className="text-xs text-gray-600 dark:text-gray-300">
+                      kWh/day
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -493,9 +528,15 @@ const PerformanceAnalyticsDashboard = ({ embedded = false }) => {
               <Card>
                 <CardContent className="pt-6">
                   <div>
-                    <p className="text-sm text-muted-foreground">Peak</p>
-                    <p className="text-2xl font-bold">{energyData?.peak}</p>
-                    <p className="text-xs text-muted-foreground">kWh</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                      Peak
+                    </p>
+                    <p className="text-2xl font-bold text-foreground dark:text-white">
+                      {energyData?.peak}
+                    </p>
+                    <p className="text-xs text-gray-600 dark:text-gray-300">
+                      kWh
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -520,15 +561,34 @@ const PerformanceAnalyticsDashboard = ({ embedded = false }) => {
             {/* Energy Consumption Trend */}
             <Card>
               <CardHeader>
-                <CardTitle>Energy Consumption Trend</CardTitle>
+                <CardTitle className="text-foreground dark:text-white">
+                  Energy Consumption Trend
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={energyData?.timeline}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <Tooltip />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      className="stroke-gray-200 dark:stroke-gray-700"
+                    />
+                    <XAxis
+                      dataKey="date"
+                      className="text-gray-600 dark:text-gray-400"
+                      tick={{ fill: "currentColor" }}
+                    />
+                    <YAxis
+                      className="text-gray-600 dark:text-gray-400"
+                      tick={{ fill: "currentColor" }}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "var(--background)",
+                        border: "1px solid var(--border)",
+                        borderRadius: "8px",
+                        color: "var(--foreground)",
+                      }}
+                    />
                     <Legend />
                     <Bar
                       dataKey="consumption"
@@ -544,7 +604,9 @@ const PerformanceAnalyticsDashboard = ({ embedded = false }) => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Consumption by Device</CardTitle>
+                  <CardTitle className="text-foreground dark:text-white">
+                    Consumption by Device
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={250}>
@@ -573,7 +635,9 @@ const PerformanceAnalyticsDashboard = ({ embedded = false }) => {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Device Breakdown</CardTitle>
+                  <CardTitle className="text-foreground dark:text-white">
+                    Device Breakdown
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
@@ -590,8 +654,10 @@ const PerformanceAnalyticsDashboard = ({ embedded = false }) => {
                             }}
                           />
                           <div>
-                            <p className="text-sm font-medium">{device.name}</p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-sm font-medium text-foreground dark:text-white">
+                              {device.name}
+                            </p>
+                            <p className="text-xs text-gray-600 dark:text-gray-300">
                               {device.consumption} kWh
                             </p>
                           </div>
@@ -609,12 +675,14 @@ const PerformanceAnalyticsDashboard = ({ embedded = false }) => {
           <TabsContent value="predictive" className="space-y-6 mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>Predictive Maintenance Insights</CardTitle>
+                <CardTitle className="text-foreground dark:text-white">
+                  Predictive Maintenance Insights
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex items-start gap-3 p-4 border rounded-lg bg-yellow-50 dark:bg-yellow-950/20">
-                    <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                    <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
                     <div>
                       <h4 className="font-medium text-yellow-900 dark:text-yellow-100">
                         Maintenance Recommended
@@ -628,14 +696,19 @@ const PerformanceAnalyticsDashboard = ({ embedded = false }) => {
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     {equipmentHealth?.devices.map((device) => (
-                      <div key={device.id} className="p-4 border rounded-lg">
-                        <h4 className="font-semibold mb-3">{device.name}</h4>
+                      <div
+                        key={device.id}
+                        className="p-4 border rounded-lg bg-card dark:bg-gray-800"
+                      >
+                        <h4 className="font-semibold text-foreground dark:text-white mb-3">
+                          {device.name}
+                        </h4>
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
-                            <span className="text-sm text-muted-foreground">
+                            <span className="text-sm text-gray-600 dark:text-gray-300">
                               Remaining Lifetime
                             </span>
-                            <span className="text-sm font-medium">
+                            <span className="text-sm font-medium text-foreground dark:text-white">
                               {device.predictions.remainingLifetime}%
                             </span>
                           </div>
@@ -648,10 +721,10 @@ const PerformanceAnalyticsDashboard = ({ embedded = false }) => {
                             />
                           </div>
                           <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">
+                            <span className="text-gray-600 dark:text-gray-300">
                               Next Maintenance
                             </span>
-                            <span className="font-medium">
+                            <span className="font-medium text-foreground dark:text-white">
                               {device.predictions.maintenanceDue} days
                             </span>
                           </div>

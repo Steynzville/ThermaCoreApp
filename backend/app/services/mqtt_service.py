@@ -138,9 +138,7 @@ class MQTTClient:
                     self.client.tls_insecure_set(False)
                 # Log appropriate warning based on environment
                 elif is_production_environment(app):
-                    logger.warning(
-                        "MQTT certificates missing in production - TLS disabled",
-                    )
+                    raise ValueError("MQTT TLS certificates are REQUIRED in production")
                 else:
                     logger.warning(
                         "MQTT certificates missing or empty. TLS disabled.",

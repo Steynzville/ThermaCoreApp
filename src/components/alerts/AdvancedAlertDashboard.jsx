@@ -43,7 +43,7 @@ import {
 } from "../ui/select";
 import { Textarea } from "../ui/textarea";
 
-const AdvancedAlertDashboard = ({ embedded = false }) => {
+const AdvancedAlertDashboard = ({ embedded = false, className = "" }) => {
   const { currentTenant } = useTenant();
   const { user } = useAuth();
   const [alerts, setAlerts] = useState([]);
@@ -194,7 +194,9 @@ const AdvancedAlertDashboard = ({ embedded = false }) => {
   });
 
   return (
-    <div className={embedded ? "" : "min-h-screen bg-background p-4 sm:p-6"}>
+    <div
+      className={`${embedded ? "" : "min-h-screen bg-background p-4 sm:p-6"} ${className}`}
+    >
       <div className={embedded ? "" : "max-w-7xl mx-auto space-y-6"}>
         {/* Header - only show when not embedded */}
         {!embedded && (
@@ -212,7 +214,7 @@ const AdvancedAlertDashboard = ({ embedded = false }) => {
 
         {/* Statistics Cards */}
         {statistics && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
             <Card className="bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
@@ -265,14 +267,14 @@ const AdvancedAlertDashboard = ({ embedded = false }) => {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
                       Avg. Resolution
                     </p>
-                    <p className="text-2xl font-bold">
+                    <p className="text-2xl font-bold text-foreground dark:text-white">
                       {statistics.avgResolutionTime}m
                     </p>
                   </div>
-                  <Clock className="h-8 w-8 text-muted-foreground" />
+                  <Clock className="h-8 w-8 text-gray-600 dark:text-gray-400" />
                 </div>
               </CardContent>
             </Card>
@@ -289,7 +291,7 @@ const AdvancedAlertDashboard = ({ embedded = false }) => {
                   placeholder="Search alerts..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 placeholder:text-gray-600 dark:placeholder:text-gray-400"
                 />
               </div>
 
@@ -335,7 +337,9 @@ const AdvancedAlertDashboard = ({ embedded = false }) => {
         {/* Alerts List */}
         <Card>
           <CardHeader>
-            <CardTitle>Active Alerts ({filteredAlerts.length})</CardTitle>
+            <CardTitle className="text-foreground dark:text-white">
+              Active Alerts ({filteredAlerts.length})
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -349,7 +353,7 @@ const AdvancedAlertDashboard = ({ embedded = false }) => {
                 <p className="text-muted-foreground">No alerts found</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4 sm:space-y-3">
                 {filteredAlerts.map((alert) => (
                   <div
                     key={alert.id}
@@ -360,13 +364,15 @@ const AdvancedAlertDashboard = ({ embedded = false }) => {
                         {getSeverityIcon(alert.severity)}
                         <div className="flex-1">
                           <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-1">
-                            <h3 className="text-lg font-bold">{alert.type}</h3>
+                            <h3 className="text-lg font-bold text-foreground dark:text-white">
+                              {alert.type}
+                            </h3>
                             {getStatusBadge(alert.status, alert.acknowledged)}
                           </div>
-                          <p className="text-base text-muted-foreground mb-2">
+                          <p className="text-base text-gray-700 dark:text-gray-200 mb-2">
                             {alert.message}
                           </p>
-                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600 dark:text-gray-300">
                             <span className="flex items-center gap-1">
                               <Clock className="h-3 w-3" />
                               {formatTimeAgo(alert.timestamp)}
@@ -380,7 +386,7 @@ const AdvancedAlertDashboard = ({ embedded = false }) => {
                             )}
                           </div>
                           {alert.acknowledgedBy && (
-                            <p className="text-xs text-muted-foreground mt-2">
+                            <p className="text-xs text-gray-600 dark:text-gray-300 mt-2">
                               Acknowledged by {alert.acknowledgedBy}
                             </p>
                           )}
@@ -422,7 +428,7 @@ const AdvancedAlertDashboard = ({ embedded = false }) => {
           </DialogHeader>
           <div className="space-y-4">
             {selectedAlert && (
-              <div className="p-3 bg-muted rounded-lg">
+              <div className="p-3 bg-muted rounded-lg text-black dark:text-black">
                 <p className="font-semibold">{selectedAlert.type}</p>
                 <p className="text-sm text-muted-foreground">
                   {selectedAlert.device} - {selectedAlert.message}

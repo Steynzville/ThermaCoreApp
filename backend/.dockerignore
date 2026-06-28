@@ -37,6 +37,9 @@ venv.bak/
 .cache
 nosetests.xml
 coverage.xml
+coverage.json
+bandit_report.json
+.mypy_cache
 *.cover
 .hypothesis/
 .pytest_cache/

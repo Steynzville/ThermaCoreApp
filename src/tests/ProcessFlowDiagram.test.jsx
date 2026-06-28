@@ -13,7 +13,8 @@
  * - Auto-layout algorithm
  */
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ProcessFlowDiagram from "@/components/visualization/ProcessFlowDiagram";
 
@@ -50,9 +51,13 @@ describe("ProcessFlowDiagram", () => {
     });
 
     it("should render with custom title", () => {
-      render(<ProcessFlowDiagram title="Custom Process Flow" />);
+      const { container } = render(
+        <ProcessFlowDiagram title="Custom Process Flow" />,
+      );
 
-      expect(screen.getByText("Custom Process Flow")).toBeInTheDocument();
+      // Check for visible title in CardTitle
+      const cardTitle = container.querySelector('[data-slot="card-title"]');
+      expect(cardTitle).toHaveTextContent("Custom Process Flow");
     });
 
     it("should accept width and height props", () => {
@@ -393,14 +398,20 @@ describe("ProcessFlowDiagram", () => {
     });
 
     it("should have descriptive title", () => {
-      render(
+      const { container } = render(
         <ProcessFlowDiagram
           title="Water Treatment Process"
           nodes={mockNodes}
         />,
       );
 
-      expect(screen.getByText("Water Treatment Process")).toBeInTheDocument();
+      // Check for visible title in CardTitle
+      const cardTitle = container.querySelector('[data-slot="card-title"]');
+      expect(cardTitle).toHaveTextContent("Water Treatment Process");
+
+      // Check for SVG title (for screen readers)
+      const svgTitle = container.querySelector("svg title");
+      expect(svgTitle).toHaveTextContent("Water Treatment Process");
     });
   });
 
@@ -505,6 +516,246 @@ describe("ProcessFlowDiagram", () => {
       );
 
       expect(() => unmount()).not.toThrow();
+    });
+  });
+
+  describe("Zoom and Pan Functionality", () => {
+    it("should zoom in when zoom in button is clicked", async () => {
+      const { container } = render(
+        <ProcessFlowDiagram nodes={mockNodes} connections={mockConnections} />,
+      );
+
+      // Find zoom level display showing 100%
+      const zoomDisplay = container.querySelector(
+        ".text-sm.text-muted-foreground",
+      );
+      expect(zoomDisplay).toHaveTextContent("100%");
+
+      // Find zoom in button (Plus icon button)
+      const buttons = container.querySelectorAll("button");
+      const zoomInButton = Array.from(buttons).find((btn) =>
+        btn.querySelector("svg.lucide-plus"),
+      );
+
+      expect(zoomInButton).toBeTruthy();
+
+      act(() => {
+        fireEvent.click(zoomInButton);
+      });
+
+      // Wait for zoom level to update - verify by checking display text
+      await waitFor(() => {
+        // After zoom in, should show 125% (1.25 * 100)
+        expect(zoomDisplay).toHaveTextContent("125%");
+      });
+    });
+
+    it("should zoom out when zoom out button is clicked", async () => {
+      const { container } = render(
+        <ProcessFlowDiagram nodes={mockNodes} connections={mockConnections} />,
+      );
+
+      const zoomDisplay = container.querySelector(
+        ".text-sm.text-muted-foreground",
+      );
+
+      // First zoom in
+      const buttons = container.querySelectorAll("button");
+      const zoomInButton = Array.from(buttons).find((btn) =>
+        btn.querySelector("svg.lucide-plus"),
+      );
+      expect(zoomInButton).toBeTruthy();
+
+      act(() => {
+        fireEvent.click(zoomInButton);
+      });
+
+      // Wait for zoom in to take effect
+      await waitFor(() => {
+        expect(zoomDisplay).toHaveTextContent("125%");
+      });
+
+      // Now zoom out
+      const zoomOutButton = Array.from(buttons).find((btn) =>
+        btn.querySelector("svg.lucide-minus"),
+      );
+      expect(zoomOutButton).toBeTruthy();
+
+      act(() => {
+        fireEvent.click(zoomOutButton);
+      });
+
+      // Wait for zoom out - should be back to 100%
+      await waitFor(() => {
+        expect(zoomDisplay).toHaveTextContent("100%");
+      });
+    });
+
+    it("should reset zoom and pan when reset button is clicked", async () => {
+      const { container } = render(
+        <ProcessFlowDiagram nodes={mockNodes} connections={mockConnections} />,
+      );
+
+      const zoomDisplay = container.querySelector(
+        ".text-sm.text-muted-foreground",
+      );
+
+      // Zoom in first
+      const buttons = container.querySelectorAll("button");
+      const zoomInButton = Array.from(buttons).find((btn) =>
+        btn.querySelector("svg.lucide-plus"),
+      );
+      expect(zoomInButton).toBeTruthy();
+
+      act(() => {
+        fireEvent.click(zoomInButton);
+      });
+
+      // Wait for zoom in to take effect
+      await waitFor(() => {
+        expect(zoomDisplay).toHaveTextContent("125%");
+      });
+
+      // Find and click reset button
+      const resetButton = screen.getByText("Reset");
+      act(() => {
+        fireEvent.click(resetButton);
+      });
+
+      // Wait for reset - should return to 100%
+      await waitFor(() => {
+        expect(zoomDisplay).toHaveTextContent("100%");
+      });
+    });
+
+    it("should apply grab cursor when zoomed in", async () => {
+      const { container } = render(
+        <ProcessFlowDiagram nodes={mockNodes} connections={mockConnections} />,
+      );
+
+      // Find and click zoom in button to zoom in
+      const buttons = container.querySelectorAll("button");
+      const zoomInButton = Array.from(buttons).find((btn) =>
+        btn.querySelector("svg.lucide-plus"),
+      );
+
+      if (zoomInButton) {
+        act(() => {
+          fireEvent.click(zoomInButton);
+        });
+
+        // Wait for zoom and check cursor
+        await waitFor(() => {
+          const svgContainer = container.querySelector(
+            '[style*="touchAction: none"]',
+          );
+          if (svgContainer) {
+            expect(svgContainer.style.cursor).toMatch(
+              /^(grab|grabbing|default)$/,
+            );
+          }
+        });
+      }
+    });
+
+    it("should handle mouse drag for panning when zoomed in", async () => {
+      const { container } = render(
+        <ProcessFlowDiagram nodes={mockNodes} connections={mockConnections} />,
+      );
+
+      const zoomDisplay = container.querySelector(
+        ".text-sm.text-muted-foreground",
+      );
+
+      // Zoom in first
+      const buttons = container.querySelectorAll("button");
+      const zoomInButton = Array.from(buttons).find((btn) =>
+        btn.querySelector("svg.lucide-plus"),
+      );
+      expect(zoomInButton).toBeTruthy();
+
+      act(() => {
+        fireEvent.click(zoomInButton);
+      });
+
+      // Wait for zoom to take effect
+      await waitFor(() => {
+        expect(zoomDisplay).toHaveTextContent("125%");
+      });
+
+      const svgContainer = container.querySelector(
+        '[style*="overflow: hidden"]',
+      );
+      expect(svgContainer).toBeTruthy();
+
+      // Verify cursor changes to 'grab' when zoomed in
+      expect(svgContainer).toHaveStyle({ cursor: "grab" });
+
+      // Simulate mouse drag - this tests the panning interaction
+      act(() => {
+        fireEvent.mouseDown(svgContainer, {
+          clientX: 100,
+          clientY: 100,
+          button: 0,
+        });
+      });
+
+      // Cursor should change to 'grabbing' while dragging
+      expect(svgContainer).toHaveStyle({ cursor: "grabbing" });
+
+      act(() => {
+        fireEvent.mouseMove(window, { clientX: 150, clientY: 150 });
+        fireEvent.mouseUp(window);
+      });
+
+      // After mouse up, cursor should return to 'grab'
+      expect(svgContainer).toHaveStyle({ cursor: "grab" });
+    });
+
+    it("should not pan when not zoomed in", () => {
+      const { container } = render(
+        <ProcessFlowDiagram nodes={mockNodes} connections={mockConnections} />,
+      );
+
+      const svgContainer = container.querySelector(
+        '[style*="overflow: hidden"]',
+      );
+      const zoomDisplay = container.querySelector(
+        ".text-sm.text-muted-foreground",
+      );
+
+      expect(svgContainer).toBeTruthy();
+      expect(zoomDisplay).toHaveTextContent("100%");
+
+      // Cursor should be 'default' when not zoomed in
+      expect(svgContainer).toHaveStyle({ cursor: "default" });
+
+      // Try to drag without zooming - should not change cursor or pan
+      act(() => {
+        fireEvent.mouseDown(svgContainer, {
+          clientX: 100,
+          clientY: 100,
+          button: 0,
+        });
+        fireEvent.mouseMove(window, { clientX: 150, clientY: 150 });
+        fireEvent.mouseUp(window);
+      });
+
+      // Cursor should still be 'default' (no panning at zoom level 1)
+      expect(svgContainer).toHaveStyle({ cursor: "default" });
+      // Zoom level should still be 100%
+      expect(zoomDisplay).toHaveTextContent("100%");
+    });
+
+    it("should have smooth transition on zoom", () => {
+      const { container } = render(
+        <ProcessFlowDiagram nodes={mockNodes} connections={mockConnections} />,
+      );
+
+      const svg = container.querySelector("svg");
+
+      // SVG should have transition style (unless actively panning/pinching)
+      expect(svg.style.transition).toBeDefined();
     });
   });
 });

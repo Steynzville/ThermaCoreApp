@@ -15,15 +15,16 @@ const UnitDetails = ({ className }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const unit = location.state?.unit;
+  const rawUnit = location.state?.unit;
+  const unit = rawUnit
+    ? {
+        ...rawUnit,
+        batteryLife: rawUnit.batteryLife || 85,
+        tankCapacity: rawUnit.tankCapacity || 800,
+      }
+    : null;
   const initialTab = searchParams.get("tab") || "overview";
   const [activeTab, setActiveTab] = useState(initialTab);
-
-  // Extend unit data with mock battery life and tank capacity
-  if (unit) {
-    unit.batteryLife = 85; // Example battery life percentage
-    unit.tankCapacity = 800; // Example tank capacity in liters
-  }
 
   const alertsHistory = [
     {

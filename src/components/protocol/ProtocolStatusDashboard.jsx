@@ -44,7 +44,7 @@ const ProtocolStatusDashboard = ({ tenantId, onProtocolClick }) => {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[...Array(4)].map((_, i) => (
           <Card key={`skeleton-card-${i}`} className="animate-pulse">
             <CardContent className="p-6">
@@ -115,7 +115,7 @@ const ProtocolStatusDashboard = ({ tenantId, onProtocolClick }) => {
               <Progress value={avgHealth} className="h-2" />
             </div>
 
-            <div className="grid grid-cols-3 gap-4 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
               <div>
                 <p className="text-xs text-muted-foreground">Fully Available</p>
                 <p className="text-2xl font-bold text-green-600">
@@ -140,7 +140,7 @@ const ProtocolStatusDashboard = ({ tenantId, onProtocolClick }) => {
       </Card>
 
       {/* Individual Protocol Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {protocols.map((protocol) => {
           const health = getProtocolHealth(protocol);
           const HealthIcon = getHealthIcon(health);
@@ -155,7 +155,7 @@ const ProtocolStatusDashboard = ({ tenantId, onProtocolClick }) => {
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <h3 className="text-lg font-bold uppercase">
+                    <h3 className="text-lg font-bold uppercase text-foreground">
                       {protocol.name}
                     </h3>
                     <Badge
@@ -213,7 +213,7 @@ const ProtocolStatusDashboard = ({ tenantId, onProtocolClick }) => {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">

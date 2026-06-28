@@ -25,12 +25,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { apiGetJson, apiPostJson } from "@/utils/apiFetch";
 
 const ModbusDeviceModal = ({ device, isOpen, onClose, tenantId }) => {
+  const isDesktop = useMediaQuery("(min-width: 768px)");
   const [deviceData, setDeviceData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [registers, setRegisters] = useState([]);
@@ -55,14 +64,36 @@ const ModbusDeviceModal = ({ device, isOpen, onClose, tenantId }) => {
       setDeviceData(data);
 
       // Extract registers from data
-      if (data.registers) {
+      if (data.readings) {
         setRegisters(
-          Object.entries(data.registers).map(([address, value]) => ({
-            address: parseInt(address, 10),
-            value,
-            timestamp: data.timestamp || new Date().toISOString(),
-          })),
+          Object.values(data.readings).map((reading) => ({
+            address: reading.address,
+            value: reading.processed_value !== undefined ? reading.processed_value : (Array.isArray(reading.raw_value) ? reading.raw_value[0] : reading.raw_value),
+            name: reading.name,
+            type: reading.type,
+            timestamp: reading.timestamp || data.timestamp || new Date().toISOString(),
+          }))
         );
+      } else if (data.registers) {
+        if (Array.isArray(data.registers)) {
+          setRegisters(
+            data.registers.map((reg) => ({
+              address: reg.address,
+              value: typeof reg.value === "boolean" ? (reg.value ? 1 : 0) : reg.value,
+              name: reg.name,
+              type: reg.type,
+              timestamp: data.timestamp || new Date().toISOString(),
+            }))
+          );
+        } else {
+          setRegisters(
+            Object.entries(data.registers).map(([address, value]) => ({
+              address: parseInt(address, 10),
+              value,
+              timestamp: data.timestamp || new Date().toISOString(),
+            })),
+          );
+        }
       }
     } catch (_error) {
       toast.error("Failed to load device details");
@@ -128,9 +159,264 @@ const ModbusDeviceModal = ({ device, isOpen, onClose, tenantId }) => {
 
   const status = getConnectionStatus();
 
+  if (!isDesktop) {
+    return (
+      <Drawer open={isOpen} onOpenChange={onClose}>
+        <DrawerContent className="h-[90vh]">
+          <DrawerHeader className="text-left">
+            <div className="flex items-center justify-between">
+              <div>
+                <DrawerTitle className="text-xl">
+                  Modbus Device: {device?.device_id || "Unknown"}
+                </DrawerTitle>
+                <DrawerDescription>
+                  {device?.host}:{device?.port || 502} (Unit ID:{" "}
+                  {device?.unit_id || 1})
+                </DrawerDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge
+                  variant={status.color === "green" ? "default" : "destructive"}
+                >
+                  <status.icon className="h-3 w-3 mr-1" />
+                  {status.text}
+                </Badge>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={fetchDeviceData}
+                  disabled={loading}
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+                  />
+                </Button>
+              </div>
+            </div>
+          </DrawerHeader>
+
+          <div className="p-4 h-full overflow-y-auto">
+            <Tabs defaultValue="overview" className="w-full">
+              <TabsList className="grid w-full grid-cols-4 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                <TabsTrigger value="overview" className="text-slate-600 dark:text-slate-300 data-[state=active]:text-slate-900 dark:data-[state=active]:text-white data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700">Overview</TabsTrigger>
+                <TabsTrigger value="registers" className="text-slate-600 dark:text-slate-300 data-[state=active]:text-slate-900 dark:data-[state=active]:text-white data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700">Registers</TabsTrigger>
+                <TabsTrigger value="read" className="text-slate-600 dark:text-slate-300 data-[state=active]:text-slate-900 dark:data-[state=active]:text-white data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700">Read</TabsTrigger>
+                <TabsTrigger value="write" className="text-slate-600 dark:text-slate-300 data-[state=active]:text-slate-900 dark:data-[state=active]:text-white data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700">Write</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="overview" className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Activity className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold">
+                        Connection
+                      </span>
+                    </div>
+                    <p className="text-2xl font-bold text-slate-900 dark:text-white">{status.text}</p>
+                    {deviceData?.last_poll && (
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        Last poll:{" "}
+                        {new Date(deviceData.last_poll).toLocaleTimeString()}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="p-4 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Zap className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold">
+                        Registers
+                      </span>
+                    </div>
+                    <p className="text-2xl font-bold text-slate-900 dark:text-white">{registers.length}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      Total configured
+                    </p>
+                  </div>
+
+                  <div className="p-4 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Settings className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold">
+                        Protocol
+                      </span>
+                    </div>
+                    <p className="text-lg font-bold text-slate-900 dark:text-white">Modbus TCP</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      Unit ID: {device?.unit_id || 1}
+                    </p>
+                  </div>
+
+                  <div className="p-4 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold">
+                        Response Time
+                      </span>
+                    </div>
+                    <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                      {deviceData?.response_time
+                        ? `${deviceData.response_time}ms`
+                        : "N/A"}
+                    </p>
+                  </div>
+                </div>
+
+                {deviceData?.error && (
+                  <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                    <p className="text-sm font-medium text-destructive">
+                      Error: {deviceData.error}
+                    </p>
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="registers" className="space-y-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Register Values</h3>
+                  <Button
+                    size="sm"
+                    onClick={fetchDeviceData}
+                    disabled={loading}
+                  >
+                    <RefreshCw
+                      className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
+                    />
+                    Refresh
+                  </Button>
+                </div>
+
+                <div className="max-h-96 overflow-y-auto pr-1">
+                  {registers.length === 0 ? (
+                    <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                      No register data available
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {registers.map((register) => (
+                        <div
+                          key={register.address}
+                          className="flex items-center justify-between p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800/60 hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="flex flex-col">
+                              <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                                {register.name || `Address ${register.address}`}
+                              </span>
+                              <span className="text-xs text-slate-500 dark:text-slate-400">
+                                Address {register.address} {register.type ? `(${register.type})` : ""}
+                              </span>
+                            </div>
+                            <span className="text-lg font-bold text-slate-950 dark:text-slate-50 ml-2">
+                              {register.value}
+                            </span>
+                          </div>
+                          <span className="text-xs text-slate-500 dark:text-slate-400">
+                            {register.timestamp && !isNaN(new Date(register.timestamp).getTime())
+                              ? new Date(register.timestamp).toLocaleTimeString()
+                              : "N/A"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="read" className="space-y-4">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Read Registers</h3>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="read-address">Start Address</Label>
+                      <Input
+                        id="read-address"
+                        type="number"
+                        value={registerToRead.address}
+                        onChange={(e) =>
+                          setRegisterToRead({
+                            ...registerToRead,
+                            address: parseInt(e.target.value, 10) || 0,
+                          })
+                        }
+                        placeholder="0"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="read-count">Count</Label>
+                      <Input
+                        id="read-count"
+                        type="number"
+                        value={registerToRead.count}
+                        onChange={(e) =>
+                          setRegisterToRead({
+                            ...registerToRead,
+                            count: parseInt(e.target.value, 10) || 1,
+                          })
+                        }
+                        placeholder="1"
+                      />
+                    </div>
+                  </div>
+                  <Button onClick={handleReadRegister} disabled={loading}>
+                    Read Registers
+                  </Button>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="write" className="space-y-4">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Write Register</h3>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="write-address">Address</Label>
+                      <Input
+                        id="write-address"
+                        type="number"
+                        value={registerToWrite.address}
+                        onChange={(e) =>
+                          setRegisterToWrite({
+                            ...registerToWrite,
+                            address: parseInt(e.target.value, 10) || 0,
+                          })
+                        }
+                        placeholder="0"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="write-value">Value</Label>
+                      <Input
+                        id="write-value"
+                        type="number"
+                        value={registerToWrite.value}
+                        onChange={(e) =>
+                          setRegisterToWrite({
+                            ...registerToWrite,
+                            value: parseInt(e.target.value, 10) || 0,
+                          })
+                        }
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+                  <Button onClick={handleWriteRegister} disabled={loading}>
+                    Write Register
+                  </Button>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-full">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -164,65 +450,65 @@ const ModbusDeviceModal = ({ device, isOpen, onClose, tenantId }) => {
         </DialogHeader>
 
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="registers">Registers</TabsTrigger>
-            <TabsTrigger value="read">Read</TabsTrigger>
-            <TabsTrigger value="write">Write</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            <TabsTrigger value="overview" className="text-slate-600 dark:text-slate-300 data-[state=active]:text-slate-900 dark:data-[state=active]:text-white data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700">Overview</TabsTrigger>
+            <TabsTrigger value="registers" className="text-slate-600 dark:text-slate-300 data-[state=active]:text-slate-900 dark:data-[state=active]:text-white data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700">Registers</TabsTrigger>
+            <TabsTrigger value="read" className="text-slate-600 dark:text-slate-300 data-[state=active]:text-slate-900 dark:data-[state=active]:text-white data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700">Read</TabsTrigger>
+            <TabsTrigger value="write" className="text-slate-600 dark:text-slate-300 data-[state=active]:text-slate-900 dark:data-[state=active]:text-white data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700">Write</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 border rounded-lg">
+              <div className="p-4 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
                   <Activity className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold">
                     Connection
                   </span>
                 </div>
-                <p className="text-2xl font-bold">{status.text}</p>
+                <p className="text-2xl font-bold text-slate-900 dark:text-white">{status.text}</p>
                 {deviceData?.last_poll && (
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                     Last poll:{" "}
                     {new Date(deviceData.last_poll).toLocaleTimeString()}
                   </p>
                 )}
               </div>
 
-              <div className="p-4 border rounded-lg">
+              <div className="p-4 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
                   <Zap className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold">
                     Registers
                   </span>
                 </div>
-                <p className="text-2xl font-bold">{registers.length}</p>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-2xl font-bold text-slate-900 dark:text-white">{registers.length}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                   Total configured
                 </p>
               </div>
 
-              <div className="p-4 border rounded-lg">
+              <div className="p-4 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
                   <Settings className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold">
                     Protocol
                   </span>
                 </div>
-                <p className="text-lg font-medium">Modbus TCP</p>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-lg font-bold text-slate-900 dark:text-white">Modbus TCP</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                   Unit ID: {device?.unit_id || 1}
                 </p>
               </div>
 
-              <div className="p-4 border rounded-lg">
+              <div className="p-4 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
                   <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-sm text-slate-500 dark:text-slate-400 font-semibold">
                     Response Time
                   </span>
                 </div>
-                <p className="text-2xl font-bold">
+                <p className="text-2xl font-bold text-slate-900 dark:text-white">
                   {deviceData?.response_time
                     ? `${deviceData.response_time}ms`
                     : "N/A"}
@@ -241,7 +527,7 @@ const ModbusDeviceModal = ({ device, isOpen, onClose, tenantId }) => {
 
           <TabsContent value="registers" className="space-y-4">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Register Values</h3>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Register Values</h3>
               <Button size="sm" onClick={fetchDeviceData} disabled={loading}>
                 <RefreshCw
                   className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
@@ -250,9 +536,9 @@ const ModbusDeviceModal = ({ device, isOpen, onClose, tenantId }) => {
               </Button>
             </div>
 
-            <div className="max-h-96 overflow-y-auto">
+            <div className="max-h-96 overflow-y-auto pr-1">
               {registers.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="text-center py-8 text-slate-500 dark:text-slate-400">
                   No register data available
                 </div>
               ) : (
@@ -260,18 +546,25 @@ const ModbusDeviceModal = ({ device, isOpen, onClose, tenantId }) => {
                   {registers.map((register) => (
                     <div
                       key={register.address}
-                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50"
+                      className="flex items-center justify-between p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800/60 hover:bg-slate-50 dark:hover:bg-slate-700/50"
                     >
                       <div className="flex items-center gap-4">
-                        <span className="text-sm font-medium min-w-[80px]">
-                          Address {register.address}
-                        </span>
-                        <span className="text-lg font-bold">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                            {register.name || `Address ${register.address}`}
+                          </span>
+                          <span className="text-xs text-slate-500 dark:text-slate-400">
+                            Address {register.address} {register.type ? `(${register.type})` : ""}
+                          </span>
+                        </div>
+                        <span className="text-lg font-bold text-slate-950 dark:text-slate-50 ml-2">
                           {register.value}
                         </span>
                       </div>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(register.timestamp).toLocaleTimeString()}
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
+                        {register.timestamp && !isNaN(new Date(register.timestamp).getTime())
+                          ? new Date(register.timestamp).toLocaleTimeString()
+                          : "N/A"}
                       </span>
                     </div>
                   ))}

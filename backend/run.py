@@ -154,9 +154,7 @@ def init_database_on_startup():
                             app.logger.warning(
                                 "⚠️  IMPORTANT: No DEFAULT_ADMIN_PASSWORD set!",
                             )
-                            app.logger.warning(
-                                f"Generated random password: {default_password}",
-                            )
+                            app.logger.warning("Generated random password - check environment variable DEFAULT_ADMIN_PASSWORD")
                             app.logger.warning(
                                 "SAVE THIS PASSWORD - It will not be shown again!",
                             )

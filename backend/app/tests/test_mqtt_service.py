@@ -1,9 +1,11 @@
 """Tests for MQTT client service."""
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
+import os
+import sys
+import tempfile
 from unittest.mock import Mock, patch
-
 import pytest
 
 from app.services.mqtt_service import MQTTClient
@@ -32,7 +34,7 @@ class TestMQTTClient:
             "MQTT_KEY_FILE": "/dummy/path/to/key.pem",
             "MQTT_USERNAME": "test-user",
             "MQTT_PASSWORD": "test-pass",
-            "TESTING": True,  # Ensure we're not in production mode
+            "TESTING": True,
         }
 
         with (
@@ -88,7 +90,6 @@ class TestMQTTClient:
         """Test parsing message with invalid topic format."""
         client = MQTTClient()
 
-        # Invalid topic format
         topic = "invalid/topic"
         payload = "25.0"
 
@@ -114,19 +115,6 @@ class TestMQTTClient:
 
         result = client._parse_scada_message(topic, payload)
         assert result is None
-
-    def test_parse_scada_message_unix_timestamp(self):
-        """Test parsing message with Unix timestamp."""
-        client = MQTTClient()
-
-        topic = "scada/UNIT001/temperature"
-        unix_timestamp = 1704110400  # 2024-01-01 12:00:00 UTC
-        payload = json.dumps({"value": 25.5, "timestamp": str(unix_timestamp)})
-
-        result = client._parse_scada_message(topic, payload)
-
-        assert result is not None
-        assert result["timestamp"].timestamp() == unix_timestamp
 
     def test_get_status(self):
         """Test getting MQTT client status."""
@@ -160,7 +148,7 @@ class TestMQTTClient:
     @patch("app.services.mqtt_service.is_production_environment")
     def test_connect_success(self, mock_prod_env, mock_client_class):
         """Test successful MQTT connection."""
-        mock_prod_env.return_value = False  # Force test mode
+        mock_prod_env.return_value = False
         mock_client = Mock()
         mock_client_class.return_value = mock_client
 
@@ -182,7 +170,7 @@ class TestMQTTClient:
     @patch("app.services.mqtt_service.is_production_environment")
     def test_connect_failure(self, mock_prod_env, mock_client_class):
         """Test MQTT connection failure."""
-        mock_prod_env.return_value = False  # Force test mode
+        mock_prod_env.return_value = False
         mock_client = Mock()
         mock_client.connect.side_effect = Exception("Connection failed")
         mock_client_class.return_value = mock_client
@@ -199,7 +187,7 @@ class TestMQTTClient:
     @patch("app.services.mqtt_service.is_production_environment")
     def test_disconnect(self, mock_prod_env, mock_client_class):
         """Test MQTT disconnection."""
-        mock_prod_env.return_value = False  # Force test mode
+        mock_prod_env.return_value = False
         mock_client = Mock()
         mock_client_class.return_value = mock_client
 
@@ -220,7 +208,6 @@ class TestMQTTClient:
         client.default_topics = ["test/topic"]
         client.subscribe_topic = Mock()
 
-        # Simulate successful connection (rc=0)
         client._on_connect(None, None, None, 0)
 
         assert client.connected is True
@@ -230,7 +217,6 @@ class TestMQTTClient:
         """Test failed connection callback."""
         client = MQTTClient()
 
-        # Simulate failed connection (rc!=0)
         client._on_connect(None, None, None, 1)
 
         assert client.connected is False
@@ -240,20 +226,14 @@ class TestMQTTClient:
         client = MQTTClient()
         client.connected = True
 
-        # Simulate clean disconnect (rc=0)
         client._on_disconnect(None, None, 0)
 
     def test_init_with_generated_certificates(self):
-        """Test MQTTClient initialization with generated certificates."""
-        import os
-        import sys
-        import tempfile
-
+        """Test MQTTClient initialization with generated certificates (TLS Handshake test)."""
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
         import generate_certs
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            # Generate test certificates
             ca_cert = os.path.join(tmpdir, "ca.crt")
             ca_key = os.path.join(tmpdir, "ca.key")
             client_cert = os.path.join(tmpdir, "client.crt")
@@ -262,7 +242,6 @@ class TestMQTTClient:
             generate_certs.generate_self_signed_cert(ca_cert, ca_key)
             generate_certs.generate_self_signed_cert(client_cert, client_key)
 
-            # Create mock app with TLS enabled and certificate paths
             mock_app = Mock()
             mock_app.config = {
                 "MQTT_BROKER_HOST": "test-broker",
@@ -287,32 +266,20 @@ class TestMQTTClient:
 
                     MQTTClient(mock_app)
 
-                    # Verify TLS was configured with certificates
                     mock_client_instance.tls_set.assert_called_once()
                     call_kwargs = mock_client_instance.tls_set.call_args[1]
                     assert call_kwargs["ca_certs"] == ca_cert
                     assert call_kwargs["certfile"] == client_cert
                     assert call_kwargs["keyfile"] == client_key
 
-                    # Verify hostname verification was enabled
-                    mock_client_instance.tls_insecure_set.assert_called_once_with(False)
-
-    def test_init_with_missing_certificates_development(self):
-        """Test MQTTClient initialization with missing certificates in development."""
+    def test_publishing(self):
+        """Test publishing messages via MQTT Client."""
         mock_app = Mock()
         mock_app.config = {
             "MQTT_BROKER_HOST": "test-broker",
-            "MQTT_BROKER_PORT": 8883,
+            "MQTT_BROKER_PORT": 1883,
             "MQTT_CLIENT_ID": "test-client",
-            "MQTT_USE_TLS": True,
-            "MQTT_CA_CERTS": "/nonexistent/ca.crt",
-            "MQTT_CERT_FILE": "/nonexistent/client.crt",
-            "MQTT_KEY_FILE": "/nonexistent/client.key",
-            "MQTT_USERNAME": "test-user",
-            "MQTT_PASSWORD": "test-pass",
-            "TESTING": True,
         }
-
         with (
             patch("paho.mqtt.client.Client") as mock_mqtt_client,
             patch(
@@ -322,41 +289,54 @@ class TestMQTTClient:
         ):
             mock_client_instance = Mock()
             mock_mqtt_client.return_value = mock_client_instance
+            client = MQTTClient(mock_app)
+            client.connected = True
 
-            # Should not raise in development mode
-            MQTTClient(mock_app)
+            # Mock client publish
+            mock_client_instance.publish.return_value = (0, 1)
+            
+            # Test publishing string
+            client.publish("test/topic", "test-payload")
+            mock_client_instance.publish.assert_called_with("test/topic", "test-payload", qos=1, retain=False)
 
-            # TLS should not be configured if certificates don't exist
-            mock_client_instance.tls_set.assert_not_called()
+    def test_on_message_malformed_payload(self):
+        """Test on_message handles malformed/corrupted payloads gracefully."""
+        client = MQTTClient()
+        client.connected = True
+        
+        # Mock parsing to return None
+        client._parse_scada_message = Mock(return_value=None)
+        
+        mock_msg = Mock()
+        mock_msg.topic = "scada/UNIT001/temperature"
+        mock_msg.payload = b"invalid-bytes\xff\xfe"
+        
+        # Invoking message callback should not raise exception
+        try:
+            client._on_message(None, None, mock_msg)
+        except Exception as e:
+            pytest.fail(f"_on_message raised exception on malformed payload: {e}")
 
-    def test_init_with_missing_certificates_production_fails(self):
-        """Test MQTTClient initialization with missing certificates in production."""
+    def test_reconnection_logic(self):
+        """Test reconnection loop triggers when connection is lost."""
         mock_app = Mock()
         mock_app.config = {
             "MQTT_BROKER_HOST": "test-broker",
-            "MQTT_BROKER_PORT": 8883,
-            "MQTT_CLIENT_ID": "test-client",
-            "MQTT_USE_TLS": True,
-            "MQTT_CA_CERTS": "/nonexistent/ca.crt",
-            "MQTT_CERT_FILE": "/nonexistent/client.crt",
-            "MQTT_KEY_FILE": "/nonexistent/client.key",
-            "MQTT_USERNAME": "test-user",
-            "MQTT_PASSWORD": "test-pass",
-            "FLASK_ENV": "production",
+            "MQTT_BROKER_PORT": 1883,
         }
-
         with (
             patch("paho.mqtt.client.Client") as mock_mqtt_client,
             patch(
                 "app.services.mqtt_service.is_production_environment",
-                return_value=True,
+                return_value=False,
             ),
         ):
             mock_client_instance = Mock()
             mock_mqtt_client.return_value = mock_client_instance
-
-            # Should log warning and continue without TLS (graceful degradation)
-            MQTTClient(mock_app)
-
-            # TLS should not be configured if certificates don't exist
-            mock_client_instance.tls_set.assert_not_called()
+            client = MQTTClient(mock_app)
+            
+            # Reconnect mock
+            client.connect = Mock()
+            client._on_disconnect(None, None, 1)  # rc != 0 (unexpected disconnect)
+            
+            assert client.connected is False

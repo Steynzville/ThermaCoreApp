@@ -2,7 +2,7 @@
 
 > **Industrial SCADA Monitoring & Control System**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![Node 18+](https://img.shields.io/badge/node-18+-green.svg)](https://nodejs.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-13+-blue.svg)](https://www.postgresql.org/)
@@ -336,9 +336,15 @@ Check the **[Troubleshooting Guide](docs/OPERATIONS/TROUBLESHOOTING.md)** for co
 
 ---
 
+## ⚠️ Manufacturing Safety Disclaimer
+
+This software is provided for demonstration purposes only.
+Not certified for production manufacturing use.
+Always test in a safe environment before connecting to live equipment.
+
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the proprietary license of ThermaCore Renewable Technologies Pty Ltd. See the [LICENSE](LICENSE) file for details.
 
 ---
 

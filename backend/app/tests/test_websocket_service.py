@@ -2,6 +2,7 @@
 
 from datetime import datetime, timezone
 from unittest.mock import Mock, patch
+import pytest
 
 from app.services.websocket_service import WebSocketService
 
@@ -150,10 +151,6 @@ class TestWebSocketService:
         assert message["message"] == "High temperature detected"
         assert message["unit_id"] == "UNIT001"
         assert "timestamp" in message
-
-        # broadcast parameter is optional in Flask-SocketIO and may not be explicitly set
-        # This test verifies that the emit call is made with the correct event and message.
-        # Since no room parameter is provided, the message is broadcast to all clients by default.
 
     def test_broadcast_without_socketio(self):
         """Test that broadcast methods handle missing socketio gracefully."""
@@ -313,3 +310,22 @@ class TestWebSocketService:
         assert message["connected_at"] == connected_at.isoformat()
         assert message["subscribed_units"] == ["UNIT001", "UNIT002"]
         assert "server_time" in message
+
+    @patch("app.services.websocket_service.emit")
+    def test_client_reconnection(self, mock_emit):
+        """Test client reconnection logic where previous state is cleaned up and reassigned."""
+        service = WebSocketService()
+        service._get_client_id = Mock(return_value="reconnected-client-id")
+
+        # Connect first time
+        service._on_connect()
+        assert "reconnected-client-id" in service._connected_clients
+
+        # Simulate disconnection
+        service._on_disconnect()
+        assert "reconnected-client-id" not in service._connected_clients
+
+        # Reconnect
+        service._on_connect()
+        assert "reconnected-client-id" in service._connected_clients
+        assert len(service._connected_clients) == 1

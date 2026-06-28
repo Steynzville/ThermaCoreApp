@@ -223,7 +223,9 @@ const IndustrialGauge = ({
     <Card className="overflow-hidden">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium">{title}</CardTitle>
+          <CardTitle className="text-sm font-medium text-foreground">
+            {title}
+          </CardTitle>
           {status === "critical" && (
             <AlertTriangle className="h-4 w-4 text-red-500 animate-pulse" />
           )}
@@ -237,12 +239,12 @@ const IndustrialGauge = ({
           className="mb-2 max-w-full h-auto"
         />
         {showValue && (
-          <div className="text-center">
-            <div className="text-3xl font-bold">
+          <div className="text-center w-full px-2">
+            <div className="text-2xl sm:text-3xl font-bold text-foreground dark:text-white break-words">
               {value.toFixed(precision)}
               {unit}
             </div>
-            <div className="text-sm text-muted-foreground mt-1">
+            <div className="text-xs sm:text-sm text-muted-foreground dark:text-gray-300 mt-1">
               Range: {min}
               {unit} - {max}
               {unit}

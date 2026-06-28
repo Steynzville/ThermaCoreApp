@@ -1,0 +1,345 @@
+/**
+ * SCADA Dashboard Tab Styling
+ *
+ * Implements navy blue and gold color scheme with proper borders,
+ * hover effects, and responsive design for all screen sizes.
+ */
+
+/* Main Tab Container */
+.scada-tabs-container {
+  width: 100%;
+  background: transparent;
+}
+
+/* Tab List - Main Navigation */
+.scada-tabs-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: transparent;
+  border-radius: 0;
+  border: none;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: visible;
+  z-index: 10;
+  position: relative;
+}
+
+/* Individual Tab Trigger - Default State (Navy Blue) */
+.scada-tab-trigger {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 3rem;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--scada-text-on-navy);
+  background-color: var(--scada-navy-default);
+  border: 2px solid var(--scada-border-navy);
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: fit-content;
+}
+
+/* Tab Trigger - Hover State */
+.scada-tab-trigger:hover:not([data-state="active"]) {
+  background-color: var(--scada-navy-hover);
+  border-color: var(--scada-navy-hover);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+}
+
+/* Tab Trigger - Active State (Gold) */
+.scada-tab-trigger[data-state="active"] {
+  background-color: var(--scada-gold-default);
+  border-color: var(--scada-border-gold);
+  color: var(--scada-text-on-gold);
+  box-shadow: 0 4px 6px -1px rgba(212, 175, 55, 0.3);
+  font-weight: 600;
+}
+
+/* Tab Trigger - Active Hover State */
+.scada-tab-trigger[data-state="active"]:hover {
+  background-color: var(--scada-gold-hover);
+  border-color: var(--scada-gold-hover);
+}
+
+/* Tab Icon Styling */
+.scada-tab-icon {
+  width: 1.125rem;
+  height: 1.125rem;
+  flex-shrink: 0;
+}
+
+/* Tab Trigger - Default Icon Color */
+.scada-tab-trigger .scada-tab-icon {
+  color: var(--scada-text-on-navy);
+  opacity: 0.9;
+}
+
+/* Tab Trigger - Active Icon Color */
+.scada-tab-trigger[data-state="active"] .scada-tab-icon {
+  color: var(--scada-text-on-gold);
+  opacity: 1;
+}
+
+/* Tab Trigger - Hover Icon Color */
+.scada-tab-trigger:hover:not([data-state="active"]) .scada-tab-icon {
+  color: white;
+  opacity: 1;
+}
+
+/* Sub-Navigation Container */
+.scada-sub-nav {
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.scada-sub-nav-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--scada-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+  padding-left: 0.5rem; /* Default padding */
+}
+
+/* Sub-Navigation Tab List */
+.scada-sub-tabs-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Sub-Navigation Tab Trigger - Smaller, more subtle */
+.scada-sub-tab-trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.5rem;
+  padding: 0.625rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--scada-text-on-navy);
+  background-color: var(--scada-navy-medium);
+  border: 1px solid var(--scada-border-navy);
+  border-radius: 0.25rem;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: fit-content;
+}
+
+/* Sub-Tab Trigger - Hover State */
+.scada-sub-tab-trigger:hover:not([data-state="active"]) {
+  background-color: var(--scada-navy-light);
+  border-color: var(--scada-navy-light);
+  color: white;
+}
+
+/* Sub-Tab Trigger - Active State */
+.scada-sub-tab-trigger[data-state="active"] {
+  background-color: var(--scada-gold-dark);
+  border-color: var(--scada-gold-dark);
+  color: var(--scada-text-on-gold);
+  font-weight: 600;
+}
+
+/* Sub-Tab Trigger - Active Hover */
+.scada-sub-tab-trigger[data-state="active"]:hover {
+  background-color: var(--scada-gold-default);
+  border-color: var(--scada-gold-default);
+}
+
+/* Sub-Tab Icon */
+.scada-sub-tab-icon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+/* Content Area */
+.scada-tab-content {
+  margin-top: 1.5rem;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive Design - Mobile */
+@media (max-width: 640px) {
+  .scada-tabs-list {
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+    /* Ensure wrapping is enabled for all tabs to be visible */
+    flex-wrap: wrap;
+  }
+
+  .scada-tab-trigger {
+    min-height: 2.75rem;
+    padding: 0.625rem 0.875rem;
+    font-size: 0.875rem;
+    /* Allow tabs to fit content but grow to fill space equally */
+    flex: 1 1 0%;
+    min-width: fit-content;
+    max-width: 100%;
+  }
+
+  .scada-tab-trigger > span:not(.scada-tab-icon) {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .scada-tab-icon {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .scada-sub-nav {
+    padding: 0.75rem 0;
+    margin-top: 2rem; /* Increased vertical spacing from main tabs */
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+  }
+
+  .scada-sub-nav-title {
+    padding-left: 0.75rem; /* Apply horizontal padding to match main content */
+  }
+
+  .scada-sub-tabs-list {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  .scada-sub-tab-trigger {
+    min-height: 2.25rem;
+    padding: 0.5rem 0.875rem;
+    font-size: 0.813rem;
+    /* Allow sub-tabs to grow on mobile */
+    flex: 0 0 auto;
+  }
+
+  .scada-sub-tab-icon {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+
+  /* Alerts tab specific spacing - adds extra top margin to prevent tiles from hiding behind tabs */
+  .scada-alerts-content {
+    margin-top: 4rem;
+  }
+}
+
+/* Extra small mobile devices (< 375px) */
+@media (max-width: 374px) {
+  .scada-tabs-list {
+    gap: 0.375rem;
+    padding: 0.375rem;
+  }
+
+  .scada-tab-trigger {
+    min-height: 2.5rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.813rem;
+    gap: 0.375rem;
+  }
+
+  .scada-sub-nav {
+    padding: 0.5rem 0;
+    margin-top: 2rem; /* Increased vertical spacing from main tabs */
+  }
+
+  .scada-sub-nav-title {
+    padding-left: 0.5rem; /* Apply horizontal padding to match main content */
+  }
+
+  .scada-sub-tab-trigger {
+    min-height: 2rem;
+    padding: 0.375rem 0.625rem;
+    font-size: 0.75rem;
+    gap: 0.25rem;
+  }
+
+  /* Alerts tab specific spacing for extra small devices */
+  .scada-alerts-content {
+    margin-top: 4rem;
+  }
+}
+
+/* Touch device optimization - larger touch targets */
+@media (hover: none) and (pointer: coarse) {
+  .scada-tab-trigger {
+    min-height: 44px; /* 44px minimum for iOS accessibility */
+  }
+
+  .scada-sub-tab-trigger {
+    min-height: 44px; /* 44px minimum for iOS accessibility */
+  }
+}
+
+/* Responsive Design - Tablet */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .scada-tab-trigger {
+    padding: 0.625rem 1rem;
+  }
+
+  .scada-sub-tab-trigger {
+    padding: 0.5rem 0.875rem;
+  }
+}
+
+/* Responsive Design - Large Screens */
+@media (min-width: 1025px) {
+  .scada-tabs-list {
+    flex-wrap: nowrap;
+  }
+
+  .scada-sub-tabs-list {
+    flex-wrap: nowrap;
+  }
+}
+
+/* Focus Styles for Accessibility */
+.scada-tab-trigger:focus-visible,
+.scada-sub-tab-trigger:focus-visible {
+  outline: 2px solid var(--scada-gold-default);
+  outline-offset: 2px;
+}
+
+/* Disabled State */
+.scada-tab-trigger:disabled,
+.scada-sub-tab-trigger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}

@@ -65,7 +65,7 @@ const ROIAssumptions = ({ isOpen, onClose, onSave, currentAssumptions }) => {
               type="number"
               step="0.01"
               min="0"
-              value={assumptions.initialInvestment}
+              value={assumptions.initialInvestment !== undefined ? assumptions.initialInvestment : ""}
               onChange={(e) =>
                 handleInputChange("initialInvestment", e.target.value)
               }

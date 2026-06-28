@@ -36,8 +36,8 @@ const NavItem = ({ item, isCollapsed, isActive, onClick }) => {
     <button
       type="button"
       className={`
-        group relative flex items-center w-full p-3 rounded-lg cursor-pointer
-        transition-all duration-300 mb-1
+        group relative flex items-center justify-start w-full p-3 rounded-lg cursor-pointer
+        transition-all duration-300 mb-1 text-left
         ${
           isActive
             ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"

@@ -5,7 +5,8 @@ import { vi } from "vitest";
 Object.defineProperty(window, "matchMedia", {
   writable: true,
   value: vi.fn().mockImplementation((query) => ({
-    matches: false,
+    matches:
+      query.includes("min-width: 768px") || query.includes("min-width:768px"),
     media: query,
     onchange: null,
     addListener: vi.fn(), // Deprecated

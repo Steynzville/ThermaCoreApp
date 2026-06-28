@@ -14,12 +14,10 @@ class Config:
     """Base configuration class."""
 
     # Flask Configuration
-    SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-secret-key-change-in-production"
+    SECRET_KEY = os.environ.get("SECRET_KEY")
 
     # Database Configuration
-    SQLALCHEMY_DATABASE_URI = (
-        os.environ.get("DATABASE_URL") or "sqlite:///thermacore.db"
-    )
+    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS: ClassVar[dict[str, int | bool]] = {
         "pool_size": 20,
@@ -28,9 +26,7 @@ class Config:
     }
 
     # JWT Configuration
-    JWT_SECRET_KEY = (
-        os.environ.get("JWT_SECRET_KEY") or "dev-jwt-secret-change-in-production"
-    )
+    JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(
         hours=int(os.environ.get("JWT_ACCESS_TOKEN_EXPIRES", "1")),
     )
@@ -125,8 +121,8 @@ class Config:
     OPCUA_SERVER_URL = os.environ.get("OPCUA_SERVER_URL", "opc.tcp://localhost:4840")
     OPCUA_USERNAME = os.environ.get("OPCUA_USERNAME")
     OPCUA_PASSWORD = os.environ.get("OPCUA_PASSWORD")
-    OPCUA_SECURITY_POLICY = os.environ.get("OPCUA_SECURITY_POLICY", "None")
-    OPCUA_SECURITY_MODE = os.environ.get("OPCUA_SECURITY_MODE", "None")
+    OPCUA_SECURITY_POLICY = os.environ.get("OPCUA_SECURITY_POLICY", "Basic256Sha256")
+    OPCUA_SECURITY_MODE = os.environ.get("OPCUA_SECURITY_MODE", "SignAndEncrypt")
     OPCUA_TIMEOUT = int(os.environ.get("OPCUA_TIMEOUT", "30"))
     OPCUA_CERT_FILE = os.environ.get("OPCUA_CERT_FILE")  # Path to client certificate
     OPCUA_PRIVATE_KEY_FILE = os.environ.get(
@@ -216,18 +212,17 @@ class ProductionConfig(Config):
         super().__init__()
 
         # Validate critical environment variables are set for production
-        if not os.environ.get("SECRET_KEY"):
-            raise ValueError(
-                "SECRET_KEY must be set in environment variables for production",
-            )
-        if not os.environ.get("DATABASE_URL"):
-            raise ValueError(
-                "DATABASE_URL must be set in environment variables for production",
-            )
-        if not os.environ.get("JWT_SECRET_KEY"):
-            raise ValueError(
-                "JWT_SECRET_KEY must be set in environment variables for production",
-            )
+        self.SECRET_KEY = os.environ.get("SECRET_KEY")
+        if not self.SECRET_KEY:
+            raise ValueError("SECRET_KEY must be set in environment variables")
+
+        self.JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
+        if not self.JWT_SECRET_KEY:
+            raise ValueError("JWT_SECRET_KEY must be set in environment variables")
+
+        self.SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
+        if not self.SQLALCHEMY_DATABASE_URI:
+            raise ValueError("DATABASE_URL must be set in environment variables")
 
         # Override WebSocket CORS for production - restrict to trusted domains
         # This should be set via environment variable in production

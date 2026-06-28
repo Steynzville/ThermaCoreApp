@@ -1,0 +1,46 @@
+/**
+ * SCADA UI Theme - Navy Blue and Gold Color Scheme
+ *
+ * This file defines the color scheme for SCADA components in dark mode.
+ * Navy blue is used for default states, gold for active/selected states,
+ * with brighter variants for hover states.
+ */
+
+:root {
+  /* SCADA Navy Blue Colors */
+  --scada-navy-dark: #0a1929;
+  --scada-navy-default: #1e3a5f;
+  --scada-navy-medium: #2c5282;
+  --scada-navy-light: #3b6ba8;
+  --scada-navy-hover: #4a7fc1;
+
+  /* SCADA Gold Colors */
+  --scada-gold-dark: #b8860b;
+  --scada-gold-default: #d4af37;
+  --scada-gold-light: #eac54f;
+  --scada-gold-hover: #f5d76e;
+  --scada-gold-bright: #ffd700;
+
+  /* SCADA Text Colors */
+  --scada-text-on-navy: #e0e7ef;
+  --scada-text-on-gold: #1a1a1a;
+  --scada-text-muted: #94a3b8;
+  --scada-text-primary: #ffffff;
+  --scada-text-secondary: #e0e7ef;
+
+  /* SCADA Border Colors */
+  --scada-border-navy: #2c5282;
+  --scada-border-gold: #d4af37;
+  --scada-border-subtle: #334155;
+
+  /* SCADA Background Colors */
+  --scada-bg-dark: #0f172a;
+  --scada-bg-medium: #1e293b;
+  --scada-bg-card: #1e3a5f;
+
+  /* SCADA Status Colors */
+  --scada-success: #22c55e;
+  --scada-warning: #f59e0b;
+  --scada-error: #ef4444;
+  --scada-info: #3b82f6;
+}

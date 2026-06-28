@@ -14,10 +14,11 @@ import {
   Wrench,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useSettings } from "../../context/SettingsContext";
 import { useUnits } from "../../context/UnitContext";
+import { useRealtimeMetrics } from "../../hooks/useRealtimeData";
 import { Card, CardContent, CardHeader } from "../ui/card";
 
 const UnitVitals = ({ unit }) => {
@@ -37,6 +38,63 @@ const UnitVitals = ({ unit }) => {
     unit.status === "offline" ||
     unit.status === "decommissioned" ||
     unit.status === "maintenance";
+
+  // Real-time data hooks for live values
+  const { metrics } = useRealtimeMetrics({ useMockData: true });
+  const [liveUnit, setLiveUnit] = useState(unit);
+
+  useEffect(() => {
+    setLiveUnit(unit);
+  }, [unit]);
+
+  useEffect(() => {
+    if (metrics && !isOffline) {
+      setLiveUnit((prev) => {
+        const tempBase = parseFloat(metrics.temperature?.current) || 70;
+        const pressureBase = parseFloat(metrics.pressure?.current) || 100;
+        const flowInBase = parseFloat(
+          metrics.flow_rate_inlet?.current ||
+            metrics.flowRateInlet?.current ||
+            45.5,
+        );
+        const flowOutBase = parseFloat(
+          metrics.flow_rate_outlet?.current ||
+            metrics.flowRateOutlet?.current ||
+            42.1,
+        );
+
+        const idOffset = (prev.id?.toString() || "").charCodeAt(0) || 0;
+
+        return {
+          ...prev,
+          temp_in:
+            prev.temp_in !== undefined
+              ? +(tempBase * 0.4 + (idOffset % 5)).toFixed(1)
+              : undefined,
+          temp_out:
+            prev.temp_out !== undefined
+              ? +(tempBase * 0.1 + (idOffset % 3)).toFixed(1)
+              : undefined,
+          pressure:
+            prev.pressure !== undefined
+              ? +(pressureBase * 1.5 + (idOffset % 20)).toFixed(1)
+              : undefined,
+          flow_rate_inlet: +(flowInBase + (idOffset % 5) - 2.5).toFixed(1),
+          flow_rate_outlet: +(flowOutBase + (idOffset % 3) - 1.5).toFixed(1),
+        };
+      });
+    }
+  }, [metrics, isOffline]);
+
+  const getFlowRateColor = (val) => {
+    if (val === undefined || val === null || isOffline)
+      return "text-gray-900 dark:text-gray-100";
+    const num = parseFloat(val);
+    if (num >= 90 || num < 10)
+      return "text-red-600 dark:text-red-400 font-bold";
+    if (num >= 70) return "text-yellow-600 dark:text-yellow-400 font-semibold";
+    return "text-green-600 dark:text-green-400 font-medium";
+  };
 
   const handleSaveName = async () => {
     try {
@@ -111,12 +169,15 @@ const UnitVitals = ({ unit }) => {
                   Power Output
                 </p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  {parseFloat(unit.currentPower).toFixed(1)} kW
+                  {parseFloat(
+                    liveUnit.currentPower || unit.currentPower,
+                  ).toFixed(1)}{" "}
+                  kW
                 </p>
               </div>
             </div>
 
-            {unit.watergeneration && (
+            {liveUnit.watergeneration && (
               <div className="flex items-center space-x-3">
                 <Droplets className="h-5 w-5 text-blue-500" />
                 <div>
@@ -124,7 +185,7 @@ const UnitVitals = ({ unit }) => {
                     Water Level
                   </p>
                   <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                    {unit.water_level} L
+                    {liveUnit.water_level || unit.water_level} L
                   </p>
                 </div>
               </div>
@@ -137,7 +198,9 @@ const UnitVitals = ({ unit }) => {
                   Temp Outside
                 </p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  {formatTemperature(unit.temp_outside)}
+                  {formatTemperature(
+                    liveUnit.temp_outside || unit.temp_outside,
+                  )}
                 </p>
               </div>
             </div>
@@ -149,7 +212,13 @@ const UnitVitals = ({ unit }) => {
                   Temp In
                 </p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  {isOffline ? "N/A" : formatTemperature(unit.temp_in)}
+                  {isOffline
+                    ? "N/A"
+                    : formatTemperature(
+                        liveUnit.temp_in !== undefined
+                          ? liveUnit.temp_in
+                          : unit.temp_in,
+                      )}
                 </p>
               </div>
             </div>
@@ -161,7 +230,13 @@ const UnitVitals = ({ unit }) => {
                   Temp Out
                 </p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  {isOffline ? "N/A" : formatTemperature(unit.temp_out)}
+                  {isOffline
+                    ? "N/A"
+                    : formatTemperature(
+                        liveUnit.temp_out !== undefined
+                          ? liveUnit.temp_out
+                          : unit.temp_out,
+                      )}
                 </p>
               </div>
             </div>
@@ -173,7 +248,7 @@ const UnitVitals = ({ unit }) => {
                   Humidity
                 </p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  {unit.humidity}%
+                  {liveUnit.humidity || unit.humidity}%
                 </p>
               </div>
             </div>
@@ -185,7 +260,9 @@ const UnitVitals = ({ unit }) => {
                   Pressure
                 </p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  {isOffline ? "N/A" : `${unit.pressure} kPa`}
+                  {isOffline
+                    ? "N/A"
+                    : `${liveUnit.pressure !== undefined ? liveUnit.pressure : unit.pressure} kPa`}
                 </p>
               </div>
             </div>
@@ -200,13 +277,47 @@ const UnitVitals = ({ unit }) => {
                   <div className="flex-1 max-w-24 bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
                     <div
                       className="bg-green-500 h-2.5 rounded-full"
-                      style={{ width: `${unit.battery_level}%` }}
+                      style={{
+                        width: `${liveUnit.battery_level || unit.battery_level}%`,
+                      }}
                     ></div>
                   </div>
                   <p className="text-lg font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
-                    {unit.battery_level}%
+                    {liveUnit.battery_level || unit.battery_level}%
                   </p>
                 </div>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-3">
+              <Droplets className="h-5 w-5 text-cyan-500 animate-pulse" />
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Flow Rate Inlet
+                </p>
+                <p
+                  className={`text-lg ${getFlowRateColor(liveUnit.flow_rate_inlet || unit.flowRate || 45.5)}`}
+                >
+                  {isOffline
+                    ? "N/A"
+                    : `${liveUnit.flow_rate_inlet || unit.flowRate || 45.5} L/min`}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-3">
+              <Droplets className="h-5 w-5 text-blue-500 animate-pulse" />
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Flow Rate Outlet
+                </p>
+                <p
+                  className={`text-lg ${getFlowRateColor(liveUnit.flow_rate_outlet || unit.flowRate * 0.95 || 42.1)}`}
+                >
+                  {isOffline
+                    ? "N/A"
+                    : `${liveUnit.flow_rate_outlet || (unit.flowRate ? (unit.flowRate * 0.95).toFixed(1) : 42.1)} L/min`}
+                </p>
               </div>
             </div>
           </div>
@@ -235,7 +346,7 @@ const UnitVitals = ({ unit }) => {
                   <div className="flex items-center space-x-2 mt-1">
                     <input
                       type="text"
-                      value={editedName}
+                      value={editedName || ""}
                       onChange={(e) => setEditedName(e.target.value)}
                       className="text-sm font-medium text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 flex-1"
                     />
@@ -306,7 +417,7 @@ const UnitVitals = ({ unit }) => {
                   <div className="flex items-center space-x-2 mt-1">
                     <input
                       type="text"
-                      value={editedLocation}
+                      value={editedLocation || ""}
                       onChange={(e) => setEditedLocation(e.target.value)}
                       className="text-sm font-medium text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 flex-1"
                     />
@@ -344,7 +455,7 @@ const UnitVitals = ({ unit }) => {
                         <div className="flex items-center space-x-2 flex-1">
                           <input
                             type="text"
-                            value={editedGPS}
+                            value={editedGPS || ""}
                             onChange={(e) => setEditedGPS(e.target.value)}
                             className="text-xs text-gray-500 dark:text-gray-500 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 flex-1"
                             placeholder="Enter GPS coordinates"
