@@ -2,7 +2,7 @@
  * Comprehensive Branch Coverage Tests for WebSocket Service
  */
 
-import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import websocketService from "../../services/websocketService";
 
 // Custom Mock WebSocket to allow fine-grained behavior simulation
@@ -53,7 +53,9 @@ describe("WebSocket Service - Branch Coverage", () => {
       // Fast forward past the 10000ms timeout
       vi.advanceTimersByTime(10000);
 
-      await expect(connectPromise).rejects.toThrow("WebSocket connection timeout");
+      await expect(connectPromise).rejects.toThrow(
+        "WebSocket connection timeout",
+      );
     });
   });
 
@@ -68,10 +70,11 @@ describe("WebSocket Service - Branch Coverage", () => {
     });
 
     it("should stop reconnecting after reaching maxReconnectAttempts", async () => {
-      const connectPromise = websocketService.connect();
+      const _connectPromise = websocketService.connect();
       // Set reconnectAttempts to maxReconnectAttempts after connect() sets shouldReconnect to true
-      websocketService.reconnectAttempts = websocketService.maxReconnectAttempts;
-      
+      websocketService.reconnectAttempts =
+        websocketService.maxReconnectAttempts;
+
       const spySchedule = vi.spyOn(websocketService, "scheduleReconnect");
 
       // Trigger close directly without having triggered onopen (so reconnectAttempts is not reset to 0)
@@ -81,10 +84,10 @@ describe("WebSocket Service - Branch Coverage", () => {
     });
 
     it("should not reconnect if shouldReconnect is false", async () => {
-      const connectPromise = websocketService.connect();
+      const _connectPromise = websocketService.connect();
       // Explicitly set shouldReconnect to false after connect() overrides it to true
       websocketService.shouldReconnect = false;
-      
+
       const spySchedule = vi.spyOn(websocketService, "scheduleReconnect");
 
       websocketService.ws.onclose();
@@ -104,7 +107,7 @@ describe("WebSocket Service - Branch Coverage", () => {
       vi.advanceTimersByTime(30000);
 
       expect(websocketService.ws.send).toHaveBeenCalledWith(
-        JSON.stringify({ type: "ping" })
+        JSON.stringify({ type: "ping" }),
       );
       expect(websocketService.lastHeartbeat).toBeGreaterThan(0);
     });
@@ -124,7 +127,7 @@ describe("WebSocket Service - Branch Coverage", () => {
       await connectPromise;
 
       const spyHandle = vi.spyOn(websocketService, "handleMessage");
-      
+
       // Simulate invalid JSON message
       websocketService.ws.onmessage({ data: "{invalid json" });
 
@@ -160,7 +163,7 @@ describe("WebSocket Service - Branch Coverage", () => {
           type: "subscribe",
           stream: "metrics",
           tenant_id: null,
-        })
+        }),
       );
     });
 
@@ -179,12 +182,14 @@ describe("WebSocket Service - Branch Coverage", () => {
         JSON.stringify({
           type: "unsubscribe",
           stream: "metrics",
-        })
+        }),
       );
     });
 
     it("should safely unsubscribe when stream or callback is not found", () => {
-      expect(() => websocketService.unsubscribe("unknown-stream", () => {})).not.toThrow();
+      expect(() =>
+        websocketService.unsubscribe("unknown-stream", () => {}),
+      ).not.toThrow();
     });
 
     it("should return null for getCachedData if stream not cached", () => {
@@ -209,7 +214,9 @@ describe("WebSocket Service - Branch Coverage", () => {
         throw new Error("crashing callback");
       });
 
-      expect(() => websocketService.notifyStatusChange("connected")).not.toThrow();
+      expect(() =>
+        websocketService.notifyStatusChange("connected"),
+      ).not.toThrow();
     });
   });
 });
