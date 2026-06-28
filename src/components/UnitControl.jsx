@@ -67,7 +67,7 @@ const UnitControl = ({ className }) => {
     };
 
     loadUnitData();
-  }, [id, location.state]);
+  }, [id, location.state, device]);
 
   useEffect(() => {
     if (metrics && systemPower && device) {
@@ -107,7 +107,7 @@ const UnitControl = ({ className }) => {
         };
       });
     }
-  }, [metrics, systemPower]);
+  }, [metrics, systemPower, device]);
 
   const getFlowRateColor = (val) => {
     if (val === undefined || val === null || !systemPower)
