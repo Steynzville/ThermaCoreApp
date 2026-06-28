@@ -3,7 +3,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import scadaService, {
+import {
   getDeviceStatus,
   getScadaStatus,
   getCurrentMetrics,
