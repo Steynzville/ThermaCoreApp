@@ -106,7 +106,7 @@ export const acknowledgeAlert = async ({ alertId, userId, notes = "" }) => {
       success: true,
       data,
     };
-  } catch (alarmError) {
+  } catch (_alarmError) {
     // 2. Try acknowledging using /api/v1/alerts/... fallback
     try {
       const url = `${API_BASE_URL}/api/v1/alerts/${alertId}/acknowledge`;
