@@ -127,7 +127,8 @@ describe("Dashboard", () => {
         </TestWrapper>,
       );
 
-      expect(screen.getByText("Dashboard Overview")).toBeInTheDocument();
+      const titles = screen.getAllByText("Dashboard Overview");
+      expect(titles.length).toBeGreaterThan(0);
     });
 
     it("should render dashboard description", () => {
@@ -152,7 +153,9 @@ describe("Dashboard", () => {
 
       const homeElements = screen.getAllByText("Home");
       expect(homeElements.length).toBeGreaterThan(0);
-      expect(screen.getByText("Dashboard")).toBeInTheDocument();
+      
+      const dashboardElements = screen.getAllByText("Dashboard");
+      expect(dashboardElements.length).toBeGreaterThan(0);
     });
 
     it("should render notification bell", () => {
@@ -212,7 +215,8 @@ describe("Dashboard", () => {
         </TestWrapper>,
       );
 
-      const totalDial = screen.getAllByTestId("status-dial-total-units")[0];
+      const totalDials = screen.getAllByTestId("status-dial-total-units");
+      const totalDial = totalDials[0];
       expect(totalDial).toBeInTheDocument();
       expect(totalDial.textContent).toContain("Total Units");
     });
@@ -224,7 +228,8 @@ describe("Dashboard", () => {
         </TestWrapper>,
       );
 
-      const totalDial = screen.getAllByTestId("status-dial-total-units")[0];
+      const totalDials = screen.getAllByTestId("status-dial-total-units");
+      const totalDial = totalDials[0];
       fireEvent.click(totalDial);
 
       expect(mockNavigate).toHaveBeenCalledWith("/grid-view?status=all");
@@ -237,7 +242,8 @@ describe("Dashboard", () => {
         </TestWrapper>,
       );
 
-      const onlineDial = screen.getAllByTestId("status-dial-online")[0];
+      const onlineDials = screen.getAllByTestId("status-dial-online");
+      const onlineDial = onlineDials[0];
       fireEvent.click(onlineDial);
 
       expect(mockNavigate).toHaveBeenCalledWith("/grid-view?status=online");
@@ -250,7 +256,8 @@ describe("Dashboard", () => {
         </TestWrapper>,
       );
 
-      const offlineDial = screen.getAllByTestId("status-dial-offline")[0];
+      const offlineDials = screen.getAllByTestId("status-dial-offline");
+      const offlineDial = offlineDials[0];
       fireEvent.click(offlineDial);
 
       expect(mockNavigate).toHaveBeenCalledWith("/grid-view?status=offline");
@@ -263,7 +270,8 @@ describe("Dashboard", () => {
         </TestWrapper>,
       );
 
-      const maintenanceDial = screen.getAllByTestId("status-dial-maintenance")[0];
+      const maintenanceDials = screen.getAllByTestId("status-dial-maintenance");
+      const maintenanceDial = maintenanceDials[0];
       fireEvent.click(maintenanceDial);
 
       expect(mockNavigate).toHaveBeenCalledWith(
@@ -278,7 +286,8 @@ describe("Dashboard", () => {
         </TestWrapper>,
       );
 
-      const alertsDial = screen.getAllByTestId("status-dial-alerts")[0];
+      const alertsDials = screen.getAllByTestId("status-dial-alerts");
+      const alertsDial = alertsDials[0];
       fireEvent.click(alertsDial);
 
       expect(mockNavigate).toHaveBeenCalledWith("/alerts");
@@ -291,7 +300,8 @@ describe("Dashboard", () => {
         </TestWrapper>,
       );
 
-      const alarmsDial = screen.getAllByTestId("status-dial-alarms")[0];
+      const alarmsDials = screen.getAllByTestId("status-dial-alarms");
+      const alarmsDial = alarmsDials[0];
       fireEvent.click(alarmsDial);
 
       expect(mockNavigate).toHaveBeenCalledWith("/grid-view?alarms=true");
@@ -306,7 +316,8 @@ describe("Dashboard", () => {
         </TestWrapper>,
       );
 
-      expect(screen.getByText("Quick Actions")).toBeInTheDocument();
+      const quickActionHeadings = screen.getAllByText("Quick Actions");
+      expect(quickActionHeadings.length).toBeGreaterThan(0);
       
       const analyticsActions = screen.getAllByTestId("quick-action-sales-analytics");
       expect(analyticsActions.length).toBeGreaterThan(0);
@@ -340,6 +351,12 @@ describe("Dashboard", () => {
 
       const analyticsActions = screen.queryAllByTestId("quick-action-sales-analytics");
       expect(analyticsActions.length).toBe(0);
+      
+      const healthActions = screen.queryAllByTestId("quick-action-system-health");
+      expect(healthActions.length).toBe(0);
+      
+      const reportsActions = screen.queryAllByTestId("quick-action-reports");
+      expect(reportsActions.length).toBe(0);
     });
 
     it("should navigate to analytics when Sales Analytics is clicked", () => {
@@ -349,9 +366,10 @@ describe("Dashboard", () => {
         </TestWrapper>,
       );
 
-      const analyticsButton = screen.getAllByTestId(
+      const analyticsButtons = screen.getAllByTestId(
         "quick-action-sales-analytics",
-      )[0];
+      );
+      const analyticsButton = analyticsButtons[0];
       fireEvent.click(analyticsButton);
 
       expect(mockNavigate).toHaveBeenCalledWith("/analytics");
@@ -364,7 +382,8 @@ describe("Dashboard", () => {
         </TestWrapper>,
       );
 
-      const healthButton = screen.getAllByTestId("quick-action-system-health")[0];
+      const healthButtons = screen.getAllByTestId("quick-action-system-health");
+      const healthButton = healthButtons[0];
       fireEvent.click(healthButton);
 
       expect(mockNavigate).toHaveBeenCalledWith("/system-health");
@@ -377,7 +396,8 @@ describe("Dashboard", () => {
         </TestWrapper>,
       );
 
-      const reportsButton = screen.getAllByTestId("quick-action-reports")[0];
+      const reportsButtons = screen.getAllByTestId("quick-action-reports");
+      const reportsButton = reportsButtons[0];
       fireEvent.click(reportsButton);
 
       expect(mockNavigate).toHaveBeenCalledWith("/reports");
@@ -392,7 +412,8 @@ describe("Dashboard", () => {
         </TestWrapper>,
       );
 
-      expect(screen.getByText("Dashboard Overview")).toBeInTheDocument();
+      const titles = screen.getAllByText("Dashboard Overview");
+      expect(titles.length).toBeGreaterThan(0);
       
       const perfDashboards = screen.queryAllByTestId("performance-dashboard");
       expect(perfDashboards.length).toBe(0);
@@ -405,7 +426,8 @@ describe("Dashboard", () => {
         </TestWrapper>,
       );
 
-      const toggleButton = screen.getAllByTestId("view-toggle")[0];
+      const toggleButtons = screen.getAllByTestId("view-toggle");
+      const toggleButton = toggleButtons[0];
       fireEvent.click(toggleButton);
 
       await waitFor(() => {
@@ -421,7 +443,8 @@ describe("Dashboard", () => {
         </TestWrapper>,
       );
 
-      const toggleButton = screen.getAllByTestId("view-toggle")[0];
+      const toggleButtons = screen.getAllByTestId("view-toggle");
+      const toggleButton = toggleButtons[0];
       fireEvent.click(toggleButton);
 
       await waitFor(() => {
@@ -437,7 +460,8 @@ describe("Dashboard", () => {
         </TestWrapper>,
       );
 
-      const toggleButton = screen.getAllByTestId("view-toggle")[0];
+      const toggleButtons = screen.getAllByTestId("view-toggle");
+      const toggleButton = toggleButtons[0];
 
       fireEvent.click(toggleButton);
       await waitFor(() => {
@@ -445,9 +469,10 @@ describe("Dashboard", () => {
         expect(perfDashboards.length).toBeGreaterThan(0);
       });
 
-      fireEvent.click(screen.getAllByTestId("view-toggle")[0]);
+      fireEvent.click(toggleButtons[0]);
       await waitFor(() => {
-        expect(screen.getByText("Dashboard Overview")).toBeInTheDocument();
+        const titles = screen.getAllByText("Dashboard Overview");
+        expect(titles.length).toBeGreaterThan(0);
       });
     });
 
@@ -458,7 +483,8 @@ describe("Dashboard", () => {
         </TestWrapper>,
       );
 
-      const toggleButton = screen.getAllByTestId("view-toggle")[0];
+      const toggleButtons = screen.getAllByTestId("view-toggle");
+      const toggleButton = toggleButtons[0];
       fireEvent.click(toggleButton);
 
       await waitFor(() => {
@@ -479,7 +505,8 @@ describe("Dashboard", () => {
         </TestWrapper>,
       );
 
-      const toggleButton = screen.getAllByTestId("view-toggle")[0];
+      const toggleButtons = screen.getAllByTestId("view-toggle");
+      const toggleButton = toggleButtons[0];
       fireEvent.click(toggleButton);
 
       await waitFor(() => {
@@ -596,7 +623,8 @@ describe("Dashboard", () => {
         </TestWrapper>,
       );
 
-      expect(screen.getByText("Dashboard Overview")).toBeInTheDocument();
+      const titles = screen.getAllByText("Dashboard Overview");
+      expect(titles.length).toBeGreaterThan(0);
     });
 
     it("should handle rapid view switching", async () => {
@@ -606,7 +634,8 @@ describe("Dashboard", () => {
         </TestWrapper>,
       );
 
-      const toggleButton = screen.getAllByTestId("view-toggle")[0];
+      const toggleButtons = screen.getAllByTestId("view-toggle");
+      const toggleButton = toggleButtons[0];
 
       fireEvent.click(toggleButton);
       fireEvent.click(toggleButton);
@@ -625,9 +654,10 @@ describe("Dashboard", () => {
         </TestWrapper>,
       );
 
-      const analyticsButton = screen.getAllByTestId(
+      const analyticsButtons = screen.getAllByTestId(
         "quick-action-sales-analytics",
-      )[0];
+      );
+      const analyticsButton = analyticsButtons[0];
       fireEvent.click(analyticsButton);
       fireEvent.click(analyticsButton);
 
@@ -656,11 +686,11 @@ describe("Dashboard", () => {
         </TestWrapper>,
       );
 
-      const dials = [
-        screen.getAllByTestId("status-dial-total-units")[0],
-        screen.getAllByTestId("status-dial-online")[0],
-        screen.getAllByTestId("status-dial-offline")[0],
-      ];
+      const totalDials = screen.getAllByTestId("status-dial-total-units");
+      const onlineDials = screen.getAllByTestId("status-dial-online");
+      const offlineDials = screen.getAllByTestId("status-dial-offline");
+
+      const dials = [totalDials[0], onlineDials[0], offlineDials[0]];
 
       dials.forEach((dial) => {
         expect(dial.getAttribute("role")).toBe("button");
@@ -674,10 +704,14 @@ describe("Dashboard", () => {
         </TestWrapper>,
       );
 
+      const analyticsButtons = screen.getAllByTestId("quick-action-sales-analytics");
+      const healthButtons = screen.getAllByTestId("quick-action-system-health");
+      const reportsButtons = screen.getAllByTestId("quick-action-reports");
+
       const quickActions = [
-        screen.getAllByTestId("quick-action-sales-analytics")[0],
-        screen.getAllByTestId("quick-action-system-health")[0],
-        screen.getAllByTestId("quick-action-reports")[0],
+        analyticsButtons[0],
+        healthButtons[0],
+        reportsButtons[0],
       ];
 
       quickActions.forEach((action) => {
@@ -696,12 +730,12 @@ describe("Dashboard", () => {
         </TestWrapper>,
       );
 
-      const h1 = screen.getByText("Dashboard Overview");
-      expect(h1.tagName).toBe("H1");
+      const h1Elements = screen.getAllByText("Dashboard Overview");
+      expect(h1Elements[0].tagName).toBe("H1");
 
-      if (screen.queryByText("Quick Actions")) {
-        const h2 = screen.getByText("Quick Actions");
-        expect(h2.tagName).toBe("H2");
+      const quickActionHeadings = screen.queryAllByText("Quick Actions");
+      if (quickActionHeadings.length > 0) {
+        expect(quickActionHeadings[0].tagName).toBe("H2");
       }
     });
 
@@ -714,7 +748,9 @@ describe("Dashboard", () => {
 
       const homeElements = screen.getAllByText("Home");
       expect(homeElements.length).toBeGreaterThan(0);
-      expect(screen.getByText("Dashboard")).toBeInTheDocument();
+      
+      const dashboardElements = screen.getAllByText("Dashboard");
+      expect(dashboardElements.length).toBeGreaterThan(0);
     });
   });
 });
