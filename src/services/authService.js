@@ -51,7 +51,7 @@ export const login = async (identifier, password, keepMeSignedIn = false) => {
     );
 
     if (mockUser) {
-      authToken = "mock_dev_token_" + Date.now();
+      authToken = `mock_dev_token_${Date.now()}`;
       currentUser = {
         id: mockUser.id,
         username: mockUser.username,
