@@ -367,9 +367,9 @@ const MQTTManagementPanel = ({ isOpen, onClose, tenantId }) => {
                         </div>
                       ) : (
                         <div className="space-y-2">
-                          {filteredMessages.map((msg, index) => (
+                          {filteredMessages.map((msg) => (
                             <div
-                              key={index}
+                              key={msg.id || `msg-${msg.topic}-${msg.timestamp || Date.now()}`}
                               className="p-3 border rounded-lg bg-muted/50"
                             >
                               <div className="flex items-center justify-between text-sm mb-1">
@@ -684,7 +684,7 @@ const MQTTManagementPanel = ({ isOpen, onClose, tenantId }) => {
               ) : (
                 <div className="space-y-2">
                   {filteredMessages.map((msg) => (
-                    <Card key={`${msg.topic}-${msg.timestamp}`}>
+                    <Card key={`${msg.topic}-${msg.timestamp}-${Math.random().toString(36).substr(2, 6)}`}>
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-center gap-2">
