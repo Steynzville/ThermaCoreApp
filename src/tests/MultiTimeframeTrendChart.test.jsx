@@ -13,7 +13,7 @@
  * - Accessibility
  */
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import MultiTimeframeTrendChart from "@/components/visualization/MultiTimeframeTrendChart";
 
@@ -296,12 +296,6 @@ describe("MultiTimeframeTrendChart", () => {
 
       // Look for download icon or export button
       const buttons = screen.getAllByRole("button");
-      // Check if any button has download icon or export text
-      const hasExportButton = buttons.some(
-        (btn) =>
-          btn.textContent?.toLowerCase().includes("export") ||
-          btn.querySelector('[data-lucide="download"]'),
-      );
       // If no export button found, the test passes (component might not render it)
       expect(true).toBe(true);
     });
@@ -456,7 +450,6 @@ describe("MultiTimeframeTrendChart", () => {
         <MultiTimeframeTrendChart data={mockData} metrics={mockMetrics} />,
       );
 
-      // Use getAllByTestId and check the first one
       const tempLines = screen.getAllByTestId("line-temperature");
       const pressureLines = screen.getAllByTestId("line-pressure");
       
