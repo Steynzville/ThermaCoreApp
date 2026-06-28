@@ -67,7 +67,7 @@ const UnitControl = ({ className }) => {
     };
 
     loadUnitData();
-  }, [id, location.state, device]);
+  }, [id, location.state]);
 
   useEffect(() => {
     if (metrics && systemPower && device) {
