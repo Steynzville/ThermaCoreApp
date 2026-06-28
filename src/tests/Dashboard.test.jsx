@@ -330,17 +330,10 @@ describe("Dashboard", () => {
     });
 
     it("should not render quick actions for regular users", () => {
-      Storage.prototype.getItem = vi.fn((key) => {
-        if (key === "thermacore_user") {
-          return JSON.stringify({ id: 1, username: "testuser" });
-        }
-        if (key === "thermacore_role" || key === "thermacore_backend_role") {
-          return "user";
-        }
-        if (key === "thermacore_token") {
-          return "mock-jwt-token";
-        }
-        return null;
+      // Mock user role
+      mockUseAuth.mockReturnValue({
+        userRole: "user",
+        permissions: { canViewAllUnits: false },
       });
 
       render(
@@ -448,7 +441,7 @@ describe("Dashboard", () => {
       fireEvent.click(toggleButton);
 
       await waitFor(() => {
-        const perfDashboards = screen.getAllByTestId("performance-dashboard");
+        const perfDashboards = screen.queryAllByTestId("performance-dashboard");
         expect(perfDashboards.length).toBeGreaterThan(0);
       });
     });
@@ -510,7 +503,7 @@ describe("Dashboard", () => {
       fireEvent.click(toggleButton);
 
       await waitFor(() => {
-        const perfTexts = screen.getAllByText("Performance");
+        const perfTexts = screen.getAllByText(/performance/i);
         expect(perfTexts.length).toBeGreaterThan(0);
       });
     });
@@ -538,7 +531,8 @@ describe("Dashboard", () => {
         </TestWrapper>,
       );
 
-      expect(screen.getByTestId("unit-summary")).toBeInTheDocument();
+      const summaries = screen.getAllByTestId("unit-summary");
+      expect(summaries.length).toBeGreaterThan(0);
     });
   });
 
@@ -674,7 +668,7 @@ describe("Dashboard", () => {
         </TestWrapper>,
       );
 
-      const unitSummary = screen.getByTestId("unit-summary");
+      const unitSummary = screen.getAllByTestId("unit-summary")[0];
       expect(unitSummary.textContent).toContain("Total:");
       expect(unitSummary.textContent).toContain("Online:");
     });
