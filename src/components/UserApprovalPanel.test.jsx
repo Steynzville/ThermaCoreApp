@@ -59,11 +59,11 @@ vi.mock("./ui/dialog", () => ({
 }));
 
 vi.mock("./ui/label", () => ({
-  Label: ({ children, ...props }) => <label {...props}>{children}</label>,
+  Label: ({ children, ...props }) => <label htmlFor="test" {...props}>{children}</label>,
 }));
 
 vi.mock("./ui/select", () => ({
-  Select: ({ children, onValueChange, value }) => (
+  Select: ({ children, onValueChange: _onValueChange, value }) => (
     <div data-testid="select" data-value={value}>
       {children}
     </div>
