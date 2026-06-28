@@ -81,7 +81,6 @@ export const getCurrentAlerts = async ({
 export const acknowledgeAlert = async ({ alertId, userId, notes = "" }) => {
   // If in development/sandbox mode or using mock alerts (ID starts with 'alert-'), handle locally for instant, functional feedback
   if (import.meta.env.DEV || (alertId && String(alertId).startsWith("alert-"))) {
-    console.log(`[Dev Sandbox] Locally acknowledging alert ${alertId}`);
     return {
       success: true,
       data: {
@@ -97,7 +96,6 @@ export const acknowledgeAlert = async ({ alertId, userId, notes = "" }) => {
   // 1. Try acknowledging using /api/v1/alarms/... first
   try {
     const url = `${API_BASE_URL}/api/v1/alarms/${alertId}/acknowledge`;
-    console.log(`[alertService] Attempting alarm acknowledgment: ${url}`);
     const data = await apiPostJson(url, {
       user_id: userId,
       notes,
@@ -109,12 +107,9 @@ export const acknowledgeAlert = async ({ alertId, userId, notes = "" }) => {
       data,
     };
   } catch (alarmError) {
-    console.warn(`[alertService] Alarms endpoint failed: ${alarmError.message}. Retrying with alerts endpoint...`);
-
     // 2. Try acknowledging using /api/v1/alerts/... fallback
     try {
       const url = `${API_BASE_URL}/api/v1/alerts/${alertId}/acknowledge`;
-      console.log(`[alertService] Attempting alert acknowledgment fallback: ${url}`);
       const data = await apiPostJson(url, {
         user_id: userId,
         notes,
@@ -125,9 +120,7 @@ export const acknowledgeAlert = async ({ alertId, userId, notes = "" }) => {
         success: true,
         data,
       };
-    } catch (alertError) {
-      console.error(`[alertService] Both alarms and alerts endpoints failed. Falling back to local acknowledgment. Error:`, alertError.message);
-
+    } catch (_alertError) {
       // 3. Ultimate Fallback: Perform local acknowledgment so the UI is completely functional in all environments
       return {
         success: true,
