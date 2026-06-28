@@ -53,15 +53,12 @@ describe("ProtocolWizard", () => {
     it("should not render when closed", () => {
       render(<ProtocolWizard {...defaultProps} isOpen={false} />);
 
-      // Use queryAllByText and check length
-      const elements = screen.queryAllByText("Select Protocol");
-      expect(elements).toHaveLength(0);
+      expect(screen.queryByText("Select Protocol")).not.toBeInTheDocument();
     });
 
     it("should display all protocol options", () => {
       render(<ProtocolWizard {...defaultProps} />);
 
-      // Use getAllByText and check at least one exists
       const modbusElements = screen.getAllByText(/modbus/i);
       expect(modbusElements.length).toBeGreaterThan(0);
       
@@ -78,13 +75,9 @@ describe("ProtocolWizard", () => {
     it("should show protocol descriptions", () => {
       render(<ProtocolWizard {...defaultProps} />);
 
-      expect(
-        screen.getByText(/Industrial serial\/TCP protocol/i),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Industrial serial\/TCP protocol/i)).toBeInTheDocument();
       expect(screen.getByText(/OPC Unified Architecture/i)).toBeInTheDocument();
-      expect(
-        screen.getByText(/Distributed Network Protocol/i),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Distributed Network Protocol/i)).toBeInTheDocument();
       expect(screen.getByText(/Message Queue Telemetry/i)).toBeInTheDocument();
     });
   });
@@ -99,7 +92,7 @@ describe("ProtocolWizard", () => {
       fireEvent.click(modbusCard);
 
       await waitFor(() => {
-        expect(modbusCard.parentElement).toHaveClass(/border-primary/);
+        expect(modbusCard?.parentElement).toHaveClass(/border-primary/);
       });
     });
 
@@ -112,7 +105,7 @@ describe("ProtocolWizard", () => {
       fireEvent.click(opcuaCard);
 
       await waitFor(() => {
-        expect(opcuaCard.parentElement).toHaveClass(/border-primary/);
+        expect(opcuaCard?.parentElement).toHaveClass(/border-primary/);
       });
     });
 
@@ -125,7 +118,7 @@ describe("ProtocolWizard", () => {
       fireEvent.click(dnp3Card);
 
       await waitFor(() => {
-        expect(dnp3Card.parentElement).toHaveClass(/border-primary/);
+        expect(dnp3Card?.parentElement).toHaveClass(/border-primary/);
       });
     });
 
@@ -138,7 +131,7 @@ describe("ProtocolWizard", () => {
       fireEvent.click(mqttCard);
 
       await waitFor(() => {
-        expect(mqttCard.parentElement).toHaveClass(/border-primary/);
+        expect(mqttCard?.parentElement).toHaveClass(/border-primary/);
       });
     });
   });
@@ -147,25 +140,22 @@ describe("ProtocolWizard", () => {
     it("should navigate to next step after protocol selection", async () => {
       render(<ProtocolWizard {...defaultProps} />);
 
-      // Select protocol
       const modbusCard = screen
         .getAllByText(/modbus/i)[0]
         .closest("div");
       fireEvent.click(modbusCard);
 
-      // Click Next button
       const nextButton = screen.getByRole("button", { name: /next/i });
       fireEvent.click(nextButton);
 
       await waitFor(() => {
-        expect(screen.getByText("Device Information")).toBeInTheDocument();
+        expect(screen.getByText(/Device Information/i)).toBeInTheDocument();
       });
     });
 
     it("should navigate back to previous step", async () => {
       render(<ProtocolWizard {...defaultProps} />);
 
-      // Navigate forward
       const modbusCard = screen
         .getAllByText(/modbus/i)[0]
         .closest("div");
@@ -175,10 +165,9 @@ describe("ProtocolWizard", () => {
       fireEvent.click(nextButton);
 
       await waitFor(() => {
-        expect(screen.getByText("Device Information")).toBeInTheDocument();
+        expect(screen.getByText(/Device Information/i)).toBeInTheDocument();
       });
 
-      // Navigate back
       const backButton = screen.getByRole("button", { name: /back/i });
       fireEvent.click(backButton);
 
@@ -210,7 +199,6 @@ describe("ProtocolWizard", () => {
     beforeEach(async () => {
       render(<ProtocolWizard {...defaultProps} />);
 
-      // Navigate to Modbus device info
       const modbusCard = screen
         .getAllByText(/modbus/i)[0]
         .closest("div");
@@ -220,7 +208,7 @@ describe("ProtocolWizard", () => {
       fireEvent.click(nextButton);
 
       await waitFor(() => {
-        expect(screen.getByText("Device Information")).toBeInTheDocument();
+        expect(screen.getByText(/Device Information/i)).toBeInTheDocument();
       });
     });
 
@@ -256,7 +244,6 @@ describe("ProtocolWizard", () => {
     });
 
     it("should validate host address format", async () => {
-      // Navigate to connection settings
       const nextButton = screen.getByRole("button", { name: /next/i });
       fireEvent.click(nextButton);
 
@@ -271,7 +258,6 @@ describe("ProtocolWizard", () => {
     });
 
     it("should validate port number", async () => {
-      // Navigate to connection settings
       const nextButton = screen.getByRole("button", { name: /next/i });
       fireEvent.click(nextButton);
 
@@ -290,7 +276,6 @@ describe("ProtocolWizard", () => {
     beforeEach(async () => {
       render(<ProtocolWizard {...defaultProps} />);
 
-      // Select OPC-UA
       const opcuaCard = screen
         .getAllByText(/opcua/i)[0]
         .closest("div");
@@ -343,7 +328,6 @@ describe("ProtocolWizard", () => {
         const usernameInput = screen.queryByLabelText(/Username/i);
         const passwordInput = screen.queryByLabelText(/Password/i);
 
-        // These fields should exist for optional authentication
         if (usernameInput && passwordInput) {
           expect(usernameInput).toBeInTheDocument();
           expect(passwordInput).toBeInTheDocument();
@@ -356,7 +340,6 @@ describe("ProtocolWizard", () => {
     beforeEach(async () => {
       render(<ProtocolWizard {...defaultProps} />);
 
-      // Select DNP3
       const dnp3Card = screen
         .getAllByText(/dnp3/i)[0]
         .closest("div");
@@ -394,13 +377,11 @@ describe("ProtocolWizard", () => {
     beforeEach(async () => {
       render(<ProtocolWizard {...defaultProps} />);
 
-      // Navigate to test connection step for Modbus
       const modbusCard = screen
         .getAllByText(/modbus/i)[0]
         .closest("div");
       fireEvent.click(modbusCard);
 
-      // Navigate through steps
       for (let i = 0; i < 3; i++) {
         const nextButton = screen.getByRole("button", { name: /next/i });
         fireEvent.click(nextButton);
@@ -463,7 +444,6 @@ describe("ProtocolWizard", () => {
       });
       fireEvent.click(testButton);
 
-      // Check for loading indicator
       await waitFor(() => {
         expect(testButton).toBeDisabled();
       });
@@ -491,13 +471,11 @@ describe("ProtocolWizard", () => {
     beforeEach(async () => {
       render(<ProtocolWizard {...defaultProps} />);
 
-      // Navigate to final step
       const modbusCard = screen
         .getAllByText(/modbus/i)[0]
         .closest("div");
       fireEvent.click(modbusCard);
 
-      // Navigate through all steps
       for (let i = 0; i < 4; i++) {
         const nextButton = screen.getByRole("button", { name: /next/i });
         fireEvent.click(nextButton);
@@ -560,7 +538,6 @@ describe("ProtocolWizard", () => {
     it("should validate required fields", async () => {
       render(<ProtocolWizard {...defaultProps} />);
 
-      // Select protocol and navigate
       const modbusCard = screen
         .getAllByText(/modbus/i)[0]
         .closest("div");
@@ -570,7 +547,6 @@ describe("ProtocolWizard", () => {
       fireEvent.click(nextButton);
 
       await waitFor(() => {
-        // Should show required field indicators or validation messages
         const deviceIdInput = screen.getByLabelText(/Device ID/i);
         expect(deviceIdInput).toBeInTheDocument();
       });
@@ -579,7 +555,6 @@ describe("ProtocolWizard", () => {
     it("should handle invalid port numbers", async () => {
       render(<ProtocolWizard {...defaultProps} />);
 
-      // Navigate to connection settings
       const modbusCard = screen
         .getAllByText(/modbus/i)[0]
         .closest("div");
@@ -602,7 +577,6 @@ describe("ProtocolWizard", () => {
 
       render(<ProtocolWizard {...defaultProps} />);
 
-      // Navigate to test step and test
       const modbusCard = screen
         .getAllByText(/modbus/i)[0]
         .closest("div");
@@ -629,13 +603,11 @@ describe("ProtocolWizard", () => {
     it("should close dialog and reset state", async () => {
       render(<ProtocolWizard {...defaultProps} />);
 
-      // Select protocol
       const modbusCard = screen
         .getAllByText(/modbus/i)[0]
         .closest("div");
       fireEvent.click(modbusCard);
 
-      // Close dialog (implementation depends on UI)
       const closeButton = screen.queryByRole("button", {
         name: /close|cancel/i,
       });
@@ -651,7 +623,6 @@ describe("ProtocolWizard", () => {
     it("should maintain state during wizard navigation", async () => {
       render(<ProtocolWizard {...defaultProps} />);
 
-      // Select protocol
       const modbusCard = screen
         .getAllByText(/modbus/i)[0]
         .closest("div");
@@ -661,14 +632,12 @@ describe("ProtocolWizard", () => {
       fireEvent.click(nextButton);
 
       await waitFor(() => {
-        expect(screen.getByText("Device Information")).toBeInTheDocument();
+        expect(screen.getByText(/Device Information/i)).toBeInTheDocument();
       });
 
-      // Enter data
       const deviceIdInput = screen.getByLabelText(/Device ID/i);
       fireEvent.change(deviceIdInput, { target: { value: "TEST-001" } });
 
-      // Navigate forward and back
       fireEvent.click(screen.getByRole("button", { name: /next/i }));
       await waitFor(() => {}, { timeout: 100 });
 
