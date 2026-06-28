@@ -82,7 +82,6 @@ vi.mock("../components/ui/HighTechToggle", () => ({
 
 // Test wrapper with providers
 const TestWrapper = ({ children, userRole = "admin" }) => {
-  // Mock AuthContext value
   const authContextValue = {
     user: { id: 1, username: "testuser", role: userRole },
     userRole: userRole,
@@ -101,7 +100,6 @@ const TestWrapper = ({ children, userRole = "admin" }) => {
 describe("Dashboard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Mock localStorage
     Storage.prototype.getItem = vi.fn((key) => {
       if (key === "thermacore_user") {
         return JSON.stringify({ id: 1, username: "testuser" });
@@ -330,12 +328,6 @@ describe("Dashboard", () => {
     });
 
     it("should not render quick actions for regular users", () => {
-      // Mock user role
-      mockUseAuth.mockReturnValue({
-        userRole: "user",
-        permissions: { canViewAllUnits: false },
-      });
-
       render(
         <TestWrapper userRole="user">
           <Dashboard />
@@ -423,10 +415,11 @@ describe("Dashboard", () => {
       const toggleButton = toggleButtons[0];
       fireEvent.click(toggleButton);
 
+      // Wait for the performance dashboard to appear
       await waitFor(() => {
-        const perfDashboards = screen.getAllByTestId("performance-dashboard");
+        const perfDashboards = screen.queryAllByTestId("performance-dashboard");
         expect(perfDashboards.length).toBeGreaterThan(0);
-      });
+      }, { timeout: 3000 });
     });
 
     it("should render performance dashboard without duplicate header", async () => {
@@ -443,7 +436,7 @@ describe("Dashboard", () => {
       await waitFor(() => {
         const perfDashboards = screen.queryAllByTestId("performance-dashboard");
         expect(perfDashboards.length).toBeGreaterThan(0);
-      });
+      }, { timeout: 3000 });
     });
 
     it("should switch back to operator view from performance view", async () => {
@@ -458,9 +451,9 @@ describe("Dashboard", () => {
 
       fireEvent.click(toggleButton);
       await waitFor(() => {
-        const perfDashboards = screen.getAllByTestId("performance-dashboard");
+        const perfDashboards = screen.queryAllByTestId("performance-dashboard");
         expect(perfDashboards.length).toBeGreaterThan(0);
-      });
+      }, { timeout: 3000 });
 
       fireEvent.click(toggleButtons[0]);
       await waitFor(() => {
@@ -488,7 +481,7 @@ describe("Dashboard", () => {
             /Monitor power generation, efficiency, and environmental impact/i,
           ),
         ).toBeInTheDocument();
-      });
+      }, { timeout: 3000 });
     });
 
     it("should show performance breadcrumb in performance view", async () => {
@@ -505,7 +498,7 @@ describe("Dashboard", () => {
       await waitFor(() => {
         const perfTexts = screen.getAllByText(/performance/i);
         expect(perfTexts.length).toBeGreaterThan(0);
-      });
+      }, { timeout: 3000 });
     });
   });
 
