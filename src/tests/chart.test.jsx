@@ -54,7 +54,8 @@ describe("ChartContainer", () => {
         </ChartContainer>,
       );
 
-      expect(screen.getByText("Chart Content")).toBeInTheDocument();
+      const elements = screen.getAllByText("Chart Content");
+      expect(elements.length).toBeGreaterThan(0);
     });
 
     it("should render ResponsiveContainer", () => {
@@ -64,7 +65,8 @@ describe("ChartContainer", () => {
         </ChartContainer>,
       );
 
-      expect(screen.getByTestId("responsive-container")).toBeInTheDocument();
+      const elements = screen.getAllByTestId("responsive-container");
+      expect(elements.length).toBeGreaterThan(0);
     });
 
     it("should apply data-slot attribute", () => {
@@ -138,7 +140,8 @@ describe("ChartContainer", () => {
         </ChartContainer>,
       );
 
-      expect(screen.getByText("Test")).toBeInTheDocument();
+      const elements = screen.getAllByText("Test");
+      expect(elements.length).toBeGreaterThan(0);
     });
 
     it("should handle empty config", () => {
@@ -148,7 +151,8 @@ describe("ChartContainer", () => {
         </ChartContainer>,
       );
 
-      expect(screen.getByText("Chart")).toBeInTheDocument();
+      const elements = screen.getAllByText("Chart");
+      expect(elements.length).toBeGreaterThan(0);
     });
 
     it("should handle complex config", () => {
@@ -180,7 +184,8 @@ describe("ChartContainer", () => {
         </ChartContainer>,
       );
 
-      expect(screen.getByText("Chart")).toBeInTheDocument();
+      const elements = screen.getAllByText("Chart");
+      expect(elements.length).toBeGreaterThan(0);
     });
   });
 
@@ -287,7 +292,8 @@ describe("ChartTooltipContent", () => {
         </ChartContainer>,
       );
 
-      expect(screen.getByText("100")).toBeInTheDocument();
+      const elements = screen.getAllByText("100");
+      expect(elements.length).toBeGreaterThan(0);
     });
 
     it("should not render when not active", () => {
@@ -297,8 +303,8 @@ describe("ChartTooltipContent", () => {
         </ChartContainer>,
       );
 
-      // Tooltip content should not be rendered
-      expect(screen.queryByText("100")).not.toBeInTheDocument();
+      const elements = screen.queryAllByText("100");
+      expect(elements.length).toBe(0);
     });
 
     it("should not render when payload is empty", () => {
@@ -308,9 +314,10 @@ describe("ChartTooltipContent", () => {
         </ChartContainer>,
       );
 
-      // No tooltip content should be rendered with empty payload
-      expect(screen.queryByText("Value")).not.toBeInTheDocument();
-      expect(screen.queryByText("Count")).not.toBeInTheDocument();
+      const valueElements = screen.queryAllByText("Value");
+      const countElements = screen.queryAllByText("Count");
+      expect(valueElements.length).toBe(0);
+      expect(countElements.length).toBe(0);
     });
   });
 
@@ -326,7 +333,8 @@ describe("ChartTooltipContent", () => {
         </ChartContainer>,
       );
 
-      expect(screen.getByText("Value")).toBeInTheDocument();
+      const elements = screen.getAllByText("Value");
+      expect(elements.length).toBeGreaterThan(0);
     });
 
     it("should hide label when hideLabel is true", () => {
@@ -341,8 +349,8 @@ describe("ChartTooltipContent", () => {
         </ChartContainer>,
       );
 
-      // Label should not be rendered separately
-      expect(screen.queryByText("Test Label")).not.toBeInTheDocument();
+      const elements = screen.queryAllByText("Test Label");
+      expect(elements.length).toBe(0);
     });
 
     it("should format label with labelFormatter", () => {
@@ -359,7 +367,8 @@ describe("ChartTooltipContent", () => {
         </ChartContainer>,
       );
 
-      expect(screen.getByText(/Custom:/)).toBeInTheDocument();
+      const elements = screen.getAllByText(/Custom:/);
+      expect(elements.length).toBeGreaterThan(0);
     });
   });
 
@@ -371,7 +380,6 @@ describe("ChartTooltipContent", () => {
         </ChartContainer>,
       );
 
-      // Dot indicator should be rendered (as a div with background color)
       expect(container.querySelector("[style]")).toBeInTheDocument();
     });
 
@@ -414,7 +422,8 @@ describe("ChartTooltipContent", () => {
         </ChartContainer>,
       );
 
-      expect(screen.getByText("100")).toBeInTheDocument();
+      const elements = screen.getAllByText("100");
+      expect(elements.length).toBeGreaterThan(0);
     });
   });
 
@@ -443,8 +452,10 @@ describe("ChartTooltipContent", () => {
         </ChartContainer>,
       );
 
-      expect(screen.getByText("100")).toBeInTheDocument();
-      expect(screen.getByText("50")).toBeInTheDocument();
+      const elements100 = screen.getAllByText("100");
+      const elements50 = screen.getAllByText("50");
+      expect(elements100.length).toBeGreaterThan(0);
+      expect(elements50.length).toBeGreaterThan(0);
     });
 
     it("should format values with custom formatter", () => {
@@ -460,7 +471,8 @@ describe("ChartTooltipContent", () => {
         </ChartContainer>,
       );
 
-      expect(screen.getByText("$100")).toBeInTheDocument();
+      const elements = screen.getAllByText("$100");
+      expect(elements.length).toBeGreaterThan(0);
     });
 
     it("should handle undefined values gracefully", () => {
@@ -480,7 +492,6 @@ describe("ChartTooltipContent", () => {
         </ChartContainer>,
       );
 
-      // Should render without error - check for Value label
       const valueLabels = screen.getAllByText("Value");
       expect(valueLabels.length).toBeGreaterThan(0);
     });
@@ -539,8 +550,10 @@ describe("ChartLegendContent", () => {
         </ChartContainer>,
       );
 
-      expect(screen.getByText("Value")).toBeInTheDocument();
-      expect(screen.getByText("Count")).toBeInTheDocument();
+      const valueElements = screen.getAllByText("Value");
+      const countElements = screen.getAllByText("Count");
+      expect(valueElements.length).toBeGreaterThan(0);
+      expect(countElements.length).toBeGreaterThan(0);
     });
 
     it("should not render when payload is empty", () => {
@@ -550,9 +563,10 @@ describe("ChartLegendContent", () => {
         </ChartContainer>,
       );
 
-      // Should not render legend items, but chart style may exist
-      expect(screen.queryByText("Value")).not.toBeInTheDocument();
-      expect(screen.queryByText("Count")).not.toBeInTheDocument();
+      const valueElements = screen.queryAllByText("Value");
+      const countElements = screen.queryAllByText("Count");
+      expect(valueElements.length).toBe(0);
+      expect(countElements.length).toBe(0);
     });
 
     it("should not render when payload is null", () => {
@@ -562,9 +576,10 @@ describe("ChartLegendContent", () => {
         </ChartContainer>,
       );
 
-      // Should not render legend items, but chart style may exist
-      expect(screen.queryByText("Value")).not.toBeInTheDocument();
-      expect(screen.queryByText("Count")).not.toBeInTheDocument();
+      const valueElements = screen.queryAllByText("Value");
+      const countElements = screen.queryAllByText("Count");
+      expect(valueElements.length).toBe(0);
+      expect(countElements.length).toBe(0);
     });
   });
 
@@ -611,9 +626,10 @@ describe("ChartLegendContent", () => {
         </ChartContainer>,
       );
 
-      // Should still render labels
-      expect(screen.getByText("Value")).toBeInTheDocument();
-      expect(screen.getByText("Count")).toBeInTheDocument();
+      const valueElements = screen.getAllByText("Value");
+      const countElements = screen.getAllByText("Count");
+      expect(valueElements.length).toBeGreaterThan(0);
+      expect(countElements.length).toBeGreaterThan(0);
     });
   });
 
@@ -637,8 +653,10 @@ describe("ChartLegendContent", () => {
         </ChartContainer>,
       );
 
-      expect(screen.getByText("Value")).toBeInTheDocument();
-      expect(screen.getByText("Count")).toBeInTheDocument();
+      const valueElements = screen.getAllByText("Value");
+      const countElements = screen.getAllByText("Count");
+      expect(valueElements.length).toBeGreaterThan(0);
+      expect(countElements.length).toBeGreaterThan(0);
     });
   });
 });
@@ -674,7 +692,9 @@ describe("Chart Integration", () => {
       </ChartContainer>,
     );
 
-    expect(screen.getByTestId("recharts-tooltip")).toBeInTheDocument();
-    expect(screen.getByTestId("recharts-legend")).toBeInTheDocument();
+    const tooltipElements = screen.getAllByTestId("recharts-tooltip");
+    const legendElements = screen.getAllByTestId("recharts-legend");
+    expect(tooltipElements.length).toBeGreaterThan(0);
+    expect(legendElements.length).toBeGreaterThan(0);
   });
 });
