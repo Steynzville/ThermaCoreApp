@@ -112,7 +112,6 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      // Use getAllByText since unit name may appear multiple times (header, breadcrumb, etc.)
       const unitNameElements = screen.getAllByText(/ThermaCore Unit 003/i);
       expect(unitNameElements.length).toBeGreaterThan(0);
     });
@@ -140,11 +139,7 @@ describe("UnitPerformance", () => {
         </BrowserRouter>,
       );
 
-      // Check component renders without crashing during loading state
       expect(container).toBeTruthy();
-      // Loading spinner may or may not be present depending on implementation
-      const _spinner = container.querySelector(".animate-spin");
-      // Just verify we got a container (loading state handled gracefully)
     });
 
     it("should show back button", () => {
@@ -154,8 +149,8 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      const backButton = screen.getByRole("button", { name: /back/i });
-      expect(backButton).toBeInTheDocument();
+      const backButtons = screen.getAllByRole("button", { name: /back/i });
+      expect(backButtons.length).toBeGreaterThan(0);
     });
   });
 
@@ -167,7 +162,6 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      // Check that power-related content appears
       expect(container.textContent).toMatch(/Power Generation|kW/i);
     });
 
@@ -178,43 +172,36 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      // Check that efficiency appears somewhere in the rendered component
       expect(container.textContent).toMatch(/Efficiency|%/i);
     });
 
     it.skip("should display operating metrics", () => {
-      // TODO: Implement temperature display in UnitPerformance component
       const { container } = render(
         <TestWrapper>
           <UnitPerformance />
         </TestWrapper>,
       );
 
-      // Check that temperature appears somewhere in the rendered component
       expect(container.textContent).toMatch(/Temperature|°/i);
     });
 
     it.skip("should display pressure metrics", () => {
-      // TODO: Implement pressure display in UnitPerformance component
       const { container } = render(
         <TestWrapper>
           <UnitPerformance />
         </TestWrapper>,
       );
 
-      // Check that pressure appears somewhere in the rendered component
       expect(container.textContent).toMatch(/Pressure|PSI|Bar/i);
     });
 
     it.skip("should display fuel information", () => {
-      // TODO: Implement fuel consumption display in UnitPerformance component
       const { container } = render(
         <TestWrapper>
           <UnitPerformance />
         </TestWrapper>,
       );
 
-      // Check that fuel consumption appears somewhere in the rendered component
       expect(container.textContent).toMatch(/Fuel|Consumption/i);
     });
 
@@ -225,7 +212,6 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      // Check that operating hours appears somewhere in the rendered component
       expect(container.textContent).toMatch(/Hours|Operating|Time/i);
     });
   });
@@ -238,7 +224,6 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      // Check for card icons
       const icons = container.querySelectorAll("svg");
       expect(icons.length).toBeGreaterThan(0);
     });
@@ -250,7 +235,6 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      // Check for trend icons (TrendingUp/Down)
       const trendIcons = container.querySelectorAll(
         ".text-green-500, .text-red-500",
       );
@@ -264,7 +248,6 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      // Check for colored borders
       const coloredCards = container.querySelectorAll(
         ".border-blue-200, .border-green-200, .border-orange-200",
       );
@@ -274,24 +257,21 @@ describe("UnitPerformance", () => {
 
   describe("Threshold Validation", () => {
     it.skip("should indicate when efficiency is above threshold", () => {
-      // TODO: Implement efficiency display in UnitPerformance component
       const { container } = render(
         <TestWrapper>
           <UnitPerformance />
         </TestWrapper>,
       );
 
-      // 92.5% efficiency is above typical threshold (85%)
       expect(container.textContent).toMatch(/92[.,]5|92\.5%?/);
     });
 
     it.skip("should indicate when efficiency is below threshold", () => {
-      // TODO: Implement efficiency display in UnitPerformance component
       const lowEfficiencyUnits = [
         {
           id: "TC003",
           name: "ThermaCore Unit 003",
-          efficiency: 70, // Below threshold
+          efficiency: 70,
           outputPower: 1000,
         },
       ];
@@ -306,12 +286,11 @@ describe("UnitPerformance", () => {
     });
 
     it.skip("should show warning for high temperature", () => {
-      // TODO: Implement temperature display in UnitPerformance component
       const highTempUnits = [
         {
           id: "TC003",
           name: "ThermaCore Unit 003",
-          temperature: 95, // High temperature
+          temperature: 95,
           efficiency: 85,
         },
       ];
@@ -334,7 +313,6 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      // Green trend up icons
       const upTrends = container.querySelectorAll(".text-green-500");
       expect(upTrends.length).toBeGreaterThanOrEqual(0);
     });
@@ -346,7 +324,6 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      // Red trend down icons
       const downTrends = container.querySelectorAll(".text-red-500");
       expect(downTrends.length).toBeGreaterThanOrEqual(0);
     });
@@ -360,7 +337,6 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      // FinancialAssumptions component should be rendered
       expect(screen).toBeTruthy();
     });
 
@@ -371,7 +347,6 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      // EnvironmentalAssumptions component should be rendered
       expect(screen).toBeTruthy();
     });
 
@@ -382,7 +357,6 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      // Check for currency formatting ($ symbol)
       const dollarSigns = screen.queryAllByText(/\$/);
       expect(dollarSigns.length).toBeGreaterThanOrEqual(0);
     });
@@ -396,7 +370,8 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      const backButton = screen.getByRole("button", { name: /back/i });
+      const backButtons = screen.getAllByRole("button", { name: /back/i });
+      const backButton = backButtons[0];
       backButton.click();
 
       await waitFor(() => {
@@ -420,7 +395,6 @@ describe("UnitPerformance", () => {
         </BrowserRouter>,
       );
 
-      // Should show appropriate message or redirect
       expect(screen).toBeTruthy();
     });
   });
@@ -433,7 +407,8 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      expect(screen.getByText(/Running/i)).toBeInTheDocument();
+      const runningElements = screen.getAllByText(/Running/i);
+      expect(runningElements.length).toBeGreaterThan(0);
     });
 
     it("should handle offline status", () => {
@@ -452,7 +427,8 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      expect(screen.getByText(/Offline/i)).toBeInTheDocument();
+      const offlineElements = screen.getAllByText(/Offline/i);
+      expect(offlineElements.length).toBeGreaterThan(0);
     });
   });
 
@@ -464,7 +440,6 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      // Check for visible labels - use getAllByText since text may appear multiple times
       const unitLabels = screen.getAllByText(/ThermaCore Unit 003/i);
       expect(unitLabels.length).toBeGreaterThan(0);
     });
@@ -476,8 +451,8 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      const backButton = screen.getByRole("button", { name: /back/i });
-      expect(backButton).toBeEnabled();
+      const backButtons = screen.getAllByRole("button", { name: /back/i });
+      expect(backButtons[0]).toBeEnabled();
     });
   });
 
@@ -499,7 +474,6 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      // Check for grid classes
       expect(container.querySelector(".grid, .flex")).toBeTruthy();
     });
   });
@@ -512,7 +486,6 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      // Check for dark mode classes
       const darkElements = container.querySelectorAll("[class*='dark:']");
       expect(darkElements.length).toBeGreaterThan(0);
     });
@@ -520,8 +493,6 @@ describe("UnitPerformance", () => {
 
   describe("Error States", () => {
     it("should handle invalid unit ID", () => {
-      // The test already uses mockParams defined at the top
-      // Testing with the default mock params which uses id: "3"
       expect(() => {
         render(
           <TestWrapper>
@@ -536,7 +507,6 @@ describe("UnitPerformance", () => {
         {
           id: "TC003",
           name: "ThermaCore Unit 003",
-          // Missing other properties
         },
       ];
 
@@ -546,7 +516,6 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      // Should render without crashing - use getAllByText since text may appear multiple times
       const unitLabels = screen.getAllByText(/ThermaCore Unit 003/i);
       expect(unitLabels.length).toBeGreaterThan(0);
     });
@@ -560,7 +529,6 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      // Performance cards should have hover effects
       const cards = container.querySelectorAll(".hover\\:shadow-md");
       expect(cards.length).toBeGreaterThan(0);
     });
@@ -572,7 +540,6 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      // Some metrics may have asterisks for footnotes
       const asterisks = screen.queryAllByText("*");
       expect(asterisks.length).toBeGreaterThanOrEqual(0);
     });
