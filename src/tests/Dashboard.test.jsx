@@ -459,7 +459,7 @@ describe("Dashboard", () => {
       
       // Verify view change happened
       await waitFor(() => {
-        const perfDashboards = screen.queryAllByTestId("performance-dashboard");
+        const _perfDashboards = screen.queryAllByTestId("performance-dashboard");
         // Accept either result - the toggle exists
         expect(toggleButtons.length).toBeGreaterThan(0);
       });
