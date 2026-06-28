@@ -372,7 +372,7 @@ describe("UnitPerformance", () => {
 
       const backButtons = screen.getAllByRole("button", { name: /back/i });
       const backButton = backButtons[0];
-      backButton.click();
+      fireEvent.click(backButton);
 
       await waitFor(() => {
         expect(mockNavigate).toHaveBeenCalledWith(-1);
