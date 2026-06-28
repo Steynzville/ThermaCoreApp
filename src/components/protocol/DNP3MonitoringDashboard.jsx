@@ -464,9 +464,9 @@ const DNP3MonitoringDashboard = ({ isOpen, onClose, tenantId }) => {
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {events.map((event, index) => (
+                      {events.map((event) => (
                         <div
-                          key={index}
+                          key={`${event.type}-${event.timestamp}-${Math.random().toString(36).substr(2, 6)}`}
                           className="p-3 border rounded-lg bg-muted/50"
                         >
                           <div className="flex items-center justify-between text-sm mb-1">
@@ -868,7 +868,7 @@ const DNP3MonitoringDashboard = ({ isOpen, onClose, tenantId }) => {
                 <div className="space-y-2">
                   {events.map((event) => (
                     <div
-                      key={`${event.type}-${event.timestamp}`}
+                      key={`${event.type}-${event.timestamp}-${Math.random().toString(36).substr(2, 6)}`}
                       className="p-3 border rounded-lg hover:bg-muted/50"
                     >
                       <div className="flex justify-between items-start">
