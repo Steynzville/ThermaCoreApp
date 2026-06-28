@@ -1,20 +1,36 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Set up mocks for localStorage, sessionStorage, and window.location before importing any modules
 const store = {};
 const mockLocalStorage = {
   getItem: vi.fn((key) => store[key] || null),
-  setItem: vi.fn((key, value) => { store[key] = String(value); }),
-  removeItem: vi.fn((key) => { delete store[key]; }),
-  clear: vi.fn(() => { Object.keys(store).forEach((k) => delete store[k]); }),
+  setItem: vi.fn((key, value) => {
+    store[key] = String(value);
+  }),
+  removeItem: vi.fn((key) => {
+    delete store[key];
+  }),
+  clear: vi.fn(() => {
+    Object.keys(store).forEach((k) => {
+      delete store[k];
+    });
+  }),
 };
 
 const sessionStore = {};
 const mockSessionStorage = {
   getItem: vi.fn((key) => sessionStore[key] || null),
-  setItem: vi.fn((key, value) => { sessionStore[key] = String(value); }),
-  removeItem: vi.fn((key) => { delete sessionStore[key]; }),
-  clear: vi.fn(() => { Object.keys(sessionStore).forEach((k) => delete sessionStore[k]); }),
+  setItem: vi.fn((key, value) => {
+    sessionStore[key] = String(value);
+  }),
+  removeItem: vi.fn((key) => {
+    delete sessionStore[key];
+  }),
+  clear: vi.fn(() => {
+    Object.keys(sessionStore).forEach((k) => {
+      delete sessionStore[k];
+    });
+  }),
 };
 
 Object.defineProperty(window, "localStorage", { value: mockLocalStorage });
@@ -78,7 +94,7 @@ describe("API Service - /src/services/api.js", () => {
     await import("../../services/api");
 
     expect(mockAxiosInstance.defaults.headers.common["Authorization"]).toBe(
-      "Bearer test-token-123"
+      "Bearer test-token-123",
     );
   });
 
@@ -88,7 +104,7 @@ describe("API Service - /src/services/api.js", () => {
     await import("../../services/api");
 
     expect(mockAxiosInstance.defaults.headers.common["Authorization"]).toBe(
-      "Bearer alt-token-xyz"
+      "Bearer alt-token-xyz",
     );
   });
 
@@ -98,9 +114,12 @@ describe("API Service - /src/services/api.js", () => {
     setAuthToken("new-session-token", true);
 
     expect(mockAxiosInstance.defaults.headers.common["Authorization"]).toBe(
-      "Bearer new-session-token"
+      "Bearer new-session-token",
     );
-    expect(mockLocalStorage.setItem).toHaveBeenCalledWith("authToken", "new-session-token");
+    expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
+      "authToken",
+      "new-session-token",
+    );
     expect(mockSessionStorage.setItem).not.toHaveBeenCalled();
   });
 
@@ -110,19 +129,25 @@ describe("API Service - /src/services/api.js", () => {
     setAuthToken("temp-token", false);
 
     expect(mockAxiosInstance.defaults.headers.common["Authorization"]).toBe(
-      "Bearer temp-token"
+      "Bearer temp-token",
     );
-    expect(mockSessionStorage.setItem).toHaveBeenCalledWith("authToken", "temp-token");
+    expect(mockSessionStorage.setItem).toHaveBeenCalledWith(
+      "authToken",
+      "temp-token",
+    );
     expect(mockLocalStorage.setItem).not.toHaveBeenCalled();
   });
 
   it("should clear auth token when token is null", async () => {
     const { setAuthToken } = await import("../../services/api");
-    mockAxiosInstance.defaults.headers.common["Authorization"] = "Bearer old-token";
+    mockAxiosInstance.defaults.headers.common["Authorization"] =
+      "Bearer old-token";
 
     setAuthToken(null);
 
-    expect(mockAxiosInstance.defaults.headers.common["Authorization"]).toBeUndefined();
+    expect(
+      mockAxiosInstance.defaults.headers.common["Authorization"],
+    ).toBeUndefined();
     expect(mockLocalStorage.removeItem).toHaveBeenCalledWith("authToken");
     expect(mockSessionStorage.removeItem).toHaveBeenCalledWith("authToken");
   });
@@ -131,7 +156,8 @@ describe("API Service - /src/services/api.js", () => {
     await import("../../services/api");
 
     // Retrieve response interceptor handler
-    const responseInterceptor = mockAxiosInstance.interceptors.response.use.mock.calls[0][1];
+    const responseInterceptor =
+      mockAxiosInstance.interceptors.response.use.mock.calls[0][1];
 
     const mockError = {
       response: {
@@ -142,7 +168,9 @@ describe("API Service - /src/services/api.js", () => {
     await expect(responseInterceptor(mockError)).rejects.toEqual(mockError);
 
     // Verify side effects
-    expect(mockAxiosInstance.defaults.headers.common["Authorization"]).toBeUndefined();
+    expect(
+      mockAxiosInstance.defaults.headers.common["Authorization"],
+    ).toBeUndefined();
     expect(mockLocalStorage.removeItem).toHaveBeenCalledWith("authToken");
     expect(mockLocalStorage.removeItem).toHaveBeenCalledWith("user");
     expect(window.location.href).toBe("/login");
@@ -151,7 +179,8 @@ describe("API Service - /src/services/api.js", () => {
   it("should pass through non-401 errors unchanged", async () => {
     await import("../../services/api");
 
-    const responseInterceptor = mockAxiosInstance.interceptors.response.use.mock.calls[0][1];
+    const responseInterceptor =
+      mockAxiosInstance.interceptors.response.use.mock.calls[0][1];
 
     const mockError = {
       response: {
@@ -169,7 +198,8 @@ describe("API Service - /src/services/api.js", () => {
   it("should return response directly on success", async () => {
     await import("../../services/api");
 
-    const successInterceptor = mockAxiosInstance.interceptors.response.use.mock.calls[0][0];
+    const successInterceptor =
+      mockAxiosInstance.interceptors.response.use.mock.calls[0][0];
     const mockResponse = { data: { success: true } };
 
     const result = successInterceptor(mockResponse);
