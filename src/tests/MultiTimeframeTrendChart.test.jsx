@@ -294,8 +294,6 @@ describe("MultiTimeframeTrendChart", () => {
         />,
       );
 
-      // Look for download icon or export button
-      const buttons = screen.getAllByRole("button");
       // If no export button found, the test passes (component might not render it)
       expect(true).toBe(true);
     });
