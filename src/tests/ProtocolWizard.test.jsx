@@ -53,32 +53,26 @@ describe("ProtocolWizard", () => {
     it("should not render when closed", () => {
       render(<ProtocolWizard {...defaultProps} isOpen={false} />);
 
-      expect(screen.queryByText("Select Protocol")).not.toBeInTheDocument();
+      // Use queryAllByText and check length
+      const elements = screen.queryAllByText("Select Protocol");
+      expect(elements).toHaveLength(0);
     });
 
     it("should display all protocol options", () => {
       render(<ProtocolWizard {...defaultProps} />);
 
-      expect(
-        screen.getByText((content, _element) =>
-          content.toUpperCase().includes("MODBUS"),
-        ),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByText((content, _element) =>
-          content.toUpperCase().includes("OPCUA"),
-        ),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByText((content, _element) =>
-          content.toUpperCase().includes("DNP3"),
-        ),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByText((content, _element) =>
-          content.toUpperCase().includes("MQTT"),
-        ),
-      ).toBeInTheDocument();
+      // Use getAllByText and check at least one exists
+      const modbusElements = screen.getAllByText(/modbus/i);
+      expect(modbusElements.length).toBeGreaterThan(0);
+      
+      const opcuaElements = screen.getAllByText(/opcua/i);
+      expect(opcuaElements.length).toBeGreaterThan(0);
+      
+      const dnp3Elements = screen.getAllByText(/dnp3/i);
+      expect(dnp3Elements.length).toBeGreaterThan(0);
+      
+      const mqttElements = screen.getAllByText(/mqtt/i);
+      expect(mqttElements.length).toBeGreaterThan(0);
     });
 
     it("should show protocol descriptions", () => {
@@ -100,9 +94,7 @@ describe("ProtocolWizard", () => {
       render(<ProtocolWizard {...defaultProps} />);
 
       const modbusCard = screen
-        .getByText((content, _element) =>
-          content.toUpperCase().includes("MODBUS"),
-        )
+        .getAllByText(/modbus/i)[0]
         .closest("div");
       fireEvent.click(modbusCard);
 
@@ -115,7 +107,7 @@ describe("ProtocolWizard", () => {
       render(<ProtocolWizard {...defaultProps} />);
 
       const opcuaCard = screen
-        .getByText((content) => content.toUpperCase().includes("OPCUA"))
+        .getAllByText(/opcua/i)[0]
         .closest("div");
       fireEvent.click(opcuaCard);
 
@@ -128,7 +120,7 @@ describe("ProtocolWizard", () => {
       render(<ProtocolWizard {...defaultProps} />);
 
       const dnp3Card = screen
-        .getByText((content) => content.toUpperCase().includes("DNP3"))
+        .getAllByText(/dnp3/i)[0]
         .closest("div");
       fireEvent.click(dnp3Card);
 
@@ -141,7 +133,7 @@ describe("ProtocolWizard", () => {
       render(<ProtocolWizard {...defaultProps} />);
 
       const mqttCard = screen
-        .getByText((content) => content.toUpperCase().includes("MQTT"))
+        .getAllByText(/mqtt/i)[0]
         .closest("div");
       fireEvent.click(mqttCard);
 
@@ -157,7 +149,7 @@ describe("ProtocolWizard", () => {
 
       // Select protocol
       const modbusCard = screen
-        .getByText((content) => content.toUpperCase().includes("MODBUS"))
+        .getAllByText(/modbus/i)[0]
         .closest("div");
       fireEvent.click(modbusCard);
 
@@ -175,7 +167,7 @@ describe("ProtocolWizard", () => {
 
       // Navigate forward
       const modbusCard = screen
-        .getByText((content) => content.toUpperCase().includes("MODBUS"))
+        .getAllByText(/modbus/i)[0]
         .closest("div");
       fireEvent.click(modbusCard);
 
@@ -220,7 +212,7 @@ describe("ProtocolWizard", () => {
 
       // Navigate to Modbus device info
       const modbusCard = screen
-        .getByText((content) => content.toUpperCase().includes("MODBUS"))
+        .getAllByText(/modbus/i)[0]
         .closest("div");
       fireEvent.click(modbusCard);
 
@@ -300,7 +292,7 @@ describe("ProtocolWizard", () => {
 
       // Select OPC-UA
       const opcuaCard = screen
-        .getByText((content) => content.toUpperCase().includes("OPCUA"))
+        .getAllByText(/opcua/i)[0]
         .closest("div");
       fireEvent.click(opcuaCard);
 
@@ -366,7 +358,7 @@ describe("ProtocolWizard", () => {
 
       // Select DNP3
       const dnp3Card = screen
-        .getByText((content) => content.toUpperCase().includes("DNP3"))
+        .getAllByText(/dnp3/i)[0]
         .closest("div");
       fireEvent.click(dnp3Card);
 
@@ -404,7 +396,7 @@ describe("ProtocolWizard", () => {
 
       // Navigate to test connection step for Modbus
       const modbusCard = screen
-        .getByText((content) => content.toUpperCase().includes("MODBUS"))
+        .getAllByText(/modbus/i)[0]
         .closest("div");
       fireEvent.click(modbusCard);
 
@@ -501,7 +493,7 @@ describe("ProtocolWizard", () => {
 
       // Navigate to final step
       const modbusCard = screen
-        .getByText((content) => content.toUpperCase().includes("MODBUS"))
+        .getAllByText(/modbus/i)[0]
         .closest("div");
       fireEvent.click(modbusCard);
 
@@ -570,7 +562,7 @@ describe("ProtocolWizard", () => {
 
       // Select protocol and navigate
       const modbusCard = screen
-        .getByText((content) => content.toUpperCase().includes("MODBUS"))
+        .getAllByText(/modbus/i)[0]
         .closest("div");
       fireEvent.click(modbusCard);
 
@@ -589,7 +581,7 @@ describe("ProtocolWizard", () => {
 
       // Navigate to connection settings
       const modbusCard = screen
-        .getByText((content) => content.toUpperCase().includes("MODBUS"))
+        .getAllByText(/modbus/i)[0]
         .closest("div");
       fireEvent.click(modbusCard);
 
@@ -612,7 +604,7 @@ describe("ProtocolWizard", () => {
 
       // Navigate to test step and test
       const modbusCard = screen
-        .getByText((content) => content.toUpperCase().includes("MODBUS"))
+        .getAllByText(/modbus/i)[0]
         .closest("div");
       fireEvent.click(modbusCard);
 
@@ -639,7 +631,7 @@ describe("ProtocolWizard", () => {
 
       // Select protocol
       const modbusCard = screen
-        .getByText((content) => content.toUpperCase().includes("MODBUS"))
+        .getAllByText(/modbus/i)[0]
         .closest("div");
       fireEvent.click(modbusCard);
 
@@ -661,7 +653,7 @@ describe("ProtocolWizard", () => {
 
       // Select protocol
       const modbusCard = screen
-        .getByText((content) => content.toUpperCase().includes("MODBUS"))
+        .getAllByText(/modbus/i)[0]
         .closest("div");
       fireEvent.click(modbusCard);
 
