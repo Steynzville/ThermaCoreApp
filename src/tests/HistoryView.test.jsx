@@ -95,7 +95,7 @@ describe("HistoryView", () => {
         () =>
           new Promise((resolve) => {
             setTimeout(() => resolve([]), 100);
-          }),
+          })
       );
 
       render(
@@ -395,7 +395,7 @@ describe("HistoryView", () => {
 
       await waitFor(() => {
         const unresolvedElements = Array.from(
-          container.querySelectorAll("p"),
+          container.querySelectorAll("p")
         ).filter((el) => el.textContent === "Unresolved");
         expect(unresolvedElements.length).toBeGreaterThan(0);
         expect(unresolvedElements[0].className).toMatch(/text-red-600/);
@@ -458,7 +458,28 @@ describe("HistoryView", () => {
     });
 
     it("should hide load more button when all events shown", async () => {
-      unitService.getEventHistory.mockResolvedValue([]);
+      // Use a small dataset where all events fit on screen
+      const smallEvents = [
+        {
+          id: "event-1",
+          unitName: "ThermaCore Unit 001",
+          timestamp: new Date().toISOString(),
+          description: "Test event 1",
+        },
+        {
+          id: "event-2",
+          unitName: "ThermaCore Unit 002",
+          timestamp: new Date().toISOString(),
+          description: "Test event 2",
+        },
+        {
+          id: "event-3",
+          unitName: "ThermaCore Unit 003",
+          timestamp: new Date().toISOString(),
+          description: "Test event 3",
+        },
+      ];
+      unitService.getEventHistory.mockResolvedValue(smallEvents);
 
       render(
         <TestWrapper>
@@ -467,13 +488,8 @@ describe("HistoryView", () => {
       );
 
       await waitFor(() => {
-        const loadMoreButton = screen.queryByText(/Load more Events/i);
-        if (loadMoreButton) {
-          fireEvent.click(loadMoreButton);
-          fireEvent.click(loadMoreButton);
-        }
-        // Test passes if no error occurs
-        expect(true).toBe(true);
+        const buttons = screen.queryAllByText(/Load more Events/i);
+        expect(buttons.length).toBe(0);
       });
     });
   });
