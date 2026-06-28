@@ -13,7 +13,6 @@
  */
 
 import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SystemHealth from "@/components/SystemHealth";
 
@@ -253,10 +252,8 @@ describe("SystemHealth", () => {
       render(<SystemHealth />);
 
       await waitFor(() => {
-        // Look for text containing "operational" and numbers
         const elements = screen.getAllByText(/operational/i);
         expect(elements.length).toBeGreaterThan(0);
-        // Check if any element contains "2" and "operational"
         const hasTwoOperational = elements.some(el => 
           el.textContent?.includes("2") && el.textContent?.toLowerCase().includes("operational")
         );
@@ -279,7 +276,6 @@ describe("SystemHealth", () => {
       await waitFor(() => {
         const elements = screen.getAllByText(/outage/i);
         expect(elements.length).toBeGreaterThan(0);
-        // Check if any element contains "1" and "outage"
         const hasOneOutage = elements.some(el => 
           el.textContent?.includes("1") && el.textContent?.toLowerCase().includes("outage")
         );
@@ -441,7 +437,6 @@ describe("SystemHealth", () => {
     });
 
     it("should update timestamp on refresh", async () => {
-      // Get the actual button and click it
       render(<SystemHealth />);
 
       await waitFor(() => {
@@ -449,9 +444,7 @@ describe("SystemHealth", () => {
         expect(timestampElements.length).toBeGreaterThan(0);
       });
 
-      // Find the refresh button by its icon or aria-label
       const refreshButton = screen.getByRole("button", { name: /refresh/i });
-      // Use fireEvent instead of userEvent to avoid pointer-events issues
       fireEvent.click(refreshButton);
 
       await waitFor(() => {
