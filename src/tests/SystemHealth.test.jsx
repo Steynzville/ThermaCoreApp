@@ -62,7 +62,6 @@ describe("SystemHealth", () => {
   });
 
   afterEach(() => {
-    // Clean up any fake timers if they were set
     try {
       vi.useRealTimers();
     } catch (_e) {
@@ -250,31 +249,42 @@ describe("SystemHealth", () => {
   });
 
   describe("Status Aggregation", () => {
-    it("should count operational services", () => {
+    it("should count operational services", async () => {
       render(<SystemHealth />);
 
-      const operationalText = screen.queryByText(/2.*operational/i);
-      if (operationalText) {
-        expect(operationalText).toBeInTheDocument();
-      }
+      await waitFor(() => {
+        // Look for text containing "operational" and numbers
+        const elements = screen.getAllByText(/operational/i);
+        expect(elements.length).toBeGreaterThan(0);
+        // Check if any element contains "2" and "operational"
+        const hasTwoOperational = elements.some(el => 
+          el.textContent?.includes("2") && el.textContent?.toLowerCase().includes("operational")
+        );
+        expect(hasTwoOperational).toBe(true);
+      });
     });
 
-    it("should count degraded services", () => {
+    it("should count degraded services", async () => {
       render(<SystemHealth />);
 
-      const degradedText = screen.queryByText(/1.*degraded/i);
-      if (degradedText) {
-        expect(degradedText).toBeInTheDocument();
-      }
+      await waitFor(() => {
+        const elements = screen.getAllByText(/degraded/i);
+        expect(elements.length).toBeGreaterThan(0);
+      });
     });
 
-    it("should count outage services", () => {
+    it("should count outage services", async () => {
       render(<SystemHealth />);
 
-      const outageText = screen.queryByText(/1.*outage/i);
-      if (outageText) {
-        expect(outageText).toBeInTheDocument();
-      }
+      await waitFor(() => {
+        const elements = screen.getAllByText(/outage/i);
+        expect(elements.length).toBeGreaterThan(0);
+        // Check if any element contains "1" and "outage"
+        const hasOneOutage = elements.some(el => 
+          el.textContent?.includes("1") && el.textContent?.toLowerCase().includes("outage")
+        );
+        expect(hasOneOutage).toBe(true);
+      });
     });
   });
 
@@ -317,15 +327,15 @@ describe("SystemHealth", () => {
 
       await waitFor(() => {
         const greenIcons = container.querySelectorAll(
-          ".text-green-500, .text-green-600, .text-green-400",
+          ".text-green-500, .text-green-600, .text-green-400"
         );
         expect(greenIcons.length).toBeGreaterThan(0);
         const yellowIcons = container.querySelectorAll(
-          ".text-yellow-500, .text-yellow-600, .text-yellow-400",
+          ".text-yellow-500, .text-yellow-600, .text-yellow-400"
         );
         expect(yellowIcons.length).toBeGreaterThan(0);
         const redIcons = container.querySelectorAll(
-          ".text-red-500, .text-red-600, .text-red-400",
+          ".text-red-500, .text-red-600, .text-red-400"
         );
         expect(redIcons.length).toBeGreaterThan(0);
       });
@@ -431,7 +441,7 @@ describe("SystemHealth", () => {
     });
 
     it("should update timestamp on refresh", async () => {
-      const user = userEvent.setup({ delay: null });
+      // Get the actual button and click it
       render(<SystemHealth />);
 
       await waitFor(() => {
@@ -439,9 +449,10 @@ describe("SystemHealth", () => {
         expect(timestampElements.length).toBeGreaterThan(0);
       });
 
-      const refreshButtons = screen.getAllByRole("button", { name: /Refresh/i });
-      const refreshButton = refreshButtons[0];
-      await user.click(refreshButton);
+      // Find the refresh button by its icon or aria-label
+      const refreshButton = screen.getByRole("button", { name: /refresh/i });
+      // Use fireEvent instead of userEvent to avoid pointer-events issues
+      fireEvent.click(refreshButton);
 
       await waitFor(() => {
         expect(checkAllStatus).toHaveBeenCalledTimes(2);
@@ -454,22 +465,20 @@ describe("SystemHealth", () => {
       render(<SystemHealth />);
 
       await waitFor(() => {
-        const refreshButtons = screen.getAllByRole("button", { name: /Refresh/i });
+        const refreshButtons = screen.getAllByRole("button", { name: /refresh/i });
         expect(refreshButtons.length).toBeGreaterThan(0);
       });
     });
 
     it("should call checkAllStatus when refresh button is clicked", async () => {
-      const user = userEvent.setup({ delay: null });
       render(<SystemHealth />);
 
       await waitFor(() => {
         expect(checkAllStatus).toHaveBeenCalledTimes(1);
       });
 
-      const refreshButtons = screen.getAllByRole("button", { name: /Refresh/i });
-      const refreshButton = refreshButtons[0];
-      await user.click(refreshButton);
+      const refreshButton = screen.getByRole("button", { name: /refresh/i });
+      fireEvent.click(refreshButton);
 
       await waitFor(() => {
         expect(checkAllStatus).toHaveBeenCalledTimes(2);
@@ -477,48 +486,44 @@ describe("SystemHealth", () => {
     });
 
     it("should show refreshing state when refresh is in progress", async () => {
-      const user = userEvent.setup({ delay: null });
       checkAllStatus.mockImplementation(
         () =>
           new Promise((resolve) => {
             setTimeout(() => resolve(mockHealthData), 100);
-          }),
+          })
       );
 
       render(<SystemHealth />);
 
       await waitFor(() => {
-        const refreshButtons = screen.getAllByRole("button", { name: /Refresh/i });
+        const refreshButtons = screen.getAllByRole("button", { name: /refresh/i });
         expect(refreshButtons.length).toBeGreaterThan(0);
       });
 
-      const refreshButtons = screen.getAllByRole("button", { name: /Refresh/i });
-      const refreshButton = refreshButtons[0];
-      await user.click(refreshButton);
+      const refreshButton = screen.getByRole("button", { name: /refresh/i });
+      fireEvent.click(refreshButton);
 
       const refreshingElements = screen.getAllByText(/Refreshing/i);
       expect(refreshingElements.length).toBeGreaterThan(0);
     });
 
     it("should disable refresh button while refreshing", async () => {
-      const user = userEvent.setup({ delay: null });
       checkAllStatus.mockImplementation(
         () =>
           new Promise((resolve) => {
             setTimeout(() => resolve(mockHealthData), 100);
-          }),
+          })
       );
 
       render(<SystemHealth />);
 
       await waitFor(() => {
-        const refreshButtons = screen.getAllByRole("button", { name: /Refresh/i });
+        const refreshButtons = screen.getAllByRole("button", { name: /refresh/i });
         expect(refreshButtons.length).toBeGreaterThan(0);
       });
 
-      const refreshButtons = screen.getAllByRole("button", { name: /Refresh/i });
-      const refreshButton = refreshButtons[0];
-      await user.click(refreshButton);
+      const refreshButton = screen.getByRole("button", { name: /refresh/i });
+      fireEvent.click(refreshButton);
 
       expect(refreshButton).toBeDisabled();
     });
