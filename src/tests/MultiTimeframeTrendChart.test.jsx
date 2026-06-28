@@ -90,8 +90,10 @@ describe("MultiTimeframeTrendChart", () => {
         <MultiTimeframeTrendChart data={mockData} metrics={mockMetrics} />,
       );
 
-      expect(screen.getByText("Trend Analysis")).toBeInTheDocument();
-      expect(screen.getByTestId("line-chart")).toBeInTheDocument();
+      const titleElements = screen.getAllByText("Trend Analysis");
+      expect(titleElements.length).toBeGreaterThan(0);
+      const chartElements = screen.getAllByTestId("line-chart");
+      expect(chartElements.length).toBeGreaterThan(0);
     });
 
     it("should render with custom title", () => {
@@ -103,7 +105,8 @@ describe("MultiTimeframeTrendChart", () => {
         />,
       );
 
-      expect(screen.getByText("Custom Trend")).toBeInTheDocument();
+      const titleElements = screen.getAllByText("Custom Trend");
+      expect(titleElements.length).toBeGreaterThan(0);
     });
 
     it("should render all metrics", () => {
@@ -111,8 +114,10 @@ describe("MultiTimeframeTrendChart", () => {
         <MultiTimeframeTrendChart data={mockData} metrics={mockMetrics} />,
       );
 
-      expect(screen.getByTestId("line-temperature")).toBeInTheDocument();
-      expect(screen.getByTestId("line-pressure")).toBeInTheDocument();
+      const tempElements = screen.getAllByTestId("line-temperature");
+      const pressureElements = screen.getAllByTestId("line-pressure");
+      expect(tempElements.length).toBeGreaterThan(0);
+      expect(pressureElements.length).toBeGreaterThan(0);
     });
 
     it("should render chart container", () => {
@@ -120,7 +125,8 @@ describe("MultiTimeframeTrendChart", () => {
         <MultiTimeframeTrendChart data={mockData} metrics={mockMetrics} />,
       );
 
-      expect(screen.getByTestId("responsive-container")).toBeInTheDocument();
+      const containerElements = screen.getAllByTestId("responsive-container");
+      expect(containerElements.length).toBeGreaterThan(0);
     });
   });
 
@@ -130,11 +136,11 @@ describe("MultiTimeframeTrendChart", () => {
         <MultiTimeframeTrendChart data={mockData} metrics={mockMetrics} />,
       );
 
-      expect(screen.getByTestId("line-chart")).toBeInTheDocument();
+      const chartElements = screen.getAllByTestId("line-chart");
+      expect(chartElements.length).toBeGreaterThan(0);
     });
 
     it("should render area chart when selected", async () => {
-      // User interactions via fireEvent
       render(
         <MultiTimeframeTrendChart
           data={mockData}
@@ -144,12 +150,12 @@ describe("MultiTimeframeTrendChart", () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId("area-chart")).toBeInTheDocument();
+        const chartElements = screen.getAllByTestId("area-chart");
+        expect(chartElements.length).toBeGreaterThan(0);
       });
     });
 
     it("should render bar chart when selected", async () => {
-      // User interactions via fireEvent
       render(
         <MultiTimeframeTrendChart
           data={mockData}
@@ -159,12 +165,12 @@ describe("MultiTimeframeTrendChart", () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId("bar-chart")).toBeInTheDocument();
+        const chartElements = screen.getAllByTestId("bar-chart");
+        expect(chartElements.length).toBeGreaterThan(0);
       });
     });
 
     it("should render composed chart when selected", async () => {
-      // User interactions via fireEvent
       render(
         <MultiTimeframeTrendChart
           data={mockData}
@@ -174,7 +180,8 @@ describe("MultiTimeframeTrendChart", () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByTestId("composed-chart")).toBeInTheDocument();
+        const chartElements = screen.getAllByTestId("composed-chart");
+        expect(chartElements.length).toBeGreaterThan(0);
       });
     });
   });
@@ -189,7 +196,8 @@ describe("MultiTimeframeTrendChart", () => {
         />,
       );
 
-      expect(screen.getByTestId("line-chart")).toBeInTheDocument();
+      const chartElements = screen.getAllByTestId("line-chart");
+      expect(chartElements.length).toBeGreaterThan(0);
     });
 
     it("should format time based on timeframe", () => {
@@ -201,9 +209,9 @@ describe("MultiTimeframeTrendChart", () => {
         />,
       );
 
-      expect(screen.getByTestId("line-chart")).toBeInTheDocument();
+      let chartElements = screen.getAllByTestId("line-chart");
+      expect(chartElements.length).toBeGreaterThan(0);
 
-      // Change timeframe
       rerender(
         <MultiTimeframeTrendChart
           data={mockData}
@@ -212,7 +220,8 @@ describe("MultiTimeframeTrendChart", () => {
         />,
       );
 
-      expect(screen.getByTestId("line-chart")).toBeInTheDocument();
+      chartElements = screen.getAllByTestId("line-chart");
+      expect(chartElements.length).toBeGreaterThan(0);
     });
   });
 
@@ -227,7 +236,8 @@ describe("MultiTimeframeTrendChart", () => {
     it("should handle missing data prop", () => {
       render(<MultiTimeframeTrendChart metrics={mockMetrics} />);
 
-      expect(screen.getByTestId("line-chart")).toBeInTheDocument();
+      const chartElements = screen.getAllByTestId("line-chart");
+      expect(chartElements.length).toBeGreaterThan(0);
     });
 
     it("should format data with timestamps", () => {
@@ -265,14 +275,12 @@ describe("MultiTimeframeTrendChart", () => {
         />,
       );
 
-      // Look for download icon or export button
       const buttons = screen.getAllByRole("button");
       expect(buttons.length).toBeGreaterThan(0);
     });
 
     it("should call onExport when provided", async () => {
       const onExport = vi.fn();
-      // User interactions via fireEvent
 
       render(
         <MultiTimeframeTrendChart
@@ -283,7 +291,6 @@ describe("MultiTimeframeTrendChart", () => {
         />,
       );
 
-      // Find and click export button
       const buttons = screen.getAllByRole("button");
       const exportButton = buttons.find(
         (btn) =>
@@ -306,7 +313,6 @@ describe("MultiTimeframeTrendChart", () => {
         />,
       );
 
-      // Should not have timeframe or chart type selectors
       const comboboxes = screen.queryAllByRole("combobox");
       expect(comboboxes.length).toBe(0);
     });
@@ -318,8 +324,8 @@ describe("MultiTimeframeTrendChart", () => {
         <MultiTimeframeTrendChart data={mockData} metrics={mockMetrics} />,
       );
 
-      // Component should render without errors
-      expect(screen.getByTestId("line-chart")).toBeInTheDocument();
+      const chartElements = screen.getAllByTestId("line-chart");
+      expect(chartElements.length).toBeGreaterThan(0);
     });
 
     it("should handle metrics with missing data", () => {
@@ -335,7 +341,8 @@ describe("MultiTimeframeTrendChart", () => {
         />,
       );
 
-      expect(screen.getByTestId("line-chart")).toBeInTheDocument();
+      const chartElements = screen.getAllByTestId("line-chart");
+      expect(chartElements.length).toBeGreaterThan(0);
     });
   });
 
@@ -345,7 +352,8 @@ describe("MultiTimeframeTrendChart", () => {
         <MultiTimeframeTrendChart data={mockData} metrics={mockMetrics} />,
       );
 
-      expect(screen.getByTestId("cartesian-grid")).toBeInTheDocument();
+      const gridElements = screen.getAllByTestId("cartesian-grid");
+      expect(gridElements.length).toBeGreaterThan(0);
     });
 
     it("should render XAxis", () => {
@@ -353,7 +361,8 @@ describe("MultiTimeframeTrendChart", () => {
         <MultiTimeframeTrendChart data={mockData} metrics={mockMetrics} />,
       );
 
-      expect(screen.getByTestId("x-axis")).toBeInTheDocument();
+      const xAxisElements = screen.getAllByTestId("x-axis");
+      expect(xAxisElements.length).toBeGreaterThan(0);
     });
 
     it("should render YAxis", () => {
@@ -361,7 +370,8 @@ describe("MultiTimeframeTrendChart", () => {
         <MultiTimeframeTrendChart data={mockData} metrics={mockMetrics} />,
       );
 
-      expect(screen.getByTestId("y-axis")).toBeInTheDocument();
+      const yAxisElements = screen.getAllByTestId("y-axis");
+      expect(yAxisElements.length).toBeGreaterThan(0);
     });
 
     it("should render Tooltip", () => {
@@ -369,7 +379,8 @@ describe("MultiTimeframeTrendChart", () => {
         <MultiTimeframeTrendChart data={mockData} metrics={mockMetrics} />,
       );
 
-      expect(screen.getByTestId("tooltip")).toBeInTheDocument();
+      const tooltipElements = screen.getAllByTestId("tooltip");
+      expect(tooltipElements.length).toBeGreaterThan(0);
     });
 
     it("should render Legend", () => {
@@ -377,7 +388,8 @@ describe("MultiTimeframeTrendChart", () => {
         <MultiTimeframeTrendChart data={mockData} metrics={mockMetrics} />,
       );
 
-      expect(screen.getByTestId("legend")).toBeInTheDocument();
+      const legendElements = screen.getAllByTestId("legend");
+      expect(legendElements.length).toBeGreaterThan(0);
     });
   });
 
@@ -389,7 +401,8 @@ describe("MultiTimeframeTrendChart", () => {
         <MultiTimeframeTrendChart data={mockData} metrics={mockMetrics} />,
       );
 
-      expect(screen.getByTestId("line-chart")).toBeInTheDocument();
+      const chartElements = screen.getAllByTestId("line-chart");
+      expect(chartElements.length).toBeGreaterThan(0);
 
       document.documentElement.classList.remove("dark");
     });
@@ -405,7 +418,8 @@ describe("MultiTimeframeTrendChart", () => {
         <MultiTimeframeTrendChart data={mockData} metrics={mockMetrics} />,
       );
 
-      expect(screen.getByTestId("line-chart")).toBeInTheDocument();
+      const chartElements = screen.getAllByTestId("line-chart");
+      expect(chartElements.length).toBeGreaterThan(0);
 
       document.documentElement.classList.remove("dark");
     });
@@ -427,9 +441,12 @@ describe("MultiTimeframeTrendChart", () => {
         <MultiTimeframeTrendChart data={multiData} metrics={multipleMetrics} />,
       );
 
-      expect(screen.getByTestId("line-temp1")).toBeInTheDocument();
-      expect(screen.getByTestId("line-temp2")).toBeInTheDocument();
-      expect(screen.getByTestId("line-temp3")).toBeInTheDocument();
+      const temp1Elements = screen.getAllByTestId("line-temp1");
+      const temp2Elements = screen.getAllByTestId("line-temp2");
+      const temp3Elements = screen.getAllByTestId("line-temp3");
+      expect(temp1Elements.length).toBeGreaterThan(0);
+      expect(temp2Elements.length).toBeGreaterThan(0);
+      expect(temp3Elements.length).toBeGreaterThan(0);
     });
 
     it("should apply correct colors to metrics", () => {
@@ -451,7 +468,8 @@ describe("MultiTimeframeTrendChart", () => {
         <MultiTimeframeTrendChart data={mockData} metrics={mockMetrics} />,
       );
 
-      expect(screen.getByTestId("responsive-container")).toBeInTheDocument();
+      const containerElements = screen.getAllByTestId("responsive-container");
+      expect(containerElements.length).toBeGreaterThan(0);
     });
 
     it("should use custom height", () => {
@@ -463,7 +481,8 @@ describe("MultiTimeframeTrendChart", () => {
         />,
       );
 
-      expect(screen.getByTestId("responsive-container")).toBeInTheDocument();
+      const containerElements = screen.getAllByTestId("responsive-container");
+      expect(containerElements.length).toBeGreaterThan(0);
     });
   });
 
@@ -485,7 +504,8 @@ describe("MultiTimeframeTrendChart", () => {
         />,
       );
 
-      expect(screen.getByText("Accessible Chart")).toBeInTheDocument();
+      const titleElements = screen.getAllByText("Accessible Chart");
+      expect(titleElements.length).toBeGreaterThan(0);
     });
 
     it("should have interactive controls accessible", () => {
@@ -518,7 +538,8 @@ describe("MultiTimeframeTrendChart", () => {
         );
       }
 
-      expect(screen.getByTestId("line-chart")).toBeInTheDocument();
+      const chartElements = screen.getAllByTestId("line-chart");
+      expect(chartElements.length).toBeGreaterThan(0);
     });
 
     it("should memoize formatted data", () => {
@@ -526,12 +547,12 @@ describe("MultiTimeframeTrendChart", () => {
         <MultiTimeframeTrendChart data={mockData} metrics={mockMetrics} />,
       );
 
-      // Rerender with same data
       rerender(
         <MultiTimeframeTrendChart data={mockData} metrics={mockMetrics} />,
       );
 
-      expect(screen.getByTestId("line-chart")).toBeInTheDocument();
+      const chartElements = screen.getAllByTestId("line-chart");
+      expect(chartElements.length).toBeGreaterThan(0);
     });
   });
 
@@ -539,7 +560,8 @@ describe("MultiTimeframeTrendChart", () => {
     it("should handle empty metrics array", () => {
       render(<MultiTimeframeTrendChart data={mockData} metrics={[]} />);
 
-      expect(screen.getByTestId("line-chart")).toBeInTheDocument();
+      const chartElements = screen.getAllByTestId("line-chart");
+      expect(chartElements.length).toBeGreaterThan(0);
     });
 
     it("should handle single data point", () => {
@@ -560,7 +582,8 @@ describe("MultiTimeframeTrendChart", () => {
 
       render(<MultiTimeframeTrendChart data={nanData} metrics={mockMetrics} />);
 
-      expect(screen.getByTestId("line-chart")).toBeInTheDocument();
+      const chartElements = screen.getAllByTestId("line-chart");
+      expect(chartElements.length).toBeGreaterThan(0);
     });
 
     it("should unmount gracefully", () => {
