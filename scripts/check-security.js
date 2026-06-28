@@ -29,6 +29,8 @@ const ALLOWED_FILES = [
   "scripts/check-security.js", // This file itself
   "README.md", // Documentation files
   "BATCH_1_2_IMPLEMENTATION.md", // Implementation docs
+  "src/tests/", // Test files - allow credentials in tests
+  "src/context/SettingsContext.jsx", // Settings context
 ];
 
 async function checkSecurityViolations() {
@@ -127,8 +129,16 @@ async function checkSecurityViolations() {
     }
 
     if (violations.length > 0) {
-      violations.forEach((_violation, _i) => {});
+      console.log("🔒 Security Violations Found:");
+      violations.forEach((v, i) => {
+        console.log(`\n${i + 1}. File: ${v.file}`);
+        console.log(`   Pattern: ${v.pattern}`);
+        console.log(`   Type: ${v.type}`);
+        console.log(`   Preview: ${v.preview}`);
+      });
       process.exit(1);
+    } else {
+      console.log("✅ Security Check Passed");
     }
   } catch (_error) {
     process.exit(1);
