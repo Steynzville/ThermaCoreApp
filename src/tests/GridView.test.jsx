@@ -348,7 +348,8 @@ describe("GridView", () => {
         </TestWrapper>,
       );
 
-      const statusFilter = screen.getByRole("combobox");
+      const statusFilters = screen.getAllByRole("combobox");
+      const statusFilter = statusFilters[0];
       fireEvent.change(statusFilter, { target: { value: "Online" } });
 
       await waitFor(() => {
@@ -366,7 +367,8 @@ describe("GridView", () => {
         </TestWrapper>,
       );
 
-      const statusFilter = screen.getByRole("combobox");
+      const statusFilters = screen.getAllByRole("combobox");
+      const statusFilter = statusFilters[0];
       fireEvent.change(statusFilter, { target: { value: "Offline" } });
 
       await waitFor(() => {
@@ -384,7 +386,8 @@ describe("GridView", () => {
         </TestWrapper>,
       );
 
-      const statusFilter = screen.getByRole("combobox");
+      const statusFilters = screen.getAllByRole("combobox");
+      const statusFilter = statusFilters[0];
       fireEvent.change(statusFilter, { target: { value: "Maintenance" } });
 
       await waitFor(() => {
@@ -402,7 +405,8 @@ describe("GridView", () => {
         </TestWrapper>,
       );
 
-      const statusFilter = screen.getByRole("combobox");
+      const statusFilters = screen.getAllByRole("combobox");
+      const statusFilter = statusFilters[0];
       fireEvent.change(statusFilter, { target: { value: "Alerts" } });
 
       await waitFor(() => {
@@ -418,7 +422,8 @@ describe("GridView", () => {
         </TestWrapper>,
       );
 
-      const statusFilter = screen.getByRole("combobox");
+      const statusFilters = screen.getAllByRole("combobox");
+      const statusFilter = statusFilters[0];
       fireEvent.change(statusFilter, { target: { value: "Alarms" } });
 
       await waitFor(() => {
@@ -437,8 +442,8 @@ describe("GridView", () => {
       );
 
       await waitFor(() => {
-        const statusFilter = screen.getByRole("combobox");
-        expect(statusFilter.value).toBe("Online");
+        const statusFilters = screen.getAllByRole("combobox");
+        expect(statusFilters[0].value).toBe("Online");
       });
     });
 
@@ -450,8 +455,8 @@ describe("GridView", () => {
       );
 
       await waitFor(() => {
-        const statusFilter = screen.getByRole("combobox");
-        expect(statusFilter.value).toBe("Alerts");
+        const statusFilters = screen.getAllByRole("combobox");
+        expect(statusFilters[0].value).toBe("Alerts");
       });
     });
 
@@ -540,7 +545,8 @@ describe("GridView", () => {
         </TestWrapper>,
       );
 
-      const unitCard = screen.getAllByText("ThermaCore Unit 001")[0].closest("div");
+      const unitCards = screen.getAllByText("ThermaCore Unit 001");
+      const unitCard = unitCards[0].closest("div");
       fireEvent.click(unitCard);
 
       expect(mockNavigate).toHaveBeenCalledWith(
@@ -563,7 +569,8 @@ describe("GridView", () => {
         </TestWrapper>,
       );
 
-      const unitCard = screen.getAllByText("ThermaCore Unit 001")[0].closest("div");
+      const unitCards = screen.getAllByText("ThermaCore Unit 001");
+      const unitCard = unitCards[0].closest("div");
       fireEvent.click(unitCard);
 
       expect(mockNavigate).toHaveBeenCalledWith(
@@ -715,7 +722,8 @@ describe("GridView", () => {
       const searchInput = searchInputs[0];
       fireEvent.change(searchInput, { target: { value: "Client A" } });
 
-      const statusFilter = screen.getByRole("combobox");
+      const statusFilters = screen.getAllByRole("combobox");
+      const statusFilter = statusFilters[0];
       fireEvent.change(statusFilter, { target: { value: "Online" } });
 
       await waitFor(() => {
