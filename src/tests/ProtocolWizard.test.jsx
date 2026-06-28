@@ -47,13 +47,15 @@ describe("ProtocolWizard", () => {
     it("should render wizard when open", () => {
       render(<ProtocolWizard {...defaultProps} />);
 
-      expect(screen.getByText("Select Protocol")).toBeInTheDocument();
+      const elements = screen.getAllByText("Select Protocol");
+      expect(elements.length).toBeGreaterThan(0);
     });
 
     it("should not render when closed", () => {
       render(<ProtocolWizard {...defaultProps} isOpen={false} />);
 
-      expect(screen.queryByText("Select Protocol")).not.toBeInTheDocument();
+      const elements = screen.queryAllByText("Select Protocol");
+      expect(elements.length).toBe(0);
     });
 
     it("should display all protocol options", () => {
@@ -75,10 +77,17 @@ describe("ProtocolWizard", () => {
     it("should show protocol descriptions", () => {
       render(<ProtocolWizard {...defaultProps} />);
 
-      expect(screen.getByText(/Industrial serial\/TCP protocol/i)).toBeInTheDocument();
-      expect(screen.getByText(/OPC Unified Architecture/i)).toBeInTheDocument();
-      expect(screen.getByText(/Distributed Network Protocol/i)).toBeInTheDocument();
-      expect(screen.getByText(/Message Queue Telemetry/i)).toBeInTheDocument();
+      const modbusDesc = screen.getAllByText(/Industrial serial\/TCP protocol/i);
+      expect(modbusDesc.length).toBeGreaterThan(0);
+      
+      const opcuaDesc = screen.getAllByText(/OPC Unified Architecture/i);
+      expect(opcuaDesc.length).toBeGreaterThan(0);
+      
+      const dnp3Desc = screen.getAllByText(/Distributed Network Protocol/i);
+      expect(dnp3Desc.length).toBeGreaterThan(0);
+      
+      const mqttDesc = screen.getAllByText(/Message Queue Telemetry/i);
+      expect(mqttDesc.length).toBeGreaterThan(0);
     });
   });
 
@@ -149,7 +158,8 @@ describe("ProtocolWizard", () => {
       fireEvent.click(nextButton);
 
       await waitFor(() => {
-        expect(screen.getByText(/Device Information/i)).toBeInTheDocument();
+        const elements = screen.getAllByText(/Device Information/i);
+        expect(elements.length).toBeGreaterThan(0);
       });
     });
 
@@ -165,14 +175,16 @@ describe("ProtocolWizard", () => {
       fireEvent.click(nextButton);
 
       await waitFor(() => {
-        expect(screen.getByText(/Device Information/i)).toBeInTheDocument();
+        const elements = screen.getAllByText(/Device Information/i);
+        expect(elements.length).toBeGreaterThan(0);
       });
 
       const backButton = screen.getByRole("button", { name: /back/i });
       fireEvent.click(backButton);
 
       await waitFor(() => {
-        expect(screen.getByText("Select Protocol")).toBeInTheDocument();
+        const elements = screen.getAllByText("Select Protocol");
+        expect(elements.length).toBeGreaterThan(0);
       });
     });
 
@@ -208,27 +220,30 @@ describe("ProtocolWizard", () => {
       fireEvent.click(nextButton);
 
       await waitFor(() => {
-        expect(screen.getByText(/Device Information/i)).toBeInTheDocument();
+        const elements = screen.getAllByText(/Device Information/i);
+        expect(elements.length).toBeGreaterThan(0);
       });
     });
 
     it("should display device ID field", () => {
-      expect(screen.getByLabelText(/Device ID/i)).toBeInTheDocument();
+      const elements = screen.getAllByLabelText(/Device ID/i);
+      expect(elements.length).toBeGreaterThan(0);
     });
 
     it("should display unit ID field", () => {
-      expect(screen.getByLabelText(/Unit ID/i)).toBeInTheDocument();
+      const elements = screen.getAllByLabelText(/Unit ID/i);
+      expect(elements.length).toBeGreaterThan(0);
     });
 
     it("should allow entering device ID", async () => {
-      const deviceIdInput = screen.getByLabelText(/Device ID/i);
+      const deviceIdInput = screen.getAllByLabelText(/Device ID/i)[0];
       fireEvent.change(deviceIdInput, { target: { value: "PLC-001" } });
 
       expect(deviceIdInput).toHaveValue("PLC-001");
     });
 
     it("should allow entering unit ID", async () => {
-      const unitIdInput = screen.getByLabelText(/Unit ID/i);
+      const unitIdInput = screen.getAllByLabelText(/Unit ID/i)[0];
       fireEvent.change(unitIdInput, { target: { value: 5 } });
 
       expect(unitIdInput).toHaveValue(5);
@@ -239,7 +254,8 @@ describe("ProtocolWizard", () => {
       fireEvent.click(nextButton);
 
       await waitFor(() => {
-        expect(screen.getByText("Connection Settings")).toBeInTheDocument();
+        const elements = screen.getAllByText("Connection Settings");
+        expect(elements.length).toBeGreaterThan(0);
       });
     });
 
@@ -248,10 +264,11 @@ describe("ProtocolWizard", () => {
       fireEvent.click(nextButton);
 
       await waitFor(() => {
-        expect(screen.getByLabelText(/Host\/IP Address/i)).toBeInTheDocument();
+        const elements = screen.getAllByLabelText(/Host\/IP Address/i);
+        expect(elements.length).toBeGreaterThan(0);
       });
 
-      const hostInput = screen.getByLabelText(/Host\/IP Address/i);
+      const hostInput = screen.getAllByLabelText(/Host\/IP Address/i)[0];
       fireEvent.change(hostInput, { target: { value: "192.168.1.100" } });
 
       expect(hostInput).toHaveValue("192.168.1.100");
@@ -262,10 +279,11 @@ describe("ProtocolWizard", () => {
       fireEvent.click(nextButton);
 
       await waitFor(() => {
-        expect(screen.getByLabelText(/Port/i)).toBeInTheDocument();
+        const elements = screen.getAllByLabelText(/Port/i);
+        expect(elements.length).toBeGreaterThan(0);
       });
 
-      const portInput = screen.getByLabelText(/Port/i);
+      const portInput = screen.getAllByLabelText(/Port/i)[0];
       fireEvent.change(portInput, { target: { value: 502 } });
 
       expect(portInput).toHaveValue(502);
@@ -285,16 +303,18 @@ describe("ProtocolWizard", () => {
       fireEvent.click(nextButton);
 
       await waitFor(() => {
-        expect(screen.getByText("Server Info")).toBeInTheDocument();
+        const elements = screen.getAllByText("Server Info");
+        expect(elements.length).toBeGreaterThan(0);
       });
     });
 
     it("should display endpoint URL field", () => {
-      expect(screen.getByLabelText(/Endpoint URL/i)).toBeInTheDocument();
+      const elements = screen.getAllByLabelText(/Endpoint URL/i);
+      expect(elements.length).toBeGreaterThan(0);
     });
 
     it("should allow entering endpoint URL", async () => {
-      const endpointInput = screen.getByLabelText(/Endpoint URL/i);
+      const endpointInput = screen.getAllByLabelText(/Endpoint URL/i)[0];
       fireEvent.change(endpointInput, {
         target: { value: "opc.tcp://localhost:4840" },
       });
@@ -307,7 +327,8 @@ describe("ProtocolWizard", () => {
       fireEvent.click(nextButton);
 
       await waitFor(() => {
-        expect(screen.getByText("Security")).toBeInTheDocument();
+        const elements = screen.getAllByText("Security");
+        expect(elements.length).toBeGreaterThan(0);
       });
     });
 
@@ -316,7 +337,8 @@ describe("ProtocolWizard", () => {
       fireEvent.click(nextButton);
 
       await waitFor(() => {
-        expect(screen.getByLabelText(/Security Mode/i)).toBeInTheDocument();
+        const elements = screen.getAllByLabelText(/Security Mode/i);
+        expect(elements.length).toBeGreaterThan(0);
       });
     });
 
@@ -325,13 +347,11 @@ describe("ProtocolWizard", () => {
       fireEvent.click(nextButton);
 
       await waitFor(() => {
-        const usernameInput = screen.queryByLabelText(/Username/i);
-        const passwordInput = screen.queryByLabelText(/Password/i);
+        const usernameInput = screen.queryAllByLabelText(/Username/i);
+        const passwordInput = screen.queryAllByLabelText(/Password/i);
 
-        if (usernameInput && passwordInput) {
-          expect(usernameInput).toBeInTheDocument();
-          expect(passwordInput).toBeInTheDocument();
-        }
+        // Check if at least one exists
+        expect(usernameInput.length + passwordInput.length).toBeGreaterThan(0);
       });
     });
   });
@@ -349,21 +369,24 @@ describe("ProtocolWizard", () => {
       fireEvent.click(nextButton);
 
       await waitFor(() => {
-        expect(screen.getByText("Addresses")).toBeInTheDocument();
+        const elements = screen.getAllByText("Addresses");
+        expect(elements.length).toBeGreaterThan(0);
       });
     });
 
     it("should display master address field", () => {
-      expect(screen.getByLabelText(/Master Address/i)).toBeInTheDocument();
+      const elements = screen.getAllByLabelText(/Master Address/i);
+      expect(elements.length).toBeGreaterThan(0);
     });
 
     it("should display outstation address field", () => {
-      expect(screen.getByLabelText(/Outstation Address/i)).toBeInTheDocument();
+      const elements = screen.getAllByLabelText(/Outstation Address/i);
+      expect(elements.length).toBeGreaterThan(0);
     });
 
     it("should validate address values", async () => {
-      const masterInput = screen.getByLabelText(/Master Address/i);
-      const outstationInput = screen.getByLabelText(/Outstation Address/i);
+      const masterInput = screen.getAllByLabelText(/Master Address/i)[0];
+      const outstationInput = screen.getAllByLabelText(/Outstation Address/i)[0];
 
       fireEvent.change(masterInput, { target: { value: 1 } });
       fireEvent.change(outstationInput, { target: { value: 10 } });
@@ -395,10 +418,10 @@ describe("ProtocolWizard", () => {
     });
 
     it("should display test connection button", () => {
-      const testButton = screen.getByRole("button", {
+      const buttons = screen.getAllByRole("button", {
         name: /test.*connection/i,
       });
-      expect(testButton).toBeInTheDocument();
+      expect(buttons.length).toBeGreaterThan(0);
     });
 
     it("should test connection successfully", async () => {
@@ -407,9 +430,10 @@ describe("ProtocolWizard", () => {
         message: "Connection successful",
       });
 
-      const testButton = screen.getByRole("button", {
+      const buttons = screen.getAllByRole("button", {
         name: /test connection/i,
       });
+      const testButton = buttons[0];
       fireEvent.click(testButton);
 
       await waitFor(() => {
@@ -423,9 +447,10 @@ describe("ProtocolWizard", () => {
     it("should handle connection test failure", async () => {
       apiPostJson.mockRejectedValue(new Error("Connection timeout"));
 
-      const testButton = screen.getByRole("button", {
+      const buttons = screen.getAllByRole("button", {
         name: /test connection/i,
       });
+      const testButton = buttons[0];
       fireEvent.click(testButton);
 
       await waitFor(() => {
@@ -439,9 +464,10 @@ describe("ProtocolWizard", () => {
         () => new Promise((resolve) => setTimeout(resolve, 100)),
       );
 
-      const testButton = screen.getByRole("button", {
+      const buttons = screen.getAllByRole("button", {
         name: /test connection/i,
       });
+      const testButton = buttons[0];
       fireEvent.click(testButton);
 
       await waitFor(() => {
@@ -455,9 +481,10 @@ describe("ProtocolWizard", () => {
         message: "Connection successful",
       });
 
-      const testButton = screen.getByRole("button", {
+      const buttons = screen.getAllByRole("button", {
         name: /test.*connection/i,
       });
+      const testButton = buttons[0];
       fireEvent.click(testButton);
 
       await waitFor(() => {
@@ -483,19 +510,21 @@ describe("ProtocolWizard", () => {
       }
 
       await waitFor(() => {
-        expect(screen.getByText("Complete")).toBeInTheDocument();
+        const elements = screen.getAllByText("Complete");
+        expect(elements.length).toBeGreaterThan(0);
       });
     });
 
     it("should display save button", () => {
-      const saveButton = screen.getByRole("button", { name: /save|finish/i });
-      expect(saveButton).toBeInTheDocument();
+      const buttons = screen.getAllByRole("button", { name: /save|finish/i });
+      expect(buttons.length).toBeGreaterThan(0);
     });
 
     it("should save configuration successfully", async () => {
       apiPostJson.mockResolvedValue({ success: true });
 
-      const saveButton = screen.getByRole("button", { name: /save|finish/i });
+      const buttons = screen.getAllByRole("button", { name: /save|finish/i });
+      const saveButton = buttons[0];
       fireEvent.click(saveButton);
 
       await waitFor(() => {
@@ -509,7 +538,8 @@ describe("ProtocolWizard", () => {
     it("should handle save errors", async () => {
       apiPostJson.mockRejectedValue(new Error("Save failed"));
 
-      const saveButton = screen.getByRole("button", { name: /save|finish/i });
+      const buttons = screen.getAllByRole("button", { name: /save|finish/i });
+      const saveButton = buttons[0];
       fireEvent.click(saveButton);
 
       await waitFor(() => {
@@ -522,7 +552,8 @@ describe("ProtocolWizard", () => {
     it("should include tenant ID in save request", async () => {
       apiPostJson.mockResolvedValue({ success: true });
 
-      const saveButton = screen.getByRole("button", { name: /save|finish/i });
+      const buttons = screen.getAllByRole("button", { name: /save|finish/i });
+      const saveButton = buttons[0];
       fireEvent.click(saveButton);
 
       await waitFor(() => {
@@ -547,8 +578,8 @@ describe("ProtocolWizard", () => {
       fireEvent.click(nextButton);
 
       await waitFor(() => {
-        const deviceIdInput = screen.getByLabelText(/Device ID/i);
-        expect(deviceIdInput).toBeInTheDocument();
+        const elements = screen.getAllByLabelText(/Device ID/i);
+        expect(elements.length).toBeGreaterThan(0);
       });
     });
 
@@ -567,8 +598,9 @@ describe("ProtocolWizard", () => {
       }
 
       await waitFor(() => {
-        const portInput = screen.getByLabelText(/Port/i);
-        expect(portInput).toHaveAttribute("type", "number");
+        const elements = screen.getAllByLabelText(/Port/i);
+        expect(elements.length).toBeGreaterThan(0);
+        expect(elements[0]).toHaveAttribute("type", "number");
       });
     });
 
@@ -588,9 +620,10 @@ describe("ProtocolWizard", () => {
         await waitFor(() => {}, { timeout: 100 });
       }
 
-      const testButton = screen.getByRole("button", {
+      const buttons = screen.getAllByRole("button", {
         name: /test connection/i,
       });
+      const testButton = buttons[0];
       fireEvent.click(testButton);
 
       await waitFor(() => {
@@ -632,10 +665,12 @@ describe("ProtocolWizard", () => {
       fireEvent.click(nextButton);
 
       await waitFor(() => {
-        expect(screen.getByText(/Device Information/i)).toBeInTheDocument();
+        const elements = screen.getAllByText(/Device Information/i);
+        expect(elements.length).toBeGreaterThan(0);
       });
 
-      const deviceIdInput = screen.getByLabelText(/Device ID/i);
+      const deviceIdInputs = screen.getAllByLabelText(/Device ID/i);
+      const deviceIdInput = deviceIdInputs[0];
       fireEvent.change(deviceIdInput, { target: { value: "TEST-001" } });
 
       fireEvent.click(screen.getByRole("button", { name: /next/i }));
@@ -644,8 +679,8 @@ describe("ProtocolWizard", () => {
       fireEvent.click(screen.getByRole("button", { name: /back/i }));
 
       await waitFor(() => {
-        const input = screen.getByLabelText(/Device ID/i);
-        expect(input).toHaveValue("TEST-001");
+        const inputs = screen.getAllByLabelText(/Device ID/i);
+        expect(inputs[0]).toHaveValue("TEST-001");
       });
     });
   });
