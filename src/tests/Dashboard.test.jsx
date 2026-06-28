@@ -338,6 +338,11 @@ describe("Dashboard", () => {
         </TestWrapper>,
       );
 
+      // Check for Quick Actions heading - should not exist
+      const quickActionHeadings = screen.queryAllByText("Quick Actions");
+      expect(quickActionHeadings.length).toBe(0);
+      
+      // Check for individual quick action buttons - should not exist
       const analyticsActions = screen.queryAllByTestId("quick-action-sales-analytics");
       expect(analyticsActions.length).toBe(0);
       
