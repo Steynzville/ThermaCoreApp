@@ -313,7 +313,7 @@ const ModbusDeviceModal = ({ device, isOpen, onClose, tenantId }) => {
                             </span>
                           </div>
                           <span className="text-xs text-slate-500 dark:text-slate-400">
-                            {register.timestamp && !isNaN(new Date(register.timestamp).getTime())
+                            {register.timestamp && !Number.isNaN(new Date(register.timestamp).getTime())
                               ? new Date(register.timestamp).toLocaleTimeString()
                               : "N/A"}
                           </span>
@@ -562,7 +562,7 @@ const ModbusDeviceModal = ({ device, isOpen, onClose, tenantId }) => {
                         </span>
                       </div>
                       <span className="text-xs text-slate-500 dark:text-slate-400">
-                        {register.timestamp && !isNaN(new Date(register.timestamp).getTime())
+                        {register.timestamp && !Number.isNaN(new Date(register.timestamp).getTime())
                           ? new Date(register.timestamp).toLocaleTimeString()
                           : "N/A"}
                       </span>
