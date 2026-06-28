@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 
 const SettingsContext = createContext(null);
 
@@ -25,7 +25,7 @@ export const SettingsProvider = ({ children }) => {
   const formatTemperature = (celsiusVal) => {
     if (celsiusVal === undefined || celsiusVal === null) return "--";
     const numericVal = parseFloat(celsiusVal);
-    if (isNaN(numericVal)) return "--";
+    if (Number.isNaN(numericVal)) return "--";
     
     if (settings.temperatureUnit === "F") {
       const fahrenheit = (numericVal * 9) / 5 + 32;
@@ -57,7 +57,7 @@ export const useSettings = () => {
       formatTemperature: (celsiusVal) => {
         if (celsiusVal === undefined || celsiusVal === null) return "--";
         const numericVal = parseFloat(celsiusVal);
-        if (isNaN(numericVal)) return "--";
+        if (Number.isNaN(numericVal)) return "--";
         if (defaultSettings.temperatureUnit === "F") {
           const fahrenheit = (numericVal * 9) / 5 + 32;
           return `${fahrenheit.toFixed(1)}°F`;
