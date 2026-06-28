@@ -222,3 +222,8 @@ def record_error(
         "context": context or {},
         "timestamp": utc_now().isoformat(),
     }
+
+
+# Backwards compatibility aliases
+calculate_health_score = compute_health_score
+determine_availability_level = compute_availability_level
