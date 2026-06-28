@@ -72,11 +72,6 @@ export const login = async (identifier, password, keepMeSignedIn = false) => {
   const API_BASE_URL =
     import.meta.env.VITE_API_BASE_URL || "https://thermacoreapp.onrender.com";
 
-  // Warn if API_BASE_URL is not configured (in production this should be set)
-  if (!API_BASE_URL && import.meta.env.DEV) {
-    console.warn("VITE_API_BASE_URL not configured, using default");
-  }
-
   try {
     const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
       method: "POST",
