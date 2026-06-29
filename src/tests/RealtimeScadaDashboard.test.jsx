@@ -455,7 +455,8 @@ describe("RealtimeScadaDashboard", () => {
         </TestWrapper>,
       );
 
-      const timeRangeSelect = screen.getByRole("combobox");
+      const timeRangeSelects = screen.getAllByRole("combobox");
+      const timeRangeSelect = timeRangeSelects[0];
       fireEvent.click(timeRangeSelect);
 
       await waitFor(() => {
