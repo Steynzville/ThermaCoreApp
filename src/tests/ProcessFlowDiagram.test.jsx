@@ -275,60 +275,82 @@ describe("ProcessFlowDiagram", () => {
   describe("Interactive Features", () => {
     it("should call onNodeClick when node is clicked", () => {
       const onNodeClick = vi.fn();
-      render(
+      const { container } = render(
         <ProcessFlowDiagram nodes={mockNodes} onNodeClick={onNodeClick} />,
       );
 
-      // Find the text element and click its parent
-      const pumpText = screen.getAllByText("Pump 1")[0];
-      const pumpParent = pumpText.closest('[role="button"]') || pumpText.parentElement;
-      
-      if (pumpParent) {
-        fireEvent.click(pumpParent);
+      // Find the SVG group or element that contains the node
+      const pumpNode = container.querySelector('[data-id="pump1"]');
+      if (pumpNode) {
+        fireEvent.click(pumpNode);
         expect(onNodeClick).toHaveBeenCalledWith(
           expect.objectContaining({ id: "pump1" }),
         );
+      } else {
+        // Fallback: find the text and click its parent
+        const pumpText = screen.getAllByText("Pump 1")[0];
+        const pumpParent = pumpText.parentElement;
+        if (pumpParent) {
+          fireEvent.click(pumpParent);
+          expect(onNodeClick).toHaveBeenCalledWith(
+            expect.objectContaining({ id: "pump1" }),
+          );
+        }
       }
     });
 
     it("should handle keyboard interaction on nodes", () => {
       const onNodeClick = vi.fn();
-      render(
+      const { container } = render(
         <ProcessFlowDiagram nodes={mockNodes} onNodeClick={onNodeClick} />,
       );
 
-      const pumpText = screen.getAllByText("Pump 1")[0];
-      const pumpParent = pumpText.closest('[role="button"]') || pumpText.parentElement;
-      
-      if (pumpParent) {
-        fireEvent.keyDown(pumpParent, { key: "Enter", code: "Enter" });
+      const pumpNode = container.querySelector('[data-id="pump1"]');
+      if (pumpNode) {
+        fireEvent.keyDown(pumpNode, { key: "Enter", code: "Enter" });
         expect(onNodeClick).toHaveBeenCalled();
+      } else {
+        const pumpText = screen.getAllByText("Pump 1")[0];
+        const pumpParent = pumpText.parentElement;
+        if (pumpParent) {
+          fireEvent.keyDown(pumpParent, { key: "Enter", code: "Enter" });
+          expect(onNodeClick).toHaveBeenCalled();
+        }
       }
     });
 
     it("should handle space key on nodes", () => {
       const onNodeClick = vi.fn();
-      render(
+      const { container } = render(
         <ProcessFlowDiagram nodes={mockNodes} onNodeClick={onNodeClick} />,
       );
 
-      const pumpText = screen.getAllByText("Pump 1")[0];
-      const pumpParent = pumpText.closest('[role="button"]') || pumpText.parentElement;
-      
-      if (pumpParent) {
-        fireEvent.keyDown(pumpParent, { key: " ", code: "Space" });
+      const pumpNode = container.querySelector('[data-id="pump1"]');
+      if (pumpNode) {
+        fireEvent.keyDown(pumpNode, { key: " ", code: "Space" });
         expect(onNodeClick).toHaveBeenCalled();
+      } else {
+        const pumpText = screen.getAllByText("Pump 1")[0];
+        const pumpParent = pumpText.parentElement;
+        if (pumpParent) {
+          fireEvent.keyDown(pumpParent, { key: " ", code: "Space" });
+          expect(onNodeClick).toHaveBeenCalled();
+        }
       }
     });
 
     it("should not call onNodeClick if not provided", () => {
-      render(<ProcessFlowDiagram nodes={mockNodes} />);
+      const { container } = render(<ProcessFlowDiagram nodes={mockNodes} />);
 
-      const pumpText = screen.getAllByText("Pump 1")[0];
-      const pumpParent = pumpText.closest('[role="button"]') || pumpText.parentElement;
-      
-      if (pumpParent) {
-        expect(() => fireEvent.click(pumpParent)).not.toThrow();
+      const pumpNode = container.querySelector('[data-id="pump1"]');
+      if (pumpNode) {
+        expect(() => fireEvent.click(pumpNode)).not.toThrow();
+      } else {
+        const pumpText = screen.getAllByText("Pump 1")[0];
+        const pumpParent = pumpText.parentElement;
+        if (pumpParent) {
+          expect(() => fireEvent.click(pumpParent)).not.toThrow();
+        }
       }
     });
   });
