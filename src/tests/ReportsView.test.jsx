@@ -11,10 +11,12 @@
  * - Data providers integration
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import ReportsView from "@/components/ReportsView";
+import { ThemeProvider } from "@/context/ThemeContext";
+import { SettingsProvider } from "@/context/SettingsContext";
 
 // Mock ReportConfigurator since it's a complex component
 vi.mock("@/components/reports/ReportConfigurator", () => ({
@@ -40,14 +42,25 @@ vi.mock("@/components/reports/ReportConfigurator", () => ({
 }));
 
 const TestWrapper = ({ children }) => {
-  return <BrowserRouter>{children}</BrowserRouter>;
+  return (
+    <ThemeProvider>
+      <SettingsProvider>
+        <BrowserRouter>{children}</BrowserRouter>
+      </SettingsProvider>
+    </ThemeProvider>
+  );
 };
 
 describe("ReportsView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers();
     // Mock window.alert
     global.alert = vi.fn();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   describe("Component Rendering", () => {
@@ -172,14 +185,11 @@ describe("ReportsView", () => {
       const generateButton = screen.getByText("Generate Report");
       generateButton.click();
 
-      // Wait for the alert to be called (setTimeout in component is 3000ms)
-      await waitFor(
-        () => {
-          expect(global.alert).toHaveBeenCalledWith(
-            "Report generated successfully! Download will begin shortly.",
-          );
-        },
-        { timeout: 4000 },
+      // Fast forward the fake timers to trigger the alert immediately
+      await vi.advanceTimersByTimeAsync(3000);
+
+      expect(global.alert).toHaveBeenCalledWith(
+        "Report generated successfully! Download will begin shortly.",
       );
     });
 
@@ -193,12 +203,10 @@ describe("ReportsView", () => {
       const generateButton = screen.getByText("Generate Report");
       generateButton.click();
 
-      await waitFor(
-        () => {
-          expect(global.alert).toHaveBeenCalled();
-        },
-        { timeout: 4000 },
-      );
+      // Fast forward the fake timers to trigger the alert immediately
+      await vi.advanceTimersByTimeAsync(3000);
+
+      expect(global.alert).toHaveBeenCalled();
     });
   });
 
