@@ -44,12 +44,6 @@ describe("ProtocolWizard", () => {
     vi.clearAllMocks();
   });
 
-  // Helper to get dialog content
-  const getDialog = async () => {
-    const dialog = await screen.findByRole("dialog");
-    return within(dialog);
-  };
-
   describe("Component Rendering", () => {
     it("should render wizard when open", async () => {
       render(<ProtocolWizard {...defaultProps} />);
@@ -173,7 +167,6 @@ describe("ProtocolWizard", () => {
       await waitFor(() => {
         const dialog = screen.getByRole("dialog");
         expect(dialog).toBeInTheDocument();
-        // Check that we're on a new step by looking for text that appears after navigation
         const elements = screen.queryAllByText(/Device|Information|Info|Modbus/i);
         expect(elements.length).toBeGreaterThan(0);
       });
@@ -244,8 +237,6 @@ describe("ProtocolWizard", () => {
     it("should display device ID field", async () => {
       const dialog = screen.getByRole("dialog");
       const dialogContent = within(dialog);
-      
-      // Look for text content in the dialog
       const text = dialogContent.queryAllByText(/Device/i);
       expect(text.length).toBeGreaterThan(0);
     });
@@ -253,7 +244,6 @@ describe("ProtocolWizard", () => {
     it("should display unit ID field", async () => {
       const dialog = screen.getByRole("dialog");
       const dialogContent = within(dialog);
-      
       const text = dialogContent.queryAllByText(/Unit/i);
       expect(text.length).toBeGreaterThan(0);
     });
@@ -261,8 +251,6 @@ describe("ProtocolWizard", () => {
     it("should allow entering device ID", async () => {
       const dialog = screen.getByRole("dialog");
       const dialogContent = within(dialog);
-      
-      // Find any input in the dialog
       const inputs = dialogContent.queryAllByRole("textbox");
       if (inputs.length > 0) {
         const firstInput = inputs[0];
@@ -274,7 +262,6 @@ describe("ProtocolWizard", () => {
     it("should allow entering unit ID", async () => {
       const dialog = screen.getByRole("dialog");
       const dialogContent = within(dialog);
-      
       const inputs = dialogContent.queryAllByRole("textbox");
       if (inputs.length > 1) {
         const secondInput = inputs[1];
@@ -290,7 +277,6 @@ describe("ProtocolWizard", () => {
       await waitFor(() => {
         const dialog = screen.getByRole("dialog");
         expect(dialog).toBeInTheDocument();
-        // Connection settings should be shown
         const text = screen.queryAllByText(/Connection|Settings/i);
         expect(text.length).toBeGreaterThan(0);
       });
@@ -303,7 +289,6 @@ describe("ProtocolWizard", () => {
       await waitFor(() => {
         const dialog = screen.getByRole("dialog");
         expect(dialog).toBeInTheDocument();
-        // Host/IP label should exist
         const text = screen.queryAllByText(/Host|IP|Address/i);
         expect(text.length).toBeGreaterThan(0);
       });
@@ -343,7 +328,6 @@ describe("ProtocolWizard", () => {
     it("should display endpoint URL field", async () => {
       const dialog = screen.getByRole("dialog");
       const dialogContent = within(dialog);
-      
       const text = dialogContent.queryAllByText(/Endpoint|URL/i);
       expect(text.length).toBeGreaterThan(0);
     });
@@ -351,7 +335,6 @@ describe("ProtocolWizard", () => {
     it("should allow entering endpoint URL", async () => {
       const dialog = screen.getByRole("dialog");
       const dialogContent = within(dialog);
-      
       const inputs = dialogContent.queryAllByRole("textbox");
       if (inputs.length > 0) {
         const input = inputs[0];
@@ -420,7 +403,6 @@ describe("ProtocolWizard", () => {
     it("should display master address field", async () => {
       const dialog = screen.getByRole("dialog");
       const dialogContent = within(dialog);
-      
       const text = dialogContent.queryAllByText(/Master|Address/i);
       expect(text.length).toBeGreaterThan(0);
     });
@@ -428,7 +410,6 @@ describe("ProtocolWizard", () => {
     it("should display outstation address field", async () => {
       const dialog = screen.getByRole("dialog");
       const dialogContent = within(dialog);
-      
       const text = dialogContent.queryAllByText(/Outstation|Address/i);
       expect(text.length).toBeGreaterThan(0);
     });
@@ -436,7 +417,6 @@ describe("ProtocolWizard", () => {
     it("should validate address values", async () => {
       const dialog = screen.getByRole("dialog");
       const dialogContent = within(dialog);
-      
       const inputs = dialogContent.queryAllByRole("textbox");
       if (inputs.length >= 2) {
         fireEvent.change(inputs[0], { target: { value: "1" } });
