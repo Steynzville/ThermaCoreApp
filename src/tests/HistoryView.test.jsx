@@ -458,8 +458,16 @@ describe("HistoryView", () => {
     });
 
     it("should hide load more button when all events shown", async () => {
-      // Use an empty dataset and verify no load more button appears
-      unitService.getEventHistory.mockResolvedValue([]);
+      // Use a very small dataset and verify no load more button
+      const smallEvents = [
+        {
+          id: "event-1",
+          unitName: "ThermaCore Unit 001",
+          timestamp: new Date().toISOString(),
+          description: "Test event",
+        },
+      ];
+      unitService.getEventHistory.mockResolvedValue(smallEvents);
 
       render(
         <TestWrapper>
