@@ -134,7 +134,7 @@ if (typeof window !== "undefined") {
       try {
         const res = originalGetComputedStyle(elt, pseudoElt);
         if (res) return res;
-      } catch (e) {
+      } catch (_e) {
         // ignore
       }
     }
@@ -319,21 +319,16 @@ afterEach(() => {
   cleanup();
   if (typeof document !== "undefined") {
     // Clear any leftover Radix portal wrappers, overlays, or DOM elements to prevent cross-test pollution
-    // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach callback intentionally returns void
     document
       .querySelectorAll("[data-radix-portal]")
       .forEach((el) => { el.remove(); });
-    // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach callback intentionally returns void
     document
       .querySelectorAll("[data-radix-focus-guard]")
       .forEach((el) => { el.remove(); });
-    // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach callback intentionally returns void
     document
       .querySelectorAll("[data-radix-popper-content-wrapper]")
       .forEach((el) => { el.remove(); });
-    // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach callback intentionally returns void
     document.querySelectorAll('[role="dialog"]').forEach((el) => { el.remove(); });
-    // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach callback intentionally returns void
     document.querySelectorAll('[role="menu"]').forEach((el) => { el.remove(); });
     document.body.innerHTML = "";
   }
