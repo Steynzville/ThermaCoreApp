@@ -60,8 +60,6 @@ export function ProtocolWizard({ protocol, onSave, onCancel, initialData }) {
   const steps = protocolConfig?.steps || [];
   const currentStepData = steps[currentStep];
 
-  const getCurrentSteps = () => steps;
-
   const handleNext = () => {
     if (validateStep(currentStep)) {
       setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1));
