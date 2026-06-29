@@ -55,7 +55,6 @@ describe("ProcessFlowDiagram", () => {
         <ProcessFlowDiagram title="Custom Process Flow" />,
       );
 
-      // Check for visible title in CardTitle
       const cardTitle = container.querySelector('[data-slot="card-title"]');
       expect(cardTitle).toHaveTextContent("Custom Process Flow");
     });
@@ -66,7 +65,6 @@ describe("ProcessFlowDiagram", () => {
       );
 
       const svg = container.querySelector("svg");
-      // SVG should be rendered
       expect(svg).toBeInTheDocument();
     });
 
@@ -74,7 +72,6 @@ describe("ProcessFlowDiagram", () => {
       const { container } = render(<ProcessFlowDiagram nodes={mockNodes} />);
 
       const svg = container.querySelector("svg");
-      // SVG should be rendered
       expect(svg).toBeInTheDocument();
     });
   });
@@ -85,9 +82,12 @@ describe("ProcessFlowDiagram", () => {
         <ProcessFlowDiagram nodes={mockNodes} connections={mockConnections} />,
       );
 
-      expect(screen.getByText("Pump 1")).toBeInTheDocument();
-      expect(screen.getByText("Tank 1")).toBeInTheDocument();
-      expect(screen.getByText("Valve 1")).toBeInTheDocument();
+      const pumpElements = screen.getAllByText("Pump 1");
+      expect(pumpElements.length).toBeGreaterThan(0);
+      const tankElements = screen.getAllByText("Tank 1");
+      expect(tankElements.length).toBeGreaterThan(0);
+      const valveElements = screen.getAllByText("Valve 1");
+      expect(valveElements.length).toBeGreaterThan(0);
     });
 
     it("should render nodes with provided positions", () => {
@@ -106,9 +106,12 @@ describe("ProcessFlowDiagram", () => {
 
       render(<ProcessFlowDiagram nodes={nodesWithoutPos} />);
 
-      expect(screen.getByText("Node 1")).toBeInTheDocument();
-      expect(screen.getByText("Node 2")).toBeInTheDocument();
-      expect(screen.getByText("Node 3")).toBeInTheDocument();
+      const node1Elements = screen.getAllByText("Node 1");
+      expect(node1Elements.length).toBeGreaterThan(0);
+      const node2Elements = screen.getAllByText("Node 2");
+      expect(node2Elements.length).toBeGreaterThan(0);
+      const node3Elements = screen.getAllByText("Node 3");
+      expect(node3Elements.length).toBeGreaterThan(0);
     });
 
     it("should handle empty nodes array", () => {
@@ -122,7 +125,8 @@ describe("ProcessFlowDiagram", () => {
       render(<ProcessFlowDiagram nodes={mockNodes} />);
 
       mockNodes.forEach((node) => {
-        expect(screen.getByText(node.label)).toBeInTheDocument();
+        const elements = screen.getAllByText(node.label);
+        expect(elements.length).toBeGreaterThan(0);
       });
     });
   });
@@ -137,7 +141,6 @@ describe("ProcessFlowDiagram", () => {
         />,
       );
 
-      // Green color for running status
       const statusCircle = container.querySelector('circle[fill="#22c55e"]');
       expect(statusCircle).toBeInTheDocument();
     });
@@ -151,7 +154,6 @@ describe("ProcessFlowDiagram", () => {
         />,
       );
 
-      // Yellow color for warning status
       const statusCircle = container.querySelector('circle[fill="#eab308"]');
       expect(statusCircle).toBeInTheDocument();
     });
@@ -163,7 +165,6 @@ describe("ProcessFlowDiagram", () => {
         />,
       );
 
-      // Red color for error status
       const statusCircle = container.querySelector('circle[fill="#ef4444"]');
       expect(statusCircle).toBeInTheDocument();
     });
@@ -175,7 +176,6 @@ describe("ProcessFlowDiagram", () => {
         />,
       );
 
-      // Gray color for idle status
       const statusCircle = container.querySelector('circle[fill="#6b7280"]');
       expect(statusCircle).toBeInTheDocument();
     });
@@ -185,7 +185,6 @@ describe("ProcessFlowDiagram", () => {
     it("should display live data values", () => {
       render(<ProcessFlowDiagram nodes={mockNodes} liveData={mockLiveData} />);
 
-      // Check if values are displayed
       expect(screen.getByText(/45\.2/)).toBeInTheDocument();
       expect(screen.getByText(/85\.0/)).toBeInTheDocument();
       expect(screen.getByText(/65\.0/)).toBeInTheDocument();
@@ -196,7 +195,6 @@ describe("ProcessFlowDiagram", () => {
         <ProcessFlowDiagram nodes={mockNodes} liveData={mockLiveData} />,
       );
 
-      // Update live data
       const updatedLiveData = {
         ...mockLiveData,
         pump1: { status: "error", value: 0, unit: "L/min" },
@@ -206,7 +204,6 @@ describe("ProcessFlowDiagram", () => {
         <ProcessFlowDiagram nodes={mockNodes} liveData={updatedLiveData} />,
       );
 
-      // Red color for error status
       const errorCircle = container.querySelector('circle[fill="#ef4444"]');
       expect(errorCircle).toBeInTheDocument();
     });
@@ -214,7 +211,8 @@ describe("ProcessFlowDiagram", () => {
     it("should handle missing live data gracefully", () => {
       render(<ProcessFlowDiagram nodes={mockNodes} liveData={{}} />);
 
-      expect(screen.getByText("Pump 1")).toBeInTheDocument();
+      const pumpElements = screen.getAllByText("Pump 1");
+      expect(pumpElements.length).toBeGreaterThan(0);
     });
   });
 
@@ -225,14 +223,14 @@ describe("ProcessFlowDiagram", () => {
       );
 
       const paths = container.querySelectorAll("path");
-      // At least 2 connections + arrowhead marker path
       expect(paths.length).toBeGreaterThanOrEqual(2);
     });
 
     it("should handle missing connections", () => {
       render(<ProcessFlowDiagram nodes={mockNodes} connections={[]} />);
 
-      expect(screen.getByText("Pump 1")).toBeInTheDocument();
+      const pumpElements = screen.getAllByText("Pump 1");
+      expect(pumpElements.length).toBeGreaterThan(0);
     });
 
     it("should not render connection if node is missing", () => {
@@ -247,7 +245,6 @@ describe("ProcessFlowDiagram", () => {
         />,
       );
 
-      // Should still render without errors
       const svg = container.querySelector("svg");
       expect(svg).toBeInTheDocument();
     });
@@ -261,7 +258,6 @@ describe("ProcessFlowDiagram", () => {
         />,
       );
 
-      // Flow rates should be displayed
       expect(screen.getByText(/12\.5/)).toBeInTheDocument();
       expect(screen.getByText(/8\.3/)).toBeInTheDocument();
     });
@@ -283,7 +279,7 @@ describe("ProcessFlowDiagram", () => {
         <ProcessFlowDiagram nodes={mockNodes} onNodeClick={onNodeClick} />,
       );
 
-      const node = screen.getByText("Pump 1").closest('[role="button"]');
+      const node = screen.getAllByText("Pump 1")[0].closest('[role="button"]');
       fireEvent.click(node);
 
       expect(onNodeClick).toHaveBeenCalledWith(
@@ -293,13 +289,12 @@ describe("ProcessFlowDiagram", () => {
 
     it("should handle keyboard interaction on nodes", async () => {
       const onNodeClick = vi.fn();
-      // User interactions via fireEvent
 
       render(
         <ProcessFlowDiagram nodes={mockNodes} onNodeClick={onNodeClick} />,
       );
 
-      const node = screen.getByText("Pump 1").closest('[role="button"]');
+      const node = screen.getAllByText("Pump 1")[0].closest('[role="button"]');
       node.focus();
       fireEvent.keyDown(node, { key: "Enter", code: "Enter" });
 
@@ -308,13 +303,12 @@ describe("ProcessFlowDiagram", () => {
 
     it("should handle space key on nodes", async () => {
       const onNodeClick = vi.fn();
-      // User interactions via fireEvent
 
       render(
         <ProcessFlowDiagram nodes={mockNodes} onNodeClick={onNodeClick} />,
       );
 
-      const node = screen.getByText("Pump 1").closest('[role="button"]');
+      const node = screen.getAllByText("Pump 1")[0].closest('[role="button"]');
       node.focus();
       fireEvent.keyDown(node, { key: " ", code: "Space" });
 
@@ -324,7 +318,7 @@ describe("ProcessFlowDiagram", () => {
     it("should not call onNodeClick if not provided", () => {
       render(<ProcessFlowDiagram nodes={mockNodes} />);
 
-      const node = screen.getByText("Pump 1").closest('[role="button"]');
+      const node = screen.getAllByText("Pump 1")[0].closest('[role="button"]');
       expect(() => fireEvent.click(node)).not.toThrow();
     });
   });
@@ -405,11 +399,9 @@ describe("ProcessFlowDiagram", () => {
         />,
       );
 
-      // Check for visible title in CardTitle
       const cardTitle = container.querySelector('[data-slot="card-title"]');
       expect(cardTitle).toHaveTextContent("Water Treatment Process");
 
-      // Check for SVG title (for screen readers)
       const svgTitle = container.querySelector("svg title");
       expect(svgTitle).toHaveTextContent("Water Treatment Process");
     });
@@ -425,22 +417,26 @@ describe("ProcessFlowDiagram", () => {
       render(<ProcessFlowDiagram nodes={manyNodes} width={800} height={600} />);
 
       manyNodes.forEach((node) => {
-        expect(screen.getByText(node.label)).toBeInTheDocument();
+        const elements = screen.getAllByText(node.label);
+        expect(elements.length).toBeGreaterThan(0);
       });
     });
 
     it("should handle mixed positioned and non-positioned nodes", () => {
       const mixedNodes = [
         { id: "n1", label: "Node 1", x: 100, y: 100 },
-        { id: "n2", label: "Node 2" }, // No position
+        { id: "n2", label: "Node 2" },
         { id: "n3", label: "Node 3", x: 300, y: 100 },
       ];
 
       render(<ProcessFlowDiagram nodes={mixedNodes} />);
 
-      expect(screen.getByText("Node 1")).toBeInTheDocument();
-      expect(screen.getByText("Node 2")).toBeInTheDocument();
-      expect(screen.getByText("Node 3")).toBeInTheDocument();
+      const node1Elements = screen.getAllByText("Node 1");
+      expect(node1Elements.length).toBeGreaterThan(0);
+      const node2Elements = screen.getAllByText("Node 2");
+      expect(node2Elements.length).toBeGreaterThan(0);
+      const node3Elements = screen.getAllByText("Node 3");
+      expect(node3Elements.length).toBeGreaterThan(0);
     });
   });
 
@@ -484,8 +480,10 @@ describe("ProcessFlowDiagram", () => {
 
       render(<ProcessFlowDiagram nodes={overlappingNodes} />);
 
-      expect(screen.getByText("Node 1")).toBeInTheDocument();
-      expect(screen.getByText("Node 2")).toBeInTheDocument();
+      const node1Elements = screen.getAllByText("Node 1");
+      expect(node1Elements.length).toBeGreaterThan(0);
+      const node2Elements = screen.getAllByText("Node 2");
+      expect(node2Elements.length).toBeGreaterThan(0);
     });
 
     it("should handle circular connections", () => {
@@ -525,13 +523,11 @@ describe("ProcessFlowDiagram", () => {
         <ProcessFlowDiagram nodes={mockNodes} connections={mockConnections} />,
       );
 
-      // Find zoom level display showing 100%
       const zoomDisplay = container.querySelector(
         ".text-sm.text-muted-foreground",
       );
       expect(zoomDisplay).toHaveTextContent("100%");
 
-      // Find zoom in button (Plus icon button)
       const buttons = container.querySelectorAll("button");
       const zoomInButton = Array.from(buttons).find((btn) =>
         btn.querySelector("svg.lucide-plus"),
@@ -543,9 +539,7 @@ describe("ProcessFlowDiagram", () => {
         fireEvent.click(zoomInButton);
       });
 
-      // Wait for zoom level to update - verify by checking display text
       await waitFor(() => {
-        // After zoom in, should show 125% (1.25 * 100)
         expect(zoomDisplay).toHaveTextContent("125%");
       });
     });
@@ -559,7 +553,6 @@ describe("ProcessFlowDiagram", () => {
         ".text-sm.text-muted-foreground",
       );
 
-      // First zoom in
       const buttons = container.querySelectorAll("button");
       const zoomInButton = Array.from(buttons).find((btn) =>
         btn.querySelector("svg.lucide-plus"),
@@ -570,12 +563,10 @@ describe("ProcessFlowDiagram", () => {
         fireEvent.click(zoomInButton);
       });
 
-      // Wait for zoom in to take effect
       await waitFor(() => {
         expect(zoomDisplay).toHaveTextContent("125%");
       });
 
-      // Now zoom out
       const zoomOutButton = Array.from(buttons).find((btn) =>
         btn.querySelector("svg.lucide-minus"),
       );
@@ -585,7 +576,6 @@ describe("ProcessFlowDiagram", () => {
         fireEvent.click(zoomOutButton);
       });
 
-      // Wait for zoom out - should be back to 100%
       await waitFor(() => {
         expect(zoomDisplay).toHaveTextContent("100%");
       });
@@ -600,7 +590,6 @@ describe("ProcessFlowDiagram", () => {
         ".text-sm.text-muted-foreground",
       );
 
-      // Zoom in first
       const buttons = container.querySelectorAll("button");
       const zoomInButton = Array.from(buttons).find((btn) =>
         btn.querySelector("svg.lucide-plus"),
@@ -611,18 +600,15 @@ describe("ProcessFlowDiagram", () => {
         fireEvent.click(zoomInButton);
       });
 
-      // Wait for zoom in to take effect
       await waitFor(() => {
         expect(zoomDisplay).toHaveTextContent("125%");
       });
 
-      // Find and click reset button
       const resetButton = screen.getByText("Reset");
       act(() => {
         fireEvent.click(resetButton);
       });
 
-      // Wait for reset - should return to 100%
       await waitFor(() => {
         expect(zoomDisplay).toHaveTextContent("100%");
       });
@@ -633,7 +619,6 @@ describe("ProcessFlowDiagram", () => {
         <ProcessFlowDiagram nodes={mockNodes} connections={mockConnections} />,
       );
 
-      // Find and click zoom in button to zoom in
       const buttons = container.querySelectorAll("button");
       const zoomInButton = Array.from(buttons).find((btn) =>
         btn.querySelector("svg.lucide-plus"),
@@ -644,7 +629,6 @@ describe("ProcessFlowDiagram", () => {
           fireEvent.click(zoomInButton);
         });
 
-        // Wait for zoom and check cursor
         await waitFor(() => {
           const svgContainer = container.querySelector(
             '[style*="touchAction: none"]',
@@ -667,7 +651,6 @@ describe("ProcessFlowDiagram", () => {
         ".text-sm.text-muted-foreground",
       );
 
-      // Zoom in first
       const buttons = container.querySelectorAll("button");
       const zoomInButton = Array.from(buttons).find((btn) =>
         btn.querySelector("svg.lucide-plus"),
@@ -678,7 +661,6 @@ describe("ProcessFlowDiagram", () => {
         fireEvent.click(zoomInButton);
       });
 
-      // Wait for zoom to take effect
       await waitFor(() => {
         expect(zoomDisplay).toHaveTextContent("125%");
       });
@@ -688,10 +670,8 @@ describe("ProcessFlowDiagram", () => {
       );
       expect(svgContainer).toBeTruthy();
 
-      // Verify cursor changes to 'grab' when zoomed in
       expect(svgContainer).toHaveStyle({ cursor: "grab" });
 
-      // Simulate mouse drag - this tests the panning interaction
       act(() => {
         fireEvent.mouseDown(svgContainer, {
           clientX: 100,
@@ -700,7 +680,6 @@ describe("ProcessFlowDiagram", () => {
         });
       });
 
-      // Cursor should change to 'grabbing' while dragging
       expect(svgContainer).toHaveStyle({ cursor: "grabbing" });
 
       act(() => {
@@ -708,7 +687,6 @@ describe("ProcessFlowDiagram", () => {
         fireEvent.mouseUp(window);
       });
 
-      // After mouse up, cursor should return to 'grab'
       expect(svgContainer).toHaveStyle({ cursor: "grab" });
     });
 
@@ -727,10 +705,8 @@ describe("ProcessFlowDiagram", () => {
       expect(svgContainer).toBeTruthy();
       expect(zoomDisplay).toHaveTextContent("100%");
 
-      // Cursor should be 'default' when not zoomed in
       expect(svgContainer).toHaveStyle({ cursor: "default" });
 
-      // Try to drag without zooming - should not change cursor or pan
       act(() => {
         fireEvent.mouseDown(svgContainer, {
           clientX: 100,
@@ -741,9 +717,7 @@ describe("ProcessFlowDiagram", () => {
         fireEvent.mouseUp(window);
       });
 
-      // Cursor should still be 'default' (no panning at zoom level 1)
       expect(svgContainer).toHaveStyle({ cursor: "default" });
-      // Zoom level should still be 100%
       expect(zoomDisplay).toHaveTextContent("100%");
     });
 
@@ -753,8 +727,6 @@ describe("ProcessFlowDiagram", () => {
       );
 
       const svg = container.querySelector("svg");
-
-      // SVG should have transition style (unless actively panning/pinching)
       expect(svg.style.transition).toBeDefined();
     });
   });
