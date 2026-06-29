@@ -231,10 +231,8 @@ describe("MultiTimeframeTrendChart", () => {
 
       const charts = screen.getAllByTestId("line-chart");
       expect(charts.length).toBeGreaterThan(0);
-      // Check that data-length exists and is not empty
-      const dataLength = charts[0].getAttribute("data-length");
       // The mock returns 0 for empty data
-      expect(dataLength).toBe("0");
+      expect(charts[0]).toHaveAttribute("data-length", "0");
     });
 
     it("should handle missing data prop", () => {
@@ -251,7 +249,6 @@ describe("MultiTimeframeTrendChart", () => {
 
       const charts = screen.getAllByTestId("line-chart");
       expect(charts.length).toBeGreaterThan(0);
-      // Check that data-length exists
       expect(charts[0]).toHaveAttribute("data-length");
     });
 
@@ -268,7 +265,6 @@ describe("MultiTimeframeTrendChart", () => {
 
       const charts = screen.getAllByTestId("line-chart");
       expect(charts.length).toBeGreaterThan(0);
-      // Check that data-length exists
       expect(charts[0]).toHaveAttribute("data-length");
     });
   });
@@ -312,8 +308,14 @@ describe("MultiTimeframeTrendChart", () => {
         />,
       );
 
-      const comboboxes = screen.queryAllByRole("combobox");
-      expect(comboboxes.length).toBe(0);
+      // Check that export button is not present
+      const buttons = screen.getAllByRole("button");
+      const hasExportButton = buttons.some(
+        (btn) =>
+          btn.textContent?.toLowerCase().includes("export") ||
+          btn.textContent?.toLowerCase().includes("download")
+      );
+      expect(hasExportButton).toBe(false);
     });
   });
 
@@ -574,7 +576,6 @@ describe("MultiTimeframeTrendChart", () => {
 
       const charts = screen.getAllByTestId("line-chart");
       expect(charts.length).toBeGreaterThan(0);
-      // Check that data-length exists
       expect(charts[0]).toHaveAttribute("data-length");
     });
 
