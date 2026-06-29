@@ -294,7 +294,7 @@ if (typeof window !== "undefined") {
       } catch (_innerError) {
         const originalNavigator = window.navigator;
         const descriptor = Object.getOwnPropertyDescriptor(window, "navigator");
-        if (descriptor && descriptor.configurable) {
+        if (descriptor?.configurable) {
           Object.defineProperty(window, "navigator", {
             value: {
               ...originalNavigator,
