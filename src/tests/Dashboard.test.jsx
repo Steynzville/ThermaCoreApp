@@ -1,4 +1,3 @@
-/* biome-ignore lint/a11y/noStaticElementInteractions: Mock component for testing */
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -25,18 +24,29 @@ vi.mock("framer-motion", () => ({
 
 // Mock child components to isolate testing
 vi.mock("../components/Dashboard/EnhancedStatusDial", () => ({
-  default: ({ title, count, onClick, clickable }) => (
-    <div
-      data-testid={`status-dial-${title.toLowerCase().replace(/\s+/g, "-")}`}
-      onClick={clickable ? onClick : undefined}
-      onKeyDown={clickable ? (e) => e.key === "Enter" && onClick() : undefined}
-      role={clickable ? "button" : "presentation"}
-      tabIndex={clickable ? 0 : undefined}
-    >
-      <span>{title}</span>
-      <span>{count}</span>
-    </div>
-  ),
+  default: ({ title, count, onClick, clickable }) => {
+    if (clickable) {
+      return (
+        <button
+          type="button"
+          data-testid={`status-dial-${title.toLowerCase().replace(/\s+/g, "-")}`}
+          onClick={onClick}
+        >
+          <span>{title}</span>
+          <span>{count}</span>
+        </button>
+      );
+    }
+    return (
+      <div
+        data-testid={`status-dial-${title.toLowerCase().replace(/\s+/g, "-")}`}
+        role="presentation"
+      >
+        <span>{title}</span>
+        <span>{count}</span>
+      </div>
+    );
+  },
 }));
 
 vi.mock("../components/Dashboard/QuickActionCard", () => ({
@@ -681,7 +691,7 @@ describe("Dashboard", () => {
       const dials = [totalDials[0], onlineDials[0], offlineDials[0]];
 
       dials.forEach((dial) => {
-        expect(dial.getAttribute("role")).toBe("button");
+        expect(dial.tagName).toBe("BUTTON");
       });
     });
 
