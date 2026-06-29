@@ -21,6 +21,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { apiGetJson } from "@/utils/apiFetch";
 
+const skeletonIds = ['skeleton-1', 'skeleton-2', 'skeleton-3', 'skeleton-4'];
+
 const ProtocolStatusDashboard = ({ tenantId, onProtocolClick }) => {
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -45,8 +47,8 @@ const ProtocolStatusDashboard = ({ tenantId, onProtocolClick }) => {
   if (loading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[...Array(4)].map((_, i) => (
-          <Card key={`skeleton-card-${i}`} className="animate-pulse">
+        {skeletonIds.map((id) => (
+          <Card key={id} className="animate-pulse">
             <CardContent className="p-6">
               <div className="h-20 bg-muted rounded" />
             </CardContent>
