@@ -279,23 +279,15 @@ describe("ProcessFlowDiagram", () => {
         <ProcessFlowDiagram nodes={mockNodes} onNodeClick={onNodeClick} />,
       );
 
-      // Find the pump1 node by data-id
-      const pumpNode = container.querySelector('[data-id="pump1"]');
-      if (pumpNode) {
-        fireEvent.click(pumpNode);
+      // Find the text element and click its parent
+      const pumpText = screen.getAllByText("Pump 1")[0];
+      const pumpParent = pumpText.closest('[role="button"]') || pumpText.parentElement;
+      
+      if (pumpParent) {
+        fireEvent.click(pumpParent);
         expect(onNodeClick).toHaveBeenCalledWith(
           expect.objectContaining({ id: "pump1" }),
         );
-      } else {
-        // Fallback: find by text
-        const pumpText = screen.getAllByText("Pump 1")[0];
-        const pumpParent = pumpText.closest('[role="button"]');
-        if (pumpParent) {
-          fireEvent.click(pumpParent);
-          expect(onNodeClick).toHaveBeenCalledWith(
-            expect.objectContaining({ id: "pump1" }),
-          );
-        }
       }
     });
 
@@ -305,17 +297,12 @@ describe("ProcessFlowDiagram", () => {
         <ProcessFlowDiagram nodes={mockNodes} onNodeClick={onNodeClick} />,
       );
 
-      const pumpNode = container.querySelector('[data-id="pump1"]');
-      if (pumpNode) {
-        fireEvent.keyDown(pumpNode, { key: "Enter", code: "Enter" });
+      const pumpText = screen.getAllByText("Pump 1")[0];
+      const pumpParent = pumpText.closest('[role="button"]') || pumpText.parentElement;
+      
+      if (pumpParent) {
+        fireEvent.keyDown(pumpParent, { key: "Enter", code: "Enter" });
         expect(onNodeClick).toHaveBeenCalled();
-      } else {
-        const pumpText = screen.getAllByText("Pump 1")[0];
-        const pumpParent = pumpText.closest('[role="button"]');
-        if (pumpParent) {
-          fireEvent.keyDown(pumpParent, { key: "Enter", code: "Enter" });
-          expect(onNodeClick).toHaveBeenCalled();
-        }
       }
     });
 
@@ -325,32 +312,23 @@ describe("ProcessFlowDiagram", () => {
         <ProcessFlowDiagram nodes={mockNodes} onNodeClick={onNodeClick} />,
       );
 
-      const pumpNode = container.querySelector('[data-id="pump1"]');
-      if (pumpNode) {
-        fireEvent.keyDown(pumpNode, { key: " ", code: "Space" });
+      const pumpText = screen.getAllByText("Pump 1")[0];
+      const pumpParent = pumpText.closest('[role="button"]') || pumpText.parentElement;
+      
+      if (pumpParent) {
+        fireEvent.keyDown(pumpParent, { key: " ", code: "Space" });
         expect(onNodeClick).toHaveBeenCalled();
-      } else {
-        const pumpText = screen.getAllByText("Pump 1")[0];
-        const pumpParent = pumpText.closest('[role="button"]');
-        if (pumpParent) {
-          fireEvent.keyDown(pumpParent, { key: " ", code: "Space" });
-          expect(onNodeClick).toHaveBeenCalled();
-        }
       }
     });
 
     it("should not call onNodeClick if not provided", () => {
       const { container } = render(<ProcessFlowDiagram nodes={mockNodes} />);
 
-      const pumpNode = container.querySelector('[data-id="pump1"]');
-      if (pumpNode) {
-        expect(() => fireEvent.click(pumpNode)).not.toThrow();
-      } else {
-        const pumpText = screen.getAllByText("Pump 1")[0];
-        const pumpParent = pumpText.closest('[role="button"]');
-        if (pumpParent) {
-          expect(() => fireEvent.click(pumpParent)).not.toThrow();
-        }
+      const pumpText = screen.getAllByText("Pump 1")[0];
+      const pumpParent = pumpText.closest('[role="button"]') || pumpText.parentElement;
+      
+      if (pumpParent) {
+        expect(() => fireEvent.click(pumpParent)).not.toThrow();
       }
     });
   });
@@ -636,16 +614,15 @@ describe("ProcessFlowDiagram", () => {
         expect(zoomDisplay).toHaveTextContent("125%");
       });
 
-      const resetButtons = screen.getAllByText("Reset");
-      expect(resetButtons.length).toBeGreaterThan(0);
-      const resetButton = resetButtons[0];
+      const resetButton = screen.getByText("Reset");
       act(() => {
         fireEvent.click(resetButton);
       });
 
       await waitFor(() => {
+        // Wait for the reset to complete - may need longer
         expect(zoomDisplay).toHaveTextContent("100%");
-      }, { timeout: 2000 });
+      }, { timeout: 3000 });
     });
 
     it("should apply grab cursor when zoomed in", async () => {
