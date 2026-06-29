@@ -90,7 +90,7 @@ if (typeof window !== "undefined") {
       setTimeout(() => {
         if (this.onload) this.onload();
         if (this.listeners["load"]) {
-          this.listeners["load"].forEach(cb => cb());
+          this.listeners["load"].forEach((cb) => { cb(); });
         }
       }, 10);
     }
@@ -100,7 +100,7 @@ if (typeof window !== "undefined") {
     }
     removeEventListener(event, callback) {
       if (this.listeners[event]) {
-        this.listeners[event] = this.listeners[event].filter(cb => cb !== callback);
+        this.listeners[event] = this.listeners[event].filter((cb) => cb !== callback);
       }
     }
     setAttribute(name, value) {
@@ -319,17 +319,22 @@ afterEach(() => {
   cleanup();
   if (typeof document !== "undefined") {
     // Clear any leftover Radix portal wrappers, overlays, or DOM elements to prevent cross-test pollution
+    // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach callback intentionally returns void
     document
       .querySelectorAll("[data-radix-portal]")
-      .forEach((el) => el.remove());
+      .forEach((el) => { el.remove(); });
+    // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach callback intentionally returns void
     document
       .querySelectorAll("[data-radix-focus-guard]")
-      .forEach((el) => el.remove());
+      .forEach((el) => { el.remove(); });
+    // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach callback intentionally returns void
     document
       .querySelectorAll("[data-radix-popper-content-wrapper]")
-      .forEach((el) => el.remove());
-    document.querySelectorAll('[role="dialog"]').forEach((el) => el.remove());
-    document.querySelectorAll('[role="menu"]').forEach((el) => el.remove());
+      .forEach((el) => { el.remove(); });
+    // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach callback intentionally returns void
+    document.querySelectorAll('[role="dialog"]').forEach((el) => { el.remove(); });
+    // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach callback intentionally returns void
+    document.querySelectorAll('[role="menu"]').forEach((el) => { el.remove(); });
     document.body.innerHTML = "";
   }
 });
