@@ -67,6 +67,48 @@ describe("RemoteControl Component", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // Mock navigator.clipboard robustly inside the test context to avoid any env quirks
+    const clipboardMock = {
+      writeText: vi.fn().mockResolvedValue(undefined),
+      readText: vi.fn().mockResolvedValue(""),
+    };
+
+    if (typeof navigator === "undefined" || !navigator) {
+      global.navigator = {
+        clipboard: clipboardMock,
+      };
+    } else {
+      try {
+        Object.defineProperty(navigator, "clipboard", {
+          writable: true,
+          configurable: true,
+          value: clipboardMock,
+        });
+      } catch (_e) {
+        try {
+          navigator.clipboard = clipboardMock;
+        } catch (_innerError) {
+          const originalNavigator = window.navigator;
+          const descriptor = Object.getOwnPropertyDescriptor(window, "navigator");
+          if (descriptor && descriptor.configurable) {
+            Object.defineProperty(window, "navigator", {
+              value: {
+                ...originalNavigator,
+                clipboard: clipboardMock,
+              },
+              configurable: true,
+              writable: true,
+            });
+          } else {
+            window.navigator = {
+              ...window.navigator,
+              clipboard: clipboardMock,
+            };
+          }
+        }
+      }
+    }
   });
 
   describe("Component Rendering", () => {
