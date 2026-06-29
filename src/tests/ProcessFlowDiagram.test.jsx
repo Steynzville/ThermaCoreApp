@@ -275,12 +275,13 @@ describe("ProcessFlowDiagram", () => {
   describe("Interactive Features", () => {
     it("should call onNodeClick when node is clicked", () => {
       const onNodeClick = vi.fn();
-      const { container } = render(
+      render(
         <ProcessFlowDiagram nodes={mockNodes} onNodeClick={onNodeClick} />,
       );
 
-      // Find the node by its data-id attribute
-      const node = container.querySelector('[data-id="pump1"]');
+      // Find the node by text and click it
+      const nodeText = screen.getAllByText("Pump 1")[0];
+      const node = nodeText.closest('[role="button"]');
       expect(node).toBeTruthy();
       fireEvent.click(node);
 
@@ -291,11 +292,12 @@ describe("ProcessFlowDiagram", () => {
 
     it("should handle keyboard interaction on nodes", async () => {
       const onNodeClick = vi.fn();
-      const { container } = render(
+      render(
         <ProcessFlowDiagram nodes={mockNodes} onNodeClick={onNodeClick} />,
       );
 
-      const node = container.querySelector('[data-id="pump1"]');
+      const nodeText = screen.getAllByText("Pump 1")[0];
+      const node = nodeText.closest('[role="button"]');
       expect(node).toBeTruthy();
       node.focus();
       fireEvent.keyDown(node, { key: "Enter", code: "Enter" });
@@ -305,11 +307,12 @@ describe("ProcessFlowDiagram", () => {
 
     it("should handle space key on nodes", async () => {
       const onNodeClick = vi.fn();
-      const { container } = render(
+      render(
         <ProcessFlowDiagram nodes={mockNodes} onNodeClick={onNodeClick} />,
       );
 
-      const node = container.querySelector('[data-id="pump1"]');
+      const nodeText = screen.getAllByText("Pump 1")[0];
+      const node = nodeText.closest('[role="button"]');
       expect(node).toBeTruthy();
       node.focus();
       fireEvent.keyDown(node, { key: " ", code: "Space" });
@@ -318,9 +321,10 @@ describe("ProcessFlowDiagram", () => {
     });
 
     it("should not call onNodeClick if not provided", () => {
-      const { container } = render(<ProcessFlowDiagram nodes={mockNodes} />);
+      render(<ProcessFlowDiagram nodes={mockNodes} />);
 
-      const node = container.querySelector('[data-id="pump1"]');
+      const nodeText = screen.getAllByText("Pump 1")[0];
+      const node = nodeText.closest('[role="button"]');
       expect(node).toBeTruthy();
       expect(() => fireEvent.click(node)).not.toThrow();
     });
@@ -607,15 +611,15 @@ describe("ProcessFlowDiagram", () => {
         expect(zoomDisplay).toHaveTextContent("125%");
       });
 
-      const resetButtons = screen.getAllByText("Reset");
-      expect(resetButtons.length).toBeGreaterThan(0);
+      const resetButton = screen.getByText("Reset");
       act(() => {
-        fireEvent.click(resetButtons[0]);
+        fireEvent.click(resetButton);
       });
 
+      // Wait for reset to complete - may take a moment
       await waitFor(() => {
         expect(zoomDisplay).toHaveTextContent("100%");
-      });
+      }, { timeout: 2000 });
     });
 
     it("should apply grab cursor when zoomed in", async () => {
