@@ -275,82 +275,94 @@ describe("ProcessFlowDiagram", () => {
   describe("Interactive Features", () => {
     it("should call onNodeClick when node is clicked", () => {
       const onNodeClick = vi.fn();
-      const { container } = render(
+      render(
         <ProcessFlowDiagram nodes={mockNodes} onNodeClick={onNodeClick} />,
       );
 
-      // Find the SVG group or element that contains the node
-      const pumpNode = container.querySelector('[data-id="pump1"]');
-      if (pumpNode) {
-        fireEvent.click(pumpNode);
+      // Find the text and click it - the text is inside a clickable element
+      const pumpText = screen.getAllByText("Pump 1")[0];
+      // Get the parent element that is clickable (the SVG group)
+      let clickableElement = pumpText.closest("g");
+      if (!clickableElement) {
+        clickableElement = pumpText.parentElement;
+      }
+      // Also try to find by role
+      if (!clickableElement || !clickableElement.getAttribute("role")) {
+        const roleElement = pumpText.closest('[role="button"]');
+        if (roleElement) {
+          clickableElement = roleElement;
+        }
+      }
+      if (clickableElement) {
+        fireEvent.click(clickableElement);
         expect(onNodeClick).toHaveBeenCalledWith(
           expect.objectContaining({ id: "pump1" }),
         );
-      } else {
-        // Fallback: find the text and click its parent
-        const pumpText = screen.getAllByText("Pump 1")[0];
-        const pumpParent = pumpText.parentElement;
-        if (pumpParent) {
-          fireEvent.click(pumpParent);
-          expect(onNodeClick).toHaveBeenCalledWith(
-            expect.objectContaining({ id: "pump1" }),
-          );
-        }
       }
     });
 
     it("should handle keyboard interaction on nodes", () => {
       const onNodeClick = vi.fn();
-      const { container } = render(
+      render(
         <ProcessFlowDiagram nodes={mockNodes} onNodeClick={onNodeClick} />,
       );
 
-      const pumpNode = container.querySelector('[data-id="pump1"]');
-      if (pumpNode) {
-        fireEvent.keyDown(pumpNode, { key: "Enter", code: "Enter" });
-        expect(onNodeClick).toHaveBeenCalled();
-      } else {
-        const pumpText = screen.getAllByText("Pump 1")[0];
-        const pumpParent = pumpText.parentElement;
-        if (pumpParent) {
-          fireEvent.keyDown(pumpParent, { key: "Enter", code: "Enter" });
-          expect(onNodeClick).toHaveBeenCalled();
+      const pumpText = screen.getAllByText("Pump 1")[0];
+      let clickableElement = pumpText.closest("g");
+      if (!clickableElement) {
+        clickableElement = pumpText.parentElement;
+      }
+      if (!clickableElement || !clickableElement.getAttribute("role")) {
+        const roleElement = pumpText.closest('[role="button"]');
+        if (roleElement) {
+          clickableElement = roleElement;
         }
+      }
+      if (clickableElement) {
+        fireEvent.keyDown(clickableElement, { key: "Enter", code: "Enter" });
+        expect(onNodeClick).toHaveBeenCalled();
       }
     });
 
     it("should handle space key on nodes", () => {
       const onNodeClick = vi.fn();
-      const { container } = render(
+      render(
         <ProcessFlowDiagram nodes={mockNodes} onNodeClick={onNodeClick} />,
       );
 
-      const pumpNode = container.querySelector('[data-id="pump1"]');
-      if (pumpNode) {
-        fireEvent.keyDown(pumpNode, { key: " ", code: "Space" });
-        expect(onNodeClick).toHaveBeenCalled();
-      } else {
-        const pumpText = screen.getAllByText("Pump 1")[0];
-        const pumpParent = pumpText.parentElement;
-        if (pumpParent) {
-          fireEvent.keyDown(pumpParent, { key: " ", code: "Space" });
-          expect(onNodeClick).toHaveBeenCalled();
+      const pumpText = screen.getAllByText("Pump 1")[0];
+      let clickableElement = pumpText.closest("g");
+      if (!clickableElement) {
+        clickableElement = pumpText.parentElement;
+      }
+      if (!clickableElement || !clickableElement.getAttribute("role")) {
+        const roleElement = pumpText.closest('[role="button"]');
+        if (roleElement) {
+          clickableElement = roleElement;
         }
+      }
+      if (clickableElement) {
+        fireEvent.keyDown(clickableElement, { key: " ", code: "Space" });
+        expect(onNodeClick).toHaveBeenCalled();
       }
     });
 
     it("should not call onNodeClick if not provided", () => {
-      const { container } = render(<ProcessFlowDiagram nodes={mockNodes} />);
+      render(<ProcessFlowDiagram nodes={mockNodes} />);
 
-      const pumpNode = container.querySelector('[data-id="pump1"]');
-      if (pumpNode) {
-        expect(() => fireEvent.click(pumpNode)).not.toThrow();
-      } else {
-        const pumpText = screen.getAllByText("Pump 1")[0];
-        const pumpParent = pumpText.parentElement;
-        if (pumpParent) {
-          expect(() => fireEvent.click(pumpParent)).not.toThrow();
+      const pumpText = screen.getAllByText("Pump 1")[0];
+      let clickableElement = pumpText.closest("g");
+      if (!clickableElement) {
+        clickableElement = pumpText.parentElement;
+      }
+      if (!clickableElement || !clickableElement.getAttribute("role")) {
+        const roleElement = pumpText.closest('[role="button"]');
+        if (roleElement) {
+          clickableElement = roleElement;
         }
+      }
+      if (clickableElement) {
+        expect(() => fireEvent.click(clickableElement)).not.toThrow();
       }
     });
   });
