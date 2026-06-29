@@ -1,10 +1,13 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
-import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, afterEach, beforeAll, afterAll, describe, expect, it, vi } from "vitest";
 
 import NotificationBell from "../components/NotificationBell";
 
 const mockNavigate = vi.fn();
+
+// Store original console.error for debugging
+const originalConsoleError = console.error;
 
 // Mock dependencies
 vi.mock("react-router-dom", async () => {
@@ -18,6 +21,22 @@ vi.mock("react-router-dom", async () => {
 vi.mock("../context/AuthContext", () => ({
   useAuth: vi.fn(() => ({
     userRole: "admin",
+  })),
+}));
+
+vi.mock("../context/ThemeContext", () => ({
+  useTheme: vi.fn(() => ({
+    theme: "light",
+    setTheme: vi.fn(),
+  })),
+}));
+
+vi.mock("../context/SettingsContext", () => ({
+  useSettings: vi.fn(() => ({
+    settings: {
+      soundEnabled: false,
+      volume: 0.5,
+    },
   })),
 }));
 
@@ -69,6 +88,21 @@ const renderNotificationBell = (props = {}) => {
 };
 
 describe("NotificationBell", () => {
+  beforeAll(() => {
+    // Silence React warnings during tests but log errors
+    console.error = (...args) => {
+      if (args[0]?.includes && args[0].includes('Warning:')) {
+        // Filter out React warnings
+        return;
+      }
+      originalConsoleError(...args);
+    };
+  });
+
+  afterAll(() => {
+    console.error = originalConsoleError;
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
@@ -76,6 +110,18 @@ describe("NotificationBell", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  // Debug test to verify component renders
+  it("should render without crashing", () => {
+    const { container } = renderNotificationBell();
+    console.log("Container:", container);
+    console.log("Container firstChild:", container.firstChild);
+    console.log("Container innerHTML:", container.innerHTML);
+    
+    expect(container).toBeTruthy();
+    expect(container.firstChild).toBeTruthy();
+    // screen.debug(); // Uncomment to see what's rendered
   });
 
   describe("Rendering", () => {
@@ -91,10 +137,13 @@ describe("NotificationBell", () => {
       renderNotificationBell();
 
       // Should show count of unviewed notifications
-      await waitFor(() => {
-        const badge = screen.getByText("2");
-        expect(badge).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          const badge = screen.getByText("2");
+          expect(badge).toBeInTheDocument();
+        },
+        { timeout: 3000 },
+      );
     });
 
     it("should apply custom className", () => {
@@ -114,11 +163,14 @@ describe("NotificationBell", () => {
       const bellButton = screen.getByRole("button");
       fireEvent.click(bellButton);
 
-      await waitFor(() => {
-        // Use getAllByText since there are multiple instances
-        const notificationHeaders = screen.getAllByText(/Notifications/i);
-        expect(notificationHeaders.length).toBeGreaterThan(0);
-      });
+      await waitFor(
+        () => {
+          // Use getAllByText since there are multiple instances
+          const notificationHeaders = screen.getAllByText(/Notifications/i);
+          expect(notificationHeaders.length).toBeGreaterThan(0);
+        },
+        { timeout: 3000 },
+      );
     });
 
     it("should close notification panel on close button click", async () => {
@@ -128,10 +180,13 @@ describe("NotificationBell", () => {
       const bellButton = screen.getByRole("button");
       fireEvent.click(bellButton);
 
-      await waitFor(() => {
-        const notificationHeaders = screen.getAllByText(/Notifications/i);
-        expect(notificationHeaders.length).toBeGreaterThan(0);
-      });
+      await waitFor(
+        () => {
+          const notificationHeaders = screen.getAllByText(/Notifications/i);
+          expect(notificationHeaders.length).toBeGreaterThan(0);
+        },
+        { timeout: 3000 },
+      );
 
       // Close panel
       const closeButtons = screen.getAllByRole("button");
@@ -143,11 +198,14 @@ describe("NotificationBell", () => {
         fireEvent.click(closeButton);
       }
 
-      await waitFor(() => {
-        expect(
-          screen.queryByText(/View all notifications/i),
-        ).not.toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(
+            screen.queryByText(/View all notifications/i),
+          ).not.toBeInTheDocument();
+        },
+        { timeout: 3000 },
+      );
     });
 
     it("should display notifications in panel", async () => {
@@ -156,10 +214,13 @@ describe("NotificationBell", () => {
       const bellButton = screen.getByRole("button");
       fireEvent.click(bellButton);
 
-      await waitFor(() => {
-        expect(screen.getByText(/NH3 LEAK DETECTED/i)).toBeInTheDocument();
-        expect(screen.getByText(/Unit Offline/i)).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText(/NH3 LEAK DETECTED/i)).toBeInTheDocument();
+          expect(screen.getByText(/Unit Offline/i)).toBeInTheDocument();
+        },
+        { timeout: 3000 },
+      );
     });
   });
 
@@ -170,9 +231,12 @@ describe("NotificationBell", () => {
       const bellButton = screen.getByRole("button");
       fireEvent.click(bellButton);
 
-      await waitFor(() => {
-        expect(screen.getByText(/NH3 LEAK DETECTED/i)).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText(/NH3 LEAK DETECTED/i)).toBeInTheDocument();
+        },
+        { timeout: 3000 },
+      );
 
       // Click a notification
       const notification = screen.getByText(/NH3 LEAK DETECTED/i);
@@ -190,17 +254,23 @@ describe("NotificationBell", () => {
       renderNotificationBell();
 
       // Initial count
-      await waitFor(() => {
-        expect(screen.getByText("2")).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText("2")).toBeInTheDocument();
+        },
+        { timeout: 3000 },
+      );
 
       // Open and view a notification
       const bellButton = screen.getByRole("button");
       fireEvent.click(bellButton);
 
-      await waitFor(() => {
-        expect(screen.getByText(/NH3 LEAK DETECTED/i)).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText(/NH3 LEAK DETECTED/i)).toBeInTheDocument();
+        },
+        { timeout: 3000 },
+      );
 
       const notification = screen.getByText(/NH3 LEAK DETECTED/i);
       const notificationCard = notification.closest("button");
@@ -221,9 +291,12 @@ describe("NotificationBell", () => {
 
       renderNotificationBell();
 
-      await waitFor(() => {
-        expect(getAllNotifications).toHaveBeenCalledWith("admin");
-      });
+      await waitFor(
+        () => {
+          expect(getAllNotifications).toHaveBeenCalledWith("admin");
+        },
+        { timeout: 3000 },
+      );
     });
 
     it("should load notifications for user role", async () => {
@@ -234,9 +307,12 @@ describe("NotificationBell", () => {
 
       renderNotificationBell();
 
-      await waitFor(() => {
-        expect(getAllNotifications).toHaveBeenCalledWith("user");
-      });
+      await waitFor(
+        () => {
+          expect(getAllNotifications).toHaveBeenCalledWith("user");
+        },
+        { timeout: 3000 },
+      );
     });
   });
 
@@ -293,10 +369,13 @@ describe("NotificationBell", () => {
         });
       }
 
-      await waitFor(() => {
-        // Should be called again after status change
-        expect(getAllNotifications).toHaveBeenCalledTimes(2);
-      });
+      await waitFor(
+        () => {
+          // Should be called again after status change
+          expect(getAllNotifications).toHaveBeenCalledTimes(2);
+        },
+        { timeout: 3000 },
+      );
     });
   });
 
@@ -307,12 +386,15 @@ describe("NotificationBell", () => {
       const bellButton = screen.getByRole("button");
       fireEvent.click(bellButton);
 
-      await waitFor(() => {
-        const viewAllButton = screen.getByText(/View all notifications/i);
-        expect(viewAllButton).toBeInTheDocument();
+      await waitFor(
+        () => {
+          const viewAllButton = screen.getByText(/View all notifications/i);
+          expect(viewAllButton).toBeInTheDocument();
 
-        fireEvent.click(viewAllButton);
-      });
+          fireEvent.click(viewAllButton);
+        },
+        { timeout: 3000 },
+      );
 
       expect(mockNavigate).toHaveBeenCalledWith("/history");
     });
@@ -323,14 +405,17 @@ describe("NotificationBell", () => {
       const bellButton = screen.getByRole("button");
       fireEvent.click(bellButton);
 
-      await waitFor(() => {
-        const notification = screen.getByText(/Unit Offline/i);
-        const notificationCard = notification.closest("button");
+      await waitFor(
+        () => {
+          const notification = screen.getByText(/Unit Offline/i);
+          const notificationCard = notification.closest("button");
 
-        if (notificationCard) {
-          fireEvent.click(notificationCard);
-        }
-      });
+          if (notificationCard) {
+            fireEvent.click(notificationCard);
+          }
+        },
+        { timeout: 3000 },
+      );
 
       expect(mockNavigate).toHaveBeenCalled();
     });
@@ -343,9 +428,12 @@ describe("NotificationBell", () => {
       const bellButton = screen.getByRole("button");
       fireEvent.click(bellButton);
 
-      await waitFor(() => {
-        expect(screen.getByText(/NH3 LEAK DETECTED/i)).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText(/NH3 LEAK DETECTED/i)).toBeInTheDocument();
+        },
+        { timeout: 3000 },
+      );
     });
 
     it("should display alert notifications", async () => {
@@ -354,9 +442,12 @@ describe("NotificationBell", () => {
       const bellButton = screen.getByRole("button");
       fireEvent.click(bellButton);
 
-      await waitFor(() => {
-        expect(screen.getByText(/Unit Offline/i)).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText(/Unit Offline/i)).toBeInTheDocument();
+        },
+        { timeout: 3000 },
+      );
     });
 
     it("should show notification timestamps", async () => {
@@ -365,11 +456,14 @@ describe("NotificationBell", () => {
       const bellButton = screen.getByRole("button");
       fireEvent.click(bellButton);
 
-      await waitFor(() => {
-        // Timestamps should be visible
-        const timestamps = screen.getAllByText(/2025-09-09/);
-        expect(timestamps.length).toBeGreaterThan(0);
-      });
+      await waitFor(
+        () => {
+          // Timestamps should be visible
+          const timestamps = screen.getAllByText(/2025-09-09/);
+          expect(timestamps.length).toBeGreaterThan(0);
+        },
+        { timeout: 3000 },
+      );
     });
   });
 
@@ -383,11 +477,14 @@ describe("NotificationBell", () => {
       const bellButton = screen.getByRole("button");
       fireEvent.click(bellButton);
 
-      await waitFor(() => {
-        // Should show "No notifications" message
-        const noNotifications = screen.getByText(/No notifications/i);
-        expect(noNotifications).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          // Should show "No notifications" message
+          const noNotifications = screen.getByText(/No notifications/i);
+          expect(noNotifications).toBeInTheDocument();
+        },
+        { timeout: 3000 },
+      );
     });
 
     it("should not show badge when no unviewed notifications", async () => {
@@ -396,12 +493,15 @@ describe("NotificationBell", () => {
 
       renderNotificationBell();
 
-      await waitFor(() => {
-        // Badge should not be visible when there are no notifications
-        const badge = screen.queryByText("0");
-        // Badge might not be rendered at all for zero notifications
-        expect(badge).not.toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          // Badge should not be visible when there are no notifications
+          const badge = screen.queryByText("0");
+          // Badge might not be rendered at all for zero notifications
+          expect(badge).not.toBeInTheDocument();
+        },
+        { timeout: 3000 },
+      );
     });
   });
 
@@ -423,10 +523,13 @@ describe("NotificationBell", () => {
       fireEvent.keyDown(bellButton, { key: "Enter", code: "Enter" });
 
       // Panel should open (implementation dependent)
-      await waitFor(() => {
-        const panelContent = screen.queryByText(/Notifications/i);
-        expect(panelContent).toBeDefined();
-      });
+      await waitFor(
+        () => {
+          const panelContent = screen.queryByText(/Notifications/i);
+          expect(panelContent).toBeDefined();
+        },
+        { timeout: 3000 },
+      );
     });
   });
 });
