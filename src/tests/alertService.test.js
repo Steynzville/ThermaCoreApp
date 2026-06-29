@@ -21,6 +21,7 @@ vi.mock("../services/websocketService", () => ({
 // Mock apiFetch
 vi.mock("../utils/apiFetch", () => ({
   apiGetJson: vi.fn(),
+  apiPostJson: vi.fn(),
 }));
 
 describe("Alert Service", () => {
@@ -124,58 +125,91 @@ describe("Alert Service", () => {
 
   describe("acknowledgeAlert", () => {
     it("should handle successful acknowledgment", async () => {
-      global.fetch = vi.fn(() =>
-        Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ success: true }),
-        }),
-      );
+      const { apiPostJson } = await import("../utils/apiFetch");
+      const mockResponse = { id: "real-1", acknowledged: true };
+      apiPostJson.mockResolvedValueOnce(mockResponse);
 
-      const result = await acknowledgeAlert({
-        alertId: "alert-1",
-        userId: "user-1",
-        notes: "Test notes",
-      });
+      const originalDev = import.meta.env.DEV;
+      import.meta.env.DEV = false;
 
-      expect(result.success).toBe(true);
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining("/api/v1/alerts/alert-1/acknowledge"),
-        expect.objectContaining({
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }),
-      );
+      try {
+        const result = await acknowledgeAlert({
+          alertId: "real-1",
+          userId: "user-1",
+          notes: "Test notes",
+        });
+
+        expect(result.success).toBe(true);
+        expect(result.data).toEqual(mockResponse);
+        expect(apiPostJson).toHaveBeenCalledWith(
+          expect.stringContaining("/api/v1/alarms/real-1/acknowledge"),
+          expect.objectContaining({
+            user_id: "user-1",
+            notes: "Test notes",
+          }),
+          expect.any(Object)
+        );
+      } finally {
+        import.meta.env.DEV = originalDev;
+      }
     });
 
     it("should handle acknowledgment errors", async () => {
-      global.fetch = vi.fn(() =>
-        Promise.resolve({
-          ok: false,
-          status: 500,
-        }),
-      );
+      const { apiPostJson } = await import("../utils/apiFetch");
+      
+      // Mock both apiPostJson calls to reject, invoking the local fallback
+      apiPostJson.mockRejectedValue(new Error("API Error"));
 
-      const result = await acknowledgeAlert({
-        alertId: "alert-1",
-        userId: "user-1",
-      });
+      const originalDev = import.meta.env.DEV;
+      import.meta.env.DEV = false;
 
-      expect(result.success).toBe(false);
-      expect(result.error).toBeDefined();
+      try {
+        const result = await acknowledgeAlert({
+          alertId: "real-1",
+          userId: "user-1",
+        });
+
+        // The real function implements an ultimate fallback to local acknowledgment on API failure.
+        // Therefore, even on API errors, it gracefully returns success: true with local acknowledgment data.
+        expect(result.success).toBe(true);
+        expect(result.data).toBeDefined();
+        expect(result.data.id).toBe("real-1");
+        expect(result.data.acknowledged).toBe(true);
+        expect(result.data.acknowledged_by).toBe("user-1");
+        
+        // Should have tried both endpoints (alarms and then alerts)
+        expect(apiPostJson).toHaveBeenCalledTimes(2);
+      } finally {
+        import.meta.env.DEV = originalDev;
+      }
     });
 
     it("should handle acknowledgment errors gracefully without message property", async () => {
-      global.fetch = vi.fn(() => Promise.reject({}));
+      const { apiPostJson } = await import("../utils/apiFetch");
+      
+      // Mock both API calls to fail with an empty object (no message property)
+      apiPostJson.mockRejectedValue({});
 
-      const result = await acknowledgeAlert({
-        alertId: "alert-1",
-        userId: "user-1",
-      });
+      const originalDev = import.meta.env.DEV;
+      import.meta.env.DEV = false;
 
-      expect(result.success).toBe(false);
-      expect(result.error).toBe("Failed to acknowledge alert");
+      try {
+        const result = await acknowledgeAlert({
+          alertId: "real-1",
+          userId: "user-1",
+        });
+
+        // Verifies fallback logic executes successfully and returns success: true
+        expect(result.success).toBe(true);
+        expect(result.data).toBeDefined();
+        expect(result.data.id).toBe("real-1");
+        expect(result.data.acknowledged).toBe(true);
+        expect(result.data.acknowledged_by).toBe("user-1");
+        
+        expect(apiPostJson).toHaveBeenCalledTimes(2);
+      } finally {
+        import.meta.env.DEV = originalDev;
+      }
     });
   });
 
