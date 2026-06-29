@@ -358,3 +358,6 @@ export function ProtocolWizard({ protocol, onSave, onCancel, initialData }) {
     </Card>
   );
 }
+
+// Default export for compatibility with existing imports
+export default ProtocolWizard;
