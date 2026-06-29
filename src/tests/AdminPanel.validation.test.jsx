@@ -4,12 +4,15 @@ import {
   screen,
   waitFor,
   within,
+  act,
 } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
-import { vi, afterAll } from "vitest";
+import { afterAll, vi, beforeEach, describe, it, expect } from "vitest";
 
 import AdminPanel from "../components/AdminPanel";
 import * as AuthContext from "../context/AuthContext.jsx";
+import { AuthProvider } from "../context/AuthContext.jsx";
+import { SettingsProvider } from "../context/SettingsContext.jsx";
 import * as apiFetch from "../utils/apiFetch";
 
 // Mock sonner toast
@@ -20,12 +23,82 @@ vi.mock("sonner", () => ({
   },
 }));
 
-// Mock apiFetch to prevent real API calls
+// Mock ThemeContext to make sure ThemeProvider is fully operational for the component under test
+vi.mock("../context/ThemeContext.jsx", () => {
+  const React = require("react");
+  const ThemeContext = React.createContext({ theme: "dark", setTheme: () => {} });
+  return {
+    ThemeContext,
+    ThemeProvider: ({ children }) => (
+      <ThemeContext.Provider value={{ theme: "dark", setTheme: () => {} }}>
+        {children}
+      </ThemeContext.Provider>
+    ),
+    useTheme: () => React.useContext(ThemeContext),
+  };
+});
+
+vi.mock("../context/ThemeContext", () => {
+  const React = require("react");
+  const ThemeContext = React.createContext({ theme: "dark", setTheme: () => {} });
+  return {
+    ThemeContext,
+    ThemeProvider: ({ children }) => (
+      <ThemeContext.Provider value={{ theme: "dark", setTheme: () => {} }}>
+        {children}
+      </ThemeContext.Provider>
+    ),
+    useTheme: () => React.useContext(ThemeContext),
+  };
+});
+
+// Mock apiFetch to prevent real API calls and make it a configurable mock
 vi.mock("../utils/apiFetch", () => ({
   apiGet: vi.fn(() => Promise.resolve({ data: [] })),
-  apiPost: vi.fn(() => Promise.resolve({ data: {} })),
+  apiPost: vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true }) })),
   apiPut: vi.fn(() => Promise.resolve({ data: {} })),
   apiDelete: vi.fn(() => Promise.resolve({ data: {} })),
+}));
+
+// Mock usersAPI to prevent disk dependencies and network requests
+vi.mock("../services/usersAPI", () => ({
+  getAllUsers: vi.fn(() =>
+    Promise.resolve({
+      data: [
+        {
+          id: 1,
+          username: "john_doe",
+          email: "john@thermacore.com",
+          first_name: "John",
+          last_name: "Doe",
+          role: { name: "admin" },
+          is_active: true,
+        },
+        {
+          id: 2,
+          username: "jane_smith",
+          email: "jane@thermacore.com",
+          first_name: "Jane",
+          last_name: "Smith",
+          role: { name: "operator" },
+          is_active: true,
+        },
+        {
+          id: 3,
+          username: "mike_johnson",
+          email: "mike@thermacore.com",
+          first_name: "Mike",
+          last_name: "Johnson",
+          role: { name: "viewer" },
+          is_active: false,
+        },
+      ],
+      page: 1,
+      per_page: 100,
+      total: 3,
+    })
+  ),
+  deleteUser: vi.fn(() => Promise.resolve({ ok: true, status: 204 })),
 }));
 
 const mockUser = {
@@ -40,7 +113,7 @@ const mockUser = {
 const originalLocalStorage = window.localStorage;
 
 const renderWithProviders = (component) => {
-  // Mock AuthContext
+  // Mock AuthContext hook directly
   vi.spyOn(AuthContext, "useAuth").mockReturnValue({
     user: mockUser,
     userRole: "admin",
@@ -55,6 +128,15 @@ const renderWithProviders = (component) => {
         if (key === "thermacore_user") return JSON.stringify(mockUser);
         if (key === "thermacore_role") return "admin";
         if (key === "thermacore_token") return "fake-token";
+        if (key === "thermacore_settings" || key === "thermacore-settings") {
+          return JSON.stringify({
+            soundEnabled: true,
+            volume: 0.35,
+            refreshInterval: 5000,
+            temperatureUnit: "celsius",
+            theme: "dark",
+          });
+        }
         return null;
       }),
       setItem: vi.fn(),
@@ -64,7 +146,20 @@ const renderWithProviders = (component) => {
     writable: true,
   });
 
-  return render(<BrowserRouter>{component}</BrowserRouter>);
+  return render(
+    <SettingsProvider>
+      <AuthProvider
+        value={{
+          user: mockUser,
+          userRole: "admin",
+          isAuthenticated: true,
+          isLoading: false,
+        }}
+      >
+        <BrowserRouter>{component}</BrowserRouter>
+      </AuthProvider>
+    </SettingsProvider>
+  );
 };
 
 describe("AdminPanel Password Reset Validation - Real-time Updates", () => {
@@ -81,22 +176,35 @@ describe("AdminPanel Password Reset Validation - Real-time Updates", () => {
     window.confirm = vi.fn(() => true);
   });
 
+  it("should render without crashing", async () => {
+    renderWithProviders(<AdminPanel />);
+    await waitFor(() => {
+      expect(screen.getByText("Users")).toBeInTheDocument();
+    });
+  });
+
   it("should show warning for passwords less than 6 characters", async () => {
     renderWithProviders(<AdminPanel />);
 
     // Navigate to Password Management and open modal
-    fireEvent.click(screen.getByText("Password Management"));
-    fireEvent.click(screen.getByText("Change My Password"));
+    await act(async () => {
+      fireEvent.click(screen.getByText("Password Management"));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByText("Change My Password"));
+    });
 
     const newPasswordInput = screen.getByPlaceholderText("Enter new password");
 
     // Type 5 characters - should show warning
-    fireEvent.change(newPasswordInput, { target: { value: "12345" } });
+    await act(async () => {
+      fireEvent.change(newPasswordInput, { target: { value: "12345" } });
+    });
 
     await waitFor(() => {
-      // Should have the validation warning (static info banner removed per requirements)
+      // Should have the validation warning
       const warning = screen.getByText(
-        "Password must be at least 6 characters long",
+        "Password must be at least 6 characters long"
       );
       expect(warning).toBeInTheDocument();
     });
@@ -113,32 +221,42 @@ describe("AdminPanel Password Reset Validation - Real-time Updates", () => {
     renderWithProviders(<AdminPanel />);
 
     // Navigate to Password Management and open modal
-    fireEvent.click(screen.getByText("Password Management"));
-    fireEvent.click(screen.getByText("Change My Password"));
+    await act(async () => {
+      fireEvent.click(screen.getByText("Password Management"));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByText("Change My Password"));
+    });
 
     const newPasswordInput = screen.getByPlaceholderText("Enter new password");
     const confirmPasswordInput = screen.getByPlaceholderText(
-      "Confirm new password",
+      "Confirm new password"
     );
 
     // Type 5 characters first - should show warning
-    fireEvent.change(newPasswordInput, { target: { value: "12345" } });
+    await act(async () => {
+      fireEvent.change(newPasswordInput, { target: { value: "12345" } });
+    });
 
     await waitFor(() => {
       const warning = screen.getByText(
-        "Password must be at least 6 characters long",
+        "Password must be at least 6 characters long"
       );
       expect(warning).toBeInTheDocument();
     });
 
-    // Now type 6 characters - warning should disappear completely (no static info banner per requirements)
-    fireEvent.change(newPasswordInput, { target: { value: "123456" } });
-    fireEvent.change(confirmPasswordInput, { target: { value: "123456" } });
+    // Now type 6 characters - warning should disappear completely
+    await act(async () => {
+      fireEvent.change(newPasswordInput, { target: { value: "123456" } });
+    });
+    await act(async () => {
+      fireEvent.change(confirmPasswordInput, { target: { value: "123456" } });
+    });
 
     await waitFor(() => {
-      // Warning should be completely gone (no static info banner)
+      // Warning should be completely gone
       const warning = screen.queryByText(
-        "Password must be at least 6 characters long",
+        "Password must be at least 6 characters long"
       );
       expect(warning).not.toBeInTheDocument();
     });
@@ -155,20 +273,28 @@ describe("AdminPanel Password Reset Validation - Real-time Updates", () => {
     renderWithProviders(<AdminPanel />);
 
     // Navigate to Password Management and open modal
-    fireEvent.click(screen.getByText("Password Management"));
-    fireEvent.click(screen.getByText("Change My Password"));
+    await act(async () => {
+      fireEvent.click(screen.getByText("Password Management"));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByText("Change My Password"));
+    });
 
     const newPasswordInput = screen.getByPlaceholderText("Enter new password");
     const confirmPasswordInput = screen.getByPlaceholderText(
-      "Confirm new password",
+      "Confirm new password"
     );
 
     // Type valid password
-    fireEvent.change(newPasswordInput, { target: { value: "password123" } });
+    await act(async () => {
+      fireEvent.change(newPasswordInput, { target: { value: "password123" } });
+    });
 
     // Type different password in confirm field
-    fireEvent.change(confirmPasswordInput, {
-      target: { value: "password456" },
+    await act(async () => {
+      fireEvent.change(confirmPasswordInput, {
+        target: { value: "password456" },
+      });
     });
 
     await waitFor(() => {
@@ -187,18 +313,26 @@ describe("AdminPanel Password Reset Validation - Real-time Updates", () => {
     renderWithProviders(<AdminPanel />);
 
     // Navigate to Password Management and open modal
-    fireEvent.click(screen.getByText("Password Management"));
-    fireEvent.click(screen.getByText("Change My Password"));
+    await act(async () => {
+      fireEvent.click(screen.getByText("Password Management"));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByText("Change My Password"));
+    });
 
     const newPasswordInput = screen.getByPlaceholderText("Enter new password");
     const confirmPasswordInput = screen.getByPlaceholderText(
-      "Confirm new password",
+      "Confirm new password"
     );
 
     // Create mismatch
-    fireEvent.change(newPasswordInput, { target: { value: "password123" } });
-    fireEvent.change(confirmPasswordInput, {
-      target: { value: "password456" },
+    await act(async () => {
+      fireEvent.change(newPasswordInput, { target: { value: "password123" } });
+    });
+    await act(async () => {
+      fireEvent.change(confirmPasswordInput, {
+        target: { value: "password456" },
+      });
     });
 
     await waitFor(() => {
@@ -206,13 +340,15 @@ describe("AdminPanel Password Reset Validation - Real-time Updates", () => {
     });
 
     // Fix the mismatch
-    fireEvent.change(confirmPasswordInput, {
-      target: { value: "password123" },
+    await act(async () => {
+      fireEvent.change(confirmPasswordInput, {
+        target: { value: "password123" },
+      });
     });
 
     await waitFor(() => {
       expect(
-        screen.queryByText("Passwords do not match"),
+        screen.queryByText("Passwords do not match")
       ).not.toBeInTheDocument();
     });
 
@@ -228,12 +364,16 @@ describe("AdminPanel Password Reset Validation - Real-time Updates", () => {
     renderWithProviders(<AdminPanel />);
 
     // Navigate to Password Management and open modal
-    fireEvent.click(screen.getByText("Password Management"));
-    fireEvent.click(screen.getByText("Change My Password"));
+    await act(async () => {
+      fireEvent.click(screen.getByText("Password Management"));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByText("Change My Password"));
+    });
 
     const newPasswordInput = screen.getByPlaceholderText("Enter new password");
     const confirmPasswordInput = screen.getByPlaceholderText(
-      "Confirm new password",
+      "Confirm new password"
     );
     const modal = screen.getByTestId("password-reset-modal");
     const resetButton = within(modal).getByRole("button", {
@@ -244,23 +384,33 @@ describe("AdminPanel Password Reset Validation - Real-time Updates", () => {
     expect(resetButton).toBeDisabled();
 
     // Short password + no confirm - disabled
-    fireEvent.change(newPasswordInput, { target: { value: "123" } });
+    await act(async () => {
+      fireEvent.change(newPasswordInput, { target: { value: "123" } });
+    });
     expect(resetButton).toBeDisabled();
 
     // Short password + matching - disabled
-    fireEvent.change(confirmPasswordInput, { target: { value: "123" } });
+    await act(async () => {
+      fireEvent.change(confirmPasswordInput, { target: { value: "123" } });
+    });
     expect(resetButton).toBeDisabled();
 
     // Valid length + no confirm - disabled
-    fireEvent.change(newPasswordInput, { target: { value: "123456" } });
+    await act(async () => {
+      fireEvent.change(newPasswordInput, { target: { value: "123456" } });
+    });
     expect(resetButton).toBeDisabled();
 
     // Valid length + mismatched - disabled
-    fireEvent.change(confirmPasswordInput, { target: { value: "123" } });
+    await act(async () => {
+      fireEvent.change(confirmPasswordInput, { target: { value: "123" } });
+    });
     expect(resetButton).toBeDisabled();
 
     // Valid length + matched - enabled
-    fireEvent.change(confirmPasswordInput, { target: { value: "123456" } });
+    await act(async () => {
+      fireEvent.change(confirmPasswordInput, { target: { value: "123456" } });
+    });
     await waitFor(() => {
       expect(resetButton).not.toBeDisabled();
     });
@@ -268,33 +418,38 @@ describe("AdminPanel Password Reset Validation - Real-time Updates", () => {
 
   it("should successfully submit password reset with valid data", async () => {
     // Mock successful API response
-    const mockApiPost = vi.fn(() =>
-      Promise.resolve({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            success: true,
-            message: "Password reset successfully",
-          }),
-      }),
-    );
-    vi.spyOn(apiFetch, "apiPost").mockImplementation(mockApiPost);
+    apiFetch.apiPost.mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          success: true,
+          message: "Password reset successfully",
+        }),
+    });
 
     renderWithProviders(<AdminPanel />);
 
     // Navigate to Password Management and open modal
-    fireEvent.click(screen.getByText("Password Management"));
-    fireEvent.click(screen.getByText("Change My Password"));
+    await act(async () => {
+      fireEvent.click(screen.getByText("Password Management"));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByText("Change My Password"));
+    });
 
     const newPasswordInput = screen.getByPlaceholderText("Enter new password");
     const confirmPasswordInput = screen.getByPlaceholderText(
-      "Confirm new password",
+      "Confirm new password"
     );
 
     // Fill in valid matching passwords
-    fireEvent.change(newPasswordInput, { target: { value: "newPassword123" } });
-    fireEvent.change(confirmPasswordInput, {
-      target: { value: "newPassword123" },
+    await act(async () => {
+      fireEvent.change(newPasswordInput, { target: { value: "newPassword123" } });
+    });
+    await act(async () => {
+      fireEvent.change(confirmPasswordInput, {
+        target: { value: "newPassword123" },
+      });
     });
 
     const modal = screen.getByTestId("password-reset-modal");
@@ -308,47 +463,54 @@ describe("AdminPanel Password Reset Validation - Real-time Updates", () => {
     });
 
     // Click submit
-    fireEvent.click(resetButton);
+    await act(async () => {
+      fireEvent.click(resetButton);
+    });
 
     // Verify API was called with correct data
     await waitFor(() => {
-      expect(mockApiPost).toHaveBeenCalledWith(
+      expect(apiFetch.apiPost).toHaveBeenCalledWith(
         expect.stringContaining("/api/v1/users/"),
         { new_password: "newPassword123" },
         expect.objectContaining({
           showToastOnError: false,
           retries: 2,
           retryDelay: 1000,
-        }),
+        })
       );
     });
   });
 
   it("should show error message on API failure", async () => {
     // Mock failed API response
-    const mockApiPost = vi.fn(() =>
-      Promise.resolve({
-        ok: false,
-        json: () => Promise.resolve({ error: "Invalid password format" }),
-      }),
-    );
-    vi.spyOn(apiFetch, "apiPost").mockImplementation(mockApiPost);
+    apiFetch.apiPost.mockResolvedValue({
+      ok: false,
+      json: () => Promise.resolve({ error: "Invalid password format" }),
+    });
 
     renderWithProviders(<AdminPanel />);
 
     // Navigate to Password Management and open modal
-    fireEvent.click(screen.getByText("Password Management"));
-    fireEvent.click(screen.getByText("Change My Password"));
+    await act(async () => {
+      fireEvent.click(screen.getByText("Password Management"));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByText("Change My Password"));
+    });
 
     const newPasswordInput = screen.getByPlaceholderText("Enter new password");
     const confirmPasswordInput = screen.getByPlaceholderText(
-      "Confirm new password",
+      "Confirm new password"
     );
 
     // Fill in valid matching passwords
-    fireEvent.change(newPasswordInput, { target: { value: "newPassword123" } });
-    fireEvent.change(confirmPasswordInput, {
-      target: { value: "newPassword123" },
+    await act(async () => {
+      fireEvent.change(newPasswordInput, { target: { value: "newPassword123" } });
+    });
+    await act(async () => {
+      fireEvent.change(confirmPasswordInput, {
+        target: { value: "newPassword123" },
+      });
     });
 
     const modal = screen.getByTestId("password-reset-modal");
@@ -361,7 +523,9 @@ describe("AdminPanel Password Reset Validation - Real-time Updates", () => {
     });
 
     // Click submit
-    fireEvent.click(resetButton);
+    await act(async () => {
+      fireEvent.click(resetButton);
+    });
 
     // Verify error message is displayed
     await waitFor(() => {
