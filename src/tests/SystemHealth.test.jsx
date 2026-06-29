@@ -12,7 +12,7 @@
  * - Loading states
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SystemHealth from "@/components/SystemHealth";
 
@@ -495,7 +495,8 @@ describe("SystemHealth", () => {
         expect(refreshButtons.length).toBeGreaterThan(0);
       });
 
-      const refreshButton = screen.getAllByRole("button", { name: /refresh/i })[0];
+      const refreshButtons = screen.getAllByRole("button", { name: /refresh/i });
+      const refreshButton = refreshButtons[0];
       fireEvent.click(refreshButton);
 
       const refreshingElements = screen.getAllByText(/Refreshing/i);
@@ -517,7 +518,8 @@ describe("SystemHealth", () => {
         expect(refreshButtons.length).toBeGreaterThan(0);
       });
 
-      const refreshButton = screen.getAllByRole("button", { name: /refresh/i })[0];
+      const refreshButtons = screen.getAllByRole("button", { name: /refresh/i });
+      const refreshButton = refreshButtons[0];
       fireEvent.click(refreshButton);
 
       expect(refreshButton).toBeDisabled();
