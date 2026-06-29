@@ -1,6 +1,6 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 
 import NotificationBell from "../components/NotificationBell";
 
@@ -71,6 +71,11 @@ const renderNotificationBell = (props = {}) => {
 describe("NotificationBell", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   describe("Rendering", () => {
@@ -171,7 +176,7 @@ describe("NotificationBell", () => {
 
       // Click a notification
       const notification = screen.getByText(/NH3 LEAK DETECTED/i);
-      const notificationCard = notification.closest("div");
+      const notificationCard = notification.closest("button");
 
       if (notificationCard) {
         fireEvent.click(notificationCard);
@@ -198,7 +203,7 @@ describe("NotificationBell", () => {
       });
 
       const notification = screen.getByText(/NH3 LEAK DETECTED/i);
-      const notificationCard = notification.closest("div");
+      const notificationCard = notification.closest("button");
 
       if (notificationCard) {
         fireEvent.click(notificationCard);
@@ -283,7 +288,9 @@ describe("NotificationBell", () => {
 
       // Trigger status change
       if (statusChangeCallback) {
-        statusChangeCallback();
+        act(() => {
+          statusChangeCallback();
+        });
       }
 
       await waitFor(() => {
@@ -318,7 +325,7 @@ describe("NotificationBell", () => {
 
       await waitFor(() => {
         const notification = screen.getByText(/Unit Offline/i);
-        const notificationCard = notification.closest("div");
+        const notificationCard = notification.closest("button");
 
         if (notificationCard) {
           fireEvent.click(notificationCard);
