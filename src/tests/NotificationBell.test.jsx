@@ -43,13 +43,15 @@ vi.mock("../context/SettingsContext", () => ({
 vi.mock("../services/deviceStatusService", () => ({
   deviceStatusService: {
     addStatusChangeListener: vi.fn(() => vi.fn()), // Returns unsubscribe function
+    generateDeviceStatusNotifications: vi.fn(() => []),
   },
 }));
 
+// Mock the notifications module with proper data structure matching the actual module
 vi.mock("../utils/notifications", () => ({
   getAllNotifications: vi.fn(() => [
     {
-      id: 1,
+      id: 7,
       type: "alarm",
       message: "ThermaCore Unit 003 - NH3 LEAK DETECTED",
       timestamp: "2025-09-09 15:30",
@@ -57,13 +59,12 @@ vi.mock("../utils/notifications", () => ({
         id: 7,
         type: "critical",
         title: "NH3 LEAK DETECTED",
-        message:
-          "Critical ammonia leak detected - immediate attention required",
+        message: "Critical ammonia leak detected - immediate attention required",
         timestamp: "2025-09-09 15:30",
       },
     },
     {
-      id: 2,
+      id: 1,
       type: "alert",
       message: "ThermaCore Unit 001 - Unit Offline",
       timestamp: "2025-09-09 14:45",
@@ -71,12 +72,43 @@ vi.mock("../utils/notifications", () => ({
         id: 1,
         type: "critical",
         title: "Unit Offline",
-        message:
-          "ThermaCore Unit 001 has gone offline and requires immediate attention",
+        message: "ThermaCore Unit 001 has gone offline and requires immediate attention",
         timestamp: "2025-09-09 14:45",
       },
     },
   ]),
+  getRoleFilteredAlarms: vi.fn(() => [
+    {
+      id: 7,
+      type: "alarm",
+      message: "ThermaCore Unit 003 - NH3 LEAK DETECTED",
+      timestamp: "2025-09-09 15:30",
+      alertData: {
+        id: 7,
+        type: "critical",
+        title: "NH3 LEAK DETECTED",
+        message: "Critical ammonia leak detected - immediate attention required",
+        timestamp: "2025-09-09 15:30",
+      },
+    },
+  ]),
+  getRoleFilteredAlerts: vi.fn(() => [
+    {
+      id: 1,
+      type: "alert",
+      message: "ThermaCore Unit 001 - Unit Offline",
+      timestamp: "2025-09-09 14:45",
+      alertData: {
+        id: 1,
+        type: "critical",
+        title: "Unit Offline",
+        message: "ThermaCore Unit 001 has gone offline and requires immediate attention",
+        timestamp: "2025-09-09 14:45",
+      },
+    },
+  ]),
+  getDeviceStatusNotifications: vi.fn(() => []),
+  getAllCurrentNotificationsForUnit: vi.fn(() => []),
 }));
 
 const renderNotificationBell = (props = {}) => {
