@@ -279,22 +279,15 @@ describe("ProcessFlowDiagram", () => {
         <ProcessFlowDiagram nodes={mockNodes} onNodeClick={onNodeClick} />,
       );
 
-      // Find the text and click it - the text is inside a clickable element
-      const pumpText = screen.getAllByText("Pump 1")[0];
-      // Get the parent element that is clickable (the SVG group)
-      let clickableElement = pumpText.closest("g");
-      if (!clickableElement) {
-        clickableElement = pumpText.parentElement;
-      }
-      // Also try to find by role
-      if (!clickableElement || !clickableElement.getAttribute("role")) {
-        const roleElement = pumpText.closest('[role="button"]');
-        if (roleElement) {
-          clickableElement = roleElement;
-        }
-      }
-      if (clickableElement) {
-        fireEvent.click(clickableElement);
+      // Find all clickable nodes
+      const nodes = screen.getAllByRole("button");
+      // Find the one that contains "Pump 1" text
+      const pumpNode = nodes.find((node) =>
+        node.textContent?.includes("Pump 1")
+      );
+      
+      if (pumpNode) {
+        fireEvent.click(pumpNode);
         expect(onNodeClick).toHaveBeenCalledWith(
           expect.objectContaining({ id: "pump1" }),
         );
@@ -307,19 +300,13 @@ describe("ProcessFlowDiagram", () => {
         <ProcessFlowDiagram nodes={mockNodes} onNodeClick={onNodeClick} />,
       );
 
-      const pumpText = screen.getAllByText("Pump 1")[0];
-      let clickableElement = pumpText.closest("g");
-      if (!clickableElement) {
-        clickableElement = pumpText.parentElement;
-      }
-      if (!clickableElement || !clickableElement.getAttribute("role")) {
-        const roleElement = pumpText.closest('[role="button"]');
-        if (roleElement) {
-          clickableElement = roleElement;
-        }
-      }
-      if (clickableElement) {
-        fireEvent.keyDown(clickableElement, { key: "Enter", code: "Enter" });
+      const nodes = screen.getAllByRole("button");
+      const pumpNode = nodes.find((node) =>
+        node.textContent?.includes("Pump 1")
+      );
+      
+      if (pumpNode) {
+        fireEvent.keyDown(pumpNode, { key: "Enter", code: "Enter" });
         expect(onNodeClick).toHaveBeenCalled();
       }
     });
@@ -330,19 +317,13 @@ describe("ProcessFlowDiagram", () => {
         <ProcessFlowDiagram nodes={mockNodes} onNodeClick={onNodeClick} />,
       );
 
-      const pumpText = screen.getAllByText("Pump 1")[0];
-      let clickableElement = pumpText.closest("g");
-      if (!clickableElement) {
-        clickableElement = pumpText.parentElement;
-      }
-      if (!clickableElement || !clickableElement.getAttribute("role")) {
-        const roleElement = pumpText.closest('[role="button"]');
-        if (roleElement) {
-          clickableElement = roleElement;
-        }
-      }
-      if (clickableElement) {
-        fireEvent.keyDown(clickableElement, { key: " ", code: "Space" });
+      const nodes = screen.getAllByRole("button");
+      const pumpNode = nodes.find((node) =>
+        node.textContent?.includes("Pump 1")
+      );
+      
+      if (pumpNode) {
+        fireEvent.keyDown(pumpNode, { key: " ", code: "Space" });
         expect(onNodeClick).toHaveBeenCalled();
       }
     });
@@ -350,19 +331,13 @@ describe("ProcessFlowDiagram", () => {
     it("should not call onNodeClick if not provided", () => {
       render(<ProcessFlowDiagram nodes={mockNodes} />);
 
-      const pumpText = screen.getAllByText("Pump 1")[0];
-      let clickableElement = pumpText.closest("g");
-      if (!clickableElement) {
-        clickableElement = pumpText.parentElement;
-      }
-      if (!clickableElement || !clickableElement.getAttribute("role")) {
-        const roleElement = pumpText.closest('[role="button"]');
-        if (roleElement) {
-          clickableElement = roleElement;
-        }
-      }
-      if (clickableElement) {
-        expect(() => fireEvent.click(clickableElement)).not.toThrow();
+      const nodes = screen.getAllByRole("button");
+      const pumpNode = nodes.find((node) =>
+        node.textContent?.includes("Pump 1")
+      );
+      
+      if (pumpNode) {
+        expect(() => fireEvent.click(pumpNode)).not.toThrow();
       }
     });
   });
