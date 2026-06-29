@@ -444,7 +444,8 @@ describe("SystemHealth", () => {
         expect(timestampElements.length).toBeGreaterThan(0);
       });
 
-      const refreshButton = screen.getByRole("button", { name: /refresh/i });
+      const refreshButtons = screen.getAllByRole("button", { name: /refresh/i });
+      const refreshButton = refreshButtons[0];
       fireEvent.click(refreshButton);
 
       await waitFor(() => {
@@ -470,7 +471,8 @@ describe("SystemHealth", () => {
         expect(checkAllStatus).toHaveBeenCalledTimes(1);
       });
 
-      const refreshButton = screen.getByRole("button", { name: /refresh/i });
+      const refreshButtons = screen.getAllByRole("button", { name: /refresh/i });
+      const refreshButton = refreshButtons[0];
       fireEvent.click(refreshButton);
 
       await waitFor(() => {
@@ -493,7 +495,7 @@ describe("SystemHealth", () => {
         expect(refreshButtons.length).toBeGreaterThan(0);
       });
 
-      const refreshButton = screen.getByRole("button", { name: /refresh/i });
+      const refreshButton = screen.getAllByRole("button", { name: /refresh/i })[0];
       fireEvent.click(refreshButton);
 
       const refreshingElements = screen.getAllByText(/Refreshing/i);
@@ -515,7 +517,7 @@ describe("SystemHealth", () => {
         expect(refreshButtons.length).toBeGreaterThan(0);
       });
 
-      const refreshButton = screen.getByRole("button", { name: /refresh/i });
+      const refreshButton = screen.getAllByRole("button", { name: /refresh/i })[0];
       fireEvent.click(refreshButton);
 
       expect(refreshButton).toBeDisabled();
