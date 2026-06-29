@@ -3,6 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import MultiProtocolManager from "../components/MultiProtocolManager";
 import * as apiFetch from "../utils/apiFetch";
 
+// Force apiGetJson to be called instead of returning local mockData
+import.meta.env.DEV = false;
+import.meta.env.VITE_MOCK_MODE = "false";
+
 // Mock the API fetch utilities
 vi.mock("../utils/apiFetch", () => ({
   apiGetJson: vi.fn(),

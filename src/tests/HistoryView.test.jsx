@@ -85,7 +85,9 @@ describe("HistoryView", () => {
       await waitFor(() => {
         const titleElements = screen.getAllByText("Event History");
         expect(titleElements.length).toBeGreaterThan(0);
-        const descElements = screen.getAllByText(/Recent events and changes across all devices/i);
+        const descElements = screen.getAllByText(
+          /Recent events and changes across all devices/i,
+        );
         expect(descElements.length).toBeGreaterThan(0);
       });
     });
@@ -95,7 +97,7 @@ describe("HistoryView", () => {
         () =>
           new Promise((resolve) => {
             setTimeout(() => resolve([]), 100);
-          })
+          }),
       );
 
       render(
@@ -180,7 +182,9 @@ describe("HistoryView", () => {
       );
 
       await waitFor(() => {
-        const maintenanceElements = screen.getAllByText("Maintenance Scheduled");
+        const maintenanceElements = screen.getAllByText(
+          "Maintenance Scheduled",
+        );
         expect(maintenanceElements.length).toBeGreaterThan(0);
       });
     });
@@ -244,7 +248,9 @@ describe("HistoryView", () => {
       await waitFor(() => {
         const unit007Elements = screen.getAllByText("ThermaCore Unit 007");
         expect(unit007Elements.length).toBeGreaterThan(0);
-        const maintenanceElements = screen.getAllByText("Maintenance completed");
+        const maintenanceElements = screen.getAllByText(
+          "Maintenance completed",
+        );
         expect(maintenanceElements.length).toBeGreaterThan(0);
       });
     });
@@ -345,7 +351,9 @@ describe("HistoryView", () => {
       );
 
       await waitFor(() => {
-        const maintenanceElements = screen.getAllByText("Maintenance completed");
+        const maintenanceElements = screen.getAllByText(
+          "Maintenance completed",
+        );
         expect(maintenanceElements.length).toBeGreaterThan(0);
         const successCards = container.querySelectorAll(".border-l-green-500");
         expect(successCards.length).toBeGreaterThan(0);
@@ -395,7 +403,7 @@ describe("HistoryView", () => {
 
       await waitFor(() => {
         const unresolvedElements = Array.from(
-          container.querySelectorAll("p")
+          container.querySelectorAll("p"),
         ).filter((el) => el.textContent === "Unresolved");
         expect(unresolvedElements.length).toBeGreaterThan(0);
         expect(unresolvedElements[0].className).toMatch(/text-red-600/);
@@ -569,9 +577,13 @@ describe("HistoryView", () => {
       );
 
       await waitFor(() => {
-        const maintenanceElements = screen.getAllByText("Maintenance completed");
+        const maintenanceElements = screen.getAllByText(
+          "Maintenance completed",
+        );
         expect(maintenanceElements.length).toBeGreaterThan(0);
-        const calibrationElements = screen.getAllByText("Calibration adjustment");
+        const calibrationElements = screen.getAllByText(
+          "Calibration adjustment",
+        );
         expect(calibrationElements.length).toBeGreaterThan(0);
         const icons = container.querySelectorAll("svg");
         expect(icons.length).toBeGreaterThan(0);
@@ -625,7 +637,9 @@ describe("HistoryView", () => {
       );
 
       await waitFor(() => {
-        const maintenanceElements = screen.getAllByText("Maintenance completed successfully");
+        const maintenanceElements = screen.getAllByText(
+          "Maintenance completed successfully",
+        );
         expect(maintenanceElements.length).toBeGreaterThan(0);
         const icons = container.querySelectorAll("svg");
         expect(icons.length).toBeGreaterThan(0);
@@ -649,7 +663,9 @@ describe("HistoryView", () => {
       );
 
       await waitFor(() => {
-        const diagnosticElements = screen.getAllByText("Diagnostic check performed");
+        const diagnosticElements = screen.getAllByText(
+          "Diagnostic check performed",
+        );
         expect(diagnosticElements.length).toBeGreaterThan(0);
         const icons = container.querySelectorAll("svg");
         expect(icons.length).toBeGreaterThan(0);
@@ -670,7 +686,9 @@ describe("HistoryView", () => {
       await waitFor(() => {
         const nh3Leaks = screen.getAllByText("NH3 LEAK DETECTED");
         expect(nh3Leaks.length).toBeGreaterThan(0);
-        const maintenanceElements = screen.getAllByText("Maintenance completed");
+        const maintenanceElements = screen.getAllByText(
+          "Maintenance completed",
+        );
         expect(maintenanceElements.length).toBeGreaterThan(0);
       });
     });

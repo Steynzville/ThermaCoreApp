@@ -283,9 +283,9 @@ describe("ProcessFlowDiagram", () => {
       const nodes = screen.getAllByRole("button");
       // Find the one that contains "Pump 1" text
       const pumpNode = nodes.find((node) =>
-        node.textContent?.includes("Pump 1")
+        node.textContent?.includes("Pump 1"),
       );
-      
+
       if (pumpNode) {
         fireEvent.click(pumpNode);
         expect(onNodeClick).toHaveBeenCalledWith(
@@ -302,9 +302,9 @@ describe("ProcessFlowDiagram", () => {
 
       const nodes = screen.getAllByRole("button");
       const pumpNode = nodes.find((node) =>
-        node.textContent?.includes("Pump 1")
+        node.textContent?.includes("Pump 1"),
       );
-      
+
       if (pumpNode) {
         fireEvent.keyDown(pumpNode, { key: "Enter", code: "Enter" });
         expect(onNodeClick).toHaveBeenCalled();
@@ -319,9 +319,9 @@ describe("ProcessFlowDiagram", () => {
 
       const nodes = screen.getAllByRole("button");
       const pumpNode = nodes.find((node) =>
-        node.textContent?.includes("Pump 1")
+        node.textContent?.includes("Pump 1"),
       );
-      
+
       if (pumpNode) {
         fireEvent.keyDown(pumpNode, { key: " ", code: "Space" });
         expect(onNodeClick).toHaveBeenCalled();
@@ -333,9 +333,9 @@ describe("ProcessFlowDiagram", () => {
 
       const nodes = screen.getAllByRole("button");
       const pumpNode = nodes.find((node) =>
-        node.textContent?.includes("Pump 1")
+        node.textContent?.includes("Pump 1"),
       );
-      
+
       if (pumpNode) {
         expect(() => fireEvent.click(pumpNode)).not.toThrow();
       }
@@ -628,9 +628,12 @@ describe("ProcessFlowDiagram", () => {
         fireEvent.click(resetButton);
       });
 
-      await waitFor(() => {
-        expect(zoomDisplay).toHaveTextContent("100%");
-      }, { timeout: 3000 });
+      await waitFor(
+        () => {
+          expect(zoomDisplay).toHaveTextContent("100%");
+        },
+        { timeout: 3000 },
+      );
     });
 
     it("should apply grab cursor when zoomed in", async () => {

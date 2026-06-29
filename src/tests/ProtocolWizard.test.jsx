@@ -11,8 +11,13 @@
  * - Form field validation
  */
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ProtocolWizard from "@/components/protocol/ProtocolWizard";
 
@@ -69,13 +74,13 @@ describe("ProtocolWizard", () => {
         const dialogContent = within(dialog);
         const modbusElements = dialogContent.getAllByText(/modbus/i);
         expect(modbusElements.length).toBeGreaterThan(0);
-        
+
         const opcuaElements = dialogContent.getAllByText(/opcua/i);
         expect(opcuaElements.length).toBeGreaterThan(0);
-        
+
         const dnp3Elements = dialogContent.getAllByText(/dnp3/i);
         expect(dnp3Elements.length).toBeGreaterThan(0);
-        
+
         const mqttElements = dialogContent.getAllByText(/mqtt/i);
         expect(mqttElements.length).toBeGreaterThan(0);
       });
@@ -87,15 +92,21 @@ describe("ProtocolWizard", () => {
       await waitFor(() => {
         const dialog = screen.getByRole("dialog");
         const dialogContent = within(dialog);
-        const modbusDesc = dialogContent.getAllByText(/Industrial serial\/TCP protocol/i);
+        const modbusDesc = dialogContent.getAllByText(
+          /Industrial serial\/TCP protocol/i,
+        );
         expect(modbusDesc.length).toBeGreaterThan(0);
-        
-        const opcuaDesc = dialogContent.getAllByText(/OPC Unified Architecture/i);
+
+        const opcuaDesc = dialogContent.getAllByText(
+          /OPC Unified Architecture/i,
+        );
         expect(opcuaDesc.length).toBeGreaterThan(0);
-        
-        const dnp3Desc = dialogContent.getAllByText(/Distributed Network Protocol/i);
+
+        const dnp3Desc = dialogContent.getAllByText(
+          /Distributed Network Protocol/i,
+        );
         expect(dnp3Desc.length).toBeGreaterThan(0);
-        
+
         const mqttDesc = dialogContent.getAllByText(/Message Queue Telemetry/i);
         expect(mqttDesc.length).toBeGreaterThan(0);
       });
@@ -139,9 +150,7 @@ describe("ProtocolWizard", () => {
       await waitFor(() => {
         const dialog = screen.getByRole("dialog");
         const dialogContent = within(dialog);
-        const dnp3Card = dialogContent
-          .getAllByText(/dnp3/i)[0]
-          .closest("div");
+        const dnp3Card = dialogContent.getAllByText(/dnp3/i)[0].closest("div");
         fireEvent.click(dnp3Card);
 
         expect(dnp3Card?.parentElement).toHaveClass(/border-primary/);
@@ -154,9 +163,7 @@ describe("ProtocolWizard", () => {
       await waitFor(() => {
         const dialog = screen.getByRole("dialog");
         const dialogContent = within(dialog);
-        const mqttCard = dialogContent
-          .getAllByText(/mqtt/i)[0]
-          .closest("div");
+        const mqttCard = dialogContent.getAllByText(/mqtt/i)[0].closest("div");
         fireEvent.click(mqttCard);
 
         expect(mqttCard?.parentElement).toHaveClass(/border-primary/);
@@ -181,7 +188,9 @@ describe("ProtocolWizard", () => {
       await waitFor(() => {
         const dialog2 = screen.getByRole("dialog");
         const content2 = within(dialog2);
-        const elements = content2.queryAllByText(/Device|Information|Info|Modbus/i);
+        const elements = content2.queryAllByText(
+          /Device|Information|Info|Modbus/i,
+        );
         expect(elements.length).toBeGreaterThan(0);
       });
     });
@@ -333,9 +342,7 @@ describe("ProtocolWizard", () => {
 
       const dialog = screen.getByRole("dialog");
       const dialogContent = within(dialog);
-      const opcuaCard = dialogContent
-        .getAllByText(/opcua/i)[0]
-        .closest("div");
+      const opcuaCard = dialogContent.getAllByText(/opcua/i)[0].closest("div");
       fireEvent.click(opcuaCard);
 
       const nextButton = screen.getByRole("button", { name: /next/i });
@@ -410,9 +417,7 @@ describe("ProtocolWizard", () => {
 
       const dialog = screen.getByRole("dialog");
       const dialogContent = within(dialog);
-      const dnp3Card = dialogContent
-        .getAllByText(/dnp3/i)[0]
-        .closest("div");
+      const dnp3Card = dialogContent.getAllByText(/dnp3/i)[0].closest("div");
       fireEvent.click(dnp3Card);
 
       const nextButton = screen.getByRole("button", { name: /next/i });
@@ -471,7 +476,8 @@ describe("ProtocolWizard", () => {
       await waitFor(() => {
         const dialog2 = screen.getByRole("dialog");
         const content2 = within(dialog2);
-        const testConnectionElements = content2.queryAllByText(/Test Connection/i);
+        const testConnectionElements =
+          content2.queryAllByText(/Test Connection/i);
         expect(testConnectionElements.length).toBeGreaterThan(0);
       });
     });
@@ -584,14 +590,20 @@ describe("ProtocolWizard", () => {
 
       let stepCount = 0;
       let nextButton = screen.getByRole("button", { name: /next/i });
-      
-      while (nextButton && !nextButton.textContent?.match(/save|finish/i) && stepCount < 6) {
+
+      while (
+        nextButton &&
+        !nextButton.textContent?.match(/save|finish/i) &&
+        stepCount < 6
+      ) {
         fireEvent.click(nextButton);
         await waitFor(() => {}, { timeout: 200 });
         stepCount++;
-        const buttons = screen.queryAllByRole("button", { name: /next|save|finish/i });
-        nextButton = buttons.find(btn => 
-          btn.textContent?.match(/next|save|finish/i)
+        const buttons = screen.queryAllByRole("button", {
+          name: /next|save|finish/i,
+        });
+        nextButton = buttons.find((btn) =>
+          btn.textContent?.match(/next|save|finish/i),
         );
         if (!nextButton) break;
       }
@@ -600,7 +612,9 @@ describe("ProtocolWizard", () => {
         const dialog2 = screen.getByRole("dialog");
         const content2 = within(dialog2);
         const completeElements = content2.queryAllByText(/Complete/i);
-        const saveButtons = content2.queryAllByRole("button", { name: /save|finish/i });
+        const saveButtons = content2.queryAllByRole("button", {
+          name: /save|finish/i,
+        });
         expect(completeElements.length + saveButtons.length).toBeGreaterThan(0);
       });
     });
@@ -608,7 +622,9 @@ describe("ProtocolWizard", () => {
     it("should display save button", async () => {
       const dialog = screen.getByRole("dialog");
       const dialogContent = within(dialog);
-      const buttons = dialogContent.queryAllByRole("button", { name: /save|finish/i });
+      const buttons = dialogContent.queryAllByRole("button", {
+        name: /save|finish/i,
+      });
       if (buttons.length === 0) {
         const completeElements = dialogContent.queryAllByText(/Complete/i);
         expect(completeElements.length).toBeGreaterThan(0);
@@ -620,9 +636,11 @@ describe("ProtocolWizard", () => {
     it("should save configuration successfully", async () => {
       const dialog = screen.getByRole("dialog");
       const dialogContent = within(dialog);
-      const buttons = dialogContent.queryAllByRole("button", { name: /save|finish/i });
+      const buttons = dialogContent.queryAllByRole("button", {
+        name: /save|finish/i,
+      });
       const saveButton = buttons.length > 0 ? buttons[0] : null;
-      
+
       if (saveButton) {
         apiPostJson.mockResolvedValue({ success: true });
         fireEvent.click(saveButton);
@@ -642,9 +660,11 @@ describe("ProtocolWizard", () => {
     it("should handle save errors", async () => {
       const dialog = screen.getByRole("dialog");
       const dialogContent = within(dialog);
-      const buttons = dialogContent.queryAllByRole("button", { name: /save|finish/i });
+      const buttons = dialogContent.queryAllByRole("button", {
+        name: /save|finish/i,
+      });
       const saveButton = buttons.length > 0 ? buttons[0] : null;
-      
+
       if (saveButton) {
         apiPostJson.mockRejectedValue(new Error("Save failed"));
         fireEvent.click(saveButton);
@@ -663,9 +683,11 @@ describe("ProtocolWizard", () => {
     it("should include tenant ID in save request", async () => {
       const dialog = screen.getByRole("dialog");
       const dialogContent = within(dialog);
-      const buttons = dialogContent.queryAllByRole("button", { name: /save|finish/i });
+      const buttons = dialogContent.queryAllByRole("button", {
+        name: /save|finish/i,
+      });
       const saveButton = buttons.length > 0 ? buttons[0] : null;
-      
+
       if (saveButton) {
         apiPostJson.mockResolvedValue({ success: true });
         fireEvent.click(saveButton);
@@ -808,7 +830,7 @@ describe("ProtocolWizard", () => {
       if (inputs.length > 0) {
         const input = inputs[0];
         fireEvent.change(input, { target: { value: "TEST-001" } });
-        
+
         fireEvent.click(screen.getByRole("button", { name: /next/i }));
         await waitFor(() => {}, { timeout: 100 });
 

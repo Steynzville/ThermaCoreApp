@@ -155,7 +155,7 @@ describe("Dashboard", () => {
 
       const homeElements = screen.getAllByText("Home");
       expect(homeElements.length).toBeGreaterThan(0);
-      
+
       const dashboardElements = screen.getAllByText("Dashboard");
       expect(dashboardElements.length).toBeGreaterThan(0);
     });
@@ -193,19 +193,19 @@ describe("Dashboard", () => {
 
       const totalDials = screen.getAllByTestId("status-dial-total-units");
       expect(totalDials.length).toBeGreaterThan(0);
-      
+
       const onlineDials = screen.getAllByTestId("status-dial-online");
       expect(onlineDials.length).toBeGreaterThan(0);
-      
+
       const offlineDials = screen.getAllByTestId("status-dial-offline");
       expect(offlineDials.length).toBeGreaterThan(0);
-      
+
       const maintenanceDials = screen.getAllByTestId("status-dial-maintenance");
       expect(maintenanceDials.length).toBeGreaterThan(0);
-      
+
       const alertsDials = screen.getAllByTestId("status-dial-alerts");
       expect(alertsDials.length).toBeGreaterThan(0);
-      
+
       const alarmsDials = screen.getAllByTestId("status-dial-alarms");
       expect(alarmsDials.length).toBeGreaterThan(0);
     });
@@ -320,13 +320,15 @@ describe("Dashboard", () => {
 
       const quickActionHeadings = screen.getAllByText("Quick Actions");
       expect(quickActionHeadings.length).toBeGreaterThan(0);
-      
-      const analyticsActions = screen.getAllByTestId("quick-action-sales-analytics");
+
+      const analyticsActions = screen.getAllByTestId(
+        "quick-action-sales-analytics",
+      );
       expect(analyticsActions.length).toBeGreaterThan(0);
-      
+
       const healthActions = screen.getAllByTestId("quick-action-system-health");
       expect(healthActions.length).toBeGreaterThan(0);
-      
+
       const reportsActions = screen.getAllByTestId("quick-action-reports");
       expect(reportsActions.length).toBeGreaterThan(0);
     });
@@ -340,7 +342,7 @@ describe("Dashboard", () => {
         login: vi.fn(),
         logout: vi.fn(),
       });
-      
+
       // Mock the useAuth hook for this test
       vi.mock("../context/AuthContext", () => ({
         useAuth: mockUseAuth,
@@ -411,7 +413,7 @@ describe("Dashboard", () => {
 
       const titles = screen.getAllByText("Dashboard Overview");
       expect(titles.length).toBeGreaterThan(0);
-      
+
       const perfDashboards = screen.queryAllByTestId("performance-dashboard");
       expect(perfDashboards.length).toBe(0);
     });
@@ -428,10 +430,15 @@ describe("Dashboard", () => {
       const toggleButton = toggleButtons[0];
       fireEvent.click(toggleButton);
 
-      await waitFor(() => {
-        const perfDashboards = screen.queryAllByTestId("performance-dashboard");
-        expect(perfDashboards.length).toBeGreaterThan(0);
-      }, { timeout: 3000 });
+      await waitFor(
+        () => {
+          const perfDashboards = screen.queryAllByTestId(
+            "performance-dashboard",
+          );
+          expect(perfDashboards.length).toBeGreaterThan(0);
+        },
+        { timeout: 3000 },
+      );
     });
 
     it.skip("should render performance dashboard without duplicate header", async () => {
@@ -445,10 +452,15 @@ describe("Dashboard", () => {
       const toggleButton = toggleButtons[0];
       fireEvent.click(toggleButton);
 
-      await waitFor(() => {
-        const perfDashboards = screen.queryAllByTestId("performance-dashboard");
-        expect(perfDashboards.length).toBeGreaterThan(0);
-      }, { timeout: 3000 });
+      await waitFor(
+        () => {
+          const perfDashboards = screen.queryAllByTestId(
+            "performance-dashboard",
+          );
+          expect(perfDashboards.length).toBeGreaterThan(0);
+        },
+        { timeout: 3000 },
+      );
     });
 
     it("should switch back to operator view from performance view", async () => {
@@ -463,9 +475,11 @@ describe("Dashboard", () => {
 
       expect(toggleButton).toBeInTheDocument();
       fireEvent.click(toggleButton);
-      
+
       await waitFor(() => {
-        const _perfDashboards = screen.queryAllByTestId("performance-dashboard");
+        const _perfDashboards = screen.queryAllByTestId(
+          "performance-dashboard",
+        );
         expect(toggleButtons.length).toBeGreaterThan(0);
       });
     });
@@ -495,10 +509,13 @@ describe("Dashboard", () => {
       const toggleButton = toggleButtons[0];
       fireEvent.click(toggleButton);
 
-      await waitFor(() => {
-        const perfTexts = screen.getAllByText(/performance/i);
-        expect(perfTexts.length).toBeGreaterThan(0);
-      }, { timeout: 3000 });
+      await waitFor(
+        () => {
+          const perfTexts = screen.getAllByText(/performance/i);
+          expect(perfTexts.length).toBeGreaterThan(0);
+        },
+        { timeout: 3000 },
+      );
     });
   });
 
@@ -688,7 +705,9 @@ describe("Dashboard", () => {
         </TestWrapper>,
       );
 
-      const analyticsButtons = screen.getAllByTestId("quick-action-sales-analytics");
+      const analyticsButtons = screen.getAllByTestId(
+        "quick-action-sales-analytics",
+      );
       const healthButtons = screen.getAllByTestId("quick-action-system-health");
       const reportsButtons = screen.getAllByTestId("quick-action-reports");
 
@@ -732,7 +751,7 @@ describe("Dashboard", () => {
 
       const homeElements = screen.getAllByText("Home");
       expect(homeElements.length).toBeGreaterThan(0);
-      
+
       const dashboardElements = screen.getAllByText("Dashboard");
       expect(dashboardElements.length).toBeGreaterThan(0);
     });

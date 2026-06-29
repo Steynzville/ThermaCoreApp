@@ -6,7 +6,7 @@ import {
   within,
 } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
-import { vi } from "vitest";
+import { vi, afterAll } from "vitest";
 
 import AdminPanel from "../components/AdminPanel";
 import * as AuthContext from "../context/AuthContext.jsx";
@@ -37,6 +37,8 @@ const mockUser = {
   lastName: "User",
 };
 
+const originalLocalStorage = window.localStorage;
+
 const renderWithProviders = (component) => {
   // Mock AuthContext
   vi.spyOn(AuthContext, "useAuth").mockReturnValue({
@@ -57,6 +59,7 @@ const renderWithProviders = (component) => {
       }),
       setItem: vi.fn(),
       removeItem: vi.fn(),
+      clear: vi.fn(),
     },
     writable: true,
   });
@@ -65,6 +68,13 @@ const renderWithProviders = (component) => {
 };
 
 describe("AdminPanel Password Reset Validation - Real-time Updates", () => {
+  afterAll(() => {
+    Object.defineProperty(window, "localStorage", {
+      value: originalLocalStorage,
+      writable: true,
+    });
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     // Mock window.confirm to prevent ReferenceError in tests

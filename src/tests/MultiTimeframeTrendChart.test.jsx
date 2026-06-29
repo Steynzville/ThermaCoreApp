@@ -323,12 +323,12 @@ describe("MultiTimeframeTrendChart", () => {
       // Check that no controls are visible
       const comboboxes = screen.queryAllByRole("combobox");
       expect(comboboxes.length).toBe(0);
-      
+
       const buttons = screen.getAllByRole("button");
       const hasExportButton = buttons.some(
         (btn) =>
           btn.textContent?.toLowerCase().includes("export") ||
-          btn.textContent?.toLowerCase().includes("download")
+          btn.textContent?.toLowerCase().includes("download"),
       );
       expect(hasExportButton).toBe(false);
     });
@@ -472,7 +472,7 @@ describe("MultiTimeframeTrendChart", () => {
 
       const tempLines = screen.getAllByTestId("line-temperature");
       const pressureLines = screen.getAllByTestId("line-pressure");
-      
+
       expect(tempLines.length).toBeGreaterThan(0);
       expect(pressureLines.length).toBeGreaterThan(0);
       expect(tempLines[0]).toHaveAttribute("data-stroke", "#ff0000");

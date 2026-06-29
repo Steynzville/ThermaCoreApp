@@ -84,7 +84,9 @@ describe("SystemHealth", () => {
       await waitFor(() => {
         const titleElements = screen.getAllByText("System Health Status");
         expect(titleElements.length).toBeGreaterThan(0);
-        const descElements = screen.getAllByText(/Real-time monitoring of all infrastructure/i);
+        const descElements = screen.getAllByText(
+          /Real-time monitoring of all infrastructure/i,
+        );
         expect(descElements.length).toBeGreaterThan(0);
       });
     });
@@ -254,8 +256,10 @@ describe("SystemHealth", () => {
       await waitFor(() => {
         const elements = screen.getAllByText(/operational/i);
         expect(elements.length).toBeGreaterThan(0);
-        const hasTwoOperational = elements.some(el => 
-          el.textContent?.includes("2") && el.textContent?.toLowerCase().includes("operational")
+        const hasTwoOperational = elements.some(
+          (el) =>
+            el.textContent?.includes("2") &&
+            el.textContent?.toLowerCase().includes("operational"),
         );
         expect(hasTwoOperational).toBe(true);
       });
@@ -276,8 +280,10 @@ describe("SystemHealth", () => {
       await waitFor(() => {
         const elements = screen.getAllByText(/outage/i);
         expect(elements.length).toBeGreaterThan(0);
-        const hasOneOutage = elements.some(el => 
-          el.textContent?.includes("1") && el.textContent?.toLowerCase().includes("outage")
+        const hasOneOutage = elements.some(
+          (el) =>
+            el.textContent?.includes("1") &&
+            el.textContent?.toLowerCase().includes("outage"),
         );
         expect(hasOneOutage).toBe(true);
       });
@@ -323,15 +329,15 @@ describe("SystemHealth", () => {
 
       await waitFor(() => {
         const greenIcons = container.querySelectorAll(
-          ".text-green-500, .text-green-600, .text-green-400"
+          ".text-green-500, .text-green-600, .text-green-400",
         );
         expect(greenIcons.length).toBeGreaterThan(0);
         const yellowIcons = container.querySelectorAll(
-          ".text-yellow-500, .text-yellow-600, .text-yellow-400"
+          ".text-yellow-500, .text-yellow-600, .text-yellow-400",
         );
         expect(yellowIcons.length).toBeGreaterThan(0);
         const redIcons = container.querySelectorAll(
-          ".text-red-500, .text-red-600, .text-red-400"
+          ".text-red-500, .text-red-600, .text-red-400",
         );
         expect(redIcons.length).toBeGreaterThan(0);
       });
@@ -444,7 +450,9 @@ describe("SystemHealth", () => {
         expect(timestampElements.length).toBeGreaterThan(0);
       });
 
-      const refreshButtons = screen.getAllByRole("button", { name: /refresh/i });
+      const refreshButtons = screen.getAllByRole("button", {
+        name: /refresh/i,
+      });
       const refreshButton = refreshButtons[0];
       fireEvent.click(refreshButton);
 
@@ -459,7 +467,9 @@ describe("SystemHealth", () => {
       render(<SystemHealth />);
 
       await waitFor(() => {
-        const refreshButtons = screen.getAllByRole("button", { name: /refresh/i });
+        const refreshButtons = screen.getAllByRole("button", {
+          name: /refresh/i,
+        });
         expect(refreshButtons.length).toBeGreaterThan(0);
       });
     });
@@ -471,7 +481,9 @@ describe("SystemHealth", () => {
         expect(checkAllStatus).toHaveBeenCalledTimes(1);
       });
 
-      const refreshButtons = screen.getAllByRole("button", { name: /refresh/i });
+      const refreshButtons = screen.getAllByRole("button", {
+        name: /refresh/i,
+      });
       const refreshButton = refreshButtons[0];
       fireEvent.click(refreshButton);
 
@@ -485,17 +497,21 @@ describe("SystemHealth", () => {
         () =>
           new Promise((resolve) => {
             setTimeout(() => resolve(mockHealthData), 100);
-          })
+          }),
       );
 
       render(<SystemHealth />);
 
       await waitFor(() => {
-        const refreshButtons = screen.getAllByRole("button", { name: /refresh/i });
+        const refreshButtons = screen.getAllByRole("button", {
+          name: /refresh/i,
+        });
         expect(refreshButtons.length).toBeGreaterThan(0);
       });
 
-      const refreshButtons = screen.getAllByRole("button", { name: /refresh/i });
+      const refreshButtons = screen.getAllByRole("button", {
+        name: /refresh/i,
+      });
       const refreshButton = refreshButtons[0];
       fireEvent.click(refreshButton);
 
@@ -508,17 +524,21 @@ describe("SystemHealth", () => {
         () =>
           new Promise((resolve) => {
             setTimeout(() => resolve(mockHealthData), 100);
-          })
+          }),
       );
 
       render(<SystemHealth />);
 
       await waitFor(() => {
-        const refreshButtons = screen.getAllByRole("button", { name: /refresh/i });
+        const refreshButtons = screen.getAllByRole("button", {
+          name: /refresh/i,
+        });
         expect(refreshButtons.length).toBeGreaterThan(0);
       });
 
-      const refreshButtons = screen.getAllByRole("button", { name: /refresh/i });
+      const refreshButtons = screen.getAllByRole("button", {
+        name: /refresh/i,
+      });
       const refreshButton = refreshButtons[0];
       fireEvent.click(refreshButton);
 
@@ -576,7 +596,9 @@ describe("SystemHealth", () => {
       render(<SystemHealth />);
 
       await waitFor(() => {
-        const bannerElements = screen.getAllByText(/1 service experiencing degraded performance/i);
+        const bannerElements = screen.getAllByText(
+          /1 service experiencing degraded performance/i,
+        );
         expect(bannerElements.length).toBeGreaterThan(0);
       });
     });
@@ -585,7 +607,9 @@ describe("SystemHealth", () => {
       render(<SystemHealth />);
 
       await waitFor(() => {
-        const bannerElements = screen.getAllByText(/1 service experiencing outages/i);
+        const bannerElements = screen.getAllByText(
+          /1 service experiencing outages/i,
+        );
         expect(bannerElements.length).toBeGreaterThan(0);
       });
     });
@@ -596,9 +620,13 @@ describe("SystemHealth", () => {
       render(<SystemHealth />);
 
       await waitFor(() => {
-        const titleElements = screen.getAllByText(/Live Infrastructure Monitoring/i);
+        const titleElements = screen.getAllByText(
+          /Live Infrastructure Monitoring/i,
+        );
         expect(titleElements.length).toBeGreaterThan(0);
-        const descElements = screen.getAllByText(/real-time status of infrastructure components/i);
+        const descElements = screen.getAllByText(
+          /real-time status of infrastructure components/i,
+        );
         expect(descElements.length).toBeGreaterThan(0);
       });
     });

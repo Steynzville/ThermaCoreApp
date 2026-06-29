@@ -53,3 +53,28 @@ global.AudioContext = vi.fn().mockImplementation(() => ({
 }));
 
 global.webkitAudioContext = global.AudioContext;
+
+// Mock HTMLElement and Element prototype methods for JSDOM
+window.HTMLElement.prototype.scrollIntoView = vi.fn();
+window.Element.prototype.scrollIntoView = vi.fn();
+window.HTMLElement.prototype.releasePointerCapture = vi.fn();
+window.HTMLElement.prototype.hasPointerCapture = vi.fn();
+
+import { cleanup } from "@testing-library/react";
+import { afterEach } from "vitest";
+
+afterEach(() => {
+  // Clean up React Testing Library roots first
+  cleanup();
+  // Clear any leftover Radix portal wrappers, overlays, or DOM elements to prevent cross-test pollution
+  document.querySelectorAll("[data-radix-portal]").forEach((el) => el.remove());
+  document
+    .querySelectorAll("[data-radix-focus-guard]")
+    .forEach((el) => el.remove());
+  document
+    .querySelectorAll("[data-radix-popper-content-wrapper]")
+    .forEach((el) => el.remove());
+  document.querySelectorAll('[role="dialog"]').forEach((el) => el.remove());
+  document.querySelectorAll('[role="menu"]').forEach((el) => el.remove());
+  document.body.innerHTML = "";
+});

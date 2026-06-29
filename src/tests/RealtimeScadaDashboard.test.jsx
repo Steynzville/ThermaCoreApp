@@ -115,7 +115,9 @@ describe("RealtimeScadaDashboard", () => {
 
       const titleElements = screen.getAllByText("Real-Time SCADA Dashboard");
       expect(titleElements.length).toBeGreaterThan(0);
-      const descElements = screen.getAllByText("Live industrial monitoring and control");
+      const descElements = screen.getAllByText(
+        "Live industrial monitoring and control",
+      );
       expect(descElements.length).toBeGreaterThan(0);
     });
 
@@ -359,9 +361,13 @@ describe("RealtimeScadaDashboard", () => {
         </TestWrapper>,
       );
 
-      const errorTitleElements = screen.getAllByText(/Error loading SCADA dashboard/i);
+      const errorTitleElements = screen.getAllByText(
+        /Error loading SCADA dashboard/i,
+      );
       expect(errorTitleElements.length).toBeGreaterThan(0);
-      const errorMsgElements = screen.getAllByText(/Failed to connect to SCADA server/i);
+      const errorMsgElements = screen.getAllByText(
+        /Failed to connect to SCADA server/i,
+      );
       expect(errorMsgElements.length).toBeGreaterThan(0);
     });
 
@@ -458,7 +464,7 @@ describe("RealtimeScadaDashboard", () => {
       // Find all comboboxes and get the first one
       const timeRangeSelects = screen.getAllByRole("combobox");
       const timeRangeSelect = timeRangeSelects[0];
-      
+
       fireEvent.click(timeRangeSelect);
 
       await waitFor(() => {

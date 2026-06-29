@@ -138,11 +138,7 @@ const createLargeDataset = (count) => {
 
 // Helper to render with MemoryRouter
 const renderWithRouter = (ui, { route = "/" } = {}) => {
-  return render(
-    <MemoryRouter initialEntries={[route]}>
-      {ui}
-    </MemoryRouter>
-  );
+  return render(<MemoryRouter initialEntries={[route]}>{ui}</MemoryRouter>);
 };
 
 describe("GridView", () => {
