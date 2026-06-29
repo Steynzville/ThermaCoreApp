@@ -458,7 +458,6 @@ describe("HistoryView", () => {
     });
 
     it("should hide load more button when all events shown", async () => {
-      // Use a small dataset where all events fit on screen
       const smallEvents = [
         {
           id: "event-1",
