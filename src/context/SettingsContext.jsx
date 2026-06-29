@@ -1,33 +1,61 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 const SettingsContext = createContext(null);
 
 export const SettingsProvider = ({ children }) => {
   const [settings, setSettings] = useState(() => {
-    const saved = localStorage.getItem("thermacore_settings");
-    return saved ? JSON.parse(saved) : {
+    // Check both local storage keys for maximum compatibility
+    const saved =
+      localStorage.getItem("thermacore-settings") ||
+      localStorage.getItem("thermacore_settings");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        // Fallback to defaults
+      }
+    }
+    return {
       soundEnabled: true,
-      volume: 0.8,
+      volume: 0.35,
       refreshInterval: 5000,
-      temperatureUnit: "C",
-      theme: "dark"
+      temperatureUnit: "celsius",
+      theme: "dark",
     };
   });
 
   useEffect(() => {
-    localStorage.setItem("thermacore_settings", JSON.stringify(settings));
+    // Persist to both keys for compatibility
+    const jsonStr = JSON.stringify(settings);
+    localStorage.setItem("thermacore-settings", jsonStr);
+    localStorage.setItem("thermacore_settings", jsonStr);
   }, [settings]);
 
   const updateSettings = (newSettings) => {
     setSettings((prev) => ({ ...prev, ...newSettings }));
   };
 
+  const toggleSound = () => {
+    setSettings((prev) => ({ ...prev, soundEnabled: !prev.soundEnabled }));
+  };
+
+  const setVolume = (volume) => {
+    setSettings((prev) => ({ ...prev, volume }));
+  };
+
+  const setTemperatureUnit = (temperatureUnit) => {
+    setSettings((prev) => ({ ...prev, temperatureUnit }));
+  };
+
   const formatTemperature = (celsiusVal) => {
     if (celsiusVal === undefined || celsiusVal === null) return "--";
     const numericVal = parseFloat(celsiusVal);
     if (Number.isNaN(numericVal)) return "--";
-    
-    if (settings.temperatureUnit === "F") {
+
+    const isF =
+      settings.temperatureUnit === "fahrenheit" ||
+      settings.temperatureUnit === "F";
+    if (isF) {
       const fahrenheit = (numericVal * 9) / 5 + 32;
       return `${fahrenheit.toFixed(1)}°F`;
     }
@@ -35,7 +63,16 @@ export const SettingsProvider = ({ children }) => {
   };
 
   return (
-    <SettingsContext.Provider value={{ settings, updateSettings, formatTemperature }}>
+    <SettingsContext.Provider
+      value={{
+        settings,
+        updateSettings,
+        toggleSound,
+        setVolume,
+        setTemperatureUnit,
+        formatTemperature,
+      }}
+    >
       {children}
     </SettingsContext.Provider>
   );
@@ -44,27 +81,7 @@ export const SettingsProvider = ({ children }) => {
 export const useSettings = () => {
   const context = useContext(SettingsContext);
   if (!context) {
-    const defaultSettings = {
-      soundEnabled: true,
-      volume: 0.8,
-      refreshInterval: 5000,
-      temperatureUnit: "C",
-      theme: "dark"
-    };
-    return {
-      settings: defaultSettings,
-      updateSettings: () => {},
-      formatTemperature: (celsiusVal) => {
-        if (celsiusVal === undefined || celsiusVal === null) return "--";
-        const numericVal = parseFloat(celsiusVal);
-        if (Number.isNaN(numericVal)) return "--";
-        if (defaultSettings.temperatureUnit === "F") {
-          const fahrenheit = (numericVal * 9) / 5 + 32;
-          return `${fahrenheit.toFixed(1)}°F`;
-        }
-        return `${numericVal.toFixed(1)}°C`;
-      }
-    };
+    throw new Error("useSettings must be used within a SettingsProvider");
   }
   return context;
 };

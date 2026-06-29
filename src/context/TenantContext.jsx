@@ -11,15 +11,7 @@ const API_BASE_URL_FALLBACK = "https://thermacoreapp.onrender.com";
 export const useTenant = () => {
   const context = useContext(TenantContext);
   if (!context) {
-    return {
-      currentTenant: null,
-      availableTenants: [],
-      isLoading: false,
-      error: null,
-      isAdmin: false,
-      switchTenant: () => {},
-      getTenantQueryParam: () => "",
-    };
+    throw new Error("useTenant must be used within a TenantProvider");
   }
   return context;
 };
