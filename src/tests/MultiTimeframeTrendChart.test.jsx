@@ -324,13 +324,8 @@ describe("MultiTimeframeTrendChart", () => {
       const comboboxes = screen.queryAllByRole("combobox");
       expect(comboboxes.length).toBe(0);
 
-      const buttons = screen.getAllByRole("button");
-      const hasExportButton = buttons.some(
-        (btn) =>
-          btn.textContent?.toLowerCase().includes("export") ||
-          btn.textContent?.toLowerCase().includes("download"),
-      );
-      expect(hasExportButton).toBe(false);
+      const buttons = screen.queryAllByRole("button");
+      expect(buttons.length).toBe(0);
     });
   });
 

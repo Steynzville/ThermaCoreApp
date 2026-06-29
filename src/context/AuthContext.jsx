@@ -13,7 +13,7 @@ export const useAuth = () => {
   return context;
 };
 
-export const AuthProvider = ({ children }) => {
+export const AuthProvider = ({ children, value: customValue }) => {
   const [user, setUser] = useState(null);
   const [userRole, setUserRole] = useState(null); // Frontend role (admin/user)
   const [backendRole, setBackendRole] = useState(null); // Backend role (admin/operator/viewer)
@@ -155,7 +155,7 @@ export const AuthProvider = ({ children }) => {
     isLoggingOut,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={customValue || value}>{children}</AuthContext.Provider>;
 };
 
 export default AuthContext;

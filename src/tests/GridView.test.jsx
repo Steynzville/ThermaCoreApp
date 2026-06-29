@@ -20,6 +20,7 @@ vi.mock("@/context/UnitContext", () => ({
 }));
 
 // Mock navigate
+let mockSearch = "";
 const mockNavigate = vi.fn();
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual("react-router-dom");
@@ -27,7 +28,7 @@ vi.mock("react-router-dom", async () => {
     ...actual,
     useNavigate: () => mockNavigate,
     useLocation: () => ({
-      search: "",
+      search: mockSearch,
     }),
   };
 });
@@ -144,6 +145,7 @@ const renderWithRouter = (ui, { route = "/" } = {}) => {
 describe("GridView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSearch = "";
     mockUseAuth.mockReturnValue({
       userRole: "admin",
       permissions: { canViewAllUnits: true },
@@ -362,17 +364,7 @@ describe("GridView", () => {
   describe("URL Parameter Handling", () => {
     it("should apply status filter from URL parameter", async () => {
       // Override useLocation for this test
-      const mockUseLocation = vi.fn().mockReturnValue({
-        search: "?status=online",
-      });
-      vi.mock("react-router-dom", async () => {
-        const actual = await vi.importActual("react-router-dom");
-        return {
-          ...actual,
-          useNavigate: () => mockNavigate,
-          useLocation: mockUseLocation,
-        };
-      });
+      mockSearch = "?status=online";
 
       render(
         <MemoryRouter initialEntries={["/?status=online"]}>
@@ -387,6 +379,7 @@ describe("GridView", () => {
     });
 
     it("should apply alerts filter from URL parameter", async () => {
+      mockSearch = "?alerts=true";
       render(
         <MemoryRouter initialEntries={["/?alerts=true"]}>
           <GridView />
@@ -400,6 +393,7 @@ describe("GridView", () => {
     });
 
     it("should apply search term from URL parameter", async () => {
+      mockSearch = "?search=Unit%20001";
       render(
         <MemoryRouter initialEntries={["/?search=Unit%20001"]}>
           <GridView />

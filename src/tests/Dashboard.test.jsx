@@ -334,20 +334,6 @@ describe("Dashboard", () => {
     });
 
     it("should not render quick actions for regular users", () => {
-      // Override the useAuth mock to return user role
-      const mockUseAuth = vi.fn().mockReturnValue({
-        userRole: "user",
-        user: { id: 1, username: "testuser", role: "user" },
-        isAuthenticated: true,
-        login: vi.fn(),
-        logout: vi.fn(),
-      });
-
-      // Mock the useAuth hook for this test
-      vi.mock("../context/AuthContext", () => ({
-        useAuth: mockUseAuth,
-      }));
-
       render(
         <TestWrapper userRole="user">
           <Dashboard />
