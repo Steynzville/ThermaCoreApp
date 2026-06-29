@@ -1,3 +1,4 @@
+/* biome-ignore lint/a11y/noStaticElementInteractions: Mock component for testing */
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
