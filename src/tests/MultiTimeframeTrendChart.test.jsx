@@ -13,7 +13,7 @@
  * - Accessibility
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import MultiTimeframeTrendChart from "@/components/visualization/MultiTimeframeTrendChart";
 
@@ -231,7 +231,7 @@ describe("MultiTimeframeTrendChart", () => {
 
       const charts = screen.getAllByTestId("line-chart");
       expect(charts.length).toBeGreaterThan(0);
-      // Check that data-length is set (mock returns 0 for empty)
+      // The mock returns 0 for empty data
       expect(charts[0]).toHaveAttribute("data-length", "0");
     });
 
@@ -320,7 +320,7 @@ describe("MultiTimeframeTrendChart", () => {
         />,
       );
 
-      // Check that no controls are visible (no comboboxes or export buttons)
+      // Check that no controls are visible
       const comboboxes = screen.queryAllByRole("combobox");
       expect(comboboxes.length).toBe(0);
       
