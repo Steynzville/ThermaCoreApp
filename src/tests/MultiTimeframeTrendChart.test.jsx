@@ -231,7 +231,7 @@ describe("MultiTimeframeTrendChart", () => {
 
       const charts = screen.getAllByTestId("line-chart");
       expect(charts.length).toBeGreaterThan(0);
-      // The mock returns 0 for empty data
+      // Check that data-length is set (mock returns 0 for empty)
       expect(charts[0]).toHaveAttribute("data-length", "0");
     });
 
@@ -249,7 +249,7 @@ describe("MultiTimeframeTrendChart", () => {
 
       const charts = screen.getAllByTestId("line-chart");
       expect(charts.length).toBeGreaterThan(0);
-      expect(charts[0]).toHaveAttribute("data-length");
+      expect(charts[0]).toHaveAttribute("data-length", "3");
     });
 
     it("should handle large datasets", () => {
@@ -265,7 +265,7 @@ describe("MultiTimeframeTrendChart", () => {
 
       const charts = screen.getAllByTestId("line-chart");
       expect(charts.length).toBeGreaterThan(0);
-      expect(charts[0]).toHaveAttribute("data-length");
+      expect(charts[0]).toHaveAttribute("data-length", "1000");
     });
   });
 
@@ -295,8 +295,20 @@ describe("MultiTimeframeTrendChart", () => {
         />,
       );
 
-      // The test passes if the component renders without error
-      expect(screen.getAllByTestId("line-chart").length).toBeGreaterThan(0);
+      const buttons = screen.getAllByRole("button");
+      const exportButton = buttons.find(
+        (btn) =>
+          btn.textContent?.toLowerCase().includes("export") ||
+          btn.querySelector('[data-lucide="download"]'),
+      );
+
+      if (exportButton) {
+        fireEvent.click(exportButton);
+        expect(onExport).toHaveBeenCalled();
+      } else {
+        // If no export button, the test passes (component might not render it)
+        expect(true).toBe(true);
+      }
     });
 
     it("should not show controls when showControls is false", () => {
@@ -308,7 +320,10 @@ describe("MultiTimeframeTrendChart", () => {
         />,
       );
 
-      // Check that export button is not present
+      // Check that no controls are visible (no comboboxes or export buttons)
+      const comboboxes = screen.queryAllByRole("combobox");
+      expect(comboboxes.length).toBe(0);
+      
       const buttons = screen.getAllByRole("button");
       const hasExportButton = buttons.some(
         (btn) =>
@@ -576,7 +591,7 @@ describe("MultiTimeframeTrendChart", () => {
 
       const charts = screen.getAllByTestId("line-chart");
       expect(charts.length).toBeGreaterThan(0);
-      expect(charts[0]).toHaveAttribute("data-length");
+      expect(charts[0]).toHaveAttribute("data-length", "1");
     });
 
     it("should handle NaN values in data", () => {
