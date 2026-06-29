@@ -279,7 +279,7 @@ describe("ProcessFlowDiagram", () => {
         <ProcessFlowDiagram nodes={mockNodes} onNodeClick={onNodeClick} />,
       );
 
-      // Find the SVG circle/group for pump1
+      // Find the pump1 node by data-id
       const pumpNode = container.querySelector('[data-id="pump1"]');
       if (pumpNode) {
         fireEvent.click(pumpNode);
