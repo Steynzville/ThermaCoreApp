@@ -275,7 +275,7 @@ describe("ProcessFlowDiagram", () => {
   describe("Interactive Features", () => {
     it("should call onNodeClick when node is clicked", () => {
       const onNodeClick = vi.fn();
-      const { container } = render(
+      render(
         <ProcessFlowDiagram nodes={mockNodes} onNodeClick={onNodeClick} />,
       );
 
@@ -293,7 +293,7 @@ describe("ProcessFlowDiagram", () => {
 
     it("should handle keyboard interaction on nodes", () => {
       const onNodeClick = vi.fn();
-      const { container } = render(
+      render(
         <ProcessFlowDiagram nodes={mockNodes} onNodeClick={onNodeClick} />,
       );
 
@@ -308,7 +308,7 @@ describe("ProcessFlowDiagram", () => {
 
     it("should handle space key on nodes", () => {
       const onNodeClick = vi.fn();
-      const { container } = render(
+      render(
         <ProcessFlowDiagram nodes={mockNodes} onNodeClick={onNodeClick} />,
       );
 
@@ -322,7 +322,7 @@ describe("ProcessFlowDiagram", () => {
     });
 
     it("should not call onNodeClick if not provided", () => {
-      const { container } = render(<ProcessFlowDiagram nodes={mockNodes} />);
+      render(<ProcessFlowDiagram nodes={mockNodes} />);
 
       const pumpText = screen.getAllByText("Pump 1")[0];
       const pumpParent = pumpText.closest('[role="button"]') || pumpText.parentElement;
@@ -620,7 +620,6 @@ describe("ProcessFlowDiagram", () => {
       });
 
       await waitFor(() => {
-        // Wait for the reset to complete - may need longer
         expect(zoomDisplay).toHaveTextContent("100%");
       }, { timeout: 3000 });
     });
