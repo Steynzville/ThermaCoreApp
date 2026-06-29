@@ -30,6 +30,16 @@ if (typeof window !== "undefined") {
     value: vi.fn(),
   });
 
+  // Mock navigator.clipboard
+  Object.defineProperty(navigator, "clipboard", {
+    writable: true,
+    configurable: true,
+    value: {
+      writeText: vi.fn().mockResolvedValue(undefined),
+      readText: vi.fn().mockResolvedValue(""),
+    },
+  });
+
   // Mock HTMLElement and Element prototype methods for JSDOM
   if (window.HTMLElement) {
     window.HTMLElement.prototype.scrollIntoView = vi.fn();
