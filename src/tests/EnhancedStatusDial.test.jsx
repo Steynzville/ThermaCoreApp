@@ -1,6 +1,6 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { Package, Wifi, Zap } from "lucide-react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 
 import EnhancedStatusDial from "../components/Dashboard/EnhancedStatusDial";
 
@@ -24,6 +24,11 @@ describe("EnhancedStatusDial", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   describe("Rendering", () => {
@@ -263,29 +268,34 @@ describe("EnhancedStatusDial", () => {
 
   describe("Animation and Interaction", () => {
     it("should animate percentage on mount", async () => {
+      vi.useFakeTimers();
       render(<EnhancedStatusDial {...defaultProps} percentage={50} />);
 
-      // Wait for animation to complete
-      await waitFor(
-        () => {
-          expect(screen.getByText("50%")).toBeInTheDocument();
-        },
-        { timeout: 2000 },
-      );
+      // Advance timers to trigger the useEffect setTimeout
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+
+      expect(screen.getByText("50%")).toBeInTheDocument();
     });
 
     it("should update percentage when prop changes", async () => {
+      vi.useFakeTimers();
       const { rerender } = render(
         <EnhancedStatusDial {...defaultProps} percentage={50} />,
       );
 
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
       expect(screen.getByText("50%")).toBeInTheDocument();
 
       rerender(<EnhancedStatusDial {...defaultProps} percentage={80} />);
 
-      await waitFor(() => {
-        expect(screen.getByText("80%")).toBeInTheDocument();
+      act(() => {
+        vi.advanceTimersByTime(300);
       });
+      expect(screen.getByText("80%")).toBeInTheDocument();
     });
 
     it("should update count when prop changes", () => {
