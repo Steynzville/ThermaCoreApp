@@ -455,10 +455,14 @@ describe("RealtimeScadaDashboard", () => {
         </TestWrapper>,
       );
 
+      // Find the first combobox (time range selector)
       const timeRangeSelects = screen.getAllByRole("combobox");
       const timeRangeSelect = timeRangeSelects[0];
+      
+      // Click to open the dropdown
       fireEvent.click(timeRangeSelect);
 
+      // Wait for options to appear
       await waitFor(() => {
         const option = screen.getByText("Last Hour");
         fireEvent.click(option);
@@ -485,6 +489,7 @@ describe("RealtimeScadaDashboard", () => {
         </TestWrapper>,
       );
 
+      // Find the first select or combobox
       const selects = container.querySelectorAll('select, [role="combobox"]');
       if (selects.length > 0) {
         fireEvent.click(selects[0]);
@@ -500,6 +505,7 @@ describe("RealtimeScadaDashboard", () => {
         });
       }
 
+      // Test passes if component rendered without errors
       expect(container).toBeTruthy();
     });
   });
