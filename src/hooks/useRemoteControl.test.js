@@ -16,6 +16,19 @@ vi.mock("../context/AuthContext", async () => {
   };
 });
 
+// Mock getAuthToken
+vi.mock("../utils/authToken", () => ({
+  getAuthToken: vi.fn(() => "test-token"),
+}));
+
+// Mock apiFetch utilities if used
+vi.mock("../utils/apiFetch", () => ({
+  apiGet: vi.fn(),
+  apiPost: vi.fn(),
+  apiPut: vi.fn(),
+  apiDelete: vi.fn(),
+}));
+
 const TestWrapper = ({ children }) => {
   return React.createElement(
     ThemeProvider,
@@ -40,6 +53,7 @@ describe("useRemoteControl", () => {
     const localStorageMock = {
       getItem: vi.fn((key) => {
         if (key === "thermacore_token") return mockToken;
+        if (key === "thermacore_user") return JSON.stringify({ id: 1, username: "admin" });
         return null;
       }),
       setItem: vi.fn(),
@@ -54,14 +68,38 @@ describe("useRemoteControl", () => {
       writable: true,
       configurable: true,
     });
-    
-    // Also set global localStorage for Node environment
     global.localStorage = localStorageMock;
+    
+    // Mock sessionStorage
+    const sessionStorageMock = {
+      getItem: vi.fn(),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+      clear: vi.fn(),
+      key: vi.fn(),
+      length: 0,
+    };
+    Object.defineProperty(window, "sessionStorage", {
+      value: sessionStorageMock,
+      writable: true,
+      configurable: true,
+    });
+    global.sessionStorage = sessionStorageMock;
+    
+    // Mock window properties
+    Object.defineProperty(window, "location", {
+      value: { href: "http://localhost:3000" },
+      writable: true,
+      configurable: true,
+    });
     
     import.meta.env.VITE_API_BASE_URL = mockApiBaseUrl;
 
+    // Mock the auth context
     mockUseAuth.mockReturnValue({
       isAuthenticated: true,
+      user: { id: 1, username: "admin", role: "admin" },
+      userRole: "admin",
     });
 
     global.fetch = vi.fn();
@@ -122,6 +160,8 @@ describe("useRemoteControl", () => {
     it("should not fetch when not authenticated", async () => {
       mockUseAuth.mockReturnValue({
         isAuthenticated: false,
+        user: null,
+        userRole: null,
       });
 
       const { result } = renderHook(() => useRemoteControl(unitId), {
