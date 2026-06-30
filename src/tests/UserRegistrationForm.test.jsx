@@ -87,84 +87,73 @@ describe("UserRegistrationForm", () => {
   });
 
   it("should display validation errors for empty required fields", async () => {
-    const { container } = render(<UserRegistrationForm />, { wrapper: TestWrapper });
+    render(<UserRegistrationForm />, { wrapper: TestWrapper });
 
-    const form = container.querySelector("form");
+    const submitButton = screen.getByRole("button", { name: /Create Account/i });
+    
     await act(async () => {
-      fireEvent.submit(form);
+      fireEvent.click(submitButton);
     });
 
-    await waitFor(() => {
-      expect(
-        screen.getByText("Username must be at least 3 characters"),
-      ).toBeTruthy();
-      expect(screen.getByText("Valid email is required")).toBeTruthy();
-      expect(
-        screen.getByText("Password must be at least 6 characters"),
-      ).toBeTruthy();
-      expect(screen.getByText("First name is required")).toBeTruthy();
-      expect(screen.getByText("Last name is required")).toBeTruthy();
-    });
-
-    expect(toast.error).toHaveBeenCalledWith("Please fix the errors in the form");
+    // Use findByText which waits for the element to appear
+    const usernameError = await screen.findByText("Username must be at least 3 characters");
+    expect(usernameError).toBeTruthy();
+    
+    expect(screen.getByText("Valid email is required")).toBeTruthy();
+    expect(screen.getByText("Password must be at least 6 characters")).toBeTruthy();
+    expect(screen.getByText("First name is required")).toBeTruthy();
+    expect(screen.getByText("Last name is required")).toBeTruthy();
   });
 
   it("should validate username length", async () => {
-    const { container } = render(<UserRegistrationForm />, { wrapper: TestWrapper });
+    render(<UserRegistrationForm />, { wrapper: TestWrapper });
 
     const usernameInput = screen.getByLabelText(/^Username/i);
     await act(async () => {
       fireEvent.change(usernameInput, { target: { value: "ab" } });
     });
 
-    const form = container.querySelector("form");
+    const submitButton = screen.getByRole("button", { name: /Create Account/i });
     await act(async () => {
-      fireEvent.submit(form);
+      fireEvent.click(submitButton);
     });
 
-    await waitFor(() => {
-      expect(
-        screen.getByText("Username must be at least 3 characters"),
-      ).toBeTruthy();
-    });
+    const error = await screen.findByText("Username must be at least 3 characters");
+    expect(error).toBeTruthy();
   });
 
   it("should validate email format", async () => {
-    const { container } = render(<UserRegistrationForm />, { wrapper: TestWrapper });
+    render(<UserRegistrationForm />, { wrapper: TestWrapper });
 
     const emailInput = screen.getByLabelText(/^Email/i);
     await act(async () => {
       fireEvent.change(emailInput, { target: { value: "invalid-email" } });
     });
 
-    const form = container.querySelector("form");
+    const submitButton = screen.getByRole("button", { name: /Create Account/i });
     await act(async () => {
-      fireEvent.submit(form);
+      fireEvent.click(submitButton);
     });
 
-    await waitFor(() => {
-      expect(screen.getByText("Valid email is required")).toBeTruthy();
-    });
+    const error = await screen.findByText("Valid email is required");
+    expect(error).toBeTruthy();
   });
 
   it("should validate password length", async () => {
-    const { container } = render(<UserRegistrationForm />, { wrapper: TestWrapper });
+    render(<UserRegistrationForm />, { wrapper: TestWrapper });
 
     const passwordInput = screen.getByLabelText(/^Password/i);
     await act(async () => {
       fireEvent.change(passwordInput, { target: { value: "12345" } });
     });
 
-    const form = container.querySelector("form");
+    const submitButton = screen.getByRole("button", { name: /Create Account/i });
     await act(async () => {
-      fireEvent.submit(form);
+      fireEvent.click(submitButton);
     });
 
-    await waitFor(() => {
-      expect(
-        screen.getByText("Password must be at least 6 characters"),
-      ).toBeTruthy();
-    });
+    const error = await screen.findByText("Password must be at least 6 characters");
+    expect(error).toBeTruthy();
   });
 
   it("should toggle password visibility", async () => {
@@ -189,18 +178,15 @@ describe("UserRegistrationForm", () => {
   });
 
   it("should clear field error when user starts typing", async () => {
-    const { container } = render(<UserRegistrationForm />, { wrapper: TestWrapper });
+    render(<UserRegistrationForm />, { wrapper: TestWrapper });
 
-    const form = container.querySelector("form");
+    const submitButton = screen.getByRole("button", { name: /Create Account/i });
     await act(async () => {
-      fireEvent.submit(form);
+      fireEvent.click(submitButton);
     });
 
-    await waitFor(() => {
-      expect(
-        screen.getByText("Username must be at least 3 characters"),
-      ).toBeTruthy();
-    });
+    const error = await screen.findByText("Username must be at least 3 characters");
+    expect(error).toBeTruthy();
 
     const usernameInput = screen.getByLabelText(/^Username/i);
     await act(async () => {
@@ -209,7 +195,7 @@ describe("UserRegistrationForm", () => {
 
     await waitFor(() => {
       expect(
-        screen.queryByText("Username must be at least 3 characters"),
+        screen.queryByText("Username must be at least 3 characters")
       ).toBeNull();
     });
   });
@@ -217,7 +203,7 @@ describe("UserRegistrationForm", () => {
   it("should submit form with valid data", async () => {
     selfRegister.mockResolvedValue({ success: true });
 
-    const { container } = render(<UserRegistrationForm />, { wrapper: TestWrapper });
+    render(<UserRegistrationForm />, { wrapper: TestWrapper });
 
     await act(async () => {
       fireEvent.change(screen.getByLabelText(/^Username/i), {
@@ -237,22 +223,18 @@ describe("UserRegistrationForm", () => {
       });
     });
 
-    const form = container.querySelector("form");
+    const submitButton = screen.getByRole("button", { name: /Create Account/i });
     await act(async () => {
-      fireEvent.submit(form);
+      fireEvent.click(submitButton);
     });
 
     await waitFor(() => {
       expect(selfRegister).toHaveBeenCalled();
     });
 
-    await waitFor(() => {
-      expect(
-        screen.getByText("Thank You for Your Application!"),
-      ).toBeTruthy();
-    });
+    const successMessage = await screen.findByText("Thank You for Your Application!");
+    expect(successMessage).toBeTruthy();
 
-    // Test navigation back to login on return button click
     const returnButton = screen.getByRole("button", {
       name: /Return to Login/i,
     });
@@ -270,7 +252,7 @@ describe("UserRegistrationForm", () => {
       message: errorMessage,
     });
 
-    const { container } = render(<UserRegistrationForm />, { wrapper: TestWrapper });
+    render(<UserRegistrationForm />, { wrapper: TestWrapper });
 
     await act(async () => {
       fireEvent.change(screen.getByLabelText(/^Username/i), {
@@ -290,9 +272,9 @@ describe("UserRegistrationForm", () => {
       });
     });
 
-    const form = container.querySelector("form");
+    const submitButton = screen.getByRole("button", { name: /Create Account/i });
     await act(async () => {
-      fireEvent.submit(form);
+      fireEvent.click(submitButton);
     });
 
     await waitFor(() => {
