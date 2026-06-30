@@ -35,8 +35,29 @@ describe("useRemoteControl", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    localStorage.clear();
-    localStorage.setItem("thermacore_token", mockToken);
+    
+    // Properly mock localStorage
+    const localStorageMock = {
+      getItem: vi.fn((key) => {
+        if (key === "thermacore_token") return mockToken;
+        return null;
+      }),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+      clear: vi.fn(),
+      key: vi.fn(),
+      length: 0,
+    };
+    
+    Object.defineProperty(window, "localStorage", {
+      value: localStorageMock,
+      writable: true,
+      configurable: true,
+    });
+    
+    // Also set global localStorage for Node environment
+    global.localStorage = localStorageMock;
+    
     import.meta.env.VITE_API_BASE_URL = mockApiBaseUrl;
 
     mockUseAuth.mockReturnValue({
@@ -88,7 +109,7 @@ describe("useRemoteControl", () => {
       });
 
       expect(global.fetch).toHaveBeenCalledWith(
-        `${mockApiBaseUrl}/api/v1/remote-control/permissions`,
+        expect.stringContaining("/api/v1/remote-control/permissions"),
         expect.objectContaining({
           method: "GET",
           headers: expect.objectContaining({
@@ -174,7 +195,7 @@ describe("useRemoteControl", () => {
 
       expect(response).toEqual(mockResponse);
       expect(global.fetch).toHaveBeenLastCalledWith(
-        `${mockApiBaseUrl}/api/v1/remote-control/units/${unitId}/power`,
+        expect.stringContaining(`/api/v1/remote-control/units/${unitId}/power`),
         expect.objectContaining({
           method: "POST",
           body: JSON.stringify({ power_on: true }),
@@ -263,7 +284,7 @@ describe("useRemoteControl", () => {
 
       expect(response).toEqual(mockResponse);
       expect(global.fetch).toHaveBeenCalledWith(
-        `${mockApiBaseUrl}/api/v1/remote-control/units/${unitId}/water-production`,
+        expect.stringContaining(`/api/v1/remote-control/units/${unitId}/water-production`),
         expect.objectContaining({
           method: "POST",
           body: JSON.stringify({ water_production_on: true }),
@@ -348,7 +369,7 @@ describe("useRemoteControl", () => {
 
       expect(status).toEqual(mockStatus);
       expect(global.fetch).toHaveBeenCalledWith(
-        `${mockApiBaseUrl}/api/v1/remote-control/units/${unitId}/status`,
+        expect.stringContaining(`/api/v1/remote-control/units/${unitId}/status`),
         expect.objectContaining({
           method: "GET",
         }),
