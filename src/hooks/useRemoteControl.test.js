@@ -1,12 +1,32 @@
+import React from "react";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useRemoteControl } from "./useRemoteControl";
+import { ThemeProvider } from "../context/ThemeContext";
+import { SettingsProvider } from "../context/SettingsContext";
+import { AuthProvider } from "../context/AuthContext";
 
 // Mock AuthContext
 const mockUseAuth = vi.fn();
-vi.mock("../context/AuthContext", () => ({
-  useAuth: () => mockUseAuth(),
-}));
+vi.mock("../context/AuthContext", async () => {
+  const actual = await vi.importActual("../context/AuthContext");
+  return {
+    ...actual,
+    useAuth: () => mockUseAuth(),
+  };
+});
+
+const TestWrapper = ({ children }) => {
+  return React.createElement(
+    ThemeProvider,
+    null,
+    React.createElement(
+      SettingsProvider,
+      null,
+      React.createElement(AuthProvider, null, children)
+    )
+  );
+};
 
 describe("useRemoteControl", () => {
   const unitId = "unit-123";
@@ -33,9 +53,8 @@ describe("useRemoteControl", () => {
         new Error("Failed to fetch permissions"),
       );
 
-      let result;
-      await act(async () => {
-        ({ result } = renderHook(() => useRemoteControl(unitId)));
+      const { result } = renderHook(() => useRemoteControl(unitId), {
+        wrapper: TestWrapper,
       });
 
       // Wait for the error state to be set
@@ -60,9 +79,8 @@ describe("useRemoteControl", () => {
         json: async () => mockPermissions,
       });
 
-      let result;
-      await act(async () => {
-        ({ result } = renderHook(() => useRemoteControl(unitId)));
+      const { result } = renderHook(() => useRemoteControl(unitId), {
+        wrapper: TestWrapper,
       });
 
       await waitFor(() => {
@@ -85,9 +103,8 @@ describe("useRemoteControl", () => {
         isAuthenticated: false,
       });
 
-      let result;
-      await act(async () => {
-        ({ result } = renderHook(() => useRemoteControl(unitId)));
+      const { result } = renderHook(() => useRemoteControl(unitId), {
+        wrapper: TestWrapper,
       });
 
       await waitFor(() => {
@@ -103,7 +120,9 @@ describe("useRemoteControl", () => {
         status: 403,
       });
 
-      const { result } = renderHook(() => useRemoteControl(unitId));
+      const { result } = renderHook(() => useRemoteControl(unitId), {
+        wrapper: TestWrapper,
+      });
 
       await waitFor(() => {
         expect(result.current.error).toBe("Failed to fetch permissions");
@@ -114,7 +133,9 @@ describe("useRemoteControl", () => {
     it("should handle network error", async () => {
       global.fetch.mockRejectedValueOnce(new Error("Network error"));
 
-      const { result } = renderHook(() => useRemoteControl(unitId));
+      const { result } = renderHook(() => useRemoteControl(unitId), {
+        wrapper: TestWrapper,
+      });
 
       await waitFor(() => {
         expect(result.current.error).toBe("Failed to fetch permissions");
@@ -136,7 +157,9 @@ describe("useRemoteControl", () => {
           json: async () => mockResponse,
         });
 
-      const { result } = renderHook(() => useRemoteControl(unitId));
+      const { result } = renderHook(() => useRemoteControl(unitId), {
+        wrapper: TestWrapper,
+      });
 
       await waitFor(() => {
         expect(result.current.permissions).toEqual({
@@ -144,7 +167,10 @@ describe("useRemoteControl", () => {
         });
       });
 
-      const response = await result.current.controlPower(true);
+      let response;
+      await act(async () => {
+        response = await result.current.controlPower(true);
+      });
 
       expect(response).toEqual(mockResponse);
       expect(global.fetch).toHaveBeenLastCalledWith(
@@ -162,7 +188,9 @@ describe("useRemoteControl", () => {
         json: async () => ({ has_remote_control: false }),
       });
 
-      const { result } = renderHook(() => useRemoteControl(unitId));
+      const { result } = renderHook(() => useRemoteControl(unitId), {
+        wrapper: TestWrapper,
+      });
 
       await waitFor(() => {
         expect(result.current.permissions).toEqual({
@@ -186,7 +214,9 @@ describe("useRemoteControl", () => {
           json: async () => ({ error: "Control failed" }),
         });
 
-      const { result } = renderHook(() => useRemoteControl(unitId));
+      const { result } = renderHook(() => useRemoteControl(unitId), {
+        wrapper: TestWrapper,
+      });
 
       await waitFor(() => {
         expect(result.current.permissions?.has_remote_control).toBe(true);
@@ -216,7 +246,9 @@ describe("useRemoteControl", () => {
           json: async () => mockResponse,
         });
 
-      const { result } = renderHook(() => useRemoteControl(unitId));
+      const { result } = renderHook(() => useRemoteControl(unitId), {
+        wrapper: TestWrapper,
+      });
 
       await waitFor(() => {
         expect(result.current.permissions).toEqual({
@@ -224,7 +256,10 @@ describe("useRemoteControl", () => {
         });
       });
 
-      const response = await result.current.controlWaterProduction(true);
+      let response;
+      await act(async () => {
+        response = await result.current.controlWaterProduction(true);
+      });
 
       expect(response).toEqual(mockResponse);
       expect(global.fetch).toHaveBeenCalledWith(
@@ -242,7 +277,9 @@ describe("useRemoteControl", () => {
         json: async () => ({ has_remote_control: false }),
       });
 
-      const { result } = renderHook(() => useRemoteControl(unitId));
+      const { result } = renderHook(() => useRemoteControl(unitId), {
+        wrapper: TestWrapper,
+      });
 
       await waitFor(() => {
         expect(result.current.permissions?.has_remote_control).toBe(false);
@@ -264,7 +301,9 @@ describe("useRemoteControl", () => {
           json: async () => ({ error: "Water control failed" }),
         });
 
-      const { result } = renderHook(() => useRemoteControl(unitId));
+      const { result } = renderHook(() => useRemoteControl(unitId), {
+        wrapper: TestWrapper,
+      });
 
       await waitFor(() => {
         expect(result.current.permissions?.has_remote_control).toBe(true);
@@ -294,13 +333,18 @@ describe("useRemoteControl", () => {
           json: async () => mockStatus,
         });
 
-      const { result } = renderHook(() => useRemoteControl(unitId));
+      const { result } = renderHook(() => useRemoteControl(unitId), {
+        wrapper: TestWrapper,
+      });
 
       await waitFor(() => {
         expect(result.current.permissions).toBeDefined();
       });
 
-      const status = await result.current.getUnitStatus();
+      let status;
+      await act(async () => {
+        status = await result.current.getUnitStatus();
+      });
 
       expect(status).toEqual(mockStatus);
       expect(global.fetch).toHaveBeenCalledWith(
@@ -322,7 +366,9 @@ describe("useRemoteControl", () => {
           json: async () => ({ error: "Status fetch failed" }),
         });
 
-      const { result } = renderHook(() => useRemoteControl(unitId));
+      const { result } = renderHook(() => useRemoteControl(unitId), {
+        wrapper: TestWrapper,
+      });
 
       await waitFor(() => {
         expect(result.current.permissions).toBeDefined();
@@ -349,13 +395,17 @@ describe("useRemoteControl", () => {
           json: async () => updatedPermissions,
         });
 
-      const { result } = renderHook(() => useRemoteControl(unitId));
+      const { result } = renderHook(() => useRemoteControl(unitId), {
+        wrapper: TestWrapper,
+      });
 
       await waitFor(() => {
         expect(result.current.permissions).toEqual(initialPermissions);
       });
 
-      await result.current.refetchPermissions();
+      await act(async () => {
+        await result.current.refetchPermissions();
+      });
 
       await waitFor(() => {
         expect(result.current.permissions).toEqual(updatedPermissions);
