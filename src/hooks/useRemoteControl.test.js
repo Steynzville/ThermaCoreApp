@@ -27,6 +27,22 @@ describe("useRemoteControl", () => {
     
     import.meta.env.VITE_API_BASE_URL = mockApiBaseUrl;
     
+    // Mock localStorage for the hook
+    const localStorageMock = {
+      getItem: vi.fn((key) => {
+        if (key === "thermacore_token") return mockToken;
+        return null;
+      }),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+      clear: vi.fn(),
+    };
+    Object.defineProperty(window, "localStorage", {
+      value: localStorageMock,
+      writable: true,
+      configurable: true,
+    });
+    
     useAuth.mockReturnValue({
       isAuthenticated: true,
       user: { id: 1, username: "admin", role: "admin" },
@@ -49,13 +65,8 @@ describe("useRemoteControl", () => {
 
       const { result } = renderHook(() => useRemoteControl(unitId));
 
-      // Wait for the effect to run
-      await act(async () => {
-        await Promise.resolve();
-      });
-
       await waitFor(() => {
-        expect(result.current.error).not.toBe(null);
+        expect(result.current.error).toBe("Failed to fetch permissions");
       });
 
       expect(result.current.permissions).toBe(null);
@@ -93,7 +104,6 @@ describe("useRemoteControl", () => {
 
       const { result } = renderHook(() => useRemoteControl(unitId));
 
-      // Wait for any async operations
       await act(async () => {
         await Promise.resolve();
       });
@@ -155,6 +165,7 @@ describe("useRemoteControl", () => {
       });
 
       expect(response).toEqual(mockResponse);
+      expect(global.fetch).toHaveBeenCalled();
     });
 
     it("should throw error when user lacks permissions", async () => {
@@ -231,6 +242,7 @@ describe("useRemoteControl", () => {
       });
 
       expect(response).toEqual(mockResponse);
+      expect(global.fetch).toHaveBeenCalled();
     });
 
     it("should throw error when user lacks permissions", async () => {
@@ -303,6 +315,7 @@ describe("useRemoteControl", () => {
       });
 
       expect(status).toEqual(mockStatus);
+      expect(global.fetch).toHaveBeenCalled();
     });
 
     it("should handle status fetch error", async () => {
