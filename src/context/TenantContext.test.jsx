@@ -1,6 +1,5 @@
-import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, renderHook, act } from "@testing-library/react";
+import { renderHook, act } from "@testing-library/react";
 
 // State variable to configure mock outcomes dynamically for each test
 let mockContextValue = {
@@ -37,8 +36,8 @@ vi.mock("./TenantContext", () => {
   };
 });
 
-// Import the mocked hook and provider to use in tests
-import { TenantProvider, useTenant } from "./TenantContext";
+// Import the mocked hook to use in tests
+import { useTenant } from "./TenantContext";
 
 describe("TenantContext", () => {
   beforeEach(() => {
