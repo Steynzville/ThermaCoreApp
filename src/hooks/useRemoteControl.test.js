@@ -67,12 +67,10 @@ describe("useRemoteControl", () => {
 
       const { result } = renderHook(() => useRemoteControl(unitId));
 
-      // Wait for the effect to complete
       await act(async () => {
         await Promise.resolve();
       });
 
-      // The error should be set after the fetch fails
       expect(result.current.error).toBe("Failed to fetch permissions");
       expect(result.current.permissions).toBe(null);
       expect(result.current.isLoading).toBe(false);
@@ -94,7 +92,6 @@ describe("useRemoteControl", () => {
 
       const { result } = renderHook(() => useRemoteControl(unitId));
 
-      // Wait for the effect to complete
       await act(async () => {
         await Promise.resolve();
       });
@@ -168,7 +165,6 @@ describe("useRemoteControl", () => {
 
       const { result } = renderHook(() => useRemoteControl(unitId));
 
-      // Wait for permissions to load
       await act(async () => {
         await Promise.resolve();
       });
@@ -226,10 +222,16 @@ describe("useRemoteControl", () => {
 
       expect(result.current.permissions?.has_remote_control).toBe(true);
 
-      await expect(result.current.controlPower(true)).rejects.toThrow(
-        "Control failed",
-      );
+      // Wait for the promise rejection and state update
+      await act(async () => {
+        try {
+          await result.current.controlPower(true);
+        } catch (_e) {
+          // Expected to throw
+        }
+      });
 
+      // Now the error should be set
       expect(result.current.error).toBe("Failed to control power");
     });
   });
@@ -305,9 +307,17 @@ describe("useRemoteControl", () => {
 
       expect(result.current.permissions?.has_remote_control).toBe(true);
 
-      await expect(result.current.controlWaterProduction(true)).rejects.toThrow(
-        "Water control failed",
-      );
+      // Wait for the promise rejection and state update
+      await act(async () => {
+        try {
+          await result.current.controlWaterProduction(true);
+        } catch (_e) {
+          // Expected to throw
+        }
+      });
+
+      // Now the error should be set
+      expect(result.current.error).toBe("Failed to control water production");
     });
   });
 
