@@ -27,7 +27,6 @@ describe("useRemoteControl", () => {
     
     import.meta.env.VITE_API_BASE_URL = mockApiBaseUrl;
     
-    // Mock useAuth with a spy to see if it's being called
     useAuth.mockReturnValue({
       isAuthenticated: true,
       user: { id: 1, username: "admin", role: "admin" },
@@ -39,7 +38,6 @@ describe("useRemoteControl", () => {
     global.fetch = vi.fn();
   });
 
-  // Simple test to see if the hook renders at all
   it("should render without crashing", () => {
     const { result } = renderHook(() => useRemoteControl(unitId));
     expect(result.current).toBeDefined();
@@ -98,6 +96,7 @@ describe("useRemoteControl", () => {
 
       const { result } = renderHook(() => useRemoteControl(unitId));
 
+      // Wait a tick for any async operations
       await waitFor(() => {
         expect(result.current.permissions).toBe(null);
       });
