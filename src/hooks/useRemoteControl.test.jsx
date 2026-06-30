@@ -1,10 +1,9 @@
-import React from "react";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useRemoteControl } from "./useRemoteControl";
-import { ThemeProvider } from "../context/ThemeContext";
-import { SettingsProvider } from "../context/SettingsContext";
 import { AuthProvider } from "../context/AuthContext";
+import { SettingsProvider } from "../context/SettingsContext";
+import { ThemeProvider } from "../context/ThemeContext";
+import { useRemoteControl } from "./useRemoteControl";
 
 // Mock AuthContext
 const mockUseAuth = vi.fn();
@@ -38,7 +37,7 @@ describe("useRemoteControl", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    
+
     // Mock localStorage
     const localStorageMock = {
       getItem: vi.fn((key) => {
@@ -52,13 +51,13 @@ describe("useRemoteControl", () => {
       key: vi.fn(),
       length: 0,
     };
-    
+
     Object.defineProperty(window, "localStorage", {
       value: localStorageMock,
       writable: true,
       configurable: true,
     });
-    
+
     // Mock sessionStorage
     const sessionStorageMock = {
       getItem: vi.fn(),
@@ -73,7 +72,7 @@ describe("useRemoteControl", () => {
       writable: true,
       configurable: true,
     });
-    
+
     import.meta.env.VITE_API_BASE_URL = mockApiBaseUrl;
 
     mockUseAuth.mockReturnValue({
