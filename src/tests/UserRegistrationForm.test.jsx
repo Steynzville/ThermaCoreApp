@@ -5,6 +5,7 @@
 
 import { fireEvent, render, screen, waitFor, cleanup, act } from "@testing-library/react";
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
+import { BrowserRouter } from "react-router-dom";
 import UserRegistrationForm from "../components/UserRegistrationForm";
 import { selfRegister } from "../services/authService";
 import { toast } from "sonner";
@@ -14,9 +15,13 @@ import { AuthProvider } from "../context/AuthContext";
 
 // Mock useNavigate from react-router-dom
 const mockNavigate = vi.fn();
-vi.mock("react-router-dom", () => ({
-  useNavigate: () => mockNavigate,
-}));
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual("react-router-dom");
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
 
 // Mock the auth service
 vi.mock("../services/authService", () => ({
@@ -38,17 +43,20 @@ vi.mock("../assets/thermacore-logo-new.png", () => ({
 
 const TestWrapper = ({ children }) => {
   return (
-    <ThemeProvider>
-      <SettingsProvider>
-        <AuthProvider>{children}</AuthProvider>
-      </SettingsProvider>
-    </ThemeProvider>
+    <BrowserRouter>
+      <ThemeProvider>
+        <SettingsProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </SettingsProvider>
+      </ThemeProvider>
+    </BrowserRouter>
   );
 };
 
 describe("UserRegistrationForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockNavigate.mockClear();
     if (selfRegister.mockReset) {
       selfRegister.mockReset();
     }
