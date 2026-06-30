@@ -1,278 +1,368 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+// @vitest-environment jsdom
+import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import MultiProtocolManager from "../components/MultiProtocolManager";
-import * as apiFetch from "../utils/apiFetch";
+import { apiGetJson } from "@/utils/apiFetch";
+import { AuthProvider } from "../context/AuthContext";
+import { ThemeProvider } from "../context/ThemeContext";
+import { SettingsProvider } from "../context/SettingsContext";
 
-// Force apiGetJson to be called instead of returning local mockData
-import.meta.env.DEV = false;
-import.meta.env.VITE_MOCK_MODE = "false";
+// Mock dependencies
+vi.mock("../styles/theme.css", () => ({}));
+vi.mock("../../styles/theme.css", () => ({}));
+vi.mock("@/styles/theme.css", () => ({}));
+vi.mock("/src/styles/theme.css", () => ({}));
+vi.mock("src/styles/theme.css", () => ({}));
 
-// Mock the API fetch utilities
-vi.mock("../utils/apiFetch", () => ({
+vi.mock("sonner", () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
+vi.mock("@/utils/apiFetch", () => ({
   apiGetJson: vi.fn(),
-  apiPostJson: vi.fn(),
 }));
 
-// Mock the child components
-vi.mock("../components/protocol/ModbusDeviceModal", () => ({
-  default: ({ isOpen, device }) => (
-    <div data-testid="modbus-modal">
-      {isOpen ? `Modbus Modal - ${device?.device_id || "None"}` : null}
-    </div>
-  ),
+// Mock required contexts
+vi.mock("../context/AuthContext", () => ({
+  AuthProvider: ({ children }) => <>{children}</>,
+  useAuth: () => ({
+    user: { id: "1", username: "admin", role: "admin" },
+    userRole: "admin",
+    permissions: { canManageUsers: true, canViewProtocols: true, canManageProtocols: true },
+  }),
 }));
 
-vi.mock("../components/protocol/OPCUANodeBrowser", () => ({
-  default: ({ isOpen }) => (
-    <div data-testid="opcua-browser">{isOpen ? "OPC-UA Browser" : null}</div>
-  ),
+vi.mock("../context/ThemeContext", () => ({
+  ThemeProvider: ({ children }) => <>{children}</>,
+  useTheme: () => ({
+    theme: "light",
+    toggleTheme: vi.fn(),
+    setTheme: vi.fn(),
+  }),
 }));
 
-vi.mock("../components/protocol/DNP3MonitoringDashboard", () => ({
-  default: ({ isOpen }) => (
-    <div data-testid="dnp3-dashboard">{isOpen ? "DNP3 Dashboard" : null}</div>
-  ),
+vi.mock("../context/SettingsContext", () => ({
+  SettingsProvider: ({ children }) => <>{children}</>,
+  useSettings: () => ({
+    settings: {
+      refreshInterval: 10000,
+    },
+    updateSettings: vi.fn(),
+  }),
 }));
 
-vi.mock("../components/protocol/MQTTManagementPanel", () => ({
-  default: ({ isOpen }) => (
-    <div data-testid="mqtt-panel">{isOpen ? "MQTT Panel" : null}</div>
-  ),
+// Mock child components to isolate MultiProtocolManager testing
+vi.mock("@/components/protocol/DNP3MonitoringDashboard", () => ({
+  __esModule: true,
+  default: ({ isOpen, onClose }) => isOpen ? <div data-testid="dnp3-dashboard">DNP3 Dashboard <button onClick={onClose}>Close DNP3</button></div> : null
 }));
+
+vi.mock("@/components/protocol/ModbusDeviceModal", () => ({
+  __esModule: true,
+  default: ({ isOpen, onClose }) => isOpen ? <div data-testid="modbus-modal">Modbus Modal <button onClick={onClose}>Close Modbus</button></div> : null
+}));
+
+vi.mock("@/components/protocol/MQTTManagementPanel", () => ({
+  __esModule: true,
+  default: ({ isOpen, onClose }) => isOpen ? <div data-testid="mqtt-panel">MQTT Panel <button onClick={onClose}>Close MQTT</button></div> : null
+}));
+
+vi.mock("@/components/protocol/OPCUANodeBrowser", () => ({
+  __esModule: true,
+  default: ({ isOpen, onClose }) => isOpen ? <div data-testid="opcua-browser">OPC-UA Browser <button onClick={onClose}>Close OPC-UA</button></div> : null
+}));
+
+vi.mock("@/components/protocol/ProtocolWizard", () => ({
+  __esModule: true,
+  default: ({ isOpen, onClose }) => isOpen ? <div data-testid="protocol-wizard">Protocol Wizard <button onClick={onClose}>Close Wizard</button></div> : null
+}));
+
+vi.mock("@/components/protocol/ProtocolStatusDashboard", () => ({
+  __esModule: true,
+  default: () => <div data-testid="protocol-status-dashboard">Protocol Status Dashboard</div>
+}));
+
+const mockProtocolsData = {
+  timestamp: "2026-06-30T21:10:00.000Z",
+  summary: {
+    total_protocols: 5,
+    active_protocols: 3,
+    supported_protocols: ["mqtt", "opcua", "modbus", "dnp3", "simulator"],
+  },
+  protocols: {
+    mqtt: {
+      name: "mqtt",
+      available: true,
+      connected: true,
+      status: "ready",
+      last_heartbeat: "2026-06-30T21:09:30.000Z",
+      version: "3.1.1",
+      metrics: { messages_sent: 1247, messages_received: 2156 },
+    },
+    opcua: {
+      name: "opcua",
+      available: true,
+      connected: false,
+      status: "error",
+      error: { code: "CONNECTION_REFUSED", message: "Server unreachable" },
+      version: "1.04",
+    },
+    modbus: {
+      name: "modbus",
+      available: true,
+      connected: true,
+      status: "ready",
+      last_heartbeat: "2026-06-30T21:09:45.000Z",
+      metrics: { active_devices: 2, total_registers: 48 },
+    },
+    dnp3: {
+      name: "dnp3",
+      available: true,
+      connected: true,
+      status: "ready",
+      last_heartbeat: "2026-06-30T21:09:15.000Z",
+      metrics: { active_outstations: 1, data_points: 24 },
+    },
+    simulator: {
+      name: "simulator",
+      available: false,
+      connected: false,
+      status: "not_initialized",
+    },
+  },
+};
 
 describe("MultiProtocolManager - Enhanced Protocol Support", () => {
-  const mockProtocolsStatus = {
-    timestamp: new Date().toISOString(),
-    summary: {
-      total_protocols: 4,
-      active_protocols: 3,
-      supported_protocols: ["modbus", "opcua", "dnp3", "mqtt"],
-    },
-    protocols: {
-      modbus: {
-        name: "modbus",
-        available: true,
-        connected: true,
-        status: "ready",
-        last_heartbeat: new Date().toISOString(),
-        metrics: { active_devices: 2, total_registers: 48 },
-      },
-      opcua: {
-        name: "opcua",
-        available: true,
-        connected: true,
-        status: "ready",
-        last_heartbeat: new Date().toISOString(),
-        metrics: { connected_nodes: 15 },
-      },
-      dnp3: {
-        name: "dnp3",
-        available: true,
-        connected: true,
-        status: "ready",
-        last_heartbeat: new Date().toISOString(),
-        metrics: { active_outstations: 1, data_points: 24 },
-      },
-      mqtt: {
-        name: "mqtt",
-        available: true,
-        connected: true,
-        status: "ready",
-        last_heartbeat: new Date().toISOString(),
-        version: "3.1.1",
-        metrics: { messages_sent: 1247, messages_received: 2156 },
-      },
-    },
-  };
-
   beforeEach(() => {
     vi.clearAllMocks();
-    apiFetch.apiGetJson.mockResolvedValue(mockProtocolsStatus);
+    // Force isMockMode to be false so we hit API paths
+    import.meta.env.VITE_MOCK_MODE = "false";
+    import.meta.env.DEV = false;
+    apiGetJson.mockResolvedValue(mockProtocolsData);
   });
 
-  it("should render the multi-protocol manager with all protocols", async () => {
-    render(<MultiProtocolManager />);
+  const renderWithProviders = () => {
+    return render(
+      <AuthProvider>
+        <ThemeProvider>
+          <SettingsProvider>
+            <MultiProtocolManager />
+          </SettingsProvider>
+        </ThemeProvider>
+      </AuthProvider>
+    );
+  };
 
+  it("should render the multi-protocol manager with all protocols", async () => {
+    renderWithProviders();
+
+    // Wait for the component to finish loading and transition from spinner
     await waitFor(() => {
-      expect(screen.getByText("Multi-Protocol Manager")).toBeInTheDocument();
+      expect(screen.queryByText(/Loading protocol status.../i)).not.toBeInTheDocument();
     });
 
-    expect(screen.getByText("MODBUS")).toBeInTheDocument();
-    expect(screen.getByText("OPCUA")).toBeInTheDocument();
-    expect(screen.getByText("DNP3")).toBeInTheDocument();
+    expect(screen.getByText("Multi-Protocol Manager")).toBeInTheDocument();
+    expect(screen.getByText("Monitor and manage industrial protocol connections")).toBeInTheDocument();
+    
+    // Check that we render cards for each protocol
     expect(screen.getByText("MQTT")).toBeInTheDocument();
+    expect(screen.getByText("OPCUA")).toBeInTheDocument();
+    expect(screen.getByText("MODBUS")).toBeInTheDocument();
+    expect(screen.getByText("DNP3")).toBeInTheDocument();
+    expect(screen.getByText("SIMULATOR")).toBeInTheDocument();
   });
 
   it("should display protocol metrics correctly", async () => {
-    render(<MultiProtocolManager />);
+    renderWithProviders();
 
     await waitFor(() => {
-      expect(screen.getByText("4")).toBeInTheDocument(); // Total protocols
-      expect(screen.getByText("3")).toBeInTheDocument(); // Active protocols
+      expect(screen.queryByText(/Loading protocol status.../i)).not.toBeInTheDocument();
     });
+
+    expect(screen.getByText("Total Protocols")).toBeInTheDocument();
+    expect(screen.getByText("Active Protocols")).toBeInTheDocument();
+    expect(screen.getByText("Connection Rate")).toBeInTheDocument();
+    expect(screen.getByText("Last Updated")).toBeInTheDocument();
   });
 
   it("should open Modbus modal when configure button is clicked", async () => {
-    render(<MultiProtocolManager />);
+    renderWithProviders();
 
     await waitFor(() => {
-      expect(screen.getByText("MODBUS")).toBeInTheDocument();
+      expect(screen.queryByText(/Loading protocol status.../i)).not.toBeInTheDocument();
     });
 
-    // Find configure buttons - order is deterministic from mock (modbus, opcua, dnp3, mqtt)
+    // Modbus is the 3rd protocol in the list: mqtt (0), opcua (1), modbus (2)
     const configureButtons = screen.getAllByText("Configure");
-    expect(configureButtons.length).toBeGreaterThanOrEqual(4);
-    fireEvent.click(configureButtons[0]); // Modbus button
+    fireEvent.click(configureButtons[2]);
 
-    await waitFor(() => {
-      expect(screen.getByTestId("modbus-modal")).toBeInTheDocument();
-    });
+    expect(screen.getByTestId("modbus-modal")).toBeInTheDocument();
+    
+    // Close modal
+    fireEvent.click(screen.getByText("Close Modbus"));
+    expect(screen.queryByTestId("modbus-modal")).not.toBeInTheDocument();
   });
 
   it("should open OPC-UA browser when configure button is clicked", async () => {
-    render(<MultiProtocolManager />);
+    renderWithProviders();
 
     await waitFor(() => {
-      expect(screen.getByText("OPCUA")).toBeInTheDocument();
+      expect(screen.queryByText(/Loading protocol status.../i)).not.toBeInTheDocument();
     });
 
-    // Find configure buttons - order is deterministic from mock (modbus, opcua, dnp3, mqtt)
+    // OPC-UA is 2nd in order: mqtt (0), opcua (1)
     const configureButtons = screen.getAllByText("Configure");
-    expect(configureButtons.length).toBeGreaterThanOrEqual(4);
-    fireEvent.click(configureButtons[1]); // OPC-UA button
+    fireEvent.click(configureButtons[1]);
 
-    await waitFor(() => {
-      expect(screen.getByTestId("opcua-browser")).toBeInTheDocument();
-    });
+    expect(screen.getByTestId("opcua-browser")).toBeInTheDocument();
+
+    // Close modal
+    fireEvent.click(screen.getByText("Close OPC-UA"));
+    expect(screen.queryByTestId("opcua-browser")).not.toBeInTheDocument();
   });
 
   it("should open DNP3 dashboard when configure button is clicked", async () => {
-    render(<MultiProtocolManager />);
+    renderWithProviders();
 
     await waitFor(() => {
-      expect(screen.getByText("DNP3")).toBeInTheDocument();
+      expect(screen.queryByText(/Loading protocol status.../i)).not.toBeInTheDocument();
     });
 
-    // Find configure buttons - order is deterministic from mock (modbus, opcua, dnp3, mqtt)
+    // DNP3 is 4th in order: mqtt (0), opcua (1), modbus (2), dnp3 (3)
     const configureButtons = screen.getAllByText("Configure");
-    expect(configureButtons.length).toBeGreaterThanOrEqual(4);
-    fireEvent.click(configureButtons[2]); // DNP3 button
+    fireEvent.click(configureButtons[3]);
 
-    await waitFor(() => {
-      expect(screen.getByTestId("dnp3-dashboard")).toBeInTheDocument();
-    });
+    expect(screen.getByTestId("dnp3-dashboard")).toBeInTheDocument();
+
+    // Close modal
+    fireEvent.click(screen.getByText("Close DNP3"));
+    expect(screen.queryByTestId("dnp3-dashboard")).not.toBeInTheDocument();
   });
 
   it("should open MQTT panel when configure button is clicked", async () => {
-    render(<MultiProtocolManager />);
+    renderWithProviders();
 
     await waitFor(() => {
-      expect(screen.getByText("MQTT")).toBeInTheDocument();
+      expect(screen.queryByText(/Loading protocol status.../i)).not.toBeInTheDocument();
     });
 
-    // Find configure buttons - order is deterministic from mock (modbus, opcua, dnp3, mqtt)
+    // MQTT is 1st in order: mqtt (0)
     const configureButtons = screen.getAllByText("Configure");
-    expect(configureButtons.length).toBeGreaterThanOrEqual(4);
-    fireEvent.click(configureButtons[3]); // MQTT button
+    fireEvent.click(configureButtons[0]);
 
-    await waitFor(() => {
-      expect(screen.getByTestId("mqtt-panel")).toBeInTheDocument();
-    });
+    expect(screen.getByTestId("mqtt-panel")).toBeInTheDocument();
+
+    // Close modal
+    fireEvent.click(screen.getByText("Close MQTT"));
+    expect(screen.queryByTestId("mqtt-panel")).not.toBeInTheDocument();
   });
 
   it("should show connection status badges for each protocol", async () => {
-    render(<MultiProtocolManager />);
+    renderWithProviders();
 
     await waitFor(() => {
-      const activeBadges = screen.getAllByText("Active");
-      expect(activeBadges.length).toBeGreaterThan(0);
+      expect(screen.queryByText(/Loading protocol status.../i)).not.toBeInTheDocument();
     });
+
+    // Check that we render badges: 'Active' for ready & connected, 'Error' for opcua error, 'Inactive' for simulator
+    const activeBadges = screen.getAllByText("Active");
+    expect(activeBadges.length).toBeGreaterThanOrEqual(2); // Should have multiple actives (MQTT, Modbus, DNP3)
+
+    const errorBadge = screen.getByText("Error");
+    expect(errorBadge).toBeInTheDocument();
+
+    const inactiveBadge = screen.getByText("Inactive");
+    expect(inactiveBadge).toBeInTheDocument();
   });
 
   it("should handle refresh button click", async () => {
-    render(<MultiProtocolManager />);
+    renderWithProviders();
 
     await waitFor(() => {
-      expect(screen.getByText("Refresh")).toBeInTheDocument();
+      expect(screen.queryByText(/Loading protocol status.../i)).not.toBeInTheDocument();
     });
 
-    const callCountBefore = apiFetch.apiGetJson.mock.calls.length;
+    expect(apiGetJson).toHaveBeenCalledTimes(1);
 
-    const refreshButton = screen.getByText("Refresh");
-    fireEvent.click(refreshButton);
+    const refreshButton = screen.getByRole("button", { name: /Refresh/i });
+    
+    // Simulate clicking refresh
+    await act(async () => {
+      fireEvent.click(refreshButton);
+    });
 
     await waitFor(() => {
-      expect(apiFetch.apiGetJson.mock.calls.length).toBeGreaterThan(
-        callCountBefore,
-      );
+      expect(apiGetJson).toHaveBeenCalledTimes(2);
     });
   });
 
   it("should handle API errors gracefully", async () => {
-    apiFetch.apiGetJson.mockRejectedValueOnce(new Error("Network error"));
+    apiGetJson.mockRejectedValue(new Error("Request timed out. The server may be busy."));
 
-    render(<MultiProtocolManager />);
+    renderWithProviders();
 
     await waitFor(() => {
       expect(screen.getByText("Failed to Load")).toBeInTheDocument();
     });
+
+    expect(screen.getByText(/Failed to retrieve protocol status/i)).toBeInTheDocument();
+    expect(screen.getByText("Try Again")).toBeInTheDocument();
   });
 
   it("should display protocol-specific metrics", async () => {
-    render(<MultiProtocolManager />);
+    renderWithProviders();
 
     await waitFor(() => {
-      // Check that protocol cards are rendered with their metrics
-      expect(screen.getByText("MODBUS")).toBeInTheDocument();
+      expect(screen.queryByText(/Loading protocol status.../i)).not.toBeInTheDocument();
     });
 
-    // Verify at least one metrics section exists
-    const metricsLabels = screen.queryAllByText("Metrics:");
-    expect(metricsLabels.length).toBeGreaterThan(0);
+    // Check MQTT specific metrics
+    expect(screen.getByText("messages sent:")).toBeInTheDocument();
+    expect(screen.getByText("1247")).toBeInTheDocument();
+    expect(screen.getByText("messages received:")).toBeInTheDocument();
+    expect(screen.getByText("2156")).toBeInTheDocument();
+
+    // Check Modbus specific metrics
+    expect(screen.getByText("active devices:")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
+    expect(screen.getByText("total registers:")).toBeInTheDocument();
+    expect(screen.getByText("48")).toBeInTheDocument();
   });
 
   it("should show error state when protocol has errors", async () => {
-    const errorStatus = {
-      ...mockProtocolsStatus,
-      protocols: {
-        ...mockProtocolsStatus.protocols,
-        modbus: {
-          ...mockProtocolsStatus.protocols.modbus,
-          connected: false,
-          status: "error",
-          error: {
-            code: "CONNECTION_FAILED",
-            message: "Unable to connect",
-          },
-        },
-      },
-    };
-
-    apiFetch.apiGetJson.mockResolvedValueOnce(errorStatus);
-
-    render(<MultiProtocolManager />);
+    renderWithProviders();
 
     await waitFor(() => {
-      expect(screen.getByText("Error")).toBeInTheDocument();
-      expect(screen.getByText("CONNECTION_FAILED")).toBeInTheDocument();
+      expect(screen.queryByText(/Loading protocol status.../i)).not.toBeInTheDocument();
     });
+
+    // Check opcua error codes are displayed
+    expect(screen.getByText("CONNECTION_REFUSED")).toBeInTheDocument();
+    expect(screen.getByText("Server unreachable")).toBeInTheDocument();
   });
 
   it("should calculate connection rate correctly", async () => {
-    render(<MultiProtocolManager />);
+    renderWithProviders();
 
     await waitFor(() => {
-      // 3 out of 4 protocols active = 75%
-      expect(screen.getByText("75%")).toBeInTheDocument();
+      expect(screen.queryByText(/Loading protocol status.../i)).not.toBeInTheDocument();
     });
+
+    // Connection rate = (active_protocols / total_protocols) * 100 = (3 / 5) * 100 = 60%
+    expect(screen.getByText("60%")).toBeInTheDocument();
   });
 
   it("should display last updated timestamp", async () => {
-    render(<MultiProtocolManager />);
+    renderWithProviders();
 
     await waitFor(() => {
-      const lastUpdatedElements = screen.getAllByText(/Last Updated/i);
-      expect(lastUpdatedElements.length).toBeGreaterThan(0);
+      expect(screen.queryByText(/Loading protocol status.../i)).not.toBeInTheDocument();
     });
+
+    const expectedTime = new Date(mockProtocolsData.timestamp).toLocaleTimeString();
+    expect(screen.getByText(expectedTime)).toBeInTheDocument();
   });
 });
