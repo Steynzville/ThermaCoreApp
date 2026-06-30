@@ -27,7 +27,7 @@ describe("useRemoteControl", () => {
     
     import.meta.env.VITE_API_BASE_URL = mockApiBaseUrl;
     
-    // Mock localStorage for the hook
+    // Mock localStorage
     const localStorageMock = {
       getItem: vi.fn((key) => {
         if (key === "thermacore_token") return mockToken;
@@ -43,19 +43,31 @@ describe("useRemoteControl", () => {
       configurable: true,
     });
     
+    // Reset and mock useAuth
+    useAuth.mockReset();
     useAuth.mockReturnValue({
       isAuthenticated: true,
       user: { id: 1, username: "admin", role: "admin" },
       userRole: "admin",
     });
 
+    // Reset and mock getAuthToken
+    getAuthToken.mockReset();
     getAuthToken.mockReturnValue(mockToken);
 
     global.fetch = vi.fn();
   });
 
-  it("should render without crashing", () => {
+  // Debug test to see what's happening
+  it("should render without crashing and show debug info", async () => {
+    console.log("=== DEBUG: useRemoteControl test ===");
+    console.log("useAuth mock:", useAuth());
+    console.log("getAuthToken mock:", getAuthToken());
+    console.log("localStorage getItem:", window.localStorage.getItem("thermacore_token"));
+    
     const { result } = renderHook(() => useRemoteControl(unitId));
+    console.log("Hook result:", result.current);
+    
     expect(result.current).toBeDefined();
   });
 
@@ -96,6 +108,7 @@ describe("useRemoteControl", () => {
     });
 
     it("should not fetch when not authenticated", async () => {
+      useAuth.mockReset();
       useAuth.mockReturnValue({
         isAuthenticated: false,
         user: null,
