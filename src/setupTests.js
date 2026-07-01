@@ -140,7 +140,7 @@ if (typeof window !== "undefined") {
     // ignore
   }
 
-  // Mock window.Image constructor
+  // Mock window.Image constructor - Fixed to prevent event loop hanging in CI environments
   class MockImage {
     constructor() {
       this.listeners = {};
@@ -151,12 +151,12 @@ if (typeof window !== "undefined") {
     }
     set src(value) {
       this._src = value;
-      setTimeout(() => {
-        if (this.onload) this.onload();
-        if (this.listeners["load"]) {
-          this.listeners["load"].forEach((cb) => { cb(); });
-        }
-      }, 10);
+      // Synchronously execute callbacks instead of utilizing a setTimeout macro-task 
+      // which prevents the Node process event loop from cleaning up gracefully.
+      if (this.onload) this.onload();
+      if (this.listeners["load"]) {
+        this.listeners["load"].forEach((cb) => { cb(); });
+      }
     }
     addEventListener(event, callback) {
       if (!this.listeners[event]) this.listeners[event] = [];
