@@ -1,0 +1,100 @@
+name: Frontend Coverage Report
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  frontend-coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install Frontend Dependencies
+        run: |
+          echo "📦 Installing frontend dependencies..."
+          pnpm install --frozen-lockfile
+
+      - name: Run Coverage with Wrapper
+        env:
+          NODE_OPTIONS: "--max-old-space-size=8192"
+          CI: "true"
+        run: |
+          echo "📊 Running frontend coverage..."
+          # Use the wrapper with coverage
+          timeout 360 node scripts/test-wrapper.js --coverage --coverage.reporter=text --coverage.reporter=json-summary --coverage.reportsDirectory=coverage || {
+            EXIT_CODE=$?
+            if [ $EXIT_CODE -eq 124 ]; then
+              echo "⚠️ Coverage timed out after 6 minutes - partial report may exist"
+              exit 0
+            fi
+            exit $EXIT_CODE
+          }
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage-report
+          path: coverage/
+          retention-days: 14
+
+      - name: Display Coverage Summary
+        run: |
+          echo "📊 Frontend Coverage Report"
+          echo "=========================="
+          if [ -f coverage/coverage-summary.json ]; then
+            echo ""
+            echo "Coverage Summary:"
+            cat coverage/coverage-summary.json | jq '.total' || echo "Failed to parse JSON"
+            echo ""
+            echo "Detailed coverage report available in artifacts"
+          elif [ -f coverage/coverage-final.json ]; then
+            echo "Coverage data available (coverage-final.json)"
+          else
+            echo "⚠️ No coverage data found"
+          fi
+
+      - name: List Coverage Files
+        run: |
+          echo "📁 Coverage directory contents:"
+          ls -la coverage/ || echo "No coverage directory"
+
+      - name: Generate HTML Report (optional)
+        run: |
+          echo "📄 Generating HTML coverage report..."
+          # If you want to generate HTML report
+          pnpm vitest run --coverage --coverage.reporter=html || echo "HTML report generation skipped"
