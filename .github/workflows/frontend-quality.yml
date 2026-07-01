@@ -63,7 +63,7 @@ jobs:
         timeout-minutes: 15
         run: |
           echo "🧪 Running frontend tests with coverage on main..."
-          pnpm test:coverage -- --coverage.provider=v8 --coverage.reporter=text --coverage.reporter=json-summary --maxWorkers=2
+          pnpm test:coverage -- --coverage.provider=v8 --coverage.reporter=text --coverage.reporter=json-summary --maxWorkers=8
       - name: Display Coverage Summary
         if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
@@ -72,13 +72,11 @@ jobs:
           echo "📊 ================================="
           echo ""
           
-          # Check if coverage directory exists
           if [ ! -d "coverage" ]; then
             echo "⚠️  No coverage directory found"
             exit 0
           fi
           
-          # List coverage files for debugging
           echo "📁 Coverage files found:"
           find coverage/ -type f 2>/dev/null | head -15 || echo "No files in coverage directory"
           echo ""
@@ -102,7 +100,6 @@ jobs:
             " 2>&1 || true)
             echo "$COVERAGE_DATA"
             
-            # Extract line coverage for status
             LINE_COVERAGE=$(node -e "
               try {
                 console.log(require('./coverage/coverage-summary.json').total.lines.pct);
