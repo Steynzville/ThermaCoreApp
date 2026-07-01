@@ -14,8 +14,9 @@ on:
 jobs:
   frontend-quality:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
-      NODE_OPTIONS: --max-old-space-size=8192
+      NODE_OPTIONS: --max-old-space-size=4096
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -59,42 +60,63 @@ jobs:
           pnpm test
       - name: Run Tests with Coverage
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        timeout-minutes: 15
         run: |
           echo "🧪 Running frontend tests with coverage on main..."
-          pnpm test:coverage -- --coverage.provider=v8 --maxWorkers=2
+          pnpm test:coverage -- --coverage.provider=v8 --coverage.reporter=text --coverage.reporter=json-summary --maxWorkers=2
       - name: Display Coverage Summary
         if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           echo "📊 ================================="
           echo "📊 FRONTEND COVERAGE REPORT"
           echo "📊 ================================="
+          echo ""
+          
+          # Check if coverage directory exists
+          if [ ! -d "coverage" ]; then
+            echo "⚠️  No coverage directory found"
+            exit 0
+          fi
+          
+          # List coverage files for debugging
+          echo "📁 Coverage files found:"
+          find coverage/ -type f 2>/dev/null | head -15 || echo "No files in coverage directory"
+          echo ""
           
           if [ -f "coverage/coverage-summary.json" ]; then
+            echo "✅ Coverage summary file found - processing..."
             COVERAGE_DATA=$(node -e "
-              const coverage = require('./coverage/coverage-summary.json');
-              const total = coverage.total;
-              console.log('🎯 PRIMARY METRIC → Lines: ' + total.lines.pct + '%');
-              console.log('---');
-              console.log('📈 Statements: ' + total.statements.pct + '%');
-              console.log('🔧 Functions: ' + total.functions.pct + '%'); 
-              console.log('🌿 Branches: ' + total.branches.pct + '%');
-              console.log('---');
-            ")
+              try {
+                const coverage = require('./coverage/coverage-summary.json');
+                const total = coverage.total;
+                console.log('🎯 PRIMARY METRIC → Lines: ' + total.lines.pct + '%');
+                console.log('---');
+                console.log('📈 Statements: ' + total.statements.pct + '%');
+                console.log('🔧 Functions: ' + total.functions.pct + '%'); 
+                console.log('🌿 Branches: ' + total.branches.pct + '%');
+                console.log('---');
+              } catch (e) {
+                console.log('Error parsing coverage: ' + e.message);
+                process.exit(1);
+              }
+            " 2>&1 || true)
             echo "$COVERAGE_DATA"
             
             # Extract line coverage for status
-            LINE_COVERAGE=$(node -e "console.log(require('./coverage/coverage-summary.json').total.lines.pct)")
-            echo "COVERAGE_PCT=$LINE_COVERAGE" >> $GITHUB_ENV
-            echo "MAIN_COVERAGE=$LINE_COVERAGE" >> $GITHUB_ENV
+            LINE_COVERAGE=$(node -e "
+              try {
+                console.log(require('./coverage/coverage-summary.json').total.lines.pct);
+              } catch (e) {
+                console.log('0');
+              }
+            " 2>&1)
             echo ""
             echo "✅ Frontend Coverage: ${LINE_COVERAGE}% (Lines)"
           elif [ -f "coverage/lcov.info" ]; then
             echo "📈 Line coverage from lcov:"
             grep -E "LF:|LH:" coverage/lcov.info | head -2
           else
-            echo "⚠️  No coverage report found in expected location"
-            echo "📁 Coverage directory contents:"
-            find coverage/ -type f 2>/dev/null | head -10 || echo "No coverage directory found"
+            echo "⚠️  No coverage-summary.json or lcov.info found"
           fi
       - name: Upload Coverage Report
         if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
