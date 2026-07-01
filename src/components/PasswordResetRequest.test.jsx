@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { BrowserRouter } from "react-router-dom";
+import { BrowserRouter, MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import PasswordResetRequest from "./PasswordResetRequest";
 import { AuthProvider } from "../context/AuthContext";
@@ -8,19 +8,7 @@ import { ThemeProvider } from "../context/ThemeContext";
 import { SettingsProvider } from "../context/SettingsContext";
 import { resetPassword } from "../services/authService";
 
-// Setup mocks with variables prefixed with "mock" to bypass hoisting restrictions
-const mockNavigate = vi.fn();
-const mockUseSearchParams = vi.fn();
-
-vi.mock("react-router-dom", async () => {
-  const actual = await vi.importActual("react-router-dom");
-  return {
-    ...actual,
-    useNavigate: () => mockNavigate,
-    useSearchParams: () => mockUseSearchParams(),
-  };
-});
-
+// Mock the auth service
 vi.mock("../services/authService", () => ({
   resetPassword: vi.fn(),
 }));
@@ -34,24 +22,28 @@ vi.mock("../assets/thermacore-logo-new.png", () => ({
   default: "logo.png",
 }));
 
+// Mock useNavigate
+const mockNavigate = vi.fn();
+
 describe("PasswordResetRequest", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockNavigate.mockClear();
   });
 
-  const renderComponent = (token = "test-token") => {
-    mockUseSearchParams.mockReturnValue([
-      new URLSearchParams(token ? `token=${token}` : ""),
-      vi.fn(),
-    ]);
-
+  // Helper to render with a specific token in the URL
+  const renderWithToken = (token = "test-token") => {
+    const initialEntries = token ? [`/reset-password?token=${token}`] : ["/reset-password"];
+    
     return render(
       <AuthProvider>
         <ThemeProvider>
           <SettingsProvider>
-            <BrowserRouter>
-              <PasswordResetRequest />
-            </BrowserRouter>
+            <MemoryRouter initialEntries={initialEntries}>
+              <Routes>
+                <Route path="/reset-password" element={<PasswordResetRequest />} />
+              </Routes>
+            </MemoryRouter>
           </SettingsProvider>
         </ThemeProvider>
       </AuthProvider>
@@ -59,7 +51,7 @@ describe("PasswordResetRequest", () => {
   };
 
   it("should render password reset form", () => {
-    renderComponent();
+    renderWithToken();
 
     expect(
       screen.getByPlaceholderText("Enter new password")
@@ -73,7 +65,7 @@ describe("PasswordResetRequest", () => {
   });
 
   it("should display error when no token in URL", async () => {
-    renderComponent("");
+    renderWithToken(null);
 
     await waitFor(() => {
       expect(
@@ -83,7 +75,7 @@ describe("PasswordResetRequest", () => {
   });
 
   it("should handle password input change", () => {
-    renderComponent();
+    renderWithToken();
 
     const passwordInput = screen.getByPlaceholderText("Enter new password");
     fireEvent.change(passwordInput, {
@@ -94,7 +86,7 @@ describe("PasswordResetRequest", () => {
   });
 
   it("should handle confirm password input change", () => {
-    renderComponent();
+    renderWithToken();
 
     const confirmInput = screen.getByPlaceholderText("Confirm new password");
     fireEvent.change(confirmInput, {
@@ -105,18 +97,17 @@ describe("PasswordResetRequest", () => {
   });
 
   it("should validate empty password fields", async () => {
-    renderComponent();
+    renderWithToken();
 
     const submitButton = screen.getByRole("button", {
       name: /reset password/i,
     });
 
-    // Wait for the asynchronous useEffect to resolve and set the token, enabling the button
     await waitFor(() => {
       expect(submitButton).not.toBeDisabled();
     });
 
-    // Submit form directly to bypass native HTML5 required validation on empty fields
+    // Submit form directly
     const form = submitButton.closest("form");
     fireEvent.submit(form);
 
@@ -128,7 +119,7 @@ describe("PasswordResetRequest", () => {
   });
 
   it("should validate password length", async () => {
-    renderComponent();
+    renderWithToken();
 
     const passwordInput = screen.getByPlaceholderText("Enter new password");
     const confirmInput = screen.getByPlaceholderText("Confirm new password");
@@ -158,7 +149,7 @@ describe("PasswordResetRequest", () => {
   });
 
   it("should validate password mismatch", async () => {
-    renderComponent();
+    renderWithToken();
 
     const passwordInput = screen.getByPlaceholderText("Enter new password");
     const confirmInput = screen.getByPlaceholderText("Confirm new password");
@@ -191,7 +182,7 @@ describe("PasswordResetRequest", () => {
       message: "Password reset successful",
     });
 
-    renderComponent();
+    renderWithToken();
 
     const passwordInput = screen.getByPlaceholderText("Enter new password");
     const confirmInput = screen.getByPlaceholderText("Confirm new password");
@@ -224,7 +215,7 @@ describe("PasswordResetRequest", () => {
       message: "Invalid token",
     });
 
-    renderComponent();
+    renderWithToken();
 
     const passwordInput = screen.getByPlaceholderText("Enter new password");
     const confirmInput = screen.getByPlaceholderText("Confirm new password");
@@ -254,7 +245,7 @@ describe("PasswordResetRequest", () => {
   it("should handle API error gracefully", async () => {
     vi.mocked(resetPassword).mockRejectedValueOnce(new Error("Network Error"));
 
-    renderComponent();
+    renderWithToken();
 
     const passwordInput = screen.getByPlaceholderText("Enter new password");
     const confirmInput = screen.getByPlaceholderText("Confirm new password");
@@ -284,7 +275,7 @@ describe("PasswordResetRequest", () => {
   });
 
   it("should toggle password visibility", () => {
-    renderComponent();
+    renderWithToken();
 
     const passwordInput = screen.getByLabelText(/New Password/i);
     expect(passwordInput).toHaveAttribute("type", "password");
@@ -300,7 +291,7 @@ describe("PasswordResetRequest", () => {
   });
 
   it("should clear error when user starts typing", async () => {
-    renderComponent();
+    renderWithToken();
 
     const submitButton = screen.getByRole("button", {
       name: /reset password/i,
@@ -310,7 +301,7 @@ describe("PasswordResetRequest", () => {
       expect(submitButton).not.toBeDisabled();
     });
 
-    // Submit form directly to bypass native HTML5 required validation on empty fields
+    // Submit form directly
     const form = submitButton.closest("form");
     fireEvent.submit(form);
 
