@@ -78,23 +78,26 @@ jobs:
           echo "=========================="
           if [ -f coverage/coverage-summary.json ]; then
             echo ""
-            echo "Coverage Summary:"
-            cat coverage/coverage-summary.json | jq '.total' || echo "Failed to parse JSON"
+            echo "📈 METRIC COVERAGE SUMMARY:"
+            echo "------------------------"
+            
+            # Extract and quote clean metrics directly into the workflow logs
+            jq -r '
+              "Statements: " + (.total.statements.pct | tostring) + "% (" + (.total.statements.covered | tostring) + "/" + (.total.statements.total | tostring) + ")\n" +
+              "Branches:   " + (.total.branches.pct | tostring) + "% (" + (.total.branches.covered | tostring) + "/" + (.total.branches.total | tostring) + ")\n" +
+              "Functions:  " + (.total.functions.pct | tostring) + "% (" + (.total.functions.covered | tostring) + "/" + (.total.functions.total | tostring) + ")\n" +
+              "Lines:      " + (.total.lines.pct | tostring) + "% (" + (.total.lines.covered | tostring) + "/" + (.total.lines.total | tostring) + ")"
+            ' coverage/coverage-summary.json || echo "Failed to parse coverage-summary.json"
+            
             echo ""
-            echo "Detailed coverage report available in artifacts"
+            echo "Full raw breakdown available in artifacts."
           elif [ -f coverage/coverage-final.json ]; then
-            echo "Coverage data available (coverage-final.json)"
+            echo "Coverage summary json missing, but raw data available (coverage-final.json)"
           else
-            echo "⚠️ No coverage data found"
+            echo "⚠️ No coverage data files found inside coverage/"
           fi
 
       - name: List Coverage Files
         run: |
           echo "📁 Coverage directory contents:"
           ls -la coverage/ || echo "No coverage directory"
-
-      - name: Generate HTML Report (optional)
-        run: |
-          echo "📄 Generating HTML coverage report..."
-          # If you want to generate HTML report
-          pnpm vitest run --coverage --coverage.reporter=html || echo "HTML report generation skipped"
