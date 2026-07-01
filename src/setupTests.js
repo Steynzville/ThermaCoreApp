@@ -1,7 +1,7 @@
 import { vi } from "vitest";
 import "@testing-library/jest-dom";
 import { cleanup } from "@testing-library/react";
-import { afterEach } from "vitest";
+import { afterEach, afterAll } from "vitest";
 
 // 1. Polyfills and Mock Definitions (at the very top before other major library imports)
 if (typeof window !== "undefined") {
@@ -409,3 +409,25 @@ afterEach(() => {
   // Reset any mocks that might hold references
   vi.clearAllMocks();
 });
+
+// ============================================
+// FORCE EXIT ON CI
+// ============================================
+
+if (typeof process !== "undefined" && process.env.CI) {
+  // Use afterAll to clean up and force exit
+  afterAll(() => {
+    console.log("🔧 Tests complete - forcing cleanup...");
+    
+    // Clear all timers and mocks
+    vi.clearAllTimers();
+    vi.clearAllMocks();
+    vi.restoreAllMocks();
+    
+    // Force exit after a short delay
+    setTimeout(() => {
+      console.log("🔧 Force exiting...");
+      process.exit(0);
+    }, 100);
+  });
+}
