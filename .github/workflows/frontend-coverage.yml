@@ -55,9 +55,9 @@ jobs:
           CI: "true"
         run: |
           echo "📊 Running frontend coverage directly via Vitest..."
-          # Bypassing the test-wrapper script to eliminate parent-process deadlocks.
-          # Explicitly adding --forceExit here to guarantee termination.
-          pnpm vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary --coverage.reportsDirectory=coverage --forceExit
+          # Removed the duplicate CLI string flag to resolve the CACError.
+          # Internal teardown remains active via vite.config.js.
+          pnpm vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary --coverage.reportsDirectory=coverage
 
       - name: Upload Coverage Report
         if: always()
