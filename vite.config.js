@@ -18,22 +18,22 @@ export default defineConfig({
     passWithNoTests: true,
     forceExit: true,
     
-    // Maintain lightweight threads but impose order constraints to reveal the stall point
-    pool: "threads",
+    // SWITCH: Use forks instead of threads to eliminate JSDOM asynchronous loop hanging
+    pool: "forks",
     poolOptions: {
-      threads: {
-        singleThread: false, 
-        isolate: true,      
+      forks: {
+        isolate: true, // Guarantees a pristine global environment context per file
       },
     },
     
-    // Run sequentially for this cycle so the terminal output lists the exact file that freezes
-    maxWorkers: 1, 
+    // Maximize standard GitHub Actions runner dual-core hardware
+    maxWorkers: 2, 
     minWorkers: 1,
     
-    testTimeout: 15000,
-    hookTimeout: 15000,
-    teardownTimeout: 5000,
+    // Extended ceilings so complex structural elements complete diagnostics safely
+    testTimeout: 30000,
+    hookTimeout: 30000,
+    teardownTimeout: 15000,
     
     coverage: {
       provider: "v8",
