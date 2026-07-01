@@ -14,9 +14,7 @@ on:
 jobs:
   frontend-quality:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    env:
-      NODE_OPTIONS: --max-old-space-size=4096
+    timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -53,71 +51,7 @@ jobs:
         run: |
           echo "🏗️ Verifying production build..."
           pnpm build
-      - name: Run Tests (Pull Requests)
-        if: github.event_name == 'pull_request'
+      - name: Run Tests
         run: |
-          echo "🧪 Running frontend tests (no coverage on PR to avoid OOM)..."
+          echo "🧪 Running frontend tests..."
           pnpm test
-      - name: Run Tests with Coverage (Main Branch)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        timeout-minutes: 30
-        run: |
-          echo "🧪 Running frontend tests with coverage on main (Istanbul provider)..."
-          pnpm test:coverage -- --coverage.provider=istanbul --coverage.reporter=text --coverage.reporter=json-summary --maxWorkers=8
-      - name: Display Coverage Summary
-        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          echo "📊 ================================="
-          echo "📊 FRONTEND COVERAGE REPORT"
-          echo "📊 ================================="
-          echo ""
-          
-          if [ ! -d "coverage" ]; then
-            echo "⚠️  No coverage directory found"
-            exit 0
-          fi
-          
-          echo "📁 Coverage files found:"
-          find coverage/ -type f 2>/dev/null | head -15 || echo "No files in coverage directory"
-          echo ""
-          
-          if [ -f "coverage/coverage-summary.json" ]; then
-            echo "✅ Coverage summary file found - processing..."
-            COVERAGE_DATA=$(node -e "
-              try {
-                const coverage = require('./coverage/coverage-summary.json');
-                const total = coverage.total;
-                console.log('🎯 PRIMARY METRIC → Lines: ' + total.lines.pct + '%');
-                console.log('---');
-                console.log('📈 Statements: ' + total.statements.pct + '%');
-                console.log('🔧 Functions: ' + total.functions.pct + '%'); 
-                console.log('🌿 Branches: ' + total.branches.pct + '%');
-                console.log('---');
-              } catch (e) {
-                console.log('Error parsing coverage: ' + e.message);
-                process.exit(1);
-              }
-            " 2>&1 || true)
-            echo "$COVERAGE_DATA"
-            
-            LINE_COVERAGE=$(node -e "
-              try {
-                console.log(require('./coverage/coverage-summary.json').total.lines.pct);
-              } catch (e) {
-                console.log('0');
-              }
-            " 2>&1)
-            echo ""
-            echo "✅ Frontend Coverage: ${LINE_COVERAGE}% (Lines)"
-          elif [ -f "coverage/lcov.info" ]; then
-            echo "📈 Line coverage from lcov:"
-            grep -E "LF:|LH:" coverage/lcov.info | head -2
-          else
-            echo "⚠️  No coverage-summary.json or lcov.info found"
-          fi
-      - name: Upload Coverage Report
-        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-coverage-report
-          path: coverage/
