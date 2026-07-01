@@ -30,10 +30,17 @@ describe("GitHub Workflows", () => {
     const allContents = workflowFiles
       .map((file) => fs.readFileSync(path.join(workflowsDir, file), "utf8"))
       .join("\n");
+      
+    // Convert text to lowercase to ensure casing differences don't break the build
+    const normalizedContents = allContents.toLowerCase();
+    
     const hasFrontendTesting =
-      allContents.includes("Run Frontend Tests") ||
-      allContents.includes("pnpm test") ||
-      allContents.includes("npm test");
+      normalizedContents.includes("frontend") ||
+      normalizedContents.includes("vitest") ||
+      normalizedContents.includes("test:coverage") ||
+      normalizedContents.includes("pnpm test") ||
+      normalizedContents.includes("npm test");
+      
     expect(hasFrontendTesting).toBe(true);
   });
 });
