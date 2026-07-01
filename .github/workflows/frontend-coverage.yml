@@ -55,9 +55,9 @@ jobs:
           CI: "true"
         run: |
           echo "📊 Running frontend coverage directly via Vitest..."
-          # Removed the duplicate CLI string flag to resolve the CACError.
-          # Internal teardown remains active via vite.config.js.
-          pnpm vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary --coverage.reportsDirectory=coverage
+          # Added --logHeapUsage to track memory leaks per file
+          # Added explicit pool flag to force cleaner process reporting
+          pnpm vitest run --pool=forks --logHeapUsage --coverage --coverage.reporter=text --coverage.reporter=json-summary --coverage.reportsDirectory=coverage
 
       - name: Upload Coverage Report
         if: always()
