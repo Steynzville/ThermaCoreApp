@@ -221,6 +221,12 @@ def create_app(config_name=None):
     config_obj = load_config_object(config_name)
     app.config.from_object(config_obj)
 
+    if not app.config.get("SQLALCHEMY_DATABASE_URI") and not app.config.get(
+        "SQLALCHEMY_BINDS",
+    ):
+        app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
+        app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {}
+
     # Configure debug mode based on environment
     configure_debug_mode(app, config_name)
 

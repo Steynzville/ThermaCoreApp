@@ -293,11 +293,13 @@ class TestMQTTClient:
             client.connected = True
 
             # Mock client publish
-            mock_client_instance.publish.return_value = (0, 1)
+            mock_publish_result = Mock()
+            mock_publish_result.rc = 0
+            mock_client_instance.publish.return_value = mock_publish_result
             
             # Test publishing string
             client.publish("test/topic", "test-payload")
-            mock_client_instance.publish.assert_called_with("test/topic", "test-payload", qos=1, retain=False)
+            mock_client_instance.publish.assert_called_with("test/topic", "test-payload", 0)
 
     def test_on_message_malformed_payload(self):
         """Test on_message handles malformed/corrupted payloads gracefully."""

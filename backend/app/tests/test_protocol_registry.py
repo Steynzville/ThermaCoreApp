@@ -112,7 +112,7 @@ def test_collect_protocol_status_invalid_formats_and_exceptions(app):
             # opcua should register status as "error" due to exception
             opcua_status = next(s for s in statuses if s["name"] == "opcua")
             assert opcua_status["status"] == "error"
-            assert opcua_status["error_code"] == "STATUS_FETCH_ERROR"
+            assert opcua_status["error"]["code"] == "STATUS_FETCH_ERROR"
 
 
 def test_collect_protocol_status_duplicates_and_non_dict_adapter(app):

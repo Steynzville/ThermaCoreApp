@@ -432,6 +432,17 @@ class SecurityAwareErrorHandler:
         )
 
     @staticmethod
+    def handle_not_found(
+        resource_type: str = "Resource",
+        resource_id: str | int | None = None,
+    ) -> tuple[Any, int]:
+        """Backward-compatible not found handler."""
+        context = resource_type
+        if resource_id is not None:
+            context = f"{resource_type} ({resource_id})"
+        return SecurityAwareErrorHandler.handle_not_found_error(context)
+
+    @staticmethod
     def handle_service_unavailable(service_name: str) -> tuple[Any, int]:
         """Handle service unavailable cases with standardized envelope."""
         request_id = getattr(g, "request_id", str(uuid.uuid4()))

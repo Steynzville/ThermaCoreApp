@@ -16,7 +16,7 @@ from sqlalchemy import (
     Text,
 )
 from sqlalchemy.dialects.postgresql import JSON
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, validates
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app import db
@@ -381,6 +381,7 @@ class Unit(db.Model):
     serial_number = Column(String(100), unique=True, nullable=False)
     install_date = Column(
         DateTime,
+        default=utc_now,
         nullable=False,
     )  # timezone-aware set via application logic
     last_maintenance = Column(DateTime)  # timezone-aware set via application logic
@@ -447,6 +448,30 @@ class Unit(db.Model):
         cascade="all, delete-orphan",
     )
     tenant = relationship("Tenant", back_populates="units")
+
+    @validates("status")
+    def _normalize_status(self, _key, value):
+        """Normalize status assignments to enum values."""
+        if value is None or isinstance(value, UnitStatusEnum):
+            return value
+        normalized = str(value).lower()
+        if normalized in UnitStatusEnum._value2member_map_:
+            return UnitStatusEnum(normalized)
+        if str(value) in UnitStatusEnum.__members__:
+            return UnitStatusEnum[str(value)]
+        return value
+
+    @validates("health_status")
+    def _normalize_health_status(self, _key, value):
+        """Normalize health status assignments to enum values."""
+        if value is None or isinstance(value, HealthStatusEnum):
+            return value
+        normalized = str(value).lower()
+        if normalized in HealthStatusEnum._value2member_map_:
+            return HealthStatusEnum(normalized)
+        if str(value) in HealthStatusEnum.__members__:
+            return HealthStatusEnum[str(value)]
+        return value
 
     def __repr__(self):
         return f"<Unit {self.id}: {self.name}>"

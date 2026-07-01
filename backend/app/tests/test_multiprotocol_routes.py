@@ -64,11 +64,7 @@ def test_modbus_devices_not_available(client, admin_token):
     # Ensure current_app does not have modbus_service attribute
     # Since flask client has conftest app, let's use app_context without modbus_service
     # If conftest registers it, we can temporarily pop it or mock hasattr
-    with patch("flask.current_app") as mock_app:
-        del mock_app.modbus_service # Ensure it is deleted or AttributeError
-        # hasattr(mock_app, "modbus_service") will be False
-        mock_app.__getattr__.side_effect = AttributeError
-        
+    with patch("app.routes.multiprotocol.hasattr", return_value=False):
         response = client.get("/api/v1/protocols/modbus/devices", headers=headers)
         assert response.status_code == 503
         
@@ -146,10 +142,7 @@ def test_dnp3_devices_not_available(client, admin_token):
     """Test DNP3 endpoints when service is unavailable."""
     headers = {"Authorization": f"Bearer {admin_token}"}
     
-    with patch("flask.current_app") as mock_app:
-        del mock_app.dnp3_service
-        mock_app.__getattr__.side_effect = AttributeError
-
+    with patch("app.routes.multiprotocol.hasattr", return_value=False):
         assert client.get("/api/v1/protocols/dnp3/devices", headers=headers).status_code == 503
         assert client.post("/api/v1/protocols/dnp3/devices", headers=headers, json={}).status_code == 503
         assert client.post("/api/v1/protocols/dnp3/devices/dev1/connect", headers=headers).status_code == 503

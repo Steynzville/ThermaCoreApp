@@ -112,11 +112,13 @@ class TestModbusService:
 
         # Register device
         device = ModbusDevice("DEV1", 1, "127.0.0.1", 502, "tcp")
+        device.is_connected = True
         service._devices["DEV1"] = device
 
         mock_client = Mock()
         mock_client.write_multiple_registers.return_value = True
         service._get_client = Mock(return_value=mock_client)
+        service._clients["DEV1"] = mock_client
 
         # Write float32 value (123.45)
         success = service.write_register("DEV1", "holding_register", 100, 123.45, "float32")
@@ -185,4 +187,3 @@ class TestModbusService:
         mock_client.write_single_coil.side_effect = Exception("Parity validation failed")
         success = service.write_register("DEV_ERR_W", "coil", 100, True)
         assert success is False
-

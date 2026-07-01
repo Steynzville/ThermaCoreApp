@@ -29,6 +29,10 @@ class MQTTClient:
         self.connected = False
         self._app = app
         self._data_storage_service = data_storage_service
+        self.broker_host = "localhost"
+        self.broker_port = 1883
+        self.keepalive = 60
+        self.client_id = "thermacore_backend"
         self._message_handlers: dict[str, Callable] = {}
         self._subscribed_topics: set = (
             set()
@@ -435,6 +439,10 @@ class MQTTClient:
         except Exception as e:
             logger.exception(f"Error publishing message: {e}")
             return False
+
+    def publish(self, topic: str, payload: str, qos: int = 0):
+        """Backward-compatible publish wrapper."""
+        return self.publish_message(topic, payload, qos)
 
     def get_status(self) -> dict[str, Any]:
         """Get MQTT client status for protocol registry integration.

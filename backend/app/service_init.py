@@ -5,6 +5,12 @@ from typing import Any
 
 from app.refactor_helpers import safe_service_init
 from app.utils.environment import is_production_environment
+from app.utils.service_manager import should_skip_external_services
+
+try:
+    from app.services.protocol_gateway_simulator import ProtocolGatewaySimulator
+except Exception:  # pragma: no cover - optional service dependency
+    ProtocolGatewaySimulator = None
 
 
 def initialize_all_services(app: Any, logger: logging.Logger) -> None:
@@ -25,11 +31,9 @@ def initialize_all_services(app: Any, logger: logging.Logger) -> None:
         from app.services.modbus_service import modbus_service  # noqa: PLC0415
         from app.services.mqtt_service import mqtt_client  # noqa: PLC0415
         from app.services.opcua_service import opcua_client  # noqa: PLC0415
-        from app.services.protocol_gateway_simulator import ProtocolGatewaySimulator
         from app.services.realtime_processor import realtime_processor  # noqa: PLC0415
         from app.services.secure_opcua_client import secure_opcua_client
         from app.services.websocket_service import websocket_service  # noqa: PLC0415
-        from app.utils.service_manager import should_skip_external_services
 
         skip_external = should_skip_external_services()
 

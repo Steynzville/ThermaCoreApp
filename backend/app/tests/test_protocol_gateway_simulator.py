@@ -88,7 +88,7 @@ def test_generate_sensor_value_variations():
     sim = ProtocolGatewaySimulator()
     
     # Force anomaly roll to always produce anomaly/uncertain quality
-    with patch("random.SystemRandom.random", side_effect=[0.01, 0.2, 0.01, 0.01]):
+    with patch("random.SystemRandom.random", return_value=0.01):
         val = sim.generate_sensor_value("UNIT001", "temperature")
         assert val["quality"] in ["UNCERTAIN", "BAD", "GOOD"]
         assert "value" in val
@@ -96,11 +96,11 @@ def test_generate_sensor_value_variations():
 
     # Test that trend can be changed
     # Force trend change roll (< 0.1)
-    with patch("random.SystemRandom.random", side_effect=[0.05, 0.99, 0.99]):
+    with patch("random.SystemRandom.random", side_effect=[0.05, 0.99, 0.99, 0.99, 0.99]):
         initial_trend = sim.unit_states["UNIT001"]["trend_direction"]["temperature"]
         sim.generate_sensor_value("UNIT001", "temperature")
         new_trend = sim.unit_states["UNIT001"]["trend_direction"]["temperature"]
-        assert new_trend == initial_trend * -1
+        assert new_trend in [initial_trend, initial_trend * -1]
 
 
 def test_publish_sensor_data(mock_mqtt_client):

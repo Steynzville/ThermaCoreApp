@@ -61,6 +61,12 @@ class OPCUAClient:
         self.connected = False
         self._app = app
         self._data_storage_service = data_storage_service
+        self.server_url = "opc.tcp://localhost:4840"
+        self.username = None
+        self.password = None
+        self.security_policy = "None"
+        self.security_mode = "None"
+        self.timeout = 30
         self._subscribed_nodes: dict[str, Node] = {}
         self._node_mappings: dict[
             str,

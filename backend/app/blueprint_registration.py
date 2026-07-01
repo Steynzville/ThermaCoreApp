@@ -52,6 +52,17 @@ def register_all_blueprints(app: Any, logger: logging.Logger) -> tuple[int, int]
         else:
             blueprints_failed += 1
 
+    # examples blueprint already includes its own url_prefix in module
+    try:
+        from app.routes.examples import example_bp
+
+        app.register_blueprint(example_bp)
+        logger.info("Registered examples routes")
+        blueprints_registered += 1
+    except Exception as e:
+        logger.exception(f"Failed to register examples routes: {e}")
+        blueprints_failed += 1
+
     # Register OPC-UA monitoring (special case - uses init function)
     if _register_opcua_monitoring(app, logger):
         blueprints_registered += 1

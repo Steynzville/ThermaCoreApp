@@ -84,7 +84,7 @@ def test_get_historical_data_raw(client, admin_token, seed_historical_data):
     """Test getting historical data raw format with authorization."""
     headers = {"Authorization": f"Bearer {admin_token}"}
     response = client.get(
-        "/historical/data/TEST001?aggregation=raw&limit=5",
+        "/api/v1/historical/data/TEST001?aggregation=raw&limit=5",
         headers=headers,
     )
     assert response.status_code == 200
@@ -103,7 +103,7 @@ def test_get_historical_data_aggregated(client, admin_token, seed_historical_dat
     
     # Hourly
     res_hourly = client.get(
-        "/historical/data/TEST001?aggregation=hourly&sensor_types=temperature",
+        "/api/v1/historical/data/TEST001?aggregation=hourly&sensor_types=temperature",
         headers=headers,
     )
     assert res_hourly.status_code == 200
@@ -114,7 +114,7 @@ def test_get_historical_data_aggregated(client, admin_token, seed_historical_dat
 
     # Daily
     res_daily = client.get(
-        "/historical/data/TEST001?aggregation=daily",
+        "/api/v1/historical/data/TEST001?aggregation=daily",
         headers=headers,
     )
     assert res_daily.status_code == 200
@@ -122,7 +122,7 @@ def test_get_historical_data_aggregated(client, admin_token, seed_historical_dat
 
     # Weekly
     res_weekly = client.get(
-        "/historical/data/TEST001?aggregation=weekly",
+        "/api/v1/historical/data/TEST001?aggregation=weekly",
         headers=headers,
     )
     assert res_weekly.status_code == 200
@@ -132,7 +132,7 @@ def test_get_historical_data_aggregated(client, admin_token, seed_historical_dat
 def test_get_historical_data_not_found(client, admin_token):
     """Test get historical data for a non-existent unit."""
     headers = {"Authorization": f"Bearer {admin_token}"}
-    response = client.get("/historical/data/NONEXIST?aggregation=raw", headers=headers)
+    response = client.get("/api/v1/historical/data/NONEXIST?aggregation=raw", headers=headers)
     assert response.status_code == 404
 
 
@@ -148,7 +148,7 @@ def test_compare_units_historical_success(client, admin_token, seed_historical_d
         "aggregation": "daily",
     }
     response = client.post(
-        "/historical/compare/units",
+        "/api/v1/historical/compare/units",
         json=payload,
         headers=headers,
     )
@@ -176,7 +176,7 @@ def test_compare_units_not_found(client, admin_token):
         "aggregation": "daily",
     }
     response = client.post(
-        "/historical/compare/units",
+        "/api/v1/historical/compare/units",
         json=payload,
         headers=headers,
     )
@@ -187,7 +187,7 @@ def test_export_historical_csv(client, admin_token, seed_historical_data):
     """Test exporting historical data in CSV format."""
     headers = {"Authorization": f"Bearer {admin_token}"}
     response = client.get(
-        "/historical/export/TEST001?format=csv&sensor_types=temperature",
+        "/api/v1/historical/export/TEST001?format=csv&sensor_types=temperature",
         headers=headers,
     )
     assert response.status_code == 200
@@ -201,7 +201,7 @@ def test_export_historical_json(client, admin_token, seed_historical_data):
     """Test exporting historical data in JSON format."""
     headers = {"Authorization": f"Bearer {admin_token}"}
     response = client.get(
-        "/historical/export/TEST001?format=json",
+        "/api/v1/historical/export/TEST001?format=json",
         headers=headers,
     )
     assert response.status_code == 200
@@ -215,7 +215,7 @@ def test_get_historical_statistics_success(client, admin_token, seed_historical_
     """Test historical statistics endpoint with stddev calculation."""
     headers = {"Authorization": f"Bearer {admin_token}"}
     response = client.get(
-        "/historical/statistics/TEST001?days=30&sensor_type=temperature",
+        "/api/v1/historical/statistics/TEST001?days=30&sensor_type=temperature",
         headers=headers,
     )
     assert response.status_code == 200
@@ -238,7 +238,7 @@ def test_get_historical_statistics_empty(client, admin_token):
     db.session.commit()
     
     response = client.get(
-        "/historical/statistics/TEST001?days=30",
+        "/api/v1/historical/statistics/TEST001?days=30",
         headers=headers,
     )
     assert response.status_code == 200

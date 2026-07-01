@@ -113,11 +113,13 @@ class TestUnitsAPI:
     def test_create_unit_success(self, client):
         """Test creating new unit."""
         token = self.get_auth_token(client)
+        unique_suffix = datetime.utcnow().strftime("%H%M%S%f")
+        unit_id = f"TEST{unique_suffix[-6:]}"
 
         unit_data = {
-            "id": "TEST002",
+            "id": unit_id,
             "name": "Test Unit 002",
-            "serial_number": "TEST002-2024-002",
+            "serial_number": f"TEST-{unique_suffix}",
             "install_date": "2024-02-15T00:00:00",
             "location": "Test Site 2",
             "client_name": "Test Client 2",
@@ -136,7 +138,7 @@ class TestUnitsAPI:
         assert response.status_code == 201
         data = unwrap_response(response)
 
-        assert data["id"] == "TEST002"
+        assert data["id"] == unit_id
         assert data["name"] == "Test Unit 002"
 
     def test_create_unit_duplicate_id(self, client):
