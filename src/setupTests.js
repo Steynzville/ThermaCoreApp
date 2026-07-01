@@ -1,11 +1,12 @@
 import { vi } from "vitest";
+import React from "react"; // Explicitly import React for the factory fallback
 import "@testing-library/jest-dom";
 import { cleanup } from "@testing-library/react";
 import { afterEach, afterAll } from "vitest";
 
 // 1. Polyfills and Mock Definitions (at the very top before other major library imports)
 if (typeof window !== "undefined") {
-  // Global Mock for Sonner to prevent dangling background event-loop timers
+  // Global Mock for Sonner using standard JavaScript objects to fix compilation
   vi.mock("sonner", () => {
     return {
       toast: Object.assign(
@@ -19,7 +20,8 @@ if (typeof window !== "undefined") {
           custom: vi.fn(),
         }
       ),
-      Toaster: () => <div data-testid="mock-toaster" />,
+      // Uses standard React factory execution instead of JSX angle brackets
+      Toaster: () => React.createElement("div", { "data-testid": "mock-toaster" }),
     };
   });
 
