@@ -18,27 +18,23 @@ export default defineConfig({
     passWithNoTests: true,
     forceExit: true,
     
-    // Process configuration strategy optimized for strict CI memory profiles
-    pool: "forks",
+    // Switch pool from process forks to lightweight, isolated V8 threads
+    pool: "threads",
     poolOptions: {
-      forks: {
-        // 1. Disable single long-lived process confinement
-        singleFork: false,
-        // 2. Force hard isolation limits per file batch
-        isolate: true,
+      threads: {
+        singleThread: false, // Runs files in isolated parallel context buckets
+        isolate: true,      // Fully reloads the global environment context per file
       },
     },
     
-    // Confinement settings: Run sequentially, but terminate and recreate the process continuously
-    maxWorkers: 1,
+    // Confinement limits to prevent overwhelming the dual-core GitHub runner
+    maxWorkers: 2, 
     minWorkers: 1,
     
-    // Explicitly optimize V8 flags via Vitest's CLI layer to drop completed code caches
-    maxHeap: 0.45, // Triggers aggressive V8 garbage collection if heap crosses 45% of available RAM
-    
-    testTimeout: 15000,
+    // Tight timeouts to force any hanging UI layout primitives to crash and report their names
+    testTimeout: 10000,
     hookTimeout: 10000,
-    teardownTimeout: 5000,
+    teardownTimeout: 3000,
     
     coverage: {
       provider: "v8",
