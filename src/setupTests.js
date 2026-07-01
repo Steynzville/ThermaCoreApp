@@ -401,8 +401,6 @@ afterEach(() => {
     document
       .querySelectorAll("[data-radix-popper-content-wrapper]")
       .forEach((el) => { el.remove(); });
-    // Don't remove all [role="dialog"] - these might be legitimate
-    // Don't do document.body.innerHTML = "" - this breaks React
   }
   
   // Reset timers but don't clear all mocks globally
