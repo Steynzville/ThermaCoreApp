@@ -58,6 +58,7 @@ jobs:
       - name: Run Tests
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
+          CI: "true"
         run: |
           echo "🧪 Running frontend tests..."
           pnpm test
