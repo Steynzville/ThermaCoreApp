@@ -168,6 +168,20 @@ class SecurityAwareErrorHandler:
         return jsonify(response_data), status_code
 
     @staticmethod
+    def handle_error(
+        error: Exception,
+        context: str = "",
+        status_code: int = 500,
+    ) -> tuple[Any, int]:
+        """Backward-compatible generic error handler used by legacy routes."""
+        return SecurityAwareErrorHandler.handle_service_error(
+            error,
+            "internal_error",
+            context,
+            status_code,
+        )
+
+    @staticmethod
     def handle_mqtt_error(
         error: Exception,
         context: str = "MQTT operation",
