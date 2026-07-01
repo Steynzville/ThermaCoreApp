@@ -34,9 +34,9 @@ class TestValidators:
         assert InputValidator.check_command_injection("$(whoami)") is True
         assert InputValidator.check_command_injection("safe_input") is False
 
-    def test_unit_schema_range_validation(self):
+    def test_unit_schema_range_validation(self, db_session):
         """Test range validation for Unit fields (out-of-range sensor values)."""
-        schema = UnitSchema()
+        schema = UnitSchema(session=db_session)
 
         # Valid input
         valid_data = {

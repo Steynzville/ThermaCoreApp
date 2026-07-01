@@ -168,6 +168,20 @@ class SecurityAwareErrorHandler:
         return jsonify(response_data), status_code
 
     @staticmethod
+    def handle_error(
+        error: Exception,
+        context: str = "",
+        status_code: int = 500,
+    ) -> tuple[Any, int]:
+        """Backward-compatible generic error handler used by legacy routes."""
+        return SecurityAwareErrorHandler.handle_service_error(
+            error,
+            "internal_error",
+            context,
+            status_code,
+        )
+
+    @staticmethod
     def handle_mqtt_error(
         error: Exception,
         context: str = "MQTT operation",
@@ -416,6 +430,17 @@ class SecurityAwareErrorHandler:
             ),
             404,
         )
+
+    @staticmethod
+    def handle_not_found(
+        resource_type: str = "Resource",
+        resource_id: str | int | None = None,
+    ) -> tuple[Any, int]:
+        """Backward-compatible not found handler."""
+        context = resource_type
+        if resource_id is not None:
+            context = f"{resource_type} ({resource_id})"
+        return SecurityAwareErrorHandler.handle_not_found_error(context)
 
     @staticmethod
     def handle_service_unavailable(service_name: str) -> tuple[Any, int]:

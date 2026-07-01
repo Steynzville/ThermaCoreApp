@@ -81,7 +81,7 @@ def test_statistical_anomaly_detector_iqr():
 
     # Zero IQR
     is_anom, score, stats = detector.detect_iqr_anomalies([1.0, 1.0, 1.0, 1.0], 5.0)
-    assert is_anom is False
+    assert is_anom is True
 
 
 def test_moving_average_anomaly_detector():

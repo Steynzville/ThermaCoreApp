@@ -1,6 +1,7 @@
 """Tests for auto-migration functionality."""
 
 from sqlalchemy import inspect
+from unittest.mock import MagicMock, patch
 
 from app.utils.auto_migration import (
     _validate_sql_identifier,
@@ -399,4 +400,3 @@ class TestAutoMigration:
         """Test run_auto_migrations handles exceptions gracefully."""
         with patch("app.utils.auto_migration.add_password_reset_columns", side_effect=Exception("Migration crash")):
             assert run_auto_migrations(app) is False
-

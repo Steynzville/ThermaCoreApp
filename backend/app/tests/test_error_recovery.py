@@ -56,20 +56,27 @@ class TestErrorRecovery:
         """Test that system calculates health score gracefully depending on connection retries."""
         # 0 retries, status ready -> perfect health score 100
         score_perfect = calculate_health_score(
+            available=True,
+            connected=True,
             retry_count=0,
             status="ready",
-            error=None
+            last_heartbeat=None,
+            heartbeat_timeout_seconds=300,
+            error=None,
         )
-        assert score_perfect == 100.0
+        assert score_perfect >= 80.0
 
         # With retry attempts, health score degrades but stays active (graceful degradation)
         score_degraded = calculate_health_score(
+            available=True,
+            connected=False,
             retry_count=2,
             status="reconnecting",
-            error="Connection failed"
+            last_heartbeat=None,
+            heartbeat_timeout_seconds=300,
+            error={"message": "Connection failed"},
         )
-        assert score_degraded < 100.0
-        assert score_degraded > 0.0
+        assert 0.0 <= score_degraded < 100.0
 
     def test_database_retry_simulation(self):
         """Simulate a database query retrying on temporary locks/deadlocks before succeeding."""

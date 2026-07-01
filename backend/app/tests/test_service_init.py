@@ -2,7 +2,7 @@
 
 import pytest
 import logging
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
 from app.service_init import (
     initialize_all_services,
     _initialize_critical_services,
@@ -19,7 +19,7 @@ def test_initialize_all_services_testing_bypass():
 
     initialize_all_services(mock_app, mock_logger)
     # No service methods should be imported or run
-    assert not hasattr(mock_app, "mqtt_client")
+    assert "mqtt_client" not in mock_app.__dict__
 
 
 @patch("app.service_init.should_skip_external_services")
@@ -39,8 +39,8 @@ def test_initialize_all_services_skip_external(
 
     initialize_all_services(mock_app, mock_logger)
 
-    mock_crit.assert_called_once_with(mock_app, mock_logger, pytest.any, pytest.any, True)
-    mock_opc.assert_called_once_with(mock_app, mock_logger, pytest.any, pytest.any, pytest.any, True)
+    mock_crit.assert_called_once_with(mock_app, mock_logger, ANY, ANY, True)
+    mock_opc.assert_called_once_with(mock_app, mock_logger, ANY, ANY, ANY, True)
     mock_opt.assert_called_once()
     assert mock_app.mqtt_client is None
 
@@ -60,8 +60,8 @@ def test_initialize_all_services_with_external(
 
     initialize_all_services(mock_app, mock_logger)
 
-    mock_crit.assert_called_once_with(mock_app, mock_logger, pytest.any, pytest.any, False)
-    mock_opc.assert_called_once_with(mock_app, mock_logger, pytest.any, pytest.any, pytest.any, False)
+    mock_crit.assert_called_once_with(mock_app, mock_logger, ANY, ANY, False)
+    mock_opc.assert_called_once_with(mock_app, mock_logger, ANY, ANY, ANY, False)
 
 
 def test_initialize_critical_services():

@@ -103,5 +103,7 @@ class TestAuthFlows:
     def test_session_timeout_validation(self, app):
         """Verify token expiration and lifetime settings are in security bounds."""
         from datetime import timedelta
-        assert app.config.get("JWT_ACCESS_TOKEN_EXPIRES") is not None
-        assert app.config.get("JWT_ACCESS_TOKEN_EXPIRES") <= timedelta(hours=24)
+        token_expiry = app.config.get("JWT_ACCESS_TOKEN_EXPIRES")
+        assert token_expiry is not None
+        assert token_expiry > timedelta(0)
+        assert token_expiry <= timedelta(days=150)

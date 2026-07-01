@@ -13,10 +13,10 @@ def test_get_dashboard_summary_empty(client, admin_token):
     headers = {"Authorization": f"Bearer {admin_token}"}
     
     with patch("app.models.db.session.query") as mock_query:
-        # We can mock the scalar returns for various queries
-        # overview query mock:
-        # total_units, active_units, total_sensors, recent_readings, current_week, previous_week, avg_temp, max_temp
-        mock_query.return_value.scalar.side_effect = [0, 0, 0, 0, 0, 0, None, None]
+        query_mock = mock_query.return_value
+        query_mock.scalar.side_effect = [0, 0]
+        query_mock.filter.return_value.scalar.side_effect = [0, 0, 0, 0]
+        query_mock.filter.return_value.join.return_value.scalar.side_effect = [None, None]
         
         response = client.get("/api/v1/analytics/dashboard/summary", headers=headers)
         assert response.status_code == 200
@@ -36,8 +36,10 @@ def test_get_dashboard_summary_with_data(client, admin_token):
     headers = {"Authorization": f"Bearer {admin_token}"}
     
     with patch("app.models.db.session.query") as mock_query:
-        # total_units, active_units, total_sensors, recent_readings, current_week, previous_week, avg_temp, max_temp
-        mock_query.return_value.scalar.side_effect = [10, 8, 30, 240, 1500, 1000, 45.2, 85.0]
+        query_mock = mock_query.return_value
+        query_mock.scalar.side_effect = [10, 30]
+        query_mock.filter.return_value.scalar.side_effect = [8, 240, 1500, 1000]
+        query_mock.filter.return_value.join.return_value.scalar.side_effect = [45.2, 85.0]
         
         response = client.get("/api/v1/analytics/dashboard/summary", headers=headers)
         assert response.status_code == 200

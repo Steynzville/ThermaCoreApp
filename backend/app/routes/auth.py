@@ -562,10 +562,14 @@ def refresh():
         return (
             jsonify(
                 {
-                    "access_token": access_token,
-                    "expires_in": current_app.config[
-                        "JWT_ACCESS_TOKEN_EXPIRES"
-                    ].total_seconds(),
+                    "success": True,
+                    "message": "Token refreshed successfully",
+                    "data": {
+                        "access_token": access_token,
+                        "expires_in": current_app.config[
+                            "JWT_ACCESS_TOKEN_EXPIRES"
+                        ].total_seconds(),
+                    },
                 },
             ),
             200,

@@ -4,7 +4,7 @@ from datetime import timedelta
 
 from flask import Blueprint, current_app, jsonify
 from flask_jwt_extended import jwt_required
-from sqlalchemy import and_, func
+from sqlalchemy import and_, func, literal
 from webargs.flaskparser import use_args
 
 from app.middleware.authorization import permission_required
@@ -104,9 +104,10 @@ def get_historical_data(args, unit_id):
                 SensorReading.value,
                 Sensor.sensor_type,
                 Sensor.name,
-                Sensor.unit,
+                Sensor.unit_of_measurement.label("unit"),
             )
-            .join(Sensor)
+            .select_from(SensorReading)
+            .join(Sensor, Sensor.id == SensorReading.sensor_id)
             .filter(
                 and_(
                     Sensor.unit_id == unit_id,
@@ -137,12 +138,25 @@ def get_historical_data(args, unit_id):
                 )
         else:
             # Aggregated data
+            dialect_name = db.engine.dialect.name
             if aggregation == "hourly":
-                time_format = func.date_trunc("hour", SensorReading.timestamp)
+                time_format = (
+                    func.strftime("%Y-%m-%dT%H:00:00", SensorReading.timestamp)
+                    if dialect_name == "sqlite"
+                    else func.date_trunc("hour", SensorReading.timestamp)
+                )
             elif aggregation == "daily":
-                time_format = func.date_trunc("day", SensorReading.timestamp)
+                time_format = (
+                    func.strftime("%Y-%m-%dT00:00:00", SensorReading.timestamp)
+                    if dialect_name == "sqlite"
+                    else func.date_trunc("day", SensorReading.timestamp)
+                )
             elif aggregation == "weekly":
-                time_format = func.date_trunc("week", SensorReading.timestamp)
+                time_format = (
+                    func.strftime("%Y-%W", SensorReading.timestamp)
+                    if dialect_name == "sqlite"
+                    else func.date_trunc("week", SensorReading.timestamp)
+                )
             else:
                 return jsonify({"error": "Invalid aggregation type"}), 400
 
@@ -156,7 +170,8 @@ def get_historical_data(args, unit_id):
                     func.max(SensorReading.value).label("max_value"),
                     func.count(SensorReading.value).label("count"),
                 )
-                .join(Sensor)
+                .select_from(SensorReading)
+                .join(Sensor, Sensor.id == SensorReading.sensor_id)
                 .filter(
                     and_(
                         Sensor.unit_id == unit_id,
@@ -183,7 +198,11 @@ def get_historical_data(args, unit_id):
             for reading in aggregated_data:
                 data.append(
                     {
-                        "timestamp": reading.time_bucket.isoformat(),
+                        "timestamp": (
+                            reading.time_bucket.isoformat()
+                            if hasattr(reading.time_bucket, "isoformat")
+                            else str(reading.time_bucket)
+                        ),
                         "sensor_type": reading.sensor_type,
                         "sensor_name": reading.name,
                         "avg_value": round(float(reading.avg_value), 2),
@@ -279,12 +298,25 @@ def compare_units_historical(args):
         start_time = start_date if start_date else (end_time - timedelta(days=30))
 
         # Set aggregation format
+        dialect_name = db.engine.dialect.name
         if aggregation == "hourly":
-            time_format = func.date_trunc("hour", SensorReading.timestamp)
+            time_format = (
+                func.strftime("%Y-%m-%dT%H:00:00", SensorReading.timestamp)
+                if dialect_name == "sqlite"
+                else func.date_trunc("hour", SensorReading.timestamp)
+            )
         elif aggregation == "daily":
-            time_format = func.date_trunc("day", SensorReading.timestamp)
+            time_format = (
+                func.strftime("%Y-%m-%dT00:00:00", SensorReading.timestamp)
+                if dialect_name == "sqlite"
+                else func.date_trunc("day", SensorReading.timestamp)
+            )
         elif aggregation == "weekly":
-            time_format = func.date_trunc("week", SensorReading.timestamp)
+            time_format = (
+                func.strftime("%Y-%W", SensorReading.timestamp)
+                if dialect_name == "sqlite"
+                else func.date_trunc("week", SensorReading.timestamp)
+            )
         else:
             return jsonify({"error": "Invalid aggregation type"}), 400
 
@@ -299,7 +331,8 @@ def compare_units_historical(args):
                 func.max(SensorReading.value).label("max_value"),
                 func.count(SensorReading.value).label("count"),
             )
-            .join(Sensor)
+            .select_from(SensorReading)
+            .join(Sensor, Sensor.id == SensorReading.sensor_id)
             .join(Unit)
             .filter(
                 and_(
@@ -319,7 +352,11 @@ def compare_units_historical(args):
         unit_names = {unit.id: unit.name for unit in units}
 
         for record in comparison_data:
-            time_key = record.time_bucket.isoformat()
+            time_key = (
+                record.time_bucket.isoformat()
+                if hasattr(record.time_bucket, "isoformat")
+                else str(record.time_bucket)
+            )
             if time_key not in time_series:
                 time_series[time_key] = {"timestamp": time_key, "units": {}}
 
@@ -448,9 +485,10 @@ def export_historical_data(args, unit_id):
                 SensorReading.value,
                 Sensor.sensor_type,
                 Sensor.name,
-                Sensor.unit,
+                Sensor.unit_of_measurement.label("unit"),
             )
-            .join(Sensor)
+            .select_from(SensorReading)
+            .join(Sensor, Sensor.id == SensorReading.sensor_id)
             .filter(
                 and_(
                     Sensor.unit_id == unit_id,
@@ -572,6 +610,12 @@ def get_historical_statistics(args, unit_id):
         start_time = utc_now() - timedelta(days=days)
 
         # Base query
+        stddev_expr = (
+            func.stddev(SensorReading.value)
+            if db.engine.dialect.name != "sqlite"
+            else literal(None)
+        )
+
         query = (
             db.session.query(
                 Sensor.sensor_type,
@@ -579,9 +623,10 @@ def get_historical_statistics(args, unit_id):
                 func.avg(SensorReading.value).label("avg_value"),
                 func.min(SensorReading.value).label("min_value"),
                 func.max(SensorReading.value).label("max_value"),
-                func.stddev(SensorReading.value).label("std_dev"),
+                stddev_expr.label("std_dev"),
             )
-            .join(Sensor)
+            .select_from(SensorReading)
+            .join(Sensor, Sensor.id == SensorReading.sensor_id)
             .filter(
                 and_(Sensor.unit_id == unit_id, SensorReading.timestamp >= start_time),
             )
