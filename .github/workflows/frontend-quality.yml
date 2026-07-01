@@ -58,12 +58,12 @@ jobs:
         run: |
           echo "🧪 Running frontend tests (no coverage on PR to avoid OOM)..."
           pnpm test
-      - name: Run Tests with Coverage
+      - name: Run Tests with Coverage (Main Branch)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        timeout-minutes: 15
+        timeout-minutes: 30
         run: |
-          echo "🧪 Running frontend tests with coverage on main..."
-          pnpm test:coverage -- --coverage.provider=v8 --coverage.reporter=text --coverage.reporter=json-summary --maxWorkers=8
+          echo "🧪 Running frontend tests with coverage on main (Istanbul provider)..."
+          pnpm test:coverage -- --coverage.provider=istanbul --coverage.reporter=text --coverage.reporter=json-summary --maxWorkers=8
       - name: Display Coverage Summary
         if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
