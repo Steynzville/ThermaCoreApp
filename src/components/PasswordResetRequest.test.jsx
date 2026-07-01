@@ -103,9 +103,8 @@ describe("PasswordResetRequest", () => {
       expect(submitButton).not.toBeDisabled();
     });
 
-    // Submit form directly
-    const form = submitButton.closest("form");
-    fireEvent.submit(form);
+    // Submit by clicking the button (more robust in test DOM)
+    fireEvent.click(submitButton);
 
     await waitFor(() => {
       expect(
@@ -297,9 +296,8 @@ describe("PasswordResetRequest", () => {
       expect(submitButton).not.toBeDisabled();
     });
 
-    // Submit form directly
-    const form = submitButton.closest("form");
-    fireEvent.submit(form);
+    // Submit by clicking the button (more robust in test DOM)
+    fireEvent.click(submitButton);
 
     await waitFor(() => {
       expect(
