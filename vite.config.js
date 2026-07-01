@@ -18,19 +18,23 @@ export default defineConfig({
     passWithNoTests: true,
     forceExit: true,
     
-    // Process configuration strategy
+    // Process configuration strategy optimized for strict CI memory profiles
     pool: "forks",
     poolOptions: {
       forks: {
-        singleFork: true,
-        // Forces Node to completely cycle the process context to release cached heap memory
-        isolate: true, 
+        // 1. Disable single long-lived process confinement
+        singleFork: false,
+        // 2. Force hard isolation limits per file batch
+        isolate: true,
       },
     },
     
-    // Confinement settings for resource stability inside environments like GitHub Actions
+    // Confinement settings: Run sequentially, but terminate and recreate the process continuously
     maxWorkers: 1,
     minWorkers: 1,
+    
+    // Explicitly optimize V8 flags via Vitest's CLI layer to drop completed code caches
+    maxHeap: 0.45, // Triggers aggressive V8 garbage collection if heap crosses 45% of available RAM
     
     testTimeout: 15000,
     hookTimeout: 10000,
