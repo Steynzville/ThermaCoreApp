@@ -49,23 +49,18 @@ jobs:
           echo "📦 Installing frontend dependencies..."
           pnpm install --frozen-lockfile
 
-      - name: Run Coverage with Wrapper
+      - name: Run Coverage Directly
         env:
           NODE_OPTIONS: "--max-old-space-size=8192"
           CI: "true"
         run: |
-          echo "📊 Running frontend coverage..."
-          # Use the wrapper with coverage
-          timeout 360 node scripts/test-wrapper.js --coverage --coverage.reporter=text --coverage.reporter=json-summary --coverage.reportsDirectory=coverage || {
-            EXIT_CODE=$?
-            if [ $EXIT_CODE -eq 124 ]; then
-              echo "⚠️ Coverage timed out after 6 minutes - partial report may exist"
-              exit 0
-            fi
-            exit $EXIT_CODE
-          }
+          echo "📊 Running frontend coverage directly via Vitest..."
+          # Bypassing the test-wrapper script to eliminate parent-process deadlocks.
+          # Explicitly adding --forceExit here to guarantee termination.
+          pnpm vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary --coverage.reportsDirectory=coverage --forceExit
 
       - name: Upload Coverage Report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: frontend-coverage-report
@@ -73,6 +68,7 @@ jobs:
           retention-days: 14
 
       - name: Display Coverage Summary
+        if: always()
         run: |
           echo "📊 Frontend Coverage Report"
           echo "=========================="
@@ -81,7 +77,6 @@ jobs:
             echo "📈 METRIC COVERAGE SUMMARY:"
             echo "------------------------"
             
-            # Extract and quote clean metrics directly into the workflow logs
             jq -r '
               "Statements: " + (.total.statements.pct | tostring) + "% (" + (.total.statements.covered | tostring) + "/" + (.total.statements.total | tostring) + ")\n" +
               "Branches:   " + (.total.branches.pct | tostring) + "% (" + (.total.branches.covered | tostring) + "/" + (.total.branches.total | tostring) + ")\n" +
@@ -98,6 +93,7 @@ jobs:
           fi
 
       - name: List Coverage Files
+        if: always()
         run: |
           echo "📁 Coverage directory contents:"
           ls -la coverage/ || echo "No coverage directory"
