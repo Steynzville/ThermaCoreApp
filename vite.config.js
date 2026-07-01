@@ -80,16 +80,14 @@ export default defineConfig(() => {
       testTimeout: 15000,
       hookTimeout: 10000,
       teardownTimeout: 5000,
-      maxWorkers: 2,
-      minWorkers: 1,
+      // Use pool with single fork to avoid threading issues
       pool: "forks",
       poolOptions: {
         forks: {
           singleFork: true,
         },
       },
-      // Add these to prevent circular reference issues and hanging
-      isolate: true,
+      // Run tests sequentially to prevent race conditions
       sequence: {
         concurrent: false,
         shuffle: false,
