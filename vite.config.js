@@ -75,13 +75,18 @@ export default defineConfig(() => {
       environment: "jsdom",
       globals: true,
       setupFiles: ["./src/setupTests.js"],
-      testTimeout: 15000, // 15 seconds for longer tests
-      maxWorkers: 2, // ⬅️ ADD THIS
-      minWorkers: 1, // ⬅️ ADD THIS
-      pool: "forks", // ⬅️ ADD THIS
+      watch: false,           // ⬅️ ADD THIS - Prevents watch mode
+      forceExit: true,        // ⬅️ ADD THIS - Forces exit even with open handles
+      passWithNoTests: true,  // ⬅️ ADD THIS - Exits if no tests found
+      testTimeout: 15000,
+      hookTimeout: 10000,
+      teardownTimeout: 5000,
+      maxWorkers: 2,
+      minWorkers: 1,
+      pool: "forks",
       poolOptions: {
         forks: {
-          singleFork: true, // ⬅️ ADD THIS
+          singleFork: true,
         },
       },
       coverage: {
