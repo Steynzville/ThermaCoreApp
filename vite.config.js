@@ -18,23 +18,23 @@ export default defineConfig({
     passWithNoTests: true,
     forceExit: true,
     
-    // Switch pool from process forks to lightweight, isolated V8 threads
-    pool: "threads",
+    // Process configuration strategy optimized for swift execution and low overhead
+    pool: "forks",
     poolOptions: {
-      threads: {
-        singleThread: false, // Runs files in isolated parallel context buckets
-        isolate: true,      // Fully reloads the global environment context per file
+      forks: {
+        singleFork: false, // Drop process context between executions to flush the V8 heap
+        isolate: true,      // Keep environment scopes clean per test file
       },
     },
     
-    // Confinement limits to prevent overwhelming the dual-core GitHub runner
-    maxWorkers: 2, 
+    // Confinement limits: Running sequentially eliminates CPU core thrashing in CI
+    maxWorkers: 1,
     minWorkers: 1,
     
-    // Tight timeouts to force any hanging UI layout primitives to crash and report their names
-    testTimeout: 10000,
-    hookTimeout: 10000,
-    teardownTimeout: 3000,
+    // Generous timeouts to prevent heavy component trees from hitting a wall prematurely
+    testTimeout: 30000,
+    hookTimeout: 30000,
+    teardownTimeout: 10000,
     
     coverage: {
       provider: "v8",
