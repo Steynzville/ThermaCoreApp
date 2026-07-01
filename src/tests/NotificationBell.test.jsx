@@ -144,16 +144,12 @@ describe("NotificationBell", () => {
     vi.useRealTimers();
   });
 
-  // Debug test to verify component renders
+  // Debug test to verify component renders - removed console.log
   it("should render without crashing", () => {
     const { container } = renderNotificationBell();
-    console.log("Container:", container);
-    console.log("Container firstChild:", container.firstChild);
-    console.log("Container innerHTML:", container.innerHTML);
     
     expect(container).toBeTruthy();
     expect(container.firstChild).toBeTruthy();
-    // screen.debug(); // Uncomment to see what's rendered
   });
 
   describe("Rendering", () => {
