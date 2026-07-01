@@ -14,6 +14,8 @@ on:
 jobs:
   frontend-quality:
     runs-on: ubuntu-latest
+    env:
+      NODE_OPTIONS: --max-old-space-size=8192
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -50,12 +52,18 @@ jobs:
         run: |
           echo "🏗️ Verifying production build..."
           pnpm build
-      - name: Run Tests with Coverage
+      - name: Run Tests (Pull Requests)
+        if: github.event_name == 'pull_request'
         run: |
-          echo "🧪 Running frontend tests with coverage..."
-          pnpm test:coverage
+          echo "🧪 Running frontend tests (no coverage on PR to avoid OOM)..."
+          pnpm test
+      - name: Run Tests with Coverage
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          echo "🧪 Running frontend tests with coverage on main..."
+          pnpm test:coverage -- --coverage.provider=v8 --maxWorkers=2
       - name: Display Coverage Summary
-        if: always()
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           echo "📊 ================================="
           echo "📊 FRONTEND COVERAGE REPORT"
@@ -89,7 +97,7 @@ jobs:
             find coverage/ -type f 2>/dev/null | head -10 || echo "No coverage directory found"
           fi
       - name: Upload Coverage Report
-        if: always()
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
         with:
           name: frontend-coverage-report

@@ -50,8 +50,17 @@ const mockUsers = {
 };
 
 describe("AdminPanel Component", () => {
+  const ensureDocumentBody = () => {
+    if (!document.body) {
+      document.documentElement.appendChild(document.createElement("body"));
+    }
+  };
+  const waitForInDocument = (callback) =>
+    waitFor(callback, { container: document.body });
+
   beforeEach(() => {
     vi.clearAllMocks();
+    ensureDocumentBody();
     usersAPI.getAllUsers.mockResolvedValue(mockUsers);
   });
 
@@ -63,7 +72,7 @@ describe("AdminPanel Component", () => {
         </BrowserRouter>,
       );
 
-      await waitFor(() => {
+      await waitForInDocument(() => {
         expect(screen.getByText("Admin Panel")).toBeInTheDocument();
       });
     });
@@ -75,7 +84,7 @@ describe("AdminPanel Component", () => {
         </BrowserRouter>,
       );
 
-      await waitFor(() => {
+      await waitForInDocument(() => {
         expect(screen.getByText("Total Devices")).toBeInTheDocument();
         expect(screen.getByText("Active Users")).toBeInTheDocument();
       });
@@ -88,7 +97,7 @@ describe("AdminPanel Component", () => {
         </BrowserRouter>,
       );
 
-      await waitFor(() => {
+      await waitForInDocument(() => {
         expect(container.firstChild).toHaveClass("custom-class");
       });
     });
@@ -102,7 +111,7 @@ describe("AdminPanel Component", () => {
         </BrowserRouter>,
       );
 
-      await waitFor(() => {
+      await waitForInDocument(() => {
         expect(usersAPI.getAllUsers).toHaveBeenCalledWith({ per_page: 100 });
       });
     });
@@ -128,7 +137,7 @@ describe("AdminPanel Component", () => {
         </BrowserRouter>,
       );
 
-      await waitFor(() => {
+      await waitForInDocument(() => {
         expect(toast.error).toHaveBeenCalledWith("Failed to load users");
       });
     });
@@ -142,7 +151,7 @@ describe("AdminPanel Component", () => {
         </BrowserRouter>,
       );
 
-      await waitFor(() => {
+      await waitForInDocument(() => {
         const elements = container.querySelectorAll("[class*='dark:']");
         expect(elements.length).toBeGreaterThan(0);
       });

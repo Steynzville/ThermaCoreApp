@@ -2,11 +2,11 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import PasswordResetRequest from "./PasswordResetRequest";
 import { AuthProvider } from "../context/AuthContext";
-import { ThemeProvider } from "../context/ThemeContext";
 import { SettingsProvider } from "../context/SettingsContext";
+import { ThemeProvider } from "../context/ThemeContext";
 import { resetPassword } from "../services/authService";
+import PasswordResetRequest from "./PasswordResetRequest";
 
 // Mock the auth service
 vi.mock("../services/authService", () => ({
@@ -23,26 +23,40 @@ vi.mock("../assets/thermacore-logo-new.png", () => ({
 }));
 
 describe("PasswordResetRequest", () => {
+  const ensureDocumentBody = () => {
+    if (!document.body) {
+      document.documentElement.appendChild(document.createElement("body"));
+    }
+  };
+  const waitForInDocument = (callback) =>
+    waitFor(callback, { container: document.body });
+
   beforeEach(() => {
     vi.clearAllMocks();
+    ensureDocumentBody();
   });
 
   // Helper to render with a specific token in the URL
   const renderWithToken = (token = "test-token") => {
-    const initialEntries = token ? [`/reset-password?token=${token}`] : ["/reset-password"];
-    
+    const initialEntries = token
+      ? [`/reset-password?token=${token}`]
+      : ["/reset-password"];
+
     return render(
       <AuthProvider>
         <ThemeProvider>
           <SettingsProvider>
             <MemoryRouter initialEntries={initialEntries}>
               <Routes>
-                <Route path="/reset-password" element={<PasswordResetRequest />} />
+                <Route
+                  path="/reset-password"
+                  element={<PasswordResetRequest />}
+                />
               </Routes>
             </MemoryRouter>
           </SettingsProvider>
         </ThemeProvider>
-      </AuthProvider>
+      </AuthProvider>,
     );
   };
 
@@ -50,22 +64,24 @@ describe("PasswordResetRequest", () => {
     renderWithToken();
 
     expect(
-      screen.getByPlaceholderText("Enter new password")
+      screen.getByPlaceholderText("Enter new password"),
     ).toBeInTheDocument();
     expect(
-      screen.getByPlaceholderText("Confirm new password")
+      screen.getByPlaceholderText("Confirm new password"),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /reset password/i })
+      screen.getByRole("button", { name: /reset password/i }),
     ).toBeInTheDocument();
   });
 
   it("should display error when no token in URL", async () => {
     renderWithToken(null);
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(
-        screen.getByText(/Invalid reset link. Please request a new password reset./i)
+        screen.getByText(
+          /Invalid reset link. Please request a new password reset./i,
+        ),
       ).toBeInTheDocument();
     });
   });
@@ -99,17 +115,15 @@ describe("PasswordResetRequest", () => {
       name: /reset password/i,
     });
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(submitButton).not.toBeDisabled();
     });
 
-    // Submit form directly
-    const form = submitButton.closest("form");
-    fireEvent.submit(form);
+    fireEvent.submit(submitButton.form);
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(
-        screen.getByText(/Please enter both password fields/i)
+        screen.getByText(/Please enter both password fields/i),
       ).toBeInTheDocument();
     });
   });
@@ -131,15 +145,15 @@ describe("PasswordResetRequest", () => {
       name: /reset password/i,
     });
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(submitButton).not.toBeDisabled();
     });
 
     fireEvent.click(submitButton);
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(
-        screen.getByText(/Password must be at least 6 characters long/i)
+        screen.getByText(/Password must be at least 6 characters long/i),
       ).toBeInTheDocument();
     });
   });
@@ -161,13 +175,13 @@ describe("PasswordResetRequest", () => {
       name: /reset password/i,
     });
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(submitButton).not.toBeDisabled();
     });
 
     fireEvent.click(submitButton);
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(screen.getByText(/Passwords do not match/i)).toBeInTheDocument();
     });
   });
@@ -194,13 +208,13 @@ describe("PasswordResetRequest", () => {
       name: /reset password/i,
     });
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(submitButton).not.toBeDisabled();
     });
 
     fireEvent.click(submitButton);
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(resetPassword).toHaveBeenCalledWith("test-token", "newpass123");
     });
   });
@@ -227,13 +241,13 @@ describe("PasswordResetRequest", () => {
       name: /reset password/i,
     });
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(submitButton).not.toBeDisabled();
     });
 
     fireEvent.click(submitButton);
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(screen.getByText(/Invalid token/i)).toBeInTheDocument();
     });
   });
@@ -257,15 +271,15 @@ describe("PasswordResetRequest", () => {
       name: /reset password/i,
     });
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(submitButton).not.toBeDisabled();
     });
 
     fireEvent.click(submitButton);
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(
-        screen.getByText(/An unexpected error occurred. Please try again./i)
+        screen.getByText(/An unexpected error occurred. Please try again./i),
       ).toBeInTheDocument();
     });
   });
@@ -293,17 +307,15 @@ describe("PasswordResetRequest", () => {
       name: /reset password/i,
     });
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(submitButton).not.toBeDisabled();
     });
 
-    // Submit form directly
-    const form = submitButton.closest("form");
-    fireEvent.submit(form);
+    fireEvent.submit(submitButton.form);
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(
-        screen.getByText(/Please enter both password fields/i)
+        screen.getByText(/Please enter both password fields/i),
       ).toBeInTheDocument();
     });
 
@@ -312,9 +324,9 @@ describe("PasswordResetRequest", () => {
       target: { name: "newPassword", value: "test" },
     });
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(
-        screen.queryByText(/Please enter both password fields/i)
+        screen.queryByText(/Please enter both password fields/i),
       ).not.toBeInTheDocument();
     });
   });
