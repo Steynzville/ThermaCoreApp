@@ -7,7 +7,6 @@ const __dirname = dirname(__filename);
 
 // Get the args to pass to vitest
 const args = process.argv.slice(2);
-const isCoverage = args.includes("--coverage");
 
 // Build the vitest command
 const vitestArgs = ["vitest", "run", ...args];
@@ -26,22 +25,35 @@ const child = spawn("pnpm", vitestArgs, {
 });
 
 let timedOut = false;
+let exited = false;
 
-// Set a timeout to force exit after 5 minutes
+// Set a timeout to force exit after 4 minutes (240 seconds)
 const timeout = setTimeout(() => {
+  if (exited) return;
   timedOut = true;
-  console.log("⏰ Tests timed out after 5 minutes - forcing exit");
-  child.kill("SIGTERM");
+  console.log("⏰ Tests timed out after 4 minutes - forcing exit");
+  
+  // Try to kill the child process
+  try {
+    child.kill("SIGTERM");
+  } catch (_e) {
+    // Ignore errors
+  }
   
   // Force exit after killing
   setTimeout(() => {
-    console.log("🔧 Force exiting process");
-    process.exit(0);
-  }, 2000);
-}, 300000); // 5 minutes
+    if (!exited) {
+      exited = true;
+      console.log("🔧 Force exiting process");
+      process.exit(0);
+    }
+  }, 1000);
+}, 240000); // 4 minutes
 
 child.on("close", (code) => {
   clearTimeout(timeout);
+  if (exited) return;
+  exited = true;
   
   if (timedOut) {
     console.log("⏰ Tests timed out, but we already forced exit");
@@ -53,17 +65,47 @@ child.on("close", (code) => {
 });
 
 child.on("error", (err) => {
+  clearTimeout(timeout);
+  if (exited) return;
+  exited = true;
   console.error("❌ Error running tests:", err);
   process.exit(1);
 });
 
 // Handle parent process signals
 process.on("SIGINT", () => {
+  if (exited) return;
+  exited = true;
   console.log("🛑 Received SIGINT, killing test process...");
-  child.kill("SIGINT");
+  try {
+    child.kill("SIGINT");
+  } catch (_e) {
+    // Ignore
+  }
+  process.exit(0);
 });
 
 process.on("SIGTERM", () => {
+  if (exited) return;
+  exited = true;
   console.log("🛑 Received SIGTERM, killing test process...");
-  child.kill("SIGTERM");
+  try {
+    child.kill("SIGTERM");
+  } catch (_e) {
+    // Ignore
+  }
+  process.exit(0);
+});
+
+// Also handle uncaught exceptions
+process.on("uncaughtException", (err) => {
+  if (exited) return;
+  exited = true;
+  console.error("❌ Uncaught exception:", err);
+  try {
+    child.kill("SIGTERM");
+  } catch (_e) {
+    // Ignore
+  }
+  process.exit(1);
 });
