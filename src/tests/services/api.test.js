@@ -68,8 +68,6 @@ vi.mock("axios", () => {
   };
 });
 
-let apiModule;
-
 describe("API Service - /src/services/api.js (stability fixes)", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -82,7 +80,7 @@ describe("API Service - /src/services/api.js (stability fixes)", () => {
 
   it("should initialize with default configs", async () => {
     const axios = await import("axios");
-    apiModule = await import("../../services/api");
+    await import("../../services/api");
 
     expect(axios.default.create).toHaveBeenCalledWith({
       baseURL: expect.stringMatching(/\/api\/v1$/),
@@ -93,7 +91,7 @@ describe("API Service - /src/services/api.js (stability fixes)", () => {
   it("should initialize token from localStorage on load if found", async () => {
     mockLocalStorage.setItem("authToken", "test-token-123");
 
-    apiModule = await import("../../services/api");
+    await import("../../services/api");
 
     expect(mockAxiosInstance.defaults.headers.common["Authorization"]).toBe(
       "Bearer test-token-123",
@@ -103,7 +101,7 @@ describe("API Service - /src/services/api.js (stability fixes)", () => {
   it("should initialize token from alternative key on load if found", async () => {
     mockLocalStorage.setItem("thermacore_token", "alt-token-xyz");
 
-    apiModule = await import("../../services/api");
+    await import("../../services/api");
 
     expect(mockAxiosInstance.defaults.headers.common["Authorization"]).toBe(
       "Bearer alt-token-xyz",
