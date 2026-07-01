@@ -77,6 +77,7 @@ export default defineConfig(() => {
       setupFiles: ["./src/setupTests.js"],
       watch: false,
       passWithNoTests: true,
+      forceExit: true, // Forces worker pools to tear down and output reports immediately
       testTimeout: 15000,
       hookTimeout: 10000,
       teardownTimeout: 5000,
@@ -100,6 +101,7 @@ export default defineConfig(() => {
         exclude: [
           "node_modules/",
           "src/setupTests.js",
+          "src/mockData.js", // Excluded to prevent V8 parsing freezes on historical mock data strings
           "**/*.test.{js,jsx}",
           "**/*.spec.{js,jsx}",
         ],
