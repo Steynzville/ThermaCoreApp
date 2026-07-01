@@ -5,6 +5,24 @@ import { afterEach, afterAll } from "vitest";
 
 // 1. Polyfills and Mock Definitions (at the very top before other major library imports)
 if (typeof window !== "undefined") {
+  // Global Mock for Sonner to prevent dangling background event-loop timers
+  vi.mock("sonner", () => {
+    return {
+      toast: Object.assign(
+        vi.fn((msg) => msg),
+        {
+          success: vi.fn((msg) => msg),
+          error: vi.fn((msg) => msg),
+          warning: vi.fn((msg) => msg),
+          info: vi.fn((msg) => msg),
+          dismiss: vi.fn(),
+          custom: vi.fn(),
+        }
+      ),
+      Toaster: () => <div data-testid="mock-toaster" />,
+    };
+  });
+
   // Mock window.matchMedia
   try {
     Object.defineProperty(window, "matchMedia", {
@@ -140,7 +158,7 @@ if (typeof window !== "undefined") {
     // ignore
   }
 
-  // Mock window.Image constructor - Fixed to prevent event loop hanging in CI environments
+  // Mock window.Image constructor
   class MockImage {
     constructor() {
       this.listeners = {};
