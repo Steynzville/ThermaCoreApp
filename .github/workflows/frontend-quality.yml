@@ -14,6 +14,8 @@ on:
 jobs:
   frontend-quality:
     runs-on: ubuntu-latest
+    env:
+      NODE_OPTIONS: --max-old-space-size=8192
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -53,7 +55,7 @@ jobs:
       - name: Run Tests with Coverage
         run: |
           echo "🧪 Running frontend tests with coverage..."
-          pnpm test:coverage
+          pnpm test:coverage -- --coverage.provider=v8
       - name: Display Coverage Summary
         if: always()
         run: |
