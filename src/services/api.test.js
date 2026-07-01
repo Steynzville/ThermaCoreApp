@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import api, { setAuthToken } from "./api";
 
 describe("api service", () => {
+  const originalLocation = window.location;
+
   beforeEach(() => {
     // Clear localStorage before each test
     localStorage.clear();
@@ -11,6 +13,11 @@ describe("api service", () => {
 
   afterEach(() => {
     localStorage.clear();
+    Object.defineProperty(window, "location", {
+      value: originalLocation,
+      writable: true,
+      configurable: true,
+    });
   });
 
   describe("setAuthToken", () => {
@@ -56,9 +63,12 @@ describe("api service", () => {
 
   describe("axios instance configuration", () => {
     it("should have correct base URL", () => {
-      expect(api.defaults.baseURL).toBe(
-        "https://thermacoreapp.onrender.com/api/v1",
-      );
+      const expectedBaseUrl = `${
+        import.meta.env.VITE_API_BASE_URL ||
+        "https://thermacoreapp.onrender.com"
+      }/api/v1`;
+
+      expect(api.defaults.baseURL).toBe(expectedBaseUrl);
     });
 
     it("should have correct timeout", () => {

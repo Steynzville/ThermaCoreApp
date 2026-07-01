@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useRemoteControl } from "./useRemoteControl";
 
 // Mock AuthContext
@@ -21,13 +21,15 @@ describe("useRemoteControl", () => {
   const unitId = "unit-123";
   const mockToken = "test-token";
   const mockApiBaseUrl = "https://api.test.com";
+  const originalApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+  const originalLocalStorage = window.localStorage;
 
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
-    
+
     import.meta.env.VITE_API_BASE_URL = mockApiBaseUrl;
-    
+
     const localStorageMock = {
       getItem: vi.fn((key) => {
         if (key === "thermacore_token") return mockToken;
@@ -42,7 +44,7 @@ describe("useRemoteControl", () => {
       writable: true,
       configurable: true,
     });
-    
+
     useAuth.mockReturnValue({
       isAuthenticated: true,
       user: { id: 1, username: "admin", role: "admin" },
@@ -54,6 +56,15 @@ describe("useRemoteControl", () => {
     global.fetch = vi.fn();
   });
 
+  afterEach(() => {
+    import.meta.env.VITE_API_BASE_URL = originalApiBaseUrl;
+    Object.defineProperty(window, "localStorage", {
+      value: originalLocalStorage,
+      writable: true,
+      configurable: true,
+    });
+  });
+
   it("should render without crashing", () => {
     const { result } = renderHook(() => useRemoteControl(unitId));
     expect(result.current).toBeDefined();
@@ -63,7 +74,9 @@ describe("useRemoteControl", () => {
 
   describe("Initial State", () => {
     it("should initialize with default state", async () => {
-      global.fetch.mockRejectedValueOnce(new Error("Failed to fetch permissions"));
+      global.fetch.mockRejectedValueOnce(
+        new Error("Failed to fetch permissions"),
+      );
 
       const { result } = renderHook(() => useRemoteControl(unitId));
 

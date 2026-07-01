@@ -23,8 +23,17 @@ vi.mock("../assets/thermacore-logo-new.png", () => ({
 }));
 
 describe("PasswordResetRequest", () => {
+  const ensureDocumentBody = () => {
+    if (!document.body) {
+      document.documentElement.appendChild(document.createElement("body"));
+    }
+  };
+  const waitForInDocument = (callback) =>
+    waitFor(callback, { container: document.body });
+
   beforeEach(() => {
     vi.clearAllMocks();
+    ensureDocumentBody();
   });
 
   // Helper to render with a specific token in the URL
@@ -68,7 +77,7 @@ describe("PasswordResetRequest", () => {
   it("should display error when no token in URL", async () => {
     renderWithToken(null);
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(
         screen.getByText(
           /Invalid reset link. Please request a new password reset./i,
@@ -106,13 +115,13 @@ describe("PasswordResetRequest", () => {
       name: /reset password/i,
     });
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(submitButton).not.toBeDisabled();
     });
 
     fireEvent.submit(submitButton.form);
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(
         screen.getByText(/Please enter both password fields/i),
       ).toBeInTheDocument();
@@ -136,13 +145,13 @@ describe("PasswordResetRequest", () => {
       name: /reset password/i,
     });
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(submitButton).not.toBeDisabled();
     });
 
     fireEvent.click(submitButton);
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(
         screen.getByText(/Password must be at least 6 characters long/i),
       ).toBeInTheDocument();
@@ -166,13 +175,13 @@ describe("PasswordResetRequest", () => {
       name: /reset password/i,
     });
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(submitButton).not.toBeDisabled();
     });
 
     fireEvent.click(submitButton);
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(screen.getByText(/Passwords do not match/i)).toBeInTheDocument();
     });
   });
@@ -199,13 +208,13 @@ describe("PasswordResetRequest", () => {
       name: /reset password/i,
     });
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(submitButton).not.toBeDisabled();
     });
 
     fireEvent.click(submitButton);
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(resetPassword).toHaveBeenCalledWith("test-token", "newpass123");
     });
   });
@@ -232,13 +241,13 @@ describe("PasswordResetRequest", () => {
       name: /reset password/i,
     });
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(submitButton).not.toBeDisabled();
     });
 
     fireEvent.click(submitButton);
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(screen.getByText(/Invalid token/i)).toBeInTheDocument();
     });
   });
@@ -262,13 +271,13 @@ describe("PasswordResetRequest", () => {
       name: /reset password/i,
     });
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(submitButton).not.toBeDisabled();
     });
 
     fireEvent.click(submitButton);
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(
         screen.getByText(/An unexpected error occurred. Please try again./i),
       ).toBeInTheDocument();
@@ -298,13 +307,13 @@ describe("PasswordResetRequest", () => {
       name: /reset password/i,
     });
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(submitButton).not.toBeDisabled();
     });
 
     fireEvent.submit(submitButton.form);
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(
         screen.getByText(/Please enter both password fields/i),
       ).toBeInTheDocument();
@@ -315,7 +324,7 @@ describe("PasswordResetRequest", () => {
       target: { name: "newPassword", value: "test" },
     });
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(
         screen.queryByText(/Please enter both password fields/i),
       ).not.toBeInTheDocument();

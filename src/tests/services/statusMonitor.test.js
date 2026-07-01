@@ -1,15 +1,16 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  checkFrontendStatus,
+  checkAllStatus,
   checkBackendStatus,
   checkDatabaseStatus,
+  checkFrontendStatus,
   checkWebSocketStatus,
-  checkAllStatus,
 } from "../../services/statusMonitor";
 
 describe("Status Monitor Service - /src/services/statusMonitor.js", () => {
   let fetchSpy;
   let nowValue;
+  const originalLocation = window.location;
 
   beforeEach(() => {
     fetchSpy = vi.spyOn(global, "fetch");
@@ -19,11 +20,19 @@ describe("Status Monitor Service - /src/services/statusMonitor.js", () => {
     // Mock window.location.origin
     const originalLocation = window.location;
     delete window.location;
-    window.location = { ...originalLocation, origin: "http://test-frontend.com" };
+    window.location = {
+      ...originalLocation,
+      origin: "http://test-frontend.com",
+    };
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    Object.defineProperty(window, "location", {
+      value: originalLocation,
+      writable: true,
+      configurable: true,
+    });
   });
 
   describe("checkFrontendStatus", () => {
@@ -38,11 +47,14 @@ describe("Status Monitor Service - /src/services/statusMonitor.js", () => {
 
       const status = await checkFrontendStatus();
 
-      expect(fetchSpy).toHaveBeenCalledWith("http://test-frontend.com/index.html", {
-        method: "HEAD",
-        signal: expect.any(AbortSignal),
-        headers: { "Content-Type": "application/json" },
-      });
+      expect(fetchSpy).toHaveBeenCalledWith(
+        "http://test-frontend.com/index.html",
+        {
+          method: "HEAD",
+          signal: expect.any(AbortSignal),
+          headers: { "Content-Type": "application/json" },
+        },
+      );
 
       expect(status).toEqual({
         name: "Frontend Hosting",

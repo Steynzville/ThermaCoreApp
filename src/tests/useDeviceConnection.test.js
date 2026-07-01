@@ -14,6 +14,14 @@ vi.mock("../utils/audioPlayer", () => ({
 }));
 
 describe("useDeviceConnection Hook", () => {
+  const ensureDocumentBody = () => {
+    if (!document.body) {
+      document.documentElement.appendChild(document.createElement("body"));
+    }
+  };
+  const waitForInDocument = (callback) =>
+    waitFor(callback, { container: document.body });
+
   const mockUnit = {
     id: "unit-1",
     status: "online",
@@ -32,6 +40,7 @@ describe("useDeviceConnection Hook", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    ensureDocumentBody();
     mockControlPower = vi.fn().mockResolvedValue(undefined);
     mockControlWaterProduction = vi.fn().mockResolvedValue(undefined);
   });
@@ -187,7 +196,7 @@ describe("useDeviceConnection Hook", () => {
     });
 
     // State should not change on error
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(result.current.powerControlLoading).toBe(false);
     });
   });
@@ -210,7 +219,7 @@ describe("useDeviceConnection Hook", () => {
       await result.current.handleWaterProductionToggle(false);
     });
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(result.current.waterControlLoading).toBe(false);
     });
   });

@@ -59,7 +59,11 @@ vi.mock("./ui/dialog", () => ({
 }));
 
 vi.mock("./ui/label", () => ({
-  Label: ({ children, ...props }) => <label htmlFor="test" {...props}>{children}</label>,
+  Label: ({ children, ...props }) => (
+    <label htmlFor="test" {...props}>
+      {children}
+    </label>
+  ),
 }));
 
 vi.mock("./ui/select", () => ({
@@ -79,6 +83,14 @@ vi.mock("./ui/select", () => ({
 }));
 
 describe("UserApprovalPanel", () => {
+  const ensureDocumentBody = () => {
+    if (!document.body) {
+      document.documentElement.appendChild(document.createElement("body"));
+    }
+  };
+  const waitForInDocument = (callback) =>
+    waitFor(callback, { container: document.body });
+
   const mockPendingUsers = [
     {
       id: 1,
@@ -103,6 +115,7 @@ describe("UserApprovalPanel", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    ensureDocumentBody();
     getPendingUsers.mockResolvedValue({
       success: true,
       data: mockPendingUsers,
@@ -116,7 +129,7 @@ describe("UserApprovalPanel", () => {
   it("should render the user approval panel", async () => {
     render(<UserApprovalPanel />);
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(
         screen.getByText(/Pending User Registrations/),
       ).toBeInTheDocument();
@@ -126,7 +139,7 @@ describe("UserApprovalPanel", () => {
   it("should fetch and display pending users on mount", async () => {
     render(<UserApprovalPanel />);
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(getPendingUsers).toHaveBeenCalled();
     });
   });
@@ -143,7 +156,7 @@ describe("UserApprovalPanel", () => {
 
     render(<UserApprovalPanel />);
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(toast.error).toHaveBeenCalledWith("Failed to fetch pending users");
     });
   });
@@ -156,7 +169,7 @@ describe("UserApprovalPanel", () => {
 
     render(<UserApprovalPanel />);
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(toast.error).toHaveBeenCalledWith("Not authorized");
     });
   });
@@ -164,7 +177,7 @@ describe("UserApprovalPanel", () => {
   it("should fetch roles on mount", async () => {
     render(<UserApprovalPanel />);
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(getRoles).toHaveBeenCalled();
     });
   });
@@ -177,7 +190,7 @@ describe("UserApprovalPanel", () => {
 
     render(<UserApprovalPanel />);
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(
         screen.getByText(/No pending user registrations/i),
       ).toBeInTheDocument();
@@ -187,7 +200,7 @@ describe("UserApprovalPanel", () => {
   it("should display user cards when pending users exist", async () => {
     render(<UserApprovalPanel />);
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(screen.getByText("johndoe")).toBeInTheDocument();
       expect(screen.getByText("@janedoe")).toBeInTheDocument();
     });
@@ -196,14 +209,14 @@ describe("UserApprovalPanel", () => {
   it("should refresh pending users when refresh button is clicked", async () => {
     render(<UserApprovalPanel />);
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(getPendingUsers).toHaveBeenCalledTimes(1);
     });
 
     const refreshButton = screen.getByRole("button", { name: /refresh/i });
     fireEvent.click(refreshButton);
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(getPendingUsers).toHaveBeenCalledTimes(2);
     });
   });

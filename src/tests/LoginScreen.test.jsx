@@ -28,8 +28,17 @@ const TestWrapper = ({ children }) => (
 );
 
 describe("LoginScreen - Error Handling", () => {
+  const ensureDocumentBody = () => {
+    if (!document.body) {
+      document.documentElement.appendChild(document.createElement("body"));
+    }
+  };
+  const waitForInDocument = (callback, options) =>
+    waitFor(callback, { container: document.body, ...options });
+
   beforeEach(() => {
     vi.clearAllMocks();
+    ensureDocumentBody();
     mockNavigate.mockClear();
   });
 
@@ -57,7 +66,7 @@ describe("LoginScreen - Error Handling", () => {
     fireEvent.click(submitButton);
 
     // Wait for login to complete
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(authService.login).toHaveBeenCalledWith(
         "wronguser",
         "wrongpass",
@@ -66,7 +75,7 @@ describe("LoginScreen - Error Handling", () => {
     });
 
     // Verify error was set
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(mockSetError).toHaveBeenCalledWith(
         "Invalid username or password. Please try again.",
       );
@@ -98,7 +107,7 @@ describe("LoginScreen - Error Handling", () => {
     fireEvent.change(passwordInput, { target: { value: "wrongpassword" } });
     fireEvent.click(submitButton);
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(mockSetError).toHaveBeenCalledWith(
         "Invalid username or password. Please try again.",
       );
@@ -130,7 +139,7 @@ describe("LoginScreen - Error Handling", () => {
     fireEvent.change(passwordInput, { target: { value: "testpass" } });
     fireEvent.click(submitButton);
 
-    await waitFor(() => {
+    await waitForInDocument(() => {
       expect(mockSetError).toHaveBeenCalled();
     });
 
@@ -171,7 +180,7 @@ describe("LoginScreen - Error Handling", () => {
     fireEvent.click(submitButton);
 
     // Wait for navigation
-    await waitFor(
+    await waitForInDocument(
       () => {
         expect(mockNavigate).toHaveBeenCalledWith("/dashboard");
       },

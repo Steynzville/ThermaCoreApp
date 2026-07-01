@@ -5,7 +5,20 @@
  */
 
 import { render } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("@radix-ui/react-accordion", () => ({
+  Root: ({ children, ...props }) => <div {...props}>{children}</div>,
+  Item: ({ children, ...props }) => <div {...props}>{children}</div>,
+  Header: ({ children, ...props }) => <div {...props}>{children}</div>,
+  Trigger: ({ children, ...props }) => (
+    <button type="button" {...props}>
+      {children}
+    </button>
+  ),
+  Content: ({ children, ...props }) => <div {...props}>{children}</div>,
+}));
+
 import {
   Accordion,
   AccordionContent,

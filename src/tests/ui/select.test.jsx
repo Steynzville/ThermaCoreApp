@@ -1,5 +1,34 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("@radix-ui/react-select", () => ({
+  Root: ({ children, ...props }) => <div {...props}>{children}</div>,
+  Group: ({ children, ...props }) => <div {...props}>{children}</div>,
+  Value: ({ placeholder, ...props }) => <span {...props}>{placeholder}</span>,
+  Trigger: ({ children, ...props }) => (
+    <button type="button" {...props}>
+      {children}
+    </button>
+  ),
+  Icon: ({ children }) => <>{children}</>,
+  Portal: ({ children }) => <>{children}</>,
+  Content: ({ children, ...props }) => <div {...props}>{children}</div>,
+  Viewport: ({ children, ...props }) => <div {...props}>{children}</div>,
+  Label: ({ children, ...props }) => <div {...props}>{children}</div>,
+  Item: ({ children, ...props }) => (
+    <div role="option" tabIndex={-1} {...props}>
+      {children}
+    </div>
+  ),
+  ItemIndicator: ({ children }) => <span>{children}</span>,
+  ItemText: ({ children }) => <span>{children}</span>,
+  Separator: (props) => <hr {...props} />,
+  ScrollUpButton: ({ children, ...props }) => <div {...props}>{children}</div>,
+  ScrollDownButton: ({ children, ...props }) => (
+    <div {...props}>{children}</div>
+  ),
+}));
+
 import {
   Select,
   SelectContent,
