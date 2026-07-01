@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { BrowserRouter, MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import PasswordResetRequest from "./PasswordResetRequest";
 import { AuthProvider } from "../context/AuthContext";
@@ -22,13 +22,9 @@ vi.mock("../assets/thermacore-logo-new.png", () => ({
   default: "logo.png",
 }));
 
-// Mock useNavigate
-const mockNavigate = vi.fn();
-
 describe("PasswordResetRequest", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockNavigate.mockClear();
   });
 
   // Helper to render with a specific token in the URL
