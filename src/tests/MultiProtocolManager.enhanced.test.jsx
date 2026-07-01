@@ -67,27 +67,27 @@ vi.mock("../context/SettingsContext", () => {
 // Mock child components
 vi.mock("@/components/protocol/DNP3MonitoringDashboard", () => ({
   __esModule: true,
-  default: ({ isOpen, onClose }) => isOpen ? <div data-testid="dnp3-dashboard">DNP3 Dashboard <button onClick={onClose}>Close DNP3</button></div> : null
+  default: ({ isOpen, onClose }) => isOpen ? <div data-testid="dnp3-dashboard">DNP3 Dashboard <button type="button" onClick={onClose}>Close DNP3</button></div> : null
 }));
 
 vi.mock("@/components/protocol/ModbusDeviceModal", () => ({
   __esModule: true,
-  default: ({ isOpen, onClose }) => isOpen ? <div data-testid="modbus-modal">Modbus Modal <button onClick={onClose}>Close Modbus</button></div> : null
+  default: ({ isOpen, onClose }) => isOpen ? <div data-testid="modbus-modal">Modbus Modal <button type="button" onClick={onClose}>Close Modbus</button></div> : null
 }));
 
 vi.mock("@/components/protocol/MQTTManagementPanel", () => ({
   __esModule: true,
-  default: ({ isOpen, onClose }) => isOpen ? <div data-testid="mqtt-panel">MQTT Panel <button onClick={onClose}>Close MQTT</button></div> : null
+  default: ({ isOpen, onClose }) => isOpen ? <div data-testid="mqtt-panel">MQTT Panel <button type="button" onClick={onClose}>Close MQTT</button></div> : null
 }));
 
 vi.mock("@/components/protocol/OPCUANodeBrowser", () => ({
   __esModule: true,
-  default: ({ isOpen, onClose }) => isOpen ? <div data-testid="opcua-browser">OPC-UA Browser <button onClick={onClose}>Close OPC-UA</button></div> : null
+  default: ({ isOpen, onClose }) => isOpen ? <div data-testid="opcua-browser">OPC-UA Browser <button type="button" onClick={onClose}>Close OPC-UA</button></div> : null
 }));
 
 vi.mock("@/components/protocol/ProtocolWizard", () => ({
   __esModule: true,
-  default: ({ isOpen, onClose }) => isOpen ? <div data-testid="protocol-wizard">Protocol Wizard <button onClick={onClose}>Close Wizard</button></div> : null
+  default: ({ isOpen, onClose }) => isOpen ? <div data-testid="protocol-wizard">Protocol Wizard <button type="button" onClick={onClose}>Close Wizard</button></div> : null
 }));
 
 vi.mock("@/components/protocol/ProtocolStatusDashboard", () => ({
@@ -153,7 +153,7 @@ describe("MultiProtocolManager - Enhanced Protocol Support", () => {
     apiGetJson.mockResolvedValue(mockProtocolsData);
   });
 
-  // Debug test to see what's rendering
+  // Debug test - removed console.log
   it("should debug render", async () => {
     const { container } = render(
       <AuthProvider>
@@ -165,15 +165,9 @@ describe("MultiProtocolManager - Enhanced Protocol Support", () => {
       </AuthProvider>
     );
     
-    console.log("=== DEBUG: MultiProtocolManager render ===");
-    console.log("Container:", container);
-    console.log("Container innerHTML:", container.innerHTML);
-    console.log("Container firstChild:", container.firstChild);
-    
     // Wait for any async loading
     await waitFor(() => {
-      console.log("After waitFor - screen debug:");
-      screen.debug();
+      expect(container).toBeTruthy();
     }, { timeout: 5000 });
     
     expect(container).toBeTruthy();
