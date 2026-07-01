@@ -388,8 +388,10 @@ export { fireEvent, render, screen, waitFor, cleanup };
 // Global cleanup after each test
 afterEach(() => {
   cleanup();
+  
+  // Only clean up specific elements that Testing Library adds
   if (typeof document !== "undefined") {
-    // Clear any leftover Radix portal wrappers, overlays, or DOM elements
+    // Remove only Radix portal elements, not everything
     document
       .querySelectorAll("[data-radix-portal]")
       .forEach((el) => { el.remove(); });
@@ -399,26 +401,13 @@ afterEach(() => {
     document
       .querySelectorAll("[data-radix-popper-content-wrapper]")
       .forEach((el) => { el.remove(); });
-    document.querySelectorAll('[role="dialog"]').forEach((el) => { el.remove(); });
-    document.querySelectorAll('[role="menu"]').forEach((el) => { el.remove(); });
-    document.body.innerHTML = "";
+    // Don't remove all [role="dialog"] - these might be legitimate
+    // Don't do document.body.innerHTML = "" - this breaks React
   }
   
-  // Clear any pending timers
+  // Reset timers but don't clear all mocks globally
   vi.clearAllTimers();
   
-  // Reset any mocks that might hold references
-  vi.clearAllMocks();
+  // Don't clear all mocks - this can break tests that rely on setup
+  // vi.clearAllMocks();
 });
-
-// Simple safety net for CI - force exit after 10 seconds
-if (typeof process !== "undefined" && process.env.CI) {
-  let exited = false;
-  setTimeout(() => {
-    if (!exited) {
-      console.log("⚠️ Force exiting after tests (CI safety net)");
-      exited = true;
-      process.exit(0);
-    }
-  }, 10000);
-}
