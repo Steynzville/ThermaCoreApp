@@ -18,23 +18,22 @@ export default defineConfig({
     passWithNoTests: true,
     forceExit: true,
     
-    // REVERT: Back to the isolated thread execution pool that broke past card.test.jsx
+    // Maintain lightweight threads but impose order constraints to reveal the stall point
     pool: "threads",
     poolOptions: {
       threads: {
-        singleThread: false, // Runs files in isolated parallel context buckets
-        isolate: true,      // Fully reloads the global environment context per file
+        singleThread: false, 
+        isolate: true,      
       },
     },
     
-    // Confinement limits to prevent overwhelming the dual-core GitHub runner
-    maxWorkers: 2, 
+    // Run sequentially for this cycle so the terminal output lists the exact file that freezes
+    maxWorkers: 1, 
     minWorkers: 1,
     
-    // FORTIFIED TIMEOUTS: Extended from 10s to 45s so you can see every single red line/assertion error
-    testTimeout: 45000,
-    hookTimeout: 45000,
-    teardownTimeout: 15000,
+    testTimeout: 15000,
+    hookTimeout: 15000,
+    teardownTimeout: 5000,
     
     coverage: {
       provider: "v8",
