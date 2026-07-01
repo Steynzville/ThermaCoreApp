@@ -4,11 +4,9 @@ import react from "@vitejs/plugin-react";
 import { visualizer } from "rollup-plugin-visualizer";
 import { defineConfig } from "vite";
 
-// https://vite.dev/config/
 export default defineConfig(() => {
   const plugins = [react(), tailwindcss()];
 
-  // Enable bundle analysis with: ANALYZE=1 vite build
   if (process.env.ANALYZE) {
     plugins.push(
       visualizer({
@@ -29,9 +27,6 @@ export default defineConfig(() => {
         "@": path.resolve(__dirname, "./src"),
       },
     },
-    define: {
-      // Remove the credential defines since we're using file aliases now
-    },
     build: {
       target: "es2020",
       chunkSizeWarningLimit: 1000,
@@ -40,27 +35,16 @@ export default defineConfig(() => {
         output: {
           manualChunks(id) {
             if (id.includes("node_modules")) {
-              if (id.includes("react-router-dom")) {
-                return "react-router-dom-vendor";
-              }
-              if (id.includes("react") && !id.includes("react-dom")) {
-                return "react-vendor";
-              }
-              if (id.includes("react-dom")) {
-                return "react-dom-vendor";
-              }
-              if (id.includes("recharts")) {
-                return "recharts-vendor";
-              }
-              if (id.includes("lodash")) {
-                return "lodash-vendor";
-              }
-              return "vendor"; // All other dependencies go into a common vendor chunk
+              if (id.includes("react-router-dom")) return "react-router-dom-vendor";
+              if (id.includes("react") && !id.includes("react-dom")) return "react-vendor";
+              if (id.includes("react-dom")) return "react-dom-vendor";
+              if (id.includes("recharts")) return "recharts-vendor";
+              if (id.includes("lodash")) return "lodash-vendor";
+              return "vendor";
             }
           },
         },
       },
-      // cssCodeSplit is true by default; keep it for leaner route CSS
     },
     server: {
       host: "0.0.0.0",
@@ -80,14 +64,14 @@ export default defineConfig(() => {
       testTimeout: 15000,
       hookTimeout: 10000,
       teardownTimeout: 5000,
-      // Use pool with single fork to avoid threading issues
+      // Single thread to avoid race conditions
       pool: "forks",
       poolOptions: {
         forks: {
           singleFork: true,
         },
       },
-      // Run tests sequentially to prevent race conditions
+      // Run tests sequentially
       sequence: {
         concurrent: false,
         shuffle: false,
