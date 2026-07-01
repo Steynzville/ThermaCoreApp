@@ -18,23 +18,23 @@ export default defineConfig({
     passWithNoTests: true,
     forceExit: true,
     
-    // Process configuration strategy optimized for swift execution and low overhead
-    pool: "forks",
+    // REVERT: Back to the isolated thread execution pool that broke past card.test.jsx
+    pool: "threads",
     poolOptions: {
-      forks: {
-        singleFork: false, // Drop process context between executions to flush the V8 heap
-        isolate: true,      // Keep environment scopes clean per test file
+      threads: {
+        singleThread: false, // Runs files in isolated parallel context buckets
+        isolate: true,      // Fully reloads the global environment context per file
       },
     },
     
-    // Confinement limits: Running sequentially eliminates CPU core thrashing in CI
-    maxWorkers: 1,
+    // Confinement limits to prevent overwhelming the dual-core GitHub runner
+    maxWorkers: 2, 
     minWorkers: 1,
     
-    // Generous timeouts to prevent heavy component trees from hitting a wall prematurely
-    testTimeout: 30000,
-    hookTimeout: 30000,
-    teardownTimeout: 10000,
+    // FORTIFIED TIMEOUTS: Extended from 10s to 45s so you can see every single red line/assertion error
+    testTimeout: 45000,
+    hookTimeout: 45000,
+    teardownTimeout: 15000,
     
     coverage: {
       provider: "v8",
