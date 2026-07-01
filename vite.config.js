@@ -75,9 +75,8 @@ export default defineConfig(() => {
       environment: "jsdom",
       globals: true,
       setupFiles: ["./src/setupTests.js"],
-      watch: false,           // ⬅️ ADD THIS - Prevents watch mode
-      forceExit: true,        // ⬅️ ADD THIS - Forces exit even with open handles
-      passWithNoTests: true,  // ⬅️ ADD THIS - Exits if no tests found
+      watch: false,
+      passWithNoTests: true,
       testTimeout: 15000,
       hookTimeout: 10000,
       teardownTimeout: 5000,
@@ -88,6 +87,12 @@ export default defineConfig(() => {
         forks: {
           singleFork: true,
         },
+      },
+      // Add these to prevent circular reference issues and hanging
+      isolate: true,
+      sequence: {
+        concurrent: false,
+        shuffle: false,
       },
       coverage: {
         provider: "v8",
