@@ -1,5 +1,32 @@
 import { vi } from "vitest";
 
+// Add debugging for process events
+if (typeof process !== "undefined" && process.env.NODE_ENV === "test") {
+  process.on("beforeExit", (code) => {
+    console.log("=== BEFORE EXIT ===");
+    console.log("Exit code:", code);
+    console.log("Open handles may exist - forcing exit may be needed");
+  });
+
+  process.on("exit", (code) => {
+    console.log("=== EXIT ===");
+    console.log("Exit code:", code);
+  });
+
+  // Log unhandled rejections
+  process.on("unhandledRejection", (reason, promise) => {
+    console.error("=== UNHANDLED REJECTION ===");
+    console.error("Reason:", reason);
+    console.error("Promise:", promise);
+  });
+
+  // Log uncaught exceptions
+  process.on("uncaughtException", (error) => {
+    console.error("=== UNCAUGHT EXCEPTION ===");
+    console.error("Error:", error);
+  });
+}
+
 // 1. Polyfills and Mock Definitions (at the very top before other major library imports)
 if (typeof window !== "undefined") {
   // Mock window.matchMedia
@@ -385,10 +412,14 @@ global.waitFor = waitFor;
 // Explicitly export testing helpers
 export { fireEvent, render, screen, waitFor, cleanup };
 
+// Track if we're in the process of exiting
+let isExiting = false;
+
+// Add global afterEach cleanup with more aggressive cleanup
 afterEach(() => {
   cleanup();
   if (typeof document !== "undefined") {
-    // Clean up Radix portal wrappers, overlays, or DOM elements
+    // Clear any leftover Radix portal wrappers, overlays, or DOM elements
     document
       .querySelectorAll("[data-radix-portal]")
       .forEach((el) => { el.remove(); });
@@ -402,4 +433,23 @@ afterEach(() => {
     document.querySelectorAll('[role="menu"]').forEach((el) => { el.remove(); });
     document.body.innerHTML = "";
   }
+  
+  // Clear any pending timers
+  vi.clearAllTimers();
+  
+  // Reset any mocks that might hold references
+  vi.clearAllMocks();
 });
+
+// Add a global teardown to force exit after all tests
+// This is a safety net for CI
+if (typeof process !== "undefined" && process.env.CI) {
+  // Give Vitest a moment to finish, then force exit
+  setTimeout(() => {
+    if (!isExiting) {
+      console.log("⚠️ Tests completed but process didn't exit - forcing exit");
+      isExiting = true;
+      process.exit(0);
+    }
+  }, 5000);
+}
