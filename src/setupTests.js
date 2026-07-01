@@ -1,7 +1,7 @@
 import { vi } from "vitest";
 import "@testing-library/jest-dom";
 import { cleanup } from "@testing-library/react";
-import { afterEach } from "vitest";
+import { afterEach, afterAll } from "vitest";
 
 // 1. Polyfills and Mock Definitions (at the very top before other major library imports)
 if (typeof window !== "undefined") {
@@ -151,8 +151,6 @@ if (typeof window !== "undefined") {
     }
     set src(value) {
       this._src = value;
-      // Synchronously execute callbacks instead of utilizing a setTimeout macro-task 
-      // which prevents the Node process event loop from cleaning up gracefully.
       if (this.onload) this.onload();
       if (this.listeners["load"]) {
         this.listeners["load"].forEach((cb) => { cb(); });
@@ -225,6 +223,7 @@ if (typeof window !== "undefined") {
   } catch (_e) {
     window.ResizeObserver = ResizeObserverMock;
   }
+  global.ResizeObserver = window.ResizeObserver;
 
   // Mock IntersectionObserver
   class IntersectionObserverMock {
@@ -244,6 +243,7 @@ if (typeof window !== "undefined") {
   } catch (_e) {
     window.IntersectionObserver = IntersectionObserverMock;
   }
+  global.IntersectionObserver = window.IntersectionObserver;
 
   // Mock HTMLCanvasElement context
   if (window.HTMLCanvasElement) {
@@ -389,29 +389,26 @@ export { fireEvent, render, screen, waitFor, cleanup };
 afterEach(() => {
   cleanup();
   if (typeof document !== "undefined") {
-    // Clear any leftover Radix portal wrappers, overlays, or DOM elements
-    document
-      .querySelectorAll("[data-radix-portal]")
-      .forEach((el) => { el.remove(); });
-    document
-      .querySelectorAll("[data-radix-focus-guard]")
-      .forEach((el) => { el.remove(); });
-    document
-      .querySelectorAll("[data-radix-popper-content-wrapper]")
-      .forEach((el) => { el.remove(); });
-    document.querySelectorAll('[role="dialog"]').forEach((el) => { el.remove(); });
-    document.querySelectorAll('[role="menu"]').forEach((el) => { el.remove(); });
+    // Force clean persistent Radix floating structural overlays stuck to document.body
+    const floatingNodes = document.querySelectorAll([
+      "[data-radix-portal]",
+      "[data-radix-focus-guard]",
+      "[data-radix-popper-content-wrapper]",
+      '[role="dialog"]',
+      '[role="menu"]',
+      ".fixed"
+    ].join(","));
+    
+    floatingNodes.forEach((el) => { el.remove(); });
+    document.body.innerHTML = "";
   }
   
-  // Clear any pending timers
   vi.clearAllTimers();
-  
-  // Reset any mocks that might hold references
   vi.clearAllMocks();
 });
 
-// ============================================
-// NO process.exit() HERE - Let the wrapper handle it
-// ============================================
-// The wrapper script (scripts/test-wrapper.js) handles force exit
-// This prevents multiple exit calls and hanging
+// Clean up entire module mapping references at the end of every test file suite
+afterAll(() => {
+  vi.resetModules();
+  vi.restoreAllMocks();
+});
