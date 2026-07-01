@@ -1,9 +1,12 @@
 import { render, screen } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import React from "react";
 import Dashboard from "./Dashboard";
+import { useAuth } from "../context/AuthContext";
+import { useUnits } from "../context/UnitContext";
 
-// Mock the contexts
+// 1. Safe context mocks using plain factory returns
 vi.mock("../context/AuthContext", () => ({
   useAuth: vi.fn(),
 }));
@@ -12,17 +15,18 @@ vi.mock("../context/UnitContext", () => ({
   useUnits: vi.fn(),
 }));
 
-const mockNavigate = vi.fn();
-vi.mock("react-router-dom", async () => {
-  const actual = await vi.importActual("react-router-dom");
+// 2. Safe third-party mock with variable hoisting to protect the module boundary
+const { mockNavigate } = vi.hoisted(() => ({
+  mockNavigate: vi.fn(),
+}));
+
+vi.mock("react-router-dom", async (importOriginal) => {
+  const actual = await importOriginal();
   return {
     ...actual,
     useNavigate: () => mockNavigate,
   };
 });
-
-import { useAuth } from "../context/AuthContext";
-import { useUnits } from "../context/UnitContext";
 
 describe("Dashboard", () => {
   const mockUnits = [
@@ -33,6 +37,8 @@ describe("Dashboard", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    
+    // Seed standard authorized permissions profile
     useAuth.mockReturnValue({
       permissions: {
         canViewAllUnits: true,
@@ -42,6 +48,7 @@ describe("Dashboard", () => {
         canViewProtocols: true,
       },
     });
+    
     useUnits.mockReturnValue({
       units: mockUnits,
       loading: false,
@@ -50,9 +57,11 @@ describe("Dashboard", () => {
 
   const renderDashboard = () => {
     return render(
-      <BrowserRouter>
-        <Dashboard />
-      </BrowserRouter>,
+      React.createElement(
+        BrowserRouter,
+        null,
+        React.createElement(Dashboard, null)
+      )
     );
   };
 
@@ -165,7 +174,6 @@ describe("Dashboard", () => {
     });
     useUnits.mockReturnValue({ units: manyUnits, loading: false });
     renderDashboard();
-    // Dashboard doesn't render the units, but we can verify the component renders
     expect(screen.getByText("Dashboard Overview")).toBeInTheDocument();
   });
 
