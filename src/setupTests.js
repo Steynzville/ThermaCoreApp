@@ -3,207 +3,227 @@ import "@testing-library/jest-dom";
 import { cleanup } from "@testing-library/react";
 
 /* =========================================================
-   GLOBAL SAFETY BOOTSTRAP
+   SAFE GLOBAL ENVIRONMENT BOOTSTRAP
 ========================================================= */
 
-globalThis.window = globalThis.window || {};
-globalThis.document = globalThis.document || {};
-
-/* =========================================================
-   1. MATCHMEDIA (FINAL FIX — DASHBOARD CRASH RESOLVED)
-========================================================= */
-
-function createMatchMedia(query) {
-  return {
-    matches: false,
-    media: String(query),
-    onchange: null,
-    addListener: () => {},
-    removeListener: () => {},
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    dispatchEvent: () => false,
+if (typeof window !== "undefined") {
+  /* ===============================
+     matchMedia (CRITICAL FIX)
+  =============================== */
+  window.matchMedia = window.matchMedia || function (query) {
+    return {
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    };
   };
-}
 
-// Hard stable implementation (prevents undefined + overwrite issues)
-Object.defineProperty(window, "matchMedia", {
-  writable: true,
-  configurable: true,
-  value: (query) => createMatchMedia(query),
-});
-
-globalThis.matchMedia = window.matchMedia;
-
-/* =========================================================
-   2. ResizeObserver (UI layout safety)
-========================================================= */
-
-class ResizeObserverMock {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-}
-
-window.ResizeObserver = ResizeObserverMock;
-global.ResizeObserver = ResizeObserverMock;
-
-/* =========================================================
-   3. IntersectionObserver (lazy UI safety)
-========================================================= */
-
-class IntersectionObserverMock {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-}
-
-window.IntersectionObserver = IntersectionObserverMock;
-global.IntersectionObserver = IntersectionObserverMock;
-
-/* =========================================================
-   4. PointerEvent (drag, sliders, Radix UI)
-========================================================= */
-
-class PointerEventMock extends Event {
-  constructor(type, props = {}) {
-    super(type, props);
-    this.pointerId = props.pointerId || 1;
-    this.pointerType = props.pointerType || "mouse";
-    this.clientX = props.clientX || 0;
-    this.clientY = props.clientY || 0;
+  /* ===============================
+     ResizeObserver (Radix / Charts)
+  =============================== */
+  class ResizeObserverMock {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
   }
-}
 
-window.PointerEvent = PointerEventMock;
-global.PointerEvent = PointerEventMock;
+  window.ResizeObserver = window.ResizeObserver || ResizeObserverMock;
+  global.ResizeObserver = window.ResizeObserver;
 
-/* =========================================================
-   5. AUDIO CONTEXT (audio system stability)
-========================================================= */
+  /* ===============================
+     IntersectionObserver (Lazy UI)
+  =============================== */
+  class IntersectionObserverMock {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
 
-class AudioContextMock {
-  resume = () => Promise.resolve();
+  window.IntersectionObserver = window.IntersectionObserver || IntersectionObserverMock;
+  global.IntersectionObserver = window.IntersectionObserver;
 
-  decodeAudioData = () =>
-    Promise.resolve({
-      sampleRate: 44100,
-      length: 1024,
-      duration: 0.1,
-      numberOfChannels: 2,
-      getChannelData: () => new Float32Array(1024),
+  /* ===============================
+     VisualViewport (Floating UI FIX)
+  =============================== */
+  window.visualViewport = window.visualViewport || {
+    width: 1920,
+    height: 1080,
+    scale: 1,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  };
+
+  /* ===============================
+     getBoundingClientRect (Radix FIX)
+  =============================== */
+  const rect = {
+    width: 1200,
+    height: 800,
+    top: 0,
+    left: 0,
+    right: 1200,
+    bottom: 800,
+    x: 0,
+    y: 0,
+    toJSON: () => rect,
+  };
+
+  Element.prototype.getBoundingClientRect = () => rect;
+  Element.prototype.getClientRects = () => [rect];
+
+  /* ===============================
+     scrollIntoView safety
+  =============================== */
+  HTMLElement.prototype.scrollIntoView = vi.fn();
+
+  /* ===============================
+     requestAnimationFrame safety
+  =============================== */
+  window.requestAnimationFrame = (cb) => setTimeout(cb, 0);
+  window.cancelAnimationFrame = (id) => clearTimeout(id);
+
+  /* ===============================
+     Pointer Events (Radix drag)
+  =============================== */
+  class PointerEventMock extends Event {
+    constructor(type, props = {}) {
+      super(type, props);
+      this.pointerId = props.pointerId || 1;
+      this.pointerType = props.pointerType || "mouse";
+      this.clientX = props.clientX || 0;
+      this.clientY = props.clientY || 0;
+    }
+  }
+
+  window.PointerEvent = window.PointerEvent || PointerEventMock;
+  global.PointerEvent = window.PointerEvent;
+
+  /* ===============================
+     AudioContext (Dashboard / Player FIX)
+  =============================== */
+  class AudioContextMock {
+    constructor() {
+      this.state = "suspended";
+    }
+
+    resume = () => Promise.resolve();
+
+    decodeAudioData = () =>
+      Promise.resolve({
+        sampleRate: 44100,
+        length: 1024,
+        duration: 1,
+        numberOfChannels: 2,
+        getChannelData: () => new Float32Array(1024),
+      });
+
+    createBufferSource = () => ({
+      buffer: null,
+      connect: vi.fn(),
+      start: vi.fn(),
     });
 
-  createBufferSource = () => ({
-    buffer: null,
-    connect: () => {},
-    start: () => {},
-  });
+    createGain = () => ({
+      connect: vi.fn(),
+      gain: { value: 1 },
+    });
 
-  createGain = () => ({
-    connect: () => {},
-    gain: { value: 1 },
-  });
-}
-
-global.AudioContext = AudioContextMock;
-global.webkitAudioContext = AudioContextMock;
-
-/* =========================================================
-   6. STORAGE (local + session)
-========================================================= */
-
-class StorageMock {
-  constructor() {
-    this.store = {};
+    destination = {};
   }
 
-  getItem = (key) => this.store[key] || null;
-  setItem = (key, value) => (this.store[key] = String(value));
-  removeItem = (key) => delete this.store[key];
-  clear = () => (this.store = {});
-}
+  window.AudioContext = window.AudioContext || AudioContextMock;
+  window.webkitAudioContext = window.webkitAudioContext || AudioContextMock;
 
-global.localStorage = new StorageMock();
-global.sessionStorage = new StorageMock();
+  global.AudioContext = window.AudioContext;
+  global.webkitAudioContext = window.webkitAudioContext;
 
-/* =========================================================
-   7. ANIMATION FRAME
-========================================================= */
+  /* ===============================
+     Storage (safe state persistence)
+  =============================== */
+  class StorageMock {
+    constructor() {
+      this.store = {};
+    }
+    getItem = (k) => this.store[k] || null;
+    setItem = (k, v) => (this.store[k] = String(v));
+    removeItem = (k) => delete this.store[k];
+    clear = () => (this.store = {});
+  }
 
-global.requestAnimationFrame = (cb) => setTimeout(cb, 0);
-global.cancelAnimationFrame = (id) => clearTimeout(id);
+  window.localStorage = window.localStorage || new StorageMock();
+  window.sessionStorage = window.sessionStorage || new StorageMock();
 
-/* =========================================================
-   8. CANVAS (charts + graphs)
-========================================================= */
+  global.localStorage = window.localStorage;
+  global.sessionStorage = window.sessionStorage;
 
-HTMLCanvasElement.prototype.getContext = () => ({
-  fillRect: () => {},
-  clearRect: () => {},
-  getImageData: () => ({ data: [] }),
-  putImageData: () => {},
-  createImageData: () => [],
-  setTransform: () => {},
-  drawImage: () => {},
-  save: () => {},
-  restore: () => {},
-  beginPath: () => {},
-  moveTo: () => {},
-  lineTo: () => {},
-  closePath: () => {},
-  stroke: () => {},
-  translate: () => {},
-  scale: () => {},
-  rotate: () => {},
-  arc: () => {},
-  fill: () => {},
-  measureText: () => ({ width: 0 }),
-  transform: () => {},
-  rect: () => {},
-  clip: () => {},
-});
+  /* ===============================
+     Canvas (Charts FIX)
+  =============================== */
+  if (window.HTMLCanvasElement) {
+    window.HTMLCanvasElement.prototype.getContext = vi.fn(() => ({
+      fillRect: vi.fn(),
+      clearRect: vi.fn(),
+      getImageData: vi.fn(),
+      putImageData: vi.fn(),
+      createImageData: vi.fn(),
+      setTransform: vi.fn(),
+      drawImage: vi.fn(),
+      save: vi.fn(),
+      restore: vi.fn(),
+      beginPath: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      closePath: vi.fn(),
+      stroke: vi.fn(),
+      translate: vi.fn(),
+      scale: vi.fn(),
+      rotate: vi.fn(),
+      arc: vi.fn(),
+      fill: vi.fn(),
+      measureText: vi.fn(() => ({ width: 0 })),
+      transform: vi.fn(),
+      rect: vi.fn(),
+      clip: vi.fn(),
+    }));
+  }
 
-/* =========================================================
-   9. NAVIGATOR CLIPBOARD
-========================================================= */
+  /* ===============================
+     Navigator clipboard
+  =============================== */
+  global.navigator = global.navigator || {};
+  global.navigator.clipboard = {
+    writeText: vi.fn().mockResolvedValue(),
+    readText: vi.fn().mockResolvedValue(""),
+  };
 
-global.navigator = global.navigator || {};
+  /* ===============================
+     Dialogs
+  =============================== */
+  global.alert = vi.fn();
+  global.confirm = vi.fn(() => true);
+  global.prompt = vi.fn(() => "");
 
-global.navigator.clipboard = {
-  writeText: vi.fn().mockResolvedValue(),
-  readText: vi.fn().mockResolvedValue(""),
-};
+  /* ===============================
+     Safe computed style
+  =============================== */
+  const original = window.getComputedStyle;
 
-/* =========================================================
-   10. DIALOGS
-========================================================= */
-
-global.alert = vi.fn();
-global.confirm = vi.fn(() => true);
-global.prompt = vi.fn(() => "");
-
-/* =========================================================
-   11. COMPUTED STYLE (safe fallback)
-========================================================= */
-
-const originalGetComputedStyle = window.getComputedStyle;
-
-window.getComputedStyle = (el) => {
-  const style = originalGetComputedStyle?.(el);
-
-  return (
-    style || {
+  window.getComputedStyle = (el) =>
+    original?.(el) || {
       getPropertyValue: () => "",
+      display: "block",
       transitionDuration: "0s",
       animationDuration: "0s",
-      display: "block",
-    }
-  );
-};
+    };
+}
 
 /* =========================================================
-   CLEANUP (SAFE ONLY)
+   TEST CLEANUP
 ========================================================= */
 
 afterEach(() => {
