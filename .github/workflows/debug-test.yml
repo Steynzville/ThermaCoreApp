@@ -1,4 +1,4 @@
-name: Debug Test Batches
+name: Debug Granular Tests
 
 on:
   push:
@@ -8,9 +8,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  test-batch:
+  granular-debug:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -39,18 +39,28 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run Tests in Batches to Find Hang
+      - name: Granular Test Run
         env:
           NODE_OPTIONS: "--max-old-space-size=8192"
         run: |
-          echo "🔍 Running tests in batches to isolate the hanging test..."
+          echo "🔍 Granular debugging Batch 3..."
           
-          run_batch() {
-            echo "=== Batch $1 ==="
-            pnpm vitest run $2 --pool=forks --reporter=verbose --testTimeout=60000 || echo "Batch $1 completed or failed"
-            sleep 2
-          }
+          # Test one file at a time from the late group
+          FILES=(
+            "src/tests/scadaFixtures.test.js"
+            "src/tests/ProtocolWizard.test.jsx"
+            "src/tests/ProcessFlowDiagram.test.jsx"
+            "src/tests/Dashboard.test.jsx"
+            "src/tests/SystemHealth.test.jsx"
+            "src/tests/HistoryView.test.jsx"
+            "src/tests/GridView.test.jsx"
+            "src/tests/chart.test.jsx"
+          )
           
-          run_batch 1 "src/tests/[A-M]*.test.* src/components/*.test.* src/pages/*.test.*"
-          run_batch 2 "src/hooks/*.test.* src/context/*.test.* src/services/*.test.* src/utils/*.test.*"
-          run_batch 3 "src/tests/[N-Z]*.test.* src/tests/ui/*.test.* src/tests/*Fixture*.test.* src/tests/*scada*.test.*"
+          for file in "${FILES[@]}"; do
+            echo "=== Testing $file ==="
+            pnpm vitest run "$file" --pool=forks --reporter=verbose --testTimeout=45000 || echo "Failed or hung on $file"
+            sleep 3
+          done
+          
+          echo "Granular run completed."
