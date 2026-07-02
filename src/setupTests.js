@@ -1,4 +1,5 @@
-import "@testing-library/jest-dom";
+import "@testing-library/jest-dom/vitest";
+import React from "react";
 import { vi, beforeAll } from "vitest";
 
 /**
@@ -7,6 +8,7 @@ import { vi, beforeAll } from "vitest";
  * -----------------------------
  */
 
+// matchMedia (fix responsive tests)
 Object.defineProperty(window, "matchMedia", {
   writable: true,
   value: (query) => ({
@@ -21,12 +23,14 @@ Object.defineProperty(window, "matchMedia", {
   }),
 });
 
+// ResizeObserver (Radix + charts)
 global.ResizeObserver = class ResizeObserver {
   observe() {}
   unobserve() {}
   disconnect() {}
 };
 
+// IntersectionObserver (charts + lazy UI)
 global.IntersectionObserver = class IntersectionObserver {
   constructor() {}
   observe() {}
@@ -34,11 +38,13 @@ global.IntersectionObserver = class IntersectionObserver {
   disconnect() {}
 };
 
+// scrollTo (navigation + layout tests)
 Object.defineProperty(window, "scrollTo", {
   value: vi.fn(),
   writable: true,
 });
 
+// getComputedStyle (layout assertions)
 Object.defineProperty(window, "getComputedStyle", {
   value: () => ({
     getPropertyValue: () => "",
@@ -47,26 +53,31 @@ Object.defineProperty(window, "getComputedStyle", {
 
 /**
  * -----------------------------
- * FRAMER MOTION MOCK
+ * FRAMER MOTION MOCK (SAFE REACT VERSION)
  * -----------------------------
  */
-vi.mock("framer-motion", () => ({
-  motion: {
-    div: ({ children, ...props }) => {
-      return {
-        type: "div",
-        props,
-        children,
-      };
+
+vi.mock("framer-motion", () => {
+  const MotionComponent = ({ children, ...props }) =>
+    React.createElement("div", props, children);
+
+  return {
+    motion: {
+      div: MotionComponent,
+      span: MotionComponent,
+      button: MotionComponent,
+      section: MotionComponent,
     },
-  },
-}));
+    AnimatePresence: ({ children }) => children,
+  };
+});
 
 /**
  * -----------------------------
  * GLOBAL STABILITY
  * -----------------------------
  */
+
 beforeAll(() => {
   vi.spyOn(console, "error").mockImplementation(() => {});
   vi.spyOn(console, "warn").mockImplementation(() => {});
