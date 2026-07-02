@@ -1,14 +1,10 @@
-name: Debug SCADA Fixtures Test
+name: Debug Test Batches
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
 
 jobs:
-  debug-scada:
+  test-batch:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -27,43 +23,32 @@ jobs:
 
       - name: Get pnpm store directory
         shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
 
       - name: Setup pnpm cache
         uses: actions/cache@v4
         with:
           path: ${{ env.STORE_PATH }}
           key: \( {{ runner.os }}-pnpm-store- \){{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
+          restore-keys: ${{ runner.os }}-pnpm-store-
 
-      - name: Install Frontend Dependencies
-        run: |
-          echo "📦 Installing frontend dependencies..."
-          pnpm install --frozen-lockfile
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
-      - name: Run ONLY scadaFixtures test with diagnostics
+      - name: Run Tests in Batches
         env:
-          NODE_OPTIONS: "--max-old-space-size=4096"
-          CI: "true"
+          NODE_OPTIONS: "--max-old-space-size=8192"
         run: |
-          echo "🔍 Debugging scadaFixtures.test.js"
-          echo "Node: $(node --version) | pnpm: $(pnpm --version)"
+          echo "Testing in batches to find the hanging test..."
           
-          TEST_FILE="src/tests/scadaFixtures.test.js"
+          # Batch 1: Early tests
+          echo "=== Batch 1 ==="
+          pnpm vitest run "src/tests/*.test.*" "src/components/*.test.*" --pool=forks --reporter=verbose || echo "Batch 1 done"
           
-          if [ ! -f "$TEST_FILE" ]; then
-            echo "❌ Test file not found: $TEST_FILE"
-            ls -la src/tests/ 2>/dev/null | grep -i scada || echo "No scada files found"
-            exit 1
-          fi
+          # Batch 2: Middle
+          echo "=== Batch 2 ==="
+          pnpm vitest run "src/hooks/*.test.*" "src/context/*.test.*" "src/services/*.test.*" --pool=forks --reporter=verbose || echo "Batch 2 done"
           
-          echo "✅ Found test file. Running..."
-          
-          npx vitest run "$TEST_FILE" \
-            --pool=forks \
-            --reporter=verbose \
-            --reporter=hanging-process \
-            --testTimeout=30000 \
-            --logHeapUsage || echo "Command exited with code $?"
+          # Batch 3: Late tests
+          echo "=== Batch 3 ==="
+          pnpm vitest run "src/tests/ui/*.test.*" "src/tests/*Fixtures*.test.*" --pool=forks --reporter=verbose || echo "Batch 3 done"
