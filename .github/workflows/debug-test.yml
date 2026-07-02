@@ -1,23 +1,15 @@
-name: Debug Hanging Test
+name: Debug UserUnitDetails
 
 permissions:
   contents: read
-  pull-requests: write
-  checks: write
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
 
 jobs:
-  debug-test:
+  debug-user-unit-details:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 15
 
     steps:
       - name: Checkout code
@@ -33,101 +25,45 @@ jobs:
         with:
           run_install: false
 
-      - name: Get pnpm store directory
-        shell: bash
+      - name: Get pnpm store
         run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
 
-      - name: Setup pnpm cache
+      - name: Cache pnpm
         uses: actions/cache@v4
         with:
           path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-pnpm-store-
+            ${{ runner.os }}-pnpm-
 
-      - name: Install Frontend Dependencies
+      - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run each test file individually
+      - name: Run ONLY UserUnitDetails
         env:
-          NODE_OPTIONS: "--max-old-space-size=8192"
           CI: "true"
-        shell: bash
+          NODE_OPTIONS: "--max-old-space-size=8192"
         run: |
-          set +e
+          echo "=================================================="
+          echo "Running ONLY:"
+          echo "src/tests/UserUnitDetails.test.jsx"
+          echo "=================================================="
 
-          echo "========================================"
-          echo "Finding all test files..."
-          echo "========================================"
+          pnpm vitest run \
+            src/tests/UserUnitDetails.test.jsx \
+            --reporter=verbose \
+            --runInBand \
+            --logHeapUsage
 
-          mapfile -t TEST_FILES < <(
-            find src \
-              \( -name "*.test.js" -o -name "*.test.jsx" \) \
-              | sort
-          )
-
-          echo "Found ${#TEST_FILES[@]} test files."
-
-          FAILED=0
-
-          for TEST in "${TEST_FILES[@]}"; do
-            echo ""
-            echo "============================================================"
-            echo "RUNNING: $TEST"
-            echo "============================================================"
-
-            timeout 180s pnpm vitest run "$TEST" \
-              --pool=forks \
-              --poolOptions.forks.singleFork=true \
-              --poolOptions.forks.maxForks=1 \
-              --reporter=verbose \
-              --testTimeout=60000 \
-              --logHeapUsage
-
-            EXIT_CODE=$?
-
-            if [ "$EXIT_CODE" -eq 124 ]; then
-              echo ""
-              echo "############################################"
-              echo "HANG DETECTED"
-              echo "Test file:"
-              echo "$TEST"
-              echo "############################################"
-              exit 1
-            fi
-
-            if [ "$EXIT_CODE" -ne 0 ]; then
-              echo ""
-              echo "FAILED: $TEST (exit code $EXIT_CODE)"
-              FAILED=1
-            else
-              echo "PASSED: $TEST"
-            fi
-
-            pkill -9 node || true
-            sleep 2
-          done
-
-          if [ "$FAILED" -ne 0 ]; then
-            echo ""
-            echo "Some test files failed, but none hung."
-            exit 1
-          fi
+          EXIT_CODE=$?
 
           echo ""
-          echo "SUCCESS: Every test file exited cleanly."
+          echo "Vitest exit code: $EXIT_CODE"
 
-      - name: Final Cleanup
+          exit $EXIT_CODE
+
+      - name: Cleanup
         if: always()
         run: |
           pkill -9 node || true
           echo "Cleanup complete."
-
-      - name: Upload Coverage Report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: debug-artifacts
-          path: coverage/
-          if-no-files-found: ignore
-          retention-days: 7
