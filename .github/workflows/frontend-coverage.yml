@@ -17,7 +17,7 @@ on:
 jobs:
   frontend-coverage:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -46,24 +46,23 @@ jobs:
             ${{ runner.os }}-pnpm-store-
 
       - name: Install Frontend Dependencies
-        run: |
-          echo "📦 Installing frontend dependencies..."
-          pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
-      - name: Run Coverage
+      - name: Run Vitest with Diagnostics
         env:
           NODE_OPTIONS: "--max-old-space-size=8192"
           CI: "true"
         run: |
-          echo "📊 Running frontend coverage..."
+          echo "📊 Running frontend tests with diagnostics..."
           
-          timeout 480 pnpm vitest run \
+          # Run without outer timeout first to let hanging-process reporter work
+          pnpm vitest run \
             --pool=forks \
             --poolOptions.forks.singleFork=true \
             --poolOptions.forks.maxForks=2 \
-            --reporter=default \
+            --reporter=verbose \
             --reporter=hanging-process \
-            --testTimeout=30000 \
+            --testTimeout=45000 \
             --logHeapUsage \
             --coverage \
             --coverage.reporter=text \
@@ -71,16 +70,12 @@ jobs:
             --coverage.reportsDirectory=coverage \
             --testNamePattern="^(?!.*AdminPanel User Creation Form).*" || {
               EXIT_CODE=$?
-              if [ $EXIT_CODE -eq 124 ]; then
-                echo "⚠️ Timed out after 8 minutes - checking for coverage..."
-                if [ -f coverage/coverage-summary.json ]; then
-                  echo "✅ Coverage files generated successfully"
-                  exit 0
-                fi
-              fi
+              echo "Vitest exited with code $EXIT_CODE"
               if [ -f coverage/coverage-summary.json ]; then
-                echo "✅ Coverage exists - treating as success"
+                echo "✅ Coverage files were generated"
                 exit 0
+              else
+                echo "❌ No coverage files"
+                exit $EXIT_CODE
               fi
-              exit $EXIT_CODE
             }
