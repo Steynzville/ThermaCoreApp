@@ -186,10 +186,13 @@ describe("AdminPanel Password Reset Validation - Real-time Updates", () => {
   it("should show warning for passwords less than 6 characters", async () => {
     renderWithProviders(<AdminPanel />);
 
-    // Navigate to Password Management and open modal
+    // Use getAllByText and get the first one, or use a more specific query
+    const passwordManagementElements = screen.getAllByText("Password Management");
+    // Click the first one (or the one that's a button/link)
     await act(async () => {
-      fireEvent.click(screen.getByText("Password Management"));
+      fireEvent.click(passwordManagementElements[0]);
     });
+    
     await act(async () => {
       fireEvent.click(screen.getByText("Change My Password"));
     });
@@ -220,10 +223,12 @@ describe("AdminPanel Password Reset Validation - Real-time Updates", () => {
   it("should remove warning when password reaches 6 characters", async () => {
     renderWithProviders(<AdminPanel />);
 
-    // Navigate to Password Management and open modal
+    // Use getAllByText and get the first one
+    const passwordManagementElements = screen.getAllByText("Password Management");
     await act(async () => {
-      fireEvent.click(screen.getByText("Password Management"));
+      fireEvent.click(passwordManagementElements[0]);
     });
+    
     await act(async () => {
       fireEvent.click(screen.getByText("Change My Password"));
     });
@@ -272,10 +277,12 @@ describe("AdminPanel Password Reset Validation - Real-time Updates", () => {
   it("should show mismatch warning in real-time", async () => {
     renderWithProviders(<AdminPanel />);
 
-    // Navigate to Password Management and open modal
+    // Use getAllByText and get the first one
+    const passwordManagementElements = screen.getAllByText("Password Management");
     await act(async () => {
-      fireEvent.click(screen.getByText("Password Management"));
+      fireEvent.click(passwordManagementElements[0]);
     });
+    
     await act(async () => {
       fireEvent.click(screen.getByText("Change My Password"));
     });
@@ -312,10 +319,12 @@ describe("AdminPanel Password Reset Validation - Real-time Updates", () => {
   it("should remove mismatch warning when passwords match", async () => {
     renderWithProviders(<AdminPanel />);
 
-    // Navigate to Password Management and open modal
+    // Use getAllByText and get the first one
+    const passwordManagementElements = screen.getAllByText("Password Management");
     await act(async () => {
-      fireEvent.click(screen.getByText("Password Management"));
+      fireEvent.click(passwordManagementElements[0]);
     });
+    
     await act(async () => {
       fireEvent.click(screen.getByText("Change My Password"));
     });
@@ -363,10 +372,12 @@ describe("AdminPanel Password Reset Validation - Real-time Updates", () => {
   it("should enable button only when both validations pass", async () => {
     renderWithProviders(<AdminPanel />);
 
-    // Navigate to Password Management and open modal
+    // Use getAllByText and get the first one
+    const passwordManagementElements = screen.getAllByText("Password Management");
     await act(async () => {
-      fireEvent.click(screen.getByText("Password Management"));
+      fireEvent.click(passwordManagementElements[0]);
     });
+    
     await act(async () => {
       fireEvent.click(screen.getByText("Change My Password"));
     });
@@ -429,10 +440,12 @@ describe("AdminPanel Password Reset Validation - Real-time Updates", () => {
 
     renderWithProviders(<AdminPanel />);
 
-    // Navigate to Password Management and open modal
+    // Use getAllByText and get the first one
+    const passwordManagementElements = screen.getAllByText("Password Management");
     await act(async () => {
-      fireEvent.click(screen.getByText("Password Management"));
+      fireEvent.click(passwordManagementElements[0]);
     });
+    
     await act(async () => {
       fireEvent.click(screen.getByText("Change My Password"));
     });
@@ -490,10 +503,12 @@ describe("AdminPanel Password Reset Validation - Real-time Updates", () => {
 
     renderWithProviders(<AdminPanel />);
 
-    // Navigate to Password Management and open modal
+    // Use getAllByText and get the first one
+    const passwordManagementElements = screen.getAllByText("Password Management");
     await act(async () => {
-      fireEvent.click(screen.getByText("Password Management"));
+      fireEvent.click(passwordManagementElements[0]);
     });
+    
     await act(async () => {
       fireEvent.click(screen.getByText("Change My Password"));
     });
