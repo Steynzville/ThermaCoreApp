@@ -4,10 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 
 export default defineConfig({
-  plugins: [
-    react(),
-    tailwindcss(),
-  ],
+  plugins: [react(), tailwindcss()],
 
   resolve: {
     alias: {
@@ -18,17 +15,33 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "jsdom",
+
     setupFiles: "./src/setupTests.js",
 
-    // Keep defaults while isolating the hanging test.
-    watch: false,
     testTimeout: 60000,
     hookTimeout: 60000,
-    teardownTimeout: 60000,
 
-    // Run test files sequentially for deterministic debugging.
-    sequence: {
-      concurrent: false,
+    // IMPORTANT: stabilizes Radix / Floating UI / layout calculations
+    environmentOptions: {
+      jsdom: {
+        resources: "usable",
+        pretendToBeVisual: true,
+      },
+    },
+
+    // IMPORTANT: isolates tests better (prevents shared state leaks)
+    isolate: true,
+    restoreMocks: true,
+    clearMocks: true,
+    mockReset: true,
+
+    // Prevent silent hangs in async UI libraries
+    pool: "forks",
+    poolOptions: {
+      forks: {
+        singleFork: true,
+        maxForks: 1,
+      },
     },
 
     coverage: {
@@ -45,6 +58,12 @@ export default defineConfig({
         "**/*.test.{js,jsx}",
         "**/*.spec.{js,jsx}",
       ],
+    },
+
+    // Helps identify silent async hangs
+    logHeapUsage: true,
+    sequence: {
+      shuffle: false,
     },
   },
 });
