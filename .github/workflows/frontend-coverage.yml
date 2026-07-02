@@ -1,107 +1,41 @@
-name: Frontend Coverage Report
+import { defineConfig } from "vitest/config";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+import path from "path";
 
-permissions:
-  contents: read
-  pull-requests: write
-  checks: write
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
 
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
-  workflow_dispatch:
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
 
-jobs:
-  frontend-coverage:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  test: {
+    globals: true,
+    environment: "jsdom",
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+    setupFiles: "./src/setupTests.js",
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          run_install: false
+    testTimeout: 60000,
 
-      - name: Get pnpm store directory
-        shell: bash
-        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+    // IMPORTANT: keep minimal — avoid destabilizing JSDOM
+    isolate: true,
+    clearMocks: true,
+    restoreMocks: true,
 
-      - name: Setup pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.STORE_PATH }}
-          key: \( {{ runner.os }}-pnpm-store- \){{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-store-
+    pool: "forks",
+    poolOptions: {
+      forks: {
+        singleFork: true,
+        maxForks: 1,
+      },
+    },
 
-      - name: Install Frontend Dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Run Tests
-        env:
-          NODE_OPTIONS: "--max-old-space-size=8192"
-          CI: "true"
-        run: |
-          echo "📊 Running frontend coverage..."
-          
-          pnpm vitest run \
-            --pool=forks \
-            --poolOptions.forks.singleFork=true \
-            --poolOptions.forks.maxForks=2 \
-            --reporter=default \
-            --testTimeout=60000 \
-            --logHeapUsage \
-            --coverage \
-            --coverage.reporter=text \
-            --coverage.reporter=json-summary \
-            --coverage.reportsDirectory=coverage \
-            --testNamePattern="^(?!.*AdminPanel User Creation Form).*" || {
-              EXIT_CODE=$?
-              echo "Vitest exited with code $EXIT_CODE"
-              pkill -9 node || true
-              sleep 3
-              if [ -f coverage/coverage-summary.json ]; then
-                echo "✅ Coverage generated - success"
-                exit 0
-              fi
-              exit $EXIT_CODE
-            }
-
-      - name: Final Cleanup
-        if: always()
-        run: |
-          pkill -9 node || true
-          echo "📁 Coverage check:"
-          ls -la coverage/ 2>/dev/null || echo "No coverage directory"
-
-      - name: Upload Coverage Report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-coverage-report
-          path: coverage/
-          retention-days: 14
-
-      - name: Display Coverage Summary
-        if: always()
-        run: |
-          if [ -f coverage/coverage-summary.json ]; then
-            echo "✅ Coverage Summary:"
-            cat coverage/coverage-summary.json | jq -r '
-              "Statements: " + (.total.statements.pct | tostring) + "%",
-              "Branches: " + (.total.branches.pct | tostring) + "%",
-              "Functions: " + (.total.functions.pct | tostring) + "%",
-              "Lines: " + (.total.lines.pct | tostring) + "%"
-            ' || echo "Coverage generated"
-          else
-            echo "No coverage file"
-          fi
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "json-summary"],
+    },
+  },
+});
