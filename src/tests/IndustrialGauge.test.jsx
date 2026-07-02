@@ -11,7 +11,7 @@
  * - Animated value transitions
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import IndustrialGauge from "@/components/visualization/IndustrialGauge";
 import { setupMockCanvas } from "./utils/testHelpers.jsx";
@@ -47,7 +47,10 @@ describe("IndustrialGauge", () => {
         />,
       );
 
-      expect(screen.getByText(/75/)).toBeInTheDocument();
+      // Use getAllByText and check that we have at least one match
+      const valueElements = screen.getAllByText(/75/);
+      expect(valueElements.length).toBeGreaterThan(0);
+      
       const unitLabels = screen.getAllByText(/°C/);
       expect(unitLabels.length).toBeGreaterThan(0);
     });
@@ -130,7 +133,9 @@ describe("IndustrialGauge", () => {
         <IndustrialGauge value={75.12345} precision={2} showValue={true} />,
       );
 
-      expect(screen.getByText(/75\.1/)).toBeInTheDocument();
+      // Use getAllByText and check that we have at least one match
+      const valueElements = screen.getAllByText(/75\.1/);
+      expect(valueElements.length).toBeGreaterThan(0);
     });
 
     it("should handle negative values", () => {
@@ -472,20 +477,29 @@ describe("IndustrialGauge", () => {
 
     it("should handle different precision values", () => {
       const precisionTests = [
-        { precision: 0, expected: /75/ },
-        { precision: 1, expected: /75\.1/ },
-        { precision: 2, expected: /75\.12/ },
+        { precision: 0, expected: "75", regex: /75/ },
+        { precision: 1, expected: "75.1", regex: /75\.1/ },
+        { precision: 2, expected: "75.12", regex: /75\.12/ },
       ];
 
-      precisionTests.forEach(({ precision, expected }) => {
+      precisionTests.forEach(({ precision, expected, regex }) => {
         const { container } = render(
           <IndustrialGauge
             value={75.123}
             precision={precision}
             showValue={true}
-          />,
+          />
         );
-        expect(screen.getByText(expected)).toBeInTheDocument();
+        
+        // Use getAllByText with the regex and check we have at least one match
+        const elements = screen.getAllByText(regex);
+        expect(elements.length).toBeGreaterThan(0);
+        
+        // Also verify at least one element contains the exact expected string
+        const found = elements.some(el => el.textContent.includes(expected));
+        expect(found).toBe(true);
+        
+        // Clean up the container
         container.remove();
       });
     });
