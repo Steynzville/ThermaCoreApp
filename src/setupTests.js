@@ -1,13 +1,12 @@
 import "@testing-library/jest-dom";
 import { vi, beforeAll } from "vitest";
+import React from "react";
 
 /**
  * -----------------------------
- * GLOBAL MATCHMEDIA FIX (CRITICAL)
+ * GLOBAL MATCHMEDIA FIX
  * -----------------------------
- * Prevents: Cannot read properties of undefined (reading 'matches')
  */
-
 const createMatchMedia = (matches = false) => (query) => ({
   matches,
   media: query,
@@ -19,7 +18,6 @@ const createMatchMedia = (matches = false) => (query) => ({
   dispatchEvent: vi.fn(),
 });
 
-// Always define it safely BEFORE tests run
 Object.defineProperty(window, "matchMedia", {
   writable: true,
   configurable: true,
@@ -34,7 +32,7 @@ Object.defineProperty(globalThis, "matchMedia", {
 
 /**
  * -----------------------------
- * OTHER JSDOM POLYFILLS
+ * JSDOM POLYFILLS
  * -----------------------------
  */
 
@@ -64,21 +62,19 @@ Object.defineProperty(window, "getComputedStyle", {
 
 /**
  * -----------------------------
- * FRAMER MOTION MOCK
+ * FRAMER MOTION MOCK (NO JSX SAFE)
  * -----------------------------
- * Fixes layout/animation instability in JSDOM
  */
 vi.mock("framer-motion", () => ({
   motion: {
-    div: ({ children, ...props }) => {
-      return <div {...props}>{children}</div>;
-    },
+    div: (props) =>
+      React.createElement("div", props, props.children),
   },
 }));
 
 /**
  * -----------------------------
- * CONSOLE CLEANUP (STABILITY)
+ * GLOBAL STABILITY
  * -----------------------------
  */
 beforeAll(() => {
