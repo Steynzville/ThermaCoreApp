@@ -2,7 +2,7 @@ import { vi } from "vitest";
 import React from "react"; // Explicitly import React for the factory fallback
 import "@testing-library/jest-dom";
 import { cleanup } from "@testing-library/react";
-import { afterEach, afterAll } from "vitest";
+import { afterEach } from "vitest";
 
 // 1. Polyfills and Mock Definitions (at the very top before other major library imports)
 if (typeof window !== "undefined") {
@@ -405,33 +405,28 @@ global.waitFor = waitFor;
 // Explicitly export testing helpers
 export { fireEvent, render, screen, waitFor, cleanup };
 
-// Global cleanup after each test
+// Global cleanup after each test - simplified to avoid memory issues
 afterEach(() => {
   cleanup();
   if (typeof document !== "undefined") {
-    // Force clean persistent Radix floating structural overlays stuck to document.body
-    const floatingNodes = document.querySelectorAll([
-      "[data-radix-portal]",
-      "[data-radix-focus-guard]",
-      "[data-radix-popper-content-wrapper]",
-      '[role="dialog"]',
-      '[role="menu"]',
-      ".fixed"
-    ].join(","));
-    
-    floatingNodes.forEach((el) => { el.remove(); });
-    document.body.innerHTML = "";
+    // Only remove specific elements, not everything
+    document
+      .querySelectorAll("[data-radix-portal]")
+      .forEach((el) => { el.remove(); });
+    document
+      .querySelectorAll("[data-radix-focus-guard]")
+      .forEach((el) => { el.remove(); });
+    document
+      .querySelectorAll("[data-radix-popper-content-wrapper]")
+      .forEach((el) => { el.remove(); });
+    // Don't remove all dialogs or menus - they might be legitimate
+    // Don't wipe document.body.innerHTML - this causes issues
   }
   
   vi.clearAllTimers();
   vi.clearAllMocks();
 });
 
-// Clean up entire module mapping references at the end of every test file suite
-afterAll(() => {
-  vi.resetModules();
-  vi.restoreAllMocks();
-});
 // 3. Suppress persistent React Form console warnings that cause I/O bottlenecks in CI
 const originalConsoleError = console.error;
 console.error = (...args) => {
