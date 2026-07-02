@@ -13,7 +13,7 @@
  */
 
 import { fireEvent, render, screen, within, cleanup } from "@testing-library/react";
-import { describe, expect, it, vi, afterEach } from "vitest";
+import { describe, expect, it, vi, afterEach, beforeEach } from "vitest";
 import AlertSettings from "@/components/settings/AlertSettings";
 import DataRefreshSettings from "@/components/settings/DataRefreshSettings";
 import DisplaySettings from "@/components/settings/DisplaySettings";
@@ -24,30 +24,36 @@ afterEach(() => {
   cleanup();
 });
 
-// ONLY mock the common FormFieldGroup that DataRefreshSettings uses
-// This mock is scoped to this test file and won't affect other tests
-vi.mock("@/components/common/FormFieldGroup", () => ({
-  default: ({ id, label, value, onChange, type, inputClassName }: any) => (
-    <div>
-      <label htmlFor={id} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-        {label}
-      </label>
-      <input
-        id={id}
-        type={type || "text"}
-        value={value}
-        onChange={(e) => {
-          if (onChange) onChange(e);
-        }}
-        className={`w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${inputClassName || ''}`}
-        data-testid={`input-${id}`}
-      />
-    </div>
-  ),
-}));
+// Use a dynamic import mock that only applies to this test file
+// This avoids hoisting issues that affect other test files
+let FormFieldGroupMock: any;
 
-// DO NOT mock Card, CardContent, CardHeader - use the real components
-// DO NOT mock the shadcn Select - DataRefreshSettings uses native select
+beforeEach(async () => {
+  // Reset any previous mocks
+  vi.resetModules();
+  
+  // Only mock FormFieldGroup for these tests
+  // Using vi.doMock ensures it doesn't get hoisted globally
+  await vi.doMock("@/components/common/FormFieldGroup", () => ({
+    default: ({ id, label, value, onChange, type, inputClassName }: any) => (
+      <div>
+        <label htmlFor={id} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          {label}
+        </label>
+        <input
+          id={id}
+          type={type || "text"}
+          value={value}
+          onChange={(e) => {
+            if (onChange) onChange(e);
+          }}
+          className={`w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${inputClassName || ''}`}
+          data-testid={`input-${id}`}
+        />
+      </div>
+    ),
+  }));
+});
 
 describe("DataRefreshSettings", () => {
   const defaultSettings = {
@@ -59,11 +65,14 @@ describe("DataRefreshSettings", () => {
     },
   };
 
-  it("should render data refresh settings", () => {
+  it("should render data refresh settings", async () => {
     const mockHandleChange = vi.fn();
 
+    // Dynamically import the component after mock is applied
+    const { default: DataRefreshSettingsComponent } = await import("@/components/settings/DataRefreshSettings");
+    
     render(
-      <DataRefreshSettings
+      <DataRefreshSettingsComponent
         settings={defaultSettings}
         handleSettingChange={mockHandleChange}
       />,
@@ -73,11 +82,13 @@ describe("DataRefreshSettings", () => {
     expect(screen.getByText("Auto Refresh")).toBeInTheDocument();
   });
 
-  it("should toggle auto refresh", () => {
+  it("should toggle auto refresh", async () => {
     const mockHandleChange = vi.fn();
 
+    const { default: DataRefreshSettingsComponent } = await import("@/components/settings/DataRefreshSettings");
+    
     render(
-      <DataRefreshSettings
+      <DataRefreshSettingsComponent
         settings={defaultSettings}
         handleSettingChange={mockHandleChange}
       />,
@@ -93,11 +104,13 @@ describe("DataRefreshSettings", () => {
     );
   });
 
-  it("should show refresh interval when auto refresh is enabled", () => {
+  it("should show refresh interval when auto refresh is enabled", async () => {
     const mockHandleChange = vi.fn();
 
+    const { default: DataRefreshSettingsComponent } = await import("@/components/settings/DataRefreshSettings");
+    
     render(
-      <DataRefreshSettings
+      <DataRefreshSettingsComponent
         settings={defaultSettings}
         handleSettingChange={mockHandleChange}
       />,
@@ -108,7 +121,7 @@ describe("DataRefreshSettings", () => {
     expect(intervalInput).toHaveValue(30);
   });
 
-  it("should hide refresh interval when auto refresh is disabled", () => {
+  it("should hide refresh interval when auto refresh is disabled", async () => {
     const mockHandleChange = vi.fn();
     const settingsWithoutAutoRefresh = {
       dataRefresh: {
@@ -119,8 +132,10 @@ describe("DataRefreshSettings", () => {
       },
     };
 
+    const { default: DataRefreshSettingsComponent } = await import("@/components/settings/DataRefreshSettings");
+    
     render(
-      <DataRefreshSettings
+      <DataRefreshSettingsComponent
         settings={settingsWithoutAutoRefresh}
         handleSettingChange={mockHandleChange}
       />,
@@ -132,11 +147,13 @@ describe("DataRefreshSettings", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("should update refresh interval", () => {
+  it("should update refresh interval", async () => {
     const mockHandleChange = vi.fn();
 
+    const { default: DataRefreshSettingsComponent } = await import("@/components/settings/DataRefreshSettings");
+    
     render(
-      <DataRefreshSettings
+      <DataRefreshSettingsComponent
         settings={defaultSettings}
         handleSettingChange={mockHandleChange}
       />,
@@ -152,11 +169,13 @@ describe("DataRefreshSettings", () => {
     );
   });
 
-  it("should update data retention", () => {
+  it("should update data retention", async () => {
     const mockHandleChange = vi.fn();
 
+    const { default: DataRefreshSettingsComponent } = await import("@/components/settings/DataRefreshSettings");
+    
     render(
-      <DataRefreshSettings
+      <DataRefreshSettingsComponent
         settings={defaultSettings}
         handleSettingChange={mockHandleChange}
       />,
@@ -172,11 +191,13 @@ describe("DataRefreshSettings", () => {
     );
   });
 
-  it("should update backup frequency", () => {
+  it("should update backup frequency", async () => {
     const mockHandleChange = vi.fn();
 
+    const { default: DataRefreshSettingsComponent } = await import("@/components/settings/DataRefreshSettings");
+    
     render(
-      <DataRefreshSettings
+      <DataRefreshSettingsComponent
         settings={defaultSettings}
         handleSettingChange={mockHandleChange}
       />,
@@ -192,11 +213,13 @@ describe("DataRefreshSettings", () => {
     );
   });
 
-  it("should render all backup frequency options", () => {
+  it("should render all backup frequency options", async () => {
     const mockHandleChange = vi.fn();
 
+    const { default: DataRefreshSettingsComponent } = await import("@/components/settings/DataRefreshSettings");
+    
     render(
-      <DataRefreshSettings
+      <DataRefreshSettingsComponent
         settings={defaultSettings}
         handleSettingChange={mockHandleChange}
       />,
@@ -467,7 +490,7 @@ describe("DisplaySettings", () => {
 });
 
 describe("Settings Integration", () => {
-  it("should handle multiple settings updates", () => {
+  it("should handle multiple settings updates", async () => {
     const mockHandleChange = vi.fn();
     const settings = {
       dataRefresh: {
@@ -478,8 +501,10 @@ describe("Settings Integration", () => {
       },
     };
 
+    const { default: DataRefreshSettingsComponent } = await import("@/components/settings/DataRefreshSettings");
+    
     render(
-      <DataRefreshSettings
+      <DataRefreshSettingsComponent
         settings={settings}
         handleSettingChange={mockHandleChange}
       />,
@@ -534,7 +559,7 @@ describe("Settings Integration", () => {
 });
 
 describe("Settings Validation", () => {
-  it("should accept valid refresh interval values", () => {
+  it("should accept valid refresh interval values", async () => {
     const mockHandleChange = vi.fn();
     const settings = {
       dataRefresh: {
@@ -545,8 +570,10 @@ describe("Settings Validation", () => {
       },
     };
 
+    const { default: DataRefreshSettingsComponent } = await import("@/components/settings/DataRefreshSettings");
+    
     render(
-      <DataRefreshSettings
+      <DataRefreshSettingsComponent
         settings={settings}
         handleSettingChange={mockHandleChange}
       />,
@@ -562,7 +589,7 @@ describe("Settings Validation", () => {
     );
   });
 
-  it("should accept valid data retention values", () => {
+  it("should accept valid data retention values", async () => {
     const mockHandleChange = vi.fn();
     const settings = {
       dataRefresh: {
@@ -573,8 +600,10 @@ describe("Settings Validation", () => {
       },
     };
 
+    const { default: DataRefreshSettingsComponent } = await import("@/components/settings/DataRefreshSettings");
+    
     render(
-      <DataRefreshSettings
+      <DataRefreshSettingsComponent
         settings={settings}
         handleSettingChange={mockHandleChange}
       />,
@@ -592,7 +621,7 @@ describe("Settings Validation", () => {
 });
 
 describe("Settings Default Values", () => {
-  it("should render with default data refresh values", () => {
+  it("should render with default data refresh values", async () => {
     const mockHandleChange = vi.fn();
     const defaultSettings = {
       dataRefresh: {
@@ -603,8 +632,10 @@ describe("Settings Default Values", () => {
       },
     };
 
+    const { default: DataRefreshSettingsComponent } = await import("@/components/settings/DataRefreshSettings");
+    
     render(
-      <DataRefreshSettings
+      <DataRefreshSettingsComponent
         settings={defaultSettings}
         handleSettingChange={mockHandleChange}
       />,
