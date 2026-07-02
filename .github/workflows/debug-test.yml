@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  debug-full:
+  debug-scada:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -43,28 +43,27 @@ jobs:
           echo "📦 Installing frontend dependencies..."
           pnpm install --frozen-lockfile
 
-      - name: Run Full Test Suite with Diagnostics
+      - name: Run ONLY scadaFixtures test with diagnostics
         env:
-          NODE_OPTIONS: "--max-old-space-size=8192"
+          NODE_OPTIONS: "--max-old-space-size=4096"
           CI: "true"
         run: |
-          echo "📊 Running FULL test suite (simulating main workflow)..."
+          echo "🔍 Debugging scadaFixtures.test.js"
+          echo "Node: $(node --version) | pnpm: $(pnpm --version)"
           
-          timeout 420 pnpm vitest run \
+          TEST_FILE="src/tests/scadaFixtures.test.js"
+          
+          if [ ! -f "$TEST_FILE" ]; then
+            echo "❌ Test file not found: $TEST_FILE"
+            ls -la src/tests/ 2>/dev/null | grep -i scada || echo "No scada files found"
+            exit 1
+          fi
+          
+          echo "✅ Found test file. Running..."
+          
+          npx vitest run "$TEST_FILE" \
             --pool=forks \
-            --poolOptions.forks.singleFork=true \
             --reporter=verbose \
             --reporter=hanging-process \
             --testTimeout=30000 \
-            --logHeapUsage \
-            --coverage \
-            --coverage.reporter=text \
-            --coverage.reporter=json-summary \
-            --testNamePattern="^(?!.*AdminPanel User Creation Form).*" || {
-              EXIT_CODE=$?
-              if [ $EXIT_CODE -eq 124 ]; then
-                echo "⏰ Tests timed out after 7 minutes"
-                echo "This confirms the hang happens during full suite teardown"
-              fi
-              exit $EXIT_CODE
-            }
+            --logHeapUsage || echo "Command exited with code $?"
