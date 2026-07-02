@@ -3,33 +3,34 @@ import "@testing-library/jest-dom";
 import { cleanup } from "@testing-library/react";
 
 /* =========================================================
-   CORE TEST ENVIRONMENT STABILITY LAYER
+   CRITICAL FIX: MUST EXIST BEFORE ANY UI CODE RUNS
+   matchMedia (Radix / Theme / Responsive Fix)
 ========================================================= */
 
-/**
- * CRITICAL FIX:
- * matchMedia MUST always return a valid object synchronously.
- * This prevents: "Cannot read properties of undefined (reading 'matches')"
- */
 Object.defineProperty(window, "matchMedia", {
   writable: true,
   configurable: true,
   value: (query) => {
     return {
+      media: query,
       matches: false,
-      media: query || "",
+
       onchange: null,
-      addListener: () => {},
-      removeListener: () => {},
-      addEventListener: () => {},
-      removeEventListener: () => {},
-      dispatchEvent: () => false,
+
+      // legacy (Radix + older libs still call these)
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+
+      // modern API
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(() => false),
     };
   },
 });
 
 /* =========================================================
-   RESIZE OBSERVER (Radix + charts + layout systems)
+   ResizeObserver (layout / charts / Radix Popovers)
 ========================================================= */
 
 class ResizeObserverMock {
@@ -42,7 +43,20 @@ window.ResizeObserver = ResizeObserverMock;
 global.ResizeObserver = ResizeObserverMock;
 
 /* =========================================================
-   LAYOUT / DOM MEASUREMENT STABILITY
+   IntersectionObserver (lazy loading / charts / dashboards)
+========================================================= */
+
+class IntersectionObserverMock {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
+window.IntersectionObserver = IntersectionObserverMock;
+global.IntersectionObserver = IntersectionObserverMock;
+
+/* =========================================================
+   Layout Stability (Radix / Floating UI / Tooltips)
 ========================================================= */
 
 const stableRect = {
@@ -60,25 +74,27 @@ const stableRect = {
 Element.prototype.getBoundingClientRect = () => stableRect;
 Element.prototype.getClientRects = () => [stableRect];
 
-if (window.HTMLElement) {
-  window.HTMLElement.prototype.scrollIntoView = () => {};
-}
+window.HTMLElement.prototype.scrollIntoView = () => {};
 
 /* =========================================================
-   INTERSECTION OBSERVER (lazy UI / charts / virtualization)
+   Pointer Events (drag / sliders / dashboards)
 ========================================================= */
 
-class IntersectionObserverMock {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
+class PointerEventMock extends Event {
+  constructor(type, props = {}) {
+    super(type, props);
+    this.pointerId = props.pointerId || 1;
+    this.pointerType = props.pointerType || "mouse";
+    this.clientX = props.clientX || 0;
+    this.clientY = props.clientY || 0;
+  }
 }
 
-window.IntersectionObserver = IntersectionObserverMock;
-global.IntersectionObserver = IntersectionObserverMock;
+window.PointerEvent = PointerEventMock;
+global.PointerEvent = PointerEventMock;
 
 /* =========================================================
-   AUDIO CONTEXT (fixes audioPlayer + hooks)
+   AudioContext (charts / dashboards / visualization)
 ========================================================= */
 
 class AudioContextMock {
@@ -103,16 +119,13 @@ class AudioContextMock {
     connect: () => {},
     gain: { value: 1 },
   });
-
-  destination = {};
-  state = "suspended";
 }
 
 global.AudioContext = AudioContextMock;
 global.webkitAudioContext = AudioContextMock;
 
 /* =========================================================
-   STORAGE MOCKS
+   Storage (auth / dashboard state)
 ========================================================= */
 
 class StorageMock {
@@ -130,24 +143,14 @@ global.localStorage = new StorageMock();
 global.sessionStorage = new StorageMock();
 
 /* =========================================================
-   POINTER EVENTS (drag, sliders, Radix interactions)
+   Animation Timing
 ========================================================= */
 
-class PointerEventMock extends Event {
-  constructor(type, props = {}) {
-    super(type, props);
-    this.pointerId = props.pointerId || 1;
-    this.pointerType = props.pointerType || "mouse";
-    this.clientX = props.clientX || 0;
-    this.clientY = props.clientY || 0;
-  }
-}
-
-window.PointerEvent = PointerEventMock;
-global.PointerEvent = PointerEventMock;
+global.requestAnimationFrame = (cb) => setTimeout(cb, 0);
+global.cancelAnimationFrame = (id) => clearTimeout(id);
 
 /* =========================================================
-   CANVAS (charts / graphs / analytics UI)
+   Canvas (charts / graph rendering)
 ========================================================= */
 
 if (window.HTMLCanvasElement) {
@@ -157,6 +160,7 @@ if (window.HTMLCanvasElement) {
     getImageData: () => ({ data: [] }),
     putImageData: () => {},
     createImageData: () => [],
+    setTransform: () => {},
     drawImage: () => {},
     save: () => {},
     restore: () => {},
@@ -165,6 +169,10 @@ if (window.HTMLCanvasElement) {
     lineTo: () => {},
     closePath: () => {},
     stroke: () => {},
+    translate: () => {},
+    scale: () => {},
+    rotate: () => {},
+    arc: () => {},
     fill: () => {},
     measureText: () => ({ width: 0 }),
     transform: () => {},
@@ -174,7 +182,7 @@ if (window.HTMLCanvasElement) {
 }
 
 /* =========================================================
-   NAVIGATOR / CLIPBOARD
+   Navigator clipboard (dashboard copy actions)
 ========================================================= */
 
 global.navigator = {
@@ -186,7 +194,7 @@ global.navigator = {
 };
 
 /* =========================================================
-   WINDOW DIALOGS
+   Window dialogs
 ========================================================= */
 
 global.alert = vi.fn();
@@ -194,7 +202,7 @@ global.confirm = vi.fn(() => true);
 global.prompt = vi.fn(() => "");
 
 /* =========================================================
-   COMPUTED STYLE SAFETY (fix Radix + floating UI edge cases)
+   getComputedStyle (dark mode + responsive safety)
 ========================================================= */
 
 const originalGetComputedStyle = window.getComputedStyle;
@@ -213,11 +221,12 @@ window.getComputedStyle = (el) => {
 };
 
 /* =========================================================
-   CLEANUP (SAFE ONLY - NO DOM DESTRUCTION)
+   GLOBAL CLEANUP (SAFE ONLY)
 ========================================================= */
 
 afterEach(() => {
   cleanup();
+
   vi.clearAllMocks();
   vi.clearAllTimers();
 });
