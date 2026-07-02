@@ -3,10 +3,10 @@ import "@testing-library/jest-dom";
 import { cleanup } from "@testing-library/react";
 
 /* =========================================================
-   LAYER 1: CORE DOM STABILITY (SAFE GLOBAL POLYFILLS)
+   LAYER 1: CORE DOM STABILITY
 ========================================================= */
 
-// matchMedia (Radix / Responsive UI critical)
+// matchMedia (Radix, responsive UI, charts)
 Object.defineProperty(window, "matchMedia", {
   writable: true,
   configurable: true,
@@ -22,20 +22,20 @@ Object.defineProperty(window, "matchMedia", {
   }),
 });
 
-// ResizeObserver (charts, sliders, Radix layout)
+// ResizeObserver (charts, dashboards, sliders)
 class ResizeObserverMock {
   observe() {}
   unobserve() {}
   disconnect() {}
 }
+
 window.ResizeObserver = ResizeObserverMock;
 global.ResizeObserver = ResizeObserverMock;
 
 /* =========================================================
-   LAYER 2: LAYOUT STABILITY (FIX RADIX + FLOATING UI)
+   LAYER 2: LAYOUT STABILITY (RADIX + FLOATING UI SAFE)
 ========================================================= */
 
-// Critical for Popover / Tooltip / Slider / Floating UI
 const stableRect = {
   width: 100,
   height: 100,
@@ -48,19 +48,51 @@ const stableRect = {
   toJSON: () => stableRect,
 };
 
+// Critical for Popover / Tooltip / Slider / Dropdown
 Element.prototype.getBoundingClientRect = () => stableRect;
 Element.prototype.getClientRects = () => [stableRect];
 
-// Prevent layout-dependent crashes in Radix
+// Prevent layout-dependent crashes
 window.HTMLElement.prototype.scrollIntoView = () => {};
 
 /* =========================================================
-   LAYER 3: AUDIO + MEDIA APIs (FIX YOUR MAIN FAILURES)
+   LAYER 3: DASHBOARD / FRAMER MOTION FIX (IMPORTANT ADDITION)
+========================================================= */
+
+// Prevent animation props leaking into DOM (Dashboard crash source)
+vi.mock("framer-motion", async () => {
+  const actual = await vi.importActual("framer-motion");
+
+  return {
+    ...actual,
+    motion: new Proxy(
+      {},
+      {
+        get: () => (props = {}) => {
+          const {
+            whileHover,
+            whileTap,
+            animate,
+            initial,
+            exit,
+            ...safeProps
+          } = props;
+
+          return {
+            type: "div",
+            props: safeProps,
+          };
+        },
+      }
+    ),
+  };
+});
+
+/* =========================================================
+   LAYER 4: AUDIO CONTEXT (MINIMAL STABLE MOCK)
 ========================================================= */
 
 class AudioContextMock {
-  constructor() {}
-
   resume = () => Promise.resolve();
 
   decodeAudioData = () =>
@@ -88,7 +120,7 @@ global.AudioContext = AudioContextMock;
 global.webkitAudioContext = AudioContextMock;
 
 /* =========================================================
-   LAYER 4: STORAGE (SAFE STATE PERSISTENCE MOCK)
+   LAYER 5: STORAGE (SAFE PERSISTENCE MOCK)
 ========================================================= */
 
 class StorageMock {
@@ -106,14 +138,14 @@ global.localStorage = new StorageMock();
 global.sessionStorage = new StorageMock();
 
 /* =========================================================
-   LAYER 5: TIMING + ANIMATION SAFETY
+   LAYER 6: TIMERS / RAF
 ========================================================= */
 
 global.requestAnimationFrame = (cb) => setTimeout(cb, 0);
 global.cancelAnimationFrame = (id) => clearTimeout(id);
 
 /* =========================================================
-   LAYER 6: INTERSECTION OBSERVER (LAZY LOAD COMPONENTS)
+   LAYER 7: INTERSECTION OBSERVER
 ========================================================= */
 
 class IntersectionObserverMock {
@@ -126,7 +158,7 @@ window.IntersectionObserver = IntersectionObserverMock;
 global.IntersectionObserver = IntersectionObserverMock;
 
 /* =========================================================
-   LAYER 7: POINTER EVENTS (DRAGGABLE UI)
+   LAYER 8: POINTER EVENTS
 ========================================================= */
 
 class PointerEventMock extends Event {
@@ -143,7 +175,7 @@ window.PointerEvent = PointerEventMock;
 global.PointerEvent = PointerEventMock;
 
 /* =========================================================
-   LAYER 8: CANVAS (CHARTS, GRAPHICS)
+   LAYER 9: CANVAS (CHART / DASHBOARD GRAPHICS)
 ========================================================= */
 
 HTMLCanvasElement.prototype.getContext = () => ({
@@ -173,7 +205,7 @@ HTMLCanvasElement.prototype.getContext = () => ({
 });
 
 /* =========================================================
-   LAYER 9: NAVIGATOR + CLIPBOARD
+   LAYER 10: NAVIGATOR + CLIPBOARD
 ========================================================= */
 
 global.navigator = {
@@ -185,7 +217,7 @@ global.navigator = {
 };
 
 /* =========================================================
-   LAYER 10: WINDOW DIALOGS (NO SIDE EFFECTS)
+   LAYER 11: WINDOW DIALOGS
 ========================================================= */
 
 global.alert = vi.fn();
@@ -193,32 +225,26 @@ global.confirm = vi.fn(() => true);
 global.prompt = vi.fn(() => "");
 
 /* =========================================================
-   LAYER 11: SAFE COMPUTED STYLE (FIX FLOATING UI EDGE CASES)
+   LAYER 12: COMPUTED STYLE SAFETY
 ========================================================= */
 
 const originalGetComputedStyle = window.getComputedStyle;
 
-window.getComputedStyle = (el) => {
-  const style = originalGetComputedStyle?.(el);
-
-  return (
-    style || {
-      getPropertyValue: () => "",
-      transitionDuration: "0s",
-      animationDuration: "0s",
-      display: "block",
-    }
-  );
-};
+window.getComputedStyle = (el) =>
+  originalGetComputedStyle?.(el) || {
+    getPropertyValue: () => "",
+    transitionDuration: "0s",
+    animationDuration: "0s",
+    display: "block",
+  };
 
 /* =========================================================
-   CLEANUP (SAFE ONLY — NO DOM DESTRUCTION)
+   CLEANUP (SAFE — NO DOM DESTRUCTION)
 ========================================================= */
 
 afterEach(() => {
   cleanup();
 
-  // Only clear mocks, NOT DOM nodes
   vi.clearAllMocks();
   vi.clearAllTimers();
 });
