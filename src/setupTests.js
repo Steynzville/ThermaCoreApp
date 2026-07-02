@@ -405,11 +405,15 @@ global.waitFor = waitFor;
 // Explicitly export testing helpers
 export { fireEvent, render, screen, waitFor, cleanup };
 
-// Global cleanup after each test - simplified to avoid memory issues
+// ============================================
+// GLOBAL CLEANUP AFTER EACH TEST - UPDATED
+// ============================================
+
 afterEach(() => {
   cleanup();
+  
   if (typeof document !== "undefined") {
-    // Only remove specific elements, not everything
+    // Remove Radix UI portal elements
     document
       .querySelectorAll("[data-radix-portal]")
       .forEach((el) => { el.remove(); });
@@ -419,15 +423,43 @@ afterEach(() => {
     document
       .querySelectorAll("[data-radix-popper-content-wrapper]")
       .forEach((el) => { el.remove(); });
-    // Don't remove all dialogs or menus - they might be legitimate
-    // Don't wipe document.body.innerHTML - this causes issues
+    
+    // Clean up any leftover test containers
+    document
+      .querySelectorAll("#root, [data-testid]")
+      .forEach((el) => { 
+        if (el.parentNode) el.parentNode.removeChild(el); 
+      });
+    
+    // Specifically clean up any card-related elements that might be left
+    document
+      .querySelectorAll('[data-slot="card"], [data-slot="card-header"], [data-slot="card-footer"]')
+      .forEach((el) => { 
+        if (el.parentNode) el.parentNode.removeChild(el); 
+      });
+    
+    // Clean up any leftover divs that might be from tests
+    const bodyChildren = document.body.children;
+    for (let i = bodyChildren.length - 1; i >= 0; i--) {
+      const child = bodyChildren[i];
+      // Only remove elements that look like test containers
+      if (child.id === 'root' || 
+          child.getAttribute('data-testid') || 
+          child.className?.includes('test')) {
+        child.remove();
+      }
+    }
   }
   
   vi.clearAllTimers();
   vi.clearAllMocks();
 });
 
-// 3. Suppress persistent React Form console warnings that cause I/O bottlenecks in CI
+// ============================================
+// SUPPRESS CONSOLE WARNINGS
+// ============================================
+
+// Suppress persistent React Form console warnings that cause I/O bottlenecks in CI
 const originalConsoleError = console.error;
 console.error = (...args) => {
   if (
