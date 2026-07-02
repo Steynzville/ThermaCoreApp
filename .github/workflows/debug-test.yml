@@ -17,7 +17,7 @@ on:
 jobs:
   debug-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 60
 
     steps:
       - name: Checkout code
@@ -48,37 +48,74 @@ jobs:
       - name: Install Frontend Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run scadaFixtures only
+      - name: Run each test file individually
         env:
           NODE_OPTIONS: "--max-old-space-size=8192"
           CI: "true"
+        shell: bash
         run: |
-          echo "=================================================="
-          echo "Running ONLY:"
-          echo "src/tests/scadaFixtures.test.js"
-          echo "=================================================="
+          set +e
 
-          timeout 180s pnpm vitest run \
-            src/tests/scadaFixtures.test.js \
-            --pool=forks \
-            --poolOptions.forks.singleFork=true \
-            --poolOptions.forks.maxForks=1 \
-            --reporter=verbose \
-            --testTimeout=60000 \
-            --logHeapUsage
+          echo "========================================"
+          echo "Finding all test files..."
+          echo "========================================"
 
-          EXIT_CODE=$?
+          mapfile -t TEST_FILES < <(
+            find src \
+              \( -name "*.test.js" -o -name "*.test.jsx" \) \
+              | sort
+          )
 
-          echo ""
-          echo "Vitest exit code: $EXIT_CODE"
+          echo "Found ${#TEST_FILES[@]} test files."
 
-          if [ "$EXIT_CODE" = "124" ]; then
+          FAILED=0
+
+          for TEST in "${TEST_FILES[@]}"; do
             echo ""
-            echo "❌ TEST HUNG"
+            echo "============================================================"
+            echo "RUNNING: $TEST"
+            echo "============================================================"
+
+            timeout 180s pnpm vitest run "$TEST" \
+              --pool=forks \
+              --poolOptions.forks.singleFork=true \
+              --poolOptions.forks.maxForks=1 \
+              --reporter=verbose \
+              --testTimeout=60000 \
+              --logHeapUsage
+
+            EXIT_CODE=$?
+
+            if [ "$EXIT_CODE" -eq 124 ]; then
+              echo ""
+              echo "############################################"
+              echo "HANG DETECTED"
+              echo "Test file:"
+              echo "$TEST"
+              echo "############################################"
+              exit 1
+            fi
+
+            if [ "$EXIT_CODE" -ne 0 ]; then
+              echo ""
+              echo "FAILED: $TEST (exit code $EXIT_CODE)"
+              FAILED=1
+            else
+              echo "PASSED: $TEST"
+            fi
+
+            pkill -9 node || true
+            sleep 2
+          done
+
+          if [ "$FAILED" -ne 0 ]; then
+            echo ""
+            echo "Some test files failed, but none hung."
             exit 1
           fi
 
-          exit $EXIT_CODE
+          echo ""
+          echo "SUCCESS: Every test file exited cleanly."
 
       - name: Final Cleanup
         if: always()
