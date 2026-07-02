@@ -1,40 +1,49 @@
-import "@testing-library/jest-dom/vitest";
+import "@testing-library/jest-dom";
 import { vi, beforeAll } from "vitest";
-import React from "react";
 
 /**
  * -----------------------------
- * JSDOM POLYFILLS
+ * GLOBAL MATCHMEDIA FIX (CRITICAL)
+ * -----------------------------
+ * Prevents: Cannot read properties of undefined (reading 'matches')
+ */
+
+const createMatchMedia = (matches = false) => (query) => ({
+  matches,
+  media: query,
+  onchange: null,
+  addListener: vi.fn(),
+  removeListener: vi.fn(),
+  addEventListener: vi.fn(),
+  removeEventListener: vi.fn(),
+  dispatchEvent: vi.fn(),
+});
+
+// Always define it safely BEFORE tests run
+Object.defineProperty(window, "matchMedia", {
+  writable: true,
+  configurable: true,
+  value: createMatchMedia(false),
+});
+
+Object.defineProperty(globalThis, "matchMedia", {
+  writable: true,
+  configurable: true,
+  value: createMatchMedia(false),
+});
+
+/**
+ * -----------------------------
+ * OTHER JSDOM POLYFILLS
  * -----------------------------
  */
 
-// matchMedia (FIXED: responsive-aware mock)
-Object.defineProperty(window, "matchMedia", {
-  writable: true,
-  value: (query) => {
-    const isMobileQuery = query.includes("max-width");
-
-    return {
-      matches: isMobileQuery,
-      media: query,
-      onchange: null,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    };
-  },
-});
-
-// ResizeObserver (Radix, charts, layout libs)
 global.ResizeObserver = class ResizeObserver {
   observe() {}
   unobserve() {}
   disconnect() {}
 };
 
-// IntersectionObserver (charts, lazy UI)
 global.IntersectionObserver = class IntersectionObserver {
   constructor() {}
   observe() {}
@@ -42,13 +51,11 @@ global.IntersectionObserver = class IntersectionObserver {
   disconnect() {}
 };
 
-// scrollTo (navigation + layout behavior)
 Object.defineProperty(window, "scrollTo", {
   value: vi.fn(),
   writable: true,
 });
 
-// getComputedStyle (layout assertions)
 Object.defineProperty(window, "getComputedStyle", {
   value: () => ({
     getPropertyValue: () => "",
@@ -57,36 +64,23 @@ Object.defineProperty(window, "getComputedStyle", {
 
 /**
  * -----------------------------
- * FRAMER MOTION MOCK (SVG SAFE)
+ * FRAMER MOTION MOCK
  * -----------------------------
- * Supports: motion.div, motion.svg, motion.path, motion.g, etc.
+ * Fixes layout/animation instability in JSDOM
  */
-
-vi.mock("framer-motion", () => {
-  const createMock = (Element = "div") => {
-    return ({ children, ...props }) =>
-      React.createElement(Element, props, children);
-  };
-
-  const motion = new Proxy(
-    {},
-    {
-      get: (_, element) => createMock(element),
-    }
-  );
-
-  return {
-    motion,
-    AnimatePresence: ({ children }) => children,
-  };
-});
+vi.mock("framer-motion", () => ({
+  motion: {
+    div: ({ children, ...props }) => {
+      return <div {...props}>{children}</div>;
+    },
+  },
+}));
 
 /**
  * -----------------------------
- * GLOBAL STABILITY
+ * CONSOLE CLEANUP (STABILITY)
  * -----------------------------
  */
-
 beforeAll(() => {
   vi.spyOn(console, "error").mockImplementation(() => {});
   vi.spyOn(console, "warn").mockImplementation(() => {});
