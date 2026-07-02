@@ -1,22 +1,15 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
-import path from 'path';
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  resolve: {
-    alias: {
-      // Fixes: "Failed to resolve import @/lib/utils"
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
   test: {
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/setupTests.js',
     
-    // Maintain isolation while preventing worker deadlocks
+    // Use forks pool for better isolation
     pool: 'forks',
     poolOptions: {
       forks: {
@@ -24,12 +17,10 @@ export default defineConfig({
       },
     },
     
-    // CRITICAL: Forces the runner to kill all processes immediately 
-    // after the test suite finishes, preventing CI hangs.
+    // Critical for CI/CD: force the runner to exit after tests complete
     forceExit: true,
     
-    // Narrow coverage scope to prevent the v8 reporter from 
-    // timing out on large dependency trees.
+    // Surgical coverage configuration to prevent reporter timeouts
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json-summary'],
