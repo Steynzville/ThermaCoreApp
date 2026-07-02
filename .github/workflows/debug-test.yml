@@ -1,4 +1,4 @@
-name: Frontend Test Suite (Node Exit Trace)
+name: Frontend Test Suite (Vitest Defaults)
 
 permissions:
   contents: read
@@ -48,23 +48,17 @@ jobs:
       - name: Install Frontend Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run Frontend Tests with Node Exit Tracing
+      - name: Run Frontend Tests
         env:
           NODE_OPTIONS: "--max-old-space-size=8192"
           CI: "true"
         run: |
-          echo "🧪 Running frontend tests with Node exit tracing..."
+          echo "🧪 Running Vitest with default configuration..."
 
-          node \
-            --trace-exit \
-            --trace-uncaught \
-            ./node_modules/vitest/vitest.mjs run \
+          pnpm vitest run \
             --reporter=verbose \
-            --pool=forks \
-            --poolOptions.forks.singleFork=true \
-            --poolOptions.forks.maxForks=2 \
-            --testTimeout=60000 \
             --logHeapUsage \
+            --testTimeout=60000 \
             --testNamePattern="^(?!.*AdminPanel User Creation Form).*"
 
       - name: Final Cleanup
