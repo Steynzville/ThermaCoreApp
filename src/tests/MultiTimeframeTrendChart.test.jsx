@@ -34,31 +34,49 @@ afterAll(() => {
   vi.restoreAllMocks();
 });
 
+// Create spies for Recharts components
+const lineChartSpy = vi.fn();
+const areaChartSpy = vi.fn();
+const barChartSpy = vi.fn();
+const composedChartSpy = vi.fn();
+
 // Mock Recharts components
 vi.mock("recharts", () => ({
   ResponsiveContainer: ({ children }) => (
     <div data-testid="responsive-container">{children}</div>
   ),
-  LineChart: ({ children, data }) => (
-    <div data-testid="line-chart" data-length={data?.length || 0}>
-      {children}
-    </div>
-  ),
-  AreaChart: ({ children, data }) => (
-    <div data-testid="area-chart" data-length={data?.length || 0}>
-      {children}
-    </div>
-  ),
-  BarChart: ({ children, data }) => (
-    <div data-testid="bar-chart" data-length={data?.length || 0}>
-      {children}
-    </div>
-  ),
-  ComposedChart: ({ children, data }) => (
-    <div data-testid="composed-chart" data-length={data?.length || 0}>
-      {children}
-    </div>
-  ),
+  LineChart: (props) => {
+    lineChartSpy(props);
+    return (
+      <div data-testid="line-chart">
+        {props.children}
+      </div>
+    );
+  },
+  AreaChart: (props) => {
+    areaChartSpy(props);
+    return (
+      <div data-testid="area-chart">
+        {props.children}
+      </div>
+    );
+  },
+  BarChart: (props) => {
+    barChartSpy(props);
+    return (
+      <div data-testid="bar-chart">
+        {props.children}
+      </div>
+    );
+  },
+  ComposedChart: (props) => {
+    composedChartSpy(props);
+    return (
+      <div data-testid="composed-chart">
+        {props.children}
+      </div>
+    );
+  },
   Line: ({ dataKey, stroke }) => (
     <div data-testid={`line-${dataKey}`} data-stroke={stroke} />
   ),
@@ -99,6 +117,10 @@ describe("MultiTimeframeTrendChart", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    lineChartSpy.mockClear();
+    areaChartSpy.mockClear();
+    barChartSpy.mockClear();
+    composedChartSpy.mockClear();
   });
 
   describe("Basic Rendering", () => {
@@ -111,6 +133,7 @@ describe("MultiTimeframeTrendChart", () => {
       expect(titleElements.length).toBeGreaterThan(0);
       const chartElements = screen.getAllByTestId("line-chart");
       expect(chartElements.length).toBeGreaterThan(0);
+      expect(lineChartSpy).toHaveBeenCalled();
     });
 
     it("should render with custom title", () => {
@@ -155,6 +178,10 @@ describe("MultiTimeframeTrendChart", () => {
 
       const charts = screen.getAllByTestId("line-chart");
       expect(charts.length).toBeGreaterThan(0);
+      expect(lineChartSpy).toHaveBeenCalled();
+      expect(areaChartSpy).not.toHaveBeenCalled();
+      expect(barChartSpy).not.toHaveBeenCalled();
+      expect(composedChartSpy).not.toHaveBeenCalled();
     });
 
     it("should render area chart when selected", async () => {
@@ -169,6 +196,10 @@ describe("MultiTimeframeTrendChart", () => {
       await waitFor(() => {
         const charts = screen.getAllByTestId("area-chart");
         expect(charts.length).toBeGreaterThan(0);
+        expect(areaChartSpy).toHaveBeenCalled();
+        expect(lineChartSpy).not.toHaveBeenCalled();
+        expect(barChartSpy).not.toHaveBeenCalled();
+        expect(composedChartSpy).not.toHaveBeenCalled();
       });
     });
 
@@ -184,6 +215,10 @@ describe("MultiTimeframeTrendChart", () => {
       await waitFor(() => {
         const charts = screen.getAllByTestId("bar-chart");
         expect(charts.length).toBeGreaterThan(0);
+        expect(barChartSpy).toHaveBeenCalled();
+        expect(lineChartSpy).not.toHaveBeenCalled();
+        expect(areaChartSpy).not.toHaveBeenCalled();
+        expect(composedChartSpy).not.toHaveBeenCalled();
       });
     });
 
@@ -199,6 +234,10 @@ describe("MultiTimeframeTrendChart", () => {
       await waitFor(() => {
         const charts = screen.getAllByTestId("composed-chart");
         expect(charts.length).toBeGreaterThan(0);
+        expect(composedChartSpy).toHaveBeenCalled();
+        expect(lineChartSpy).not.toHaveBeenCalled();
+        expect(areaChartSpy).not.toHaveBeenCalled();
+        expect(barChartSpy).not.toHaveBeenCalled();
       });
     });
   });
@@ -215,6 +254,7 @@ describe("MultiTimeframeTrendChart", () => {
 
       const chartElements = screen.getAllByTestId("line-chart");
       expect(chartElements.length).toBeGreaterThan(0);
+      expect(lineChartSpy).toHaveBeenCalled();
     });
 
     it("should format time based on timeframe", () => {
@@ -228,6 +268,7 @@ describe("MultiTimeframeTrendChart", () => {
 
       let chartElements = screen.getAllByTestId("line-chart");
       expect(chartElements.length).toBeGreaterThan(0);
+      expect(lineChartSpy).toHaveBeenCalled();
 
       rerender(
         <MultiTimeframeTrendChart
@@ -239,6 +280,7 @@ describe("MultiTimeframeTrendChart", () => {
 
       chartElements = screen.getAllByTestId("line-chart");
       expect(chartElements.length).toBeGreaterThan(0);
+      expect(lineChartSpy).toHaveBeenCalled();
     });
   });
 
@@ -248,8 +290,7 @@ describe("MultiTimeframeTrendChart", () => {
 
       const charts = screen.getAllByTestId("line-chart");
       expect(charts.length).toBeGreaterThan(0);
-      // The mock returns 0 for empty data
-      expect(charts[0]).toHaveAttribute("data-length", "0");
+      expect(lineChartSpy.mock.calls.at(-1)[0].data).toHaveLength(0);
     });
 
     it("should handle missing data prop", () => {
@@ -257,6 +298,7 @@ describe("MultiTimeframeTrendChart", () => {
 
       const chartElements = screen.getAllByTestId("line-chart");
       expect(chartElements.length).toBeGreaterThan(0);
+      expect(lineChartSpy).toHaveBeenCalled();
     });
 
     it("should format data with timestamps", () => {
@@ -266,7 +308,7 @@ describe("MultiTimeframeTrendChart", () => {
 
       const charts = screen.getAllByTestId("line-chart");
       expect(charts.length).toBeGreaterThan(0);
-      expect(charts[0]).toHaveAttribute("data-length", "3");
+      expect(lineChartSpy.mock.calls.at(-1)[0].data).toHaveLength(3);
     });
 
     it("should handle large datasets", () => {
@@ -282,7 +324,7 @@ describe("MultiTimeframeTrendChart", () => {
 
       const charts = screen.getAllByTestId("line-chart");
       expect(charts.length).toBeGreaterThan(0);
-      expect(charts[0]).toHaveAttribute("data-length", "1000");
+      expect(lineChartSpy.mock.calls.at(-1)[0].data).toHaveLength(1000);
     });
   });
 
@@ -300,7 +342,7 @@ describe("MultiTimeframeTrendChart", () => {
       expect(buttons.length).toBeGreaterThan(0);
     });
 
-    it("should call onExport and trigger CSV download when export button is clicked", async () => {
+    it("should call onExport when provided and not trigger download", async () => {
       const onExport = vi.fn();
 
       render(
@@ -317,7 +359,7 @@ describe("MultiTimeframeTrendChart", () => {
         name: /export|download|csv/i 
       });
       
-      // Verify the export button exists (this will fail if the button is missing)
+      // Verify the export button exists
       expect(exportButton).toBeDefined();
       
       // Click the export button
@@ -329,9 +371,42 @@ describe("MultiTimeframeTrendChart", () => {
         expect(onExport).toHaveBeenCalledTimes(1);
       });
       
-      // Verify the CSV download path executed correctly
-      expect(global.URL.createObjectURL).toHaveBeenCalled();
-      expect(HTMLAnchorElement.prototype.click).toHaveBeenCalled();
+      // Verify download functions were NOT called when onExport is provided
+      expect(global.URL.createObjectURL).not.toHaveBeenCalled();
+      expect(HTMLAnchorElement.prototype.click).not.toHaveBeenCalled();
+    });
+
+    it("should trigger CSV download when onExport is not provided", async () => {
+      // Reset mocks before this test
+      vi.clearAllMocks();
+      
+      render(
+        <MultiTimeframeTrendChart
+          data={mockData}
+          metrics={mockMetrics}
+          showControls={true}
+          // onExport is intentionally not provided
+        />,
+      );
+
+      // Find the export button
+      const exportButton = screen.getByRole("button", { 
+        name: /export|download|csv/i 
+      });
+      
+      // Verify the export button exists
+      expect(exportButton).toBeDefined();
+      
+      // Click the export button
+      fireEvent.click(exportButton);
+      
+      // Wait for any async operations
+      await waitFor(() => {
+        // Verify download functions were called
+        expect(global.URL.createObjectURL).toHaveBeenCalledTimes(1);
+        expect(HTMLAnchorElement.prototype.click).toHaveBeenCalledTimes(1);
+        expect(global.URL.revokeObjectURL).toHaveBeenCalledTimes(1);
+      });
     });
 
     it("should not show controls when showControls is false", () => {
@@ -360,6 +435,7 @@ describe("MultiTimeframeTrendChart", () => {
 
       const chartElements = screen.getAllByTestId("line-chart");
       expect(chartElements.length).toBeGreaterThan(0);
+      expect(lineChartSpy).toHaveBeenCalled();
     });
 
     it("should handle metrics with missing data", () => {
@@ -377,6 +453,7 @@ describe("MultiTimeframeTrendChart", () => {
 
       const chartElements = screen.getAllByTestId("line-chart");
       expect(chartElements.length).toBeGreaterThan(0);
+      expect(lineChartSpy).toHaveBeenCalled();
     });
   });
 
@@ -437,6 +514,7 @@ describe("MultiTimeframeTrendChart", () => {
 
       const chartElements = screen.getAllByTestId("line-chart");
       expect(chartElements.length).toBeGreaterThan(0);
+      expect(lineChartSpy).toHaveBeenCalled();
 
       document.documentElement.classList.remove("dark");
     });
@@ -454,6 +532,7 @@ describe("MultiTimeframeTrendChart", () => {
 
       const chartElements = screen.getAllByTestId("line-chart");
       expect(chartElements.length).toBeGreaterThan(0);
+      expect(lineChartSpy).toHaveBeenCalled();
 
       document.documentElement.classList.remove("dark");
     });
@@ -576,6 +655,7 @@ describe("MultiTimeframeTrendChart", () => {
 
       const chartElements = screen.getAllByTestId("line-chart");
       expect(chartElements.length).toBeGreaterThan(0);
+      expect(lineChartSpy).toHaveBeenCalled();
     });
 
     it("should memoize formatted data", () => {
@@ -589,6 +669,7 @@ describe("MultiTimeframeTrendChart", () => {
 
       const chartElements = screen.getAllByTestId("line-chart");
       expect(chartElements.length).toBeGreaterThan(0);
+      expect(lineChartSpy).toHaveBeenCalled();
     });
   });
 
@@ -598,6 +679,7 @@ describe("MultiTimeframeTrendChart", () => {
 
       const chartElements = screen.getAllByTestId("line-chart");
       expect(chartElements.length).toBeGreaterThan(0);
+      expect(lineChartSpy).toHaveBeenCalled();
     });
 
     it("should handle single data point", () => {
@@ -609,7 +691,7 @@ describe("MultiTimeframeTrendChart", () => {
 
       const charts = screen.getAllByTestId("line-chart");
       expect(charts.length).toBeGreaterThan(0);
-      expect(charts[0]).toHaveAttribute("data-length", "1");
+      expect(lineChartSpy.mock.calls.at(-1)[0].data).toHaveLength(1);
     });
 
     it("should handle NaN values in data", () => {
@@ -621,6 +703,7 @@ describe("MultiTimeframeTrendChart", () => {
 
       const chartElements = screen.getAllByTestId("line-chart");
       expect(chartElements.length).toBeGreaterThan(0);
+      expect(lineChartSpy).toHaveBeenCalled();
     });
 
     it("should unmount gracefully", () => {
