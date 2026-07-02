@@ -20,7 +20,7 @@ export default defineConfig({
     pool: 'forks',
     poolOptions: {
       forks: {
-        singleFork: false,
+        singleFork: true,  // Changed to true to avoid memory issues
       },
     },
 
