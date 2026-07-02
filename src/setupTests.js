@@ -8,19 +8,23 @@ import React from "react";
  * -----------------------------
  */
 
-// matchMedia (responsive layouts)
+// matchMedia (FIXED: responsive-aware mock)
 Object.defineProperty(window, "matchMedia", {
   writable: true,
-  value: (query) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  }),
+  value: (query) => {
+    const isMobileQuery = query.includes("max-width");
+
+    return {
+      matches: isMobileQuery,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    };
+  },
 });
 
 // ResizeObserver (Radix, charts, layout libs)
@@ -30,7 +34,7 @@ global.ResizeObserver = class ResizeObserver {
   disconnect() {}
 };
 
-// IntersectionObserver (lazy loading, charts)
+// IntersectionObserver (charts, lazy UI)
 global.IntersectionObserver = class IntersectionObserver {
   constructor() {}
   observe() {}
@@ -38,7 +42,7 @@ global.IntersectionObserver = class IntersectionObserver {
   disconnect() {}
 };
 
-// scrollTo (navigation, layout)
+// scrollTo (navigation + layout behavior)
 Object.defineProperty(window, "scrollTo", {
   value: vi.fn(),
   writable: true,
@@ -53,13 +57,13 @@ Object.defineProperty(window, "getComputedStyle", {
 
 /**
  * -----------------------------
- * FRAMER MOTION MOCK (SAFE + SVG COMPATIBLE)
+ * FRAMER MOTION MOCK (SVG SAFE)
  * -----------------------------
- * FIX: Uses Proxy so motion.div, motion.svg, motion.path, etc. all work
+ * Supports: motion.div, motion.svg, motion.path, motion.g, etc.
  */
 
 vi.mock("framer-motion", () => {
-  const createMockComponent = (Element = "div") => {
+  const createMock = (Element = "div") => {
     return ({ children, ...props }) =>
       React.createElement(Element, props, children);
   };
@@ -67,7 +71,7 @@ vi.mock("framer-motion", () => {
   const motion = new Proxy(
     {},
     {
-      get: (_, element) => createMockComponent(element),
+      get: (_, element) => createMock(element),
     }
   );
 
@@ -79,7 +83,7 @@ vi.mock("framer-motion", () => {
 
 /**
  * -----------------------------
- * GLOBAL STABILITY HOOKS
+ * GLOBAL STABILITY
  * -----------------------------
  */
 
