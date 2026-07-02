@@ -69,18 +69,17 @@ jobs:
             --coverage.reporter=text \
             --coverage.reporter=json-summary \
             --coverage.reportsDirectory=coverage \
-            --testNamePattern="^(?!.*AdminPanel User Creation Form).*" \
-            --no-threads || {
+            --testNamePattern="^(?!.*AdminPanel User Creation Form).*" || {
               EXIT_CODE=$?
               if [ $EXIT_CODE -eq 124 ]; then
-                echo "⚠️ Timed out - checking coverage..."
+                echo "⚠️ Timed out after 8 minutes - checking for coverage..."
                 if [ -f coverage/coverage-summary.json ]; then
-                  echo "✅ Coverage generated successfully"
+                  echo "✅ Coverage files generated successfully"
                   exit 0
                 fi
               fi
               if [ -f coverage/coverage-summary.json ]; then
-                echo "✅ Coverage exists despite issues"
+                echo "✅ Coverage exists - treating as success"
                 exit 0
               fi
               exit $EXIT_CODE
