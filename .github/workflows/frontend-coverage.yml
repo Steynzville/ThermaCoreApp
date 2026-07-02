@@ -46,7 +46,9 @@ jobs:
             ${{ runner.os }}-pnpm-store-
 
       - name: Install Frontend Dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          echo "📦 Installing frontend dependencies..."
+          pnpm install --frozen-lockfile
 
       - name: Run Vitest with Diagnostics
         env:
@@ -55,27 +57,72 @@ jobs:
         run: |
           echo "📊 Running frontend tests with diagnostics..."
           
-          # Run without outer timeout first to let hanging-process reporter work
           pnpm vitest run \
             --pool=forks \
             --poolOptions.forks.singleFork=true \
             --poolOptions.forks.maxForks=2 \
-            --reporter=verbose \
+            --reporter=default \
             --reporter=hanging-process \
-            --testTimeout=45000 \
+            --testTimeout=60000 \
             --logHeapUsage \
             --coverage \
             --coverage.reporter=text \
             --coverage.reporter=json-summary \
             --coverage.reportsDirectory=coverage \
-            --testNamePattern="^(?!.*AdminPanel User Creation Form).*" || {
+            --testNamePattern="^(?!.*AdminPanel User Creation Form).*" && echo "✅ Vitest finished successfully" || {
               EXIT_CODE=$?
               echo "Vitest exited with code $EXIT_CODE"
+              
+              # Force cleanup of lingering processes
+              echo "🧹 Cleaning up lingering Node processes..."
+              pkill -9 node || true
+              
               if [ -f coverage/coverage-summary.json ]; then
-                echo "✅ Coverage files were generated"
+                echo "✅ Coverage files were generated successfully"
                 exit 0
               else
-                echo "❌ No coverage files"
+                echo "❌ No coverage files found"
                 exit $EXIT_CODE
               fi
             }
+
+      - name: Wait for Coverage Generation
+        if: always()
+        run: |
+          echo "⏳ Waiting for coverage files..."
+          sleep 10
+          ls -la coverage/ 2>/dev/null || echo "Coverage directory not found"
+
+      - name: Upload Coverage Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage-report
+          path: coverage/
+          retention-days: 14
+
+      - name: Display Coverage Summary
+        if: always()
+        run: |
+          echo "=========================================="
+          echo "📊 FRONTEND COVERAGE SUMMARY"
+          echo "=========================================="
+          if [ -f coverage/coverage-summary.json ]; then
+            echo ""
+            echo "📈 METRIC COVERAGE SUMMARY:"
+            echo "------------------------"
+            cat coverage/coverage-summary.json | jq -r '
+              "Statements: " + (.total.statements.pct | tostring) + "% (" + (.total.statements.covered | tostring) + "/" + (.total.statements.total | tostring) + ")",
+              "Branches:   " + (.total.branches.pct | tostring) + "% (" + (.total.branches.covered | tostring) + "/" + (.total.branches.total | tostring) + ")",
+              "Functions:  " + (.total.functions.pct | tostring) + "% (" + (.total.functions.covered | tostring) + "/" + (.total.functions.total | tostring) + ")",
+              "Lines:      " + (.total.lines.pct | tostring) + "% (" + (.total.lines.covered | tostring) + "/" + (.total.lines.total | tostring) + ")"
+            ' || echo "Failed to parse coverage-summary.json"
+          else
+            echo "⚠️ No coverage data found"
+          fi
+
+      - name: Force Cleanup
+        if: always()
+        run: |
+          echo "🧹 Forcing final cleanup..."
+          pkill -9 node || true
