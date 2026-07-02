@@ -431,4 +431,15 @@ afterEach(() => {
 afterAll(() => {
   vi.resetModules();
   vi.restoreAllMocks();
-}); 
+});
+// 3. Suppress persistent React Form console warnings that cause I/O bottlenecks in CI
+const originalConsoleError = console.error;
+console.error = (...args) => {
+  if (
+    typeof args[0] === 'string' && 
+    args[0].includes('You provided a `value` prop to a form field without an `onChange` handler')
+  ) {
+    return; // Silently swallow these warnings during tests
+  }
+  originalConsoleError(...args);
+};
