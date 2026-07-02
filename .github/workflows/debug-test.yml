@@ -1,7 +1,10 @@
 name: Debug SCADA Test
 
 on:
-  workflow_dispatch: # Allows you to trigger this manually from the Actions tab
+  push:
+    branches:
+      - main # Or your specific branch
+  workflow_dispatch: # This allows the manual "Run workflow" button
 
 jobs:
   test:
@@ -10,14 +13,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20 # Try 20 explicitly to see if Node 24 is the trigger
+          node-version: 20
 
       - name: Install dependencies
         run: pnpm install
 
-      - name: Run specific test
-        # Replace 'vitest' with 'jest' or your specific test runner command
+      - name: Run Vitest
         run: npx vitest run src/tests/scadaFixtures.test.js
