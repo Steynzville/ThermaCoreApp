@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom";
-import { vi, beforeAll } from "vitest";
+import { vi, beforeAll, beforeEach } from "vitest";
 import React from "react";
 
 /**
@@ -58,6 +58,52 @@ Object.defineProperty(window, "getComputedStyle", {
   value: () => ({
     getPropertyValue: () => "",
   }),
+});
+
+/**
+ * -----------------------------
+ * FILE DOWNLOAD / BLOB POLYFILLS
+ * -----------------------------
+ */
+
+// Blob URL APIs used by CSV/PDF export functionality
+if (!global.URL.createObjectURL) {
+  global.URL.createObjectURL = vi.fn(() => "blob:test");
+}
+
+if (!global.URL.revokeObjectURL) {
+  global.URL.revokeObjectURL = vi.fn();
+}
+
+// Spy on the native anchor click implementation so tests can verify downloads
+const anchorClickSpy = vi
+  .spyOn(HTMLAnchorElement.prototype, "click")
+  .mockImplementation(() => {});
+
+// Optional browser APIs that some components may use
+if (!window.open) {
+  window.open = vi.fn();
+}
+
+if (!navigator.msSaveBlob) {
+  navigator.msSaveBlob = vi.fn();
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+
+  global.URL.createObjectURL.mockClear();
+  global.URL.revokeObjectURL.mockClear();
+
+  anchorClickSpy.mockClear();
+
+  if (window.open.mockClear) {
+    window.open.mockClear();
+  }
+
+  if (navigator.msSaveBlob.mockClear) {
+    navigator.msSaveBlob.mockClear();
+  }
 });
 
 /**
