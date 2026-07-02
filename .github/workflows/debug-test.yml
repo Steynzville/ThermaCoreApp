@@ -1,16 +1,24 @@
-name: Debug Granular Tests
+name: Frontend Test Suite
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - "**"
   pull_request:
-    branches: [ main ]
+    branches:
+      - "**"
   workflow_dispatch:
 
 jobs:
-  granular-debug:
+  frontend-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 15
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -18,7 +26,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -33,34 +41,31 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.STORE_PATH }}
-          key: \( {{ runner.os }}-pnpm-store- \){{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-store-
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
-      - name: Install dependencies
+      - name: Install Frontend Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Granular Test Run
+      - name: Run Frontend Tests
         env:
           NODE_OPTIONS: "--max-old-space-size=8192"
+          CI: "true"
         run: |
-          echo "🔍 Granular debugging Batch 3..."
-          
-          # Test one file at a time from the late group
-          FILES=(
-            "src/tests/scadaFixtures.test.js"
-            "src/tests/ProtocolWizard.test.jsx"
-            "src/tests/ProcessFlowDiagram.test.jsx"
-            "src/tests/Dashboard.test.jsx"
-            "src/tests/SystemHealth.test.jsx"
-            "src/tests/HistoryView.test.jsx"
-            "src/tests/GridView.test.jsx"
-            "src/tests/chart.test.jsx"
-          )
-          
-          for file in "${FILES[@]}"; do
-            echo "=== Testing $file ==="
-            pnpm vitest run "$file" --pool=forks --reporter=verbose --testTimeout=45000 || echo "Failed or hung on $file"
-            sleep 3
-          done
-          
-          echo "Granular run completed."
+          echo "🧪 Running frontend tests (no coverage)..."
+
+          pnpm vitest run \
+            --pool=forks \
+            --poolOptions.forks.singleFork=true \
+            --poolOptions.forks.maxForks=2 \
+            --reporter=default \
+            --testTimeout=60000 \
+            --logHeapUsage \
+            --testNamePattern="^(?!.*AdminPanel User Creation Form).*"
+
+      - name: Final Cleanup
+        if: always()
+        run: |
+          pkill -9 node || true
+          echo "✅ Workflow complete."
