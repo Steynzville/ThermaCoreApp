@@ -1,12 +1,12 @@
+import "@testing-library/jest-dom";
 import { vi, beforeAll } from "vitest";
 
 /**
- * -------------------------------------------------------
- * JSDOM GLOBAL POLYFILLS
- * -------------------------------------------------------
+ * -----------------------------
+ * JSDOM POLYFILLS
+ * -----------------------------
  */
 
-// matchMedia fix (dashboard responsive + dark mode + layout tests)
 Object.defineProperty(window, "matchMedia", {
   writable: true,
   value: (query) => ({
@@ -21,14 +21,12 @@ Object.defineProperty(window, "matchMedia", {
   }),
 });
 
-// ResizeObserver fix (Radix UI, charts, layout systems)
 global.ResizeObserver = class ResizeObserver {
   observe() {}
   unobserve() {}
   disconnect() {}
 };
 
-// IntersectionObserver fix (charts, lazy rendering, animations)
 global.IntersectionObserver = class IntersectionObserver {
   constructor() {}
   observe() {}
@@ -36,13 +34,11 @@ global.IntersectionObserver = class IntersectionObserver {
   disconnect() {}
 };
 
-// scrollTo fix (navigation + UI libraries)
 Object.defineProperty(window, "scrollTo", {
   value: vi.fn(),
   writable: true,
 });
 
-// getComputedStyle fix (layout/styling tests)
 Object.defineProperty(window, "getComputedStyle", {
   value: () => ({
     getPropertyValue: () => "",
@@ -50,10 +46,9 @@ Object.defineProperty(window, "getComputedStyle", {
 });
 
 /**
- * -------------------------------------------------------
+ * -----------------------------
  * FRAMER MOTION MOCK
- * -------------------------------------------------------
- * Prevents animation-related instability in tests
+ * -----------------------------
  */
 vi.mock("framer-motion", () => ({
   motion: {
@@ -68,9 +63,9 @@ vi.mock("framer-motion", () => ({
 }));
 
 /**
- * -------------------------------------------------------
- * GLOBAL TEST STABILITY HOOKS
- * -------------------------------------------------------
+ * -----------------------------
+ * GLOBAL STABILITY
+ * -----------------------------
  */
 beforeAll(() => {
   vi.spyOn(console, "error").mockImplementation(() => {});
