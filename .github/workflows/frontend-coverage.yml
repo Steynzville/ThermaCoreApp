@@ -1,76 +1,88 @@
-name: Frontend Coverage Report
+import { vi } from "vitest";
+import { cleanup } from "@testing-library/react";
+import { afterEach } from "vitest";
+import "@testing-library/jest-dom";
 
-permissions:
-  contents: read
-  pull-requests: write
-  checks: write
+// Global fireEvent, render, screen, waitFor
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+global.fireEvent = fireEvent;
+global.render = render;
+global.screen = screen;
+global.waitFor = waitFor;
 
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
-  workflow_dispatch:
+// Basic mocks
+vi.mock("sonner", () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+    warning: vi.fn(),
+    info: vi.fn(),
+  },
+  Toaster: () => null,
+}));
 
-jobs:
-  frontend-coverage:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+// Essential mocks
+if (typeof window !== "undefined") {
+  // matchMedia
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    value: vi.fn().mockImplementation((query) => ({
+      matches: query.includes("min-width"),
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+  // Storage
+  const createStorageMock = () => {
+    let store = {};
+    return {
+      getItem: (key) => store[key] || null,
+      setItem: (key, value) => { store[key] = String(value); },
+      removeItem: (key) => { delete store[key]; },
+      clear: () => { store = {}; },
+      length: 0,
+      key: () => null,
+    };
+  };
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          run_install: false
+  window.localStorage = createStorageMock();
+  window.sessionStorage = createStorageMock();
+  global.localStorage = window.localStorage;
+  global.sessionStorage = window.sessionStorage;
 
-      - name: Get pnpm store directory
-        shell: bash
-        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+  // Other essential mocks
+  window.scrollTo = vi.fn();
+  window.Image = vi.fn().mockImplementation(() => ({
+    onload: null,
+    src: "",
+  }));
 
-      - name: Setup pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.STORE_PATH }}
-          key: \( {{ runner.os }}-pnpm-store- \){{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-store-
+  window.ResizeObserver = vi.fn(() => ({
+    observe: vi.fn(),
+    unobserve: vi.fn(),
+    disconnect: vi.fn(),
+  }));
 
-      - name: Install Frontend Dependencies
-        run: pnpm install --frozen-lockfile
+  window.IntersectionObserver = vi.fn(() => ({
+    observe: vi.fn(),
+    unobserve: vi.fn(),
+    disconnect: vi.fn(),
+  }));
+}
 
-      - name: Run Full Test Suite
-        env:
-          NODE_OPTIONS: "--max-old-space-size=8192"
-          CI: "true"
-        run: |
-          echo "📊 Running frontend coverage..."
-          
-          pnpm vitest run \
-            --pool=forks \
-            --poolOptions.forks.singleFork=true \
-            --poolOptions.forks.maxForks=2 \
-            --reporter=default \
-            --testTimeout=60000 \
-            --logHeapUsage \
-            --coverage \
-            --coverage.reporter=text \
-            --coverage.reporter=json-summary \
-            --coverage.reportsDirectory=coverage \
-            --testNamePattern="^(?!.*AdminPanel User Creation Form).*" || {
-              EXIT_CODE=$?
-              echo "Tests exited with code $EXIT_CODE"
-              pkill -9 node || true
-              if [ -f coverage/coverage-summary.json ]; then
-                echo "✅ Coverage generated successfully"
-                exit 0
-              fi
-              exit $EXIT_CODE
-            }
+// Cleanup
+afterEach(() => {
+  cleanup();
+  vi.clearAllMocks();
+  vi.clearAllTimers();
+  
+  if (typeof document !== "undefined") {
+    document.querySelectorAll("[data-radix-portal], [data-radix-focus-guard]").forEach(el => el.remove());
+  }
+});
