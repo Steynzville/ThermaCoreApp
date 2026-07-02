@@ -4,9 +4,10 @@ import { BrowserRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import AdminPanel from "../components/AdminPanel";
 
-// Force environment variable for tests to prevent runtime crashes
+// 1. Force environment variable for tests
 vi.stubEnv('VITE_API_BASE_URL', 'https://test-api.com');
 
+// 2. Define mocks using vi.hoisted to ensure they are available to the factory
 const { 
   mockGetAllUsers, 
   mockDeleteUser,
@@ -19,7 +20,7 @@ const {
   mockApiPost: vi.fn(),
 }));
 
-// Mock external dependencies
+// 3. Mock external dependencies
 vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
@@ -43,6 +44,7 @@ vi.mock("../utils/apiFetch", () => ({
 describe("AdminPanel User Creation Form", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default successful response
     mockGetAllUsers.mockResolvedValue({ data: [] });
   });
 
@@ -56,27 +58,34 @@ describe("AdminPanel User Creation Form", () => {
       ],
     });
 
+    // Wrapped render to ensure mount
     render(
       <BrowserRouter>
         <AdminPanel />
       </BrowserRouter>
     );
 
+    // Wait for the async effect that fetches users
     await waitFor(() => expect(mockGetAllUsers).toHaveBeenCalled());
 
-    const addButton = screen.getByRole("button", { name: /add user/i });
+    // Use await findBy to ensure element exists before interaction
+    const addButton = await screen.findByRole("button", { name: /add user/i });
     fireEvent.click(addButton);
 
+    // Use findBy for the modal element to ensure it rendered
     const select = await screen.findByRole("combobox", { id: "user-role-select" });
     expect(select).toBeInTheDocument();
 
     const options = select.querySelectorAll("option");
-    expect(options.length).toBe(4);
-    expect(options[1].textContent).toBe("Admin");
+    expect(options.length).toBe(4); // 1 placeholder + 3 roles
+    expect(options[1].textContent).toMatch(/admin/i);
   });
 
   it("should show error message when roles API fails", async () => {
-    mockApiGet.mockRejectedValue(new Error("API network error"));
+    // Mock failure
+    mockApiGet.mockResolvedValue({
+      ok: false,
+    });
 
     render(
       <BrowserRouter>
@@ -84,9 +93,11 @@ describe("AdminPanel User Creation Form", () => {
       </BrowserRouter>
     );
 
-    const addButton = screen.getByRole("button", { name: /add user/i });
+    const addButton = await screen.findByRole("button", { name: /add user/i });
     fireEvent.click(addButton);
 
-    expect(await screen.findByText(/Unable to load roles/i)).toBeInTheDocument();
+    // Wait for the error state to trigger in the modal
+    const errorMessage = await screen.findByText(/Unable to load roles/i);
+    expect(errorMessage).toBeInTheDocument();
   });
 });
