@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
-import React from "react";
 import { vi, beforeAll } from "vitest";
+import React from "react";
 
 /**
  * -----------------------------
@@ -8,7 +8,7 @@ import { vi, beforeAll } from "vitest";
  * -----------------------------
  */
 
-// matchMedia (fix responsive tests)
+// matchMedia (responsive layouts)
 Object.defineProperty(window, "matchMedia", {
   writable: true,
   value: (query) => ({
@@ -23,14 +23,14 @@ Object.defineProperty(window, "matchMedia", {
   }),
 });
 
-// ResizeObserver (Radix + charts)
+// ResizeObserver (Radix, charts, layout libs)
 global.ResizeObserver = class ResizeObserver {
   observe() {}
   unobserve() {}
   disconnect() {}
 };
 
-// IntersectionObserver (charts + lazy UI)
+// IntersectionObserver (lazy loading, charts)
 global.IntersectionObserver = class IntersectionObserver {
   constructor() {}
   observe() {}
@@ -38,7 +38,7 @@ global.IntersectionObserver = class IntersectionObserver {
   disconnect() {}
 };
 
-// scrollTo (navigation + layout tests)
+// scrollTo (navigation, layout)
 Object.defineProperty(window, "scrollTo", {
   value: vi.fn(),
   writable: true,
@@ -53,28 +53,33 @@ Object.defineProperty(window, "getComputedStyle", {
 
 /**
  * -----------------------------
- * FRAMER MOTION MOCK (SAFE REACT VERSION)
+ * FRAMER MOTION MOCK (SAFE + SVG COMPATIBLE)
  * -----------------------------
+ * FIX: Uses Proxy so motion.div, motion.svg, motion.path, etc. all work
  */
 
 vi.mock("framer-motion", () => {
-  const MotionComponent = ({ children, ...props }) =>
-    React.createElement("div", props, children);
+  const createMockComponent = (Element = "div") => {
+    return ({ children, ...props }) =>
+      React.createElement(Element, props, children);
+  };
+
+  const motion = new Proxy(
+    {},
+    {
+      get: (_, element) => createMockComponent(element),
+    }
+  );
 
   return {
-    motion: {
-      div: MotionComponent,
-      span: MotionComponent,
-      button: MotionComponent,
-      section: MotionComponent,
-    },
+    motion,
     AnimatePresence: ({ children }) => children,
   };
 });
 
 /**
  * -----------------------------
- * GLOBAL STABILITY
+ * GLOBAL STABILITY HOOKS
  * -----------------------------
  */
 
