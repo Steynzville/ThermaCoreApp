@@ -20,11 +20,16 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: "./src/setupTests.js",
 
-    // Use Vitest defaults for process management.
-    // Removing custom pool settings helps determine whether
-    // worker lifecycle management is contributing to the hang.
-
+    // Keep defaults while isolating the hanging test.
+    watch: false,
     testTimeout: 60000,
+    hookTimeout: 60000,
+    teardownTimeout: 60000,
+
+    // Run test files sequentially for deterministic debugging.
+    sequence: {
+      concurrent: false,
+    },
 
     coverage: {
       provider: "v8",
