@@ -14,8 +14,25 @@
  */
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import MultiTimeframeTrendChart from "@/components/visualization/MultiTimeframeTrendChart";
+
+// Mock browser APIs that may not be available in JSDOM
+beforeAll(() => {
+  global.URL.createObjectURL = vi.fn(() => "blob:test");
+  global.URL.revokeObjectURL = vi.fn();
+  HTMLAnchorElement.prototype.click = vi.fn();
+  
+  // Mock window.open for potential export functionality
+  global.window.open = vi.fn();
+  
+  // Mock navigator.msSaveBlob for IE support
+  global.navigator.msSaveBlob = vi.fn();
+});
+
+afterAll(() => {
+  vi.restoreAllMocks();
+});
 
 // Mock Recharts components
 vi.mock("recharts", () => ({
@@ -283,7 +300,7 @@ describe("MultiTimeframeTrendChart", () => {
       expect(buttons.length).toBeGreaterThan(0);
     });
 
-    it("should call onExport when provided", async () => {
+    it("should call onExport and trigger CSV download when export button is clicked", async () => {
       const onExport = vi.fn();
 
       render(
@@ -295,20 +312,26 @@ describe("MultiTimeframeTrendChart", () => {
         />,
       );
 
-      const buttons = screen.getAllByRole("button");
-      const exportButton = buttons.find(
-        (btn) =>
-          btn.textContent?.toLowerCase().includes("export") ||
-          btn.querySelector('[data-lucide="download"]'),
-      );
-
-      if (exportButton) {
-        fireEvent.click(exportButton);
-        expect(onExport).toHaveBeenCalled();
-      } else {
-        // If no export button, the test passes (component might not render it)
-        expect(true).toBe(true);
-      }
+      // Find the export button - it should exist when showControls={true}
+      const exportButton = screen.getByRole("button", { 
+        name: /export|download|csv/i 
+      });
+      
+      // Verify the export button exists (this will fail if the button is missing)
+      expect(exportButton).toBeDefined();
+      
+      // Click the export button
+      fireEvent.click(exportButton);
+      
+      // Wait for any async operations
+      await waitFor(() => {
+        // Verify onExport was called exactly once
+        expect(onExport).toHaveBeenCalledTimes(1);
+      });
+      
+      // Verify the CSV download path executed correctly
+      expect(global.URL.createObjectURL).toHaveBeenCalled();
+      expect(HTMLAnchorElement.prototype.click).toHaveBeenCalled();
     });
 
     it("should not show controls when showControls is false", () => {
