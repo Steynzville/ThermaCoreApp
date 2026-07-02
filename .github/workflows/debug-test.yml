@@ -1,82 +1,96 @@
-name: Isolate Hanging Test
+name: Debug Hanging Test
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
 
 on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
-  isolate:
+  debug-test:
     runs-on: ubuntu-latest
-
-    strategy:
-      fail-fast: false
-      matrix:
-        testfile:
-          - src/tests/ProtocolWizard.test.jsx
-          - src/tests/ProcessFlowDiagram.test.jsx
-          - src/tests/Dashboard.test.jsx
-          - src/tests/SystemHealth.test.jsx
-          - src/tests/HistoryView.test.jsx
-          - src/tests/GridView.test.jsx
-          - src/tests/chart.test.jsx
-          - src/tests/MultiTimeframeTrendChart.test.jsx
-          - src/tests/RealtimeScadaDashboard.test.jsx
-          - src/tests/Settings.test.jsx
-          - src/tests/AdminPanel.validation.test.jsx
-          - src/tests/IndustrialGauge.test.jsx
-          - src/tests/NotificationBell.test.jsx
-          - src/tests/MultiProtocolManager.enhanced.test.jsx
-          - src/components/RemoteControl.test.jsx
-          - src/tests/AdminPanel.test.jsx
-          - src/tests/AlarmsView.test.jsx
-          - src/tests/UnitPerformance.test.jsx
-          - src/tests/UnitSummary.test.jsx
-          - src/tests/EnhancedStatusDial.test.jsx
-          - src/tests/VitalSignGraph.test.jsx
-          - src/tests/ReportsView.test.jsx
-          - src/tests/AlertsView.test.jsx
-          - src/tests/SideNavigation.test.jsx
-          - src/tests/ReportConfigurator.test.jsx
-          - src/tests/UserRegistrationForm.test.jsx
-          - src/components/PasswordResetRequest.test.jsx
-          - src/components/MobileNavigation.test.jsx
-          - src/tests/PerformanceDashboard.test.jsx
-          - src/tests/LoginScreen.test.jsx
-          - src/components/UserApprovalPanel.test.jsx
-          - src/pages/Dashboard.test.jsx
-          - src/tests/AdminPanel.userCreation.test.jsx
-          - src/pages/DocumentsPage.test.jsx
-          - src/components/StatusDial.test.jsx
-          - src/components/ViewAnalytics.test.jsx
-          - src/components/AdminPanel.test.jsx
-          - src/tests/DeviceStatusDashboard.test.jsx
-          - src/tests/AdvancedAnalyticsDashboard.test.jsx
+    timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
+          node-version: "20"
 
-      - run: npm ci
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
 
-      - name: Run ${{ matrix.testfile }}
+      - name: Get pnpm store directory
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install Frontend Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run scadaFixtures only
+        env:
+          NODE_OPTIONS: "--max-old-space-size=8192"
+          CI: "true"
         run: |
-          echo "=========================================="
-          echo "Running ${{ matrix.testfile }}"
-          echo "=========================================="
+          echo "=================================================="
+          echo "Running ONLY:"
+          echo "src/tests/scadaFixtures.test.js"
+          echo "=================================================="
 
-          timeout 120s npx vitest run "${{ matrix.testfile }}" \
+          timeout 180s pnpm vitest run \
+            src/tests/scadaFixtures.test.js \
+            --pool=forks \
+            --poolOptions.forks.singleFork=true \
+            --poolOptions.forks.maxForks=1 \
             --reporter=verbose \
-            --runInBand
+            --testTimeout=60000 \
+            --logHeapUsage
 
           EXIT_CODE=$?
 
           echo ""
-          echo "Exit code: $EXIT_CODE"
+          echo "Vitest exit code: $EXIT_CODE"
 
           if [ "$EXIT_CODE" = "124" ]; then
-            echo "❌ THIS TEST HUNG"
+            echo ""
+            echo "❌ TEST HUNG"
             exit 1
           fi
+
+          exit $EXIT_CODE
+
+      - name: Final Cleanup
+        if: always()
+        run: |
+          pkill -9 node || true
+          echo "Cleanup complete."
+
+      - name: Upload Coverage Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-artifacts
+          path: coverage/
+          if-no-files-found: ignore
+          retention-days: 7
