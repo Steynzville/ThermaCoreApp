@@ -1,17 +1,19 @@
 import { vi, beforeAll } from "vitest";
 
-// -------------------------------
-// GLOBAL JSDOM FIXES
-// -------------------------------
+/**
+ * -------------------------------------------------------
+ * GLOBAL JSDOM POLYFILLS (fix dashboard + Radix + charts)
+ * -------------------------------------------------------
+ */
 
-// 1. FIX matchMedia (CRITICAL)
+// FIX: matchMedia (CRITICAL for dashboard layout + dark mode + responsive tests)
 Object.defineProperty(window, "matchMedia", {
   writable: true,
   value: (query) => ({
-    matches: false, // default safe value
+    matches: false,
     media: query,
     onchange: null,
-    addListener: vi.fn(), // deprecated but used in libs
+    addListener: vi.fn(),
     removeListener: vi.fn(),
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
@@ -19,14 +21,14 @@ Object.defineProperty(window, "matchMedia", {
   }),
 });
 
-// 2. FIX ResizeObserver (Radix/UI + charts dependency)
+// FIX: ResizeObserver (Radix UI, charts, layout libs)
 global.ResizeObserver = class ResizeObserver {
   observe() {}
   unobserve() {}
   disconnect() {}
 };
 
-// 3. FIX IntersectionObserver (charts + lazy UI)
+// FIX: IntersectionObserver (charts, lazy rendering, animations)
 global.IntersectionObserver = class IntersectionObserver {
   constructor() {}
   observe() {}
@@ -34,31 +36,35 @@ global.IntersectionObserver = class IntersectionObserver {
   disconnect() {}
 };
 
-// 4. FIX scroll APIs (Radix + animations)
+// FIX: scroll APIs (UI libraries + navigation animations)
 Object.defineProperty(window, "scrollTo", {
   value: vi.fn(),
   writable: true,
 });
 
-// 5. FIX getComputedStyle (layout tests)
+// FIX: getComputedStyle (layout + styling tests)
 Object.defineProperty(window, "getComputedStyle", {
   value: () => ({
     getPropertyValue: () => "",
   }),
 });
 
-// -------------------------------
-// FRAMER MOTION SAFETY
-// -------------------------------
+/**
+ * -------------------------------------------------------
+ * MOCK FRAMER MOTION (prevents animation-related instability)
+ * -------------------------------------------------------
+ */
 vi.mock("framer-motion", () => ({
   motion: {
     div: ({ children, ...props }) => <div {...props}>{children}</div>,
   },
 }));
 
-// -------------------------------
-// CONSOLE CLEANUP (optional but helpful)
-// -------------------------------
+/**
+ * -------------------------------------------------------
+ * GLOBAL CONSOLE CLEANUP (optional but stabilizes CI logs)
+ * -------------------------------------------------------
+ */
 beforeAll(() => {
   vi.spyOn(console, "error").mockImplementation(() => {});
   vi.spyOn(console, "warn").mockImplementation(() => {});
