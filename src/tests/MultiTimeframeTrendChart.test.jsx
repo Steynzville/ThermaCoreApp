@@ -338,8 +338,10 @@ describe("MultiTimeframeTrendChart", () => {
         />,
       );
 
+      // Find button by text content instead of role name
       const buttons = screen.getAllByRole("button");
-      expect(buttons.length).toBeGreaterThan(0);
+      const exportButton = buttons.find(btn => btn.textContent?.includes("Export"));
+      expect(exportButton).toBeDefined();
     });
 
     it("should call onExport when provided and not trigger download", async () => {
@@ -354,16 +356,17 @@ describe("MultiTimeframeTrendChart", () => {
         />,
       );
 
-      // Find the export button - it should exist when showControls={true}
-      const exportButton = screen.getByRole("button", { 
-        name: /export|download|csv/i 
-      });
+      // Find the export button by text content
+      const buttons = screen.getAllByRole("button");
+      const exportButton = buttons.find(btn => btn.textContent?.includes("Export"));
       
       // Verify the export button exists
       expect(exportButton).toBeDefined();
       
       // Click the export button
-      fireEvent.click(exportButton);
+      if (exportButton) {
+        fireEvent.click(exportButton);
+      }
       
       // Wait for any async operations
       await waitFor(() => {
@@ -389,16 +392,17 @@ describe("MultiTimeframeTrendChart", () => {
         />,
       );
 
-      // Find the export button
-      const exportButton = screen.getByRole("button", { 
-        name: /export|download|csv/i 
-      });
+      // Find the export button by text content
+      const buttons = screen.getAllByRole("button");
+      const exportButton = buttons.find(btn => btn.textContent?.includes("Export"));
       
       // Verify the export button exists
       expect(exportButton).toBeDefined();
       
       // Click the export button
-      fireEvent.click(exportButton);
+      if (exportButton) {
+        fireEvent.click(exportButton);
+      }
       
       // Wait for any async operations
       await waitFor(() => {
