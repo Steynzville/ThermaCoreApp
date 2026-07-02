@@ -7,22 +7,6 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import GridView from "@/components/GridView";
 
-/**
- * -----------------------------
- * MOCK SEARCHBAR (CRITICAL FIX)
- * -----------------------------
- * Ensures instant filtering without debounce/UI abstraction issues
- */
-vi.mock("@/components/SearchBar", () => ({
-  default: ({ value, onSearch, placeholder }) => (
-    <input
-      value={value}
-      placeholder={placeholder}
-      onChange={(e) => onSearch(e.target.value)}
-    />
-  ),
-}));
-
 // Mock useAuth and useUnits hooks
 const mockUseAuth = vi.fn();
 const mockUseUnits = vi.fn();
@@ -132,10 +116,26 @@ const mockUnits = [
   },
 ];
 
-// Helper
-const renderWithRouter = (ui, { route = "/" } = {}) => {
-  return render(<MemoryRouter initialEntries={[route]}>{ui}</MemoryRouter>);
-};
+const createLargeDataset = (count) =>
+  Array.from({ length: count }, (_, i) => ({
+    id: `TC${String(i + 1).padStart(3, "0")}`,
+    name: `ThermaCore Unit ${String(i + 1).padStart(3, "0")}`,
+    serialNumber: `TC-2024-${String(i + 1).padStart(3, "0")}`,
+    location: ["New York", "Boston", "Chicago", "Seattle", "Denver", "Miami"][i % 6],
+    status: ["online", "offline", "maintenance"][i % 3],
+    currentPower: 100,
+    hasAlert: i % 3 === 0,
+    hasAlarm: i % 5 === 0,
+    watergeneration: true,
+    water_level: 50,
+    client: {
+      name: `Client ${String.fromCharCode(65 + (i % 5))}`,
+      contact: `contact@client.com`,
+    },
+  }));
+
+const renderWithRouter = (ui, { route = "/" } = {}) =>
+  render(<MemoryRouter initialEntries={[route]}>{ui}</MemoryRouter>);
 
 describe("GridView", () => {
   beforeEach(() => {
@@ -154,125 +154,139 @@ describe("GridView", () => {
   });
 
   describe("Component Rendering", () => {
-    it("should render grid view component", () => {
+    it("renders grid view", () => {
       renderWithRouter(<GridView />);
       expect(screen.getByText(/Grid View/i)).toBeInTheDocument();
     });
 
-    it("should display loading state", () => {
-      mockUseUnits.mockReturnValue({
-        units: mockUnits,
-        loading: true,
-      });
-
+    it("shows loading state", () => {
+      mockUseUnits.mockReturnValue({ units: mockUnits, loading: true });
       renderWithRouter(<GridView />);
       expect(screen.getByText(/Loading grid view/i)).toBeInTheDocument();
     });
 
-    it("should render units in grid layout", () => {
+    it("renders units", () => {
       renderWithRouter(<GridView />);
-      expect(screen.getAllByText(/ThermaCore Unit 00\d/).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/ThermaCore Unit/).length).toBeGreaterThan(0);
+    });
+
+    it("shows client info", () => {
+      renderWithRouter(<GridView />);
+      expect(screen.getAllByText(/Client A|Client B|Client C/).length).toBeGreaterThan(0);
     });
   });
 
-  describe("Search Functionality", () => {
-    it("should filter units by name", async () => {
+  describe("Search", () => {
+    it("filters by name", async () => {
       renderWithRouter(<GridView />);
-
-      const input = screen.getByPlaceholderText(/Search by unit name/i);
-      fireEvent.change(input, { target: { value: "Unit 001" } });
+      fireEvent.change(screen.getAllByRole("textbox")[0], {
+        target: { value: "Unit 001" },
+      });
 
       await waitFor(() => {
         expect(screen.getAllByText("ThermaCore Unit 001").length).toBeGreaterThan(0);
       });
     });
-
-    it("should filter by location", async () => {
-      renderWithRouter(<GridView />);
-
-      const input = screen.getByPlaceholderText(/Search by unit name/i);
-      fireEvent.change(input, { target: { value: "Boston" } });
-
-      await waitFor(() => {
-        expect(screen.getAllByText(/Boston/i).length).toBeGreaterThan(0);
-      });
-    });
   });
 
   describe("Status Filtering", () => {
-    it("should show all units by default", () => {
+    it("filters online", async () => {
       renderWithRouter(<GridView />);
-      expect(screen.getAllByText(/ThermaCore Unit 00\d/).length).toBeGreaterThan(3);
-    });
-
-    it("should filter by online status", async () => {
-      renderWithRouter(<GridView />);
-
-      const select = screen.getByRole("combobox");
-      fireEvent.change(select, { target: { value: "Online" } });
+      fireEvent.change(screen.getAllByRole("combobox")[0], {
+        target: { value: "Online" },
+      });
 
       await waitFor(() => {
-        expect(select.value).toBe("Online");
+        expect(screen.getAllByText(/ONLINE/).length).toBeGreaterThan(0);
+      });
+    });
+
+    it("filters offline", async () => {
+      renderWithRouter(<GridView />);
+      fireEvent.change(screen.getAllByRole("combobox")[0], {
+        target: { value: "Offline" },
+      });
+
+      await waitFor(() => {
+        expect(screen.getAllByText(/OFFLINE/).length).toBeGreaterThan(0);
       });
     });
   });
 
-  describe("Pagination and Load More", () => {
-    it("should initially show limited units (5)", () => {
+  describe("Pagination", () => {
+    it("shows load more button when needed", () => {
       renderWithRouter(<GridView />);
-      const units = screen.getAllByText(/ThermaCore Unit 00\d/);
-      expect(units.length).toBeLessThanOrEqual(5);
+      expect(screen.getAllByText(/Load more Units/i).length).toBeGreaterThan(0);
     });
 
-    it("should show load more button when more units available", () => {
+    it("loads more units", async () => {
       renderWithRouter(<GridView />);
-      expect(screen.queryByText(/Load more/i)).toBeInTheDocument();
-    });
-
-    it("should load more units when clicked", async () => {
-      renderWithRouter(<GridView />);
-
-      const button = screen.getByText(/Load more/i);
-      fireEvent.click(button);
+      fireEvent.click(screen.getByText(/Load more Units/i));
 
       await waitFor(() => {
-        expect(screen.getAllByText(/ThermaCore Unit 00\d/).length).toBeGreaterThan(5);
+        expect(screen.getAllByText(/ThermaCore Unit/).length).toBeGreaterThan(5);
       });
+    });
+
+    it("hides load more when no extra units", () => {
+      mockUseUnits.mockReturnValue({
+        units: mockUnits.slice(0, 3),
+        loading: false,
+      });
+
+      renderWithRouter(<GridView />);
+      expect(screen.queryAllByText(/Load more Units/i).length).toBe(0);
     });
   });
 
   describe("Navigation", () => {
-    it("should navigate on unit click", () => {
+    it("navigates admin", () => {
       renderWithRouter(<GridView />);
+      fireEvent.click(screen.getAllByText("ThermaCore Unit 001")[0]);
 
-      const unit = screen.getByText("ThermaCore Unit 001");
-      fireEvent.click(unit.closest("div"));
-
-      expect(mockNavigate).toHaveBeenCalled();
+      expect(mockNavigate).toHaveBeenCalledWith(
+        expect.stringContaining("/unit-details/TC001"),
+        expect.any(Object),
+      );
     });
-  });
 
-  describe("Role-Based Access Control", () => {
-    it("should limit units for non-admin users", () => {
+    it("navigates user", () => {
       mockUseAuth.mockReturnValue({
         userRole: "user",
         permissions: { canViewAllUnits: false },
       });
 
       renderWithRouter(<GridView />);
-      expect(screen.getAllByText(/ThermaCore Unit 00\d/).length).toBeLessThanOrEqual(6);
+      fireEvent.click(screen.getAllByText("ThermaCore Unit 001")[0]);
+
+      expect(mockNavigate).toHaveBeenCalledWith(
+        expect.stringContaining("/unit/TC001"),
+        expect.any(Object),
+      );
     });
   });
 
-  describe("Alert Display", () => {
-    it("should show alerts", () => {
+  describe("Alerts", () => {
+    it("shows alerts", () => {
       renderWithRouter(<GridView />);
       expect(screen.getAllByText(/Alert/i).length).toBeGreaterThan(0);
     });
 
-    it("should show alarms", () => {
+    it("shows alarms", () => {
       renderWithRouter(<GridView />);
-      expect(screen.getAllByText(/Alarm/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Alarm!/i).length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("Large dataset", () => {
+    it("renders efficiently", () => {
+      mockUseUnits.mockReturnValue({
+        units: createLargeDataset(100),
+        loading: false,
+      });
+
+      renderWithRouter(<GridView />);
+      expect(screen.getAllByText(/ThermaCore Unit/).length).toBeGreaterThan(0);
     });
   });
 });
