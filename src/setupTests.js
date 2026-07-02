@@ -3,227 +3,217 @@ import "@testing-library/jest-dom";
 import { cleanup } from "@testing-library/react";
 
 /* =========================================================
-   SAFE GLOBAL ENVIRONMENT BOOTSTRAP
+   CORE TEST ENVIRONMENT STABILITY LAYER
 ========================================================= */
 
-if (typeof window !== "undefined") {
-  /* ===============================
-     matchMedia (CRITICAL FIX)
-  =============================== */
-  window.matchMedia = window.matchMedia || function (query) {
+/**
+ * CRITICAL FIX:
+ * matchMedia MUST always return a valid object synchronously.
+ * This prevents: "Cannot read properties of undefined (reading 'matches')"
+ */
+Object.defineProperty(window, "matchMedia", {
+  writable: true,
+  configurable: true,
+  value: (query) => {
     return {
       matches: false,
-      media: query,
+      media: query || "",
       onchange: null,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
     };
-  };
+  },
+});
 
-  /* ===============================
-     ResizeObserver (Radix / Charts)
-  =============================== */
-  class ResizeObserverMock {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  }
+/* =========================================================
+   RESIZE OBSERVER (Radix + charts + layout systems)
+========================================================= */
 
-  window.ResizeObserver = window.ResizeObserver || ResizeObserverMock;
-  global.ResizeObserver = window.ResizeObserver;
+class ResizeObserverMock {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
 
-  /* ===============================
-     IntersectionObserver (Lazy UI)
-  =============================== */
-  class IntersectionObserverMock {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  }
+window.ResizeObserver = ResizeObserverMock;
+global.ResizeObserver = ResizeObserverMock;
 
-  window.IntersectionObserver = window.IntersectionObserver || IntersectionObserverMock;
-  global.IntersectionObserver = window.IntersectionObserver;
+/* =========================================================
+   LAYOUT / DOM MEASUREMENT STABILITY
+========================================================= */
 
-  /* ===============================
-     VisualViewport (Floating UI FIX)
-  =============================== */
-  window.visualViewport = window.visualViewport || {
-    width: 1920,
-    height: 1080,
-    scale: 1,
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-  };
+const stableRect = {
+  width: 100,
+  height: 100,
+  top: 0,
+  left: 0,
+  right: 100,
+  bottom: 100,
+  x: 0,
+  y: 0,
+  toJSON: () => stableRect,
+};
 
-  /* ===============================
-     getBoundingClientRect (Radix FIX)
-  =============================== */
-  const rect = {
-    width: 1200,
-    height: 800,
-    top: 0,
-    left: 0,
-    right: 1200,
-    bottom: 800,
-    x: 0,
-    y: 0,
-    toJSON: () => rect,
-  };
+Element.prototype.getBoundingClientRect = () => stableRect;
+Element.prototype.getClientRects = () => [stableRect];
 
-  Element.prototype.getBoundingClientRect = () => rect;
-  Element.prototype.getClientRects = () => [rect];
-
-  /* ===============================
-     scrollIntoView safety
-  =============================== */
-  HTMLElement.prototype.scrollIntoView = vi.fn();
-
-  /* ===============================
-     requestAnimationFrame safety
-  =============================== */
-  window.requestAnimationFrame = (cb) => setTimeout(cb, 0);
-  window.cancelAnimationFrame = (id) => clearTimeout(id);
-
-  /* ===============================
-     Pointer Events (Radix drag)
-  =============================== */
-  class PointerEventMock extends Event {
-    constructor(type, props = {}) {
-      super(type, props);
-      this.pointerId = props.pointerId || 1;
-      this.pointerType = props.pointerType || "mouse";
-      this.clientX = props.clientX || 0;
-      this.clientY = props.clientY || 0;
-    }
-  }
-
-  window.PointerEvent = window.PointerEvent || PointerEventMock;
-  global.PointerEvent = window.PointerEvent;
-
-  /* ===============================
-     AudioContext (Dashboard / Player FIX)
-  =============================== */
-  class AudioContextMock {
-    constructor() {
-      this.state = "suspended";
-    }
-
-    resume = () => Promise.resolve();
-
-    decodeAudioData = () =>
-      Promise.resolve({
-        sampleRate: 44100,
-        length: 1024,
-        duration: 1,
-        numberOfChannels: 2,
-        getChannelData: () => new Float32Array(1024),
-      });
-
-    createBufferSource = () => ({
-      buffer: null,
-      connect: vi.fn(),
-      start: vi.fn(),
-    });
-
-    createGain = () => ({
-      connect: vi.fn(),
-      gain: { value: 1 },
-    });
-
-    destination = {};
-  }
-
-  window.AudioContext = window.AudioContext || AudioContextMock;
-  window.webkitAudioContext = window.webkitAudioContext || AudioContextMock;
-
-  global.AudioContext = window.AudioContext;
-  global.webkitAudioContext = window.webkitAudioContext;
-
-  /* ===============================
-     Storage (safe state persistence)
-  =============================== */
-  class StorageMock {
-    constructor() {
-      this.store = {};
-    }
-    getItem = (k) => this.store[k] || null;
-    setItem = (k, v) => (this.store[k] = String(v));
-    removeItem = (k) => delete this.store[k];
-    clear = () => (this.store = {});
-  }
-
-  window.localStorage = window.localStorage || new StorageMock();
-  window.sessionStorage = window.sessionStorage || new StorageMock();
-
-  global.localStorage = window.localStorage;
-  global.sessionStorage = window.sessionStorage;
-
-  /* ===============================
-     Canvas (Charts FIX)
-  =============================== */
-  if (window.HTMLCanvasElement) {
-    window.HTMLCanvasElement.prototype.getContext = vi.fn(() => ({
-      fillRect: vi.fn(),
-      clearRect: vi.fn(),
-      getImageData: vi.fn(),
-      putImageData: vi.fn(),
-      createImageData: vi.fn(),
-      setTransform: vi.fn(),
-      drawImage: vi.fn(),
-      save: vi.fn(),
-      restore: vi.fn(),
-      beginPath: vi.fn(),
-      moveTo: vi.fn(),
-      lineTo: vi.fn(),
-      closePath: vi.fn(),
-      stroke: vi.fn(),
-      translate: vi.fn(),
-      scale: vi.fn(),
-      rotate: vi.fn(),
-      arc: vi.fn(),
-      fill: vi.fn(),
-      measureText: vi.fn(() => ({ width: 0 })),
-      transform: vi.fn(),
-      rect: vi.fn(),
-      clip: vi.fn(),
-    }));
-  }
-
-  /* ===============================
-     Navigator clipboard
-  =============================== */
-  global.navigator = global.navigator || {};
-  global.navigator.clipboard = {
-    writeText: vi.fn().mockResolvedValue(),
-    readText: vi.fn().mockResolvedValue(""),
-  };
-
-  /* ===============================
-     Dialogs
-  =============================== */
-  global.alert = vi.fn();
-  global.confirm = vi.fn(() => true);
-  global.prompt = vi.fn(() => "");
-
-  /* ===============================
-     Safe computed style
-  =============================== */
-  const original = window.getComputedStyle;
-
-  window.getComputedStyle = (el) =>
-    original?.(el) || {
-      getPropertyValue: () => "",
-      display: "block",
-      transitionDuration: "0s",
-      animationDuration: "0s",
-    };
+if (window.HTMLElement) {
+  window.HTMLElement.prototype.scrollIntoView = () => {};
 }
 
 /* =========================================================
-   TEST CLEANUP
+   INTERSECTION OBSERVER (lazy UI / charts / virtualization)
+========================================================= */
+
+class IntersectionObserverMock {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
+window.IntersectionObserver = IntersectionObserverMock;
+global.IntersectionObserver = IntersectionObserverMock;
+
+/* =========================================================
+   AUDIO CONTEXT (fixes audioPlayer + hooks)
+========================================================= */
+
+class AudioContextMock {
+  resume = () => Promise.resolve();
+
+  decodeAudioData = () =>
+    Promise.resolve({
+      sampleRate: 44100,
+      length: 1024,
+      duration: 0.1,
+      numberOfChannels: 2,
+      getChannelData: () => new Float32Array(1024),
+    });
+
+  createBufferSource = () => ({
+    buffer: null,
+    connect: () => {},
+    start: () => {},
+  });
+
+  createGain = () => ({
+    connect: () => {},
+    gain: { value: 1 },
+  });
+
+  destination = {};
+  state = "suspended";
+}
+
+global.AudioContext = AudioContextMock;
+global.webkitAudioContext = AudioContextMock;
+
+/* =========================================================
+   STORAGE MOCKS
+========================================================= */
+
+class StorageMock {
+  constructor() {
+    this.store = {};
+  }
+
+  getItem = (key) => this.store[key] || null;
+  setItem = (key, value) => (this.store[key] = String(value));
+  removeItem = (key) => delete this.store[key];
+  clear = () => (this.store = {});
+}
+
+global.localStorage = new StorageMock();
+global.sessionStorage = new StorageMock();
+
+/* =========================================================
+   POINTER EVENTS (drag, sliders, Radix interactions)
+========================================================= */
+
+class PointerEventMock extends Event {
+  constructor(type, props = {}) {
+    super(type, props);
+    this.pointerId = props.pointerId || 1;
+    this.pointerType = props.pointerType || "mouse";
+    this.clientX = props.clientX || 0;
+    this.clientY = props.clientY || 0;
+  }
+}
+
+window.PointerEvent = PointerEventMock;
+global.PointerEvent = PointerEventMock;
+
+/* =========================================================
+   CANVAS (charts / graphs / analytics UI)
+========================================================= */
+
+if (window.HTMLCanvasElement) {
+  window.HTMLCanvasElement.prototype.getContext = () => ({
+    fillRect: () => {},
+    clearRect: () => {},
+    getImageData: () => ({ data: [] }),
+    putImageData: () => {},
+    createImageData: () => [],
+    drawImage: () => {},
+    save: () => {},
+    restore: () => {},
+    beginPath: () => {},
+    moveTo: () => {},
+    lineTo: () => {},
+    closePath: () => {},
+    stroke: () => {},
+    fill: () => {},
+    measureText: () => ({ width: 0 }),
+    transform: () => {},
+    rect: () => {},
+    clip: () => {},
+  });
+}
+
+/* =========================================================
+   NAVIGATOR / CLIPBOARD
+========================================================= */
+
+global.navigator = {
+  ...global.navigator,
+  clipboard: {
+    writeText: vi.fn().mockResolvedValue(),
+    readText: vi.fn().mockResolvedValue(""),
+  },
+};
+
+/* =========================================================
+   WINDOW DIALOGS
+========================================================= */
+
+global.alert = vi.fn();
+global.confirm = vi.fn(() => true);
+global.prompt = vi.fn(() => "");
+
+/* =========================================================
+   COMPUTED STYLE SAFETY (fix Radix + floating UI edge cases)
+========================================================= */
+
+const originalGetComputedStyle = window.getComputedStyle;
+
+window.getComputedStyle = (el) => {
+  const style = originalGetComputedStyle?.(el);
+
+  return (
+    style || {
+      getPropertyValue: () => "",
+      transitionDuration: "0s",
+      animationDuration: "0s",
+      display: "block",
+    }
+  );
+};
+
+/* =========================================================
+   CLEANUP (SAFE ONLY - NO DOM DESTRUCTION)
 ========================================================= */
 
 afterEach(() => {
