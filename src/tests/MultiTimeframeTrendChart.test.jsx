@@ -14,14 +14,13 @@
  */
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeAll, afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, afterAll, beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import MultiTimeframeTrendChart from "@/components/visualization/MultiTimeframeTrendChart";
 
 // Mock browser APIs that may not be available in JSDOM
 beforeAll(() => {
   global.URL.createObjectURL = vi.fn(() => "blob:test");
   global.URL.revokeObjectURL = vi.fn();
-  HTMLAnchorElement.prototype.click = vi.fn();
   
   // Mock window.open for potential export functionality
   global.window.open = vi.fn();
@@ -115,12 +114,35 @@ describe("MultiTimeframeTrendChart", () => {
     { timestamp: Date.now(), temperature: 27, pressure: 102 },
   ];
 
+  let mockAnchor;
+  let createElementSpy;
+
   beforeEach(() => {
     vi.clearAllMocks();
     lineChartSpy.mockClear();
     areaChartSpy.mockClear();
     barChartSpy.mockClear();
     composedChartSpy.mockClear();
+    
+    // Create a mock anchor element with a click spy
+    mockAnchor = {
+      click: vi.fn(),
+      download: '',
+      href: '',
+    };
+    
+    // Spy on document.createElement and return the mock anchor
+    createElementSpy = vi.spyOn(document, 'createElement').mockImplementation((tagName) => {
+      if (tagName === 'a') {
+        return mockAnchor;
+      }
+      return document.createElement(tagName);
+    });
+  });
+
+  afterEach(() => {
+    // Restore document.createElement after each test
+    createElementSpy.mockRestore();
   });
 
   describe("Basic Rendering", () => {
@@ -338,7 +360,7 @@ describe("MultiTimeframeTrendChart", () => {
         />,
       );
 
-      // Find button by text content instead of role name
+      // Find button by text content
       const buttons = screen.getAllByRole("button");
       const exportButton = buttons.find(btn => btn.textContent?.includes("Export"));
       expect(exportButton).toBeDefined();
@@ -376,13 +398,10 @@ describe("MultiTimeframeTrendChart", () => {
       
       // Verify download functions were NOT called when onExport is provided
       expect(global.URL.createObjectURL).not.toHaveBeenCalled();
-      expect(HTMLAnchorElement.prototype.click).not.toHaveBeenCalled();
+      expect(mockAnchor.click).not.toHaveBeenCalled();
     });
 
     it("should trigger CSV download when onExport is not provided", async () => {
-      // Reset mocks before this test
-      vi.clearAllMocks();
-      
       render(
         <MultiTimeframeTrendChart
           data={mockData}
@@ -408,7 +427,7 @@ describe("MultiTimeframeTrendChart", () => {
       await waitFor(() => {
         // Verify download functions were called
         expect(global.URL.createObjectURL).toHaveBeenCalledTimes(1);
-        expect(HTMLAnchorElement.prototype.click).toHaveBeenCalledTimes(1);
+        expect(mockAnchor.click).toHaveBeenCalledTimes(1);
         expect(global.URL.revokeObjectURL).toHaveBeenCalledTimes(1);
       });
     });
