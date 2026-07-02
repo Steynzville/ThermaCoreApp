@@ -411,48 +411,9 @@ export { fireEvent, render, screen, waitFor, cleanup };
 
 afterEach(() => {
   cleanup();
-  
-  if (typeof document !== "undefined") {
-    // Remove Radix UI portal elements
-    document
-      .querySelectorAll("[data-radix-portal]")
-      .forEach((el) => { el.remove(); });
-    document
-      .querySelectorAll("[data-radix-focus-guard]")
-      .forEach((el) => { el.remove(); });
-    document
-      .querySelectorAll("[data-radix-popper-content-wrapper]")
-      .forEach((el) => { el.remove(); });
-    
-    // Clean up any leftover test containers
-    document
-      .querySelectorAll("#root, [data-testid]")
-      .forEach((el) => { 
-        if (el.parentNode) el.parentNode.removeChild(el); 
-      });
-    
-    // Specifically clean up any card-related elements that might be left
-    document
-      .querySelectorAll('[data-slot="card"], [data-slot="card-header"], [data-slot="card-footer"]')
-      .forEach((el) => { 
-        if (el.parentNode) el.parentNode.removeChild(el); 
-      });
-    
-    // Clean up any leftover divs that might be from tests
-    const bodyChildren = document.body.children;
-    for (let i = bodyChildren.length - 1; i >= 0; i--) {
-      const child = bodyChildren[i];
-      // Only remove elements that look like test containers
-      if (child.id === 'root' || 
-          child.getAttribute('data-testid') || 
-          child.className?.includes('test')) {
-        child.remove();
-      }
-    }
-  }
-  
-  vi.clearAllTimers();
   vi.clearAllMocks();
+  vi.clearAllTimers();
+  vi.restoreAllMocks();
 });
 
 // ============================================
