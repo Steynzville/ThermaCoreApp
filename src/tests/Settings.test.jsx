@@ -12,12 +12,46 @@
  * - Default values and reset behavior
  */
 
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, within, cleanup } from "@testing-library/react";
+import { describe, expect, it, vi, afterEach } from "vitest";
 import AlertSettings from "@/components/settings/AlertSettings";
 import DataRefreshSettings from "@/components/settings/DataRefreshSettings";
 import DisplaySettings from "@/components/settings/DisplaySettings";
 import NotificationSettings from "@/components/settings/NotificationSettings";
+
+// Ensure proper cleanup between tests to prevent DOM pollution
+afterEach(() => {
+  cleanup();
+});
+
+// Mock FormFieldGroup to properly forward props and handle events
+vi.mock("@/components/ui/FormFieldGroup", () => ({
+  FormFieldGroup: ({ id, label, value, onChange, type, children }: any) => (
+    <div>
+      <label htmlFor={id}>{label}</label>
+      {type === "select" ? (
+        <select
+          id={id}
+          value={value}
+          onChange={(e) => {
+            if (onChange) onChange(e);
+          }}
+        >
+          {children}
+        </select>
+      ) : (
+        <input
+          id={id}
+          type={type || "text"}
+          value={value}
+          onChange={(e) => {
+            if (onChange) onChange(e);
+          }}
+        />
+      )}
+    </div>
+  ),
+}));
 
 describe("DataRefreshSettings", () => {
   const defaultSettings = {
@@ -73,10 +107,9 @@ describe("DataRefreshSettings", () => {
       />,
     );
 
-    expect(
-      screen.getByLabelText("Refresh Interval (seconds)"),
-    ).toBeInTheDocument();
-    expect(screen.getByLabelText("Refresh Interval (seconds)")).toHaveValue(30);
+    const intervalInput = screen.getByLabelText(/Refresh Interval/i);
+    expect(intervalInput).toBeInTheDocument();
+    expect(intervalInput).toHaveValue(30);
   });
 
   it("should hide refresh interval when auto refresh is disabled", () => {
@@ -97,8 +130,9 @@ describe("DataRefreshSettings", () => {
       />,
     );
 
+    // Use more specific label matcher to avoid false positives
     expect(
-      screen.queryByLabelText("Refresh Interval (seconds)"),
+      screen.queryByLabelText(/Refresh Interval \(seconds\)/i),
     ).not.toBeInTheDocument();
   });
 
@@ -112,7 +146,7 @@ describe("DataRefreshSettings", () => {
       />,
     );
 
-    const intervalInput = screen.getByLabelText("Refresh Interval (seconds)");
+    const intervalInput = screen.getByLabelText(/Refresh Interval/i);
     fireEvent.change(intervalInput, { target: { value: "60" } });
 
     expect(mockHandleChange).toHaveBeenCalledWith(
@@ -132,7 +166,7 @@ describe("DataRefreshSettings", () => {
       />,
     );
 
-    const retentionInput = screen.getByLabelText("Data Retention (days)");
+    const retentionInput = screen.getByLabelText(/Data Retention/i);
     fireEvent.change(retentionInput, { target: { value: "180" } });
 
     expect(mockHandleChange).toHaveBeenCalledWith(
@@ -152,7 +186,7 @@ describe("DataRefreshSettings", () => {
       />,
     );
 
-    const backupSelect = screen.getByLabelText("Backup Frequency");
+    const backupSelect = screen.getByLabelText(/Backup Frequency/i);
     fireEvent.change(backupSelect, { target: { value: "weekly" } });
 
     expect(mockHandleChange).toHaveBeenCalledWith(
@@ -172,10 +206,18 @@ describe("DataRefreshSettings", () => {
       />,
     );
 
-    expect(screen.getByText("Hourly")).toBeInTheDocument();
-    expect(screen.getByText("Daily")).toBeInTheDocument();
-    expect(screen.getByText("Weekly")).toBeInTheDocument();
-    expect(screen.getByText("Monthly")).toBeInTheDocument();
+    // Scope queries to the select element to avoid duplicate text issues
+    const select = screen.getByLabelText(/Backup Frequency/i);
+    expect(select).toHaveValue("daily");
+    
+    // Use within to scope option queries to just this select
+    const options = within(select).getAllByRole("option");
+    const optionTexts = options.map(opt => opt.textContent);
+    
+    expect(optionTexts).toContain("Hourly");
+    expect(optionTexts).toContain("Daily");
+    expect(optionTexts).toContain("Weekly");
+    expect(optionTexts).toContain("Monthly");
   });
 });
 
@@ -452,7 +494,7 @@ describe("Settings Integration", () => {
     fireEvent.click(toggleButton);
 
     // Update retention
-    const retentionInput = screen.getByLabelText("Data Retention (days)");
+    const retentionInput = screen.getByLabelText(/Data Retention/i);
     fireEvent.change(retentionInput, { target: { value: "365" } });
 
     expect(mockHandleChange).toHaveBeenCalledTimes(2);
@@ -514,7 +556,7 @@ describe("Settings Validation", () => {
       />,
     );
 
-    const intervalInput = screen.getByLabelText("Refresh Interval (seconds)");
+    const intervalInput = screen.getByLabelText(/Refresh Interval/i);
     fireEvent.change(intervalInput, { target: { value: "120" } });
 
     expect(mockHandleChange).toHaveBeenCalledWith(
@@ -542,7 +584,7 @@ describe("Settings Validation", () => {
       />,
     );
 
-    const retentionInput = screen.getByLabelText("Data Retention (days)");
+    const retentionInput = screen.getByLabelText(/Data Retention/i);
     fireEvent.change(retentionInput, { target: { value: "365" } });
 
     expect(mockHandleChange).toHaveBeenCalledWith(
@@ -572,8 +614,8 @@ describe("Settings Default Values", () => {
       />,
     );
 
-    expect(screen.getByLabelText("Data Retention (days)")).toHaveValue(30);
-    expect(screen.getByLabelText("Backup Frequency")).toHaveValue("hourly");
+    expect(screen.getByLabelText(/Data Retention/i)).toHaveValue(30);
+    expect(screen.getByLabelText(/Backup Frequency/i)).toHaveValue("hourly");
   });
 
   it("should render with default notification values", () => {
