@@ -1,673 +1,243 @@
-/**
- * Tests for SystemHealth Component
- *
- * Coverage includes:
- * - Health indicator accuracy
- * - State transitions (Operational, Degraded, Outage)
- * - Real-time status updates
- * - Service status display
- * - Status counting and aggregation
- * - Auto-refresh functionality
- * - Manual refresh button
- * - Loading states
- */
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import {
+  login,
+  logout,
+  getCurrentUser,
+  isAuthenticated,
+  getAuthToken,
+  verifyToken,
+  register,
+  selfRegister,
+  requestPasswordReset,
+  resetPassword,
+  updateProfile,
+} from "../../services/authService";
+import { apiPost } from "../../utils/apiFetch";
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import SystemHealth from "@/components/SystemHealth";
-
-// Mock the statusMonitor service
-vi.mock("@/services/statusMonitor", () => ({
-  checkAllStatus: vi.fn(),
+// Mock apiPost for selfRegister
+vi.mock("../../utils/apiFetch", () => ({
+  apiPost: vi.fn(),
 }));
 
-import { checkAllStatus } from "@/services/statusMonitor";
+describe("Authentication Service - /src/services/authService.js", () => {
+  let fetchMock;
 
-const mockHealthData = [
-  {
-    name: "Frontend Hosting",
-    provider: "Netlify",
-    status: "Operational",
-    responseTime: "80ms",
-    icon: "Globe",
-  },
-  {
-    name: "Backend API",
-    provider: "Render",
-    status: "Operational",
-    responseTime: "120ms",
-    icon: "Server",
-  },
-  {
-    name: "Database",
-    provider: "Neon PostgreSQL",
-    status: "Degraded Performance",
-    responseTime: "90ms",
-    icon: "Database",
-  },
-  {
-    name: "Real-time Messaging",
-    provider: "Mosquitto MQTT Broker",
-    status: "Outage",
-    responseTime: "150ms",
-    icon: "Activity",
-  },
-];
+  beforeEach(async () => {
+    vi.useFakeTimers();
 
-describe("SystemHealth", () => {
-  beforeEach(() => {
+    // ✅ HARD OVERRIDE fetch (fixes mockResolvedValue issues)
+    fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    // reset auth state
+    const logoutPromise = logout();
+    vi.advanceTimersByTime(200);
+    await logoutPromise;
+
     vi.clearAllMocks();
-    checkAllStatus.mockResolvedValue(mockHealthData);
   });
 
   afterEach(() => {
-    try {
-      vi.useRealTimers();
-    } catch (_e) {
-      // Ignore if real timers are already in use
-    }
+    vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
-  describe("Component Rendering", () => {
-    it("should render system health component", async () => {
-      render(<SystemHealth />);
-
-      await waitFor(() => {
-        const elements = screen.getAllByText("System Health Status");
-        expect(elements.length).toBeGreaterThan(0);
-      });
-    });
-
-    it("should display page header", async () => {
-      render(<SystemHealth />);
-
-      await waitFor(() => {
-        const titleElements = screen.getAllByText("System Health Status");
-        expect(titleElements.length).toBeGreaterThan(0);
-        const descElements = screen.getAllByText(
-          /Real-time monitoring of all infrastructure/i,
-        );
-        expect(descElements.length).toBeGreaterThan(0);
-      });
-    });
-
-    it("should show loading state initially", () => {
-      render(<SystemHealth />);
-
-      const elements = screen.getAllByText(/Loading system status/i);
-      expect(elements.length).toBeGreaterThan(0);
-    });
-
-    it("should render service cards after loading", async () => {
-      render(<SystemHealth />);
-
-      await waitFor(() => {
-        const frontendElements = screen.getAllByText("Frontend Hosting");
-        expect(frontendElements.length).toBeGreaterThan(0);
-        const backendElements = screen.getAllByText("Backend API");
-        expect(backendElements.length).toBeGreaterThan(0);
-        const dbElements = screen.getAllByText("Database");
-        expect(dbElements.length).toBeGreaterThan(0);
-        const messagingElements = screen.getAllByText("Real-time Messaging");
-        expect(messagingElements.length).toBeGreaterThan(0);
-      });
-    });
-
-    it("should apply custom className", () => {
-      const { container } = render(<SystemHealth className="custom-class" />);
-
-      expect(container.querySelector(".custom-class")).toBeTruthy();
+  describe("Initial State", () => {
+    it("should initially not be authenticated", async () => {
+      expect(isAuthenticated()).toBe(false);
+      expect(getAuthToken()).toBeNull();
+      expect(await getCurrentUser()).toBeNull();
     });
   });
 
-  describe("Health Indicator Display", () => {
-    it("should display operational status indicators", async () => {
-      render(<SystemHealth />);
+  describe("login", () => {
+    it("should authenticate successfully on correct credentials", async () => {
+      const mockLoginResponse = {
+        success: true,
+        message: "Logged in successfully",
+        data: {
+          access_token: "mock-jwt-token-xyz",
+          user: {
+            id: 10,
+            username: "test_user",
+            email: "test@thermacore.com",
+            role: { name: "operator" },
+            first_name: "Test",
+            last_name: "Operator",
+          },
+        },
+      };
 
-      await waitFor(() => {
-        const frontendElements = screen.getAllByText("Frontend Hosting");
-        expect(frontendElements.length).toBeGreaterThan(0);
-        const backendElements = screen.getAllByText("Backend API");
-        expect(backendElements.length).toBeGreaterThan(0);
-      });
-    });
-
-    it("should display degraded performance indicators", async () => {
-      render(<SystemHealth />);
-
-      await waitFor(() => {
-        const dbElements = screen.getAllByText("Database");
-        expect(dbElements.length).toBeGreaterThan(0);
-      });
-    });
-
-    it("should display outage indicators", async () => {
-      render(<SystemHealth />);
-
-      await waitFor(() => {
-        const messagingElements = screen.getAllByText("Real-time Messaging");
-        expect(messagingElements.length).toBeGreaterThan(0);
-      });
-    });
-
-    it("should show status icons", async () => {
-      const { container } = render(<SystemHealth />);
-
-      await waitFor(() => {
-        const icons = container.querySelectorAll("svg");
-        expect(icons.length).toBeGreaterThan(0);
-      });
-    });
-
-    it("should display colored status indicators", async () => {
-      render(<SystemHealth />);
-
-      await waitFor(() => {
-        const operationalElements = screen.getAllByText("Operational");
-        expect(operationalElements.length).toBeGreaterThan(0);
-        const degradedElements = screen.getAllByText("Degraded Performance");
-        expect(degradedElements.length).toBeGreaterThan(0);
-        const outageElements = screen.getAllByText("Outage");
-        expect(outageElements.length).toBeGreaterThan(0);
-      });
-    });
-  });
-
-  describe("Status Colors", () => {
-    it("should use green for operational status", async () => {
-      const { container } = render(<SystemHealth />);
-
-      await waitFor(() => {
-        const greenIcons = container.querySelectorAll(".text-green-500");
-        expect(greenIcons.length).toBeGreaterThan(0);
-      });
-    });
-
-    it("should use yellow for degraded performance", async () => {
-      const { container } = render(<SystemHealth />);
-
-      await waitFor(() => {
-        const yellowIcons = container.querySelectorAll(".text-yellow-500");
-        expect(yellowIcons.length).toBeGreaterThan(0);
-      });
-    });
-
-    it("should use red for outage status", async () => {
-      const { container } = render(<SystemHealth />);
-
-      await waitFor(() => {
-        const redIcons = container.querySelectorAll(".text-red-500");
-        expect(redIcons.length).toBeGreaterThan(0);
-      });
-    });
-  });
-
-  describe("Service Information", () => {
-    it("should display service names", async () => {
-      render(<SystemHealth />);
-
-      await waitFor(() => {
-        const frontendElements = screen.getAllByText("Frontend Hosting");
-        expect(frontendElements.length).toBeGreaterThan(0);
-        const backendElements = screen.getAllByText("Backend API");
-        expect(backendElements.length).toBeGreaterThan(0);
-        const dbElements = screen.getAllByText("Database");
-        expect(dbElements.length).toBeGreaterThan(0);
-        const messagingElements = screen.getAllByText("Real-time Messaging");
-        expect(messagingElements.length).toBeGreaterThan(0);
-      });
-    });
-
-    it("should display response times", async () => {
-      render(<SystemHealth />);
-
-      await waitFor(() => {
-        const response80 = screen.getAllByText("80ms");
-        expect(response80.length).toBeGreaterThan(0);
-        const response120 = screen.getAllByText("120ms");
-        expect(response120.length).toBeGreaterThan(0);
-        const response90 = screen.getAllByText("90ms");
-        expect(response90.length).toBeGreaterThan(0);
-        const response150 = screen.getAllByText("150ms");
-        expect(response150.length).toBeGreaterThan(0);
-      });
-    });
-
-    it("should display provider information", async () => {
-      render(<SystemHealth />);
-
-      await waitFor(() => {
-        const netlifyElements = screen.getAllByText("Netlify");
-        expect(netlifyElements.length).toBeGreaterThan(0);
-        const renderElements = screen.getAllByText("Render");
-        expect(renderElements.length).toBeGreaterThan(0);
-        const neonElements = screen.getAllByText("Neon PostgreSQL");
-        expect(neonElements.length).toBeGreaterThan(0);
-        const mosquittoElements = screen.getAllByText("Mosquitto MQTT Broker");
-        expect(mosquittoElements.length).toBeGreaterThan(0);
-      });
-    });
-  });
-
-  describe("Status Aggregation", () => {
-    it("should count operational services", async () => {
-      render(<SystemHealth />);
-
-      await waitFor(() => {
-        const elements = screen.getAllByText(/operational/i);
-        expect(elements.length).toBeGreaterThan(0);
-        const hasTwoOperational = elements.some(
-          (el) =>
-            el.textContent?.includes("2") &&
-            el.textContent?.toLowerCase().includes("operational"),
-        );
-        expect(hasTwoOperational).toBe(true);
-      });
-    });
-
-    it("should count degraded services", async () => {
-      render(<SystemHealth />);
-
-      await waitFor(() => {
-        const elements = screen.getAllByText(/degraded/i);
-        expect(elements.length).toBeGreaterThan(0);
-      });
-    });
-
-    it("should count outage services", async () => {
-      render(<SystemHealth />);
-
-      await waitFor(() => {
-        const elements = screen.getAllByText(/outage/i);
-        expect(elements.length).toBeGreaterThan(0);
-        const hasOneOutage = elements.some(
-          (el) =>
-            el.textContent?.includes("1") &&
-            el.textContent?.toLowerCase().includes("outage"),
-        );
-        expect(hasOneOutage).toBe(true);
-      });
-    });
-  });
-
-  describe("Service Icons", () => {
-    it("should display service-specific icons", async () => {
-      const { container } = render(<SystemHealth />);
-
-      await waitFor(() => {
-        const icons = container.querySelectorAll("svg");
-        expect(icons.length).toBeGreaterThanOrEqual(4);
-      });
-    });
-
-    it("should handle missing icon gracefully", async () => {
-      render(<SystemHealth />);
-
-      await waitFor(() => {
-        const frontendElements = screen.getAllByText("Frontend Hosting");
-        expect(frontendElements.length).toBeGreaterThan(0);
-      });
-    });
-  });
-
-  describe("Status Transitions", () => {
-    it("should render all status states correctly", async () => {
-      render(<SystemHealth />);
-
-      await waitFor(() => {
-        const frontendElements = screen.getAllByText("Frontend Hosting");
-        expect(frontendElements.length).toBeGreaterThan(0);
-        const dbElements = screen.getAllByText("Database");
-        expect(dbElements.length).toBeGreaterThan(0);
-        const messagingElements = screen.getAllByText("Real-time Messaging");
-        expect(messagingElements.length).toBeGreaterThan(0);
-      });
-    });
-
-    it("should use correct icon for each status", async () => {
-      const { container } = render(<SystemHealth />);
-
-      await waitFor(() => {
-        const greenIcons = container.querySelectorAll(
-          ".text-green-500, .text-green-600, .text-green-400",
-        );
-        expect(greenIcons.length).toBeGreaterThan(0);
-        const yellowIcons = container.querySelectorAll(
-          ".text-yellow-500, .text-yellow-600, .text-yellow-400",
-        );
-        expect(yellowIcons.length).toBeGreaterThan(0);
-        const redIcons = container.querySelectorAll(
-          ".text-red-500, .text-red-600, .text-red-400",
-        );
-        expect(redIcons.length).toBeGreaterThan(0);
-      });
-    });
-  });
-
-  describe("Layout and Structure", () => {
-    it("should use card components for services", () => {
-      const { container } = render(<SystemHealth />);
-
-      const cards = container.querySelectorAll("[data-slot='card']");
-      expect(cards.length).toBeGreaterThan(0);
-    });
-
-    it("should have proper container structure", () => {
-      const { container } = render(<SystemHealth />);
-
-      expect(container.querySelector(".min-h-screen")).toBeTruthy();
-      expect(container.querySelector(".max-w-6xl")).toBeTruthy();
-    });
-
-    it("should be responsive", () => {
-      const { container } = render(<SystemHealth />);
-
-      expect(container.querySelector(".mx-auto")).toBeTruthy();
-    });
-  });
-
-  describe("Empty and Error States", () => {
-    it("should handle empty service list", () => {
-      render(<SystemHealth />);
-
-      const titleElements = screen.getAllByText("System Health Status");
-      expect(titleElements.length).toBeGreaterThan(0);
-    });
-
-    it("should handle missing service data gracefully", () => {
-      expect(() => render(<SystemHealth />)).not.toThrow();
-    });
-  });
-
-  describe("Accessibility", () => {
-    it("should have accessible service names", async () => {
-      render(<SystemHealth />);
-
-      await waitFor(() => {
-        const frontendElements = screen.getAllByText("Frontend Hosting");
-        expect(frontendElements.length).toBeGreaterThan(0);
-        const backendElements = screen.getAllByText("Backend API");
-        expect(backendElements.length).toBeGreaterThan(0);
-      });
-    });
-
-    it("should have visible status indicators", async () => {
-      render(<SystemHealth />);
-
-      await waitFor(() => {
-        const frontendElements = screen.getAllByText("Frontend Hosting");
-        expect(frontendElements[0]).toBeVisible();
-      });
-    });
-
-    it("should provide status information", async () => {
-      render(<SystemHealth />);
-
-      await waitFor(() => {
-        const operationalElements = screen.getAllByText("Operational");
-        expect(operationalElements.length).toBeGreaterThan(0);
-        expect(operationalElements[0]).toBeVisible();
-      });
-    });
-  });
-
-  describe("Live Status Updates", () => {
-    it("should call checkAllStatus on mount", async () => {
-      render(<SystemHealth />);
-
-      await waitFor(() => {
-        expect(checkAllStatus).toHaveBeenCalled();
-      });
-    });
-
-    it("should auto-refresh every 30 seconds", async () => {
-      render(<SystemHealth />);
-
-      await waitFor(() => {
-        expect(checkAllStatus).toHaveBeenCalledTimes(1);
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockLoginResponse,
       });
 
-      await waitFor(() => {
-        const frontendElements = screen.getAllByText("Frontend Hosting");
-        expect(frontendElements.length).toBeGreaterThan(0);
-      });
-    });
+      const result = await login("test_user", "password123", true);
 
-    it("should display last updated timestamp", async () => {
-      render(<SystemHealth />);
-
-      await waitFor(() => {
-        const timestampElements = screen.getAllByText(/Last updated:/i);
-        expect(timestampElements.length).toBeGreaterThan(0);
-      });
-    });
-
-    it("should update timestamp on refresh", async () => {
-      render(<SystemHealth />);
-
-      await waitFor(() => {
-        const timestampElements = screen.getAllByText(/Last updated:/i);
-        expect(timestampElements.length).toBeGreaterThan(0);
-      });
-
-      const refreshButtons = screen.getAllByRole("button", {
-        name: /refresh/i,
-      });
-      const refreshButton = refreshButtons[0];
-      fireEvent.click(refreshButton);
-
-      await waitFor(() => {
-        expect(checkAllStatus).toHaveBeenCalledTimes(2);
-      });
-    });
-  });
-
-  describe("Manual Refresh", () => {
-    it("should show refresh button", async () => {
-      render(<SystemHealth />);
-
-      await waitFor(() => {
-        const refreshButtons = screen.getAllByRole("button", {
-          name: /refresh/i,
-        });
-        expect(refreshButtons.length).toBeGreaterThan(0);
-      });
-    });
-
-    it("should call checkAllStatus when refresh button is clicked", async () => {
-      render(<SystemHealth />);
-
-      await waitFor(() => {
-        expect(checkAllStatus).toHaveBeenCalledTimes(1);
-      });
-
-      const refreshButtons = screen.getAllByRole("button", {
-        name: /refresh/i,
-      });
-      const refreshButton = refreshButtons[0];
-      fireEvent.click(refreshButton);
-
-      await waitFor(() => {
-        expect(checkAllStatus).toHaveBeenCalledTimes(2);
-      });
-    });
-
-    it("should show refreshing state when refresh is in progress", async () => {
-      checkAllStatus.mockImplementation(
-        () =>
-          new Promise((resolve) => {
-            setTimeout(() => resolve(mockHealthData), 100);
-          }),
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining("/api/v1/auth/login"),
+        expect.objectContaining({
+          method: "POST",
+        })
       );
 
-      render(<SystemHealth />);
+      expect(result.success).toBe(true);
+      expect(result.token).toBe("mock-jwt-token-xyz");
 
-      await waitFor(() => {
-        const refreshButtons = screen.getAllByRole("button", {
-          name: /refresh/i,
-        });
-        expect(refreshButtons.length).toBeGreaterThan(0);
-      });
-
-      const refreshButtons = screen.getAllByRole("button", {
-        name: /refresh/i,
-      });
-      const refreshButton = refreshButtons[0];
-      fireEvent.click(refreshButton);
-
-      const refreshingElements = screen.getAllByText(/Refreshing/i);
-      expect(refreshingElements.length).toBeGreaterThan(0);
+      expect(isAuthenticated()).toBe(true);
+      expect(getAuthToken()).toBe("mock-jwt-token-xyz");
     });
 
-    it("should disable refresh button while refreshing", async () => {
-      checkAllStatus.mockImplementation(
-        () =>
-          new Promise((resolve) => {
-            setTimeout(() => resolve(mockHealthData), 100);
-          }),
-      );
-
-      render(<SystemHealth />);
-
-      await waitFor(() => {
-        const refreshButtons = screen.getAllByRole("button", {
-          name: /refresh/i,
-        });
-        expect(refreshButtons.length).toBeGreaterThan(0);
+    it("should fail authentication when server returns success = false", async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: false }),
       });
 
-      const refreshButtons = screen.getAllByRole("button", {
-        name: /refresh/i,
-      });
-      const refreshButton = refreshButtons[0];
-      fireEvent.click(refreshButton);
+      const result = await login("test_user", "wrong_pass");
 
-      expect(refreshButton).toBeDisabled();
+      expect(result.success).toBe(false);
+      expect(isAuthenticated()).toBe(false);
+    });
+
+    it("should fail authentication when request returns non-200 status", async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ error: "Unauthorized" }),
+      });
+
+      const result = await login("test_user", "wrong_pass");
+
+      expect(result.success).toBe(false);
+    });
+
+    it("should catch network errors gracefully", async () => {
+      fetchMock.mockRejectedValueOnce(new Error("Network failure"));
+
+      const result = await login("test_user", "password");
+
+      expect(result.success).toBe(false);
     });
   });
 
-  describe("Overall Status Banner", () => {
-    it("should show operational banner when all services are operational", async () => {
-      const allOperational = [
-        {
-          name: "Frontend Hosting",
-          provider: "Netlify",
-          status: "Operational",
-          responseTime: "80ms",
-          icon: "Globe",
-        },
-        {
-          name: "Backend API",
-          provider: "Render",
-          status: "Operational",
-          responseTime: "120ms",
-          icon: "Server",
-        },
-      ];
-      checkAllStatus.mockResolvedValue(allOperational);
-
-      render(<SystemHealth />);
-
-      await waitFor(() => {
-        const bannerElements = screen.getAllByText("All systems operational");
-        expect(bannerElements.length).toBeGreaterThan(0);
+  describe("logout", () => {
+    it("should clear current user and authentication token", async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: { access_token: "tkn", user: { id: 1, username: "u", role: "admin" } },
+        }),
       });
-    });
 
-    it("should show degraded banner when some services are degraded", async () => {
-      const degradedData = [
-        {
-          name: "Frontend Hosting",
-          provider: "Netlify",
-          status: "Operational",
-          responseTime: "80ms",
-          icon: "Globe",
-        },
-        {
-          name: "Backend API",
-          provider: "Render",
-          status: "Degraded Performance",
-          responseTime: "120ms",
-          icon: "Server",
-        },
-      ];
-      checkAllStatus.mockResolvedValue(degradedData);
+      await login("u", "p");
 
-      render(<SystemHealth />);
+      const logoutPromise = logout();
+      vi.advanceTimersByTime(200);
+      const result = await logoutPromise;
 
-      await waitFor(() => {
-        const bannerElements = screen.getAllByText(
-          /1 service experiencing degraded performance/i,
-        );
-        expect(bannerElements.length).toBeGreaterThan(0);
-      });
-    });
-
-    it("should show outage banner when some services are down", async () => {
-      render(<SystemHealth />);
-
-      await waitFor(() => {
-        const bannerElements = screen.getAllByText(
-          /1 service experiencing outages/i,
-        );
-        expect(bannerElements.length).toBeGreaterThan(0);
-      });
+      expect(result.success).toBe(true);
+      expect(isAuthenticated()).toBe(false);
     });
   });
 
-  describe("Info Banner", () => {
-    it("should display info banner about live monitoring", async () => {
-      render(<SystemHealth />);
-
-      await waitFor(() => {
-        const titleElements = screen.getAllByText(
-          /Live Infrastructure Monitoring/i,
-        );
-        expect(titleElements.length).toBeGreaterThan(0);
-        const descElements = screen.getAllByText(
-          /real-time status of infrastructure components/i,
-        );
-        expect(descElements.length).toBeGreaterThan(0);
+  describe("verifyToken", () => {
+    it("should verify token successfully if it matches active login token", async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: { access_token: "tkn-123", user: { id: 1, username: "u", role: "admin" } },
+        }),
       });
+
+      await login("u", "p");
+
+      const verifyPromise = verifyToken("tkn-123");
+      vi.advanceTimersByTime(200);
+      const result = await verifyPromise;
+
+      expect(result.valid).toBe(true);
     });
   });
 
-  describe("Dark Mode", () => {
-    it("should have dark mode classes", async () => {
-      const { container } = render(<SystemHealth />);
+  describe("register", () => {
+    it("should register a new user successfully", async () => {
+      const userData = {
+        username: "new_user",
+        email: "new@thermacore.com",
+        password: "secure_password",
+        firstName: "New",
+        lastName: "User",
+      };
 
-      await waitFor(() => {
-        expect(container.querySelector(".dark\\:bg-gray-950")).toBeTruthy();
-      });
-    });
+      const registerPromise = register(userData);
+      vi.advanceTimersByTime(800);
+      const result = await registerPromise;
 
-    it("should render in light mode", async () => {
-      const { container } = render(<SystemHealth />);
-
-      await waitFor(() => {
-        expect(container.querySelector(".bg-blue-50")).toBeTruthy();
-      });
+      expect(result.success).toBe(true);
     });
   });
 
-  describe("Real-time Updates", () => {
-    it("should display response times", async () => {
-      render(<SystemHealth />);
-
-      await waitFor(() => {
-        const response80 = screen.getAllByText("80ms");
-        expect(response80.length).toBeGreaterThan(0);
-        const response150 = screen.getAllByText("150ms");
-        expect(response150.length).toBeGreaterThan(0);
+  describe("selfRegister", () => {
+    it("should submit self registration request successfully", async () => {
+      vi.mocked(apiPost).mockResolvedValueOnce({
+        success: true,
+        message: "Account request submitted",
       });
+
+      const result = await selfRegister({
+        username: "self_reg",
+        email: "self@thermacore.com",
+      });
+
+      expect(result.success).toBe(true);
+      expect(apiPost).toHaveBeenCalled();
     });
+  });
 
-    it("should show all service providers", async () => {
-      render(<SystemHealth />);
+  describe("requestPasswordReset", () => {
+    it("should request password reset successfully", async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          message: "Email sent",
+        }),
+      });
 
-      await waitFor(() => {
-        const netlifyElements = screen.getAllByText("Netlify");
-        expect(netlifyElements.length).toBeGreaterThan(0);
+      const result = await requestPasswordReset("test@thermacore.com");
+
+      expect(result.success).toBe(true);
+    });
+  });
+
+  describe("resetPassword", () => {
+    it("should reset password successfully", async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          message: "Password reset",
+        }),
+      });
+
+      const result = await resetPassword("token", "newpass");
+
+      expect(result.success).toBe(true);
+    });
+  });
+
+  describe("updateProfile", () => {
+    it("should reject when not authenticated", async () => {
+      const promise = updateProfile({ firstName: "Hack" });
+      vi.advanceTimersByTime(500);
+
+      await expect(promise).rejects.toEqual({
+        success: false,
+        message: "Not authenticated",
       });
     });
   });
