@@ -24,34 +24,30 @@ afterEach(() => {
   cleanup();
 });
 
-// Mock FormFieldGroup to properly forward props and handle events
-vi.mock("@/components/ui/FormFieldGroup", () => ({
-  FormFieldGroup: ({ id, label, value, onChange, type, children }: any) => (
+// ONLY mock the common FormFieldGroup that DataRefreshSettings uses
+// This mock is scoped to this test file and won't affect other tests
+vi.mock("@/components/common/FormFieldGroup", () => ({
+  default: ({ id, label, value, onChange, type, inputClassName }: any) => (
     <div>
-      <label htmlFor={id}>{label}</label>
-      {type === "select" ? (
-        <select
-          id={id}
-          value={value}
-          onChange={(e) => {
-            if (onChange) onChange(e);
-          }}
-        >
-          {children}
-        </select>
-      ) : (
-        <input
-          id={id}
-          type={type || "text"}
-          value={value}
-          onChange={(e) => {
-            if (onChange) onChange(e);
-          }}
-        />
-      )}
+      <label htmlFor={id} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        {label}
+      </label>
+      <input
+        id={id}
+        type={type || "text"}
+        value={value}
+        onChange={(e) => {
+          if (onChange) onChange(e);
+        }}
+        className={`w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${inputClassName || ''}`}
+        data-testid={`input-${id}`}
+      />
     </div>
   ),
 }));
+
+// DO NOT mock Card, CardContent, CardHeader - use the real components
+// DO NOT mock the shadcn Select - DataRefreshSettings uses native select
 
 describe("DataRefreshSettings", () => {
   const defaultSettings = {
