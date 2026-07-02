@@ -1,16 +1,17 @@
 /**
  * Tests for UserUnitDetails Component
  *
- * Tests basic rendering with mocked providers to isolate
- * provider initialization issues.
+ * Fully isolated test to prevent UnitProvider async initialization issues.
  */
 
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 import UserUnitDetails from "../components/UserUnitDetails";
 
-// Mock react-router-dom
+/* -------------------------------------------------------
+   ROUTER MOCK
+------------------------------------------------------- */
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual("react-router-dom");
 
@@ -34,50 +35,64 @@ vi.mock("react-router-dom", async () => {
   };
 });
 
-// Mock AuthContext
-vi.mock("../context/AuthContext", () => ({
-  AuthProvider: ({ children }) => children,
-  useAuth: () => ({
-    user: {
-      id: 1,
-      username: "test",
-      role: "viewer",
-    },
-    isAuthenticated: true,
-  }),
-}));
-
-// Mock SettingsContext
+/* -------------------------------------------------------
+   SETTINGS CONTEXT MOCK
+------------------------------------------------------- */
 vi.mock("../context/SettingsContext", () => ({
   SettingsProvider: ({ children }) => children,
   useSettings: () => ({
-    temperatureUnit: "C",
-    pressureUnit: "kPa",
+    formatTemperature: (v) => `${v}°C`,
   }),
 }));
 
-// Mock UnitContext
+/* -------------------------------------------------------
+   AUTH CONTEXT MOCK
+------------------------------------------------------- */
+vi.mock("../context/AuthContext", () => ({
+  AuthProvider: ({ children }) => children,
+  useAuth: () => ({
+    user: { id: 1, username: "test", role: "viewer" },
+    userRole: "viewer",
+  }),
+}));
+
+/* -------------------------------------------------------
+   UNIT CONTEXT MOCK (IMPORTANT FIX)
+   - prevents async getAllUnits() from running
+------------------------------------------------------- */
 vi.mock("../context/UnitContext", () => ({
   UnitProvider: ({ children }) => children,
-  useUnit: () => ({
-    selectedUnit: {
-      id: 1,
-      name: "Test Unit",
-    },
+  useUnits: () => ({
+    units: [],
+    loading: false,
+    error: null,
+    updateUnitName: vi.fn(),
+    updateUnitLocation: vi.fn(),
+    updateUnitGPS: vi.fn(),
+    getUnit: vi.fn(),
+    refreshUnits: vi.fn(),
   }),
 }));
 
-// Mock VitalSignGraph
+/* -------------------------------------------------------
+   CHILD COMPONENT MOCKS
+------------------------------------------------------- */
 vi.mock("../components/VitalSignGraph", () => ({
   default: () => <div data-testid="vital-sign-graph">Graph</div>,
 }));
 
-// Mock UnitAlertsTab
 vi.mock("../components/unit-details/UnitAlertsTab", () => ({
   default: () => <div data-testid="unit-alerts-tab">Alerts</div>,
 }));
 
+/* -------------------------------------------------------
+   TESTS
+------------------------------------------------------- */
 describe("UserUnitDetails Component", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   const renderComponent = () =>
     render(
       <MemoryRouter>
