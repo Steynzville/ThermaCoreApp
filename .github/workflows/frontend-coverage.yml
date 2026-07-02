@@ -25,40 +25,27 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run ONLY scadaFixtures test (with full diagnostics)
+      - name: Run ONLY scadaFixtures test with diagnostics
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
           CI: "true"
         run: |
-          echo "🔍 Starting SCADA Fixtures debug run..."
-          echo "Node version: $(node --version)"
-          echo "PNPM version: $(pnpm --version)"
+          echo "🔍 Debugging scadaFixtures.test.js"
+          echo "Node: $(node --version) | pnpm: $(pnpm --version)"
           
           TEST_FILE="src/tests/scadaFixtures.test.js"
           
-          echo "📁 Checking test file exists..."
-          ls -la "$TEST_FILE" || echo "⚠️ Test file not found at expected path!"
+          if [ ! -f "$TEST_FILE" ]; then
+            echo "❌ Test file not found: $TEST_FILE"
+            ls -la src/tests/ | grep -i scada || echo "No scada files found"
+            exit 1
+          fi
           
-          echo "🧪 Running test with diagnostics..."
+          echo "✅ Found test file. Running..."
           
-          # Main diagnostic run
           npx vitest run "$TEST_FILE" \
             --pool=forks \
             --reporter=verbose \
             --reporter=hanging-process \
             --testTimeout=30000 \
-            --logHeapUsage \
-            --no-threads || echo "Test exited with code $?"
-          
-          echo "----------------------------------------"
-          echo "🧪 Alternative run without isolation/coverage (if above hangs)"
-          echo "----------------------------------------"
-          
-          # Alternative: lighter run
-          timeout 60s npx vitest run "$TEST_FILE" \
-            --pool=forks \
-            --coverage=false \
-            --isolate=false \
-            --reporter=verbose || echo "Light run exited with code $?"
-          
-          echo "✅ Debug workflow completed"
+            --logHeapUsage || echo "Command exited with code $?"
