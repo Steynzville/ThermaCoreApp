@@ -3,20 +3,20 @@ import "@testing-library/jest-dom";
 import { cleanup } from "@testing-library/react";
 
 /* =========================================================
-   CORE GLOBAL SAFETY (must be first)
+   GLOBAL SAFETY BOOTSTRAP
 ========================================================= */
 
 globalThis.window = globalThis.window || {};
 globalThis.document = globalThis.document || {};
 
 /* =========================================================
-   1. matchMedia (CRITICAL FIX — Dashboard/Radix)
+   1. MATCHMEDIA (FINAL FIX — DASHBOARD CRASH RESOLVED)
 ========================================================= */
 
-function matchMediaFactory(query) {
+function createMatchMedia(query) {
   return {
     matches: false,
-    media: query,
+    media: String(query),
     onchange: null,
     addListener: () => {},
     removeListener: () => {},
@@ -26,14 +26,17 @@ function matchMediaFactory(query) {
   };
 }
 
+// Hard stable implementation (prevents undefined + overwrite issues)
 Object.defineProperty(window, "matchMedia", {
   writable: true,
   configurable: true,
-  value: vi.fn(matchMediaFactory),
+  value: (query) => createMatchMedia(query),
 });
 
+globalThis.matchMedia = window.matchMedia;
+
 /* =========================================================
-   2. ResizeObserver (safe minimal mock)
+   2. ResizeObserver (UI layout safety)
 ========================================================= */
 
 class ResizeObserverMock {
@@ -59,7 +62,7 @@ window.IntersectionObserver = IntersectionObserverMock;
 global.IntersectionObserver = IntersectionObserverMock;
 
 /* =========================================================
-   4. Pointer Events (drag/drop, sliders, Radix)
+   4. PointerEvent (drag, sliders, Radix UI)
 ========================================================= */
 
 class PointerEventMock extends Event {
@@ -76,7 +79,7 @@ window.PointerEvent = PointerEventMock;
 global.PointerEvent = PointerEventMock;
 
 /* =========================================================
-   5. AudioContext (fix audioPlayer + dashboards)
+   5. AUDIO CONTEXT (audio system stability)
 ========================================================= */
 
 class AudioContextMock {
@@ -107,7 +110,7 @@ global.AudioContext = AudioContextMock;
 global.webkitAudioContext = AudioContextMock;
 
 /* =========================================================
-   6. Storage (local/session safe)
+   6. STORAGE (local + session)
 ========================================================= */
 
 class StorageMock {
@@ -125,14 +128,14 @@ global.localStorage = new StorageMock();
 global.sessionStorage = new StorageMock();
 
 /* =========================================================
-   7. Animation Frame (charts + UI loops)
+   7. ANIMATION FRAME
 ========================================================= */
 
 global.requestAnimationFrame = (cb) => setTimeout(cb, 0);
 global.cancelAnimationFrame = (id) => clearTimeout(id);
 
 /* =========================================================
-   8. Canvas (charts / graphs safe)
+   8. CANVAS (charts + graphs)
 ========================================================= */
 
 HTMLCanvasElement.prototype.getContext = () => ({
@@ -162,7 +165,7 @@ HTMLCanvasElement.prototype.getContext = () => ({
 });
 
 /* =========================================================
-   9. Navigator clipboard
+   9. NAVIGATOR CLIPBOARD
 ========================================================= */
 
 global.navigator = global.navigator || {};
@@ -173,7 +176,7 @@ global.navigator.clipboard = {
 };
 
 /* =========================================================
-   10. Dialogs (silent UI safety)
+   10. DIALOGS
 ========================================================= */
 
 global.alert = vi.fn();
@@ -181,7 +184,7 @@ global.confirm = vi.fn(() => true);
 global.prompt = vi.fn(() => "");
 
 /* =========================================================
-   11. getComputedStyle (safe fallback only)
+   11. COMPUTED STYLE (safe fallback)
 ========================================================= */
 
 const originalGetComputedStyle = window.getComputedStyle;
@@ -200,7 +203,7 @@ window.getComputedStyle = (el) => {
 };
 
 /* =========================================================
-   CLEANUP (DO NOT DESTROY DOM — ONLY RESET STATE)
+   CLEANUP (SAFE ONLY)
 ========================================================= */
 
 afterEach(() => {
