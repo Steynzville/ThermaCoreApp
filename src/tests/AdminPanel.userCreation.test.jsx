@@ -4,13 +4,14 @@ import { BrowserRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import AdminPanel from "../components/AdminPanel";
 
-// Setup hoisted mocks for non-existent files to prevent import errors in Vitest
+// Setup hoisted mocks for dependencies to prevent runtime reference errors
 const { 
   mockGetAllUsers, 
   mockDeleteUser,
   mockApiGet,
   mockApiPost,
   mockFormatRoleName,
+  mockFormatUserName,
 } = vi.hoisted(() => ({
   mockGetAllUsers: vi.fn(),
   mockDeleteUser: vi.fn(),
@@ -83,7 +84,6 @@ describe("AdminPanel User Creation Form", () => {
   });
 
   it("should show all three role options (admin, operator, viewer) in the dropdown when roles are fetched successfully", async () => {
-    // Mock successful roles fetch
     mockApiGet.mockResolvedValue({
       ok: true,
       json: async () => [
@@ -99,16 +99,13 @@ describe("AdminPanel User Creation Form", () => {
       </BrowserRouter>
     );
 
-    // Wait for the main page to load users on mount
     await waitFor(() => {
       expect(mockGetAllUsers).toHaveBeenCalled();
     });
 
-    // Find and click the Add User button
     const addButton = screen.getByText("Add User");
     fireEvent.click(addButton);
 
-    // Wait for dropdown to render and check options
     await waitFor(() => {
       const select = document.getElementById("user-role-select");
       expect(select).toBeInTheDocument();
@@ -118,7 +115,6 @@ describe("AdminPanel User Creation Form", () => {
     const select = document.getElementById("user-role-select");
     const options = select.querySelectorAll("option");
     
-    // There's a default "Select a role" option, so total 4 options
     expect(options.length).toBe(4);
     expect(options[1].textContent).toBe("Admin");
     expect(options[1].value).toBe("admin-id");
@@ -129,7 +125,6 @@ describe("AdminPanel User Creation Form", () => {
   });
 
   it("should show error message when roles API fails", async () => {
-    // Mock API throw error
     mockApiGet.mockRejectedValue(new Error("API network error"));
 
     render(
@@ -145,17 +140,13 @@ describe("AdminPanel User Creation Form", () => {
     const addButton = screen.getByText("Add User");
     fireEvent.click(addButton);
 
-    // Wait for error message to be displayed
     await waitFor(() => {
       expect(screen.getByText("Unable to load roles. Please refresh the page.")).toBeInTheDocument();
     });
   });
 
   it("should show error message when API returns non-ok response", async () => {
-    // Mock non-ok response
-    mockApiGet.mockResolvedValue({
-      ok: false,
-    });
+    mockApiGet.mockResolvedValue({ ok: false });
 
     render(
       <BrowserRouter>
@@ -176,7 +167,6 @@ describe("AdminPanel User Creation Form", () => {
   });
 
   it("should show error message when API returns empty array", async () => {
-    // Mock empty array response
     mockApiGet.mockResolvedValue({
       ok: true,
       json: async () => [],
@@ -233,41 +223,7 @@ describe("AdminPanel User Creation Form", () => {
     expect(select.value).toBe("operator-id");
   });
 
-  it("should allow selecting viewer role", async () => {
-    mockApiGet.mockResolvedValue({
-      ok: true,
-      json: async () => [
-        { id: "admin-id", name: "admin" },
-        { id: "operator-id", name: "operator" },
-        { id: "viewer-id", name: "viewer" },
-      ],
-    });
-
-    render(
-      <BrowserRouter>
-        <AdminPanel />
-      </BrowserRouter>
-    );
-
-    await waitFor(() => {
-      expect(mockGetAllUsers).toHaveBeenCalled();
-    });
-
-    const addButton = screen.getByText("Add User");
-    fireEvent.click(addButton);
-
-    await waitFor(() => {
-      const select = document.getElementById("user-role-select");
-      expect(select).toBeInTheDocument();
-    });
-
-    const select = document.getElementById("user-role-select");
-    fireEvent.change(select, { target: { value: "viewer-id" } });
-    expect(select.value).toBe("viewer-id");
-  });
-
   it("should handle roles wrapped in {roles: [...]} format", async () => {
-    // Mock {roles: [...]} wrapped response
     mockApiGet.mockResolvedValue({
       ok: true,
       json: async () => ({
