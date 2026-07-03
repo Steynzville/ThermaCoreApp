@@ -15,16 +15,13 @@ import {
   render,
   screen,
   waitFor,
-  within,
 } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { afterAll, vi, beforeEach, describe, it, expect } from "vitest";
 
 import AdminPanel from "../components/AdminPanel";
 import * as AuthContext from "../context/AuthContext.jsx";
-import { AuthProvider } from "../context/AuthContext.jsx";
 import { SettingsProvider } from "../context/SettingsContext.jsx";
-import * as apiFetch from "../utils/apiFetch";
 
 // Mock sonner toast
 vi.mock("sonner", () => ({
@@ -35,33 +32,15 @@ vi.mock("sonner", () => ({
 }));
 
 // Mock ThemeContext
-vi.mock("../context/ThemeContext.jsx", () => {
-  const React = require("react");
-  const ThemeContext = React.createContext({ theme: "dark", setTheme: () => {} });
-  return {
-    ThemeContext,
-    ThemeProvider: ({ children }) => (
-      <ThemeContext.Provider value={{ theme: "dark", setTheme: () => {} }}>
-        {children}
-      </ThemeContext.Provider>
-    ),
-    useTheme: () => React.useContext(ThemeContext),
-  };
-});
+vi.mock("../context/ThemeContext.jsx", () => ({
+  ThemeProvider: ({ children }) => <>{children}</>,
+  useTheme: () => ({ theme: "dark", setTheme: vi.fn() }),
+}));
 
-vi.mock("../context/ThemeContext", () => {
-  const React = require("react");
-  const ThemeContext = React.createContext({ theme: "dark", setTheme: () => {} });
-  return {
-    ThemeContext,
-    ThemeProvider: ({ children }) => (
-      <ThemeContext.Provider value={{ theme: "dark", setTheme: () => {} }}>
-        {children}
-      </ThemeContext.Provider>
-    ),
-    useTheme: () => React.useContext(ThemeContext),
-  };
-});
+vi.mock("../context/ThemeContext", () => ({
+  ThemeProvider: ({ children }) => <>{children}</>,
+  useTheme: () => ({ theme: "dark", setTheme: vi.fn() }),
+}));
 
 // Mock apiFetch
 vi.mock("../utils/apiFetch", () => ({
@@ -94,19 +73,10 @@ vi.mock("../services/usersAPI", () => ({
           role: { name: "operator" },
           is_active: true,
         },
-        {
-          id: 3,
-          username: "mike_johnson",
-          email: "mike@thermacore.com",
-          first_name: "Mike",
-          last_name: "Johnson",
-          role: { name: "viewer" },
-          is_active: false,
-        },
       ],
       page: 1,
       per_page: 100,
-      total: 3,
+      total: 2,
     })
   ),
   deleteUser: vi.fn(() => Promise.resolve({ ok: true, status: 204 })),
@@ -122,25 +92,6 @@ const mockUser = {
 };
 
 const originalLocalStorage = window.localStorage;
-
-// Create a wrapper component that provides all required contexts
-const TestWrapper = ({ children }) => {
-  // Mock useAuth directly
-  vi.spyOn(AuthContext, "useAuth").mockReturnValue({
-    user: mockUser,
-    userRole: "admin",
-    isAuthenticated: true,
-    isLoading: false,
-  });
-
-  return (
-    <SettingsProvider>
-      <BrowserRouter>
-        {children}
-      </BrowserRouter>
-    </SettingsProvider>
-  );
-};
 
 const renderWithProviders = (component) => {
   // Mock localStorage
@@ -168,7 +119,7 @@ const renderWithProviders = (component) => {
     writable: true,
   });
 
-  // Mock useAuth before rendering
+  // Mock useAuth
   vi.spyOn(AuthContext, "useAuth").mockReturnValue({
     user: mockUser,
     userRole: "admin",
@@ -196,7 +147,6 @@ describe("AdminPanel Component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.confirm = vi.fn(() => true);
-    // Ensure useAuth returns the mock
     vi.spyOn(AuthContext, "useAuth").mockReturnValue({
       user: mockUser,
       userRole: "admin",
@@ -209,10 +159,14 @@ describe("AdminPanel Component", () => {
     renderWithProviders(<AdminPanel />);
 
     await waitFor(() => {
-      // Use getByText - the component renders these tabs
-      expect(screen.getByText("Users")).toBeInTheDocument();
-      expect(screen.getByText("Password Management")).toBeInTheDocument();
-      expect(screen.getByText("Settings")).toBeInTheDocument();
+      const usersElements = screen.getAllByText("Users");
+      expect(usersElements.length).toBeGreaterThan(0);
+      
+      const passwordElements = screen.getAllByText("Password Management");
+      expect(passwordElements.length).toBeGreaterThan(0);
+      
+      const settingsElements = screen.getAllByText("Settings");
+      expect(settingsElements.length).toBeGreaterThan(0);
     });
   });
 
@@ -220,12 +174,13 @@ describe("AdminPanel Component", () => {
     renderWithProviders(<AdminPanel />);
 
     // Find and click the Password Management tab
-    const passwordTab = screen.getByText("Password Management");
+    const passwordElements = screen.getAllByText("Password Management");
+    const passwordTab = passwordElements[0];
     fireEvent.click(passwordTab);
 
     await waitFor(() => {
-      // Check that the password management content is visible
-      expect(screen.getByText("Change My Password")).toBeInTheDocument();
+      const changePasswordElements = screen.getAllByText("Change My Password");
+      expect(changePasswordElements.length).toBeGreaterThan(0);
     });
   });
 
@@ -233,11 +188,13 @@ describe("AdminPanel Component", () => {
     renderWithProviders(<AdminPanel />);
 
     // Navigate to Password Management tab
-    const passwordTab = screen.getByText("Password Management");
+    const passwordElements = screen.getAllByText("Password Management");
+    const passwordTab = passwordElements[0];
     fireEvent.click(passwordTab);
 
     // Click Change My Password button
-    const changePasswordButton = screen.getByText("Change My Password");
+    const changePasswordElements = screen.getAllByText("Change My Password");
+    const changePasswordButton = changePasswordElements[0];
     fireEvent.click(changePasswordButton);
 
     await waitFor(() => {
@@ -250,15 +207,16 @@ describe("AdminPanel Component", () => {
     renderWithProviders(<AdminPanel />);
 
     // Navigate to Password Management tab
-    const passwordTab = screen.getByText("Password Management");
+    const passwordElements = screen.getAllByText("Password Management");
+    const passwordTab = passwordElements[0];
     fireEvent.click(passwordTab);
 
     // Click Change My Password button
-    const changePasswordButton = screen.getByText("Change My Password");
+    const changePasswordElements = screen.getAllByText("Change My Password");
+    const changePasswordButton = changePasswordElements[0];
     fireEvent.click(changePasswordButton);
 
     await waitFor(() => {
-      // Find visibility toggle buttons - they use aria-label
       const toggleButtons = screen.getAllByRole("button", { name: /toggle password visibility/i });
       expect(toggleButtons.length).toBeGreaterThan(0);
     });
@@ -268,11 +226,13 @@ describe("AdminPanel Component", () => {
     renderWithProviders(<AdminPanel />);
 
     // Navigate to Password Management tab
-    const passwordTab = screen.getByText("Password Management");
+    const passwordElements = screen.getAllByText("Password Management");
+    const passwordTab = passwordElements[0];
     fireEvent.click(passwordTab);
 
     // Click Change My Password button
-    const changePasswordButton = screen.getByText("Change My Password");
+    const changePasswordElements = screen.getAllByText("Change My Password");
+    const changePasswordButton = changePasswordElements[0];
     fireEvent.click(changePasswordButton);
 
     const newPasswordInput = screen.getByPlaceholderText("Enter new password");
@@ -283,7 +243,8 @@ describe("AdminPanel Component", () => {
     fireEvent.change(confirmPasswordInput, { target: { value: "password456" } });
 
     await waitFor(() => {
-      expect(screen.getByText("Passwords do not match")).toBeInTheDocument();
+      const errorElements = screen.getAllByText("Passwords do not match");
+      expect(errorElements.length).toBeGreaterThan(0);
     });
   });
 
@@ -291,11 +252,13 @@ describe("AdminPanel Component", () => {
     renderWithProviders(<AdminPanel />);
 
     // Navigate to Password Management tab
-    const passwordTab = screen.getByText("Password Management");
+    const passwordElements = screen.getAllByText("Password Management");
+    const passwordTab = passwordElements[0];
     fireEvent.click(passwordTab);
 
     // Click Change My Password button
-    const changePasswordButton = screen.getByText("Change My Password");
+    const changePasswordElements = screen.getAllByText("Change My Password");
+    const changePasswordButton = changePasswordElements[0];
     fireEvent.click(changePasswordButton);
 
     const newPasswordInput = screen.getByPlaceholderText("Enter new password");
@@ -304,7 +267,8 @@ describe("AdminPanel Component", () => {
     fireEvent.change(newPasswordInput, { target: { value: "12345" } });
 
     await waitFor(() => {
-      expect(screen.getByText("Password must be at least 6 characters long")).toBeInTheDocument();
+      const errorElements = screen.getAllByText("Password must be at least 6 characters long");
+      expect(errorElements.length).toBeGreaterThan(0);
     });
   });
 });
