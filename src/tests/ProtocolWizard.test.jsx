@@ -69,12 +69,17 @@ describe("ProtocolWizard", () => {
 
   // Helper to find and click a protocol card
   const selectProtocol = async (protocolName) => {
-    const content = await getDialogContent();
+    await waitFor(() => {
+      const dialog = screen.getByRole("dialog");
+      expect(dialog).toBeInTheDocument();
+    });
+    
+    const dialog = screen.getByRole("dialog");
     // The component uses uppercase for protocol names
     const upperName = protocolName.toUpperCase();
     
-    // Find all cards with clickable class
-    const allCards = content.container.querySelectorAll('[class*="cursor-pointer"]');
+    // Find all cards with clickable class within the dialog
+    const allCards = dialog.querySelectorAll('[class*="cursor-pointer"]');
     let foundCard = null;
     
     for (const card of allCards) {
@@ -90,7 +95,8 @@ describe("ProtocolWizard", () => {
       return foundCard;
     }
     
-    // Fallback: find by text content in the card
+    // Fallback: find by text content in the dialog
+    const content = within(dialog);
     const cardElements = content.queryAllByText(new RegExp(upperName, 'i'));
     for (const el of cardElements) {
       const card = el.closest('[class*="cursor-pointer"]') || el.closest('.cursor-pointer');
@@ -99,6 +105,8 @@ describe("ProtocolWizard", () => {
         return card;
       }
     }
+    
+    throw new Error(`Could not find protocol card for: ${protocolName}`);
   };
 
   // Helper to navigate through wizard steps
@@ -194,12 +202,18 @@ describe("ProtocolWizard", () => {
 
       await selectProtocol("modbus");
 
-      const content = await getDialogContent();
+      const dialog = screen.getByRole("dialog");
       // Modbus card should be selected - check for border-primary
-      const modbusCard = content.container.querySelector('[class*="cursor-pointer"]');
-      if (modbusCard) {
-        expect(modbusCard).toHaveClass(/border-primary/);
+      const modbusCards = dialog.querySelectorAll('[class*="cursor-pointer"]');
+      let found = false;
+      for (const card of modbusCards) {
+        if (card.textContent?.toLowerCase().includes('modbus')) {
+          expect(card).toHaveClass(/border-primary/);
+          found = true;
+          break;
+        }
       }
+      expect(found).toBe(true);
     });
 
     it("should allow selecting OPC-UA protocol", async () => {
@@ -207,8 +221,8 @@ describe("ProtocolWizard", () => {
 
       await selectProtocol("opcua");
 
-      const content = await getDialogContent();
-      const opcuaCards = content.container.querySelectorAll('[class*="cursor-pointer"]');
+      const dialog = screen.getByRole("dialog");
+      const opcuaCards = dialog.querySelectorAll('[class*="cursor-pointer"]');
       let found = false;
       // Find the OPCUA card
       for (const card of opcuaCards) {
@@ -226,8 +240,8 @@ describe("ProtocolWizard", () => {
 
       await selectProtocol("dnp3");
 
-      const content = await getDialogContent();
-      const dnp3Cards = content.container.querySelectorAll('[class*="cursor-pointer"]');
+      const dialog = screen.getByRole("dialog");
+      const dnp3Cards = dialog.querySelectorAll('[class*="cursor-pointer"]');
       let found = false;
       for (const card of dnp3Cards) {
         if (card.textContent?.toLowerCase().includes('dnp3')) {
@@ -244,8 +258,8 @@ describe("ProtocolWizard", () => {
 
       await selectProtocol("mqtt");
 
-      const content = await getDialogContent();
-      const mqttCards = content.container.querySelectorAll('[class*="cursor-pointer"]');
+      const dialog = screen.getByRole("dialog");
+      const mqttCards = dialog.querySelectorAll('[class*="cursor-pointer"]');
       let found = false;
       for (const card of mqttCards) {
         if (card.textContent?.toLowerCase().includes('mqtt')) {
