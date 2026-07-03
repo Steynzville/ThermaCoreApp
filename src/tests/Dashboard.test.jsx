@@ -232,7 +232,10 @@ describe("Dashboard", () => {
         </TestWrapper>,
       );
 
-      expect(screen.queryAllByText("Quick Actions").length).toBe(0);
+      // For regular users, QuickActionCard components should NOT be rendered
+      // Check that no quick action cards exist
+      const quickActionElements = screen.queryAllByTestId(/quick-action-/);
+      expect(quickActionElements.length).toBe(0);
     });
 
     it("should render quick actions for admin users", () => {
@@ -242,7 +245,9 @@ describe("Dashboard", () => {
         </TestWrapper>,
       );
 
-      expect(screen.getAllByText("Quick Actions").length).toBeGreaterThan(0);
+      // For admin users, QuickActionCard components should be rendered
+      const quickActionElements = screen.getAllByTestId(/quick-action-/);
+      expect(quickActionElements.length).toBeGreaterThan(0);
     });
   });
 
