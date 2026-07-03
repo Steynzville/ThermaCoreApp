@@ -28,15 +28,15 @@ afterEach(() => {
 
 // Mock the Card components to break circular dependencies
 vi.mock("@/components/ui/card", () => ({
-  Card: ({ children, className }: any) => <div className={className}>{children}</div>,
-  CardHeader: ({ children, className }: any) => <div className={className}>{children}</div>,
-  CardTitle: ({ children, className }: any) => <div className={className}>{children}</div>,
-  CardContent: ({ children, className }: any) => <div className={className}>{children}</div>,
+  Card: ({ children, className }) => <div className={className}>{children}</div>,
+  CardHeader: ({ children, className }) => <div className={className}>{children}</div>,
+  CardTitle: ({ children, className }) => <div className={className}>{children}</div>,
+  CardContent: ({ children, className }) => <div className={className}>{children}</div>,
 }));
 
 // Mock FormFieldGroup to be a simple component
 vi.mock("@/components/common/FormFieldGroup", () => ({
-  default: ({ id, label, value, onChange, type, inputClassName }: any) => (
+  default: ({ id, label, value, onChange, type, inputClassName }) => (
     <div>
       <label htmlFor={id} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
         {label}
