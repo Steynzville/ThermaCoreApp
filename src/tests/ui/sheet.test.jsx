@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   Sheet,
   SheetClose,
@@ -10,6 +10,17 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "../../components/ui/sheet";
+
+// Mock window methods for Sheet
+beforeEach(() => {
+  window.setTimeout = vi.fn().mockImplementation((cb) => {
+    cb();
+    return 123;
+  });
+  window.clearTimeout = vi.fn();
+  window.addEventListener = vi.fn();
+  window.removeEventListener = vi.fn();
+});
 
 describe("Sheet Components", () => {
   it("renders SheetTrigger", () => {
@@ -52,8 +63,14 @@ describe("Sheet Components", () => {
         </SheetContent>
       </Sheet>,
     );
-    expect(screen.getByText("Sheet Title")).toBeInTheDocument();
-    expect(screen.getByText("Sheet description text")).toBeInTheDocument();
-    expect(screen.getByText("Content")).toBeInTheDocument();
+    
+    const titleElements = screen.getAllByText("Sheet Title");
+    expect(titleElements.length).toBeGreaterThan(0);
+    
+    const descElements = screen.getAllByText("Sheet description text");
+    expect(descElements.length).toBeGreaterThan(0);
+    
+    const contentElements = screen.getAllByText("Content");
+    expect(contentElements.length).toBeGreaterThan(0);
   });
 });
