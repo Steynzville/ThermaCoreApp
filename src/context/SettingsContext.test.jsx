@@ -1,5 +1,5 @@
-import { act, renderHook } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { SettingsProvider, useSettings } from "../context/SettingsContext";
 
@@ -93,7 +93,7 @@ describe("SettingsContext", () => {
       expect(result.current.settings.soundEnabled).toBe(true);
     });
 
-    it("should persist sound setting to localStorage", () => {
+    it("should persist sound setting to localStorage", async () => {
       const { result } = renderHook(() => useSettings(), {
         wrapper: SettingsProvider,
       });
@@ -102,10 +102,13 @@ describe("SettingsContext", () => {
         result.current.toggleSound();
       });
 
-      const saved = JSON.parse(
-        localStorage.getItem("thermacore-settings") || "{}",
-      );
-      expect(saved.soundEnabled).toBe(false);
+      // Wait for the effect to run
+      await waitFor(() => {
+        const saved = JSON.parse(
+          localStorage.getItem("thermacore-settings") || "{}",
+        );
+        expect(saved.soundEnabled).toBe(false);
+      });
     });
   });
 
@@ -122,7 +125,7 @@ describe("SettingsContext", () => {
       expect(result.current.settings.volume).toBe(0.7);
     });
 
-    it("should persist volume to localStorage", () => {
+    it("should persist volume to localStorage", async () => {
       const { result } = renderHook(() => useSettings(), {
         wrapper: SettingsProvider,
       });
@@ -131,10 +134,13 @@ describe("SettingsContext", () => {
         result.current.setVolume(0.8);
       });
 
-      const saved = JSON.parse(
-        localStorage.getItem("thermacore-settings") || "{}",
-      );
-      expect(saved.volume).toBe(0.8);
+      // Wait for the effect to run
+      await waitFor(() => {
+        const saved = JSON.parse(
+          localStorage.getItem("thermacore-settings") || "{}",
+        );
+        expect(saved.volume).toBe(0.8);
+      });
     });
 
     it("should allow any volume value (no clamping)", () => {
@@ -181,7 +187,7 @@ describe("SettingsContext", () => {
       expect(result.current.settings.temperatureUnit).toBe("celsius");
     });
 
-    it("should persist temperature unit to localStorage", () => {
+    it("should persist temperature unit to localStorage", async () => {
       const { result } = renderHook(() => useSettings(), {
         wrapper: SettingsProvider,
       });
@@ -190,10 +196,13 @@ describe("SettingsContext", () => {
         result.current.setTemperatureUnit("fahrenheit");
       });
 
-      const saved = JSON.parse(
-        localStorage.getItem("thermacore-settings") || "{}",
-      );
-      expect(saved.temperatureUnit).toBe("fahrenheit");
+      // Wait for the effect to run
+      await waitFor(() => {
+        const saved = JSON.parse(
+          localStorage.getItem("thermacore-settings") || "{}",
+        );
+        expect(saved.temperatureUnit).toBe("fahrenheit");
+      });
     });
   });
 
@@ -228,7 +237,7 @@ describe("SettingsContext", () => {
       expect(result.current.settings.temperatureUnit).toBe("fahrenheit");
     });
 
-    it("should persist all settings after multiple updates", () => {
+    it("should persist all settings after multiple updates", async () => {
       const { result } = renderHook(() => useSettings(), {
         wrapper: SettingsProvider,
       });
@@ -239,12 +248,15 @@ describe("SettingsContext", () => {
         result.current.setTemperatureUnit("fahrenheit");
       });
 
-      const saved = JSON.parse(
-        localStorage.getItem("thermacore-settings") || "{}",
-      );
-      expect(saved.soundEnabled).toBe(false);
-      expect(saved.volume).toBe(0.6);
-      expect(saved.temperatureUnit).toBe("fahrenheit");
+      // Wait for the effect to run
+      await waitFor(() => {
+        const saved = JSON.parse(
+          localStorage.getItem("thermacore-settings") || "{}",
+        );
+        expect(saved.soundEnabled).toBe(false);
+        expect(saved.volume).toBe(0.6);
+        expect(saved.temperatureUnit).toBe("fahrenheit");
+      });
     });
   });
 });
