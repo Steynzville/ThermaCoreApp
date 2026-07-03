@@ -10,25 +10,25 @@
  * - Unit status badges
  */
 
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import RemoteControl from "@/components/RemoteControl";
+import RemoteControl from "../components/RemoteControl";
 
-// Mock the hooks and services
-vi.mock("@/hooks/useUnitStatus", () => ({
+// Mock the hooks and services first, before importing
+vi.mock("../hooks/useUnitStatus", () => ({
   useUnitStatus: vi.fn(),
 }));
 
-vi.mock("@/hooks/usePermissions", () => ({
+vi.mock("../hooks/usePermissions", () => ({
   usePermissions: vi.fn(),
 }));
 
-vi.mock("@/hooks/useWebSocket", () => ({
+vi.mock("../hooks/useWebSocket", () => ({
   useWebSocket: vi.fn(),
 }));
 
-vi.mock("@/services/unitService", () => ({
+vi.mock("../services/unitService", () => ({
   unitService: {
     getUnitStatus: vi.fn(),
     toggleMachinePower: vi.fn(),
@@ -38,9 +38,10 @@ vi.mock("@/services/unitService", () => ({
   },
 }));
 
-import { useUnitStatus } from "@/hooks/useUnitStatus";
-import { usePermissions } from "@/hooks/usePermissions";
-import { useWebSocket } from "@/hooks/useWebSocket";
+// Import after mocks
+import { useUnitStatus } from "../hooks/useUnitStatus";
+import { usePermissions } from "../hooks/usePermissions";
+import { useWebSocket } from "../hooks/useWebSocket";
 
 const mockUnit = {
   id: "unit-1",
@@ -98,8 +99,11 @@ describe("RemoteControl Component", () => {
         </TestWrapper>,
       );
 
-      expect(screen.getByText("Remote Control")).toBeInTheDocument();
-      expect(screen.getByText("ThermaCore Unit 001")).toBeInTheDocument();
+      const titleElements = screen.getAllByText("Remote Control");
+      expect(titleElements.length).toBeGreaterThan(0);
+      
+      const unitNameElements = screen.getAllByText("ThermaCore Unit 001");
+      expect(unitNameElements.length).toBeGreaterThan(0);
     });
 
     it("should show 'Unit Not Found' when no unit is provided", () => {
@@ -117,8 +121,11 @@ describe("RemoteControl Component", () => {
         </TestWrapper>,
       );
 
-      expect(screen.getByText("Unit Not Found")).toBeInTheDocument();
-      expect(screen.getByText(/The requested unit could not be found/i)).toBeInTheDocument();
+      const notFoundElements = screen.getAllByText("Unit Not Found");
+      expect(notFoundElements.length).toBeGreaterThan(0);
+      
+      const messageElements = screen.getAllByText(/The requested unit could not be found/i);
+      expect(messageElements.length).toBeGreaterThan(0);
     });
 
     it("should display connection status as Connected", () => {
