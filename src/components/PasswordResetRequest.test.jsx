@@ -23,15 +23,10 @@ vi.mock("../assets/thermacore-logo-new.png", () => ({
 }));
 
 describe("PasswordResetRequest", () => {
-  const ensureDocumentBody = () => {
-    if (!document.body) {
-      document.documentElement.appendChild(document.createElement("body"));
-    }
-  };
-
   beforeEach(() => {
     vi.clearAllMocks();
-    ensureDocumentBody();
+    // Clean up the DOM between tests
+    document.body.innerHTML = '';
   });
 
   // Helper to render with a specific token in the URL
@@ -58,36 +53,37 @@ describe("PasswordResetRequest", () => {
     );
   };
 
-  it("should render password reset form", async () => {
+  it("should render password reset form", () => {
     renderWithToken();
 
-    // Use getAllByPlaceholderText since there might be multiple instances
-    const newPasswordInputs = screen.getAllByPlaceholderText("Enter new password");
-    expect(newPasswordInputs.length).toBeGreaterThan(0);
-    
-    const confirmPasswordInputs = screen.getAllByPlaceholderText("Confirm new password");
-    expect(confirmPasswordInputs.length).toBeGreaterThan(0);
-    
-    const resetButtons = screen.getAllByRole("button", { name: /reset password/i });
-    expect(resetButtons.length).toBeGreaterThan(0);
+    // Use getByPlaceholderText - it will find the first one
+    expect(
+      screen.getByPlaceholderText("Enter new password"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText("Confirm new password"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /reset password/i }),
+    ).toBeInTheDocument();
   });
 
   it("should display error when no token in URL", async () => {
     renderWithToken(null);
 
     await waitFor(() => {
-      const errorElements = screen.getAllByText(
-        /Invalid reset link. Please request a new password reset./i,
-      );
-      expect(errorElements.length).toBeGreaterThan(0);
+      expect(
+        screen.getByText(
+          /Invalid reset link. Please request a new password reset./i,
+        ),
+      ).toBeInTheDocument();
     });
   });
 
   it("should handle password input change", () => {
     renderWithToken();
 
-    const passwordInputs = screen.getAllByPlaceholderText("Enter new password");
-    const passwordInput = passwordInputs[0];
+    const passwordInput = screen.getByPlaceholderText("Enter new password");
     fireEvent.change(passwordInput, {
       target: { name: "newPassword", value: "newpass123" },
     });
@@ -98,8 +94,7 @@ describe("PasswordResetRequest", () => {
   it("should handle confirm password input change", () => {
     renderWithToken();
 
-    const confirmInputs = screen.getAllByPlaceholderText("Confirm new password");
-    const confirmInput = confirmInputs[0];
+    const confirmInput = screen.getByPlaceholderText("Confirm new password");
     fireEvent.change(confirmInput, {
       target: { name: "confirmPassword", value: "newpass123" },
     });
@@ -110,27 +105,30 @@ describe("PasswordResetRequest", () => {
   it("should validate empty password fields", async () => {
     renderWithToken();
 
-    const submitButtons = screen.getAllByRole("button", {
+    const submitButton = screen.getByRole("button", {
       name: /reset password/i,
     });
-    const submitButton = submitButtons[0];
 
-    // Submit the form
-    fireEvent.submit(submitButton.closest("form") || submitButton.form || submitButton);
+    // Submit the form using the button's form property
+    const form = submitButton.closest('form');
+    if (form) {
+      fireEvent.submit(form);
+    } else {
+      fireEvent.click(submitButton);
+    }
 
     await waitFor(() => {
-      const errorElements = screen.getAllByText(/Please enter both password fields/i);
-      expect(errorElements.length).toBeGreaterThan(0);
+      expect(
+        screen.getByText(/Please enter both password fields/i),
+      ).toBeInTheDocument();
     });
   });
 
   it("should validate password length", async () => {
     renderWithToken();
 
-    const passwordInputs = screen.getAllByPlaceholderText("Enter new password");
-    const passwordInput = passwordInputs[0];
-    const confirmInputs = screen.getAllByPlaceholderText("Confirm new password");
-    const confirmInput = confirmInputs[0];
+    const passwordInput = screen.getByPlaceholderText("Enter new password");
+    const confirmInput = screen.getByPlaceholderText("Confirm new password");
 
     fireEvent.change(passwordInput, {
       target: { name: "newPassword", value: "short" },
@@ -139,26 +137,24 @@ describe("PasswordResetRequest", () => {
       target: { name: "confirmPassword", value: "short" },
     });
 
-    const submitButtons = screen.getAllByRole("button", {
+    const submitButton = screen.getByRole("button", {
       name: /reset password/i,
     });
-    const submitButton = submitButtons[0];
 
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      const errorElements = screen.getAllByText(/Password must be at least 6 characters long/i);
-      expect(errorElements.length).toBeGreaterThan(0);
+      expect(
+        screen.getByText(/Password must be at least 6 characters long/i),
+      ).toBeInTheDocument();
     });
   });
 
   it("should validate password mismatch", async () => {
     renderWithToken();
 
-    const passwordInputs = screen.getAllByPlaceholderText("Enter new password");
-    const passwordInput = passwordInputs[0];
-    const confirmInputs = screen.getAllByPlaceholderText("Confirm new password");
-    const confirmInput = confirmInputs[0];
+    const passwordInput = screen.getByPlaceholderText("Enter new password");
+    const confirmInput = screen.getByPlaceholderText("Confirm new password");
 
     fireEvent.change(passwordInput, {
       target: { name: "newPassword", value: "password123" },
@@ -167,16 +163,14 @@ describe("PasswordResetRequest", () => {
       target: { name: "confirmPassword", value: "different456" },
     });
 
-    const submitButtons = screen.getAllByRole("button", {
+    const submitButton = screen.getByRole("button", {
       name: /reset password/i,
     });
-    const submitButton = submitButtons[0];
 
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      const errorElements = screen.getAllByText(/Passwords do not match/i);
-      expect(errorElements.length).toBeGreaterThan(0);
+      expect(screen.getByText(/Passwords do not match/i)).toBeInTheDocument();
     });
   });
 
@@ -188,10 +182,8 @@ describe("PasswordResetRequest", () => {
 
     renderWithToken();
 
-    const passwordInputs = screen.getAllByPlaceholderText("Enter new password");
-    const passwordInput = passwordInputs[0];
-    const confirmInputs = screen.getAllByPlaceholderText("Confirm new password");
-    const confirmInput = confirmInputs[0];
+    const passwordInput = screen.getByPlaceholderText("Enter new password");
+    const confirmInput = screen.getByPlaceholderText("Confirm new password");
 
     fireEvent.change(passwordInput, {
       target: { name: "newPassword", value: "newpass123" },
@@ -200,10 +192,9 @@ describe("PasswordResetRequest", () => {
       target: { name: "confirmPassword", value: "newpass123" },
     });
 
-    const submitButtons = screen.getAllByRole("button", {
+    const submitButton = screen.getByRole("button", {
       name: /reset password/i,
     });
-    const submitButton = submitButtons[0];
 
     fireEvent.click(submitButton);
 
@@ -220,10 +211,8 @@ describe("PasswordResetRequest", () => {
 
     renderWithToken();
 
-    const passwordInputs = screen.getAllByPlaceholderText("Enter new password");
-    const passwordInput = passwordInputs[0];
-    const confirmInputs = screen.getAllByPlaceholderText("Confirm new password");
-    const confirmInput = confirmInputs[0];
+    const passwordInput = screen.getByPlaceholderText("Enter new password");
+    const confirmInput = screen.getByPlaceholderText("Confirm new password");
 
     fireEvent.change(passwordInput, {
       target: { name: "newPassword", value: "newpass123" },
@@ -232,16 +221,14 @@ describe("PasswordResetRequest", () => {
       target: { name: "confirmPassword", value: "newpass123" },
     });
 
-    const submitButtons = screen.getAllByRole("button", {
+    const submitButton = screen.getByRole("button", {
       name: /reset password/i,
     });
-    const submitButton = submitButtons[0];
 
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      const errorElements = screen.getAllByText(/Invalid token/i);
-      expect(errorElements.length).toBeGreaterThan(0);
+      expect(screen.getByText(/Invalid token/i)).toBeInTheDocument();
     });
   });
 
@@ -250,10 +237,8 @@ describe("PasswordResetRequest", () => {
 
     renderWithToken();
 
-    const passwordInputs = screen.getAllByPlaceholderText("Enter new password");
-    const passwordInput = passwordInputs[0];
-    const confirmInputs = screen.getAllByPlaceholderText("Confirm new password");
-    const confirmInput = confirmInputs[0];
+    const passwordInput = screen.getByPlaceholderText("Enter new password");
+    const confirmInput = screen.getByPlaceholderText("Confirm new password");
 
     fireEvent.change(passwordInput, {
       target: { name: "newPassword", value: "newpass123" },
@@ -262,61 +247,61 @@ describe("PasswordResetRequest", () => {
       target: { name: "confirmPassword", value: "newpass123" },
     });
 
-    const submitButtons = screen.getAllByRole("button", {
+    const submitButton = screen.getByRole("button", {
       name: /reset password/i,
     });
-    const submitButton = submitButtons[0];
 
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      const errorElements = screen.getAllByText(
-        /An unexpected error occurred. Please try again./i,
-      );
-      expect(errorElements.length).toBeGreaterThan(0);
+      expect(
+        screen.getByText(/An unexpected error occurred. Please try again./i),
+      ).toBeInTheDocument();
     });
   });
 
   it("should toggle password visibility", () => {
     renderWithToken();
 
-    const passwordInputs = screen.getAllByLabelText(/New Password/i);
-    const passwordInput = passwordInputs[0];
+    const passwordInput = screen.getByPlaceholderText("Enter new password");
     expect(passwordInput).toHaveAttribute("type", "password");
 
     // Find the toggle button by aria-label
-    const toggleButtons = screen.getAllByRole("button", { name: /show password|hide password/i });
-    if (toggleButtons.length > 0) {
-      fireEvent.click(toggleButtons[0]);
-      expect(passwordInput).toHaveAttribute("type", "text");
-    }
+    const toggleButton = screen.getByRole("button", { name: /Show password|Hide password/i });
+    fireEvent.click(toggleButton);
+    expect(passwordInput).toHaveAttribute("type", "text");
   });
 
   it("should clear error when user starts typing", async () => {
     renderWithToken();
 
-    const submitButtons = screen.getAllByRole("button", {
+    const submitButton = screen.getByRole("button", {
       name: /reset password/i,
     });
-    const submitButton = submitButtons[0];
 
     // Submit without filling fields to trigger error
-    fireEvent.submit(submitButton.closest("form") || submitButton.form || submitButton);
+    const form = submitButton.closest('form');
+    if (form) {
+      fireEvent.submit(form);
+    } else {
+      fireEvent.click(submitButton);
+    }
 
     await waitFor(() => {
-      const errorElements = screen.getAllByText(/Please enter both password fields/i);
-      expect(errorElements.length).toBeGreaterThan(0);
+      expect(
+        screen.getByText(/Please enter both password fields/i),
+      ).toBeInTheDocument();
     });
 
-    const passwordInputs = screen.getAllByPlaceholderText("Enter new password");
-    const passwordInput = passwordInputs[0];
+    const passwordInput = screen.getByPlaceholderText("Enter new password");
     fireEvent.change(passwordInput, {
       target: { name: "newPassword", value: "test" },
     });
 
     await waitFor(() => {
-      const errorElements = screen.queryAllByText(/Please enter both password fields/i);
-      expect(errorElements.length).toBe(0);
+      expect(
+        screen.queryByText(/Please enter both password fields/i),
+      ).not.toBeInTheDocument();
     });
   });
 });
