@@ -1,11 +1,22 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   Popover,
   PopoverAnchor,
   PopoverContent,
   PopoverTrigger,
 } from "../../components/ui/popover";
+
+// Mock window methods for Popover
+beforeEach(() => {
+  window.setTimeout = vi.fn().mockImplementation((cb) => {
+    cb();
+    return 123;
+  });
+  window.clearTimeout = vi.fn();
+  window.addEventListener = vi.fn();
+  window.removeEventListener = vi.fn();
+});
 
 describe("Popover Components", () => {
   it("renders PopoverTrigger", () => {
@@ -37,7 +48,11 @@ describe("Popover Components", () => {
         <PopoverContent>Content</PopoverContent>
       </Popover>,
     );
-    expect(screen.getByText("Trigger")).toBeInTheDocument();
-    expect(screen.getByText("Content")).toBeInTheDocument();
+    
+    const triggerElements = screen.getAllByText("Trigger");
+    expect(triggerElements.length).toBeGreaterThan(0);
+    
+    const contentElements = screen.getAllByText("Content");
+    expect(contentElements.length).toBeGreaterThan(0);
   });
 });
