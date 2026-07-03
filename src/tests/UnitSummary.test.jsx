@@ -14,7 +14,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import UnitSummary from "@/components/dashboard/UnitSummary";
+import UnitSummary from "../components/dashboard/UnitSummary";
 
 // Mock navigate
 const mockNavigate = vi.fn();
