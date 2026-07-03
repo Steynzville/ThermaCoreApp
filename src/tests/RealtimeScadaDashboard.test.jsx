@@ -10,7 +10,7 @@
  * - Multi-source data aggregation
  */
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { createContext } from "react";
 import { BrowserRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -601,7 +601,6 @@ describe("RealtimeScadaDashboard", () => {
 
   describe("Time Range Selection", () => {
     beforeEach(() => {
-      // Use the imported mocks directly
       useRealtimeMetrics.mockReturnValue({
         metrics: scadaDashboardFixture.metrics,
         loading: false,
@@ -634,22 +633,21 @@ describe("RealtimeScadaDashboard", () => {
         </TestWrapper>,
       );
 
+      // Find the select trigger
+      const selectTriggers = await screen.findAllByRole("combobox");
+      const selectTrigger = selectTriggers[0];
+
+      // Open the select dropdown
+      fireEvent.click(selectTrigger);
+
+      // Wait for the dropdown content to appear and click the option
+      const option = await screen.findByText("Last Hour");
+      fireEvent.click(option);
+
+      // Wait for the mock to be called
       await waitFor(() => {
-        const timeRangeSelects = screen.getAllByRole("combobox");
-        expect(timeRangeSelects.length).toBeGreaterThan(0);
+        expect(mockSetTimeRange).toHaveBeenCalledWith(1);
       });
-
-      const timeRangeSelects = screen.getAllByRole("combobox");
-      const timeRangeSelect = timeRangeSelects[0];
-
-      fireEvent.click(timeRangeSelect);
-
-      await waitFor(() => {
-        const option = screen.getByText("Last Hour");
-        fireEvent.click(option);
-      });
-
-      expect(mockSetTimeRange).toHaveBeenCalled();
     });
 
     it("should update historical data when time range changes", async () => {
@@ -670,25 +668,21 @@ describe("RealtimeScadaDashboard", () => {
         </TestWrapper>,
       );
 
+      // Find the select trigger
+      const selectTriggers = await screen.findAllByRole("combobox");
+      const selectTrigger = selectTriggers[0];
+
+      // Open the select dropdown
+      fireEvent.click(selectTrigger);
+
+      // Click the "Last 7 Days" option
+      const option = await screen.findByText("Last 7 Days");
+      fireEvent.click(option);
+
+      // Verify the mock was called
       await waitFor(() => {
-        const selects = container.querySelectorAll('select, [role="combobox"]');
-        expect(selects.length).toBeGreaterThan(0);
+        expect(mockSetTimeRange).toHaveBeenCalled();
       });
-
-      const selects = container.querySelectorAll('select, [role="combobox"]');
-      if (selects.length > 0) {
-        fireEvent.click(selects[0]);
-
-        await waitFor(() => {
-          const options = screen.queryAllByText(
-            (content, _element) =>
-              content.includes("Last 7 Days") || content.includes("7 Days"),
-          );
-          if (options.length > 0) {
-            fireEvent.click(options[0]);
-          }
-        });
-      }
 
       expect(container).toBeTruthy();
     });
@@ -699,7 +693,6 @@ describe("Protocol Status Display", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Use the imported mocks directly - NO require()
     useRealtimeMetrics.mockReturnValue({
       metrics: scadaDashboardFixture.metrics,
       loading: false,
@@ -780,7 +773,6 @@ describe("Accessibility", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Use the imported mocks directly - NO require()
     useRealtimeMetrics.mockReturnValue({
       metrics: scadaDashboardFixture.metrics,
       loading: false,
