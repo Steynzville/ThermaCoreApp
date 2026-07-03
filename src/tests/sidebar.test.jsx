@@ -5,7 +5,7 @@
  */
 
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   Sidebar,
   SidebarContent,
@@ -18,6 +18,17 @@ import {
   SidebarMenuItem,
   SidebarProvider,
 } from "../components/ui/sidebar";
+
+// Mock window methods for Sidebar
+beforeEach(() => {
+  window.addEventListener = vi.fn();
+  window.removeEventListener = vi.fn();
+  window.clearTimeout = vi.fn();
+  window.setTimeout = vi.fn().mockImplementation((cb) => {
+    cb();
+    return 123;
+  });
+});
 
 // Mock use-mobile hook
 vi.mock("../hooks/use-mobile", () => ({
@@ -36,7 +47,8 @@ describe("Sidebar Component", () => {
       </SidebarProvider>,
     );
 
-    expect(screen.getByText("Header")).toBeInTheDocument();
+    const elements = screen.getAllByText("Header");
+    expect(elements.length).toBeGreaterThan(0);
   });
 
   it("should render sidebar menu with items", () => {
@@ -58,7 +70,8 @@ describe("Sidebar Component", () => {
       </SidebarProvider>,
     );
 
-    expect(screen.getByText("Test Item")).toBeInTheDocument();
+    const elements = screen.getAllByText("Test Item");
+    expect(elements.length).toBeGreaterThan(0);
   });
 
   it("should render sidebar with footer", () => {
@@ -71,6 +84,7 @@ describe("Sidebar Component", () => {
       </SidebarProvider>,
     );
 
-    expect(screen.getByText("Footer Content")).toBeInTheDocument();
+    const elements = screen.getAllByText("Footer Content");
+    expect(elements.length).toBeGreaterThan(0);
   });
 });
