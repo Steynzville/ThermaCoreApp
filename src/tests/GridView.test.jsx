@@ -156,35 +156,43 @@ describe("GridView", () => {
   describe("Component Rendering", () => {
     it("renders grid view", () => {
       renderWithRouter(<GridView />);
-      expect(screen.getByText(/Grid View/i)).toBeInTheDocument();
+      const elements = screen.getAllByText(/Grid View/i);
+      expect(elements.length).toBeGreaterThan(0);
     });
 
     it("shows loading state", () => {
       mockUseUnits.mockReturnValue({ units: mockUnits, loading: true });
       renderWithRouter(<GridView />);
-      expect(screen.getByText(/Loading grid view/i)).toBeInTheDocument();
+      const elements = screen.getAllByText(/Loading grid view/i);
+      expect(elements.length).toBeGreaterThan(0);
     });
 
     it("renders units", () => {
       renderWithRouter(<GridView />);
-      expect(screen.getAllByText(/ThermaCore Unit/).length).toBeGreaterThan(0);
+      const elements = screen.getAllByText(/ThermaCore Unit/);
+      expect(elements.length).toBeGreaterThan(0);
     });
 
     it("shows client info", () => {
       renderWithRouter(<GridView />);
-      expect(screen.getAllByText(/Client A|Client B|Client C/).length).toBeGreaterThan(0);
+      const elements = screen.getAllByText(/Client A|Client B|Client C/);
+      expect(elements.length).toBeGreaterThan(0);
     });
   });
 
   describe("Search", () => {
     it("filters by name", async () => {
       renderWithRouter(<GridView />);
-      fireEvent.change(screen.getAllByRole("textbox")[0], {
+      const textboxes = screen.getAllByRole("textbox");
+      expect(textboxes.length).toBeGreaterThan(0);
+      
+      fireEvent.change(textboxes[0], {
         target: { value: "Unit 001" },
       });
 
       await waitFor(() => {
-        expect(screen.getAllByText("ThermaCore Unit 001").length).toBeGreaterThan(0);
+        const elements = screen.getAllByText("ThermaCore Unit 001");
+        expect(elements.length).toBeGreaterThan(0);
       });
     });
   });
@@ -192,23 +200,31 @@ describe("GridView", () => {
   describe("Status Filtering", () => {
     it("filters online", async () => {
       renderWithRouter(<GridView />);
-      fireEvent.change(screen.getAllByRole("combobox")[0], {
+      const comboboxes = screen.getAllByRole("combobox");
+      expect(comboboxes.length).toBeGreaterThan(0);
+      
+      fireEvent.change(comboboxes[0], {
         target: { value: "Online" },
       });
 
       await waitFor(() => {
-        expect(screen.getAllByText(/ONLINE/).length).toBeGreaterThan(0);
+        const elements = screen.getAllByText(/ONLINE/);
+        expect(elements.length).toBeGreaterThan(0);
       });
     });
 
     it("filters offline", async () => {
       renderWithRouter(<GridView />);
-      fireEvent.change(screen.getAllByRole("combobox")[0], {
+      const comboboxes = screen.getAllByRole("combobox");
+      expect(comboboxes.length).toBeGreaterThan(0);
+      
+      fireEvent.change(comboboxes[0], {
         target: { value: "Offline" },
       });
 
       await waitFor(() => {
-        expect(screen.getAllByText(/OFFLINE/).length).toBeGreaterThan(0);
+        const elements = screen.getAllByText(/OFFLINE/);
+        expect(elements.length).toBeGreaterThan(0);
       });
     });
   });
@@ -216,15 +232,20 @@ describe("GridView", () => {
   describe("Pagination", () => {
     it("shows load more button when needed", () => {
       renderWithRouter(<GridView />);
-      expect(screen.getAllByText(/Load more Units/i).length).toBeGreaterThan(0);
+      const elements = screen.getAllByText(/Load more Units/i);
+      expect(elements.length).toBeGreaterThan(0);
     });
 
     it("loads more units", async () => {
       renderWithRouter(<GridView />);
-      fireEvent.click(screen.getByText(/Load more Units/i));
+      const loadMoreElements = screen.getAllByText(/Load more Units/i);
+      expect(loadMoreElements.length).toBeGreaterThan(0);
+      
+      fireEvent.click(loadMoreElements[0]);
 
       await waitFor(() => {
-        expect(screen.getAllByText(/ThermaCore Unit/).length).toBeGreaterThan(5);
+        const elements = screen.getAllByText(/ThermaCore Unit/);
+        expect(elements.length).toBeGreaterThan(5);
       });
     });
 
@@ -235,14 +256,18 @@ describe("GridView", () => {
       });
 
       renderWithRouter(<GridView />);
-      expect(screen.queryAllByText(/Load more Units/i).length).toBe(0);
+      const elements = screen.queryAllByText(/Load more Units/i);
+      expect(elements.length).toBe(0);
     });
   });
 
   describe("Navigation", () => {
     it("navigates admin", () => {
       renderWithRouter(<GridView />);
-      fireEvent.click(screen.getAllByText("ThermaCore Unit 001")[0]);
+      const unitElements = screen.getAllByText("ThermaCore Unit 001");
+      expect(unitElements.length).toBeGreaterThan(0);
+      
+      fireEvent.click(unitElements[0]);
 
       expect(mockNavigate).toHaveBeenCalledWith(
         expect.stringContaining("/unit-details/TC001"),
@@ -257,7 +282,10 @@ describe("GridView", () => {
       });
 
       renderWithRouter(<GridView />);
-      fireEvent.click(screen.getAllByText("ThermaCore Unit 001")[0]);
+      const unitElements = screen.getAllByText("ThermaCore Unit 001");
+      expect(unitElements.length).toBeGreaterThan(0);
+      
+      fireEvent.click(unitElements[0]);
 
       expect(mockNavigate).toHaveBeenCalledWith(
         expect.stringContaining("/unit/TC001"),
@@ -269,12 +297,14 @@ describe("GridView", () => {
   describe("Alerts", () => {
     it("shows alerts", () => {
       renderWithRouter(<GridView />);
-      expect(screen.getAllByText(/Alert/i).length).toBeGreaterThan(0);
+      const elements = screen.getAllByText(/Alert/i);
+      expect(elements.length).toBeGreaterThan(0);
     });
 
     it("shows alarms", () => {
       renderWithRouter(<GridView />);
-      expect(screen.getAllByText(/Alarm!/i).length).toBeGreaterThan(0);
+      const elements = screen.getAllByText(/Alarm!/i);
+      expect(elements.length).toBeGreaterThan(0);
     });
   });
 
@@ -286,7 +316,8 @@ describe("GridView", () => {
       });
 
       renderWithRouter(<GridView />);
-      expect(screen.getAllByText(/ThermaCore Unit/).length).toBeGreaterThan(0);
+      const elements = screen.getAllByText(/ThermaCore Unit/);
+      expect(elements.length).toBeGreaterThan(0);
     });
   });
 });
