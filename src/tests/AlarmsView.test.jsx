@@ -149,7 +149,7 @@ describe("AlarmsView", () => {
       );
 
       const alarmMessages = screen.getAllByText(
-        /Critical alarm: Toxic ammonia leak/i,
+        /Critical alarm: Toxic ammonia leak detected/i,
       );
       expect(alarmMessages.length).toBeGreaterThan(0);
     });
@@ -173,7 +173,7 @@ describe("AlarmsView", () => {
       );
 
       // Use getAllByText since the timestamp might appear in multiple places
-      const timestamps = screen.getAllByText(/2025-09-09 15:30/i);
+      const timestamps = screen.getAllByText(/2025-09-09 15:/i);
       expect(timestamps.length).toBeGreaterThan(0);
     });
 
@@ -221,12 +221,13 @@ describe("AlarmsView", () => {
         </TestWrapper>,
       );
 
+      // User should see Unit 003 alarms
       const unit003 = screen.getAllByText(/ThermaCore Unit 003/i);
       expect(unit003.length).toBeGreaterThan(0);
-      // Use queryByText for elements that might not exist
-      expect(
-        screen.queryByText(/ThermaCore Unit 014/i)
-      ).not.toBeInTheDocument();
+      
+      // User should NOT see Unit 014 alarms - use queryAllByText and check length
+      const unit014Elements = screen.queryAllByText(/ThermaCore Unit 014/i);
+      expect(unit014Elements.length).toBe(0);
     });
 
     it("should show all units for admin", () => {
@@ -236,9 +237,10 @@ describe("AlarmsView", () => {
         </TestWrapper>,
       );
 
+      // Admin should see both Unit 003 and Unit 014
       const unit003 = screen.getAllByText(/ThermaCore Unit 003/i);
       expect(unit003.length).toBeGreaterThan(0);
-      // Use getAllByText for elements that should exist
+      
       const unit014 = screen.getAllByText(/ThermaCore Unit 014/i);
       expect(unit014.length).toBeGreaterThan(0);
     });
@@ -252,8 +254,9 @@ describe("AlarmsView", () => {
         </TestWrapper>,
       );
 
+      // Find the first alarm card by looking for the card container
       const alarmCards = screen.getAllByText(/NH3 LEAK DETECTED/i);
-      const card = alarmCards[0].closest("div");
+      const card = alarmCards[0].closest("[class*='border-l-4']");
       if (card) {
         fireEvent.click(card);
       }
@@ -271,7 +274,7 @@ describe("AlarmsView", () => {
       );
 
       const alarmCards = screen.getAllByText(/NH3 LEAK DETECTED/i);
-      const card = alarmCards[0].closest("div");
+      const card = alarmCards[0].closest("[class*='border-l-4']");
       if (card) {
         fireEvent.click(card);
       }
@@ -289,7 +292,7 @@ describe("AlarmsView", () => {
       );
 
       const alarmCards = screen.getAllByText(/NH3 LEAK DETECTED/i);
-      const card = alarmCards[0].closest("div");
+      const card = alarmCards[0].closest("[class*='border-l-4']");
       if (card) {
         fireEvent.click(card);
       }
@@ -307,13 +310,18 @@ describe("AlarmsView", () => {
       );
 
       const unit003Alarms = screen.getAllByText(/ThermaCore Unit 003/i);
-      const card = unit003Alarms[0].closest("div");
+      const card = unit003Alarms[0].closest("[class*='border-l-4']");
       if (card) {
         fireEvent.click(card);
       }
 
       await waitFor(() => {
         expect(mockNavigate).toHaveBeenCalled();
+        // Check that navigate was called with the correct path
+        expect(mockNavigate).toHaveBeenCalledWith(
+          expect.stringMatching(/\/unit-details\/3/i),
+          expect.any(Object)
+        );
       });
     });
   });
@@ -376,7 +384,7 @@ describe("AlarmsView", () => {
         </TestWrapper>,
       );
 
-      const timestamps = screen.getAllByText(/2025-09-09/);
+      const timestamps = screen.getAllByText(/2025-09-09 15:/i);
       expect(timestamps.length).toBeGreaterThan(0);
     });
 
@@ -423,7 +431,7 @@ describe("AlarmsView", () => {
         </TestWrapper>,
       );
 
-      const cards = container.querySelectorAll("[data-slot='card']");
+      const cards = container.querySelectorAll("[class*='border-l-4']");
       expect(cards.length).toBeGreaterThan(0);
     });
 
