@@ -15,9 +15,6 @@ import { createContext } from "react";
 import { BrowserRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import RealtimeScadaDashboard from "@/components/RealtimeScadaDashboard";
-import {
-  scadaDashboardFixture,
-} from "./fixtures/scadaFixtures";
 
 // Mock ResizeObserver properly - this is critical for Recharts
 class ResizeObserverMock {
@@ -128,7 +125,8 @@ vi.mock("@/components/visualization/EnhancedMetricCard", () => ({
     if (loading) {
       return (
         <div data-testid={`metric-card-${title?.replace(/\s+/g, '-') || 'loading'}`}>
-          <div className="animate-pulse">Loading...</div>
+          <div className="animate-pulse h-8 bg-gray-200 dark:bg-gray-700 rounded w-24 mb-2"></div>
+          <div className="animate-pulse h-4 bg-gray-200 dark:bg-gray-700 rounded w-32"></div>
         </div>
       );
     }
@@ -270,15 +268,35 @@ describe("RealtimeScadaDashboard", () => {
         error: null,
       });
 
+      // Also set protocol status loading to true to show loading state
+      useRealtimeProtocolStatus.mockReturnValue({
+        protocols: [],
+        loading: true,
+      });
+
+      useRealtimeHistoricalData.mockReturnValue({
+        data: [],
+        loading: true,
+        setTimeRange: vi.fn(),
+      });
+
       render(
         <TestWrapper>
           <RealtimeScadaDashboard />
         </TestWrapper>,
       );
 
+      // Check for loading indicators - the actual component shows loading states
+      // in the metric cards and protocol status sections
       await waitFor(() => {
-        // Should show loading indicators
-        const loadingElements = screen.getAllByText(/Loading/i);
+        // The component should render, and we can check for the presence of
+        // the dashboard structure or loading animations
+        const titleElements = screen.getAllByText(/Real-Time SCADA Dashboard/i);
+        expect(titleElements.length).toBeGreaterThan(0);
+        
+        // Check for loading skeletons or placeholder elements
+        // The EnhancedMetricCard mock renders loading state with animate-pulse
+        const loadingElements = document.querySelectorAll('.animate-pulse');
         expect(loadingElements.length).toBeGreaterThan(0);
       });
     });
