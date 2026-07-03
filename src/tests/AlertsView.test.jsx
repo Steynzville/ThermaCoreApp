@@ -84,9 +84,9 @@ describe("AlertsView", () => {
       const pressureElements = screen.getAllByText("Pressure Drop");
       expect(pressureElements.length).toBeGreaterThan(0);
 
-      // Should not show non-critical alerts
-      const maintenanceElements = screen.queryAllByText("Maintenance Scheduled");
-      expect(maintenanceElements.length).toBe(0);
+      // Should not show non-critical alerts - use queryByText instead of queryAllByText
+      const maintenanceElement = screen.queryByText("Maintenance Scheduled");
+      expect(maintenanceElement).not.toBeInTheDocument();
     });
 
     it("should filter warning alerts", () => {
@@ -102,9 +102,9 @@ describe("AlertsView", () => {
       const tempElements = screen.getAllByText("Temperature Alert");
       expect(tempElements.length).toBeGreaterThan(0);
 
-      // Should not show non-warning alerts
-      const offlineElements = screen.queryAllByText("Unit Offline");
-      expect(offlineElements.length).toBe(0);
+      // Should not show non-warning alerts - use queryByText instead of queryAllByText
+      const offlineElement = screen.queryByText("Unit Offline");
+      expect(offlineElement).not.toBeInTheDocument();
     });
 
     it("should filter info alerts", () => {
@@ -117,12 +117,12 @@ describe("AlertsView", () => {
       const maintenanceElements = screen.getAllByText("Maintenance Scheduled");
       expect(maintenanceElements.length).toBeGreaterThan(0);
 
-      // Should not show other alert types
-      const offlineElements = screen.queryAllByText("Unit Offline");
-      expect(offlineElements.length).toBe(0);
+      // Should not show other alert types - use queryByText instead of queryAllByText
+      const offlineElement = screen.queryByText("Unit Offline");
+      expect(offlineElement).not.toBeInTheDocument();
       
-      const waterElements = screen.queryAllByText("Low Water Level");
-      expect(waterElements.length).toBe(0);
+      const waterElement = screen.queryByText("Low Water Level");
+      expect(waterElement).not.toBeInTheDocument();
     });
 
     it("should filter success alerts", () => {
@@ -135,9 +135,9 @@ describe("AlertsView", () => {
       const restoredElements = screen.getAllByText("System Restored");
       expect(restoredElements.length).toBeGreaterThan(0);
 
-      // Should not show other alert types
-      const offlineElements = screen.queryAllByText("Unit Offline");
-      expect(offlineElements.length).toBe(0);
+      // Should not show other alert types - use queryByText instead of queryAllByText
+      const offlineElement = screen.queryByText("Unit Offline");
+      expect(offlineElement).not.toBeInTheDocument();
     });
 
     it("should show all alerts when 'All Alerts' filter is selected", () => {
