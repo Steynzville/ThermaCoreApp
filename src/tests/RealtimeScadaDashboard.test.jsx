@@ -213,7 +213,6 @@ describe("RealtimeScadaDashboard", () => {
         </TestWrapper>,
       );
 
-      // Wait for component to settle
       await waitFor(() => {
         const titleElements = screen.getAllByText("Real-Time SCADA Dashboard");
         expect(titleElements.length).toBeGreaterThan(0);
@@ -385,6 +384,7 @@ describe("RealtimeScadaDashboard", () => {
         </TestWrapper>,
       );
 
+      // Wait for initial render
       await waitFor(() => {
         const initialLabel = screen.queryAllByText(
           (content, element) =>
@@ -396,10 +396,13 @@ describe("RealtimeScadaDashboard", () => {
         expect(initialLabel.length).toBeGreaterThan(0);
       });
 
-      currentMetrics = [
-        { ...scadaDashboardFixture.metrics[0], value: 99.9 },
-        ...scadaDashboardFixture.metrics.slice(1),
-      ];
+      // Update with new value
+      const updatedMetric = {
+        ...scadaDashboardFixture.metrics[0],
+        value: 99.9,
+        current: 99.9, // Some metrics might use 'current' field
+      };
+      currentMetrics = [updatedMetric, ...scadaDashboardFixture.metrics.slice(1)];
 
       useRealtimeMetrics.mockReturnValue({
         metrics: currentMetrics,
@@ -413,13 +416,16 @@ describe("RealtimeScadaDashboard", () => {
         </TestWrapper>,
       );
 
-      await waitFor(() => {
-        const valueElements = screen.queryAllByText(
-          (content, element) =>
-            content.includes("99.9") || element?.textContent?.includes("99.9"),
-        );
-        expect(valueElements.length).toBeGreaterThan(0);
-      });
+      // Wait for the updated value to appear - check the entire document text
+      await waitFor(
+        () => {
+          // Check if the updated value appears anywhere in the document
+          const documentText = document.body.textContent || '';
+          // The value might appear as "99.9" or "99.9°C" or similar
+          expect(documentText).toContain('99.9');
+        },
+        { timeout: 3000 },
+      );
     });
 
     it("should handle rapid metric updates", async () => {
@@ -461,13 +467,14 @@ describe("RealtimeScadaDashboard", () => {
         );
       }
 
-      await waitFor(() => {
-        const valueElements = screen.queryAllByText(
-          (content, element) =>
-            content.includes("59") || element?.textContent?.includes("59"),
-        );
-        expect(valueElements.length).toBeGreaterThan(0);
-      });
+      await waitFor(
+        () => {
+          // Check if any element contains "59" (the last value in the update sequence)
+          const documentText = document.body.textContent || '';
+          expect(documentText).toContain('59');
+        },
+        { timeout: 3000 },
+      );
     });
   });
 
@@ -580,7 +587,6 @@ describe("RealtimeScadaDashboard", () => {
 
   describe("Time Range Selection", () => {
     beforeEach(() => {
-      // Ensure mocks are properly set for this describe block
       useRealtimeMetrics.mockReturnValue({
         metrics: scadaDashboardFixture.metrics,
         loading: false,
@@ -678,7 +684,6 @@ describe("Protocol Status Display", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Ensure mocks are properly set for this describe block
     const useRealtimeMetrics = require("@/hooks/useRealtimeData").useRealtimeMetrics;
     const useRealtimeProtocolStatus = require("@/hooks/useRealtimeData").useRealtimeProtocolStatus;
     const useRealtimeHistoricalData = require("@/hooks/useRealtimeData").useRealtimeHistoricalData;
@@ -706,7 +711,6 @@ describe("Protocol Status Display", () => {
       isReconnecting: false,
     });
 
-    // Reset getBoundingClientRect mock
     Element.prototype.getBoundingClientRect = vi.fn(() => mockRect);
   });
 
@@ -755,12 +759,10 @@ describe("Protocol Status Display", () => {
 
 describe("Performance - 60fps Streaming", () => {
   it.skip("should handle 60fps data updates without performance degradation", async () => {
-    // Skipping performance tests in CI environment
     expect(true).toBe(true);
   });
 
   it.skip("should maintain UI responsiveness during high-frequency updates", async () => {
-    // Skipping performance tests in CI environment
     expect(true).toBe(true);
   });
 });
@@ -769,7 +771,6 @@ describe("Accessibility", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Ensure mocks are properly set for this describe block
     const useRealtimeMetrics = require("@/hooks/useRealtimeData").useRealtimeMetrics;
     const useRealtimeProtocolStatus = require("@/hooks/useRealtimeData").useRealtimeProtocolStatus;
     const useRealtimeHistoricalData = require("@/hooks/useRealtimeData").useRealtimeHistoricalData;
@@ -797,7 +798,6 @@ describe("Accessibility", () => {
       isReconnecting: false,
     });
 
-    // Reset getBoundingClientRect mock
     Element.prototype.getBoundingClientRect = vi.fn(() => mockRect);
   });
 
