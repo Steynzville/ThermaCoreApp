@@ -57,10 +57,17 @@ describe("ThemeContext", () => {
     }));
   });
 
-  // Helper to wait for effects to run
+  // Helper to wait for effects to run - using flushPromises approach
   const waitForEffects = async () => {
     await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      // Use a combination of microtask and macrotask to ensure all effects have run
+      await new Promise((resolve) => {
+        // Use queueMicrotask to run after microtasks
+        queueMicrotask(() => {
+          // Then use setTimeout to run after macrotasks
+          setTimeout(resolve, 0);
+        });
+      });
     });
   };
 
@@ -152,6 +159,7 @@ describe("ThemeContext", () => {
         result.current.setTheme("dark");
       });
 
+      // Wait for the effect to run and save to localStorage
       await waitForEffects();
 
       expect(localStorage.getItem("theme")).toBe("dark");
