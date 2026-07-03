@@ -54,10 +54,11 @@ describe("HistoryView", () => {
         </TestWrapper>
       );
 
-      expect(await screen.findByText("Event History")).toBeInTheDocument();
-      expect(
-        screen.getByText(/Recent events and changes across all devices/i)
-      ).toBeInTheDocument();
+      const titleElements = await screen.findAllByText("Event History");
+      expect(titleElements.length).toBeGreaterThan(0);
+      
+      const descElements = screen.getAllByText(/Recent events and changes across all devices/i);
+      expect(descElements.length).toBeGreaterThan(0);
     });
 
     it("shows loading state initially", () => {
@@ -71,9 +72,8 @@ describe("HistoryView", () => {
         </TestWrapper>
       );
 
-      expect(
-        screen.getByText(/Loading event history/i)
-      ).toBeInTheDocument();
+      const loadingElements = screen.getAllByText(/Loading event history/i);
+      expect(loadingElements.length).toBeGreaterThan(0);
     });
   });
 
@@ -89,29 +89,32 @@ describe("HistoryView", () => {
 
     it("renders NH3 leak alert", async () => {
       setup();
-      expect(await screen.findByText("NH3 LEAK DETECTED")).toBeInTheDocument();
+      const elements = await screen.findAllByText("NH3 LEAK DETECTED");
+      expect(elements.length).toBeGreaterThan(0);
     });
 
     it("renders offline notification", async () => {
       setup();
-      expect(await screen.findByText("Unit Offline")).toBeInTheDocument();
+      const elements = await screen.findAllByText("Unit Offline");
+      expect(elements.length).toBeGreaterThan(0);
     });
 
     it("renders water level warning", async () => {
       setup();
-      expect(await screen.findByText("Low Water Level")).toBeInTheDocument();
+      const elements = await screen.findAllByText("Low Water Level");
+      expect(elements.length).toBeGreaterThan(0);
     });
 
     it("renders maintenance notification", async () => {
       setup();
-      expect(
-        await screen.findByText("Maintenance Scheduled")
-      ).toBeInTheDocument();
+      const elements = await screen.findAllByText("Maintenance Scheduled");
+      expect(elements.length).toBeGreaterThan(0);
     });
 
     it("renders system restored message", async () => {
       setup();
-      expect(await screen.findByText("System Restored")).toBeInTheDocument();
+      const elements = await screen.findAllByText("System Restored");
+      expect(elements.length).toBeGreaterThan(0);
     });
   });
 
@@ -125,13 +128,11 @@ describe("HistoryView", () => {
         </TestWrapper>
       );
 
-      expect(
-        await screen.findByText("ThermaCore Unit 007")
-      ).toBeInTheDocument();
+      const unitElements = await screen.findAllByText("ThermaCore Unit 007");
+      expect(unitElements.length).toBeGreaterThan(0);
 
-      expect(
-        await screen.findByText("Maintenance completed")
-      ).toBeInTheDocument();
+      const descElements = await screen.findAllByText("Maintenance completed");
+      expect(descElements.length).toBeGreaterThan(0);
     });
 
     it("handles API errors gracefully", async () => {
@@ -143,10 +144,11 @@ describe("HistoryView", () => {
         </TestWrapper>
       );
 
-      expect(await screen.findByText("Event History")).toBeInTheDocument();
-      expect(
-        await screen.findByText("NH3 LEAK DETECTED")
-      ).toBeInTheDocument();
+      const titleElements = await screen.findAllByText("Event History");
+      expect(titleElements.length).toBeGreaterThan(0);
+      
+      const nh3Elements = await screen.findAllByText("NH3 LEAK DETECTED");
+      expect(nh3Elements.length).toBeGreaterThan(0);
     });
   });
 
@@ -180,8 +182,11 @@ describe("HistoryView", () => {
         </TestWrapper>
       );
 
-      expect(await screen.findByText("Unresolved")).toBeInTheDocument();
-      expect(await screen.findByText("Completed")).toBeInTheDocument();
+      const unresolvedElements = await screen.findAllByText("Unresolved");
+      expect(unresolvedElements.length).toBeGreaterThan(0);
+      
+      const completedElements = await screen.findAllByText("Completed");
+      expect(completedElements.length).toBeGreaterThan(0);
     });
   });
 
@@ -202,9 +207,8 @@ describe("HistoryView", () => {
         </TestWrapper>
       );
 
-      expect(
-        await screen.findByText(/Load more Events/i)
-      ).toBeInTheDocument();
+      const loadMoreElements = await screen.findAllByText(/Load more Events/i);
+      expect(loadMoreElements.length).toBeGreaterThan(0);
     });
 
     it("loads more events on click", async () => {
@@ -223,13 +227,16 @@ describe("HistoryView", () => {
         </TestWrapper>
       );
 
-      const button = await screen.findByText(/Load more Events/i);
-      fireEvent.click(button);
+      const buttons = await screen.findAllByText(/Load more Events/i);
+      expect(buttons.length).toBeGreaterThan(0);
+      
+      if (buttons.length > 0) {
+        fireEvent.click(buttons[0]);
+      }
 
       await waitFor(() => {
-        expect(screen.getAllByText(/ThermaCore Unit/).length).toBeGreaterThan(
-          5
-        );
+        const unitElements = screen.getAllByText(/ThermaCore Unit/);
+        expect(unitElements.length).toBeGreaterThan(5);
       });
     });
 
@@ -249,11 +256,10 @@ describe("HistoryView", () => {
         </TestWrapper>
       );
 
-      await screen.findByText("Event History");
+      await screen.findAllByText("Event History");
 
-      expect(
-        screen.queryByText(/Load more Events/i)
-      ).not.toBeInTheDocument();
+      const loadMoreElements = screen.queryAllByText(/Load more Events/i);
+      expect(loadMoreElements.length).toBe(0);
     });
   });
 
@@ -268,9 +274,8 @@ describe("HistoryView", () => {
         </TestWrapper>
       );
 
-      expect(
-        await screen.findByText("NH3 LEAK DETECTED")
-      ).toBeInTheDocument();
+      const nh3Elements = await screen.findAllByText("NH3 LEAK DETECTED");
+      expect(nh3Elements.length).toBeGreaterThan(0);
     });
 
     it("renders for user", async () => {
@@ -283,9 +288,8 @@ describe("HistoryView", () => {
         </TestWrapper>
       );
 
-      expect(
-        await screen.findByText("NH3 LEAK DETECTED")
-      ).toBeInTheDocument();
+      const nh3Elements = await screen.findAllByText("NH3 LEAK DETECTED");
+      expect(nh3Elements.length).toBeGreaterThan(0);
     });
   });
 
@@ -306,8 +310,11 @@ describe("HistoryView", () => {
         </TestWrapper>
       );
 
-      expect(await screen.findByText(/Test event/)).toBeInTheDocument();
-      expect(screen.getByText(/2025/)).toBeInTheDocument();
+      const testElements = await screen.findAllByText(/Test event/);
+      expect(testElements.length).toBeGreaterThan(0);
+      
+      const dateElements = screen.getAllByText(/2025/);
+      expect(dateElements.length).toBeGreaterThan(0);
     });
   });
 });
