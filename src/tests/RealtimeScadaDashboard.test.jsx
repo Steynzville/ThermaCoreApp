@@ -11,6 +11,7 @@
  */
 
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from '@testing-library/user-event';
 import { createContext } from "react";
 import { BrowserRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -619,6 +620,7 @@ describe("RealtimeScadaDashboard", () => {
     });
 
     it("should allow changing time range", async () => {
+      const user = userEvent.setup();
       const mockSetTimeRange = vi.fn();
 
       useRealtimeHistoricalData.mockReturnValue({
@@ -633,24 +635,24 @@ describe("RealtimeScadaDashboard", () => {
         </TestWrapper>,
       );
 
-      // Find the select trigger
-      const selectTriggers = await screen.findAllByRole("combobox");
-      const selectTrigger = selectTriggers[0];
+      // Wait for the select to be rendered
+      const selectTrigger = await screen.findByRole("combobox");
+      
+      // Click to open dropdown using userEvent
+      await user.click(selectTrigger);
 
-      // Open the select dropdown
-      fireEvent.click(selectTrigger);
-
-      // Wait for the dropdown content to appear and click the option
+      // Find and click the option using userEvent
       const option = await screen.findByText("Last Hour");
-      fireEvent.click(option);
+      await user.click(option);
 
-      // Wait for the mock to be called
+      // Verify the mock was called with the correct value
       await waitFor(() => {
         expect(mockSetTimeRange).toHaveBeenCalledWith(1);
       });
     });
 
     it("should update historical data when time range changes", async () => {
+      const user = userEvent.setup();
       let currentData = [];
       const mockSetTimeRange = vi.fn((hours) => {
         currentData = generateSCADAMetrics({ hours });
@@ -668,16 +670,15 @@ describe("RealtimeScadaDashboard", () => {
         </TestWrapper>,
       );
 
-      // Find the select trigger
-      const selectTriggers = await screen.findAllByRole("combobox");
-      const selectTrigger = selectTriggers[0];
+      // Wait for the select to be rendered
+      const selectTrigger = await screen.findByRole("combobox");
+      
+      // Click to open dropdown using userEvent
+      await user.click(selectTrigger);
 
-      // Open the select dropdown
-      fireEvent.click(selectTrigger);
-
-      // Click the "Last 7 Days" option
+      // Find and click the option using userEvent
       const option = await screen.findByText("Last 7 Days");
-      fireEvent.click(option);
+      await user.click(option);
 
       // Verify the mock was called
       await waitFor(() => {
