@@ -16,7 +16,7 @@ vi.mock("../context/AuthContext", () => ({
   }),
 }));
 
-// Mock device status service
+// Mock device status service with proper data structure
 vi.mock("../services/deviceStatusService", () => ({
   deviceStatusService: {
     getAllDeviceStatuses: vi.fn().mockReturnValue([
@@ -37,6 +37,15 @@ vi.mock("../services/deviceStatusService", () => ({
         hasAlarm: false,
         lastSeen: new Date(),
         healthStatus: "warning",
+      },
+      {
+        id: "TC003",
+        name: "Device 3",
+        status: "online",
+        hasAlert: false,
+        hasAlarm: true,
+        lastSeen: new Date(),
+        healthStatus: "healthy",
       },
     ]),
     addStatusChangeListener: vi.fn().mockReturnValue(vi.fn()), // Returns unsubscribe function
