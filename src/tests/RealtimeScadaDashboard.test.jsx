@@ -11,7 +11,6 @@
  */
 
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import userEvent from '@testing-library/user-event';
 import { createContext } from "react";
 import { BrowserRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -620,7 +619,6 @@ describe("RealtimeScadaDashboard", () => {
     });
 
     it("should allow changing time range", async () => {
-      const user = userEvent.setup();
       const mockSetTimeRange = vi.fn();
 
       useRealtimeHistoricalData.mockReturnValue({
@@ -635,34 +633,36 @@ describe("RealtimeScadaDashboard", () => {
         </TestWrapper>,
       );
 
-      // Find all comboboxes
-      const comboboxes = await screen.findAllByRole("combobox");
-      // The time range select is the one with "Last" in its text content
-      const selectTrigger = comboboxes.find(trigger => 
-        trigger.textContent?.includes('Last') || 
-        trigger.textContent?.includes('Hour') ||
-        trigger.textContent?.includes('Day')
-      ) || comboboxes[0];
-      
-      // Click to open dropdown using userEvent
-      await user.click(selectTrigger);
+      // Find the select trigger by its visible text
+      const selectTriggers = await screen.findAllByRole("combobox");
+      const selectTrigger = selectTriggers.find(trigger => 
+        trigger.textContent?.includes('Last')
+      ) || selectTriggers[0];
 
-      // Wait for the dropdown to open and find the option
-      // Use a function matcher to find the option by text and role
-      const option = await screen.findByText((content, element) => {
-        return element?.getAttribute('role') === 'option' && 
-               content.includes('Last Hour');
-      });
-      await user.click(option);
+      // Open the dropdown using fireEvent (more reliable than userEvent for Radix)
+      fireEvent.click(selectTrigger);
+
+      // Wait for the dropdown content to appear in the portal
+      // Radix UI renders options with role="option" in a portal
+      await waitFor(() => {
+        const options = screen.queryAllByRole("option");
+        expect(options.length).toBeGreaterThan(0);
+      }, { timeout: 3000 });
+
+      // Find and click the "Last Hour" option
+      const options = screen.getAllByRole("option");
+      const option = options.find(opt => opt.textContent?.includes('Last Hour'));
+      if (option) {
+        fireEvent.click(option);
+      }
 
       // Verify the mock was called with the correct value
       await waitFor(() => {
         expect(mockSetTimeRange).toHaveBeenCalledWith(1);
-      });
+      }, { timeout: 3000 });
     });
 
     it("should update historical data when time range changes", async () => {
-      const user = userEvent.setup();
       let currentData = [];
       const mockSetTimeRange = vi.fn((hours) => {
         currentData = generateSCADAMetrics({ hours });
@@ -680,29 +680,32 @@ describe("RealtimeScadaDashboard", () => {
         </TestWrapper>,
       );
 
-      // Find all comboboxes
-      const comboboxes = await screen.findAllByRole("combobox");
-      // The time range select is the one with "Last" in its text content
-      const selectTrigger = comboboxes.find(trigger => 
-        trigger.textContent?.includes('Last') || 
-        trigger.textContent?.includes('Hour') ||
-        trigger.textContent?.includes('Day')
-      ) || comboboxes[0];
-      
-      // Click to open dropdown using userEvent
-      await user.click(selectTrigger);
+      // Find the select trigger by its visible text
+      const selectTriggers = await screen.findAllByRole("combobox");
+      const selectTrigger = selectTriggers.find(trigger => 
+        trigger.textContent?.includes('Last')
+      ) || selectTriggers[0];
 
-      // Wait for the dropdown to open and find the option
-      const option = await screen.findByText((content, element) => {
-        return element?.getAttribute('role') === 'option' && 
-               content.includes('Last 7 Days');
-      });
-      await user.click(option);
+      // Open the dropdown using fireEvent
+      fireEvent.click(selectTrigger);
+
+      // Wait for the dropdown content to appear in the portal
+      await waitFor(() => {
+        const options = screen.queryAllByRole("option");
+        expect(options.length).toBeGreaterThan(0);
+      }, { timeout: 3000 });
+
+      // Find and click the "Last 7 Days" option
+      const options = screen.getAllByRole("option");
+      const option = options.find(opt => opt.textContent?.includes('Last 7 Days'));
+      if (option) {
+        fireEvent.click(option);
+      }
 
       // Verify the mock was called
       await waitFor(() => {
         expect(mockSetTimeRange).toHaveBeenCalled();
-      });
+      }, { timeout: 3000 });
 
       expect(container).toBeTruthy();
     });
