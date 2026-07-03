@@ -123,8 +123,9 @@ const mockUser = {
 
 const originalLocalStorage = window.localStorage;
 
-const renderWithProviders = (component) => {
-  // Mock AuthContext hook directly
+// Create a wrapper component that provides all required contexts
+const TestWrapper = ({ children }) => {
+  // Mock useAuth directly
   vi.spyOn(AuthContext, "useAuth").mockReturnValue({
     user: mockUser,
     userRole: "admin",
@@ -132,6 +133,16 @@ const renderWithProviders = (component) => {
     isLoading: false,
   });
 
+  return (
+    <SettingsProvider>
+      <BrowserRouter>
+        {children}
+      </BrowserRouter>
+    </SettingsProvider>
+  );
+};
+
+const renderWithProviders = (component) => {
   // Mock localStorage
   Object.defineProperty(window, "localStorage", {
     value: {
@@ -157,6 +168,14 @@ const renderWithProviders = (component) => {
     writable: true,
   });
 
+  // Mock useAuth before rendering
+  vi.spyOn(AuthContext, "useAuth").mockReturnValue({
+    user: mockUser,
+    userRole: "admin",
+    isAuthenticated: true,
+    isLoading: false,
+  });
+
   return render(
     <SettingsProvider>
       <BrowserRouter>
@@ -177,38 +196,36 @@ describe("AdminPanel Component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.confirm = vi.fn(() => true);
+    // Ensure useAuth returns the mock
+    vi.spyOn(AuthContext, "useAuth").mockReturnValue({
+      user: mockUser,
+      userRole: "admin",
+      isAuthenticated: true,
+      isLoading: false,
+    });
   });
 
   it("should render all three tabs: Users, Password Management, and Settings", async () => {
     renderWithProviders(<AdminPanel />);
 
     await waitFor(() => {
-      // Use getAllByText since "Users" appears multiple times
-      const usersElements = screen.getAllByText("Users");
-      expect(usersElements.length).toBeGreaterThan(0);
-
-      // Use getAllByText since "Password Management" appears multiple times
-      const passwordManagementElements = screen.getAllByText("Password Management");
-      expect(passwordManagementElements.length).toBeGreaterThan(0);
-
-      // Use getAllByText since "Settings" appears multiple times
-      const settingsElements = screen.getAllByText("Settings");
-      expect(settingsElements.length).toBeGreaterThan(0);
+      // Use getByText - the component renders these tabs
+      expect(screen.getByText("Users")).toBeInTheDocument();
+      expect(screen.getByText("Password Management")).toBeInTheDocument();
+      expect(screen.getByText("Settings")).toBeInTheDocument();
     });
   });
 
   it("should display Password Management tab when clicked", async () => {
     renderWithProviders(<AdminPanel />);
 
-    // Find all Password Management elements and click the first one (the tab)
-    const passwordManagementElements = await screen.findAllByText("Password Management");
-    const passwordTab = passwordManagementElements[0];
+    // Find and click the Password Management tab
+    const passwordTab = screen.getByText("Password Management");
     fireEvent.click(passwordTab);
 
     await waitFor(() => {
       // Check that the password management content is visible
-      const changePasswordButtons = screen.getAllByText("Change My Password");
-      expect(changePasswordButtons.length).toBeGreaterThan(0);
+      expect(screen.getByText("Change My Password")).toBeInTheDocument();
     });
   });
 
@@ -216,13 +233,11 @@ describe("AdminPanel Component", () => {
     renderWithProviders(<AdminPanel />);
 
     // Navigate to Password Management tab
-    const passwordManagementElements = await screen.findAllByText("Password Management");
-    const passwordTab = passwordManagementElements[0];
+    const passwordTab = screen.getByText("Password Management");
     fireEvent.click(passwordTab);
 
     // Click Change My Password button
-    const changePasswordButtons = screen.getAllByText("Change My Password");
-    const changePasswordButton = changePasswordButtons[0];
+    const changePasswordButton = screen.getByText("Change My Password");
     fireEvent.click(changePasswordButton);
 
     await waitFor(() => {
@@ -235,13 +250,11 @@ describe("AdminPanel Component", () => {
     renderWithProviders(<AdminPanel />);
 
     // Navigate to Password Management tab
-    const passwordManagementElements = await screen.findAllByText("Password Management");
-    const passwordTab = passwordManagementElements[0];
+    const passwordTab = screen.getByText("Password Management");
     fireEvent.click(passwordTab);
 
     // Click Change My Password button
-    const changePasswordButtons = screen.getAllByText("Change My Password");
-    const changePasswordButton = changePasswordButtons[0];
+    const changePasswordButton = screen.getByText("Change My Password");
     fireEvent.click(changePasswordButton);
 
     await waitFor(() => {
@@ -255,13 +268,11 @@ describe("AdminPanel Component", () => {
     renderWithProviders(<AdminPanel />);
 
     // Navigate to Password Management tab
-    const passwordManagementElements = await screen.findAllByText("Password Management");
-    const passwordTab = passwordManagementElements[0];
+    const passwordTab = screen.getByText("Password Management");
     fireEvent.click(passwordTab);
 
     // Click Change My Password button
-    const changePasswordButtons = screen.getAllByText("Change My Password");
-    const changePasswordButton = changePasswordButtons[0];
+    const changePasswordButton = screen.getByText("Change My Password");
     fireEvent.click(changePasswordButton);
 
     const newPasswordInput = screen.getByPlaceholderText("Enter new password");
@@ -272,9 +283,7 @@ describe("AdminPanel Component", () => {
     fireEvent.change(confirmPasswordInput, { target: { value: "password456" } });
 
     await waitFor(() => {
-      // Use getAllByText since the error might appear multiple times
-      const mismatchElements = screen.getAllByText("Passwords do not match");
-      expect(mismatchElements.length).toBeGreaterThan(0);
+      expect(screen.getByText("Passwords do not match")).toBeInTheDocument();
     });
   });
 
@@ -282,13 +291,11 @@ describe("AdminPanel Component", () => {
     renderWithProviders(<AdminPanel />);
 
     // Navigate to Password Management tab
-    const passwordManagementElements = await screen.findAllByText("Password Management");
-    const passwordTab = passwordManagementElements[0];
+    const passwordTab = screen.getByText("Password Management");
     fireEvent.click(passwordTab);
 
     // Click Change My Password button
-    const changePasswordButtons = screen.getAllByText("Change My Password");
-    const changePasswordButton = changePasswordButtons[0];
+    const changePasswordButton = screen.getByText("Change My Password");
     fireEvent.click(changePasswordButton);
 
     const newPasswordInput = screen.getByPlaceholderText("Enter new password");
@@ -297,9 +304,7 @@ describe("AdminPanel Component", () => {
     fireEvent.change(newPasswordInput, { target: { value: "12345" } });
 
     await waitFor(() => {
-      // Use getAllByText since the warning might appear multiple times
-      const warningElements = screen.getAllByText("Password must be at least 6 characters long");
-      expect(warningElements.length).toBeGreaterThan(0);
+      expect(screen.getByText("Password must be at least 6 characters long")).toBeInTheDocument();
     });
   });
 });
