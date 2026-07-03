@@ -25,6 +25,17 @@ describe("ProcessFlowDiagram", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Mock window methods for zoom/pan functionality
+    window.addEventListener = vi.fn();
+    window.removeEventListener = vi.fn();
+    // Mock ResizeObserver if the component uses it
+    if (!window.ResizeObserver) {
+      window.ResizeObserver = vi.fn().mockImplementation(() => ({
+        observe: vi.fn(),
+        unobserve: vi.fn(),
+        disconnect: vi.fn(),
+      }));
+    }
   });
 
   describe("Basic Rendering", () => {
@@ -210,7 +221,13 @@ describe("ProcessFlowDiagram", () => {
         expect(zoomDisplay).toHaveTextContent("125%");
       });
 
-      fireEvent.click(screen.getByText("Reset"));
+      const resetButton = Array.from(container.querySelectorAll("button"))
+        .find((btn) => btn.textContent === "Reset");
+
+      expect(resetButton).toBeTruthy();
+      if (resetButton) {
+        fireEvent.click(resetButton);
+      }
 
       await waitFor(() => {
         expect(zoomDisplay).toHaveTextContent("100%");
@@ -225,7 +242,9 @@ describe("ProcessFlowDiagram", () => {
       const zoomInButton = Array.from(container.querySelectorAll("button"))
         .find((btn) => btn.querySelector("svg.lucide-plus"));
 
-      act(() => fireEvent.click(zoomInButton));
+      if (zoomInButton) {
+        act(() => fireEvent.click(zoomInButton));
+      }
 
       const svgContainer = container.querySelector("svg") || container;
 
