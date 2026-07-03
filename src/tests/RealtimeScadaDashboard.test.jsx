@@ -30,7 +30,6 @@ class ResizeObserverMock {
   constructor(callback) {
     this.callback = callback;
     this.observations = [];
-    // Immediately call callback with a mock entry
     if (this.callback) {
       setTimeout(() => {
         this.callback([
@@ -64,10 +63,8 @@ class ResizeObserverMock {
   }
 }
 
-// Replace global ResizeObserver with our mock
 global.ResizeObserver = ResizeObserverMock;
 
-// Mock element methods that Recharts might use
 const mockRect = {
   x: 0,
   y: 0,
@@ -79,10 +76,8 @@ const mockRect = {
   left: 0,
 };
 
-// Mock getBoundingClientRect for all elements
 Element.prototype.getBoundingClientRect = vi.fn(() => mockRect);
 
-// Mock offsetWidth and offsetHeight
 Object.defineProperty(Element.prototype, 'offsetWidth', {
   get: vi.fn(() => 800),
   configurable: true,
@@ -93,7 +88,6 @@ Object.defineProperty(Element.prototype, 'offsetHeight', {
   configurable: true,
 });
 
-// Mock clientWidth and clientHeight
 Object.defineProperty(Element.prototype, 'clientWidth', {
   get: vi.fn(() => 800),
   configurable: true,
@@ -104,7 +98,6 @@ Object.defineProperty(Element.prototype, 'clientHeight', {
   configurable: true,
 });
 
-// Mock scrollWidth and scrollHeight
 Object.defineProperty(Element.prototype, 'scrollWidth', {
   get: vi.fn(() => 800),
   configurable: true,
@@ -115,14 +108,11 @@ Object.defineProperty(Element.prototype, 'scrollHeight', {
   configurable: true,
 });
 
-// Suppress console errors during tests
 const originalConsoleError = console.error;
 const originalConsoleWarn = console.warn;
 
-// Create a mock TenantContext for testing
 const TenantContext = createContext();
 
-// Mock hooks
 vi.mock("@/hooks/useRealtimeData", () => ({
   useRealtimeMetrics: vi.fn(),
   useRealtimeProtocolStatus: vi.fn(),
@@ -137,7 +127,6 @@ import {
   useWebSocketStatus,
 } from "@/hooks/useRealtimeData";
 
-// Mock websocketService
 vi.mock("@/services/websocketService", () => ({
   default: {
     connect: vi.fn(),
@@ -149,7 +138,26 @@ vi.mock("@/services/websocketService", () => ({
   },
 }));
 
-// Test wrapper with tenant context and router
+// Mock EnhancedMetricCard to simplify testing
+vi.mock("@/components/visualization/EnhancedMetricCard", () => ({
+  default: ({ title, value, subValue, loading }) => {
+    if (loading) {
+      return (
+        <div data-testid={`metric-card-${title}`}>
+          <div className="animate-pulse">Loading...</div>
+        </div>
+      );
+    }
+    return (
+      <div data-testid={`metric-card-${title}`}>
+        <div className="text-sm font-medium">{title}</div>
+        <div className="text-2xl font-bold">{value}</div>
+        {subValue && <div className="text-xs text-muted-foreground">{subValue}</div>}
+      </div>
+    );
+  },
+}));
+
 const TestWrapper = ({ children }) => {
   const tenantValue = {
     currentTenant: { id: "tenant-1", name: "Test Tenant" },
@@ -168,11 +176,9 @@ describe("RealtimeScadaDashboard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Reset console mocks
     console.error = vi.fn();
     console.warn = vi.fn();
 
-    // Setup default mock implementations
     useRealtimeMetrics.mockReturnValue({
       metrics: scadaDashboardFixture.metrics,
       loading: false,
@@ -195,12 +201,10 @@ describe("RealtimeScadaDashboard", () => {
       isReconnecting: false,
     });
 
-    // Reset getBoundingClientRect mock
     Element.prototype.getBoundingClientRect = vi.fn(() => mockRect);
   });
 
   afterEach(() => {
-    // Restore console methods
     console.error = originalConsoleError;
     console.warn = originalConsoleWarn;
   });
@@ -370,10 +374,19 @@ describe("RealtimeScadaDashboard", () => {
 
   describe("Real-time Data Updates", () => {
     it("should update metrics when new data arrives", async () => {
-      let currentMetrics = scadaDashboardFixture.metrics;
+      const initialMetrics = {
+        ...scadaDashboardFixture.metrics,
+        temperature: {
+          current: 75,
+          unit: "°C",
+          min: 70,
+          max: 80,
+          trend: "stable",
+        },
+      };
 
       useRealtimeMetrics.mockReturnValue({
-        metrics: currentMetrics,
+        metrics: initialMetrics,
         loading: false,
         error: null,
       });
@@ -384,28 +397,27 @@ describe("RealtimeScadaDashboard", () => {
         </TestWrapper>,
       );
 
-      // Wait for initial render
+      // Wait for initial render with 75°C
       await waitFor(() => {
-        const initialLabel = screen.queryAllByText(
-          (content, element) =>
-            content.includes(scadaDashboardFixture.metrics[0].label) ||
-            element?.textContent?.includes(
-              scadaDashboardFixture.metrics[0].label,
-            ),
-        );
-        expect(initialLabel.length).toBeGreaterThan(0);
+        const documentText = document.body.textContent || '';
+        expect(documentText).toContain('75');
+        expect(documentText).toContain('°C');
       });
 
-      // Update with new value
-      const updatedMetric = {
-        ...scadaDashboardFixture.metrics[0],
-        value: 99.9,
-        current: 99.9, // Some metrics might use 'current' field
+      // Update with new value - component expects temperature.current
+      const updatedMetrics = {
+        ...scadaDashboardFixture.metrics,
+        temperature: {
+          current: 99.9,
+          unit: "°C",
+          min: 70,
+          max: 100,
+          trend: "up",
+        },
       };
-      currentMetrics = [updatedMetric, ...scadaDashboardFixture.metrics.slice(1)];
 
       useRealtimeMetrics.mockReturnValue({
-        metrics: currentMetrics,
+        metrics: updatedMetrics,
         loading: false,
         error: null,
       });
@@ -416,13 +428,12 @@ describe("RealtimeScadaDashboard", () => {
         </TestWrapper>,
       );
 
-      // Wait for the updated value to appear - check the entire document text
+      // Wait for the updated value to appear - "99.9°C"
       await waitFor(
         () => {
-          // Check if the updated value appears anywhere in the document
           const documentText = document.body.textContent || '';
-          // The value might appear as "99.9" or "99.9°C" or similar
           expect(documentText).toContain('99.9');
+          expect(documentText).toContain('°C');
         },
         { timeout: 3000 },
       );
@@ -433,15 +444,16 @@ describe("RealtimeScadaDashboard", () => {
 
       for (let i = 0; i < 10; i++) {
         updates.push({
-          metrics: [
-            {
-              id: "temp",
-              label: "Temperature",
-              value: 50 + i,
+          metrics: {
+            ...scadaDashboardFixture.metrics,
+            temperature: {
+              current: 50 + i,
               unit: "°C",
-              status: "normal",
+              min: 40,
+              max: 60,
+              trend: i % 2 === 0 ? "up" : "down",
             },
-          ],
+          },
           loading: false,
           error: null,
         });
@@ -469,9 +481,10 @@ describe("RealtimeScadaDashboard", () => {
 
       await waitFor(
         () => {
-          // Check if any element contains "59" (the last value in the update sequence)
           const documentText = document.body.textContent || '';
+          // The last value in the sequence is 59 (50 + 9)
           expect(documentText).toContain('59');
+          expect(documentText).toContain('°C');
         },
         { timeout: 3000 },
       );
