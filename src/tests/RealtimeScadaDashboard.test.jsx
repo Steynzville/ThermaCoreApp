@@ -666,12 +666,26 @@ describe("RealtimeScadaDashboard", () => {
         </TestWrapper>,
       );
 
-      // Find the select trigger - use getByRole with a more specific query
-      // The select trigger is in the header area with the "Last 24h" text
+      // Find all comboboxes - the time range selector is the first one
       const selectTriggers = screen.getAllByRole("combobox");
-      // The first one is the time range selector (the badge is also a combobox but has different text)
-      const selectTrigger = selectTriggers[0];
-      fireEvent.click(selectTrigger);
+      // The time range selector is typically the first combobox
+      // but to be safe, find the one with "Last 24h" text
+      let timeRangeTrigger = null;
+      for (const trigger of selectTriggers) {
+        const text = trigger.textContent || '';
+        if (text.includes('Last 24h') || text.includes('Last Hour') || text.includes('Last 7 Days')) {
+          timeRangeTrigger = trigger;
+          break;
+        }
+      }
+      
+      // If not found by text, use the first one
+      if (!timeRangeTrigger && selectTriggers.length > 0) {
+        timeRangeTrigger = selectTriggers[0];
+      }
+      
+      expect(timeRangeTrigger).toBeInTheDocument();
+      fireEvent.click(timeRangeTrigger);
 
       // Wait for options and click one
       await waitFor(() => {
