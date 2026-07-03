@@ -10,7 +10,7 @@
  * - Environmental metrics
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import UnitPerformance from "@/components/UnitPerformance";
