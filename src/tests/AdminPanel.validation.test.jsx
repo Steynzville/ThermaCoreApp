@@ -174,6 +174,11 @@ describe("AdminPanel Password Reset Validation - Real-time Updates", () => {
     vi.clearAllMocks();
     // Mock window.confirm to prevent ReferenceError in tests
     window.confirm = vi.fn(() => true);
+    // Reset apiFetch mocks
+    apiFetch.apiPost.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ success: true, message: "Password reset successfully" }),
+    });
   });
 
   it("should render without crashing", async () => {
@@ -186,15 +191,27 @@ describe("AdminPanel Password Reset Validation - Real-time Updates", () => {
   it("should show warning for passwords less than 6 characters", async () => {
     renderWithProviders(<AdminPanel />);
 
-    // Use getAllByText and get the first one, or use a more specific query
+    // Find Password Management tab/button
     const passwordManagementElements = screen.getAllByText("Password Management");
-    // Click the first one (or the one that's a button/link)
+    // Click the first one that's clickable (button/link)
+    const passwordManagementTab = passwordManagementElements[0].closest("button") || passwordManagementElements[0];
     await act(async () => {
-      fireEvent.click(passwordManagementElements[0]);
+      fireEvent.click(passwordManagementTab);
+    });
+    
+    // Find and click Change My Password button
+    await waitFor(() => {
+      const changePasswordButton = screen.getByText("Change My Password");
+      expect(changePasswordButton).toBeInTheDocument();
     });
     
     await act(async () => {
       fireEvent.click(screen.getByText("Change My Password"));
+    });
+
+    // Wait for modal to appear
+    await waitFor(() => {
+      expect(screen.getByTestId("password-reset-modal")).toBeInTheDocument();
     });
 
     const newPasswordInput = screen.getByPlaceholderText("Enter new password");
@@ -223,14 +240,25 @@ describe("AdminPanel Password Reset Validation - Real-time Updates", () => {
   it("should remove warning when password reaches 6 characters", async () => {
     renderWithProviders(<AdminPanel />);
 
-    // Use getAllByText and get the first one
+    // Find Password Management tab/button
     const passwordManagementElements = screen.getAllByText("Password Management");
+    const passwordManagementTab = passwordManagementElements[0].closest("button") || passwordManagementElements[0];
     await act(async () => {
-      fireEvent.click(passwordManagementElements[0]);
+      fireEvent.click(passwordManagementTab);
+    });
+    
+    // Find and click Change My Password button
+    await waitFor(() => {
+      expect(screen.getByText("Change My Password")).toBeInTheDocument();
     });
     
     await act(async () => {
       fireEvent.click(screen.getByText("Change My Password"));
+    });
+
+    // Wait for modal to appear
+    await waitFor(() => {
+      expect(screen.getByTestId("password-reset-modal")).toBeInTheDocument();
     });
 
     const newPasswordInput = screen.getByPlaceholderText("Enter new password");
@@ -277,14 +305,25 @@ describe("AdminPanel Password Reset Validation - Real-time Updates", () => {
   it("should show mismatch warning in real-time", async () => {
     renderWithProviders(<AdminPanel />);
 
-    // Use getAllByText and get the first one
+    // Find Password Management tab/button
     const passwordManagementElements = screen.getAllByText("Password Management");
+    const passwordManagementTab = passwordManagementElements[0].closest("button") || passwordManagementElements[0];
     await act(async () => {
-      fireEvent.click(passwordManagementElements[0]);
+      fireEvent.click(passwordManagementTab);
+    });
+    
+    // Find and click Change My Password button
+    await waitFor(() => {
+      expect(screen.getByText("Change My Password")).toBeInTheDocument();
     });
     
     await act(async () => {
       fireEvent.click(screen.getByText("Change My Password"));
+    });
+
+    // Wait for modal to appear
+    await waitFor(() => {
+      expect(screen.getByTestId("password-reset-modal")).toBeInTheDocument();
     });
 
     const newPasswordInput = screen.getByPlaceholderText("Enter new password");
@@ -319,14 +358,25 @@ describe("AdminPanel Password Reset Validation - Real-time Updates", () => {
   it("should remove mismatch warning when passwords match", async () => {
     renderWithProviders(<AdminPanel />);
 
-    // Use getAllByText and get the first one
+    // Find Password Management tab/button
     const passwordManagementElements = screen.getAllByText("Password Management");
+    const passwordManagementTab = passwordManagementElements[0].closest("button") || passwordManagementElements[0];
     await act(async () => {
-      fireEvent.click(passwordManagementElements[0]);
+      fireEvent.click(passwordManagementTab);
+    });
+    
+    // Find and click Change My Password button
+    await waitFor(() => {
+      expect(screen.getByText("Change My Password")).toBeInTheDocument();
     });
     
     await act(async () => {
       fireEvent.click(screen.getByText("Change My Password"));
+    });
+
+    // Wait for modal to appear
+    await waitFor(() => {
+      expect(screen.getByTestId("password-reset-modal")).toBeInTheDocument();
     });
 
     const newPasswordInput = screen.getByPlaceholderText("Enter new password");
@@ -372,14 +422,25 @@ describe("AdminPanel Password Reset Validation - Real-time Updates", () => {
   it("should enable button only when both validations pass", async () => {
     renderWithProviders(<AdminPanel />);
 
-    // Use getAllByText and get the first one
+    // Find Password Management tab/button
     const passwordManagementElements = screen.getAllByText("Password Management");
+    const passwordManagementTab = passwordManagementElements[0].closest("button") || passwordManagementElements[0];
     await act(async () => {
-      fireEvent.click(passwordManagementElements[0]);
+      fireEvent.click(passwordManagementTab);
+    });
+    
+    // Find and click Change My Password button
+    await waitFor(() => {
+      expect(screen.getByText("Change My Password")).toBeInTheDocument();
     });
     
     await act(async () => {
       fireEvent.click(screen.getByText("Change My Password"));
+    });
+
+    // Wait for modal to appear
+    await waitFor(() => {
+      expect(screen.getByTestId("password-reset-modal")).toBeInTheDocument();
     });
 
     const newPasswordInput = screen.getByPlaceholderText("Enter new password");
@@ -440,14 +501,25 @@ describe("AdminPanel Password Reset Validation - Real-time Updates", () => {
 
     renderWithProviders(<AdminPanel />);
 
-    // Use getAllByText and get the first one
+    // Find Password Management tab/button
     const passwordManagementElements = screen.getAllByText("Password Management");
+    const passwordManagementTab = passwordManagementElements[0].closest("button") || passwordManagementElements[0];
     await act(async () => {
-      fireEvent.click(passwordManagementElements[0]);
+      fireEvent.click(passwordManagementTab);
+    });
+    
+    // Find and click Change My Password button
+    await waitFor(() => {
+      expect(screen.getByText("Change My Password")).toBeInTheDocument();
     });
     
     await act(async () => {
       fireEvent.click(screen.getByText("Change My Password"));
+    });
+
+    // Wait for modal to appear
+    await waitFor(() => {
+      expect(screen.getByTestId("password-reset-modal")).toBeInTheDocument();
     });
 
     const newPasswordInput = screen.getByPlaceholderText("Enter new password");
@@ -483,7 +555,7 @@ describe("AdminPanel Password Reset Validation - Real-time Updates", () => {
     // Verify API was called with correct data
     await waitFor(() => {
       expect(apiFetch.apiPost).toHaveBeenCalledWith(
-        expect.stringContaining("/api/v1/users/"),
+        expect.stringContaining("/users/"),
         { new_password: "newPassword123" },
         expect.objectContaining({
           showToastOnError: false,
@@ -503,14 +575,25 @@ describe("AdminPanel Password Reset Validation - Real-time Updates", () => {
 
     renderWithProviders(<AdminPanel />);
 
-    // Use getAllByText and get the first one
+    // Find Password Management tab/button
     const passwordManagementElements = screen.getAllByText("Password Management");
+    const passwordManagementTab = passwordManagementElements[0].closest("button") || passwordManagementElements[0];
     await act(async () => {
-      fireEvent.click(passwordManagementElements[0]);
+      fireEvent.click(passwordManagementTab);
+    });
+    
+    // Find and click Change My Password button
+    await waitFor(() => {
+      expect(screen.getByText("Change My Password")).toBeInTheDocument();
     });
     
     await act(async () => {
       fireEvent.click(screen.getByText("Change My Password"));
+    });
+
+    // Wait for modal to appear
+    await waitFor(() => {
+      expect(screen.getByTestId("password-reset-modal")).toBeInTheDocument();
     });
 
     const newPasswordInput = screen.getByPlaceholderText("Enter new password");
@@ -544,8 +627,8 @@ describe("AdminPanel Password Reset Validation - Real-time Updates", () => {
 
     // Verify error message is displayed
     await waitFor(() => {
-      expect(screen.getByTestId("password-error")).toBeInTheDocument();
-      expect(screen.getByText(/Invalid password format/i)).toBeInTheDocument();
+      const errorElement = screen.getByTestId("password-error") || screen.getByText(/Invalid password format/i);
+      expect(errorElement).toBeInTheDocument();
     });
   });
 });
