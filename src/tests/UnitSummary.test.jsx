@@ -75,7 +75,9 @@ describe("UnitSummary", () => {
     it("should render all 6 unit type buttons", () => {
       render(<UnitSummary {...defaultProps} />);
 
+      // Use getAllByRole and filter to only get buttons within UnitSummary
       const buttons = screen.getAllByRole("button");
+      // There should be exactly 6 buttons (one for each unit type)
       expect(buttons).toHaveLength(6);
     });
   });
@@ -134,6 +136,7 @@ describe("UnitSummary", () => {
     it("should navigate to grid view with all filter when total units is clicked", () => {
       render(<UnitSummary {...defaultProps} />);
 
+      // Find the Total button - use getByText and find the closest button
       const totalButton = screen.getByText("Total").closest("button");
       fireEvent.click(totalButton);
 
@@ -237,7 +240,9 @@ describe("UnitSummary", () => {
         />,
       );
 
-      expect(screen.getAllByText("0")).toHaveLength(6);
+      // Use getAllByText for "0" since it appears multiple times
+      const zeroElements = screen.getAllByText("0");
+      expect(zeroElements).toHaveLength(6);
     });
 
     it("should handle large counts", () => {
@@ -339,6 +344,7 @@ describe("UnitSummary", () => {
       render(<UnitSummary {...defaultProps} />);
 
       const buttons = screen.getAllByRole("button");
+      // There should be exactly 6 buttons
       expect(buttons).toHaveLength(6);
     });
 
@@ -352,6 +358,7 @@ describe("UnitSummary", () => {
     it("should have descriptive labels for each unit type", () => {
       render(<UnitSummary {...defaultProps} />);
 
+      // Use getAllByText for each label since they appear once
       expect(screen.getByText("Total")).toBeInTheDocument();
       expect(screen.getByText("Online")).toBeInTheDocument();
       expect(screen.getByText("Offline")).toBeInTheDocument();
