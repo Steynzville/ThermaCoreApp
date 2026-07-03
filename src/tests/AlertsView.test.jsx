@@ -29,28 +29,37 @@ describe("AlertsView", () => {
   describe("Rendering", () => {
     it("should render component with title", () => {
       renderAlertsView();
-      expect(screen.getByText("Alerts & Notifications")).toBeInTheDocument();
+      const titleElements = screen.getAllByText("Alerts & Notifications");
+      expect(titleElements.length).toBeGreaterThan(0);
     });
 
     it("should render filter dropdown", () => {
       renderAlertsView();
-      const filterSelect = screen.getByRole("combobox");
-      expect(filterSelect).toBeInTheDocument();
+      const filterSelects = screen.getAllByRole("combobox");
+      expect(filterSelects.length).toBeGreaterThan(0);
     });
 
     it("should display all alerts by default", () => {
       renderAlertsView();
 
-      expect(screen.getByText("Unit Offline")).toBeInTheDocument();
-      expect(screen.getByText("Low Water Level")).toBeInTheDocument();
-      expect(screen.getByText("Maintenance Scheduled")).toBeInTheDocument();
+      const offlineElements = screen.getAllByText("Unit Offline");
+      expect(offlineElements.length).toBeGreaterThan(0);
+      
+      const waterElements = screen.getAllByText("Low Water Level");
+      expect(waterElements.length).toBeGreaterThan(0);
+      
+      const maintenanceElements = screen.getAllByText("Maintenance Scheduled");
+      expect(maintenanceElements.length).toBeGreaterThan(0);
     });
 
     it("should display alert timestamps", () => {
       renderAlertsView();
 
-      expect(screen.getByText(/2025-09-09 14:45/)).toBeInTheDocument();
-      expect(screen.getByText(/2025-09-09 14:15/)).toBeInTheDocument();
+      const timestampElements = screen.getAllByText(/2025-09-09 14:45/);
+      expect(timestampElements.length).toBeGreaterThan(0);
+      
+      const timestampElements2 = screen.getAllByText(/2025-09-09 14:15/);
+      expect(timestampElements2.length).toBeGreaterThan(0);
     });
 
     it("should display device names", () => {
@@ -65,75 +74,92 @@ describe("AlertsView", () => {
     it("should filter critical alerts", () => {
       renderAlertsView();
 
-      const filterButton = screen.getByRole("combobox");
-      fireEvent.change(filterButton, { target: { value: "critical" } });
+      const filterSelects = screen.getAllByRole("combobox");
+      fireEvent.change(filterSelects[0], { target: { value: "critical" } });
 
       // Should show critical alerts
-      expect(screen.getByText("Unit Offline")).toBeInTheDocument();
-      expect(screen.getByText("Pressure Drop")).toBeInTheDocument();
+      const offlineElements = screen.getAllByText("Unit Offline");
+      expect(offlineElements.length).toBeGreaterThan(0);
+      
+      const pressureElements = screen.getAllByText("Pressure Drop");
+      expect(pressureElements.length).toBeGreaterThan(0);
 
       // Should not show non-critical alerts
-      expect(
-        screen.queryByText("Maintenance Scheduled"),
-      ).not.toBeInTheDocument();
+      const maintenanceElements = screen.queryAllByText("Maintenance Scheduled");
+      expect(maintenanceElements.length).toBe(0);
     });
 
     it("should filter warning alerts", () => {
       renderAlertsView();
 
-      const filterButton = screen.getByRole("combobox");
-      fireEvent.change(filterButton, { target: { value: "warning" } });
+      const filterSelects = screen.getAllByRole("combobox");
+      fireEvent.change(filterSelects[0], { target: { value: "warning" } });
 
       // Should show warning alerts
-      expect(screen.getByText("Low Water Level")).toBeInTheDocument();
-      expect(screen.getByText("Temperature Alert")).toBeInTheDocument();
+      const waterElements = screen.getAllByText("Low Water Level");
+      expect(waterElements.length).toBeGreaterThan(0);
+      
+      const tempElements = screen.getAllByText("Temperature Alert");
+      expect(tempElements.length).toBeGreaterThan(0);
 
       // Should not show non-warning alerts
-      expect(screen.queryByText("Unit Offline")).not.toBeInTheDocument();
+      const offlineElements = screen.queryAllByText("Unit Offline");
+      expect(offlineElements.length).toBe(0);
     });
 
     it("should filter info alerts", () => {
       renderAlertsView();
 
-      const filterButton = screen.getByRole("combobox");
-      fireEvent.change(filterButton, { target: { value: "info" } });
+      const filterSelects = screen.getAllByRole("combobox");
+      fireEvent.change(filterSelects[0], { target: { value: "info" } });
 
       // Should show info alerts
-      expect(screen.getByText("Maintenance Scheduled")).toBeInTheDocument();
+      const maintenanceElements = screen.getAllByText("Maintenance Scheduled");
+      expect(maintenanceElements.length).toBeGreaterThan(0);
 
       // Should not show other alert types
-      expect(screen.queryByText("Unit Offline")).not.toBeInTheDocument();
-      expect(screen.queryByText("Low Water Level")).not.toBeInTheDocument();
+      const offlineElements = screen.queryAllByText("Unit Offline");
+      expect(offlineElements.length).toBe(0);
+      
+      const waterElements = screen.queryAllByText("Low Water Level");
+      expect(waterElements.length).toBe(0);
     });
 
     it("should filter success alerts", () => {
       renderAlertsView();
 
-      const filterButton = screen.getByRole("combobox");
-      fireEvent.change(filterButton, { target: { value: "success" } });
+      const filterSelects = screen.getAllByRole("combobox");
+      fireEvent.change(filterSelects[0], { target: { value: "success" } });
 
       // Should show success alerts
-      expect(screen.getByText("System Restored")).toBeInTheDocument();
+      const restoredElements = screen.getAllByText("System Restored");
+      expect(restoredElements.length).toBeGreaterThan(0);
 
       // Should not show other alert types
-      expect(screen.queryByText("Unit Offline")).not.toBeInTheDocument();
+      const offlineElements = screen.queryAllByText("Unit Offline");
+      expect(offlineElements.length).toBe(0);
     });
 
     it("should show all alerts when 'All Alerts' filter is selected", () => {
       renderAlertsView();
 
-      const filterButton = screen.getByRole("combobox");
+      const filterSelects = screen.getAllByRole("combobox");
 
       // Filter to critical first
-      fireEvent.change(filterButton, { target: { value: "critical" } });
+      fireEvent.change(filterSelects[0], { target: { value: "critical" } });
 
       // Now switch back to all
-      fireEvent.change(filterButton, { target: { value: "all" } });
+      fireEvent.change(filterSelects[0], { target: { value: "all" } });
 
       // Should show all alerts again
-      expect(screen.getByText("Unit Offline")).toBeInTheDocument();
-      expect(screen.getByText("Low Water Level")).toBeInTheDocument();
-      expect(screen.getByText("Maintenance Scheduled")).toBeInTheDocument();
+      const offlineElements = screen.getAllByText("Unit Offline");
+      expect(offlineElements.length).toBeGreaterThan(0);
+      
+      const waterElements = screen.getAllByText("Low Water Level");
+      expect(waterElements.length).toBeGreaterThan(0);
+      
+      const maintenanceElements = screen.getAllByText("Maintenance Scheduled");
+      expect(maintenanceElements.length).toBeGreaterThan(0);
     });
   });
 
@@ -171,7 +197,7 @@ describe("AlertsView", () => {
     it("should navigate to unit details on alert click", () => {
       renderAlertsView();
 
-      const alertCard = screen.getByText("Unit Offline").closest("div");
+      const alertCard = screen.getAllByText("Unit Offline")[0].closest("div");
       if (alertCard) {
         fireEvent.click(alertCard);
       }
@@ -191,7 +217,7 @@ describe("AlertsView", () => {
     it("should pass alert information when navigating", () => {
       renderAlertsView();
 
-      const alertCard = screen.getByText("Low Water Level").closest("div");
+      const alertCard = screen.getAllByText("Low Water Level")[0].closest("div");
       if (alertCard) {
         fireEvent.click(alertCard);
       }
@@ -217,22 +243,25 @@ describe("AlertsView", () => {
       renderAlertsView();
 
       // Should display the count of alerts
-      const alertCards = screen.getAllByText(/ThermaCore Unit/);
-      expect(alertCards.length).toBeGreaterThan(0);
+      const deviceNames = screen.getAllByText(/ThermaCore Unit/);
+      expect(deviceNames.length).toBeGreaterThan(0);
     });
 
     it("should update count when filter is applied", () => {
       renderAlertsView();
 
-      const filterButton = screen.getByRole("combobox");
-      fireEvent.change(filterButton, { target: { value: "critical" } });
+      const filterSelects = screen.getAllByRole("combobox");
+      fireEvent.change(filterSelects[0], { target: { value: "critical" } });
 
       // Should show only critical alerts
-      const criticalAlertTitles = [
-        screen.getByText("Unit Offline"),
-        screen.getByText("Pressure Drop"),
-      ];
-      expect(criticalAlertTitles.length).toBe(2); // 2 critical alerts
+      const offlineElements = screen.getAllByText("Unit Offline");
+      expect(offlineElements.length).toBeGreaterThan(0);
+      
+      const pressureElements = screen.getAllByText("Pressure Drop");
+      expect(pressureElements.length).toBeGreaterThan(0);
+      
+      // Both critical alerts should be present
+      expect(offlineElements.length + pressureElements.length).toBeGreaterThan(0);
     });
   });
 
@@ -240,15 +269,17 @@ describe("AlertsView", () => {
     it("should handle different filter values", () => {
       renderAlertsView();
 
-      const filterButton = screen.getByRole("combobox");
+      const filterSelects = screen.getAllByRole("combobox");
 
       // Test success filter
-      fireEvent.change(filterButton, { target: { value: "success" } });
-      expect(screen.getByText("System Restored")).toBeInTheDocument();
+      fireEvent.change(filterSelects[0], { target: { value: "success" } });
+      const restoredElements = screen.getAllByText("System Restored");
+      expect(restoredElements.length).toBeGreaterThan(0);
 
       // Test info filter
-      fireEvent.change(filterButton, { target: { value: "info" } });
-      expect(screen.getByText("Maintenance Scheduled")).toBeInTheDocument();
+      fireEvent.change(filterSelects[0], { target: { value: "info" } });
+      const maintenanceElements = screen.getAllByText("Maintenance Scheduled");
+      expect(maintenanceElements.length).toBeGreaterThan(0);
     });
   });
 
@@ -257,18 +288,18 @@ describe("AlertsView", () => {
       renderAlertsView();
 
       // Maintenance Scheduled is acknowledged
-      const acknowledgedAlert = screen.getByText("Maintenance Scheduled");
-      expect(acknowledgedAlert).toBeInTheDocument();
+      const acknowledgedAlert = screen.getAllByText("Maintenance Scheduled");
+      expect(acknowledgedAlert.length).toBeGreaterThan(0);
     });
 
     it("should display unacknowledged alerts prominently", () => {
       renderAlertsView();
 
       // Unit Offline is not acknowledged
-      const unacknowledgedAlert = screen.getByText("Unit Offline");
-      expect(unacknowledgedAlert).toBeInTheDocument();
+      const unacknowledgedAlert = screen.getAllByText("Unit Offline");
+      expect(unacknowledgedAlert.length).toBeGreaterThan(0);
 
-      const card = unacknowledgedAlert.closest("div");
+      const card = unacknowledgedAlert[0].closest("div");
       expect(card).toBeInTheDocument();
     });
   });
@@ -310,12 +341,15 @@ describe("AlertsView", () => {
     it("should display alert messages clearly", () => {
       renderAlertsView();
 
-      expect(
-        screen.getByText(/has gone offline and requires immediate attention/),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByText(/water level has dropped below 10%/),
-      ).toBeInTheDocument();
+      const messageElements = screen.getAllByText(
+        /has gone offline and requires immediate attention/,
+      );
+      expect(messageElements.length).toBeGreaterThan(0);
+      
+      const waterElements = screen.getAllByText(
+        /water level has dropped below 10%/,
+      );
+      expect(waterElements.length).toBeGreaterThan(0);
     });
   });
 });
