@@ -57,17 +57,15 @@ describe("ThemeContext", () => {
     }));
   });
 
-  // Helper to wait for effects to run - using flushPromises approach
+  // Helper to wait for effects to run - using act with flushSync approach
   const waitForEffects = async () => {
+    // Wait for one full tick to let effects run
     await act(async () => {
-      // Use a combination of microtask and macrotask to ensure all effects have run
-      await new Promise((resolve) => {
-        // Use queueMicrotask to run after microtasks
-        queueMicrotask(() => {
-          // Then use setTimeout to run after macrotasks
-          setTimeout(resolve, 0);
-        });
-      });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    // Additional act to catch any nested effects
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
   };
 
@@ -154,6 +152,9 @@ describe("ThemeContext", () => {
       const { result } = renderHook(() => useTheme(), {
         wrapper: ThemeProvider,
       });
+
+      // Clear localStorage to ensure it's empty
+      localStorage.clear();
 
       act(() => {
         result.current.setTheme("dark");
@@ -353,6 +354,9 @@ describe("ThemeContext", () => {
       const { result } = renderHook(() => useTheme(), {
         wrapper: ThemeProvider,
       });
+
+      // Clear localStorage to ensure it's empty
+      localStorage.clear();
 
       act(() => {
         result.current.setTheme("dark");
