@@ -2,15 +2,28 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AuthProvider } from "../context/AuthContext";
-import { SettingsProvider } from "../context/SettingsContext";
-import { ThemeProvider } from "../context/ThemeContext";
 import { resetPassword } from "../services/authService";
-import PasswordResetRequest from "./PasswordResetRequest";
+import PasswordResetRequest from "../components/PasswordResetRequest";
 
 // Mock the auth service
 vi.mock("../services/authService", () => ({
   resetPassword: vi.fn(),
+}));
+
+// Mock all contexts
+vi.mock("../context/AuthContext", () => ({
+  AuthProvider: ({ children }) => <>{children}</>,
+  useAuth: () => ({ user: null, userRole: null, isAuthenticated: false }),
+}));
+
+vi.mock("../context/ThemeContext", () => ({
+  ThemeProvider: ({ children }) => <>{children}</>,
+  useTheme: () => ({ theme: "dark", setTheme: vi.fn() }),
+}));
+
+vi.mock("../context/SettingsContext", () => ({
+  SettingsProvider: ({ children }) => <>{children}</>,
+  useSettings: () => ({ settings: {} }),
 }));
 
 vi.mock("lucide-react", () => ({
@@ -22,44 +35,22 @@ vi.mock("../assets/thermacore-logo-new.png", () => ({
   default: "logo.png",
 }));
 
-// Mock useAuth to avoid context issues
-vi.mock("../context/AuthContext", async () => {
-  const actual = await vi.importActual("../context/AuthContext");
-  return {
-    ...actual,
-    useAuth: () => ({
-      user: null,
-      userRole: null,
-      isAuthenticated: false,
-      isLoading: false,
-    }),
-  };
-});
-
 describe("PasswordResetRequest", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  // Helper to render with a specific token in the URL
   const renderWithToken = (token = "test-token") => {
     const initialEntries = token
       ? [`/reset-password?token=${token}`]
       : ["/reset-password"];
 
     return render(
-      <ThemeProvider>
-        <SettingsProvider>
-          <MemoryRouter initialEntries={initialEntries}>
-            <Routes>
-              <Route
-                path="/reset-password"
-                element={<PasswordResetRequest />}
-              />
-            </Routes>
-          </MemoryRouter>
-        </SettingsProvider>
-      </ThemeProvider>
+      <MemoryRouter initialEntries={initialEntries}>
+        <Routes>
+          <Route path="/reset-password" element={<PasswordResetRequest />} />
+        </Routes>
+      </MemoryRouter>
     );
   };
 
@@ -67,15 +58,9 @@ describe("PasswordResetRequest", () => {
     renderWithToken();
 
     await waitFor(() => {
-      expect(
-        screen.getByPlaceholderText("Enter new password"),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByPlaceholderText("Confirm new password"),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole("button", { name: /reset password/i }),
-      ).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Enter new password")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Confirm new password")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /reset password/i })).toBeInTheDocument();
     });
   });
 
@@ -84,9 +69,7 @@ describe("PasswordResetRequest", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(
-          /Invalid reset link. Please request a new password reset./i,
-        ),
+        screen.getByText(/Invalid reset link. Please request a new password reset./i)
       ).toBeInTheDocument();
     });
   });
@@ -119,16 +102,12 @@ describe("PasswordResetRequest", () => {
     renderWithToken();
 
     await waitFor(() => {
-      const submitButton = screen.getByRole("button", {
-        name: /reset password/i,
-      });
+      const submitButton = screen.getByRole("button", { name: /reset password/i });
       fireEvent.click(submitButton);
     });
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/Please enter both password fields/i),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Please enter both password fields/i)).toBeInTheDocument();
     });
   });
 
@@ -146,16 +125,12 @@ describe("PasswordResetRequest", () => {
         target: { name: "confirmPassword", value: "short" },
       });
 
-      const submitButton = screen.getByRole("button", {
-        name: /reset password/i,
-      });
+      const submitButton = screen.getByRole("button", { name: /reset password/i });
       fireEvent.click(submitButton);
     });
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/Password must be at least 6 characters long/i),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Password must be at least 6 characters long/i)).toBeInTheDocument();
     });
   });
 
@@ -173,9 +148,7 @@ describe("PasswordResetRequest", () => {
         target: { name: "confirmPassword", value: "different456" },
       });
 
-      const submitButton = screen.getByRole("button", {
-        name: /reset password/i,
-      });
+      const submitButton = screen.getByRole("button", { name: /reset password/i });
       fireEvent.click(submitButton);
     });
 
@@ -203,9 +176,7 @@ describe("PasswordResetRequest", () => {
         target: { name: "confirmPassword", value: "newpass123" },
       });
 
-      const submitButton = screen.getByRole("button", {
-        name: /reset password/i,
-      });
+      const submitButton = screen.getByRole("button", { name: /reset password/i });
       fireEvent.click(submitButton);
     });
 
@@ -233,9 +204,7 @@ describe("PasswordResetRequest", () => {
         target: { name: "confirmPassword", value: "newpass123" },
       });
 
-      const submitButton = screen.getByRole("button", {
-        name: /reset password/i,
-      });
+      const submitButton = screen.getByRole("button", { name: /reset password/i });
       fireEvent.click(submitButton);
     });
 
@@ -260,16 +229,12 @@ describe("PasswordResetRequest", () => {
         target: { name: "confirmPassword", value: "newpass123" },
       });
 
-      const submitButton = screen.getByRole("button", {
-        name: /reset password/i,
-      });
+      const submitButton = screen.getByRole("button", { name: /reset password/i });
       fireEvent.click(submitButton);
     });
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/An unexpected error occurred. Please try again./i),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/An unexpected error occurred. Please try again./i)).toBeInTheDocument();
     });
   });
 
@@ -290,16 +255,12 @@ describe("PasswordResetRequest", () => {
     renderWithToken();
 
     await waitFor(() => {
-      const submitButton = screen.getByRole("button", {
-        name: /reset password/i,
-      });
+      const submitButton = screen.getByRole("button", { name: /reset password/i });
       fireEvent.click(submitButton);
     });
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/Please enter both password fields/i),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Please enter both password fields/i)).toBeInTheDocument();
     });
 
     const passwordInput = screen.getByPlaceholderText("Enter new password");
@@ -308,9 +269,7 @@ describe("PasswordResetRequest", () => {
     });
 
     await waitFor(() => {
-      expect(
-        screen.queryByText(/Please enter both password fields/i),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByText(/Please enter both password fields/i)).not.toBeInTheDocument();
     });
   });
 });
