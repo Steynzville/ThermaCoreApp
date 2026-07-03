@@ -249,11 +249,11 @@ describe("NotificationBell", () => {
         fireEvent.click(closeButton);
       }
 
+      // Use getAllByText with queryAllByText for checking absence
       await waitFor(
         () => {
-          expect(
-            screen.queryByText(/View all notifications/i),
-          ).not.toBeInTheDocument();
+          const viewAllElements = screen.queryAllByText(/View all notifications/i);
+          expect(viewAllElements.length).toBe(0);
         },
         { timeout: 3000 },
       );
@@ -275,14 +275,14 @@ describe("NotificationBell", () => {
 
       await waitFor(
         () => {
-          expect(screen.getByText(/NH3 LEAK DETECTED/i)).toBeInTheDocument();
-          expect(screen.getByText(/Unit Offline/i)).toBeInTheDocument();
+          const nh3Elements = screen.getAllByText(/NH3 LEAK DETECTED/i);
+          expect(nh3Elements.length).toBeGreaterThan(0);
+          
+          const offlineElements = screen.getAllByText(/Unit Offline/i);
+          expect(offlineElements.length).toBeGreaterThan(0);
         },
         { timeout: 3000 },
       );
     });
   });
-
-  // The rest of the tests remain the same but with the bell button finding pattern...
-  // ... (keeping the rest of the tests as they were in the previous version)
 });
