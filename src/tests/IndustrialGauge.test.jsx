@@ -69,21 +69,27 @@ describe("IndustrialGauge", () => {
       );
 
       // When showValue is false, the value display div should not be present
-      // But the canvas may still show the value visually, so we check for the text
-      // value display specifically
-      const valueDisplay = screen.queryByText(/75/);
-      // The value might appear in the canvas, but the text should not be visible
-      // as a standalone element. We check that there is no text node with 75
-      // that is part of the value display area.
-      const valueElements = screen.queryAllByText(/75/);
-      // Check that there are no text elements containing 75°C as a display value
-      // (some might be in the title or other places)
-      const valueDisplayElements = valueElements.filter(el => 
-        el.textContent?.includes('°C') || 
-        el.closest('.text-2xl') || 
-        el.closest('.text-3xl')
-      );
+      // Check for the value display specifically - look for the div with text containing °C
+      // or the value in the value display area
+      const valueDisplayElements = screen.queryAllByText((content, element) => {
+        // Check if this element is part of the value display
+        // The value display has specific classes
+        if (!element) return false;
+        const parent = element.closest?.('.text-2xl') || element.closest?.('.text-3xl');
+        if (parent) {
+          return content.includes('75') || content.includes('°C');
+        }
+        return false;
+      });
+      
+      // Also check for the "75°C" display directly
+      const tempDisplay = screen.queryAllByText(/75°C/);
+      
+      // The value should not be displayed as text in the value display area
+      // Note: The value might still appear in the canvas or in other contexts
+      // but should not be visible as a text element in the value display
       expect(valueDisplayElements.length).toBe(0);
+      expect(tempDisplay.length).toBe(0);
     });
 
     it("should render canvas element", () => {
