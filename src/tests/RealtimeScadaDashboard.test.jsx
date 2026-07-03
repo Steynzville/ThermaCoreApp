@@ -120,7 +120,8 @@ import {
 } from "@/hooks/useRealtimeData";
 
 // Mock EnhancedMetricCard to properly render values for testing
-vi.mock("@/components/visualization/EnhancedMetricCard", () => ({
+// CHANGE 1: Fixed the import path to match the actual component location
+vi.mock("@/components/EnhancedMetricCard", () => ({
   default: ({ title, value, subValue, loading, trend, variant, clickable }) => {
     if (loading) {
       return (
@@ -652,6 +653,7 @@ describe("RealtimeScadaDashboard", () => {
       });
     });
 
+    // CHANGE 2: Fixed the time range selection test to work with Radix Select
     it("should update historical data when time range changes", async () => {
       const setTimeRangeMock = vi.fn();
       useRealtimeHistoricalData.mockReturnValue({
@@ -666,34 +668,47 @@ describe("RealtimeScadaDashboard", () => {
         </TestWrapper>,
       );
 
-      // Find all comboboxes - the time range selector is the first one
+      // Wait for the component to render
+      await waitFor(() => {
+        const titleElements = screen.getAllByText(/Real-Time SCADA Dashboard/i);
+        expect(titleElements.length).toBeGreaterThan(0);
+      });
+
+      // Find all comboboxes
       const selectTriggers = screen.getAllByRole("combobox");
-      // The time range selector is typically the first combobox
-      // but to be safe, find the one with "Last 24h" text
+      
+      // Find the time range selector - look for the one that contains time-related text
       let timeRangeTrigger = null;
       for (const trigger of selectTriggers) {
         const text = trigger.textContent || '';
-        if (text.includes('Last 24h') || text.includes('Last Hour') || text.includes('Last 7 Days')) {
+        // Check if this trigger has time-related text
+        if (text.includes('Last 24h') || text.includes('Last Hour') || text.includes('Last 7 Days') || text.includes('h')) {
           timeRangeTrigger = trigger;
           break;
         }
       }
       
-      // If not found by text, use the first one
+      // If not found by text, use the first one (it's typically the time range selector)
       if (!timeRangeTrigger && selectTriggers.length > 0) {
         timeRangeTrigger = selectTriggers[0];
       }
       
       expect(timeRangeTrigger).toBeInTheDocument();
+
+      // For Radix Select, we need to properly open the dropdown
+      // Click on the trigger to open the dropdown
       fireEvent.click(timeRangeTrigger);
 
-      // Wait for options and click one
+      // Wait for the dropdown to open and options to appear
       await waitFor(() => {
         const options = screen.getAllByRole("option");
         expect(options.length).toBeGreaterThan(0);
-        // Click the first option (should be "Last Hour")
-        fireEvent.click(options[0]);
       });
+
+      // Get all options and click the first one (Last Hour)
+      const options = screen.getAllByRole("option");
+      // Click the first option which should be "Last Hour"
+      fireEvent.click(options[0]);
 
       // Verify setTimeRange was called
       await waitFor(() => {
