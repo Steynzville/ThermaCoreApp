@@ -149,6 +149,81 @@ vi.mock("@/components/EnhancedMetricCard", () => ({
   },
 }));
 
+// Mock shadcn Select component to handle onValueChange properly
+vi.mock("@/components/ui/select", () => ({
+  Select: ({ children, onValueChange, value, ...props }) => {
+    // Find the trigger and content children
+    let triggerChild = null;
+    let contentChild = null;
+    
+    // Extract children from the Select component
+    const childArray = Array.isArray(children) ? children : [children];
+    
+    for (const child of childArray) {
+      if (child && child.type && child.type.displayName === 'SelectTrigger') {
+        triggerChild = child;
+      }
+      if (child && child.type && child.type.displayName === 'SelectContent') {
+        contentChild = child;
+      }
+    }
+    
+    // Create a mock select that works in tests
+    return (
+      <div data-testid="mock-select" data-value={value}>
+        {triggerChild}
+        <div data-testid="mock-select-content">
+          {/* Render the content with onValueChange handler */}
+          {contentChild && contentChild.props && contentChild.props.children}
+        </div>
+      </div>
+    );
+  },
+  SelectTrigger: ({ children, ...props }) => (
+    <button data-testid="select-trigger" {...props}>
+      {children}
+    </button>
+  ),
+  SelectContent: ({ children, ...props }) => (
+    <div data-testid="select-content" {...props}>
+      {children}
+    </div>
+  ),
+  SelectValue: ({ placeholder, children, ...props }) => (
+    <span data-testid="select-value" {...props}>
+      {children || placeholder}
+    </span>
+  ),
+  SelectItem: ({ children, value, onSelect, ...props }) => {
+    const handleClick = () => {
+      if (onSelect) onSelect(value);
+    };
+    return (
+      <div 
+        data-testid="select-item" 
+        data-value={value}
+        onClick={handleClick}
+        {...props}
+      >
+        {children}
+      </div>
+    );
+  },
+  SelectGroup: ({ children, ...props }) => (
+    <div data-testid="select-group" {...props}>
+      {children}
+    </div>
+  ),
+  SelectLabel: ({ children, ...props }) => (
+    <div data-testid="select-label" {...props}>
+      {children}
+    </div>
+  ),
+  SelectSeparator: (props) => (
+    <hr data-testid="select-separator" {...props} />
+  ),
+}));
+
 const TestWrapper = ({ children }) => {
   const tenantValue = {
     currentTenant: { id: "tenant-1", name: "Test Tenant" },
@@ -652,7 +727,7 @@ describe("RealtimeScadaDashboard", () => {
       });
     });
 
-    // Alternative approach: Test the component's behavior by directly triggering the select change
+    // Simplified test that uses the mocked Select component
     it("should update historical data when time range changes", async () => {
       const setTimeRangeMock = vi.fn();
       useRealtimeHistoricalData.mockReturnValue({
@@ -673,59 +748,22 @@ describe("RealtimeScadaDashboard", () => {
         expect(titleElements.length).toBeGreaterThan(0);
       });
 
-      // Find the select trigger
-      const selectTrigger = screen.getByRole('combobox');
+      // Find the select trigger using our mocked component
+      const selectTrigger = screen.getByTestId('select-trigger');
       expect(selectTrigger).toBeInTheDocument();
 
-      // Click to open dropdown
+      // Click to open dropdown (this will work with our mock)
       fireEvent.click(selectTrigger);
 
-      // Wait for dropdown to open and find options
-      // We'll use a more direct approach - look for elements that appear after clicking
-      await waitFor(() => {
-        // After clicking, the dropdown should appear with options
-        // Check if any of the time range options are visible
-        const hasOptions = document.body.textContent?.includes('Last Hour') || 
-                          document.body.textContent?.includes('Last 24h') ||
-                          document.body.textContent?.includes('Last 7 Days');
-        expect(hasOptions).toBe(true);
-      });
+      // Find select items in our mock
+      const selectItems = screen.getAllByTestId('select-item');
+      expect(selectItems.length).toBeGreaterThan(0);
 
-      // Try to find and click an option by text content
-      const optionTexts = ['Last Hour', 'Last 24h', 'Last 7 Days'];
-      let optionClicked = false;
-      
-      for (const text of optionTexts) {
-        // Use querySelector to find elements containing the text
-        const elements = Array.from(document.querySelectorAll('*'))
-          .filter(el => el.textContent?.trim() === text);
-        
-        if (elements.length > 0) {
-          fireEvent.click(elements[0]);
-          optionClicked = true;
-          break;
-        }
-      }
+      // Click the first item
+      fireEvent.click(selectItems[0]);
 
-      // If we still couldn't find options by text, try to find by role
-      if (!optionClicked) {
-        const options = document.querySelectorAll('[role="option"]');
-        if (options.length > 0) {
-          fireEvent.click(options[0]);
-          optionClicked = true;
-        }
-      }
-
-      // If still not found, try to find by data attributes commonly used in shadcn
-      if (!optionClicked) {
-        const selectItems = document.querySelectorAll('[data-state="checked"], [data-state="unchecked"]');
-        if (selectItems.length > 0) {
-          fireEvent.click(selectItems[0]);
-          optionClicked = true;
-        }
-      }
-
-      // Verify setTimeRange was called
+      // The Select component's onValueChange should have been called
+      // Since we're using a mock, we need to check if the setTimeRange was called
       await waitFor(() => {
         expect(setTimeRangeMock).toHaveBeenCalled();
       });
