@@ -1,15 +1,59 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   getAuthToken,
   getAuthTokenWithSource,
   hasAuthToken,
 } from "./authToken";
 
+// Setup localStorage and sessionStorage mocks
+const localStorageMock = (() => {
+  let store = {};
+  return {
+    getItem: (key) => store[key] || null,
+    setItem: (key, value) => {
+      store[key] = value.toString();
+    },
+    removeItem: (key) => {
+      delete store[key];
+    },
+    clear: () => {
+      store = {};
+    },
+  };
+})();
+
+const sessionStorageMock = (() => {
+  let store = {};
+  return {
+    getItem: (key) => store[key] || null,
+    setItem: (key, value) => {
+      store[key] = value.toString();
+    },
+    removeItem: (key) => {
+      delete store[key];
+    },
+    clear: () => {
+      store = {};
+    },
+  };
+})();
+
+Object.defineProperty(window, "localStorage", {
+  value: localStorageMock,
+  writable: true,
+});
+
+Object.defineProperty(window, "sessionStorage", {
+  value: sessionStorageMock,
+  writable: true,
+});
+
 describe("authToken utility", () => {
   beforeEach(() => {
     // Clear all storage before each test
     localStorage.clear();
     sessionStorage.clear();
+    vi.clearAllMocks();
   });
 
   describe("getAuthToken", () => {
