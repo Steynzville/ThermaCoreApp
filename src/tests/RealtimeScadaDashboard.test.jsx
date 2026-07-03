@@ -10,7 +10,7 @@
  * - Multi-source data aggregation
  */
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, act } from "@testing-library/react";
 import { createContext } from "react";
 import { BrowserRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -111,14 +111,8 @@ const TestWrapper = ({ children }) => {
 };
 
 describe("RealtimeScadaDashboard", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-
-    // Suppress React key warnings and other console noise during tests
-    console.error = vi.fn();
-    console.warn = vi.fn();
-
-    // Setup default mock implementations
+  // Helper function to setup default mocks
+  const setupDefaultMocks = () => {
     useRealtimeMetrics.mockReturnValue({
       metrics: scadaDashboardFixture.metrics,
       loading: false,
@@ -140,6 +134,16 @@ describe("RealtimeScadaDashboard", () => {
       isConnected: true,
       isReconnecting: false,
     });
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    // Suppress React key warnings and other console noise during tests
+    console.error = vi.fn();
+    console.warn = vi.fn();
+
+    setupDefaultMocks();
   });
 
   afterEach(() => {
@@ -292,15 +296,103 @@ describe("RealtimeScadaDashboard", () => {
   });
 
   describe("Real-time Data Updates", () => {
-    it.skip("should update metrics when new data arrives", async () => {
-      // This test is skipped due to complexity with the mock implementation
-      // The component is rendering correctly based on other tests
-      expect(true).toBe(true);
+    it("should update metrics when new data arrives", async () => {
+      let currentMetrics = scadaDashboardFixture.metrics;
+
+      useRealtimeMetrics.mockReturnValue({
+        metrics: currentMetrics,
+        loading: false,
+        error: null,
+      });
+
+      const { rerender } = render(
+        <TestWrapper>
+          <RealtimeScadaDashboard />
+        </TestWrapper>,
+      );
+
+      // Check initial render
+      const initialLabel = screen.queryAllByText(
+        (content, element) =>
+          content.includes(scadaDashboardFixture.metrics[0].label) ||
+          element?.textContent?.includes(
+            scadaDashboardFixture.metrics[0].label,
+          ),
+      );
+      expect(initialLabel.length).toBeGreaterThan(0);
+
+      currentMetrics = [
+        { ...scadaDashboardFixture.metrics[0], value: 99.9 },
+        ...scadaDashboardFixture.metrics.slice(1),
+      ];
+
+      useRealtimeMetrics.mockReturnValue({
+        metrics: currentMetrics,
+        loading: false,
+        error: null,
+      });
+
+      rerender(
+        <TestWrapper>
+          <RealtimeScadaDashboard />
+        </TestWrapper>,
+      );
+
+      await waitFor(() => {
+        const valueElements = screen.queryAllByText(
+          (content, element) =>
+            content.includes("99.9") || element?.textContent?.includes("99.9"),
+        );
+        expect(valueElements.length).toBeGreaterThan(0);
+      });
     });
 
-    it.skip("should handle rapid metric updates", async () => {
-      // This test is skipped due to complexity with the mock implementation
-      expect(true).toBe(true);
+    it("should handle rapid metric updates", async () => {
+      const updates = [];
+
+      for (let i = 0; i < 10; i++) {
+        updates.push({
+          metrics: [
+            {
+              id: "temp",
+              label: "Temperature",
+              value: 50 + i,
+              unit: "°C",
+              status: "normal",
+            },
+          ],
+          loading: false,
+          error: null,
+        });
+      }
+
+      let updateIndex = 0;
+      useRealtimeMetrics.mockImplementation(
+        () => updates[updateIndex] || updates[0],
+      );
+
+      const { rerender } = render(
+        <TestWrapper>
+          <RealtimeScadaDashboard />
+        </TestWrapper>,
+      );
+
+      for (let i = 1; i < updates.length; i++) {
+        updateIndex = i;
+        rerender(
+          <TestWrapper>
+            <RealtimeScadaDashboard />
+          </TestWrapper>,
+        );
+      }
+
+      await waitFor(() => {
+        const valueElements = screen.queryAllByText(
+          (content, element) =>
+            content.includes("59") || element?.textContent?.includes("59"),
+        );
+        expect(valueElements.length).toBeGreaterThan(0);
+      });
     });
   });
 
@@ -403,6 +495,25 @@ describe("RealtimeScadaDashboard", () => {
   });
 
   describe("Time Range Selection", () => {
+    beforeEach(() => {
+      // Ensure mocks are properly set for this describe block
+      useRealtimeMetrics.mockReturnValue({
+        metrics: scadaDashboardFixture.metrics,
+        loading: false,
+        error: null,
+      });
+
+      useRealtimeProtocolStatus.mockReturnValue({
+        protocols: scadaDashboardFixture.protocols,
+        loading: false,
+      });
+
+      useWebSocketStatus.mockReturnValue({
+        isConnected: true,
+        isReconnecting: false,
+      });
+    });
+
     it("should allow changing time range", async () => {
       const mockSetTimeRange = vi.fn();
 
@@ -471,6 +582,38 @@ describe("RealtimeScadaDashboard", () => {
 });
 
 describe("Protocol Status Display", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    // Ensure mocks are properly set for this describe block
+    const useRealtimeMetrics = require("@/hooks/useRealtimeData").useRealtimeMetrics;
+    const useRealtimeProtocolStatus = require("@/hooks/useRealtimeData").useRealtimeProtocolStatus;
+    const useRealtimeHistoricalData = require("@/hooks/useRealtimeData").useRealtimeHistoricalData;
+    const useWebSocketStatus = require("@/hooks/useRealtimeData").useWebSocketStatus;
+
+    useRealtimeMetrics.mockReturnValue({
+      metrics: scadaDashboardFixture.metrics,
+      loading: false,
+      error: null,
+    });
+
+    useRealtimeProtocolStatus.mockReturnValue({
+      protocols: scadaDashboardFixture.protocols,
+      loading: false,
+    });
+
+    useRealtimeHistoricalData.mockReturnValue({
+      data: [],
+      loading: false,
+      setTimeRange: vi.fn(),
+    });
+
+    useWebSocketStatus.mockReturnValue({
+      isConnected: true,
+      isReconnecting: false,
+    });
+  });
+
   it("should display connected protocols", () => {
     render(
       <TestWrapper>
@@ -487,6 +630,8 @@ describe("Protocol Status Display", () => {
   });
 
   it("should indicate disconnected protocols", () => {
+    const useRealtimeProtocolStatus = require("@/hooks/useRealtimeData").useRealtimeProtocolStatus;
+    
     const protocolsWithDisconnected = [
       ...scadaDashboardFixture.protocols,
       { id: "test-1", protocol: "Modbus", status: "disconnected", devices: 1 },
@@ -521,13 +666,39 @@ describe("Performance - 60fps Streaming", () => {
 });
 
 describe("Accessibility", () => {
-  it("should have accessible metric labels", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    // Ensure mocks are properly set for this describe block
+    const useRealtimeMetrics = require("@/hooks/useRealtimeData").useRealtimeMetrics;
+    const useRealtimeProtocolStatus = require("@/hooks/useRealtimeData").useRealtimeProtocolStatus;
+    const useRealtimeHistoricalData = require("@/hooks/useRealtimeData").useRealtimeHistoricalData;
+    const useWebSocketStatus = require("@/hooks/useRealtimeData").useWebSocketStatus;
+
     useRealtimeMetrics.mockReturnValue({
       metrics: scadaDashboardFixture.metrics,
       loading: false,
       error: null,
     });
 
+    useRealtimeProtocolStatus.mockReturnValue({
+      protocols: scadaDashboardFixture.protocols,
+      loading: false,
+    });
+
+    useRealtimeHistoricalData.mockReturnValue({
+      data: [],
+      loading: false,
+      setTimeRange: vi.fn(),
+    });
+
+    useWebSocketStatus.mockReturnValue({
+      isConnected: true,
+      isReconnecting: false,
+    });
+  });
+
+  it("should have accessible metric labels", () => {
     render(
       <TestWrapper>
         <RealtimeScadaDashboard />
