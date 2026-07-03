@@ -226,27 +226,26 @@ describe("Dashboard", () => {
 
   describe("Quick Actions - Admin Only", () => {
     it("should not render quick actions for regular users", () => {
-      render(
+      const { container } = render(
         <TestWrapper userRole="user">
           <Dashboard />
         </TestWrapper>,
       );
 
-      // For regular users, QuickActionCard components should NOT be rendered
-      // Check that no quick action cards exist
-      const quickActionElements = screen.queryAllByTestId(/quick-action-/);
+      // Search within the container for quick action testids
+      const quickActionElements = container.querySelectorAll('[data-testid^="quick-action-"]');
       expect(quickActionElements.length).toBe(0);
     });
 
     it("should render quick actions for admin users", () => {
-      render(
+      const { container } = render(
         <TestWrapper userRole="admin">
           <Dashboard />
         </TestWrapper>,
       );
 
-      // For admin users, QuickActionCard components should be rendered
-      const quickActionElements = screen.getAllByTestId(/quick-action-/);
+      // Search within the container for quick action testids
+      const quickActionElements = container.querySelectorAll('[data-testid^="quick-action-"]');
       expect(quickActionElements.length).toBeGreaterThan(0);
     });
   });
