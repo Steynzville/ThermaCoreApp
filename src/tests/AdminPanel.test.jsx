@@ -159,16 +159,9 @@ const renderWithProviders = (component) => {
 
   return render(
     <SettingsProvider>
-      <AuthProvider
-        value={{
-          user: mockUser,
-          userRole: "admin",
-          isAuthenticated: true,
-          isLoading: false,
-        }}
-      >
-        <BrowserRouter>{component}</BrowserRouter>
-      </AuthProvider>
+      <BrowserRouter>
+        {component}
+      </BrowserRouter>
     </SettingsProvider>
   );
 };
@@ -252,7 +245,7 @@ describe("AdminPanel Component", () => {
     fireEvent.click(changePasswordButton);
 
     await waitFor(() => {
-      // Find visibility toggle buttons
+      // Find visibility toggle buttons - they use aria-label
       const toggleButtons = screen.getAllByRole("button", { name: /toggle password visibility/i });
       expect(toggleButtons.length).toBeGreaterThan(0);
     });
@@ -279,6 +272,7 @@ describe("AdminPanel Component", () => {
     fireEvent.change(confirmPasswordInput, { target: { value: "password456" } });
 
     await waitFor(() => {
+      // Use getAllByText since the error might appear multiple times
       const mismatchElements = screen.getAllByText("Passwords do not match");
       expect(mismatchElements.length).toBeGreaterThan(0);
     });
@@ -303,6 +297,7 @@ describe("AdminPanel Component", () => {
     fireEvent.change(newPasswordInput, { target: { value: "12345" } });
 
     await waitFor(() => {
+      // Use getAllByText since the warning might appear multiple times
       const warningElements = screen.getAllByText("Password must be at least 6 characters long");
       expect(warningElements.length).toBeGreaterThan(0);
     });
