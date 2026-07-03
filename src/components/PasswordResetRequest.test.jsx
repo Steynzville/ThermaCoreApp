@@ -22,11 +22,23 @@ vi.mock("../assets/thermacore-logo-new.png", () => ({
   default: "logo.png",
 }));
 
+// Mock useAuth to avoid context issues
+vi.mock("../context/AuthContext", async () => {
+  const actual = await vi.importActual("../context/AuthContext");
+  return {
+    ...actual,
+    useAuth: () => ({
+      user: null,
+      userRole: null,
+      isAuthenticated: false,
+      isLoading: false,
+    }),
+  };
+});
+
 describe("PasswordResetRequest", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Clean up the DOM between tests
-    document.body.innerHTML = '';
   });
 
   // Helper to render with a specific token in the URL
@@ -36,36 +48,35 @@ describe("PasswordResetRequest", () => {
       : ["/reset-password"];
 
     return render(
-      <AuthProvider>
-        <ThemeProvider>
-          <SettingsProvider>
-            <MemoryRouter initialEntries={initialEntries}>
-              <Routes>
-                <Route
-                  path="/reset-password"
-                  element={<PasswordResetRequest />}
-                />
-              </Routes>
-            </MemoryRouter>
-          </SettingsProvider>
-        </ThemeProvider>
-      </AuthProvider>,
+      <ThemeProvider>
+        <SettingsProvider>
+          <MemoryRouter initialEntries={initialEntries}>
+            <Routes>
+              <Route
+                path="/reset-password"
+                element={<PasswordResetRequest />}
+              />
+            </Routes>
+          </MemoryRouter>
+        </SettingsProvider>
+      </ThemeProvider>
     );
   };
 
-  it("should render password reset form", () => {
+  it("should render password reset form", async () => {
     renderWithToken();
 
-    // Use getByPlaceholderText - it will find the first one
-    expect(
-      screen.getByPlaceholderText("Enter new password"),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByPlaceholderText("Confirm new password"),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /reset password/i }),
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.getByPlaceholderText("Enter new password"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText("Confirm new password"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /reset password/i }),
+      ).toBeInTheDocument();
+    });
   });
 
   it("should display error when no token in URL", async () => {
@@ -80,42 +91,39 @@ describe("PasswordResetRequest", () => {
     });
   });
 
-  it("should handle password input change", () => {
+  it("should handle password input change", async () => {
     renderWithToken();
 
-    const passwordInput = screen.getByPlaceholderText("Enter new password");
-    fireEvent.change(passwordInput, {
-      target: { name: "newPassword", value: "newpass123" },
+    await waitFor(() => {
+      const passwordInput = screen.getByPlaceholderText("Enter new password");
+      fireEvent.change(passwordInput, {
+        target: { name: "newPassword", value: "newpass123" },
+      });
+      expect(passwordInput.value).toBe("newpass123");
     });
-
-    expect(passwordInput.value).toBe("newpass123");
   });
 
-  it("should handle confirm password input change", () => {
+  it("should handle confirm password input change", async () => {
     renderWithToken();
 
-    const confirmInput = screen.getByPlaceholderText("Confirm new password");
-    fireEvent.change(confirmInput, {
-      target: { name: "confirmPassword", value: "newpass123" },
+    await waitFor(() => {
+      const confirmInput = screen.getByPlaceholderText("Confirm new password");
+      fireEvent.change(confirmInput, {
+        target: { name: "confirmPassword", value: "newpass123" },
+      });
+      expect(confirmInput.value).toBe("newpass123");
     });
-
-    expect(confirmInput.value).toBe("newpass123");
   });
 
   it("should validate empty password fields", async () => {
     renderWithToken();
 
-    const submitButton = screen.getByRole("button", {
-      name: /reset password/i,
-    });
-
-    // Submit the form using the button's form property
-    const form = submitButton.closest('form');
-    if (form) {
-      fireEvent.submit(form);
-    } else {
+    await waitFor(() => {
+      const submitButton = screen.getByRole("button", {
+        name: /reset password/i,
+      });
       fireEvent.click(submitButton);
-    }
+    });
 
     await waitFor(() => {
       expect(
@@ -127,21 +135,22 @@ describe("PasswordResetRequest", () => {
   it("should validate password length", async () => {
     renderWithToken();
 
-    const passwordInput = screen.getByPlaceholderText("Enter new password");
-    const confirmInput = screen.getByPlaceholderText("Confirm new password");
+    await waitFor(() => {
+      const passwordInput = screen.getByPlaceholderText("Enter new password");
+      const confirmInput = screen.getByPlaceholderText("Confirm new password");
 
-    fireEvent.change(passwordInput, {
-      target: { name: "newPassword", value: "short" },
-    });
-    fireEvent.change(confirmInput, {
-      target: { name: "confirmPassword", value: "short" },
-    });
+      fireEvent.change(passwordInput, {
+        target: { name: "newPassword", value: "short" },
+      });
+      fireEvent.change(confirmInput, {
+        target: { name: "confirmPassword", value: "short" },
+      });
 
-    const submitButton = screen.getByRole("button", {
-      name: /reset password/i,
+      const submitButton = screen.getByRole("button", {
+        name: /reset password/i,
+      });
+      fireEvent.click(submitButton);
     });
-
-    fireEvent.click(submitButton);
 
     await waitFor(() => {
       expect(
@@ -153,21 +162,22 @@ describe("PasswordResetRequest", () => {
   it("should validate password mismatch", async () => {
     renderWithToken();
 
-    const passwordInput = screen.getByPlaceholderText("Enter new password");
-    const confirmInput = screen.getByPlaceholderText("Confirm new password");
+    await waitFor(() => {
+      const passwordInput = screen.getByPlaceholderText("Enter new password");
+      const confirmInput = screen.getByPlaceholderText("Confirm new password");
 
-    fireEvent.change(passwordInput, {
-      target: { name: "newPassword", value: "password123" },
-    });
-    fireEvent.change(confirmInput, {
-      target: { name: "confirmPassword", value: "different456" },
-    });
+      fireEvent.change(passwordInput, {
+        target: { name: "newPassword", value: "password123" },
+      });
+      fireEvent.change(confirmInput, {
+        target: { name: "confirmPassword", value: "different456" },
+      });
 
-    const submitButton = screen.getByRole("button", {
-      name: /reset password/i,
+      const submitButton = screen.getByRole("button", {
+        name: /reset password/i,
+      });
+      fireEvent.click(submitButton);
     });
-
-    fireEvent.click(submitButton);
 
     await waitFor(() => {
       expect(screen.getByText(/Passwords do not match/i)).toBeInTheDocument();
@@ -182,21 +192,22 @@ describe("PasswordResetRequest", () => {
 
     renderWithToken();
 
-    const passwordInput = screen.getByPlaceholderText("Enter new password");
-    const confirmInput = screen.getByPlaceholderText("Confirm new password");
+    await waitFor(() => {
+      const passwordInput = screen.getByPlaceholderText("Enter new password");
+      const confirmInput = screen.getByPlaceholderText("Confirm new password");
 
-    fireEvent.change(passwordInput, {
-      target: { name: "newPassword", value: "newpass123" },
-    });
-    fireEvent.change(confirmInput, {
-      target: { name: "confirmPassword", value: "newpass123" },
-    });
+      fireEvent.change(passwordInput, {
+        target: { name: "newPassword", value: "newpass123" },
+      });
+      fireEvent.change(confirmInput, {
+        target: { name: "confirmPassword", value: "newpass123" },
+      });
 
-    const submitButton = screen.getByRole("button", {
-      name: /reset password/i,
+      const submitButton = screen.getByRole("button", {
+        name: /reset password/i,
+      });
+      fireEvent.click(submitButton);
     });
-
-    fireEvent.click(submitButton);
 
     await waitFor(() => {
       expect(resetPassword).toHaveBeenCalledWith("test-token", "newpass123");
@@ -211,21 +222,22 @@ describe("PasswordResetRequest", () => {
 
     renderWithToken();
 
-    const passwordInput = screen.getByPlaceholderText("Enter new password");
-    const confirmInput = screen.getByPlaceholderText("Confirm new password");
+    await waitFor(() => {
+      const passwordInput = screen.getByPlaceholderText("Enter new password");
+      const confirmInput = screen.getByPlaceholderText("Confirm new password");
 
-    fireEvent.change(passwordInput, {
-      target: { name: "newPassword", value: "newpass123" },
-    });
-    fireEvent.change(confirmInput, {
-      target: { name: "confirmPassword", value: "newpass123" },
-    });
+      fireEvent.change(passwordInput, {
+        target: { name: "newPassword", value: "newpass123" },
+      });
+      fireEvent.change(confirmInput, {
+        target: { name: "confirmPassword", value: "newpass123" },
+      });
 
-    const submitButton = screen.getByRole("button", {
-      name: /reset password/i,
+      const submitButton = screen.getByRole("button", {
+        name: /reset password/i,
+      });
+      fireEvent.click(submitButton);
     });
-
-    fireEvent.click(submitButton);
 
     await waitFor(() => {
       expect(screen.getByText(/Invalid token/i)).toBeInTheDocument();
@@ -237,21 +249,22 @@ describe("PasswordResetRequest", () => {
 
     renderWithToken();
 
-    const passwordInput = screen.getByPlaceholderText("Enter new password");
-    const confirmInput = screen.getByPlaceholderText("Confirm new password");
+    await waitFor(() => {
+      const passwordInput = screen.getByPlaceholderText("Enter new password");
+      const confirmInput = screen.getByPlaceholderText("Confirm new password");
 
-    fireEvent.change(passwordInput, {
-      target: { name: "newPassword", value: "newpass123" },
-    });
-    fireEvent.change(confirmInput, {
-      target: { name: "confirmPassword", value: "newpass123" },
-    });
+      fireEvent.change(passwordInput, {
+        target: { name: "newPassword", value: "newpass123" },
+      });
+      fireEvent.change(confirmInput, {
+        target: { name: "confirmPassword", value: "newpass123" },
+      });
 
-    const submitButton = screen.getByRole("button", {
-      name: /reset password/i,
+      const submitButton = screen.getByRole("button", {
+        name: /reset password/i,
+      });
+      fireEvent.click(submitButton);
     });
-
-    fireEvent.click(submitButton);
 
     await waitFor(() => {
       expect(
@@ -260,32 +273,28 @@ describe("PasswordResetRequest", () => {
     });
   });
 
-  it("should toggle password visibility", () => {
+  it("should toggle password visibility", async () => {
     renderWithToken();
 
-    const passwordInput = screen.getByPlaceholderText("Enter new password");
-    expect(passwordInput).toHaveAttribute("type", "password");
+    await waitFor(() => {
+      const passwordInput = screen.getByPlaceholderText("Enter new password");
+      expect(passwordInput).toHaveAttribute("type", "password");
 
-    // Find the toggle button by aria-label
-    const toggleButton = screen.getByRole("button", { name: /Show password|Hide password/i });
-    fireEvent.click(toggleButton);
-    expect(passwordInput).toHaveAttribute("type", "text");
+      const toggleButton = screen.getByRole("button", { name: /Show password|Hide password/i });
+      fireEvent.click(toggleButton);
+      expect(passwordInput).toHaveAttribute("type", "text");
+    });
   });
 
   it("should clear error when user starts typing", async () => {
     renderWithToken();
 
-    const submitButton = screen.getByRole("button", {
-      name: /reset password/i,
-    });
-
-    // Submit without filling fields to trigger error
-    const form = submitButton.closest('form');
-    if (form) {
-      fireEvent.submit(form);
-    } else {
+    await waitFor(() => {
+      const submitButton = screen.getByRole("button", {
+        name: /reset password/i,
+      });
       fireEvent.click(submitButton);
-    }
+    });
 
     await waitFor(() => {
       expect(
