@@ -1,6 +1,23 @@
 import "@testing-library/jest-dom";
-import { vi, beforeAll, beforeEach } from "vitest";
+import { vi, beforeAll, beforeEach, afterEach } from "vitest";
 import React from "react";
+import { cleanup } from "@testing-library/react";
+
+/**
+ * -----------------------------
+ * GLOBAL CLEANUP
+ * -----------------------------
+ */
+// Clean up DOM after each test to prevent memory leaks and test pollution
+afterEach(() => {
+  cleanup();
+  
+  // Clear any leftover DOM nodes
+  document.body.innerHTML = '';
+  
+  // Reset any global state
+  vi.clearAllMocks();
+});
 
 /**
  * -----------------------------
@@ -28,6 +45,11 @@ Object.defineProperty(globalThis, "matchMedia", {
   writable: true,
   configurable: true,
   value: createMatchMedia(false),
+});
+
+// Reset matchMedia before each test
+beforeEach(() => {
+  window.matchMedia = createMatchMedia(false);
 });
 
 /**
@@ -82,9 +104,17 @@ if (!global.URL.revokeObjectURL) {
 }
 
 // Spy on the native anchor click implementation so tests can verify downloads
-const anchorClickSpy = vi
-  .spyOn(HTMLAnchorElement.prototype, "click")
-  .mockImplementation(() => {});
+let anchorClickSpy = null;
+
+// Create the spy before each test
+beforeEach(() => {
+  if (anchorClickSpy) {
+    anchorClickSpy.mockRestore();
+  }
+  anchorClickSpy = vi
+    .spyOn(HTMLAnchorElement.prototype, "click")
+    .mockImplementation(() => {});
+});
 
 // Optional browser APIs that some components may use
 // Create a mock for window.open if it doesn't exist
@@ -102,6 +132,7 @@ if (!navigator.msSaveBlob) {
   navigator.msSaveBlob = vi.fn();
 }
 
+// Reset mocks before each test
 beforeEach(() => {
   vi.clearAllMocks();
 
@@ -126,6 +157,9 @@ beforeEach(() => {
   if (navigator.msSaveBlob && typeof navigator.msSaveBlob === 'function' && navigator.msSaveBlob.mockClear) {
     navigator.msSaveBlob.mockClear();
   }
+
+  // Clear any leftover DOM from previous tests
+  document.body.innerHTML = '';
 });
 
 /**
@@ -148,4 +182,10 @@ vi.mock("framer-motion", () => ({
 beforeAll(() => {
   vi.spyOn(console, "error").mockImplementation(() => {});
   vi.spyOn(console, "warn").mockImplementation(() => {});
+});
+
+// Restore console mocks after all tests
+afterEach(() => {
+  console.error?.mockRestore?.();
+  console.warn?.mockRestore?.();
 });
