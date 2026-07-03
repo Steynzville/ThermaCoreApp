@@ -666,8 +666,11 @@ describe("RealtimeScadaDashboard", () => {
         </TestWrapper>,
       );
 
-      // Find and click the select trigger
-      const selectTrigger = screen.getByRole("combobox");
+      // Find the select trigger - use getByRole with a more specific query
+      // The select trigger is in the header area with the "Last 24h" text
+      const selectTriggers = screen.getAllByRole("combobox");
+      // The first one is the time range selector (the badge is also a combobox but has different text)
+      const selectTrigger = selectTriggers[0];
       fireEvent.click(selectTrigger);
 
       // Wait for options and click one
