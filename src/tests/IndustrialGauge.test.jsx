@@ -11,7 +11,7 @@
  * - Animated value transitions
  */
 
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import IndustrialGauge from "@/components/visualization/IndustrialGauge";
 import { setupMockCanvas } from "./utils/testHelpers.jsx";
@@ -34,7 +34,10 @@ describe("IndustrialGauge", () => {
     it("should render with custom title", () => {
       render(<IndustrialGauge title="Temperature" />);
 
-      expect(screen.getByText("Temperature")).toBeInTheDocument();
+      // Use getAllByText since there may be multiple elements with "Temperature"
+      // (e.g., card title, gauge title, etc.)
+      const elements = screen.getAllByText("Temperature");
+      expect(elements.length).toBeGreaterThan(0);
     });
 
     it("should display current value when showValue is true", () => {
@@ -517,7 +520,9 @@ describe("IndustrialGauge", () => {
     it("should display title for screen readers", () => {
       render(<IndustrialGauge title="Temperature Monitor" />);
 
-      expect(screen.getByText("Temperature Monitor")).toBeInTheDocument();
+      // Use getAllByText since there might be multiple instances
+      const elements = screen.getAllByText("Temperature Monitor");
+      expect(elements.length).toBeGreaterThan(0);
     });
 
     it("should show warning icon for critical status", () => {
