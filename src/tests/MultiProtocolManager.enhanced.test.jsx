@@ -10,17 +10,22 @@
  * - Error handling and reconnection logic
  */
 
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import MultiProtocolManager from "@/components/MultiProtocolManager";
+import MultiProtocolManager from "../components/MultiProtocolManager";
 
-// Mock the hooks and services
-vi.mock("@/hooks/useProtocols", () => ({
-  useProtocols: vi.fn(),
+// Mock the hooks and services - using the actual hook name
+vi.mock("../hooks/useProtocolWebSocket", () => ({
+  useProtocolWebSocket: vi.fn(),
+  useModbusRegisters: vi.fn(),
+  useOPCUANodes: vi.fn(),
+  useDNP3Points: vi.fn(),
+  useMQTTMessages: vi.fn(),
+  useProtocolEvent: vi.fn(),
 }));
 
-vi.mock("@/services/protocolService", () => ({
+vi.mock("../services/protocolService", () => ({
   protocolService: {
     getProtocols: vi.fn(),
     connectProtocol: vi.fn(),
@@ -30,7 +35,7 @@ vi.mock("@/services/protocolService", () => ({
   },
 }));
 
-vi.mock("@/services/mqttService", () => ({
+vi.mock("../services/mqttService", () => ({
   mqttService: {
     connect: vi.fn(),
     disconnect: vi.fn(),
@@ -39,7 +44,7 @@ vi.mock("@/services/mqttService", () => ({
   },
 }));
 
-vi.mock("@/services/modbusService", () => ({
+vi.mock("../services/modbusService", () => ({
   modbusService: {
     connect: vi.fn(),
     disconnect: vi.fn(),
@@ -48,8 +53,9 @@ vi.mock("@/services/modbusService", () => ({
   },
 }));
 
-import { useProtocols } from "@/hooks/useProtocols";
-import { protocolService } from "@/services/protocolService";
+// Import after mocks
+import { useProtocolWebSocket } from "../hooks/useProtocolWebSocket";
+import { protocolService } from "../services/protocolService";
 
 const mockProtocols = [
   {
@@ -113,14 +119,20 @@ describe("MultiProtocolManager - Enhanced Protocol Support", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Default mock implementations
-    useProtocols.mockReturnValue({
+    // Default mock implementations using the actual hook
+    useProtocolWebSocket.mockReturnValue({
       protocols: mockProtocols,
+      connectionStatus: "connected",
+      isConnected: true,
+      data: mockProtocols,
       loading: false,
       error: null,
       refresh: vi.fn(),
       connectProtocol: vi.fn(),
       disconnectProtocol: vi.fn(),
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+      send: vi.fn(),
     });
 
     protocolService.getProtocols.mockResolvedValue(mockProtocols);
@@ -216,13 +228,17 @@ describe("MultiProtocolManager - Enhanced Protocol Support", () => {
 
   it("should handle refresh button click", async () => {
     const refreshMock = vi.fn();
-    useProtocols.mockReturnValue({
+    useProtocolWebSocket.mockReturnValue({
       protocols: mockProtocols,
+      connectionStatus: "connected",
+      isConnected: true,
+      data: mockProtocols,
       loading: false,
       error: null,
       refresh: refreshMock,
-      connectProtocol: vi.fn(),
-      disconnectProtocol: vi.fn(),
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+      send: vi.fn(),
     });
 
     render(
@@ -249,13 +265,17 @@ describe("MultiProtocolManager - Enhanced Protocol Support", () => {
 
   it("should handle API errors gracefully", async () => {
     // Mock API error
-    useProtocols.mockReturnValue({
+    useProtocolWebSocket.mockReturnValue({
       protocols: [],
+      connectionStatus: "error",
+      isConnected: false,
+      data: null,
       loading: false,
       error: "Failed to load protocols",
       refresh: vi.fn(),
-      connectProtocol: vi.fn(),
-      disconnectProtocol: vi.fn(),
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+      send: vi.fn(),
     });
 
     render(
