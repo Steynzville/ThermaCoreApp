@@ -5,8 +5,19 @@
  */
 
 import { render } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import DNP3MonitoringDashboard from "../components/protocol/DNP3MonitoringDashboard";
+
+// Mock window methods for DNP3MonitoringDashboard
+beforeEach(() => {
+  window.addEventListener = vi.fn();
+  window.removeEventListener = vi.fn();
+  window.ResizeObserver = vi.fn().mockImplementation(() => ({
+    observe: vi.fn(),
+    unobserve: vi.fn(),
+    disconnect: vi.fn(),
+  }));
+});
 
 // Mock sonner toast
 vi.mock("sonner", () => ({
