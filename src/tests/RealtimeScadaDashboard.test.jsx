@@ -10,7 +10,7 @@
  * - Multi-source data aggregation
  */
 
-import { fireEvent, render, screen, waitFor, act } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { createContext } from "react";
 import { BrowserRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -30,13 +30,31 @@ class ResizeObserverMock {
   constructor(callback) {
     this.callback = callback;
     this.observations = [];
+    // Immediately call callback with a mock entry
+    if (this.callback) {
+      setTimeout(() => {
+        this.callback([
+          {
+            target: {
+              getBoundingClientRect: () => ({
+                width: 800,
+                height: 400,
+                top: 0,
+                left: 0,
+                bottom: 400,
+                right: 800,
+                x: 0,
+                y: 0,
+              }),
+            },
+            contentRect: { width: 800, height: 400 },
+          },
+        ]);
+      }, 0);
+    }
   }
   observe(element) {
     this.observations.push(element);
-    // Simulate a resize event
-    if (this.callback) {
-      this.callback([{ target: element }]);
-    }
   }
   unobserve(element) {
     this.observations = this.observations.filter(el => el !== element);
@@ -50,7 +68,7 @@ class ResizeObserverMock {
 global.ResizeObserver = ResizeObserverMock;
 
 // Mock element methods that Recharts might use
-Element.prototype.getBoundingClientRect = vi.fn(() => ({
+const mockRect = {
   x: 0,
   y: 0,
   width: 800,
@@ -59,7 +77,43 @@ Element.prototype.getBoundingClientRect = vi.fn(() => ({
   right: 800,
   bottom: 400,
   left: 0,
-}));
+};
+
+// Mock getBoundingClientRect for all elements
+Element.prototype.getBoundingClientRect = vi.fn(() => mockRect);
+
+// Mock offsetWidth and offsetHeight
+Object.defineProperty(Element.prototype, 'offsetWidth', {
+  get: vi.fn(() => 800),
+  configurable: true,
+});
+
+Object.defineProperty(Element.prototype, 'offsetHeight', {
+  get: vi.fn(() => 400),
+  configurable: true,
+});
+
+// Mock clientWidth and clientHeight
+Object.defineProperty(Element.prototype, 'clientWidth', {
+  get: vi.fn(() => 800),
+  configurable: true,
+});
+
+Object.defineProperty(Element.prototype, 'clientHeight', {
+  get: vi.fn(() => 400),
+  configurable: true,
+});
+
+// Mock scrollWidth and scrollHeight
+Object.defineProperty(Element.prototype, 'scrollWidth', {
+  get: vi.fn(() => 800),
+  configurable: true,
+});
+
+Object.defineProperty(Element.prototype, 'scrollHeight', {
+  get: vi.fn(() => 400),
+  configurable: true,
+});
 
 // Suppress console errors during tests
 const originalConsoleError = console.error;
@@ -111,8 +165,14 @@ const TestWrapper = ({ children }) => {
 };
 
 describe("RealtimeScadaDashboard", () => {
-  // Helper function to setup default mocks
-  const setupDefaultMocks = () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    // Reset console mocks
+    console.error = vi.fn();
+    console.warn = vi.fn();
+
+    // Setup default mock implementations
     useRealtimeMetrics.mockReturnValue({
       metrics: scadaDashboardFixture.metrics,
       loading: false,
@@ -134,16 +194,9 @@ describe("RealtimeScadaDashboard", () => {
       isConnected: true,
       isReconnecting: false,
     });
-  };
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-
-    // Suppress React key warnings and other console noise during tests
-    console.error = vi.fn();
-    console.warn = vi.fn();
-
-    setupDefaultMocks();
+    // Reset getBoundingClientRect mock
+    Element.prototype.getBoundingClientRect = vi.fn(() => mockRect);
   });
 
   afterEach(() => {
@@ -153,45 +206,52 @@ describe("RealtimeScadaDashboard", () => {
   });
 
   describe("Component Rendering", () => {
-    it("should render dashboard title and description", () => {
+    it("should render dashboard title and description", async () => {
       render(
         <TestWrapper>
           <RealtimeScadaDashboard />
         </TestWrapper>,
       );
 
-      const titleElements = screen.getAllByText("Real-Time SCADA Dashboard");
-      expect(titleElements.length).toBeGreaterThan(0);
+      // Wait for component to settle
+      await waitFor(() => {
+        const titleElements = screen.getAllByText("Real-Time SCADA Dashboard");
+        expect(titleElements.length).toBeGreaterThan(0);
+      });
+
       const descElements = screen.getAllByText(
         "Live industrial monitoring and control",
       );
       expect(descElements.length).toBeGreaterThan(0);
     });
 
-    it("should display connection status badge when connected", () => {
+    it("should display connection status badge when connected", async () => {
       render(
         <TestWrapper>
           <RealtimeScadaDashboard />
         </TestWrapper>,
       );
 
-      const statusElements = screen.getAllByText("Live");
-      expect(statusElements.length).toBeGreaterThan(0);
+      await waitFor(() => {
+        const statusElements = screen.getAllByText("Live");
+        expect(statusElements.length).toBeGreaterThan(0);
+      });
     });
 
-    it("should display metrics cards", () => {
+    it("should display metrics cards", async () => {
       render(
         <TestWrapper>
           <RealtimeScadaDashboard />
         </TestWrapper>,
       );
 
-      // Check that metric cards are rendered
-      const activeUnitsElements = screen.getAllByText(/Active Units/i);
-      expect(activeUnitsElements.length).toBeGreaterThan(0);
+      await waitFor(() => {
+        const activeUnitsElements = screen.getAllByText(/Active Units/i);
+        expect(activeUnitsElements.length).toBeGreaterThan(0);
+      });
     });
 
-    it("should render with loading state", () => {
+    it("should render with loading state", async () => {
       useRealtimeMetrics.mockReturnValue({
         metrics: null,
         loading: true,
@@ -204,12 +264,14 @@ describe("RealtimeScadaDashboard", () => {
         </TestWrapper>,
       );
 
-      expect(container).toBeTruthy();
+      await waitFor(() => {
+        expect(container).toBeTruthy();
+      });
     });
   });
 
   describe("WebSocket Connection Lifecycle", () => {
-    it("should display offline status when disconnected", () => {
+    it("should display offline status when disconnected", async () => {
       useWebSocketStatus.mockReturnValue({
         isConnected: false,
         isReconnecting: false,
@@ -221,11 +283,13 @@ describe("RealtimeScadaDashboard", () => {
         </TestWrapper>,
       );
 
-      const offlineElements = screen.getAllByText("Offline");
-      expect(offlineElements.length).toBeGreaterThan(0);
+      await waitFor(() => {
+        const offlineElements = screen.getAllByText("Offline");
+        expect(offlineElements.length).toBeGreaterThan(0);
+      });
     });
 
-    it("should display reconnecting status during reconnection", () => {
+    it("should display reconnecting status during reconnection", async () => {
       useWebSocketStatus.mockReturnValue({
         isConnected: false,
         isReconnecting: true,
@@ -237,8 +301,10 @@ describe("RealtimeScadaDashboard", () => {
         </TestWrapper>,
       );
 
-      const reconnectingElements = screen.getAllByText("Reconnecting...");
-      expect(reconnectingElements.length).toBeGreaterThan(0);
+      await waitFor(() => {
+        const reconnectingElements = screen.getAllByText("Reconnecting...");
+        expect(reconnectingElements.length).toBeGreaterThan(0);
+      });
     });
 
     it("should handle connection state transitions", async () => {
@@ -248,8 +314,10 @@ describe("RealtimeScadaDashboard", () => {
         </TestWrapper>,
       );
 
-      const liveElements = screen.getAllByText("Live");
-      expect(liveElements.length).toBeGreaterThan(0);
+      await waitFor(() => {
+        const liveElements = screen.getAllByText("Live");
+        expect(liveElements.length).toBeGreaterThan(0);
+      });
 
       useWebSocketStatus.mockReturnValue({
         isConnected: false,
@@ -262,8 +330,10 @@ describe("RealtimeScadaDashboard", () => {
         </TestWrapper>,
       );
 
-      const offlineElements = screen.getAllByText("Offline");
-      expect(offlineElements.length).toBeGreaterThan(0);
+      await waitFor(() => {
+        const offlineElements = screen.getAllByText("Offline");
+        expect(offlineElements.length).toBeGreaterThan(0);
+      });
 
       useWebSocketStatus.mockReturnValue({
         isConnected: false,
@@ -276,8 +346,10 @@ describe("RealtimeScadaDashboard", () => {
         </TestWrapper>,
       );
 
-      const reconnectingElements = screen.getAllByText("Reconnecting...");
-      expect(reconnectingElements.length).toBeGreaterThan(0);
+      await waitFor(() => {
+        const reconnectingElements = screen.getAllByText("Reconnecting...");
+        expect(reconnectingElements.length).toBeGreaterThan(0);
+      });
 
       useWebSocketStatus.mockReturnValue({
         isConnected: true,
@@ -290,8 +362,10 @@ describe("RealtimeScadaDashboard", () => {
         </TestWrapper>,
       );
 
-      const liveElementsAfter = screen.getAllByText("Live");
-      expect(liveElementsAfter.length).toBeGreaterThan(0);
+      await waitFor(() => {
+        const liveElementsAfter = screen.getAllByText("Live");
+        expect(liveElementsAfter.length).toBeGreaterThan(0);
+      });
     });
   });
 
@@ -311,15 +385,16 @@ describe("RealtimeScadaDashboard", () => {
         </TestWrapper>,
       );
 
-      // Check initial render
-      const initialLabel = screen.queryAllByText(
-        (content, element) =>
-          content.includes(scadaDashboardFixture.metrics[0].label) ||
-          element?.textContent?.includes(
-            scadaDashboardFixture.metrics[0].label,
-          ),
-      );
-      expect(initialLabel.length).toBeGreaterThan(0);
+      await waitFor(() => {
+        const initialLabel = screen.queryAllByText(
+          (content, element) =>
+            content.includes(scadaDashboardFixture.metrics[0].label) ||
+            element?.textContent?.includes(
+              scadaDashboardFixture.metrics[0].label,
+            ),
+        );
+        expect(initialLabel.length).toBeGreaterThan(0);
+      });
 
       currentMetrics = [
         { ...scadaDashboardFixture.metrics[0], value: 99.9 },
@@ -397,7 +472,7 @@ describe("RealtimeScadaDashboard", () => {
   });
 
   describe("Error Handling and Graceful Degradation", () => {
-    it("should display error message when metrics fail to load", () => {
+    it("should display error message when metrics fail to load", async () => {
       useRealtimeMetrics.mockReturnValue({
         metrics: null,
         loading: false,
@@ -410,17 +485,20 @@ describe("RealtimeScadaDashboard", () => {
         </TestWrapper>,
       );
 
-      const errorTitleElements = screen.getAllByText(
-        /Error loading SCADA dashboard/i,
-      );
-      expect(errorTitleElements.length).toBeGreaterThan(0);
+      await waitFor(() => {
+        const errorTitleElements = screen.getAllByText(
+          /Error loading SCADA dashboard/i,
+        );
+        expect(errorTitleElements.length).toBeGreaterThan(0);
+      });
+
       const errorMsgElements = screen.getAllByText(
         /Failed to connect to SCADA server/i,
       );
       expect(errorMsgElements.length).toBeGreaterThan(0);
     });
 
-    it("should gracefully handle null metrics data", () => {
+    it("should gracefully handle null metrics data", async () => {
       useRealtimeMetrics.mockReturnValue({
         metrics: null,
         loading: false,
@@ -433,11 +511,13 @@ describe("RealtimeScadaDashboard", () => {
         </TestWrapper>,
       );
 
-      const titleElements = screen.getAllByText("Real-Time SCADA Dashboard");
-      expect(titleElements.length).toBeGreaterThan(0);
+      await waitFor(() => {
+        const titleElements = screen.getAllByText("Real-Time SCADA Dashboard");
+        expect(titleElements.length).toBeGreaterThan(0);
+      });
     });
 
-    it("should handle missing protocol data", () => {
+    it("should handle missing protocol data", async () => {
       useRealtimeProtocolStatus.mockReturnValue({
         protocols: [],
         loading: false,
@@ -449,8 +529,10 @@ describe("RealtimeScadaDashboard", () => {
         </TestWrapper>,
       );
 
-      const titleElements = screen.getAllByText("Real-Time SCADA Dashboard");
-      expect(titleElements.length).toBeGreaterThan(0);
+      await waitFor(() => {
+        const titleElements = screen.getAllByText("Real-Time SCADA Dashboard");
+        expect(titleElements.length).toBeGreaterThan(0);
+      });
     });
 
     it("should recover from error state", async () => {
@@ -472,8 +554,10 @@ describe("RealtimeScadaDashboard", () => {
         </TestWrapper>,
       );
 
-      const errorElements = screen.getAllByText(/Connection lost/i);
-      expect(errorElements.length).toBeGreaterThan(0);
+      await waitFor(() => {
+        const errorElements = screen.getAllByText(/Connection lost/i);
+        expect(errorElements.length).toBeGreaterThan(0);
+      });
 
       useRealtimeMetrics.mockReturnValue({
         metrics: scadaDashboardFixture.metrics,
@@ -529,7 +613,11 @@ describe("RealtimeScadaDashboard", () => {
         </TestWrapper>,
       );
 
-      // Find all comboboxes and get the first one
+      await waitFor(() => {
+        const timeRangeSelects = screen.getAllByRole("combobox");
+        expect(timeRangeSelects.length).toBeGreaterThan(0);
+      });
+
       const timeRangeSelects = screen.getAllByRole("combobox");
       const timeRangeSelect = timeRangeSelects[0];
 
@@ -560,6 +648,11 @@ describe("RealtimeScadaDashboard", () => {
           <RealtimeScadaDashboard />
         </TestWrapper>,
       );
+
+      await waitFor(() => {
+        const selects = container.querySelectorAll('select, [role="combobox"]');
+        expect(selects.length).toBeGreaterThan(0);
+      });
 
       const selects = container.querySelectorAll('select, [role="combobox"]');
       if (selects.length > 0) {
@@ -612,29 +705,34 @@ describe("Protocol Status Display", () => {
       isConnected: true,
       isReconnecting: false,
     });
+
+    // Reset getBoundingClientRect mock
+    Element.prototype.getBoundingClientRect = vi.fn(() => mockRect);
   });
 
-  it("should display connected protocols", () => {
+  it("should display connected protocols", async () => {
     render(
       <TestWrapper>
         <RealtimeScadaDashboard />
       </TestWrapper>,
     );
 
-    scadaDashboardFixture.protocols.forEach((protocol) => {
-      if (protocol.status === "connected") {
-        const badges = screen.getAllByText(/connected/i);
-        expect(badges.length).toBeGreaterThan(0);
-      }
+    await waitFor(() => {
+      scadaDashboardFixture.protocols.forEach((protocol) => {
+        if (protocol.status === "connected") {
+          const badges = screen.getAllByText(/connected/i);
+          expect(badges.length).toBeGreaterThan(0);
+        }
+      });
     });
   });
 
-  it("should indicate disconnected protocols", () => {
+  it("should indicate disconnected protocols", async () => {
     const useRealtimeProtocolStatus = require("@/hooks/useRealtimeData").useRealtimeProtocolStatus;
     
     const protocolsWithDisconnected = [
       ...scadaDashboardFixture.protocols,
-      { id: "test-1", protocol: "Modbus", status: "disconnected", devices: 1 },
+      { id: "test-1", name: "Modbus", status: "disconnected", devices: 1 },
     ];
 
     useRealtimeProtocolStatus.mockReturnValue({
@@ -648,8 +746,10 @@ describe("Protocol Status Display", () => {
       </TestWrapper>,
     );
 
-    const disconnectedBadges = screen.getAllByText(/disconnected/i);
-    expect(disconnectedBadges.length).toBeGreaterThan(0);
+    await waitFor(() => {
+      const disconnectedBadges = screen.getAllByText(/disconnected/i);
+      expect(disconnectedBadges.length).toBeGreaterThan(0);
+    });
   });
 });
 
@@ -696,35 +796,42 @@ describe("Accessibility", () => {
       isConnected: true,
       isReconnecting: false,
     });
+
+    // Reset getBoundingClientRect mock
+    Element.prototype.getBoundingClientRect = vi.fn(() => mockRect);
   });
 
-  it("should have accessible metric labels", () => {
+  it("should have accessible metric labels", async () => {
     render(
       <TestWrapper>
         <RealtimeScadaDashboard />
       </TestWrapper>,
     );
 
-    const hasMetrics = scadaDashboardFixture.metrics.some((metric) => {
-      const labelElements = screen.queryAllByText(
-        (content, element) =>
-          content.includes(metric.label) ||
-          element?.textContent?.includes(metric.label),
-      );
-      return labelElements.length > 0;
+    await waitFor(() => {
+      const hasMetrics = scadaDashboardFixture.metrics.some((metric) => {
+        const labelElements = screen.queryAllByText(
+          (content, element) =>
+            content.includes(metric.label) ||
+            element?.textContent?.includes(metric.label),
+        );
+        return labelElements.length > 0;
+      });
+
+      expect(hasMetrics).toBe(true);
     });
-
-    expect(hasMetrics).toBe(true);
   });
 
-  it("should have accessible connection status", () => {
+  it("should have accessible connection status", async () => {
     render(
       <TestWrapper>
         <RealtimeScadaDashboard />
       </TestWrapper>,
     );
 
-    const statusBadges = screen.getAllByText("Live");
-    expect(statusBadges.length).toBeGreaterThan(0);
+    await waitFor(() => {
+      const statusBadges = screen.getAllByText("Live");
+      expect(statusBadges.length).toBeGreaterThan(0);
+    });
   });
 });
