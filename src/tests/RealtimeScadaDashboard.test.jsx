@@ -647,8 +647,12 @@ describe("RealtimeScadaDashboard", () => {
       // Click to open dropdown using userEvent
       await user.click(selectTrigger);
 
-      // Find and click the option using userEvent
-      const option = await screen.findByText("Last Hour");
+      // Wait for the dropdown to open and find the option
+      // Use a function matcher to find the option by text and role
+      const option = await screen.findByText((content, element) => {
+        return element?.getAttribute('role') === 'option' && 
+               content.includes('Last Hour');
+      });
       await user.click(option);
 
       // Verify the mock was called with the correct value
@@ -688,8 +692,11 @@ describe("RealtimeScadaDashboard", () => {
       // Click to open dropdown using userEvent
       await user.click(selectTrigger);
 
-      // Find and click the option using userEvent
-      const option = await screen.findByText("Last 7 Days");
+      // Wait for the dropdown to open and find the option
+      const option = await screen.findByText((content, element) => {
+        return element?.getAttribute('role') === 'option' && 
+               content.includes('Last 7 Days');
+      });
       await user.click(option);
 
       // Verify the mock was called
