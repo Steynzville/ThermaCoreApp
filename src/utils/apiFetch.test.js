@@ -7,6 +7,7 @@ import {
   apiPost,
   apiPut,
 } from "./apiFetch";
+import { toast } from "sonner";
 
 // Mock toast
 vi.mock("sonner", () => ({
@@ -18,7 +19,8 @@ vi.mock("sonner", () => ({
 }));
 
 // Mock fetch globally
-global.fetch = vi.fn();
+const mockFetch = vi.fn();
+global.fetch = mockFetch;
 
 // Mock localStorage
 const localStorageMock = {
@@ -44,31 +46,40 @@ const mockLocation = {
   search: "",
   href: "",
 };
+const mockHistory = {
+  pushState: vi.fn(),
+};
 global.window = {
   location: mockLocation,
-  history: {
-    pushState: vi.fn(),
-  },
+  history: mockHistory,
   dispatchEvent: vi.fn(),
 };
 
 describe("apiFetch", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockFetch.mockClear();
     localStorageMock.getItem.mockReturnValue(null);
     sessionStorageMock.getItem.mockReturnValue(null);
     mockLocation.pathname = "/test";
     mockLocation.search = "";
+    // Reset fetch mock to default successful response
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({}),
+    });
   });
 
   afterEach(() => {
     vi.clearAllMocks();
+    mockFetch.mockClear();
   });
 
   describe("basic functionality", () => {
     it("should make successful GET request", async () => {
       const mockResponse = { data: "test" };
-      global.fetch.mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
         json: async () => mockResponse,
@@ -76,7 +87,7 @@ describe("apiFetch", () => {
 
       const response = await apiFetch("/api/test");
 
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(mockFetch).toHaveBeenCalledWith(
         "/api/test",
         expect.objectContaining({
           headers: expect.objectContaining({
@@ -89,7 +100,7 @@ describe("apiFetch", () => {
 
     it("should include authorization header when token exists", async () => {
       localStorageMock.getItem.mockReturnValue("test-token");
-      global.fetch.mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
         json: async () => ({}),
@@ -97,7 +108,7 @@ describe("apiFetch", () => {
 
       await apiFetch("/api/test");
 
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(mockFetch).toHaveBeenCalledWith(
         "/api/test",
         expect.objectContaining({
           headers: expect.objectContaining({
@@ -108,7 +119,6 @@ describe("apiFetch", () => {
     });
 
     it("should retrieve token from sessionStorage when not in localStorage", async () => {
-      // Mock getAuthToken behavior: check localStorage first, then sessionStorage
       localStorageMock.getItem.mockImplementation((key) => {
         if (key === "thermacore_token") return null;
         if (key === "authToken") return null;
@@ -119,7 +129,7 @@ describe("apiFetch", () => {
         return null;
       });
 
-      global.fetch.mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
         json: async () => ({}),
@@ -127,7 +137,7 @@ describe("apiFetch", () => {
 
       await apiFetch("/api/test");
 
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(mockFetch).toHaveBeenCalledWith(
         "/api/test",
         expect.objectContaining({
           headers: expect.objectContaining({
@@ -147,7 +157,7 @@ describe("apiFetch", () => {
         return null;
       });
 
-      global.fetch.mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
         json: async () => ({}),
@@ -155,7 +165,7 @@ describe("apiFetch", () => {
 
       await apiFetch("/api/test");
 
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(mockFetch).toHaveBeenCalledWith(
         "/api/test",
         expect.objectContaining({
           headers: expect.objectContaining({
@@ -173,7 +183,7 @@ describe("apiFetch", () => {
       });
       sessionStorageMock.getItem.mockReturnValue(null);
 
-      global.fetch.mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
         json: async () => ({}),
@@ -181,7 +191,7 @@ describe("apiFetch", () => {
 
       await apiFetch("/api/test");
 
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(mockFetch).toHaveBeenCalledWith(
         "/api/test",
         expect.objectContaining({
           headers: expect.objectContaining({
@@ -192,7 +202,7 @@ describe("apiFetch", () => {
     });
 
     it("should merge custom headers", async () => {
-      global.fetch.mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
         json: async () => ({}),
@@ -202,7 +212,7 @@ describe("apiFetch", () => {
         headers: { "X-Custom-Header": "value" },
       });
 
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(mockFetch).toHaveBeenCalledWith(
         "/api/test",
         expect.objectContaining({
           headers: expect.objectContaining({
@@ -216,8 +226,7 @@ describe("apiFetch", () => {
 
   describe("error handling", () => {
     it("should handle 401 unauthorized", async () => {
-      const { toast } = await import("sonner");
-      global.fetch.mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: false,
         status: 401,
       });
@@ -233,30 +242,30 @@ describe("apiFetch", () => {
 
     it("should not redirect on 401 if on login page", async () => {
       mockLocation.pathname = "/login";
-      global.fetch.mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: false,
         status: 401,
       });
 
       await expect(apiFetch("/api/test")).rejects.toThrow("Unauthorized");
-      expect(window.history.pushState).not.toHaveBeenCalled();
+      expect(mockHistory.pushState).not.toHaveBeenCalled();
     });
 
     it("should redirect on 401 when not on login page", async () => {
       mockLocation.pathname = "/dashboard";
-      global.fetch.mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: false,
         status: 401,
       });
 
       await expect(apiFetch("/api/test")).rejects.toThrow("Unauthorized");
-      expect(window.history.pushState).toHaveBeenCalledWith(null, "", "/login");
+      expect(mockHistory.pushState).toHaveBeenCalledWith(null, "", "/login");
     });
 
     it("should store redirect path on 401", async () => {
       mockLocation.pathname = "/dashboard";
       mockLocation.search = "?tab=analytics";
-      global.fetch.mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: false,
         status: 401,
       });
@@ -269,8 +278,7 @@ describe("apiFetch", () => {
     });
 
     it("should handle 403 forbidden", async () => {
-      const { toast } = await import("sonner");
-      global.fetch.mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: false,
         status: 403,
       });
@@ -282,8 +290,7 @@ describe("apiFetch", () => {
     });
 
     it("should handle 500 server error without retry", async () => {
-      const { toast } = await import("sonner");
-      global.fetch.mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: false,
         status: 500,
         statusText: "Internal Server Error",
@@ -295,8 +302,7 @@ describe("apiFetch", () => {
     });
 
     it("should retry on 500 error when retries specified", async () => {
-      const { toast } = await import("sonner");
-      global.fetch
+      mockFetch
         .mockResolvedValueOnce({
           ok: false,
           status: 500,
@@ -310,23 +316,21 @@ describe("apiFetch", () => {
 
       await apiFetch("/api/test", { retries: 1, retryDelay: 100 });
 
-      expect(global.fetch).toHaveBeenCalledTimes(2);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
       expect(toast.warning).toHaveBeenCalled();
     });
 
     it("should handle network errors", async () => {
       const networkError = new TypeError("Failed to fetch");
-      global.fetch.mockRejectedValue(networkError);
+      mockFetch.mockRejectedValue(networkError);
 
       await expect(apiFetch("/api/test")).rejects.toThrow("Failed to fetch");
-      // Network errors may or may not show toast depending on retry logic
     });
 
     it("should handle timeout errors", async () => {
-      const { toast } = await import("sonner");
       const abortError = new Error("AbortError");
       abortError.name = "AbortError";
-      global.fetch.mockRejectedValue(abortError);
+      mockFetch.mockRejectedValue(abortError);
 
       await expect(apiFetch("/api/test", { timeout: 1000 })).rejects.toThrow();
       expect(toast.error).toHaveBeenCalledWith(
@@ -337,8 +341,7 @@ describe("apiFetch", () => {
 
   describe("toast notifications", () => {
     it("should not show toast when showToastOnError is false", async () => {
-      const { toast } = await import("sonner");
-      global.fetch.mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: false,
         status: 403,
       });
@@ -348,8 +351,7 @@ describe("apiFetch", () => {
     });
 
     it("should respect showToastOnError in options", async () => {
-      const { toast } = await import("sonner");
-      global.fetch.mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: false,
         status: 403,
       });
@@ -363,13 +365,13 @@ describe("apiFetch", () => {
 
   describe("redirect control", () => {
     it("should not redirect on 401 when redirectOn401 is false", async () => {
-      global.fetch.mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: false,
         status: 401,
       });
 
       await expect(apiFetch("/api/test", {}, true, false)).rejects.toThrow();
-      expect(window.history.pushState).not.toHaveBeenCalled();
+      expect(mockHistory.pushState).not.toHaveBeenCalled();
     });
   });
 });
@@ -377,7 +379,8 @@ describe("apiFetch", () => {
 describe("apiGet", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    global.fetch.mockResolvedValue({
+    mockFetch.mockClear();
+    mockFetch.mockResolvedValue({
       ok: true,
       status: 200,
       json: async () => ({ data: "test" }),
@@ -387,7 +390,7 @@ describe("apiGet", () => {
   it("should make GET request", async () => {
     await apiGet("/api/test");
 
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect(mockFetch).toHaveBeenCalledWith(
       "/api/test",
       expect.objectContaining({
         method: "GET",
@@ -398,7 +401,7 @@ describe("apiGet", () => {
   it("should pass options through", async () => {
     await apiGet("/api/test", { custom: "option" });
 
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect(mockFetch).toHaveBeenCalledWith(
       "/api/test",
       expect.objectContaining({
         method: "GET",
@@ -411,7 +414,8 @@ describe("apiGet", () => {
 describe("apiPost", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    global.fetch.mockResolvedValue({
+    mockFetch.mockClear();
+    mockFetch.mockResolvedValue({
       ok: true,
       status: 200,
       json: async () => ({ success: true }),
@@ -422,7 +426,7 @@ describe("apiPost", () => {
     const data = { key: "value" };
     await apiPost("/api/test", data);
 
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect(mockFetch).toHaveBeenCalledWith(
       "/api/test",
       expect.objectContaining({
         method: "POST",
@@ -435,7 +439,8 @@ describe("apiPost", () => {
 describe("apiPut", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    global.fetch.mockResolvedValue({
+    mockFetch.mockClear();
+    mockFetch.mockResolvedValue({
       ok: true,
       status: 200,
       json: async () => ({ success: true }),
@@ -446,7 +451,7 @@ describe("apiPut", () => {
     const data = { key: "updated" };
     await apiPut("/api/test", data);
 
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect(mockFetch).toHaveBeenCalledWith(
       "/api/test",
       expect.objectContaining({
         method: "PUT",
@@ -459,7 +464,8 @@ describe("apiPut", () => {
 describe("apiDelete", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    global.fetch.mockResolvedValue({
+    mockFetch.mockClear();
+    mockFetch.mockResolvedValue({
       ok: true,
       status: 200,
       json: async () => ({ success: true }),
@@ -469,7 +475,7 @@ describe("apiDelete", () => {
   it("should make DELETE request", async () => {
     await apiDelete("/api/test");
 
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect(mockFetch).toHaveBeenCalledWith(
       "/api/test",
       expect.objectContaining({
         method: "DELETE",
@@ -481,11 +487,12 @@ describe("apiDelete", () => {
 describe("apiGetJson", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockFetch.mockClear();
   });
 
   it("should return parsed JSON from successful request", async () => {
     const mockData = { data: "test" };
-    global.fetch.mockResolvedValue({
+    mockFetch.mockResolvedValue({
       ok: true,
       status: 200,
       json: async () => mockData,
@@ -497,7 +504,7 @@ describe("apiGetJson", () => {
   });
 
   it("should pass options through", async () => {
-    global.fetch.mockResolvedValue({
+    mockFetch.mockResolvedValue({
       ok: true,
       status: 200,
       json: async () => ({}),
@@ -505,7 +512,7 @@ describe("apiGetJson", () => {
 
     await apiGetJson("/api/test", { custom: "value" });
 
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect(mockFetch).toHaveBeenCalledWith(
       "/api/test",
       expect.objectContaining({
         custom: "value",
