@@ -113,6 +113,7 @@ const originalConsoleWarn = console.warn;
 
 const TenantContext = createContext();
 
+// Mock hooks
 vi.mock("@/hooks/useRealtimeData", () => ({
   useRealtimeMetrics: vi.fn(),
   useRealtimeProtocolStatus: vi.fn(),
@@ -600,6 +601,7 @@ describe("RealtimeScadaDashboard", () => {
 
   describe("Time Range Selection", () => {
     beforeEach(() => {
+      // Use the imported mocks directly
       useRealtimeMetrics.mockReturnValue({
         metrics: scadaDashboardFixture.metrics,
         loading: false,
@@ -697,11 +699,7 @@ describe("Protocol Status Display", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    const useRealtimeMetrics = require("@/hooks/useRealtimeData").useRealtimeMetrics;
-    const useRealtimeProtocolStatus = require("@/hooks/useRealtimeData").useRealtimeProtocolStatus;
-    const useRealtimeHistoricalData = require("@/hooks/useRealtimeData").useRealtimeHistoricalData;
-    const useWebSocketStatus = require("@/hooks/useRealtimeData").useWebSocketStatus;
-
+    // Use the imported mocks directly - NO require()
     useRealtimeMetrics.mockReturnValue({
       metrics: scadaDashboardFixture.metrics,
       loading: false,
@@ -745,8 +743,6 @@ describe("Protocol Status Display", () => {
   });
 
   it("should indicate disconnected protocols", async () => {
-    const useRealtimeProtocolStatus = require("@/hooks/useRealtimeData").useRealtimeProtocolStatus;
-    
     const protocolsWithDisconnected = [
       ...scadaDashboardFixture.protocols,
       { id: "test-1", name: "Modbus", status: "disconnected", devices: 1 },
@@ -784,11 +780,7 @@ describe("Accessibility", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    const useRealtimeMetrics = require("@/hooks/useRealtimeData").useRealtimeMetrics;
-    const useRealtimeProtocolStatus = require("@/hooks/useRealtimeData").useRealtimeProtocolStatus;
-    const useRealtimeHistoricalData = require("@/hooks/useRealtimeData").useRealtimeHistoricalData;
-    const useWebSocketStatus = require("@/hooks/useRealtimeData").useWebSocketStatus;
-
+    // Use the imported mocks directly - NO require()
     useRealtimeMetrics.mockReturnValue({
       metrics: scadaDashboardFixture.metrics,
       loading: false,
