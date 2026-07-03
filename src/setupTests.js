@@ -54,11 +54,17 @@ Object.defineProperty(window, "scrollTo", {
   writable: true,
 });
 
-Object.defineProperty(window, "getComputedStyle", {
-  value: () => ({
-    getPropertyValue: () => "",
-  }),
-});
+// Fix: Only define getComputedStyle if it doesn't already exist
+// or if it's not properly implemented
+if (!window.getComputedStyle || typeof window.getComputedStyle !== 'function') {
+  Object.defineProperty(window, "getComputedStyle", {
+    value: () => ({
+      getPropertyValue: () => "",
+    }),
+    writable: true,
+    configurable: true,
+  });
+}
 
 /**
  * -----------------------------
@@ -81,10 +87,17 @@ const anchorClickSpy = vi
   .mockImplementation(() => {});
 
 // Optional browser APIs that some components may use
+// Create a mock for window.open if it doesn't exist
 if (!window.open) {
   window.open = vi.fn();
 }
 
+// Ensure window.open is always a mock function with mockClear
+if (!window.open.mockClear) {
+  window.open = vi.fn();
+}
+
+// Create navigator.msSaveBlob if it doesn't exist
 if (!navigator.msSaveBlob) {
   navigator.msSaveBlob = vi.fn();
 }
@@ -92,16 +105,25 @@ if (!navigator.msSaveBlob) {
 beforeEach(() => {
   vi.clearAllMocks();
 
-  global.URL.createObjectURL.mockClear();
-  global.URL.revokeObjectURL.mockClear();
+  if (global.URL.createObjectURL?.mockClear) {
+    global.URL.createObjectURL.mockClear();
+  }
 
-  anchorClickSpy.mockClear();
+  if (global.URL.revokeObjectURL?.mockClear) {
+    global.URL.revokeObjectURL.mockClear();
+  }
 
-  if (window.open.mockClear) {
+  if (anchorClickSpy?.mockClear) {
+    anchorClickSpy.mockClear();
+  }
+
+  // Safe check for window.open mock
+  if (window.open && typeof window.open === 'function' && window.open.mockClear) {
     window.open.mockClear();
   }
 
-  if (navigator.msSaveBlob.mockClear) {
+  // Safe check for navigator.msSaveBlob mock
+  if (navigator.msSaveBlob && typeof navigator.msSaveBlob === 'function' && navigator.msSaveBlob.mockClear) {
     navigator.msSaveBlob.mockClear();
   }
 });
