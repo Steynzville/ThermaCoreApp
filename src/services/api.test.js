@@ -1,5 +1,27 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import api, { setAuthToken } from "./api";
+
+// Setup localStorage mock
+const localStorageMock = (() => {
+  let store = {};
+  return {
+    getItem: (key) => store[key] || null,
+    setItem: (key, value) => {
+      store[key] = value.toString();
+    },
+    removeItem: (key) => {
+      delete store[key];
+    },
+    clear: () => {
+      store = {};
+    },
+  };
+})();
+
+Object.defineProperty(window, "localStorage", {
+  value: localStorageMock,
+  writable: true,
+});
 
 describe("api service", () => {
   const originalLocation = window.location;
@@ -9,6 +31,7 @@ describe("api service", () => {
     localStorage.clear();
     // Clear any existing authorization headers
     delete api.defaults.headers.common["Authorization"];
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
@@ -52,6 +75,7 @@ describe("api service", () => {
       expect(api.defaults.headers.common["Authorization"]).toBe(
         `Bearer ${firstToken}`,
       );
+      expect(localStorage.getItem("authToken")).toBe(firstToken);
 
       setAuthToken(secondToken);
       expect(api.defaults.headers.common["Authorization"]).toBe(
