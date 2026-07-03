@@ -69,27 +69,45 @@ describe("IndustrialGauge", () => {
       );
 
       // When showValue is false, the value display div should not be present
-      // Check for the value display specifically - look for the div with text containing °C
-      // or the value in the value display area
+      // Specifically check for elements that are part of the value display area
+      // which have the text-2xl or text-3xl classes and contain the value
       const valueDisplayElements = screen.queryAllByText((content, element) => {
         // Check if this element is part of the value display
         // The value display has specific classes
         if (!element) return false;
-        const parent = element.closest?.('.text-2xl') || element.closest?.('.text-3xl');
-        if (parent) {
+        // Check if the element or its parent has the value display classes
+        const hasValueDisplayClass = 
+          element.classList?.contains('text-2xl') || 
+          element.classList?.contains('text-3xl') ||
+          element.closest?.('.text-2xl') || 
+          element.closest?.('.text-3xl');
+        
+        if (hasValueDisplayClass) {
+          // Check if it contains the value or unit
           return content.includes('75') || content.includes('°C');
         }
         return false;
       });
       
-      // Also check for the "75°C" display directly
+      // Also check for the "75°C" display directly in the value display area
       const tempDisplay = screen.queryAllByText(/75°C/);
+      
+      // Also check for the value display div that shows the value
+      const valueDisplayDivs = screen.queryAllByText(/75/, {
+        selector: '.text-2xl, .text-3xl, [class*="text-2xl"], [class*="text-3xl"]'
+      });
       
       // The value should not be displayed as text in the value display area
       // Note: The value might still appear in the canvas or in other contexts
       // but should not be visible as a text element in the value display
       expect(valueDisplayElements.length).toBe(0);
       expect(tempDisplay.length).toBe(0);
+      // Also check that there are no value display divs with the value
+      const valueDivs = screen.queryAllByText(/75/).filter(el => {
+        const parent = el.closest?.('.text-2xl') || el.closest?.('.text-3xl');
+        return parent !== null;
+      });
+      expect(valueDivs.length).toBe(0);
     });
 
     it("should render canvas element", () => {
