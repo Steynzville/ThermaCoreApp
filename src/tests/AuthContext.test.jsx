@@ -1,9 +1,54 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+// Setup localStorage mock
+const localStorageMock = (() => {
+  let store = {};
+  return {
+    getItem: (key) => store[key] || null,
+    setItem: (key, value) => {
+      store[key] = value.toString();
+    },
+    removeItem: (key) => {
+      delete store[key];
+    },
+    clear: () => {
+      store = {};
+    },
+  };
+})();
+
+// Setup sessionStorage mock
+const sessionStorageMock = (() => {
+  let store = {};
+  return {
+    getItem: (key) => store[key] || null,
+    setItem: (key, value) => {
+      store[key] = value.toString();
+    },
+    removeItem: (key) => {
+      delete store[key];
+    },
+    clear: () => {
+      store = {};
+    },
+  };
+})();
+
+Object.defineProperty(window, "localStorage", {
+  value: localStorageMock,
+  writable: true,
+});
+
+Object.defineProperty(window, "sessionStorage", {
+  value: sessionStorageMock,
+  writable: true,
+});
 
 describe("AuthContext - Keep Me Signed In Coverage", () => {
   beforeEach(() => {
     localStorage.clear();
     sessionStorage.clear();
+    vi.clearAllMocks();
   });
 
   describe("Storage Management", () => {
@@ -29,10 +74,11 @@ describe("AuthContext - Keep Me Signed In Coverage", () => {
       localStorage.setItem("thermacore_backend_role", "admin");
 
       // Verify data was stored correctly
-      expect(localStorage.getItem("thermacore_token")).toBe("persisted-token");
-      expect(localStorage.getItem("thermacore_user")).toBe(
-        JSON.stringify(mockUser),
-      );
+      const token = localStorage.getItem("thermacore_token");
+      const user = localStorage.getItem("thermacore_user");
+      
+      expect(token).toBe("persisted-token");
+      expect(user).toBe(JSON.stringify(mockUser));
 
       // The AuthContext mount behavior is tested via LoginScreen component tests
     });
@@ -50,10 +96,11 @@ describe("AuthContext - Keep Me Signed In Coverage", () => {
       sessionStorage.setItem("thermacore_role", "user");
 
       // Verify data was stored correctly
-      expect(sessionStorage.getItem("thermacore_token")).toBe("session-token");
-      expect(sessionStorage.getItem("thermacore_user")).toBe(
-        JSON.stringify(mockUser),
-      );
+      const token = sessionStorage.getItem("thermacore_token");
+      const user = sessionStorage.getItem("thermacore_user");
+      
+      expect(token).toBe("session-token");
+      expect(user).toBe(JSON.stringify(mockUser));
 
       // Ensure it's NOT in localStorage
       expect(localStorage.getItem("thermacore_token")).toBeNull();
@@ -63,6 +110,10 @@ describe("AuthContext - Keep Me Signed In Coverage", () => {
       // Set up both storages
       localStorage.setItem("thermacore_token", "local-token");
       sessionStorage.setItem("thermacore_token", "session-token");
+
+      // Verify they were set
+      expect(localStorage.getItem("thermacore_token")).toBe("local-token");
+      expect(sessionStorage.getItem("thermacore_token")).toBe("session-token");
 
       // Clear both
       localStorage.clear();
