@@ -11,11 +11,11 @@ import {
   requestPasswordReset,
   resetPassword,
   updateProfile,
-} from "../../services/authService";
-import { apiPost } from "../../utils/apiFetch";
+} from "../services/authService";
+import { apiPost } from "../utils/apiFetch";
 
 // Mock apiPost for selfRegister
-vi.mock("../../utils/apiFetch", () => ({
+vi.mock("../utils/apiFetch", () => ({
   apiPost: vi.fn(),
 }));
 
