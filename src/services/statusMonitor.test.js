@@ -19,18 +19,21 @@ import {
   checkWebSocketStatus,
 } from "./statusMonitor";
 
-// Mock fetch globally
+// Mock fetch globally - properly set up as a vi mock function
 global.fetch = vi.fn();
+
+// Mock performance.now
+const mockPerformanceNow = vi.fn();
 global.performance = {
-  now: vi.fn(),
+  now: mockPerformanceNow,
 };
 
 describe("statusMonitor Service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     let time = 0;
-    global.performance.now.mockImplementation(() => {
-      time += 100; // Each call adds 100ms
+    mockPerformanceNow.mockImplementation(() => {
+      time += 100;
       return time;
     });
   });
@@ -270,7 +273,7 @@ describe("statusMonitor Service", () => {
   describe("Response Time Measurement", () => {
     it("should measure and report response time", async () => {
       let callTime = 0;
-      global.performance.now.mockImplementation(() => {
+      mockPerformanceNow.mockImplementation(() => {
         callTime += 50;
         return callTime;
       });
