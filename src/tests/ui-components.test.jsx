@@ -5,7 +5,29 @@
  */
 
 import { render } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+// Mock window.Image for Avatar component
+beforeEach(() => {
+  // Mock window.Image for Avatar component
+  window.Image = vi.fn().mockImplementation(() => ({
+    src: '',
+    onload: null,
+    onerror: null,
+    complete: false,
+  }));
+  
+  // Mock window.addEventListener for Drawer component
+  window.addEventListener = vi.fn();
+  window.removeEventListener = vi.fn();
+  
+  // Mock ResizeObserver for Drawer component
+  window.ResizeObserver = vi.fn().mockImplementation(() => ({
+    observe: vi.fn(),
+    unobserve: vi.fn(),
+    disconnect: vi.fn(),
+  }));
+});
 
 vi.mock("@radix-ui/react-accordion", () => ({
   Root: ({ children, ...props }) => <div {...props}>{children}</div>,
