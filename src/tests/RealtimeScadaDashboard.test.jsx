@@ -635,8 +635,14 @@ describe("RealtimeScadaDashboard", () => {
         </TestWrapper>,
       );
 
-      // Wait for the select to be rendered
-      const selectTrigger = await screen.findByRole("combobox");
+      // Find all comboboxes
+      const comboboxes = await screen.findAllByRole("combobox");
+      // The time range select is the one with "Last" in its text content
+      const selectTrigger = comboboxes.find(trigger => 
+        trigger.textContent?.includes('Last') || 
+        trigger.textContent?.includes('Hour') ||
+        trigger.textContent?.includes('Day')
+      ) || comboboxes[0];
       
       // Click to open dropdown using userEvent
       await user.click(selectTrigger);
@@ -670,8 +676,14 @@ describe("RealtimeScadaDashboard", () => {
         </TestWrapper>,
       );
 
-      // Wait for the select to be rendered
-      const selectTrigger = await screen.findByRole("combobox");
+      // Find all comboboxes
+      const comboboxes = await screen.findAllByRole("combobox");
+      // The time range select is the one with "Last" in its text content
+      const selectTrigger = comboboxes.find(trigger => 
+        trigger.textContent?.includes('Last') || 
+        trigger.textContent?.includes('Hour') ||
+        trigger.textContent?.includes('Day')
+      ) || comboboxes[0];
       
       // Click to open dropdown using userEvent
       await user.click(selectTrigger);
