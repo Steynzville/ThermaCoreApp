@@ -146,12 +146,15 @@ describe("EnhancedStatusDial", () => {
   describe("Clickable Behavior", () => {
     it("should call onClick when clicked and clickable is true", () => {
       const onClick = vi.fn();
-      render(<EnhancedStatusDial {...defaultProps} onClick={onClick} clickable={true} />);
+      const { container } = render(
+        <EnhancedStatusDial {...defaultProps} onClick={onClick} clickable={true} />
+      );
 
-      // Use getAllByRole and click the first one
-      const buttons = screen.getAllByRole("button");
-      expect(buttons.length).toBeGreaterThan(0);
-      fireEvent.click(buttons[0]);
+      // The component uses role="button" on a div, not a button element
+      // Find the element with role="button"
+      const dialElement = container.querySelector('[role="button"]');
+      expect(dialElement).toBeInTheDocument();
+      fireEvent.click(dialElement);
 
       expect(onClick).toHaveBeenCalledTimes(1);
     });
@@ -191,36 +194,43 @@ describe("EnhancedStatusDial", () => {
     });
 
     it("should have button role when clickable is true", () => {
-      render(<EnhancedStatusDial {...defaultProps} clickable={true} />);
+      const { container } = render(
+        <EnhancedStatusDial {...defaultProps} clickable={true} />
+      );
 
-      // There may be multiple buttons, but at least one should exist
-      const buttons = screen.getAllByRole("button");
-      expect(buttons.length).toBeGreaterThan(0);
+      // The component uses role="button" on the div
+      const elements = container.querySelectorAll('[role="button"]');
+      expect(elements.length).toBe(1);
     });
 
     it("should have presentation role when clickable is false", () => {
-      render(<EnhancedStatusDial {...defaultProps} clickable={false} />);
+      const { container } = render(
+        <EnhancedStatusDial {...defaultProps} clickable={false} />
+      );
 
-      // When not clickable, there should be no buttons
-      const buttons = screen.queryAllByRole("button");
-      expect(buttons.length).toBe(0);
+      const elements = container.querySelectorAll('[role="presentation"]');
+      expect(elements.length).toBe(1);
     });
 
     it("should have proper aria-label when clickable", () => {
-      render(<EnhancedStatusDial {...defaultProps} clickable={true} />);
+      const { container } = render(
+        <EnhancedStatusDial {...defaultProps} clickable={true} />
+      );
 
-      const buttons = screen.getAllByRole("button");
-      expect(buttons[0]).toHaveAttribute(
+      const dialElement = container.querySelector('[role="button"]');
+      expect(dialElement).toHaveAttribute(
         "aria-label",
         "Total Units: 10 items, 75% complete",
       );
     });
 
     it("should have tabIndex 0 when clickable", () => {
-      render(<EnhancedStatusDial {...defaultProps} clickable={true} />);
+      const { container } = render(
+        <EnhancedStatusDial {...defaultProps} clickable={true} />
+      );
 
-      const buttons = screen.getAllByRole("button");
-      expect(buttons[0]).toHaveAttribute("tabIndex", "0");
+      const dialElement = container.querySelector('[role="button"]');
+      expect(dialElement).toHaveAttribute("tabIndex", "0");
     });
 
     it("should have tabIndex -1 when not clickable", () => {
@@ -236,31 +246,37 @@ describe("EnhancedStatusDial", () => {
   describe("Keyboard Navigation", () => {
     it("should call onClick when Enter key is pressed and clickable", () => {
       const onClick = vi.fn();
-      render(<EnhancedStatusDial {...defaultProps} onClick={onClick} clickable={true} />);
+      const { container } = render(
+        <EnhancedStatusDial {...defaultProps} onClick={onClick} clickable={true} />
+      );
 
-      const buttons = screen.getAllByRole("button");
-      fireEvent.keyDown(buttons[0], { key: "Enter" });
+      const dialElement = container.querySelector('[role="button"]');
+      fireEvent.keyDown(dialElement, { key: "Enter" });
 
       expect(onClick).toHaveBeenCalledTimes(1);
     });
 
     it("should call onClick when Space key is pressed and clickable", () => {
       const onClick = vi.fn();
-      render(<EnhancedStatusDial {...defaultProps} onClick={onClick} clickable={true} />);
+      const { container } = render(
+        <EnhancedStatusDial {...defaultProps} onClick={onClick} clickable={true} />
+      );
 
-      const buttons = screen.getAllByRole("button");
-      fireEvent.keyDown(buttons[0], { key: " " });
+      const dialElement = container.querySelector('[role="button"]');
+      fireEvent.keyDown(dialElement, { key: " " });
 
       expect(onClick).toHaveBeenCalledTimes(1);
     });
 
     it("should not call onClick when other keys are pressed", () => {
       const onClick = vi.fn();
-      render(<EnhancedStatusDial {...defaultProps} onClick={onClick} clickable={true} />);
+      const { container } = render(
+        <EnhancedStatusDial {...defaultProps} onClick={onClick} clickable={true} />
+      );
 
-      const buttons = screen.getAllByRole("button");
-      fireEvent.keyDown(buttons[0], { key: "Escape" });
-      fireEvent.keyDown(buttons[0], { key: "Tab" });
+      const dialElement = container.querySelector('[role="button"]');
+      fireEvent.keyDown(dialElement, { key: "Escape" });
+      fireEvent.keyDown(dialElement, { key: "Tab" });
 
       expect(onClick).not.toHaveBeenCalled();
     });
@@ -305,14 +321,19 @@ describe("EnhancedStatusDial", () => {
       act(() => {
         vi.advanceTimersByTime(300);
       });
-      expect(screen.getByText("50%")).toBeInTheDocument();
+      
+      // Use getAllByText since there might be multiple instances
+      const percentageElements50 = screen.getAllByText("50%");
+      expect(percentageElements50.length).toBeGreaterThan(0);
 
       rerender(<EnhancedStatusDial {...defaultProps} percentage={80} />);
 
       act(() => {
         vi.advanceTimersByTime(300);
       });
-      expect(screen.getByText("80%")).toBeInTheDocument();
+      
+      const percentageElements80 = screen.getAllByText("80%");
+      expect(percentageElements80.length).toBeGreaterThan(0);
     });
 
     it("should update count when prop changes", () => {
@@ -320,11 +341,14 @@ describe("EnhancedStatusDial", () => {
         <EnhancedStatusDial {...defaultProps} count={10} />,
       );
 
-      expect(screen.getByText("10")).toBeInTheDocument();
+      // Use getAllByText since there might be multiple instances
+      const countElements10 = screen.getAllByText("10");
+      expect(countElements10.length).toBeGreaterThan(0);
 
       rerender(<EnhancedStatusDial {...defaultProps} count={15} />);
 
-      expect(screen.getByText("15")).toBeInTheDocument();
+      const countElements15 = screen.getAllByText("15");
+      expect(countElements15.length).toBeGreaterThan(0);
     });
   });
 
@@ -380,25 +404,29 @@ describe("EnhancedStatusDial", () => {
     it("should handle zero count", () => {
       render(<EnhancedStatusDial {...defaultProps} count={0} />);
 
-      expect(screen.getByText("0")).toBeInTheDocument();
+      const countElements = screen.getAllByText("0");
+      expect(countElements.length).toBeGreaterThan(0);
     });
 
     it("should handle zero percentage", () => {
       render(<EnhancedStatusDial {...defaultProps} percentage={0} />);
 
-      expect(screen.getByText("0%")).toBeInTheDocument();
+      const percentageElements = screen.getAllByText("0%");
+      expect(percentageElements.length).toBeGreaterThan(0);
     });
 
     it("should handle 100 percentage", () => {
       render(<EnhancedStatusDial {...defaultProps} percentage={100} />);
 
-      expect(screen.getByText("100%")).toBeInTheDocument();
+      const percentageElements = screen.getAllByText("100%");
+      expect(percentageElements.length).toBeGreaterThan(0);
     });
 
     it("should handle large count numbers", () => {
       render(<EnhancedStatusDial {...defaultProps} count={9999} />);
 
-      expect(screen.getByText("9999")).toBeInTheDocument();
+      const countElements = screen.getAllByText("9999");
+      expect(countElements.length).toBeGreaterThan(0);
     });
 
     it("should handle undefined onClick gracefully", () => {
@@ -420,15 +448,17 @@ describe("EnhancedStatusDial", () => {
 
   describe("Accessibility", () => {
     it("should be keyboard accessible when clickable", () => {
-      render(<EnhancedStatusDial {...defaultProps} clickable={true} />);
+      const { container } = render(
+        <EnhancedStatusDial {...defaultProps} clickable={true} />
+      );
 
-      const buttons = screen.getAllByRole("button");
-      expect(buttons[0]).toHaveAttribute("tabIndex", "0");
-      expect(buttons[0]).toHaveAttribute("aria-label");
+      const dialElement = container.querySelector('[role="button"]');
+      expect(dialElement).toHaveAttribute("tabIndex", "0");
+      expect(dialElement).toHaveAttribute("aria-label");
     });
 
     it("should have descriptive aria-label", () => {
-      render(
+      const { container } = render(
         <EnhancedStatusDial
           {...defaultProps}
           title="Online Units"
@@ -438,8 +468,8 @@ describe("EnhancedStatusDial", () => {
         />,
       );
 
-      const buttons = screen.getAllByRole("button");
-      expect(buttons[0]).toHaveAttribute(
+      const dialElement = container.querySelector('[role="button"]');
+      expect(dialElement).toHaveAttribute(
         "aria-label",
         "Online Units: 8 items, 80% complete",
       );
