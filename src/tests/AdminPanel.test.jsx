@@ -175,9 +175,11 @@ describe("AdminPanel Component", () => {
 
     // Find and click the Password Management tab
     const passwordElements = screen.getAllByText("Password Management");
+    expect(passwordElements.length).toBeGreaterThan(0);
     const passwordTab = passwordElements[0];
     fireEvent.click(passwordTab);
 
+    // Wait for the tab content to appear
     await waitFor(() => {
       const changePasswordElements = screen.getAllByText("Change My Password");
       expect(changePasswordElements.length).toBeGreaterThan(0);
@@ -189,17 +191,22 @@ describe("AdminPanel Component", () => {
 
     // Navigate to Password Management tab
     const passwordElements = screen.getAllByText("Password Management");
+    expect(passwordElements.length).toBeGreaterThan(0);
     const passwordTab = passwordElements[0];
     fireEvent.click(passwordTab);
 
-    // Click Change My Password button
-    const changePasswordElements = screen.getAllByText("Change My Password");
-    const changePasswordButton = changePasswordElements[0];
-    fireEvent.click(changePasswordButton);
-
+    // Wait for the button to appear then click it
     await waitFor(() => {
-      const modal = screen.getByTestId("password-reset-modal");
-      expect(modal).toBeInTheDocument();
+      const changePasswordElements = screen.getAllByText("Change My Password");
+      expect(changePasswordElements.length).toBeGreaterThan(0);
+      const changePasswordButton = changePasswordElements[0];
+      fireEvent.click(changePasswordButton);
+    });
+
+    // Check for modal using getAllByTestId or getByTestId if it's unique
+    await waitFor(() => {
+      const modals = screen.getAllByTestId("password-reset-modal");
+      expect(modals.length).toBeGreaterThan(0);
     });
   });
 
@@ -208,13 +215,17 @@ describe("AdminPanel Component", () => {
 
     // Navigate to Password Management tab
     const passwordElements = screen.getAllByText("Password Management");
+    expect(passwordElements.length).toBeGreaterThan(0);
     const passwordTab = passwordElements[0];
     fireEvent.click(passwordTab);
 
     // Click Change My Password button
-    const changePasswordElements = screen.getAllByText("Change My Password");
-    const changePasswordButton = changePasswordElements[0];
-    fireEvent.click(changePasswordButton);
+    await waitFor(() => {
+      const changePasswordElements = screen.getAllByText("Change My Password");
+      expect(changePasswordElements.length).toBeGreaterThan(0);
+      const changePasswordButton = changePasswordElements[0];
+      fireEvent.click(changePasswordButton);
+    });
 
     await waitFor(() => {
       const toggleButtons = screen.getAllByRole("button", { name: /toggle password visibility/i });
@@ -227,20 +238,29 @@ describe("AdminPanel Component", () => {
 
     // Navigate to Password Management tab
     const passwordElements = screen.getAllByText("Password Management");
+    expect(passwordElements.length).toBeGreaterThan(0);
     const passwordTab = passwordElements[0];
     fireEvent.click(passwordTab);
 
     // Click Change My Password button
-    const changePasswordElements = screen.getAllByText("Change My Password");
-    const changePasswordButton = changePasswordElements[0];
-    fireEvent.click(changePasswordButton);
+    await waitFor(() => {
+      const changePasswordElements = screen.getAllByText("Change My Password");
+      expect(changePasswordElements.length).toBeGreaterThan(0);
+      const changePasswordButton = changePasswordElements[0];
+      fireEvent.click(changePasswordButton);
+    });
 
-    const newPasswordInput = screen.getByPlaceholderText("Enter new password");
-    const confirmPasswordInput = screen.getByPlaceholderText("Confirm new password");
-
-    // Type different passwords
-    fireEvent.change(newPasswordInput, { target: { value: "password123" } });
-    fireEvent.change(confirmPasswordInput, { target: { value: "password456" } });
+    // Wait for inputs to appear
+    await waitFor(() => {
+      const newPasswordInputs = screen.getAllByPlaceholderText("Enter new password");
+      const confirmPasswordInputs = screen.getAllByPlaceholderText("Confirm new password");
+      expect(newPasswordInputs.length).toBeGreaterThan(0);
+      expect(confirmPasswordInputs.length).toBeGreaterThan(0);
+      
+      // Type different passwords
+      fireEvent.change(newPasswordInputs[0], { target: { value: "password123" } });
+      fireEvent.change(confirmPasswordInputs[0], { target: { value: "password456" } });
+    });
 
     await waitFor(() => {
       const errorElements = screen.getAllByText("Passwords do not match");
@@ -253,19 +273,28 @@ describe("AdminPanel Component", () => {
 
     // Navigate to Password Management tab
     const passwordElements = screen.getAllByText("Password Management");
+    expect(passwordElements.length).toBeGreaterThan(0);
     const passwordTab = passwordElements[0];
     fireEvent.click(passwordTab);
 
     // Click Change My Password button
-    const changePasswordElements = screen.getAllByText("Change My Password");
-    const changePasswordButton = changePasswordElements[0];
-    fireEvent.click(changePasswordButton);
+    await waitFor(() => {
+      const changePasswordElements = screen.getAllByText("Change My Password");
+      expect(changePasswordElements.length).toBeGreaterThan(0);
+      const changePasswordButton = changePasswordElements[0];
+      fireEvent.click(changePasswordButton);
+    });
 
-    const newPasswordInput = screen.getByPlaceholderText("Enter new password");
+    // Wait for input to appear
+    await waitFor(() => {
+      const newPasswordInputs = screen.getAllByPlaceholderText("Enter new password");
+      expect(newPasswordInputs.length).toBeGreaterThan(0);
+      
+      // Type short password
+      fireEvent.change(newPasswordInputs[0], { target: { value: "12345" } });
+    });
 
-    // Type short password
-    fireEvent.change(newPasswordInput, { target: { value: "12345" } });
-
+    // Check for error message
     await waitFor(() => {
       const errorElements = screen.getAllByText("Password must be at least 6 characters long");
       expect(errorElements.length).toBeGreaterThan(0);
