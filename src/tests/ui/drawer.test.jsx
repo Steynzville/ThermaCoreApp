@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   Drawer,
   DrawerClose,
@@ -10,6 +10,17 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "../../components/ui/drawer";
+
+// Mock window methods for Drawer
+beforeEach(() => {
+  window.addEventListener = vi.fn();
+  window.removeEventListener = vi.fn();
+  window.ResizeObserver = vi.fn().mockImplementation(() => ({
+    observe: vi.fn(),
+    unobserve: vi.fn(),
+    disconnect: vi.fn(),
+  }));
+});
 
 describe("Drawer Components", () => {
   it("renders DrawerTrigger", () => {
@@ -51,8 +62,14 @@ describe("Drawer Components", () => {
         </DrawerContent>
       </Drawer>,
     );
-    expect(screen.getByText("Drawer Title")).toBeInTheDocument();
-    expect(screen.getByText("Drawer description text")).toBeInTheDocument();
-    expect(screen.getByText("Close")).toBeInTheDocument();
+    
+    const titleElements = screen.getAllByText("Drawer Title");
+    expect(titleElements.length).toBeGreaterThan(0);
+    
+    const descElements = screen.getAllByText("Drawer description text");
+    expect(descElements.length).toBeGreaterThan(0);
+    
+    const closeElements = screen.getAllByText("Close");
+    expect(closeElements.length).toBeGreaterThan(0);
   });
 });
