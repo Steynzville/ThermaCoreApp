@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ThemeProvider, useTheme } from "../context/ThemeContext";
 
@@ -18,32 +18,51 @@ Object.defineProperty(window, "matchMedia", {
   })),
 });
 
-// Mock localStorage
-const localStorageMock = (() => {
-  let store = {};
-  return {
-    getItem: (key) => store[key] || null,
-    setItem: (key, value) => {
-      store[key] = value.toString();
-    },
-    removeItem: (key) => {
-      delete store[key];
-    },
-    clear: () => {
-      store = {};
-    },
-  };
-})();
+// Mock localStorage with proper persistence
+let store = {};
+const localStorageMock = {
+  getItem: (key) => store[key] || null,
+  setItem: (key, value) => {
+    store[key] = value.toString();
+  },
+  removeItem: (key) => {
+    delete store[key];
+  },
+  clear: () => {
+    store = {};
+  },
+};
 
 Object.defineProperty(window, "localStorage", {
   value: localStorageMock,
+  writable: true,
 });
 
 describe("ThemeContext", () => {
   beforeEach(() => {
+    // Reset localStorage before each test
     localStorage.clear();
+    // Remove dark class from document
     document.documentElement.classList.remove("dark");
+    // Reset matchMedia
+    window.matchMedia = vi.fn().mockImplementation((query) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
   });
+
+  // Helper to wait for effects to run
+  const waitForEffects = async () => {
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    });
+  };
 
   describe("Provider", () => {
     it("should provide default theme values", () => {
@@ -55,12 +74,15 @@ describe("ThemeContext", () => {
       expect(result.current.actualTheme).toBeDefined();
     });
 
-    it("should load theme from localStorage on mount", () => {
+    it("should load theme from localStorage on mount", async () => {
       localStorage.setItem("theme", "dark");
 
       const { result } = renderHook(() => useTheme(), {
         wrapper: ThemeProvider,
       });
+
+      // Wait for useEffect to run
+      await waitForEffects();
 
       expect(result.current.theme).toBe("dark");
     });
@@ -130,8 +152,7 @@ describe("ThemeContext", () => {
         result.current.setTheme("dark");
       });
 
-      // Wait for effect to run
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      await waitForEffects();
 
       expect(localStorage.getItem("theme")).toBe("dark");
     });
@@ -262,7 +283,7 @@ describe("ThemeContext", () => {
 
     it("should detect light mode from system preferences when in auto mode", () => {
       window.matchMedia = vi.fn().mockImplementation(() => ({
-        matches: false, // No dark preference
+        matches: false,
         media: "",
         onchange: null,
         addListener: vi.fn(),
@@ -329,8 +350,7 @@ describe("ThemeContext", () => {
         result.current.setTheme("dark");
       });
 
-      // Wait for effect
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      await waitForEffects();
 
       expect(localStorage.getItem("theme")).toBe("dark");
 
@@ -338,7 +358,7 @@ describe("ThemeContext", () => {
         result.current.setTheme("light");
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      await waitForEffects();
 
       expect(localStorage.getItem("theme")).toBe("light");
     });
