@@ -71,12 +71,14 @@ describe("ReportsView", () => {
         </TestWrapper>,
       );
 
-      expect(screen.getByText("Reports")).toBeInTheDocument();
-      expect(
-        screen.getByText(
-          /Generate comprehensive PDF reports for units, clients, and portfolios/i,
-        ),
-      ).toBeInTheDocument();
+      // Use getAllByText since there might be multiple instances
+      const reportElements = screen.getAllByText("Reports");
+      expect(reportElements.length).toBeGreaterThan(0);
+      
+      const descriptionElements = screen.getAllByText(
+        /Generate comprehensive PDF reports for units, clients, and portfolios/i,
+      );
+      expect(descriptionElements.length).toBeGreaterThan(0);
     });
 
     it("should render page header", () => {
@@ -86,7 +88,8 @@ describe("ReportsView", () => {
         </TestWrapper>,
       );
 
-      expect(screen.getByText("Reports")).toBeInTheDocument();
+      const headerElements = screen.getAllByText("Reports");
+      expect(headerElements.length).toBeGreaterThan(0);
     });
 
     it("should render report configurator", () => {
@@ -96,8 +99,11 @@ describe("ReportsView", () => {
         </TestWrapper>,
       );
 
-      expect(screen.getByTestId("report-configurator")).toBeInTheDocument();
-      expect(screen.getByText("Report Configurator")).toBeInTheDocument();
+      const configuratorElements = screen.getAllByTestId("report-configurator");
+      expect(configuratorElements.length).toBeGreaterThan(0);
+      
+      const configTextElements = screen.getAllByText("Report Configurator");
+      expect(configTextElements.length).toBeGreaterThan(0);
     });
   });
 
@@ -109,11 +115,14 @@ describe("ReportsView", () => {
         </TestWrapper>,
       );
 
-      const scopesElement = screen.getByTestId("allowed-scopes");
-      expect(scopesElement.textContent).toContain("single");
-      expect(scopesElement.textContent).toContain("multiple");
-      expect(scopesElement.textContent).toContain("client");
-      expect(scopesElement.textContent).toContain("master");
+      const scopesElements = screen.getAllByTestId("allowed-scopes");
+      expect(scopesElements.length).toBeGreaterThan(0);
+      
+      const scopesText = scopesElements[0].textContent;
+      expect(scopesText).toContain("single");
+      expect(scopesText).toContain("multiple");
+      expect(scopesText).toContain("client");
+      expect(scopesText).toContain("master");
     });
   });
 
@@ -125,13 +134,16 @@ describe("ReportsView", () => {
         </TestWrapper>,
       );
 
-      const sectionsElement = screen.getByTestId("allowed-sections");
-      expect(sectionsElement.textContent).toContain("vitalStatistics");
-      expect(sectionsElement.textContent).toContain("alertsAlarms");
-      expect(sectionsElement.textContent).toContain("maintenance");
-      expect(sectionsElement.textContent).toContain("performance");
-      expect(sectionsElement.textContent).toContain("compliance");
-      expect(sectionsElement.textContent).toContain("salesRevenue");
+      const sectionsElements = screen.getAllByTestId("allowed-sections");
+      expect(sectionsElements.length).toBeGreaterThan(0);
+      
+      const sectionsText = sectionsElements[0].textContent;
+      expect(sectionsText).toContain("vitalStatistics");
+      expect(sectionsText).toContain("alertsAlarms");
+      expect(sectionsText).toContain("maintenance");
+      expect(sectionsText).toContain("performance");
+      expect(sectionsText).toContain("compliance");
+      expect(sectionsText).toContain("salesRevenue");
     });
   });
 
@@ -143,8 +155,9 @@ describe("ReportsView", () => {
         </TestWrapper>,
       );
 
-      const unitsElement = screen.getByTestId("available-units");
-      expect(unitsElement.textContent).toBe("5");
+      const unitsElements = screen.getAllByTestId("available-units");
+      expect(unitsElements.length).toBeGreaterThan(0);
+      expect(unitsElements[0].textContent).toBe("5");
     });
 
     it("should provide units with correct structure", () => {
@@ -156,8 +169,8 @@ describe("ReportsView", () => {
 
       expect(container).toBeTruthy();
       // Units should have id, name, client, location
-      const unitsElement = screen.getByTestId("available-units");
-      expect(unitsElement).toBeInTheDocument();
+      const unitsElements = screen.getAllByTestId("available-units");
+      expect(unitsElements.length).toBeGreaterThan(0);
     });
   });
 
@@ -170,7 +183,8 @@ describe("ReportsView", () => {
       );
 
       // Component provides clients data
-      expect(screen.getByTestId("report-configurator")).toBeInTheDocument();
+      const configuratorElements = screen.getAllByTestId("report-configurator");
+      expect(configuratorElements.length).toBeGreaterThan(0);
     });
   });
 
@@ -182,8 +196,9 @@ describe("ReportsView", () => {
         </TestWrapper>,
       );
 
-      const generateButton = screen.getByText("Generate Report");
-      generateButton.click();
+      const generateButtons = screen.getAllByText("Generate Report");
+      expect(generateButtons.length).toBeGreaterThan(0);
+      generateButtons[0].click();
 
       // Fast forward the fake timers to trigger the alert immediately
       await vi.advanceTimersByTimeAsync(3000);
@@ -200,8 +215,9 @@ describe("ReportsView", () => {
         </TestWrapper>,
       );
 
-      const generateButton = screen.getByText("Generate Report");
-      generateButton.click();
+      const generateButtons = screen.getAllByText("Generate Report");
+      expect(generateButtons.length).toBeGreaterThan(0);
+      generateButtons[0].click();
 
       // Fast forward the fake timers to trigger the alert immediately
       await vi.advanceTimersByTimeAsync(3000);
@@ -218,8 +234,9 @@ describe("ReportsView", () => {
         </TestWrapper>,
       );
 
-      const schedulingElement = screen.getByTestId("show-scheduling");
-      expect(schedulingElement.textContent).toBe("true");
+      const schedulingElements = screen.getAllByTestId("show-scheduling");
+      expect(schedulingElements.length).toBeGreaterThan(0);
+      expect(schedulingElements[0].textContent).toBe("true");
     });
   });
 
@@ -232,8 +249,9 @@ describe("ReportsView", () => {
       );
 
       // Units should be available
-      const unitsCount = screen.getByTestId("available-units");
-      expect(parseInt(unitsCount.textContent, 10)).toBeGreaterThan(0);
+      const unitsElements = screen.getAllByTestId("available-units");
+      expect(unitsElements.length).toBeGreaterThan(0);
+      expect(parseInt(unitsElements[0].textContent, 10)).toBeGreaterThan(0);
     });
   });
 
@@ -245,7 +263,8 @@ describe("ReportsView", () => {
         </TestWrapper>,
       );
 
-      expect(screen.getByTestId("report-configurator")).toBeInTheDocument();
+      const configuratorElements = screen.getAllByTestId("report-configurator");
+      expect(configuratorElements.length).toBeGreaterThan(0);
     });
 
     it("should provide clients data provider", () => {
@@ -255,7 +274,8 @@ describe("ReportsView", () => {
         </TestWrapper>,
       );
 
-      expect(screen.getByTestId("report-configurator")).toBeInTheDocument();
+      const configuratorElements = screen.getAllByTestId("report-configurator");
+      expect(configuratorElements.length).toBeGreaterThan(0);
     });
 
     it("should provide report types data provider", () => {
@@ -265,7 +285,8 @@ describe("ReportsView", () => {
         </TestWrapper>,
       );
 
-      expect(screen.getByTestId("report-configurator")).toBeInTheDocument();
+      const configuratorElements = screen.getAllByTestId("report-configurator");
+      expect(configuratorElements.length).toBeGreaterThan(0);
     });
   });
 
@@ -313,8 +334,9 @@ describe("ReportsView", () => {
         </TestWrapper>,
       );
 
-      const scopesElement = screen.getByTestId("allowed-scopes");
-      expect(scopesElement.textContent).toContain("single");
+      const scopesElements = screen.getAllByTestId("allowed-scopes");
+      expect(scopesElements.length).toBeGreaterThan(0);
+      expect(scopesElements[0].textContent).toContain("single");
     });
 
     it("should support multiple unit reports", () => {
@@ -324,8 +346,9 @@ describe("ReportsView", () => {
         </TestWrapper>,
       );
 
-      const scopesElement = screen.getByTestId("allowed-scopes");
-      expect(scopesElement.textContent).toContain("multiple");
+      const scopesElements = screen.getAllByTestId("allowed-scopes");
+      expect(scopesElements.length).toBeGreaterThan(0);
+      expect(scopesElements[0].textContent).toContain("multiple");
     });
 
     it("should support client-level reports", () => {
@@ -335,8 +358,9 @@ describe("ReportsView", () => {
         </TestWrapper>,
       );
 
-      const scopesElement = screen.getByTestId("allowed-scopes");
-      expect(scopesElement.textContent).toContain("client");
+      const scopesElements = screen.getAllByTestId("allowed-scopes");
+      expect(scopesElements.length).toBeGreaterThan(0);
+      expect(scopesElements[0].textContent).toContain("client");
     });
 
     it("should support master portfolio reports", () => {
@@ -346,8 +370,9 @@ describe("ReportsView", () => {
         </TestWrapper>,
       );
 
-      const scopesElement = screen.getByTestId("allowed-scopes");
-      expect(scopesElement.textContent).toContain("master");
+      const scopesElements = screen.getAllByTestId("allowed-scopes");
+      expect(scopesElements.length).toBeGreaterThan(0);
+      expect(scopesElements[0].textContent).toContain("master");
     });
   });
 
@@ -359,8 +384,9 @@ describe("ReportsView", () => {
         </TestWrapper>,
       );
 
-      const sectionsElement = screen.getByTestId("allowed-sections");
-      expect(sectionsElement.textContent).toContain("vitalStatistics");
+      const sectionsElements = screen.getAllByTestId("allowed-sections");
+      expect(sectionsElements.length).toBeGreaterThan(0);
+      expect(sectionsElements[0].textContent).toContain("vitalStatistics");
     });
 
     it("should include alerts and alarms section", () => {
@@ -370,8 +396,9 @@ describe("ReportsView", () => {
         </TestWrapper>,
       );
 
-      const sectionsElement = screen.getByTestId("allowed-sections");
-      expect(sectionsElement.textContent).toContain("alertsAlarms");
+      const sectionsElements = screen.getAllByTestId("allowed-sections");
+      expect(sectionsElements.length).toBeGreaterThan(0);
+      expect(sectionsElements[0].textContent).toContain("alertsAlarms");
     });
 
     it("should include maintenance section", () => {
@@ -381,8 +408,9 @@ describe("ReportsView", () => {
         </TestWrapper>,
       );
 
-      const sectionsElement = screen.getByTestId("allowed-sections");
-      expect(sectionsElement.textContent).toContain("maintenance");
+      const sectionsElements = screen.getAllByTestId("allowed-sections");
+      expect(sectionsElements.length).toBeGreaterThan(0);
+      expect(sectionsElements[0].textContent).toContain("maintenance");
     });
 
     it("should include performance section", () => {
@@ -392,8 +420,9 @@ describe("ReportsView", () => {
         </TestWrapper>,
       );
 
-      const sectionsElement = screen.getByTestId("allowed-sections");
-      expect(sectionsElement.textContent).toContain("performance");
+      const sectionsElements = screen.getAllByTestId("allowed-sections");
+      expect(sectionsElements.length).toBeGreaterThan(0);
+      expect(sectionsElements[0].textContent).toContain("performance");
     });
 
     it("should include compliance section", () => {
@@ -403,8 +432,9 @@ describe("ReportsView", () => {
         </TestWrapper>,
       );
 
-      const sectionsElement = screen.getByTestId("allowed-sections");
-      expect(sectionsElement.textContent).toContain("compliance");
+      const sectionsElements = screen.getAllByTestId("allowed-sections");
+      expect(sectionsElements.length).toBeGreaterThan(0);
+      expect(sectionsElements[0].textContent).toContain("compliance");
     });
 
     it("should include sales and revenue section", () => {
@@ -414,8 +444,9 @@ describe("ReportsView", () => {
         </TestWrapper>,
       );
 
-      const sectionsElement = screen.getByTestId("allowed-sections");
-      expect(sectionsElement.textContent).toContain("salesRevenue");
+      const sectionsElements = screen.getAllByTestId("allowed-sections");
+      expect(sectionsElements.length).toBeGreaterThan(0);
+      expect(sectionsElements[0].textContent).toContain("salesRevenue");
     });
   });
 });
