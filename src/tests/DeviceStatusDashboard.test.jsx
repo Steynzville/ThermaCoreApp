@@ -201,15 +201,17 @@ describe("DeviceStatusDashboard", () => {
     expect(screen.getByText("Total")).toBeInTheDocument();
     expect(screen.getByText("7")).toBeInTheDocument(); // Total devices
 
-    // Use getAllByText and check length for "Online" since it appears multiple times
+    // Use getAllByText for labels that appear multiple times
     const onlineLabels = screen.getAllByText("Online");
     expect(onlineLabels.length).toBeGreaterThan(0);
+    
+    const offlineLabels = screen.getAllByText("Offline");
+    expect(offlineLabels.length).toBeGreaterThan(0);
     
     // The online count should be 6 (TC001, TC003, TC004, TC005, TC006, TC007)
     // TC004 is in maintenance but isOnline: true
     expect(screen.getByText("6")).toBeInTheDocument();
 
-    expect(screen.getByText("Offline")).toBeInTheDocument();
     expect(screen.getByText("1")).toBeInTheDocument(); // Offline: TC002
 
     expect(screen.getByText("Alerts")).toBeInTheDocument();
