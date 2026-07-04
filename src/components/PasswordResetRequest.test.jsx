@@ -27,12 +27,34 @@ vi.mock("../context/SettingsContext", () => ({
 }));
 
 vi.mock("lucide-react", () => ({
-  Eye: () => <div data-testid="eye-icon">Eye</div>,
-  EyeOff: () => <div data-testid="eye-off-icon">EyeOff</div>,
+  Eye: ({ size }) => <span data-testid="eye-icon">Eye</span>,
+  EyeOff: ({ size }) => <span data-testid="eye-off-icon">EyeOff</span>,
 }));
 
 vi.mock("../assets/thermacore-logo-new.png", () => ({
   default: "logo.png",
+}));
+
+// Mock CSS module
+vi.mock("../components/LoginScreen.module.css", () => ({
+  default: {
+    pageWrapper: "pageWrapper",
+    loginContainer: "loginContainer",
+    logoContainer: "logoContainer",
+    logo: "logo",
+    titleContainer: "titleContainer",
+    title: "title",
+    companySubtitle: "companySubtitle",
+    loginError: "loginError",
+    visible: "visible",
+    formGroup: "formGroup",
+    formLabel: "formLabel",
+    passwordInputContainer: "passwordInputContainer",
+    formInput: "formInput",
+    passwordToggleButton: "passwordToggleButton",
+    btnSignin: "btnSignin",
+    forgotPasswordLink: "forgotPasswordLink",
+  },
 }));
 
 describe("PasswordResetRequest", () => {
@@ -49,6 +71,7 @@ describe("PasswordResetRequest", () => {
       <MemoryRouter initialEntries={initialEntries}>
         <Routes>
           <Route path="/reset-password" element={<PasswordResetRequest />} />
+          <Route path="/login" element={<div data-testid="login-page">Login Page</div>} />
         </Routes>
       </MemoryRouter>
     );
@@ -64,6 +87,7 @@ describe("PasswordResetRequest", () => {
     const confirmFields = await screen.findAllByPlaceholderText("Confirm new password");
     expect(confirmFields.length).toBeGreaterThan(0);
     
+    // Check for the submit button
     const buttons = screen.getAllByRole("button", { name: /reset password/i });
     expect(buttons.length).toBeGreaterThan(0);
   });
@@ -71,6 +95,7 @@ describe("PasswordResetRequest", () => {
   it("should display error when no token in URL", async () => {
     renderWithToken(null);
 
+    // Wait for the error to appear
     await waitFor(() => {
       const errorMessages = screen.getAllByText(/Invalid reset link. Please request a new password reset./i);
       expect(errorMessages.length).toBeGreaterThan(0);
@@ -86,7 +111,7 @@ describe("PasswordResetRequest", () => {
     fireEvent.change(passwordInputs[0], {
       target: { name: "newPassword", value: "newpass123" },
     });
-    expect(passwordInputs[0].value).toBe("newpass123");
+    expect(passwordInputs[0]).toHaveValue("newpass123");
   });
 
   it("should handle confirm password input change", async () => {
@@ -98,7 +123,7 @@ describe("PasswordResetRequest", () => {
     fireEvent.change(confirmInputs[0], {
       target: { name: "confirmPassword", value: "newpass123" },
     });
-    expect(confirmInputs[0].value).toBe("newpass123");
+    expect(confirmInputs[0]).toHaveValue("newpass123");
   });
 
   it("should validate empty password fields", async () => {
@@ -106,6 +131,8 @@ describe("PasswordResetRequest", () => {
 
     const buttons = screen.getAllByRole("button", { name: /reset password/i });
     expect(buttons.length).toBeGreaterThan(0);
+    
+    // Click submit with empty fields
     fireEvent.click(buttons[0]);
 
     await waitFor(() => {
@@ -159,7 +186,8 @@ describe("PasswordResetRequest", () => {
   });
 
   it("should successfully reset password with valid data", async () => {
-    vi.mocked(resetPassword).mockResolvedValueOnce({
+    const mockResetPassword = resetPassword;
+    mockResetPassword.mockResolvedValueOnce({
       success: true,
       message: "Password reset successful",
     });
@@ -180,12 +208,13 @@ describe("PasswordResetRequest", () => {
     fireEvent.click(buttons[0]);
 
     await waitFor(() => {
-      expect(resetPassword).toHaveBeenCalledWith("test-token", "newpass123");
+      expect(mockResetPassword).toHaveBeenCalledWith("test-token", "newpass123");
     });
   });
 
   it("should show error message on API failure", async () => {
-    vi.mocked(resetPassword).mockResolvedValueOnce({
+    const mockResetPassword = resetPassword;
+    mockResetPassword.mockResolvedValueOnce({
       success: false,
       message: "Invalid token",
     });
@@ -212,7 +241,8 @@ describe("PasswordResetRequest", () => {
   });
 
   it("should handle API error gracefully", async () => {
-    vi.mocked(resetPassword).mockRejectedValueOnce(new Error("Network Error"));
+    const mockResetPassword = resetPassword;
+    mockResetPassword.mockRejectedValueOnce(new Error("Network Error"));
 
     renderWithToken();
 
@@ -241,29 +271,50 @@ describe("PasswordResetRequest", () => {
     const passwordInputs = await screen.findAllByPlaceholderText("Enter new password");
     expect(passwordInputs[0]).toHaveAttribute("type", "password");
 
-    // Find toggle button using data-testid or aria-label
-    const toggleButtons = screen.getAllByRole("button", { name: /Show password|Hide password/i });
+    // Find the toggle button using aria-label
+    const toggleButtons = screen.getAllByRole("button", { 
+      name: /Show password|Hide password/i 
+    });
+    expect(toggleButtons.length).toBeGreaterThan(0);
+    
     if (toggleButtons.length > 0) {
+      // Click to show password
       fireEvent.click(toggleButtons[0]);
       expect(passwordInputs[0]).toHaveAttribute("type", "text");
-    } else {
-      // Alternative: find by data-testid if available
-      const eyeIcons = screen.getAllByTestId("eye-icon");
-      if (eyeIcons.length > 0) {
-        // Click the parent button or the icon itself
-        const parentButton = eyeIcons[0].closest("button");
-        if (parentButton) {
-          fireEvent.click(parentButton);
-          expect(passwordInputs[0]).toHaveAttribute("type", "text");
-        }
-      }
+      
+      // Click to hide password again
+      fireEvent.click(toggleButtons[0]);
+      expect(passwordInputs[0]).toHaveAttribute("type", "password");
+    }
+  });
+
+  it("should toggle confirm password visibility", async () => {
+    renderWithToken();
+
+    const confirmInputs = await screen.findAllByPlaceholderText("Confirm new password");
+    expect(confirmInputs[0]).toHaveAttribute("type", "password");
+
+    // Find the toggle button using aria-label
+    const toggleButtons = screen.getAllByRole("button", { 
+      name: /Show confirm password|Hide confirm password/i 
+    });
+    expect(toggleButtons.length).toBeGreaterThan(0);
+    
+    if (toggleButtons.length > 0) {
+      // Click to show password
+      fireEvent.click(toggleButtons[0]);
+      expect(confirmInputs[0]).toHaveAttribute("type", "text");
+      
+      // Click to hide password again
+      fireEvent.click(toggleButtons[0]);
+      expect(confirmInputs[0]).toHaveAttribute("type", "password");
     }
   });
 
   it("should clear error when user starts typing", async () => {
     renderWithToken();
 
-    // First trigger an error
+    // First trigger an error (submit empty form)
     const buttons = screen.getAllByRole("button", { name: /reset password/i });
     fireEvent.click(buttons[0]);
 
@@ -272,16 +323,38 @@ describe("PasswordResetRequest", () => {
       expect(errorMessages.length).toBeGreaterThan(0);
     });
 
-    // Then start typing
-    const passwordInputs = screen.getAllByPlaceholderText("Enter new password");
+    // Then start typing in password field
+    const passwordInputs = await screen.findAllByPlaceholderText("Enter new password");
     fireEvent.change(passwordInputs[0], {
       target: { name: "newPassword", value: "test" },
     });
 
-    // Error should be cleared
+    // Error should be cleared (no error messages found)
     await waitFor(() => {
       const errorMessages = screen.queryAllByText(/Please enter both password fields/i);
       expect(errorMessages.length).toBe(0);
     });
+  });
+
+  it("should have back to login button", async () => {
+    renderWithToken();
+
+    const backButton = screen.getByRole("button", { name: /Back to Login/i });
+    expect(backButton).toBeInTheDocument();
+    
+    fireEvent.click(backButton);
+    // Should navigate to login - we can check for the login page
+    await waitFor(() => {
+      const loginPage = screen.getByTestId("login-page");
+      expect(loginPage).toBeInTheDocument();
+    });
+  });
+
+  it("should disable submit button when token is missing", async () => {
+    renderWithToken(null);
+
+    const buttons = screen.getAllByRole("button", { name: /reset password/i });
+    expect(buttons.length).toBeGreaterThan(0);
+    expect(buttons[0]).toBeDisabled();
   });
 });
