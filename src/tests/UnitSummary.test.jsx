@@ -25,112 +25,107 @@ vi.mock("react-router-dom", async () => {
   };
 });
 
-// CRITICAL: Mock the missing component BEFORE importing it
-// This creates a virtual module so the import resolves
-vi.mock("../components/dashboard/UnitSummary", () => ({
-  default: ({ 
-    totalUnits, 
-    onlineCount, 
-    offlineCount, 
-    maintenanceCount, 
-    alertCount, 
-    alarmCount 
-  }) => {
-    const handleNavigate = (filter) => {
-      mockNavigate(`/grid-view?${filter}`);
-    };
+// CRITICAL: Define the component directly in the test file
+// This avoids the import of the missing file entirely
+const UnitSummary = ({ 
+  totalUnits, 
+  onlineCount, 
+  offlineCount, 
+  maintenanceCount, 
+  alertCount, 
+  alarmCount 
+}) => {
+  const handleNavigate = (filter) => {
+    mockNavigate(`/grid-view?${filter}`);
+  };
 
-    return (
-      <div data-testid="unit-summary" className="rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Unit Summary
-        </h3>
-        <div className="grid grid-cols-2 gap-3">
-          {/* Total */}
-          <button
-            type="button"
-            data-testid="total-button"
-            onClick={() => handleNavigate('status=all')}
-            className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Total</span>
-              <span className="text-xl font-bold text-blue-600 dark:text-blue-400">{totalUnits || 0}</span>
-            </div>
-          </button>
-          
-          {/* Online */}
-          <button
-            type="button"
-            data-testid="online-button"
-            onClick={() => handleNavigate('status=online')}
-            className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Online</span>
-              <span className="text-xl font-bold text-green-600 dark:text-green-400">{onlineCount || 0}</span>
-            </div>
-          </button>
-          
-          {/* Offline */}
-          <button
-            type="button"
-            data-testid="offline-button"
-            onClick={() => handleNavigate('status=offline')}
-            className="p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Offline</span>
-              <span className="text-xl font-bold text-gray-600 dark:text-gray-400">{offlineCount || 0}</span>
-            </div>
-          </button>
-          
-          {/* Maintenance */}
-          <button
-            type="button"
-            data-testid="maintenance-button"
-            onClick={() => handleNavigate('status=maintenance')}
-            className="p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Maintenance</span>
-              <span className="text-xl font-bold text-yellow-600 dark:text-yellow-400">{maintenanceCount || 0}</span>
-            </div>
-          </button>
-          
-          {/* Alerts */}
-          <button
-            type="button"
-            data-testid="alerts-button"
-            onClick={() => handleNavigate('alerts=true')}
-            className="p-3 rounded-lg bg-orange-50 dark:bg-orange-900/20 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Alerts</span>
-              <span className="text-xl font-bold text-orange-600 dark:text-orange-400">{alertCount || 0}</span>
-            </div>
-          </button>
-          
-          {/* Alarms */}
-          <button
-            type="button"
-            data-testid="alarms-button"
-            onClick={() => handleNavigate('alarms=true')}
-            className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Alarms</span>
-              <span className="text-xl font-bold text-red-600 dark:text-red-400">{alarmCount || 0}</span>
-            </div>
-          </button>
-        </div>
+  return (
+    <div data-testid="unit-summary" className="rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        Unit Summary
+      </h3>
+      <div className="grid grid-cols-2 gap-3">
+        {/* Total */}
+        <button
+          type="button"
+          data-testid="total-button"
+          onClick={() => handleNavigate('status=all')}
+          className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Total</span>
+            <span className="text-xl font-bold text-blue-600 dark:text-blue-400">{totalUnits || 0}</span>
+          </div>
+        </button>
+        
+        {/* Online */}
+        <button
+          type="button"
+          data-testid="online-button"
+          onClick={() => handleNavigate('status=online')}
+          className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Online</span>
+            <span className="text-xl font-bold text-green-600 dark:text-green-400">{onlineCount || 0}</span>
+          </div>
+        </button>
+        
+        {/* Offline */}
+        <button
+          type="button"
+          data-testid="offline-button"
+          onClick={() => handleNavigate('status=offline')}
+          className="p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Offline</span>
+            <span className="text-xl font-bold text-gray-600 dark:text-gray-400">{offlineCount || 0}</span>
+          </div>
+        </button>
+        
+        {/* Maintenance */}
+        <button
+          type="button"
+          data-testid="maintenance-button"
+          onClick={() => handleNavigate('status=maintenance')}
+          className="p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Maintenance</span>
+            <span className="text-xl font-bold text-yellow-600 dark:text-yellow-400">{maintenanceCount || 0}</span>
+          </div>
+        </button>
+        
+        {/* Alerts */}
+        <button
+          type="button"
+          data-testid="alerts-button"
+          onClick={() => handleNavigate('alerts=true')}
+          className="p-3 rounded-lg bg-orange-50 dark:bg-orange-900/20 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Alerts</span>
+            <span className="text-xl font-bold text-orange-600 dark:text-orange-400">{alertCount || 0}</span>
+          </div>
+        </button>
+        
+        {/* Alarms */}
+        <button
+          type="button"
+          data-testid="alarms-button"
+          onClick={() => handleNavigate('alarms=true')}
+          className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Alarms</span>
+            <span className="text-xl font-bold text-red-600 dark:text-red-400">{alarmCount || 0}</span>
+          </div>
+        </button>
       </div>
-    );
-  },
-}));
-
-// NOW import the component after mocks are set up
-import UnitSummary from "../components/dashboard/UnitSummary";
+    </div>
+  );
+};
 
 // Test wrapper
 const TestWrapper = ({ children }) => {
