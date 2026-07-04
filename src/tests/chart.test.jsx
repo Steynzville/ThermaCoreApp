@@ -27,9 +27,15 @@ vi.mock("recharts", () => ({
   ),
 }));
 
+// Mock the cn utility
+vi.mock("@/lib/utils", () => ({
+  cn: (...inputs) => inputs.filter(Boolean).join(" "),
+}));
+
 const mockConfig = {
   value: { label: "Value", color: "#8884d8" },
   revenue: { label: "Revenue", color: "#82ca9d" },
+  count: { label: "Count", color: "#ff7300" },
 };
 
 describe("ChartContainer", () => {
@@ -124,6 +130,11 @@ describe("ChartTooltipContent", () => {
       dataKey: "value",
       value: 100,
       name: "value",
+      color: "#8884d8",
+      payload: {
+        fill: "#8884d8",
+        value: 100,
+      },
     },
   ];
 
@@ -177,8 +188,20 @@ describe("ChartTooltipContent", () => {
 
   it("should render multiple values", () => {
     const payload = [
-      { dataKey: "value", value: 100 },
-      { dataKey: "count", value: 50 },
+      {
+        dataKey: "value",
+        value: 100,
+        name: "value",
+        color: "#8884d8",
+        payload: { fill: "#8884d8", value: 100 },
+      },
+      {
+        dataKey: "count",
+        value: 50,
+        name: "count",
+        color: "#ff7300",
+        payload: { fill: "#ff7300", count: 50 },
+      },
     ];
 
     render(
@@ -194,7 +217,15 @@ describe("ChartTooltipContent", () => {
   });
 
   it("should handle undefined values safely", () => {
-    const payload = [{ dataKey: "value", value: undefined }];
+    const payload = [
+      {
+        dataKey: "value",
+        value: undefined,
+        name: "value",
+        color: "#8884d8",
+        payload: { fill: "#8884d8", value: undefined },
+      },
+    ];
 
     render(
       <ChartContainer config={mockConfig}>
@@ -202,16 +233,16 @@ describe("ChartTooltipContent", () => {
       </ChartContainer>,
     );
 
-    // should not crash
-    const elements = screen.getAllByTestId("responsive-container");
-    expect(elements.length).toBeGreaterThan(0);
+    // Should render without crashing - verify the component renders
+    const containerElements = screen.getAllByTestId("responsive-container");
+    expect(containerElements.length).toBeGreaterThan(0);
   });
 });
 
 describe("ChartLegendContent", () => {
   const payload = [
-    { value: "value", dataKey: "value" },
-    { value: "revenue", dataKey: "revenue" },
+    { value: "value", dataKey: "value", color: "#8884d8" },
+    { value: "revenue", dataKey: "revenue", color: "#82ca9d" },
   ];
 
   it("should render legend labels", () => {
@@ -262,18 +293,30 @@ describe("ChartLegendContent", () => {
 
 describe("Chart Integration", () => {
   it("should render tooltip and legend together", () => {
+    const tooltipPayload = [
+      {
+        dataKey: "value",
+        value: 100,
+        name: "value",
+        color: "#8884d8",
+        payload: { fill: "#8884d8", value: 100 },
+      },
+    ];
+    
+    const legendPayload = [
+      { value: "value", dataKey: "value", color: "#8884d8" },
+    ];
+
     render(
       <ChartContainer config={mockConfig}>
         <ChartTooltip
           content={
-            <ChartTooltipContent active payload={[{ value: 100 }]} />
+            <ChartTooltipContent active payload={tooltipPayload} />
           }
         />
         <ChartLegend
           content={
-            <ChartLegendContent
-              payload={[{ value: "value", dataKey: "value" }]}
-            />
+            <ChartLegendContent payload={legendPayload} />
           }
         />
       </ChartContainer>,
@@ -283,5 +326,9 @@ describe("Chart Integration", () => {
     const legendElements = screen.getAllByTestId("recharts-legend");
     expect(tooltipElements.length).toBeGreaterThan(0);
     expect(legendElements.length).toBeGreaterThan(0);
+    
+    // Verify content is rendered
+    const valueElements = screen.getAllByText("100");
+    expect(valueElements.length).toBeGreaterThan(0);
   });
 });
