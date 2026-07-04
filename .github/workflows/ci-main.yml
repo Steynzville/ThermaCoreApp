@@ -1,4 +1,5 @@
 name: CI Main - Backend Tests
+
 permissions:
   contents: read
   pull-requests: write
@@ -30,6 +31,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Set up Node.js (for any Node-based tooling)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'pnpm'
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -106,30 +113,52 @@ jobs:
           echo "🧪 Running backend tests with coverage..."
           docker-compose -f docker-compose.ci.yml run --rm backend python -m pytest -v --tb=short --cov=app --cov-report=json --cov-report=term --cov-report=term-missing --cov-fail-under=60
 
-      - name: Display Coverage Summary
+      - name: 📊 Display Coverage Summary
         if: always()
         run: |
-          echo "📊 BACKEND COVERAGE REPORT"
-          echo "---"
+          echo ""
+          echo "═══════════════════════════════════════════════════════════"
+          echo "                   📊 BACKEND COVERAGE                    "
+          echo "═══════════════════════════════════════════════════════════"
+          echo ""
           
           if [ -f "backend/coverage.json" ]; then
             # Write Python script to file to avoid shell parsing
-            echo 'import json' > /tmp/coverage_script.py
-            echo 'try:' >> /tmp/coverage_script.py
-            echo '    with open("backend/coverage.json", "r") as f:' >> /tmp/coverage_script.py
-            echo '        data = json.load(f)' >> /tmp/coverage_script.py
-            echo '    coverage = data.get("totals", {}).get("percent_covered", 0)' >> /tmp/coverage_script.py
-            echo '    print("✅ Coverage: {:.2f}%".format(coverage))' >> /tmp/coverage_script.py
-            echo '    print("COVERAGE_PCT={:.2f}".format(coverage))' >> /tmp/coverage_script.py
-            echo 'except Exception as e:' >> /tmp/coverage_script.py
-            echo '    print("Error:", e)' >> /tmp/coverage_script.py
-            echo '    print("COVERAGE_PCT=0.00")' >> /tmp/coverage_script.py
+            echo 'import json' > /tmp/backend_coverage_script.py
+            echo 'try:' >> /tmp/backend_coverage_script.py
+            echo '    with open("backend/coverage.json", "r") as f:' >> /tmp/backend_coverage_script.py
+            echo '        data = json.load(f)' >> /tmp/backend_coverage_script.py
+            echo '    coverage = data.get("totals", {}).get("percent_covered", 0)' >> /tmp/backend_coverage_script.py
+            echo '    statements = data.get("totals", {}).get("num_statements", 0)' >> /tmp/backend_coverage_script.py
+            echo '    covered = data.get("totals", {}).get("covered_statements", 0)' >> /tmp/backend_coverage_script.py
+            echo '    missing = data.get("totals", {}).get("missed_statements", 0)' >> /tmp/backend_coverage_script.py
+            echo '    print("  📈 Total Coverage: {:.2f}%".format(coverage))' >> /tmp/backend_coverage_script.py
+            echo '    print("  📝 Statements:     {}".format(statements))' >> /tmp/backend_coverage_script.py
+            echo '    print("  ✅ Covered:        {}".format(covered))' >> /tmp/backend_coverage_script.py
+            echo '    print("  ❌ Missing:       {}".format(missing))' >> /tmp/backend_coverage_script.py
+            echo '    print("")' >> /tmp/backend_coverage_script.py
+            echo '    # Color coding based on coverage percentage' >> /tmp/backend_coverage_script.py
+            echo '    if coverage >= 80:' >> /tmp/backend_coverage_script.py
+            echo '        print("  🟢 EXCELLENT! Coverage is above 80%")' >> /tmp/backend_coverage_script.py
+            echo '    elif coverage >= 60:' >> /tmp/backend_coverage_script.py
+            echo '        print("  🟡 Good! Coverage is above 60%")' >> /tmp/backend_coverage_script.py
+            echo '    elif coverage >= 40:' >> /tmp/backend_coverage_script.py
+            echo '        print("  🟠 Fair - Consider improving coverage")' >> /tmp/backend_coverage_script.py
+            echo '    else:' >> /tmp/backend_coverage_script.py
+            echo '        print("  🔴 Low coverage - Please add more tests")' >> /tmp/backend_coverage_script.py
+            echo '    print("")' >> /tmp/backend_coverage_script.py
+            echo '    print("═══════════════════════════════════════════════════════════")' >> /tmp/backend_coverage_script.py
+            echo '    print("COVERAGE_PCT={:.2f}".format(coverage))' >> /tmp/backend_coverage_script.py
+            echo 'except Exception as e:' >> /tmp/backend_coverage_script.py
+            echo '    print("Error:", e)' >> /tmp/backend_coverage_script.py
+            echo '    print("COVERAGE_PCT=0.00")' >> /tmp/backend_coverage_script.py
             
             # Run the Python script
-            python3 /tmp/coverage_script.py
+            python3 /tmp/backend_coverage_script.py
             
           else
-            echo "❌ No coverage.json found"
+            echo "  ❌ No coverage.json found"
+            echo "═══════════════════════════════════════════════════════════"
           fi
 
       - name: Upload Coverage Report
@@ -138,6 +167,7 @@ jobs:
         with:
           name: backend-coverage-report
           path: backend/coverage.json
+          retention-days: 14
 
       - name: Stop Services
         if: always()
