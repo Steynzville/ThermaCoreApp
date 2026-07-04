@@ -22,16 +22,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-          cache: 'pnpm'
-
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
           run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          # Remove cache: 'pnpm' since we're caching separately below
 
       - name: Get pnpm store directory
         shell: bash
@@ -140,7 +140,6 @@ jobs:
             COVERAGE=$(cat coverage/coverage-summary.json | jq -r '.total.statements.pct')
             COVERAGE_INT=$(echo "$COVERAGE" | cut -d'.' -f1)
             
-            # Determine color based on coverage
             if [ "$COVERAGE_INT" -ge 80 ]; then
               COLOR="brightgreen"
             elif [ "$COVERAGE_INT" -ge 60 ]; then
@@ -153,8 +152,4 @@ jobs:
             
             echo "📊 Coverage: ${COVERAGE}%"
             echo "🎨 Badge color: ${COLOR}"
-            
-            # You can optionally upload a badge image here
-            # curl -o coverage-badge.svg "https://img.shields.io/badge/coverage-${COVERAGE}%-${COLOR}.svg"
-            # Then upload as artifact
           fi
