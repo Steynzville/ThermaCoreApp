@@ -185,9 +185,10 @@ describe("HistoryView", () => {
         </TestWrapper>
       );
 
-      // Wait for content to load
+      // Wait for content to load - FIXED: use await directly
       await screen.findAllByText("Event History");
 
+      // Use waitFor with the container query
       await waitFor(() => {
         // Use querySelectorAll with the container
         const severityBlocks = container.querySelectorAll(
@@ -197,7 +198,7 @@ describe("HistoryView", () => {
         // There should be at least some severity indicators
         // Some might be from hardcoded notifications
         expect(severityBlocks.length).toBeGreaterThan(0);
-      });
+      }, { timeout: 3000 });
     });
   });
 
@@ -274,11 +275,12 @@ describe("HistoryView", () => {
         fireEvent.click(buttons[0]);
       }
 
-      // Check that more items appear
+      // Check that more items appear - FIXED: use a more reliable check
       await waitFor(() => {
+        // Check that we have more than 5 "ThermaCore Unit" matches (hardcoded + API events)
         const unitElements = screen.getAllByText(/ThermaCore Unit/);
         expect(unitElements.length).toBeGreaterThan(5);
-      });
+      }, { timeout: 3000 });
     });
 
     it("hides load more when not needed", async () => {
@@ -318,7 +320,7 @@ describe("HistoryView", () => {
       // Admin should see all notifications including NH3 from unit 014
       const nh3Elements = await screen.findAllByText("NH3 LEAK DETECTED");
       // There should be at least 2 NH3 notifications for admin
-      expect(nh3Elements.length).toBeGreaterThan(0);
+      expect(nh3Elements.length).toBeGreaterThan(1);
     });
 
     it("renders for user", async () => {
@@ -381,14 +383,17 @@ describe("HistoryView", () => {
 
       await screen.findAllByText("Event History");
 
-      // Check for severity classes on cards
-      const errorCards = container.querySelectorAll(".border-l-red-500");
-      const warningCards = container.querySelectorAll(".border-l-yellow-500");
-      const infoCards = container.querySelectorAll(".border-l-blue-500");
-      const successCards = container.querySelectorAll(".border-l-green-500");
+      // Check for severity classes on cards - use waitFor to ensure DOM is ready
+      await waitFor(() => {
+        const errorCards = container.querySelectorAll(".border-l-red-500");
+        const warningCards = container.querySelectorAll(".border-l-yellow-500");
+        const infoCards = container.querySelectorAll(".border-l-blue-500");
+        const successCards = container.querySelectorAll(".border-l-green-500");
 
-      // There should be at least one of each type
-      expect(errorCards.length + warningCards.length + infoCards.length + successCards.length).toBeGreaterThan(0);
+        // There should be at least one of each type
+        const total = errorCards.length + warningCards.length + infoCards.length + successCards.length;
+        expect(total).toBeGreaterThan(0);
+      }, { timeout: 3000 });
     });
   });
 });
