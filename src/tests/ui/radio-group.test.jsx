@@ -13,14 +13,27 @@ vi.mock("lucide-react", () => ({
 }));
 
 // Mock the entire Radix UI radio-group module
+// CRITICAL: The Root must include the defaultValue prop as a data attribute
 vi.mock("@radix-ui/react-radio-group", () => ({
-  Root: ({ children, className, ...props }) => (
-    <div data-slot="radio-group" className={className} {...props}>
+  Root: ({ children, className, defaultValue, value, ...props }) => (
+    <div 
+      data-slot="radio-group" 
+      className={className} 
+      data-default-value={defaultValue}
+      data-value={value}
+      {...props}
+    >
       {children}
     </div>
   ),
-  Item: ({ children, className, value, ...props }) => (
-    <div data-slot="radio-group-item" className={className} data-value={value} {...props}>
+  Item: ({ children, className, value, disabled, ...props }) => (
+    <div 
+      data-slot="radio-group-item" 
+      className={className} 
+      data-value={value}
+      disabled={disabled}
+      {...props}
+    >
       {children}
     </div>
   ),
@@ -161,6 +174,7 @@ describe("RadioGroup Components", () => {
     );
     const radioGroup = container.querySelector('[data-slot="radio-group"]');
     expect(radioGroup).toBeInTheDocument();
+    // CRITICAL FIX: The defaultValue is now passed through as data-default-value
     expect(radioGroup).toHaveAttribute('data-default-value', 'option1');
   });
 
