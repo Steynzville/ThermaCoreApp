@@ -5,7 +5,7 @@ import React from "react";
 import UnitDetails from "./UnitDetails";
 import * as unitService from "../services/unitService";
 
-// Mock AudioContext globally (same as audioPlayer.test.js)
+// Mock AudioContext globally
 class MockAudioContext {
   constructor() {
     this.state = "suspended";
@@ -48,11 +48,9 @@ class MockAudioContext {
 
 // Setup AudioContext mock before all tests
 beforeAll(() => {
-  // Store original if it exists
   const originalAudioContext = window.AudioContext;
   const originalWebkitAudioContext = window.webkitAudioContext;
 
-  // Mock AudioContext
   Object.defineProperty(window, "AudioContext", {
     writable: true,
     configurable: true,
@@ -65,7 +63,6 @@ beforeAll(() => {
     value: MockAudioContext,
   });
 
-  // Mock window.matchMedia for responsive components
   Object.defineProperty(window, "matchMedia", {
     writable: true,
     configurable: true,
@@ -81,14 +78,12 @@ beforeAll(() => {
     }),
   });
 
-  // Mock ResizeObserver
   window.ResizeObserver = vi.fn().mockImplementation(() => ({
     observe: vi.fn(),
     unobserve: vi.fn(),
     disconnect: vi.fn(),
   }));
 
-  // Mock getBoundingClientRect for any DOM calculations
   Element.prototype.getBoundingClientRect = vi.fn().mockReturnValue({
     width: 0,
     height: 0,
@@ -101,7 +96,6 @@ beforeAll(() => {
     toJSON: vi.fn(),
   });
 
-  // Clean up after all tests
   return () => {
     Object.defineProperty(window, "AudioContext", {
       writable: true,
@@ -173,7 +167,6 @@ describe("UnitDetails", () => {
     unitService.getUnitAlerts.mockResolvedValue(mockDetails.alerts);
   });
 
-  // Use explicit React.createElement for stable component mounting
   const renderUnitDetails = (id = "1", initialEntries = [`/units/${id}`]) => {
     return render(
       React.createElement(MemoryRouter, { initialEntries },
@@ -192,20 +185,23 @@ describe("UnitDetails", () => {
 
   it("should render unit details after loading", async () => {
     renderUnitDetails();
-    // Wait for the loading to complete and unit details to appear
+    
+    // Wait for the loading to complete by finding the heading
     await waitFor(() => {
-      // Use a more specific matcher - find the heading that contains "Unit: Unit 1"
       const heading = screen.getByRole('heading', { level: 2 });
       expect(heading).toHaveTextContent('Unit: Unit 1');
     });
   });
 
   it("should handle alerts tab loading state", async () => {
+    // Mock alerts to return after a delay to test loading state
     let resolveAlerts;
-    // Mock the alerts to return a promise we can control
-    unitService.getUnitAlerts.mockReturnValue(new Promise((res) => { resolveAlerts = res; }));
+    unitService.getUnitAlerts.mockReturnValue(new Promise((res) => { 
+      resolveAlerts = res; 
+    }));
 
     renderUnitDetails();
+    
     // Wait for unit data to load
     await waitFor(() => {
       const heading = screen.getByRole('heading', { level: 2 });
@@ -216,9 +212,9 @@ describe("UnitDetails", () => {
     const alertTab = screen.getByText('Alerts');
     fireEvent.click(alertTab);
 
-    // Wait for loading state to appear - use getByText with regex to be more flexible
+    // Wait for loading state to appear
     await waitFor(() => {
-      const loadingElements = screen.getAllByText(/Loading alerts/i);
+      const loadingElements = screen.getAllByText('Loading alerts...');
       expect(loadingElements.length).toBeGreaterThan(0);
     });
 
@@ -229,7 +225,7 @@ describe("UnitDetails", () => {
     
     // Wait for alerts to display
     await waitFor(() => { 
-      const alertHistoryElements = screen.getAllByText("Alert History");
+      const alertHistoryElements = screen.getAllByText('Alert History');
       expect(alertHistoryElements.length).toBeGreaterThan(0);
     });
   });
@@ -249,7 +245,7 @@ describe("UnitDetails", () => {
 
     // Wait for Remote Control component to render
     await waitFor(() => {
-      const remoteControlElements = screen.getAllByTestId("remote-control");
+      const remoteControlElements = screen.getAllByTestId('remote-control');
       expect(remoteControlElements.length).toBeGreaterThan(0);
     });
   });
@@ -269,7 +265,7 @@ describe("UnitDetails", () => {
 
     // Manage Remotely tab should render content - it shows RemoteControl component
     await waitFor(() => {
-      const remoteControlElements = screen.getAllByTestId("remote-control");
+      const remoteControlElements = screen.getAllByTestId('remote-control');
       expect(remoteControlElements.length).toBeGreaterThan(0);
     });
   });
