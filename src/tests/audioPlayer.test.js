@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeAll, afterAll } from "vitest";
+import { describe, expect, it, vi, beforeAll, afterAll, beforeEach } from "vitest";
 import playSound from "../utils/audioPlayer.js";
 
 // Mock AudioContext globally
@@ -76,22 +76,48 @@ beforeAll(() => {
   };
 });
 
-// Mock fetch to prevent actual HTTP requests during tests
-global.fetch = vi.fn().mockImplementation(() =>
+// Create a proper fetch spy
+const mockFetch = vi.fn().mockImplementation(() =>
   Promise.resolve({
     ok: true,
     arrayBuffer: () => Promise.resolve(new ArrayBuffer(1024)),
-  }),
+  })
 );
 
 describe("AudioPlayer", () => {
+  let originalFetch;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    
+    // Store original fetch
+    originalFetch = global.fetch;
+    
+    // Set the mock fetch as a spy
+    global.fetch = mockFetch;
+    
+    // Reset the mock implementation for each test
+    mockFetch.mockReset();
+    mockFetch.mockImplementation(() =>
+      Promise.resolve({
+        ok: true,
+        arrayBuffer: () => Promise.resolve(new ArrayBuffer(1024)),
+      })
+    );
+  });
+
+  afterEach(() => {
+    // Restore original fetch
+    global.fetch = originalFetch;
   });
 
   it("should handle decodeAudioData correctly with mock AudioContext", async () => {
     // Test that playSound doesn't hang or fail due to improper AudioContext mock
     await expect(playSound("test-sound.mp3", true, 0.5)).resolves.not.toThrow();
+    
+    // Verify fetch was called
+    expect(global.fetch).toHaveBeenCalled();
+    expect(global.fetch).toHaveBeenCalledWith("test-sound.mp3");
   });
 
   it("should use cached audio buffer on subsequent calls", async () => {
@@ -99,6 +125,7 @@ describe("AudioPlayer", () => {
 
     // Clear fetch mock counts
     vi.clearAllMocks();
+    mockFetch.mockClear();
 
     // First call should fetch and decode audio
     await playSound(fileName, true, 0.5);
@@ -111,9 +138,16 @@ describe("AudioPlayer", () => {
   });
 
   it("should not play sound when disabled", async () => {
+    // Clear fetch mock counts
+    vi.clearAllMocks();
+    mockFetch.mockClear();
+
     // This should resolve quickly without attempting to play
     await expect(
       playSound("disabled-sound.mp3", false, 0.5),
     ).resolves.not.toThrow();
+    
+    // fetch should not be called when sound is disabled
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 });
