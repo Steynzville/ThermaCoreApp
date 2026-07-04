@@ -22,7 +22,7 @@ vi.mock("@/lib/utils", () => ({
   cn: (...inputs) => inputs.filter(Boolean).join(" "),
 }));
 
-// Mock Radix UI Select with complete exports including ItemIndicator
+// Mock Radix UI Select with complete exports including ItemText
 vi.mock("@radix-ui/react-select", () => ({
   Root: ({ children, value, defaultValue, onValueChange, ...props }) => (
     <div data-testid="select-root" data-value={value || defaultValue} {...props}>
@@ -75,6 +75,12 @@ vi.mock("@radix-ui/react-select", () => ({
   ItemIndicator: ({ children, ...props }) => (
     <span data-testid="select-item-indicator" {...props}>
       {children || "✓"}
+    </span>
+  ),
+  // CRITICAL: ItemText is used by SelectItem component for text content
+  ItemText: ({ children, ...props }) => (
+    <span data-testid="select-item-text" {...props}>
+      {children}
     </span>
   ),
   Value: ({ children, placeholder, ...props }) => (
