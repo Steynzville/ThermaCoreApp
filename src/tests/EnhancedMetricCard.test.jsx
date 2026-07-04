@@ -99,9 +99,17 @@ describe("EnhancedMetricCard", () => {
         />
       );
 
-      // Should show loading skeletons
-      const loadingElements = document.querySelectorAll('.animate-pulse');
-      expect(loadingElements.length).toBeGreaterThan(0);
+      // Should show loading skeleton
+      const loadingContainer = document.querySelector('.animate-pulse');
+      expect(loadingContainer).toBeInTheDocument();
+      
+      // Should have the value skeleton (h-8)
+      const valueSkeleton = loadingContainer?.querySelector('.h-8');
+      expect(valueSkeleton).toBeInTheDocument();
+      
+      // Should have the subValue skeleton (h-4)
+      const subValueSkeleton = loadingContainer?.querySelector('.h-4');
+      expect(subValueSkeleton).toBeInTheDocument();
       
       // Should not show the actual value
       expect(screen.queryByText("42")).not.toBeInTheDocument();
@@ -470,16 +478,20 @@ describe("EnhancedMetricCard", () => {
         />
       );
 
-      const loadingDivs = document.querySelectorAll('.animate-pulse');
-      expect(loadingDivs.length).toBe(2); // Two skeleton divs
+      // Should show one loading container with animate-pulse
+      const loadingContainer = document.querySelector('.animate-pulse');
+      expect(loadingContainer).toBeInTheDocument();
       
-      // First skeleton (value)
-      const firstSkeleton = loadingDivs[0].querySelector('.h-8');
-      expect(firstSkeleton).toBeInTheDocument();
+      // Should have the value skeleton (h-8)
+      const valueSkeleton = loadingContainer?.querySelector('.h-8');
+      expect(valueSkeleton).toBeInTheDocument();
       
-      // Second skeleton (subValue)
-      const secondSkeleton = loadingDivs[1].querySelector('.h-4');
-      expect(secondSkeleton).toBeInTheDocument();
+      // Should have the subValue skeleton (h-4)
+      const subValueSkeleton = loadingContainer?.querySelector('.h-4');
+      expect(subValueSkeleton).toBeInTheDocument();
+      
+      // Both skeletons should be inside the same container
+      expect(loadingContainer?.children.length).toBe(2);
     });
   });
 });
