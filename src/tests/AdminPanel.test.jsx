@@ -79,7 +79,7 @@ vi.mock("../components/ui/card", () => ({
   ),
 }));
 
-// Mock lucide-react icons
+// Mock lucide-react icons with click handlers
 vi.mock("lucide-react", () => ({
   Database: () => <span data-testid="icon-database">Database</span>,
   Users: () => <span data-testid="icon-users">Users</span>,
@@ -90,8 +90,16 @@ vi.mock("lucide-react", () => ({
   Trash2: () => <span data-testid="icon-trash">Trash</span>,
   Key: () => <span data-testid="icon-key">Key</span>,
   Lock: () => <span data-testid="icon-lock">Lock</span>,
-  Eye: () => <span data-testid="icon-eye">Eye</span>,
-  EyeOff: () => <span data-testid="icon-eye-off">EyeOff</span>,
+  Eye: ({ onClick, ...props }) => (
+    <button data-testid="eye-icon" onClick={onClick} {...props}>
+      Eye
+    </button>
+  ),
+  EyeOff: ({ onClick, ...props }) => (
+    <button data-testid="eye-off-icon" onClick={onClick} {...props}>
+      EyeOff
+    </button>
+  ),
   UserCheck: () => <span data-testid="icon-user-check">UserCheck</span>,
 }));
 
@@ -228,15 +236,12 @@ describe("AdminPanel Component", () => {
     renderWithProviders(<AdminPanel />);
 
     await waitFor(() => {
-      // Check for the Users tab
       const usersElements = screen.getAllByText("Users");
       expect(usersElements.length).toBeGreaterThan(0);
       
-      // Check for Password Management tab
       const passwordElements = screen.getAllByText("Password Management");
       expect(passwordElements.length).toBeGreaterThan(0);
       
-      // Check for Settings tab
       const settingsElements = screen.getAllByText("Settings");
       expect(settingsElements.length).toBeGreaterThan(0);
     });
@@ -245,13 +250,11 @@ describe("AdminPanel Component", () => {
   it("should display Password Management tab when clicked", async () => {
     renderWithProviders(<AdminPanel />);
 
-    // Find and click the Password Management tab
     const passwordElements = screen.getAllByText("Password Management");
     expect(passwordElements.length).toBeGreaterThan(0);
     const passwordTab = passwordElements[0];
     fireEvent.click(passwordTab);
 
-    // Wait for the tab content to appear
     await waitFor(() => {
       const changePasswordElements = screen.getAllByText("Change My Password");
       expect(changePasswordElements.length).toBeGreaterThan(0);
@@ -261,13 +264,11 @@ describe("AdminPanel Component", () => {
   it("should open password reset modal when 'Change My Password' is clicked", async () => {
     renderWithProviders(<AdminPanel />);
 
-    // Navigate to Password Management tab
     const passwordElements = screen.getAllByText("Password Management");
     expect(passwordElements.length).toBeGreaterThan(0);
     const passwordTab = passwordElements[0];
     fireEvent.click(passwordTab);
 
-    // Wait for the button to appear then click it
     await waitFor(() => {
       const changePasswordElements = screen.getAllByText("Change My Password");
       expect(changePasswordElements.length).toBeGreaterThan(0);
@@ -275,7 +276,6 @@ describe("AdminPanel Component", () => {
       fireEvent.click(changePasswordButton);
     });
 
-    // Check for modal using getAllByTestId
     await waitFor(() => {
       const modals = screen.getAllByTestId("password-reset-modal");
       expect(modals.length).toBeGreaterThan(0);
@@ -285,13 +285,11 @@ describe("AdminPanel Component", () => {
   it("should show password visibility toggle buttons", async () => {
     renderWithProviders(<AdminPanel />);
 
-    // Navigate to Password Management tab
     const passwordElements = screen.getAllByText("Password Management");
     expect(passwordElements.length).toBeGreaterThan(0);
     const passwordTab = passwordElements[0];
     fireEvent.click(passwordTab);
 
-    // Click Change My Password button
     await waitFor(() => {
       const changePasswordElements = screen.getAllByText("Change My Password");
       expect(changePasswordElements.length).toBeGreaterThan(0);
@@ -299,15 +297,13 @@ describe("AdminPanel Component", () => {
       fireEvent.click(changePasswordButton);
     });
 
-    // Wait for modal to appear
     await waitFor(() => {
       const modals = screen.getAllByTestId("password-reset-modal");
       expect(modals.length).toBeGreaterThan(0);
     });
 
-    // Find toggle buttons - the component uses these exact aria-labels
-    // The new password toggle uses "Show password" / "Hide password"
-    // The confirm password toggle uses "Show confirm password" / "Hide confirm password"
+    // Look for the Eye/EyeOff icons which indicate toggle buttons
+    // The toggle buttons have aria-label "Show password" / "Hide password"
     const toggleButtons = screen.getAllByRole("button", { 
       name: /Show password|Hide password|Show confirm password|Hide confirm password/i 
     });
@@ -318,13 +314,11 @@ describe("AdminPanel Component", () => {
   it("should validate password matching", async () => {
     renderWithProviders(<AdminPanel />);
 
-    // Navigate to Password Management tab
     const passwordElements = screen.getAllByText("Password Management");
     expect(passwordElements.length).toBeGreaterThan(0);
     const passwordTab = passwordElements[0];
     fireEvent.click(passwordTab);
 
-    // Click Change My Password button
     await waitFor(() => {
       const changePasswordElements = screen.getAllByText("Change My Password");
       expect(changePasswordElements.length).toBeGreaterThan(0);
@@ -332,19 +326,16 @@ describe("AdminPanel Component", () => {
       fireEvent.click(changePasswordButton);
     });
 
-    // Wait for inputs to appear
     await waitFor(() => {
       const newPasswordInputs = screen.getAllByPlaceholderText("Enter new password");
       const confirmPasswordInputs = screen.getAllByPlaceholderText("Confirm new password");
       expect(newPasswordInputs.length).toBeGreaterThan(0);
       expect(confirmPasswordInputs.length).toBeGreaterThan(0);
       
-      // Type different passwords
       fireEvent.change(newPasswordInputs[0], { target: { value: "password123" } });
       fireEvent.change(confirmPasswordInputs[0], { target: { value: "password456" } });
     });
 
-    // Wait for mismatch warning to appear
     await waitFor(() => {
       const errorElements = screen.getAllByText(/Passwords do not match/i);
       expect(errorElements.length).toBeGreaterThan(0);
@@ -354,13 +345,11 @@ describe("AdminPanel Component", () => {
   it("should validate minimum password length", async () => {
     renderWithProviders(<AdminPanel />);
 
-    // Navigate to Password Management tab
     const passwordElements = screen.getAllByText("Password Management");
     expect(passwordElements.length).toBeGreaterThan(0);
     const passwordTab = passwordElements[0];
     fireEvent.click(passwordTab);
 
-    // Click Change My Password button
     await waitFor(() => {
       const changePasswordElements = screen.getAllByText("Change My Password");
       expect(changePasswordElements.length).toBeGreaterThan(0);
@@ -368,16 +357,13 @@ describe("AdminPanel Component", () => {
       fireEvent.click(changePasswordButton);
     });
 
-    // Wait for input to appear
     await waitFor(() => {
       const newPasswordInputs = screen.getAllByPlaceholderText("Enter new password");
       expect(newPasswordInputs.length).toBeGreaterThan(0);
       
-      // Type short password
       fireEvent.change(newPasswordInputs[0], { target: { value: "12345" } });
     });
 
-    // Check for error message
     await waitFor(() => {
       const errorElements = screen.getAllByText(/Password must be at least 6 characters long/i);
       expect(errorElements.length).toBeGreaterThan(0);
@@ -387,13 +373,11 @@ describe("AdminPanel Component", () => {
   it("should toggle password visibility in password reset modal", async () => {
     renderWithProviders(<AdminPanel />);
 
-    // Navigate to Password Management tab
     const passwordElements = screen.getAllByText("Password Management");
     expect(passwordElements.length).toBeGreaterThan(0);
     const passwordTab = passwordElements[0];
     fireEvent.click(passwordTab);
 
-    // Click Change My Password button
     await waitFor(() => {
       const changePasswordElements = screen.getAllByText("Change My Password");
       expect(changePasswordElements.length).toBeGreaterThan(0);
@@ -401,13 +385,11 @@ describe("AdminPanel Component", () => {
       fireEvent.click(changePasswordButton);
     });
 
-    // Wait for modal and find password input
     await waitFor(() => {
       const modals = screen.getAllByTestId("password-reset-modal");
       expect(modals.length).toBeGreaterThan(0);
     });
 
-    // Find the new password input
     const newPasswordInputs = await screen.findAllByPlaceholderText("Enter new password");
     expect(newPasswordInputs.length).toBeGreaterThan(0);
     expect(newPasswordInputs[0]).toHaveAttribute("type", "password");
@@ -416,18 +398,14 @@ describe("AdminPanel Component", () => {
     const toggleButtons = screen.getAllByRole("button", { 
       name: /Show password|Hide password/i 
     });
-    // There should be at least one toggle button for the new password field
     expect(toggleButtons.length).toBeGreaterThan(0);
     
-    // Click to show password
     fireEvent.click(toggleButtons[0]);
-    // Wait for the input type to change
     await waitFor(() => {
       const inputs = screen.getAllByPlaceholderText("Enter new password");
       expect(inputs[0]).toHaveAttribute("type", "text");
     });
     
-    // Click to hide password again
     fireEvent.click(toggleButtons[0]);
     await waitFor(() => {
       const inputs = screen.getAllByPlaceholderText("Enter new password");
@@ -439,11 +417,9 @@ describe("AdminPanel Component", () => {
     renderWithProviders(<AdminPanel />);
 
     await waitFor(() => {
-      // Check for User Management heading
       const userManagementElements = screen.getAllByText("User Management");
       expect(userManagementElements.length).toBeGreaterThan(0);
       
-      // Check for Add User button
       const addUserElements = screen.getAllByText("Add User");
       expect(addUserElements.length).toBeGreaterThan(0);
     });
