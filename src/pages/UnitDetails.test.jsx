@@ -186,12 +186,9 @@ describe("UnitDetails", () => {
   it("should render unit details after loading", async () => {
     renderUnitDetails();
     
-    // Wait for the unit name to appear in the heading
-    await waitFor(() => {
-      // Use getAllByText with a simple matcher for the heading
-      const headings = screen.getAllByText(/Unit: Unit 1/);
-      expect(headings.length).toBeGreaterThan(0);
-    });
+    // Use findByText which waits for the element to appear
+    const heading = await screen.findByText(/Unit: Unit 1/);
+    expect(heading).toBeInTheDocument();
   });
 
   it("should handle alerts tab loading state", async () => {
@@ -202,91 +199,62 @@ describe("UnitDetails", () => {
 
     renderUnitDetails();
     
-    // Wait for unit data to load
-    await waitFor(() => {
-      const headings = screen.getAllByText(/Unit: Unit 1/);
-      expect(headings.length).toBeGreaterThan(0);
-    });
+    // Wait for unit data to load using findByText
+    await screen.findByText(/Unit: Unit 1/);
 
     // Click the Alerts tab
     const alertTabs = screen.getAllByText("Alerts");
     fireEvent.click(alertTabs[0]);
 
-    // Wait for loading state to appear
-    await waitFor(() => {
-      const loadingElements = screen.getAllByText('Loading alerts...');
-      expect(loadingElements.length).toBeGreaterThan(0);
-    });
+    // Wait for loading state to appear using findByText
+    await screen.findByText('Loading alerts...');
 
     // Resolve the alerts promise
     if (resolveAlerts) {
       resolveAlerts(mockDetails.alerts);
     }
     
-    // Wait for alerts to display
-    await waitFor(() => { 
-      const alertHistoryElements = screen.getAllByText('Alert History');
-      expect(alertHistoryElements.length).toBeGreaterThan(0);
-    });
+    // Wait for alerts to display using findByText
+    await screen.findByText('Alert History');
   });
 
   it("should render Remote Control tab", async () => {
     renderUnitDetails();
     
     // Wait for unit to load
-    await waitFor(() => {
-      const headings = screen.getAllByText(/Unit: Unit 1/);
-      expect(headings.length).toBeGreaterThan(0);
-    });
+    await screen.findByText(/Unit: Unit 1/);
 
     // Click Remote Control tab
     const remoteControlTabs = screen.getAllByText("Remote Control");
     fireEvent.click(remoteControlTabs[0]);
 
-    // Wait for Remote Control component to render
-    await waitFor(() => {
-      const remoteControlElements = screen.getAllByTestId("remote-control");
-      expect(remoteControlElements.length).toBeGreaterThan(0);
-    });
+    // Wait for Remote Control component to render using findByTestId
+    await screen.findByTestId('remote-control');
   });
 
   it("should handle Manage Remotely tab", async () => {
     renderUnitDetails();
     
     // Wait for unit to load
-    await waitFor(() => {
-      const headings = screen.getAllByText(/Unit: Unit 1/);
-      expect(headings.length).toBeGreaterThan(0);
-    });
+    await screen.findByText(/Unit: Unit 1/);
 
     // Click Manage Remotely tab
     const manageTabs = screen.getAllByText("Manage Remotely");
     fireEvent.click(manageTabs[0]);
 
     // Manage Remotely tab should render content - it shows RemoteControl component
-    await waitFor(() => {
-      const remoteControlElements = screen.getAllByTestId("remote-control");
-      expect(remoteControlElements.length).toBeGreaterThan(0);
-    });
+    await screen.findByTestId('remote-control');
   });
 
   it("should handle Overview tab content", async () => {
     renderUnitDetails();
     
     // Wait for unit to load
-    await waitFor(() => {
-      const headings = screen.getAllByText(/Unit: Unit 1/);
-      expect(headings.length).toBeGreaterThan(0);
-    });
+    await screen.findByText(/Unit: Unit 1/);
 
-    // Verify overview content - use getAllByText with regex
-    const statusElements = screen.getAllByText(/Status:/i);
-    expect(statusElements.length).toBeGreaterThan(0);
-    
-    const locationElements = screen.getAllByText(/Location:/i);
-    expect(locationElements.length).toBeGreaterThan(0);
-    
-    const installDateElements = screen.getAllByText(/Install Date:/i);
-    expect(installDateElements.length).toBeGreaterThan(0);
+    // Verify overview content using findByText
+    await screen.findByText(/Status:/i);
+    await screen.findByText(/Location:/i);
+    await screen.findByText(/Install Date:/i);
   });
 });
