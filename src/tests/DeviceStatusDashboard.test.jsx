@@ -198,30 +198,36 @@ describe("DeviceStatusDashboard", () => {
   it("displays status summary cards with correct counts", () => {
     renderWithAuth();
 
+    // Check total
     expect(screen.getByText("Total")).toBeInTheDocument();
-    expect(screen.getByText("7")).toBeInTheDocument(); // Total devices
+    expect(screen.getByText("7")).toBeInTheDocument();
 
-    // Use getAllByText for labels that appear multiple times
-    const onlineLabels = screen.getAllByText("Online");
-    expect(onlineLabels.length).toBeGreaterThan(0);
-    
-    const offlineLabels = screen.getAllByText("Offline");
-    expect(offlineLabels.length).toBeGreaterThan(0);
-    
-    // The online count should be 6 (TC001, TC003, TC004, TC005, TC006, TC007)
-    // TC004 is in maintenance but isOnline: true
+    // Check online - the number 6 should be unique
     expect(screen.getByText("6")).toBeInTheDocument();
 
-    expect(screen.getByText("1")).toBeInTheDocument(); // Offline: TC002
+    // For counts that appear multiple times, use getAllByText and check length
+    const allOnes = screen.getAllByText("1");
+    // There should be 4 ones: offline, alerts, alarms, maintenance
+    expect(allOnes).toHaveLength(4);
 
+    // Verify the labels exist
+    expect(screen.getByText("Offline")).toBeInTheDocument();
     expect(screen.getByText("Alerts")).toBeInTheDocument();
-    expect(screen.getByText("1")).toBeInTheDocument(); // Alert: TC003
-
     expect(screen.getByText("Alarms")).toBeInTheDocument();
-    expect(screen.getByText("1")).toBeInTheDocument(); // Alarm: TC005
-
     expect(screen.getByText("Maintenance")).toBeInTheDocument();
-    expect(screen.getByText("1")).toBeInTheDocument(); // Maintenance: TC004
+
+    // Verify we have the correct number of cards with "1"
+    // Each "1" should be in a different card
+    const offlineCard = screen.getByText("Offline").closest('[data-testid="card"]');
+    const alertsCard = screen.getByText("Alerts").closest('[data-testid="card"]');
+    const alarmsCard = screen.getByText("Alarms").closest('[data-testid="card"]');
+    const maintenanceCard = screen.getByText("Maintenance").closest('[data-testid="card"]');
+
+    // Each card should have a "1" in it
+    expect(offlineCard).toHaveTextContent("1");
+    expect(alertsCard).toHaveTextContent("1");
+    expect(alarmsCard).toHaveTextContent("1");
+    expect(maintenanceCard).toHaveTextContent("1");
   });
 
   it("displays all devices in the list for admin users", () => {
