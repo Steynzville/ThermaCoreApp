@@ -17,6 +17,7 @@ afterEach(() => {
   
   // Reset any global state
   vi.clearAllMocks();
+  vi.resetAllMocks();
 });
 
 /**
@@ -85,6 +86,195 @@ if (!window.getComputedStyle || typeof window.getComputedStyle !== 'function') {
     }),
     writable: true,
     configurable: true,
+  });
+}
+
+/**
+ * -----------------------------
+ * WINDOW METHOD MOCKS (ADDED)
+ * -----------------------------
+ */
+
+// Add missing window methods for Radix UI and other libraries
+if (!window.requestAnimationFrame) {
+  Object.defineProperty(window, "requestAnimationFrame", {
+    writable: true,
+    configurable: true,
+    value: vi.fn().mockImplementation((cb) => {
+      cb();
+      return 123;
+    }),
+  });
+}
+
+if (!window.cancelAnimationFrame) {
+  Object.defineProperty(window, "cancelAnimationFrame", {
+    writable: true,
+    configurable: true,
+    value: vi.fn(),
+  });
+}
+
+if (!window.setTimeout) {
+  Object.defineProperty(window, "setTimeout", {
+    writable: true,
+    configurable: true,
+    value: vi.fn().mockImplementation((cb) => {
+      cb();
+      return 123;
+    }),
+  });
+}
+
+if (!window.clearTimeout) {
+  Object.defineProperty(window, "clearTimeout", {
+    writable: true,
+    configurable: true,
+    value: vi.fn(),
+  });
+}
+
+if (!window.setInterval) {
+  Object.defineProperty(window, "setInterval", {
+    writable: true,
+    configurable: true,
+    value: vi.fn().mockImplementation(() => 456),
+  });
+}
+
+if (!window.clearInterval) {
+  Object.defineProperty(window, "clearInterval", {
+    writable: true,
+    configurable: true,
+    value: vi.fn(),
+  });
+}
+
+// Mock window.Image for Avatar component
+if (!window.Image) {
+  Object.defineProperty(window, "Image", {
+    writable: true,
+    configurable: true,
+    value: vi.fn().mockImplementation(() => ({
+      src: '',
+      onload: null,
+      onerror: null,
+      complete: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      getAttribute: vi.fn(),
+      setAttribute: vi.fn(),
+    })),
+  });
+}
+
+// Mock window.addEventListener/removeEventListener if needed
+if (!window.addEventListener) {
+  Object.defineProperty(window, "addEventListener", {
+    writable: true,
+    configurable: true,
+    value: vi.fn(),
+  });
+}
+
+if (!window.removeEventListener) {
+  Object.defineProperty(window, "removeEventListener", {
+    writable: true,
+    configurable: true,
+    value: vi.fn(),
+  });
+}
+
+// Mock PointerEvent for Slider component
+if (!window.PointerEvent) {
+  window.PointerEvent = class PointerEvent extends Event {
+    constructor(type, params = {}) {
+      super(type, params);
+      this.pointerId = params.pointerId || 1;
+      this.clientX = params.clientX || 0;
+      this.clientY = params.clientY || 0;
+    }
+  };
+}
+
+// Mock Element.prototype methods for Radix UI components
+if (!Element.prototype.hasOwnProperty('scrollIntoView')) {
+  Element.prototype.scrollIntoView = vi.fn();
+}
+
+// Mock getBoundingClientRect for various components
+const originalGetBoundingClientRect = Element.prototype.getBoundingClientRect;
+Element.prototype.getBoundingClientRect = vi.fn().mockReturnValue({
+  width: 100,
+  height: 100,
+  top: 0,
+  left: 0,
+  bottom: 100,
+  right: 100,
+  x: 0,
+  y: 0,
+  toJSON: vi.fn(),
+});
+
+/**
+ * -----------------------------
+ * AUDIO CONTEXT MOCK (ADDED)
+ * -----------------------------
+ */
+
+class MockAudioContext {
+  constructor() {
+    this.state = "suspended";
+    this.currentTime = 0;
+    this.destination = {};
+  }
+  resume() {
+    return Promise.resolve();
+  }
+  suspend() {
+    return Promise.resolve();
+  }
+  close() {
+    return Promise.resolve();
+  }
+  decodeAudioData() {
+    return Promise.resolve({
+      duration: 1,
+      numberOfChannels: 2,
+      sampleRate: 44100,
+      getChannelData: () => new Float32Array(44100),
+    });
+  }
+  createBufferSource() {
+    return {
+      buffer: null,
+      connect: vi.fn(),
+      start: vi.fn(),
+      stop: vi.fn(),
+      onended: null,
+    };
+  }
+  createGain() {
+    return {
+      gain: { value: 0.5, setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn() },
+      connect: vi.fn(),
+    };
+  }
+}
+
+if (!window.AudioContext) {
+  Object.defineProperty(window, "AudioContext", {
+    writable: true,
+    configurable: true,
+    value: MockAudioContext,
+  });
+}
+
+if (!window.webkitAudioContext) {
+  Object.defineProperty(window, "webkitAudioContext", {
+    writable: true,
+    configurable: true,
+    value: MockAudioContext,
   });
 }
 
