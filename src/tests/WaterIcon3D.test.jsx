@@ -363,24 +363,42 @@ describe("WaterIcon3D", () => {
       expect(svg).toHaveClass('text-gray-400');
     });
 
-    it("handles undefined waterLevel gracefully", () => {
+    it("handles undefined waterLevel by rendering empty text", () => {
       render(<WaterIcon3D />);
       
-      // Should default to 0
-      expect(screen.getByText("undefined")).toBeInTheDocument();
+      // The badge text will be empty (undefined renders as empty)
+      // Check that the L label is still there
+      expect(screen.getByText("L")).toBeInTheDocument();
       
+      // Should render gray styling
       const svg = document.querySelector('svg[role="img"]');
       expect(svg).toHaveClass('text-gray-400');
+      
+      // The span for the value should be empty (no text content)
+      const badge = document.querySelector('.min-w-\\[2\\.25rem\\]');
+      const valueSpan = badge?.querySelector('.text-xs');
+      expect(valueSpan).toBeInTheDocument();
+      // It should render as empty text
+      expect(valueSpan?.textContent).toBe('');
     });
 
-    it("handles null waterLevel gracefully", () => {
+    it("handles null waterLevel by rendering empty text", () => {
       render(<WaterIcon3D waterLevel={null} />);
       
-      // null will be treated as 0 for styling
-      expect(screen.getByText("null")).toBeInTheDocument();
+      // The badge text will be empty (null renders as empty)
+      // Check that the L label is still there
+      expect(screen.getByText("L")).toBeInTheDocument();
       
+      // Should render gray styling
       const svg = document.querySelector('svg[role="img"]');
       expect(svg).toHaveClass('text-gray-400');
+      
+      // The span for the value should be empty (no text content)
+      const badge = document.querySelector('.min-w-\\[2\\.25rem\\]');
+      const valueSpan = badge?.querySelector('.text-xs');
+      expect(valueSpan).toBeInTheDocument();
+      // It should render as empty text
+      expect(valueSpan?.textContent).toBe('');
     });
 
     it("handles string water levels", () => {
