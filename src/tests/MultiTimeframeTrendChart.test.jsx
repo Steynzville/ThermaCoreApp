@@ -17,38 +17,69 @@ import { fireEvent, render, screen, waitFor, cleanup } from "@testing-library/re
 import { beforeAll, afterAll, beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import MultiTimeframeTrendChart from "@/components/visualization/MultiTimeframeTrendChart";
 
-// Mock browser APIs that may not be available in JSDOM
-beforeAll(() => {
-  global.URL.createObjectURL = vi.fn(() => "blob:test");
-  global.URL.revokeObjectURL = vi.fn();
-  
-  // Mock window.open for potential export functionality
-  global.window.open = vi.fn();
-  
-  // Mock navigator.msSaveBlob for IE support
-  global.navigator.msSaveBlob = vi.fn();
-});
+// Mock the cn utility
+vi.mock("@/lib/utils", () => ({
+  cn: (...inputs) => inputs.filter(Boolean).join(" "),
+}));
 
-afterAll(() => {
-  vi.restoreAllMocks();
-});
-
-// Clean up after each test
-afterEach(() => {
-  cleanup();
-  vi.clearAllMocks();
-});
-
-// Create spies for Recharts components - but keep them simple to avoid recursion
-const chartSpy = vi.fn();
+// Mock Radix UI Select to avoid prototype errors
+vi.mock("@radix-ui/react-select", () => ({
+  Root: ({ children, value, defaultValue, onValueChange, ...props }) => (
+    <div data-testid="select-root" data-value={value || defaultValue} {...props}>
+      <select 
+        data-testid="select-native"
+        value={value || defaultValue} 
+        onChange={(e) => onValueChange?.(e.target.value)}
+      >
+        {children}
+      </select>
+      {children}
+    </div>
+  ),
+  Trigger: ({ children, ...props }) => (
+    <button data-testid="select-trigger" {...props}>
+      {children}
+    </button>
+  ),
+  Content: ({ children, ...props }) => (
+    <div data-testid="select-content" {...props}>
+      {children}
+    </div>
+  ),
+  Item: ({ children, value, ...props }) => (
+    <option data-testid="select-item" value={value} {...props}>
+      {children}
+    </option>
+  ),
+  Value: ({ children, placeholder, ...props }) => (
+    <span data-testid="select-value" {...props}>
+      {children || placeholder}
+    </span>
+  ),
+  Portal: ({ children }) => <>{children}</>,
+  Group: ({ children, ...props }) => (
+    <div data-testid="select-group" {...props}>
+      {children}
+    </div>
+  ),
+  Label: ({ children, ...props }) => (
+    <div data-testid="select-label" {...props}>
+      {children}
+    </div>
+  ),
+  Separator: ({ ...props }) => (
+    <hr data-testid="select-separator" {...props} />
+  ),
+}));
 
 // Mock Recharts components - simplified to avoid circular dependencies
+const chartSpy = vi.fn();
+
 vi.mock("recharts", () => ({
   ResponsiveContainer: ({ children }) => (
     <div data-testid="responsive-container">{children}</div>
   ),
   LineChart: (props) => {
-    // Just spy, don't return anything that could cause recursion
     chartSpy({ type: 'line', ...props });
     return (
       <div data-testid="line-chart">
@@ -92,8 +123,16 @@ vi.mock("recharts", () => ({
   CartesianGrid: () => <div data-testid="cartesian-grid" />,
   XAxis: ({ dataKey }) => <div data-testid="x-axis" data-key={dataKey} />,
   YAxis: () => <div data-testid="y-axis" />,
-  Tooltip: () => <div data-testid="tooltip" />,
-  Legend: () => <div data-testid="legend" />,
+  Tooltip: ({ content }) => (
+    <div data-testid="tooltip">
+      {content || "Tooltip Content"}
+    </div>
+  ),
+  Legend: ({ content }) => (
+    <div data-testid="legend">
+      {content || "Legend Content"}
+    </div>
+  ),
 }));
 
 describe("MultiTimeframeTrendChart", () => {
@@ -124,6 +163,16 @@ describe("MultiTimeframeTrendChart", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     chartSpy.mockClear();
+    
+    // Mock window.Image if needed
+    window.Image = vi.fn().mockImplementation(() => ({
+      src: '',
+      onload: null,
+      onerror: null,
+      complete: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }));
     
     // Create a mock anchor element with a click spy
     mockAnchor = {
