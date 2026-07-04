@@ -206,15 +206,10 @@ describe("DeviceStatusDashboard", () => {
     expect(screen.getByText("6")).toBeInTheDocument();
 
     // For labels that appear multiple times (label + badge), use getAllByText
+    // Just verify they exist without trying to use them for card selection
     const offlineLabels = screen.getAllByText("Offline");
     expect(offlineLabels.length).toBeGreaterThan(0);
 
-    // For counts that appear multiple times, use getAllByText and check length
-    const allOnes = screen.getAllByText("1");
-    // There should be 4 ones: offline, alerts, alarms, maintenance
-    expect(allOnes).toHaveLength(4);
-
-    // Verify the labels exist using getAllByText
     const alertsLabels = screen.getAllByText("Alerts");
     expect(alertsLabels.length).toBeGreaterThan(0);
     
@@ -224,18 +219,41 @@ describe("DeviceStatusDashboard", () => {
     const maintenanceLabels = screen.getAllByText("Maintenance");
     expect(maintenanceLabels.length).toBeGreaterThan(0);
 
-    // Verify we have the correct number of cards with "1"
-    // Each "1" should be in a different card
-    const offlineCard = screen.getByText("Offline").closest('[data-testid="card"]');
-    const alertsCard = screen.getByText("Alerts").closest('[data-testid="card"]');
-    const alarmsCard = screen.getByText("Alarms").closest('[data-testid="card"]');
-    const maintenanceCard = screen.getByText("Maintenance").closest('[data-testid="card"]');
+    // For counts that appear multiple times, use getAllByText and check length
+    const allOnes = screen.getAllByText("1");
+    // There should be 4 ones: offline, alerts, alarms, maintenance
+    expect(allOnes).toHaveLength(4);
 
-    // Each card should have a "1" in it
-    expect(offlineCard).toHaveTextContent("1");
-    expect(alertsCard).toHaveTextContent("1");
-    expect(alarmsCard).toHaveTextContent("1");
-    expect(maintenanceCard).toHaveTextContent("1");
+    // Find the cards by their title/content instead of using the label text
+    // Each summary card has a specific structure we can query
+    const cards = screen.getAllByTestId("card");
+    
+    // The summary cards are the first 6 cards (before the device cards)
+    // We can check that each of the first 6 cards has the right content
+    // Card 0: Total (7)
+    // Card 1: Online (6)
+    // Card 2: Offline (1)
+    // Card 3: Alerts (1)
+    // Card 4: Alarms (1)
+    // Card 5: Maintenance (1)
+    
+    expect(cards[0]).toHaveTextContent("Total");
+    expect(cards[0]).toHaveTextContent("7");
+    
+    expect(cards[1]).toHaveTextContent("Online");
+    expect(cards[1]).toHaveTextContent("6");
+    
+    expect(cards[2]).toHaveTextContent("Offline");
+    expect(cards[2]).toHaveTextContent("1");
+    
+    expect(cards[3]).toHaveTextContent("Alerts");
+    expect(cards[3]).toHaveTextContent("1");
+    
+    expect(cards[4]).toHaveTextContent("Alarms");
+    expect(cards[4]).toHaveTextContent("1");
+    
+    expect(cards[5]).toHaveTextContent("Maintenance");
+    expect(cards[5]).toHaveTextContent("1");
   });
 
   it("displays all devices in the list for admin users", () => {
