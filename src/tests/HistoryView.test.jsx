@@ -196,19 +196,20 @@ describe("HistoryView", () => {
     it("renders severity indicators", async () => {
       unitService.getEventHistory.mockResolvedValue(mockEvents);
 
-      const { container } = render(
+      render(
         <TestWrapper>
           <HistoryView />
         </TestWrapper>
       );
 
+      // Wait for the component to finish loading and render
       await screen.findAllByText("Event History");
-
+      
+      // Wait for cards to appear
       await waitFor(() => {
-        const cards = container.querySelectorAll('[data-testid="card"]');
-        // There should be at least some cards with severity classes
+        const cards = screen.getAllByTestId("card");
         expect(cards.length).toBeGreaterThan(0);
-      }, { timeout: 3000 });
+      });
     });
   });
 
@@ -276,6 +277,7 @@ describe("HistoryView", () => {
       const buttons = screen.getAllByText(/Load more Events/i);
       expect(buttons.length).toBeGreaterThan(0);
       
+      // Get initial count of unit elements
       const initialElements = screen.getAllByText(/ThermaCore Unit/);
       const initialCount = initialElements.length;
       
@@ -283,10 +285,11 @@ describe("HistoryView", () => {
         fireEvent.click(buttons[0]);
       }
 
+      // Wait for more events to load
       await waitFor(() => {
         const unitElements = screen.getAllByText(/ThermaCore Unit/);
         expect(unitElements.length).toBeGreaterThan(initialCount);
-      }, { timeout: 3000 });
+      });
     });
 
     it("hides load more when not needed", async () => {
@@ -375,7 +378,7 @@ describe("HistoryView", () => {
     it("applies correct severity colors", async () => {
       unitService.getEventHistory.mockResolvedValue([]);
 
-      const { container } = render(
+      render(
         <TestWrapper>
           <HistoryView />
         </TestWrapper>
@@ -383,10 +386,18 @@ describe("HistoryView", () => {
 
       await screen.findAllByText("Event History");
 
+      // Wait for cards to appear with severity classes
       await waitFor(() => {
-        const cards = container.querySelectorAll('[data-testid="card"]');
+        const cards = screen.getAllByTestId("card");
         expect(cards.length).toBeGreaterThan(0);
-      }, { timeout: 3000 });
+        
+        // Check that at least one card has a severity class
+        const hasSeverityClass = cards.some(card => 
+          card.className.includes('border-l-') || 
+          card.className.includes('bg-')
+        );
+        expect(hasSeverityClass).toBe(true);
+      });
     });
   });
 });
