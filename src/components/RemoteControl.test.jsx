@@ -14,6 +14,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import RemoteControl from "../components/RemoteControl";
+import { SettingsProvider } from "../context/SettingsContext.jsx";
 
 // Mock the hooks and services - using actual hook names from your directory
 vi.mock("../hooks/useRemoteControl", () => ({
@@ -68,14 +69,20 @@ const mockUnitStatus = {
 };
 
 const TestWrapper = ({ children }) => {
-  return <BrowserRouter>{children}</BrowserRouter>;
+  return (
+    <BrowserRouter>
+      <SettingsProvider>
+        {children}
+      </SettingsProvider>
+    </BrowserRouter>
+  );
 };
 
 describe("RemoteControl Component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Default mock implementations using actual hooks
+    // Default mock implementations
     useRemoteControl.mockReturnValue({
       unit: mockUnit,
       status: mockUnitStatus,
@@ -150,7 +157,6 @@ describe("RemoteControl Component", () => {
         </TestWrapper>,
       );
 
-      // Use getAllByText since "ONLINE" appears multiple times
       const onlineElements = screen.getAllByText("ONLINE");
       expect(onlineElements.length).toBeGreaterThan(0);
     });
@@ -158,8 +164,7 @@ describe("RemoteControl Component", () => {
 
   describe("Permission Checks - Admin Role", () => {
     beforeEach(() => {
-      // Mock admin permissions - this would come from your auth context
-      // Adjust based on your actual auth implementation
+      // Mock admin permissions - adjust based on your auth implementation
     });
 
     it("should allow admin to toggle machine power", async () => {
@@ -180,7 +185,6 @@ describe("RemoteControl Component", () => {
         </TestWrapper>,
       );
 
-      // Find all switches and get the one for Machine Power
       const switches = screen.getAllByRole("switch");
       const machinePowerSwitch = switches.find(
         (sw) => sw.getAttribute("aria-label") === "Machine Power"
@@ -213,7 +217,6 @@ describe("RemoteControl Component", () => {
         </TestWrapper>,
       );
 
-      // Find all switches and get the one for Water Production
       const switches = screen.getAllByRole("switch");
       const waterProductionSwitch = switches.find(
         (sw) => sw.getAttribute("aria-label") === "Water Production"
@@ -246,7 +249,6 @@ describe("RemoteControl Component", () => {
         </TestWrapper>,
       );
 
-      // Find all switches and get the one for Auto Switch
       const switches = screen.getAllByRole("switch");
       const autoSwitch = switches.find(
         (sw) => sw.getAttribute("aria-label") === "Auto Switch"
@@ -366,14 +368,12 @@ describe("RemoteControl Component", () => {
 
   describe("Video Feed Controls", () => {
     it("should allow viewer to view video feed (read-only access)", () => {
-      // Mock viewer permissions - adjust based on your auth implementation
       render(
         <TestWrapper>
           <RemoteControl unitId="unit-1" />
         </TestWrapper>,
       );
 
-      // Find all video feed toggle buttons
       const videoButtons = screen.getAllByTestId("button-video-feed-toggle");
       expect(videoButtons.length).toBeGreaterThan(0);
     });
