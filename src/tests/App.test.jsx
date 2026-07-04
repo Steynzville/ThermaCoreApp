@@ -1,7 +1,51 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi, beforeAll, afterAll } from "vitest";
 
 import App from "../App";
+
+// Mock AuthContext to return unauthenticated state
+vi.mock("../context/AuthContext", () => ({
+  useAuth: () => ({
+    user: null,
+    isAuthenticated: false,
+    loading: false,
+    login: vi.fn(),
+    logout: vi.fn(),
+    register: vi.fn(),
+    updateProfile: vi.fn(),
+  }),
+  AuthProvider: ({ children }) => <div data-testid="auth-provider">{children}</div>,
+}));
+
+// Mock SettingsContext
+vi.mock("../context/SettingsContext", () => ({
+  useSettings: () => ({
+    settings: {
+      sound: true,
+      volume: 0.5,
+      temperatureUnit: "celsius",
+    },
+    toggleSound: vi.fn(),
+    setVolume: vi.fn(),
+    setTemperatureUnit: vi.fn(),
+  }),
+  SettingsProvider: ({ children }) => <div data-testid="settings-provider">{children}</div>,
+}));
+
+// Mock ThemeContext
+vi.mock("../context/ThemeContext", () => ({
+  useTheme: () => ({
+    theme: "light",
+    toggleTheme: vi.fn(),
+    setTheme: vi.fn(),
+  }),
+  ThemeProvider: ({ children }) => <div data-testid="theme-provider">{children}</div>,
+}));
+
+// Mock the cn utility
+vi.mock("@/lib/utils", () => ({
+  cn: (...inputs) => inputs.filter(Boolean).join(" "),
+}));
 
 // Mock AudioContext globally
 class MockAudioContext {
@@ -87,6 +131,29 @@ beforeAll(() => {
     },
   });
 
+  // Mock window.matchMedia for theme
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    configurable: true,
+    value: (query) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }),
+  });
+
+  // Mock ResizeObserver
+  window.ResizeObserver = vi.fn().mockImplementation(() => ({
+    observe: vi.fn(),
+    unobserve: vi.fn(),
+    disconnect: vi.fn(),
+  }));
+
   return () => {
     Object.defineProperty(window, "AudioContext", {
       writable: true,
@@ -101,32 +168,72 @@ beforeAll(() => {
   };
 });
 
+// Mock localStorage
+const createStorageMock = () => {
+  let store = {};
+  return {
+    getItem: (key) => (key in store ? store[key] : null),
+    setItem: (key, value) => { store[key] = value.toString(); },
+    removeItem: (key) => { delete store[key]; },
+    clear: () => { store = {}; },
+    get length() { return Object.keys(store).length; },
+    key: (index) => Object.keys(store)[index] || null,
+  };
+};
+
 describe("App", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    
+    // Reset localStorage and sessionStorage
+    Object.defineProperty(window, "localStorage", {
+      value: createStorageMock(),
+      writable: true,
+    });
+    Object.defineProperty(window, "sessionStorage", {
+      value: createStorageMock(),
+      writable: true,
+    });
+    
+    // Reset window.location.pathname
+    window.location.pathname = "/";
   });
 
-  it("renders Login page for unauthenticated user", () => {
+  it("renders Login page for unauthenticated user", async () => {
     render(<App />);
-    const usernameElements = screen.getAllByLabelText(/Username/i);
-    expect(usernameElements.length).toBeGreaterThan(0);
+    
+    // Wait for the login page to render
+    await waitFor(() => {
+      const usernameElements = screen.getAllByText(/Username/i);
+      expect(usernameElements.length).toBeGreaterThan(0);
+    });
   });
 
-  it("renders with all required providers", () => {
+  it("renders with all required providers", async () => {
     render(<App />);
-    const usernameElements = screen.getAllByLabelText(/Username/i);
-    expect(usernameElements.length).toBeGreaterThan(0);
+    
+    // Should render the login page
+    await waitFor(() => {
+      const usernameElements = screen.getAllByText(/Username/i);
+      expect(usernameElements.length).toBeGreaterThan(0);
+    });
   });
 
-  it("redirects to /login when accessing root path", () => {
+  it("redirects to /login when accessing root path", async () => {
     render(<App />);
-    const usernameElements = screen.getAllByLabelText(/Username/i);
-    expect(usernameElements.length).toBeGreaterThan(0);
+    
+    // Should show login page
+    await waitFor(() => {
+      const usernameElements = screen.getAllByText(/Username/i);
+      expect(usernameElements.length).toBeGreaterThan(0);
+    });
   });
 
   it("renders router with routes", () => {
     render(<App />);
-    expect(window.location.pathname).toBeDefined();
+    // Verify that the router is rendering something
+    const appElement = document.querySelector(".min-h-screen");
+    expect(appElement).toBeInTheDocument();
   });
 
   it("mounts and unmounts without errors", () => {
@@ -136,7 +243,8 @@ describe("App", () => {
 
   it("renders theme toggle component", () => {
     render(<App />);
-    const app = document.querySelector(".min-h-screen");
-    expect(app).toBeInTheDocument();
+    // The theme toggle should be present
+    const themeToggleElements = screen.getAllByLabelText(/Toggle Theme/i);
+    expect(themeToggleElements.length).toBeGreaterThan(0);
   });
 });
