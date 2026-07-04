@@ -3,22 +3,16 @@ import { beforeEach, describe, expect, it, vi, beforeAll, afterAll } from "vites
 
 import App from "../App";
 
-// Mock AudioContext globally (same as audioPlayer.test.js)
+// Mock AudioContext globally
 class MockAudioContext {
   constructor() {
     this.state = "suspended";
     this.currentTime = 0;
     this.destination = {};
   }
-  resume() {
-    return Promise.resolve();
-  }
-  suspend() {
-    return Promise.resolve();
-  }
-  close() {
-    return Promise.resolve();
-  }
+  resume() { return Promise.resolve(); }
+  suspend() { return Promise.resolve(); }
+  close() { return Promise.resolve(); }
   decodeAudioData() {
     return Promise.resolve({
       duration: 1,
@@ -44,13 +38,11 @@ class MockAudioContext {
   }
 }
 
-// Setup AudioContext mock before all tests
+// Setup AudioContext mock and window.location before all tests
 beforeAll(() => {
-  // Store original if it exists
   const originalAudioContext = window.AudioContext;
   const originalWebkitAudioContext = window.webkitAudioContext;
 
-  // Mock AudioContext
   Object.defineProperty(window, "AudioContext", {
     writable: true,
     configurable: true,
@@ -63,7 +55,38 @@ beforeAll(() => {
     value: MockAudioContext,
   });
 
-  // Clean up after all tests
+  // CRITICAL: Mock window.location for React Router
+  Object.defineProperty(window, "location", {
+    writable: true,
+    configurable: true,
+    value: {
+      href: "http://localhost/",
+      origin: "http://localhost",
+      pathname: "/",
+      search: "",
+      hash: "",
+      assign: vi.fn(),
+      replace: vi.fn(),
+      reload: vi.fn(),
+    },
+  });
+
+  // Also mock window.history for React Router
+  Object.defineProperty(window, "history", {
+    writable: true,
+    configurable: true,
+    value: {
+      pushState: vi.fn(),
+      replaceState: vi.fn(),
+      go: vi.fn(),
+      back: vi.fn(),
+      forward: vi.fn(),
+      length: 0,
+      scrollRestoration: "auto",
+      state: null,
+    },
+  });
+
   return () => {
     Object.defineProperty(window, "AudioContext", {
       writable: true,
@@ -91,21 +114,18 @@ describe("App", () => {
 
   it("renders with all required providers", () => {
     render(<App />);
-    // App should render without crashing
     const usernameElements = screen.getAllByLabelText(/Username/i);
     expect(usernameElements.length).toBeGreaterThan(0);
   });
 
   it("redirects to /login when accessing root path", () => {
     render(<App />);
-    // Should show login screen when accessing root
     const usernameElements = screen.getAllByLabelText(/Username/i);
     expect(usernameElements.length).toBeGreaterThan(0);
   });
 
   it("renders router with routes", () => {
     render(<App />);
-    // App should have routing functionality
     expect(window.location.pathname).toBeDefined();
   });
 
@@ -116,7 +136,6 @@ describe("App", () => {
 
   it("renders theme toggle component", () => {
     render(<App />);
-    // Theme toggle should be present in the DOM
     const app = document.querySelector(".min-h-screen");
     expect(app).toBeInTheDocument();
   });
