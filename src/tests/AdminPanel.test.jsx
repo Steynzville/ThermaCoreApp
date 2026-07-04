@@ -312,13 +312,14 @@ describe("AdminPanel Component", () => {
       expect(modals.length).toBeGreaterThan(0);
     });
 
-    // Look for the Eye/EyeOff icons which indicate toggle buttons
-    // Use getAllByTestId to find the eye icons
+    // Initially, the password is hidden, so we should see eye-icon (not eye-off-icon)
+    // First check that there are at least 2 toggle buttons total (new password and confirm password)
     const eyeIcons = screen.getAllByTestId("eye-icon");
-    const eyeOffIcons = screen.getAllByTestId("eye-off-icon");
-    // There should be at least 2 toggle buttons (new password and confirm password)
-    // They could be either Eye or EyeOff depending on state
-    expect(eyeIcons.length + eyeOffIcons.length).toBeGreaterThanOrEqual(2);
+    const eyeOffIcons = screen.queryAllByTestId("eye-off-icon");
+    
+    // Initially, both should be eye-icon (password hidden)
+    expect(eyeIcons.length).toBeGreaterThanOrEqual(2);
+    expect(eyeOffIcons.length).toBe(0);
   });
 
   it("should validate password matching", async () => {
@@ -404,18 +405,28 @@ describe("AdminPanel Component", () => {
     expect(newPasswordInputs.length).toBeGreaterThan(0);
     expect(newPasswordInputs[0]).toHaveAttribute("type", "password");
 
-    // Find toggle button for the new password field using testid
-    const toggleButtons = screen.getAllByTestId(/eye-icon|eye-off-icon/);
-    expect(toggleButtons.length).toBeGreaterThan(0);
+    // Initially, password is hidden, so eye-icon should be visible
+    let eyeIcons = screen.getAllByTestId("eye-icon");
+    let eyeOffIcons = screen.queryAllByTestId("eye-off-icon");
     
-    // Click the first toggle button (should be for new password)
-    fireEvent.click(toggleButtons[0]);
+    expect(eyeIcons.length).toBeGreaterThan(0);
+    expect(eyeOffIcons.length).toBe(0);
+    
+    // Click the eye icon to show password
+    fireEvent.click(eyeIcons[0]);
+    
     await waitFor(() => {
       const inputs = screen.getAllByPlaceholderText("Enter new password");
       expect(inputs[0]).toHaveAttribute("type", "text");
     });
     
-    fireEvent.click(toggleButtons[0]);
+    // After clicking, eye-off-icon should be visible
+    eyeOffIcons = screen.getAllByTestId("eye-off-icon");
+    expect(eyeOffIcons.length).toBeGreaterThan(0);
+    
+    // Click the eye-off icon to hide password again
+    fireEvent.click(eyeOffIcons[0]);
+    
     await waitFor(() => {
       const inputs = screen.getAllByPlaceholderText("Enter new password");
       expect(inputs[0]).toHaveAttribute("type", "password");
