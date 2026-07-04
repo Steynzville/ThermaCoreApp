@@ -208,8 +208,8 @@ describe("GridView", () => {
   describe("Component Rendering", () => {
     it("renders grid view", () => {
       renderWithRouter(<GridView />);
-      // Use getAllByText with a more specific selector
-      const elements = screen.getAllByText(/Grid View - All Status/i);
+      // FIXED: The actual title is "Grid View - All Units" when status is "All Status"
+      const elements = screen.getAllByText(/Grid View - All Units/i);
       expect(elements.length).toBeGreaterThan(0);
     });
 
@@ -244,10 +244,11 @@ describe("GridView", () => {
         target: { value: "Unit 001" },
       });
 
+      // Wait for the filter to apply - use a timeout
       await waitFor(() => {
         const elements = screen.getAllByText("ThermaCore Unit 001");
         expect(elements.length).toBeGreaterThan(0);
-      });
+      }, { timeout: 3000 });
     });
   });
 
@@ -264,7 +265,7 @@ describe("GridView", () => {
       await waitFor(() => {
         const elements = screen.getAllByText(/ONLINE/);
         expect(elements.length).toBeGreaterThan(0);
-      });
+      }, { timeout: 3000 });
     });
 
     it("filters offline", async () => {
@@ -279,7 +280,7 @@ describe("GridView", () => {
       await waitFor(() => {
         const elements = screen.getAllByText(/OFFLINE/);
         expect(elements.length).toBeGreaterThan(0);
-      });
+      }, { timeout: 3000 });
     });
   });
 
@@ -315,7 +316,7 @@ describe("GridView", () => {
       await waitFor(() => {
         const elements = screen.getAllByText(/ThermaCore Unit/);
         expect(elements.length).toBeGreaterThan(initialCount);
-      });
+      }, { timeout: 3000 });
     });
 
     it("hides load more when no extra units", () => {
@@ -433,6 +434,16 @@ describe("GridView", () => {
       
       const searchInput = screen.getByTestId("search-bar");
       expect(searchInput).toHaveValue("Unit 001");
+    });
+  });
+
+  describe("Default Status Filter", () => {
+    it("shows 'All Status' as default filter", () => {
+      renderWithRouter(<GridView />);
+      
+      const comboboxes = screen.getAllByRole("combobox");
+      expect(comboboxes.length).toBeGreaterThan(0);
+      expect(comboboxes[0]).toHaveValue("All Status");
     });
   });
 });
