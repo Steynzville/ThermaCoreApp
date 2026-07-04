@@ -8,7 +8,16 @@ import { deviceStatusService } from "../services/deviceStatusService";
 // Mock the DeviceStatusIndicator component since it's already tested elsewhere
 vi.mock("../components/DeviceStatusIndicator", () => ({
   default: ({ status, hasAlert, hasAlarm, isOnline, healthStatus, showText, size }) => (
-    <div data-testid="device-status-indicator" data-status={status} data-has-alert={hasAlert} data-has-alarm={hasAlarm} data-online={isOnline} data-health={healthStatus} data-show-text={showText} data-size={size}>
+    <div 
+      data-testid="device-status-indicator" 
+      data-status={status} 
+      data-has-alert={String(hasAlert)} 
+      data-has-alarm={String(hasAlarm)} 
+      data-online={String(isOnline)} 
+      data-health={healthStatus} 
+      data-show-text={showText ? "true" : "false"} 
+      data-size={size}
+    >
       {showText && `Status: ${status}`}
     </div>
   ),
@@ -196,8 +205,9 @@ describe("DeviceStatusDashboard", () => {
     const onlineLabels = screen.getAllByText("Online");
     expect(onlineLabels.length).toBeGreaterThan(0);
     
-    // Use specific queries for the counts
-    expect(screen.getByText("5")).toBeInTheDocument(); // Online count
+    // The online count should be 6 (TC001, TC003, TC004, TC005, TC006, TC007)
+    // TC004 is in maintenance but isOnline: true
+    expect(screen.getByText("6")).toBeInTheDocument();
 
     expect(screen.getByText("Offline")).toBeInTheDocument();
     expect(screen.getByText("1")).toBeInTheDocument(); // Offline: TC002
