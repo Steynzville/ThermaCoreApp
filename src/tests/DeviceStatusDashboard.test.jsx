@@ -96,10 +96,13 @@ vi.mock("lucide-react", () => ({
   Search: () => <span data-testid="icon-search">Search</span>,
 }));
 
-// Mock device status service - FIXED to always return an array
-const mockUnsubscribe = vi.fn();
+// Mock the cn utility
+vi.mock("@/lib/utils", () => ({
+  cn: (...inputs) => inputs.filter(Boolean).join(" "),
+}));
 
-// Define mock data outside the factory for consistency
+// Mock device status service - SIMPLER APPROACH
+// Define the mock data as a constant that can be referenced
 const mockDeviceStatuses = [
   {
     id: "TC001",
@@ -151,87 +154,43 @@ const mockDeviceStatuses = [
   },
 ];
 
-vi.mock("../services/deviceStatusService", () => {
-  // Re-define the mock data inside the factory to ensure it's available
-  const deviceStatuses = [
-    {
-      id: "TC001",
-      name: "Device 1",
-      status: "online",
-      isOnline: true,
-      hasAlert: false,
-      hasAlarm: false,
-      lastSeen: new Date(),
-      healthStatus: "healthy",
-      location: "Building A",
-      batteryLevel: 85.5,
-    },
-    {
-      id: "TC002",
-      name: "Device 2",
-      status: "offline",
-      isOnline: false,
-      hasAlert: true,
-      hasAlarm: false,
-      lastSeen: new Date(Date.now() - 600000),
-      healthStatus: "warning",
-      location: "Building B",
-      batteryLevel: 12.3,
-    },
-    {
-      id: "TC003",
-      name: "Device 3",
-      status: "online",
-      isOnline: true,
-      hasAlert: false,
-      hasAlarm: true,
-      lastSeen: new Date(),
-      healthStatus: "healthy",
-      location: "Building A",
-      batteryLevel: 67.8,
-    },
-    {
-      id: "TC004",
-      name: "Device 4",
-      status: "maintenance",
-      isOnline: false,
-      hasAlert: false,
-      hasAlarm: false,
-      lastSeen: new Date(Date.now() - 1200000),
-      healthStatus: "maintenance",
-      location: "Building C",
-      batteryLevel: 45.0,
-    },
-  ];
-
-  const mockUnsubscribe = vi.fn();
-
-  return {
-    deviceStatusService: {
-      // CRITICAL: Must return an array for .filter() to work
-      getAllDeviceStatuses: vi.fn().mockReturnValue(deviceStatuses),
-      addStatusChangeListener: vi.fn().mockReturnValue(mockUnsubscribe),
-      getDeviceStatus: vi.fn().mockResolvedValue({
-        success: true,
-        data: {
-          devices: [{ id: "device-1", name: "Device 1", status: "online" }],
-        },
-      }),
-      initialize: vi.fn().mockResolvedValue(undefined),
-      subscribe: vi.fn(),
-      unsubscribe: vi.fn(),
-    },
-  };
+// Create mock functions that we can reference
+const mockGetAllDeviceStatuses = vi.fn().mockReturnValue(mockDeviceStatuses);
+const mockAddStatusChangeListener = vi.fn().mockReturnValue(() => {});
+const mockGetDeviceStatus = vi.fn().mockResolvedValue({
+  success: true,
+  data: {
+    devices: [{ id: "device-1", name: "Device 1", status: "online" }],
+  },
 });
+const mockInitialize = vi.fn().mockResolvedValue(undefined);
+const mockSubscribe = vi.fn();
+const mockUnsubscribe = vi.fn();
 
-// Mock the cn utility
-vi.mock("@/lib/utils", () => ({
-  cn: (...inputs) => inputs.filter(Boolean).join(" "),
+vi.mock("../services/deviceStatusService", () => ({
+  deviceStatusService: {
+    getAllDeviceStatuses: mockGetAllDeviceStatuses,
+    addStatusChangeListener: mockAddStatusChangeListener,
+    getDeviceStatus: mockGetDeviceStatus,
+    initialize: mockInitialize,
+    subscribe: mockSubscribe,
+    unsubscribe: mockUnsubscribe,
+  },
 }));
 
 // Mock window methods
 beforeEach(() => {
   vi.clearAllMocks();
+  // Reset the mocks to their default return values
+  mockGetAllDeviceStatuses.mockReturnValue(mockDeviceStatuses);
+  mockAddStatusChangeListener.mockReturnValue(() => {});
+  mockGetDeviceStatus.mockResolvedValue({
+    success: true,
+    data: {
+      devices: [{ id: "device-1", name: "Device 1", status: "online" }],
+    },
+  });
+  mockInitialize.mockResolvedValue(undefined);
   
   // Mock ResizeObserver
   window.ResizeObserver = vi.fn().mockImplementation(() => ({
@@ -251,6 +210,9 @@ beforeEach(() => {
 describe("DeviceStatusDashboard - Smoke Tests", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Re-setup the mocks after clear
+    mockGetAllDeviceStatuses.mockReturnValue(mockDeviceStatuses);
+    mockAddStatusChangeListener.mockReturnValue(() => {});
   });
 
   it("should render without crashing", async () => {
