@@ -99,9 +99,61 @@ vi.mock("lucide-react", () => ({
 // Mock device status service - FIXED to always return an array
 const mockUnsubscribe = vi.fn();
 
+// Define mock data outside the factory for consistency
+const mockDeviceStatuses = [
+  {
+    id: "TC001",
+    name: "Device 1",
+    status: "online",
+    isOnline: true,
+    hasAlert: false,
+    hasAlarm: false,
+    lastSeen: new Date(),
+    healthStatus: "healthy",
+    location: "Building A",
+    batteryLevel: 85.5,
+  },
+  {
+    id: "TC002",
+    name: "Device 2",
+    status: "offline",
+    isOnline: false,
+    hasAlert: true,
+    hasAlarm: false,
+    lastSeen: new Date(Date.now() - 600000),
+    healthStatus: "warning",
+    location: "Building B",
+    batteryLevel: 12.3,
+  },
+  {
+    id: "TC003",
+    name: "Device 3",
+    status: "online",
+    isOnline: true,
+    hasAlert: false,
+    hasAlarm: true,
+    lastSeen: new Date(),
+    healthStatus: "healthy",
+    location: "Building A",
+    batteryLevel: 67.8,
+  },
+  {
+    id: "TC004",
+    name: "Device 4",
+    status: "maintenance",
+    isOnline: false,
+    hasAlert: false,
+    hasAlarm: false,
+    lastSeen: new Date(Date.now() - 1200000),
+    healthStatus: "maintenance",
+    location: "Building C",
+    batteryLevel: 45.0,
+  },
+];
+
 vi.mock("../services/deviceStatusService", () => {
-  // Define the mock data inside the factory function
-  const mockDeviceStatuses = [
+  // Re-define the mock data inside the factory to ensure it's available
+  const deviceStatuses = [
     {
       id: "TC001",
       name: "Device 1",
@@ -157,7 +209,7 @@ vi.mock("../services/deviceStatusService", () => {
   return {
     deviceStatusService: {
       // CRITICAL: Must return an array for .filter() to work
-      getAllDeviceStatuses: vi.fn().mockReturnValue(mockDeviceStatuses),
+      getAllDeviceStatuses: vi.fn().mockReturnValue(deviceStatuses),
       addStatusChangeListener: vi.fn().mockReturnValue(mockUnsubscribe),
       getDeviceStatus: vi.fn().mockResolvedValue({
         success: true,
