@@ -205,16 +205,24 @@ describe("DeviceStatusDashboard", () => {
     // Check online - the number 6 should be unique
     expect(screen.getByText("6")).toBeInTheDocument();
 
+    // For labels that appear multiple times (label + badge), use getAllByText
+    const offlineLabels = screen.getAllByText("Offline");
+    expect(offlineLabels.length).toBeGreaterThan(0);
+
     // For counts that appear multiple times, use getAllByText and check length
     const allOnes = screen.getAllByText("1");
     // There should be 4 ones: offline, alerts, alarms, maintenance
     expect(allOnes).toHaveLength(4);
 
-    // Verify the labels exist
-    expect(screen.getByText("Offline")).toBeInTheDocument();
-    expect(screen.getByText("Alerts")).toBeInTheDocument();
-    expect(screen.getByText("Alarms")).toBeInTheDocument();
-    expect(screen.getByText("Maintenance")).toBeInTheDocument();
+    // Verify the labels exist using getAllByText
+    const alertsLabels = screen.getAllByText("Alerts");
+    expect(alertsLabels.length).toBeGreaterThan(0);
+    
+    const alarmsLabels = screen.getAllByText("Alarms");
+    expect(alarmsLabels.length).toBeGreaterThan(0);
+    
+    const maintenanceLabels = screen.getAllByText("Maintenance");
+    expect(maintenanceLabels.length).toBeGreaterThan(0);
 
     // Verify we have the correct number of cards with "1"
     // Each "1" should be in a different card
