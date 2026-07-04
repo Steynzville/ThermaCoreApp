@@ -22,8 +22,7 @@ vi.mock("@/lib/utils", () => ({
   cn: (...inputs) => inputs.filter(Boolean).join(" "),
 }));
 
-// Mock Radix UI Select to avoid prototype errors
-// CRITICAL: Must include Icon, Viewport, ScrollUpButton, and ScrollDownButton exports
+// Mock Radix UI Select with complete exports including ItemIndicator
 vi.mock("@radix-ui/react-select", () => ({
   Root: ({ children, value, defaultValue, onValueChange, ...props }) => (
     <div data-testid="select-root" data-value={value || defaultValue} {...props}>
@@ -52,13 +51,11 @@ vi.mock("@radix-ui/react-select", () => ({
       {children}
     </div>
   ),
-  // CRITICAL: ScrollUpButton is used by SelectContent
   ScrollUpButton: ({ children, ...props }) => (
     <div data-testid="select-scroll-up" {...props}>
       {children || "▲"}
     </div>
   ),
-  // CRITICAL: ScrollDownButton is used by SelectContent
   ScrollDownButton: ({ children, ...props }) => (
     <div data-testid="select-scroll-down" {...props}>
       {children || "▼"}
@@ -73,6 +70,12 @@ vi.mock("@radix-ui/react-select", () => ({
     <option data-testid="select-item" value={value} {...props}>
       {children}
     </option>
+  ),
+  // CRITICAL: ItemIndicator is used by SelectItem component
+  ItemIndicator: ({ children, ...props }) => (
+    <span data-testid="select-item-indicator" {...props}>
+      {children || "✓"}
+    </span>
   ),
   Value: ({ children, placeholder, ...props }) => (
     <span data-testid="select-value" {...props}>
@@ -158,6 +161,35 @@ vi.mock("recharts", () => ({
   ),
 }));
 
+// Mock Tabs component to avoid Radix UI issues
+vi.mock("@/components/ui/tabs", () => ({
+  Tabs: ({ children, value, onValueChange, ...props }) => (
+    <div data-testid="tabs-root" data-value={value} {...props}>
+      {children}
+    </div>
+  ),
+  TabsList: ({ children, ...props }) => (
+    <div data-testid="tabs-list" {...props}>
+      {children}
+    </div>
+  ),
+  TabsTrigger: ({ children, value, ...props }) => (
+    <button 
+      data-testid="tabs-trigger" 
+      data-value={value}
+      onClick={() => {}} 
+      {...props}
+    >
+      {children}
+    </button>
+  ),
+  TabsContent: ({ children, value, ...props }) => (
+    <div data-testid="tabs-content" data-value={value} {...props}>
+      {children}
+    </div>
+  ),
+}));
+
 describe("MultiTimeframeTrendChart", () => {
   const mockMetrics = [
     {
@@ -230,10 +262,13 @@ describe("MultiTimeframeTrendChart", () => {
         <MultiTimeframeTrendChart data={mockData} metrics={mockMetrics} />,
       );
 
+      // Use getAllByText and check length is > 0
       const titleElements = screen.getAllByText("Trend Analysis");
       expect(titleElements.length).toBeGreaterThan(0);
+      
       const chartElements = screen.getAllByTestId("line-chart");
       expect(chartElements.length).toBeGreaterThan(0);
+      
       // Check that the spy was called with the right type
       expect(chartSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'line' }));
     });
