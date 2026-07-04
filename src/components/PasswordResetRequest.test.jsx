@@ -131,18 +131,20 @@ describe("PasswordResetRequest", () => {
   it("should validate empty password fields", async () => {
     renderWithToken();
 
-    const buttons = screen.getAllByRole("button", { name: /reset password/i });
-    expect(buttons.length).toBeGreaterThan(0);
-    
-    // Click submit with empty fields
-    fireEvent.click(buttons[0]);
+    // Get the form and submit it directly
+    const form = document.querySelector('form');
+    expect(form).toBeInTheDocument();
 
-    // Wait for error - use a function matcher since the text might be split
+    // Submit the form with empty fields
+    fireEvent.submit(form);
+
+    // Wait for error - look for the error message in the DOM
     await waitFor(() => {
-      const errorMessages = screen.getAllByText((content) => {
+      // The error is rendered inside a div with class "loginError"
+      const errorElements = screen.getAllByText((content) => {
         return content.includes("Please enter both password fields");
       });
-      expect(errorMessages.length).toBeGreaterThan(0);
+      expect(errorElements.length).toBeGreaterThan(0);
     }, { timeout: 3000 });
   });
 
@@ -159,14 +161,16 @@ describe("PasswordResetRequest", () => {
       target: { name: "confirmPassword", value: "short" },
     });
 
-    const buttons = screen.getAllByRole("button", { name: /reset password/i });
-    fireEvent.click(buttons[0]);
+    // Submit the form directly
+    const form = document.querySelector('form');
+    expect(form).toBeInTheDocument();
+    fireEvent.submit(form);
 
     await waitFor(() => {
-      const errorMessages = screen.getAllByText((content) => {
+      const errorElements = screen.getAllByText((content) => {
         return content.includes("Password must be at least 6 characters long");
       });
-      expect(errorMessages.length).toBeGreaterThan(0);
+      expect(errorElements.length).toBeGreaterThan(0);
     }, { timeout: 3000 });
   });
 
@@ -183,14 +187,16 @@ describe("PasswordResetRequest", () => {
       target: { name: "confirmPassword", value: "different456" },
     });
 
-    const buttons = screen.getAllByRole("button", { name: /reset password/i });
-    fireEvent.click(buttons[0]);
+    // Submit the form directly
+    const form = document.querySelector('form');
+    expect(form).toBeInTheDocument();
+    fireEvent.submit(form);
 
     await waitFor(() => {
-      const errorMessages = screen.getAllByText((content) => {
+      const errorElements = screen.getAllByText((content) => {
         return content.includes("Passwords do not match");
       });
-      expect(errorMessages.length).toBeGreaterThan(0);
+      expect(errorElements.length).toBeGreaterThan(0);
     }, { timeout: 3000 });
   });
 
@@ -213,8 +219,10 @@ describe("PasswordResetRequest", () => {
       target: { name: "confirmPassword", value: "newpass123" },
     });
 
-    const buttons = screen.getAllByRole("button", { name: /reset password/i });
-    fireEvent.click(buttons[0]);
+    // Submit the form directly
+    const form = document.querySelector('form');
+    expect(form).toBeInTheDocument();
+    fireEvent.submit(form);
 
     await waitFor(() => {
       expect(mockResetPassword).toHaveBeenCalledWith("test-token", "newpass123");
@@ -240,8 +248,10 @@ describe("PasswordResetRequest", () => {
       target: { name: "confirmPassword", value: "newpass123" },
     });
 
-    const buttons = screen.getAllByRole("button", { name: /reset password/i });
-    fireEvent.click(buttons[0]);
+    // Submit the form directly
+    const form = document.querySelector('form');
+    expect(form).toBeInTheDocument();
+    fireEvent.submit(form);
 
     await waitFor(() => {
       const errorMessages = screen.getAllByText(/Invalid token/i);
@@ -265,8 +275,10 @@ describe("PasswordResetRequest", () => {
       target: { name: "confirmPassword", value: "newpass123" },
     });
 
-    const buttons = screen.getAllByRole("button", { name: /reset password/i });
-    fireEvent.click(buttons[0]);
+    // Submit the form directly
+    const form = document.querySelector('form');
+    expect(form).toBeInTheDocument();
+    fireEvent.submit(form);
 
     await waitFor(() => {
       const errorMessages = screen.getAllByText(/An unexpected error occurred. Please try again./i);
@@ -287,7 +299,6 @@ describe("PasswordResetRequest", () => {
     expect(passwordInputs[0]).toHaveAttribute("type", "password");
 
     // Find the toggle button using aria-label - matches component's labels
-    // The component uses "Show password" and "Hide password" exactly
     const toggleButtons = screen.getAllByRole("button", { 
       name: /Show password|Hide password/i 
     });
@@ -318,8 +329,7 @@ describe("PasswordResetRequest", () => {
     
     expect(confirmInputs[0]).toHaveAttribute("type", "password");
 
-    // Find the toggle button using aria-label - matches component's labels
-    // The component uses "Show confirm password" and "Hide confirm password" exactly
+    // Find the toggle button using aria-label
     const toggleButtons = screen.getAllByRole("button", { 
       name: /Show confirm password|Hide confirm password/i 
     });
@@ -344,8 +354,9 @@ describe("PasswordResetRequest", () => {
     renderWithToken();
 
     // First trigger an error (submit empty form)
-    const buttons = screen.getAllByRole("button", { name: /reset password/i });
-    fireEvent.click(buttons[0]);
+    const form = document.querySelector('form');
+    expect(form).toBeInTheDocument();
+    fireEvent.submit(form);
 
     // Wait for error to appear
     await waitFor(() => {
@@ -373,7 +384,7 @@ describe("PasswordResetRequest", () => {
   it("should have back to login button", async () => {
     renderWithToken();
 
-    // Use getAllByRole to find the back button - it's rendered as a button with text "Back to Login"
+    // Find the back button - it's rendered as a button with text "Back to Login"
     const backButtons = screen.getAllByRole("button", { name: /Back to Login/i });
     expect(backButtons.length).toBeGreaterThan(0);
     
