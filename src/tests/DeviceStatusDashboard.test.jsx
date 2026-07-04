@@ -101,82 +101,84 @@ vi.mock("@/lib/utils", () => ({
   cn: (...inputs) => inputs.filter(Boolean).join(" "),
 }));
 
-// Mock device status service - ALL definitions inside the factory
-vi.mock("../services/deviceStatusService", () => {
-  // Define mock data inside the factory
-  const mockDeviceStatuses = [
-    {
-      id: "TC001",
-      name: "Device 1",
-      status: "online",
-      isOnline: true,
-      hasAlert: false,
-      hasAlarm: false,
-      lastSeen: new Date(),
-      healthStatus: "healthy",
-      location: "Building A",
-      batteryLevel: 85.5,
-    },
-    {
-      id: "TC002",
-      name: "Device 2",
-      status: "offline",
-      isOnline: false,
-      hasAlert: true,
-      hasAlarm: false,
-      lastSeen: new Date(Date.now() - 600000),
-      healthStatus: "warning",
-      location: "Building B",
-      batteryLevel: 12.3,
-    },
-    {
-      id: "TC003",
-      name: "Device 3",
-      status: "online",
-      isOnline: true,
-      hasAlert: false,
-      hasAlarm: true,
-      lastSeen: new Date(),
-      healthStatus: "healthy",
-      location: "Building A",
-      batteryLevel: 67.8,
-    },
-    {
-      id: "TC004",
-      name: "Device 4",
-      status: "maintenance",
-      isOnline: false,
-      hasAlert: false,
-      hasAlarm: false,
-      lastSeen: new Date(Date.now() - 1200000),
-      healthStatus: "maintenance",
-      location: "Building C",
-      batteryLevel: 45.0,
-    },
-  ];
+// Mock device status service - SIMPLER: Use a module-level mock
+// The component uses: import { deviceStatusService } from "../services/deviceStatusService";
+const mockDeviceStatuses = [
+  {
+    id: "TC001",
+    name: "Device 1",
+    status: "online",
+    isOnline: true,
+    hasAlert: false,
+    hasAlarm: false,
+    lastSeen: new Date(),
+    healthStatus: "healthy",
+    location: "Building A",
+    batteryLevel: 85.5,
+  },
+  {
+    id: "TC002",
+    name: "Device 2",
+    status: "offline",
+    isOnline: false,
+    hasAlert: true,
+    hasAlarm: false,
+    lastSeen: new Date(Date.now() - 600000),
+    healthStatus: "warning",
+    location: "Building B",
+    batteryLevel: 12.3,
+  },
+  {
+    id: "TC003",
+    name: "Device 3",
+    status: "online",
+    isOnline: true,
+    hasAlert: false,
+    hasAlarm: true,
+    lastSeen: new Date(),
+    healthStatus: "healthy",
+    location: "Building A",
+    batteryLevel: 67.8,
+  },
+  {
+    id: "TC004",
+    name: "Device 4",
+    status: "maintenance",
+    isOnline: false,
+    hasAlert: false,
+    hasAlarm: false,
+    lastSeen: new Date(Date.now() - 1200000),
+    healthStatus: "maintenance",
+    location: "Building C",
+    batteryLevel: 45.0,
+  },
+];
 
-  const mockUnsubscribe = vi.fn();
-
-  return {
-    deviceStatusService: {
-      getAllDeviceStatuses: vi.fn().mockReturnValue(mockDeviceStatuses),
-      addStatusChangeListener: vi.fn().mockReturnValue(mockUnsubscribe),
-      getDeviceStatus: vi.fn().mockResolvedValue({
-        success: true,
-        data: {
-          devices: [{ id: "device-1", name: "Device 1", status: "online" }],
-        },
-      }),
-      initialize: vi.fn().mockResolvedValue(undefined),
-      subscribe: vi.fn(),
-      unsubscribe: vi.fn(),
+// Create the mock module
+const mockDeviceStatusService = {
+  getAllDeviceStatuses: vi.fn(() => mockDeviceStatuses),
+  addStatusChangeListener: vi.fn(() => () => {}),
+  getDeviceStatus: vi.fn(() => Promise.resolve({
+    success: true,
+    data: {
+      devices: [{ id: "device-1", name: "Device 1", status: "online" }],
     },
-  };
-});
+  })),
+  initialize: vi.fn(() => Promise.resolve(undefined)),
+  subscribe: vi.fn(),
+  unsubscribe: vi.fn(),
+};
+
+vi.mock("../services/deviceStatusService", () => ({
+  deviceStatusService: mockDeviceStatusService,
+}));
 
 // Mock window methods
 beforeEach(() => {
   vi.clearAllMocks();
+  // Re-setup the mock to return the array
+  mockDeviceStatusService.getAllDeviceStatuses.mockReturnValue(mockDeviceStatuses);
+  mockDeviceStatusService.addStatusChangeListener.mockReturnValue(() => {});
   
   // Mock ResizeObserver
   window.ResizeObserver = vi.fn().mockImplementation(() => ({
@@ -196,6 +198,9 @@ beforeEach(() => {
 describe("DeviceStatusDashboard - Smoke Tests", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Re-setup the mock after clear
+    mockDeviceStatusService.getAllDeviceStatuses.mockReturnValue(mockDeviceStatuses);
+    mockDeviceStatusService.addStatusChangeListener.mockReturnValue(() => {});
   });
 
   it("should render without crashing", async () => {
