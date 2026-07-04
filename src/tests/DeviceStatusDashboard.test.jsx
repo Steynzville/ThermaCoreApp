@@ -96,78 +96,81 @@ vi.mock("lucide-react", () => ({
   Search: () => <span data-testid="icon-search">Search</span>,
 }));
 
-// Mock device status service with proper data structure
-// CRITICAL: The component expects getAllDeviceStatuses to return an array
-// and addStatusChangeListener to return an unsubscribe function
-const mockDeviceStatuses = [
-  {
-    id: "TC001",
-    name: "Device 1",
-    status: "online",
-    isOnline: true,
-    hasAlert: false,
-    hasAlarm: false,
-    lastSeen: new Date(),
-    healthStatus: "healthy",
-    location: "Building A",
-    batteryLevel: 85.5,
-  },
-  {
-    id: "TC002",
-    name: "Device 2",
-    status: "offline",
-    isOnline: false,
-    hasAlert: true,
-    hasAlarm: false,
-    lastSeen: new Date(Date.now() - 600000),
-    healthStatus: "warning",
-    location: "Building B",
-    batteryLevel: 12.3,
-  },
-  {
-    id: "TC003",
-    name: "Device 3",
-    status: "online",
-    isOnline: true,
-    hasAlert: false,
-    hasAlarm: true,
-    lastSeen: new Date(),
-    healthStatus: "healthy",
-    location: "Building A",
-    batteryLevel: 67.8,
-  },
-  {
-    id: "TC004",
-    name: "Device 4",
-    status: "maintenance",
-    isOnline: false,
-    hasAlert: false,
-    hasAlarm: false,
-    lastSeen: new Date(Date.now() - 1200000),
-    healthStatus: "maintenance",
-    location: "Building C",
-    batteryLevel: 45.0,
-  },
-];
-
+// Mock device status service - define the mock data INSIDE the factory function
+// to avoid hoisting issues
 const mockUnsubscribe = vi.fn();
 
-vi.mock("../services/deviceStatusService", () => ({
-  deviceStatusService: {
-    // CRITICAL: This must return an array for the .filter() call to work
-    getAllDeviceStatuses: vi.fn().mockReturnValue(mockDeviceStatuses),
-    addStatusChangeListener: vi.fn().mockReturnValue(mockUnsubscribe),
-    getDeviceStatus: vi.fn().mockResolvedValue({
-      success: true,
-      data: {
-        devices: [{ id: "device-1", name: "Device 1", status: "online" }],
-      },
-    }),
-    initialize: vi.fn().mockResolvedValue(undefined),
-    subscribe: vi.fn(),
-    unsubscribe: vi.fn(),
-  },
-}));
+vi.mock("../services/deviceStatusService", () => {
+  // Define the mock data inside the factory function
+  const mockDeviceStatuses = [
+    {
+      id: "TC001",
+      name: "Device 1",
+      status: "online",
+      isOnline: true,
+      hasAlert: false,
+      hasAlarm: false,
+      lastSeen: new Date(),
+      healthStatus: "healthy",
+      location: "Building A",
+      batteryLevel: 85.5,
+    },
+    {
+      id: "TC002",
+      name: "Device 2",
+      status: "offline",
+      isOnline: false,
+      hasAlert: true,
+      hasAlarm: false,
+      lastSeen: new Date(Date.now() - 600000),
+      healthStatus: "warning",
+      location: "Building B",
+      batteryLevel: 12.3,
+    },
+    {
+      id: "TC003",
+      name: "Device 3",
+      status: "online",
+      isOnline: true,
+      hasAlert: false,
+      hasAlarm: true,
+      lastSeen: new Date(),
+      healthStatus: "healthy",
+      location: "Building A",
+      batteryLevel: 67.8,
+    },
+    {
+      id: "TC004",
+      name: "Device 4",
+      status: "maintenance",
+      isOnline: false,
+      hasAlert: false,
+      hasAlarm: false,
+      lastSeen: new Date(Date.now() - 1200000),
+      healthStatus: "maintenance",
+      location: "Building C",
+      batteryLevel: 45.0,
+    },
+  ];
+
+  const mockUnsubscribe = vi.fn();
+
+  return {
+    deviceStatusService: {
+      getAllDeviceStatuses: vi.fn().mockReturnValue(mockDeviceStatuses),
+      addStatusChangeListener: vi.fn().mockReturnValue(mockUnsubscribe),
+      getDeviceStatus: vi.fn().mockResolvedValue({
+        success: true,
+        data: {
+          devices: [{ id: "device-1", name: "Device 1", status: "online" }],
+        },
+      }),
+      initialize: vi.fn().mockResolvedValue(undefined),
+      subscribe: vi.fn(),
+      unsubscribe: vi.fn(),
+    },
+  };
+});
 
 // Mock the cn utility
 vi.mock("@/lib/utils", () => ({
@@ -176,6 +179,8 @@ vi.mock("@/lib/utils", () => ({
 
 // Mock window methods
 beforeEach(() => {
+  vi.clearAllMocks();
+  
   // Mock ResizeObserver
   window.ResizeObserver = vi.fn().mockImplementation(() => ({
     observe: vi.fn(),
