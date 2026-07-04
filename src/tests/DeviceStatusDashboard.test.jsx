@@ -97,61 +97,66 @@ vi.mock("lucide-react", () => ({
 }));
 
 // Mock device status service with proper data structure
-// CRITICAL: The component expects isOnline (boolean) and lastSeen (Date object)
+// CRITICAL: The component expects getAllDeviceStatuses to return an array
+// and addStatusChangeListener to return an unsubscribe function
+const mockDeviceStatuses = [
+  {
+    id: "TC001",
+    name: "Device 1",
+    status: "online",
+    isOnline: true,
+    hasAlert: false,
+    hasAlarm: false,
+    lastSeen: new Date(),
+    healthStatus: "healthy",
+    location: "Building A",
+    batteryLevel: 85.5,
+  },
+  {
+    id: "TC002",
+    name: "Device 2",
+    status: "offline",
+    isOnline: false,
+    hasAlert: true,
+    hasAlarm: false,
+    lastSeen: new Date(Date.now() - 600000),
+    healthStatus: "warning",
+    location: "Building B",
+    batteryLevel: 12.3,
+  },
+  {
+    id: "TC003",
+    name: "Device 3",
+    status: "online",
+    isOnline: true,
+    hasAlert: false,
+    hasAlarm: true,
+    lastSeen: new Date(),
+    healthStatus: "healthy",
+    location: "Building A",
+    batteryLevel: 67.8,
+  },
+  {
+    id: "TC004",
+    name: "Device 4",
+    status: "maintenance",
+    isOnline: false,
+    hasAlert: false,
+    hasAlarm: false,
+    lastSeen: new Date(Date.now() - 1200000),
+    healthStatus: "maintenance",
+    location: "Building C",
+    batteryLevel: 45.0,
+  },
+];
+
+const mockUnsubscribe = vi.fn();
+
 vi.mock("../services/deviceStatusService", () => ({
   deviceStatusService: {
-    // The component calls getAllDeviceStatuses() which should return an array
-    getAllDeviceStatuses: vi.fn().mockReturnValue([
-      {
-        id: "TC001",
-        name: "Device 1",
-        status: "online",
-        isOnline: true,
-        hasAlert: false,
-        hasAlarm: false,
-        lastSeen: new Date(),
-        healthStatus: "healthy",
-        location: "Building A",
-        batteryLevel: 85.5,
-      },
-      {
-        id: "TC002",
-        name: "Device 2",
-        status: "offline",
-        isOnline: false,
-        hasAlert: true,
-        hasAlarm: false,
-        lastSeen: new Date(Date.now() - 600000),
-        healthStatus: "warning",
-        location: "Building B",
-        batteryLevel: 12.3,
-      },
-      {
-        id: "TC003",
-        name: "Device 3",
-        status: "online",
-        isOnline: true,
-        hasAlert: false,
-        hasAlarm: true,
-        lastSeen: new Date(),
-        healthStatus: "healthy",
-        location: "Building A",
-        batteryLevel: 67.8,
-      },
-      {
-        id: "TC004",
-        name: "Device 4",
-        status: "maintenance",
-        isOnline: false,
-        hasAlert: false,
-        hasAlarm: false,
-        lastSeen: new Date(Date.now() - 1200000),
-        healthStatus: "maintenance",
-        location: "Building C",
-        batteryLevel: 45.0,
-      },
-    ]),
-    addStatusChangeListener: vi.fn().mockReturnValue(vi.fn()), // Returns unsubscribe function
+    // CRITICAL: This must return an array for the .filter() call to work
+    getAllDeviceStatuses: vi.fn().mockReturnValue(mockDeviceStatuses),
+    addStatusChangeListener: vi.fn().mockReturnValue(mockUnsubscribe),
     getDeviceStatus: vi.fn().mockResolvedValue({
       success: true,
       data: {
