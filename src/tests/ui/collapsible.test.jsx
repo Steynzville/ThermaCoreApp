@@ -13,6 +13,7 @@ vi.mock("@/lib/utils", () => ({
 }));
 
 // Mock the entire Radix UI collapsible module
+// CRITICAL: The exports must match what the component imports
 vi.mock("@radix-ui/react-collapsible", () => ({
   Root: ({ children, className, defaultOpen, open, ...props }) => (
     <div 
@@ -25,7 +26,9 @@ vi.mock("@radix-ui/react-collapsible", () => ({
       {children}
     </div>
   ),
-  Trigger: ({ children, className, asChild, ...props }) => (
+  // IMPORTANT: The component imports CollapsibleTrigger and CollapsibleContent
+  // So the mock must export these exact names
+  CollapsibleTrigger: ({ children, className, asChild, ...props }) => (
     <button
       data-slot="collapsible-trigger"
       className={className}
@@ -35,7 +38,7 @@ vi.mock("@radix-ui/react-collapsible", () => ({
       {children}
     </button>
   ),
-  Content: ({ children, className, ...props }) => (
+  CollapsibleContent: ({ children, className, ...props }) => (
     <div
       data-slot="collapsible-content"
       className={className}
