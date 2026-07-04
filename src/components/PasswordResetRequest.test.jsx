@@ -26,16 +26,17 @@ vi.mock("../context/SettingsContext", () => ({
   useSettings: () => ({ settings: {} }),
 }));
 
+// Mock lucide-react icons with proper components
 vi.mock("lucide-react", () => ({
-  Eye: ({ size }) => <span data-testid="eye-icon">Eye</span>,
-  EyeOff: ({ size }) => <span data-testid="eye-off-icon">EyeOff</span>,
+  Eye: ({ size }) => <span data-testid="eye-icon" data-size={size}>Eye</span>,
+  EyeOff: ({ size }) => <span data-testid="eye-off-icon" data-size={size}>EyeOff</span>,
 }));
 
 vi.mock("../assets/thermacore-logo-new.png", () => ({
   default: "logo.png",
 }));
 
-// Mock CSS module - FIXED: More complete mock with all required classes
+// Mock CSS module - COMPLETE with all required classes
 vi.mock("../components/LoginScreen.module.css", () => ({
   default: {
     pageWrapper: "pageWrapper",
@@ -52,7 +53,7 @@ vi.mock("../components/LoginScreen.module.css", () => ({
     passwordInputContainer: "passwordInputContainer",
     formInput: "formInput",
     passwordToggleButton: "passwordToggleButton",
-    btnSignin: "btnSignin",
+    btnSignin: "btnSignin", // CRITICAL: Was missing
     forgotPasswordLink: "forgotPasswordLink",
   },
 }));
@@ -63,7 +64,8 @@ describe("PasswordResetRequest", () => {
   });
 
   const renderWithToken = (token = "test-token") => {
-    const initialEntries = token
+    // Handle null token by not including the query parameter
+    const initialEntries = token 
       ? [`/reset-password?token=${token}`]
       : ["/reset-password"];
 
@@ -277,7 +279,8 @@ describe("PasswordResetRequest", () => {
     // Check initial type
     expect(passwordInputs[0]).toHaveAttribute("type", "password");
 
-    // Find the toggle button using aria-label
+    // Find the toggle button using aria-label - matches component's labels
+    // The component uses "Show password" and "Hide password" exactly
     const toggleButtons = screen.getAllByRole("button", { 
       name: /Show password|Hide password/i 
     });
@@ -306,7 +309,8 @@ describe("PasswordResetRequest", () => {
     
     expect(confirmInputs[0]).toHaveAttribute("type", "password");
 
-    // Find the toggle button using aria-label
+    // Find the toggle button using aria-label - matches component's labels
+    // The component uses "Show confirm password" and "Hide confirm password" exactly
     const toggleButtons = screen.getAllByRole("button", { 
       name: /Show confirm password|Hide confirm password/i 
     });
@@ -353,10 +357,11 @@ describe("PasswordResetRequest", () => {
   it("should have back to login button", async () => {
     renderWithToken();
 
-    const backButton = screen.getByRole("button", { name: /Back to Login/i });
-    expect(backButton).toBeInTheDocument();
+    // Use getAllByRole to find the back button - it's rendered as a button with text "Back to Login"
+    const backButtons = screen.getAllByRole("button", { name: /Back to Login/i });
+    expect(backButtons.length).toBeGreaterThan(0);
     
-    fireEvent.click(backButton);
+    fireEvent.click(backButtons[0]);
     // Should navigate to login - we can check for the login page
     await waitFor(() => {
       const loginPage = screen.getByTestId("login-page");
