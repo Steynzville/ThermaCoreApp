@@ -23,23 +23,64 @@ vi.mock("../utils/permissions", () => ({
 }));
 
 // Mock the UI components to simplify testing
-vi.mock("../components/ui/alert-dialog", () => ({
-  AlertDialog: ({ children }) => <div data-testid="alert-dialog">{children}</div>,
-  AlertDialogTrigger: ({ children }) => <div data-testid="alert-dialog-trigger">{children}</div>,
-  AlertDialogContent: ({ children }) => <div data-testid="alert-dialog-content">{children}</div>,
-  AlertDialogDescription: ({ children }) => <div data-testid="alert-dialog-description">{children}</div>,
-  AlertDialogFooter: ({ children }) => <div data-testid="alert-dialog-footer">{children}</div>,
-  AlertDialogHeader: ({ children }) => <div data-testid="alert-dialog-header">{children}</div>,
-  AlertDialogTitle: ({ children }) => <div data-testid="alert-dialog-title">{children}</div>,
-  AlertDialogAction: ({ children, onClick }) => (
-    <button data-testid="alert-dialog-action" onClick={onClick}>
-      {children}
-    </button>
-  ),
-  AlertDialogCancel: ({ children }) => (
-    <button data-testid="alert-dialog-cancel">{children}</button>
-  ),
-}));
+vi.mock("../components/ui/alert-dialog", () => {
+  // Track dialog open state
+  let isOpen = false;
+  
+  return {
+    AlertDialog: ({ children, open, ...props }) => {
+      // Use the open prop if provided, otherwise use internal state
+      const shouldRender = open !== undefined ? open : isOpen;
+      return (
+        <div data-testid="alert-dialog" data-open={shouldRender} {...props}>
+          {children}
+          {shouldRender && (
+            <div data-testid="alert-dialog-content">
+              <div data-testid="alert-dialog-header">
+                <div data-testid="alert-dialog-title">Are you absolutely sure?</div>
+              </div>
+              <div data-testid="alert-dialog-description">
+                This action will turn off the machine power. This could have significant impact on unit operations.
+              </div>
+              <div data-testid="alert-dialog-footer">
+                <button data-testid="alert-dialog-cancel">Cancel</button>
+                <button data-testid="alert-dialog-action" onClick={() => {}}>Continue</button>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    },
+    AlertDialogTrigger: ({ children, ...props }) => (
+      <div data-testid="alert-dialog-trigger" {...props}>
+        {children}
+      </div>
+    ),
+    AlertDialogContent: ({ children, ...props }) => (
+      <div data-testid="alert-dialog-content" {...props}>{children}</div>
+    ),
+    AlertDialogDescription: ({ children, ...props }) => (
+      <div data-testid="alert-dialog-description" {...props}>{children}</div>
+    ),
+    AlertDialogFooter: ({ children, ...props }) => (
+      <div data-testid="alert-dialog-footer" {...props}>{children}</div>
+    ),
+    AlertDialogHeader: ({ children, ...props }) => (
+      <div data-testid="alert-dialog-header" {...props}>{children}</div>
+    ),
+    AlertDialogTitle: ({ children, ...props }) => (
+      <div data-testid="alert-dialog-title" {...props}>{children}</div>
+    ),
+    AlertDialogAction: ({ children, onClick, ...props }) => (
+      <button data-testid="alert-dialog-action" onClick={onClick} {...props}>
+        {children}
+      </button>
+    ),
+    AlertDialogCancel: ({ children, ...props }) => (
+      <button data-testid="alert-dialog-cancel" {...props}>{children}</button>
+    ),
+  };
+});
 
 vi.mock("../components/ui/card", () => ({
   Card: ({ children, className }) => (
@@ -191,7 +232,6 @@ describe("RemoteControl Component", () => {
         </TestWrapper>,
       );
 
-      // Look for the heading
       const headingElements = screen.getAllByText(/Unit Not Found/i);
       expect(headingElements.length).toBeGreaterThan(0);
     });
@@ -232,15 +272,12 @@ describe("RemoteControl Component", () => {
       // First switch should be Machine Power
       expect(switches.length).toBeGreaterThan(0);
       
-      // Click the switch to trigger the AlertDialog
+      // Click the switch
       fireEvent.click(switches[0]);
       
-      // The AlertDialogTrigger wraps the Switch, so clicking it should show the dialog
-      // Look for the alert dialog content
-      await waitFor(() => {
-        const dialogElements = screen.getAllByTestId("alert-dialog-content");
-        expect(dialogElements.length).toBeGreaterThan(0);
-      });
+      // Wait for the AlertDialog content to appear using findByTestId
+      const dialogContent = await screen.findByTestId("alert-dialog-content");
+      expect(dialogContent).toBeInTheDocument();
     });
 
     it("should allow admin to toggle water production", () => {
@@ -324,14 +361,11 @@ describe("RemoteControl Component", () => {
         </TestWrapper>,
       );
 
-      // Find the video feed toggle button
       const videoButton = screen.getByTestId("button-video-feed-toggle");
       expect(videoButton).toBeInTheDocument();
       
-      // Click to start video feed
       fireEvent.click(videoButton);
       
-      // Should show the video feed active state
       const activeElements = screen.getAllByText(/Live Feed Active/i);
       expect(activeElements.length).toBeGreaterThan(0);
     });
@@ -347,12 +381,10 @@ describe("RemoteControl Component", () => {
         </TestWrapper>,
       );
 
-      // The button is rendered as part of the Unit Not Found view
       const backButton = screen.getByRole("button", { name: /Back to Unit Details/i });
       expect(backButton).toBeInTheDocument();
       
       fireEvent.click(backButton);
-      // When unit is null and propUnit is not provided, it navigates with -1
       expect(mockNavigate).toHaveBeenCalledWith(-1);
     });
   });
@@ -368,7 +400,6 @@ describe("RemoteControl Component", () => {
       const select = screen.getByTestId("select-camera");
       expect(select).toBeInTheDocument();
       
-      // Should have camera options
       const options = select.querySelectorAll("option");
       expect(options.length).toBeGreaterThan(0);
     });
@@ -409,12 +440,10 @@ describe("RemoteControl Component", () => {
 
       const videoButton = screen.getByTestId("button-video-feed-toggle");
       
-      // Start feed
       fireEvent.click(videoButton);
       let activeElements = screen.getAllByText(/Live Feed Active/i);
       expect(activeElements.length).toBeGreaterThan(0);
       
-      // Stop feed
       fireEvent.click(videoButton);
       const inactiveElements = screen.getAllByText(/Video Feed Inactive/i);
       expect(inactiveElements.length).toBeGreaterThan(0);
