@@ -116,7 +116,7 @@ describe("SettingsContext", () => {
         result.current.toggleSound();
       });
 
-      // Use a simple setTimeout to allow the effect to run
+      // Wait for the effect to run
       await new Promise(resolve => setTimeout(resolve, 100));
 
       const saved = JSON.parse(
