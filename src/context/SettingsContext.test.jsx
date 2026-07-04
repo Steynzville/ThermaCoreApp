@@ -54,7 +54,7 @@ describe("SettingsContext", () => {
       expect(result.current.settings.temperatureUnit).toBe("celsius");
     });
 
-    it("should load settings from localStorage on mount", async () => {
+    it("should load settings from localStorage on mount", () => {
       const savedSettings = {
         soundEnabled: false,
         volume: 0.5,
@@ -69,12 +69,10 @@ describe("SettingsContext", () => {
         wrapper: SettingsProvider,
       });
 
-      // Wait for the initial state to be computed
-      await waitFor(() => {
-        expect(result.current.settings.soundEnabled).toBe(false);
-        expect(result.current.settings.volume).toBe(0.5);
-        expect(result.current.settings.temperatureUnit).toBe("fahrenheit");
-      });
+      // The settings should be loaded synchronously from the initial state
+      expect(result.current.settings.soundEnabled).toBe(false);
+      expect(result.current.settings.volume).toBe(0.5);
+      expect(result.current.settings.temperatureUnit).toBe("fahrenheit");
     });
 
     it("should handle invalid JSON in localStorage gracefully", () => {
@@ -114,18 +112,17 @@ describe("SettingsContext", () => {
         wrapper: SettingsProvider,
       });
 
-      // Toggle sound
       act(() => {
         result.current.toggleSound();
       });
 
-      // Wait for the useEffect to run and persist to localStorage
-      await waitFor(() => {
-        const saved = JSON.parse(
-          localStorageMock.getItem("thermacore-settings") || "{}",
-        );
-        expect(saved.soundEnabled).toBe(false);
-      });
+      // Use a simple setTimeout to allow the effect to run
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const saved = JSON.parse(
+        localStorageMock.getItem("thermacore-settings") || "{}",
+      );
+      expect(saved.soundEnabled).toBe(false);
     });
   });
 
@@ -151,13 +148,12 @@ describe("SettingsContext", () => {
         result.current.setVolume(0.8);
       });
 
-      // Wait for the useEffect to run and persist to localStorage
-      await waitFor(() => {
-        const saved = JSON.parse(
-          localStorageMock.getItem("thermacore-settings") || "{}",
-        );
-        expect(saved.volume).toBe(0.8);
-      });
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const saved = JSON.parse(
+        localStorageMock.getItem("thermacore-settings") || "{}",
+      );
+      expect(saved.volume).toBe(0.8);
     });
 
     it("should allow any volume value (no clamping)", () => {
@@ -213,13 +209,12 @@ describe("SettingsContext", () => {
         result.current.setTemperatureUnit("fahrenheit");
       });
 
-      // Wait for the useEffect to run and persist to localStorage
-      await waitFor(() => {
-        const saved = JSON.parse(
-          localStorageMock.getItem("thermacore-settings") || "{}",
-        );
-        expect(saved.temperatureUnit).toBe("fahrenheit");
-      });
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const saved = JSON.parse(
+        localStorageMock.getItem("thermacore-settings") || "{}",
+      );
+      expect(saved.temperatureUnit).toBe("fahrenheit");
     });
   });
 
@@ -243,7 +238,6 @@ describe("SettingsContext", () => {
         wrapper: SettingsProvider,
       });
 
-      // Use act for each update or batch them
       act(() => {
         result.current.toggleSound();
         result.current.setVolume(0.5);
@@ -266,15 +260,14 @@ describe("SettingsContext", () => {
         result.current.setTemperatureUnit("fahrenheit");
       });
 
-      // Wait for the useEffect to run and persist to localStorage
-      await waitFor(() => {
-        const saved = JSON.parse(
-          localStorageMock.getItem("thermacore-settings") || "{}",
-        );
-        expect(saved.soundEnabled).toBe(false);
-        expect(saved.volume).toBe(0.6);
-        expect(saved.temperatureUnit).toBe("fahrenheit");
-      });
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const saved = JSON.parse(
+        localStorageMock.getItem("thermacore-settings") || "{}",
+      );
+      expect(saved.soundEnabled).toBe(false);
+      expect(saved.volume).toBe(0.6);
+      expect(saved.temperatureUnit).toBe("fahrenheit");
     });
   });
 });
