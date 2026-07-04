@@ -8,66 +8,59 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import DeviceStatusDashboard from "../components/DeviceStatusDashboard";
 
-// CRITICAL: Define mocks inside vi.hoisted to avoid hoisting issues
-const mocks = vi.hoisted(() => {
-  const mockDeviceStatuses = [
-    {
-      id: "TC001",
-      name: "Device 1",
-      status: "online",
-      isOnline: true,
-      hasAlert: false,
-      hasAlarm: false,
-      lastSeen: new Date(),
-      healthStatus: "healthy",
-      location: "Building A",
-      batteryLevel: 85.5,
-    },
-    {
-      id: "TC002",
-      name: "Device 2",
-      status: "offline",
-      isOnline: false,
-      hasAlert: true,
-      hasAlarm: false,
-      lastSeen: new Date(Date.now() - 600000),
-      healthStatus: "warning",
-      location: "Building B",
-      batteryLevel: 12.3,
-    },
-    {
-      id: "TC003",
-      name: "Device 3",
-      status: "online",
-      isOnline: true,
-      hasAlert: false,
-      hasAlarm: true,
-      lastSeen: new Date(),
-      healthStatus: "healthy",
-      location: "Building A",
-      batteryLevel: 67.8,
-    },
-    {
-      id: "TC004",
-      name: "Device 4",
-      status: "maintenance",
-      isOnline: false,
-      hasAlert: false,
-      hasAlarm: false,
-      lastSeen: new Date(Date.now() - 1200000),
-      healthStatus: "maintenance",
-      location: "Building C",
-      batteryLevel: 45.0,
-    },
-  ];
+// Define mock data at the top level (before vi.mock)
+const mockDeviceStatuses = [
+  {
+    id: "TC001",
+    name: "Device 1",
+    status: "online",
+    isOnline: true,
+    hasAlert: false,
+    hasAlarm: false,
+    lastSeen: new Date(),
+    healthStatus: "healthy",
+    location: "Building A",
+    batteryLevel: 85.5,
+  },
+  {
+    id: "TC002",
+    name: "Device 2",
+    status: "offline",
+    isOnline: false,
+    hasAlert: true,
+    hasAlarm: false,
+    lastSeen: new Date(Date.now() - 600000),
+    healthStatus: "warning",
+    location: "Building B",
+    batteryLevel: 12.3,
+  },
+  {
+    id: "TC003",
+    name: "Device 3",
+    status: "online",
+    isOnline: true,
+    hasAlert: false,
+    hasAlarm: true,
+    lastSeen: new Date(),
+    healthStatus: "healthy",
+    location: "Building A",
+    batteryLevel: 67.8,
+  },
+  {
+    id: "TC004",
+    name: "Device 4",
+    status: "maintenance",
+    isOnline: false,
+    hasAlert: false,
+    hasAlarm: false,
+    lastSeen: new Date(Date.now() - 1200000),
+    healthStatus: "maintenance",
+    location: "Building C",
+    batteryLevel: 45.0,
+  },
+];
 
-  const mockUnsubscribe = vi.fn();
-
-  return {
-    mockDeviceStatuses,
-    mockUnsubscribe,
-  };
-});
+const mockUnsubscribe = vi.fn();
 
 // Mock auth context
 vi.mock("../context/AuthContext", () => ({
@@ -158,74 +151,67 @@ vi.mock("lucide-react", () => ({
 }));
 
 // Mock device status service with proper data structure
-// CRITICAL: Use the hoisted mocks inside the factory
+// CRITICAL: Use the top-level mockDeviceStatuses and mockUnsubscribe
 vi.mock("../services/deviceStatusService", () => {
-  // Access the hoisted mocks
-  const { mockDeviceStatuses, mockUnsubscribe } = vi.hoisted(() => {
-    const mockDeviceStatuses = [
-      {
-        id: "TC001",
-        name: "Device 1",
-        status: "online",
-        isOnline: true,
-        hasAlert: false,
-        hasAlarm: false,
-        lastSeen: new Date(),
-        healthStatus: "healthy",
-        location: "Building A",
-        batteryLevel: 85.5,
-      },
-      {
-        id: "TC002",
-        name: "Device 2",
-        status: "offline",
-        isOnline: false,
-        hasAlert: true,
-        hasAlarm: false,
-        lastSeen: new Date(Date.now() - 600000),
-        healthStatus: "warning",
-        location: "Building B",
-        batteryLevel: 12.3,
-      },
-      {
-        id: "TC003",
-        name: "Device 3",
-        status: "online",
-        isOnline: true,
-        hasAlert: false,
-        hasAlarm: true,
-        lastSeen: new Date(),
-        healthStatus: "healthy",
-        location: "Building A",
-        batteryLevel: 67.8,
-      },
-      {
-        id: "TC004",
-        name: "Device 4",
-        status: "maintenance",
-        isOnline: false,
-        hasAlert: false,
-        hasAlarm: false,
-        lastSeen: new Date(Date.now() - 1200000),
-        healthStatus: "maintenance",
-        location: "Building C",
-        batteryLevel: 45.0,
-      },
-    ];
+  // Create local copies of the mock data since we can't reference outside variables
+  const devices = [
+    {
+      id: "TC001",
+      name: "Device 1",
+      status: "online",
+      isOnline: true,
+      hasAlert: false,
+      hasAlarm: false,
+      lastSeen: new Date(),
+      healthStatus: "healthy",
+      location: "Building A",
+      batteryLevel: 85.5,
+    },
+    {
+      id: "TC002",
+      name: "Device 2",
+      status: "offline",
+      isOnline: false,
+      hasAlert: true,
+      hasAlarm: false,
+      lastSeen: new Date(Date.now() - 600000),
+      healthStatus: "warning",
+      location: "Building B",
+      batteryLevel: 12.3,
+    },
+    {
+      id: "TC003",
+      name: "Device 3",
+      status: "online",
+      isOnline: true,
+      hasAlert: false,
+      hasAlarm: true,
+      lastSeen: new Date(),
+      healthStatus: "healthy",
+      location: "Building A",
+      batteryLevel: 67.8,
+    },
+    {
+      id: "TC004",
+      name: "Device 4",
+      status: "maintenance",
+      isOnline: false,
+      hasAlert: false,
+      hasAlarm: false,
+      lastSeen: new Date(Date.now() - 1200000),
+      healthStatus: "maintenance",
+      location: "Building C",
+      batteryLevel: 45.0,
+    },
+  ];
 
-    const mockUnsubscribe = vi.fn();
-
-    return {
-      mockDeviceStatuses,
-      mockUnsubscribe,
-    };
-  });
+  const unsubscribe = vi.fn();
 
   return {
     deviceStatusService: {
       // CRITICAL: This must return an array for the .filter() call to work
-      getAllDeviceStatuses: vi.fn().mockReturnValue(mockDeviceStatuses),
-      addStatusChangeListener: vi.fn().mockReturnValue(mockUnsubscribe),
+      getAllDeviceStatuses: vi.fn().mockReturnValue(devices),
+      addStatusChangeListener: vi.fn().mockReturnValue(unsubscribe),
       getDeviceStatus: vi.fn().mockResolvedValue({
         success: true,
         data: {
