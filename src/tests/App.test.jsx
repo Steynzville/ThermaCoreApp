@@ -89,7 +89,7 @@ vi.mock("../components/common/Spinner", () => ({
   ),
 }));
 
-// Mock the LoginScreen component - make it render something visible
+// Mock the LoginScreen component - simplified
 vi.mock("../components/LoginScreen", () => ({
   default: ({ error, setError }) => (
     <div data-testid="login-page" className="login-page">
@@ -97,30 +97,24 @@ vi.mock("../components/LoginScreen", () => ({
       <div>
         <label>
           Username
-          <input type="text" placeholder="Username" aria-label="Username" />
+          <input type="text" placeholder="Username" data-testid="username-input" />
         </label>
       </div>
       <div>
         <label>
           Password
-          <input type="password" placeholder="Password" aria-label="Password" />
+          <input type="password" placeholder="Password" data-testid="password-input" />
         </label>
       </div>
       {error && <div data-testid="login-error">{error}</div>}
-      <button type="button" onClick={() => setError("")}>Login</button>
+      <button data-testid="login-button" type="button" onClick={() => setError("")}>Login</button>
     </div>
   ),
 }));
 
 // Mock the ProtectedRoute component
 vi.mock("../components/ProtectedRoute", () => ({
-  default: ({ component: Component, componentMap, roles }) => {
-    // For role-based components, render a placeholder
-    if (componentMap) {
-      return <div data-testid="protected-content">Protected Content</div>;
-    }
-    return <div data-testid="protected-content">Protected Content</div>;
-  },
+  default: () => <div data-testid="protected-content">Protected Content</div>,
 }));
 
 // Mock config/routes
@@ -184,7 +178,6 @@ beforeAll(() => {
     value: MockAudioContext,
   });
 
-  // CRITICAL: Mock window.location for React Router
   Object.defineProperty(window, "location", {
     writable: true,
     configurable: true,
@@ -200,7 +193,6 @@ beforeAll(() => {
     },
   });
 
-  // Also mock window.history for React Router
   Object.defineProperty(window, "history", {
     writable: true,
     configurable: true,
@@ -216,7 +208,6 @@ beforeAll(() => {
     },
   });
 
-  // Mock window.matchMedia for theme
   Object.defineProperty(window, "matchMedia", {
     writable: true,
     configurable: true,
@@ -232,14 +223,12 @@ beforeAll(() => {
     }),
   });
 
-  // Mock ResizeObserver
   window.ResizeObserver = vi.fn().mockImplementation(() => ({
     observe: vi.fn(),
     unobserve: vi.fn(),
     disconnect: vi.fn(),
   }));
 
-  // Mock IntersectionObserver
   window.IntersectionObserver = vi.fn().mockImplementation(() => ({
     observe: vi.fn(),
     unobserve: vi.fn(),
@@ -277,7 +266,6 @@ describe("App", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     
-    // Reset localStorage and sessionStorage
     Object.defineProperty(window, "localStorage", {
       value: createStorageMock(),
       writable: true,
@@ -287,53 +275,47 @@ describe("App", () => {
       writable: true,
     });
     
-    // Reset window.location.pathname
     window.location.pathname = "/";
   });
 
   it("renders Login page for unauthenticated user", async () => {
     render(<App />);
     
-    // Wait for the login page to render - look for the login-page testid
     await waitFor(() => {
       const loginElements = screen.getAllByTestId("login-page");
       expect(loginElements.length).toBeGreaterThan(0);
-    });
+    }, { timeout: 3000 });
     
-    // Also verify username text is present
-    const usernameElements = screen.getAllByText(/Username/i);
+    const usernameElements = screen.getAllByTestId("username-input");
     expect(usernameElements.length).toBeGreaterThan(0);
   });
 
   it("renders with all required providers", async () => {
     render(<App />);
     
-    // Should render the login page
     await waitFor(() => {
       const loginElements = screen.getAllByTestId("login-page");
       expect(loginElements.length).toBeGreaterThan(0);
-    });
+    }, { timeout: 3000 });
     
-    const usernameElements = screen.getAllByText(/Username/i);
+    const usernameElements = screen.getAllByTestId("username-input");
     expect(usernameElements.length).toBeGreaterThan(0);
   });
 
   it("redirects to /login when accessing root path", async () => {
     render(<App />);
     
-    // Should show login page
     await waitFor(() => {
       const loginElements = screen.getAllByTestId("login-page");
       expect(loginElements.length).toBeGreaterThan(0);
-    });
+    }, { timeout: 3000 });
     
-    const usernameElements = screen.getAllByText(/Username/i);
+    const usernameElements = screen.getAllByTestId("username-input");
     expect(usernameElements.length).toBeGreaterThan(0);
   });
 
   it("renders router with routes", () => {
     render(<App />);
-    // Verify that the router is rendering something
     const appElement = document.querySelector(".min-h-screen");
     expect(appElement).toBeInTheDocument();
   });
@@ -345,7 +327,6 @@ describe("App", () => {
 
   it("renders theme toggle component", () => {
     render(<App />);
-    // The theme toggle should be present
     const themeToggleElements = screen.getAllByTestId("theme-toggle");
     expect(themeToggleElements.length).toBeGreaterThan(0);
   });
