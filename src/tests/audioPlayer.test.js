@@ -115,9 +115,10 @@ describe("AudioPlayer", () => {
     // Test that playSound doesn't hang or fail due to improper AudioContext mock
     await expect(playSound("test-sound.mp3", true, 0.5)).resolves.not.toThrow();
     
-    // Verify fetch was called
+    // Verify fetch was called with the correct URL (includes /audio/ prefix)
+    // The audio player likely prepends /audio/ to the filename
     expect(global.fetch).toHaveBeenCalled();
-    expect(global.fetch).toHaveBeenCalledWith("test-sound.mp3");
+    expect(global.fetch).toHaveBeenCalledWith("/audio/test-sound.mp3");
   });
 
   it("should use cached audio buffer on subsequent calls", async () => {
