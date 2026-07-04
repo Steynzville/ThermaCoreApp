@@ -96,8 +96,7 @@ vi.mock("lucide-react", () => ({
   Search: () => <span data-testid="icon-search">Search</span>,
 }));
 
-// Mock device status service - define the mock data INSIDE the factory function
-// to avoid hoisting issues
+// Mock device status service - FIXED to always return an array
 const mockUnsubscribe = vi.fn();
 
 vi.mock("../services/deviceStatusService", () => {
@@ -157,6 +156,7 @@ vi.mock("../services/deviceStatusService", () => {
 
   return {
     deviceStatusService: {
+      // CRITICAL: Must return an array for .filter() to work
       getAllDeviceStatuses: vi.fn().mockReturnValue(mockDeviceStatuses),
       addStatusChangeListener: vi.fn().mockReturnValue(mockUnsubscribe),
       getDeviceStatus: vi.fn().mockResolvedValue({
