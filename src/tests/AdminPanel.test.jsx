@@ -93,39 +93,51 @@ const mockUser = {
 
 const originalLocalStorage = window.localStorage;
 
+// Create a proper storage mock
+const createStorageMock = () => {
+  let store = {};
+  return {
+    getItem: (key) => {
+      if (key === "thermacore_user") return JSON.stringify(mockUser);
+      if (key === "thermacore_role") return "admin";
+      if (key === "thermacore_token") return "fake-token";
+      if (key === "thermacore_settings" || key === "thermacore-settings") {
+        return JSON.stringify({
+          soundEnabled: true,
+          volume: 0.35,
+          refreshInterval: 5000,
+          temperatureUnit: "celsius",
+          theme: "dark",
+        });
+      }
+      return key in store ? store[key] : null;
+    },
+    setItem: vi.fn((key, value) => { store[key] = value; }),
+    removeItem: vi.fn((key) => { delete store[key]; }),
+    clear: vi.fn(() => { store = {}; }),
+  };
+};
+
 const renderWithProviders = (component) => {
   // Mock localStorage
+  const storageMock = createStorageMock();
   Object.defineProperty(window, "localStorage", {
-    value: {
-      getItem: vi.fn((key) => {
-        if (key === "thermacore_user") return JSON.stringify(mockUser);
-        if (key === "thermacore_role") return "admin";
-        if (key === "thermacore_token") return "fake-token";
-        if (key === "thermacore_settings" || key === "thermacore-settings") {
-          return JSON.stringify({
-            soundEnabled: true,
-            volume: 0.35,
-            refreshInterval: 5000,
-            temperatureUnit: "celsius",
-            theme: "dark",
-          });
-        }
-        return null;
-      }),
-      setItem: vi.fn(),
-      removeItem: vi.fn(),
-      clear: vi.fn(),
-    },
+    value: storageMock,
     writable: true,
+    configurable: true,
   });
 
-  // Mock useAuth
+  // Mock useAuth - use spyOn to ensure it's properly mocked
   vi.spyOn(AuthContext, "useAuth").mockReturnValue({
     user: mockUser,
     userRole: "admin",
     isAuthenticated: true,
     isLoading: false,
+    backendRole: "admin",
   });
+
+  // Mock window.confirm for delete operations
+  window.confirm = vi.fn(() => true);
 
   return render(
     <SettingsProvider>
@@ -142,16 +154,20 @@ describe("AdminPanel Component", () => {
       value: originalLocalStorage,
       writable: true,
     });
+    vi.restoreAllMocks();
   });
 
   beforeEach(() => {
     vi.clearAllMocks();
     window.confirm = vi.fn(() => true);
+    
+    // Reset useAuth mock before each test
     vi.spyOn(AuthContext, "useAuth").mockReturnValue({
       user: mockUser,
       userRole: "admin",
       isAuthenticated: true,
       isLoading: false,
+      backendRole: "admin",
     });
   });
 
@@ -203,7 +219,7 @@ describe("AdminPanel Component", () => {
       fireEvent.click(changePasswordButton);
     });
 
-    // Check for modal using getAllByTestId or getByTestId if it's unique
+    // Check for modal using getAllByTestId
     await waitFor(() => {
       const modals = screen.getAllByTestId("password-reset-modal");
       expect(modals.length).toBeGreaterThan(0);
@@ -228,7 +244,11 @@ describe("AdminPanel Component", () => {
     });
 
     await waitFor(() => {
-      const toggleButtons = screen.getAllByRole("button", { name: /toggle password visibility/i });
+      // Find toggle buttons by looking for Eye/EyeOff icons or the buttons
+      const toggleButtons = screen.getAllByRole("button", { 
+        name: /Show password|Hide password|Show confirm password|Hide confirm password/i 
+      });
+      // There should be at least one toggle button
       expect(toggleButtons.length).toBeGreaterThan(0);
     });
   });
@@ -262,8 +282,9 @@ describe("AdminPanel Component", () => {
       fireEvent.change(confirmPasswordInputs[0], { target: { value: "password456" } });
     });
 
+    // Wait for mismatch warning to appear
     await waitFor(() => {
-      const errorElements = screen.getAllByText("Passwords do not match");
+      const errorElements = screen.getAllByText(/Passwords do not match/i);
       expect(errorElements.length).toBeGreaterThan(0);
     });
   });
@@ -296,8 +317,74 @@ describe("AdminPanel Component", () => {
 
     // Check for error message
     await waitFor(() => {
-      const errorElements = screen.getAllByText("Password must be at least 6 characters long");
+      const errorElements = screen.getAllByText(/Password must be at least 6 characters long/i);
       expect(errorElements.length).toBeGreaterThan(0);
+    });
+  });
+
+  it("should toggle password visibility in password reset modal", async () => {
+    renderWithProviders(<AdminPanel />);
+
+    // Navigate to Password Management tab
+    const passwordElements = screen.getAllByText("Password Management");
+    expect(passwordElements.length).toBeGreaterThan(0);
+    const passwordTab = passwordElements[0];
+    fireEvent.click(passwordTab);
+
+    // Click Change My Password button
+    await waitFor(() => {
+      const changePasswordElements = screen.getAllByText("Change My Password");
+      expect(changePasswordElements.length).toBeGreaterThan(0);
+      const changePasswordButton = changePasswordElements[0];
+      fireEvent.click(changePasswordButton);
+    });
+
+    // Wait for modal and find password input
+    await waitFor(() => {
+      const modals = screen.getAllByTestId("password-reset-modal");
+      expect(modals.length).toBeGreaterThan(0);
+    });
+
+    // Find the new password input and toggle button
+    const newPasswordInputs = await screen.findAllByPlaceholderText("Enter new password");
+    expect(newPasswordInputs.length).toBeGreaterThan(0);
+    expect(newPasswordInputs[0]).toHaveAttribute("type", "password");
+
+    // Find toggle button
+    const toggleButtons = screen.getAllByRole("button", { 
+      name: /Show password|Hide password/i 
+    });
+    expect(toggleButtons.length).toBeGreaterThan(0);
+    
+    // Click to show password
+    fireEvent.click(toggleButtons[0]);
+    expect(newPasswordInputs[0]).toHaveAttribute("type", "text");
+    
+    // Click to hide password again
+    fireEvent.click(toggleButtons[0]);
+    expect(newPasswordInputs[0]).toHaveAttribute("type", "password");
+  });
+
+  it("should show Users tab content by default", async () => {
+    renderWithProviders(<AdminPanel />);
+
+    await waitFor(() => {
+      // Check for User Management heading
+      const userManagementElements = screen.getAllByText("User Management");
+      expect(userManagementElements.length).toBeGreaterThan(0);
+      
+      // Check for Add User button
+      const addUserElements = screen.getAllByText("Add User");
+      expect(addUserElements.length).toBeGreaterThan(0);
+    });
+  });
+
+  it("should render system stats", async () => {
+    renderWithProviders(<AdminPanel />);
+
+    await waitFor(() => {
+      const statElements = screen.getAllByText(/Total Devices|Active Users|System Uptime|Data Points/i);
+      expect(statElements.length).toBeGreaterThan(0);
     });
   });
 });
