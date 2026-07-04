@@ -5,17 +5,18 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import GridView from "@/components/GridView";
+// Change from @/ to relative import
+import GridView from "../components/GridView";
 
 // Mock useAuth and useUnits hooks
 const mockUseAuth = vi.fn();
 const mockUseUnits = vi.fn();
 
-vi.mock("@/context/AuthContext", () => ({
+vi.mock("../context/AuthContext", () => ({
   useAuth: () => mockUseAuth(),
 }));
 
-vi.mock("@/context/UnitContext", () => ({
+vi.mock("../context/UnitContext", () => ({
   useUnits: () => mockUseUnits(),
 }));
 
@@ -33,6 +34,57 @@ vi.mock("react-router-dom", async () => {
     }),
   };
 });
+
+// Mock the 3D icons to avoid rendering issues
+vi.mock("../components/PowerIcon3D", () => ({
+  default: ({ power }) => (
+    <div data-testid="power-icon" data-power={power}>
+      ⚡ {power}W
+    </div>
+  ),
+}));
+
+vi.mock("../components/WaterIcon3D", () => ({
+  default: ({ waterLevel, greyedOut }) => (
+    <div data-testid="water-icon" data-water-level={waterLevel} data-greyed-out={greyedOut}>
+      💧 {waterLevel}%
+    </div>
+  ),
+}));
+
+// Mock SearchBar
+vi.mock("../components/SearchBar", () => ({
+  default: ({ placeholder, value, onSearch }) => (
+    <input
+      type="text"
+      placeholder={placeholder}
+      value={value || ""}
+      onChange={(e) => onSearch(e.target.value)}
+      data-testid="search-bar"
+    />
+  ),
+}));
+
+// Mock PageHeader
+vi.mock("../components/PageHeader", () => ({
+  default: ({ title, subtitle }) => (
+    <div data-testid="page-header">
+      <h1>{title}</h1>
+      <p>{subtitle}</p>
+    </div>
+  ),
+}));
+
+// Mock UI components
+vi.mock("../components/ui/card", () => ({
+  Card: ({ children, className, onClick }) => (
+    <div data-testid="card" className={className} onClick={onClick}>
+      {children}
+    </div>
+  ),
+  CardHeader: ({ children }) => <div data-testid="card-header">{children}</div>,
+  CardContent: ({ children }) => <div data-testid="card-content">{children}</div>,
+}));
 
 // Mock units data
 const mockUnits = [
@@ -156,7 +208,8 @@ describe("GridView", () => {
   describe("Component Rendering", () => {
     it("renders grid view", () => {
       renderWithRouter(<GridView />);
-      const elements = screen.getAllByText(/Grid View/i);
+      // Use getAllByText with a more specific selector
+      const elements = screen.getAllByText(/Grid View - All Status/i);
       expect(elements.length).toBeGreaterThan(0);
     });
 
@@ -175,6 +228,7 @@ describe("GridView", () => {
 
     it("shows client info", () => {
       renderWithRouter(<GridView />);
+      // Use getAllByText with regex to match multiple clients
       const elements = screen.getAllByText(/Client A|Client B|Client C/);
       expect(elements.length).toBeGreaterThan(0);
     });
@@ -183,10 +237,10 @@ describe("GridView", () => {
   describe("Search", () => {
     it("filters by name", async () => {
       renderWithRouter(<GridView />);
-      const textboxes = screen.getAllByRole("textbox");
-      expect(textboxes.length).toBeGreaterThan(0);
+      const searchInput = screen.getByTestId("search-bar");
+      expect(searchInput).toBeInTheDocument();
       
-      fireEvent.change(textboxes[0], {
+      fireEvent.change(searchInput, {
         target: { value: "Unit 001" },
       });
 
@@ -231,21 +285,36 @@ describe("GridView", () => {
 
   describe("Pagination", () => {
     it("shows load more button when needed", () => {
+      // Use a larger dataset to ensure load more is needed
+      mockUseUnits.mockReturnValue({
+        units: createLargeDataset(10),
+        loading: false,
+      });
+      
       renderWithRouter(<GridView />);
       const elements = screen.getAllByText(/Load more Units/i);
       expect(elements.length).toBeGreaterThan(0);
     });
 
     it("loads more units", async () => {
+      mockUseUnits.mockReturnValue({
+        units: createLargeDataset(10),
+        loading: false,
+      });
+      
       renderWithRouter(<GridView />);
       const loadMoreElements = screen.getAllByText(/Load more Units/i);
       expect(loadMoreElements.length).toBeGreaterThan(0);
+      
+      // Count initial units
+      const initialUnits = screen.getAllByText(/ThermaCore Unit/);
+      const initialCount = initialUnits.length;
       
       fireEvent.click(loadMoreElements[0]);
 
       await waitFor(() => {
         const elements = screen.getAllByText(/ThermaCore Unit/);
-        expect(elements.length).toBeGreaterThan(5);
+        expect(elements.length).toBeGreaterThan(initialCount);
       });
     });
 
@@ -264,10 +333,18 @@ describe("GridView", () => {
   describe("Navigation", () => {
     it("navigates admin", () => {
       renderWithRouter(<GridView />);
+      // Find the unit card and click it
       const unitElements = screen.getAllByText("ThermaCore Unit 001");
       expect(unitElements.length).toBeGreaterThan(0);
       
-      fireEvent.click(unitElements[0]);
+      // Find the parent card and click it
+      const card = unitElements[0].closest('[data-testid="card"]');
+      if (card) {
+        fireEvent.click(card);
+      } else {
+        // Fallback: click the unit element itself
+        fireEvent.click(unitElements[0]);
+      }
 
       expect(mockNavigate).toHaveBeenCalledWith(
         expect.stringContaining("/unit-details/TC001"),
@@ -285,7 +362,13 @@ describe("GridView", () => {
       const unitElements = screen.getAllByText("ThermaCore Unit 001");
       expect(unitElements.length).toBeGreaterThan(0);
       
-      fireEvent.click(unitElements[0]);
+      // Find the parent card and click it
+      const card = unitElements[0].closest('[data-testid="card"]');
+      if (card) {
+        fireEvent.click(card);
+      } else {
+        fireEvent.click(unitElements[0]);
+      }
 
       expect(mockNavigate).toHaveBeenCalledWith(
         expect.stringContaining("/unit/TC001"),
@@ -318,6 +401,38 @@ describe("GridView", () => {
       renderWithRouter(<GridView />);
       const elements = screen.getAllByText(/ThermaCore Unit/);
       expect(elements.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("URL Parameters", () => {
+    it("handles status filter from URL", () => {
+      mockSearch = "?status=online";
+      
+      renderWithRouter(<GridView />, { route: "/?status=online" });
+      
+      // The combobox should show "Online"
+      const comboboxes = screen.getAllByRole("combobox");
+      expect(comboboxes.length).toBeGreaterThan(0);
+      expect(comboboxes[0]).toHaveValue("Online");
+    });
+
+    it("handles alerts from URL", () => {
+      mockSearch = "?alerts=true";
+      
+      renderWithRouter(<GridView />, { route: "/?alerts=true" });
+      
+      const comboboxes = screen.getAllByRole("combobox");
+      expect(comboboxes.length).toBeGreaterThan(0);
+      expect(comboboxes[0]).toHaveValue("Alerts");
+    });
+
+    it("handles search from URL", () => {
+      mockSearch = "?search=Unit%20001";
+      
+      renderWithRouter(<GridView />, { route: "/?search=Unit%20001" });
+      
+      const searchInput = screen.getByTestId("search-bar");
+      expect(searchInput).toHaveValue("Unit 001");
     });
   });
 });
