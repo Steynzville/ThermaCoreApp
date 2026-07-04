@@ -23,7 +23,7 @@ vi.mock("@/lib/utils", () => ({
 }));
 
 // Mock Radix UI Select to avoid prototype errors
-// CRITICAL: Must include Icon export that the SelectTrigger component uses
+// CRITICAL: Must include Icon and Viewport exports
 vi.mock("@radix-ui/react-select", () => ({
   Root: ({ children, value, defaultValue, onValueChange, ...props }) => (
     <div data-testid="select-root" data-value={value || defaultValue} {...props}>
@@ -42,11 +42,16 @@ vi.mock("@radix-ui/react-select", () => ({
       {children}
     </button>
   ),
-  // IMPORTANT: Icon must be exported for SelectTrigger to work
   Icon: ({ children, ...props }) => (
     <span data-testid="select-icon" {...props}>
       {children || "▼"}
     </span>
+  ),
+  // CRITICAL: Viewport is used by SelectContent
+  Viewport: ({ children, ...props }) => (
+    <div data-testid="select-viewport" {...props}>
+      {children}
+    </div>
   ),
   Content: ({ children, ...props }) => (
     <div data-testid="select-content" {...props}>
