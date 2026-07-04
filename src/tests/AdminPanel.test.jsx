@@ -42,6 +42,43 @@ vi.mock("../context/ThemeContext", () => ({
   useTheme: () => ({ theme: "dark", setTheme: vi.fn() }),
 }));
 
+// Mock PageHeader - FIXED: Add this to prevent rendering issues
+vi.mock("../components/PageHeader", () => ({
+  default: ({ title, subtitle }) => (
+    <div data-testid="page-header">
+      <h1>{title}</h1>
+      <p>{subtitle}</p>
+    </div>
+  ),
+}));
+
+// Mock UserApprovalPanel
+vi.mock("../components/UserApprovalPanel", () => ({
+  default: () => <div data-testid="user-approval-panel">User Approvals</div>,
+}));
+
+// Mock Button
+vi.mock("../components/ui/button", () => ({
+  Button: ({ children, onClick, className }) => (
+    <button data-testid="button" className={className} onClick={onClick}>
+      {children}
+    </button>
+  ),
+}));
+
+// Mock Card components
+vi.mock("../components/ui/card", () => ({
+  Card: ({ children, className }) => (
+    <div data-testid="card" className={className}>{children}</div>
+  ),
+  CardHeader: ({ children, className }) => (
+    <div data-testid="card-header" className={className}>{children}</div>
+  ),
+  CardContent: ({ children, className }) => (
+    <div data-testid="card-content" className={className}>{children}</div>
+  ),
+}));
+
 // Mock apiFetch
 vi.mock("../utils/apiFetch", () => ({
   apiGet: vi.fn(() => Promise.resolve({ data: [] })),
@@ -175,12 +212,15 @@ describe("AdminPanel Component", () => {
     renderWithProviders(<AdminPanel />);
 
     await waitFor(() => {
+      // Check for the Users tab
       const usersElements = screen.getAllByText("Users");
       expect(usersElements.length).toBeGreaterThan(0);
       
+      // Check for Password Management tab
       const passwordElements = screen.getAllByText("Password Management");
       expect(passwordElements.length).toBeGreaterThan(0);
       
+      // Check for Settings tab
       const settingsElements = screen.getAllByText("Settings");
       expect(settingsElements.length).toBeGreaterThan(0);
     });
