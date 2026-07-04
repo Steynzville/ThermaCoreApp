@@ -1,4 +1,4 @@
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { SettingsProvider, useSettings } from "../context/SettingsContext";
@@ -116,8 +116,10 @@ describe("SettingsContext", () => {
         result.current.toggleSound();
       });
 
-      // Wait for the effect to run
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Use act with a small delay to let the effect run
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 50));
+      });
 
       const saved = JSON.parse(
         localStorageMock.getItem("thermacore-settings") || "{}",
@@ -148,7 +150,9 @@ describe("SettingsContext", () => {
         result.current.setVolume(0.8);
       });
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 50));
+      });
 
       const saved = JSON.parse(
         localStorageMock.getItem("thermacore-settings") || "{}",
@@ -209,7 +213,9 @@ describe("SettingsContext", () => {
         result.current.setTemperatureUnit("fahrenheit");
       });
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 50));
+      });
 
       const saved = JSON.parse(
         localStorageMock.getItem("thermacore-settings") || "{}",
@@ -238,6 +244,7 @@ describe("SettingsContext", () => {
         wrapper: SettingsProvider,
       });
 
+      // Use act for each update or batch them
       act(() => {
         result.current.toggleSound();
         result.current.setVolume(0.5);
@@ -260,7 +267,9 @@ describe("SettingsContext", () => {
         result.current.setTemperatureUnit("fahrenheit");
       });
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 50));
+      });
 
       const saved = JSON.parse(
         localStorageMock.getItem("thermacore-settings") || "{}",
