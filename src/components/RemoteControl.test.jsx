@@ -181,8 +181,10 @@ describe("RemoteControl Component", () => {
         </TestWrapper>,
       );
 
-      // The component renders "Unit Not Found" as an h1
-      const headingElements = screen.getAllByText(/Unit Not Found/i);
+      // Use a function matcher to find the text
+      const headingElements = screen.getAllByText((content) => {
+        return content.includes("Unit Not Found");
+      });
       expect(headingElements.length).toBeGreaterThan(0);
       
       // Also check for the back button text
