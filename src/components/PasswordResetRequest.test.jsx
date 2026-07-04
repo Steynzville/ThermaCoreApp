@@ -35,7 +35,7 @@ vi.mock("../assets/thermacore-logo-new.png", () => ({
   default: "logo.png",
 }));
 
-// Mock CSS module
+// Mock CSS module - FIXED: More complete mock with all required classes
 vi.mock("../components/LoginScreen.module.css", () => ({
   default: {
     pageWrapper: "pageWrapper",
@@ -269,6 +269,12 @@ describe("PasswordResetRequest", () => {
     renderWithToken();
 
     const passwordInputs = await screen.findAllByPlaceholderText("Enter new password");
+    // Wait for the input to be ready
+    await waitFor(() => {
+      expect(passwordInputs.length).toBeGreaterThan(0);
+    });
+    
+    // Check initial type
     expect(passwordInputs[0]).toHaveAttribute("type", "password");
 
     // Find the toggle button using aria-label
@@ -277,21 +283,27 @@ describe("PasswordResetRequest", () => {
     });
     expect(toggleButtons.length).toBeGreaterThan(0);
     
-    if (toggleButtons.length > 0) {
-      // Click to show password
-      fireEvent.click(toggleButtons[0]);
+    // Click to show password
+    fireEvent.click(toggleButtons[0]);
+    await waitFor(() => {
       expect(passwordInputs[0]).toHaveAttribute("type", "text");
-      
-      // Click to hide password again
-      fireEvent.click(toggleButtons[0]);
+    });
+    
+    // Click to hide password again
+    fireEvent.click(toggleButtons[0]);
+    await waitFor(() => {
       expect(passwordInputs[0]).toHaveAttribute("type", "password");
-    }
+    });
   });
 
   it("should toggle confirm password visibility", async () => {
     renderWithToken();
 
     const confirmInputs = await screen.findAllByPlaceholderText("Confirm new password");
+    await waitFor(() => {
+      expect(confirmInputs.length).toBeGreaterThan(0);
+    });
+    
     expect(confirmInputs[0]).toHaveAttribute("type", "password");
 
     // Find the toggle button using aria-label
@@ -300,15 +312,17 @@ describe("PasswordResetRequest", () => {
     });
     expect(toggleButtons.length).toBeGreaterThan(0);
     
-    if (toggleButtons.length > 0) {
-      // Click to show password
-      fireEvent.click(toggleButtons[0]);
+    // Click to show password
+    fireEvent.click(toggleButtons[0]);
+    await waitFor(() => {
       expect(confirmInputs[0]).toHaveAttribute("type", "text");
-      
-      // Click to hide password again
-      fireEvent.click(toggleButtons[0]);
+    });
+    
+    // Click to hide password again
+    fireEvent.click(toggleButtons[0]);
+    await waitFor(() => {
       expect(confirmInputs[0]).toHaveAttribute("type", "password");
-    }
+    });
   });
 
   it("should clear error when user starts typing", async () => {
@@ -352,6 +366,12 @@ describe("PasswordResetRequest", () => {
 
   it("should disable submit button when token is missing", async () => {
     renderWithToken(null);
+
+    // Wait for the error to appear first
+    await waitFor(() => {
+      const errorMessages = screen.getAllByText(/Invalid reset link. Please request a new password reset./i);
+      expect(errorMessages.length).toBeGreaterThan(0);
+    });
 
     const buttons = screen.getAllByRole("button", { name: /reset password/i });
     expect(buttons.length).toBeGreaterThan(0);
