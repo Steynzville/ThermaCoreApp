@@ -40,6 +40,19 @@ vi.mock("../components/ui/card", () => ({
   CardContent: ({ children }) => <div data-testid="card-content">{children}</div>,
 }));
 
+// Mock lucide-react icons
+vi.mock("lucide-react", () => ({
+  Clock: ({ className }) => <span data-testid="clock" className={className}>⏰</span>,
+  Minus: ({ className }) => <span data-testid="minus" className={className}>−</span>,
+  TrendingDown: ({ className }) => <span data-testid="trending-down" className={className}>↓</span>,
+  TrendingUp: ({ className }) => <span data-testid="trending-up" className={className}>↑</span>,
+}));
+
+// Mock the cn utility
+vi.mock("@/lib/utils", () => ({
+  cn: (...inputs) => inputs.filter(Boolean).join(" "),
+}));
+
 const mockEvents = [
   {
     id: "event-1",
@@ -52,6 +65,12 @@ const mockEvents = [
     unitName: "ThermaCore Unit 008",
     timestamp: "2025-09-09T09:30:00Z",
     description: "Diagnostic check performed",
+  },
+  {
+    id: "event-3",
+    unitName: "ThermaCore Unit 009",
+    timestamp: "2025-09-09T09:00:00Z",
+    description: "Calibration completed",
   },
 ];
 
@@ -185,19 +204,23 @@ describe("HistoryView", () => {
         </TestWrapper>
       );
 
-      // Wait for content to load - FIXED: use await directly
+      // Wait for content to load
       await screen.findAllByText("Event History");
 
-      // Use waitFor with the container query
+      // Use waitFor with the container query - look for the border-l-4 class
+      // The component uses border-l-4 plus the severity color class
       await waitFor(() => {
-        // Use querySelectorAll with the container
-        const severityBlocks = container.querySelectorAll(
-          ".border-l-red-500, .border-l-yellow-500, .border-l-blue-500, .border-l-green-500"
+        // Look for the Card elements which have the severity classes
+        const cards = container.querySelectorAll('[data-testid="card"]');
+        // There should be at least some cards with severity classes
+        // The className on the Card includes the severity color
+        const severityCards = Array.from(cards).filter(card => 
+          card.className.includes('border-l-red-500') ||
+          card.className.includes('border-l-yellow-500') ||
+          card.className.includes('border-l-blue-500') ||
+          card.className.includes('border-l-green-500')
         );
-
-        // There should be at least some severity indicators
-        // Some might be from hardcoded notifications
-        expect(severityBlocks.length).toBeGreaterThan(0);
+        expect(severityCards.length).toBeGreaterThan(0);
       }, { timeout: 3000 });
     });
   });
@@ -270,16 +293,20 @@ describe("HistoryView", () => {
       const buttons = screen.getAllByText(/Load more Events/i);
       expect(buttons.length).toBeGreaterThan(0);
       
+      // Get the initial count of visible events
+      const initialElements = screen.getAllByText(/ThermaCore Unit/);
+      const initialCount = initialElements.length;
+      
       // Click the first button
       if (buttons.length > 0) {
         fireEvent.click(buttons[0]);
       }
 
-      // Check that more items appear - FIXED: use a more reliable check
+      // Check that more items appear - use a more reliable check
       await waitFor(() => {
-        // Check that we have more than 5 "ThermaCore Unit" matches (hardcoded + API events)
         const unitElements = screen.getAllByText(/ThermaCore Unit/);
-        expect(unitElements.length).toBeGreaterThan(5);
+        // The count should increase after loading more
+        expect(unitElements.length).toBeGreaterThan(initialCount);
       }, { timeout: 3000 });
     });
 
@@ -385,14 +412,16 @@ describe("HistoryView", () => {
 
       // Check for severity classes on cards - use waitFor to ensure DOM is ready
       await waitFor(() => {
-        const errorCards = container.querySelectorAll(".border-l-red-500");
-        const warningCards = container.querySelectorAll(".border-l-yellow-500");
-        const infoCards = container.querySelectorAll(".border-l-blue-500");
-        const successCards = container.querySelectorAll(".border-l-green-500");
-
-        // There should be at least one of each type
-        const total = errorCards.length + warningCards.length + infoCards.length + successCards.length;
-        expect(total).toBeGreaterThan(0);
+        // Look for cards with severity color classes
+        const cards = container.querySelectorAll('[data-testid="card"]');
+        const cardsWithSeverity = Array.from(cards).filter(card => {
+          const className = card.className || '';
+          return className.includes('border-l-red-500') ||
+                 className.includes('border-l-yellow-500') ||
+                 className.includes('border-l-blue-500') ||
+                 className.includes('border-l-green-500');
+        });
+        expect(cardsWithSeverity.length).toBeGreaterThan(0);
       }, { timeout: 3000 });
     });
   });
