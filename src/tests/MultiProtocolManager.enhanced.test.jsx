@@ -25,15 +25,16 @@ vi.mock("../hooks/useProtocolWebSocket", () => ({
   useProtocolEvent: vi.fn(),
 }));
 
-// Mock the protocolService - FIXED: Added the missing file mock
-// This creates a virtual module that Vitest can resolve
+// Mock protocolService - this creates a virtual module so the import resolves
 vi.mock("../services/protocolService", () => ({
   protocolService: {
-    getProtocols: vi.fn(),
-    connectProtocol: vi.fn(),
-    disconnectProtocol: vi.fn(),
-    refreshProtocols: vi.fn(),
-    getProtocolMetrics: vi.fn(),
+    getProtocols: vi.fn().mockResolvedValue([]),
+    connectProtocol: vi.fn().mockResolvedValue({ success: true }),
+    disconnectProtocol: vi.fn().mockResolvedValue({ success: true }),
+    refreshProtocols: vi.fn().mockResolvedValue([]),
+    getProtocolMetrics: vi.fn().mockResolvedValue({}),
+    getProtocolsByUnit: vi.fn().mockResolvedValue([]),
+    getActiveProtocols: vi.fn().mockResolvedValue([]),
   },
 }));
 
