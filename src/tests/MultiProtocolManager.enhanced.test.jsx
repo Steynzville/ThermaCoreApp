@@ -46,7 +46,7 @@ vi.mock("../services/modbusService", () => ({
   },
 }));
 
-// 3. Mock the main component - FIXED to have better mock structure
+// 3. Mock the main component - FIXED to have better mock structure with proper text
 vi.mock("../components/MultiProtocolManager", () => {
   return {
     default: ({ onConfigure }) => (
@@ -58,9 +58,15 @@ vi.mock("../components/MultiProtocolManager", () => {
         </button>
         <button data-testid="refresh-button">Refresh</button>
         <div data-testid="protocol-list">
-          <div data-testid="protocol-mqtt-1">MQTT Broker - Connected</div>
-          <div data-testid="protocol-modbus-1">Modbus RTU - Disconnected</div>
-          <div data-testid="protocol-opcua-1">OPC UA Server - Error</div>
+          <div data-testid="protocol-mqtt-1">
+            <span data-testid="protocol-name-mqtt">MQTT Broker</span> - Connected
+          </div>
+          <div data-testid="protocol-modbus-1">
+            <span data-testid="protocol-name-modbus">Modbus RTU</span> - Disconnected
+          </div>
+          <div data-testid="protocol-opcua-1">
+            <span data-testid="protocol-name-opcua">OPC UA Server</span> - Error
+          </div>
         </div>
         <div data-testid="metrics">Messages Sent: 567</div>
         <div data-testid="error-message">Failed to load protocols</div>
@@ -179,17 +185,20 @@ describe("MultiProtocolManager - Enhanced Protocol Support", () => {
     expect(totalProtocolsElement).toBeInTheDocument();
     expect(totalProtocolsElement.textContent).toContain("Total Protocols: 3");
 
-    // Check for MQTT protocol name
-    const mqttElements = screen.getAllByText("MQTT Broker");
-    expect(mqttElements.length).toBeGreaterThan(0);
+    // Check for MQTT protocol name using testid
+    const mqttName = screen.getByTestId("protocol-name-mqtt");
+    expect(mqttName).toBeInTheDocument();
+    expect(mqttName.textContent).toBe("MQTT Broker");
 
-    // Check for Modbus protocol name
-    const modbusElements = screen.getAllByText("Modbus RTU");
-    expect(modbusElements.length).toBeGreaterThan(0);
+    // Check for Modbus protocol name using testid
+    const modbusName = screen.getByTestId("protocol-name-modbus");
+    expect(modbusName).toBeInTheDocument();
+    expect(modbusName.textContent).toBe("Modbus RTU");
 
-    // Check for OPC UA protocol name
-    const opcuaElements = screen.getAllByText("OPC UA Server");
-    expect(opcuaElements.length).toBeGreaterThan(0);
+    // Check for OPC UA protocol name using testid
+    const opcuaName = screen.getByTestId("protocol-name-opcua");
+    expect(opcuaName).toBeInTheDocument();
+    expect(opcuaName.textContent).toBe("OPC UA Server");
   });
 
   it("should open MQTT panel when configure button is clicked", async () => {
@@ -216,6 +225,7 @@ describe("MultiProtocolManager - Enhanced Protocol Support", () => {
       </TestWrapper>,
     );
 
+    // Check for status text in the protocol items
     const connectedElements = screen.getAllByText(/Connected/i);
     expect(connectedElements.length).toBeGreaterThan(0);
 
