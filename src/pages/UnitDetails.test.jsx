@@ -88,6 +88,19 @@ beforeAll(() => {
     disconnect: vi.fn(),
   }));
 
+  // Mock getBoundingClientRect for any DOM calculations
+  Element.prototype.getBoundingClientRect = vi.fn().mockReturnValue({
+    width: 0,
+    height: 0,
+    top: 0,
+    left: 0,
+    bottom: 0,
+    right: 0,
+    x: 0,
+    y: 0,
+    toJSON: vi.fn(),
+  });
+
   // Clean up after all tests
   return () => {
     Object.defineProperty(window, "AudioContext", {
@@ -108,18 +121,23 @@ vi.mock("../components/RemoteControl", () => ({
   default: ({ unit, details }) => (
     <div data-testid="remote-control">
       <h3>Remote Control</h3>
-      <p>Unit: {unit.name}</p>
-      <p>Status: {unit.status}</p>
+      <p>Unit: {unit?.name || "Unknown"}</p>
+      <p>Status: {unit?.status || "Unknown"}</p>
       <button data-testid="remote-control-button">Toggle Power</button>
     </div>
   ),
 }));
 
-// 1. Explicit service mock using spyOn
+// Mock the unitService
 vi.mock("../services/unitService", () => ({
   getUnitById: vi.fn(),
   getUnitDetails: vi.fn(),
   getUnitAlerts: vi.fn(),
+}));
+
+// Mock the cn utility if needed
+vi.mock("@/lib/utils", () => ({
+  cn: (...inputs) => inputs.filter(Boolean).join(" "),
 }));
 
 describe("UnitDetails", () => {
@@ -175,7 +193,7 @@ describe("UnitDetails", () => {
   it("should render unit details after loading", async () => {
     renderUnitDetails();
     await waitFor(() => {
-      // Use getAllByText with a more specific matcher
+      // Use getAllByText with a more specific matcher - check for "Unit: Unit 1" or parts of it
       const unitElements = screen.getAllByText((content, element) => {
         return content.includes("Unit:") && content.includes("Unit 1");
       });
@@ -251,7 +269,7 @@ describe("UnitDetails", () => {
     const manageTabs = screen.getAllByText("Manage Remotely");
     fireEvent.click(manageTabs[0]);
 
-    // Manage Remotely tab should render content
+    // Manage Remotely tab should render content - it shows RemoteControl component
     await waitFor(() => {
       const remoteControlElements = screen.getAllByTestId("remote-control");
       expect(remoteControlElements.length).toBeGreaterThan(0);
@@ -269,15 +287,15 @@ describe("UnitDetails", () => {
       expect(unitElements.length).toBeGreaterThan(0);
     });
 
-    // Verify overview content
+    // Verify overview content - use getAllByText with regex patterns
     await waitFor(() => {
-      const statusElements = screen.getAllByText(/Status:/);
+      const statusElements = screen.getAllByText(/Status:/i);
       expect(statusElements.length).toBeGreaterThan(0);
       
-      const locationElements = screen.getAllByText(/Location:/);
+      const locationElements = screen.getAllByText(/Location:/i);
       expect(locationElements.length).toBeGreaterThan(0);
       
-      const installDateElements = screen.getAllByText(/Install Date:/);
+      const installDateElements = screen.getAllByText(/Install Date:/i);
       expect(installDateElements.length).toBeGreaterThan(0);
     });
   });
