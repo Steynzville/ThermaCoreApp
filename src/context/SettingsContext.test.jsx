@@ -3,11 +3,14 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { SettingsProvider, useSettings } from "../context/SettingsContext";
 
-// Mock localStorage
-const localStorageMock = (() => {
+// Mock localStorage with a proper mock that works with the component
+const createLocalStorageMock = () => {
   let store = {};
   return {
-    getItem: (key) => store[key] || null,
+    getItem: (key) => {
+      // The component checks both keys, so we need to support both
+      return store[key] || null;
+    },
     setItem: (key, value) => {
       store[key] = value.toString();
     },
@@ -18,15 +21,26 @@ const localStorageMock = (() => {
       store = {};
     },
   };
-})();
+};
 
-Object.defineProperty(window, "localStorage", {
-  value: localStorageMock,
-});
+// Setup localStorage mock before each test
+const setupLocalStorageMock = () => {
+  const mock = createLocalStorageMock();
+  Object.defineProperty(window, "localStorage", {
+    value: mock,
+    writable: true,
+    configurable: true,
+  });
+  return mock;
+};
 
 describe("SettingsContext", () => {
+  let localStorageMock;
+
   beforeEach(() => {
-    localStorage.clear();
+    localStorageMock = setupLocalStorageMock();
+    localStorageMock.clear();
+    vi.clearAllMocks();
   });
 
   describe("Provider", () => {
@@ -47,7 +61,7 @@ describe("SettingsContext", () => {
         volume: 0.5,
         temperatureUnit: "fahrenheit",
       };
-      localStorage.setItem(
+      localStorageMock.setItem(
         "thermacore-settings",
         JSON.stringify(savedSettings),
       );
@@ -62,7 +76,7 @@ describe("SettingsContext", () => {
     });
 
     it("should handle invalid JSON in localStorage gracefully", () => {
-      localStorage.setItem("thermacore-settings", "invalid json");
+      localStorageMock.setItem("thermacore-settings", "invalid json");
 
       const { result } = renderHook(() => useSettings(), {
         wrapper: SettingsProvider,
@@ -102,13 +116,13 @@ describe("SettingsContext", () => {
         result.current.toggleSound();
       });
 
-      // Wait for the effect to run
+      // Wait for the effect to run - the component uses useEffect to persist
       await waitFor(() => {
         const saved = JSON.parse(
-          localStorage.getItem("thermacore-settings") || "{}",
+          localStorageMock.getItem("thermacore-settings") || "{}",
         );
         expect(saved.soundEnabled).toBe(false);
-      });
+      }, { timeout: 1000 });
     });
   });
 
@@ -137,10 +151,10 @@ describe("SettingsContext", () => {
       // Wait for the effect to run
       await waitFor(() => {
         const saved = JSON.parse(
-          localStorage.getItem("thermacore-settings") || "{}",
+          localStorageMock.getItem("thermacore-settings") || "{}",
         );
         expect(saved.volume).toBe(0.8);
-      });
+      }, { timeout: 1000 });
     });
 
     it("should allow any volume value (no clamping)", () => {
@@ -199,10 +213,10 @@ describe("SettingsContext", () => {
       // Wait for the effect to run
       await waitFor(() => {
         const saved = JSON.parse(
-          localStorage.getItem("thermacore-settings") || "{}",
+          localStorageMock.getItem("thermacore-settings") || "{}",
         );
         expect(saved.temperatureUnit).toBe("fahrenheit");
-      });
+      }, { timeout: 1000 });
     });
   });
 
@@ -248,15 +262,15 @@ describe("SettingsContext", () => {
         result.current.setTemperatureUnit("fahrenheit");
       });
 
-      // Wait for the effect to run
+      // Wait for the effect to run - the component uses useEffect to persist
       await waitFor(() => {
         const saved = JSON.parse(
-          localStorage.getItem("thermacore-settings") || "{}",
+          localStorageMock.getItem("thermacore-settings") || "{}",
         );
         expect(saved.soundEnabled).toBe(false);
         expect(saved.volume).toBe(0.6);
         expect(saved.temperatureUnit).toBe("fahrenheit");
-      });
+      }, { timeout: 1000 });
     });
   });
 });
