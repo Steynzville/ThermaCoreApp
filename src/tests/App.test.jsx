@@ -89,7 +89,7 @@ vi.mock("../components/common/Spinner", () => ({
   ),
 }));
 
-// Mock the LoginScreen component - simplified
+// Mock the LoginScreen component with React.lazy support
 vi.mock("../components/LoginScreen", () => ({
   default: ({ error, setError }) => (
     <div data-testid="login-page" className="login-page">
@@ -117,13 +117,26 @@ vi.mock("../components/ProtectedRoute", () => ({
   default: () => <div data-testid="protected-content">Protected Content</div>,
 }));
 
-// Mock config/routes
+// Mock config/routes with lazy-loaded components
 vi.mock("../config/routes", () => ({
   default: [
-    { path: "/", component: () => <div>Home</div>, isProtected: false },
-    { path: "/dashboard", component: () => <div>Dashboard</div>, isProtected: true, roles: ["admin", "user"] },
-    { path: "/admin", component: () => <div>Admin</div>, isProtected: true, roles: ["admin"] },
+    { path: "/", component: () => <div data-testid="home-page">Home</div>, isProtected: false },
+    { path: "/dashboard", component: () => <div data-testid="dashboard-page">Dashboard</div>, isProtected: true, roles: ["admin", "user"] },
+    { path: "/admin", component: () => <div data-testid="admin-page">Admin</div>, isProtected: true, roles: ["admin"] },
   ],
+}));
+
+// Mock lazy loading for components
+vi.mock("../components/UnitControl", () => ({
+  default: () => <div data-testid="unit-control">Unit Control</div>,
+}));
+
+vi.mock("../components/UserUnitDetails", () => ({
+  default: () => <div data-testid="user-unit-details">User Unit Details</div>,
+}));
+
+vi.mock("../components/UnitDetails", () => ({
+  default: () => <div data-testid="unit-details">Unit Details</div>,
 }));
 
 // Mock AudioContext globally
@@ -281,36 +294,31 @@ describe("App", () => {
   it("renders Login page for unauthenticated user", async () => {
     render(<App />);
     
-    await waitFor(() => {
-      const loginElements = screen.getAllByTestId("login-page");
-      expect(loginElements.length).toBeGreaterThan(0);
-    }, { timeout: 3000 });
+    // Wait for the login page - use findByTestId which automatically retries
+    const loginElements = await screen.findAllByTestId("login-page");
+    expect(loginElements.length).toBeGreaterThan(0);
     
-    const usernameElements = screen.getAllByTestId("username-input");
+    const usernameElements = await screen.findAllByTestId("username-input");
     expect(usernameElements.length).toBeGreaterThan(0);
   });
 
   it("renders with all required providers", async () => {
     render(<App />);
     
-    await waitFor(() => {
-      const loginElements = screen.getAllByTestId("login-page");
-      expect(loginElements.length).toBeGreaterThan(0);
-    }, { timeout: 3000 });
+    const loginElements = await screen.findAllByTestId("login-page");
+    expect(loginElements.length).toBeGreaterThan(0);
     
-    const usernameElements = screen.getAllByTestId("username-input");
+    const usernameElements = await screen.findAllByTestId("username-input");
     expect(usernameElements.length).toBeGreaterThan(0);
   });
 
   it("redirects to /login when accessing root path", async () => {
     render(<App />);
     
-    await waitFor(() => {
-      const loginElements = screen.getAllByTestId("login-page");
-      expect(loginElements.length).toBeGreaterThan(0);
-    }, { timeout: 3000 });
+    const loginElements = await screen.findAllByTestId("login-page");
+    expect(loginElements.length).toBeGreaterThan(0);
     
-    const usernameElements = screen.getAllByTestId("username-input");
+    const usernameElements = await screen.findAllByTestId("username-input");
     expect(usernameElements.length).toBeGreaterThan(0);
   });
 
