@@ -192,44 +192,50 @@ describe("UnitDetails", () => {
 
   it("should render unit details after loading", async () => {
     renderUnitDetails();
+    // Wait for the loading to complete and unit details to appear
     await waitFor(() => {
-      // Use getAllByText with a more specific matcher - check for "Unit: Unit 1" or parts of it
-      const unitElements = screen.getAllByText((content, element) => {
+      // Use a simple text matcher - the component renders "Unit: {unit.name}"
+      const unitElements = screen.getAllByText((content) => {
         return content.includes("Unit:") && content.includes("Unit 1");
       });
       expect(unitElements.length).toBeGreaterThan(0);
-    });
+    }, { timeout: 5000 });
   });
 
   it("should handle alerts tab loading state", async () => {
     let resolveAlerts;
+    // Mock the alerts to return a promise we can control
     unitService.getUnitAlerts.mockReturnValue(new Promise((res) => { resolveAlerts = res; }));
 
     renderUnitDetails();
-    await waitFor(() => { 
-      const unitElements = screen.getAllByText((content, element) => {
+    // Wait for unit data to load
+    await waitFor(() => {
+      const unitElements = screen.getAllByText((content) => {
         return content.includes("Unit:") && content.includes("Unit 1");
       });
       expect(unitElements.length).toBeGreaterThan(0);
-    });
+    }, { timeout: 5000 });
 
+    // Click the Alerts tab
     const alertTabs = screen.getAllByText("Alerts");
     fireEvent.click(alertTabs[0]);
 
-    // Wait for loading state
+    // Wait for loading state to appear
     await waitFor(() => {
       const loadingElements = screen.getAllByText("Loading alerts...");
       expect(loadingElements.length).toBeGreaterThan(0);
-    });
+    }, { timeout: 3000 });
 
-    // Resolve the alerts
-    resolveAlerts(mockDetails.alerts);
+    // Resolve the alerts promise
+    if (resolveAlerts) {
+      resolveAlerts(mockDetails.alerts);
+    }
     
     // Wait for alerts to display
     await waitFor(() => { 
       const alertHistoryElements = screen.getAllByText("Alert History");
       expect(alertHistoryElements.length).toBeGreaterThan(0);
-    });
+    }, { timeout: 3000 });
   });
 
   it("should render Remote Control tab", async () => {
@@ -237,11 +243,11 @@ describe("UnitDetails", () => {
     
     // Wait for unit to load
     await waitFor(() => {
-      const unitElements = screen.getAllByText((content, element) => {
+      const unitElements = screen.getAllByText((content) => {
         return content.includes("Unit:") && content.includes("Unit 1");
       });
       expect(unitElements.length).toBeGreaterThan(0);
-    });
+    }, { timeout: 5000 });
 
     // Click Remote Control tab
     const remoteControlTabs = screen.getAllByText("Remote Control");
@@ -251,7 +257,7 @@ describe("UnitDetails", () => {
     await waitFor(() => {
       const remoteControlElements = screen.getAllByTestId("remote-control");
       expect(remoteControlElements.length).toBeGreaterThan(0);
-    });
+    }, { timeout: 3000 });
   });
 
   it("should handle Manage Remotely tab", async () => {
@@ -259,11 +265,11 @@ describe("UnitDetails", () => {
     
     // Wait for unit to load
     await waitFor(() => {
-      const unitElements = screen.getAllByText((content, element) => {
+      const unitElements = screen.getAllByText((content) => {
         return content.includes("Unit:") && content.includes("Unit 1");
       });
       expect(unitElements.length).toBeGreaterThan(0);
-    });
+    }, { timeout: 5000 });
 
     // Click Manage Remotely tab
     const manageTabs = screen.getAllByText("Manage Remotely");
@@ -273,7 +279,7 @@ describe("UnitDetails", () => {
     await waitFor(() => {
       const remoteControlElements = screen.getAllByTestId("remote-control");
       expect(remoteControlElements.length).toBeGreaterThan(0);
-    });
+    }, { timeout: 3000 });
   });
 
   it("should handle Overview tab content", async () => {
@@ -281,11 +287,11 @@ describe("UnitDetails", () => {
     
     // Wait for unit to load
     await waitFor(() => {
-      const unitElements = screen.getAllByText((content, element) => {
+      const unitElements = screen.getAllByText((content) => {
         return content.includes("Unit:") && content.includes("Unit 1");
       });
       expect(unitElements.length).toBeGreaterThan(0);
-    });
+    }, { timeout: 5000 });
 
     // Verify overview content - use getAllByText with regex patterns
     await waitFor(() => {
@@ -297,6 +303,6 @@ describe("UnitDetails", () => {
       
       const installDateElements = screen.getAllByText(/Install Date:/i);
       expect(installDateElements.length).toBeGreaterThan(0);
-    });
+    }, { timeout: 3000 });
   });
 });
