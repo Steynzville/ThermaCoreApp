@@ -23,7 +23,7 @@ vi.mock("@/lib/utils", () => ({
 }));
 
 // Mock Radix UI Select to avoid prototype errors
-// CRITICAL: Must include Icon and Viewport exports
+// CRITICAL: Must include Icon, Viewport, ScrollUpButton, and ScrollDownButton exports
 vi.mock("@radix-ui/react-select", () => ({
   Root: ({ children, value, defaultValue, onValueChange, ...props }) => (
     <div data-testid="select-root" data-value={value || defaultValue} {...props}>
@@ -47,10 +47,21 @@ vi.mock("@radix-ui/react-select", () => ({
       {children || "▼"}
     </span>
   ),
-  // CRITICAL: Viewport is used by SelectContent
   Viewport: ({ children, ...props }) => (
     <div data-testid="select-viewport" {...props}>
       {children}
+    </div>
+  ),
+  // CRITICAL: ScrollUpButton is used by SelectContent
+  ScrollUpButton: ({ children, ...props }) => (
+    <div data-testid="select-scroll-up" {...props}>
+      {children || "▲"}
+    </div>
+  ),
+  // CRITICAL: ScrollDownButton is used by SelectContent
+  ScrollDownButton: ({ children, ...props }) => (
+    <div data-testid="select-scroll-down" {...props}>
+      {children || "▼"}
     </div>
   ),
   Content: ({ children, ...props }) => (
