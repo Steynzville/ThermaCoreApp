@@ -15,7 +15,17 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Mock the missing component - UnitSummary
+// Mock navigate BEFORE importing anything that uses it
+const mockNavigate = vi.fn();
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual("react-router-dom");
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
+
+// CRITICAL: Mock the missing component BEFORE importing it
 // This creates a virtual module so the import resolves
 vi.mock("../components/dashboard/UnitSummary", () => ({
   default: ({ 
@@ -26,14 +36,12 @@ vi.mock("../components/dashboard/UnitSummary", () => ({
     alertCount, 
     alarmCount 
   }) => {
-    const mockNavigate = vi.fn();
-    
     const handleNavigate = (filter) => {
       mockNavigate(`/grid-view?${filter}`);
     };
 
     return (
-      <div className="rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+      <div data-testid="unit-summary" className="rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
           Unit Summary
         </h3>
@@ -41,6 +49,7 @@ vi.mock("../components/dashboard/UnitSummary", () => ({
           {/* Total */}
           <button
             type="button"
+            data-testid="total-button"
             onClick={() => handleNavigate('status=all')}
             className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
@@ -53,6 +62,7 @@ vi.mock("../components/dashboard/UnitSummary", () => ({
           {/* Online */}
           <button
             type="button"
+            data-testid="online-button"
             onClick={() => handleNavigate('status=online')}
             className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
@@ -65,6 +75,7 @@ vi.mock("../components/dashboard/UnitSummary", () => ({
           {/* Offline */}
           <button
             type="button"
+            data-testid="offline-button"
             onClick={() => handleNavigate('status=offline')}
             className="p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
@@ -77,6 +88,7 @@ vi.mock("../components/dashboard/UnitSummary", () => ({
           {/* Maintenance */}
           <button
             type="button"
+            data-testid="maintenance-button"
             onClick={() => handleNavigate('status=maintenance')}
             className="p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
@@ -89,6 +101,7 @@ vi.mock("../components/dashboard/UnitSummary", () => ({
           {/* Alerts */}
           <button
             type="button"
+            data-testid="alerts-button"
             onClick={() => handleNavigate('alerts=true')}
             className="p-3 rounded-lg bg-orange-50 dark:bg-orange-900/20 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
@@ -101,6 +114,7 @@ vi.mock("../components/dashboard/UnitSummary", () => ({
           {/* Alarms */}
           <button
             type="button"
+            data-testid="alarms-button"
             onClick={() => handleNavigate('alarms=true')}
             className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
@@ -115,17 +129,7 @@ vi.mock("../components/dashboard/UnitSummary", () => ({
   },
 }));
 
-// Mock navigate
-const mockNavigate = vi.fn();
-vi.mock("react-router-dom", async () => {
-  const actual = await vi.importActual("react-router-dom");
-  return {
-    ...actual,
-    useNavigate: () => mockNavigate,
-  };
-});
-
-// Import after mocks
+// NOW import the component after mocks are set up
 import UnitSummary from "../components/dashboard/UnitSummary";
 
 // Test wrapper
@@ -259,12 +263,8 @@ describe("UnitSummary", () => {
         </TestWrapper>,
       );
 
-      // Find the Total button and click it
-      const totalElements = screen.getAllByText("Total");
-      const totalButton = totalElements[0].closest("button");
-      if (totalButton) {
-        fireEvent.click(totalButton);
-      }
+      const totalButton = screen.getByTestId("total-button");
+      fireEvent.click(totalButton);
 
       expect(mockNavigate).toHaveBeenCalledWith("/grid-view?status=all");
     });
@@ -276,11 +276,8 @@ describe("UnitSummary", () => {
         </TestWrapper>,
       );
 
-      const onlineElements = screen.getAllByText("Online");
-      const onlineButton = onlineElements[0].closest("button");
-      if (onlineButton) {
-        fireEvent.click(onlineButton);
-      }
+      const onlineButton = screen.getByTestId("online-button");
+      fireEvent.click(onlineButton);
 
       expect(mockNavigate).toHaveBeenCalledWith("/grid-view?status=online");
     });
@@ -292,11 +289,8 @@ describe("UnitSummary", () => {
         </TestWrapper>,
       );
 
-      const offlineElements = screen.getAllByText("Offline");
-      const offlineButton = offlineElements[0].closest("button");
-      if (offlineButton) {
-        fireEvent.click(offlineButton);
-      }
+      const offlineButton = screen.getByTestId("offline-button");
+      fireEvent.click(offlineButton);
 
       expect(mockNavigate).toHaveBeenCalledWith("/grid-view?status=offline");
     });
@@ -308,11 +302,8 @@ describe("UnitSummary", () => {
         </TestWrapper>,
       );
 
-      const maintenanceElements = screen.getAllByText("Maintenance");
-      const maintenanceButton = maintenanceElements[0].closest("button");
-      if (maintenanceButton) {
-        fireEvent.click(maintenanceButton);
-      }
+      const maintenanceButton = screen.getByTestId("maintenance-button");
+      fireEvent.click(maintenanceButton);
 
       expect(mockNavigate).toHaveBeenCalledWith("/grid-view?status=maintenance");
     });
@@ -324,11 +315,8 @@ describe("UnitSummary", () => {
         </TestWrapper>,
       );
 
-      const alertsElements = screen.getAllByText("Alerts");
-      const alertsButton = alertsElements[0].closest("button");
-      if (alertsButton) {
-        fireEvent.click(alertsButton);
-      }
+      const alertsButton = screen.getByTestId("alerts-button");
+      fireEvent.click(alertsButton);
 
       expect(mockNavigate).toHaveBeenCalledWith("/grid-view?alerts=true");
     });
@@ -340,11 +328,8 @@ describe("UnitSummary", () => {
         </TestWrapper>,
       );
 
-      const alarmsElements = screen.getAllByText("Alarms");
-      const alarmsButton = alarmsElements[0].closest("button");
-      if (alarmsButton) {
-        fireEvent.click(alarmsButton);
-      }
+      const alarmsButton = screen.getByTestId("alarms-button");
+      fireEvent.click(alarmsButton);
 
       expect(mockNavigate).toHaveBeenCalledWith("/grid-view?alarms=true");
     });
