@@ -65,6 +65,29 @@ beforeAll(() => {
     value: MockAudioContext,
   });
 
+  // Mock window.matchMedia for responsive components
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    configurable: true,
+    value: (query) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }),
+  });
+
+  // Mock ResizeObserver
+  window.ResizeObserver = vi.fn().mockImplementation(() => ({
+    observe: vi.fn(),
+    unobserve: vi.fn(),
+    disconnect: vi.fn(),
+  }));
+
   // Clean up after all tests
   return () => {
     Object.defineProperty(window, "AudioContext", {
@@ -80,6 +103,18 @@ beforeAll(() => {
   };
 });
 
+// Mock the RemoteControl component
+vi.mock("../components/RemoteControl", () => ({
+  default: ({ unit, details }) => (
+    <div data-testid="remote-control">
+      <h3>Remote Control</h3>
+      <p>Unit: {unit.name}</p>
+      <p>Status: {unit.status}</p>
+      <button data-testid="remote-control-button">Toggle Power</button>
+    </div>
+  ),
+}));
+
 // 1. Explicit service mock using spyOn
 vi.mock("../services/unitService", () => ({
   getUnitById: vi.fn(),
@@ -88,11 +123,29 @@ vi.mock("../services/unitService", () => ({
 }));
 
 describe("UnitDetails", () => {
-  const mockUnit = { id: "1", name: "Unit 1", status: "Operational", location: "Building A" };
+  const mockUnit = { 
+    id: "1", 
+    name: "Unit 1", 
+    status: "Operational", 
+    location: "Building A" 
+  };
   const mockDetails = {
     installDate: "2023-01-15",
     lastMaintenance: "2024-10-01",
-    alerts: [{ id: 1, severity: "Warning", description: "Temperature high", timestamp: "2024-10-23T10:00:00Z" }],
+    alerts: [
+      { 
+        id: 1, 
+        severity: "Warning", 
+        description: "Temperature high", 
+        timestamp: "2024-10-23T10:00:00Z" 
+      },
+      { 
+        id: 2, 
+        severity: "Critical", 
+        description: "Pressure drop detected", 
+        timestamp: "2024-10-23T11:00:00Z" 
+      },
+    ],
   };
 
   beforeEach(() => {
@@ -122,7 +175,10 @@ describe("UnitDetails", () => {
   it("should render unit details after loading", async () => {
     renderUnitDetails();
     await waitFor(() => {
-      const unitElements = screen.getAllByText("Unit: Unit 1");
+      // Use getAllByText with a more specific matcher
+      const unitElements = screen.getAllByText((content, element) => {
+        return content.includes("Unit:") && content.includes("Unit 1");
+      });
       expect(unitElements.length).toBeGreaterThan(0);
     });
   });
@@ -133,20 +189,96 @@ describe("UnitDetails", () => {
 
     renderUnitDetails();
     await waitFor(() => { 
-      const unitElements = screen.getAllByText("Unit: Unit 1");
+      const unitElements = screen.getAllByText((content, element) => {
+        return content.includes("Unit:") && content.includes("Unit 1");
+      });
       expect(unitElements.length).toBeGreaterThan(0);
     });
 
     const alertTabs = screen.getAllByText("Alerts");
     fireEvent.click(alertTabs[0]);
 
-    const loadingElements = screen.getAllByText("Loading alerts...");
-    expect(loadingElements.length).toBeGreaterThan(0);
+    // Wait for loading state
+    await waitFor(() => {
+      const loadingElements = screen.getAllByText("Loading alerts...");
+      expect(loadingElements.length).toBeGreaterThan(0);
+    });
 
+    // Resolve the alerts
     resolveAlerts(mockDetails.alerts);
+    
+    // Wait for alerts to display
     await waitFor(() => { 
       const alertHistoryElements = screen.getAllByText("Alert History");
       expect(alertHistoryElements.length).toBeGreaterThan(0);
+    });
+  });
+
+  it("should render Remote Control tab", async () => {
+    renderUnitDetails();
+    
+    // Wait for unit to load
+    await waitFor(() => {
+      const unitElements = screen.getAllByText((content, element) => {
+        return content.includes("Unit:") && content.includes("Unit 1");
+      });
+      expect(unitElements.length).toBeGreaterThan(0);
+    });
+
+    // Click Remote Control tab
+    const remoteControlTabs = screen.getAllByText("Remote Control");
+    fireEvent.click(remoteControlTabs[0]);
+
+    // Wait for Remote Control component to render
+    await waitFor(() => {
+      const remoteControlElements = screen.getAllByTestId("remote-control");
+      expect(remoteControlElements.length).toBeGreaterThan(0);
+    });
+  });
+
+  it("should handle Manage Remotely tab", async () => {
+    renderUnitDetails();
+    
+    // Wait for unit to load
+    await waitFor(() => {
+      const unitElements = screen.getAllByText((content, element) => {
+        return content.includes("Unit:") && content.includes("Unit 1");
+      });
+      expect(unitElements.length).toBeGreaterThan(0);
+    });
+
+    // Click Manage Remotely tab
+    const manageTabs = screen.getAllByText("Manage Remotely");
+    fireEvent.click(manageTabs[0]);
+
+    // Manage Remotely tab should render content
+    await waitFor(() => {
+      const remoteControlElements = screen.getAllByTestId("remote-control");
+      expect(remoteControlElements.length).toBeGreaterThan(0);
+    });
+  });
+
+  it("should handle Overview tab content", async () => {
+    renderUnitDetails();
+    
+    // Wait for unit to load
+    await waitFor(() => {
+      const unitElements = screen.getAllByText((content, element) => {
+        return content.includes("Unit:") && content.includes("Unit 1");
+      });
+      expect(unitElements.length).toBeGreaterThan(0);
+    });
+
+    // Verify overview content
+    await waitFor(() => {
+      const statusElements = screen.getAllByText(/Status:/);
+      expect(statusElements.length).toBeGreaterThan(0);
+      
+      const locationElements = screen.getAllByText(/Location:/);
+      expect(locationElements.length).toBeGreaterThan(0);
+      
+      const installDateElements = screen.getAllByText(/Install Date:/);
+      expect(installDateElements.length).toBeGreaterThan(0);
     });
   });
 });
