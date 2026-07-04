@@ -13,19 +13,9 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import MultiProtocolManager from "../components/MultiProtocolManager";
 
-// Mock the hooks and services - using the actual hook name
-vi.mock("../hooks/useProtocolWebSocket", () => ({
-  useProtocolWebSocket: vi.fn(),
-  useModbusRegisters: vi.fn(),
-  useOPCUANodes: vi.fn(),
-  useDNP3Points: vi.fn(),
-  useMQTTMessages: vi.fn(),
-  useProtocolEvent: vi.fn(),
-}));
-
-// Mock protocolService - this creates a virtual module so the import resolves
+// IMPORTANT: Mock protocolService BEFORE importing the component
+// This creates a virtual module so the import resolves
 vi.mock("../services/protocolService", () => ({
   protocolService: {
     getProtocols: vi.fn().mockResolvedValue([]),
@@ -38,6 +28,17 @@ vi.mock("../services/protocolService", () => ({
   },
 }));
 
+// Mock the hooks - BEFORE importing the component
+vi.mock("../hooks/useProtocolWebSocket", () => ({
+  useProtocolWebSocket: vi.fn(),
+  useModbusRegisters: vi.fn(),
+  useOPCUANodes: vi.fn(),
+  useDNP3Points: vi.fn(),
+  useMQTTMessages: vi.fn(),
+  useProtocolEvent: vi.fn(),
+}));
+
+// Mock other services
 vi.mock("../services/mqttService", () => ({
   mqttService: {
     connect: vi.fn(),
@@ -56,7 +57,8 @@ vi.mock("../services/modbusService", () => ({
   },
 }));
 
-// Import after mocks
+// NOW import the component and hooks after mocks are set up
+import MultiProtocolManager from "../components/MultiProtocolManager";
 import { useProtocolWebSocket } from "../hooks/useProtocolWebSocket";
 import { protocolService } from "../services/protocolService";
 
