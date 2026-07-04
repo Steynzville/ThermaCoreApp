@@ -11,7 +11,7 @@
  * - Edge cases (zero counts, large numbers)
  */
 
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import UnitSummary from "../components/dashboard/UnitSummary";
@@ -32,13 +32,14 @@ const TestWrapper = ({ children }) => {
 };
 
 describe("UnitSummary", () => {
+  // Using the correct prop names that the component expects
   const defaultProps = {
     totalUnits: 24,
-    onlineUnits: 18,
-    offlineUnits: 3,
-    maintenanceUnits: 2,
-    alerts: 6,
-    alarms: 1,
+    onlineCount: 18,
+    offlineCount: 3,
+    maintenanceCount: 2,
+    alertCount: 6,
+    alarmCount: 1,
   };
 
   beforeEach(() => {
@@ -53,7 +54,6 @@ describe("UnitSummary", () => {
         </TestWrapper>,
       );
 
-      // Use getAllByText since there might be multiple instances
       const titleElements = screen.getAllByText("Unit Summary");
       expect(titleElements.length).toBeGreaterThan(0);
     });
@@ -65,9 +65,11 @@ describe("UnitSummary", () => {
         </TestWrapper>,
       );
 
-      // Use getAllByText since there might be multiple instances
       const totalElements = screen.getAllByText("Total");
       expect(totalElements.length).toBeGreaterThan(0);
+      // Check the actual number
+      const totalNumberElements = screen.getAllByText("24");
+      expect(totalNumberElements.length).toBeGreaterThan(0);
     });
 
     it("should render online units count", () => {
@@ -79,6 +81,8 @@ describe("UnitSummary", () => {
 
       const onlineElements = screen.getAllByText("Online");
       expect(onlineElements.length).toBeGreaterThan(0);
+      const onlineNumberElements = screen.getAllByText("18");
+      expect(onlineNumberElements.length).toBeGreaterThan(0);
     });
 
     it("should render offline units count", () => {
@@ -90,6 +94,8 @@ describe("UnitSummary", () => {
 
       const offlineElements = screen.getAllByText("Offline");
       expect(offlineElements.length).toBeGreaterThan(0);
+      const offlineNumberElements = screen.getAllByText("3");
+      expect(offlineNumberElements.length).toBeGreaterThan(0);
     });
 
     it("should render maintenance units count", () => {
@@ -101,6 +107,8 @@ describe("UnitSummary", () => {
 
       const maintenanceElements = screen.getAllByText("Maintenance");
       expect(maintenanceElements.length).toBeGreaterThan(0);
+      const maintenanceNumberElements = screen.getAllByText("2");
+      expect(maintenanceNumberElements.length).toBeGreaterThan(0);
     });
 
     it("should render alerts count", () => {
@@ -112,6 +120,8 @@ describe("UnitSummary", () => {
 
       const alertsElements = screen.getAllByText("Alerts");
       expect(alertsElements.length).toBeGreaterThan(0);
+      const alertsNumberElements = screen.getAllByText("6");
+      expect(alertsNumberElements.length).toBeGreaterThan(0);
     });
 
     it("should render alarms count", () => {
@@ -123,6 +133,8 @@ describe("UnitSummary", () => {
 
       const alarmsElements = screen.getAllByText("Alarms");
       expect(alarmsElements.length).toBeGreaterThan(0);
+      const alarmsNumberElements = screen.getAllByText("1");
+      expect(alarmsNumberElements.length).toBeGreaterThan(0);
     });
 
     it("should render all 6 unit type buttons", () => {
@@ -133,7 +145,6 @@ describe("UnitSummary", () => {
       );
 
       const buttons = screen.getAllByRole("button");
-      // There should be at least 6 buttons (one for each unit type)
       expect(buttons.length).toBeGreaterThanOrEqual(6);
     });
   });
@@ -214,16 +225,14 @@ describe("UnitSummary", () => {
         </TestWrapper>,
       );
 
-      // Find the Total button - use getAllByText and get the first one
+      // Find the Total button and click it
       const totalElements = screen.getAllByText("Total");
       const totalButton = totalElements[0].closest("button");
       if (totalButton) {
         fireEvent.click(totalButton);
       }
 
-      expect(mockNavigate).toHaveBeenCalledWith("/grid-view", {
-        state: { filter: "all" },
-      });
+      expect(mockNavigate).toHaveBeenCalledWith("/grid-view?status=all");
     });
 
     it("should navigate to grid view with online filter when online units is clicked", () => {
@@ -239,9 +248,7 @@ describe("UnitSummary", () => {
         fireEvent.click(onlineButton);
       }
 
-      expect(mockNavigate).toHaveBeenCalledWith("/grid-view", {
-        state: { filter: "online" },
-      });
+      expect(mockNavigate).toHaveBeenCalledWith("/grid-view?status=online");
     });
 
     it("should navigate to grid view with offline filter when offline units is clicked", () => {
@@ -257,9 +264,7 @@ describe("UnitSummary", () => {
         fireEvent.click(offlineButton);
       }
 
-      expect(mockNavigate).toHaveBeenCalledWith("/grid-view", {
-        state: { filter: "offline" },
-      });
+      expect(mockNavigate).toHaveBeenCalledWith("/grid-view?status=offline");
     });
 
     it("should navigate to grid view with maintenance filter when maintenance units is clicked", () => {
@@ -275,9 +280,7 @@ describe("UnitSummary", () => {
         fireEvent.click(maintenanceButton);
       }
 
-      expect(mockNavigate).toHaveBeenCalledWith("/grid-view", {
-        state: { filter: "maintenance" },
-      });
+      expect(mockNavigate).toHaveBeenCalledWith("/grid-view?status=maintenance");
     });
 
     it("should navigate to grid view with alerts filter when alerts is clicked", () => {
@@ -293,9 +296,7 @@ describe("UnitSummary", () => {
         fireEvent.click(alertsButton);
       }
 
-      expect(mockNavigate).toHaveBeenCalledWith("/grid-view", {
-        state: { filter: "alerts" },
-      });
+      expect(mockNavigate).toHaveBeenCalledWith("/grid-view?alerts=true");
     });
 
     it("should navigate to grid view with alarms filter when alarms is clicked", () => {
@@ -311,9 +312,7 @@ describe("UnitSummary", () => {
         fireEvent.click(alarmsButton);
       }
 
-      expect(mockNavigate).toHaveBeenCalledWith("/grid-view", {
-        state: { filter: "alarms" },
-      });
+      expect(mockNavigate).toHaveBeenCalledWith("/grid-view?alarms=true");
     });
   });
 
@@ -327,6 +326,7 @@ describe("UnitSummary", () => {
 
       const grid = container.querySelector(".grid");
       expect(grid).toBeTruthy();
+      expect(grid.className).toContain("grid-cols-2");
     });
 
     it("should have proper styling classes for the container", () => {
@@ -338,6 +338,9 @@ describe("UnitSummary", () => {
 
       const containerElement = container.firstChild;
       expect(containerElement).toBeTruthy();
+      expect(containerElement.className).toContain("rounded-lg");
+      expect(containerElement.className).toContain("shadow-sm");
+      expect(containerElement.className).toContain("border");
     });
 
     it("should have hover states on buttons", () => {
@@ -348,8 +351,11 @@ describe("UnitSummary", () => {
       );
 
       const buttons = screen.getAllByRole("button");
-      // Just check that buttons exist with hover classes
       expect(buttons.length).toBeGreaterThan(0);
+      // Check for hover class
+      buttons.forEach(button => {
+        expect(button.className).toContain("hover:bg-gray-50");
+      });
     });
 
     it("should have dark mode classes", () => {
@@ -368,7 +374,14 @@ describe("UnitSummary", () => {
     it("should handle zero counts", () => {
       render(
         <TestWrapper>
-          <UnitSummary {...defaultProps} totalUnits={0} onlineUnits={0} offlineUnits={0} maintenanceUnits={0} alerts={0} alarms={0} />
+          <UnitSummary 
+            totalUnits={0} 
+            onlineCount={0} 
+            offlineCount={0} 
+            maintenanceCount={0} 
+            alertCount={0} 
+            alarmCount={0} 
+          />
         </TestWrapper>,
       );
 
@@ -379,18 +392,34 @@ describe("UnitSummary", () => {
     it("should handle large counts", () => {
       render(
         <TestWrapper>
-          <UnitSummary {...defaultProps} totalUnits={9999} onlineUnits={8888} offlineUnits={777} maintenanceUnits={666} alerts={55} alarms={4} />
+          <UnitSummary 
+            totalUnits={9999} 
+            onlineCount={8888} 
+            offlineCount={777} 
+            maintenanceCount={666} 
+            alertCount={55} 
+            alarmCount={4} 
+          />
         </TestWrapper>,
       );
 
       const totalElements = screen.getAllByText("9999");
       expect(totalElements.length).toBeGreaterThan(0);
+      const onlineElements = screen.getAllByText("8888");
+      expect(onlineElements.length).toBeGreaterThan(0);
     });
 
     it("should handle single digit counts", () => {
       render(
         <TestWrapper>
-          <UnitSummary {...defaultProps} totalUnits={5} onlineUnits={3} offlineUnits={2} maintenanceUnits={1} alerts={0} alarms={0} />
+          <UnitSummary 
+            totalUnits={5} 
+            onlineCount={3} 
+            offlineCount={2} 
+            maintenanceCount={1} 
+            alertCount={0} 
+            alarmCount={0} 
+          />
         </TestWrapper>,
       );
 
@@ -443,8 +472,9 @@ describe("UnitSummary", () => {
       );
 
       const buttons = screen.getAllByRole("button");
-      // Just check that buttons exist and have a type attribute
-      expect(buttons.length).toBeGreaterThan(0);
+      buttons.forEach((button) => {
+        expect(button).toHaveAttribute("type", "button");
+      });
     });
 
     it("should be keyboard accessible", () => {
@@ -456,7 +486,8 @@ describe("UnitSummary", () => {
 
       const buttons = screen.getAllByRole("button");
       buttons.forEach((button) => {
-        expect(button).toHaveAttribute("tabindex");
+        // Check that they're focusable (have appropriate tabindex or are naturally focusable)
+        expect(button.tagName).toBe("BUTTON");
       });
     });
 
@@ -475,7 +506,7 @@ describe("UnitSummary", () => {
         fireEvent.click(totalButton);
       }
 
-      expect(mockNavigate).toHaveBeenCalled();
+      expect(mockNavigate).toHaveBeenCalledTimes(3);
     });
   });
 
@@ -488,7 +519,6 @@ describe("UnitSummary", () => {
       );
 
       const buttons = screen.getAllByRole("button");
-      // There should be at least 6 buttons
       expect(buttons.length).toBeGreaterThanOrEqual(6);
     });
 
@@ -501,6 +531,9 @@ describe("UnitSummary", () => {
 
       const headings = screen.getAllByText("Unit Summary");
       expect(headings.length).toBeGreaterThan(0);
+      // Check that it's an h3
+      const heading = headings[0].closest("h3");
+      expect(heading).toBeTruthy();
     });
 
     it("should have descriptive labels for each unit type", () => {
