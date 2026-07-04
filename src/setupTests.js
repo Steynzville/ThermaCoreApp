@@ -91,7 +91,84 @@ if (!window.getComputedStyle || typeof window.getComputedStyle !== 'function') {
 
 /**
  * -----------------------------
- * WINDOW METHOD MOCKS (ADDED)
+ * WINDOW LOCATION MOCK (ADDED)
+ * -----------------------------
+ */
+// Add window.location for React Router and URL creation
+Object.defineProperty(window, "location", {
+  writable: true,
+  configurable: true,
+  value: {
+    href: "http://localhost/",
+    origin: "http://localhost",
+    pathname: "/",
+    search: "",
+    hash: "",
+    assign: vi.fn(),
+    replace: vi.fn(),
+    reload: vi.fn(),
+  },
+});
+
+Object.defineProperty(window, "history", {
+  writable: true,
+  configurable: true,
+  value: {
+    pushState: vi.fn(),
+    replaceState: vi.fn(),
+    go: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    length: 0,
+    scrollRestoration: "auto",
+    state: null,
+  },
+});
+
+/**
+ * -----------------------------
+ * STORAGE MOCKS (ADDED)
+ * -----------------------------
+ */
+// Complete localStorage mock with proper getItem that returns null for missing keys
+const createStorageMock = () => {
+  let store = {};
+  return {
+    getItem: (key) => (key in store ? store[key] : null),
+    setItem: (key, value) => { store[key] = value.toString(); },
+    removeItem: (key) => { delete store[key]; },
+    clear: () => { store = {}; },
+    get length() { return Object.keys(store).length; },
+    key: (index) => Object.keys(store)[index] || null,
+  };
+};
+
+// Define localStorage and sessionStorage with proper mocks
+if (!window.localStorage) {
+  Object.defineProperty(window, "localStorage", {
+    value: createStorageMock(),
+    writable: true,
+    configurable: true,
+  });
+}
+
+if (!window.sessionStorage) {
+  Object.defineProperty(window, "sessionStorage", {
+    value: createStorageMock(),
+    writable: true,
+    configurable: true,
+  });
+}
+
+// Reset storage before each test
+beforeEach(() => {
+  window.localStorage.clear();
+  window.sessionStorage.clear();
+});
+
+/**
+ * -----------------------------
+ * WINDOW METHOD MOCKS
  * -----------------------------
  */
 
@@ -216,9 +293,28 @@ Element.prototype.getBoundingClientRect = vi.fn().mockReturnValue({
   toJSON: vi.fn(),
 });
 
+// Mock DOMRect for popover/input-otp components (ADDED)
+if (!window.DOMRect) {
+  window.DOMRect = class DOMRect {
+    constructor(x = 0, y = 0, width = 0, height = 0) {
+      this.x = x;
+      this.y = y;
+      this.width = width;
+      this.height = height;
+      this.top = y;
+      this.left = x;
+      this.bottom = y + height;
+      this.right = x + width;
+    }
+    toJSON() {
+      return { x: this.x, y: this.y, width: this.width, height: this.height, top: this.top, left: this.left, bottom: this.bottom, right: this.right };
+    }
+  };
+}
+
 /**
  * -----------------------------
- * AUDIO CONTEXT MOCK (ADDED)
+ * AUDIO CONTEXT MOCK
  * -----------------------------
  */
 
@@ -277,6 +373,32 @@ if (!window.webkitAudioContext) {
     value: MockAudioContext,
   });
 }
+
+/**
+ * -----------------------------
+ * FETCH MOCK FOR AUDIO PLAYER (ADDED)
+ * -----------------------------
+ */
+// Mock fetch for audioPlayer tests
+if (!global.fetch) {
+  global.fetch = vi.fn().mockImplementation(() =>
+    Promise.resolve({
+      arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
+      blob: () => Promise.resolve(new Blob()),
+      text: () => Promise.resolve(""),
+      json: () => Promise.resolve({}),
+      ok: true,
+      status: 200,
+    })
+  );
+}
+
+// Reset fetch mock before each test
+beforeEach(() => {
+  if (global.fetch && typeof global.fetch === 'function' && global.fetch.mockClear) {
+    global.fetch.mockClear();
+  }
+});
 
 /**
  * -----------------------------
