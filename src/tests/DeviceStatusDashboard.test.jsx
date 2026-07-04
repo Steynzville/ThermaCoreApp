@@ -6,6 +6,129 @@
 
 import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+// Mock device status service FIRST - before importing the component
+// This is a simpler approach that works with Vitest
+const mockDeviceStatuses = [
+  {
+    id: "TC001",
+    name: "Device 1",
+    status: "online",
+    isOnline: true,
+    hasAlert: false,
+    hasAlarm: false,
+    lastSeen: new Date(),
+    healthStatus: "healthy",
+    location: "Building A",
+    batteryLevel: 85.5,
+  },
+  {
+    id: "TC002",
+    name: "Device 2",
+    status: "offline",
+    isOnline: false,
+    hasAlert: true,
+    hasAlarm: false,
+    lastSeen: new Date(Date.now() - 600000),
+    healthStatus: "warning",
+    location: "Building B",
+    batteryLevel: 12.3,
+  },
+  {
+    id: "TC003",
+    name: "Device 3",
+    status: "online",
+    isOnline: true,
+    hasAlert: false,
+    hasAlarm: true,
+    lastSeen: new Date(),
+    healthStatus: "healthy",
+    location: "Building A",
+    batteryLevel: 67.8,
+  },
+  {
+    id: "TC004",
+    name: "Device 4",
+    status: "maintenance",
+    isOnline: false,
+    hasAlert: false,
+    hasAlarm: false,
+    lastSeen: new Date(Date.now() - 1200000),
+    healthStatus: "maintenance",
+    location: "Building C",
+    batteryLevel: 45.0,
+  },
+];
+
+// Mock the device status service module
+vi.mock("../services/deviceStatusService", () => {
+  return {
+    deviceStatusService: {
+      getAllDeviceStatuses: vi.fn().mockReturnValue([
+        {
+          id: "TC001",
+          name: "Device 1",
+          status: "online",
+          isOnline: true,
+          hasAlert: false,
+          hasAlarm: false,
+          lastSeen: new Date(),
+          healthStatus: "healthy",
+          location: "Building A",
+          batteryLevel: 85.5,
+        },
+        {
+          id: "TC002",
+          name: "Device 2",
+          status: "offline",
+          isOnline: false,
+          hasAlert: true,
+          hasAlarm: false,
+          lastSeen: new Date(Date.now() - 600000),
+          healthStatus: "warning",
+          location: "Building B",
+          batteryLevel: 12.3,
+        },
+        {
+          id: "TC003",
+          name: "Device 3",
+          status: "online",
+          isOnline: true,
+          hasAlert: false,
+          hasAlarm: true,
+          lastSeen: new Date(),
+          healthStatus: "healthy",
+          location: "Building A",
+          batteryLevel: 67.8,
+        },
+        {
+          id: "TC004",
+          name: "Device 4",
+          status: "maintenance",
+          isOnline: false,
+          hasAlert: false,
+          hasAlarm: false,
+          lastSeen: new Date(Date.now() - 1200000),
+          healthStatus: "maintenance",
+          location: "Building C",
+          batteryLevel: 45.0,
+        },
+      ]),
+      addStatusChangeListener: vi.fn().mockReturnValue(() => {}),
+      getDeviceStatus: vi.fn().mockResolvedValue({
+        success: true,
+        data: {
+          devices: [{ id: "device-1", name: "Device 1", status: "online" }],
+        },
+      }),
+      initialize: vi.fn().mockResolvedValue(undefined),
+      subscribe: vi.fn(),
+      unsubscribe: vi.fn(),
+    },
+  };
+});
+
+// Now import the component after mocks are set up
 import DeviceStatusDashboard from "../components/DeviceStatusDashboard";
 
 // Mock auth context
@@ -100,79 +223,6 @@ vi.mock("lucide-react", () => ({
 vi.mock("@/lib/utils", () => ({
   cn: (...inputs) => inputs.filter(Boolean).join(" "),
 }));
-
-// Mock device status service - ALL definitions inside the factory, no external references
-vi.mock("../services/deviceStatusService", () => {
-  // Define mock data inside the factory
-  const mockDeviceStatuses = [
-    {
-      id: "TC001",
-      name: "Device 1",
-      status: "online",
-      isOnline: true,
-      hasAlert: false,
-      hasAlarm: false,
-      lastSeen: new Date(),
-      healthStatus: "healthy",
-      location: "Building A",
-      batteryLevel: 85.5,
-    },
-    {
-      id: "TC002",
-      name: "Device 2",
-      status: "offline",
-      isOnline: false,
-      hasAlert: true,
-      hasAlarm: false,
-      lastSeen: new Date(Date.now() - 600000),
-      healthStatus: "warning",
-      location: "Building B",
-      batteryLevel: 12.3,
-    },
-    {
-      id: "TC003",
-      name: "Device 3",
-      status: "online",
-      isOnline: true,
-      hasAlert: false,
-      hasAlarm: true,
-      lastSeen: new Date(),
-      healthStatus: "healthy",
-      location: "Building A",
-      batteryLevel: 67.8,
-    },
-    {
-      id: "TC004",
-      name: "Device 4",
-      status: "maintenance",
-      isOnline: false,
-      hasAlert: false,
-      hasAlarm: false,
-      lastSeen: new Date(Date.now() - 1200000),
-      healthStatus: "maintenance",
-      location: "Building C",
-      batteryLevel: 45.0,
-    },
-  ];
-
-  const mockUnsubscribe = vi.fn();
-
-  return {
-    deviceStatusService: {
-      getAllDeviceStatuses: vi.fn().mockReturnValue(mockDeviceStatuses),
-      addStatusChangeListener: vi.fn().mockReturnValue(mockUnsubscribe),
-      getDeviceStatus: vi.fn().mockResolvedValue({
-        success: true,
-        data: {
-          devices: [{ id: "device-1", name: "Device 1", status: "online" }],
-        },
-      }),
-      initialize: vi.fn().mockResolvedValue(undefined),
-      subscribe: vi.fn(),
-      unsubscribe: vi.fn(),
-    },
-  };
-});
 
 // Mock window methods
 beforeEach(() => {
