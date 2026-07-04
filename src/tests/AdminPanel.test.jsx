@@ -42,7 +42,7 @@ vi.mock("../context/ThemeContext", () => ({
   useTheme: () => ({ theme: "dark", setTheme: vi.fn() }),
 }));
 
-// Mock PageHeader - FIXED: Add this to prevent rendering issues
+// Mock PageHeader
 vi.mock("../components/PageHeader", () => ({
   default: ({ title, subtitle }) => (
     <div data-testid="page-header">
@@ -77,6 +77,22 @@ vi.mock("../components/ui/card", () => ({
   CardContent: ({ children, className }) => (
     <div data-testid="card-content" className={className}>{children}</div>
   ),
+}));
+
+// Mock lucide-react icons
+vi.mock("lucide-react", () => ({
+  Database: () => <span data-testid="icon-database">Database</span>,
+  Users: () => <span data-testid="icon-users">Users</span>,
+  Shield: () => <span data-testid="icon-shield">Shield</span>,
+  Settings: () => <span data-testid="icon-settings">Settings</span>,
+  Plus: () => <span data-testid="icon-plus">Plus</span>,
+  Edit: () => <span data-testid="icon-edit">Edit</span>,
+  Trash2: () => <span data-testid="icon-trash">Trash</span>,
+  Key: () => <span data-testid="icon-key">Key</span>,
+  Lock: () => <span data-testid="icon-lock">Lock</span>,
+  Eye: () => <span data-testid="icon-eye">Eye</span>,
+  EyeOff: () => <span data-testid="icon-eye-off">EyeOff</span>,
+  UserCheck: () => <span data-testid="icon-user-check">UserCheck</span>,
 }));
 
 // Mock apiFetch
@@ -283,14 +299,20 @@ describe("AdminPanel Component", () => {
       fireEvent.click(changePasswordButton);
     });
 
+    // Wait for modal to appear
     await waitFor(() => {
-      // Find toggle buttons by looking for Eye/EyeOff icons or the buttons
-      const toggleButtons = screen.getAllByRole("button", { 
-        name: /Show password|Hide password|Show confirm password|Hide confirm password/i 
-      });
-      // There should be at least one toggle button
-      expect(toggleButtons.length).toBeGreaterThan(0);
+      const modals = screen.getAllByTestId("password-reset-modal");
+      expect(modals.length).toBeGreaterThan(0);
     });
+
+    // Find toggle buttons - the component uses these exact aria-labels
+    // The new password toggle uses "Show password" / "Hide password"
+    // The confirm password toggle uses "Show confirm password" / "Hide confirm password"
+    const toggleButtons = screen.getAllByRole("button", { 
+      name: /Show password|Hide password|Show confirm password|Hide confirm password/i 
+    });
+    // There should be at least two toggle buttons (one for new password, one for confirm)
+    expect(toggleButtons.length).toBeGreaterThanOrEqual(2);
   });
 
   it("should validate password matching", async () => {
@@ -385,24 +407,32 @@ describe("AdminPanel Component", () => {
       expect(modals.length).toBeGreaterThan(0);
     });
 
-    // Find the new password input and toggle button
+    // Find the new password input
     const newPasswordInputs = await screen.findAllByPlaceholderText("Enter new password");
     expect(newPasswordInputs.length).toBeGreaterThan(0);
     expect(newPasswordInputs[0]).toHaveAttribute("type", "password");
 
-    // Find toggle button
+    // Find toggle button for the new password field
     const toggleButtons = screen.getAllByRole("button", { 
       name: /Show password|Hide password/i 
     });
+    // There should be at least one toggle button for the new password field
     expect(toggleButtons.length).toBeGreaterThan(0);
     
     // Click to show password
     fireEvent.click(toggleButtons[0]);
-    expect(newPasswordInputs[0]).toHaveAttribute("type", "text");
+    // Wait for the input type to change
+    await waitFor(() => {
+      const inputs = screen.getAllByPlaceholderText("Enter new password");
+      expect(inputs[0]).toHaveAttribute("type", "text");
+    });
     
     // Click to hide password again
     fireEvent.click(toggleButtons[0]);
-    expect(newPasswordInputs[0]).toHaveAttribute("type", "password");
+    await waitFor(() => {
+      const inputs = screen.getAllByPlaceholderText("Enter new password");
+      expect(inputs[0]).toHaveAttribute("type", "password");
+    });
   });
 
   it("should show Users tab content by default", async () => {
