@@ -126,13 +126,13 @@ jobs:
                 statements = data.get('totals', {}).get('num_statements', 0)
                 covered = data.get('totals', {}).get('covered_statements', 0)
                 missing = data.get('totals', {}).get('missed_statements', 0)
-                
+
                 print('  📈 Total Coverage: {:.2f}%'.format(coverage))
                 print('  📝 Statements:     {}'.format(statements))
                 print('  ✅ Covered:        {}'.format(covered))
                 print('  ❌ Missing:       {}'.format(missing))
                 print('')
-                
+
                 if coverage >= 80:
                     print('  🟢 EXCELLENT! Coverage is above 80%')
                 elif coverage >= 60:
