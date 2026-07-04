@@ -209,13 +209,13 @@ describe("MultiProtocolManager - Enhanced Protocol Support", () => {
       </TestWrapper>,
     );
 
-    const configureButtons = screen.getAllByText(/Configure MQTT/i);
-    expect(configureButtons.length).toBeGreaterThan(0);
-    fireEvent.click(configureButtons[0]);
+    // Use getByTestId to find the configure button directly
+    const configureButton = screen.getByTestId("configure-mqtt");
+    expect(configureButton).toBeInTheDocument();
+    fireEvent.click(configureButton);
 
-    await waitFor(() => {
-      expect(onConfigure).toHaveBeenCalledWith('mqtt');
-    });
+    // Verify the callback was called
+    expect(onConfigure).toHaveBeenCalledWith('mqtt');
   });
 
   it("should show connection status badges for each protocol", async () => {
