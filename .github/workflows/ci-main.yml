@@ -1,4 +1,5 @@
-CI Main - Backend Tests
+name: CI Main - Backend Tests
+
 permissions:
   contents: read
   pull-requests: write
@@ -106,30 +107,50 @@ jobs:
           echo "🧪 Running backend tests with coverage..."
           docker-compose -f docker-compose.ci.yml run --rm backend python -m pytest -v --tb=short --cov=app --cov-report=json --cov-report=term --cov-report=term-missing --cov-fail-under=60
 
-      - name: Display Coverage Summary
+      - name: 📊 Display Coverage Summary
         if: always()
         run: |
-          echo "📊 BACKEND COVERAGE REPORT"
-          echo "---"
+          echo ""
+          echo "═══════════════════════════════════════════════════════════"
+          echo "                   📊 BACKEND COVERAGE                    "
+          echo "═══════════════════════════════════════════════════════════"
+          echo ""
           
           if [ -f "backend/coverage.json" ]; then
-            # Write Python script to file to avoid shell parsing
-            echo 'import json' > /tmp/coverage_script.py
-            echo 'try:' >> /tmp/coverage_script.py
-            echo '    with open("backend/coverage.json", "r") as f:' >> /tmp/coverage_script.py
-            echo '        data = json.load(f)' >> /tmp/coverage_script.py
-            echo '    coverage = data.get("totals", {}).get("percent_covered", 0)' >> /tmp/coverage_script.py
-            echo '    print("✅ Coverage: {:.2f}%".format(coverage))' >> /tmp/coverage_script.py
-            echo '    print("COVERAGE_PCT={:.2f}".format(coverage))' >> /tmp/coverage_script.py
-            echo 'except Exception as e:' >> /tmp/coverage_script.py
-            echo '    print("Error:", e)' >> /tmp/coverage_script.py
-            echo '    print("COVERAGE_PCT=0.00")' >> /tmp/coverage_script.py
-            
-            # Run the Python script
-            python3 /tmp/coverage_script.py
-            
+            python3 -c "
+            import json
+            try:
+                with open('backend/coverage.json', 'r') as f:
+                    data = json.load(f)
+                coverage = data.get('totals', {}).get('percent_covered', 0)
+                statements = data.get('totals', {}).get('num_statements', 0)
+                covered = data.get('totals', {}).get('covered_statements', 0)
+                missing = data.get('totals', {}).get('missed_statements', 0)
+                
+                print('  📈 Total Coverage: {:.2f}%'.format(coverage))
+                print('  📝 Statements:     {}'.format(statements))
+                print('  ✅ Covered:        {}'.format(covered))
+                print('  ❌ Missing:       {}'.format(missing))
+                print('')
+                
+                if coverage >= 80:
+                    print('  🟢 EXCELLENT! Coverage is above 80%')
+                elif coverage >= 60:
+                    print('  🟡 Good! Coverage is above 60%')
+                elif coverage >= 40:
+                    print('  🟠 Fair - Consider improving coverage')
+                else:
+                    print('  🔴 Low coverage - Please add more tests')
+                print('')
+                print('═══════════════════════════════════════════════════════════')
+                print('COVERAGE_PCT={:.2f}'.format(coverage))
+            except Exception as e:
+                print('Error:', e)
+                print('COVERAGE_PCT=0.00')
+            "
           else
-            echo "❌ No coverage.json found"
+            echo "  ❌ No coverage.json found"
+            echo "═══════════════════════════════════════════════════════════"
           fi
 
       - name: Upload Coverage Report
@@ -138,9 +159,38 @@ jobs:
         with:
           name: backend-coverage-report
           path: backend/coverage.json
+          retention-days: 14
+
+      - name: Generate Coverage Badge
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          if [ -f "backend/coverage.json" ]; then
+            python3 -c "
+            import json
+            try:
+                with open('backend/coverage.json', 'r') as f:
+                    data = json.load(f)
+                coverage = data.get('totals', {}).get('percent_covered', 0)
+                coverage_int = int(coverage)
+                
+                if coverage_int >= 80:
+                    color = 'brightgreen'
+                elif coverage_int >= 60:
+                    color = 'yellow'
+                elif coverage_int >= 40:
+                    color = 'orange'
+                else:
+                    color = 'red'
+                
+                print('📊 Backend Coverage: {:.2f}%'.format(coverage))
+                print('🎨 Badge color: {}'.format(color))
+            except Exception as e:
+                print('Error:', e)
+            "
+          fi
 
       - name: Stop Services
         if: always()
         run: |
           docker-compose -f docker-compose.ci.yml down --remove-orphans --timeout 30 || true
-          rm -f docker-compose.ci.yml || true 
+          rm -f docker-compose.ci.yml || true
