@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it, vi, beforeAll, afterAll } from "vites
 import App from "../App";
 
 // Mock AuthContext to return unauthenticated state
-// CRITICAL: The mock must match what the App component expects
 vi.mock("../context/AuthContext", () => ({
   useAuth: () => ({
     user: null,
@@ -16,7 +15,6 @@ vi.mock("../context/AuthContext", () => ({
     register: vi.fn(),
     updateProfile: vi.fn(),
   }),
-  // AuthProvider must render children with the context
   AuthProvider: ({ children }) => <div data-testid="auth-provider">{children}</div>,
 }));
 
@@ -91,19 +89,23 @@ vi.mock("../components/common/Spinner", () => ({
   ),
 }));
 
-// Mock the LoginScreen component
+// Mock the LoginScreen component - make it render something visible
 vi.mock("../components/LoginScreen", () => ({
   default: ({ error, setError }) => (
-    <div data-testid="login-page">
+    <div data-testid="login-page" className="login-page">
       <h1>Login</h1>
-      <label>
-        Username
-        <input type="text" placeholder="Username" />
-      </label>
-      <label>
-        Password
-        <input type="password" placeholder="Password" />
-      </label>
+      <div>
+        <label>
+          Username
+          <input type="text" placeholder="Username" aria-label="Username" />
+        </label>
+      </div>
+      <div>
+        <label>
+          Password
+          <input type="password" placeholder="Password" aria-label="Password" />
+        </label>
+      </div>
       {error && <div data-testid="login-error">{error}</div>}
       <button type="button" onClick={() => setError("")}>Login</button>
     </div>
@@ -113,10 +115,8 @@ vi.mock("../components/LoginScreen", () => ({
 // Mock the ProtectedRoute component
 vi.mock("../components/ProtectedRoute", () => ({
   default: ({ component: Component, componentMap, roles }) => {
-    // Determine which component to render based on roles or componentMap
-    let Comp = Component;
+    // For role-based components, render a placeholder
     if (componentMap) {
-      // For role-based components, render a placeholder
       return <div data-testid="protected-content">Protected Content</div>;
     }
     return <div data-testid="protected-content">Protected Content</div>;
@@ -294,11 +294,15 @@ describe("App", () => {
   it("renders Login page for unauthenticated user", async () => {
     render(<App />);
     
-    // Wait for the login page to render
+    // Wait for the login page to render - look for the login-page testid
     await waitFor(() => {
-      const usernameElements = screen.getAllByText(/Username/i);
-      expect(usernameElements.length).toBeGreaterThan(0);
+      const loginElements = screen.getAllByTestId("login-page");
+      expect(loginElements.length).toBeGreaterThan(0);
     });
+    
+    // Also verify username text is present
+    const usernameElements = screen.getAllByText(/Username/i);
+    expect(usernameElements.length).toBeGreaterThan(0);
   });
 
   it("renders with all required providers", async () => {
@@ -306,9 +310,12 @@ describe("App", () => {
     
     // Should render the login page
     await waitFor(() => {
-      const usernameElements = screen.getAllByText(/Username/i);
-      expect(usernameElements.length).toBeGreaterThan(0);
+      const loginElements = screen.getAllByTestId("login-page");
+      expect(loginElements.length).toBeGreaterThan(0);
     });
+    
+    const usernameElements = screen.getAllByText(/Username/i);
+    expect(usernameElements.length).toBeGreaterThan(0);
   });
 
   it("redirects to /login when accessing root path", async () => {
@@ -316,9 +323,12 @@ describe("App", () => {
     
     // Should show login page
     await waitFor(() => {
-      const usernameElements = screen.getAllByText(/Username/i);
-      expect(usernameElements.length).toBeGreaterThan(0);
+      const loginElements = screen.getAllByTestId("login-page");
+      expect(loginElements.length).toBeGreaterThan(0);
     });
+    
+    const usernameElements = screen.getAllByText(/Username/i);
+    expect(usernameElements.length).toBeGreaterThan(0);
   });
 
   it("renders router with routes", () => {
@@ -336,7 +346,7 @@ describe("App", () => {
   it("renders theme toggle component", () => {
     render(<App />);
     // The theme toggle should be present
-    const themeToggleElements = screen.getAllByLabelText(/Toggle Theme/i);
+    const themeToggleElements = screen.getAllByTestId("theme-toggle");
     expect(themeToggleElements.length).toBeGreaterThan(0);
   });
 });
