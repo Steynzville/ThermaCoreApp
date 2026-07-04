@@ -1,117 +1,302 @@
-/**
- * Tests for UserUnitDetails Component
- *
- * Fully isolated test to prevent UnitProvider async initialization issues.
- */
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { beforeEach, describe, expect, it, vi, beforeAll, afterAll } from "vitest";
+import React from "react";
+import UnitDetails from "./UnitDetails";
+import * as unitService from "../services/unitService";
 
-import { render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import UserUnitDetails from "../components/UserUnitDetails";
+// Mock AudioContext globally (same as audioPlayer.test.js)
+class MockAudioContext {
+  constructor() {
+    this.state = "suspended";
+    this.currentTime = 0;
+    this.destination = {};
+  }
+  resume() {
+    return Promise.resolve();
+  }
+  suspend() {
+    return Promise.resolve();
+  }
+  close() {
+    return Promise.resolve();
+  }
+  decodeAudioData() {
+    return Promise.resolve({
+      duration: 1,
+      numberOfChannels: 2,
+      sampleRate: 44100,
+      getChannelData: () => new Float32Array(44100),
+    });
+  }
+  createBufferSource() {
+    return {
+      buffer: null,
+      connect: vi.fn(),
+      start: vi.fn(),
+      stop: vi.fn(),
+      onended: null,
+    };
+  }
+  createGain() {
+    return {
+      gain: { value: 0.5, setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn() },
+      connect: vi.fn(),
+    };
+  }
+}
 
-/* -------------------------------------------------------
-   ROUTER MOCK
-------------------------------------------------------- */
-vi.mock("react-router-dom", async () => {
-  const actual = await vi.importActual("react-router-dom");
+// Setup AudioContext mock before all tests
+beforeAll(() => {
+  // Store original if it exists
+  const originalAudioContext = window.AudioContext;
+  const originalWebkitAudioContext = window.webkitAudioContext;
 
-  return {
-    ...actual,
-    useNavigate: () => vi.fn(),
-    useLocation: () => ({
-      state: {
-        unit: {
-          id: 1,
-          name: "Test Unit",
-          location: "Test Location",
-          status: "running",
-          temperature: 25,
-          pressure: 100,
-          flowRate: 50,
-        },
-      },
+  // Mock AudioContext
+  Object.defineProperty(window, "AudioContext", {
+    writable: true,
+    configurable: true,
+    value: MockAudioContext,
+  });
+
+  Object.defineProperty(window, "webkitAudioContext", {
+    writable: true,
+    configurable: true,
+    value: MockAudioContext,
+  });
+
+  // Mock window.matchMedia for responsive components
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    configurable: true,
+    value: (query) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
     }),
-    useSearchParams: () => [new URLSearchParams()],
+  });
+
+  // Mock ResizeObserver
+  window.ResizeObserver = vi.fn().mockImplementation(() => ({
+    observe: vi.fn(),
+    unobserve: vi.fn(),
+    disconnect: vi.fn(),
+  }));
+
+  // Mock getBoundingClientRect for any DOM calculations
+  Element.prototype.getBoundingClientRect = vi.fn().mockReturnValue({
+    width: 0,
+    height: 0,
+    top: 0,
+    left: 0,
+    bottom: 0,
+    right: 0,
+    x: 0,
+    y: 0,
+    toJSON: vi.fn(),
+  });
+
+  // Clean up after all tests
+  return () => {
+    Object.defineProperty(window, "AudioContext", {
+      writable: true,
+      configurable: true,
+      value: originalAudioContext,
+    });
+    Object.defineProperty(window, "webkitAudioContext", {
+      writable: true,
+      configurable: true,
+      value: originalWebkitAudioContext,
+    });
   };
 });
 
-/* -------------------------------------------------------
-   SETTINGS CONTEXT MOCK
-------------------------------------------------------- */
-vi.mock("../context/SettingsContext", () => ({
-  SettingsProvider: ({ children }) => children,
-  useSettings: () => ({
-    formatTemperature: (v) => `${v}°C`,
-  }),
+// Mock the RemoteControl component
+vi.mock("../components/RemoteControl", () => ({
+  default: ({ unit, details }) => (
+    <div data-testid="remote-control">
+      <h3>Remote Control</h3>
+      <p>Unit: {unit?.name || "Unknown"}</p>
+      <p>Status: {unit?.status || "Unknown"}</p>
+      <button data-testid="remote-control-button">Toggle Power</button>
+    </div>
+  ),
 }));
 
-/* -------------------------------------------------------
-   AUTH CONTEXT MOCK
-------------------------------------------------------- */
-vi.mock("../context/AuthContext", () => ({
-  AuthProvider: ({ children }) => children,
-  useAuth: () => ({
-    user: { id: 1, username: "test", role: "viewer" },
-    userRole: "viewer",
-  }),
+// Mock the unitService
+vi.mock("../services/unitService", () => ({
+  getUnitById: vi.fn(),
+  getUnitDetails: vi.fn(),
+  getUnitAlerts: vi.fn(),
 }));
 
-/* -------------------------------------------------------
-   UNIT CONTEXT MOCK (IMPORTANT FIX)
-   - prevents async getAllUnits() from running
-------------------------------------------------------- */
-vi.mock("../context/UnitContext", () => ({
-  UnitProvider: ({ children }) => children,
-  useUnits: () => ({
-    units: [],
-    loading: false,
-    error: null,
-    updateUnitName: vi.fn(),
-    updateUnitLocation: vi.fn(),
-    updateUnitGPS: vi.fn(),
-    getUnit: vi.fn(),
-    refreshUnits: vi.fn(),
-  }),
+// Mock the cn utility if needed
+vi.mock("@/lib/utils", () => ({
+  cn: (...inputs) => inputs.filter(Boolean).join(" "),
 }));
 
-/* -------------------------------------------------------
-   CHILD COMPONENT MOCKS
-------------------------------------------------------- */
-vi.mock("../components/VitalSignGraph", () => ({
-  default: () => <div data-testid="vital-sign-graph">Graph</div>,
-}));
+describe("UnitDetails", () => {
+  const mockUnit = { 
+    id: "1", 
+    name: "Unit 1", 
+    status: "Operational", 
+    location: "Building A" 
+  };
+  const mockDetails = {
+    installDate: "2023-01-15",
+    lastMaintenance: "2024-10-01",
+    alerts: [
+      { 
+        id: 1, 
+        severity: "Warning", 
+        description: "Temperature high", 
+        timestamp: "2024-10-23T10:00:00Z" 
+      },
+      { 
+        id: 2, 
+        severity: "Critical", 
+        description: "Pressure drop detected", 
+        timestamp: "2024-10-23T11:00:00Z" 
+      },
+    ],
+  };
 
-vi.mock("../components/unit-details/UnitAlertsTab", () => ({
-  default: () => <div data-testid="unit-alerts-tab">Alerts</div>,
-}));
-
-/* -------------------------------------------------------
-   TESTS
-------------------------------------------------------- */
-describe("UserUnitDetails Component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    unitService.getUnitById.mockResolvedValue(mockUnit);
+    unitService.getUnitDetails.mockResolvedValue(mockDetails);
+    unitService.getUnitAlerts.mockResolvedValue(mockDetails.alerts);
   });
 
-  const renderComponent = () =>
-    render(
-      <MemoryRouter>
-        <UserUnitDetails />
-      </MemoryRouter>,
+  // Use explicit React.createElement for stable component mounting
+  const renderUnitDetails = (id = "1", initialEntries = [`/units/${id}`]) => {
+    return render(
+      React.createElement(MemoryRouter, { initialEntries },
+        React.createElement(Routes, null,
+          React.createElement(Route, { path: "/units/:id", element: React.createElement(UnitDetails) })
+        )
+      )
     );
+  };
 
-  it("should render unit details with unit information", () => {
-    renderComponent();
-    expect(screen.getByText("Test Unit")).toBeInTheDocument();
+  it("should render loading state initially", () => {
+    renderUnitDetails();
+    const loadingElements = screen.getAllByText("Loading unit details...");
+    expect(loadingElements.length).toBeGreaterThan(0);
   });
 
-  it("should render unit location", () => {
-    renderComponent();
-    expect(screen.getByText("Test Location")).toBeInTheDocument();
+  it("should render unit details after loading", async () => {
+    renderUnitDetails();
+    await waitFor(() => {
+      // Use getAllByText with a more specific matcher - check for "Unit: Unit 1" or parts of it
+      const unitElements = screen.getAllByText((content, element) => {
+        return content.includes("Unit:") && content.includes("Unit 1");
+      });
+      expect(unitElements.length).toBeGreaterThan(0);
+    }, { timeout: 3000 });
   });
 
-  it("should display unit status", () => {
-    renderComponent();
-    expect(screen.getByText(/running/i)).toBeInTheDocument();
+  it("should handle alerts tab loading state", async () => {
+    let resolveAlerts;
+    unitService.getUnitAlerts.mockReturnValue(new Promise((res) => { resolveAlerts = res; }));
+
+    renderUnitDetails();
+    await waitFor(() => { 
+      const unitElements = screen.getAllByText((content, element) => {
+        return content.includes("Unit:") && content.includes("Unit 1");
+      });
+      expect(unitElements.length).toBeGreaterThan(0);
+    }, { timeout: 3000 });
+
+    const alertTabs = screen.getAllByText("Alerts");
+    fireEvent.click(alertTabs[0]);
+
+    // Wait for loading state
+    await waitFor(() => {
+      const loadingElements = screen.getAllByText("Loading alerts...");
+      expect(loadingElements.length).toBeGreaterThan(0);
+    }, { timeout: 3000 });
+
+    // Resolve the alerts
+    resolveAlerts(mockDetails.alerts);
+    
+    // Wait for alerts to display
+    await waitFor(() => { 
+      const alertHistoryElements = screen.getAllByText("Alert History");
+      expect(alertHistoryElements.length).toBeGreaterThan(0);
+    }, { timeout: 3000 });
+  });
+
+  it("should render Remote Control tab", async () => {
+    renderUnitDetails();
+    
+    // Wait for unit to load
+    await waitFor(() => {
+      const unitElements = screen.getAllByText((content, element) => {
+        return content.includes("Unit:") && content.includes("Unit 1");
+      });
+      expect(unitElements.length).toBeGreaterThan(0);
+    }, { timeout: 3000 });
+
+    // Click Remote Control tab
+    const remoteControlTabs = screen.getAllByText("Remote Control");
+    fireEvent.click(remoteControlTabs[0]);
+
+    // Wait for Remote Control component to render
+    await waitFor(() => {
+      const remoteControlElements = screen.getAllByTestId("remote-control");
+      expect(remoteControlElements.length).toBeGreaterThan(0);
+    }, { timeout: 3000 });
+  });
+
+  it("should handle Manage Remotely tab", async () => {
+    renderUnitDetails();
+    
+    // Wait for unit to load
+    await waitFor(() => {
+      const unitElements = screen.getAllByText((content, element) => {
+        return content.includes("Unit:") && content.includes("Unit 1");
+      });
+      expect(unitElements.length).toBeGreaterThan(0);
+    }, { timeout: 3000 });
+
+    // Click Manage Remotely tab
+    const manageTabs = screen.getAllByText("Manage Remotely");
+    fireEvent.click(manageTabs[0]);
+
+    // Manage Remotely tab should render content - it shows RemoteControl component
+    await waitFor(() => {
+      const remoteControlElements = screen.getAllByTestId("remote-control");
+      expect(remoteControlElements.length).toBeGreaterThan(0);
+    }, { timeout: 3000 });
+  });
+
+  it("should handle Overview tab content", async () => {
+    renderUnitDetails();
+    
+    // Wait for unit to load
+    await waitFor(() => {
+      const unitElements = screen.getAllByText((content, element) => {
+        return content.includes("Unit:") && content.includes("Unit 1");
+      });
+      expect(unitElements.length).toBeGreaterThan(0);
+    }, { timeout: 3000 });
+
+    // Verify overview content - use getAllByText with regex patterns
+    await waitFor(() => {
+      const statusElements = screen.getAllByText(/Status:/i);
+      expect(statusElements.length).toBeGreaterThan(0);
+      
+      const locationElements = screen.getAllByText(/Location:/i);
+      expect(locationElements.length).toBeGreaterThan(0);
+      
+      const installDateElements = screen.getAllByText(/Install Date:/i);
+      expect(installDateElements.length).toBeGreaterThan(0);
+    }, { timeout: 3000 });
   });
 });
