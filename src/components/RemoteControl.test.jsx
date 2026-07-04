@@ -142,6 +142,7 @@ const TestWrapper = ({ children, unit = mockUnit, role = "admin" }) => {
 describe("RemoteControl Component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockNavigate.mockClear();
     mockUseAuth.mockReturnValue({
       user: { id: 1, username: "admin", role: "admin" },
       isAuthenticated: true,
@@ -180,8 +181,13 @@ describe("RemoteControl Component", () => {
         </TestWrapper>,
       );
 
-      const elements = screen.getAllByText(/Unit Not Found/i);
-      expect(elements.length).toBeGreaterThan(0);
+      // The component renders "Unit Not Found" as an h1
+      const headingElements = screen.getAllByText(/Unit Not Found/i);
+      expect(headingElements.length).toBeGreaterThan(0);
+      
+      // Also check for the back button text
+      const backButtonElements = screen.getAllByText(/Back to Unit Details/i);
+      expect(backButtonElements.length).toBeGreaterThan(0);
     });
 
     it("should display connection status as Connected", () => {
@@ -220,12 +226,14 @@ describe("RemoteControl Component", () => {
       // First switch should be Machine Power
       expect(switches.length).toBeGreaterThan(0);
       
-      // Click the switch
+      // Click the switch to trigger the AlertDialog
       fireEvent.click(switches[0]);
       
-      // Should show the alert dialog
+      // The AlertDialogTrigger wraps the Switch, so clicking it should show the dialog
+      // Look for the alert dialog content
       await waitFor(() => {
-        expect(screen.getByTestId("alert-dialog")).toBeInTheDocument();
+        const dialogElements = screen.getAllByTestId("alert-dialog-content");
+        expect(dialogElements.length).toBeGreaterThan(0);
       });
     });
 
@@ -331,11 +339,13 @@ describe("RemoteControl Component", () => {
         </TestWrapper>,
       );
 
+      // The button is rendered as part of the Unit Not Found view
       const backButton = screen.getByRole("button", { name: /Back to Unit Details/i });
       expect(backButton).toBeInTheDocument();
       
       fireEvent.click(backButton);
-      expect(mockNavigate).toHaveBeenCalled();
+      // When unit is null and propUnit is not provided, it navigates with -1
+      expect(mockNavigate).toHaveBeenCalledWith(-1);
     });
   });
 
