@@ -24,14 +24,15 @@ vi.mock("../context/UnitContext", () => ({
 let mockSearch = "";
 const mockNavigate = vi.fn();
 
+// Mock useLocation to handle search param changes
+const mockUseLocation = vi.fn();
+
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual("react-router-dom");
   return {
     ...actual,
     useNavigate: () => mockNavigate,
-    useLocation: () => ({
-      search: mockSearch,
-    }),
+    useLocation: () => mockUseLocation(),
   };
 });
 
@@ -84,6 +85,15 @@ vi.mock("../components/ui/card", () => ({
   ),
   CardHeader: ({ children }) => <div data-testid="card-header">{children}</div>,
   CardContent: ({ children }) => <div data-testid="card-content">{children}</div>,
+}));
+
+// Mock lucide-react icons
+vi.mock("lucide-react", () => ({
+  AlertTriangle: ({ className }) => <span data-testid="alert-triangle" className={className}>⚠</span>,
+  CheckCircle: ({ className }) => <span data-testid="check-circle" className={className}>✓</span>,
+  Filter: ({ className }) => <span data-testid="filter" className={className}>Filter</span>,
+  User: ({ className }) => <span data-testid="user" className={className}>User</span>,
+  Zap: ({ className }) => <span data-testid="zap" className={className}>⚡</span>,
 }));
 
 // Mock units data
@@ -186,13 +196,31 @@ const createLargeDataset = (count) =>
     },
   }));
 
-const renderWithRouter = (ui, { route = "/" } = {}) =>
-  render(<MemoryRouter initialEntries={[route]}>{ui}</MemoryRouter>);
+const renderWithRouter = (ui, { route = "/" } = {}) => {
+  // Set up the location mock for this render
+  mockUseLocation.mockReturnValue({
+    search: new URLSearchParams(route.split('?')[1] || "").toString(),
+    pathname: route.split('?')[0] || "/",
+  });
+  
+  return render(
+    <MemoryRouter initialEntries={[route]}>
+      {ui}
+    </MemoryRouter>
+  );
+};
 
 describe("GridView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSearch = "";
+    mockNavigate.mockClear();
+    
+    // Reset mockUseLocation
+    mockUseLocation.mockReturnValue({
+      search: "",
+      pathname: "/",
+    });
 
     mockUseAuth.mockReturnValue({
       userRole: "admin",
@@ -208,7 +236,7 @@ describe("GridView", () => {
   describe("Component Rendering", () => {
     it("renders grid view", () => {
       renderWithRouter(<GridView />);
-      // FIXED: The actual title is "Grid View - All Units" when status is "All Status"
+      // The actual title is "Grid View - All Units" when status is "All Status"
       const elements = screen.getAllByText(/Grid View - All Units/i);
       expect(elements.length).toBeGreaterThan(0);
     });
@@ -244,9 +272,11 @@ describe("GridView", () => {
         target: { value: "Unit 001" },
       });
 
-      // Wait for the filter to apply - use a timeout
+      // Wait for the filter to apply - use getAllByText with function matcher
       await waitFor(() => {
-        const elements = screen.getAllByText("ThermaCore Unit 001");
+        const elements = screen.getAllByText((content) => {
+          return content.includes("ThermaCore Unit 001");
+        });
         expect(elements.length).toBeGreaterThan(0);
       }, { timeout: 3000 });
     });
@@ -262,8 +292,11 @@ describe("GridView", () => {
         target: { value: "Online" },
       });
 
+      // Wait for the filter to apply - check for "ONLINE" text in the status badge
       await waitFor(() => {
-        const elements = screen.getAllByText(/ONLINE/);
+        const elements = screen.getAllByText((content) => {
+          return content.toUpperCase().includes("ONLINE");
+        });
         expect(elements.length).toBeGreaterThan(0);
       }, { timeout: 3000 });
     });
@@ -277,8 +310,11 @@ describe("GridView", () => {
         target: { value: "Offline" },
       });
 
+      // Wait for the filter to apply - check for "OFFLINE" text in the status badge
       await waitFor(() => {
-        const elements = screen.getAllByText(/OFFLINE/);
+        const elements = screen.getAllByText((content) => {
+          return content.toUpperCase().includes("OFFLINE");
+        });
         expect(elements.length).toBeGreaterThan(0);
       }, { timeout: 3000 });
     });
@@ -407,9 +443,13 @@ describe("GridView", () => {
 
   describe("URL Parameters", () => {
     it("handles status filter from URL", () => {
-      mockSearch = "?status=online";
+      const route = "/?status=online";
+      mockUseLocation.mockReturnValue({
+        search: "status=online",
+        pathname: "/",
+      });
       
-      renderWithRouter(<GridView />, { route: "/?status=online" });
+      renderWithRouter(<GridView />, { route });
       
       // The combobox should show "Online"
       const comboboxes = screen.getAllByRole("combobox");
@@ -418,9 +458,13 @@ describe("GridView", () => {
     });
 
     it("handles alerts from URL", () => {
-      mockSearch = "?alerts=true";
+      const route = "/?alerts=true";
+      mockUseLocation.mockReturnValue({
+        search: "alerts=true",
+        pathname: "/",
+      });
       
-      renderWithRouter(<GridView />, { route: "/?alerts=true" });
+      renderWithRouter(<GridView />, { route });
       
       const comboboxes = screen.getAllByRole("combobox");
       expect(comboboxes.length).toBeGreaterThan(0);
@@ -428,9 +472,13 @@ describe("GridView", () => {
     });
 
     it("handles search from URL", () => {
-      mockSearch = "?search=Unit%20001";
+      const route = "/?search=Unit%20001";
+      mockUseLocation.mockReturnValue({
+        search: "search=Unit%20001",
+        pathname: "/",
+      });
       
-      renderWithRouter(<GridView />, { route: "/?search=Unit%20001" });
+      renderWithRouter(<GridView />, { route });
       
       const searchInput = screen.getByTestId("search-bar");
       expect(searchInput).toHaveValue("Unit 001");
