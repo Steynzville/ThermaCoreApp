@@ -30,7 +30,6 @@ vi.mock("../components/ui/alert-dialog", () => ({
     </div>
   ),
   AlertDialogTrigger: ({ children, asChild, ...props }) => {
-    // If asChild is true, render the child directly with the props
     if (asChild && children) {
       return children;
     }
@@ -151,7 +150,6 @@ vi.mock("../context/SettingsContext", async () => {
 
 // Test wrapper with all providers
 const TestWrapper = ({ children, unit = mockUnit, role = "admin" }) => {
-  // Set up mocks before rendering
   mockUseAuth.mockReturnValue({
     user: { id: 1, username: "admin", role },
     isAuthenticated: true,
@@ -167,7 +165,6 @@ const TestWrapper = ({ children, unit = mockUnit, role = "admin" }) => {
     },
   });
 
-  // Set the location state based on the unit prop
   mockLocationState = { unit: unit };
 
   return (
@@ -185,7 +182,6 @@ describe("RemoteControl Component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockNavigate.mockClear();
-    // Reset location state
     mockLocationState = { unit: mockUnit };
     mockUseAuth.mockReturnValue({
       user: { id: 1, username: "admin", role: "admin" },
@@ -262,19 +258,14 @@ describe("RemoteControl Component", () => {
         </TestWrapper>,
       );
 
-      // Find the switch for Machine Power
       const switches = screen.getAllByTestId("switch");
       expect(switches.length).toBeGreaterThan(0);
       
-      // Click the switch - this should trigger the AlertDialog
-      // We need to click the switch directly since it's inside AlertDialogTrigger
       fireEvent.click(switches[0]);
       
-      // Wait for the AlertDialog content to appear
-      await waitFor(() => {
-        const dialogContent = screen.queryAllByTestId("alert-dialog-content");
-        expect(dialogContent.length).toBeGreaterThan(0);
-      });
+      // Use findAllByTestId which properly waits for elements to appear
+      const dialogContents = await screen.findAllByTestId("alert-dialog-content");
+      expect(dialogContents.length).toBeGreaterThan(0);
     });
 
     it("should allow admin to toggle water production", () => {
@@ -289,7 +280,6 @@ describe("RemoteControl Component", () => {
       
       fireEvent.click(switches[1]);
       
-      // Just verify the switch was clicked (no error)
       expect(switches[1]).toBeInTheDocument();
     });
 
@@ -305,7 +295,6 @@ describe("RemoteControl Component", () => {
       
       fireEvent.click(switches[2]);
       
-      // Just verify the switch was clicked (no error)
       expect(switches[2]).toBeInTheDocument();
     });
   });
@@ -362,21 +351,16 @@ describe("RemoteControl Component", () => {
         </TestWrapper>,
       );
 
-      // The button might not be found by testid if it's rendered differently
-      // Let's use a more flexible approach
       const buttons = screen.getAllByRole("button");
       const videoButton = buttons.find(btn => 
         btn.textContent?.includes("Start Feed") || btn.textContent?.includes("Stop Feed")
       );
       
-      // If found, click it
       if (videoButton) {
         fireEvent.click(videoButton);
-        // Verify something changed
         const activeElements = screen.getAllByText(/Live Feed Active/i);
         expect(activeElements.length).toBeGreaterThan(0);
       } else {
-        // Skip or assert the button exists in some form
         expect(true).toBe(true);
       }
     });
@@ -436,7 +420,6 @@ describe("RemoteControl Component", () => {
         </TestWrapper>,
       );
 
-      // Look for the fullscreen button by title
       const fullscreenButton = screen.getByTitle(/Enter Fullscreen/i);
       expect(fullscreenButton).toBeInTheDocument();
     });
@@ -450,7 +433,6 @@ describe("RemoteControl Component", () => {
         </TestWrapper>,
       );
 
-      // Find the video toggle button
       const buttons = screen.getAllByRole("button");
       const videoButton = buttons.find(btn => 
         btn.textContent?.includes("Start Feed") || btn.textContent?.includes("Stop Feed")
@@ -465,7 +447,6 @@ describe("RemoteControl Component", () => {
         const inactiveElements = screen.getAllByText(/Video Feed Inactive/i);
         expect(inactiveElements.length).toBeGreaterThan(0);
       } else {
-        // If button not found, just verify the component rendered
         expect(screen.getByText(/Video Feed Status/i)).toBeInTheDocument();
       }
     });
