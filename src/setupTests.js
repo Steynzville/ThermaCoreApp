@@ -91,46 +91,10 @@ if (!window.getComputedStyle || typeof window.getComputedStyle !== 'function') {
 
 /**
  * -----------------------------
- * WINDOW LOCATION MOCK (ADDED)
+ * STORAGE MOCKS (FIXED)
  * -----------------------------
  */
-// Add window.location for React Router and URL creation
-Object.defineProperty(window, "location", {
-  writable: true,
-  configurable: true,
-  value: {
-    href: "http://localhost/",
-    origin: "http://localhost",
-    pathname: "/",
-    search: "",
-    hash: "",
-    assign: vi.fn(),
-    replace: vi.fn(),
-    reload: vi.fn(),
-  },
-});
-
-Object.defineProperty(window, "history", {
-  writable: true,
-  configurable: true,
-  value: {
-    pushState: vi.fn(),
-    replaceState: vi.fn(),
-    go: vi.fn(),
-    back: vi.fn(),
-    forward: vi.fn(),
-    length: 0,
-    scrollRestoration: "auto",
-    state: null,
-  },
-});
-
-/**
- * -----------------------------
- * STORAGE MOCKS (ADDED)
- * -----------------------------
- */
-// Complete localStorage mock with proper getItem that returns null for missing keys
+// Create storage mocks with proper getItem that returns null for missing keys
 const createStorageMock = () => {
   let store = {};
   return {
@@ -160,10 +124,46 @@ if (!window.sessionStorage) {
   });
 }
 
-// Reset storage before each test
-beforeEach(() => {
-  window.localStorage.clear();
-  window.sessionStorage.clear();
+// Reset storage before each test (but ONLY if needed)
+// We'll handle this per test file instead
+// DO NOT auto-clear here - let tests manage their own storage state
+
+/**
+ * -----------------------------
+ * WINDOW LOCATION MOCK
+ * -----------------------------
+ */
+// Add window.location for React Router and URL creation
+if (!window.location || !window.location.origin) {
+  Object.defineProperty(window, "location", {
+    writable: true,
+    configurable: true,
+    value: {
+      href: "http://localhost/",
+      origin: "http://localhost",
+      pathname: "/",
+      search: "",
+      hash: "",
+      assign: vi.fn(),
+      replace: vi.fn(),
+      reload: vi.fn(),
+    },
+  });
+}
+
+Object.defineProperty(window, "history", {
+  writable: true,
+  configurable: true,
+  value: {
+    pushState: vi.fn(),
+    replaceState: vi.fn(),
+    go: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    length: 0,
+    scrollRestoration: "auto",
+    state: null,
+  },
 });
 
 /**
@@ -262,7 +262,7 @@ if (!window.removeEventListener) {
   });
 }
 
-// Mock PointerEvent for Slider component
+// Mock PointerEvent for Slider/RadioGroup components
 if (!window.PointerEvent) {
   window.PointerEvent = class PointerEvent extends Event {
     constructor(type, params = {}) {
@@ -293,7 +293,7 @@ Element.prototype.getBoundingClientRect = vi.fn().mockReturnValue({
   toJSON: vi.fn(),
 });
 
-// Mock DOMRect for popover/input-otp components (ADDED)
+// Mock DOMRect for popover/input-otp components
 if (!window.DOMRect) {
   window.DOMRect = class DOMRect {
     constructor(x = 0, y = 0, width = 0, height = 0) {
@@ -376,7 +376,7 @@ if (!window.webkitAudioContext) {
 
 /**
  * -----------------------------
- * FETCH MOCK FOR AUDIO PLAYER (ADDED)
+ * FETCH MOCK FOR AUDIO PLAYER
  * -----------------------------
  */
 // Mock fetch for audioPlayer tests
@@ -501,3 +501,10 @@ afterEach(() => {
   console.error?.mockRestore?.();
   console.warn?.mockRestore?.();
 });
+
+// IMPORTANT: Export a helper to reset storage for tests that need it
+// This is NOT automatically called - tests must call it if they need clean storage
+export const resetStorage = () => {
+  window.localStorage.clear();
+  window.sessionStorage.clear();
+};
