@@ -4,16 +4,19 @@ import { beforeEach, describe, expect, it, vi, beforeAll, afterAll } from "vites
 import App from "../App";
 
 // Mock AuthContext to return unauthenticated state
+// CRITICAL: The mock must match what the App component expects
 vi.mock("../context/AuthContext", () => ({
   useAuth: () => ({
     user: null,
     isAuthenticated: false,
     loading: false,
+    isLoggingOut: false,
     login: vi.fn(),
     logout: vi.fn(),
     register: vi.fn(),
     updateProfile: vi.fn(),
   }),
+  // AuthProvider must render children with the context
   AuthProvider: ({ children }) => <div data-testid="auth-provider">{children}</div>,
 }));
 
@@ -21,6 +24,7 @@ vi.mock("../context/AuthContext", () => ({
 vi.mock("../context/SettingsContext", () => ({
   useSettings: () => ({
     settings: {
+      soundEnabled: true,
       sound: true,
       volume: 0.5,
       temperatureUnit: "celsius",
@@ -42,9 +46,90 @@ vi.mock("../context/ThemeContext", () => ({
   ThemeProvider: ({ children }) => <div data-testid="theme-provider">{children}</div>,
 }));
 
+// Mock SidebarContext
+vi.mock("../context/SidebarContext", () => ({
+  SidebarProvider: ({ children }) => <div data-testid="sidebar-provider">{children}</div>,
+  useSidebar: () => ({ isOpen: true, toggleSidebar: vi.fn() }),
+}));
+
+// Mock TenantContext
+vi.mock("../context/TenantContext", () => ({
+  TenantProvider: ({ children }) => <div data-testid="tenant-provider">{children}</div>,
+  useTenant: () => ({ tenant: null, setTenant: vi.fn() }),
+}));
+
+// Mock UnitContext
+vi.mock("../context/UnitContext", () => ({
+  UnitProvider: ({ children }) => <div data-testid="unit-provider">{children}</div>,
+  useUnits: () => ({ units: [], loading: false }),
+}));
+
 // Mock the cn utility
 vi.mock("@/lib/utils", () => ({
   cn: (...inputs) => inputs.filter(Boolean).join(" "),
+}));
+
+// Mock the ThemeToggle component
+vi.mock("../components/ThemeToggle", () => ({
+  default: () => (
+    <button 
+      aria-label="Toggle Theme"
+      data-testid="theme-toggle"
+      type="button"
+    >
+      Toggle Theme
+    </button>
+  ),
+}));
+
+// Mock the Spinner component
+vi.mock("../components/common/Spinner", () => ({
+  default: ({ size, className }) => (
+    <div data-testid="spinner" data-size={size} className={className}>
+      Loading...
+    </div>
+  ),
+}));
+
+// Mock the LoginScreen component
+vi.mock("../components/LoginScreen", () => ({
+  default: ({ error, setError }) => (
+    <div data-testid="login-page">
+      <h1>Login</h1>
+      <label>
+        Username
+        <input type="text" placeholder="Username" />
+      </label>
+      <label>
+        Password
+        <input type="password" placeholder="Password" />
+      </label>
+      {error && <div data-testid="login-error">{error}</div>}
+      <button type="button" onClick={() => setError("")}>Login</button>
+    </div>
+  ),
+}));
+
+// Mock the ProtectedRoute component
+vi.mock("../components/ProtectedRoute", () => ({
+  default: ({ component: Component, componentMap, roles }) => {
+    // Determine which component to render based on roles or componentMap
+    let Comp = Component;
+    if (componentMap) {
+      // For role-based components, render a placeholder
+      return <div data-testid="protected-content">Protected Content</div>;
+    }
+    return <div data-testid="protected-content">Protected Content</div>;
+  },
+}));
+
+// Mock config/routes
+vi.mock("../config/routes", () => ({
+  default: [
+    { path: "/", component: () => <div>Home</div>, isProtected: false },
+    { path: "/dashboard", component: () => <div>Dashboard</div>, isProtected: true, roles: ["admin", "user"] },
+    { path: "/admin", component: () => <div>Admin</div>, isProtected: true, roles: ["admin"] },
+  ],
 }));
 
 // Mock AudioContext globally
@@ -149,6 +234,13 @@ beforeAll(() => {
 
   // Mock ResizeObserver
   window.ResizeObserver = vi.fn().mockImplementation(() => ({
+    observe: vi.fn(),
+    unobserve: vi.fn(),
+    disconnect: vi.fn(),
+  }));
+
+  // Mock IntersectionObserver
+  window.IntersectionObserver = vi.fn().mockImplementation(() => ({
     observe: vi.fn(),
     unobserve: vi.fn(),
     disconnect: vi.fn(),
