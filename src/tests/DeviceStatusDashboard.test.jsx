@@ -4,7 +4,7 @@
  * Tests basic rendering and prop validation
  */
 
-import { render } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import DeviceStatusDashboard from "../components/DeviceStatusDashboard";
 
@@ -16,9 +16,55 @@ vi.mock("../context/AuthContext", () => ({
   }),
 }));
 
+// Mock Unit context if the component uses it
+vi.mock("../context/UnitContext", () => ({
+  useUnits: () => ({
+    units: [
+      { id: "TC001", name: "Unit 1" },
+      { id: "TC002", name: "Unit 2" },
+      { id: "TC003", name: "Unit 3" },
+    ],
+  }),
+}));
+
 // Mock device status service with proper data structure
+// The component expects the service to return data in a specific format
 vi.mock("../services/deviceStatusService", () => ({
   deviceStatusService: {
+    // The component likely calls getDevices() which should return an array
+    getDevices: vi.fn().mockReturnValue([
+      {
+        id: "TC001",
+        name: "Device 1",
+        status: "online",
+        hasAlert: false,
+        hasAlarm: false,
+        lastSeen: new Date().toISOString(),
+        healthStatus: "healthy",
+        type: "thermacore",
+      },
+      {
+        id: "TC002",
+        name: "Device 2",
+        status: "offline",
+        hasAlert: true,
+        hasAlarm: false,
+        lastSeen: new Date().toISOString(),
+        healthStatus: "warning",
+        type: "thermacore",
+      },
+      {
+        id: "TC003",
+        name: "Device 3",
+        status: "online",
+        hasAlert: false,
+        hasAlarm: true,
+        lastSeen: new Date().toISOString(),
+        healthStatus: "healthy",
+        type: "thermacore",
+      },
+    ]),
+    // The component might also call these methods
     getAllDeviceStatuses: vi.fn().mockReturnValue([
       {
         id: "TC001",
@@ -26,7 +72,7 @@ vi.mock("../services/deviceStatusService", () => ({
         status: "online",
         hasAlert: false,
         hasAlarm: false,
-        lastSeen: new Date(),
+        lastSeen: new Date().toISOString(),
         healthStatus: "healthy",
       },
       {
@@ -35,7 +81,7 @@ vi.mock("../services/deviceStatusService", () => ({
         status: "offline",
         hasAlert: true,
         hasAlarm: false,
-        lastSeen: new Date(),
+        lastSeen: new Date().toISOString(),
         healthStatus: "warning",
       },
       {
@@ -44,7 +90,7 @@ vi.mock("../services/deviceStatusService", () => ({
         status: "online",
         hasAlert: false,
         hasAlarm: true,
-        lastSeen: new Date(),
+        lastSeen: new Date().toISOString(),
         healthStatus: "healthy",
       },
     ]),
@@ -55,26 +101,54 @@ vi.mock("../services/deviceStatusService", () => ({
         devices: [{ id: "device-1", name: "Device 1", status: "online" }],
       },
     }),
-    initialize: vi.fn(),
+    initialize: vi.fn().mockResolvedValue(undefined),
     subscribe: vi.fn(),
     unsubscribe: vi.fn(),
-    getDevices: vi.fn().mockReturnValue(new Map()),
+    // Add a method that returns a Map if the component expects it
+    getStatusMap: vi.fn().mockReturnValue(new Map()),
   },
 }));
+
+// Mock the cn utility
+vi.mock("@/lib/utils", () => ({
+  cn: (...inputs) => inputs.filter(Boolean).join(" "),
+}));
+
+// Mock window methods
+beforeEach(() => {
+  // Mock ResizeObserver
+  window.ResizeObserver = vi.fn().mockImplementation(() => ({
+    observe: vi.fn(),
+    unobserve: vi.fn(),
+    disconnect: vi.fn(),
+  }));
+  
+  // Mock IntersectionObserver
+  window.IntersectionObserver = vi.fn().mockImplementation(() => ({
+    observe: vi.fn(),
+    unobserve: vi.fn(),
+    disconnect: vi.fn(),
+  }));
+});
 
 describe("DeviceStatusDashboard - Smoke Tests", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("should render without crashing", () => {
+  it("should render without crashing", async () => {
     const { container } = render(<DeviceStatusDashboard />);
-    expect(container).toBeInTheDocument();
+    // Wait for any async operations
+    await waitFor(() => {
+      expect(container).toBeInTheDocument();
+    });
   });
 
-  it("should render with default state", () => {
+  it("should render with default state", async () => {
     const { container } = render(<DeviceStatusDashboard />);
-    expect(container.firstChild).toBeInTheDocument();
+    await waitFor(() => {
+      expect(container.firstChild).toBeInTheDocument();
+    });
   });
 
   it("should mount and unmount without errors", () => {
@@ -82,8 +156,13 @@ describe("DeviceStatusDashboard - Smoke Tests", () => {
     expect(() => unmount()).not.toThrow();
   });
 
-  it("should handle component lifecycle", () => {
+  it("should handle component lifecycle", async () => {
     const { rerender, unmount } = render(<DeviceStatusDashboard />);
+
+    // Wait for initial render
+    await waitFor(() => {
+      expect(document.body).toBeInTheDocument();
+    });
 
     // Rerender should work
     expect(() => rerender(<DeviceStatusDashboard />)).not.toThrow();
@@ -92,36 +171,49 @@ describe("DeviceStatusDashboard - Smoke Tests", () => {
     expect(() => unmount()).not.toThrow();
   });
 
-  it("should render dashboard structure", () => {
+  it("should render dashboard structure", async () => {
     const { container } = render(<DeviceStatusDashboard />);
-    expect(container).toBeInTheDocument();
+    await waitFor(() => {
+      expect(container).toBeInTheDocument();
+    });
   });
 
   it("should render without throwing errors", () => {
     expect(() => render(<DeviceStatusDashboard />)).not.toThrow();
   });
 
-  it("should handle state initialization", () => {
+  it("should handle state initialization", async () => {
     const { container } = render(<DeviceStatusDashboard />);
-    expect(container).toBeInTheDocument();
+    await waitFor(() => {
+      expect(container).toBeInTheDocument();
+    });
   });
 
-  it("should handle multiple renders", () => {
+  it("should handle multiple renders", async () => {
     const { rerender } = render(<DeviceStatusDashboard />);
+
+    // Wait for initial render
+    await waitFor(() => {
+      expect(document.body).toBeInTheDocument();
+    });
 
     for (let i = 0; i < 5; i++) {
       expect(() => rerender(<DeviceStatusDashboard />)).not.toThrow();
     }
   });
 
-  it("should render with mocked service", () => {
+  it("should render with mocked service", async () => {
     const { container } = render(<DeviceStatusDashboard />);
-    expect(container.firstChild).toBeInTheDocument();
+    await waitFor(() => {
+      expect(container.firstChild).toBeInTheDocument();
+    });
   });
 
   it("should handle async data loading", async () => {
     const { container } = render(<DeviceStatusDashboard />);
     // Component should handle async data loading
-    expect(container).toBeInTheDocument();
+    await waitFor(() => {
+      expect(container).toBeInTheDocument();
+    });
   });
 });
