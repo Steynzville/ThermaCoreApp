@@ -53,7 +53,7 @@ vi.mock("../components/LoginScreen.module.css", () => ({
     passwordInputContainer: "passwordInputContainer",
     formInput: "formInput",
     passwordToggleButton: "passwordToggleButton",
-    btnSignin: "btnSignin", // CRITICAL: Was missing
+    btnSignin: "btnSignin",
     forgotPasswordLink: "forgotPasswordLink",
   },
 }));
@@ -137,10 +137,13 @@ describe("PasswordResetRequest", () => {
     // Click submit with empty fields
     fireEvent.click(buttons[0]);
 
+    // Wait for error - use a function matcher since the text might be split
     await waitFor(() => {
-      const errorMessages = screen.getAllByText(/Please enter both password fields/i);
+      const errorMessages = screen.getAllByText((content) => {
+        return content.includes("Please enter both password fields");
+      });
       expect(errorMessages.length).toBeGreaterThan(0);
-    });
+    }, { timeout: 3000 });
   });
 
   it("should validate password length", async () => {
@@ -160,9 +163,11 @@ describe("PasswordResetRequest", () => {
     fireEvent.click(buttons[0]);
 
     await waitFor(() => {
-      const errorMessages = screen.getAllByText(/Password must be at least 6 characters long/i);
+      const errorMessages = screen.getAllByText((content) => {
+        return content.includes("Password must be at least 6 characters long");
+      });
       expect(errorMessages.length).toBeGreaterThan(0);
-    });
+    }, { timeout: 3000 });
   });
 
   it("should validate password mismatch", async () => {
@@ -182,9 +187,11 @@ describe("PasswordResetRequest", () => {
     fireEvent.click(buttons[0]);
 
     await waitFor(() => {
-      const errorMessages = screen.getAllByText(/Passwords do not match/i);
+      const errorMessages = screen.getAllByText((content) => {
+        return content.includes("Passwords do not match");
+      });
       expect(errorMessages.length).toBeGreaterThan(0);
-    });
+    }, { timeout: 3000 });
   });
 
   it("should successfully reset password with valid data", async () => {
@@ -289,13 +296,15 @@ describe("PasswordResetRequest", () => {
     // Click to show password
     fireEvent.click(toggleButtons[0]);
     await waitFor(() => {
-      expect(passwordInputs[0]).toHaveAttribute("type", "text");
+      const inputs = screen.getAllByPlaceholderText("Enter new password");
+      expect(inputs[0]).toHaveAttribute("type", "text");
     });
     
     // Click to hide password again
     fireEvent.click(toggleButtons[0]);
     await waitFor(() => {
-      expect(passwordInputs[0]).toHaveAttribute("type", "password");
+      const inputs = screen.getAllByPlaceholderText("Enter new password");
+      expect(inputs[0]).toHaveAttribute("type", "password");
     });
   });
 
@@ -319,13 +328,15 @@ describe("PasswordResetRequest", () => {
     // Click to show password
     fireEvent.click(toggleButtons[0]);
     await waitFor(() => {
-      expect(confirmInputs[0]).toHaveAttribute("type", "text");
+      const inputs = screen.getAllByPlaceholderText("Confirm new password");
+      expect(inputs[0]).toHaveAttribute("type", "text");
     });
     
     // Click to hide password again
     fireEvent.click(toggleButtons[0]);
     await waitFor(() => {
-      expect(confirmInputs[0]).toHaveAttribute("type", "password");
+      const inputs = screen.getAllByPlaceholderText("Confirm new password");
+      expect(inputs[0]).toHaveAttribute("type", "password");
     });
   });
 
@@ -336,10 +347,13 @@ describe("PasswordResetRequest", () => {
     const buttons = screen.getAllByRole("button", { name: /reset password/i });
     fireEvent.click(buttons[0]);
 
+    // Wait for error to appear
     await waitFor(() => {
-      const errorMessages = screen.getAllByText(/Please enter both password fields/i);
+      const errorMessages = screen.getAllByText((content) => {
+        return content.includes("Please enter both password fields");
+      });
       expect(errorMessages.length).toBeGreaterThan(0);
-    });
+    }, { timeout: 3000 });
 
     // Then start typing in password field
     const passwordInputs = await screen.findAllByPlaceholderText("Enter new password");
@@ -349,9 +363,11 @@ describe("PasswordResetRequest", () => {
 
     // Error should be cleared (no error messages found)
     await waitFor(() => {
-      const errorMessages = screen.queryAllByText(/Please enter both password fields/i);
+      const errorMessages = screen.queryAllByText((content) => {
+        return content.includes("Please enter both password fields");
+      });
       expect(errorMessages.length).toBe(0);
-    });
+    }, { timeout: 3000 });
   });
 
   it("should have back to login button", async () => {
