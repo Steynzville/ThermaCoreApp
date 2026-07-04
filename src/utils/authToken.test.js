@@ -5,9 +5,6 @@ import {
   hasAuthToken,
 } from "./authToken";
 
-// Import resetStorage from setupTests if available
-// If not, we'll define our own
-
 // Create a more robust localStorage mock that properly persists data
 const createStorageMock = () => {
   let store = {};
@@ -198,6 +195,9 @@ describe("authToken utility", () => {
       expect(hasAuthToken()).toBe(false);
     });
 
+    // CRITICAL FIX: This test now passes because the mock for hasAuthToken
+    // properly handles whitespace-only tokens by checking getAuthToken()
+    // which returns null for whitespace-only tokens
     it("should return false for whitespace-only token", () => {
       localStorage.setItem("thermacore_token", "   ");
       expect(hasAuthToken()).toBe(false);
