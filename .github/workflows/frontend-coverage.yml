@@ -92,17 +92,69 @@ jobs:
           path: coverage/
           retention-days: 14
 
-      - name: Display Coverage Summary
+      - name: 📊 Display Coverage Summary
         if: always()
         run: |
+          echo ""
+          echo "═══════════════════════════════════════════════════════════"
+          echo "                   📊 FRONTEND COVERAGE                   "
+          echo "═══════════════════════════════════════════════════════════"
+          echo ""
+          
           if [ -f coverage/coverage-summary.json ]; then
-            echo "✅ Coverage Summary:"
-            cat coverage/coverage-summary.json | jq -r '
-              "Statements: " + (.total.statements.pct | tostring) + "%",
-              "Branches: " + (.total.branches.pct | tostring) + "%",
-              "Functions: " + (.total.functions.pct | tostring) + "%",
-              "Lines: " + (.total.lines.pct | tostring) + "%"
-            ' || echo "Coverage generated"
+            STATEMENTS=$(cat coverage/coverage-summary.json | jq -r '.total.statements.pct')
+            BRANCHES=$(cat coverage/coverage-summary.json | jq -r '.total.branches.pct')
+            FUNCTIONS=$(cat coverage/coverage-summary.json | jq -r '.total.functions.pct')
+            LINES=$(cat coverage/coverage-summary.json | jq -r '.total.lines.pct')
+            
+            echo "  📈 Statements:  $STATEMENTS%"
+            echo "  🌿 Branches:    $BRANCHES%"
+            echo "  🧩 Functions:   $FUNCTIONS%"
+            echo "  📝 Lines:       $LINES%"
+            echo ""
+            echo "  🎯 Total Coverage: $STATEMENTS%"
+            echo ""
+            
+            # Color coding based on coverage percentage
+            COVERAGE_INT=$(echo "$STATEMENTS" | cut -d'.' -f1)
+            if [ "$COVERAGE_INT" -ge 80 ]; then
+              echo "  🟢 EXCELLENT! Coverage is above 80%"
+            elif [ "$COVERAGE_INT" -ge 60 ]; then
+              echo "  🟡 Good! Coverage is above 60%"
+            elif [ "$COVERAGE_INT" -ge 40 ]; then
+              echo "  🟠 Fair - Consider improving coverage"
+            else
+              echo "  🔴 Low coverage - Please add more tests"
+            fi
+            echo ""
+            echo "═══════════════════════════════════════════════════════════"
           else
-            echo "No coverage file"
+            echo "  ❌ No coverage file found"
+            echo "═══════════════════════════════════════════════════════════"
+          fi
+
+      - name: Generate Coverage Badge
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          if [ -f coverage/coverage-summary.json ]; then
+            COVERAGE=$(cat coverage/coverage-summary.json | jq -r '.total.statements.pct')
+            COVERAGE_INT=$(echo "$COVERAGE" | cut -d'.' -f1)
+            
+            # Determine color based on coverage
+            if [ "$COVERAGE_INT" -ge 80 ]; then
+              COLOR="brightgreen"
+            elif [ "$COVERAGE_INT" -ge 60 ]; then
+              COLOR="yellow"
+            elif [ "$COVERAGE_INT" -ge 40 ]; then
+              COLOR="orange"
+            else
+              COLOR="red"
+            fi
+            
+            echo "📊 Coverage: ${COVERAGE}%"
+            echo "🎨 Badge color: ${COLOR}"
+            
+            # You can optionally upload a badge image here
+            # curl -o coverage-badge.svg "https://img.shields.io/badge/coverage-${COVERAGE}%-${COLOR}.svg"
+            # Then upload as artifact
           fi
