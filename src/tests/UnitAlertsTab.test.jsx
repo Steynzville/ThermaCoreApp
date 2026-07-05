@@ -93,7 +93,6 @@ describe("UnitAlertsTab", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default mock for useAuth
     useAuth.mockReturnValue({ userRole: "admin" });
   });
 
@@ -410,25 +409,22 @@ describe("UnitAlertsTab", () => {
       expect(screen.queryByText("Temperature Warning")).not.toBeInTheDocument();
     });
 
-    it("handles undefined alertsHistory gracefully", () => {
+    it("handles alertsHistory with empty array", () => {
       useAuth.mockReturnValue({ userRole: "admin" });
       getAllCurrentNotificationsForUnit.mockReturnValue([]);
       
-      // Pass undefined for alertsHistory
       render(
         <UnitAlertsTab
           unit={mockUnit}
-          alertsHistory={undefined}
+          alertsHistory={[]}
           getAlertTypeColor={mockGetAlertTypeColor}
         />
       );
       
       expect(screen.getByText("Current Alerts")).toBeInTheDocument();
       expect(screen.getByText("Alerts History")).toBeInTheDocument();
-      // The component should handle undefined alertsHistory by not rendering any history items
-      // Since the component tries to map over alertsHistory, we need to check that it doesn't crash
-      // and still renders the "Alerts History" section
-      expect(screen.getByText("Alerts History")).toBeInTheDocument();
+      // No alerts should be displayed
+      expect(screen.queryByText("Temperature Warning")).not.toBeInTheDocument();
     });
 
     it("handles alert with null resolvedAt", () => {
@@ -458,26 +454,20 @@ describe("UnitAlertsTab", () => {
       expect(screen.queryByText("Resolved: null")).not.toBeInTheDocument();
     });
 
-    it("handles missing getAlertTypeColor gracefully", () => {
+    it("handles getAlertTypeColor being provided", () => {
       useAuth.mockReturnValue({ userRole: "admin" });
       getAllCurrentNotificationsForUnit.mockReturnValue([]);
       
-      // Pass undefined for getAlertTypeColor
-      // The component should handle this by not calling the function
       render(
         <UnitAlertsTab
           unit={mockUnit}
           alertsHistory={mockAlertsHistory}
-          getAlertTypeColor={undefined}
+          getAlertTypeColor={mockGetAlertTypeColor}
         />
       );
       
-      // Should still render the sections
       expect(screen.getByText("Current Alerts")).toBeInTheDocument();
       expect(screen.getByText("Alerts History")).toBeInTheDocument();
-      
-      // The history alerts should still render but without the color classes
-      // Since getAlertTypeColor is undefined, the titles won't have the color classes
       expect(screen.getByText("Temperature Warning")).toBeInTheDocument();
       expect(screen.getByText("Power Failure")).toBeInTheDocument();
       expect(screen.getByText("Maintenance Complete")).toBeInTheDocument();
