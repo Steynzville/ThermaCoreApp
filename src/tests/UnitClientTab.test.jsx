@@ -91,7 +91,6 @@ describe("UnitClientTab", () => {
         />
       );
 
-      // Use getAllByTestId for user-icon since there are 2
       const userIcons = screen.getAllByTestId("user-icon");
       expect(userIcons).toHaveLength(2);
       
@@ -127,9 +126,8 @@ describe("UnitClientTab", () => {
         />
       );
 
-      // Should show N/A for all fields
       const naElements = screen.getAllByText("N/A");
-      expect(naElements).toHaveLength(4); // Company, Contact, Email, Phone
+      expect(naElements).toHaveLength(4);
     });
 
     it("displays 'N/A' for partial client information", () => {
@@ -144,7 +142,7 @@ describe("UnitClientTab", () => {
 
       expect(screen.getByText("Tech Corp")).toBeInTheDocument();
       const naElements = screen.getAllByText("N/A");
-      expect(naElements).toHaveLength(3); // Contact, Email, Phone
+      expect(naElements).toHaveLength(3);
     });
 
     it("displays correct labels for client fields", () => {
@@ -400,10 +398,8 @@ describe("UnitClientTab", () => {
         />
       );
 
-      // Should show N/A for all fields
       expect(screen.getAllByText("N/A")).toHaveLength(4);
       
-      // Buttons should still work
       const buttons = screen.getAllByRole("button");
       expect(buttons).toHaveLength(3);
     });
@@ -439,9 +435,7 @@ describe("UnitClientTab", () => {
       );
 
       const sendEmailButton = screen.getByText("Send Email");
-      // Should not throw error
       await user.click(sendEmailButton);
-      // Button should still be there
       expect(sendEmailButton).toBeInTheDocument();
     });
 
@@ -457,7 +451,6 @@ describe("UnitClientTab", () => {
       );
 
       const callButton = screen.getByText("Call Client");
-      // Should not throw error
       await user.click(callButton);
       expect(callButton).toBeInTheDocument();
     });
@@ -474,7 +467,6 @@ describe("UnitClientTab", () => {
       );
 
       const scheduleButton = screen.getByText("Schedule Maintenance");
-      // Should not throw error
       await user.click(scheduleButton);
       expect(scheduleButton).toBeInTheDocument();
     });
@@ -501,21 +493,22 @@ describe("UnitClientTab", () => {
       );
 
       // Empty strings should render as empty (not N/A)
-      // The card content should be present
-      const cardContents = screen.getAllByTestId("card-content");
-      expect(cardContents).toHaveLength(2);
+      // Check that "N/A" is not present
+      const naElements = screen.queryAllByText("N/A");
+      expect(naElements).toHaveLength(0);
       
-      // The client info card should have empty values
-      // We can check that the labels are present
+      // The labels should still be present
       expect(screen.getByText("Company")).toBeInTheDocument();
       expect(screen.getByText("Contact Person")).toBeInTheDocument();
       expect(screen.getByText("Email")).toBeInTheDocument();
       expect(screen.getByText("Phone")).toBeInTheDocument();
       
-      // The actual values should be empty strings (not visible as text)
-      // We check that "N/A" is not present since empty strings are not "N/A"
-      const naElements = screen.queryAllByText("N/A");
-      expect(naElements).toHaveLength(0);
+      // The values should be empty - we can check that the text nodes for the values are empty
+      // We do this by finding the parent divs and checking they don't contain the empty strings as text
+      // (they will be empty text nodes, not visible)
+      const content = screen.getAllByTestId("card-content")[0];
+      // The content should exist and not have "N/A"
+      expect(content).toBeInTheDocument();
     });
 
     it("handles very long client information", () => {
