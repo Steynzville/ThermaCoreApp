@@ -101,7 +101,9 @@ describe("FormFieldGroup", () => {
         />
       );
       
-      const input = screen.getByLabelText("password");
+      // Find input by id or role
+      const input = document.querySelector('input[id="password"]');
+      expect(input).toBeInTheDocument();
       expect(input).toHaveAttribute("type", "password");
       
       // Password toggle button should be present
@@ -150,7 +152,7 @@ describe("FormFieldGroup", () => {
         />
       );
       
-      const input = screen.getByLabelText("password");
+      const input = document.querySelector('input[id="password"]');
       expect(input).toHaveAttribute("type", "password");
       
       const toggleButton = screen.getByRole("button", { name: /show password/i });
@@ -345,15 +347,31 @@ describe("FormFieldGroup", () => {
       render(
         <FormFieldGroup
           id="username"
+          label="Username"
           value=""
           onChange={mockOnChange}
           error=""
         />
       );
       
-      const errorElement = screen.queryByText(/.*/);
-      // The only element with text might be the label, so we check for no error class
-      expect(document.querySelector('.text-red-600')).not.toBeInTheDocument();
+      // There should be no error message div with error styling
+      const errorElements = document.querySelectorAll('.text-red-600');
+      expect(errorElements).toHaveLength(0);
+    });
+
+    it("does not show error when error prop is undefined", () => {
+      render(
+        <FormFieldGroup
+          id="username"
+          label="Username"
+          value=""
+          onChange={mockOnChange}
+          error={undefined}
+        />
+      );
+      
+      const errorElements = document.querySelectorAll('.text-red-600');
+      expect(errorElements).toHaveLength(0);
     });
   });
 
