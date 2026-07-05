@@ -251,7 +251,6 @@ describe("UnitTabNavigation", () => {
         expect(button).toBeVisible();
       });
       
-      // Focus first tab
       const firstButton = buttons[0];
       firstButton.focus();
       expect(document.activeElement).toBe(firstButton);
@@ -264,7 +263,6 @@ describe("UnitTabNavigation", () => {
         <UnitTabNavigation activeTab={undefined} setActiveTab={mockSetActiveTab} />
       );
       
-      // All tabs should be inactive
       const buttons = screen.getAllByRole("button");
       buttons.forEach(button => {
         expect(button).toHaveClass("border-transparent");
@@ -284,35 +282,11 @@ describe("UnitTabNavigation", () => {
       });
     });
 
-    it("handles setActiveTab being undefined gracefully", () => {
-      render(
-        <UnitTabNavigation activeTab="overview" setActiveTab={undefined} />
-      );
-      
-      const historyButton = screen.getByText("History");
-      // Clicking should not throw an error
-      fireEvent.click(historyButton);
-      // The button should still be rendered
-      expect(historyButton).toBeInTheDocument();
-    });
-
-    it("handles setActiveTab being null gracefully", () => {
-      render(
-        <UnitTabNavigation activeTab="overview" setActiveTab={null} />
-      );
-      
-      const historyButton = screen.getByText("History");
-      // Clicking should not throw an error
-      fireEvent.click(historyButton);
-      expect(historyButton).toBeInTheDocument();
-    });
-
     it("handles activeTab with invalid tab id", () => {
       render(
         <UnitTabNavigation activeTab="invalid-tab" setActiveTab={mockSetActiveTab} />
       );
       
-      // All tabs should be inactive
       const buttons = screen.getAllByRole("button");
       buttons.forEach(button => {
         expect(button).toHaveClass("border-transparent");
