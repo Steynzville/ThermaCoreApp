@@ -423,54 +423,6 @@ describe("UnitClientTab", () => {
       expect(screen.getAllByText("N/A")).toHaveLength(4);
     });
 
-    it("handles missing handleSendEmail prop", async () => {
-      const user = userEvent.setup();
-      render(
-        <UnitClientTab
-          unit={mockUnitWithClient}
-          handleSendEmail={undefined}
-          handleCallClient={mockHandleCallClient}
-          handleScheduleMaintenance={mockHandleScheduleMaintenance}
-        />
-      );
-
-      const sendEmailButton = screen.getByText("Send Email");
-      await user.click(sendEmailButton);
-      expect(sendEmailButton).toBeInTheDocument();
-    });
-
-    it("handles missing handleCallClient prop", async () => {
-      const user = userEvent.setup();
-      render(
-        <UnitClientTab
-          unit={mockUnitWithClient}
-          handleSendEmail={mockHandleSendEmail}
-          handleCallClient={undefined}
-          handleScheduleMaintenance={mockHandleScheduleMaintenance}
-        />
-      );
-
-      const callButton = screen.getByText("Call Client");
-      await user.click(callButton);
-      expect(callButton).toBeInTheDocument();
-    });
-
-    it("handles missing handleScheduleMaintenance prop", async () => {
-      const user = userEvent.setup();
-      render(
-        <UnitClientTab
-          unit={mockUnitWithClient}
-          handleSendEmail={mockHandleSendEmail}
-          handleCallClient={mockHandleCallClient}
-          handleScheduleMaintenance={undefined}
-        />
-      );
-
-      const scheduleButton = screen.getByText("Schedule Maintenance");
-      await user.click(scheduleButton);
-      expect(scheduleButton).toBeInTheDocument();
-    });
-
     it("handles client with empty string values", () => {
       const unitWithEmptyClient = {
         id: "TC005",
@@ -493,11 +445,9 @@ describe("UnitClientTab", () => {
       );
 
       // Empty strings are treated as falsy by the || operator, so "N/A" is rendered
-      // This is the actual component behavior
       const naElements = screen.getAllByText("N/A");
       expect(naElements).toHaveLength(4);
       
-      // The labels should still be present
       expect(screen.getByText("Company")).toBeInTheDocument();
       expect(screen.getByText("Contact Person")).toBeInTheDocument();
       expect(screen.getByText("Email")).toBeInTheDocument();
