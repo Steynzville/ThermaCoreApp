@@ -12,6 +12,29 @@ export default defineConfig({
     },
   },
 
+  server: {
+    host: '0.0.0.0',
+    port: 10000,
+    allowedHosts: [
+      'thermacoreapp.onrender.com',
+      '.onrender.com',
+      'localhost',
+      '127.0.0.1'
+    ]
+  },
+
+  preview: {
+    host: '0.0.0.0',
+    port: 10000,
+    strictPort: true,
+    allowedHosts: [
+      'thermacoreapp.onrender.com',
+      '.onrender.com',
+      'localhost',
+      '127.0.0.1'
+    ]
+  },
+
   test: {
     globals: true,
     environment: "jsdom",
