@@ -15,18 +15,18 @@ vi.mock("../components/ui/card", () => ({
   CardContent: ({ children, className }) => <div data-testid="card-content" className={className}>{children}</div>,
 }));
 
-// Mock AuthContext
-vi.mock("../../context/AuthContext", () => ({
+// Mock AuthContext - fix the import path
+vi.mock("../context/AuthContext", () => ({
   useAuth: vi.fn(),
 }));
 
-// Mock notifications utils
-vi.mock("../../utils/notifications", () => ({
+// Mock notifications utils - fix the import path
+vi.mock("../utils/notifications", () => ({
   getAllCurrentNotificationsForUnit: vi.fn(),
 }));
 
-import { useAuth } from "../../context/AuthContext";
-import { getAllCurrentNotificationsForUnit } from "../../utils/notifications";
+import { useAuth } from "../context/AuthContext";
+import { getAllCurrentNotificationsForUnit } from "../utils/notifications";
 
 describe("UnitAlertsTab", () => {
   const mockUnit = {
@@ -155,7 +155,7 @@ describe("UnitAlertsTab", () => {
       renderWithMocks();
       
       const cards = screen.getAllByTestId("card");
-      const criticalCard = cards[0]; // First notification is critical
+      const criticalCard = cards[0];
       expect(criticalCard).toHaveClass("border-l-red-500");
     });
 
@@ -163,7 +163,7 @@ describe("UnitAlertsTab", () => {
       renderWithMocks();
       
       const cards = screen.getAllByTestId("card");
-      const warningCard = cards[1]; // Second notification is warning
+      const warningCard = cards[1];
       expect(warningCard).toHaveClass("border-l-yellow-500");
     });
 
@@ -223,13 +223,12 @@ describe("UnitAlertsTab", () => {
       renderWithMocks();
       
       const resolvedBadges = screen.getAllByText("Resolved");
-      expect(resolvedBadges).toHaveLength(2); // Two resolved alerts
+      expect(resolvedBadges).toHaveLength(2);
     });
 
     it("does not show 'Resolved' badge for unresolved alerts", () => {
       renderWithMocks();
       
-      // Power Failure is unresolved, so no badge
       const powerFailure = screen.getByText("Power Failure");
       const parent = powerFailure.closest('[data-testid="card-content"]');
       expect(parent).not.toHaveTextContent("Resolved");
@@ -253,7 +252,6 @@ describe("UnitAlertsTab", () => {
     it("does not display resolved timestamp for unresolved alerts", () => {
       renderWithMocks();
       
-      // Power Failure has no resolvedAt
       expect(screen.queryByText("Resolved: null")).not.toBeInTheDocument();
     });
 
@@ -310,7 +308,6 @@ describe("UnitAlertsTab", () => {
       renderWithMocks();
       
       const cards = screen.getAllByTestId("card");
-      // History cards start from index 2 (after current notifications)
       const historyCard = cards[2];
       expect(historyCard).toHaveClass("bg-white");
       expect(historyCard).toHaveClass("dark:bg-gray-900");
@@ -319,7 +316,6 @@ describe("UnitAlertsTab", () => {
     it("applies correct text colors for alert titles", () => {
       renderWithMocks();
       
-      // Mock getAlertTypeColor returns colors based on type
       const warningTitle = screen.getByText("Temperature Warning");
       expect(warningTitle).toHaveClass("text-yellow-600");
       
@@ -353,11 +349,8 @@ describe("UnitAlertsTab", () => {
         />
       );
       
-      // Should still render current alerts
       expect(screen.getByText("Current Alerts")).toBeInTheDocument();
       expect(screen.getByText("Alerts History")).toBeInTheDocument();
-      
-      // No history alerts should be displayed
       expect(screen.queryByText("Temperature Warning")).not.toBeInTheDocument();
     });
 
@@ -370,7 +363,6 @@ describe("UnitAlertsTab", () => {
         />
       );
       
-      // Should still render without crashing
       expect(screen.getByText("Current Alerts")).toBeInTheDocument();
       expect(screen.getByText("Alerts History")).toBeInTheDocument();
     });
@@ -396,7 +388,6 @@ describe("UnitAlertsTab", () => {
         />
       );
       
-      // Should not show resolved timestamp
       expect(screen.queryByText("Resolved: null")).not.toBeInTheDocument();
     });
 
@@ -409,7 +400,6 @@ describe("UnitAlertsTab", () => {
         />
       );
       
-      // Should still render
       expect(screen.getByText("Current Alerts")).toBeInTheDocument();
       expect(screen.getByText("Alerts History")).toBeInTheDocument();
     });
@@ -417,7 +407,6 @@ describe("UnitAlertsTab", () => {
 
   describe("alert type colors", () => {
     it("returns correct border color for each type", () => {
-      // Test the getBorderColor function indirectly through rendering
       const notifications = [
         { id: "n1", title: "Critical", message: "Critical", type: "critical", timestamp: "2024-01-01" },
         { id: "n2", title: "Warning", message: "Warning", type: "warning", timestamp: "2024-01-01" },
@@ -437,13 +426,9 @@ describe("UnitAlertsTab", () => {
       );
       
       const cards = screen.getAllByTestId("card");
-      // First card should be critical (border-l-red-500)
       expect(cards[0]).toHaveClass("border-l-red-500");
-      // Second card should be warning (border-l-yellow-500)
       expect(cards[1]).toHaveClass("border-l-yellow-500");
-      // Third card should be info (border-l-blue-500)
       expect(cards[2]).toHaveClass("border-l-blue-500");
-      // Fourth card should be success (border-l-green-500)
       expect(cards[3]).toHaveClass("border-l-green-500");
     });
   });
