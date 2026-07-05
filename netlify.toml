@@ -1,9 +1,14 @@
 [build]
   publish = "dist"
-  command = "npm run build"
+  command = "pnpm run build"
 
 [build.environment]
-  NODE_VERSION = "18"
+  NODE_VERSION = "20.18.0"
+  NPM_FLAGS = "--no-package-lock"
+
+# Install pnpm before building
+[build.commands]
+  pre = "npm install -g pnpm@10.4.1"
 
 [[redirects]]
   from = "/*"
