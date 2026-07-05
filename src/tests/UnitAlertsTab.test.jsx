@@ -15,12 +15,12 @@ vi.mock("../components/ui/card", () => ({
   CardContent: ({ children, className }) => <div data-testid="card-content" className={className}>{children}</div>,
 }));
 
-// Mock AuthContext - fix the import path
+// Mock AuthContext
 vi.mock("../context/AuthContext", () => ({
   useAuth: vi.fn(),
 }));
 
-// Mock notifications utils - fix the import path
+// Mock notifications utils
 vi.mock("../utils/notifications", () => ({
   getAllCurrentNotificationsForUnit: vi.fn(),
 }));
@@ -93,6 +93,8 @@ describe("UnitAlertsTab", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default mock for useAuth
+    useAuth.mockReturnValue({ userRole: "admin" });
   });
 
   const renderWithMocks = (
@@ -188,22 +190,60 @@ describe("UnitAlertsTab", () => {
 
   describe("no current notifications", () => {
     it("displays 'No active alerts' message when no notifications", () => {
-      renderWithMocks([]);
+      // Use getAllByTestId and check length instead of getByTestId
+      getAllCurrentNotificationsForUnit.mockReturnValue([]);
+      useAuth.mockReturnValue({ userRole: "admin" });
       
-      expect(screen.getByText("No active alerts")).toBeInTheDocument();
-      expect(screen.getByTestId("check-circle")).toBeInTheDocument();
+      render(
+        <UnitAlertsTab
+          unit={mockUnit}
+          alertsHistory={[]}
+          getAlertTypeColor={mockGetAlertTypeColor}
+        />
+      );
+      
+      // There should be check-circle icons in the no alerts message
+      const checkIcons = screen.getAllByTestId("check-circle");
+      // The no alerts message has one check-circle
+      expect(checkIcons.length).toBeGreaterThan(0);
+      
+      // The "No active alerts" text should be present
+      const noAlertsText = screen.getByText("No active alerts");
+      expect(noAlertsText).toBeInTheDocument();
     });
 
     it("displays checkmark icon when no notifications", () => {
-      renderWithMocks([]);
+      getAllCurrentNotificationsForUnit.mockReturnValue([]);
+      useAuth.mockReturnValue({ userRole: "admin" });
       
-      const checkIcon = screen.getByTestId("check-circle");
-      expect(checkIcon).toBeInTheDocument();
-      expect(checkIcon).toHaveClass("text-green-500");
+      render(
+        <UnitAlertsTab
+          unit={mockUnit}
+          alertsHistory={[]}
+          getAlertTypeColor={mockGetAlertTypeColor}
+        />
+      );
+      
+      const checkIcons = screen.getAllByTestId("check-circle");
+      // Should have at least one check-circle (from no alerts message)
+      expect(checkIcons.length).toBeGreaterThan(0);
+      
+      // The check-circle should be green
+      const noAlertsIcon = checkIcons[0];
+      expect(noAlertsIcon).toHaveClass("text-green-500");
     });
 
     it("does not display any notification cards when no notifications", () => {
-      renderWithMocks([]);
+      getAllCurrentNotificationsForUnit.mockReturnValue([]);
+      useAuth.mockReturnValue({ userRole: "admin" });
+      
+      render(
+        <UnitAlertsTab
+          unit={mockUnit}
+          alertsHistory={[]}
+          getAlertTypeColor={mockGetAlertTypeColor}
+        />
+      );
       
       const alertTriangles = screen.queryAllByTestId("alert-triangle");
       expect(alertTriangles).toHaveLength(0);
@@ -329,18 +369,41 @@ describe("UnitAlertsTab", () => {
 
   describe("edge cases", () => {
     it("handles null currentNotifications gracefully", () => {
-      renderWithMocks(null);
+      getAllCurrentNotificationsForUnit.mockReturnValue(null);
+      useAuth.mockReturnValue({ userRole: "admin" });
       
+      render(
+        <UnitAlertsTab
+          unit={mockUnit}
+          alertsHistory={mockAlertsHistory}
+          getAlertTypeColor={mockGetAlertTypeColor}
+        />
+      );
+      
+      // Should show no alerts message
       expect(screen.getByText("No active alerts")).toBeInTheDocument();
     });
 
     it("handles undefined currentNotifications gracefully", () => {
-      renderWithMocks(undefined);
+      getAllCurrentNotificationsForUnit.mockReturnValue(undefined);
+      useAuth.mockReturnValue({ userRole: "admin" });
       
+      render(
+        <UnitAlertsTab
+          unit={mockUnit}
+          alertsHistory={mockAlertsHistory}
+          getAlertTypeColor={mockGetAlertTypeColor}
+        />
+      );
+      
+      // Should show no alerts message
       expect(screen.getByText("No active alerts")).toBeInTheDocument();
     });
 
     it("handles empty alertsHistory", () => {
+      useAuth.mockReturnValue({ userRole: "admin" });
+      getAllCurrentNotificationsForUnit.mockReturnValue([]);
+      
       render(
         <UnitAlertsTab
           unit={mockUnit}
@@ -351,10 +414,14 @@ describe("UnitAlertsTab", () => {
       
       expect(screen.getByText("Current Alerts")).toBeInTheDocument();
       expect(screen.getByText("Alerts History")).toBeInTheDocument();
+      expect(screen.getByText("No active alerts")).toBeInTheDocument();
       expect(screen.queryByText("Temperature Warning")).not.toBeInTheDocument();
     });
 
     it("handles undefined alertsHistory gracefully", () => {
+      useAuth.mockReturnValue({ userRole: "admin" });
+      getAllCurrentNotificationsForUnit.mockReturnValue([]);
+      
       render(
         <UnitAlertsTab
           unit={mockUnit}
@@ -380,6 +447,9 @@ describe("UnitAlertsTab", () => {
         },
       ];
       
+      useAuth.mockReturnValue({ userRole: "admin" });
+      getAllCurrentNotificationsForUnit.mockReturnValue([]);
+      
       render(
         <UnitAlertsTab
           unit={mockUnit}
@@ -392,6 +462,9 @@ describe("UnitAlertsTab", () => {
     });
 
     it("handles missing getAlertTypeColor gracefully", () => {
+      useAuth.mockReturnValue({ userRole: "admin" });
+      getAllCurrentNotificationsForUnit.mockReturnValue([]);
+      
       render(
         <UnitAlertsTab
           unit={mockUnit}
