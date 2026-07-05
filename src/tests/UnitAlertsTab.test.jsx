@@ -190,7 +190,6 @@ describe("UnitAlertsTab", () => {
 
   describe("no current notifications", () => {
     it("displays 'No active alerts' message when no notifications", () => {
-      // Use getAllByTestId and check length instead of getByTestId
       getAllCurrentNotificationsForUnit.mockReturnValue([]);
       useAuth.mockReturnValue({ userRole: "admin" });
       
@@ -202,12 +201,9 @@ describe("UnitAlertsTab", () => {
         />
       );
       
-      // There should be check-circle icons in the no alerts message
       const checkIcons = screen.getAllByTestId("check-circle");
-      // The no alerts message has one check-circle
       expect(checkIcons.length).toBeGreaterThan(0);
       
-      // The "No active alerts" text should be present
       const noAlertsText = screen.getByText("No active alerts");
       expect(noAlertsText).toBeInTheDocument();
     });
@@ -225,10 +221,8 @@ describe("UnitAlertsTab", () => {
       );
       
       const checkIcons = screen.getAllByTestId("check-circle");
-      // Should have at least one check-circle (from no alerts message)
       expect(checkIcons.length).toBeGreaterThan(0);
       
-      // The check-circle should be green
       const noAlertsIcon = checkIcons[0];
       expect(noAlertsIcon).toHaveClass("text-green-500");
     });
@@ -380,7 +374,6 @@ describe("UnitAlertsTab", () => {
         />
       );
       
-      // Should show no alerts message
       expect(screen.getByText("No active alerts")).toBeInTheDocument();
     });
 
@@ -396,7 +389,6 @@ describe("UnitAlertsTab", () => {
         />
       );
       
-      // Should show no alerts message
       expect(screen.getByText("No active alerts")).toBeInTheDocument();
     });
 
@@ -422,6 +414,7 @@ describe("UnitAlertsTab", () => {
       useAuth.mockReturnValue({ userRole: "admin" });
       getAllCurrentNotificationsForUnit.mockReturnValue([]);
       
+      // Pass undefined for alertsHistory
       render(
         <UnitAlertsTab
           unit={mockUnit}
@@ -431,6 +424,10 @@ describe("UnitAlertsTab", () => {
       );
       
       expect(screen.getByText("Current Alerts")).toBeInTheDocument();
+      expect(screen.getByText("Alerts History")).toBeInTheDocument();
+      // The component should handle undefined alertsHistory by not rendering any history items
+      // Since the component tries to map over alertsHistory, we need to check that it doesn't crash
+      // and still renders the "Alerts History" section
       expect(screen.getByText("Alerts History")).toBeInTheDocument();
     });
 
@@ -465,6 +462,8 @@ describe("UnitAlertsTab", () => {
       useAuth.mockReturnValue({ userRole: "admin" });
       getAllCurrentNotificationsForUnit.mockReturnValue([]);
       
+      // Pass undefined for getAlertTypeColor
+      // The component should handle this by not calling the function
       render(
         <UnitAlertsTab
           unit={mockUnit}
@@ -473,8 +472,15 @@ describe("UnitAlertsTab", () => {
         />
       );
       
+      // Should still render the sections
       expect(screen.getByText("Current Alerts")).toBeInTheDocument();
       expect(screen.getByText("Alerts History")).toBeInTheDocument();
+      
+      // The history alerts should still render but without the color classes
+      // Since getAlertTypeColor is undefined, the titles won't have the color classes
+      expect(screen.getByText("Temperature Warning")).toBeInTheDocument();
+      expect(screen.getByText("Power Failure")).toBeInTheDocument();
+      expect(screen.getByText("Maintenance Complete")).toBeInTheDocument();
     });
   });
 
