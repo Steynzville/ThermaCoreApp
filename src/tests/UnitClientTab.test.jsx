@@ -91,7 +91,10 @@ describe("UnitClientTab", () => {
         />
       );
 
-      expect(screen.getByTestId("user-icon")).toBeInTheDocument();
+      // Use getAllByTestId for user-icon since there are 2
+      const userIcons = screen.getAllByTestId("user-icon");
+      expect(userIcons).toHaveLength(2);
+      
       expect(screen.getByTestId("mail-icon")).toBeInTheDocument();
       expect(screen.getByTestId("phone-icon")).toBeInTheDocument();
     });
@@ -498,8 +501,21 @@ describe("UnitClientTab", () => {
       );
 
       // Empty strings should render as empty (not N/A)
-      const content = screen.getByTestId("card-content");
-      expect(content).toBeInTheDocument();
+      // The card content should be present
+      const cardContents = screen.getAllByTestId("card-content");
+      expect(cardContents).toHaveLength(2);
+      
+      // The client info card should have empty values
+      // We can check that the labels are present
+      expect(screen.getByText("Company")).toBeInTheDocument();
+      expect(screen.getByText("Contact Person")).toBeInTheDocument();
+      expect(screen.getByText("Email")).toBeInTheDocument();
+      expect(screen.getByText("Phone")).toBeInTheDocument();
+      
+      // The actual values should be empty strings (not visible as text)
+      // We check that "N/A" is not present since empty strings are not "N/A"
+      const naElements = screen.queryAllByText("N/A");
+      expect(naElements).toHaveLength(0);
     });
 
     it("handles very long client information", () => {
