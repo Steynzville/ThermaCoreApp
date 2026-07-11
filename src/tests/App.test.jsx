@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from "vite
 import React from "react";
 
 // ============================================================
-// Use vi.hoisted() with a simple object - NO React.createContext
+// CRITICAL: Use vi.hoisted() with a simple object - NO React.createContext
 // ============================================================
 
 const { authMock } = vi.hoisted(() => {
