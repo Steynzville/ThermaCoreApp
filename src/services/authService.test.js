@@ -62,7 +62,7 @@ describe("authService", () => {
       });
       expect(result.token).toBe("test-token-123");
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining("/api/v1/auth/login"),
+        expect.stringContaining("/auth/login"),
         expect.objectContaining({
           method: "POST",
           headers: { "Content-Type": "application/json" },
