@@ -73,7 +73,8 @@ export const login = async (identifier, password, keepMeSignedIn = false) => {
     import.meta.env.VITE_API_BASE_URL || "https://thermacoreapp.onrender.com";
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+    // UPDATED: Changed from /api/v1/auth/login to /auth/login
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -280,7 +281,7 @@ export const requestPasswordReset = async (email) => {
 
   try {
     const response = await fetch(
-      `${API_BASE_URL}/api/v1/auth/forgot-password`,
+      `${API_BASE_URL}/auth/forgot-password`,  // UPDATED: removed /api/v1
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -328,7 +329,7 @@ export const resetPassword = async (token, newPassword) => {
     import.meta.env.VITE_API_BASE_URL || "https://thermacoreapp.onrender.com";
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/auth/reset-password`, {
+    const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {  // UPDATED: removed /api/v1
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token, new_password: newPassword }),
@@ -394,4 +395,4 @@ export const updateProfile = (profileData) => {
       });
     }, 500);
   });
-};
+}; 
