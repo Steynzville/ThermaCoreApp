@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 
 # Import Flask and core extensions
-from flask import Flask, jsonify
+from flask import Flask, jsonify, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 
 from app.exceptions import ConfigurationException
@@ -212,7 +212,7 @@ def create_app(config_name=None):
     )
     from app.refactor_helpers import configure_debug_mode, setup_logging_level
 
-    app = Flask(__name__)
+    app = Flask(__name__, static_folder='../dist', static_url_path='')
 
     # Determine configuration name from environment
     config_name = determine_config_name(config_name)
@@ -281,5 +281,27 @@ def create_app(config_name=None):
     from app.service_init import initialize_all_services
 
     initialize_all_services(app, logger)
+
+    # Serve React static files
+    @app.route('/')
+    def serve_index():
+        """Serve the React index.html."""
+        return send_from_directory(app.static_folder, 'index.html')
+
+    @app.route('/<path:path>')
+    def serve_static(path):
+        """Serve static files from the React build."""
+        # Skip API routes - let them be handled by the blueprints
+        if path.startswith('api/') or path.startswith('auth/') or path.startswith('health'):
+            return None
+        
+        # Check if the file exists in the dist folder
+        import os
+        file_path = os.path.join(app.static_folder, path)
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            return send_from_directory(app.static_folder, path)
+        
+        # For all other paths, serve index.html (SPA routing)
+        return send_from_directory(app.static_folder, 'index.html')
 
     return app
