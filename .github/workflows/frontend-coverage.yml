@@ -32,7 +32,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24'
-          # Remove cache: 'pnpm' since we're caching separately below
 
       - name: Get pnpm store directory
         shell: bash
@@ -49,6 +48,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run Tests
+        id: tests
         env:
           NODE_OPTIONS: "--max-old-space-size=8192"
           CI: "true"
@@ -66,7 +66,7 @@ jobs:
             --coverage.reporter=text \
             --coverage.reporter=json-summary \
             --coverage.reportsDirectory=coverage \
-            --testNamePattern="^(?!.*AdminPanel User Creation Form).*" || {
+            --testNamePattern="^(?!.*AdminPanel User Creation Form).*" 2>&1 | tee coverage_output.txt || {
               EXIT_CODE=$?
               echo "Vitest exited with code $EXIT_CODE"
               pkill -9 node || true
@@ -77,6 +77,20 @@ jobs:
               fi
               exit $EXIT_CODE
             }
+
+      - name: Extract Coverage from Output
+        id: coverage
+        if: always()
+        run: |
+          echo "📊 Extracting coverage from test output..."
+          # Extract the coverage percentage from the vitest output
+          COVERAGE=$(grep -oP 'All files\s+\|\s+[0-9.]+\s+\|\s+[0-9.]+\s+\|\s+[0-9.]+\s+\|\s+\K[0-9.]+' coverage_output.txt | head -1 || echo "0")
+          # Fallback: try to extract from coverage-summary.json if grep fails
+          if [ "$COVERAGE" = "0" ] && [ -f coverage/coverage-summary.json ]; then
+            COVERAGE=$(cat coverage/coverage-summary.json | jq -r '.total.statements.pct' || echo "0")
+          fi
+          echo "COVERAGE=$COVERAGE" >> $GITHUB_ENV
+          echo "Total coverage extracted: $COVERAGE%"
 
       - name: Final Cleanup
         if: always()
@@ -101,38 +115,22 @@ jobs:
           echo "                   📊 FRONTEND COVERAGE                   "
           echo "═══════════════════════════════════════════════════════════"
           echo ""
+          echo "  📈 Total Coverage: ${{ env.COVERAGE }}%"
+          echo ""
           
-          if [ -f coverage/coverage-summary.json ]; then
-            STATEMENTS=$(cat coverage/coverage-summary.json | jq -r '.total.statements.pct')
-            BRANCHES=$(cat coverage/coverage-summary.json | jq -r '.total.branches.pct')
-            FUNCTIONS=$(cat coverage/coverage-summary.json | jq -r '.total.functions.pct')
-            LINES=$(cat coverage/coverage-summary.json | jq -r '.total.lines.pct')
-            
-            echo "  📈 Statements:  $STATEMENTS%"
-            echo "  🌿 Branches:    $BRANCHES%"
-            echo "  🧩 Functions:   $FUNCTIONS%"
-            echo "  📝 Lines:       $LINES%"
-            echo ""
-            echo "  🎯 Total Coverage: $STATEMENTS%"
-            echo ""
-            
-            # Color coding based on coverage percentage
-            COVERAGE_INT=$(echo "$STATEMENTS" | cut -d'.' -f1)
-            if [ "$COVERAGE_INT" -ge 80 ]; then
-              echo "  🟢 EXCELLENT! Coverage is above 80%"
-            elif [ "$COVERAGE_INT" -ge 60 ]; then
-              echo "  🟡 Good! Coverage is above 60%"
-            elif [ "$COVERAGE_INT" -ge 40 ]; then
-              echo "  🟠 Fair - Consider improving coverage"
-            else
-              echo "  🔴 Low coverage - Please add more tests"
-            fi
-            echo ""
-            echo "═══════════════════════════════════════════════════════════"
+          # Color coding based on coverage percentage
+          COVERAGE_INT=$(echo "${{ env.COVERAGE }}" | cut -d'.' -f1)
+          if [ "$COVERAGE_INT" -ge 80 ]; then
+            echo "  🟢 EXCELLENT! Coverage is above 80%"
+          elif [ "$COVERAGE_INT" -ge 60 ]; then
+            echo "  🟡 Good! Coverage is above 60%"
+          elif [ "$COVERAGE_INT" -ge 40 ]; then
+            echo "  🟠 Fair - Consider improving coverage"
           else
-            echo "  ❌ No coverage file found"
-            echo "═══════════════════════════════════════════════════════════"
+            echo "  🔴 Low coverage - Please add more tests"
           fi
+          echo ""
+          echo "═══════════════════════════════════════════════════════════"
 
       - name: Generate Coverage Badge
         if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
