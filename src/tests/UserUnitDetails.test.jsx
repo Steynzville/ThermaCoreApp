@@ -164,8 +164,12 @@ describe("UserUnitDetails", () => {
       screen.getByText("Unit Alpha - Detailed View"),
     ).toBeInTheDocument();
     expect(screen.getByText(/UA-001/)).toBeInTheDocument();
-    // FIX: Use a more specific query for location
-    expect(screen.getByText(/Site A/)).toBeInTheDocument();
+    
+    // Check that location appears in the Location section specifically
+    const locationLabel = screen.getByText("Location");
+    const locationContainer = locationLabel.closest("div")?.parentElement;
+    expect(locationContainer).toHaveTextContent(/Site A/);
+    
     expect(screen.getByText("ONLINE")).toBeInTheDocument();
   });
 
