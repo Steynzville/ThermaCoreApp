@@ -7,22 +7,52 @@ import React from "react";
 import App from "../App";
 
 // ============================================================
-// Mock auth state via vi.hoisted() so the fn exists before any
-// vi.mock factory (which Vitest hoists above all other code in
-// this file, including plain const declarations) needs to close
-// over it. Using vi.hoisted() removes any ambiguity about
-// hoisting order rather than relying on the "mock"-prefix naming
-// convention alone.
+// Create a React Context to pass auth value directly
 // ============================================================
 
-const { mockUseAuth } = vi.hoisted(() => ({ mockUseAuth: vi.fn() }));
+// Create a simple context for testing
+const TestAuthContext = React.createContext(null);
+
+// ============================================================
+// Mock auth state - KEY FIX: Use a provider that actually
+// passes the value through context
+// ============================================================
+
+const { mockUseAuth, setMockAuth } = vi.hoisted(() => ({
+  mockUseAuth: vi.fn(),
+  setMockAuth: vi.fn(),
+}));
 
 vi.mock("../context/AuthContext", () => ({
   useAuth: () => mockUseAuth(),
-  AuthProvider: ({ children }) => (
-    <div data-testid="auth-provider">{children}</div>
-  ),
+  AuthProvider: ({ children }) => {
+    // Get the current auth value from the mock
+    const authValue = mockUseAuth();
+    // Pass it through context using the real context
+    return (
+      <TestAuthContext.Provider value={authValue}>
+        <div data-testid="auth-provider">{children}</div>
+      </TestAuthContext.Provider>
+    );
+  },
 }));
+
+// Make the context available to components
+vi.mock("../context/AuthContext", async () => {
+  const actual = await vi.importActual("../context/AuthContext");
+  return {
+    ...actual,
+    useAuth: () => mockUseAuth(),
+    AuthProvider: ({ children }) => {
+      const authValue = mockUseAuth();
+      return (
+        <actual.AuthProvider value={authValue}>
+          <div data-testid="auth-provider">{children}</div>
+        </actual.AuthProvider>
+      );
+    },
+  };
+});
 
 // Mock all other contexts
 vi.mock("../context/SettingsContext", () => ({
@@ -257,22 +287,19 @@ beforeAll(() => {
 beforeEach(() => {
   vi.clearAllMocks();
   window.location.pathname = "/";
-  // Default: unauthenticated, not loading
+  
+  // CRITICAL: Default auth state - NOT LOADING
   mockUseAuth.mockReturnValue({
     user: null,
     isAuthenticated: false,
-    isLoading: false,
+    isLoading: false,  // MUST be false
     isLoggingOut: false,
-    login: vi.fn(),
+    login: vi.fn().mockResolvedValue(undefined),
     logout: vi.fn(),
   });
 });
 
-// CRITICAL FIX: without this, every render(<App />) from a previous test
-// stays mounted in document.body (including its window "error" /
-// "unhandledrejection" listeners), so later tests accumulate duplicate
-// "Login" headings and stale error-boundary state, causing
-// findByRole/getByRole to throw "found multiple elements" or time out.
+// CRITICAL FIX: Cleanup between tests
 afterEach(() => {
   cleanup();
   reloadMock.mockClear();
@@ -286,9 +313,9 @@ const setAuth = (overrides = {}) => {
   const defaultAuth = {
     user: null,
     isAuthenticated: false,
-    isLoading: false,
+    isLoading: false,  // MUST be false
     isLoggingOut: false,
-    login: vi.fn(),
+    login: vi.fn().mockResolvedValue(undefined),
     logout: vi.fn(),
   };
   mockUseAuth.mockReturnValue({
@@ -311,6 +338,7 @@ describe("App", () => {
     setAuth();
     render(<App />);
 
+    // Wait for the login page
     const heading = await screen.findByRole("heading", { name: /login/i });
     expect(heading).toBeInTheDocument();
     expect(screen.getByTestId("username-input")).toBeInTheDocument();
@@ -335,7 +363,6 @@ describe("App", () => {
     const themeToggle = screen.getByTestId("theme-toggle");
 
     expect(themeToggle).toHaveAttribute("aria-pressed", "false");
-
     await user.click(themeToggle);
     expect(themeToggle).toHaveAttribute("aria-pressed", "true");
   });
