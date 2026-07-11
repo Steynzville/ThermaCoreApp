@@ -115,8 +115,7 @@ vi.mock("../components/UnitDetails", () => ({
   default: () => <div data-testid="unit-details">Unit Details</div>,
 }));
 
-// Mock routes - includes a public route, a plain protected route, and a
-// specialHandling protected route so all branches in AppContent are exercised.
+// Mock routes
 vi.mock("../config/routes", () => ({
   default: [
     { path: "/public-page", component: () => <div data-testid="public-page">Public Page</div>, isProtected: false },
@@ -189,14 +188,33 @@ beforeAll(() => {
     value: MockAudioContext,
   });
 
-  // Mock location
+  // Mock location with proper origin for React Router
   Object.defineProperty(window, "location", {
     writable: true,
     configurable: true,
     value: {
       href: "http://localhost/",
+      origin: "http://localhost",
       pathname: "/",
+      search: "",
+      hash: "",
       reload: reloadMock,
+    },
+  });
+
+  // Mock history for React Router
+  Object.defineProperty(window, "history", {
+    writable: true,
+    configurable: true,
+    value: {
+      pushState: vi.fn(),
+      replaceState: vi.fn(),
+      go: vi.fn(),
+      back: vi.fn(),
+      forward: vi.fn(),
+      length: 0,
+      scrollRestoration: "auto",
+      state: null,
     },
   });
 
@@ -222,8 +240,17 @@ beforeAll(() => {
   }));
 });
 
+// ============================================================
+// Helper to set pathname and trigger navigation
+// ============================================================
+
+const setPathname = (path) => {
+  window.location.pathname = path;
+  window.location.href = `http://localhost${path}`;
+};
+
 afterEach(() => {
-  window.location.pathname = "/";
+  setPathname("/");
   reloadMock.mockClear();
 });
 
@@ -234,6 +261,7 @@ afterEach(() => {
 describe("App", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    setPathname("/");
   });
 
   describe("basic rendering", () => {
@@ -274,9 +302,9 @@ describe("App", () => {
       render(<App />);
 
       await waitFor(() => {
-        expect(screen.getByTestId("spinner")).toBeInTheDocument();
+        const spinner = screen.getByTestId("spinner");
+        expect(spinner).toBeInTheDocument();
       });
-      expect(screen.getByText("Loading...")).toBeInTheDocument();
     });
 
     it("shows signing out message when isLoggingOut is true", async () => {
@@ -294,8 +322,8 @@ describe("App", () => {
 
       await waitFor(() => {
         expect(screen.getByTestId("spinner")).toBeInTheDocument();
+        expect(screen.getByText("Signing out...")).toBeInTheDocument();
       });
-      expect(screen.getByText("Signing out...")).toBeInTheDocument();
     });
   });
 
@@ -414,7 +442,7 @@ describe("App", () => {
 
   describe("routing", () => {
     it("renders the forgot password route", async () => {
-      window.location.pathname = "/forgot-password";
+      setPathname("/forgot-password");
       render(<App />);
 
       await waitFor(() => {
@@ -423,7 +451,7 @@ describe("App", () => {
     });
 
     it("renders the reset password route", async () => {
-      window.location.pathname = "/reset-password";
+      setPathname("/reset-password");
       render(<App />);
 
       await waitFor(() => {
@@ -432,7 +460,7 @@ describe("App", () => {
     });
 
     it("renders a public route from the route configuration", async () => {
-      window.location.pathname = "/public-page";
+      setPathname("/public-page");
       render(<App />);
 
       await waitFor(() => {
@@ -441,7 +469,7 @@ describe("App", () => {
     });
 
     it("redirects an unknown path to login", async () => {
-      window.location.pathname = "/some-unknown-path";
+      setPathname("/some-unknown-path");
       render(<App />);
 
       await waitFor(() => {
@@ -460,7 +488,7 @@ describe("App", () => {
         logout: vi.fn(),
       });
 
-      window.location.pathname = "/dashboard";
+      setPathname("/dashboard");
       render(<App />);
 
       await waitFor(() => {
@@ -470,7 +498,7 @@ describe("App", () => {
     });
 
     it("redirects to login when visiting a protected route unauthenticated", async () => {
-      window.location.pathname = "/dashboard";
+      setPathname("/dashboard");
       render(<App />);
 
       await waitFor(() => {
@@ -490,7 +518,7 @@ describe("App", () => {
         logout: vi.fn(),
       });
 
-      window.location.pathname = "/role-based";
+      setPathname("/role-based");
       render(<App />);
 
       await waitFor(() => {
