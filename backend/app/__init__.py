@@ -7,6 +7,7 @@ from datetime import datetime
 # Import Flask and core extensions
 from flask import Flask, jsonify, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
 
 from app.exceptions import ConfigurationException
 
@@ -237,8 +238,21 @@ def create_app(config_name=None):
     # Initialize core extensions (db, migrate, jwt)
     initialize_core_extensions(app)
 
-    # Configure CORS if available
-    configure_cors(app)
+    # ============================================
+    # CONFIGURE CORS - Allow Netlify
+    # ============================================
+    CORS(app, 
+         origins=[
+             'https://thermacoreapp.netlify.app',
+             'https://*.netlify.app',
+             'https://thermacoreapp.onrender.com',
+             'http://localhost:3000',
+             'http://localhost:5173'
+         ],
+         supports_credentials=True,
+         allow_headers=['Content-Type', 'Authorization', 'X-Requested-With'],
+         methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+         expose_headers=['Content-Type', 'Authorization'])
 
     # Set up middleware
     _setup_middleware(app)
