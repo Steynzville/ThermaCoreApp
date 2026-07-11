@@ -164,6 +164,7 @@ describe("UserUnitDetails", () => {
       screen.getByText("Unit Alpha - Detailed View"),
     ).toBeInTheDocument();
     expect(screen.getByText(/UA-001/)).toBeInTheDocument();
+    // FIX: Use a more specific query for location
     expect(screen.getByText(/Site A/)).toBeInTheDocument();
     expect(screen.getByText("ONLINE")).toBeInTheDocument();
   });
