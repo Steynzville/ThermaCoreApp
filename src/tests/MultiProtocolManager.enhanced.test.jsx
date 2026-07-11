@@ -252,12 +252,14 @@ describe("MultiProtocolManager", () => {
       </TestWrapper>,
     );
 
+    // Use testid to find loading state
+    expect(screen.getByTestId("loading-state")).toBeInTheDocument();
     expect(screen.getByText(/Loading protocol status/i)).toBeInTheDocument();
     expect(document.querySelector(".animate-spin")).toBeInTheDocument();
 
     // Wait for loading to finish
     await waitFor(() => {
-      expect(screen.queryByText(/Loading protocol status/i)).not.toBeInTheDocument();
+      expect(screen.queryByTestId("loading-state")).not.toBeInTheDocument();
     });
   });
 
@@ -312,7 +314,7 @@ describe("MultiProtocolManager", () => {
   });
 
   // ============================================================
-  // TEST: Configure Buttons - FIXED
+  // TEST: Configure Buttons
   // ============================================================
   it("should open Modbus modal when Configure is clicked on Modbus card", async () => {
     render(
@@ -325,19 +327,10 @@ describe("MultiProtocolManager", () => {
       expect(screen.getByText("MODBUS")).toBeInTheDocument();
     });
 
-    // Find the Modbus card by looking for the MODBUS text and then finding the Configure button in that card
-    const modbusCard = screen.getByText("MODBUS").closest('[data-testid="card"]');
-    const configureButtons = modbusCard?.querySelectorAll('[data-testid="button"]');
-    
-    // Click the first button (Configure) in the Modbus card
-    if (configureButtons && configureButtons.length > 0) {
-      fireEvent.click(configureButtons[0]);
-    } else {
-      // Fallback: find all Configure buttons and click the one that's in the Modbus context
-      const allConfigureButtons = screen.getAllByText("Configure");
-      // Modbus is the third protocol (index 2)
-      fireEvent.click(allConfigureButtons[2]);
-    }
+    // Find the Modbus card's Configure button using testid
+    const configureButton = screen.getByTestId("configure-modbus");
+    expect(configureButton).toBeInTheDocument();
+    fireEvent.click(configureButton);
 
     // Check that the Modbus modal opened
     await waitFor(() => {
@@ -356,16 +349,9 @@ describe("MultiProtocolManager", () => {
       expect(screen.getByText("OPCUA")).toBeInTheDocument();
     });
 
-    const opcuaCard = screen.getByText("OPCUA").closest('[data-testid="card"]');
-    const configureButtons = opcuaCard?.querySelectorAll('[data-testid="button"]');
-    
-    if (configureButtons && configureButtons.length > 0) {
-      fireEvent.click(configureButtons[0]);
-    } else {
-      const allConfigureButtons = screen.getAllByText("Configure");
-      // OPCUA is the second protocol (index 1)
-      fireEvent.click(allConfigureButtons[1]);
-    }
+    const configureButton = screen.getByTestId("configure-opcua");
+    expect(configureButton).toBeInTheDocument();
+    fireEvent.click(configureButton);
 
     await waitFor(() => {
       expect(screen.getByTestId("opcua-browser")).toBeInTheDocument();
@@ -383,20 +369,78 @@ describe("MultiProtocolManager", () => {
       expect(screen.getByText("DNP3")).toBeInTheDocument();
     });
 
-    const dnp3Card = screen.getByText("DNP3").closest('[data-testid="card"]');
-    const configureButtons = dnp3Card?.querySelectorAll('[data-testid="button"]');
-    
-    if (configureButtons && configureButtons.length > 0) {
-      fireEvent.click(configureButtons[0]);
-    } else {
-      const allConfigureButtons = screen.getAllByText("Configure");
-      // DNP3 is the fourth protocol (index 3)
-      fireEvent.click(allConfigureButtons[3]);
-    }
+    const configureButton = screen.getByTestId("configure-dnp3");
+    expect(configureButton).toBeInTheDocument();
+    fireEvent.click(configureButton);
 
     await waitFor(() => {
       expect(screen.getByTestId("dnp3-dashboard")).toBeInTheDocument();
     });
+  });
+
+  it("should open MQTT panel when Configure is clicked on MQTT card", async () => {
+    render(
+      <TestWrapper>
+        <MultiProtocolManager />
+      </TestWrapper>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("MQTT")).toBeInTheDocument();
+    });
+
+    const configureButton = screen.getByTestId("configure-mqtt");
+    expect(configureButton).toBeInTheDocument();
+    fireEvent.click(configureButton);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("mqtt-panel")).toBeInTheDocument();
+    });
+  });
+
+  it("should open Simulator dialog when Configure is clicked on Simulator card", async () => {
+    render(
+      <TestWrapper>
+        <MultiProtocolManager />
+      </TestWrapper>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("SIMULATOR")).toBeInTheDocument();
+    });
+
+    const configureButton = screen.getByTestId("configure-simulator");
+    expect(configureButton).toBeInTheDocument();
+    fireEvent.click(configureButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Simulator Configuration/i)).toBeInTheDocument();
+    });
+
+    // Check for simulator settings fields
+    expect(screen.getByLabelText(/Simulation Units Count/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Sensor Types Count/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Simulation Speed/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Noise Level/i)).toBeInTheDocument();
+  });
+
+  // ============================================================
+  // TEST: Connect Buttons
+  // ============================================================
+  it("should show Connect button for available but disconnected protocols", async () => {
+    render(
+      <TestWrapper>
+        <MultiProtocolManager />
+      </TestWrapper>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("OPCUA")).toBeInTheDocument();
+    });
+
+    // OPCUA is available but disconnected, so should have a Connect button
+    const connectButton = screen.getByTestId("connect-opcua");
+    expect(connectButton).toBeInTheDocument();
   });
 
   // ============================================================
@@ -465,70 +509,18 @@ describe("MultiProtocolManager", () => {
       </TestWrapper>,
     );
 
+    // Wait for the error state to appear using testid
     await waitFor(() => {
-      expect(screen.getByText(/Failed to Load/i)).toBeInTheDocument();
+      expect(screen.getByTestId("error-state")).toBeInTheDocument();
     });
 
+    // Check for the error message
+    expect(screen.getByText(/Failed to Load/i)).toBeInTheDocument();
     expect(screen.getByText(/Could not retrieve protocol status/i)).toBeInTheDocument();
-    expect(screen.getByText("Try Again")).toBeInTheDocument();
-  });
-
-  // ============================================================
-  // TEST: Simulator Dialog
-  // ============================================================
-  it("should open Simulator dialog when Configure is clicked on Simulator card", async () => {
-    render(
-      <TestWrapper>
-        <MultiProtocolManager />
-      </TestWrapper>,
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText("SIMULATOR")).toBeInTheDocument();
-    });
-
-    const simulatorCard = screen.getByText("SIMULATOR").closest('[data-testid="card"]');
-    const configureButtons = simulatorCard?.querySelectorAll('[data-testid="button"]');
     
-    if (configureButtons && configureButtons.length > 0) {
-      fireEvent.click(configureButtons[0]);
-    } else {
-      const allConfigureButtons = screen.getAllByText("Configure");
-      // Simulator is the last protocol (index 4)
-      fireEvent.click(allConfigureButtons[4]);
-    }
-
-    await waitFor(() => {
-      expect(screen.getByText(/Simulator Configuration/i)).toBeInTheDocument();
-    });
-
-    // Check for simulator settings fields
-    expect(screen.getByLabelText(/Simulation Units Count/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Sensor Types Count/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Simulation Speed/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Noise Level/i)).toBeInTheDocument();
-  });
-
-  // ============================================================
-  // TEST: Demo Mode Badge
-  // ============================================================
-  it("should show Demo Mode badge when in development mode", async () => {
-    // This requires setting import.meta.env.DEV = true
-    // We can mock the environment variable
-    const originalDev = import.meta.env.DEV;
-    import.meta.env.DEV = true;
-
-    render(
-      <TestWrapper>
-        <MultiProtocolManager />
-      </TestWrapper>,
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText("Demo Mode")).toBeInTheDocument();
-    });
-
-    import.meta.env.DEV = originalDev;
+    // Check for the "Try Again" button
+    const tryAgainButton = screen.getByText("Try Again");
+    expect(tryAgainButton).toBeInTheDocument();
   });
 
   // ============================================================
@@ -564,23 +556,32 @@ describe("MultiProtocolManager", () => {
       expect(screen.getByText("MQTT")).toBeInTheDocument();
     });
 
-    // MQTT metrics
-    expect(screen.getByText(/messages sent:/i)).toBeInTheDocument();
-    expect(screen.getByText("1247")).toBeInTheDocument();
+    // Look for metrics containers
+    const metricsContainers = screen.getAllByTestId("metrics-container");
+    expect(metricsContainers.length).toBeGreaterThan(0);
 
-    // Modbus metrics
-    expect(screen.getByText(/active devices:/i)).toBeInTheDocument();
-    expect(screen.getByText("2")).toBeInTheDocument();
+    // Check for specific metric values using test IDs
+    const messagesSent = screen.getByTestId("metric-value-messages_sent");
+    expect(messagesSent).toBeInTheDocument();
+    expect(messagesSent.textContent).toBe("1247");
 
-    // DNP3 metrics
-    expect(screen.getByText(/active outstations:/i)).toBeInTheDocument();
-    expect(screen.getByText("1")).toBeInTheDocument();
+    const activeDevices = screen.getByTestId("metric-value-active_devices");
+    expect(activeDevices).toBeInTheDocument();
+    expect(activeDevices.textContent).toBe("2");
+
+    const activeOutstations = screen.getByTestId("metric-value-active_outstations");
+    expect(activeOutstations).toBeInTheDocument();
+    expect(activeOutstations.textContent).toBe("1");
   });
 
   // ============================================================
-  // TEST: Connect Button for Available but Disconnected Protocols
+  // TEST: Demo Mode Badge
   // ============================================================
-  it("should show Connect button for available but disconnected protocols", async () => {
+  it("should show Demo Mode badge when in development mode", async () => {
+    // This requires setting import.meta.env.DEV = true
+    const originalDev = import.meta.env.DEV;
+    import.meta.env.DEV = true;
+
     render(
       <TestWrapper>
         <MultiProtocolManager />
@@ -588,12 +589,10 @@ describe("MultiProtocolManager", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("OPCUA")).toBeInTheDocument();
+      expect(screen.getByText("Demo Mode")).toBeInTheDocument();
     });
 
-    // OPCUA is available but disconnected, so should have a Connect button
-    const connectButtons = screen.getAllByText("Connect");
-    expect(connectButtons.length).toBeGreaterThan(0);
+    import.meta.env.DEV = originalDev;
   });
 
   // ============================================================
