@@ -241,15 +241,23 @@ beforeAll(() => {
     value: MockAudioContext,
   });
 
+  // FIX: Add complete location mock with search and hash
   Object.defineProperty(window, "location", {
     writable: true,
     configurable: true,
     value: {
       href: "http://localhost/",
       origin: "http://localhost",
+      protocol: "http:",
+      host: "localhost",
+      hostname: "localhost",
+      port: "",
       pathname: "/",
+      search: "",
+      hash: "",
       reload: reloadMock,
       assign: vi.fn(),
+      replace: vi.fn(),
     },
   });
 
@@ -277,6 +285,8 @@ beforeAll(() => {
 beforeEach(() => {
   vi.clearAllMocks();
   window.location.pathname = "/";
+  window.location.search = "";
+  window.location.hash = "";
   
   // Reset auth mock to default state
   Object.assign(authMock, {
@@ -356,8 +366,9 @@ describe("App", () => {
     setAuth({ isLoading: true });
     render(<App />);
 
-    const loadingText = await screen.findByText(/loading/i);
-    expect(loadingText).toBeInTheDocument();
+    // Use findAllByText since there are multiple loading elements
+    const loadingElements = await screen.findAllByText(/loading/i);
+    expect(loadingElements.length).toBeGreaterThan(0);
     expect(screen.getByTestId("spinner")).toBeInTheDocument();
   });
 
