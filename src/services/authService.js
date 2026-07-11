@@ -1,6 +1,5 @@
 // Authentication Service Module
 // This service encapsulates all authentication-related operations
-// Currently uses mock data but designed to be easily swappable with actual API calls
 
 import { apiPost } from "../utils/apiFetch";
 
@@ -11,7 +10,7 @@ const mockUsers = import.meta.env.DEV
         id: 1,
         username: "admin",
         email: "admin@thermacore.com",
-        password: "dev_admin_credential", // Development only
+        password: "dev_admin_credential",
         role: "admin",
         firstName: "Admin",
         lastName: "User",
@@ -21,14 +20,14 @@ const mockUsers = import.meta.env.DEV
         id: 2,
         username: "user",
         email: "user@thermacore.com",
-        password: "dev_user_credential", // Development only
+        password: "dev_user_credential",
         role: "user",
         firstName: "Regular",
         lastName: "User",
-        lastLogin: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+        lastLogin: new Date(Date.now() - 86400000).toISOString(),
       },
     ]
-  : []; // Empty in production builds
+  : [];
 
 // Mock session storage
 let currentUser = null;
@@ -44,7 +43,6 @@ let authToken = null;
 export const login = async (identifier, password, keepMeSignedIn = false) => {
   // Try development fallback first (only in DEV mode)
   if (import.meta.env.DEV) {
-    // Check against mock users
     const mockUser = mockUsers.find(
       (u) => (u.username === identifier || u.email === identifier) && 
              u.password === password
@@ -73,7 +71,7 @@ export const login = async (identifier, password, keepMeSignedIn = false) => {
     import.meta.env.VITE_API_BASE_URL || "https://thermacoreapp.onrender.com";
 
   try {
-    // UPDATED: Changed from /api/v1/auth/login to /auth/login
+    // FIXED: Changed from /api/v1/auth/login to /auth/login
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -87,10 +85,8 @@ export const login = async (identifier, password, keepMeSignedIn = false) => {
     const result = await response.json();
 
     if (response.ok && result.success) {
-      // Extract data from backend response
       const { access_token, user } = result.data;
 
-      // Store token and user data
       authToken = access_token;
       currentUser = {
         id: user.id,
@@ -108,7 +104,6 @@ export const login = async (identifier, password, keepMeSignedIn = false) => {
         message: result.message || "Login successful",
       };
     } else {
-      // Backend returned error response
       return {
         success: false,
         message: "Invalid username or password. Please try again.",
@@ -131,7 +126,6 @@ export const logout = () => {
     setTimeout(() => {
       currentUser = null;
       authToken = null;
-
       resolve({
         success: true,
         message: "Logout successful",
@@ -173,7 +167,6 @@ export const verifyToken = (token) => {
   return new Promise((resolve) => {
     setTimeout(() => {
       const isValid = token === authToken && currentUser !== null;
-
       resolve({
         valid: isValid,
         user: isValid ? currentUser : null,
@@ -190,7 +183,6 @@ export const verifyToken = (token) => {
 export const register = (userData) => {
   return new Promise((resolve, reject) => {
     setTimeout(() => {
-      // Check if user already exists
       const existingUser = mockUsers.find(
         (u) => u.username === userData.username || u.email === userData.email,
       );
@@ -205,7 +197,7 @@ export const register = (userData) => {
           id: mockUsers.length + 1,
           username: userData.username,
           email: userData.email,
-          password: userData.password, // In real implementation, this would be hashed
+          password: userData.password,
           role: userData.role || "user",
           firstName: userData.firstName,
           lastName: userData.lastName,
@@ -233,9 +225,6 @@ export const register = (userData) => {
 
 /**
  * Self-register a new user (public registration)
- * Creates user in pending status awaiting admin approval
- * @param {Object} userData - User registration data
- * @returns {Promise<Object>} Registration result
  */
 export const selfRegister = async (userData) => {
   try {
@@ -280,8 +269,9 @@ export const requestPasswordReset = async (email) => {
     import.meta.env.VITE_API_BASE_URL || "https://thermacoreapp.onrender.com";
 
   try {
+    // FIXED: Changed from /api/v1/auth/forgot-password to /auth/forgot-password
     const response = await fetch(
-      `${API_BASE_URL}/auth/forgot-password`,  // UPDATED: removed /api/v1
+      `${API_BASE_URL}/auth/forgot-password`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -292,7 +282,6 @@ export const requestPasswordReset = async (email) => {
     const result = await response.json();
 
     if (response.ok && result.success) {
-      // Read nested message field from API response
       const okMsg = result?.data?.message ?? result?.message;
       return {
         success: true,
@@ -300,7 +289,6 @@ export const requestPasswordReset = async (email) => {
           okMsg || "If the email exists, a password reset link has been sent",
       };
     } else {
-      // Read error message from various possible locations
       const errMsg =
         result?.error?.message ?? result?.data?.message ?? result?.message;
       return {
@@ -329,7 +317,8 @@ export const resetPassword = async (token, newPassword) => {
     import.meta.env.VITE_API_BASE_URL || "https://thermacoreapp.onrender.com";
 
   try {
-    const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {  // UPDATED: removed /api/v1
+    // FIXED: Changed from /api/v1/auth/reset-password to /auth/reset-password
+    const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token, new_password: newPassword }),
@@ -379,10 +368,8 @@ export const updateProfile = (profileData) => {
         return;
       }
 
-      // Update current user
       currentUser = { ...currentUser, ...profileData };
 
-      // Update in mock users array
       const userIndex = mockUsers.findIndex((u) => u.id === currentUser.id);
       if (userIndex !== -1) {
         mockUsers[userIndex] = { ...mockUsers[userIndex], ...profileData };
