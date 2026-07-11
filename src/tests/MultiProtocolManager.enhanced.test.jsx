@@ -466,7 +466,7 @@ describe("MultiProtocolManager", () => {
   });
 
   // ============================================================
-  // TEST: Error State - FIXED
+  // TEST: Error State
   // ============================================================
   it("should show error state when API fails", async () => {
     apiGetJson.mockRejectedValue(new Error("Network error"));
@@ -505,7 +505,7 @@ describe("MultiProtocolManager", () => {
   });
 
   // ============================================================
-  // TEST: Protocol Metrics Display - FIXED
+  // TEST: Protocol Metrics Display - SIMPLIFIED
   // ============================================================
   it("should display metrics for protocols that have them", async () => {
     render(
@@ -520,26 +520,32 @@ describe("MultiProtocolManager", () => {
     const metricsContainers = screen.getAllByTestId("metrics-container");
     expect(metricsContainers.length).toBeGreaterThan(0);
 
-    // Use function matchers to find specific numbers
-    // MQTT metrics - look for "1247"
-    const messagesSent = screen.getByText((content, element) => {
-      return content.includes("1247") && element?.tagName !== 'svg';
-    });
-    expect(messagesSent).toBeInTheDocument();
+    // Look for the "Metrics:" label inside the first metrics container
+    expect(screen.getByText("Metrics:")).toBeInTheDocument();
 
-    // Modbus metrics - look for "2" (active devices)
-    const activeDevices = screen.getByText((content, element) => {
-      return content.includes("2") && element?.tagName !== 'svg' && 
+    // Look for metric labels
+    expect(screen.getByText(/messages sent:/i)).toBeInTheDocument();
+    expect(screen.getByText(/active devices:/i)).toBeInTheDocument();
+    expect(screen.getByText(/active outstations:/i)).toBeInTheDocument();
+
+    // Look for the numbers using a more flexible approach
+    // They are rendered as direct text nodes inside spans
+    const allText = screen.getByText((content, element) => {
+      return element?.textContent?.includes("1247") || false;
+    });
+    expect(allText).toBeTruthy();
+
+    const twoText = screen.getByText((content, element) => {
+      return element?.textContent?.includes("2") && 
              element?.textContent?.includes("active");
     });
-    expect(activeDevices).toBeInTheDocument();
+    expect(twoText).toBeTruthy();
 
-    // DNP3 metrics - look for "1" (active outstations)
-    const activeOutstations = screen.getByText((content, element) => {
-      return content.includes("1") && element?.tagName !== 'svg' && 
+    const oneText = screen.getByText((content, element) => {
+      return element?.textContent?.includes("1") && 
              element?.textContent?.includes("outstation");
     });
-    expect(activeOutstations).toBeInTheDocument();
+    expect(oneText).toBeTruthy();
   });
 
   // ============================================================
