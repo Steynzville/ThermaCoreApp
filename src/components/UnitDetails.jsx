@@ -1,4 +1,3 @@
-import { Minus, TrendingDown, TrendingUp } from "lucide-react";
 import { useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
@@ -55,31 +54,6 @@ const UnitDetails = ({ className }) => {
       resolvedAt: "2024-07-15 09:45",
     },
   ];
-
-  // Helper functions
-  const _getTrendIcon = (trend) => {
-    switch (trend) {
-      case "up":
-        return <TrendingUp className="h-4 w-4 text-green-500" />;
-      case "down":
-        return <TrendingDown className="h-4 w-4 text-red-500" />;
-      default:
-        return <Minus className="h-4 w-4 text-gray-500" />;
-    }
-  };
-
-  const _getSeverityColor = (severity) => {
-    switch (severity) {
-      case "critical":
-        return "border-l-red-500 bg-red-50 dark:bg-red-900/20";
-      case "warning":
-        return "border-l-yellow-500 bg-yellow-50 dark:bg-yellow-900/20";
-      case "success":
-        return "border-l-green-500 bg-green-50 dark:bg-green-900/20";
-      default:
-        return "border-l-blue-500 bg-blue-50 dark:bg-blue-900/20";
-    }
-  };
 
   const getAlertTypeColor = (type) => {
     switch (type) {
