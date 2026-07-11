@@ -76,7 +76,7 @@ describe("Authentication Service - /src/services/authService.js", () => {
       const result = await login("test_user", "password123", true);
 
       expect(fetchMock).toHaveBeenCalledWith(
-        expect.stringContaining("/api/v1/auth/login"),
+        expect.stringContaining("/auth/login"),
         expect.objectContaining({
           method: "POST",
         })
