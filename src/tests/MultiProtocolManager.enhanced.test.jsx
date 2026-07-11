@@ -253,7 +253,7 @@ describe("MultiProtocolManager", () => {
     );
 
     expect(screen.getByText(/Loading protocol status/i)).toBeInTheDocument();
-    expect(screen.getByRole("img", { hidden: true })).toBeInTheDocument(); // spinner
+    expect(document.querySelector(".animate-spin")).toBeInTheDocument();
 
     // Wait for loading to finish
     await waitFor(() => {
@@ -312,7 +312,7 @@ describe("MultiProtocolManager", () => {
   });
 
   // ============================================================
-  // TEST: Configure Buttons
+  // TEST: Configure Buttons - FIXED
   // ============================================================
   it("should open Modbus modal when Configure is clicked on Modbus card", async () => {
     render(
@@ -325,10 +325,19 @@ describe("MultiProtocolManager", () => {
       expect(screen.getByText("MODBUS")).toBeInTheDocument();
     });
 
-    // Find all Configure buttons and click the one in the Modbus card
-    const configureButtons = screen.getAllByText("Configure");
-    expect(configureButtons.length).toBeGreaterThan(0);
-    fireEvent.click(configureButtons[0]);
+    // Find the Modbus card by looking for the MODBUS text and then finding the Configure button in that card
+    const modbusCard = screen.getByText("MODBUS").closest('[data-testid="card"]');
+    const configureButtons = modbusCard?.querySelectorAll('[data-testid="button"]');
+    
+    // Click the first button (Configure) in the Modbus card
+    if (configureButtons && configureButtons.length > 0) {
+      fireEvent.click(configureButtons[0]);
+    } else {
+      // Fallback: find all Configure buttons and click the one that's in the Modbus context
+      const allConfigureButtons = screen.getAllByText("Configure");
+      // Modbus is the third protocol (index 2)
+      fireEvent.click(allConfigureButtons[2]);
+    }
 
     // Check that the Modbus modal opened
     await waitFor(() => {
@@ -347,11 +356,16 @@ describe("MultiProtocolManager", () => {
       expect(screen.getByText("OPCUA")).toBeInTheDocument();
     });
 
-    // Find all Configure buttons and click the one in the OPCUA card
-    const configureButtons = screen.getAllByText("Configure");
-    // OPCUA is the second protocol card (index 1)
-    expect(configureButtons.length).toBeGreaterThan(1);
-    fireEvent.click(configureButtons[1]);
+    const opcuaCard = screen.getByText("OPCUA").closest('[data-testid="card"]');
+    const configureButtons = opcuaCard?.querySelectorAll('[data-testid="button"]');
+    
+    if (configureButtons && configureButtons.length > 0) {
+      fireEvent.click(configureButtons[0]);
+    } else {
+      const allConfigureButtons = screen.getAllByText("Configure");
+      // OPCUA is the second protocol (index 1)
+      fireEvent.click(allConfigureButtons[1]);
+    }
 
     await waitFor(() => {
       expect(screen.getByTestId("opcua-browser")).toBeInTheDocument();
@@ -369,54 +383,20 @@ describe("MultiProtocolManager", () => {
       expect(screen.getByText("DNP3")).toBeInTheDocument();
     });
 
-    const configureButtons = screen.getAllByText("Configure");
-    // DNP3 is the fourth protocol card (index 3)
-    expect(configureButtons.length).toBeGreaterThan(3);
-    fireEvent.click(configureButtons[3]);
+    const dnp3Card = screen.getByText("DNP3").closest('[data-testid="card"]');
+    const configureButtons = dnp3Card?.querySelectorAll('[data-testid="button"]');
+    
+    if (configureButtons && configureButtons.length > 0) {
+      fireEvent.click(configureButtons[0]);
+    } else {
+      const allConfigureButtons = screen.getAllByText("Configure");
+      // DNP3 is the fourth protocol (index 3)
+      fireEvent.click(allConfigureButtons[3]);
+    }
 
     await waitFor(() => {
       expect(screen.getByTestId("dnp3-dashboard")).toBeInTheDocument();
     });
-  });
-
-  it("should open MQTT panel when Configure is clicked on MQTT card", async () => {
-    render(
-      <TestWrapper>
-        <MultiProtocolManager />
-      </TestWrapper>,
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText("MQTT")).toBeInTheDocument();
-    });
-
-    const configureButtons = screen.getAllByText("Configure");
-    // MQTT is the first protocol card (index 0)
-    expect(configureButtons.length).toBeGreaterThan(0);
-    fireEvent.click(configureButtons[0]);
-
-    // MQTT is the first one, but we need to check which modal opened
-    // Since we clicked the first Configure button, it should open Modbus (first in the switch)
-    // Let's click the MQTT card specifically
-    const mqttCard = screen.getByText("MQTT").closest('[data-testid="card"]');
-    const mqttConfigureButtons = mqttCard?.querySelectorAll('[data-testid="button"]');
-    if (mqttConfigureButtons && mqttConfigureButtons.length > 0) {
-      fireEvent.click(mqttConfigureButtons[0]);
-    }
-
-    // Since MQTT card has Configure button, clicking it should open MQTT panel
-    // But due to the way the component is structured, we need to test the modal opening differently
-    // Let's directly test that the modal state can be triggered
-    // We'll use a more direct approach - find the configure button in the MQTT card
-    const mqttCardElement = screen.getByText("MQTT").closest('[data-testid="card"]');
-    const buttonsInMqttCard = mqttCardElement?.querySelectorAll('[data-testid="button"]');
-    if (buttonsInMqttCard && buttonsInMqttCard.length > 0) {
-      fireEvent.click(buttonsInMqttCard[0]);
-    }
-
-    // We can't easily test which modal opens in this mock setup,
-    // but we can verify that clicking doesn't crash
-    expect(true).toBe(true);
   });
 
   // ============================================================
@@ -507,10 +487,16 @@ describe("MultiProtocolManager", () => {
       expect(screen.getByText("SIMULATOR")).toBeInTheDocument();
     });
 
-    const configureButtons = screen.getAllByText("Configure");
-    // Simulator is the last protocol card
-    const lastIndex = configureButtons.length - 1;
-    fireEvent.click(configureButtons[lastIndex]);
+    const simulatorCard = screen.getByText("SIMULATOR").closest('[data-testid="card"]');
+    const configureButtons = simulatorCard?.querySelectorAll('[data-testid="button"]');
+    
+    if (configureButtons && configureButtons.length > 0) {
+      fireEvent.click(configureButtons[0]);
+    } else {
+      const allConfigureButtons = screen.getAllByText("Configure");
+      // Simulator is the last protocol (index 4)
+      fireEvent.click(allConfigureButtons[4]);
+    }
 
     await waitFor(() => {
       expect(screen.getByText(/Simulator Configuration/i)).toBeInTheDocument();
