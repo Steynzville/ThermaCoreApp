@@ -334,7 +334,7 @@ describe("SystemHealth", () => {
   });
 
   // ============================================================
-  // Summary cards
+  // Summary cards - FIXED
   // ============================================================
 
   it("should show correct operational, degraded, and outage counts in the summary cards", async () => {
@@ -351,7 +351,10 @@ describe("SystemHealth", () => {
     const oneElements = screen.getAllByText("1");
     expect(oneElements.length).toBeGreaterThan(0);
     
-    expect(screen.getByText("Operational")).toBeInTheDocument();
+    // Use getAllByText for "Operational" since it appears multiple times
+    const operationalElements = screen.getAllByText("Operational");
+    expect(operationalElements.length).toBeGreaterThan(0);
+    
     expect(screen.getByText("Degraded")).toBeInTheDocument();
     expect(screen.getByText("Outages")).toBeInTheDocument();
   });
