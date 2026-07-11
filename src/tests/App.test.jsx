@@ -5,40 +5,47 @@ import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from "vite
 import React from "react";
 
 // ============================================================
-// CRITICAL: Mock BEFORE importing App
+// CRITICAL: Use vi.hoisted() to define mocks before they're used
 // ============================================================
 
-// Create a shared mock that will be used everywhere
-const authMock = {
-  user: null,
-  isAuthenticated: false,
-  isLoading: false,
-  isLoggingOut: false,
-  login: vi.fn().mockResolvedValue(undefined),
-  logout: vi.fn(),
-};
-
-// Mock the entire AuthContext module
-vi.mock("../context/AuthContext", () => {
-  // Create a context that we can control
-  const mockContext = React.createContext(authMock);
+const { authMock, authContextMock } = vi.hoisted(() => {
+  const mock = {
+    user: null,
+    isAuthenticated: false,
+    isLoading: false,
+    isLoggingOut: false,
+    login: vi.fn().mockResolvedValue(undefined),
+    logout: vi.fn(),
+  };
+  
+  const context = React.createContext(mock);
   
   return {
-    default: mockContext,
-    AuthContext: mockContext,
+    authMock: mock,
+    authContextMock: context,
+  };
+});
+
+// ============================================================
+// Mock ALL contexts BEFORE importing App
+// ============================================================
+
+vi.mock("../context/AuthContext", () => {
+  return {
+    default: authContextMock,
+    AuthContext: authContextMock,
     useAuth: () => authMock,
     AuthProvider: ({ children }) => {
-      // Provide the mock auth value through context
       return (
-        <mockContext.Provider value={authMock}>
+        <authContextMock.Provider value={authMock}>
           <div data-testid="auth-provider">{children}</div>
-        </mockContext.Provider>
+        </authContextMock.Provider>
       );
     },
   };
 });
 
-// Mock all other contexts with simple providers
+// Mock all other contexts
 vi.mock("../context/SettingsContext", () => ({
   useSettings: vi.fn(() => ({
     settings: { soundEnabled: true, volume: 0.5 },
@@ -332,7 +339,6 @@ describe("App", () => {
     setAuth();
     render(<App />);
 
-    // Wait for the login page to render
     const heading = await screen.findByRole("heading", { name: /login/i });
     expect(heading).toBeInTheDocument();
     expect(screen.getByTestId("username-input")).toBeInTheDocument();
@@ -365,7 +371,6 @@ describe("App", () => {
     setAuth({ isLoading: true });
     render(<App />);
 
-    // The real App shows "Loading..." text when isLoading is true
     const loadingText = await screen.findByText(/loading/i);
     expect(loadingText).toBeInTheDocument();
     expect(screen.getByTestId("spinner")).toBeInTheDocument();
