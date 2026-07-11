@@ -7,52 +7,23 @@ import React from "react";
 import App from "../App";
 
 // ============================================================
-// Create a React Context to pass auth value directly
+// COMPLETELY MOCK AuthContext - NO REAL CODE RUNS
 // ============================================================
 
-// Create a simple context for testing
-const TestAuthContext = React.createContext(null);
-
-// ============================================================
-// Mock auth state - KEY FIX: Use a provider that actually
-// passes the value through context
-// ============================================================
-
-const { mockUseAuth, setMockAuth } = vi.hoisted(() => ({
-  mockUseAuth: vi.fn(),
-  setMockAuth: vi.fn(),
-}));
+const { mockUseAuth } = vi.hoisted(() => ({ mockUseAuth: vi.fn() }));
 
 vi.mock("../context/AuthContext", () => ({
+  // Default export
+  default: React.createContext(null),
+  // Named exports
   useAuth: () => mockUseAuth(),
   AuthProvider: ({ children }) => {
-    // Get the current auth value from the mock
-    const authValue = mockUseAuth();
-    // Pass it through context using the real context
-    return (
-      <TestAuthContext.Provider value={authValue}>
-        <div data-testid="auth-provider">{children}</div>
-      </TestAuthContext.Provider>
-    );
+    // Just pass children through - NO real AuthProvider logic runs
+    return <div data-testid="auth-provider">{children}</div>;
   },
+  // Any other exports from AuthContext
+  AuthContext: React.createContext(null),
 }));
-
-// Make the context available to components
-vi.mock("../context/AuthContext", async () => {
-  const actual = await vi.importActual("../context/AuthContext");
-  return {
-    ...actual,
-    useAuth: () => mockUseAuth(),
-    AuthProvider: ({ children }) => {
-      const authValue = mockUseAuth();
-      return (
-        <actual.AuthProvider value={authValue}>
-          <div data-testid="auth-provider">{children}</div>
-        </actual.AuthProvider>
-      );
-    },
-  };
-});
 
 // Mock all other contexts
 vi.mock("../context/SettingsContext", () => ({
@@ -82,7 +53,29 @@ vi.mock("../context/UnitContext", () => ({
   useUnits: vi.fn(() => ({ units: [], loading: false })),
 }));
 
-// Mock the child components
+// Mock the Spinner component to match the real one's aria-label
+vi.mock("../components/ui/spinner", () => ({
+  Spinner: ({ className, size, ...props }) => (
+    <div data-testid="spinner" aria-label="Loading" {...props}>
+      Loading...
+    </div>
+  ),
+}));
+
+// Also mock the common Spinner import path
+vi.mock("../components/common/Spinner", async () => {
+  const actual = await vi.importActual("../components/common/Spinner");
+  return {
+    ...actual,
+    default: ({ className, size, ...props }) => (
+      <div data-testid="spinner" aria-label="Loading" {...props}>
+        Loading...
+      </div>
+    ),
+  };
+});
+
+// Mock all child components
 vi.mock("../components/LoginScreen", () => ({
   default: ({ error, setError }) => {
     const [username, setUsername] = React.useState("");
@@ -146,10 +139,6 @@ vi.mock("../components/ThemeToggle", () => ({
       </button>
     );
   },
-}));
-
-vi.mock("../components/common/Spinner", () => ({
-  default: () => <div data-testid="spinner">Loading...</div>,
 }));
 
 vi.mock("../components/ForgotPassword", () => ({
@@ -288,18 +277,18 @@ beforeEach(() => {
   vi.clearAllMocks();
   window.location.pathname = "/";
   
-  // CRITICAL: Default auth state - NOT LOADING
+  // CRITICAL: Default auth state with isLoading: false
   mockUseAuth.mockReturnValue({
     user: null,
     isAuthenticated: false,
-    isLoading: false,  // MUST be false
+    isLoading: false,
     isLoggingOut: false,
     login: vi.fn().mockResolvedValue(undefined),
     logout: vi.fn(),
   });
 });
 
-// CRITICAL FIX: Cleanup between tests
+// CRITICAL: Cleanup between tests
 afterEach(() => {
   cleanup();
   reloadMock.mockClear();
@@ -313,7 +302,7 @@ const setAuth = (overrides = {}) => {
   const defaultAuth = {
     user: null,
     isAuthenticated: false,
-    isLoading: false,  // MUST be false
+    isLoading: false,
     isLoggingOut: false,
     login: vi.fn().mockResolvedValue(undefined),
     logout: vi.fn(),
@@ -338,7 +327,6 @@ describe("App", () => {
     setAuth();
     render(<App />);
 
-    // Wait for the login page
     const heading = await screen.findByRole("heading", { name: /login/i });
     expect(heading).toBeInTheDocument();
     expect(screen.getByTestId("username-input")).toBeInTheDocument();
@@ -371,8 +359,9 @@ describe("App", () => {
     setAuth({ isLoading: true });
     render(<App />);
 
-    const loadingElements = await screen.findAllByText(/loading/i);
-    expect(loadingElements.length).toBeGreaterThan(0);
+    // The real App shows "Loading..." text when isLoading is true
+    const loadingText = await screen.findByText(/loading/i);
+    expect(loadingText).toBeInTheDocument();
     expect(screen.getByTestId("spinner")).toBeInTheDocument();
   });
 
