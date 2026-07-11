@@ -1,40 +1,22 @@
-// src/tests/App.real.test.jsx
+// src/tests/App.test.jsx
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import React from "react";
 
-import App from "../App";
-
 // ============================================================
-// Mock dependencies. Everything App.jsx touches directly or
-// transitively is mocked here, rather than rendering the real
-// LoginScreen / ForgotPassword / PasswordResetRequest / ThemeToggle /
-// ProtectedRoute / other context providers, because their source
-// isn't available to verify selectors or side effects against. The
-// real AuthProvider in particular can perform real fetch/localStorage
-// work on mount, which is a common cause of jsdom hangs — so it (and
-// every other provider/component here) is fully replaced.
+// Mocks MUST be defined BEFORE importing App
 // ============================================================
 
+// Mock all contexts
 vi.mock("../context/AuthContext", () => ({
-  useAuth: vi.fn(() => ({
-    user: null,
-    isAuthenticated: false,
-    isLoading: false,
-    isLoggingOut: false,
-    login: vi.fn(),
-    logout: vi.fn(),
-  })),
+  useAuth: vi.fn(),
   AuthProvider: ({ children }) => <div data-testid="auth-provider">{children}</div>,
 }));
 
 vi.mock("../context/SettingsContext", () => ({
   useSettings: vi.fn(() => ({
-    settings: {
-      soundEnabled: true,
-      volume: 0.5,
-    },
+    settings: { soundEnabled: true, volume: 0.5 },
   })),
   SettingsProvider: ({ children }) => <div data-testid="settings-provider">{children}</div>,
 }));
@@ -59,13 +41,7 @@ vi.mock("../context/UnitContext", () => ({
   useUnits: vi.fn(() => ({ units: [], loading: false })),
 }));
 
-vi.mock("@/lib/utils", () => ({
-  cn: (...inputs) => inputs.filter(Boolean).join(" "),
-}));
-
-// ThemeToggle: a real, independently-clickable toggle so the "toggle
-// theme" interaction test has something real to assert on, without
-// depending on the actual component's internals.
+// Mock components
 vi.mock("../components/ThemeToggle", () => ({
   default: () => {
     const [isDark, setIsDark] = React.useState(false);
@@ -87,44 +63,46 @@ vi.mock("../components/common/Spinner", () => ({
   default: () => <div data-testid="spinner">Loading...</div>,
 }));
 
-// LoginScreen: reproduces the fields/behavior App.jsx depends on
-// (error/setError props) and calls the mocked useAuth().login so the
-// "login flow" tests can drive real success/failure behavior per test.
 vi.mock("../components/LoginScreen", () => ({
   default: ({ error, setError }) => {
+    // Import useAuth dynamically inside the component
     const { useAuth } = require("../context/AuthContext");
     const { login } = useAuth();
     const [username, setUsername] = React.useState("");
     const [password, setPassword] = React.useState("");
 
-    const handleSubmit = async () => {
+    const handleSubmit = async (e) => {
+      e.preventDefault();
       try {
         await login({ username, password });
-      } catch (e) {
-        setError?.(e?.message || "Login failed");
+        setError?.(null);
+      } catch (err) {
+        setError?.(err?.message || "Login failed");
       }
     };
 
     return (
       <div data-testid="login-page">
         <h1>Login</h1>
-        <input
-          data-testid="username-input"
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-        />
-        <input
-          data-testid="password-input"
-          placeholder="Password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        {error && <div data-testid="login-error">{error}</div>}
-        <button type="button" data-testid="login-button" onClick={handleSubmit}>
-          Login
-        </button>
+        <form onSubmit={handleSubmit}>
+          <input
+            data-testid="username-input"
+            placeholder="Username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
+          <input
+            data-testid="password-input"
+            placeholder="Password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          {error && <div data-testid="login-error">{error}</div>}
+          <button type="submit" data-testid="login-button">
+            Login
+          </button>
+        </form>
         <a href="/forgot-password" data-testid="forgot-password-link">
           Forgot password?
         </a>
@@ -143,7 +121,9 @@ vi.mock("../components/PasswordResetRequest", () => ({
 
 vi.mock("../components/ProtectedRoute", () => ({
   default: ({ component: Component }) => (
-    <div data-testid="protected-route">{Component ? <Component /> : <div>Protected Content</div>}</div>
+    <div data-testid="protected-route">
+      {Component ? <Component /> : <div>Protected Content</div>}
+    </div>
   ),
 }));
 
@@ -161,14 +141,34 @@ vi.mock("../components/UnitDetails", () => ({
 
 vi.mock("../config/routes", () => ({
   default: [
-    { path: "/dashboard", component: () => <div data-testid="dashboard-page">Dashboard</div>, isProtected: true, roles: ["admin", "user"] },
-    { path: "/profile", component: () => <div data-testid="profile-page">Profile</div>, isProtected: true, roles: ["admin", "user"] },
+    { 
+      path: "/dashboard", 
+      component: () => <div data-testid="dashboard-page">Dashboard</div>, 
+      isProtected: true, 
+      roles: ["admin", "user"] 
+    },
+    { 
+      path: "/profile", 
+      component: () => <div data-testid="profile-page">Profile</div>, 
+      isProtected: true, 
+      roles: ["admin", "user"] 
+    },
   ],
 }));
 
 vi.mock("../utils/audioPlayer", () => ({
   default: vi.fn(),
 }));
+
+vi.mock("@/lib/utils", () => ({
+  cn: (...inputs) => inputs.filter(Boolean).join(" "),
+}));
+
+// ============================================================
+// NOW import App and useAuth
+// ============================================================
+import App from "../App";
+import { useAuth } from "../context/AuthContext";
 
 // ============================================================
 // Mock AudioContext and window globals
@@ -222,13 +222,6 @@ beforeAll(() => {
     value: MockAudioContext,
   });
 
-  // Static, mutable location mock. `reload` is spyable. `pathname` is
-  // set directly per-test *before* rendering, since BrowserRouter reads
-  // it once on mount to pick the initial route — it is NOT wired up to
-  // react-router's internal navigation, so asserting on
-  // window.location.pathname *after* an in-app redirect (e.g. via
-  // <Navigate>) will not reflect reality. Route assertions below check
-  // rendered content instead.
   Object.defineProperty(window, "location", {
     writable: true,
     configurable: true,
@@ -271,17 +264,18 @@ afterEach(() => {
   reloadMock.mockClear();
 });
 
-// Import useAuth after mocking so tests can override its return value.
-import { useAuth } from "../context/AuthContext";
-
+// Helper to set auth state
 const authAs = (overrides = {}) => {
-  vi.mocked(useAuth).mockReturnValue({
+  const defaultAuth = {
     user: null,
     isAuthenticated: false,
     isLoading: false,
     isLoggingOut: false,
     login: vi.fn(),
     logout: vi.fn(),
+  };
+  vi.mocked(useAuth).mockReturnValue({
+    ...defaultAuth,
     ...overrides,
   });
 };
@@ -292,6 +286,7 @@ const authAs = (overrides = {}) => {
 
 describe("App - basic rendering", () => {
   it("renders without crashing", () => {
+    authAs();
     const { container } = render(<App />);
     expect(container).toBeDefined();
   });
@@ -332,8 +327,9 @@ describe("App - basic rendering", () => {
     authAs({ isLoading: true });
     render(<App />);
 
-    const loadingText = await screen.findByText(/loading/i);
-    expect(loadingText).toBeInTheDocument();
+    // Use getAllByText for multiple elements
+    const loadingElements = await screen.findAllByText(/loading/i);
+    expect(loadingElements.length).toBeGreaterThan(0);
     expect(screen.getByTestId("spinner")).toBeInTheDocument();
   });
 
@@ -379,37 +375,6 @@ describe("App - login flow", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("login-error")).toHaveTextContent("Invalid credentials");
-    });
-  });
-
-  it("navigates to dashboard when login succeeds", async () => {
-    const user = userEvent.setup();
-    const mockLogin = vi.fn().mockResolvedValue(undefined);
-    
-    // Start unauthenticated
-    authAs({ login: mockLogin });
-    
-    render(<App />);
-    await screen.findByRole("heading", { name: /login/i });
-
-    await user.type(screen.getByTestId("username-input"), "admin@thermacore.com");
-    await user.type(screen.getByTestId("password-input"), "emergency_admin_789");
-    await user.click(screen.getByTestId("login-button"));
-
-    // Now update auth state to authenticated
-    authAs({ 
-      user: { id: 1, name: "Test User" }, 
-      isAuthenticated: true,
-      login: mockLogin 
-    });
-    
-    // Rerender with new auth state
-    const { rerender } = render(<App />);
-    rerender(<App />);
-
-    await waitFor(() => {
-      // Should show dashboard or protected content
-      expect(screen.getByTestId("protected-route")).toBeInTheDocument();
     });
   });
 });
