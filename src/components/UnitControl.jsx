@@ -430,6 +430,8 @@ const UnitControl = ({ className }) => {
                 </div>
                 <button
                   type="button"
+                  data-testid="power-toggle"
+                  aria-pressed={systemPower}
                   onClick={() => handlePowerToggle(!systemPower)}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                     systemPower
@@ -457,6 +459,8 @@ const UnitControl = ({ className }) => {
                 </div>
                 <button
                   type="button"
+                  data-testid="auto-water-toggle"
+                  aria-pressed={autoWaterProduction && systemPower}
                   onClick={handleAutoWaterToggle}
                   disabled={!systemPower}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
