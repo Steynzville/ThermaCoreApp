@@ -5,24 +5,19 @@ import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from "vite
 import React from "react";
 
 // ============================================================
-// CRITICAL: Use vi.hoisted() to define mocks before they're used
+// CRITICAL: Use vi.hoisted() with simple objects, no React.createContext
 // ============================================================
 
-const { authMock, authContextMock } = vi.hoisted(() => {
-  const mock = {
-    user: null,
-    isAuthenticated: false,
-    isLoading: false,
-    isLoggingOut: false,
-    login: vi.fn().mockResolvedValue(undefined),
-    logout: vi.fn(),
-  };
-  
-  const context = React.createContext(mock);
-  
+const { authMock } = vi.hoisted(() => {
   return {
-    authMock: mock,
-    authContextMock: context,
+    authMock: {
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      isLoggingOut: false,
+      login: vi.fn().mockResolvedValue(undefined),
+      logout: vi.fn(),
+    }
   };
 });
 
@@ -31,16 +26,20 @@ const { authMock, authContextMock } = vi.hoisted(() => {
 // ============================================================
 
 vi.mock("../context/AuthContext", () => {
+  // Create a simple provider that just passes children through
   return {
-    default: authContextMock,
-    AuthContext: authContextMock,
     useAuth: () => authMock,
     AuthProvider: ({ children }) => {
       return (
-        <authContextMock.Provider value={authMock}>
-          <div data-testid="auth-provider">{children}</div>
-        </authContextMock.Provider>
+        <div data-testid="auth-provider">
+          {children}
+        </div>
       );
+    },
+    // Export the context for any components that might need it
+    AuthContext: {
+      Provider: ({ children }) => children,
+      Consumer: ({ children }) => children(authMock),
     },
   };
 });
