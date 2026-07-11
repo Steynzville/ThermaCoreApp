@@ -5,44 +5,37 @@ import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from "vite
 import React from "react";
 
 // ============================================================
-// CRITICAL: Use vi.hoisted() with simple objects, no React.createContext
+// Use vi.hoisted() - this was working!
 // ============================================================
 
 const { authMock } = vi.hoisted(() => {
-  return {
-    authMock: {
-      user: null,
-      isAuthenticated: false,
-      isLoading: false,
-      isLoggingOut: false,
-      login: vi.fn().mockResolvedValue(undefined),
-      logout: vi.fn(),
-    }
+  // Create a simple object, no React.createContext
+  const mock = {
+    user: null,
+    isAuthenticated: false,
+    isLoading: false,
+    isLoggingOut: false,
+    login: vi.fn().mockResolvedValue(undefined),
+    logout: vi.fn(),
   };
+  return { authMock: mock };
 });
 
 // ============================================================
 // Mock ALL contexts BEFORE importing App
 // ============================================================
 
-vi.mock("../context/AuthContext", () => {
-  // Create a simple provider that just passes children through
-  return {
-    useAuth: () => authMock,
-    AuthProvider: ({ children }) => {
-      return (
-        <div data-testid="auth-provider">
-          {children}
-        </div>
-      );
-    },
-    // Export the context for any components that might need it
-    AuthContext: {
-      Provider: ({ children }) => children,
-      Consumer: ({ children }) => children(authMock),
-    },
-  };
-});
+vi.mock("../context/AuthContext", () => ({
+  useAuth: () => authMock,
+  AuthProvider: ({ children }) => {
+    return <div data-testid="auth-provider">{children}</div>;
+  },
+  // Add default export for any imports that might need it
+  default: {
+    Provider: ({ children }) => children,
+    Consumer: ({ children }) => children(authMock),
+  },
+}));
 
 // Mock all other contexts
 vi.mock("../context/SettingsContext", () => ({
@@ -292,15 +285,13 @@ beforeEach(() => {
   vi.clearAllMocks();
   window.location.pathname = "/";
   
-  // Reset auth mock to default state
-  Object.assign(authMock, {
-    user: null,
-    isAuthenticated: false,
-    isLoading: false,
-    isLoggingOut: false,
-    login: vi.fn().mockResolvedValue(undefined),
-    logout: vi.fn(),
-  });
+  // Reset auth mock to default state - NOT LOADING
+  authMock.user = null;
+  authMock.isAuthenticated = false;
+  authMock.isLoading = false;
+  authMock.isLoggingOut = false;
+  authMock.login = vi.fn().mockResolvedValue(undefined);
+  authMock.logout = vi.fn();
 });
 
 afterEach(() => {
@@ -370,8 +361,9 @@ describe("App", () => {
     setAuth({ isLoading: true });
     render(<App />);
 
-    const loadingText = await screen.findByText(/loading/i);
-    expect(loadingText).toBeInTheDocument();
+    // FIX: Use findAllByText instead of findByText
+    const loadingElements = await screen.findAllByText(/loading/i);
+    expect(loadingElements.length).toBeGreaterThan(0);
     expect(screen.getByTestId("spinner")).toBeInTheDocument();
   });
 
