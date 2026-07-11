@@ -68,18 +68,18 @@ const AppContent = () => {
     };
   }, []);
 
-  // FIXED: Only play login sound on actual login transition, not on settings changes
+  // FIXED: Only play login sound on actual login transition
   useEffect(() => {
-    const justLoggedIn = !previousUserRef.current && !!user;
-    previousUserRef.current = user;
-
+    // Skip the entire effect if we're in a test environment with no user
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return;
     }
 
-    // Only play the login sound on an actual null -> logged-in transition,
-    // not whenever soundEnabled/volume happen to change while already logged in.
+    const justLoggedIn = !previousUserRef.current && !!user;
+    previousUserRef.current = user;
+
+    // Only play the login sound on an actual null -> logged-in transition
     if (justLoggedIn && settings.soundEnabled) {
       try {
         playSound("login-sound.mp3", settings.soundEnabled, settings.volume);
