@@ -241,24 +241,19 @@ beforeAll(() => {
     value: MockAudioContext,
   });
 
-  // FIX: Add complete location mock with search and hash
-  Object.defineProperty(window, "location", {
-    writable: true,
+  // IMPORTANT: Do NOT replace window.location wholesale with a plain
+  // object. react-router-dom's BrowserRouter relies on the `history`
+  // package, which calls the *real* window.history.pushState /
+  // replaceState under the hood, and those are tied to jsdom's actual
+  // internal Location object. Swapping in a POJO breaks that link and
+  // Routes stop matching entirely.
+  //
+  // Instead, keep the real Location object and only stub the one
+  // method jsdom doesn't implement: reload().
+  Object.defineProperty(window.location, "reload", {
     configurable: true,
-    value: {
-      href: "http://localhost/",
-      origin: "http://localhost",
-      protocol: "http:",
-      host: "localhost",
-      hostname: "localhost",
-      port: "",
-      pathname: "/",
-      search: "",
-      hash: "",
-      reload: reloadMock,
-      assign: vi.fn(),
-      replace: vi.fn(),
-    },
+    writable: true,
+    value: reloadMock,
   });
 
   Object.defineProperty(window, "matchMedia", {
@@ -284,10 +279,13 @@ beforeAll(() => {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  window.location.pathname = "/";
-  window.location.search = "";
-  window.location.hash = "";
-  
+
+  // Use the real History API (supported by jsdom) to reset the URL
+  // between tests, instead of assigning window.location.pathname
+  // directly (which jsdom does not support and which desyncs
+  // react-router's internal history state).
+  window.history.pushState({}, "", "/");
+
   // Reset auth mock to default state
   Object.assign(authMock, {
     user: null,
@@ -318,6 +316,11 @@ const setAuth = (overrides = {}) => {
     logout: vi.fn(),
     ...overrides,
   });
+};
+
+// Helper to navigate to a given path using the real History API
+const navigateTo = (path) => {
+  window.history.pushState({}, "", path);
 };
 
 // ============================================================
@@ -431,7 +434,7 @@ describe("App", () => {
   });
 
   it("renders the forgot password route directly", async () => {
-    window.location.pathname = "/forgot-password";
+    navigateTo("/forgot-password");
     setAuth();
     render(<App />);
 
@@ -441,7 +444,7 @@ describe("App", () => {
   });
 
   it("renders the reset password route directly", async () => {
-    window.location.pathname = "/reset-password";
+    navigateTo("/reset-password");
     setAuth();
     render(<App />);
 
@@ -457,14 +460,14 @@ describe("App", () => {
   });
 
   it("redirects unknown paths to the login page", async () => {
-    window.location.pathname = "/some-unknown-path";
+    navigateTo("/some-unknown-path");
     setAuth();
     render(<App />);
     await screen.findByRole("heading", { name: /login/i });
   });
 
   it("renders a protected route when authenticated", async () => {
-    window.location.pathname = "/dashboard";
+    navigateTo("/dashboard");
     setAuth({ user: { id: 1, name: "Test User" }, isAuthenticated: true });
     render(<App />);
 
@@ -475,7 +478,7 @@ describe("App", () => {
   });
 
   it("redirects to login when visiting a protected route unauthenticated", async () => {
-    window.location.pathname = "/dashboard";
+    navigateTo("/dashboard");
     setAuth();
     render(<App />);
 
