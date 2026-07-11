@@ -182,7 +182,9 @@ describe("UnitControl", () => {
     render(<UnitControl />);
 
     // 65% of 800 = 520
-    await waitFor(() => expect(screen.getByText(/520L/)).toBeInTheDocument());
+    // Use getAllByText since "520L" appears in multiple places
+    const waterElements = screen.getAllByText(/520L/);
+    expect(waterElements.length).toBeGreaterThan(0);
   });
 
   it("should fill in default values for fields missing from the device payload", async () => {
@@ -202,14 +204,20 @@ describe("UnitControl", () => {
     setLocationState({ device: { ...baseDevice, status: "Operational" } });
     render(<UnitControl />);
 
-    await waitFor(() => expect(screen.getByText("ONLINE")).toBeInTheDocument());
+    await waitFor(() => {
+      const onlineElements = screen.getAllByText("ONLINE");
+      expect(onlineElements.length).toBeGreaterThan(0);
+    });
   });
 
   it("should show OFFLINE status when device.status is not 'Operational'", async () => {
     setLocationState({ device: { ...baseDevice, status: "Down" } });
     render(<UnitControl />);
 
-    await waitFor(() => expect(screen.getByText("OFFLINE")).toBeInTheDocument());
+    await waitFor(() => {
+      const offlineElements = screen.getAllByText("OFFLINE");
+      expect(offlineElements.length).toBeGreaterThan(0);
+    });
   });
 
   // ============================================================
@@ -239,11 +247,17 @@ describe("UnitControl", () => {
     setLocationState({ device: { ...baseDevice, status: "Operational" } });
     render(<UnitControl />);
 
-    await waitFor(() => expect(screen.getByText("ONLINE")).toBeInTheDocument());
+    await waitFor(() => {
+      const onlineElements = screen.getAllByText("ONLINE");
+      expect(onlineElements.length).toBeGreaterThan(0);
+    });
 
     fireEvent.click(screen.getByTestId("power-toggle"));
 
-    await waitFor(() => expect(screen.getByText("OFFLINE")).toBeInTheDocument());
+    await waitFor(() => {
+      const offlineElements = screen.getAllByText("OFFLINE");
+      expect(offlineElements.length).toBeGreaterThan(0);
+    });
     expect(playSound).toHaveBeenCalledWith("power-off.mp3", true, 0.5);
   });
 
@@ -251,11 +265,17 @@ describe("UnitControl", () => {
     setLocationState({ device: { ...baseDevice, status: "Down" } });
     render(<UnitControl />);
 
-    await waitFor(() => expect(screen.getByText("OFFLINE")).toBeInTheDocument());
+    await waitFor(() => {
+      const offlineElements = screen.getAllByText("OFFLINE");
+      expect(offlineElements.length).toBeGreaterThan(0);
+    });
 
     fireEvent.click(screen.getByTestId("power-toggle"));
 
-    await waitFor(() => expect(screen.getByText("ONLINE")).toBeInTheDocument());
+    await waitFor(() => {
+      const onlineElements = screen.getAllByText("ONLINE");
+      expect(onlineElements.length).toBeGreaterThan(0);
+    });
     expect(playSound).toHaveBeenCalledWith("power-on.mp3", true, 0.5);
   });
 
@@ -263,7 +283,10 @@ describe("UnitControl", () => {
     setLocationState({ device: { ...baseDevice, status: "Down", powerOutput: 15, pressure: 10 } });
     render(<UnitControl />);
 
-    await waitFor(() => expect(screen.getByText("OFFLINE")).toBeInTheDocument());
+    await waitFor(() => {
+      const offlineElements = screen.getAllByText("OFFLINE");
+      expect(offlineElements.length).toBeGreaterThan(0);
+    });
     expect(screen.getAllByText("--").length).toBeGreaterThan(0);
     expect(screen.getByText("0 kW")).toBeInTheDocument();
   });
@@ -283,7 +306,10 @@ describe("UnitControl", () => {
     setLocationState({ device: { ...baseDevice, status: "Down" } });
     render(<UnitControl />);
 
-    await waitFor(() => expect(screen.getByText("OFFLINE")).toBeInTheDocument());
+    await waitFor(() => {
+      const offlineElements = screen.getAllByText("OFFLINE");
+      expect(offlineElements.length).toBeGreaterThan(0);
+    });
     expect(screen.getByTestId("auto-water-toggle")).toBeDisabled();
     expect(screen.getByText("DISABLED")).toBeInTheDocument();
   });
@@ -454,25 +480,23 @@ describe("UnitControl", () => {
     render(<UnitControl />);
 
     await waitFor(() => expect(screen.getByText("95 L/min")).toBeInTheDocument());
-    expect(screen.getByText("5 L/min")).toBeInTheDocument();
+    expect(screen.getByText("5 L/min")).toBeInTheDocument());
   });
 
   it("should show '--' for flow rates when system power is off", async () => {
     setLocationState({ device: { ...baseDevice, status: "Down" } });
     render(<UnitControl />);
 
-    await waitFor(() => expect(screen.getByText("OFFLINE")).toBeInTheDocument());
+    await waitFor(() => {
+      const offlineElements = screen.getAllByText("OFFLINE");
+      expect(offlineElements.length).toBeGreaterThan(0);
+    });
     expect(screen.getAllByText("--").length).toBeGreaterThan(0);
   });
 
   // ============================================================
   // Live metrics effect
   // ============================================================
-  //
-  // The component now bails out of setDevice with the same object
-  // reference when computed values haven't changed, and the effect no
-  // longer depends on `device` itself, so this is safe to exercise with
-  // systemPower: true.
 
   it("should not apply live metrics when system power is off", async () => {
     setLocationState({ device: { ...baseDevice, status: "Down" } });
@@ -487,7 +511,10 @@ describe("UnitControl", () => {
 
     render(<UnitControl />);
 
-    await waitFor(() => expect(screen.getByText("OFFLINE")).toBeInTheDocument());
+    await waitFor(() => {
+      const offlineElements = screen.getAllByText("OFFLINE");
+      expect(offlineElements.length).toBeGreaterThan(0);
+    });
     // Values remain the "off" placeholders rather than being overwritten
     // by the (ignored) live metrics.
     expect(screen.getAllByText("--").length).toBeGreaterThan(0);
@@ -566,7 +593,10 @@ describe("UnitControl", () => {
     setLocationState({ device: { ...baseDevice, status: "Down" } });
     render(<UnitControl />);
 
-    await waitFor(() => expect(screen.getByText("OFFLINE")).toBeInTheDocument());
+    await waitFor(() => {
+      const offlineElements = screen.getAllByText("OFFLINE");
+      expect(offlineElements.length).toBeGreaterThan(0);
+    });
     expect(screen.getByRole("button", { name: /advanced settings/i })).toBeDisabled();
   });
 
@@ -574,7 +604,10 @@ describe("UnitControl", () => {
     setLocationState({ device: { ...baseDevice, status: "Operational" } });
     render(<UnitControl />);
 
-    await waitFor(() => expect(screen.getByText("ONLINE")).toBeInTheDocument());
+    await waitFor(() => {
+      const onlineElements = screen.getAllByText("ONLINE");
+      expect(onlineElements.length).toBeGreaterThan(0);
+    });
     expect(screen.getByRole("button", { name: /advanced settings/i })).toBeEnabled();
   });
 
