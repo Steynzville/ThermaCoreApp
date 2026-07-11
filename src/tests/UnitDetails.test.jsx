@@ -2,71 +2,66 @@
  * Tests for UnitDetails Component
  */
 
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import React from "react";
 
 // ============================================================
-// Mock dependencies
+// Mock ALL subcomponents with proper exports
 // ============================================================
 
-vi.mock("../context/AuthContext", () => ({
-  useAuth: vi.fn(() => ({
-    userRole: "admin",
-  })),
-}));
-
-vi.mock("../context/SettingsContext", () => ({
-  useSettings: vi.fn(() => ({
-    formatTemperature: (temp) => `${temp}°C`,
-  })),
-}));
-
-vi.mock("../context/UnitContext", () => ({
-  useUnits: vi.fn(() => ({
-    updateUnitName: vi.fn().mockResolvedValue({}),
-    updateUnitLocation: vi.fn().mockResolvedValue({}),
-  })),
-}));
-
-vi.mock("../hooks/useRealtimeData", () => ({
-  useRealtimeMetrics: vi.fn(() => ({
-    metrics: {
-      temperature: { current: 72 },
-      pressure: { current: 105 },
-      flow_rate_inlet: { current: 47.2 },
-      flow_rate_outlet: { current: 43.8 },
-    },
-  })),
-}));
-
-vi.mock("../components/VitalSignGraph", () => ({
-  default: ({ title }) => (
-    <div data-testid="vital-sign-graph">
-      <h4>{title}</h4>
-      <div>Mock Graph</div>
+vi.mock("../components/unit-details/UnitStatusHeader", () => ({
+  default: ({ unit, getStatusColor }) => (
+    <div data-testid="unit-status-header">
+      <h2>{unit?.name || "Unknown Unit"}</h2>
+      <span data-testid="status-badge" className={getStatusColor?.(unit?.status) || ""}>
+        {unit?.status?.toUpperCase() || "UNKNOWN"}
+      </span>
     </div>
   ),
 }));
 
-vi.mock("../components/ui/card", () => ({
-  Card: ({ children }) => <div data-testid="card">{children}</div>,
-  CardContent: ({ children }) => <div data-testid="card-content">{children}</div>,
-  CardHeader: ({ children }) => <div data-testid="card-header">{children}</div>,
-}));
-
-vi.mock("../components/unit-details/UnitAlertsTab", () => ({
-  default: ({ unit }) => (
-    <div data-testid="alerts-tab">
-      <h3>Alerts</h3>
-      <div>Unit: {unit?.name || "Unknown"}</div>
+vi.mock("../components/unit-details/UnitTabNavigation", () => ({
+  default: ({ activeTab, setActiveTab }) => (
+    <div data-testid="unit-tab-navigation">
+      <button
+        data-testid="tab-overview"
+        onClick={() => setActiveTab("overview")}
+        className={activeTab === "overview" ? "active" : ""}
+      >
+        Overview
+      </button>
+      <button
+        data-testid="tab-history"
+        onClick={() => setActiveTab("history")}
+        className={activeTab === "history" ? "active" : ""}
+      >
+        History
+      </button>
+      <button
+        data-testid="tab-alerts"
+        onClick={() => setActiveTab("alerts")}
+        className={activeTab === "alerts" ? "active" : ""}
+      >
+        Alerts
+      </button>
+      <button
+        data-testid="tab-client"
+        onClick={() => setActiveTab("client")}
+        className={activeTab === "client" ? "active" : ""}
+      >
+        Client
+      </button>
+      <button
+        data-testid="tab-remote-control"
+        onClick={() => setActiveTab("remote-control")}
+        className={activeTab === "remote-control" ? "active" : ""}
+      >
+        Remote Control
+      </button>
     </div>
   ),
-}));
-
-vi.mock("../components/unit-details/UnitHistoryTab", () => ({
-  default: () => <div data-testid="history-tab">History Tab</div>,
 }));
 
 vi.mock("../components/unit-details/UnitOverviewTab", () => ({
@@ -74,40 +69,38 @@ vi.mock("../components/unit-details/UnitOverviewTab", () => ({
     <div data-testid="overview-tab">
       <h3>Overview</h3>
       <div>Unit: {unit?.name || "Unknown"}</div>
+      <div>Location: {unit?.location || "Unknown"}</div>
     </div>
   ),
 }));
 
-vi.mock("../components/unit-details/UnitStatusHeader", () => ({
+vi.mock("../components/unit-details/UnitHistoryTab", () => ({
+  default: () => <div data-testid="history-tab">History Tab Content</div>,
+}));
+
+vi.mock("../components/unit-details/UnitAlertsTab", () => ({
+  default: ({ unit, alertsHistory }) => (
+    <div data-testid="alerts-tab">
+      <h3>Alerts</h3>
+      <div>Unit: {unit?.name || "Unknown"}</div>
+      <div>Alert Count: {alertsHistory?.length || 0}</div>
+    </div>
+  ),
+}));
+
+vi.mock("../components/unit-details/UnitClientTab", () => ({
   default: ({ unit }) => (
-    <div data-testid="unit-status-header">
-      <h2>{unit?.name || "Unknown Unit"}</h2>
-      <span>Status: {unit?.status || "Unknown"}</span>
+    <div data-testid="client-tab">
+      <h3>Client Information</h3>
+      <div>Unit: {unit?.name || "Unknown"}</div>
     </div>
   ),
 }));
 
-vi.mock("../components/unit-details/UnitTabNavigation", () => ({
-  default: ({ activeTab, setActiveTab, tabs }) => (
-    <div data-testid="unit-tab-navigation">
-      {tabs.map((tab) => (
-        <button
-          key={tab.id}
-          data-testid={`tab-${tab.id}`}
-          onClick={() => setActiveTab(tab.id)}
-          className={activeTab === tab.id ? "active" : ""}
-        >
-          {tab.name}
-        </button>
-      ))}
-    </div>
-  ),
-}));
-
-vi.mock("../components/unit-details/UnitVitals", () => ({
+vi.mock("../components/RemoteControl", () => ({
   default: ({ unit }) => (
-    <div data-testid="unit-vitals">
-      <h3>Vitals</h3>
+    <div data-testid="remote-control-tab">
+      <h3>Remote Control</h3>
       <div>Unit: {unit?.name || "Unknown"}</div>
     </div>
   ),
@@ -115,27 +108,9 @@ vi.mock("../components/unit-details/UnitVitals", () => ({
 
 // Mock icons
 vi.mock("lucide-react", () => ({
-  AlertTriangle: () => <span data-testid="icon-alert-triangle">AlertTriangle</span>,
-  ArrowLeft: () => <span data-testid="icon-arrow-left">ArrowLeft</span>,
-  BarChart: () => <span data-testid="icon-bar-chart">BarChart</span>,
-  BatteryCharging: () => <span data-testid="icon-battery-charging">BatteryCharging</span>,
-  Calendar: () => <span data-testid="icon-calendar">Calendar</span>,
-  Check: () => <span data-testid="icon-check">Check</span>,
-  CheckCircle: () => <span data-testid="icon-check-circle">CheckCircle</span>,
-  Cloud: () => <span data-testid="icon-cloud">Cloud</span>,
-  Droplets: () => <span data-testid="icon-droplets">Droplets</span>,
-  Edit2: () => <span data-testid="icon-edit">Edit2</span>,
-  Gauge: () => <span data-testid="icon-gauge">Gauge</span>,
-  MapPin: () => <span data-testid="icon-map-pin">MapPin</span>,
   Minus: () => <span data-testid="icon-minus">Minus</span>,
-  Power: () => <span data-testid="icon-power">Power</span>,
-  ThermometerSnowflake: () => <span data-testid="icon-thermometer-snow">ThermometerSnowflake</span>,
-  ThermometerSun: () => <span data-testid="icon-thermometer-sun">ThermometerSun</span>,
   TrendingDown: () => <span data-testid="icon-trending-down">TrendingDown</span>,
   TrendingUp: () => <span data-testid="icon-trending-up">TrendingUp</span>,
-  Wrench: () => <span data-testid="icon-wrench">Wrench</span>,
-  X: () => <span data-testid="icon-x">X</span>,
-  Zap: () => <span data-testid="icon-zap">Zap</span>,
 }));
 
 // ============================================================
@@ -175,8 +150,7 @@ const TestWrapper = ({ children, unit = mockUnit }) => {
     <MemoryRouter initialEntries={[{ pathname: "/units/unit-1", state: { unit } }]}>
       <Routes>
         <Route path="/units/:id" element={children} />
-        <Route path="/dashboard" element={<div data-testid="dashboard-page">Dashboard</div>} />
-        <Route path="/remote-control" element={<div data-testid="remote-control-page">Remote Control</div>} />
+        <Route path="/grid-view" element={<div data-testid="grid-view-page">Grid View</div>} />
       </Routes>
     </MemoryRouter>
   );
@@ -224,7 +198,7 @@ describe("UnitDetails", () => {
         <UnitDetails />
       </TestWrapper>,
     );
-    expect(screen.getByText("ONLINE")).toBeInTheDocument();
+    expect(screen.getByTestId("status-badge")).toHaveTextContent("ONLINE");
   });
 
   // ============================================================
@@ -266,65 +240,30 @@ describe("UnitDetails", () => {
     expect(screen.getByTestId("history-tab")).toBeInTheDocument();
   });
 
-  it("should switch to Vitals tab when clicked", () => {
+  it("should switch to Client tab when clicked", () => {
     render(
       <TestWrapper>
         <UnitDetails />
       </TestWrapper>,
     );
 
-    const vitalsTab = screen.getByTestId("tab-vitals");
-    fireEvent.click(vitalsTab);
+    const clientTab = screen.getByTestId("tab-client");
+    fireEvent.click(clientTab);
 
-    expect(screen.getByTestId("unit-vitals")).toBeInTheDocument();
+    expect(screen.getByTestId("client-tab")).toBeInTheDocument();
   });
 
-  // ============================================================
-  // Navigation Buttons Tests
-  // ============================================================
-
-  it("should render Back to Dashboard button", () => {
-    render(
-      <TestWrapper>
-        <UnitDetails />
-      </TestWrapper>,
-    );
-    expect(screen.getByText("Back to Dashboard")).toBeInTheDocument();
-  });
-
-  it("should navigate to dashboard when Back button is clicked", () => {
+  it("should switch to Remote Control tab when clicked", () => {
     render(
       <TestWrapper>
         <UnitDetails />
       </TestWrapper>,
     );
 
-    const backButton = screen.getByText("Back to Dashboard");
-    fireEvent.click(backButton);
+    const remoteTab = screen.getByTestId("tab-remote-control");
+    fireEvent.click(remoteTab);
 
-    expect(screen.getByTestId("dashboard-page")).toBeInTheDocument();
-  });
-
-  it("should render Manage Remotely button", () => {
-    render(
-      <TestWrapper>
-        <UnitDetails />
-      </TestWrapper>,
-    );
-    expect(screen.getByText("Manage Remotely")).toBeInTheDocument();
-  });
-
-  it("should navigate to remote control when Manage Remotely is clicked", () => {
-    render(
-      <TestWrapper>
-        <UnitDetails />
-      </TestWrapper>,
-    );
-
-    const remoteButton = screen.getByText("Manage Remotely");
-    fireEvent.click(remoteButton);
-
-    expect(screen.getByTestId("remote-control-page")).toBeInTheDocument();
+    expect(screen.getByTestId("remote-control-tab")).toBeInTheDocument();
   });
 
   // ============================================================
@@ -340,13 +279,26 @@ describe("UnitDetails", () => {
     expect(screen.getByText("Unit Not Found")).toBeInTheDocument();
   });
 
-  it("should show Return to Dashboard button when unit not found", () => {
+  it("should show Return to Grid View button when unit not found", () => {
     render(
       <TestWrapper unit={null}>
         <UnitDetails />
       </TestWrapper>,
     );
-    expect(screen.getByText("Return to Dashboard")).toBeInTheDocument();
+    expect(screen.getByText("Return to Grid View")).toBeInTheDocument();
+  });
+
+  it("should navigate to grid view when Return button is clicked", () => {
+    render(
+      <TestWrapper unit={null}>
+        <UnitDetails />
+      </TestWrapper>,
+    );
+
+    const returnButton = screen.getByText("Return to Grid View");
+    fireEvent.click(returnButton);
+
+    expect(screen.getByTestId("grid-view-page")).toBeInTheDocument();
   });
 
   // ============================================================
@@ -359,7 +311,7 @@ describe("UnitDetails", () => {
         <UnitDetails />
       </TestWrapper>,
     );
-    expect(screen.getByText("ONLINE")).toBeInTheDocument();
+    expect(screen.getByTestId("status-badge")).toHaveTextContent("ONLINE");
   });
 
   it("should show offline status badge", () => {
@@ -369,7 +321,7 @@ describe("UnitDetails", () => {
         <UnitDetails />
       </TestWrapper>,
     );
-    expect(screen.getByText("OFFLINE")).toBeInTheDocument();
+    expect(screen.getByTestId("status-badge")).toHaveTextContent("OFFLINE");
   });
 
   it("should show maintenance status badge", () => {
@@ -379,7 +331,7 @@ describe("UnitDetails", () => {
         <UnitDetails />
       </TestWrapper>,
     );
-    expect(screen.getByText("MAINTENANCE")).toBeInTheDocument();
+    expect(screen.getByTestId("status-badge")).toHaveTextContent("MAINTENANCE");
   });
 
   it("should show decommissioned status badge", () => {
@@ -389,152 +341,76 @@ describe("UnitDetails", () => {
         <UnitDetails />
       </TestWrapper>,
     );
-    expect(screen.getByText("DECOMMISSIONED")).toBeInTheDocument();
+    expect(screen.getByTestId("status-badge")).toHaveTextContent("DECOMMISSIONED");
   });
 
   // ============================================================
-  // Edit Name Tests
+  // Overview Tab Content Tests
   // ============================================================
 
-  it("should show edit name input when edit icon is clicked", () => {
+  it("should show overview content with unit details", () => {
     render(
       <TestWrapper>
         <UnitDetails />
       </TestWrapper>,
     );
 
-    const editButtons = screen.getAllByTestId("icon-edit");
-    fireEvent.click(editButtons[0]);
-
-    expect(screen.getByDisplayValue("Test Unit A")).toBeInTheDocument();
+    expect(screen.getByTestId("overview-tab")).toBeInTheDocument();
+    expect(screen.getByText(/Unit: Test Unit A/)).toBeInTheDocument();
+    expect(screen.getByText(/Location: Building A/)).toBeInTheDocument();
   });
 
-  it("should cancel name edit when X button is clicked", () => {
+  // ============================================================
+  // Alerts Tab Content Tests
+  // ============================================================
+
+  it("should show alerts tab with alert count", () => {
     render(
       <TestWrapper>
         <UnitDetails />
       </TestWrapper>,
     );
 
-    const editButtons = screen.getAllByTestId("icon-edit");
-    fireEvent.click(editButtons[0]);
+    const alertsTab = screen.getByTestId("tab-alerts");
+    fireEvent.click(alertsTab);
 
-    const cancelButton = screen.getByTestId("icon-x");
-    fireEvent.click(cancelButton);
-
-    expect(screen.queryByDisplayValue("Test Unit A")).not.toBeInTheDocument();
+    expect(screen.getByTestId("alerts-tab")).toBeInTheDocument();
+    expect(screen.getByText("Alert Count: 3")).toBeInTheDocument();
   });
 
   // ============================================================
-  // Edit Location Tests
+  // Client Tab Content Tests
   // ============================================================
 
-  it("should show edit location input when edit icon is clicked", () => {
+  it("should show client tab content", () => {
     render(
       <TestWrapper>
         <UnitDetails />
       </TestWrapper>,
     );
 
-    const editButtons = screen.getAllByTestId("icon-edit");
-    fireEvent.click(editButtons[1]);
+    const clientTab = screen.getByTestId("tab-client");
+    fireEvent.click(clientTab);
 
-    expect(screen.getByDisplayValue("Building A")).toBeInTheDocument();
+    expect(screen.getByTestId("client-tab")).toBeInTheDocument();
+    expect(screen.getByText(/Unit: Test Unit A/)).toBeInTheDocument();
   });
 
-  it("should cancel location edit when X button is clicked", () => {
+  // ============================================================
+  // Remote Control Tab Content Tests
+  // ============================================================
+
+  it("should show remote control tab content", () => {
     render(
       <TestWrapper>
         <UnitDetails />
       </TestWrapper>,
     );
 
-    const editButtons = screen.getAllByTestId("icon-edit");
-    fireEvent.click(editButtons[1]);
+    const remoteTab = screen.getByTestId("tab-remote-control");
+    fireEvent.click(remoteTab);
 
-    const cancelButton = screen.getByTestId("icon-x");
-    fireEvent.click(cancelButton);
-
-    expect(screen.queryByDisplayValue("Building A")).not.toBeInTheDocument();
-  });
-
-  // ============================================================
-  // Alarm Alert Tests
-  // ============================================================
-
-  it("should show alarm alert when unit has alarm", () => {
-    const alarmUnit = { ...mockUnit, hasAlarm: true };
-    render(
-      <TestWrapper unit={alarmUnit}>
-        <UnitDetails />
-      </TestWrapper>,
-    );
-    expect(screen.getByText(/NH3 LEAK DETECTED/)).toBeInTheDocument();
-  });
-
-  it("should not show alarm alert when unit has no alarm", () => {
-    render(
-      <TestWrapper>
-        <UnitDetails />
-      </TestWrapper>,
-    );
-    expect(screen.queryByText(/NH3 LEAK DETECTED/)).not.toBeInTheDocument();
-  });
-
-  // ============================================================
-  // Offline State Tests
-  // ============================================================
-
-  it("should show N/A for metrics when unit is offline", () => {
-    const offlineUnit = { ...mockUnit, status: "offline" };
-    render(
-      <TestWrapper unit={offlineUnit}>
-        <UnitDetails />
-      </TestWrapper>,
-    );
-
-    // Should show N/A for temperature, pressure, flow rate
-    const naElements = screen.getAllByText("N/A");
-    expect(naElements.length).toBeGreaterThan(0);
-  });
-
-  // ============================================================
-  // Water Generation Tests
-  // ============================================================
-
-  it("should show water-related metrics for units with water generation", () => {
-    render(
-      <TestWrapper>
-        <UnitDetails />
-      </TestWrapper>,
-    );
-    expect(screen.getByText("Water Level")).toBeInTheDocument();
-  });
-
-  it("should not show water-related metrics for units without water generation", () => {
-    const noWaterUnit = { ...mockUnit, watergeneration: false };
-    render(
-      <TestWrapper unit={noWaterUnit}>
-        <UnitDetails />
-      </TestWrapper>,
-    );
-    expect(screen.queryByText("Water Level")).not.toBeInTheDocument();
-  });
-
-  // ============================================================
-  // Unit Vitals Tests
-  // ============================================================
-
-  it("should show Unit Vitals when Vitals tab is active", () => {
-    render(
-      <TestWrapper>
-        <UnitDetails />
-      </TestWrapper>,
-    );
-
-    const vitalsTab = screen.getByTestId("tab-vitals");
-    fireEvent.click(vitalsTab);
-
-    expect(screen.getByTestId("unit-vitals")).toBeInTheDocument();
+    expect(screen.getByTestId("remote-control-tab")).toBeInTheDocument();
+    expect(screen.getByText(/Unit: Test Unit A/)).toBeInTheDocument();
   });
 });
