@@ -69,45 +69,65 @@ const UnitControl = ({ className }) => {
     loadUnitData();
   }, [id, location.state]);
 
+  // FIXED: `device` was previously both a dependency of this effect AND
+  // written to by it (setDevice always returned a brand-new object via
+  // spread, even when values were unchanged). That made the effect re-fire
+  // on every commit — an infinite render loop whenever metrics+systemPower
+  // were truthy. Now the effect only depends on `metrics`/`systemPower`,
+  // and the "is there a device yet" check happens inside the functional
+  // updater instead of the dependency array, so setDevice no longer causes
+  // this effect to re-run.
   useEffect(() => {
-    if (metrics && systemPower && device) {
-      setDevice((prev) => {
-        if (!prev) return prev;
-        const tempBase = parseFloat(metrics.temperature?.current) || 70;
-        const pressureBase = parseFloat(metrics.pressure?.current) || 100;
-        const flowInBase = parseFloat(
-          metrics.flow_rate_inlet?.current ||
-            metrics.flowRateInlet?.current ||
-            45.5,
-        );
-        const flowOutBase = parseFloat(
-          metrics.flow_rate_outlet?.current ||
-            metrics.flowRateOutlet?.current ||
-            42.1,
-        );
+    if (!metrics || !systemPower) return;
 
-        const idOffset = (prev.id?.toString() || "").charCodeAt(0) || 0;
+    setDevice((prev) => {
+      if (!prev) return prev;
 
-        return {
-          ...prev,
-          tempIn:
-            prev.tempIn !== undefined
-              ? +(tempBase * 0.4 + (idOffset % 5)).toFixed(1)
-              : undefined,
-          tempOut:
-            prev.tempOut !== undefined
-              ? +(tempBase * 0.1 + (idOffset % 3)).toFixed(1)
-              : undefined,
-          pressure:
-            prev.pressure !== undefined
-              ? +(pressureBase * 0.15 + (idOffset % 2)).toFixed(1)
-              : undefined,
-          flowRateInlet: +(flowInBase + (idOffset % 5) - 2.5).toFixed(1),
-          flowRateOutlet: +(flowOutBase + (idOffset % 3) - 1.5).toFixed(1),
-        };
-      });
-    }
-  }, [metrics, systemPower, device]);
+      const tempBase = parseFloat(metrics.temperature?.current) || 70;
+      const pressureBase = parseFloat(metrics.pressure?.current) || 100;
+      const flowInBase = parseFloat(
+        metrics.flow_rate_inlet?.current ||
+          metrics.flowRateInlet?.current ||
+          45.5,
+      );
+      const flowOutBase = parseFloat(
+        metrics.flow_rate_outlet?.current ||
+          metrics.flowRateOutlet?.current ||
+          42.1,
+      );
+
+      const idOffset = (prev.id?.toString() || "").charCodeAt(0) || 0;
+
+      const next = {
+        ...prev,
+        tempIn:
+          prev.tempIn !== undefined
+            ? +(tempBase * 0.4 + (idOffset % 5)).toFixed(1)
+            : undefined,
+        tempOut:
+          prev.tempOut !== undefined
+            ? +(tempBase * 0.1 + (idOffset % 3)).toFixed(1)
+            : undefined,
+        pressure:
+          prev.pressure !== undefined
+            ? +(pressureBase * 0.15 + (idOffset % 2)).toFixed(1)
+            : undefined,
+        flowRateInlet: +(flowInBase + (idOffset % 5) - 2.5).toFixed(1),
+        flowRateOutlet: +(flowOutBase + (idOffset % 3) - 1.5).toFixed(1),
+      };
+
+      // Bail out with the *same* reference if nothing actually changed,
+      // so React can skip the re-render/effect-rerun entirely.
+      const unchanged =
+        next.tempIn === prev.tempIn &&
+        next.tempOut === prev.tempOut &&
+        next.pressure === prev.pressure &&
+        next.flowRateInlet === prev.flowRateInlet &&
+        next.flowRateOutlet === prev.flowRateOutlet;
+
+      return unchanged ? prev : next;
+    });
+  }, [metrics, systemPower]);
 
   const getFlowRateColor = (val) => {
     if (val === undefined || val === null || !systemPower)
