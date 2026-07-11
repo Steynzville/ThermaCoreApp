@@ -1,34 +1,30 @@
 // src/tests/App.test.jsx
-import { render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from "vitest";
 import React from "react";
 
-// ============================================================
-// Create a custom AuthProvider that we control
-// ============================================================
-
-// First, import the real modules we need
-import { BrowserRouter } from "react-router-dom";
 import App from "../App";
 
-// Mock ONLY the auth context hook - but keep the provider
-const mockUseAuth = vi.fn();
+// ============================================================
+// Mock auth state via vi.hoisted() so the fn exists before any
+// vi.mock factory (which Vitest hoists above all other code in
+// this file, including plain const declarations) needs to close
+// over it. Using vi.hoisted() removes any ambiguity about
+// hoisting order rather than relying on the "mock"-prefix naming
+// convention alone.
+// ============================================================
+
+const { mockUseAuth } = vi.hoisted(() => ({ mockUseAuth: vi.fn() }));
 
 vi.mock("../context/AuthContext", () => ({
   useAuth: () => mockUseAuth(),
-  AuthProvider: ({ children }) => {
-    // This is a custom AuthProvider that uses our mock
-    const authValue = mockUseAuth();
-    return (
-      <div data-testid="auth-provider">
-        {children}
-      </div>
-    );
-  },
+  AuthProvider: ({ children }) => (
+    <div data-testid="auth-provider">{children}</div>
+  ),
 }));
 
-// Mock all other contexts (they should be fine, but we mock them to be safe)
+// Mock all other contexts
 vi.mock("../context/SettingsContext", () => ({
   useSettings: vi.fn(() => ({
     settings: { soundEnabled: true, volume: 0.5 },
@@ -62,7 +58,6 @@ vi.mock("../components/LoginScreen", () => ({
     const [username, setUsername] = React.useState("");
     const [password, setPassword] = React.useState("");
 
-    // Get the login function from the mock
     const auth = mockUseAuth();
     const { login } = auth;
 
@@ -157,11 +152,11 @@ vi.mock("../components/UnitDetails", () => ({
 
 vi.mock("../config/routes", () => ({
   default: [
-    { 
-      path: "/dashboard", 
-      component: () => <div data-testid="dashboard-page">Dashboard</div>, 
-      isProtected: true, 
-      roles: ["admin", "user"] 
+    {
+      path: "/dashboard",
+      component: () => <div data-testid="dashboard-page">Dashboard</div>,
+      isProtected: true,
+      roles: ["admin", "user"],
     },
   ],
 }));
@@ -273,6 +268,16 @@ beforeEach(() => {
   });
 });
 
+// CRITICAL FIX: without this, every render(<App />) from a previous test
+// stays mounted in document.body (including its window "error" /
+// "unhandledrejection" listeners), so later tests accumulate duplicate
+// "Login" headings and stale error-boundary state, causing
+// findByRole/getByRole to throw "found multiple elements" or time out.
+afterEach(() => {
+  cleanup();
+  reloadMock.mockClear();
+});
+
 // ============================================================
 // Helper to set auth state
 // ============================================================
@@ -328,11 +333,9 @@ describe("App", () => {
 
     await screen.findByRole("heading", { name: /login/i });
     const themeToggle = screen.getByTestId("theme-toggle");
-    
-    // Check initial state
+
     expect(themeToggle).toHaveAttribute("aria-pressed", "false");
-    
-    // Click to toggle
+
     await user.click(themeToggle);
     expect(themeToggle).toHaveAttribute("aria-pressed", "true");
   });
@@ -462,7 +465,6 @@ describe("App", () => {
     render(<App />);
     await screen.findByRole("heading", { name: /login/i });
 
-    // Trigger error
     const errorEvent = new ErrorEvent("error", { message: "Test error" });
     window.dispatchEvent(errorEvent);
 
@@ -477,7 +479,6 @@ describe("App", () => {
     render(<App />);
     await screen.findByRole("heading", { name: /login/i });
 
-    // Trigger error
     const errorEvent = new ErrorEvent("error", { message: "Test error" });
     window.dispatchEvent(errorEvent);
 
