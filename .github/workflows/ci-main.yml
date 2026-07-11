@@ -103,9 +103,20 @@ jobs:
           docker-compose -f docker-compose.ci.yml exec -T $DB_SERVICE psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE thermacore TO thermacore_user;" || true
 
       - name: Run Backend Tests with Coverage
+        id: tests
         run: |
           echo "🧪 Running backend tests with coverage..."
-          docker-compose -f docker-compose.ci.yml run --rm backend python -m pytest -v --tb=short --cov=app --cov-report=json --cov-report=term --cov-report=term-missing --cov-fail-under=60 --cov-branch
+          docker-compose -f docker-compose.ci.yml run --rm backend python -m pytest -v --tb=short --cov=app --cov-report=json --cov-report=term --cov-report=term-missing --cov-fail-under=60 --cov-branch 2>&1 | tee coverage_output.txt
+
+      - name: Extract Coverage from Output
+        id: coverage
+        if: always()
+        run: |
+          echo "📊 Extracting coverage from test output..."
+          # Extract the coverage percentage from the pytest output
+          COVERAGE=$(grep -oP 'Total coverage: \K[0-9.]+' coverage_output.txt || echo "0")
+          echo "COVERAGE=$COVERAGE" >> $GITHUB_ENV
+          echo "Total coverage extracted: $COVERAGE%"
 
       - name: Display Coverage Summary
         if: always()
@@ -114,29 +125,19 @@ jobs:
           echo "                   📊 BACKEND COVERAGE                   "
           echo "═══════════════════════════════════════════════════════════"
           echo ""
-          
-          # Read coverage from JSON file using Python inline
-          python3 -c "
-          import json
-          try:
-              with open('backend/coverage.json', 'r') as f:
-                  data = json.load(f)
-              coverage = data.get('totals', {}).get('percent_covered', 0)
-              print(f'  📈 Total Coverage: {coverage:.2f}%')
-              print('')
-              if coverage >= 80:
-                  print('  🟢 EXCELLENT! Coverage is above 80%')
-              elif coverage >= 60:
-                  print('  🟡 Good! Coverage is above 60%')
-              elif coverage >= 40:
-                  print('  🟠 Fair - Consider improving coverage')
-              else:
-                  print('  🔴 Low coverage - Please add more tests')
-              print('')
-              print('═══════════════════════════════════════════════════════════')
-          except Exception as e:
-              print(f'  ❌ Error reading coverage: {e}')
-          "
+          echo "  📈 Total Coverage: ${{ env.COVERAGE }}%"
+          echo ""
+          if (( $(echo "${{ env.COVERAGE }} >= 80" | bc -l) )); then
+            echo "  🟢 EXCELLENT! Coverage is above 80%"
+          elif (( $(echo "${{ env.COVERAGE }} >= 60" | bc -l) )); then
+            echo "  🟡 Good! Coverage is above 60%"
+          elif (( $(echo "${{ env.COVERAGE }} >= 40" | bc -l) )); then
+            echo "  🟠 Fair - Consider improving coverage"
+          else
+            echo "  🔴 Low coverage - Please add more tests"
+          fi
+          echo ""
+          echo "═══════════════════════════════════════════════════════════"
 
       - name: Upload Coverage Report
         if: always()
