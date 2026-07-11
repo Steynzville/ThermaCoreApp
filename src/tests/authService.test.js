@@ -35,7 +35,7 @@ describe("authService", () => {
       const result = await login("testuser", "password123");
 
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining("/api/v1/auth/login"),
+        expect.stringContaining("/auth/login"),
         expect.objectContaining({
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -189,7 +189,7 @@ describe("authService", () => {
       const result = await login("persistent-user", "password", true);
 
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining("/api/v1/auth/login"),
+        expect.stringContaining("/auth/login"),
         expect.objectContaining({
           method: "POST",
           body: JSON.stringify({
