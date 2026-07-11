@@ -4,28 +4,41 @@ import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from "vitest";
 import React from "react";
 
-import App from "../App";
-
 // ============================================================
-// COMPLETELY MOCK AuthContext - NO REAL CODE RUNS
+// CRITICAL: Mock BEFORE importing App
 // ============================================================
 
-const { mockUseAuth } = vi.hoisted(() => ({ mockUseAuth: vi.fn() }));
+// Create a shared mock that will be used everywhere
+const authMock = {
+  user: null,
+  isAuthenticated: false,
+  isLoading: false,
+  isLoggingOut: false,
+  login: vi.fn().mockResolvedValue(undefined),
+  logout: vi.fn(),
+};
 
-vi.mock("../context/AuthContext", () => ({
-  // Default export
-  default: React.createContext(null),
-  // Named exports
-  useAuth: () => mockUseAuth(),
-  AuthProvider: ({ children }) => {
-    // Just pass children through - NO real AuthProvider logic runs
-    return <div data-testid="auth-provider">{children}</div>;
-  },
-  // Any other exports from AuthContext
-  AuthContext: React.createContext(null),
-}));
+// Mock the entire AuthContext module
+vi.mock("../context/AuthContext", () => {
+  // Create a context that we can control
+  const mockContext = React.createContext(authMock);
+  
+  return {
+    default: mockContext,
+    AuthContext: mockContext,
+    useAuth: () => authMock,
+    AuthProvider: ({ children }) => {
+      // Provide the mock auth value through context
+      return (
+        <mockContext.Provider value={authMock}>
+          <div data-testid="auth-provider">{children}</div>
+        </mockContext.Provider>
+      );
+    },
+  };
+});
 
-// Mock all other contexts
+// Mock all other contexts with simple providers
 vi.mock("../context/SettingsContext", () => ({
   useSettings: vi.fn(() => ({
     settings: { soundEnabled: true, volume: 0.5 },
@@ -53,41 +66,16 @@ vi.mock("../context/UnitContext", () => ({
   useUnits: vi.fn(() => ({ units: [], loading: false })),
 }));
 
-// Mock the Spinner component to match the real one's aria-label
-vi.mock("../components/ui/spinner", () => ({
-  Spinner: ({ className, size, ...props }) => (
-    <div data-testid="spinner" aria-label="Loading" {...props}>
-      Loading...
-    </div>
-  ),
-}));
-
-// Also mock the common Spinner import path
-vi.mock("../components/common/Spinner", async () => {
-  const actual = await vi.importActual("../components/common/Spinner");
-  return {
-    ...actual,
-    default: ({ className, size, ...props }) => (
-      <div data-testid="spinner" aria-label="Loading" {...props}>
-        Loading...
-      </div>
-    ),
-  };
-});
-
 // Mock all child components
 vi.mock("../components/LoginScreen", () => ({
   default: ({ error, setError }) => {
     const [username, setUsername] = React.useState("");
     const [password, setPassword] = React.useState("");
 
-    const auth = mockUseAuth();
-    const { login } = auth;
-
     const handleSubmit = async (e) => {
       e.preventDefault();
       try {
-        await login({ username, password });
+        await authMock.login({ username, password });
         setError?.(null);
       } catch (err) {
         setError?.(err?.message || "Login failed");
@@ -141,6 +129,22 @@ vi.mock("../components/ThemeToggle", () => ({
   },
 }));
 
+vi.mock("../components/ui/spinner", () => ({
+  Spinner: ({ className, size, ...props }) => (
+    <div data-testid="spinner" aria-label="Loading" {...props}>
+      Loading...
+    </div>
+  ),
+}));
+
+vi.mock("../components/common/Spinner", () => ({
+  default: ({ className, size, ...props }) => (
+    <div data-testid="spinner" aria-label="Loading" {...props}>
+      Loading...
+    </div>
+  ),
+}));
+
 vi.mock("../components/ForgotPassword", () => ({
   default: () => <div data-testid="forgot-password-page">Password Reset Request</div>,
 }));
@@ -187,6 +191,11 @@ vi.mock("../utils/audioPlayer", () => ({
 vi.mock("@/lib/utils", () => ({
   cn: (...inputs) => inputs.filter(Boolean).join(" "),
 }));
+
+// ============================================================
+// NOW import App
+// ============================================================
+import App from "../App";
 
 // ============================================================
 // Mock window globals
@@ -277,8 +286,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   window.location.pathname = "/";
   
-  // CRITICAL: Default auth state with isLoading: false
-  mockUseAuth.mockReturnValue({
+  // Reset auth mock to default state
+  Object.assign(authMock, {
     user: null,
     isAuthenticated: false,
     isLoading: false,
@@ -288,7 +297,6 @@ beforeEach(() => {
   });
 });
 
-// CRITICAL: Cleanup between tests
 afterEach(() => {
   cleanup();
   reloadMock.mockClear();
@@ -299,16 +307,13 @@ afterEach(() => {
 // ============================================================
 
 const setAuth = (overrides = {}) => {
-  const defaultAuth = {
+  Object.assign(authMock, {
     user: null,
     isAuthenticated: false,
     isLoading: false,
     isLoggingOut: false,
     login: vi.fn().mockResolvedValue(undefined),
     logout: vi.fn(),
-  };
-  mockUseAuth.mockReturnValue({
-    ...defaultAuth,
     ...overrides,
   });
 };
@@ -327,6 +332,7 @@ describe("App", () => {
     setAuth();
     render(<App />);
 
+    // Wait for the login page to render
     const heading = await screen.findByRole("heading", { name: /login/i });
     expect(heading).toBeInTheDocument();
     expect(screen.getByTestId("username-input")).toBeInTheDocument();
