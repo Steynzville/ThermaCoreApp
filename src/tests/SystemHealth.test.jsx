@@ -195,7 +195,7 @@ describe("SystemHealth", () => {
   });
 
   // ============================================================
-  // Service table rendering - FIXED
+  // Service table rendering
   // ============================================================
 
   it("should render a table row for each service with provider and response time", async () => {
@@ -211,7 +211,6 @@ describe("SystemHealth", () => {
     expect(screen.getByText("Vercel")).toBeInTheDocument();
     expect(screen.getByText("Backend API")).toBeInTheDocument();
     expect(screen.getByText("AWS")).toBeInTheDocument();
-    // Use getAllByText for "Database" since it appears as icon text too
     const databaseElements = screen.getAllByText("Database");
     expect(databaseElements.length).toBeGreaterThan(0);
     expect(screen.getByText("AWS RDS")).toBeInTheDocument();
@@ -242,7 +241,7 @@ describe("SystemHealth", () => {
   });
 
   // ============================================================
-  // Overall status computation - FIXED
+  // Overall status computation
   // ============================================================
 
   it("should show 'All systems operational' when everything is operational", async () => {
@@ -257,7 +256,6 @@ describe("SystemHealth", () => {
     await waitFor(() =>
       expect(screen.getByText("All systems operational")).toBeInTheDocument(),
     );
-    // Use getAllByText for "Operational" since it appears multiple times
     const operationalElements = screen.getAllByText("Operational");
     expect(operationalElements.length).toBeGreaterThan(0);
   });
@@ -336,7 +334,7 @@ describe("SystemHealth", () => {
   });
 
   // ============================================================
-  // Summary cards - FIXED
+  // Summary cards
   // ============================================================
 
   it("should show correct operational, degraded, and outage counts in the summary cards", async () => {
@@ -350,18 +348,16 @@ describe("SystemHealth", () => {
 
     await waitFor(() => expect(screen.getByText("Frontend")).toBeInTheDocument());
 
-    // Use getAllByText for "1" since there are multiple summary cards
     const oneElements = screen.getAllByText("1");
     expect(oneElements.length).toBeGreaterThan(0);
     
-    // Confirm each summary label is present
     expect(screen.getByText("Operational")).toBeInTheDocument();
     expect(screen.getByText("Degraded")).toBeInTheDocument();
     expect(screen.getByText("Outages")).toBeInTheDocument();
   });
 
   // ============================================================
-  // Response time color branches - FIXED
+  // Response time color branches
   // ============================================================
 
   it("should render N/A, low, and high response times distinctly", async () => {
@@ -379,7 +375,6 @@ describe("SystemHealth", () => {
 
     await waitFor(() => expect(screen.getByText("Low")).toBeInTheDocument());
     
-    // Use getAllByText for numbers that appear multiple times
     const oneFiftyElements = screen.getAllByText("150ms");
     expect(oneFiftyElements.length).toBeGreaterThan(0);
     expect(screen.getByText("300ms")).toBeInTheDocument();
@@ -455,7 +450,7 @@ describe("SystemHealth", () => {
   });
 
   // ============================================================
-  // Availability percentage / average response time metrics - FIXED
+  // Availability percentage / average response time metrics
   // ============================================================
 
   it("should compute and display the service availability percentage", async () => {
@@ -487,7 +482,6 @@ describe("SystemHealth", () => {
     );
 
     await waitFor(() => {
-      // The average is (100 + 200) / 3 = 100ms (since N/A is ignored in display)
       const avgElements = screen.getAllByText("100ms");
       expect(avgElements.length).toBeGreaterThan(0);
     });
@@ -503,7 +497,7 @@ describe("SystemHealth", () => {
     );
 
     await waitFor(() => expect(screen.getByText("0%")).toBeInTheDocument());
-    expect(screen.getByText("0ms")).toBeInTheDocument());
+    expect(screen.getByText("0ms")).toBeInTheDocument();
     expect(screen.getByText("0 of 0 services operational")).toBeInTheDocument();
   });
 });
