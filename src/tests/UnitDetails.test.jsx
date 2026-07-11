@@ -4,7 +4,7 @@
 
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import React from "react";
 
 // ============================================================
@@ -78,21 +78,39 @@ vi.mock("../components/unit-details/UnitHistoryTab", () => ({
   default: () => <div data-testid="history-tab">History Tab Content</div>,
 }));
 
+// This mock now calls getAlertTypeColor for every alert type so all branches
+// of that function are exercised.
 vi.mock("../components/unit-details/UnitAlertsTab", () => ({
-  default: ({ unit, alertsHistory }) => (
+  default: ({ unit, alertsHistory, getAlertTypeColor }) => (
     <div data-testid="alerts-tab">
       <h3>Alerts</h3>
       <div>Unit: {unit?.name || "Unknown"}</div>
       <div>Alert Count: {alertsHistory?.length || 0}</div>
+      {["critical", "warning", "info", "unknown-type"].map((type) => (
+        <div key={type} data-testid={`alert-color-${type}`}>
+          {getAlertTypeColor?.(type)}
+        </div>
+      ))}
     </div>
   ),
 }));
 
+// This mock now calls each handler prop so branch coverage for
+// handleSendEmail / handleCallClient / handleScheduleMaintenance is exercised.
 vi.mock("../components/unit-details/UnitClientTab", () => ({
-  default: ({ unit }) => (
+  default: ({ unit, handleSendEmail, handleCallClient, handleScheduleMaintenance }) => (
     <div data-testid="client-tab">
       <h3>Client Information</h3>
       <div>Unit: {unit?.name || "Unknown"}</div>
+      <button data-testid="send-email-btn" onClick={() => handleSendEmail(unit?.clientEmail)}>
+        Send Email
+      </button>
+      <button data-testid="call-client-btn" onClick={() => handleCallClient(unit?.clientPhone)}>
+        Call Client
+      </button>
+      <button data-testid="schedule-maintenance-btn" onClick={() => handleScheduleMaintenance()}>
+        Schedule Maintenance
+      </button>
     </div>
   ),
 }));
@@ -102,6 +120,8 @@ vi.mock("../components/RemoteControl", () => ({
     <div data-testid="remote-control-tab">
       <h3>Remote Control</h3>
       <div>Unit: {unit?.name || "Unknown"}</div>
+      <div>Water Production On: {String(unit?.waterProductionOn)}</div>
+      <div>Auto Switch: {String(unit?.autoSwitchEnabled)}</div>
     </div>
   ),
 }));
@@ -140,14 +160,19 @@ const mockUnit = {
   installDate: "2024-01-15",
   lastMaintenance: "2024-07-10",
   gpsCoordinates: "40.7128, -74.0060",
+  clientEmail: "client@example.com",
+  clientPhone: "555-1234",
 };
 
 // ============================================================
 // Test Wrapper
 // ============================================================
-const TestWrapper = ({ children, unit = mockUnit }) => {
+const TestWrapper = ({ children, unit = mockUnit, initialTab }) => {
+  const search = initialTab ? `?tab=${initialTab}` : "";
   return (
-    <MemoryRouter initialEntries={[{ pathname: "/units/unit-1", state: { unit } }]}>
+    <MemoryRouter
+      initialEntries={[{ pathname: "/units/unit-1", search, state: { unit } }]}
+    >
       <Routes>
         <Route path="/units/:id" element={children} />
         <Route path="/grid-view" element={<div data-testid="grid-view-page">Grid View</div>} />
@@ -157,8 +182,23 @@ const TestWrapper = ({ children, unit = mockUnit }) => {
 };
 
 describe("UnitDetails", () => {
+  let confirmSpy;
+  let alertSpy;
+
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // Stub window.location so href assignment doesn't blow up in jsdom
+    delete window.location;
+    window.location = { href: "" };
+
+    confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    confirmSpy.mockRestore();
+    alertSpy.mockRestore();
   });
 
   // ============================================================
@@ -201,6 +241,15 @@ describe("UnitDetails", () => {
     expect(screen.getByTestId("status-badge")).toHaveTextContent("ONLINE");
   });
 
+  it("should apply a custom className to the root wrapper", () => {
+    const { container } = render(
+      <TestWrapper>
+        <UnitDetails className="custom-class" />
+      </TestWrapper>,
+    );
+    expect(container.querySelector(".custom-class")).toBeInTheDocument();
+  });
+
   // ============================================================
   // Tab Navigation Tests
   // ============================================================
@@ -221,9 +270,7 @@ describe("UnitDetails", () => {
       </TestWrapper>,
     );
 
-    const alertsTab = screen.getByTestId("tab-alerts");
-    fireEvent.click(alertsTab);
-
+    fireEvent.click(screen.getByTestId("tab-alerts"));
     expect(screen.getByTestId("alerts-tab")).toBeInTheDocument();
   });
 
@@ -234,9 +281,7 @@ describe("UnitDetails", () => {
       </TestWrapper>,
     );
 
-    const historyTab = screen.getByTestId("tab-history");
-    fireEvent.click(historyTab);
-
+    fireEvent.click(screen.getByTestId("tab-history"));
     expect(screen.getByTestId("history-tab")).toBeInTheDocument();
   });
 
@@ -247,9 +292,7 @@ describe("UnitDetails", () => {
       </TestWrapper>,
     );
 
-    const clientTab = screen.getByTestId("tab-client");
-    fireEvent.click(clientTab);
-
+    fireEvent.click(screen.getByTestId("tab-client"));
     expect(screen.getByTestId("client-tab")).toBeInTheDocument();
   });
 
@@ -260,9 +303,47 @@ describe("UnitDetails", () => {
       </TestWrapper>,
     );
 
-    const remoteTab = screen.getByTestId("tab-remote-control");
-    fireEvent.click(remoteTab);
+    fireEvent.click(screen.getByTestId("tab-remote-control"));
+    expect(screen.getByTestId("remote-control-tab")).toBeInTheDocument();
+  });
 
+  // ============================================================
+  // Initial tab from search params
+  // ============================================================
+
+  it("should honor an initial tab of 'history' from the URL", () => {
+    render(
+      <TestWrapper initialTab="history">
+        <UnitDetails />
+      </TestWrapper>,
+    );
+    expect(screen.getByTestId("history-tab")).toBeInTheDocument();
+  });
+
+  it("should honor an initial tab of 'alerts' from the URL", () => {
+    render(
+      <TestWrapper initialTab="alerts">
+        <UnitDetails />
+      </TestWrapper>,
+    );
+    expect(screen.getByTestId("alerts-tab")).toBeInTheDocument();
+  });
+
+  it("should honor an initial tab of 'client' from the URL", () => {
+    render(
+      <TestWrapper initialTab="client">
+        <UnitDetails />
+      </TestWrapper>,
+    );
+    expect(screen.getByTestId("client-tab")).toBeInTheDocument();
+  });
+
+  it("should honor an initial tab of 'remote-control' from the URL", () => {
+    render(
+      <TestWrapper initialTab="remote-control">
+        <UnitDetails />
+      </TestWrapper>,
+    );
     expect(screen.getByTestId("remote-control-tab")).toBeInTheDocument();
   });
 
@@ -295,14 +376,12 @@ describe("UnitDetails", () => {
       </TestWrapper>,
     );
 
-    const returnButton = screen.getByText("Return to Grid View");
-    fireEvent.click(returnButton);
-
+    fireEvent.click(screen.getByText("Return to Grid View"));
     expect(screen.getByTestId("grid-view-page")).toBeInTheDocument();
   });
 
   // ============================================================
-  // Unit Status Tests
+  // Unit Status Tests (covers every getStatusColor branch)
   // ============================================================
 
   it("should show online status badge", () => {
@@ -344,6 +423,16 @@ describe("UnitDetails", () => {
     expect(screen.getByTestId("status-badge")).toHaveTextContent("DECOMMISSIONED");
   });
 
+  it("should fall back to the default status color for an unrecognized status", () => {
+    const unknownStatusUnit = { ...mockUnit, status: "weird-status" };
+    render(
+      <TestWrapper unit={unknownStatusUnit}>
+        <UnitDetails />
+      </TestWrapper>,
+    );
+    expect(screen.getByTestId("status-badge")).toHaveTextContent("WEIRD-STATUS");
+  });
+
   // ============================================================
   // Overview Tab Content Tests
   // ============================================================
@@ -361,7 +450,7 @@ describe("UnitDetails", () => {
   });
 
   // ============================================================
-  // Alerts Tab Content Tests
+  // Alerts Tab Content Tests (covers every getAlertTypeColor branch)
   // ============================================================
 
   it("should show alerts tab with alert count", () => {
@@ -371,11 +460,34 @@ describe("UnitDetails", () => {
       </TestWrapper>,
     );
 
-    const alertsTab = screen.getByTestId("tab-alerts");
-    fireEvent.click(alertsTab);
+    fireEvent.click(screen.getByTestId("tab-alerts"));
 
     expect(screen.getByTestId("alerts-tab")).toBeInTheDocument();
     expect(screen.getByText("Alert Count: 3")).toBeInTheDocument();
+  });
+
+  it("should resolve the correct color class for each alert type", () => {
+    render(
+      <TestWrapper>
+        <UnitDetails />
+      </TestWrapper>,
+    );
+
+    fireEvent.click(screen.getByTestId("tab-alerts"));
+
+    expect(screen.getByTestId("alert-color-critical")).toHaveTextContent(
+      "text-red-600",
+    );
+    expect(screen.getByTestId("alert-color-warning")).toHaveTextContent(
+      "text-yellow-600",
+    );
+    expect(screen.getByTestId("alert-color-info")).toHaveTextContent(
+      "text-blue-600",
+    );
+    // default/fallback branch
+    expect(screen.getByTestId("alert-color-unknown-type")).toHaveTextContent(
+      "text-gray-600",
+    );
   });
 
   // ============================================================
@@ -389,11 +501,142 @@ describe("UnitDetails", () => {
       </TestWrapper>,
     );
 
-    const clientTab = screen.getByTestId("tab-client");
-    fireEvent.click(clientTab);
+    fireEvent.click(screen.getByTestId("tab-client"));
 
     expect(screen.getByTestId("client-tab")).toBeInTheDocument();
     expect(screen.getByText(/Unit: Test Unit A/)).toBeInTheDocument();
+  });
+
+  it("should send an email when confirmed and an email address exists", () => {
+    render(
+      <TestWrapper>
+        <UnitDetails />
+      </TestWrapper>,
+    );
+
+    fireEvent.click(screen.getByTestId("tab-client"));
+    fireEvent.click(screen.getByTestId("send-email-btn"));
+
+    expect(confirmSpy).toHaveBeenCalledWith(
+      expect.stringContaining("client@example.com"),
+    );
+    expect(window.location.href).toBe("mailto:client@example.com");
+  });
+
+  it("should not navigate to mailto when the email confirm is cancelled", () => {
+    confirmSpy.mockReturnValue(false);
+
+    render(
+      <TestWrapper>
+        <UnitDetails />
+      </TestWrapper>,
+    );
+
+    fireEvent.click(screen.getByTestId("tab-client"));
+    fireEvent.click(screen.getByTestId("send-email-btn"));
+
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(window.location.href).toBe("");
+  });
+
+  it("should alert when no client email is available", () => {
+    const noEmailUnit = { ...mockUnit, clientEmail: undefined };
+    render(
+      <TestWrapper unit={noEmailUnit}>
+        <UnitDetails />
+      </TestWrapper>,
+    );
+
+    fireEvent.click(screen.getByTestId("tab-client"));
+    fireEvent.click(screen.getByTestId("send-email-btn"));
+
+    expect(alertSpy).toHaveBeenCalledWith(
+      "Client email address not available.",
+    );
+    expect(confirmSpy).not.toHaveBeenCalled();
+  });
+
+  it("should call the client when confirmed and a phone number exists", () => {
+    render(
+      <TestWrapper>
+        <UnitDetails />
+      </TestWrapper>,
+    );
+
+    fireEvent.click(screen.getByTestId("tab-client"));
+    fireEvent.click(screen.getByTestId("call-client-btn"));
+
+    expect(confirmSpy).toHaveBeenCalledWith(
+      expect.stringContaining("555-1234"),
+    );
+    expect(window.location.href).toBe("tel:555-1234");
+  });
+
+  it("should not navigate to tel when the call confirm is cancelled", () => {
+    confirmSpy.mockReturnValue(false);
+
+    render(
+      <TestWrapper>
+        <UnitDetails />
+      </TestWrapper>,
+    );
+
+    fireEvent.click(screen.getByTestId("tab-client"));
+    fireEvent.click(screen.getByTestId("call-client-btn"));
+
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(window.location.href).toBe("");
+  });
+
+  it("should alert when no client phone is available", () => {
+    const noPhoneUnit = { ...mockUnit, clientPhone: undefined };
+    render(
+      <TestWrapper unit={noPhoneUnit}>
+        <UnitDetails />
+      </TestWrapper>,
+    );
+
+    fireEvent.click(screen.getByTestId("tab-client"));
+    fireEvent.click(screen.getByTestId("call-client-btn"));
+
+    expect(alertSpy).toHaveBeenCalledWith(
+      "Client phone number not available.",
+    );
+    expect(confirmSpy).not.toHaveBeenCalled();
+  });
+
+  it("should show a placeholder alert when scheduling maintenance is confirmed", () => {
+    render(
+      <TestWrapper>
+        <UnitDetails />
+      </TestWrapper>,
+    );
+
+    fireEvent.click(screen.getByTestId("tab-client"));
+    fireEvent.click(screen.getByTestId("schedule-maintenance-btn"));
+
+    expect(confirmSpy).toHaveBeenCalledWith(
+      "Do you want to open your calendar to schedule maintenance?",
+    );
+    expect(alertSpy).toHaveBeenCalledWith(
+      "Opening calendar application (placeholder action).",
+    );
+  });
+
+  it("should do nothing further when scheduling maintenance is cancelled", () => {
+    confirmSpy.mockReturnValue(false);
+
+    render(
+      <TestWrapper>
+        <UnitDetails />
+      </TestWrapper>,
+    );
+
+    fireEvent.click(screen.getByTestId("tab-client"));
+    fireEvent.click(screen.getByTestId("schedule-maintenance-btn"));
+
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(alertSpy).not.toHaveBeenCalled();
   });
 
   // ============================================================
@@ -407,10 +650,35 @@ describe("UnitDetails", () => {
       </TestWrapper>,
     );
 
-    const remoteTab = screen.getByTestId("tab-remote-control");
-    fireEvent.click(remoteTab);
+    fireEvent.click(screen.getByTestId("tab-remote-control"));
 
     expect(screen.getByTestId("remote-control-tab")).toBeInTheDocument();
     expect(screen.getByText(/Unit: Test Unit A/)).toBeInTheDocument();
+  });
+
+  it("should pass computed waterProductionOn and autoSwitchEnabled to RemoteControl", () => {
+    render(
+      <TestWrapper>
+        <UnitDetails />
+      </TestWrapper>,
+    );
+
+    fireEvent.click(screen.getByTestId("tab-remote-control"));
+
+    expect(screen.getByText("Water Production On: true")).toBeInTheDocument();
+    expect(screen.getByText("Auto Switch: true")).toBeInTheDocument();
+  });
+
+  it("should reflect waterProductionOn as false when watergeneration is false", () => {
+    const noWaterUnit = { ...mockUnit, watergeneration: false };
+    render(
+      <TestWrapper unit={noWaterUnit}>
+        <UnitDetails />
+      </TestWrapper>,
+    );
+
+    fireEvent.click(screen.getByTestId("tab-remote-control"));
+
+    expect(screen.getByText("Water Production On: false")).toBeInTheDocument();
   });
 });
