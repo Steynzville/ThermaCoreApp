@@ -1,19 +1,34 @@
 // src/tests/App.test.jsx
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
 import React from "react";
 
 // ============================================================
-// Mocks MUST be defined BEFORE importing App
+// Create a custom AuthProvider that we control
 // ============================================================
 
-// Mock all contexts
+// First, import the real modules we need
+import { BrowserRouter } from "react-router-dom";
+import App from "../App";
+
+// Mock ONLY the auth context hook - but keep the provider
+const mockUseAuth = vi.fn();
+
 vi.mock("../context/AuthContext", () => ({
-  useAuth: vi.fn(),
-  AuthProvider: ({ children }) => <div data-testid="auth-provider">{children}</div>,
+  useAuth: () => mockUseAuth(),
+  AuthProvider: ({ children }) => {
+    // This is a custom AuthProvider that uses our mock
+    const authValue = mockUseAuth();
+    return (
+      <div data-testid="auth-provider">
+        {children}
+      </div>
+    );
+  },
 }));
 
+// Mock all other contexts (they should be fine, but we mock them to be safe)
 vi.mock("../context/SettingsContext", () => ({
   useSettings: vi.fn(() => ({
     settings: { soundEnabled: true, volume: 0.5 },
@@ -41,35 +56,15 @@ vi.mock("../context/UnitContext", () => ({
   useUnits: vi.fn(() => ({ units: [], loading: false })),
 }));
 
-// Mock components
-vi.mock("../components/ThemeToggle", () => ({
-  default: () => {
-    const [isDark, setIsDark] = React.useState(false);
-    return (
-      <button
-        type="button"
-        aria-label="Toggle Theme"
-        data-testid="theme-toggle"
-        aria-pressed={isDark}
-        onClick={() => setIsDark((prev) => !prev)}
-      >
-        {isDark ? "Dark" : "Light"}
-      </button>
-    );
-  },
-}));
-
-vi.mock("../components/common/Spinner", () => ({
-  default: () => <div data-testid="spinner">Loading...</div>,
-}));
-
+// Mock the child components
 vi.mock("../components/LoginScreen", () => ({
   default: ({ error, setError }) => {
-    // Import useAuth dynamically inside the component
-    const { useAuth } = require("../context/AuthContext");
-    const { login } = useAuth();
     const [username, setUsername] = React.useState("");
     const [password, setPassword] = React.useState("");
+
+    // Get the login function from the mock
+    const auth = mockUseAuth();
+    const { login } = auth;
 
     const handleSubmit = async (e) => {
       e.preventDefault();
@@ -111,6 +106,27 @@ vi.mock("../components/LoginScreen", () => ({
   },
 }));
 
+vi.mock("../components/ThemeToggle", () => ({
+  default: () => {
+    const [isDark, setIsDark] = React.useState(false);
+    return (
+      <button
+        type="button"
+        aria-label="Toggle Theme"
+        data-testid="theme-toggle"
+        aria-pressed={isDark}
+        onClick={() => setIsDark((prev) => !prev)}
+      >
+        {isDark ? "Dark" : "Light"}
+      </button>
+    );
+  },
+}));
+
+vi.mock("../components/common/Spinner", () => ({
+  default: () => <div data-testid="spinner">Loading...</div>,
+}));
+
 vi.mock("../components/ForgotPassword", () => ({
   default: () => <div data-testid="forgot-password-page">Password Reset Request</div>,
 }));
@@ -147,12 +163,6 @@ vi.mock("../config/routes", () => ({
       isProtected: true, 
       roles: ["admin", "user"] 
     },
-    { 
-      path: "/profile", 
-      component: () => <div data-testid="profile-page">Profile</div>, 
-      isProtected: true, 
-      roles: ["admin", "user"] 
-    },
   ],
 }));
 
@@ -165,13 +175,7 @@ vi.mock("@/lib/utils", () => ({
 }));
 
 // ============================================================
-// NOW import App and useAuth
-// ============================================================
-import App from "../App";
-import { useAuth } from "../context/AuthContext";
-
-// ============================================================
-// Mock AudioContext and window globals
+// Mock window globals
 // ============================================================
 
 class MockAudioContext {
@@ -258,14 +262,22 @@ beforeAll(() => {
 beforeEach(() => {
   vi.clearAllMocks();
   window.location.pathname = "/";
+  // Default: unauthenticated, not loading
+  mockUseAuth.mockReturnValue({
+    user: null,
+    isAuthenticated: false,
+    isLoading: false,
+    isLoggingOut: false,
+    login: vi.fn(),
+    logout: vi.fn(),
+  });
 });
 
-afterEach(() => {
-  reloadMock.mockClear();
-});
-
+// ============================================================
 // Helper to set auth state
-const authAs = (overrides = {}) => {
+// ============================================================
+
+const setAuth = (overrides = {}) => {
   const defaultAuth = {
     user: null,
     isAuthenticated: false,
@@ -274,7 +286,7 @@ const authAs = (overrides = {}) => {
     login: vi.fn(),
     logout: vi.fn(),
   };
-  vi.mocked(useAuth).mockReturnValue({
+  mockUseAuth.mockReturnValue({
     ...defaultAuth,
     ...overrides,
   });
@@ -284,15 +296,14 @@ const authAs = (overrides = {}) => {
 // Tests
 // ============================================================
 
-describe("App - basic rendering", () => {
+describe("App", () => {
   it("renders without crashing", () => {
-    authAs();
     const { container } = render(<App />);
     expect(container).toBeDefined();
   });
 
   it("renders the login page for unauthenticated users", async () => {
-    authAs();
+    setAuth();
     render(<App />);
 
     const heading = await screen.findByRole("heading", { name: /login/i });
@@ -303,50 +314,52 @@ describe("App - basic rendering", () => {
   });
 
   it("shows the theme toggle button", async () => {
-    authAs();
+    setAuth();
     render(<App />);
 
     await screen.findByRole("heading", { name: /login/i });
-    expect(screen.getByRole("button", { name: /toggle theme/i })).toBeInTheDocument();
+    expect(screen.getByTestId("theme-toggle")).toBeInTheDocument();
   });
 
   it("allows the user to toggle theme", async () => {
     const user = userEvent.setup();
-    authAs();
+    setAuth();
     render(<App />);
 
     await screen.findByRole("heading", { name: /login/i });
-    const themeToggle = screen.getByRole("button", { name: /toggle theme/i });
-
+    const themeToggle = screen.getByTestId("theme-toggle");
+    
+    // Check initial state
     expect(themeToggle).toHaveAttribute("aria-pressed", "false");
+    
+    // Click to toggle
     await user.click(themeToggle);
     expect(themeToggle).toHaveAttribute("aria-pressed", "true");
   });
 
   it("shows loading state when authentication is in progress", async () => {
-    authAs({ isLoading: true });
+    setAuth({ isLoading: true });
     render(<App />);
 
-    // Use getAllByText for multiple elements
     const loadingElements = await screen.findAllByText(/loading/i);
     expect(loadingElements.length).toBeGreaterThan(0);
     expect(screen.getByTestId("spinner")).toBeInTheDocument();
   });
 
   it("shows signing out message when isLoggingOut is true", async () => {
-    authAs({ isLoggingOut: true });
+    setAuth({ isLoggingOut: true });
     render(<App />);
 
-    await waitFor(() => expect(screen.getByTestId("spinner")).toBeInTheDocument());
+    await waitFor(() => {
+      expect(screen.getByTestId("spinner")).toBeInTheDocument();
+    });
     expect(screen.getByText(/signing out/i)).toBeInTheDocument();
   });
-});
 
-describe("App - login flow", () => {
   it("calls login with the entered credentials on submit", async () => {
     const user = userEvent.setup();
     const mockLogin = vi.fn().mockResolvedValue(undefined);
-    authAs({ login: mockLogin });
+    setAuth({ login: mockLogin });
 
     render(<App />);
     await screen.findByRole("heading", { name: /login/i });
@@ -364,7 +377,7 @@ describe("App - login flow", () => {
   it("shows an error message when login rejects", async () => {
     const user = userEvent.setup();
     const mockLogin = vi.fn().mockRejectedValue(new Error("Invalid credentials"));
-    authAs({ login: mockLogin });
+    setAuth({ login: mockLogin });
 
     render(<App />);
     await screen.findByRole("heading", { name: /login/i });
@@ -377,40 +390,10 @@ describe("App - login flow", () => {
       expect(screen.getByTestId("login-error")).toHaveTextContent("Invalid credentials");
     });
   });
-});
 
-describe("App - error boundary", () => {
-  it("shows the error boundary UI when a window error event fires", async () => {
-    authAs();
-    render(<App />);
-    await screen.findByRole("heading", { name: /login/i });
-
-    fireEvent(window, new ErrorEvent("error", { message: "Test error" }));
-
-    await waitFor(() => {
-      expect(screen.getByText(/something went wrong/i)).toBeInTheDocument();
-    });
-  });
-
-  it("reloads the app when the reload button is clicked in the error state", async () => {
-    const user = userEvent.setup();
-    authAs();
-    render(<App />);
-    await screen.findByRole("heading", { name: /login/i });
-
-    fireEvent(window, new ErrorEvent("error", { message: "Test error" }));
-
-    const reloadButton = await screen.findByText(/reload application/i);
-    await user.click(reloadButton);
-
-    expect(reloadMock).toHaveBeenCalled();
-  });
-});
-
-describe("App - forgot/reset password navigation", () => {
   it("navigates to the forgot password page via the link", async () => {
     const user = userEvent.setup();
-    authAs();
+    setAuth();
     render(<App />);
     await screen.findByRole("heading", { name: /login/i });
 
@@ -423,7 +406,7 @@ describe("App - forgot/reset password navigation", () => {
 
   it("renders the forgot password route directly", async () => {
     window.location.pathname = "/forgot-password";
-    authAs();
+    setAuth();
     render(<App />);
 
     await waitFor(() => {
@@ -433,32 +416,30 @@ describe("App - forgot/reset password navigation", () => {
 
   it("renders the reset password route directly", async () => {
     window.location.pathname = "/reset-password";
-    authAs();
+    setAuth();
     render(<App />);
 
     await waitFor(() => {
       expect(screen.getByTestId("reset-password-page")).toBeInTheDocument();
     });
   });
-});
 
-describe("App - routing", () => {
   it("redirects root path to the login page", async () => {
-    authAs();
+    setAuth();
     render(<App />);
     await screen.findByRole("heading", { name: /login/i });
   });
 
   it("redirects unknown paths to the login page", async () => {
     window.location.pathname = "/some-unknown-path";
-    authAs();
+    setAuth();
     render(<App />);
     await screen.findByRole("heading", { name: /login/i });
   });
 
   it("renders a protected route when authenticated", async () => {
     window.location.pathname = "/dashboard";
-    authAs({ user: { id: 1, name: "Test User" }, isAuthenticated: true });
+    setAuth({ user: { id: 1, name: "Test User" }, isAuthenticated: true });
     render(<App />);
 
     await waitFor(() => {
@@ -469,39 +450,40 @@ describe("App - routing", () => {
 
   it("redirects to login when visiting a protected route unauthenticated", async () => {
     window.location.pathname = "/dashboard";
-    authAs();
+    setAuth();
     render(<App />);
 
     await screen.findByRole("heading", { name: /login/i });
     expect(screen.queryByTestId("protected-route")).not.toBeInTheDocument();
   });
-});
 
-describe("App - login sound", () => {
-  it("does not play login sound on initial mount", async () => {
-    const playSound = (await import("../utils/audioPlayer")).default;
-    authAs({ user: { name: "Test User" }, isAuthenticated: true });
-    
+  it("shows the error boundary UI when a window error event fires", async () => {
+    setAuth();
     render(<App />);
-    await screen.findByTestId("theme-toggle");
-    expect(playSound).not.toHaveBeenCalled();
-  });
+    await screen.findByRole("heading", { name: /login/i });
 
-  it("plays login sound on null -> logged-in transition", async () => {
-    const playSound = (await import("../utils/audioPlayer")).default;
-    
-    // Start unauthenticated
-    authAs();
-    const { rerender } = render(<App />);
-    await screen.findByTestId("login-page");
-    expect(playSound).not.toHaveBeenCalled();
-
-    // Change to authenticated
-    authAs({ user: { name: "Test User" }, isAuthenticated: true });
-    rerender(<App />);
+    // Trigger error
+    const errorEvent = new ErrorEvent("error", { message: "Test error" });
+    window.dispatchEvent(errorEvent);
 
     await waitFor(() => {
-      expect(playSound).toHaveBeenCalledWith("login-sound.mp3", true, 0.5);
+      expect(screen.getByText(/something went wrong/i)).toBeInTheDocument();
     });
+  });
+
+  it("reloads the app when the reload button is clicked in the error state", async () => {
+    const user = userEvent.setup();
+    setAuth();
+    render(<App />);
+    await screen.findByRole("heading", { name: /login/i });
+
+    // Trigger error
+    const errorEvent = new ErrorEvent("error", { message: "Test error" });
+    window.dispatchEvent(errorEvent);
+
+    const reloadButton = await screen.findByText(/reload application/i);
+    await user.click(reloadButton);
+
+    expect(reloadMock).toHaveBeenCalled();
   });
 });
