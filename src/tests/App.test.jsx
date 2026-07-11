@@ -3,64 +3,56 @@ import { beforeEach, describe, expect, it, vi, beforeAll, afterAll } from "vites
 
 import App from "../App";
 
-// Mock AuthContext to return unauthenticated state with loading false
+// ============================================================
+// Mock dependencies - NOT the App component itself
+// ============================================================
+
+// Mock AuthContext
 vi.mock("../context/AuthContext", () => ({
-  useAuth: () => ({
+  useAuth: vi.fn(() => ({
     user: null,
     isAuthenticated: false,
-    loading: false,
     isLoading: false,
     isLoggingOut: false,
     login: vi.fn(),
     logout: vi.fn(),
-    register: vi.fn(),
-    updateProfile: vi.fn(),
-  }),
+  })),
   AuthProvider: ({ children }) => <div data-testid="auth-provider">{children}</div>,
 }));
 
 // Mock SettingsContext
 vi.mock("../context/SettingsContext", () => ({
-  useSettings: () => ({
+  useSettings: vi.fn(() => ({
     settings: {
       soundEnabled: true,
-      sound: true,
       volume: 0.5,
-      temperatureUnit: "celsius",
     },
-    toggleSound: vi.fn(),
-    setVolume: vi.fn(),
-    setTemperatureUnit: vi.fn(),
-  }),
+  })),
   SettingsProvider: ({ children }) => <div data-testid="settings-provider">{children}</div>,
 }));
 
 // Mock ThemeContext
 vi.mock("../context/ThemeContext", () => ({
-  useTheme: () => ({
-    theme: "light",
-    toggleTheme: vi.fn(),
-    setTheme: vi.fn(),
-  }),
   ThemeProvider: ({ children }) => <div data-testid="theme-provider">{children}</div>,
+  useTheme: vi.fn(() => ({ theme: "light", toggleTheme: vi.fn() })),
 }));
 
 // Mock SidebarContext
 vi.mock("../context/SidebarContext", () => ({
   SidebarProvider: ({ children }) => <div data-testid="sidebar-provider">{children}</div>,
-  useSidebar: () => ({ isOpen: true, toggleSidebar: vi.fn() }),
+  useSidebar: vi.fn(() => ({ isOpen: true, toggleSidebar: vi.fn() })),
 }));
 
 // Mock TenantContext
 vi.mock("../context/TenantContext", () => ({
   TenantProvider: ({ children }) => <div data-testid="tenant-provider">{children}</div>,
-  useTenant: () => ({ tenant: null, setTenant: vi.fn() }),
+  useTenant: vi.fn(() => ({ tenant: null, setTenant: vi.fn() })),
 }));
 
 // Mock UnitContext
 vi.mock("../context/UnitContext", () => ({
   UnitProvider: ({ children }) => <div data-testid="unit-provider">{children}</div>,
-  useUnits: () => ({ units: [], loading: false }),
+  useUnits: vi.fn(() => ({ units: [], loading: false })),
 }));
 
 // Mock the cn utility
@@ -68,66 +60,39 @@ vi.mock("@/lib/utils", () => ({
   cn: (...inputs) => inputs.filter(Boolean).join(" "),
 }));
 
-// Mock the ThemeToggle component
+// Mock ThemeToggle
 vi.mock("../components/ThemeToggle", () => ({
-  default: () => (
-    <button 
-      aria-label="Toggle Theme"
-      data-testid="theme-toggle"
-      type="button"
-    >
-      Toggle Theme
-    </button>
-  ),
+  default: () => <button data-testid="theme-toggle">Toggle Theme</button>,
 }));
 
-// Mock the Spinner component
+// Mock Spinner
 vi.mock("../components/common/Spinner", () => ({
-  default: ({ size, className }) => (
-    <div data-testid="spinner" data-size={size} className={className}>
-      Loading...
-    </div>
-  ),
+  default: () => <div data-testid="spinner">Loading...</div>,
 }));
 
-// Mock the LoginScreen component
+// Mock LoginScreen
 vi.mock("../components/LoginScreen", () => ({
   default: ({ error, setError }) => (
-    <div data-testid="login-page" className="login-page">
+    <div data-testid="login-page">
       <h1>Login</h1>
-      <div>
-        <label>
-          Username
-          <input type="text" placeholder="Username" data-testid="username-input" />
-        </label>
-      </div>
-      <div>
-        <label>
-          Password
-          <input type="password" placeholder="Password" data-testid="password-input" />
-        </label>
-      </div>
+      <input data-testid="username-input" placeholder="Username" />
+      <input data-testid="password-input" placeholder="Password" type="password" />
       {error && <div data-testid="login-error">{error}</div>}
-      <button data-testid="login-button" type="button" onClick={() => setError("")}>Login</button>
+      <button data-testid="login-button">Login</button>
     </div>
   ),
 }));
 
-// Mock the ProtectedRoute component
+// Mock ProtectedRoute
 vi.mock("../components/ProtectedRoute", () => ({
-  default: ({ children }) => <div data-testid="protected-content">{children || "Protected Content"}</div>,
+  default: ({ component: Component, componentMap, roles }) => (
+    <div data-testid="protected-route">
+      {Component ? <Component /> : <div>Protected Content</div>}
+    </div>
+  ),
 }));
 
-// Mock config/routes
-vi.mock("../config/routes", () => ({
-  default: [
-    { path: "/", component: () => <div data-testid="home-page">Home</div>, isProtected: false },
-    { path: "/dashboard", component: () => <div data-testid="dashboard-page">Dashboard</div>, isProtected: true, roles: ["admin", "user"] },
-    { path: "/admin", component: () => <div data-testid="admin-page">Admin</div>, isProtected: true, roles: ["admin"] },
-  ],
-}));
-
-// Mock lazy loading for components
+// Mock lazy-loaded components
 vi.mock("../components/UnitControl", () => ({
   default: () => <div data-testid="unit-control">Unit Control</div>,
 }));
@@ -140,56 +105,23 @@ vi.mock("../components/UnitDetails", () => ({
   default: () => <div data-testid="unit-details">Unit Details</div>,
 }));
 
-// Mock the AppContent component to avoid lazy loading issues
-// This is the key fix - we mock the entire AppContent
-vi.mock("../App", async () => {
-  const actual = await vi.importActual("../App");
-  return {
-    ...actual,
-    // Override the default export to use our mocked version
-    default: () => (
-      <div data-testid="theme-provider">
-        <div data-testid="settings-provider">
-          <div data-testid="auth-provider">
-            <div data-testid="tenant-provider">
-              <div data-testid="unit-provider">
-                <div data-testid="sidebar-provider">
-                  <div className="min-h-screen bg-background text-foreground relative">
-                    <button
-                      aria-label="Toggle Theme"
-                      data-testid="theme-toggle"
-                      type="button"
-                    >
-                      Toggle Theme
-                    </button>
-                    <div data-testid="login-page" className="login-page">
-                      <h1>Login</h1>
-                      <div>
-                        <label>
-                          Username
-                          <input type="text" placeholder="Username" data-testid="username-input" />
-                        </label>
-                      </div>
-                      <div>
-                        <label>
-                          Password
-                          <input type="password" placeholder="Password" data-testid="password-input" />
-                        </label>
-                      </div>
-                      <button data-testid="login-button" type="button">Login</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    ),
-  };
-});
+// Mock routes
+vi.mock("../config/routes", () => ({
+  default: [
+    { path: "/", component: () => <div>Home</div>, isProtected: false },
+    { path: "/dashboard", component: () => <div>Dashboard</div>, isProtected: true, roles: ["admin", "user"] },
+  ],
+}));
 
-// Mock AudioContext globally
+// Mock audioPlayer to prevent actual sound playback
+vi.mock("../utils/audioPlayer", () => ({
+  default: vi.fn(),
+}));
+
+// ============================================================
+// Mock AudioContext and window globals
+// ============================================================
+
 class MockAudioContext {
   constructor() {
     this.state = "suspended";
@@ -224,11 +156,8 @@ class MockAudioContext {
   }
 }
 
-// Setup AudioContext mock and window.location before all tests
 beforeAll(() => {
-  const originalAudioContext = window.AudioContext;
-  const originalWebkitAudioContext = window.webkitAudioContext;
-
+  // Mock AudioContext
   Object.defineProperty(window, "AudioContext", {
     writable: true,
     configurable: true,
@@ -241,43 +170,24 @@ beforeAll(() => {
     value: MockAudioContext,
   });
 
+  // Mock location
   Object.defineProperty(window, "location", {
     writable: true,
     configurable: true,
     value: {
       href: "http://localhost/",
-      origin: "http://localhost",
       pathname: "/",
-      search: "",
-      hash: "",
-      assign: vi.fn(),
-      replace: vi.fn(),
       reload: vi.fn(),
     },
   });
 
-  Object.defineProperty(window, "history", {
-    writable: true,
-    configurable: true,
-    value: {
-      pushState: vi.fn(),
-      replaceState: vi.fn(),
-      go: vi.fn(),
-      back: vi.fn(),
-      forward: vi.fn(),
-      length: 0,
-      scrollRestoration: "auto",
-      state: null,
-    },
-  });
-
+  // Mock matchMedia
   Object.defineProperty(window, "matchMedia", {
     writable: true,
     configurable: true,
     value: (query) => ({
       matches: false,
       media: query,
-      onchange: null,
       addListener: vi.fn(),
       removeListener: vi.fn(),
       addEventListener: vi.fn(),
@@ -291,100 +201,54 @@ beforeAll(() => {
     unobserve: vi.fn(),
     disconnect: vi.fn(),
   }));
-
-  window.IntersectionObserver = vi.fn().mockImplementation(() => ({
-    observe: vi.fn(),
-    unobserve: vi.fn(),
-    disconnect: vi.fn(),
-  }));
-
-  return () => {
-    Object.defineProperty(window, "AudioContext", {
-      writable: true,
-      configurable: true,
-      value: originalAudioContext,
-    });
-    Object.defineProperty(window, "webkitAudioContext", {
-      writable: true,
-      configurable: true,
-      value: originalWebkitAudioContext,
-    });
-  };
 });
 
-// Mock localStorage
-const createStorageMock = () => {
-  let store = {};
-  return {
-    getItem: (key) => (key in store ? store[key] : null),
-    setItem: (key, value) => { store[key] = value.toString(); },
-    removeItem: (key) => { delete store[key]; },
-    clear: () => { store = {}; },
-    get length() { return Object.keys(store).length; },
-    key: (index) => Object.keys(store)[index] || null,
-  };
-};
+// ============================================================
+// Tests
+// ============================================================
 
 describe("App", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it("renders without crashing", () => {
+    const { container } = render(<App />);
+    expect(container).toBeDefined();
+  });
+
+  it("renders the login page for unauthenticated users", async () => {
+    render(<App />);
     
-    Object.defineProperty(window, "localStorage", {
-      value: createStorageMock(),
-      writable: true,
+    await waitFor(() => {
+      expect(screen.getByTestId("login-page")).toBeInTheDocument();
     });
-    Object.defineProperty(window, "sessionStorage", {
-      value: createStorageMock(),
-      writable: true,
+  });
+
+  it("renders theme toggle button", async () => {
+    render(<App />);
+    
+    await waitFor(() => {
+      expect(screen.getByTestId("theme-toggle")).toBeInTheDocument();
     });
-    
-    window.location.pathname = "/";
   });
 
-  it("renders Login page for unauthenticated user", async () => {
+  it("shows loading state when isLoading is true", async () => {
+    // Override the mock to show loading
+    const { useAuth } = await import("../context/AuthContext");
+    vi.mocked(useAuth).mockReturnValue({
+      user: null,
+      isAuthenticated: false,
+      isLoading: true,
+      isLoggingOut: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+    });
+
     render(<App />);
     
-    const loginElements = await screen.findAllByTestId("login-page");
-    expect(loginElements.length).toBeGreaterThan(0);
-    
-    const usernameElements = await screen.findAllByTestId("username-input");
-    expect(usernameElements.length).toBeGreaterThan(0);
-  });
-
-  it("renders with all required providers", async () => {
-    render(<App />);
-    
-    const loginElements = await screen.findAllByTestId("login-page");
-    expect(loginElements.length).toBeGreaterThan(0);
-    
-    const usernameElements = await screen.findAllByTestId("username-input");
-    expect(usernameElements.length).toBeGreaterThan(0);
-  });
-
-  it("redirects to /login when accessing root path", async () => {
-    render(<App />);
-    
-    const loginElements = await screen.findAllByTestId("login-page");
-    expect(loginElements.length).toBeGreaterThan(0);
-    
-    const usernameElements = await screen.findAllByTestId("username-input");
-    expect(usernameElements.length).toBeGreaterThan(0);
-  });
-
-  it("renders router with routes", () => {
-    render(<App />);
-    const appElement = document.querySelector(".min-h-screen");
-    expect(appElement).toBeInTheDocument();
-  });
-
-  it("mounts and unmounts without errors", () => {
-    const { unmount } = render(<App />);
-    expect(() => unmount()).not.toThrow();
-  });
-
-  it("renders theme toggle component", () => {
-    render(<App />);
-    const themeToggleElements = screen.getAllByTestId("theme-toggle");
-    expect(themeToggleElements.length).toBeGreaterThan(0);
+    await waitFor(() => {
+      expect(screen.getByTestId("spinner")).toBeInTheDocument();
+    });
   });
 });
