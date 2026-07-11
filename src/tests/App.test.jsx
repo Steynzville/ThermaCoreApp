@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from "vite
 import React from "react";
 
 // ============================================================
-// Use vi.hoisted() for the auth mock object only
+// Use vi.hoisted() for the auth mock object only - NO React.createContext
 // ============================================================
 
 const { authMock } = vi.hoisted(() => {
@@ -24,22 +24,11 @@ const { authMock } = vi.hoisted(() => {
 // Mock ALL contexts BEFORE importing App
 // ============================================================
 
-// Create the context INSIDE the mock factory, not in vi.hoisted()
-vi.mock("../context/AuthContext", () => {
-  const context = React.createContext(authMock);
-  return {
-    default: context,
-    AuthContext: context,
-    useAuth: () => authMock,
-    AuthProvider: ({ children }) => {
-      return (
-        <context.Provider value={authMock}>
-          <div data-testid="auth-provider">{children}</div>
-        </context.Provider>
-      );
-    },
-  };
-});
+vi.mock("../context/AuthContext", () => ({
+  default: authMock,
+  useAuth: () => authMock,
+  AuthProvider: ({ children }) => <div data-testid="auth-provider">{children}</div>,
+}));
 
 // Mock all other contexts
 vi.mock("../context/SettingsContext", () => ({
