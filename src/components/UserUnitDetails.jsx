@@ -21,7 +21,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
@@ -60,52 +60,56 @@ const UserUnitDetails = ({ className }) => {
 
   // Real-time data hooks for live values
   const { metrics } = useRealtimeMetrics({ useMockData: true });
-  const [liveUnit, setLiveUnit] = useState(unit || {});
 
-  useEffect(() => {
-    if (unit) {
-      setLiveUnit(unit);
+  // FIX: Use useMemo instead of useState + useEffect to avoid infinite loop
+  const liveUnit = useMemo(() => {
+    if (!unit) return {};
+
+    const tempBase = parseFloat(metrics?.temperature?.current) || 70;
+    const pressureBase = parseFloat(metrics?.pressure?.current) || 100;
+    const flowInBase = parseFloat(
+      metrics?.flow_rate_inlet?.current ||
+        metrics?.flowRateInlet?.current ||
+        45.5,
+    );
+    const flowOutBase = parseFloat(
+      metrics?.flow_rate_outlet?.current ||
+        metrics?.flowRateOutlet?.current ||
+        42.1,
+    );
+
+    const idOffset = (unit.id?.toString() || "").charCodeAt(0) || 0;
+
+    // Only calculate derived values if not offline
+    if (isOffline) {
+      return {
+        ...unit,
+        temp_in: undefined,
+        temp_out: undefined,
+        pressure: undefined,
+        flow_rate_inlet: flowInBase,
+        flow_rate_outlet: flowOutBase,
+      };
     }
-  }, [unit]);
 
-  useEffect(() => {
-    if (metrics && !isOffline && unit) {
-      setLiveUnit((prev) => {
-        const tempBase = parseFloat(metrics.temperature?.current) || 70;
-        const pressureBase = parseFloat(metrics.pressure?.current) || 100;
-        const flowInBase = parseFloat(
-          metrics.flow_rate_inlet?.current ||
-            metrics.flowRateInlet?.current ||
-            45.5,
-        );
-        const flowOutBase = parseFloat(
-          metrics.flow_rate_outlet?.current ||
-            metrics.flowRateOutlet?.current ||
-            42.1,
-        );
-
-        const idOffset = (prev.id?.toString() || "").charCodeAt(0) || 0;
-
-        return {
-          ...prev,
-          temp_in:
-            prev.temp_in !== undefined
-              ? +(tempBase * 0.4 + (idOffset % 5)).toFixed(1)
-              : undefined,
-          temp_out:
-            prev.temp_out !== undefined
-              ? +(tempBase * 0.1 + (idOffset % 3)).toFixed(1)
-              : undefined,
-          pressure:
-            prev.pressure !== undefined
-              ? +(pressureBase * 1.5 + (idOffset % 20)).toFixed(1)
-              : undefined,
-          flow_rate_inlet: +(flowInBase + (idOffset % 5) - 2.5).toFixed(1),
-          flow_rate_outlet: +(flowOutBase + (idOffset % 3) - 1.5).toFixed(1),
-        };
-      });
-    }
-  }, [metrics, isOffline, unit]);
+    return {
+      ...unit,
+      temp_in:
+        unit.temp_in !== undefined
+          ? +(tempBase * 0.4 + (idOffset % 5)).toFixed(1)
+          : undefined,
+      temp_out:
+        unit.temp_out !== undefined
+          ? +(tempBase * 0.1 + (idOffset % 3)).toFixed(1)
+          : undefined,
+      pressure:
+        unit.pressure !== undefined
+          ? +(pressureBase * 1.5 + (idOffset % 20)).toFixed(1)
+          : undefined,
+      flow_rate_inlet: +(flowInBase + (idOffset % 5) - 2.5).toFixed(1),
+      flow_rate_outlet: +(flowOutBase + (idOffset % 3) - 1.5).toFixed(1),
+    };
+  }, [metrics, unit, isOffline]);
 
   const getFlowRateColor = (val) => {
     if (val === undefined || val === null || isOffline)
