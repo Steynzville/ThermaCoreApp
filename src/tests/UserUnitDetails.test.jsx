@@ -126,9 +126,18 @@ const mockUnit = {
   gpsCoordinates: "40.7128, -74.0060",
 };
 
-const TestWrapper = ({ children, initialEntries = ["/units/unit-1"] }) => {
+// ============================================================
+// Test Wrapper that passes unit via location.state
+// ============================================================
+const TestWrapper = ({ children, unit = mockUnit, initialEntries = ["/units/unit-1"] }) => {
+  const locationState = { state: { unit } };
+  const entries = initialEntries.map((entry) => ({
+    pathname: entry,
+    state: locationState.state,
+  }));
+
   return (
-    <MemoryRouter initialEntries={initialEntries}>
+    <MemoryRouter initialEntries={entries}>
       <Routes>
         <Route
           path="/units/:id"
@@ -137,6 +146,14 @@ const TestWrapper = ({ children, initialEntries = ["/units/unit-1"] }) => {
         <Route
           path="/dashboard"
           element={<div data-testid="dashboard-page">Dashboard</div>}
+        />
+        <Route
+          path="/remote-control"
+          element={<div data-testid="remote-control-page">Remote Control</div>}
+        />
+        <Route
+          path="/unit-performance/:id"
+          element={<div data-testid="unit-performance-page">Unit Performance</div>}
         />
       </Routes>
     </MemoryRouter>
@@ -155,7 +172,7 @@ describe("UserUnitDetails", () => {
   it("should render without crashing", () => {
     const { container } = render(
       <TestWrapper>
-        <UserUnitDetails unit={mockUnit} />
+        <UserUnitDetails />
       </TestWrapper>,
     );
     expect(container).toBeDefined();
@@ -164,7 +181,7 @@ describe("UserUnitDetails", () => {
   it("should render unit details when unit data is provided", () => {
     render(
       <TestWrapper>
-        <UserUnitDetails unit={mockUnit} />
+        <UserUnitDetails />
       </TestWrapper>,
     );
 
@@ -176,7 +193,7 @@ describe("UserUnitDetails", () => {
   it("should display unit status badge", () => {
     render(
       <TestWrapper>
-        <UserUnitDetails unit={mockUnit} />
+        <UserUnitDetails />
       </TestWrapper>,
     );
 
@@ -185,7 +202,7 @@ describe("UserUnitDetails", () => {
 
   it("should show 'Unit Not Found' when no unit is provided", () => {
     render(
-      <TestWrapper>
+      <TestWrapper unit={null}>
         <UserUnitDetails />
       </TestWrapper>,
     );
@@ -196,7 +213,7 @@ describe("UserUnitDetails", () => {
 
   it("should navigate back to dashboard when 'Return to Dashboard' is clicked", () => {
     render(
-      <TestWrapper>
+      <TestWrapper unit={null}>
         <UserUnitDetails />
       </TestWrapper>,
     );
@@ -214,7 +231,7 @@ describe("UserUnitDetails", () => {
   it("should show Overview tab by default", () => {
     render(
       <TestWrapper>
-        <UserUnitDetails unit={mockUnit} />
+        <UserUnitDetails />
       </TestWrapper>,
     );
 
@@ -225,7 +242,7 @@ describe("UserUnitDetails", () => {
   it("should switch to History tab when clicked", () => {
     render(
       <TestWrapper>
-        <UserUnitDetails unit={mockUnit} />
+        <UserUnitDetails />
       </TestWrapper>,
     );
 
@@ -239,7 +256,7 @@ describe("UserUnitDetails", () => {
   it("should switch to Alerts tab when clicked", () => {
     render(
       <TestWrapper>
-        <UserUnitDetails unit={mockUnit} />
+        <UserUnitDetails />
       </TestWrapper>,
     );
 
@@ -252,7 +269,7 @@ describe("UserUnitDetails", () => {
   it("should respect tab query parameter", () => {
     render(
       <TestWrapper initialEntries={["/units/unit-1?tab=history"]}>
-        <UserUnitDetails unit={mockUnit} />
+        <UserUnitDetails />
       </TestWrapper>,
     );
 
@@ -267,24 +284,27 @@ describe("UserUnitDetails", () => {
   it("should navigate to remote control when Manage Remotely is clicked", () => {
     render(
       <TestWrapper>
-        <UserUnitDetails unit={mockUnit} />
+        <UserUnitDetails />
       </TestWrapper>,
     );
 
     const remoteButton = screen.getByTestId("button-remote-control");
     expect(remoteButton).toBeInTheDocument();
-    // Note: Navigation is handled by react-router, we verify button exists
+    fireEvent.click(remoteButton);
+    expect(screen.getByTestId("remote-control-page")).toBeInTheDocument();
   });
 
   it("should navigate to unit performance when Unit Performance is clicked", () => {
     render(
       <TestWrapper>
-        <UserUnitDetails unit={mockUnit} />
+        <UserUnitDetails />
       </TestWrapper>,
     );
 
     const performanceButton = screen.getByTestId("button-unit-performance");
     expect(performanceButton).toBeInTheDocument();
+    fireEvent.click(performanceButton);
+    expect(screen.getByTestId("unit-performance-page")).toBeInTheDocument();
   });
 
   // ============================================================
@@ -294,7 +314,7 @@ describe("UserUnitDetails", () => {
   it("should show edit name input when edit icon is clicked", () => {
     render(
       <TestWrapper>
-        <UserUnitDetails unit={mockUnit} />
+        <UserUnitDetails />
       </TestWrapper>,
     );
 
@@ -314,7 +334,7 @@ describe("UserUnitDetails", () => {
 
     render(
       <TestWrapper>
-        <UserUnitDetails unit={mockUnit} />
+        <UserUnitDetails />
       </TestWrapper>,
     );
 
@@ -332,36 +352,20 @@ describe("UserUnitDetails", () => {
     });
   });
 
-  // ============================================================
-  // Offline State Tests
-  // ============================================================
-
-  it("should show 'N/A' for metrics when unit is offline", () => {
-    const offlineUnit = { ...mockUnit, status: "offline" };
+  it("should cancel name edit when X button is clicked", () => {
     render(
       <TestWrapper>
-        <UserUnitDetails unit={offlineUnit} />
+        <UserUnitDetails />
       </TestWrapper>,
     );
 
-    // Should show N/A for temperature, pressure, flow rate
-    expect(screen.getAllByText("N/A").length).toBeGreaterThan(0);
-  });
+    const editButtons = screen.getAllByTestId("icon-edit");
+    fireEvent.click(editButtons[0]);
 
-  // ============================================================
-  // Alarm Alert Tests
-  // ============================================================
+    const cancelButton = screen.getByTestId("icon-x");
+    fireEvent.click(cancelButton);
 
-  it("should show NH3 alarm alert when unit has alarm", () => {
-    const alarmUnit = { ...mockUnit, hasAlarm: true };
-    render(
-      <TestWrapper>
-        <UserUnitDetails unit={alarmUnit} />
-      </TestWrapper>,
-    );
-
-    expect(screen.getByText(/🚨 NH3 LEAK DETECTED 🚨/)).toBeInTheDocument();
-    expect(screen.getByText(/Toxic ammonia leak detected/)).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("Test Unit A")).not.toBeInTheDocument();
   });
 
   // ============================================================
@@ -371,7 +375,7 @@ describe("UserUnitDetails", () => {
   it("should show edit location input when edit icon is clicked", () => {
     render(
       <TestWrapper>
-        <UserUnitDetails unit={mockUnit} />
+        <UserUnitDetails />
       </TestWrapper>,
     );
 
@@ -391,7 +395,7 @@ describe("UserUnitDetails", () => {
 
     render(
       <TestWrapper>
-        <UserUnitDetails unit={mockUnit} />
+        <UserUnitDetails />
       </TestWrapper>,
     );
 
@@ -409,30 +413,10 @@ describe("UserUnitDetails", () => {
     });
   });
 
-  // ============================================================
-  // Cancel Edit Tests
-  // ============================================================
-
-  it("should cancel name edit when X button is clicked", () => {
-    render(
-      <TestWrapper>
-        <UserUnitDetails unit={mockUnit} />
-      </TestWrapper>,
-    );
-
-    const editButtons = screen.getAllByTestId("icon-edit");
-    fireEvent.click(editButtons[0]);
-
-    const cancelButton = screen.getByTestId("icon-x");
-    fireEvent.click(cancelButton);
-
-    expect(screen.queryByDisplayValue("Test Unit A")).not.toBeInTheDocument();
-  });
-
   it("should cancel location edit when X button is clicked", () => {
     render(
       <TestWrapper>
-        <UserUnitDetails unit={mockUnit} />
+        <UserUnitDetails />
       </TestWrapper>,
     );
 
@@ -446,13 +430,46 @@ describe("UserUnitDetails", () => {
   });
 
   // ============================================================
+  // Offline State Tests
+  // ============================================================
+
+  it("should show 'N/A' for metrics when unit is offline", () => {
+    const offlineUnit = { ...mockUnit, status: "offline" };
+    render(
+      <TestWrapper unit={offlineUnit}>
+        <UserUnitDetails />
+      </TestWrapper>,
+    );
+
+    // Should show N/A for temperature, pressure, flow rate
+    const naElements = screen.getAllByText("N/A");
+    expect(naElements.length).toBeGreaterThan(0);
+  });
+
+  // ============================================================
+  // Alarm Alert Tests
+  // ============================================================
+
+  it("should show NH3 alarm alert when unit has alarm", () => {
+    const alarmUnit = { ...mockUnit, hasAlarm: true };
+    render(
+      <TestWrapper unit={alarmUnit}>
+        <UserUnitDetails />
+      </TestWrapper>,
+    );
+
+    expect(screen.getByText(/🚨 NH3 LEAK DETECTED 🚨/)).toBeInTheDocument();
+    expect(screen.getByText(/Toxic ammonia leak detected/)).toBeInTheDocument();
+  });
+
+  // ============================================================
   // Status Color Tests
   // ============================================================
 
   it("should show green status for online units", () => {
     render(
       <TestWrapper>
-        <UserUnitDetails unit={{ ...mockUnit, status: "online" }} />
+        <UserUnitDetails />
       </TestWrapper>,
     );
 
@@ -461,9 +478,10 @@ describe("UserUnitDetails", () => {
   });
 
   it("should show red status for offline units", () => {
+    const offlineUnit = { ...mockUnit, status: "offline" };
     render(
-      <TestWrapper>
-        <UserUnitDetails unit={{ ...mockUnit, status: "offline" }} />
+      <TestWrapper unit={offlineUnit}>
+        <UserUnitDetails />
       </TestWrapper>,
     );
 
@@ -472,9 +490,10 @@ describe("UserUnitDetails", () => {
   });
 
   it("should show yellow status for maintenance units", () => {
+    const maintenanceUnit = { ...mockUnit, status: "maintenance" };
     render(
-      <TestWrapper>
-        <UserUnitDetails unit={{ ...mockUnit, status: "maintenance" }} />
+      <TestWrapper unit={maintenanceUnit}>
+        <UserUnitDetails />
       </TestWrapper>,
     );
 
@@ -487,9 +506,10 @@ describe("UserUnitDetails", () => {
   // ============================================================
 
   it("should show red color for high flow rate", () => {
+    const highFlowUnit = { ...mockUnit, flowRate: 95 };
     render(
-      <TestWrapper>
-        <UserUnitDetails unit={{ ...mockUnit, flowRate: 95 }} />
+      <TestWrapper unit={highFlowUnit}>
+        <UserUnitDetails />
       </TestWrapper>,
     );
 
@@ -498,9 +518,10 @@ describe("UserUnitDetails", () => {
   });
 
   it("should show yellow color for medium flow rate", () => {
+    const mediumFlowUnit = { ...mockUnit, flowRate: 75 };
     render(
-      <TestWrapper>
-        <UserUnitDetails unit={{ ...mockUnit, flowRate: 75 }} />
+      <TestWrapper unit={mediumFlowUnit}>
+        <UserUnitDetails />
       </TestWrapper>,
     );
 
@@ -511,7 +532,7 @@ describe("UserUnitDetails", () => {
   it("should show green color for normal flow rate", () => {
     render(
       <TestWrapper>
-        <UserUnitDetails unit={{ ...mockUnit, flowRate: 45.5 }} />
+        <UserUnitDetails />
       </TestWrapper>,
     );
 
@@ -526,7 +547,7 @@ describe("UserUnitDetails", () => {
   it("should update metrics from realtime data", () => {
     render(
       <TestWrapper>
-        <UserUnitDetails unit={mockUnit} />
+        <UserUnitDetails />
       </TestWrapper>,
     );
 
@@ -542,7 +563,7 @@ describe("UserUnitDetails", () => {
   it("should show water-related metrics for units with water generation", () => {
     render(
       <TestWrapper>
-        <UserUnitDetails unit={{ ...mockUnit, watergeneration: true }} />
+        <UserUnitDetails />
       </TestWrapper>,
     );
 
@@ -550,9 +571,10 @@ describe("UserUnitDetails", () => {
   });
 
   it("should not show water-related metrics for units without water generation", () => {
+    const noWaterUnit = { ...mockUnit, watergeneration: false };
     render(
-      <TestWrapper>
-        <UserUnitDetails unit={{ ...mockUnit, watergeneration: false }} />
+      <TestWrapper unit={noWaterUnit}>
+        <UserUnitDetails />
       </TestWrapper>,
     );
 
