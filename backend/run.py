@@ -283,16 +283,9 @@ def create_admin():
 
 
 if __name__ == "__main__":
-    # Use Flask's built-in debug configuration
-    # The app.debug is set by the configuration loaded in create_app
-    # Flask's app.run() automatically uses app.debug when debug parameter is not specified
-    #
-    # IMPORTANT: This is only for development/testing purposes.
-    # In production, use a production WSGI server (e.g., gunicorn, uWSGI)
-    # instead of app.run(), and ensure FLASK_ENV is never set to 'development'.
-    if not app.debug:
-        raise RuntimeError(
-            "This script is for development only. "
-            "In production, use a WSGI server like Gunicorn or uWSGI.",
-        )
-    app.run(host="127.0.0.1", port=5000)
+    # Get port from environment or use default
+    port = int(os.environ.get("PORT", 10000))
+    
+    # Run the Flask app
+    # In production, use Gunicorn instead of Flask's built-in server
+    app.run(host="0.0.0.0", port=port, debug=False)
