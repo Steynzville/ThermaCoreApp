@@ -85,15 +85,32 @@ def configure_cors(app: Any) -> None:
     try:
         from flask_cors import CORS  # noqa: PLC0415 - Optional dependency
 
+        # Get CORS origins from config with a sensible default
+        cors_origins = app.config.get("CORS_ORIGINS", [
+            'https://thermacoreapp.netlify.app',
+            'https://*.netlify.app',
+            'https://thermacoreapp.onrender.com',
+            'http://localhost:3000',
+            'http://localhost:5173',
+            'http://localhost:5000'
+        ])
+
         CORS(
             app,
-            origins=app.config["CORS_ORIGINS"],
+            origins=cors_origins,
             supports_credentials=True,
-            allow_headers=["Content-Type", "Authorization"],
+            allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
             methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+            expose_headers=["Content-Type", "Authorization"],
         )
-    except ImportError:
-        pass
+        logger = logging.getLogger(__name__)
+        logger.info(f"CORS configured with origins: {cors_origins}")
+    except ImportError as e:
+        logger = logging.getLogger(__name__)
+        logger.warning(f"CORS not available: {e}")
+    except Exception as e:
+        logger = logging.getLogger(__name__)
+        logger.error(f"CORS configuration failed: {e}")
 
 
 def initialize_swagger(app: Any) -> None:
