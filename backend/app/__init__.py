@@ -212,6 +212,7 @@ def create_app(config_name=None):
     )
     from app.refactor_helpers import configure_debug_mode, setup_logging_level
 
+    # Create Flask app with static folder for React build
     app = Flask(__name__, static_folder='../dist', static_url_path='')
 
     # Determine configuration name from environment
@@ -282,7 +283,10 @@ def create_app(config_name=None):
 
     initialize_all_services(app, logger)
 
-    # Serve React static files
+    # ============================================
+    # Serve React static files (SPA support)
+    # ============================================
+    
     @app.route('/')
     def serve_index():
         """Serve the React index.html."""
