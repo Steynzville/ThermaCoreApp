@@ -241,15 +241,7 @@ beforeAll(() => {
     value: MockAudioContext,
   });
 
-  // IMPORTANT: Do NOT replace window.location wholesale with a plain
-  // object. react-router-dom's BrowserRouter relies on the `history`
-  // package, which calls the *real* window.history.pushState /
-  // replaceState under the hood, and those are tied to jsdom's actual
-  // internal Location object. Swapping in a POJO breaks that link and
-  // Routes stop matching entirely.
-  //
-  // Instead, keep the real Location object and only stub the one
-  // method jsdom doesn't implement: reload().
+  // Keep the real Location object and only stub reload()
   Object.defineProperty(window.location, "reload", {
     configurable: true,
     writable: true,
@@ -280,10 +272,7 @@ beforeAll(() => {
 beforeEach(() => {
   vi.clearAllMocks();
 
-  // Use the real History API (supported by jsdom) to reset the URL
-  // between tests, instead of assigning window.location.pathname
-  // directly (which jsdom does not support and which desyncs
-  // react-router's internal history state).
+  // Use the real History API to reset the URL between tests
   window.history.pushState({}, "", "/");
 
   // Reset auth mock to default state
@@ -337,6 +326,15 @@ describe("App", () => {
     setAuth();
     render(<App />);
 
+    // ============================================================
+    // DEBUGGING: These lines will show what's actually rendered
+    // ============================================================
+    console.log('=== DEBUG: URL ===', window.location.href);
+    console.log('=== DEBUG: HTML length ===', document.body.innerHTML.length);
+    console.log('=== DEBUG: Full DOM tree ===');
+    screen.debug(undefined, 300000);
+    console.log('=== DEBUG: End of DOM tree ===');
+
     const heading = await screen.findByRole("heading", { name: /login/i });
     expect(heading).toBeInTheDocument();
     expect(screen.getByTestId("username-input")).toBeInTheDocument();
@@ -369,7 +367,6 @@ describe("App", () => {
     setAuth({ isLoading: true });
     render(<App />);
 
-    // Use findAllByText since there are multiple loading elements
     const loadingElements = await screen.findAllByText(/loading/i);
     expect(loadingElements.length).toBeGreaterThan(0);
     expect(screen.getByTestId("spinner")).toBeInTheDocument();
