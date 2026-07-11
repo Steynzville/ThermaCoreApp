@@ -105,7 +105,7 @@ jobs:
       - name: Run Backend Tests with Coverage
         run: |
           echo "🧪 Running backend tests with coverage..."
-          docker-compose -f docker-compose.ci.yml run --rm backend python -m pytest -v --tb=short --cov=app --cov-report=json --cov-report=term --cov-report=term-missing --cov-fail-under=60
+          docker-compose -f docker-compose.ci.yml run --rm backend python -m pytest -v --tb=short --cov=app --cov-report=json --cov-report=term --cov-report=term-missing --cov-fail-under=60 --cov-branch
 
       - name: Display Coverage Summary
         if: always()
@@ -115,36 +115,28 @@ jobs:
           echo "═══════════════════════════════════════════════════════════"
           echo ""
           
-          # Extract coverage from pytest output (captured in previous step)
-          # The coverage report shows "Total coverage: XX.XX%"
-          if [ -f "backend/coverage.json" ]; then
-            # Read coverage from JSON file
-            python3 << 'EOF'
-            import json
-            try:
-                with open("backend/coverage.json", "r") as f:
-                    data = json.load(f)
-                # Get coverage from the correct location
-                coverage = data.get("totals", {}).get("percent_covered", 0)
-                print(f"  📈 Total Coverage: {coverage:.2f}%")
-                print("")
-                
-                if coverage >= 80:
-                    print("  🟢 EXCELLENT! Coverage is above 80%")
-                elif coverage >= 60:
-                    print("  🟡 Good! Coverage is above 60%")
-                elif coverage >= 40:
-                    print("  🟠 Fair - Consider improving coverage")
-                else:
-                    print("  🔴 Low coverage - Please add more tests")
-                print("")
-                print("═══════════════════════════════════════════════════════════")
-            except Exception as e:
-                print(f"  ❌ Error reading coverage: {e}")
-            EOF
-          else
-            echo "  ❌ No coverage.json found"
-          fi
+          # Read coverage from JSON file using Python inline
+          python3 -c "
+          import json
+          try:
+              with open('backend/coverage.json', 'r') as f:
+                  data = json.load(f)
+              coverage = data.get('totals', {}).get('percent_covered', 0)
+              print(f'  📈 Total Coverage: {coverage:.2f}%')
+              print('')
+              if coverage >= 80:
+                  print('  🟢 EXCELLENT! Coverage is above 80%')
+              elif coverage >= 60:
+                  print('  🟡 Good! Coverage is above 60%')
+              elif coverage >= 40:
+                  print('  🟠 Fair - Consider improving coverage')
+              else:
+                  print('  🔴 Low coverage - Please add more tests')
+              print('')
+              print('═══════════════════════════════════════════════════════════')
+          except Exception as e:
+              print(f'  ❌ Error reading coverage: {e}')
+          "
 
       - name: Upload Coverage Report
         if: always()
