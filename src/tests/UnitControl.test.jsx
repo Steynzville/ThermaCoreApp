@@ -480,7 +480,7 @@ describe("UnitControl", () => {
     render(<UnitControl />);
 
     await waitFor(() => expect(screen.getByText("95 L/min")).toBeInTheDocument());
-    expect(screen.getByText("5 L/min")).toBeInTheDocument());
+    expect(screen.getByText("5 L/min")).toBeInTheDocument();
   });
 
   it("should show '--' for flow rates when system power is off", async () => {
