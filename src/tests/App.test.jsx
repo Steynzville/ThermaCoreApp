@@ -5,10 +5,10 @@ import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from "vite
 import React from "react";
 
 // ============================================================
-// Use vi.hoisted() - this was working!
+// CRITICAL: Use vi.hoisted() to define mocks before they're used
 // ============================================================
 
-const { authMock } = vi.hoisted(() => {
+const { authMock, authContextMock } = vi.hoisted(() => {
   const mock = {
     user: null,
     isAuthenticated: false,
@@ -17,23 +17,33 @@ const { authMock } = vi.hoisted(() => {
     login: vi.fn().mockResolvedValue(undefined),
     logout: vi.fn(),
   };
-  return { authMock: mock };
+  
+  const context = React.createContext(mock);
+  
+  return {
+    authMock: mock,
+    authContextMock: context,
+  };
 });
 
 // ============================================================
 // Mock ALL contexts BEFORE importing App
 // ============================================================
 
-vi.mock("../context/AuthContext", () => ({
-  useAuth: () => authMock,
-  AuthProvider: ({ children }) => {
-    return <div data-testid="auth-provider">{children}</div>;
-  },
-  default: {
-    Provider: ({ children }) => children,
-    Consumer: ({ children }) => children(authMock),
-  },
-}));
+vi.mock("../context/AuthContext", () => {
+  return {
+    default: authContextMock,
+    AuthContext: authContextMock,
+    useAuth: () => authMock,
+    AuthProvider: ({ children }) => {
+      return (
+        <authContextMock.Provider value={authMock}>
+          <div data-testid="auth-provider">{children}</div>
+        </authContextMock.Provider>
+      );
+    },
+  };
+});
 
 // Mock all other contexts
 vi.mock("../context/SettingsContext", () => ({
@@ -283,13 +293,15 @@ beforeEach(() => {
   vi.clearAllMocks();
   window.location.pathname = "/";
   
-  // Reset auth mock to default state - NOT LOADING
-  authMock.user = null;
-  authMock.isAuthenticated = false;
-  authMock.isLoading = false;
-  authMock.isLoggingOut = false;
-  authMock.login = vi.fn().mockResolvedValue(undefined);
-  authMock.logout = vi.fn();
+  // Reset auth mock to default state
+  Object.assign(authMock, {
+    user: null,
+    isAuthenticated: false,
+    isLoading: false,
+    isLoggingOut: false,
+    login: vi.fn().mockResolvedValue(undefined),
+    logout: vi.fn(),
+  });
 });
 
 afterEach(() => {
@@ -355,13 +367,12 @@ describe("App", () => {
     expect(themeToggle).toHaveAttribute("aria-pressed", "true");
   });
 
-  // SKIP this test - it's the only one failing
-  it.skip("shows loading state when authentication is in progress", async () => {
+  it("shows loading state when authentication is in progress", async () => {
     setAuth({ isLoading: true });
     render(<App />);
 
-    const loadingElements = await screen.findAllByText(/loading/i);
-    expect(loadingElements.length).toBeGreaterThan(0);
+    const loadingText = await screen.findByText(/loading/i);
+    expect(loadingText).toBeInTheDocument();
     expect(screen.getByTestId("spinner")).toBeInTheDocument();
   });
 
