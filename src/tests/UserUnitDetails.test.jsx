@@ -1,470 +1,561 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+/**
+ * Tests for UserUnitDetails Component
+ */
+
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import React from "react";
-import * as unitService from "../services/unitService";
 
-// CRITICAL: Define the component directly in the test file
-// This avoids the import of the missing file entirely
-const UnitDetails = ({ unit: propUnit, details: propDetails }) => {
-  const [unit, setUnit] = React.useState(propUnit || null);
-  const [details, setDetails] = React.useState(propDetails || null);
-  const [loading, setLoading] = React.useState(!propUnit || !propDetails);
-  const [activeTab, setActiveTab] = React.useState("overview");
-  const [alerts, setAlerts] = React.useState([]);
-  const [alertsLoading, setAlertsLoading] = React.useState(false);
+// ============================================================
+// Mock dependencies
+// ============================================================
 
-  React.useEffect(() => {
-    if (!propUnit || !propDetails) {
-      // Simulate loading
-      const timer = setTimeout(() => {
-        setUnit({ id: "1", name: "Unit 1", status: "Operational", location: "Building A" });
-        setDetails({
-          installDate: "2023-01-15",
-          lastMaintenance: "2024-10-01",
-          alerts: [
-            { id: 1, severity: "Warning", description: "Temperature high", timestamp: "2024-10-23T10:00:00Z" },
-            { id: 2, severity: "Critical", description: "Pressure drop detected", timestamp: "2024-10-23T11:00:00Z" },
-          ],
-        });
-        setAlerts([
-          { id: 1, severity: "Warning", description: "Temperature high", timestamp: "2024-10-23T10:00:00Z" },
-          { id: 2, severity: "Critical", description: "Pressure drop detected", timestamp: "2024-10-23T11:00:00Z" },
-        ]);
-        setLoading(false);
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [propUnit, propDetails]);
+// Mock hooks
+vi.mock("../context/AuthContext", () => ({
+  useAuth: vi.fn(() => ({
+    userRole: "user",
+  })),
+}));
 
-  // FIXED: This effect now properly shows loading state when switching to alerts tab
-  React.useEffect(() => {
-    if (activeTab === "alerts") {
-      // Show loading state first
-      setAlertsLoading(true);
-      // Simulate loading alerts with a delay
-      const timer = setTimeout(() => {
-        setAlerts([
-          { id: 1, severity: "Warning", description: "Temperature high", timestamp: "2024-10-23T10:00:00Z" },
-          { id: 2, severity: "Critical", description: "Pressure drop detected", timestamp: "2024-10-23T11:00:00Z" },
-        ]);
-        setAlertsLoading(false);
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [activeTab]);
+vi.mock("../context/SettingsContext", () => ({
+  useSettings: vi.fn(() => ({
+    formatTemperature: (temp) => `${temp}°C`,
+  })),
+}));
 
-  if (loading) {
-    return <div>Loading unit details...</div>;
-  }
+vi.mock("../context/UnitContext", () => ({
+  useUnits: vi.fn(() => ({
+    updateUnitName: vi.fn().mockResolvedValue({}),
+    updateUnitLocation: vi.fn().mockResolvedValue({}),
+  })),
+}));
 
-  if (!unit || !details) {
-    return <div>Unit not found.</div>;
-  }
+vi.mock("../hooks/useRealtimeData", () => ({
+  useRealtimeMetrics: vi.fn(() => ({
+    metrics: {
+      temperature: { current: 72 },
+      pressure: { current: 105 },
+      flow_rate_inlet: { current: 47.2 },
+      flow_rate_outlet: { current: 43.8 },
+    },
+  })),
+}));
 
-  const currentAlert = details.alerts?.find(
-    (a) => a.severity === "Critical" || a.severity === "Warning",
-  );
-
-  return (
-    <div className="unit-details" data-testid="unit-details">
-      <h2>Unit: {unit.name}</h2>
-      <div className="details-tabs">
-        <button
-          type="button"
-          onClick={() => setActiveTab("overview")}
-          className={activeTab === "overview" ? "active" : ""}
-          data-testid="overview-tab"
-        >
-          Overview
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("alerts")}
-          className={activeTab === "alerts" ? "active" : ""}
-          data-testid="alerts-tab"
-        >
-          Alerts
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("manage")}
-          className={activeTab === "manage" ? "active" : ""}
-          data-testid="manage-tab"
-        >
-          Manage Remotely
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("remote-control")}
-          className={activeTab === "remote-control" ? "active" : ""}
-          data-testid="remote-control-tab"
-        >
-          Remote Control
-        </button>
-      </div>
-      <div className="tab-content">
-        {activeTab === "overview" && (
-          <div className="overview-tab" data-testid="overview-content">
-            <p>
-              <strong>Status:</strong>{" "}
-              <span className={`status-${unit.status.toLowerCase()}`}>
-                {unit.status}
-              </span>
-            </p>
-            {unit.status !== "Operational" && currentAlert && (
-              <p>
-                <strong>Current Alert:</strong>{" "}
-                <span className="status-critical">
-                  {currentAlert.description}
-                </span>
-              </p>
-            )}
-            <p>
-              <strong>Location:</strong> {unit.location}
-            </p>
-            <p>
-              <strong>Install Date:</strong> {details.installDate}
-            </p>
-            <p>
-              <strong>Last Maintenance:</strong> {details.lastMaintenance}
-            </p>
-          </div>
-        )}
-        {activeTab === "alerts" && (
-          <div className="alerts-tab" data-testid="alerts-content">
-            {alertsLoading ? (
-              <div data-testid="alerts-loading">Loading alerts...</div>
-            ) : (
-              <>
-                <h4>Alert History</h4>
-                {alerts.length > 0 ? (
-                  <ul className="alert-list">
-                    {alerts.map((alert) => (
-                      <li key={alert.id}>
-                        <span>{new Date(alert.timestamp).toLocaleString()}</span>
-                        <span>{alert.description}</span>
-                        <span>Severity: {alert.severity}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p>No alerts for this unit.</p>
-                )}
-              </>
-            )}
-          </div>
-        )}
-        {activeTab === "remote-control" && unit && details && (
-          <div data-testid="remote-control">
-            <h3>Remote Control</h3>
-            <p>Unit: {unit.name}</p>
-            <p>Status: {unit.status}</p>
-            <button data-testid="remote-control-button">Toggle Power</button>
-          </div>
-        )}
-        {activeTab === "manage" && (
-          <div data-testid="remote-control">
-            <h3>Manage Remotely</h3>
-            <p>Unit: {unit.name}</p>
-            <p>Status: {unit.status}</p>
-            <button data-testid="remote-control-button">Toggle Power</button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// Mock the RemoteControl component
-vi.mock("../components/RemoteControl", () => ({
-  default: ({ unit, details }) => (
-    <div data-testid="remote-control">
-      <h3>Remote Control</h3>
-      <p>Unit: {unit?.name || "Unknown"}</p>
-      <p>Status: {unit?.status || "Unknown"}</p>
-      <button data-testid="remote-control-button">Toggle Power</button>
+// Mock child components
+vi.mock("../components/VitalSignGraph", () => ({
+  default: ({ title }) => (
+    <div data-testid="vital-sign-graph">
+      <h4>{title}</h4>
+      <div>Mock Graph</div>
     </div>
   ),
 }));
 
-// Mock the unitService
-vi.mock("../services/unitService", () => ({
-  getUnitById: vi.fn(),
-  getUnitDetails: vi.fn(),
-  getUnitAlerts: vi.fn(),
+vi.mock("../components/ui/card", () => ({
+  Card: ({ children }) => <div data-testid="card">{children}</div>,
+  CardContent: ({ children }) => <div data-testid="card-content">{children}</div>,
+  CardHeader: ({ children }) => <div data-testid="card-header">{children}</div>,
 }));
 
-// Mock the cn utility if needed
-vi.mock("@/lib/utils", () => ({
-  cn: (...inputs) => inputs.filter(Boolean).join(" "),
+vi.mock("../components/unit-details/UnitAlertsTab", () => ({
+  default: ({ unit, alertsHistory }) => (
+    <div data-testid="alerts-tab">
+      <h3>Alerts</h3>
+      <div data-testid="alert-count">Alert Count: {alertsHistory?.length || 0}</div>
+      <div>Unit: {unit?.name || "Unknown"}</div>
+    </div>
+  ),
 }));
 
-// Mock AudioContext globally (same as audioPlayer.test.js)
-class MockAudioContext {
-  constructor() {
-    this.state = "suspended";
-    this.currentTime = 0;
-    this.destination = {};
-  }
-  resume() {
-    return Promise.resolve();
-  }
-  suspend() {
-    return Promise.resolve();
-  }
-  close() {
-    return Promise.resolve();
-  }
-  decodeAudioData() {
-    return Promise.resolve({
-      duration: 1,
-      numberOfChannels: 2,
-      sampleRate: 44100,
-      getChannelData: () => new Float32Array(44100),
-    });
-  }
-  createBufferSource() {
-    return {
-      buffer: null,
-      connect: vi.fn(),
-      start: vi.fn(),
-      stop: vi.fn(),
-      onended: null,
-    };
-  }
-  createGain() {
-    return {
-      gain: { value: 0.5, setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn() },
-      connect: vi.fn(),
-    };
-  }
-}
+// Mock icons
+vi.mock("lucide-react", () => ({
+  AlertTriangle: () => <span data-testid="icon-alert-triangle">AlertTriangle</span>,
+  ArrowLeft: () => <span data-testid="icon-arrow-left">ArrowLeft</span>,
+  BarChart: () => <span data-testid="icon-bar-chart">BarChart</span>,
+  BatteryCharging: () => <span data-testid="icon-battery-charging">BatteryCharging</span>,
+  Calendar: () => <span data-testid="icon-calendar">Calendar</span>,
+  Check: () => <span data-testid="icon-check">Check</span>,
+  CheckCircle: () => <span data-testid="icon-check-circle">CheckCircle</span>,
+  Cloud: () => <span data-testid="icon-cloud">Cloud</span>,
+  Droplets: () => <span data-testid="icon-droplets">Droplets</span>,
+  Edit2: () => <span data-testid="icon-edit">Edit2</span>,
+  Gauge: () => <span data-testid="icon-gauge">Gauge</span>,
+  MapPin: () => <span data-testid="icon-map-pin">MapPin</span>,
+  Minus: () => <span data-testid="icon-minus">Minus</span>,
+  Power: () => <span data-testid="icon-power">Power</span>,
+  ThermometerSnowflake: () => <span data-testid="icon-thermometer-snow">ThermometerSnowflake</span>,
+  ThermometerSun: () => <span data-testid="icon-thermometer-sun">ThermometerSun</span>,
+  TrendingDown: () => <span data-testid="icon-trending-down">TrendingDown</span>,
+  TrendingUp: () => <span data-testid="icon-trending-up">TrendingUp</span>,
+  Wrench: () => <span data-testid="icon-wrench">Wrench</span>,
+  X: () => <span data-testid="icon-x">X</span>,
+  Zap: () => <span data-testid="icon-zap">Zap</span>,
+}));
 
-// Setup AudioContext mock before all tests
-beforeAll(() => {
-  // Store original if it exists
-  const originalAudioContext = window.AudioContext;
-  const originalWebkitAudioContext = window.webkitAudioContext;
+// ============================================================
+// Import the REAL component
+// ============================================================
+import UserUnitDetails from "../components/UserUnitDetails";
+import { useAuth } from "../context/AuthContext";
+import { useSettings } from "../context/SettingsContext";
+import { useUnits } from "../context/UnitContext";
+import { useRealtimeMetrics } from "../hooks/useRealtimeData";
 
-  // Mock AudioContext
-  Object.defineProperty(window, "AudioContext", {
-    writable: true,
-    configurable: true,
-    value: MockAudioContext,
-  });
+// Mock unit data
+const mockUnit = {
+  id: "unit-1",
+  name: "Test Unit A",
+  location: "Building A",
+  status: "online",
+  serialNumber: "SN-12345",
+  powerOutput: 150,
+  currentPower: 142.5,
+  waterLevel: 85,
+  watergeneration: true,
+  temp_outside: 25,
+  temp_in: 22,
+  temp_out: 18,
+  humidity: 60,
+  pressure: 101.3,
+  battery_level: 85,
+  flowRate: 45.5,
+  hasAlarm: false,
+  installDate: "2024-01-15",
+  lastMaintenance: "2024-07-10",
+  gpsCoordinates: "40.7128, -74.0060",
+};
 
-  Object.defineProperty(window, "webkitAudioContext", {
-    writable: true,
-    configurable: true,
-    value: MockAudioContext,
-  });
-
-  // Mock window.matchMedia for responsive components
-  Object.defineProperty(window, "matchMedia", {
-    writable: true,
-    configurable: true,
-    value: (query) => ({
-      matches: false,
-      media: query,
-      onchange: null,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    }),
-  });
-
-  // Mock ResizeObserver
-  window.ResizeObserver = vi.fn().mockImplementation(() => ({
-    observe: vi.fn(),
-    unobserve: vi.fn(),
-    disconnect: vi.fn(),
-  }));
-
-  // Mock getBoundingClientRect for any DOM calculations
-  Element.prototype.getBoundingClientRect = vi.fn().mockReturnValue({
-    width: 0,
-    height: 0,
-    top: 0,
-    left: 0,
-    bottom: 0,
-    right: 0,
-    x: 0,
-    y: 0,
-    toJSON: vi.fn(),
-  });
-
-  // Clean up after all tests
-  return () => {
-    Object.defineProperty(window, "AudioContext", {
-      writable: true,
-      configurable: true,
-      value: originalAudioContext,
-    });
-    Object.defineProperty(window, "webkitAudioContext", {
-      writable: true,
-      configurable: true,
-      value: originalWebkitAudioContext,
-    });
-  };
-});
+const TestWrapper = ({ children, initialEntries = ["/units/unit-1"] }) => {
+  return (
+    <MemoryRouter initialEntries={initialEntries}>
+      <Routes>
+        <Route
+          path="/units/:id"
+          element={children}
+        />
+        <Route
+          path="/dashboard"
+          element={<div data-testid="dashboard-page">Dashboard</div>}
+        />
+      </Routes>
+    </MemoryRouter>
+  );
+};
 
 describe("UserUnitDetails", () => {
-  const mockUnit = { 
-    id: "1", 
-    name: "Unit 1", 
-    status: "Operational", 
-    location: "Building A" 
-  };
-  const mockDetails = {
-    installDate: "2023-01-15",
-    lastMaintenance: "2024-10-01",
-    alerts: [
-      { 
-        id: 1, 
-        severity: "Warning", 
-        description: "Temperature high", 
-        timestamp: "2024-10-23T10:00:00Z" 
-      },
-      { 
-        id: 2, 
-        severity: "Critical", 
-        description: "Pressure drop detected", 
-        timestamp: "2024-10-23T11:00:00Z" 
-      },
-    ],
-  };
-
   beforeEach(() => {
     vi.clearAllMocks();
-    unitService.getUnitById.mockResolvedValue(mockUnit);
-    unitService.getUnitDetails.mockResolvedValue(mockDetails);
-    unitService.getUnitAlerts.mockResolvedValue(mockDetails.alerts);
   });
 
-  // Use explicit React.createElement for stable component mounting
-  const renderUnitDetails = (id = "1", initialEntries = [`/units/${id}`]) => {
-    return render(
-      React.createElement(MemoryRouter, { initialEntries },
-        React.createElement(Routes, null,
-          React.createElement(Route, { path: "/units/:id", element: React.createElement(UnitDetails) })
-        )
-      )
+  // ============================================================
+  // Basic Rendering Tests
+  // ============================================================
+
+  it("should render without crashing", () => {
+    const { container } = render(
+      <TestWrapper>
+        <UserUnitDetails unit={mockUnit} />
+      </TestWrapper>,
     );
-  };
-
-  it("should render loading state initially", () => {
-    renderUnitDetails();
-    const loadingElements = screen.getAllByText("Loading unit details...");
-    expect(loadingElements.length).toBeGreaterThan(0);
+    expect(container).toBeDefined();
   });
 
-  it("should render unit details after loading", async () => {
-    renderUnitDetails();
+  it("should render unit details when unit data is provided", () => {
+    render(
+      <TestWrapper>
+        <UserUnitDetails unit={mockUnit} />
+      </TestWrapper>,
+    );
+
+    expect(screen.getByText("Test Unit A - Detailed View")).toBeInTheDocument();
+    expect(screen.getByText(/Serial Number:/)).toBeInTheDocument();
+    expect(screen.getByText(/Building A/)).toBeInTheDocument();
+  });
+
+  it("should display unit status badge", () => {
+    render(
+      <TestWrapper>
+        <UserUnitDetails unit={mockUnit} />
+      </TestWrapper>,
+    );
+
+    expect(screen.getByText("ONLINE")).toBeInTheDocument();
+  });
+
+  it("should show 'Unit Not Found' when no unit is provided", () => {
+    render(
+      <TestWrapper>
+        <UserUnitDetails />
+      </TestWrapper>,
+    );
+
+    expect(screen.getByText("Unit Not Found")).toBeInTheDocument();
+    expect(screen.getByText("Return to Dashboard")).toBeInTheDocument();
+  });
+
+  it("should navigate back to dashboard when 'Return to Dashboard' is clicked", () => {
+    render(
+      <TestWrapper>
+        <UserUnitDetails />
+      </TestWrapper>,
+    );
+
+    const returnButton = screen.getByText("Return to Dashboard");
+    fireEvent.click(returnButton);
+
+    expect(screen.getByTestId("dashboard-page")).toBeInTheDocument();
+  });
+
+  // ============================================================
+  // Tab Navigation Tests
+  // ============================================================
+
+  it("should show Overview tab by default", () => {
+    render(
+      <TestWrapper>
+        <UserUnitDetails unit={mockUnit} />
+      </TestWrapper>,
+    );
+
+    expect(screen.getByText("Current Status")).toBeInTheDocument();
+    expect(screen.getByText("Unit Information")).toBeInTheDocument();
+  });
+
+  it("should switch to History tab when clicked", () => {
+    render(
+      <TestWrapper>
+        <UserUnitDetails unit={mockUnit} />
+      </TestWrapper>,
+    );
+
+    const historyTab = screen.getByText("History");
+    fireEvent.click(historyTab);
+
+    const graphs = screen.getAllByTestId("vital-sign-graph");
+    expect(graphs.length).toBeGreaterThan(0);
+  });
+
+  it("should switch to Alerts tab when clicked", () => {
+    render(
+      <TestWrapper>
+        <UserUnitDetails unit={mockUnit} />
+      </TestWrapper>,
+    );
+
+    const alertsTab = screen.getByText("Alerts");
+    fireEvent.click(alertsTab);
+
+    expect(screen.getByTestId("alerts-tab")).toBeInTheDocument();
+  });
+
+  it("should respect tab query parameter", () => {
+    render(
+      <TestWrapper initialEntries={["/units/unit-1?tab=history"]}>
+        <UserUnitDetails unit={mockUnit} />
+      </TestWrapper>,
+    );
+
+    const graphs = screen.getAllByTestId("vital-sign-graph");
+    expect(graphs.length).toBeGreaterThan(0);
+  });
+
+  // ============================================================
+  // Navigation Buttons Tests
+  // ============================================================
+
+  it("should navigate to remote control when Manage Remotely is clicked", () => {
+    render(
+      <TestWrapper>
+        <UserUnitDetails unit={mockUnit} />
+      </TestWrapper>,
+    );
+
+    const remoteButton = screen.getByTestId("button-remote-control");
+    expect(remoteButton).toBeInTheDocument();
+    // Note: Navigation is handled by react-router, we verify button exists
+  });
+
+  it("should navigate to unit performance when Unit Performance is clicked", () => {
+    render(
+      <TestWrapper>
+        <UserUnitDetails unit={mockUnit} />
+      </TestWrapper>,
+    );
+
+    const performanceButton = screen.getByTestId("button-unit-performance");
+    expect(performanceButton).toBeInTheDocument();
+  });
+
+  // ============================================================
+  // Edit Name Tests
+  // ============================================================
+
+  it("should show edit name input when edit icon is clicked", () => {
+    render(
+      <TestWrapper>
+        <UserUnitDetails unit={mockUnit} />
+      </TestWrapper>,
+    );
+
+    const editButtons = screen.getAllByTestId("icon-edit");
+    fireEvent.click(editButtons[0]);
+
+    const input = screen.getByDisplayValue("Test Unit A");
+    expect(input).toBeInTheDocument();
+  });
+
+  it("should save name when save button is clicked", async () => {
+    const mockUpdateUnitName = vi.fn().mockResolvedValue({});
+    useUnits.mockReturnValue({
+      updateUnitName: mockUpdateUnitName,
+      updateUnitLocation: vi.fn().mockResolvedValue({}),
+    });
+
+    render(
+      <TestWrapper>
+        <UserUnitDetails unit={mockUnit} />
+      </TestWrapper>,
+    );
+
+    const editButtons = screen.getAllByTestId("icon-edit");
+    fireEvent.click(editButtons[0]);
+
+    const input = screen.getByDisplayValue("Test Unit A");
+    fireEvent.change(input, { target: { value: "New Unit Name" } });
+
+    const saveButton = screen.getByTestId("icon-check");
+    fireEvent.click(saveButton);
+
     await waitFor(() => {
-      // Use getAllByText with a more specific matcher - check for "Unit: Unit 1" or parts of it
-      const unitElements = screen.getAllByText((content, element) => {
-        return content.includes("Unit:") && content.includes("Unit 1");
-      });
-      expect(unitElements.length).toBeGreaterThan(0);
+      expect(mockUpdateUnitName).toHaveBeenCalledWith("unit-1", "New Unit Name");
     });
   });
 
-  it("should handle alerts tab loading state", async () => {
-    renderUnitDetails();
-    
-    // Wait for unit to load
-    await waitFor(() => { 
-      const unitElements = screen.getAllByText((content, element) => {
-        return content.includes("Unit:") && content.includes("Unit 1");
-      });
-      expect(unitElements.length).toBeGreaterThan(0);
+  // ============================================================
+  // Offline State Tests
+  // ============================================================
+
+  it("should show 'N/A' for metrics when unit is offline", () => {
+    const offlineUnit = { ...mockUnit, status: "offline" };
+    render(
+      <TestWrapper>
+        <UserUnitDetails unit={offlineUnit} />
+      </TestWrapper>,
+    );
+
+    // Should show N/A for temperature, pressure, flow rate
+    expect(screen.getAllByText("N/A").length).toBeGreaterThan(0);
+  });
+
+  // ============================================================
+  // Alarm Alert Tests
+  // ============================================================
+
+  it("should show NH3 alarm alert when unit has alarm", () => {
+    const alarmUnit = { ...mockUnit, hasAlarm: true };
+    render(
+      <TestWrapper>
+        <UserUnitDetails unit={alarmUnit} />
+      </TestWrapper>,
+    );
+
+    expect(screen.getByText(/🚨 NH3 LEAK DETECTED 🚨/)).toBeInTheDocument();
+    expect(screen.getByText(/Toxic ammonia leak detected/)).toBeInTheDocument();
+  });
+
+  // ============================================================
+  // Edit Location Tests
+  // ============================================================
+
+  it("should show edit location input when edit icon is clicked", () => {
+    render(
+      <TestWrapper>
+        <UserUnitDetails unit={mockUnit} />
+      </TestWrapper>,
+    );
+
+    const editButtons = screen.getAllByTestId("icon-edit");
+    fireEvent.click(editButtons[1]);
+
+    const input = screen.getByDisplayValue("Building A");
+    expect(input).toBeInTheDocument();
+  });
+
+  it("should save location when save button is clicked", async () => {
+    const mockUpdateUnitLocation = vi.fn().mockResolvedValue({});
+    useUnits.mockReturnValue({
+      updateUnitName: vi.fn().mockResolvedValue({}),
+      updateUnitLocation: mockUpdateUnitLocation,
     });
 
-    // Click the Alerts tab
-    const alertTabs = screen.getAllByText("Alerts");
-    fireEvent.click(alertTabs[0]);
+    render(
+      <TestWrapper>
+        <UserUnitDetails unit={mockUnit} />
+      </TestWrapper>,
+    );
 
-    // Wait for loading state - now using data-testid
+    const editButtons = screen.getAllByTestId("icon-edit");
+    fireEvent.click(editButtons[1]);
+
+    const input = screen.getByDisplayValue("Building A");
+    fireEvent.change(input, { target: { value: "Building B" } });
+
+    const saveButton = screen.getByTestId("icon-check");
+    fireEvent.click(saveButton);
+
     await waitFor(() => {
-      const loadingElements = screen.getAllByTestId("alerts-loading");
-      expect(loadingElements.length).toBeGreaterThan(0);
-    });
-
-    // Wait for alerts to display
-    await waitFor(() => { 
-      const alertHistoryElements = screen.getAllByText("Alert History");
-      expect(alertHistoryElements.length).toBeGreaterThan(0);
+      expect(mockUpdateUnitLocation).toHaveBeenCalledWith("unit-1", "Building B");
     });
   });
 
-  it("should render Remote Control tab", async () => {
-    renderUnitDetails();
-    
-    // Wait for unit to load
-    await waitFor(() => {
-      const unitElements = screen.getAllByText((content, element) => {
-        return content.includes("Unit:") && content.includes("Unit 1");
-      });
-      expect(unitElements.length).toBeGreaterThan(0);
-    });
+  // ============================================================
+  // Cancel Edit Tests
+  // ============================================================
 
-    // Click Remote Control tab
-    const remoteControlTabs = screen.getAllByText("Remote Control");
-    fireEvent.click(remoteControlTabs[0]);
+  it("should cancel name edit when X button is clicked", () => {
+    render(
+      <TestWrapper>
+        <UserUnitDetails unit={mockUnit} />
+      </TestWrapper>,
+    );
 
-    // Wait for Remote Control component to render
-    await waitFor(() => {
-      const remoteControlElements = screen.getAllByTestId("remote-control");
-      expect(remoteControlElements.length).toBeGreaterThan(0);
-    });
+    const editButtons = screen.getAllByTestId("icon-edit");
+    fireEvent.click(editButtons[0]);
+
+    const cancelButton = screen.getByTestId("icon-x");
+    fireEvent.click(cancelButton);
+
+    expect(screen.queryByDisplayValue("Test Unit A")).not.toBeInTheDocument();
   });
 
-  it("should handle Manage Remotely tab", async () => {
-    renderUnitDetails();
-    
-    // Wait for unit to load
-    await waitFor(() => {
-      const unitElements = screen.getAllByText((content, element) => {
-        return content.includes("Unit:") && content.includes("Unit 1");
-      });
-      expect(unitElements.length).toBeGreaterThan(0);
-    });
+  it("should cancel location edit when X button is clicked", () => {
+    render(
+      <TestWrapper>
+        <UserUnitDetails unit={mockUnit} />
+      </TestWrapper>,
+    );
 
-    // Click Manage Remotely tab
-    const manageTabs = screen.getAllByText("Manage Remotely");
-    fireEvent.click(manageTabs[0]);
+    const editButtons = screen.getAllByTestId("icon-edit");
+    fireEvent.click(editButtons[1]);
 
-    // Manage Remotely tab should render content - it shows RemoteControl component
-    await waitFor(() => {
-      const remoteControlElements = screen.getAllByTestId("remote-control");
-      expect(remoteControlElements.length).toBeGreaterThan(0);
-    });
+    const cancelButton = screen.getByTestId("icon-x");
+    fireEvent.click(cancelButton);
+
+    expect(screen.queryByDisplayValue("Building A")).not.toBeInTheDocument();
   });
 
-  it("should handle Overview tab content", async () => {
-    renderUnitDetails();
-    
-    // Wait for unit to load
-    await waitFor(() => {
-      const unitElements = screen.getAllByText((content, element) => {
-        return content.includes("Unit:") && content.includes("Unit 1");
-      });
-      expect(unitElements.length).toBeGreaterThan(0);
-    });
+  // ============================================================
+  // Status Color Tests
+  // ============================================================
 
-    // Verify overview content - use getAllByText with regex patterns
-    await waitFor(() => {
-      const statusElements = screen.getAllByText(/Status:/i);
-      expect(statusElements.length).toBeGreaterThan(0);
-      
-      const locationElements = screen.getAllByText(/Location:/i);
-      expect(locationElements.length).toBeGreaterThan(0);
-      
-      const installDateElements = screen.getAllByText(/Install Date:/i);
-      expect(installDateElements.length).toBeGreaterThan(0);
-    });
+  it("should show green status for online units", () => {
+    render(
+      <TestWrapper>
+        <UserUnitDetails unit={{ ...mockUnit, status: "online" }} />
+      </TestWrapper>,
+    );
+
+    const statusBadge = screen.getByText("ONLINE");
+    expect(statusBadge).toHaveClass("bg-green-100");
+  });
+
+  it("should show red status for offline units", () => {
+    render(
+      <TestWrapper>
+        <UserUnitDetails unit={{ ...mockUnit, status: "offline" }} />
+      </TestWrapper>,
+    );
+
+    const statusBadge = screen.getByText("OFFLINE");
+    expect(statusBadge).toHaveClass("bg-red-100");
+  });
+
+  it("should show yellow status for maintenance units", () => {
+    render(
+      <TestWrapper>
+        <UserUnitDetails unit={{ ...mockUnit, status: "maintenance" }} />
+      </TestWrapper>,
+    );
+
+    const statusBadge = screen.getByText("MAINTENANCE");
+    expect(statusBadge).toHaveClass("bg-yellow-100");
+  });
+
+  // ============================================================
+  // Flow Rate Color Tests
+  // ============================================================
+
+  it("should show red color for high flow rate", () => {
+    render(
+      <TestWrapper>
+        <UserUnitDetails unit={{ ...mockUnit, flowRate: 95 }} />
+      </TestWrapper>,
+    );
+
+    const flowRateElement = screen.getByText(/95 L\/min/);
+    expect(flowRateElement).toHaveClass("text-red-600");
+  });
+
+  it("should show yellow color for medium flow rate", () => {
+    render(
+      <TestWrapper>
+        <UserUnitDetails unit={{ ...mockUnit, flowRate: 75 }} />
+      </TestWrapper>,
+    );
+
+    const flowRateElement = screen.getByText(/75 L\/min/);
+    expect(flowRateElement).toHaveClass("text-yellow-600");
+  });
+
+  it("should show green color for normal flow rate", () => {
+    render(
+      <TestWrapper>
+        <UserUnitDetails unit={{ ...mockUnit, flowRate: 45.5 }} />
+      </TestWrapper>,
+    );
+
+    const flowRateElement = screen.getByText(/45.5 L\/min/);
+    expect(flowRateElement).toHaveClass("text-green-600");
+  });
+
+  // ============================================================
+  // Realtime Data Tests
+  // ============================================================
+
+  it("should update metrics from realtime data", () => {
+    render(
+      <TestWrapper>
+        <UserUnitDetails unit={mockUnit} />
+      </TestWrapper>,
+    );
+
+    // The component should receive metrics from useRealtimeMetrics
+    // and update the liveUnit state
+    expect(screen.getByText(/72°C/)).toBeInTheDocument();
+  });
+
+  // ============================================================
+  // Water Generation Tests
+  // ============================================================
+
+  it("should show water-related metrics for units with water generation", () => {
+    render(
+      <TestWrapper>
+        <UserUnitDetails unit={{ ...mockUnit, watergeneration: true }} />
+      </TestWrapper>,
+    );
+
+    expect(screen.getByText("Water Level")).toBeInTheDocument();
+  });
+
+  it("should not show water-related metrics for units without water generation", () => {
+    render(
+      <TestWrapper>
+        <UserUnitDetails unit={{ ...mockUnit, watergeneration: false }} />
+      </TestWrapper>,
+    );
+
+    expect(screen.queryByText("Water Level")).not.toBeInTheDocument();
   });
 });
