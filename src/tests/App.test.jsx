@@ -1,5 +1,5 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi, beforeAll, afterAll } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "../App";
 
@@ -72,7 +72,7 @@ vi.mock("../components/common/Spinner", () => ({
 
 // Mock LoginScreen
 vi.mock("../components/LoginScreen", () => ({
-  default: ({ error, setError }) => (
+  default: ({ error }) => (
     <div data-testid="login-page">
       <h1>Login</h1>
       <input data-testid="username-input" placeholder="Username" />
@@ -83,10 +83,20 @@ vi.mock("../components/LoginScreen", () => ({
   ),
 }));
 
+// Mock ForgotPassword
+vi.mock("../components/ForgotPassword", () => ({
+  default: () => <div data-testid="forgot-password-page">Forgot Password</div>,
+}));
+
+// Mock PasswordResetRequest
+vi.mock("../components/PasswordResetRequest", () => ({
+  default: () => <div data-testid="reset-password-page">Reset Password</div>,
+}));
+
 // Mock ProtectedRoute
 vi.mock("../components/ProtectedRoute", () => ({
   default: ({ component: Component, componentMap, roles }) => (
-    <div data-testid="protected-route">
+    <div data-testid="protected-route" data-has-component-map={!!componentMap} data-roles={JSON.stringify(roles || [])}>
       {Component ? <Component /> : <div>Protected Content</div>}
     </div>
   ),
@@ -105,11 +115,18 @@ vi.mock("../components/UnitDetails", () => ({
   default: () => <div data-testid="unit-details">Unit Details</div>,
 }));
 
-// Mock routes
+// Mock routes - includes a public route, a plain protected route, and a
+// specialHandling protected route so all branches in AppContent are exercised.
 vi.mock("../config/routes", () => ({
   default: [
-    { path: "/", component: () => <div>Home</div>, isProtected: false },
-    { path: "/dashboard", component: () => <div>Dashboard</div>, isProtected: true, roles: ["admin", "user"] },
+    { path: "/public-page", component: () => <div data-testid="public-page">Public Page</div>, isProtected: false },
+    { path: "/dashboard", component: () => <div data-testid="dashboard-page">Dashboard</div>, isProtected: true, roles: ["admin", "user"] },
+    {
+      path: "/role-based",
+      isProtected: true,
+      roles: ["admin", "user"],
+      specialHandling: "unit-role-based",
+    },
   ],
 }));
 
@@ -156,6 +173,8 @@ class MockAudioContext {
   }
 }
 
+const reloadMock = vi.fn();
+
 beforeAll(() => {
   // Mock AudioContext
   Object.defineProperty(window, "AudioContext", {
@@ -177,7 +196,7 @@ beforeAll(() => {
     value: {
       href: "http://localhost/",
       pathname: "/",
-      reload: vi.fn(),
+      reload: reloadMock,
     },
   });
 
@@ -203,6 +222,11 @@ beforeAll(() => {
   }));
 });
 
+afterEach(() => {
+  window.location.pathname = "/";
+  reloadMock.mockClear();
+});
+
 // ============================================================
 // Tests
 // ============================================================
@@ -212,43 +236,269 @@ describe("App", () => {
     vi.clearAllMocks();
   });
 
-  it("renders without crashing", () => {
-    const { container } = render(<App />);
-    expect(container).toBeDefined();
-  });
+  describe("basic rendering", () => {
+    it("renders without crashing", () => {
+      const { container } = render(<App />);
+      expect(container).toBeDefined();
+    });
 
-  it("renders the login page for unauthenticated users", async () => {
-    render(<App />);
-    
-    await waitFor(() => {
-      expect(screen.getByTestId("login-page")).toBeInTheDocument();
+    it("renders the login page for unauthenticated users at root path", async () => {
+      render(<App />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("login-page")).toBeInTheDocument();
+      });
+    });
+
+    it("renders theme toggle button", async () => {
+      render(<App />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("theme-toggle")).toBeInTheDocument();
+      });
     });
   });
 
-  it("renders theme toggle button", async () => {
-    render(<App />);
-    
-    await waitFor(() => {
-      expect(screen.getByTestId("theme-toggle")).toBeInTheDocument();
+  describe("loading and logging-out states", () => {
+    it("shows loading state when isLoading is true", async () => {
+      const { useAuth } = await import("../context/AuthContext");
+      vi.mocked(useAuth).mockReturnValue({
+        user: null,
+        isAuthenticated: false,
+        isLoading: true,
+        isLoggingOut: false,
+        login: vi.fn(),
+        logout: vi.fn(),
+      });
+
+      render(<App />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("spinner")).toBeInTheDocument();
+      });
+      expect(screen.getByText("Loading...")).toBeInTheDocument();
+    });
+
+    it("shows signing out message when isLoggingOut is true", async () => {
+      const { useAuth } = await import("../context/AuthContext");
+      vi.mocked(useAuth).mockReturnValue({
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+        isLoggingOut: true,
+        login: vi.fn(),
+        logout: vi.fn(),
+      });
+
+      render(<App />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("spinner")).toBeInTheDocument();
+      });
+      expect(screen.getByText("Signing out...")).toBeInTheDocument();
     });
   });
 
-  it("shows loading state when isLoading is true", async () => {
-    // Override the mock to show loading
-    const { useAuth } = await import("../context/AuthContext");
-    vi.mocked(useAuth).mockReturnValue({
-      user: null,
-      isAuthenticated: false,
-      isLoading: true,
-      isLoggingOut: false,
-      login: vi.fn(),
-      logout: vi.fn(),
+  describe("error boundary", () => {
+    it("renders the error screen when a window error event fires", async () => {
+      render(<App />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("login-page")).toBeInTheDocument();
+      });
+
+      fireEvent(window, new ErrorEvent("error", { message: "Something broke" }));
+
+      await waitFor(() => {
+        expect(screen.getByText("Something went wrong")).toBeInTheDocument();
+      });
+      expect(screen.getByText("Something broke")).toBeInTheDocument();
     });
 
-    render(<App />);
-    
-    await waitFor(() => {
-      expect(screen.getByTestId("spinner")).toBeInTheDocument();
+    it("renders a generic message on unhandled promise rejection", async () => {
+      render(<App />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("login-page")).toBeInTheDocument();
+      });
+
+      fireEvent(window, new Event("unhandledrejection"));
+
+      await waitFor(() => {
+        expect(screen.getByText("Something went wrong")).toBeInTheDocument();
+      });
+      expect(
+        screen.getByText("A network or processing error occurred"),
+      ).toBeInTheDocument();
+    });
+
+    it("reloads the app when the reload button is clicked", async () => {
+      render(<App />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("login-page")).toBeInTheDocument();
+      });
+
+      fireEvent(window, new ErrorEvent("error", { message: "Boom" }));
+
+      const reloadButton = await screen.findByText("Reload Application");
+      fireEvent.click(reloadButton);
+
+      expect(reloadMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("login sound effect", () => {
+    it("does not play a sound on initial mount even if already authenticated", async () => {
+      const { useAuth } = await import("../context/AuthContext");
+      vi.mocked(useAuth).mockReturnValue({
+        user: { name: "Test User" },
+        isAuthenticated: true,
+        isLoading: false,
+        isLoggingOut: false,
+        login: vi.fn(),
+        logout: vi.fn(),
+      });
+
+      const playSound = (await import("../utils/audioPlayer")).default;
+
+      render(<App />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("theme-toggle")).toBeInTheDocument();
+      });
+
+      expect(playSound).not.toHaveBeenCalled();
+    });
+
+    it("plays the login sound only on a null -> logged-in transition", async () => {
+      const { useAuth } = await import("../context/AuthContext");
+      const playSound = (await import("../utils/audioPlayer")).default;
+
+      vi.mocked(useAuth).mockReturnValue({
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+        isLoggingOut: false,
+        login: vi.fn(),
+        logout: vi.fn(),
+      });
+
+      const { rerender } = render(<App />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("login-page")).toBeInTheDocument();
+      });
+      expect(playSound).not.toHaveBeenCalled();
+
+      vi.mocked(useAuth).mockReturnValue({
+        user: { name: "Test User" },
+        isAuthenticated: true,
+        isLoading: false,
+        isLoggingOut: false,
+        login: vi.fn(),
+        logout: vi.fn(),
+      });
+
+      rerender(<App />);
+
+      await waitFor(() => {
+        expect(playSound).toHaveBeenCalledWith(
+          "login-sound.mp3",
+          true,
+          0.5,
+        );
+      });
+    });
+  });
+
+  describe("routing", () => {
+    it("renders the forgot password route", async () => {
+      window.location.pathname = "/forgot-password";
+      render(<App />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("forgot-password-page")).toBeInTheDocument();
+      });
+    });
+
+    it("renders the reset password route", async () => {
+      window.location.pathname = "/reset-password";
+      render(<App />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("reset-password-page")).toBeInTheDocument();
+      });
+    });
+
+    it("renders a public route from the route configuration", async () => {
+      window.location.pathname = "/public-page";
+      render(<App />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("public-page")).toBeInTheDocument();
+      });
+    });
+
+    it("redirects an unknown path to login", async () => {
+      window.location.pathname = "/some-unknown-path";
+      render(<App />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("login-page")).toBeInTheDocument();
+      });
+    });
+
+    it("renders a protected route when authenticated", async () => {
+      const { useAuth } = await import("../context/AuthContext");
+      vi.mocked(useAuth).mockReturnValue({
+        user: { name: "Test User" },
+        isAuthenticated: true,
+        isLoading: false,
+        isLoggingOut: false,
+        login: vi.fn(),
+        logout: vi.fn(),
+      });
+
+      window.location.pathname = "/dashboard";
+      render(<App />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("protected-route")).toBeInTheDocument();
+      });
+      expect(screen.getByTestId("dashboard-page")).toBeInTheDocument();
+    });
+
+    it("redirects to login when visiting a protected route unauthenticated", async () => {
+      window.location.pathname = "/dashboard";
+      render(<App />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("login-page")).toBeInTheDocument();
+      });
+      expect(screen.queryByTestId("protected-route")).not.toBeInTheDocument();
+    });
+
+    it("passes a role-based component map for routes with specialHandling", async () => {
+      const { useAuth } = await import("../context/AuthContext");
+      vi.mocked(useAuth).mockReturnValue({
+        user: { name: "Test User" },
+        isAuthenticated: true,
+        isLoading: false,
+        isLoggingOut: false,
+        login: vi.fn(),
+        logout: vi.fn(),
+      });
+
+      window.location.pathname = "/role-based";
+      render(<App />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("protected-route")).toBeInTheDocument();
+      });
+      expect(
+        screen.getByTestId("protected-route").getAttribute("data-has-component-map"),
+      ).toBe("true");
     });
   });
 });
