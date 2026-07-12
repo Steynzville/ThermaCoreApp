@@ -23,6 +23,16 @@ def register_all_blueprints(app: Any, logger: logging.Logger) -> tuple[int, int]
     blueprints_registered = 0
     blueprints_failed = 0
 
+    # ============================================================
+    # DEBUG: Try importing auth blueprint directly
+    # ============================================================
+    try:
+        from app.routes.auth import auth_bp
+        logger.info("✅ Auth blueprint imported successfully in registration")
+        logger.info(f"   Auth blueprint routes: {[rule.rule for rule in auth_bp.url_map.iter_rules()]}")
+    except Exception as e:
+        logger.error(f"❌ Failed to import auth blueprint: {e}")
+
     # Define all blueprints to register
     blueprints = [
         ("app.routes.auth", "auth_bp", "auth"),
@@ -49,8 +59,10 @@ def register_all_blueprints(app: Any, logger: logging.Logger) -> tuple[int, int]
         )
         if success:
             blueprints_registered += 1
+            logger.info(f"✅ Registered {route_name} routes")
         else:
             blueprints_failed += 1
+            logger.error(f"❌ Failed to register {route_name} routes")
 
     # examples blueprint already includes its own url_prefix in module
     try:
