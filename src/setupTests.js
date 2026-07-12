@@ -1,6 +1,6 @@
 // src/setupTests.js
 import "@testing-library/jest-dom";
-import { vi, beforeAll, beforeEach, afterEach } from "vitest";
+import { vi, beforeAll, beforeEach, afterEach, afterAll } from "vitest";
 import React from "react";
 import { cleanup } from "@testing-library/react";
 
@@ -500,12 +500,6 @@ beforeAll(() => {
   // Create spies that persist for the entire test run
   consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
   consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-});
-
-// Clean up console spies after all tests
-afterEach(() => {
-  // Don't restore in afterEach - keep them active for all tests
-  // Only restore in afterAll
 });
 
 // Restore console mocks after all tests
