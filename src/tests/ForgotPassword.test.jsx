@@ -1,5 +1,5 @@
 // src/tests/ForgotPassword.test.jsx
-import { render, screen, waitFor, cleanup, act } from "@testing-library/react";
+import { render, screen, waitFor, cleanup, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { BrowserRouter } from "react-router-dom";
@@ -60,14 +60,11 @@ describe("ForgotPassword", () => {
     );
   };
 
-  // Synchronous act() around the event dispatch - no async/await
-  // The actual async state updates are handled by waitFor/findBy* at each call site
+  // Simple, standard RTL pattern - fireEvent handles act() internally
   const submitForm = () => {
     const form = document.querySelector('form[novalidate]');
     if (!form) throw new Error('Form not found');
-    act(() => {
-      form.requestSubmit();
-    });
+    fireEvent.submit(form);
   };
 
   it("renders the forgot password page correctly", () => {
