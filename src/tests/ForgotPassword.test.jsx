@@ -1,5 +1,5 @@
 // src/tests/ForgotPassword.test.jsx
-import { render, screen, waitFor, cleanup, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, cleanup, fireEvent, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { BrowserRouter } from "react-router-dom";
@@ -10,6 +10,13 @@ import * as authService from "../services/authService";
 // CRITICAL FIX: Ensure real timers for React's scheduler
 // ============================================================
 vi.useRealTimers();
+
+// Helper to flush pending promises
+const flushPromises = async () => {
+  await act(async () => {
+    await new Promise(resolve => setTimeout(resolve, 0));
+  });
+};
 
 // ============================================================
 // Mock the auth service
@@ -47,9 +54,11 @@ describe("ForgotPassword", () => {
   });
 
   afterEach(() => {
-    cleanup();
+    // Don't cleanup immediately - let the test finish first
+    // The test's waitFor will complete before this runs
     vi.clearAllMocks();
     vi.useRealTimers();
+    cleanup();
   });
 
   const renderForgotPassword = () => {
@@ -122,12 +131,13 @@ describe("ForgotPassword", () => {
 
     submitForm();
 
-    // Wait for the service to be called
+    // Flush promises to allow the async handler to complete
+    await flushPromises();
+
     await waitFor(() => {
       expect(authService.requestPasswordReset).toHaveBeenCalledWith("test@example.com");
     }, { timeout: 3000 });
 
-    // Look for the success message with a specific class or in a specific container
     const successElement = await screen.findByText(successMessage, {}, { timeout: 3000 });
     expect(successElement).toBeInTheDocument();
   });
@@ -146,6 +156,8 @@ describe("ForgotPassword", () => {
     await user.type(emailInput, "test@example.com");
 
     submitForm();
+
+    await flushPromises();
 
     await waitFor(() => {
       expect(authService.requestPasswordReset).toHaveBeenCalledWith("test@example.com");
@@ -199,6 +211,7 @@ describe("ForgotPassword", () => {
     });
 
     submitForm();
+    await flushPromises();
 
     const successElement = await screen.findByText("Success!");
     expect(successElement).toBeInTheDocument();
@@ -255,6 +268,7 @@ describe("ForgotPassword", () => {
     expect(emailInput).toHaveValue("test@example.com");
 
     submitForm();
+    await flushPromises();
 
     await waitFor(() => {
       expect(emailInput).toHaveValue("");
@@ -274,6 +288,7 @@ describe("ForgotPassword", () => {
     await user.type(emailInput, "  test@example.com  ");
 
     submitForm();
+    await flushPromises();
 
     await waitFor(() => {
       expect(authService.requestPasswordReset).toHaveBeenCalledWith("test@example.com");
