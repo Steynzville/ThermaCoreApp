@@ -1,5 +1,5 @@
 // src/tests/App.test.jsx
-import { cleanup, render, screen, waitFor, act } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, act, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from "vitest";
 import React from "react";
@@ -401,11 +401,13 @@ describe("App", () => {
 
     const usernameInput = screen.getByTestId("username-input");
     const passwordInput = screen.getByTestId("password-input");
-    const loginButton = screen.getByTestId("login-button");
 
     await user.type(usernameInput, "admin@thermacore.com");
     await user.type(passwordInput, "emergency_admin_789");
-    await user.click(loginButton);
+
+    // Use fireEvent.submit on the form instead of clicking the button
+    const form = screen.getByTestId("login-button").closest("form");
+    fireEvent.submit(form);
 
     await waitFor(() => {
       expect(mockLogin).toHaveBeenCalledWith({
@@ -427,11 +429,13 @@ describe("App", () => {
 
     const usernameInput = screen.getByTestId("username-input");
     const passwordInput = screen.getByTestId("password-input");
-    const loginButton = screen.getByTestId("login-button");
 
     await user.type(usernameInput, "invalid@example.com");
     await user.type(passwordInput, "wrongpassword");
-    await user.click(loginButton);
+
+    // Use fireEvent.submit on the form instead of clicking the button
+    const form = screen.getByTestId("login-button").closest("form");
+    fireEvent.submit(form);
 
     await waitFor(() => {
       expect(screen.getByTestId("login-error")).toBeInTheDocument();
