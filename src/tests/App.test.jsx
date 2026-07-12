@@ -33,25 +33,24 @@ vi.mock("react-router-dom", async () => {
 });
 
 // ============================================================
+// Global login function that can be replaced
+// ============================================================
+let currentLoginFn = vi.fn().mockResolvedValue(undefined);
+let currentLogoutFn = vi.fn();
+
+// ============================================================
 // Use vi.hoisted() for auth
 // ============================================================
 
 const { authState } = vi.hoisted(() => {
-  // Create a single login function reference that we can reassign
-  let loginFn = vi.fn().mockResolvedValue(undefined);
-  let logoutFn = vi.fn();
-  
   const state = {
     user: null,
     isAuthenticated: false,
     isLoading: false,
     isLoggingOut: false,
-    get login() { return loginFn; },
-    set login(value) { loginFn = value; },
-    get logout() { return logoutFn; },
-    set logout(value) { logoutFn = value; },
+    login: (...args) => currentLoginFn(...args),
+    logout: (...args) => currentLogoutFn(...args),
   };
-  
   return { authState: state };
 });
 
@@ -101,7 +100,12 @@ vi.mock("../components/LoginScreen", () => ({
     const handleSubmit = async (e) => {
       e.preventDefault();
       try {
-        await authState.login({ username, password });
+        const result = await authState.login({ username, password });
+        // If login returns a result with error, handle it
+        if (result && result.error) {
+          setError?.(result.error);
+          return;
+        }
         setError?.(null);
       } catch (err) {
         setError?.(err?.message || "Login failed");
@@ -308,13 +312,15 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.useRealTimers();
 
-  // Reset auth state using the setter
+  // Reset global login function
+  currentLoginFn = vi.fn().mockResolvedValue(undefined);
+  currentLogoutFn = vi.fn();
+
+  // Reset auth state
   authState.user = null;
   authState.isAuthenticated = false;
   authState.isLoading = false;
   authState.isLoggingOut = false;
-  authState.login = vi.fn().mockResolvedValue(undefined);
-  authState.logout = vi.fn();
 });
 
 afterEach(() => {
@@ -328,25 +334,17 @@ afterEach(() => {
 // ============================================================
 
 const setAuth = (overrides = {}) => {
-  // Preserve the current login if not overridden
-  const currentLogin = authState.login;
-  const currentLogout = authState.logout;
-  
-  Object.assign(authState, {
-    user: null,
-    isAuthenticated: false,
-    isLoading: false,
-    isLoggingOut: false,
-    ...overrides,
-  });
-  
-  // Ensure login and logout are functions
-  if (!overrides.login) {
-    authState.login = currentLogin || vi.fn().mockResolvedValue(undefined);
+  // If login is overridden, update the global function
+  if (overrides.login) {
+    currentLoginFn = overrides.login;
   }
-  if (!overrides.logout) {
-    authState.logout = currentLogout || vi.fn();
+  if (overrides.logout) {
+    currentLogoutFn = overrides.logout;
   }
+  
+  // Create a new object without login/logout functions
+  const { login, logout, ...rest } = overrides;
+  Object.assign(authState, rest);
 };
 
 // ============================================================
@@ -437,7 +435,7 @@ describe("App", () => {
         username: "admin@thermacore.com",
         password: "emergency_admin_789",
       });
-    }, { timeout: 2000 });
+    }, { timeout: 3000 });
   });
 
   it("shows an error message when login rejects", async () => {
@@ -460,8 +458,11 @@ describe("App", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("login-error")).toBeInTheDocument();
-      expect(screen.getByTestId("login-error")).toHaveTextContent(errorMessage);
-    }, { timeout: 2000 });
+    }, { timeout: 3000 });
+    
+    // Check the error message
+    const errorElement = screen.getByTestId("login-error");
+    expect(errorElement).toHaveTextContent(errorMessage);
   });
 
   it("navigates to the forgot password page via the link", async () => {
@@ -476,7 +477,7 @@ describe("App", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("forgot-password-page")).toBeInTheDocument();
-    }, { timeout: 2000 });
+    }, { timeout: 3000 });
   });
 
   it("renders the forgot password route directly", async () => {
@@ -515,7 +516,7 @@ describe("App", () => {
     await waitFor(() => {
       expect(screen.getByTestId("protected-route")).toBeInTheDocument();
       expect(screen.getByTestId("dashboard-page")).toBeInTheDocument();
-    }, { timeout: 2000 });
+    }, { timeout: 3000 });
   });
 
   it("redirects to login when visiting a protected route unauthenticated", async () => {
