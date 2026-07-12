@@ -1,5 +1,5 @@
 // src/tests/ForgotPassword.test.jsx
-import { render, screen, waitFor, cleanup } from "@testing-library/react";
+import { render, screen, waitFor, cleanup, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { BrowserRouter } from "react-router-dom";
@@ -74,8 +74,8 @@ describe("ForgotPassword", () => {
     const user = userEvent.setup();
     renderForgotPassword();
 
-    const submitButton = screen.getByRole("button", { name: "Send Reset Link" });
-    await user.click(submitButton);
+    const form = screen.getByRole("form");
+    fireEvent.submit(form);
 
     const errorElement = await screen.findByText("Please enter your email address");
     expect(errorElement).toBeInTheDocument();
@@ -89,8 +89,8 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "invalid-email");
 
-    const submitButton = screen.getByRole("button", { name: "Send Reset Link" });
-    await user.click(submitButton);
+    const form = screen.getByRole("form");
+    fireEvent.submit(form);
 
     const errorElement = await screen.findByText("Please enter a valid email address");
     expect(errorElement).toBeInTheDocument();
@@ -110,8 +110,8 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "test@example.com");
 
-    const submitButton = screen.getByRole("button", { name: "Send Reset Link" });
-    await user.click(submitButton);
+    const form = screen.getByRole("form");
+    fireEvent.submit(form);
 
     await waitFor(() => {
       expect(authService.requestPasswordReset).toHaveBeenCalledWith("test@example.com");
@@ -134,8 +134,8 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "test@example.com");
 
-    const submitButton = screen.getByRole("button", { name: "Send Reset Link" });
-    await user.click(submitButton);
+    const form = screen.getByRole("form");
+    fireEvent.submit(form);
 
     await waitFor(() => {
       expect(authService.requestPasswordReset).toHaveBeenCalledWith("test@example.com");
@@ -156,8 +156,8 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "test@example.com");
 
-    const submitButton = screen.getByRole("button", { name: "Send Reset Link" });
-    await user.click(submitButton);
+    const form = screen.getByRole("form");
+    fireEvent.submit(form);
 
     const errorElement = await screen.findByText(
       "An unexpected error occurred. Please try again."
@@ -178,8 +178,8 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "test@example.com");
 
-    const submitButton = screen.getByRole("button", { name: "Send Reset Link" });
-    await user.click(submitButton);
+    const form = screen.getByRole("form");
+    fireEvent.submit(form);
 
     const errorElement = await screen.findByText(errorMessage);
     expect(errorElement).toBeInTheDocument();
@@ -190,7 +190,7 @@ describe("ForgotPassword", () => {
       message: "Success!",
     });
 
-    await user.click(submitButton);
+    fireEvent.submit(form);
 
     const successElement = await screen.findByText("Success!");
     expect(successElement).toBeInTheDocument();
@@ -208,8 +208,8 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "test@example.com");
 
-    const submitButton = screen.getByRole("button", { name: "Send Reset Link" });
-    await user.click(submitButton);
+    const form = screen.getByRole("form");
+    fireEvent.submit(form);
 
     const sendingButton = await screen.findByRole("button", { name: "Sending..." });
     expect(sendingButton).toBeInTheDocument();
@@ -246,8 +246,8 @@ describe("ForgotPassword", () => {
     await user.type(emailInput, "test@example.com");
     expect(emailInput).toHaveValue("test@example.com");
 
-    const submitButton = screen.getByRole("button", { name: "Send Reset Link" });
-    await user.click(submitButton);
+    const form = screen.getByRole("form");
+    fireEvent.submit(form);
 
     await waitFor(() => {
       expect(emailInput).toHaveValue("");
@@ -266,8 +266,8 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "  test@example.com  ");
 
-    const submitButton = screen.getByRole("button", { name: "Send Reset Link" });
-    await user.click(submitButton);
+    const form = screen.getByRole("form");
+    fireEvent.submit(form);
 
     await waitFor(() => {
       expect(authService.requestPasswordReset).toHaveBeenCalledWith("test@example.com");
@@ -286,8 +286,8 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "test@example.com");
 
-    const submitButton = screen.getByRole("button", { name: "Send Reset Link" });
-    await user.click(submitButton);
+    const form = screen.getByRole("form");
+    fireEvent.submit(form);
 
     const errorElement = await screen.findByText(errorMessage);
     expect(errorElement).toBeInTheDocument();
