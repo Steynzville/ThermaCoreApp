@@ -74,7 +74,9 @@ describe("ForgotPassword", () => {
     const user = userEvent.setup();
     renderForgotPassword();
 
-    const form = screen.getByRole("form");
+    // Find the form by the novalidate attribute or by container
+    const form = document.querySelector('form[novalidate]');
+    expect(form).toBeInTheDocument();
     fireEvent.submit(form);
 
     const errorElement = await screen.findByText("Please enter your email address");
@@ -89,7 +91,8 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "invalid-email");
 
-    const form = screen.getByRole("form");
+    const form = document.querySelector('form[novalidate]');
+    expect(form).toBeInTheDocument();
     fireEvent.submit(form);
 
     const errorElement = await screen.findByText("Please enter a valid email address");
@@ -110,7 +113,8 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "test@example.com");
 
-    const form = screen.getByRole("form");
+    const form = document.querySelector('form[novalidate]');
+    expect(form).toBeInTheDocument();
     fireEvent.submit(form);
 
     await waitFor(() => {
@@ -134,7 +138,8 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "test@example.com");
 
-    const form = screen.getByRole("form");
+    const form = document.querySelector('form[novalidate]');
+    expect(form).toBeInTheDocument();
     fireEvent.submit(form);
 
     await waitFor(() => {
@@ -156,7 +161,8 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "test@example.com");
 
-    const form = screen.getByRole("form");
+    const form = document.querySelector('form[novalidate]');
+    expect(form).toBeInTheDocument();
     fireEvent.submit(form);
 
     const errorElement = await screen.findByText(
@@ -178,7 +184,8 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "test@example.com");
 
-    const form = screen.getByRole("form");
+    const form = document.querySelector('form[novalidate]');
+    expect(form).toBeInTheDocument();
     fireEvent.submit(form);
 
     const errorElement = await screen.findByText(errorMessage);
@@ -208,7 +215,8 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "test@example.com");
 
-    const form = screen.getByRole("form");
+    const form = document.querySelector('form[novalidate]');
+    expect(form).toBeInTheDocument();
     fireEvent.submit(form);
 
     const sendingButton = await screen.findByRole("button", { name: "Sending..." });
@@ -246,7 +254,8 @@ describe("ForgotPassword", () => {
     await user.type(emailInput, "test@example.com");
     expect(emailInput).toHaveValue("test@example.com");
 
-    const form = screen.getByRole("form");
+    const form = document.querySelector('form[novalidate]');
+    expect(form).toBeInTheDocument();
     fireEvent.submit(form);
 
     await waitFor(() => {
@@ -266,7 +275,8 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "  test@example.com  ");
 
-    const form = screen.getByRole("form");
+    const form = document.querySelector('form[novalidate]');
+    expect(form).toBeInTheDocument();
     fireEvent.submit(form);
 
     await waitFor(() => {
@@ -286,7 +296,8 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "test@example.com");
 
-    const form = screen.getByRole("form");
+    const form = document.querySelector('form[novalidate]');
+    expect(form).toBeInTheDocument();
     fireEvent.submit(form);
 
     const errorElement = await screen.findByText(errorMessage);
