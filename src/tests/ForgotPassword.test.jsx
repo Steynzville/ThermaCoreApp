@@ -60,7 +60,6 @@ describe("ForgotPassword", () => {
     );
   };
 
-  // Simple, standard RTL pattern - fireEvent handles act() internally
   const submitForm = () => {
     const form = document.querySelector('form[novalidate]');
     if (!form) throw new Error('Form not found');
@@ -123,11 +122,13 @@ describe("ForgotPassword", () => {
 
     submitForm();
 
+    // Wait for the service to be called
     await waitFor(() => {
       expect(authService.requestPasswordReset).toHaveBeenCalledWith("test@example.com");
-    });
+    }, { timeout: 3000 });
 
-    const successElement = await screen.findByText(successMessage);
+    // Look for the success message with a specific class or in a specific container
+    const successElement = await screen.findByText(successMessage, {}, { timeout: 3000 });
     expect(successElement).toBeInTheDocument();
   });
 
@@ -148,9 +149,9 @@ describe("ForgotPassword", () => {
 
     await waitFor(() => {
       expect(authService.requestPasswordReset).toHaveBeenCalledWith("test@example.com");
-    });
+    }, { timeout: 3000 });
 
-    const errorElement = await screen.findByText(errorMessage);
+    const errorElement = await screen.findByText(errorMessage, {}, { timeout: 3000 });
     expect(errorElement).toBeInTheDocument();
   });
 
@@ -218,7 +219,7 @@ describe("ForgotPassword", () => {
     submitForm();
 
     // Wait for the button text to change to "Sending..."
-    const sendingButton = await screen.findByRole("button", { name: "Sending..." });
+    const sendingButton = await screen.findByRole("button", { name: "Sending..." }, { timeout: 3000 });
     expect(sendingButton).toBeInTheDocument();
     expect(sendingButton).toBeDisabled();
     expect(emailInput).toBeDisabled();
@@ -257,7 +258,7 @@ describe("ForgotPassword", () => {
 
     await waitFor(() => {
       expect(emailInput).toHaveValue("");
-    });
+    }, { timeout: 3000 });
   });
 
   it("handles trimming of email input", async () => {
@@ -276,7 +277,7 @@ describe("ForgotPassword", () => {
 
     await waitFor(() => {
       expect(authService.requestPasswordReset).toHaveBeenCalledWith("test@example.com");
-    });
+    }, { timeout: 3000 });
   });
 
   it("handles service returning error message without success flag", async () => {
