@@ -1,5 +1,5 @@
 // src/tests/ForgotPassword.test.jsx
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { BrowserRouter } from "react-router-dom";
@@ -41,6 +41,7 @@ describe("ForgotPassword", () => {
   });
 
   afterEach(() => {
+    cleanup(); // CRITICAL: Unmount component and clean up DOM
     vi.clearAllMocks();
   });
 
@@ -76,10 +77,8 @@ describe("ForgotPassword", () => {
     const submitButton = screen.getByRole("button", { name: "Send Reset Link" });
     await user.click(submitButton);
 
-    await waitFor(() => {
-      const errorElement = screen.getByText("Please enter your email address");
-      expect(errorElement).toBeInTheDocument();
-    });
+    const errorElement = await screen.findByText("Please enter your email address");
+    expect(errorElement).toBeInTheDocument();
     expect(authService.requestPasswordReset).not.toHaveBeenCalled();
   });
 
@@ -93,10 +92,8 @@ describe("ForgotPassword", () => {
     const submitButton = screen.getByRole("button", { name: "Send Reset Link" });
     await user.click(submitButton);
 
-    await waitFor(() => {
-      const errorElement = screen.getByText("Please enter a valid email address");
-      expect(errorElement).toBeInTheDocument();
-    });
+    const errorElement = await screen.findByText("Please enter a valid email address");
+    expect(errorElement).toBeInTheDocument();
     expect(authService.requestPasswordReset).not.toHaveBeenCalled();
   });
 
@@ -118,9 +115,10 @@ describe("ForgotPassword", () => {
 
     await waitFor(() => {
       expect(authService.requestPasswordReset).toHaveBeenCalledWith("test@example.com");
-      const successElement = screen.getByText(successMessage);
-      expect(successElement).toBeInTheDocument();
     });
+
+    const successElement = await screen.findByText(successMessage);
+    expect(successElement).toBeInTheDocument();
   });
 
   it("shows error message when request fails", async () => {
@@ -141,9 +139,10 @@ describe("ForgotPassword", () => {
 
     await waitFor(() => {
       expect(authService.requestPasswordReset).toHaveBeenCalledWith("test@example.com");
-      const errorElement = screen.getByText(errorMessage);
-      expect(errorElement).toBeInTheDocument();
     });
+
+    const errorElement = await screen.findByText(errorMessage);
+    expect(errorElement).toBeInTheDocument();
   });
 
   it("shows error when request throws exception", async () => {
@@ -160,12 +159,10 @@ describe("ForgotPassword", () => {
     const submitButton = screen.getByRole("button", { name: "Send Reset Link" });
     await user.click(submitButton);
 
-    await waitFor(() => {
-      const errorElement = screen.getByText(
-        "An unexpected error occurred. Please try again."
-      );
-      expect(errorElement).toBeInTheDocument();
-    });
+    const errorElement = await screen.findByText(
+      "An unexpected error occurred. Please try again."
+    );
+    expect(errorElement).toBeInTheDocument();
   });
 
   it("clears previous error when submitting new request", async () => {
@@ -184,9 +181,8 @@ describe("ForgotPassword", () => {
     const submitButton = screen.getByRole("button", { name: "Send Reset Link" });
     await user.click(submitButton);
 
-    await waitFor(() => {
-      expect(screen.getByText(errorMessage)).toBeInTheDocument();
-    });
+    const errorElement = await screen.findByText(errorMessage);
+    expect(errorElement).toBeInTheDocument();
 
     // Submit again with valid response
     vi.mocked(authService.requestPasswordReset).mockResolvedValue({
@@ -196,10 +192,9 @@ describe("ForgotPassword", () => {
 
     await user.click(submitButton);
 
-    await waitFor(() => {
-      expect(screen.getByText("Success!")).toBeInTheDocument();
-      expect(screen.queryByText(errorMessage)).not.toBeInTheDocument();
-    });
+    const successElement = await screen.findByText("Success!");
+    expect(successElement).toBeInTheDocument();
+    expect(screen.queryByText(errorMessage)).not.toBeInTheDocument();
   });
 
   it("disables inputs and button during submission", async () => {
@@ -216,15 +211,12 @@ describe("ForgotPassword", () => {
     const submitButton = screen.getByRole("button", { name: "Send Reset Link" });
     await user.click(submitButton);
 
-    // Check that button text changes to "Sending..."
-    await waitFor(() => {
-      const sendingButton = screen.getByRole("button", { name: "Sending..." });
-      expect(sendingButton).toBeInTheDocument();
-      expect(sendingButton).toBeDisabled();
-    });
-
+    const sendingButton = await screen.findByRole("button", { name: "Sending..." });
+    expect(sendingButton).toBeInTheDocument();
+    expect(sendingButton).toBeDisabled();
     expect(emailInput).toBeDisabled();
 
+    // Wait for the submission to complete
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "Send Reset Link" })).toBeInTheDocument();
       expect(emailInput).not.toBeDisabled();
@@ -297,9 +289,7 @@ describe("ForgotPassword", () => {
     const submitButton = screen.getByRole("button", { name: "Send Reset Link" });
     await user.click(submitButton);
 
-    await waitFor(() => {
-      const errorElement = screen.getByText(errorMessage);
-      expect(errorElement).toBeInTheDocument();
-    });
+    const errorElement = await screen.findByText(errorMessage);
+    expect(errorElement).toBeInTheDocument();
   });
 });
