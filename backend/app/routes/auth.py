@@ -1,3 +1,7 @@
+print("=" * 60)
+print("🔴 AUTH.PY IS BEING LOADED")
+print("=" * 60)
+
 """Authentication routes for ThermaCore SCADA API."""
 
 import logging
