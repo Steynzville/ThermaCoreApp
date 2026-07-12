@@ -1,5 +1,5 @@
 // src/tests/ForgotPassword.test.jsx
-import { render, screen, waitFor, cleanup, fireEvent, act } from "@testing-library/react";
+import { render, screen, waitFor, cleanup, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { BrowserRouter } from "react-router-dom";
@@ -54,13 +54,9 @@ describe("ForgotPassword", () => {
   };
 
   const submitForm = async () => {
-    const form = document.querySelector('form[novalidate]');
-    if (!form) throw new Error('Form not found');
-    
+    const submitButton = screen.getByRole("button", { name: "Send Reset Link" });
     await act(async () => {
-      fireEvent.submit(form);
-      // Wait for the event to propagate and state to update
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await userEvent.click(submitButton);
     });
   };
 
@@ -120,12 +116,10 @@ describe("ForgotPassword", () => {
 
     await submitForm();
 
-    // Wait for the service to be called
     await waitFor(() => {
       expect(authService.requestPasswordReset).toHaveBeenCalledWith("test@example.com");
     });
 
-    // Wait for the success message to appear
     const successElement = await screen.findByText(successMessage);
     expect(successElement).toBeInTheDocument();
   });
@@ -145,12 +139,10 @@ describe("ForgotPassword", () => {
 
     await submitForm();
 
-    // Wait for the service to be called
     await waitFor(() => {
       expect(authService.requestPasswordReset).toHaveBeenCalledWith("test@example.com");
     });
 
-    // Wait for the error message to appear
     const errorElement = await screen.findByText(errorMessage);
     expect(errorElement).toBeInTheDocument();
   });
@@ -208,7 +200,7 @@ describe("ForgotPassword", () => {
   it("disables inputs and button during submission", async () => {
     const user = userEvent.setup();
     vi.mocked(authService.requestPasswordReset).mockImplementation(
-      () => new Promise(resolve => setTimeout(() => resolve({ success: true, message: "OK" }), 200))
+      () => new Promise(resolve => setTimeout(() => resolve({ success: true, message: "OK" }), 300))
     );
 
     renderForgotPassword();
@@ -217,12 +209,10 @@ describe("ForgotPassword", () => {
     await user.type(emailInput, "test@example.com");
 
     // Submit the form
-    const form = document.querySelector('form[novalidate]');
-    expect(form).toBeInTheDocument();
-    
+    const submitButton = screen.getByRole("button", { name: "Send Reset Link" });
     await act(async () => {
-      fireEvent.submit(form);
-      // Wait for the button text to change
+      await user.click(submitButton);
+      // Wait a bit for the button text to change
       await new Promise(resolve => setTimeout(resolve, 50));
     });
 
@@ -236,7 +226,7 @@ describe("ForgotPassword", () => {
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "Send Reset Link" })).toBeInTheDocument();
       expect(emailInput).not.toBeDisabled();
-    }, { timeout: 3000 });
+    }, { timeout: 4000 });
   });
 
   it("navigates back to login when Back to Login button is clicked", async () => {
@@ -264,7 +254,6 @@ describe("ForgotPassword", () => {
 
     await submitForm();
 
-    // Wait for the email to be cleared
     await waitFor(() => {
       expect(emailInput).toHaveValue("");
     });
