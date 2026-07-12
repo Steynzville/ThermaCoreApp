@@ -82,7 +82,7 @@ const ForgotPassword = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           <div className={styles.formGroup}>
             <label htmlFor="email" className={styles.formLabel}>
               Email Address
