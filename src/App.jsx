@@ -39,9 +39,10 @@ const ScrollToTop = () => {
 };
 
 const AppContent = () => {
-  const { isAuthenticated, isLoading, isLoggingOut, user } = useAuth();
+  const { isAuthenticated, isLoading, isLoggingOut } = useAuth();
   const { settings } = useSettings();
-  const previousUserRef = useRef(null);
+  // null = auth state not yet resolved, true/false = last known auth state
+  const previousIsAuthenticatedRef = useRef(null);
   const [loginError, setLoginError] = useState("");
   const [appError, setAppError] = useState(null);
 
@@ -67,24 +68,34 @@ const AppContent = () => {
     };
   }, []);
 
-  // FIXED: Only play login sound on actual login transition
-  // Removed settings.soundEnabled and settings.volume from dependencies
+  // Only play the login sound on a real false -> true auth transition.
+  // Keyed off isAuthenticated (a stable boolean) instead of the user object,
+  // so profile updates, token refreshes, or unrelated re-renders (e.g. from
+  // Settings changes) can never trigger it. We also skip the very first
+  // resolved auth state so restoring an existing session on page load
+  // doesn't play the sound.
   useEffect(() => {
-    // Check if this is a real login (null -> user)
-    const justLoggedIn = previousUserRef.current === null && user !== null;
-    
-    // Update the ref for next render
-    previousUserRef.current = user;
+    if (isLoading) {
+      return;
+    }
 
-    // Only play the login sound on an actual null -> logged-in transition
+    const previous = previousIsAuthenticatedRef.current;
+    const justLoggedIn = previous === false && isAuthenticated === true;
+    previousIsAuthenticatedRef.current = isAuthenticated;
+
     if (justLoggedIn && settings.soundEnabled) {
       try {
+        // eslint-disable-next-line react-hooks/exhaustive-deps
         playSound("login-sound.mp3", settings.soundEnabled, settings.volume);
       } catch (_error) {
         // Don't set app error for sound issues
       }
     }
-  }, [user]); // <-- ONLY depends on user, NOT settings!
+    // Intentionally NOT depending on settings.soundEnabled/settings.volume:
+    // we only want to react to actual login transitions, and read the
+    // latest settings values at that moment via closure.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, isLoading]);
 
   // Show error state if there's an application error
   if (appError) {
