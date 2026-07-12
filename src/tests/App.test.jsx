@@ -3,7 +3,6 @@ import { cleanup, render, screen, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from "vitest";
 import React from "react";
-import { MemoryRouter } from "react-router-dom";
 
 // ============================================================
 // CRITICAL FIX: Ensure real timers for React's scheduler
@@ -285,6 +284,8 @@ beforeAll(() => {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.useRealTimers();
+  
+  // Use pushState to set initial URL
   window.history.pushState({}, "", "/");
 
   Object.assign(authMock, {
@@ -319,28 +320,24 @@ const setAuth = (overrides = {}) => {
   });
 };
 
+// Helper to navigate using pushState
+const navigateTo = (path) => {
+  window.history.pushState({}, "", path);
+};
+
 // ============================================================
-// Tests with MemoryRouter
+// Tests
 // ============================================================
 
 describe("App", () => {
-  // Helper to render App with MemoryRouter
-  const renderApp = (initialEntries = ["/"]) => {
-    return render(
-      <MemoryRouter initialEntries={initialEntries}>
-        <App />
-      </MemoryRouter>
-    );
-  };
-
   it("renders without crashing", () => {
-    const { container } = renderApp();
+    const { container } = render(<App />);
     expect(container).toBeDefined();
   });
 
   it("renders the login page for unauthenticated users", async () => {
     setAuth();
-    renderApp();
+    render(<App />);
     await flushNavigation();
 
     const heading = await screen.findByRole("heading", { name: /login/i });
@@ -352,7 +349,7 @@ describe("App", () => {
 
   it("shows the theme toggle button", async () => {
     setAuth();
-    renderApp();
+    render(<App />);
     await flushNavigation();
 
     await screen.findByRole("heading", { name: /login/i });
@@ -362,7 +359,7 @@ describe("App", () => {
   it("allows the user to toggle theme", async () => {
     const user = userEvent.setup();
     setAuth();
-    renderApp();
+    render(<App />);
     await flushNavigation();
 
     await screen.findByRole("heading", { name: /login/i });
@@ -375,7 +372,7 @@ describe("App", () => {
 
   it("shows loading state when authentication is in progress", async () => {
     setAuth({ isLoading: true });
-    renderApp();
+    render(<App />);
     await flushNavigation();
 
     const loadingElements = await screen.findAllByText(/loading/i);
@@ -385,7 +382,7 @@ describe("App", () => {
 
   it("shows signing out message when isLoggingOut is true", async () => {
     setAuth({ isLoggingOut: true });
-    renderApp();
+    render(<App />);
     await flushNavigation();
 
     await waitFor(() => {
@@ -399,7 +396,7 @@ describe("App", () => {
     const mockLogin = vi.fn().mockResolvedValue(undefined);
     setAuth({ login: mockLogin });
 
-    renderApp();
+    render(<App />);
     await flushNavigation();
     await screen.findByRole("heading", { name: /login/i });
 
@@ -418,7 +415,7 @@ describe("App", () => {
     const mockLogin = vi.fn().mockRejectedValue(new Error("Invalid credentials"));
     setAuth({ login: mockLogin });
 
-    renderApp();
+    render(<App />);
     await flushNavigation();
     await screen.findByRole("heading", { name: /login/i });
 
@@ -434,7 +431,7 @@ describe("App", () => {
   it("navigates to the forgot password page via the link", async () => {
     const user = userEvent.setup();
     setAuth();
-    renderApp();
+    render(<App />);
     await flushNavigation();
     await screen.findByRole("heading", { name: /login/i });
 
@@ -447,8 +444,9 @@ describe("App", () => {
   });
 
   it("renders the forgot password route directly", async () => {
+    navigateTo("/forgot-password");
     setAuth();
-    renderApp(["/forgot-password"]);
+    render(<App />);
     await flushNavigation();
 
     await waitFor(() => {
@@ -457,8 +455,9 @@ describe("App", () => {
   });
 
   it("renders the reset password route directly", async () => {
+    navigateTo("/reset-password");
     setAuth();
-    renderApp(["/reset-password"]);
+    render(<App />);
     await flushNavigation();
 
     await waitFor(() => {
@@ -468,21 +467,23 @@ describe("App", () => {
 
   it("redirects root path to the login page", async () => {
     setAuth();
-    renderApp();
+    render(<App />);
     await flushNavigation();
     await screen.findByRole("heading", { name: /login/i });
   });
 
   it("redirects unknown paths to the login page", async () => {
+    navigateTo("/some-unknown-path");
     setAuth();
-    renderApp(["/some-unknown-path"]);
+    render(<App />);
     await flushNavigation();
     await screen.findByRole("heading", { name: /login/i });
   });
 
   it("renders a protected route when authenticated", async () => {
+    navigateTo("/dashboard");
     setAuth({ user: { id: 1, name: "Test User" }, isAuthenticated: true });
-    renderApp(["/dashboard"]);
+    render(<App />);
     await flushNavigation();
 
     await waitFor(() => {
@@ -492,8 +493,9 @@ describe("App", () => {
   });
 
   it("redirects to login when visiting a protected route unauthenticated", async () => {
+    navigateTo("/dashboard");
     setAuth();
-    renderApp(["/dashboard"]);
+    render(<App />);
     await flushNavigation();
 
     await screen.findByRole("heading", { name: /login/i });
@@ -502,7 +504,7 @@ describe("App", () => {
 
   it("shows the error boundary UI when a window error event fires", async () => {
     setAuth();
-    renderApp();
+    render(<App />);
     await flushNavigation();
     await screen.findByRole("heading", { name: /login/i });
 
@@ -517,7 +519,7 @@ describe("App", () => {
   it("reloads the app when the reload button is clicked in the error state", async () => {
     const user = userEvent.setup();
     setAuth();
-    renderApp();
+    render(<App />);
     await flushNavigation();
     await screen.findByRole("heading", { name: /login/i });
 
