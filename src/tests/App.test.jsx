@@ -37,14 +37,21 @@ vi.mock("react-router-dom", async () => {
 // ============================================================
 
 const { authState } = vi.hoisted(() => {
+  // Create a single login function reference that we can reassign
+  let loginFn = vi.fn().mockResolvedValue(undefined);
+  let logoutFn = vi.fn();
+  
   const state = {
     user: null,
     isAuthenticated: false,
     isLoading: false,
     isLoggingOut: false,
-    login: vi.fn().mockResolvedValue(undefined),
-    logout: vi.fn(),
+    get login() { return loginFn; },
+    set login(value) { loginFn = value; },
+    get logout() { return logoutFn; },
+    set logout(value) { logoutFn = value; },
   };
+  
   return { authState: state };
 });
 
@@ -301,7 +308,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.useRealTimers();
 
-  // Reset auth state
+  // Reset auth state using the setter
   authState.user = null;
   authState.isAuthenticated = false;
   authState.isLoading = false;
@@ -321,15 +328,25 @@ afterEach(() => {
 // ============================================================
 
 const setAuth = (overrides = {}) => {
+  // Preserve the current login if not overridden
+  const currentLogin = authState.login;
+  const currentLogout = authState.logout;
+  
   Object.assign(authState, {
     user: null,
     isAuthenticated: false,
     isLoading: false,
     isLoggingOut: false,
-    login: vi.fn().mockResolvedValue(undefined),
-    logout: vi.fn(),
     ...overrides,
   });
+  
+  // Ensure login and logout are functions
+  if (!overrides.login) {
+    authState.login = currentLogin || vi.fn().mockResolvedValue(undefined);
+  }
+  if (!overrides.logout) {
+    authState.logout = currentLogout || vi.fn();
+  }
 };
 
 // ============================================================
@@ -415,7 +432,6 @@ describe("App", () => {
     await user.type(passwordInput, "emergency_admin_789");
     await user.click(loginButton);
 
-    // Wait for the login to be called
     await waitFor(() => {
       expect(mockLogin).toHaveBeenCalledWith({
         username: "admin@thermacore.com",
