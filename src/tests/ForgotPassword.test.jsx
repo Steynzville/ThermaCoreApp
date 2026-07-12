@@ -1,5 +1,5 @@
 // src/tests/ForgotPassword.test.jsx
-import { render, screen, waitFor, cleanup } from "@testing-library/react";
+import { render, screen, waitFor, cleanup, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { BrowserRouter } from "react-router-dom";
@@ -60,7 +60,15 @@ describe("ForgotPassword", () => {
     );
   };
 
-  const submitButton = () => screen.getByRole("button", { name: "Send Reset Link" });
+  const submitForm = async () => {
+    const form = document.querySelector('form[novalidate]');
+    if (!form) throw new Error('Form not found');
+    await act(async () => {
+      form.requestSubmit();
+      // Wait one microtask to let React schedule the update
+      await Promise.resolve();
+    });
+  };
 
   it("renders the forgot password page correctly", () => {
     renderForgotPassword();
@@ -70,7 +78,9 @@ describe("ForgotPassword", () => {
       screen.getByText("Enter your email to receive a password reset link")
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Email Address")).toBeInTheDocument();
-    expect(submitButton()).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Send Reset Link" })
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Back to Login" })
     ).toBeInTheDocument();
@@ -78,10 +88,9 @@ describe("ForgotPassword", () => {
   });
 
   it("shows error when submitting with empty email", async () => {
-    const user = userEvent.setup();
     renderForgotPassword();
 
-    await user.click(submitButton());
+    await submitForm();
 
     const errorElement = await screen.findByText("Please enter your email address");
     expect(errorElement).toBeInTheDocument();
@@ -95,7 +104,7 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "invalid-email");
 
-    await user.click(submitButton());
+    await submitForm();
 
     const errorElement = await screen.findByText("Please enter a valid email address");
     expect(errorElement).toBeInTheDocument();
@@ -115,7 +124,7 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "test@example.com");
 
-    await user.click(submitButton());
+    await submitForm();
 
     await waitFor(() => {
       expect(authService.requestPasswordReset).toHaveBeenCalledWith("test@example.com");
@@ -138,7 +147,7 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "test@example.com");
 
-    await user.click(submitButton());
+    await submitForm();
 
     await waitFor(() => {
       expect(authService.requestPasswordReset).toHaveBeenCalledWith("test@example.com");
@@ -159,7 +168,7 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "test@example.com");
 
-    await user.click(submitButton());
+    await submitForm();
 
     const errorElement = await screen.findByText(
       "An unexpected error occurred. Please try again."
@@ -180,7 +189,7 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "test@example.com");
 
-    await user.click(submitButton());
+    await submitForm();
 
     const errorElement = await screen.findByText(errorMessage);
     expect(errorElement).toBeInTheDocument();
@@ -191,7 +200,7 @@ describe("ForgotPassword", () => {
       message: "Success!",
     });
 
-    await user.click(submitButton());
+    await submitForm();
 
     const successElement = await screen.findByText("Success!");
     expect(successElement).toBeInTheDocument();
@@ -209,7 +218,7 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "test@example.com");
 
-    await user.click(submitButton());
+    await submitForm();
 
     // Wait for the button text to change to "Sending..."
     const sendingButton = await screen.findByRole("button", { name: "Sending..." });
@@ -247,7 +256,7 @@ describe("ForgotPassword", () => {
     await user.type(emailInput, "test@example.com");
     expect(emailInput).toHaveValue("test@example.com");
 
-    await user.click(submitButton());
+    await submitForm();
 
     await waitFor(() => {
       expect(emailInput).toHaveValue("");
@@ -266,7 +275,7 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "  test@example.com  ");
 
-    await user.click(submitButton());
+    await submitForm();
 
     await waitFor(() => {
       expect(authService.requestPasswordReset).toHaveBeenCalledWith("test@example.com");
@@ -285,7 +294,7 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "test@example.com");
 
-    await user.click(submitButton());
+    await submitForm();
 
     const errorElement = await screen.findByText(errorMessage);
     expect(errorElement).toBeInTheDocument();
