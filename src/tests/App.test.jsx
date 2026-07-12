@@ -33,28 +33,31 @@ vi.mock("react-router-dom", async () => {
 });
 
 // ============================================================
-// Use vi.hoisted() for the auth mock object
+// Create auth mock using a ref object so it's shared
 // ============================================================
 
-const { authMock } = vi.hoisted(() => {
-  const mock = {
+// Use a ref to ensure the same object is always referenced
+const authRef = {
+  current: {
     user: null,
     isAuthenticated: false,
     isLoading: false,
     isLoggingOut: false,
     login: vi.fn().mockResolvedValue(undefined),
     logout: vi.fn(),
-  };
-  return { authMock: mock };
-});
+  }
+};
+
+// Export a getter that always returns the current value
+const getAuth = () => authRef.current;
 
 // ============================================================
 // Mock ALL contexts BEFORE importing App
 // ============================================================
 
 vi.mock("../context/AuthContext", () => ({
-  default: authMock,
-  useAuth: () => authMock,
+  default: getAuth(),
+  useAuth: () => getAuth(),
   AuthProvider: ({ children }) => <div data-testid="auth-provider">{children}</div>,
 }));
 
@@ -94,7 +97,8 @@ vi.mock("../components/LoginScreen", () => ({
     const handleSubmit = async (e) => {
       e.preventDefault();
       try {
-        await authMock.login({ username, password });
+        const auth = getAuth();
+        await auth.login({ username, password });
         setError?.(null);
       } catch (err) {
         setError?.(err?.message || "Login failed");
@@ -301,13 +305,15 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.useRealTimers();
 
-  // Reset auth mock to default state
-  authMock.user = null;
-  authMock.isAuthenticated = false;
-  authMock.isLoading = false;
-  authMock.isLoggingOut = false;
-  authMock.login = vi.fn().mockResolvedValue(undefined);
-  authMock.logout = vi.fn();
+  // Reset auth state
+  authRef.current = {
+    user: null,
+    isAuthenticated: false,
+    isLoading: false,
+    isLoggingOut: false,
+    login: vi.fn().mockResolvedValue(undefined),
+    logout: vi.fn(),
+  };
 });
 
 afterEach(() => {
@@ -321,15 +327,13 @@ afterEach(() => {
 // ============================================================
 
 const setAuth = (overrides = {}) => {
-  // Create a new login mock that preserves the original behavior
-  const loginMock = overrides.login || vi.fn().mockResolvedValue(undefined);
-  
-  Object.assign(authMock, {
+  const current = authRef.current;
+  Object.assign(current, {
     user: null,
     isAuthenticated: false,
     isLoading: false,
     isLoggingOut: false,
-    login: loginMock,
+    login: vi.fn().mockResolvedValue(undefined),
     logout: vi.fn(),
     ...overrides,
   });
@@ -417,14 +421,14 @@ describe("App", () => {
     await user.type(usernameInput, "admin@thermacore.com");
     await user.type(passwordInput, "emergency_admin_789");
     
-    // Use act to ensure all updates are processed
-    await act(async () => {
-      await user.click(loginButton);
-    });
+    await user.click(loginButton);
 
-    expect(mockLogin).toHaveBeenCalledWith({
-      username: "admin@thermacore.com",
-      password: "emergency_admin_789",
+    // Wait for the login to be called
+    await waitFor(() => {
+      expect(mockLogin).toHaveBeenCalledWith({
+        username: "admin@thermacore.com",
+        password: "emergency_admin_789",
+      });
     });
   });
 
@@ -444,10 +448,7 @@ describe("App", () => {
 
     await user.type(usernameInput, "invalid@example.com");
     await user.type(passwordInput, "wrongpassword");
-    
-    await act(async () => {
-      await user.click(loginButton);
-    });
+    await user.click(loginButton);
 
     await waitFor(() => {
       expect(screen.getByTestId("login-error")).toBeInTheDocument();
@@ -474,7 +475,6 @@ describe("App", () => {
     setAuth();
     render(<App />);
     await flushNavigation();
-    // The root route should redirect to login
     await screen.findByRole("heading", { name: /login/i });
   });
 
