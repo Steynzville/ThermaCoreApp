@@ -1,16 +1,5 @@
-/**
- * Tests for statusMonitor Service
- *
- * Coverage includes:
- * - Frontend status checks
- * - Backend API status checks
- * - Database status checks via backend
- * - WebSocket/MQTT status checks
- * - Response time measurement
- * - Error handling for timeouts and failures
- */
-
-import { beforeEach, describe, expect, it, vi } from "vitest";
+// src/services/statusMonitor.test.js
+import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
 import {
   checkAllStatus,
   checkBackendStatus,
@@ -29,12 +18,31 @@ global.performance = {
 };
 
 describe("statusMonitor Service", () => {
+  let time = 0;
+
   beforeEach(() => {
     vi.clearAllMocks();
-    let time = 0;
+    time = 0;
     mockPerformanceNow.mockImplementation(() => {
       time += 100;
       return time;
+    });
+    // Ensure fetch has a default mock that resolves
+    global.fetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ status: "operational", database: { connected: true } }),
+    });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    // Reset fetch mock to prevent hanging promises
+    global.fetch.mockReset();
+    global.fetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ status: "operational", database: { connected: true } }),
     });
   });
 
