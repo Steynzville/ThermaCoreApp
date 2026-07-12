@@ -41,7 +41,6 @@ const ScrollToTop = () => {
 const AppContent = () => {
   const { isAuthenticated, isLoading, isLoggingOut, user } = useAuth();
   const { settings } = useSettings();
-  const isInitialMount = useRef(true);
   const previousUserRef = useRef(null);
   const [loginError, setLoginError] = useState("");
   const [appError, setAppError] = useState(null);
@@ -68,16 +67,11 @@ const AppContent = () => {
     };
   }, []);
 
-  // FIXED: Only play login sound on actual login transition, not on settings changes
+  // FIXED: Only play login sound on actual login transition
+  // Removed settings.soundEnabled and settings.volume from dependencies
   useEffect(() => {
-    // Skip the initial mount
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
-    }
-
     // Check if this is a real login (null -> user)
-    const justLoggedIn = !previousUserRef.current && !!user;
+    const justLoggedIn = previousUserRef.current === null && user !== null;
     
     // Update the ref for next render
     previousUserRef.current = user;
@@ -90,7 +84,7 @@ const AppContent = () => {
         // Don't set app error for sound issues
       }
     }
-  }, [user, settings.soundEnabled, settings.volume]);
+  }, [user]); // <-- ONLY depends on user, NOT settings!
 
   // Show error state if there's an application error
   if (appError) {
