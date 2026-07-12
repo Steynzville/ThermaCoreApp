@@ -292,6 +292,17 @@ def create_app(config_name=None):
     logger = logging.getLogger(__name__)
     register_all_blueprints(app, logger)
 
+    # ============================================
+    # TEMPORARY: Manually register auth blueprint for debugging
+    # ============================================
+    try:
+        from app.routes.auth import auth_bp
+        app.register_blueprint(auth_bp, url_prefix='/api/v1')
+        logger.info("✅ Auth blueprint registered manually (debug)")
+        logger.info(f"   Auth routes: {[rule.rule for rule in auth_bp.url_map.iter_rules()]}")
+    except Exception as e:
+        logger.error(f"❌ Manual auth registration failed: {e}")
+
     # Initialize SCADA services (Phase 2, 3 & 4)
     from app.service_init import initialize_all_services
 
