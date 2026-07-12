@@ -1,5 +1,5 @@
 // src/tests/ForgotPassword.test.jsx
-import { render, screen, waitFor, cleanup, fireEvent, act } from "@testing-library/react";
+import { render, screen, waitFor, cleanup, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { BrowserRouter } from "react-router-dom";
@@ -10,13 +10,6 @@ import * as authService from "../services/authService";
 // CRITICAL FIX: Ensure real timers for React's scheduler
 // ============================================================
 vi.useRealTimers();
-
-// Helper to flush pending promises
-const flushPromises = async () => {
-  await act(async () => {
-    await new Promise(resolve => setTimeout(resolve, 0));
-  });
-};
 
 // ============================================================
 // Mock the auth service
@@ -54,11 +47,10 @@ describe("ForgotPassword", () => {
   });
 
   afterEach(() => {
-    // Don't cleanup immediately - let the test finish first
-    // The test's waitFor will complete before this runs
+    // Cleanup first, then mocks
+    cleanup();
     vi.clearAllMocks();
     vi.useRealTimers();
-    cleanup();
   });
 
   const renderForgotPassword = () => {
@@ -131,15 +123,16 @@ describe("ForgotPassword", () => {
 
     submitForm();
 
-    // Flush promises to allow the async handler to complete
-    await flushPromises();
-
+    // Wait for the service to be called - use waitFor with a longer timeout
     await waitFor(() => {
       expect(authService.requestPasswordReset).toHaveBeenCalledWith("test@example.com");
-    }, { timeout: 3000 });
+    });
 
-    const successElement = await screen.findByText(successMessage, {}, { timeout: 3000 });
-    expect(successElement).toBeInTheDocument();
+    // Wait for the success message to appear
+    await waitFor(() => {
+      const successElement = screen.getByText(successMessage);
+      expect(successElement).toBeInTheDocument();
+    });
   });
 
   it("shows error message when request fails", async () => {
@@ -157,14 +150,14 @@ describe("ForgotPassword", () => {
 
     submitForm();
 
-    await flushPromises();
-
     await waitFor(() => {
       expect(authService.requestPasswordReset).toHaveBeenCalledWith("test@example.com");
-    }, { timeout: 3000 });
+    });
 
-    const errorElement = await screen.findByText(errorMessage, {}, { timeout: 3000 });
-    expect(errorElement).toBeInTheDocument();
+    await waitFor(() => {
+      const errorElement = screen.getByText(errorMessage);
+      expect(errorElement).toBeInTheDocument();
+    });
   });
 
   it("shows error when request throws exception", async () => {
@@ -211,7 +204,6 @@ describe("ForgotPassword", () => {
     });
 
     submitForm();
-    await flushPromises();
 
     const successElement = await screen.findByText("Success!");
     expect(successElement).toBeInTheDocument();
@@ -232,7 +224,7 @@ describe("ForgotPassword", () => {
     submitForm();
 
     // Wait for the button text to change to "Sending..."
-    const sendingButton = await screen.findByRole("button", { name: "Sending..." }, { timeout: 3000 });
+    const sendingButton = await screen.findByRole("button", { name: "Sending..." });
     expect(sendingButton).toBeInTheDocument();
     expect(sendingButton).toBeDisabled();
     expect(emailInput).toBeDisabled();
@@ -268,11 +260,10 @@ describe("ForgotPassword", () => {
     expect(emailInput).toHaveValue("test@example.com");
 
     submitForm();
-    await flushPromises();
 
     await waitFor(() => {
       expect(emailInput).toHaveValue("");
-    }, { timeout: 3000 });
+    });
   });
 
   it("handles trimming of email input", async () => {
@@ -288,11 +279,10 @@ describe("ForgotPassword", () => {
     await user.type(emailInput, "  test@example.com  ");
 
     submitForm();
-    await flushPromises();
 
     await waitFor(() => {
       expect(authService.requestPasswordReset).toHaveBeenCalledWith("test@example.com");
-    }, { timeout: 3000 });
+    });
   });
 
   it("handles service returning error message without success flag", async () => {
