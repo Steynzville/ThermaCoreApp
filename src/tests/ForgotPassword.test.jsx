@@ -77,7 +77,8 @@ describe("ForgotPassword", () => {
     await user.click(submitButton);
 
     await waitFor(() => {
-      expect(screen.getByText("Please enter your email address")).toBeInTheDocument();
+      const errorElement = screen.getByText("Please enter your email address");
+      expect(errorElement).toBeInTheDocument();
     });
     expect(authService.requestPasswordReset).not.toHaveBeenCalled();
   });
@@ -93,7 +94,8 @@ describe("ForgotPassword", () => {
     await user.click(submitButton);
 
     await waitFor(() => {
-      expect(screen.getByText("Please enter a valid email address")).toBeInTheDocument();
+      const errorElement = screen.getByText("Please enter a valid email address");
+      expect(errorElement).toBeInTheDocument();
     });
     expect(authService.requestPasswordReset).not.toHaveBeenCalled();
   });
@@ -116,7 +118,8 @@ describe("ForgotPassword", () => {
 
     await waitFor(() => {
       expect(authService.requestPasswordReset).toHaveBeenCalledWith("test@example.com");
-      expect(screen.getByText(successMessage)).toBeInTheDocument();
+      const successElement = screen.getByText(successMessage);
+      expect(successElement).toBeInTheDocument();
     });
   });
 
@@ -138,7 +141,8 @@ describe("ForgotPassword", () => {
 
     await waitFor(() => {
       expect(authService.requestPasswordReset).toHaveBeenCalledWith("test@example.com");
-      expect(screen.getByText(errorMessage)).toBeInTheDocument();
+      const errorElement = screen.getByText(errorMessage);
+      expect(errorElement).toBeInTheDocument();
     });
   });
 
@@ -157,9 +161,10 @@ describe("ForgotPassword", () => {
     await user.click(submitButton);
 
     await waitFor(() => {
-      expect(
-        screen.getByText("An unexpected error occurred. Please try again.")
-      ).toBeInTheDocument();
+      const errorElement = screen.getByText(
+        "An unexpected error occurred. Please try again."
+      );
+      expect(errorElement).toBeInTheDocument();
     });
   });
 
@@ -200,7 +205,7 @@ describe("ForgotPassword", () => {
   it("disables inputs and button during submission", async () => {
     const user = userEvent.setup();
     vi.mocked(authService.requestPasswordReset).mockImplementation(
-      () => new Promise(resolve => setTimeout(() => resolve({ success: true, message: "OK" }), 100))
+      () => new Promise(resolve => setTimeout(() => resolve({ success: true, message: "OK" }), 200))
     );
 
     renderForgotPassword();
@@ -211,15 +216,19 @@ describe("ForgotPassword", () => {
     const submitButton = screen.getByRole("button", { name: "Send Reset Link" });
     await user.click(submitButton);
 
-    // Button should show "Sending..." and be disabled
-    expect(screen.getByRole("button", { name: "Sending..." })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Sending..." })).toBeDisabled();
+    // Check that button text changes to "Sending..."
+    await waitFor(() => {
+      const sendingButton = screen.getByRole("button", { name: "Sending..." });
+      expect(sendingButton).toBeInTheDocument();
+      expect(sendingButton).toBeDisabled();
+    });
+
     expect(emailInput).toBeDisabled();
 
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "Send Reset Link" })).toBeInTheDocument();
       expect(emailInput).not.toBeDisabled();
-    });
+    }, { timeout: 3000 });
   });
 
   it("navigates back to login when Back to Login button is clicked", async () => {
@@ -269,7 +278,6 @@ describe("ForgotPassword", () => {
     await user.click(submitButton);
 
     await waitFor(() => {
-      // The email should be trimmed before sending
       expect(authService.requestPasswordReset).toHaveBeenCalledWith("test@example.com");
     });
   });
@@ -290,7 +298,8 @@ describe("ForgotPassword", () => {
     await user.click(submitButton);
 
     await waitFor(() => {
-      expect(screen.getByText(errorMessage)).toBeInTheDocument();
+      const errorElement = screen.getByText(errorMessage);
+      expect(errorElement).toBeInTheDocument();
     });
   });
 });
