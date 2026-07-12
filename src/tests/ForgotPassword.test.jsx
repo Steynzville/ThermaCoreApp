@@ -1,34 +1,43 @@
 // src/tests/ForgotPassword.test.jsx
-import { render, screen, waitFor, act, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { BrowserRouter } from "react-router-dom";
 import ForgotPassword from "../components/ForgotPassword";
 import * as authService from "../services/authService";
 
+// ============================================================
 // Mock the auth service
+// ============================================================
 vi.mock("../services/authService", () => ({
   requestPasswordReset: vi.fn(),
 }));
 
+// ============================================================
+// Mock react-router-dom with hoisted navigate
+// ============================================================
+const { mockNavigate } = vi.hoisted(() => ({
+  mockNavigate: vi.fn(),
+}));
+
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual("react-router-dom");
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
+
+// ============================================================
 // Mock the logo import
+// ============================================================
 vi.mock("../assets/thermacore-logo-new.png", () => ({
   default: "test-logo.png",
 }));
 
 describe("ForgotPassword", () => {
-  const mockNavigate = vi.fn();
-
   beforeEach(() => {
     vi.clearAllMocks();
-    // Mock useNavigate
-    vi.mock("react-router-dom", async () => {
-      const actual = await vi.importActual("react-router-dom");
-      return {
-        ...actual,
-        useNavigate: () => mockNavigate,
-      };
-    });
   });
 
   afterEach(() => {
