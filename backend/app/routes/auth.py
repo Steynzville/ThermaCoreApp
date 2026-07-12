@@ -1,7 +1,3 @@
-print("=" * 60)
-print("🔴 AUTH.PY IS BEING LOADED")
-print("=" * 60)
-
 """Authentication routes for ThermaCore SCADA API."""
 
 import logging
@@ -41,7 +37,7 @@ auth_bp = Blueprint("auth", __name__)
 # ============================================================
 # TEST ROUTE - To verify auth blueprint is working
 # ============================================================
-@auth_bp.route("/ping", methods=["GET"])
+@auth_bp.route("/auth/ping", methods=["GET"])
 def ping():
     """Simple ping endpoint to verify auth blueprint is working."""
     return jsonify({"status": "ok", "message": "Auth blueprint is alive!"}), 200
@@ -1148,7 +1144,6 @@ def emergency_admin():
 # ============================================================
 # DEBUG: Print statements to confirm module loads
 # ============================================================
-print("=" * 60)
-print("✅ Auth blueprint module loaded")
-print(f"✅ Routes registered: {[rule.rule for rule in auth_bp.url_map.iter_rules()]}")
-print("=" * 60)
+print("=" * 60, flush=True)
+print("✅ Auth blueprint module loaded successfully", flush=True)
+print("=" * 60, flush=True)
