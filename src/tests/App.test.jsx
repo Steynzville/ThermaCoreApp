@@ -1,5 +1,5 @@
 // src/tests/App.test.jsx
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from "vitest";
 import React from "react";
@@ -10,6 +10,13 @@ import React from "react";
 // needs real timers to flush navigation updates
 // ============================================================
 vi.useRealTimers();
+
+// Helper to flush React.startTransition navigation updates
+const flushNavigation = async () => {
+  await act(async () => {
+    await new Promise(resolve => setTimeout(resolve, 0));
+  });
+};
 
 // ============================================================
 // Use vi.hoisted() for the auth mock object - NO React.createContext
@@ -340,6 +347,7 @@ describe("App", () => {
   it("renders the login page for unauthenticated users", async () => {
     setAuth();
     render(<App />);
+    await flushNavigation();
 
     const heading = await screen.findByRole("heading", { name: /login/i });
     expect(heading).toBeInTheDocument();
@@ -351,6 +359,7 @@ describe("App", () => {
   it("shows the theme toggle button", async () => {
     setAuth();
     render(<App />);
+    await flushNavigation();
 
     await screen.findByRole("heading", { name: /login/i });
     expect(screen.getByTestId("theme-toggle")).toBeInTheDocument();
@@ -360,6 +369,7 @@ describe("App", () => {
     const user = userEvent.setup();
     setAuth();
     render(<App />);
+    await flushNavigation();
 
     await screen.findByRole("heading", { name: /login/i });
     const themeToggle = screen.getByTestId("theme-toggle");
@@ -372,6 +382,7 @@ describe("App", () => {
   it("shows loading state when authentication is in progress", async () => {
     setAuth({ isLoading: true });
     render(<App />);
+    await flushNavigation();
 
     const loadingElements = await screen.findAllByText(/loading/i);
     expect(loadingElements.length).toBeGreaterThan(0);
@@ -381,6 +392,7 @@ describe("App", () => {
   it("shows signing out message when isLoggingOut is true", async () => {
     setAuth({ isLoggingOut: true });
     render(<App />);
+    await flushNavigation();
 
     await waitFor(() => {
       expect(screen.getByTestId("spinner")).toBeInTheDocument();
@@ -394,6 +406,7 @@ describe("App", () => {
     setAuth({ login: mockLogin });
 
     render(<App />);
+    await flushNavigation();
     await screen.findByRole("heading", { name: /login/i });
 
     await user.type(screen.getByTestId("username-input"), "admin@thermacore.com");
@@ -412,6 +425,7 @@ describe("App", () => {
     setAuth({ login: mockLogin });
 
     render(<App />);
+    await flushNavigation();
     await screen.findByRole("heading", { name: /login/i });
 
     await user.type(screen.getByTestId("username-input"), "invalid@example.com");
@@ -427,9 +441,11 @@ describe("App", () => {
     const user = userEvent.setup();
     setAuth();
     render(<App />);
+    await flushNavigation();
     await screen.findByRole("heading", { name: /login/i });
 
     await user.click(screen.getByTestId("forgot-password-link"));
+    await flushNavigation();
 
     await waitFor(() => {
       expect(screen.getByTestId("forgot-password-page")).toBeInTheDocument();
@@ -440,6 +456,7 @@ describe("App", () => {
     navigateTo("/forgot-password");
     setAuth();
     render(<App />);
+    await flushNavigation();
 
     await waitFor(() => {
       expect(screen.getByTestId("forgot-password-page")).toBeInTheDocument();
@@ -450,6 +467,7 @@ describe("App", () => {
     navigateTo("/reset-password");
     setAuth();
     render(<App />);
+    await flushNavigation();
 
     await waitFor(() => {
       expect(screen.getByTestId("reset-password-page")).toBeInTheDocument();
@@ -459,6 +477,7 @@ describe("App", () => {
   it("redirects root path to the login page", async () => {
     setAuth();
     render(<App />);
+    await flushNavigation();
     await screen.findByRole("heading", { name: /login/i });
   });
 
@@ -466,6 +485,7 @@ describe("App", () => {
     navigateTo("/some-unknown-path");
     setAuth();
     render(<App />);
+    await flushNavigation();
     await screen.findByRole("heading", { name: /login/i });
   });
 
@@ -473,6 +493,7 @@ describe("App", () => {
     navigateTo("/dashboard");
     setAuth({ user: { id: 1, name: "Test User" }, isAuthenticated: true });
     render(<App />);
+    await flushNavigation();
 
     await waitFor(() => {
       expect(screen.getByTestId("protected-route")).toBeInTheDocument();
@@ -484,6 +505,7 @@ describe("App", () => {
     navigateTo("/dashboard");
     setAuth();
     render(<App />);
+    await flushNavigation();
 
     await screen.findByRole("heading", { name: /login/i });
     expect(screen.queryByTestId("protected-route")).not.toBeInTheDocument();
@@ -492,6 +514,7 @@ describe("App", () => {
   it("shows the error boundary UI when a window error event fires", async () => {
     setAuth();
     render(<App />);
+    await flushNavigation();
     await screen.findByRole("heading", { name: /login/i });
 
     const errorEvent = new ErrorEvent("error", { message: "Test error" });
@@ -506,6 +529,7 @@ describe("App", () => {
     const user = userEvent.setup();
     setAuth();
     render(<App />);
+    await flushNavigation();
     await screen.findByRole("heading", { name: /login/i });
 
     const errorEvent = new ErrorEvent("error", { message: "Test error" });
