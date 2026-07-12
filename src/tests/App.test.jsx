@@ -3,7 +3,7 @@ import { cleanup, render, screen, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from "vitest";
 import React from "react";
-import { MemoryRouter, Routes, Route } from "react-router-dom";
+import { MemoryRouter } from "react-router-dom";
 
 // ============================================================
 // CRITICAL FIX: Ensure real timers for React's scheduler
@@ -301,14 +301,13 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.useRealTimers();
 
-  Object.assign(authMock, {
-    user: null,
-    isAuthenticated: false,
-    isLoading: false,
-    isLoggingOut: false,
-    login: vi.fn().mockResolvedValue(undefined),
-    logout: vi.fn(),
-  });
+  // Reset auth mock to default state
+  authMock.user = null;
+  authMock.isAuthenticated = false;
+  authMock.isLoading = false;
+  authMock.isLoggingOut = false;
+  authMock.login = vi.fn().mockResolvedValue(undefined);
+  authMock.logout = vi.fn();
 });
 
 afterEach(() => {
@@ -322,12 +321,15 @@ afterEach(() => {
 // ============================================================
 
 const setAuth = (overrides = {}) => {
+  // Create a new login mock that preserves the original behavior
+  const loginMock = overrides.login || vi.fn().mockResolvedValue(undefined);
+  
   Object.assign(authMock, {
     user: null,
     isAuthenticated: false,
     isLoading: false,
     isLoggingOut: false,
-    login: vi.fn().mockResolvedValue(undefined),
+    login: loginMock,
     logout: vi.fn(),
     ...overrides,
   });
@@ -408,9 +410,17 @@ describe("App", () => {
     await flushNavigation();
     await screen.findByRole("heading", { name: /login/i });
 
-    await user.type(screen.getByTestId("username-input"), "admin@thermacore.com");
-    await user.type(screen.getByTestId("password-input"), "emergency_admin_789");
-    await user.click(screen.getByTestId("login-button"));
+    const usernameInput = screen.getByTestId("username-input");
+    const passwordInput = screen.getByTestId("password-input");
+    const loginButton = screen.getByTestId("login-button");
+
+    await user.type(usernameInput, "admin@thermacore.com");
+    await user.type(passwordInput, "emergency_admin_789");
+    
+    // Use act to ensure all updates are processed
+    await act(async () => {
+      await user.click(loginButton);
+    });
 
     expect(mockLogin).toHaveBeenCalledWith({
       username: "admin@thermacore.com",
@@ -420,19 +430,28 @@ describe("App", () => {
 
   it("shows an error message when login rejects", async () => {
     const user = userEvent.setup();
-    const mockLogin = vi.fn().mockRejectedValue(new Error("Invalid credentials"));
+    const errorMessage = "Invalid credentials";
+    const mockLogin = vi.fn().mockRejectedValue(new Error(errorMessage));
     setAuth({ login: mockLogin });
 
     render(<App />);
     await flushNavigation();
     await screen.findByRole("heading", { name: /login/i });
 
-    await user.type(screen.getByTestId("username-input"), "invalid@example.com");
-    await user.type(screen.getByTestId("password-input"), "wrongpassword");
-    await user.click(screen.getByTestId("login-button"));
+    const usernameInput = screen.getByTestId("username-input");
+    const passwordInput = screen.getByTestId("password-input");
+    const loginButton = screen.getByTestId("login-button");
+
+    await user.type(usernameInput, "invalid@example.com");
+    await user.type(passwordInput, "wrongpassword");
+    
+    await act(async () => {
+      await user.click(loginButton);
+    });
 
     await waitFor(() => {
-      expect(screen.getByTestId("login-error")).toHaveTextContent("Invalid credentials");
+      expect(screen.getByTestId("login-error")).toBeInTheDocument();
+      expect(screen.getByTestId("login-error")).toHaveTextContent(errorMessage);
     });
   });
 
@@ -452,14 +471,11 @@ describe("App", () => {
   });
 
   it("renders the forgot password route directly", async () => {
-    // Since we're using MemoryRouter, we need to set the initial entry
-    // But our mock BrowserRouter always uses ["/"] 
-    // We'll need to handle this differently
     setAuth();
     render(<App />);
     await flushNavigation();
+    // The root route should redirect to login
     await screen.findByRole("heading", { name: /login/i });
-    // For now, we'll skip the direct route tests or handle them differently
   });
 
   it("renders the reset password route directly", async () => {
