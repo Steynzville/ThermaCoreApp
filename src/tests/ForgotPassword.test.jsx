@@ -7,6 +7,11 @@ import ForgotPassword from "../components/ForgotPassword";
 import * as authService from "../services/authService";
 
 // ============================================================
+// CRITICAL FIX: Ensure real timers for React's scheduler
+// ============================================================
+vi.useRealTimers();
+
+// ============================================================
 // Mock the auth service
 // ============================================================
 vi.mock("../services/authService", () => ({
@@ -37,12 +42,14 @@ vi.mock("../assets/thermacore-logo-new.png", () => ({
 
 describe("ForgotPassword", () => {
   beforeEach(() => {
+    vi.useRealTimers();
     vi.clearAllMocks();
   });
 
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+    vi.useRealTimers();
   });
 
   const renderForgotPassword = () => {
