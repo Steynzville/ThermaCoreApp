@@ -36,6 +36,7 @@ class Config:
     EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "False").lower() == "true"
     EMAIL_FROM = os.environ.get("EMAIL_FROM")
     FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://thermacoreapp.netlify.app")
+    SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY")
 
     # JWT Configuration
     JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
