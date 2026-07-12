@@ -3,7 +3,7 @@ import { cleanup, render, screen, waitFor, act, fireEvent } from "@testing-libra
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from "vitest";
 import React from "react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Link } from "react-router-dom";
 
 // ============================================================
 // CRITICAL FIX: Ensure real timers for React's scheduler
@@ -18,14 +18,23 @@ const flushNavigation = async () => {
 };
 
 // ============================================================
-// Mock BrowserRouter to use MemoryRouter instead
+// Mock BrowserRouter with configurable initial route
 // ============================================================
+
+const { getInitialEntries, setInitialRoute } = vi.hoisted(() => {
+  let entries = ["/"];
+  return {
+    getInitialEntries: () => entries,
+    setInitialRoute: (path) => { entries = [path]; },
+  };
+});
+
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual("react-router-dom");
   return {
     ...actual,
     BrowserRouter: ({ children }) => (
-      <MemoryRouter initialEntries={["/"]}>
+      <MemoryRouter initialEntries={getInitialEntries()}>
         {children}
       </MemoryRouter>
     ),
@@ -123,9 +132,9 @@ vi.mock("../components/LoginScreen", () => ({
             Login
           </button>
         </form>
-        <a href="/forgot-password" data-testid="forgot-password-link">
+        <Link to="/forgot-password" data-testid="forgot-password-link">
           Forgot password?
-        </a>
+        </Link>
       </div>
     );
   },
@@ -301,6 +310,9 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.useRealTimers();
 
+  // Reset the initial route for each test
+  setInitialRoute("/");
+
   // Reset auth state with fresh functions
   authState.user = null;
   authState.isAuthenticated = false;
@@ -405,7 +417,6 @@ describe("App", () => {
     await user.type(usernameInput, "admin@thermacore.com");
     await user.type(passwordInput, "emergency_admin_789");
 
-    // Use fireEvent.submit on the form instead of clicking the button
     const form = screen.getByTestId("login-button").closest("form");
     fireEvent.submit(form);
 
@@ -433,7 +444,6 @@ describe("App", () => {
     await user.type(usernameInput, "invalid@example.com");
     await user.type(passwordInput, "wrongpassword");
 
-    // Use fireEvent.submit on the form instead of clicking the button
     const form = screen.getByTestId("login-button").closest("form");
     fireEvent.submit(form);
 
@@ -462,16 +472,24 @@ describe("App", () => {
 
   it("renders the forgot password route directly", async () => {
     setAuth();
+    setInitialRoute("/forgot-password");
     render(<App />);
     await flushNavigation();
-    await screen.findByRole("heading", { name: /login/i });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("forgot-password-page")).toBeInTheDocument();
+    });
   });
 
   it("renders the reset password route directly", async () => {
     setAuth();
+    setInitialRoute("/reset-password");
     render(<App />);
     await flushNavigation();
-    await screen.findByRole("heading", { name: /login/i });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("reset-password-page")).toBeInTheDocument();
+    });
   });
 
   it("redirects root path to the login page", async () => {
@@ -483,6 +501,7 @@ describe("App", () => {
 
   it("redirects unknown paths to the login page", async () => {
     setAuth();
+    setInitialRoute("/some-unknown-path");
     render(<App />);
     await flushNavigation();
     await screen.findByRole("heading", { name: /login/i });
@@ -490,6 +509,7 @@ describe("App", () => {
 
   it("renders a protected route when authenticated", async () => {
     setAuth({ user: { id: 1, name: "Test User" }, isAuthenticated: true });
+    setInitialRoute("/dashboard");
     render(<App />);
     await flushNavigation();
 
@@ -501,6 +521,7 @@ describe("App", () => {
 
   it("redirects to login when visiting a protected route unauthenticated", async () => {
     setAuth();
+    setInitialRoute("/dashboard");
     render(<App />);
     await flushNavigation();
 
