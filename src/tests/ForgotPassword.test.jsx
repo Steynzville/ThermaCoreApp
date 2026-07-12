@@ -53,12 +53,7 @@ describe("ForgotPassword", () => {
     );
   };
 
-  const submitForm = () => {
-    const form = document.querySelector('form[novalidate]');
-    if (!form) throw new Error('Form not found');
-    // Use requestSubmit() which mimics native browser form submission
-    form.requestSubmit();
-  };
+  const submitButton = () => screen.getByRole("button", { name: "Send Reset Link" });
 
   it("renders the forgot password page correctly", () => {
     renderForgotPassword();
@@ -68,9 +63,7 @@ describe("ForgotPassword", () => {
       screen.getByText("Enter your email to receive a password reset link")
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Email Address")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Send Reset Link" })
-    ).toBeInTheDocument();
+    expect(submitButton()).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Back to Login" })
     ).toBeInTheDocument();
@@ -78,9 +71,10 @@ describe("ForgotPassword", () => {
   });
 
   it("shows error when submitting with empty email", async () => {
+    const user = userEvent.setup();
     renderForgotPassword();
 
-    submitForm();
+    await user.click(submitButton());
 
     const errorElement = await screen.findByText("Please enter your email address");
     expect(errorElement).toBeInTheDocument();
@@ -94,7 +88,7 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "invalid-email");
 
-    submitForm();
+    await user.click(submitButton());
 
     const errorElement = await screen.findByText("Please enter a valid email address");
     expect(errorElement).toBeInTheDocument();
@@ -114,7 +108,7 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "test@example.com");
 
-    submitForm();
+    await user.click(submitButton());
 
     await waitFor(() => {
       expect(authService.requestPasswordReset).toHaveBeenCalledWith("test@example.com");
@@ -137,7 +131,7 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "test@example.com");
 
-    submitForm();
+    await user.click(submitButton());
 
     await waitFor(() => {
       expect(authService.requestPasswordReset).toHaveBeenCalledWith("test@example.com");
@@ -158,7 +152,7 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "test@example.com");
 
-    submitForm();
+    await user.click(submitButton());
 
     const errorElement = await screen.findByText(
       "An unexpected error occurred. Please try again."
@@ -179,7 +173,7 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "test@example.com");
 
-    submitForm();
+    await user.click(submitButton());
 
     const errorElement = await screen.findByText(errorMessage);
     expect(errorElement).toBeInTheDocument();
@@ -190,7 +184,7 @@ describe("ForgotPassword", () => {
       message: "Success!",
     });
 
-    submitForm();
+    await user.click(submitButton());
 
     const successElement = await screen.findByText("Success!");
     expect(successElement).toBeInTheDocument();
@@ -208,7 +202,7 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "test@example.com");
 
-    submitForm();
+    await user.click(submitButton());
 
     // Wait for the button text to change to "Sending..."
     const sendingButton = await screen.findByRole("button", { name: "Sending..." });
@@ -246,7 +240,7 @@ describe("ForgotPassword", () => {
     await user.type(emailInput, "test@example.com");
     expect(emailInput).toHaveValue("test@example.com");
 
-    submitForm();
+    await user.click(submitButton());
 
     await waitFor(() => {
       expect(emailInput).toHaveValue("");
@@ -265,7 +259,7 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "  test@example.com  ");
 
-    submitForm();
+    await user.click(submitButton());
 
     await waitFor(() => {
       expect(authService.requestPasswordReset).toHaveBeenCalledWith("test@example.com");
@@ -284,7 +278,7 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "test@example.com");
 
-    submitForm();
+    await user.click(submitButton());
 
     const errorElement = await screen.findByText(errorMessage);
     expect(errorElement).toBeInTheDocument();
