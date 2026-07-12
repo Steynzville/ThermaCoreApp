@@ -4,6 +4,11 @@ import { vi, beforeAll, beforeEach, afterEach } from "vitest";
 import React from "react";
 import { cleanup } from "@testing-library/react";
 
+// ============================================================
+// CRITICAL: Ensure real timers for React's scheduler
+// ============================================================
+vi.useRealTimers();
+
 /**
  * -----------------------------
  * GLOBAL CLEANUP
@@ -12,13 +17,13 @@ import { cleanup } from "@testing-library/react";
 // Clean up DOM after each test to prevent memory leaks and test pollution
 afterEach(() => {
   cleanup();
-  
-  // Clear any leftover DOM nodes
-  document.body.innerHTML = '';
+  // REMOVED: document.body.innerHTML = ''; // This was causing issues with async continuations
   
   // Reset any global state
   vi.clearAllMocks();
   vi.resetAllMocks();
+  // CRITICAL: Re-apply real timers after clearing mocks
+  vi.useRealTimers();
 });
 
 /**
@@ -51,6 +56,8 @@ Object.defineProperty(globalThis, "matchMedia", {
 
 // Reset matchMedia before each test
 beforeEach(() => {
+  // CRITICAL: Ensure real timers before each test
+  vi.useRealTimers();
   window.matchMedia = createMatchMedia(false);
 });
 
@@ -464,7 +471,7 @@ beforeEach(() => {
   }
 
   // Clear any leftover DOM from previous tests
-  document.body.innerHTML = '';
+  // REMOVED: document.body.innerHTML = ''; // This was causing issues with async continuations
 });
 
 /**
@@ -484,15 +491,33 @@ vi.mock("framer-motion", () => ({
  * GLOBAL STABILITY
  * -----------------------------
  */
+
+// Store console spies at module level
+let consoleErrorSpy = null;
+let consoleWarnSpy = null;
+
 beforeAll(() => {
-  vi.spyOn(console, "error").mockImplementation(() => {});
-  vi.spyOn(console, "warn").mockImplementation(() => {});
+  // Create spies that persist for the entire test run
+  consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+});
+
+// Clean up console spies after all tests
+afterEach(() => {
+  // Don't restore in afterEach - keep them active for all tests
+  // Only restore in afterAll
 });
 
 // Restore console mocks after all tests
-afterEach(() => {
-  console.error?.mockRestore?.();
-  console.warn?.mockRestore?.();
+afterAll(() => {
+  if (consoleErrorSpy) {
+    consoleErrorSpy.mockRestore();
+    consoleErrorSpy = null;
+  }
+  if (consoleWarnSpy) {
+    consoleWarnSpy.mockRestore();
+    consoleWarnSpy = null;
+  }
 });
 
 // IMPORTANT: Export a helper to reset storage for tests that need it
