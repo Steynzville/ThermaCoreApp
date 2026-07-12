@@ -805,25 +805,19 @@ def forgot_password(data):
             # ============================================================
             # Send password reset email
             # ============================================================
-            try:
-                from app.services.email_service import send_password_reset_email
-                current_app.logger.info("✅ Email service imported successfully")
-                
-                success, error = send_password_reset_email(email, reset_token)
-                if not success:
-                    current_app.logger.error(
-                        f"❌ Failed to send reset email to {email}: {error}",
-                        extra={"event": "password_reset_email_failed"}
-                    )
-                else:
-                    current_app.logger.info(
-                        f"✅ Password reset email sent to {email}",
-                        extra={"event": "password_reset_email_sent"}
-                    )
-            except ImportError as import_error:
-                current_app.logger.error(f"❌ Failed to import email service: {import_error}")
-            except Exception as email_error:
-                current_app.logger.error(f"❌ Unexpected error sending email: {email_error}")
+            from app.services.email_service import send_password_reset_email
+
+            success, error = send_password_reset_email(email, reset_token)
+            if not success:
+                current_app.logger.error(
+                    f"Failed to send reset email to {email}: {error}",
+                    extra={"event": "password_reset_email_failed"}
+                )
+            else:
+                current_app.logger.info(
+                    f"Password reset email sent to {email}",
+                    extra={"event": "password_reset_email_sent"}
+                )
 
         # Always return success to prevent email enumeration
         return SecurityAwareErrorHandler.create_success_response(
@@ -1136,13 +1130,3 @@ def emergency_admin():
             "Emergency admin creation",
             500,
         )
-
-
-# ============================================================
-# DEBUG: Print statements to confirm module loads
-# ============================================================
-print("=" * 60)
-print("✅ Auth blueprint module loaded successfully")
-print("=" * 60)
-print(f"✅ Auth blueprint has routes: {[rule.rule for rule in auth_bp.url_map.iter_rules()]}")
-print("=" * 60)
