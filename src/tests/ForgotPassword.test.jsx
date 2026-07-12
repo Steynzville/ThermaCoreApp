@@ -1,5 +1,5 @@
 // src/tests/ForgotPassword.test.jsx
-import { render, screen, waitFor, cleanup, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, cleanup, fireEvent, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { BrowserRouter } from "react-router-dom";
@@ -53,12 +53,15 @@ describe("ForgotPassword", () => {
     );
   };
 
-  const submitForm = () => {
+  const submitForm = async () => {
     const form = document.querySelector('form[novalidate]');
     if (!form) throw new Error('Form not found');
-    fireEvent.submit(form);
-    // Wait for the event to propagate
-    return new Promise(resolve => setTimeout(resolve, 10));
+    
+    await act(async () => {
+      fireEvent.submit(form);
+      // Wait for the event to propagate and state to update
+      await new Promise(resolve => setTimeout(resolve, 0));
+    });
   };
 
   it("renders the forgot password page correctly", () => {
@@ -117,10 +120,12 @@ describe("ForgotPassword", () => {
 
     await submitForm();
 
+    // Wait for the service to be called
     await waitFor(() => {
       expect(authService.requestPasswordReset).toHaveBeenCalledWith("test@example.com");
     });
 
+    // Wait for the success message to appear
     const successElement = await screen.findByText(successMessage);
     expect(successElement).toBeInTheDocument();
   });
@@ -140,10 +145,12 @@ describe("ForgotPassword", () => {
 
     await submitForm();
 
+    // Wait for the service to be called
     await waitFor(() => {
       expect(authService.requestPasswordReset).toHaveBeenCalledWith("test@example.com");
     });
 
+    // Wait for the error message to appear
     const errorElement = await screen.findByText(errorMessage);
     expect(errorElement).toBeInTheDocument();
   });
@@ -209,15 +216,20 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "test@example.com");
 
-    await submitForm();
-
-    // Wait for the button text to change
-    await waitFor(() => {
-      const sendingButton = screen.getByRole("button", { name: "Sending..." });
-      expect(sendingButton).toBeInTheDocument();
-      expect(sendingButton).toBeDisabled();
+    // Submit the form
+    const form = document.querySelector('form[novalidate]');
+    expect(form).toBeInTheDocument();
+    
+    await act(async () => {
+      fireEvent.submit(form);
+      // Wait for the button text to change
+      await new Promise(resolve => setTimeout(resolve, 50));
     });
 
+    // Check that button text changed to "Sending..."
+    const sendingButton = screen.getByRole("button", { name: "Sending..." });
+    expect(sendingButton).toBeInTheDocument();
+    expect(sendingButton).toBeDisabled();
     expect(emailInput).toBeDisabled();
 
     // Wait for the submission to complete
@@ -252,6 +264,7 @@ describe("ForgotPassword", () => {
 
     await submitForm();
 
+    // Wait for the email to be cleared
     await waitFor(() => {
       expect(emailInput).toHaveValue("");
     });
