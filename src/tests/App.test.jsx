@@ -3,11 +3,10 @@ import { cleanup, render, screen, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from "vitest";
 import React from "react";
+import { MemoryRouter } from "react-router-dom";
 
 // ============================================================
 // CRITICAL FIX: Ensure real timers for React's scheduler
-// React.startTransition (used by react-router-dom v7 Navigate)
-// needs real timers to flush navigation updates
 // ============================================================
 vi.useRealTimers();
 
@@ -19,7 +18,7 @@ const flushNavigation = async () => {
 };
 
 // ============================================================
-// Use vi.hoisted() for the auth mock object - NO React.createContext
+// Use vi.hoisted() for the auth mock object
 // ============================================================
 
 const { authMock } = vi.hoisted(() => {
@@ -44,7 +43,6 @@ vi.mock("../context/AuthContext", () => ({
   AuthProvider: ({ children }) => <div data-testid="auth-provider">{children}</div>,
 }));
 
-// Mock all other contexts
 vi.mock("../context/SettingsContext", () => ({
   useSettings: vi.fn(() => ({
     settings: { soundEnabled: true, volume: 0.5 },
@@ -243,7 +241,6 @@ class MockAudioContext {
 const reloadMock = vi.fn();
 
 beforeAll(() => {
-  // Ensure real timers are used for all tests in this file
   vi.useRealTimers();
   
   Object.defineProperty(window, "AudioContext", {
@@ -258,7 +255,6 @@ beforeAll(() => {
     value: MockAudioContext,
   });
 
-  // Keep the real Location object and only stub reload()
   Object.defineProperty(window.location, "reload", {
     configurable: true,
     writable: true,
@@ -288,14 +284,9 @@ beforeAll(() => {
 
 beforeEach(() => {
   vi.clearAllMocks();
-
-  // Ensure real timers are used for each test
   vi.useRealTimers();
-
-  // Use the real History API to reset the URL between tests
   window.history.pushState({}, "", "/");
 
-  // Reset auth mock to default state
   Object.assign(authMock, {
     user: null,
     isAuthenticated: false,
@@ -309,7 +300,6 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   reloadMock.mockClear();
-  // Restore real timers after each test
   vi.useRealTimers();
 });
 
@@ -329,24 +319,28 @@ const setAuth = (overrides = {}) => {
   });
 };
 
-// Helper to navigate to a given path using the real History API
-const navigateTo = (path) => {
-  window.history.pushState({}, "", path);
-};
-
 // ============================================================
-// Tests
+// Tests with MemoryRouter
 // ============================================================
 
 describe("App", () => {
+  // Helper to render App with MemoryRouter
+  const renderApp = (initialEntries = ["/"]) => {
+    return render(
+      <MemoryRouter initialEntries={initialEntries}>
+        <App />
+      </MemoryRouter>
+    );
+  };
+
   it("renders without crashing", () => {
-    const { container } = render(<App />);
+    const { container } = renderApp();
     expect(container).toBeDefined();
   });
 
   it("renders the login page for unauthenticated users", async () => {
     setAuth();
-    render(<App />);
+    renderApp();
     await flushNavigation();
 
     const heading = await screen.findByRole("heading", { name: /login/i });
@@ -358,7 +352,7 @@ describe("App", () => {
 
   it("shows the theme toggle button", async () => {
     setAuth();
-    render(<App />);
+    renderApp();
     await flushNavigation();
 
     await screen.findByRole("heading", { name: /login/i });
@@ -368,7 +362,7 @@ describe("App", () => {
   it("allows the user to toggle theme", async () => {
     const user = userEvent.setup();
     setAuth();
-    render(<App />);
+    renderApp();
     await flushNavigation();
 
     await screen.findByRole("heading", { name: /login/i });
@@ -381,7 +375,7 @@ describe("App", () => {
 
   it("shows loading state when authentication is in progress", async () => {
     setAuth({ isLoading: true });
-    render(<App />);
+    renderApp();
     await flushNavigation();
 
     const loadingElements = await screen.findAllByText(/loading/i);
@@ -391,7 +385,7 @@ describe("App", () => {
 
   it("shows signing out message when isLoggingOut is true", async () => {
     setAuth({ isLoggingOut: true });
-    render(<App />);
+    renderApp();
     await flushNavigation();
 
     await waitFor(() => {
@@ -405,7 +399,7 @@ describe("App", () => {
     const mockLogin = vi.fn().mockResolvedValue(undefined);
     setAuth({ login: mockLogin });
 
-    render(<App />);
+    renderApp();
     await flushNavigation();
     await screen.findByRole("heading", { name: /login/i });
 
@@ -424,7 +418,7 @@ describe("App", () => {
     const mockLogin = vi.fn().mockRejectedValue(new Error("Invalid credentials"));
     setAuth({ login: mockLogin });
 
-    render(<App />);
+    renderApp();
     await flushNavigation();
     await screen.findByRole("heading", { name: /login/i });
 
@@ -440,7 +434,7 @@ describe("App", () => {
   it("navigates to the forgot password page via the link", async () => {
     const user = userEvent.setup();
     setAuth();
-    render(<App />);
+    renderApp();
     await flushNavigation();
     await screen.findByRole("heading", { name: /login/i });
 
@@ -453,9 +447,8 @@ describe("App", () => {
   });
 
   it("renders the forgot password route directly", async () => {
-    navigateTo("/forgot-password");
     setAuth();
-    render(<App />);
+    renderApp(["/forgot-password"]);
     await flushNavigation();
 
     await waitFor(() => {
@@ -464,9 +457,8 @@ describe("App", () => {
   });
 
   it("renders the reset password route directly", async () => {
-    navigateTo("/reset-password");
     setAuth();
-    render(<App />);
+    renderApp(["/reset-password"]);
     await flushNavigation();
 
     await waitFor(() => {
@@ -476,23 +468,21 @@ describe("App", () => {
 
   it("redirects root path to the login page", async () => {
     setAuth();
-    render(<App />);
+    renderApp();
     await flushNavigation();
     await screen.findByRole("heading", { name: /login/i });
   });
 
   it("redirects unknown paths to the login page", async () => {
-    navigateTo("/some-unknown-path");
     setAuth();
-    render(<App />);
+    renderApp(["/some-unknown-path"]);
     await flushNavigation();
     await screen.findByRole("heading", { name: /login/i });
   });
 
   it("renders a protected route when authenticated", async () => {
-    navigateTo("/dashboard");
     setAuth({ user: { id: 1, name: "Test User" }, isAuthenticated: true });
-    render(<App />);
+    renderApp(["/dashboard"]);
     await flushNavigation();
 
     await waitFor(() => {
@@ -502,9 +492,8 @@ describe("App", () => {
   });
 
   it("redirects to login when visiting a protected route unauthenticated", async () => {
-    navigateTo("/dashboard");
     setAuth();
-    render(<App />);
+    renderApp(["/dashboard"]);
     await flushNavigation();
 
     await screen.findByRole("heading", { name: /login/i });
@@ -513,7 +502,7 @@ describe("App", () => {
 
   it("shows the error boundary UI when a window error event fires", async () => {
     setAuth();
-    render(<App />);
+    renderApp();
     await flushNavigation();
     await screen.findByRole("heading", { name: /login/i });
 
@@ -528,7 +517,7 @@ describe("App", () => {
   it("reloads the app when the reload button is clicked in the error state", async () => {
     const user = userEvent.setup();
     setAuth();
-    render(<App />);
+    renderApp();
     await flushNavigation();
     await screen.findByRole("heading", { name: /login/i });
 
