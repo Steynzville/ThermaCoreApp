@@ -1136,3 +1136,13 @@ def emergency_admin():
             "Emergency admin creation",
             500,
         )
+
+
+# ============================================================
+# DEBUG: Print statements to confirm module loads
+# ============================================================
+print("=" * 60)
+print("✅ Auth blueprint module loaded successfully")
+print("=" * 60)
+print(f"✅ Auth blueprint has routes: {[rule.rule for rule in auth_bp.url_map.iter_rules()]}")
+print("=" * 60)
