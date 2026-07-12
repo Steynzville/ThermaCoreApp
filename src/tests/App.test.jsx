@@ -33,23 +33,28 @@ vi.mock("react-router-dom", async () => {
 });
 
 // ============================================================
-// Create auth mock using a ref object so it's shared
+// Use vi.hoisted() for auth functions to avoid hoisting issues
 // ============================================================
 
-// Use a ref to ensure the same object is always referenced
-const authRef = {
-  current: {
-    user: null,
-    isAuthenticated: false,
-    isLoading: false,
-    isLoggingOut: false,
-    login: vi.fn().mockResolvedValue(undefined),
-    logout: vi.fn(),
-  }
-};
-
-// Export a getter that always returns the current value
-const getAuth = () => authRef.current;
+const { getAuth, authRef } = vi.hoisted(() => {
+  const ref = {
+    current: {
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      isLoggingOut: false,
+      login: vi.fn().mockResolvedValue(undefined),
+      logout: vi.fn(),
+    }
+  };
+  
+  const getAuthFn = () => ref.current;
+  
+  return {
+    getAuth: getAuthFn,
+    authRef: ref,
+  };
+});
 
 // ============================================================
 // Mock ALL contexts BEFORE importing App
@@ -420,10 +425,8 @@ describe("App", () => {
 
     await user.type(usernameInput, "admin@thermacore.com");
     await user.type(passwordInput, "emergency_admin_789");
-    
     await user.click(loginButton);
 
-    // Wait for the login to be called
     await waitFor(() => {
       expect(mockLogin).toHaveBeenCalledWith({
         username: "admin@thermacore.com",
