@@ -802,12 +802,22 @@ def forgot_password(data):
                 },
             )
 
-            # In production, send email with reset link here
-            # For now, we'll just log the token (DO NOT DO THIS IN PRODUCTION)
-            if current_app.config.get("DEBUG"):
-                current_app.logger.debug(
-                    f"Password reset token for {email}: {reset_token}",
-                    extra={"event": "password_reset_token_debug"},
+            # ============================================================
+            # Send password reset email
+            # ============================================================
+            from app.services.email_service import send_password_reset_email
+
+            success, error = send_password_reset_email(email, reset_token)
+            if not success:
+                current_app.logger.error(
+                    f"Failed to send reset email to {email}: {error}",
+                    extra={"event": "password_reset_email_failed"}
+                )
+                # Still return success to prevent email enumeration
+            else:
+                current_app.logger.info(
+                    f"Password reset email sent to {email}",
+                    extra={"event": "password_reset_email_sent"}
                 )
 
         # Always return success to prevent email enumeration
