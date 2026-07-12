@@ -5,7 +5,14 @@ import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from "vite
 import React from "react";
 
 // ============================================================
-// Use vi.hoisted() for the auth mock object only - NO React.createContext
+// CRITICAL FIX: Ensure real timers for React's scheduler
+// React.startTransition (used by react-router-dom v7 Navigate)
+// needs real timers to flush navigation updates
+// ============================================================
+vi.useRealTimers();
+
+// ============================================================
+// Use vi.hoisted() for the auth mock object - NO React.createContext
 // ============================================================
 
 const { authMock } = vi.hoisted(() => {
@@ -229,6 +236,9 @@ class MockAudioContext {
 const reloadMock = vi.fn();
 
 beforeAll(() => {
+  // Ensure real timers are used for all tests in this file
+  vi.useRealTimers();
+  
   Object.defineProperty(window, "AudioContext", {
     writable: true,
     configurable: true,
@@ -272,6 +282,9 @@ beforeAll(() => {
 beforeEach(() => {
   vi.clearAllMocks();
 
+  // Ensure real timers are used for each test
+  vi.useRealTimers();
+
   // Use the real History API to reset the URL between tests
   window.history.pushState({}, "", "/");
 
@@ -289,6 +302,8 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   reloadMock.mockClear();
+  // Restore real timers after each test
+  vi.useRealTimers();
 });
 
 // ============================================================
@@ -325,15 +340,6 @@ describe("App", () => {
   it("renders the login page for unauthenticated users", async () => {
     setAuth();
     render(<App />);
-
-    // ============================================================
-    // DEBUGGING: These lines will show what's actually rendered
-    // ============================================================
-    console.log('=== DEBUG: URL ===', window.location.href);
-    console.log('=== DEBUG: HTML length ===', document.body.innerHTML.length);
-    console.log('=== DEBUG: Full DOM tree ===');
-    screen.debug(undefined, 300000);
-    console.log('=== DEBUG: End of DOM tree ===');
 
     const heading = await screen.findByRole("heading", { name: /login/i });
     expect(heading).toBeInTheDocument();
