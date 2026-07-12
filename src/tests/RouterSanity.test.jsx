@@ -1,7 +1,7 @@
 // src/tests/RouterSanity.test.jsx
 import { render, screen, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { MemoryRouter, Routes, Route, Navigate } from "react-router-dom";
 
 describe("Router sanity check", () => {
   beforeEach(() => {
@@ -9,14 +9,12 @@ describe("Router sanity check", () => {
   });
 
   it("renders a matched route on initial mount", async () => {
-    window.history.pushState({}, "", "/");
-
     render(
-      <BrowserRouter>
+      <MemoryRouter initialEntries={["/"]}>
         <Routes>
           <Route path="/" element={<div data-testid="root-ok">ROOT OK</div>} />
         </Routes>
-      </BrowserRouter>
+      </MemoryRouter>
     );
 
     const el = await screen.findByTestId("root-ok");
@@ -24,18 +22,16 @@ describe("Router sanity check", () => {
   });
 
   it("follows a Navigate redirect on initial mount", async () => {
-    window.history.pushState({}, "", "/");
-
     render(
-      <BrowserRouter>
+      <MemoryRouter initialEntries={["/"]}>
         <Routes>
           <Route path="/" element={<Navigate to="/target" replace />} />
           <Route path="/target" element={<div data-testid="target-ok">TARGET OK</div>} />
         </Routes>
-      </BrowserRouter>
+      </MemoryRouter>
     );
 
-    // CRITICAL: Flush the startTransition navigation
+    // Wait for navigation to complete
     await act(async () => {
       await new Promise(resolve => setTimeout(resolve, 0));
     });
