@@ -33,13 +33,7 @@ vi.mock("react-router-dom", async () => {
 });
 
 // ============================================================
-// Global login function that can be replaced
-// ============================================================
-let currentLoginFn = vi.fn().mockResolvedValue(undefined);
-let currentLogoutFn = vi.fn();
-
-// ============================================================
-// Use vi.hoisted() for auth
+// Use vi.hoisted() for auth - login/logout are live functions
 // ============================================================
 
 const { authState } = vi.hoisted(() => {
@@ -48,8 +42,8 @@ const { authState } = vi.hoisted(() => {
     isAuthenticated: false,
     isLoading: false,
     isLoggingOut: false,
-    login: (...args) => currentLoginFn(...args),
-    logout: (...args) => currentLogoutFn(...args),
+    login: vi.fn().mockResolvedValue(undefined),
+    logout: vi.fn(),
   };
   return { authState: state };
 });
@@ -100,12 +94,7 @@ vi.mock("../components/LoginScreen", () => ({
     const handleSubmit = async (e) => {
       e.preventDefault();
       try {
-        const result = await authState.login({ username, password });
-        // If login returns a result with error, handle it
-        if (result && result.error) {
-          setError?.(result.error);
-          return;
-        }
+        await authState.login({ username, password });
         setError?.(null);
       } catch (err) {
         setError?.(err?.message || "Login failed");
@@ -312,15 +301,13 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.useRealTimers();
 
-  // Reset global login function
-  currentLoginFn = vi.fn().mockResolvedValue(undefined);
-  currentLogoutFn = vi.fn();
-
-  // Reset auth state
+  // Reset auth state with fresh functions
   authState.user = null;
   authState.isAuthenticated = false;
   authState.isLoading = false;
   authState.isLoggingOut = false;
+  authState.login = vi.fn().mockResolvedValue(undefined);
+  authState.logout = vi.fn();
 });
 
 afterEach(() => {
@@ -330,21 +317,11 @@ afterEach(() => {
 });
 
 // ============================================================
-// Helper to set auth state
+// Helper to set auth state - plain assign, no wrapper
 // ============================================================
 
 const setAuth = (overrides = {}) => {
-  // If login is overridden, update the global function
-  if (overrides.login) {
-    currentLoginFn = overrides.login;
-  }
-  if (overrides.logout) {
-    currentLogoutFn = overrides.logout;
-  }
-  
-  // Create a new object without login/logout functions
-  const { login, logout, ...rest } = overrides;
-  Object.assign(authState, rest);
+  Object.assign(authState, overrides);
 };
 
 // ============================================================
@@ -460,7 +437,6 @@ describe("App", () => {
       expect(screen.getByTestId("login-error")).toBeInTheDocument();
     }, { timeout: 3000 });
     
-    // Check the error message
     const errorElement = screen.getByTestId("login-error");
     expect(errorElement).toHaveTextContent(errorMessage);
   });
