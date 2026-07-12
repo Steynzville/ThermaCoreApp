@@ -60,13 +60,13 @@ describe("ForgotPassword", () => {
     );
   };
 
-  const submitForm = async () => {
+  // Synchronous act() around the event dispatch - no async/await
+  // The actual async state updates are handled by waitFor/findBy* at each call site
+  const submitForm = () => {
     const form = document.querySelector('form[novalidate]');
     if (!form) throw new Error('Form not found');
-    await act(async () => {
+    act(() => {
       form.requestSubmit();
-      // Wait one microtask to let React schedule the update
-      await Promise.resolve();
     });
   };
 
@@ -90,7 +90,7 @@ describe("ForgotPassword", () => {
   it("shows error when submitting with empty email", async () => {
     renderForgotPassword();
 
-    await submitForm();
+    submitForm();
 
     const errorElement = await screen.findByText("Please enter your email address");
     expect(errorElement).toBeInTheDocument();
@@ -104,7 +104,7 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "invalid-email");
 
-    await submitForm();
+    submitForm();
 
     const errorElement = await screen.findByText("Please enter a valid email address");
     expect(errorElement).toBeInTheDocument();
@@ -124,7 +124,7 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "test@example.com");
 
-    await submitForm();
+    submitForm();
 
     await waitFor(() => {
       expect(authService.requestPasswordReset).toHaveBeenCalledWith("test@example.com");
@@ -147,7 +147,7 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "test@example.com");
 
-    await submitForm();
+    submitForm();
 
     await waitFor(() => {
       expect(authService.requestPasswordReset).toHaveBeenCalledWith("test@example.com");
@@ -168,7 +168,7 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "test@example.com");
 
-    await submitForm();
+    submitForm();
 
     const errorElement = await screen.findByText(
       "An unexpected error occurred. Please try again."
@@ -189,7 +189,7 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "test@example.com");
 
-    await submitForm();
+    submitForm();
 
     const errorElement = await screen.findByText(errorMessage);
     expect(errorElement).toBeInTheDocument();
@@ -200,7 +200,7 @@ describe("ForgotPassword", () => {
       message: "Success!",
     });
 
-    await submitForm();
+    submitForm();
 
     const successElement = await screen.findByText("Success!");
     expect(successElement).toBeInTheDocument();
@@ -218,7 +218,7 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "test@example.com");
 
-    await submitForm();
+    submitForm();
 
     // Wait for the button text to change to "Sending..."
     const sendingButton = await screen.findByRole("button", { name: "Sending..." });
@@ -256,7 +256,7 @@ describe("ForgotPassword", () => {
     await user.type(emailInput, "test@example.com");
     expect(emailInput).toHaveValue("test@example.com");
 
-    await submitForm();
+    submitForm();
 
     await waitFor(() => {
       expect(emailInput).toHaveValue("");
@@ -275,7 +275,7 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "  test@example.com  ");
 
-    await submitForm();
+    submitForm();
 
     await waitFor(() => {
       expect(authService.requestPasswordReset).toHaveBeenCalledWith("test@example.com");
@@ -294,7 +294,7 @@ describe("ForgotPassword", () => {
     const emailInput = screen.getByLabelText("Email Address");
     await user.type(emailInput, "test@example.com");
 
-    await submitForm();
+    submitForm();
 
     const errorElement = await screen.findByText(errorMessage);
     expect(errorElement).toBeInTheDocument();
