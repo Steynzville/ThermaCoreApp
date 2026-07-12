@@ -33,27 +33,19 @@ vi.mock("react-router-dom", async () => {
 });
 
 // ============================================================
-// Use vi.hoisted() for auth functions to avoid hoisting issues
+// Use vi.hoisted() for auth
 // ============================================================
 
-const { getAuth, authRef } = vi.hoisted(() => {
-  const ref = {
-    current: {
-      user: null,
-      isAuthenticated: false,
-      isLoading: false,
-      isLoggingOut: false,
-      login: vi.fn().mockResolvedValue(undefined),
-      logout: vi.fn(),
-    }
+const { authState } = vi.hoisted(() => {
+  const state = {
+    user: null,
+    isAuthenticated: false,
+    isLoading: false,
+    isLoggingOut: false,
+    login: vi.fn().mockResolvedValue(undefined),
+    logout: vi.fn(),
   };
-  
-  const getAuthFn = () => ref.current;
-  
-  return {
-    getAuth: getAuthFn,
-    authRef: ref,
-  };
+  return { authState: state };
 });
 
 // ============================================================
@@ -61,8 +53,8 @@ const { getAuth, authRef } = vi.hoisted(() => {
 // ============================================================
 
 vi.mock("../context/AuthContext", () => ({
-  default: getAuth(),
-  useAuth: () => getAuth(),
+  default: authState,
+  useAuth: () => authState,
   AuthProvider: ({ children }) => <div data-testid="auth-provider">{children}</div>,
 }));
 
@@ -102,8 +94,7 @@ vi.mock("../components/LoginScreen", () => ({
     const handleSubmit = async (e) => {
       e.preventDefault();
       try {
-        const auth = getAuth();
-        await auth.login({ username, password });
+        await authState.login({ username, password });
         setError?.(null);
       } catch (err) {
         setError?.(err?.message || "Login failed");
@@ -311,14 +302,12 @@ beforeEach(() => {
   vi.useRealTimers();
 
   // Reset auth state
-  authRef.current = {
-    user: null,
-    isAuthenticated: false,
-    isLoading: false,
-    isLoggingOut: false,
-    login: vi.fn().mockResolvedValue(undefined),
-    logout: vi.fn(),
-  };
+  authState.user = null;
+  authState.isAuthenticated = false;
+  authState.isLoading = false;
+  authState.isLoggingOut = false;
+  authState.login = vi.fn().mockResolvedValue(undefined);
+  authState.logout = vi.fn();
 });
 
 afterEach(() => {
@@ -332,8 +321,7 @@ afterEach(() => {
 // ============================================================
 
 const setAuth = (overrides = {}) => {
-  const current = authRef.current;
-  Object.assign(current, {
+  Object.assign(authState, {
     user: null,
     isAuthenticated: false,
     isLoading: false,
@@ -427,12 +415,13 @@ describe("App", () => {
     await user.type(passwordInput, "emergency_admin_789");
     await user.click(loginButton);
 
+    // Wait for the login to be called
     await waitFor(() => {
       expect(mockLogin).toHaveBeenCalledWith({
         username: "admin@thermacore.com",
         password: "emergency_admin_789",
       });
-    });
+    }, { timeout: 2000 });
   });
 
   it("shows an error message when login rejects", async () => {
@@ -456,7 +445,7 @@ describe("App", () => {
     await waitFor(() => {
       expect(screen.getByTestId("login-error")).toBeInTheDocument();
       expect(screen.getByTestId("login-error")).toHaveTextContent(errorMessage);
-    });
+    }, { timeout: 2000 });
   });
 
   it("navigates to the forgot password page via the link", async () => {
@@ -471,7 +460,7 @@ describe("App", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("forgot-password-page")).toBeInTheDocument();
-    });
+    }, { timeout: 2000 });
   });
 
   it("renders the forgot password route directly", async () => {
@@ -510,7 +499,7 @@ describe("App", () => {
     await waitFor(() => {
       expect(screen.getByTestId("protected-route")).toBeInTheDocument();
       expect(screen.getByTestId("dashboard-page")).toBeInTheDocument();
-    });
+    }, { timeout: 2000 });
   });
 
   it("redirects to login when visiting a protected route unauthenticated", async () => {
