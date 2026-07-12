@@ -1,125 +1,295 @@
-// src/components/ForgotPassword.jsx
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import thermaCoreLogo from "../assets/thermacore-logo-new.png";
-import { requestPasswordReset } from "../services/authService";
-import styles from "./LoginScreen.module.css";
+// src/tests/ForgotPassword.test.jsx
+import { render, screen, waitFor, cleanup } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { BrowserRouter } from "react-router-dom";
+import ForgotPassword from "../components/ForgotPassword";
+import * as authService from "../services/authService";
 
-const ForgotPassword = () => {
-  const [email, setEmail] = useState("");
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const navigate = useNavigate();
+// ============================================================
+// Mock the auth service
+// ============================================================
+vi.mock("../services/authService", () => ({
+  requestPasswordReset: vi.fn(),
+}));
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setMessage("");
+// ============================================================
+// Mock react-router-dom with hoisted navigate
+// ============================================================
+const { mockNavigate } = vi.hoisted(() => ({
+  mockNavigate: vi.fn(),
+}));
 
-    if (!email.trim()) {
-      setError("Please enter your email address");
-      return;
-    }
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual("react-router-dom");
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
 
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setError("Please enter a valid email address");
-      return;
-    }
+// ============================================================
+// Mock the logo import
+// ============================================================
+vi.mock("../assets/thermacore-logo-new.png", () => ({
+  default: "test-logo.png",
+}));
 
-    setIsSubmitting(true);
+describe("ForgotPassword", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
-    try {
-      const result = await requestPasswordReset(email);
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
 
-      if (result.success) {
-        setMessage(result.message);
-        setEmail("");
-      } else {
-        setError(result.message);
-      }
-    } catch (_err) {
-      setError("An unexpected error occurred. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
+  const renderForgotPassword = () => {
+    return render(
+      <BrowserRouter>
+        <ForgotPassword />
+      </BrowserRouter>
+    );
   };
 
-  const handleBackToLogin = () => {
-    navigate("/login");
-  };
+  it("renders the forgot password page correctly", () => {
+    renderForgotPassword();
 
-  return (
-    <div className={styles.pageWrapper}>
-      <div className={styles.loginContainer}>
-        <div className={styles.logoContainer}>
-          <img
-            src={thermaCoreLogo}
-            alt="ThermaCore Logo"
-            className={styles.logo}
-          />
-        </div>
-        <div className={styles.titleContainer}>
-          <h1 className={styles.forgotPasswordTitle}>Forgot Password?</h1>
-          <p className={styles.companySubtitle}>
-            Enter your email to receive a password reset link
-          </p>
-        </div>
+    expect(screen.getByText("Forgot Password?")).toBeInTheDocument();
+    expect(
+      screen.getByText("Enter your email to receive a password reset link")
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Email Address")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Send Reset Link" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Back to Login" })
+    ).toBeInTheDocument();
+    expect(screen.getByAltText("ThermaCore Logo")).toBeInTheDocument();
+  });
 
-        {message && (
-          <div
-            className={`${styles.loginError} ${styles.visible}`}
-            style={{ backgroundColor: "#10b981", color: "white" }}
-          >
-            {message}
-          </div>
-        )}
+  it("shows error when submitting with empty email", async () => {
+    const user = userEvent.setup();
+    renderForgotPassword();
 
-        {error && (
-          <div className={`${styles.loginError} ${styles.visible}`}>
-            {error}
-          </div>
-        )}
+    const submitButton = screen.getByRole("button", { name: "Send Reset Link" });
+    await user.click(submitButton);
 
-        <form onSubmit={handleSubmit} noValidate>
-          <div className={styles.formGroup}>
-            <label htmlFor="email" className={styles.formLabel}>
-              Email Address
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              placeholder="Enter your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className={styles.formInput}
-              disabled={isSubmitting}
-            />
-          </div>
+    const errorElement = await screen.findByText("Please enter your email address");
+    expect(errorElement).toBeInTheDocument();
+    expect(authService.requestPasswordReset).not.toHaveBeenCalled();
+  });
 
-          <button
-            type="submit"
-            className={styles.btnSignin}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? "Sending..." : "Send Reset Link"}
-          </button>
+  it("shows error when submitting with invalid email format", async () => {
+    const user = userEvent.setup();
+    renderForgotPassword();
 
-          <button
-            type="button"
-            onClick={handleBackToLogin}
-            className={styles.backToLoginButton}
-          >
-            Back to Login
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-};
+    const emailInput = screen.getByLabelText("Email Address");
+    await user.type(emailInput, "invalid-email");
 
-export default ForgotPassword;
+    const submitButton = screen.getByRole("button", { name: "Send Reset Link" });
+    await user.click(submitButton);
+
+    const errorElement = await screen.findByText("Please enter a valid email address");
+    expect(errorElement).toBeInTheDocument();
+    expect(authService.requestPasswordReset).not.toHaveBeenCalled();
+  });
+
+  it("submits valid email and shows success message", async () => {
+    const user = userEvent.setup();
+    const successMessage = "Password reset link sent to your email";
+    vi.mocked(authService.requestPasswordReset).mockResolvedValue({
+      success: true,
+      message: successMessage,
+    });
+
+    renderForgotPassword();
+
+    const emailInput = screen.getByLabelText("Email Address");
+    await user.type(emailInput, "test@example.com");
+
+    const submitButton = screen.getByRole("button", { name: "Send Reset Link" });
+    await user.click(submitButton);
+
+    await waitFor(() => {
+      expect(authService.requestPasswordReset).toHaveBeenCalledWith("test@example.com");
+    });
+
+    const successElement = await screen.findByText(successMessage);
+    expect(successElement).toBeInTheDocument();
+  });
+
+  it("shows error message when request fails", async () => {
+    const user = userEvent.setup();
+    const errorMessage = "Email not found";
+    vi.mocked(authService.requestPasswordReset).mockResolvedValue({
+      success: false,
+      message: errorMessage,
+    });
+
+    renderForgotPassword();
+
+    const emailInput = screen.getByLabelText("Email Address");
+    await user.type(emailInput, "test@example.com");
+
+    const submitButton = screen.getByRole("button", { name: "Send Reset Link" });
+    await user.click(submitButton);
+
+    await waitFor(() => {
+      expect(authService.requestPasswordReset).toHaveBeenCalledWith("test@example.com");
+    });
+
+    const errorElement = await screen.findByText(errorMessage);
+    expect(errorElement).toBeInTheDocument();
+  });
+
+  it("shows error when request throws exception", async () => {
+    const user = userEvent.setup();
+    vi.mocked(authService.requestPasswordReset).mockRejectedValue(
+      new Error("Network error")
+    );
+
+    renderForgotPassword();
+
+    const emailInput = screen.getByLabelText("Email Address");
+    await user.type(emailInput, "test@example.com");
+
+    const submitButton = screen.getByRole("button", { name: "Send Reset Link" });
+    await user.click(submitButton);
+
+    const errorElement = await screen.findByText(
+      "An unexpected error occurred. Please try again."
+    );
+    expect(errorElement).toBeInTheDocument();
+  });
+
+  it("clears previous error when submitting new request", async () => {
+    const user = userEvent.setup();
+    const errorMessage = "Email not found";
+    vi.mocked(authService.requestPasswordReset).mockResolvedValue({
+      success: false,
+      message: errorMessage,
+    });
+
+    renderForgotPassword();
+
+    const emailInput = screen.getByLabelText("Email Address");
+    await user.type(emailInput, "test@example.com");
+
+    const submitButton = screen.getByRole("button", { name: "Send Reset Link" });
+    await user.click(submitButton);
+
+    const errorElement = await screen.findByText(errorMessage);
+    expect(errorElement).toBeInTheDocument();
+
+    // Submit again with valid response
+    vi.mocked(authService.requestPasswordReset).mockResolvedValue({
+      success: true,
+      message: "Success!",
+    });
+
+    await user.click(submitButton);
+
+    const successElement = await screen.findByText("Success!");
+    expect(successElement).toBeInTheDocument();
+    expect(screen.queryByText(errorMessage)).not.toBeInTheDocument();
+  });
+
+  it("disables inputs and button during submission", async () => {
+    const user = userEvent.setup();
+    vi.mocked(authService.requestPasswordReset).mockImplementation(
+      () => new Promise(resolve => setTimeout(() => resolve({ success: true, message: "OK" }), 200))
+    );
+
+    renderForgotPassword();
+
+    const emailInput = screen.getByLabelText("Email Address");
+    await user.type(emailInput, "test@example.com");
+
+    const submitButton = screen.getByRole("button", { name: "Send Reset Link" });
+    await user.click(submitButton);
+
+    const sendingButton = await screen.findByRole("button", { name: "Sending..." });
+    expect(sendingButton).toBeInTheDocument();
+    expect(sendingButton).toBeDisabled();
+    expect(emailInput).toBeDisabled();
+
+    // Wait for the submission to complete
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Send Reset Link" })).toBeInTheDocument();
+      expect(emailInput).not.toBeDisabled();
+    }, { timeout: 3000 });
+  });
+
+  it("navigates back to login when Back to Login button is clicked", async () => {
+    const user = userEvent.setup();
+    renderForgotPassword();
+
+    const backButton = screen.getByRole("button", { name: "Back to Login" });
+    await user.click(backButton);
+
+    expect(mockNavigate).toHaveBeenCalledWith("/login");
+  });
+
+  it("clears email field after successful submission", async () => {
+    const user = userEvent.setup();
+    vi.mocked(authService.requestPasswordReset).mockResolvedValue({
+      success: true,
+      message: "Reset link sent",
+    });
+
+    renderForgotPassword();
+
+    const emailInput = screen.getByLabelText("Email Address");
+    await user.type(emailInput, "test@example.com");
+    expect(emailInput).toHaveValue("test@example.com");
+
+    const submitButton = screen.getByRole("button", { name: "Send Reset Link" });
+    await user.click(submitButton);
+
+    await waitFor(() => {
+      expect(emailInput).toHaveValue("");
+    });
+  });
+
+  it("handles trimming of email input", async () => {
+    const user = userEvent.setup();
+    vi.mocked(authService.requestPasswordReset).mockResolvedValue({
+      success: true,
+      message: "Reset link sent",
+    });
+
+    renderForgotPassword();
+
+    const emailInput = screen.getByLabelText("Email Address");
+    await user.type(emailInput, "  test@example.com  ");
+
+    const submitButton = screen.getByRole("button", { name: "Send Reset Link" });
+    await user.click(submitButton);
+
+    await waitFor(() => {
+      expect(authService.requestPasswordReset).toHaveBeenCalledWith("test@example.com");
+    });
+  });
+
+  it("handles service returning error message without success flag", async () => {
+    const user = userEvent.setup();
+    const errorMessage = "Something went wrong";
+    vi.mocked(authService.requestPasswordReset).mockResolvedValue({
+      message: errorMessage,
+    });
+
+    renderForgotPassword();
+
+    const emailInput = screen.getByLabelText("Email Address");
+    await user.type(emailInput, "test@example.com");
+
+    const submitButton = screen.getByRole("button", { name: "Send Reset Link" });
+    await user.click(submitButton);
+
+    const errorElement = await screen.findByText(errorMessage);
+    expect(errorElement).toBeInTheDocument();
+  });
+});
