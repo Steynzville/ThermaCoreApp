@@ -34,6 +34,15 @@ from app.utils.schemas import (
 auth_bp = Blueprint("auth", __name__)
 
 
+# ============================================================
+# TEST ROUTE - To verify auth blueprint is working
+# ============================================================
+@auth_bp.route("/ping", methods=["GET"])
+def ping():
+    """Simple ping endpoint to verify auth blueprint is working."""
+    return jsonify({"status": "ok", "message": "Auth blueprint is alive!"}), 200
+
+
 @auth_bp.route("/auth/register", methods=["POST"])
 @track_request_id
 @standard_rate_limit
@@ -1130,3 +1139,12 @@ def emergency_admin():
             "Emergency admin creation",
             500,
         )
+
+
+# ============================================================
+# DEBUG: Print statements to confirm module loads
+# ============================================================
+print("=" * 60)
+print("✅ Auth blueprint module loaded")
+print(f"✅ Routes registered: {[rule.rule for rule in auth_bp.url_map.iter_rules()]}")
+print("=" * 60)
