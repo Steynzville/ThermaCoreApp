@@ -1,3 +1,4 @@
+// src/setupTests.js
 import "@testing-library/jest-dom";
 import { vi, beforeAll, beforeEach, afterEach } from "vitest";
 import React from "react";
@@ -192,30 +193,22 @@ if (!window.cancelAnimationFrame) {
   });
 }
 
-if (!window.setTimeout) {
-  Object.defineProperty(window, "setTimeout", {
-    writable: true,
-    configurable: true,
-    value: vi.fn().mockImplementation((cb) => {
-      cb();
-      return 123;
-    }),
-  });
-}
+// ============================================================
+// CRITICAL FIX: DO NOT mock setTimeout or setInterval
+// React's scheduler (used by react-router-dom v7 Navigate)
+// relies on real setTimeout and MessageChannel to flush
+// startTransition updates. Mocking them breaks navigation.
+// ============================================================
 
+// REMOVED: setTimeout mock - let jsdom handle it natively
+// REMOVED: setInterval mock - let jsdom handle it natively
+
+// Keep clearTimeout and clearInterval if they're missing
 if (!window.clearTimeout) {
   Object.defineProperty(window, "clearTimeout", {
     writable: true,
     configurable: true,
     value: vi.fn(),
-  });
-}
-
-if (!window.setInterval) {
-  Object.defineProperty(window, "setInterval", {
-    writable: true,
-    configurable: true,
-    value: vi.fn().mockImplementation(() => 456),
   });
 }
 
