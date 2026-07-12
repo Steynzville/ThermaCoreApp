@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
+// src/services/userService.test.js
+import { describe, expect, it, vi, afterEach, beforeEach } from "vitest";
 import {
   getAllAlerts,
   getAllUnits,
@@ -98,6 +99,15 @@ vi.mock("../mockData", () => ({
 }));
 
 describe("unitService", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    vi.resetAllMocks();
+  });
+
   describe("getAllUnits", () => {
     it("should return all units", async () => {
       const units = await getAllUnits();
