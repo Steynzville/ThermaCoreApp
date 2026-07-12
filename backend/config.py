@@ -25,6 +25,18 @@ class Config:
         "pool_pre_ping": True,
     }
 
+    # ============================================================
+    # EMAIL CONFIGURATION
+    # ============================================================
+    EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
+    EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 587))
+    EMAIL_USER = os.environ.get("EMAIL_USER")
+    EMAIL_PASSWORD = os.environ.get("EMAIL_PASSWORD")
+    EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True").lower() == "true"
+    EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "False").lower() == "true"
+    EMAIL_FROM = os.environ.get("EMAIL_FROM")
+    FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://thermacoreapp.netlify.app")
+
     # JWT Configuration
     JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(
