@@ -6,10 +6,15 @@
 // If this PASSES, the bug is specific to something in App.test.jsx's setup.
 
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 describe("Router sanity check", () => {
+  // CRITICAL: Ensure real timers before each test
+  beforeEach(() => {
+    vi.useRealTimers();
+  });
+
   it("renders a matched route on initial mount", async () => {
     window.history.pushState({}, "", "/");
 
