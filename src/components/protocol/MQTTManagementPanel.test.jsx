@@ -206,7 +206,6 @@ describe("MQTTManagementPanel", () => {
     expect(screen.getByTestId("dialog")).toBeInTheDocument();
     expect(screen.getByText("MQTT Management")).toBeInTheDocument();
 
-    // connectionStatus is fetched asynchronously, so wait for it to resolve
     await waitFor(() => {
       expect(screen.getByText("Connected")).toBeInTheDocument();
     });
@@ -219,7 +218,6 @@ describe("MQTTManagementPanel", () => {
     expect(screen.getByTestId("drawer")).toBeInTheDocument();
     expect(screen.getByText("MQTT Management")).toBeInTheDocument();
 
-    // connectionStatus is fetched asynchronously, so wait for it to resolve
     await waitFor(() => {
       expect(screen.getByText("Connected")).toBeInTheDocument();
     });
@@ -251,8 +249,6 @@ describe("MQTTManagementPanel", () => {
   it("should display subscriptions", async () => {
     render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
 
-    // Scope to the Subscriptions panel since the Tabs mock renders every
-    // panel at once, and these topic names also appear in Messages / Topics
     await waitFor(() => {
       const subscriptionsPanel = getTabPanel("subscriptions");
       expect(within(subscriptionsPanel).getByText("sensors/temp")).toBeInTheDocument();
@@ -273,12 +269,10 @@ describe("MQTTManagementPanel", () => {
     const user = userEvent.setup();
     render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
 
-    // Find the topic input and enter a topic
     const topicInputs = screen.getAllByTestId("input");
-    const topicInput = topicInputs[0]; // First input is for subscription topic
+    const topicInput = topicInputs[0];
     await user.type(topicInput, "sensors/pressure");
 
-    // Find and click the Subscribe button
     const buttons = screen.getAllByTestId("button");
     const subscribeButton = buttons.find(btn => btn.textContent.includes("Subscribe"));
     await user.click(subscribeButton);
@@ -301,7 +295,6 @@ describe("MQTTManagementPanel", () => {
       expect(within(subscriptionsPanel).getByText("sensors/temp")).toBeInTheDocument();
     });
 
-    // Find and click the unsubscribe button for the first subscription
     const trashButtons = screen.getAllByTestId("button").filter(btn => 
       btn.querySelector('[data-testid="trash-icon"]')
     );
@@ -320,24 +313,23 @@ describe("MQTTManagementPanel", () => {
     const user = userEvent.setup();
     render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
 
-    // Click on Publish tab
     const tabs = screen.getAllByTestId("tabs-trigger");
     const publishTab = tabs.find(tab => tab.textContent.includes("Publish"));
     await user.click(publishTab);
 
-    // Find topic input and enter topic
     const inputs = screen.getAllByTestId("input");
     const topicInput = inputs.find(input => input.id === "pub-topic");
     await user.type(topicInput, "sensors/test");
 
-    // Find textarea and enter payload.
-    // userEvent.type treats { and } as special key-sequence markers (e.g. {enter}),
-    // so literal curly braces must be escaped as {{ and }}.
     const textareas = screen.getAllByTestId("textarea");
     const payloadTextarea = textareas.find(textarea => textarea.id === "pub-payload");
+    // userEvent.type treats { and } as special key sequences.
+    // To type a literal curly brace, escape it as {{ or }}.
+    // For a single opening brace: {{ (type {{, resulting in {).
+    // For a single closing brace: }} (type }}, resulting in }).
+    // So '{"test": "value"}' becomes '{{"test": "value"}}'.
     await user.type(payloadTextarea, '{{"test": "value"}}');
 
-    // Find and click Publish button
     const buttons = screen.getAllByTestId("button");
     const publishButton = buttons.find(btn => btn.textContent.includes("Publish Message"));
     await user.click(publishButton);
@@ -364,11 +356,9 @@ describe("MQTTManagementPanel", () => {
       expect(screen.getByText('{"value": 25.5}')).toBeInTheDocument();
     });
 
-    // Find the filter input and type a filter
     const filterInput = screen.getByPlaceholderText("Filter by topic...");
     await user.type(filterInput, "sensors/temp");
 
-    // Should show only matching messages
     expect(screen.getByText('{"value": 25.5}')).toBeInTheDocument();
   });
 
@@ -380,7 +370,6 @@ describe("MQTTManagementPanel", () => {
       expect(screen.getByText('{"value": 25.5}')).toBeInTheDocument();
     });
 
-    // Find and click Clear button
     const buttons = screen.getAllByTestId("button");
     const clearButton = buttons.find(btn => btn.textContent.includes("Clear"));
     await user.click(clearButton);
@@ -394,7 +383,6 @@ describe("MQTTManagementPanel", () => {
 
     render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
 
-    // Try to subscribe
     const topicInputs = screen.getAllByTestId("input");
     const topicInput = topicInputs[0];
     await user.type(topicInput, "sensors/test");
@@ -423,7 +411,6 @@ describe("MQTTManagementPanel", () => {
     const user = userEvent.setup();
     render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
 
-    // Click on Publish tab
     const tabs = screen.getAllByTestId("tabs-trigger");
     const publishTab = tabs.find(tab => tab.textContent.includes("Publish"));
     await user.click(publishTab);
@@ -449,18 +436,17 @@ describe("MQTTManagementPanel", () => {
     vi.useFakeTimers();
     render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
 
-    // Use vi.waitFor (not @testing-library's waitFor) since the latter polls
-    // with real setTimeout internally and will hang forever once fake timers
-    // are active.
+    // Initial calls: 3 (status, subscriptions, messages)
     await vi.waitFor(() => {
       expect(apiGetJson).toHaveBeenCalledTimes(3);
     });
 
-    // advanceTimersByTimeAsync also flushes microtasks/promises along the way
+    // After 3 seconds: auto-refresh calls status + messages (not subscriptions)
     await vi.advanceTimersByTimeAsync(3000);
 
+    // Total calls: 3 initial + 2 refresh = 5
     await vi.waitFor(() => {
-      expect(apiGetJson).toHaveBeenCalledTimes(6);
+      expect(apiGetJson).toHaveBeenCalledTimes(5);
     });
 
     vi.useRealTimers();
@@ -479,7 +465,6 @@ describe("MQTTManagementPanel", () => {
   it("should close dialog when onClose is called", () => {
     render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
 
-    // The dialog's onOpenChange should call onClose
     expect(screen.getByTestId("dialog")).toBeInTheDocument();
   });
 
