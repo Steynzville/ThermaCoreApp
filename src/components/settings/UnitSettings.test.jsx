@@ -162,7 +162,8 @@ describe("UnitSettings", () => {
       />
     );
 
-    const label = document.querySelector("label[htmlFor='temperatureUnit']");
+    // React's htmlFor becomes "for" in the DOM
+    const label = document.querySelector("label[for='temperatureUnit']");
     expect(label).toBeInTheDocument();
     expect(label).toHaveTextContent("Temperature Unit");
   });
