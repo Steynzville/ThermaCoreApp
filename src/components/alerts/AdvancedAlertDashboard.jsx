@@ -53,20 +53,29 @@ const AdvancedAlertDashboard = ({ embedded = false, className = "" }) => {
   const [acknowledgeDialogOpen, setAcknowledgeDialogOpen] = useState(false);
   const [acknowledgmentNotes, setAcknowledgmentNotes] = useState("");
   const [filterSeverity, setFilterSeverity] = useState("all");
-  const [filterStatus, setFilterStatus] = useState("open");
+  const [filterStatus, setFilterStatus] = useState("all"); // Changed default from "open" to "all"
   const [searchTerm, setSearchTerm] = useState("");
 
   const loadAlerts = useCallback(async () => {
     setLoading(true);
-    // Use mock data for development
-    const mockAlerts = alertService.generateMockAlerts(20);
-    setAlerts(mockAlerts);
-    setLoading(false);
+    try {
+      // Use mock data for development
+      const mockAlerts = alertService.generateMockAlerts(20);
+      setAlerts(mockAlerts);
+    } catch (_error) {
+      // Handle error silently
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   const loadStatistics = useCallback(async () => {
-    const mockStats = alertService.generateMockAlertStatistics();
-    setStatistics(mockStats);
+    try {
+      const mockStats = alertService.generateMockAlertStatistics();
+      setStatistics(mockStats);
+    } catch (_error) {
+      // Handle error silently
+    }
   }, []);
 
   // Load alerts and statistics
@@ -95,27 +104,34 @@ const AdvancedAlertDashboard = ({ embedded = false, className = "" }) => {
   const handleAcknowledge = async () => {
     if (!selectedAlert) return;
 
-    const result = await alertService.acknowledgeAlert({
-      alertId: selectedAlert.id,
-      userId: user?.id || "current-user",
-      notes: acknowledgmentNotes,
-    });
+    try {
+      const result = await alertService.acknowledgeAlert({
+        alertId: selectedAlert.id,
+        userId: user?.id || "current-user",
+        notes: acknowledgmentNotes,
+      });
 
-    if (result.success) {
-      // Update local alert state
-      setAlerts((prev) =>
-        prev.map((alert) =>
-          alert.id === selectedAlert.id
-            ? {
-                ...alert,
-                acknowledged: true,
-                acknowledgedBy: user?.email || "current-user",
-                acknowledgedAt: new Date().toISOString(),
-                status: ALERT_STATUS.ACKNOWLEDGED,
-              }
-            : alert,
-        ),
-      );
+      if (result.success) {
+        // Update local alert state
+        setAlerts((prev) =>
+          prev.map((alert) =>
+            alert.id === selectedAlert.id
+              ? {
+                  ...alert,
+                  acknowledged: true,
+                  acknowledgedBy: user?.email || "current-user",
+                  acknowledgedAt: new Date().toISOString(),
+                  status: ALERT_STATUS.ACKNOWLEDGED,
+                }
+              : alert,
+          ),
+        );
+        setAcknowledgeDialogOpen(false);
+        setAcknowledgmentNotes("");
+        setSelectedAlert(null);
+      }
+    } catch (_error) {
+      // Handle error silently - dialog closes but alert remains
       setAcknowledgeDialogOpen(false);
       setAcknowledgmentNotes("");
       setSelectedAlert(null);
