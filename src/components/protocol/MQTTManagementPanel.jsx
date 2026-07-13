@@ -209,11 +209,11 @@ const MQTTManagementPanel = ({ isOpen, onClose, tenantId }) => {
 
           <div className="p-4 h-full overflow-y-auto">
             <Tabs defaultValue="subscriptions" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                <TabsTrigger value="subscriptions" className="text-slate-600 dark:text-slate-300 data-[state=active]:text-slate-900 dark:data-[state=active]:text-white data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700">Subscriptions</TabsTrigger>
-                <TabsTrigger value="messages" className="text-slate-600 dark:text-slate-300 data-[state=active]:text-slate-900 dark:data-[state=active]:text-white data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700">Messages</TabsTrigger>
-                <TabsTrigger value="publish" className="text-slate-600 dark:text-slate-300 data-[state=active]:text-slate-900 dark:data-[state=active]:text-white data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700">Publish</TabsTrigger>
-                <TabsTrigger value="topics" className="text-slate-600 dark:text-slate-300 data-[state=active]:text-slate-900 dark:data-[state=active]:text-white data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700">Topic Hierarchy</TabsTrigger>
+              <TabsList className="flex w-full overflow-x-auto justify-start bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 h-auto p-1 gap-1 whitespace-nowrap scrollbar-none">
+                <TabsTrigger value="subscriptions" className="flex-1 min-w-[110px] text-xs text-slate-600 dark:text-slate-300 data-[state=active]:text-slate-900 dark:data-[state=active]:text-white data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700">Subscriptions</TabsTrigger>
+                <TabsTrigger value="messages" className="flex-1 min-w-[90px] text-xs text-slate-600 dark:text-slate-300 data-[state=active]:text-slate-900 dark:data-[state=active]:text-white data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700">Messages</TabsTrigger>
+                <TabsTrigger value="publish" className="flex-1 min-w-[80px] text-xs text-slate-600 dark:text-slate-300 data-[state=active]:text-slate-900 dark:data-[state=active]:text-white data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700">Publish</TabsTrigger>
+                <TabsTrigger value="topics" className="flex-1 min-w-[120px] text-xs text-slate-600 dark:text-slate-300 data-[state=active]:text-slate-900 dark:data-[state=active]:text-white data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700">Topic Hierarchy</TabsTrigger>
               </TabsList>
 
               {/* Subscriptions Tab */}
