@@ -595,6 +595,43 @@ describe("Create User modal", () => {
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith("connection refused"));
   });
 
+  it("falls back to the generic connection message when the exception has no message", async () => {
+    const user = userEvent.setup();
+    apiPost.mockRejectedValueOnce(new Error());
+
+    renderPanel();
+    await waitFor(() => screen.getByText("User Management"));
+    await openCreateUserModal(user);
+    await waitFor(() => screen.getByRole("option", { name: "Admin" }));
+
+    await fillCreateUserRequiredFields(user);
+    await user.selectOptions(screen.getByLabelText(/Role/i), "1");
+    await user.click(screen.getByText("Create User"));
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        "Failed to create user. Please check backend connection."
+      )
+    );
+  });
+
+  it("does not re-fetch roles on reopen once they are already loaded", async () => {
+    const user = userEvent.setup();
+
+    renderPanel();
+    await waitFor(() => screen.getByText("User Management"));
+    await openCreateUserModal(user);
+    await waitFor(() => screen.getByRole("option", { name: "Admin" }));
+    expect(apiGet).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByText("Cancel"));
+    await openCreateUserModal(user);
+    await waitFor(() => screen.getByRole("option", { name: "Admin" }));
+
+    // Roles were already loaded successfully, so handleAddUser should skip fetchRoles.
+    expect(apiGet).toHaveBeenCalledTimes(1);
+  });
+
   it("blocks submission when roles failed to load even if fields are filled", async () => {
     const user = userEvent.setup();
     apiGet.mockResolvedValueOnce(jsonResponse(false, {}));
@@ -1031,6 +1068,41 @@ describe("Password reset modal — submission outcomes", () => {
     await user.click(resetSubmitButton());
 
     expect(await screen.findByTestId("password-error")).toHaveTextContent("something odd happened");
+  });
+
+  it("falls back to the generic message when the exception has no message", async () => {
+    const user = userEvent.setup();
+    apiPost.mockRejectedValueOnce(new Error());
+
+    renderPanel();
+    await screen.findByText("John Doe");
+    await openResetAndFill(user);
+    await user.click(resetSubmitButton());
+
+    expect(await screen.findByTestId("password-error")).toHaveTextContent(
+      "An unexpected error occurred. Please check the backend logs."
+    );
+  });
+
+  it("suppresses the length/mismatch banners while a server error is showing", async () => {
+    const user = userEvent.setup();
+    apiPost.mockResolvedValueOnce(jsonResponse(false, { error: "Weak password" }));
+
+    renderPanel();
+    await screen.findByText("John Doe");
+    await openResetAndFill(user);
+    await user.click(resetSubmitButton());
+    expect(await screen.findByTestId("password-error")).toHaveTextContent("Weak password");
+
+    // Now edit the field to something invalid; the length banner must stay
+    // suppressed as long as the server error banner is showing.
+    const newPasswordInput = screen.getByPlaceholderText("Enter new password");
+    await user.clear(newPasswordInput);
+    await user.type(newPasswordInput, "12");
+
+    expect(screen.getByTestId("password-error")).toHaveTextContent("Weak password");
+    expect(screen.queryByText("Password must be at least 6 characters long")).not.toBeInTheDocument();
+    expect(screen.queryByText("Passwords do not match")).not.toBeInTheDocument();
   });
 
   it("shows a spinner and disables buttons while submitting", async () => {
