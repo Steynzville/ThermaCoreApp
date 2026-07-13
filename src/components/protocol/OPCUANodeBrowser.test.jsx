@@ -251,11 +251,11 @@ describe("OPCUANodeBrowser", () => {
       expect(screen.getByText("Device One")).toBeInTheDocument();
     });
 
-    // Find and click the expand button for Device One
-    const expandButtons = screen.getAllByTestId("button");
-    const expandButton = expandButtons.find(btn => 
-      btn.querySelector('[data-testid="chevron-right-icon"]')
-    );
+    // The expand/collapse toggle is a plain native <button> wrapping the
+    // chevron icon — it does NOT use the mocked Button component, so it
+    // won't show up via getAllByTestId("button"). Find it via the icon.
+    const chevronIcon = screen.getByTestId("chevron-right-icon");
+    const expandButton = chevronIcon.closest("button");
     await user.click(expandButton);
 
     await waitFor(() => {
@@ -285,8 +285,12 @@ describe("OPCUANodeBrowser", () => {
     const nodeButton = screen.getByText("Temperature Sensor");
     await user.click(nodeButton);
 
+    // Once selected, "Temperature Sensor" appears twice (tree row + details
+    // heading), so scope the assertion to the heading specifically.
     await waitFor(() => {
-      expect(screen.getByText("Temperature Sensor")).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { name: "Temperature Sensor" })
+      ).toBeInTheDocument();
       expect(screen.getByText("ns=2;s=Temperature")).toBeInTheDocument();
       expect(screen.getByText("Double")).toBeInTheDocument();
     });
@@ -510,7 +514,6 @@ describe("OPCUANodeBrowser", () => {
   });
 
   it("should handle unsubscribe error", async () => {
-    apiPostJson.mockRejectedValueOnce(new Error("Network error"));
     const user = userEvent.setup();
     render(
       <OPCUANodeBrowser
@@ -527,19 +530,22 @@ describe("OPCUANodeBrowser", () => {
     const nodeButton = screen.getByText("Temperature Sensor");
     await user.click(nodeButton);
 
-    // Subscribe first
+    // Subscribe first — must succeed (default resolved mock) so an
+    // "Unsubscribe" button actually appears afterward.
     let buttons = screen.getAllByTestId("button");
     let subscribeButton = buttons.find(btn => btn.textContent.includes("Subscribe"));
     await user.click(subscribeButton);
 
-    // Then try to unsubscribe with error
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith("Subscribed to Temperature Sensor");
+    });
+
+    // Now queue the rejection for the unsubscribe call specifically
     apiPostJson.mockRejectedValueOnce(new Error("Network error"));
 
-    await waitFor(async () => {
-      const updatedButtons = screen.getAllByTestId("button");
-      const unsubscribeButton = updatedButtons.find(btn => btn.textContent.includes("Unsubscribe"));
-      await user.click(unsubscribeButton);
-    });
+    const updatedButtons = screen.getAllByTestId("button");
+    const unsubscribeButton = updatedButtons.find(btn => btn.textContent.includes("Unsubscribe"));
+    await user.click(unsubscribeButton);
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith("Failed to unsubscribe from node");
@@ -561,8 +567,11 @@ describe("OPCUANodeBrowser", () => {
   });
 
   it("should display loading state", async () => {
-    // Delay the API response to show loading state
-    apiGetJson.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
+    // Delay the API response to show loading state, then resolve with
+    // the actual mock data so the component can finish rendering.
+    apiGetJson.mockImplementation(
+      () => new Promise((resolve) => setTimeout(() => resolve(mockRootNodes), 100))
+    );
 
     render(
       <OPCUANodeBrowser
