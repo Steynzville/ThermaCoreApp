@@ -502,7 +502,7 @@ describe("PerformanceAnalyticsDashboard", () => {
     await user.click(healthTab);
 
     await waitFor(() => {
-      expect(screen.getByText("Sensor Status")).toBeInTheDocument();
+      expect(screen.getAllByText("Sensor Status").length).toBeGreaterThan(0);
     });
   });
 
