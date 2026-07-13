@@ -41,10 +41,18 @@ vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual("react-router-dom");
   return {
     ...actual,
-    useSearchParams: () => [
-      new URLSearchParams(window.location.search),
-      mockSetSearchParams,
-    ],
+    // Use the REAL useSearchParams so it correctly reflects MemoryRouter's
+    // initialEntries / in-memory history (window.location.search does NOT
+    // get updated by MemoryRouter, which was causing the URL-param tests to fail).
+    // We still wrap setSearchParams so tests can assert on calls to it.
+    useSearchParams: () => {
+      const [searchParams, setSearchParams] = actual.useSearchParams();
+      const wrappedSetSearchParams = (...args) => {
+        mockSetSearchParams(...args);
+        return setSearchParams(...args);
+      };
+      return [searchParams, wrappedSetSearchParams];
+    },
   };
 });
 
