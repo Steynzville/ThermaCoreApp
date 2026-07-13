@@ -180,7 +180,6 @@ describe("ProtocolStatusDashboard", () => {
   };
 
   it("should render loading skeletons initially", () => {
-    // Delay the API response to keep loading state
     apiGetJson.mockImplementation(() => new Promise(() => {}));
 
     renderWithProps();
@@ -308,7 +307,6 @@ describe("ProtocolStatusDashboard", () => {
     });
 
     const cards = screen.getAllByTestId("card");
-    // Find the card containing "MQTT"
     const mqttCard = cards.find(card => card.textContent.includes("MQTT"));
     await user.click(mqttCard);
 
@@ -362,7 +360,6 @@ describe("ProtocolStatusDashboard", () => {
       expect(screen.getByText("0% Healthy")).toBeInTheDocument();
     });
 
-    // No protocol cards should be rendered
     const protocolNames = screen.queryByText("MQTT");
     expect(protocolNames).not.toBeInTheDocument();
   });
@@ -372,10 +369,7 @@ describe("ProtocolStatusDashboard", () => {
 
     renderWithProps();
 
-    // Should render nothing (returns null) on error
     await waitFor(() => {
-      // The component returns null when there's an error
-      // So we check that loading is gone and no content is rendered
       expect(screen.queryByText("System Health Overview")).not.toBeInTheDocument();
     });
   });
@@ -406,6 +400,10 @@ describe("ProtocolStatusDashboard", () => {
 
     await waitFor(() => {
       expect(apiGetJson).toHaveBeenCalledWith("/api/v1/protocols/status");
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("System Health Overview")).toBeInTheDocument();
     });
   });
 
@@ -444,7 +442,7 @@ describe("ProtocolStatusDashboard", () => {
     renderWithProps();
 
     await waitFor(() => {
-      expect(screen.getByText("50%")).toBeInTheDocument(); // Uptime rate
+      expect(screen.getByText("50%")).toBeInTheDocument();
     });
   });
 });
