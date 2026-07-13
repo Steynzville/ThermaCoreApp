@@ -24,15 +24,16 @@ vi.mock("../../context/SettingsContext", () => ({
 
 // Mock Radix UI Slider for testing environment
 vi.mock("@radix-ui/react-slider", () => ({
-  Root: ({ children, onValueChange, ...props }) => (
+  Root: ({ children, onValueChange, defaultValue, ...props }) => (
     <div data-testid="slider-root" {...props}>
       <input
         type="range"
         min="0"
         max="100"
-        defaultValue="75"
+        defaultValue={defaultValue ? defaultValue[0] : 75}
         onChange={(e) => onValueChange && onValueChange([parseInt(e.target.value)])}
         data-testid="slider-input"
+        disabled={props.disabled}
       />
       {children}
     </div>
@@ -66,14 +67,13 @@ describe("AudioSettings", () => {
     const user = userEvent.setup();
     render(<AudioSettings />);
 
-    const toggle = screen.getByLabelText("Sound Effects");
+    const toggle = screen.getByRole("switch", { name: "Sound Effects" });
     await user.click(toggle);
 
     expect(mockToggleSound).toHaveBeenCalled();
   });
 
   it("should handle volume change", async () => {
-    const user = userEvent.setup();
     render(<AudioSettings />);
 
     const sliderInput = screen.getByTestId("slider-input");
@@ -101,7 +101,7 @@ describe("AudioSettings", () => {
     };
 
     render(<AudioSettings />);
-    // The slider input should be disabled or not interactive
+    // The slider input should be disabled when sound is off
     const sliderInput = screen.getByTestId("slider-input");
     expect(sliderInput).toBeDisabled();
   });
