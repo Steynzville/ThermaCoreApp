@@ -611,7 +611,6 @@ describe("useProtocolWebSocket - Cleanup", () => {
 
     unmount();
 
-    // disconnect should not be called when autoConnect is false
     expect(ws.disconnect).not.toHaveBeenCalled();
   });
 });
@@ -663,7 +662,8 @@ describe("useProtocolWebSocket - Tenant ID Handling", () => {
       await result.current.connect();
     });
 
-    expect(ws.connect).toHaveBeenCalledWith("modbus", undefined);
+    // The hook converts undefined to null because tenantId is defaulted to null
+    expect(ws.connect).toHaveBeenCalledWith("modbus", null);
   });
 });
 
