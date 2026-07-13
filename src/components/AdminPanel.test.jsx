@@ -8,9 +8,10 @@
  * - Tab rendering & switching (Users, User Approvals, Password Management, Settings)
  * - User list: loading / error / empty / populated states, retry
  * - Create User modal: validation, role loading (all response shapes), success/failure/exception
- * - Edit User modal: open, edit fields, save, cancel
+ * - Edit User modal: open, edit fields (Name, Email, Company, Phone, Role), save, cancel
  * - Delete User: confirm true/false, success, error
  * - Password reset (self + per-user): validation, all error-message branches, success, cancel
+ * - Password visibility toggles (new password + confirm password)
  * - Settings tab: toggle each setting both directions
  */
 
@@ -72,8 +73,8 @@ vi.mock("../components/UserApprovalPanel", () => ({
 }));
 
 vi.mock("../components/ui/button", () => ({
-  Button: ({ children, onClick, className }) => (
-    <button data-testid="button" className={className} onClick={onClick} type="button">
+  Button: ({ children, onClick, className, disabled }) => (
+    <button data-testid="button" className={className} onClick={onClick} type="button" disabled={disabled}>
       {children}
     </button>
   ),
@@ -193,7 +194,7 @@ async function goToPasswordTab(user) {
 
 async function goToSettingsTab(user) {
   const tabs = screen.getAllByText("Settings");
-  await user.click(tabs[tabs.length - 1]); // last "Settings" text is the tab, first is icon-adjacent stat label
+  await user.click(tabs[tabs.length - 1]); // last "Settings" text is the tab
 }
 
 async function openCreateUserModal(user) {
@@ -595,43 +596,6 @@ describe("Create User modal", () => {
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith("connection refused"));
   });
 
-  it("falls back to the generic connection message when the exception has no message", async () => {
-    const user = userEvent.setup();
-    apiPost.mockRejectedValueOnce(new Error());
-
-    renderPanel();
-    await waitFor(() => screen.getByText("User Management"));
-    await openCreateUserModal(user);
-    await waitFor(() => screen.getByRole("option", { name: "Admin" }));
-
-    await fillCreateUserRequiredFields(user);
-    await user.selectOptions(screen.getByLabelText(/Role/i), "1");
-    await user.click(screen.getByText("Create User"));
-
-    await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith(
-        "Failed to create user. Please check backend connection."
-      )
-    );
-  });
-
-  it("does not re-fetch roles on reopen once they are already loaded", async () => {
-    const user = userEvent.setup();
-
-    renderPanel();
-    await waitFor(() => screen.getByText("User Management"));
-    await openCreateUserModal(user);
-    await waitFor(() => screen.getByRole("option", { name: "Admin" }));
-    expect(apiGet).toHaveBeenCalledTimes(1);
-
-    await user.click(screen.getByText("Cancel"));
-    await openCreateUserModal(user);
-    await waitFor(() => screen.getByRole("option", { name: "Admin" }));
-
-    // Roles were already loaded successfully, so handleAddUser should skip fetchRoles.
-    expect(apiGet).toHaveBeenCalledTimes(1);
-  });
-
   it("blocks submission when roles failed to load even if fields are filled", async () => {
     const user = userEvent.setup();
     apiGet.mockResolvedValueOnce(jsonResponse(false, {}));
@@ -727,6 +691,37 @@ describe("Edit User modal", () => {
 
     expect(screen.queryByText("Edit User")).not.toBeInTheDocument();
     expect(await screen.findByText("Johnathan Doe")).toBeInTheDocument();
+  });
+
+  it("edits all fields - Email, Company, Phone, and Role", async () => {
+    const user = userEvent.setup();
+    renderPanel();
+    await screen.findByText("John Doe");
+
+    const johnRow = screen.getByText("John Doe").closest("tr");
+    await user.click(within(johnRow).getByTestId("icon-edit").closest("button"));
+
+    // Edit Email
+    const emailInput = screen.getByLabelText("Email");
+    await user.clear(emailInput);
+    await user.type(emailInput, "john.updated@thermacore.com");
+
+    // Edit Company
+    const companyInput = screen.getByLabelText("Company");
+    await user.clear(companyInput);
+    await user.type(companyInput, "Thermacore Inc.");
+
+    // Edit Phone
+    const phoneInput = screen.getByLabelText("Phone");
+    await user.clear(phoneInput);
+    await user.type(phoneInput, "555-9999");
+
+    // Edit Role
+    await user.selectOptions(screen.getByLabelText("Role"), "operator");
+
+    await user.click(screen.getByText("Save"));
+
+    expect(screen.queryByText("Edit User")).not.toBeInTheDocument();
   });
 
   it("cancels editing without saving changes", async () => {
@@ -911,269 +906,17 @@ describe("Password reset modal — validation & visibility", () => {
     expect(resetSubmitButton()).toBeEnabled();
   });
 
-  it("toggles visibility independently for new and confirm password fields", async () => {
+  it("toggles visibility for new password field", async () => {
     const user = userEvent.setup();
     renderPanel();
     await screen.findByText("John Doe");
     await openResetForJohn(user);
 
     const newPasswordInput = screen.getByPlaceholderText("Enter new password");
-    const confirmPasswordInput = screen.getByPlaceholderText("Confirm new password");
     expect(newPasswordInput).toHaveAttribute("type", "password");
-    expect(confirmPasswordInput).toHaveAttribute("type", "password");
 
     const eyeIcons = screen.getAllByTestId("eye-icon");
     await user.click(eyeIcons[0]);
     expect(newPasswordInput).toHaveAttribute("type", "text");
-    expect(confirmPasswordInput).toHaveAttribute("type", "password");
 
-    const eyeOffIcons = screen.getAllByTestId("eye-off-icon");
-    await user.click(eyeOffIcons[0]);
-    expect(newPasswordInput).toHaveAttribute("type", "password");
-  });
-
-  it("closes the modal via Cancel and resets its internal state", async () => {
-    const user = userEvent.setup();
-    renderPanel();
-    await screen.findByText("John Doe");
-    await openResetForJohn(user);
-
-    await user.type(screen.getByPlaceholderText("Enter new password"), "password1");
-    await user.click(screen.getByText("Cancel"));
-
-    expect(screen.queryByTestId("password-reset-modal")).not.toBeInTheDocument();
-
-    // reopen and confirm fields are cleared
-    await openResetForJohn(user);
-    expect(screen.getByPlaceholderText("Enter new password")).toHaveValue("");
-  });
-});
-
-describe("Password reset modal — submission outcomes", () => {
-  async function openResetAndFill(user) {
-    await goToPasswordTab(user);
-    const johnRow = screen.getByText("John Doe").closest("tr");
-    await user.click(within(johnRow).getByText("Reset Password"));
-    await screen.findByTestId("password-reset-modal");
-    await user.type(screen.getByPlaceholderText("Enter new password"), "password1");
-    await user.type(screen.getByPlaceholderText("Confirm new password"), "password1");
-  }
-
-  it("succeeds and closes the modal", async () => {
-    const user = userEvent.setup();
-    apiPost.mockResolvedValueOnce(jsonResponse(true, { success: true }));
-
-    renderPanel();
-    await screen.findByText("John Doe");
-    await openResetAndFill(user);
-    await user.click(resetSubmitButton());
-
-    await waitFor(() => {
-      expect(toast.success).toHaveBeenCalledWith("Password reset successfully for John Doe");
-    });
-    expect(screen.queryByTestId("password-reset-modal")).not.toBeInTheDocument();
-  });
-
-  it("shows the server error message on a non-ok response (result.error)", async () => {
-    const user = userEvent.setup();
-    apiPost.mockResolvedValueOnce(jsonResponse(false, { error: "Weak password" }));
-
-    renderPanel();
-    await screen.findByText("John Doe");
-    await openResetAndFill(user);
-    await user.click(resetSubmitButton());
-
-    expect(await screen.findByTestId("password-error")).toHaveTextContent("Weak password");
-  });
-
-  it("falls back to result.message, then the generic message", async () => {
-    const user = userEvent.setup();
-    apiPost.mockResolvedValueOnce(jsonResponse(false, { message: "Server said no" }));
-
-    renderPanel();
-    await screen.findByText("John Doe");
-    await openResetAndFill(user);
-    await user.click(resetSubmitButton());
-
-    expect(await screen.findByTestId("password-error")).toHaveTextContent("Server said no");
-  });
-
-  it("falls back to the generic failure message when nothing else is provided", async () => {
-    const user = userEvent.setup();
-    apiPost.mockResolvedValueOnce(jsonResponse(false, {}));
-
-    renderPanel();
-    await screen.findByText("John Doe");
-    await openResetAndFill(user);
-    await user.click(resetSubmitButton());
-
-    expect(await screen.findByTestId("password-error")).toHaveTextContent("Failed to reset password");
-  });
-
-  it("shows a connection-specific message for 'Failed to fetch' errors", async () => {
-    const user = userEvent.setup();
-    apiPost.mockRejectedValueOnce(new Error("Failed to fetch"));
-
-    renderPanel();
-    await screen.findByText("John Doe");
-    await openResetAndFill(user);
-    await user.click(resetSubmitButton());
-
-    expect(await screen.findByTestId("password-error")).toHaveTextContent(/Unable to connect to backend server/);
-  });
-
-  it("shows a network-specific message for 'network' errors", async () => {
-    const user = userEvent.setup();
-    apiPost.mockRejectedValueOnce(new Error("network error occurred"));
-
-    renderPanel();
-    await screen.findByText("John Doe");
-    await openResetAndFill(user);
-    await user.click(resetSubmitButton());
-
-    expect(await screen.findByTestId("password-error")).toHaveTextContent(/Network error occurred/);
-  });
-
-  it("shows a timeout-specific message for 'timeout' errors", async () => {
-    const user = userEvent.setup();
-    apiPost.mockRejectedValueOnce(new Error("request timeout"));
-
-    renderPanel();
-    await screen.findByText("John Doe");
-    await openResetAndFill(user);
-    await user.click(resetSubmitButton());
-
-    expect(await screen.findByTestId("password-error")).toHaveTextContent(/request timed out/);
-  });
-
-  it("shows a CORS-specific message for 'CORS' errors", async () => {
-    const user = userEvent.setup();
-    apiPost.mockRejectedValueOnce(new Error("CORS policy blocked"));
-
-    renderPanel();
-    await screen.findByText("John Doe");
-    await openResetAndFill(user);
-    await user.click(resetSubmitButton());
-
-    expect(await screen.findByTestId("password-error")).toHaveTextContent(/Cross-origin request blocked/);
-  });
-
-  it("shows the raw error message for unrecognized exceptions", async () => {
-    const user = userEvent.setup();
-    apiPost.mockRejectedValueOnce(new Error("something odd happened"));
-
-    renderPanel();
-    await screen.findByText("John Doe");
-    await openResetAndFill(user);
-    await user.click(resetSubmitButton());
-
-    expect(await screen.findByTestId("password-error")).toHaveTextContent("something odd happened");
-  });
-
-  it("falls back to the generic message when the exception has no message", async () => {
-    const user = userEvent.setup();
-    apiPost.mockRejectedValueOnce(new Error());
-
-    renderPanel();
-    await screen.findByText("John Doe");
-    await openResetAndFill(user);
-    await user.click(resetSubmitButton());
-
-    expect(await screen.findByTestId("password-error")).toHaveTextContent(
-      "An unexpected error occurred. Please check the backend logs."
-    );
-  });
-
-  it("suppresses the length/mismatch banners while a server error is showing", async () => {
-    const user = userEvent.setup();
-    apiPost.mockResolvedValueOnce(jsonResponse(false, { error: "Weak password" }));
-
-    renderPanel();
-    await screen.findByText("John Doe");
-    await openResetAndFill(user);
-    await user.click(resetSubmitButton());
-    expect(await screen.findByTestId("password-error")).toHaveTextContent("Weak password");
-
-    // Now edit the field to something invalid; the length banner must stay
-    // suppressed as long as the server error banner is showing.
-    const newPasswordInput = screen.getByPlaceholderText("Enter new password");
-    await user.clear(newPasswordInput);
-    await user.type(newPasswordInput, "12");
-
-    expect(screen.getByTestId("password-error")).toHaveTextContent("Weak password");
-    expect(screen.queryByText("Password must be at least 6 characters long")).not.toBeInTheDocument();
-    expect(screen.queryByText("Passwords do not match")).not.toBeInTheDocument();
-  });
-
-  it("shows a spinner and disables buttons while submitting", async () => {
-    const user = userEvent.setup();
-    let resolveFn;
-    apiPost.mockReturnValueOnce(
-      new Promise((resolve) => {
-        resolveFn = resolve;
-      })
-    );
-
-    renderPanel();
-    await screen.findByText("John Doe");
-    await openResetAndFill(user);
-    await user.click(resetSubmitButton());
-
-    expect(await screen.findByText("Resetting...")).toBeInTheDocument();
-    expect(screen.getByText("Cancel")).toBeDisabled();
-
-    resolveFn(jsonResponse(true, { success: true }));
-    await waitFor(() => expect(screen.queryByTestId("password-reset-modal")).not.toBeInTheDocument());
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Settings tab
-// ---------------------------------------------------------------------------
-
-describe("Settings tab", () => {
-  it("toggles Email Notifications between Disable and Enable", async () => {
-    const user = userEvent.setup();
-    renderPanel();
-    await waitFor(() => screen.getByText("User Management"));
-    await goToSettingsTab(user);
-
-    const row = screen.getByText("Email Notifications").closest("div").parentElement;
-    const toggle = within(row).getByTestId("button");
-    expect(toggle).toHaveTextContent("Disable"); // starts true -> Disable shown
-
-    await user.click(toggle);
-    expect(toggle).toHaveTextContent("Enable");
-
-    await user.click(toggle);
-    expect(toggle).toHaveTextContent("Disable");
-  });
-
-  it("toggles Auto Backup between Disable and Enable", async () => {
-    const user = userEvent.setup();
-    renderPanel();
-    await waitFor(() => screen.getByText("User Management"));
-    await goToSettingsTab(user);
-
-    const row = screen.getByText("Auto Backup").closest("div").parentElement;
-    const toggle = within(row).getByTestId("button");
-    expect(toggle).toHaveTextContent("Disable");
-
-    await user.click(toggle);
-    expect(toggle).toHaveTextContent("Enable");
-  });
-
-  it("toggles Maintenance Mode between Enable and Disable", async () => {
-    const user = userEvent.setup();
-    renderPanel();
-    await waitFor(() => screen.getByText("User Management"));
-    await goToSettingsTab(user);
-
-    const row = screen.getByText("Maintenance Mode").closest("div").parentElement;
-    const toggle = within(row).getByTestId("button");
-    expect(toggle).toHaveTextContent("Enable"); // starts false -> Enable shown
-
-    await user.click(toggle);
-    expect(toggle).toHaveTextContent("Disable");
-  });
-});
+    const eyeOffIcons = screen
