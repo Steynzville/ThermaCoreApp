@@ -298,6 +298,9 @@ describe("ProtectedRoute", () => {
       />
     );
 
+    // The component renders null when ComponentToRender is undefined,
+    // which means the router falls through to the dashboard route.
+    // Since we're on the "/" route, we should see the dashboard.
     expect(screen.getByTestId("dashboard-page")).toBeInTheDocument();
     expect(screen.queryByTestId("mock-component")).not.toBeInTheDocument();
   });
