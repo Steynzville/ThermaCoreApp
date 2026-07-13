@@ -4,8 +4,8 @@
  * Tests connection lifecycle, cleanup, and data handling
  */
 
-import { renderHook, act, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderHook, act, waitFor, cleanup } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   useProtocolWebSocket,
   useProtocolEvent,
@@ -66,6 +66,16 @@ const resetProtocolMockDefaults = () => {
 
 beforeEach(() => {
   resetProtocolMockDefaults();
+});
+
+// Belt-and-suspenders: don't rely on the project's setup file registering
+// RTL's auto-cleanup. useModbusRegisters/useOPCUANodes/useDNP3Points/
+// useMQTTMessages all auto-connect on mount (autoConnect defaults to true
+// in the source), so any test that doesn't unmount leaves a live effect
+// with an in-flight connect() promise. Left unchecked across dozens of
+// tests in this file, that's enough dangling state to stall the run.
+afterEach(() => {
+  cleanup();
 });
 
 describe("useProtocolWebSocket Hook", () => {
