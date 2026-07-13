@@ -6,7 +6,14 @@
 
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useProtocolWebSocket } from "../hooks/useProtocolWebSocket";
+import {
+  useProtocolWebSocket,
+  useProtocolEvent,
+  useModbusRegisters,
+  useOPCUANodes,
+  useDNP3Points,
+  useMQTTMessages,
+} from "../hooks/useProtocolWebSocket";
 import protocolWS from "../services/protocolWebSocketService";
 
 // Mock protocol websocket service
@@ -727,5 +734,600 @@ describe("useProtocolWebSocket - IsConnected Helper", () => {
       statusCallback("disconnected");
     });
     expect(result.current.isConnected).toBe(false);
+  });
+});
+
+describe("useProtocolEvent Hook", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("should not subscribe when protocol is invalid (no ws)", () => {
+    const callback = vi.fn();
+
+    renderHook(() =>
+      useProtocolEvent("invalid-protocol", "some-event", callback),
+    );
+
+    expect(protocolWS.modbus.subscribe).not.toHaveBeenCalled();
+  });
+
+  it("should not subscribe when callback is missing", () => {
+    const ws = protocolWS.modbus;
+
+    renderHook(() => useProtocolEvent("modbus", "some-event", null));
+
+    expect(ws.subscribe).not.toHaveBeenCalled();
+  });
+
+  it("should subscribe to events on mount", () => {
+    const ws = protocolWS.modbus;
+    const callback = vi.fn();
+
+    renderHook(() => useProtocolEvent("modbus", "register_update", callback));
+
+    expect(ws.subscribe).toHaveBeenCalled();
+    expect(ws.subscribe.mock.calls[0][0]).toContain(
+      "modbus-event-register_update-",
+    );
+  });
+
+  it("should call callback when event type matches", () => {
+    const ws = protocolWS.modbus;
+    const callback = vi.fn();
+
+    renderHook(() => useProtocolEvent("modbus", "register_update", callback));
+
+    const handler = ws.subscribe.mock.calls[0][1];
+    const eventData = { type: "register_update", value: 42 };
+
+    act(() => {
+      handler(eventData);
+    });
+
+    expect(callback).toHaveBeenCalledWith(eventData);
+  });
+
+  it("should not call callback when event type does not match", () => {
+    const ws = protocolWS.modbus;
+    const callback = vi.fn();
+
+    renderHook(() => useProtocolEvent("modbus", "register_update", callback));
+
+    const handler = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      handler({ type: "other_event", value: 42 });
+    });
+
+    expect(callback).not.toHaveBeenCalled();
+  });
+
+  it("should unsubscribe on unmount", () => {
+    const ws = protocolWS.modbus;
+    const callback = vi.fn();
+
+    const { unmount } = renderHook(() =>
+      useProtocolEvent("modbus", "register_update", callback),
+    );
+
+    const subscriptionKey = ws.subscribe.mock.calls[0][0];
+    unmount();
+
+    expect(ws.unsubscribe).toHaveBeenCalledWith(subscriptionKey);
+  });
+
+  it("should accept an optional tenantId without error", () => {
+    const callback = vi.fn();
+
+    expect(() =>
+      renderHook(() =>
+        useProtocolEvent("modbus", "register_update", callback, "tenant-1"),
+      ),
+    ).not.toThrow();
+  });
+});
+
+describe("useModbusRegisters Hook", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("should initialize with empty registers", () => {
+    const { result } = renderHook(() => useModbusRegisters("device-1"));
+
+    expect(result.current.registers).toEqual({});
+  });
+
+  it("should expose base websocket state alongside registers", () => {
+    const { result } = renderHook(() => useModbusRegisters("device-1"));
+
+    expect(result.current).toHaveProperty("connectionStatus");
+    expect(result.current).toHaveProperty("isConnected");
+    expect(result.current).toHaveProperty("connect");
+    expect(result.current).toHaveProperty("disconnect");
+    expect(result.current).toHaveProperty("send");
+  });
+
+  it("should update registers on matching register_update", () => {
+    const ws = protocolWS.modbus;
+
+    const { result } = renderHook(() => useModbusRegisters("device-1"));
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({
+        type: "register_update",
+        device_id: "device-1",
+        address: 40001,
+        value: 100,
+        timestamp: "2026-01-01T00:00:00Z",
+      });
+    });
+
+    expect(result.current.registers).toEqual({
+      40001: { value: 100, timestamp: "2026-01-01T00:00:00Z" },
+    });
+  });
+
+  it("should accumulate multiple register updates", () => {
+    const ws = protocolWS.modbus;
+
+    const { result } = renderHook(() => useModbusRegisters("device-1"));
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({
+        type: "register_update",
+        device_id: "device-1",
+        address: 40001,
+        value: 100,
+        timestamp: "t1",
+      });
+      dataCallback({
+        type: "register_update",
+        device_id: "device-1",
+        address: 40002,
+        value: 200,
+        timestamp: "t2",
+      });
+    });
+
+    expect(result.current.registers).toEqual({
+      40001: { value: 100, timestamp: "t1" },
+      40002: { value: 200, timestamp: "t2" },
+    });
+  });
+
+  it("should ignore updates for a different device_id", () => {
+    const ws = protocolWS.modbus;
+
+    const { result } = renderHook(() => useModbusRegisters("device-1"));
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({
+        type: "register_update",
+        device_id: "device-2",
+        address: 40001,
+        value: 100,
+        timestamp: "t1",
+      });
+    });
+
+    expect(result.current.registers).toEqual({});
+  });
+
+  it("should ignore updates with a different data type", () => {
+    const ws = protocolWS.modbus;
+
+    const { result } = renderHook(() => useModbusRegisters("device-1"));
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({
+        type: "other_type",
+        device_id: "device-1",
+        address: 40001,
+        value: 100,
+      });
+    });
+
+    expect(result.current.registers).toEqual({});
+  });
+
+  it("should ignore updates when data is null", () => {
+    const ws = protocolWS.modbus;
+
+    const { result } = renderHook(() => useModbusRegisters("device-1"));
+
+    // No data has been emitted yet, so data starts as null; ensure no throw
+    expect(() => ws.subscribe.mock.calls[0][1]).not.toThrow();
+    expect(result.current.registers).toEqual({});
+  });
+});
+
+describe("useOPCUANodes Hook", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("should initialize with an empty Map of node values", () => {
+    const { result } = renderHook(() => useOPCUANodes(["node-1"]));
+
+    expect(result.current.nodeValues).toBeInstanceOf(Map);
+    expect(result.current.nodeValues.size).toBe(0);
+  });
+
+  it("should update node values when nodeIds list is empty (accepts all)", () => {
+    const ws = protocolWS.opcua;
+
+    const { result } = renderHook(() => useOPCUANodes([]));
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({
+        type: "node_value_update",
+        node_id: "node-1",
+        value: 1,
+        timestamp: "t1",
+        quality: "good",
+      });
+    });
+
+    expect(result.current.nodeValues.get("node-1")).toEqual({
+      value: 1,
+      timestamp: "t1",
+      quality: "good",
+    });
+  });
+
+  it("should update node values when node_id is in the watched list", () => {
+    const ws = protocolWS.opcua;
+
+    const { result } = renderHook(() => useOPCUANodes(["node-1", "node-2"]));
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({
+        type: "node_value_update",
+        node_id: "node-2",
+        value: 5,
+        timestamp: "t2",
+        quality: "good",
+      });
+    });
+
+    expect(result.current.nodeValues.get("node-2")).toEqual({
+      value: 5,
+      timestamp: "t2",
+      quality: "good",
+    });
+  });
+
+  it("should ignore node updates not in the watched list", () => {
+    const ws = protocolWS.opcua;
+
+    const { result } = renderHook(() => useOPCUANodes(["node-1"]));
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({
+        type: "node_value_update",
+        node_id: "node-99",
+        value: 5,
+        timestamp: "t2",
+        quality: "good",
+      });
+    });
+
+    expect(result.current.nodeValues.size).toBe(0);
+  });
+
+  it("should ignore data with a different type", () => {
+    const ws = protocolWS.opcua;
+
+    const { result } = renderHook(() => useOPCUANodes([]));
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({ type: "other_type", node_id: "node-1", value: 1 });
+    });
+
+    expect(result.current.nodeValues.size).toBe(0);
+  });
+
+  it("should default nodeIds to an empty array", () => {
+    const ws = protocolWS.opcua;
+
+    const { result } = renderHook(() => useOPCUANodes());
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({
+        type: "node_value_update",
+        node_id: "node-1",
+        value: 1,
+        timestamp: "t1",
+        quality: "good",
+      });
+    });
+
+    expect(result.current.nodeValues.get("node-1")).toBeDefined();
+  });
+});
+
+describe("useDNP3Points Hook", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("should initialize with empty points", () => {
+    const { result } = renderHook(() => useDNP3Points("outstation-1"));
+
+    expect(result.current.points).toEqual({});
+  });
+
+  it("should update points on matching outstation_id", () => {
+    const ws = protocolWS.dnp3;
+
+    const { result } = renderHook(() => useDNP3Points("outstation-1"));
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({
+        type: "point_update",
+        outstation_id: "outstation-1",
+        index: 1,
+        value: 10,
+        timestamp: "t1",
+        quality: "good",
+      });
+    });
+
+    expect(result.current.points).toEqual({
+      1: { value: 10, timestamp: "t1", quality: "good" },
+    });
+  });
+
+  it("should accumulate multiple point updates", () => {
+    const ws = protocolWS.dnp3;
+
+    const { result } = renderHook(() => useDNP3Points("outstation-1"));
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({
+        type: "point_update",
+        outstation_id: "outstation-1",
+        index: 1,
+        value: 10,
+        timestamp: "t1",
+        quality: "good",
+      });
+      dataCallback({
+        type: "point_update",
+        outstation_id: "outstation-1",
+        index: 2,
+        value: 20,
+        timestamp: "t2",
+        quality: "good",
+      });
+    });
+
+    expect(result.current.points).toEqual({
+      1: { value: 10, timestamp: "t1", quality: "good" },
+      2: { value: 20, timestamp: "t2", quality: "good" },
+    });
+  });
+
+  it("should ignore updates for a different outstation_id", () => {
+    const ws = protocolWS.dnp3;
+
+    const { result } = renderHook(() => useDNP3Points("outstation-1"));
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({
+        type: "point_update",
+        outstation_id: "outstation-2",
+        index: 1,
+        value: 10,
+      });
+    });
+
+    expect(result.current.points).toEqual({});
+  });
+
+  it("should ignore updates with a different data type", () => {
+    const ws = protocolWS.dnp3;
+
+    const { result } = renderHook(() => useDNP3Points("outstation-1"));
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({
+        type: "other_type",
+        outstation_id: "outstation-1",
+        index: 1,
+        value: 10,
+      });
+    });
+
+    expect(result.current.points).toEqual({});
+  });
+});
+
+describe("useMQTTMessages Hook", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("should initialize with an empty messages array", () => {
+    const { result } = renderHook(() => useMQTTMessages());
+
+    expect(result.current.messages).toEqual([]);
+  });
+
+  it("should append messages when topics filter is empty (accepts all)", () => {
+    const ws = protocolWS.mqtt;
+
+    const { result } = renderHook(() => useMQTTMessages([]));
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({
+        type: "message",
+        topic: "sensors/temp",
+        payload: "72",
+        timestamp: "t1",
+        qos: 1,
+      });
+    });
+
+    expect(result.current.messages).toEqual([
+      { topic: "sensors/temp", payload: "72", timestamp: "t1", qos: 1 },
+    ]);
+  });
+
+  it("should append messages that match the topics filter", () => {
+    const ws = protocolWS.mqtt;
+
+    const { result } = renderHook(() =>
+      useMQTTMessages(["sensors/temp", "sensors/humidity"]),
+    );
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({
+        type: "message",
+        topic: "sensors/humidity",
+        payload: "45",
+        timestamp: "t1",
+        qos: 0,
+      });
+    });
+
+    expect(result.current.messages).toHaveLength(1);
+    expect(result.current.messages[0].topic).toBe("sensors/humidity");
+  });
+
+  it("should ignore messages that do not match the topics filter", () => {
+    const ws = protocolWS.mqtt;
+
+    const { result } = renderHook(() => useMQTTMessages(["sensors/temp"]));
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({
+        type: "message",
+        topic: "sensors/pressure",
+        payload: "1013",
+        timestamp: "t1",
+        qos: 0,
+      });
+    });
+
+    expect(result.current.messages).toEqual([]);
+  });
+
+  it("should ignore data with a different type", () => {
+    const ws = protocolWS.mqtt;
+
+    const { result } = renderHook(() => useMQTTMessages([]));
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({ type: "other_type", topic: "sensors/temp" });
+    });
+
+    expect(result.current.messages).toEqual([]);
+  });
+
+  it("should keep only the last 100 messages", () => {
+    const ws = protocolWS.mqtt;
+
+    const { result } = renderHook(() => useMQTTMessages([]));
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      for (let i = 0; i < 105; i++) {
+        dataCallback({
+          type: "message",
+          topic: "sensors/temp",
+          payload: String(i),
+          timestamp: `t${i}`,
+          qos: 0,
+        });
+      }
+    });
+
+    expect(result.current.messages).toHaveLength(100);
+    expect(result.current.messages[0].payload).toBe("5");
+    expect(result.current.messages[99].payload).toBe("104");
+  });
+
+  it("should clear messages when clearMessages is called", () => {
+    const ws = protocolWS.mqtt;
+
+    const { result } = renderHook(() => useMQTTMessages([]));
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({
+        type: "message",
+        topic: "sensors/temp",
+        payload: "72",
+        timestamp: "t1",
+        qos: 1,
+      });
+    });
+
+    expect(result.current.messages).toHaveLength(1);
+
+    act(() => {
+      result.current.clearMessages();
+    });
+
+    expect(result.current.messages).toEqual([]);
+  });
+
+  it("should default topics to an empty array", () => {
+    const ws = protocolWS.mqtt;
+
+    const { result } = renderHook(() => useMQTTMessages());
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({
+        type: "message",
+        topic: "any/topic",
+        payload: "x",
+        timestamp: "t1",
+        qos: 0,
+      });
+    });
+
+    expect(result.current.messages).toHaveLength(1);
   });
 });
