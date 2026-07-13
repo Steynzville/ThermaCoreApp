@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import React from "react";
@@ -153,6 +153,15 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { apiGetJson, apiPostJson } from "@/utils/apiFetch";
 import { toast } from "sonner";
 
+// Helper: since the Tabs mock renders ALL TabsContent panels simultaneously
+// (it ignores the active tab value), text like a topic name can legitimately
+// appear in multiple panels at once (Subscriptions, Messages, Topic Hierarchy).
+// This scopes queries to a specific panel by its data-value.
+const getTabPanel = (value) => {
+  const panels = screen.getAllByTestId("tabs-content");
+  return panels.find((el) => el.getAttribute("data-value") === value);
+};
+
 describe("MQTTManagementPanel", () => {
   const mockOnClose = vi.fn();
   const mockTenantId = "tenant-123";
@@ -190,22 +199,30 @@ describe("MQTTManagementPanel", () => {
     apiPostJson.mockResolvedValue({ success: true });
   });
 
-  it("should render desktop dialog when isOpen is true", () => {
+  it("should render desktop dialog when isOpen is true", async () => {
     useMediaQuery.mockReturnValue(true);
     render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
 
     expect(screen.getByTestId("dialog")).toBeInTheDocument();
     expect(screen.getByText("MQTT Management")).toBeInTheDocument();
-    expect(screen.getByText("Connected")).toBeInTheDocument();
+
+    // connectionStatus is fetched asynchronously, so wait for it to resolve
+    await waitFor(() => {
+      expect(screen.getByText("Connected")).toBeInTheDocument();
+    });
   });
 
-  it("should render mobile drawer when isOpen is true and on mobile", () => {
+  it("should render mobile drawer when isOpen is true and on mobile", async () => {
     useMediaQuery.mockReturnValue(false);
     render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
 
     expect(screen.getByTestId("drawer")).toBeInTheDocument();
     expect(screen.getByText("MQTT Management")).toBeInTheDocument();
-    expect(screen.getByText("Connected")).toBeInTheDocument();
+
+    // connectionStatus is fetched asynchronously, so wait for it to resolve
+    await waitFor(() => {
+      expect(screen.getByText("Connected")).toBeInTheDocument();
+    });
   });
 
   it("should not render when isOpen is false", () => {
@@ -234,9 +251,12 @@ describe("MQTTManagementPanel", () => {
   it("should display subscriptions", async () => {
     render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
 
+    // Scope to the Subscriptions panel since the Tabs mock renders every
+    // panel at once, and these topic names also appear in Messages / Topics
     await waitFor(() => {
-      expect(screen.getByText("sensors/temp")).toBeInTheDocument();
-      expect(screen.getByText("sensors/humidity")).toBeInTheDocument();
+      const subscriptionsPanel = getTabPanel("subscriptions");
+      expect(within(subscriptionsPanel).getByText("sensors/temp")).toBeInTheDocument();
+      expect(within(subscriptionsPanel).getByText("sensors/humidity")).toBeInTheDocument();
     });
   });
 
@@ -277,7 +297,8 @@ describe("MQTTManagementPanel", () => {
     render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
 
     await waitFor(() => {
-      expect(screen.getByText("sensors/temp")).toBeInTheDocument();
+      const subscriptionsPanel = getTabPanel("subscriptions");
+      expect(within(subscriptionsPanel).getByText("sensors/temp")).toBeInTheDocument();
     });
 
     // Find and click the unsubscribe button for the first subscription
