@@ -8,7 +8,6 @@ import AudioSettings from "./AudioSettings";
 const mockToggleSound = vi.fn();
 const mockSetVolume = vi.fn();
 
-// Create a mock that can be updated between tests
 let mockSettings = {
   soundEnabled: true,
   volume: 0.75,
@@ -22,9 +21,27 @@ vi.mock("../../context/SettingsContext", () => ({
   }),
 }));
 
-// Mock the local Slider wrapper (not the raw @radix-ui/react-slider primitives).
-// This keeps the test independent of how ui/slider.jsx forwards props to Radix,
-// and lets us properly support the *controlled* `value` prop AudioSettings uses.
+// Mock the local Switch wrapper (not @radix-ui/react-switch directly).
+// A plain button with role="switch" reproduces Radix's real accessibility
+// contract (role="switch", click -> onCheckedChange) without needing jsdom
+// to support Radix's internal pointer/keyboard handling.
+vi.mock("../ui/switch", () => ({
+  Switch: ({ id, checked, onCheckedChange, disabled, className }) => (
+    <button
+      type="button"
+      role="switch"
+      id={id}
+      aria-checked={checked}
+      disabled={disabled}
+      className={className}
+      onClick={() => onCheckedChange && onCheckedChange(!checked)}
+    />
+  ),
+}));
+
+// Mock the local Slider wrapper (not @radix-ui/react-slider directly).
+// This mirrors the controlled `value` prop AudioSettings actually passes,
+// translating between the 0-1 volume scale and a 0-100 range input.
 vi.mock("../ui/slider", () => ({
   Slider: ({ id, value, onValueChange, min = 0, max = 100, disabled, className }) => {
     const numericValue = Array.isArray(value) ? value[0] : value;
@@ -55,7 +72,6 @@ vi.mock("../ui/slider", () => ({
 describe("AudioSettings", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Reset to default settings
     mockSettings = {
       soundEnabled: true,
       volume: 0.75,
@@ -68,7 +84,6 @@ describe("AudioSettings", () => {
     expect(screen.getByRole("heading", { name: "Audio Settings" })).toBeInTheDocument();
     expect(screen.getByLabelText("Sound Effects")).toBeInTheDocument();
     expect(screen.getByText("75%")).toBeInTheDocument();
-    // Check slider exists
     expect(screen.getByTestId("slider-root")).toBeInTheDocument();
   });
 
@@ -87,13 +102,10 @@ describe("AudioSettings", () => {
 
     const sliderInput = screen.getByTestId("slider-input");
     expect(sliderInput).toBeInTheDocument();
-
-    // Verify slider has correct initial value
     expect(sliderInput).toHaveValue("75");
   });
 
   it("should show correct volume percentage when volume changes", async () => {
-    // Update mock settings for this test
     mockSettings = {
       soundEnabled: true,
       volume: 0.5,
@@ -110,7 +122,6 @@ describe("AudioSettings", () => {
     };
 
     render(<AudioSettings />);
-    // The slider input should be disabled when sound is off
     const sliderInput = screen.getByTestId("slider-input");
     expect(sliderInput).toBeDisabled();
   });
@@ -119,9 +130,6 @@ describe("AudioSettings", () => {
     render(<AudioSettings />);
 
     const sliderInput = screen.getByTestId("slider-input");
-
-    // Range inputs aren't well supported by userEvent's high-level API,
-    // so fireEvent.change remains the pragmatic choice here.
     fireEvent.change(sliderInput, { target: { value: "50" } });
 
     await waitFor(() => {
