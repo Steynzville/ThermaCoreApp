@@ -122,6 +122,10 @@ import { apiGetJson, apiPostJson } from "@/utils/apiFetch";
 import { toast } from "sonner";
 
 // Helper to get tab panel
+// NOTE: The Tabs mock renders every TabsContent panel unconditionally (it does
+// not hide inactive panels), so multiple panels' content coexists in the DOM
+// at once. Always scope queries to the specific panel you care about with
+// `within(getTabPanel(...))` to avoid "multiple elements found" errors.
 const getTabPanel = (value) => {
   const panels = screen.getAllByTestId("tabs-content");
   return panels.find((el) => el.getAttribute("data-value") === value);
@@ -261,21 +265,27 @@ describe("DNP3MonitoringDashboard", () => {
       />
     );
 
+    // Scoped to the overview panel because "Data Points" / "45ms" also
+    // appear in the outstations and performance panels, which the Tabs
+    // mock keeps mounted simultaneously.
     await waitFor(() => {
-      expect(screen.getByText("Total Outstations")).toBeInTheDocument();
-      expect(screen.getByText("2")).toBeInTheDocument();
-      expect(screen.getByText("Active")).toBeInTheDocument();
-      // Use getAllByText for "1" since it appears multiple times
-      const ones = screen.getAllByText("1");
+      const overviewPanel = getTabPanel("overview");
+      expect(within(overviewPanel).getByText("Total Outstations")).toBeInTheDocument();
+      expect(within(overviewPanel).getByText("2")).toBeInTheDocument();
+      expect(within(overviewPanel).getByText("Active")).toBeInTheDocument();
+      const ones = within(overviewPanel).getAllByText("1");
       expect(ones.length).toBeGreaterThan(0);
-      expect(screen.getByText("Data Points")).toBeInTheDocument();
-      expect(screen.getByText("40")).toBeInTheDocument();
-      expect(screen.getByText("Avg Response")).toBeInTheDocument();
-      expect(screen.getByText("45ms")).toBeInTheDocument();
+      expect(within(overviewPanel).getByText("Data Points")).toBeInTheDocument();
+      expect(within(overviewPanel).getByText("40")).toBeInTheDocument();
+      expect(within(overviewPanel).getByText("Avg Response")).toBeInTheDocument();
+      expect(within(overviewPanel).getByText("45ms")).toBeInTheDocument();
     });
   });
 
   it("should display outstations in the outstation list", async () => {
+    // Desktop cards only show the outstation id, not its name. The name is
+    // only rendered in the mobile drawer view, so use mobile here.
+    useMediaQuery.mockReturnValue(false);
     const user = userEvent.setup();
     render(
       <DNP3MonitoringDashboard
@@ -285,7 +295,6 @@ describe("DNP3MonitoringDashboard", () => {
       />
     );
 
-    // Switch to outstations tab
     const tabs = screen.getAllByTestId("tabs-trigger");
     const outstationTab = tabs.find(tab => tab.textContent.includes("Outstations"));
     await user.click(outstationTab);
@@ -319,6 +328,10 @@ describe("DNP3MonitoringDashboard", () => {
   });
 
   it("should select outstation and display details", async () => {
+    // The "{name} Details" card only exists in the mobile drawer view.
+    // The desktop view surfaces selection details inside the Performance
+    // tab instead (covered by the "device performance" test below).
+    useMediaQuery.mockReturnValue(false);
     const user = userEvent.setup();
     render(
       <DNP3MonitoringDashboard
@@ -345,13 +358,14 @@ describe("DNP3MonitoringDashboard", () => {
     );
     fireEvent.click(outstationCard);
 
-    // Wait for details to appear - switch back to overview or check the details
+    // Wait for details to appear
     await waitFor(() => {
       expect(screen.getByText("Main Substation Details")).toBeInTheDocument();
     });
   });
 
   it("should handle integrity poll", async () => {
+    // Desktop cards render the outstation id, not its name.
     const user = userEvent.setup();
     render(
       <DNP3MonitoringDashboard
@@ -367,7 +381,7 @@ describe("DNP3MonitoringDashboard", () => {
 
     await waitFor(() => {
       const outstationPanel = getTabPanel("outstations");
-      expect(within(outstationPanel).getByText("Main Substation")).toBeInTheDocument();
+      expect(within(outstationPanel).getByText("outstation-1")).toBeInTheDocument();
     });
 
     // Find and click Integrity Poll button within the outstation panel
@@ -398,12 +412,15 @@ describe("DNP3MonitoringDashboard", () => {
     const performanceTab = tabs.find(tab => tab.textContent.includes("Performance"));
     await user.click(performanceTab);
 
+    // Scoped to the performance panel because "45ms" also appears in the
+    // overview panel (same average_response_time value).
     await waitFor(() => {
-      expect(screen.getByText("Performance Metrics")).toBeInTheDocument();
-      expect(screen.getByText("1500")).toBeInTheDocument();
-      expect(screen.getByText("1450")).toBeInTheDocument();
-      expect(screen.getByText("50")).toBeInTheDocument();
-      expect(screen.getByText("45ms")).toBeInTheDocument();
+      const performancePanel = getTabPanel("performance");
+      expect(within(performancePanel).getByText("Performance Metrics")).toBeInTheDocument();
+      expect(within(performancePanel).getByText("1500")).toBeInTheDocument();
+      expect(within(performancePanel).getByText("1450")).toBeInTheDocument();
+      expect(within(performancePanel).getByText("50")).toBeInTheDocument();
+      expect(within(performancePanel).getByText("45ms")).toBeInTheDocument();
     });
   });
 
@@ -417,9 +434,10 @@ describe("DNP3MonitoringDashboard", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("System Health")).toBeInTheDocument();
-      expect(screen.getByText("Connection Rate")).toBeInTheDocument();
-      expect(screen.getByText("50%")).toBeInTheDocument();
+      const overviewPanel = getTabPanel("overview");
+      expect(within(overviewPanel).getByText("System Health")).toBeInTheDocument();
+      expect(within(overviewPanel).getByText("Connection Rate")).toBeInTheDocument();
+      expect(within(overviewPanel).getByText("50%")).toBeInTheDocument();
       const progress = screen.getByTestId("progress");
       expect(progress).toHaveAttribute("data-value", "50");
     });
@@ -441,14 +459,14 @@ describe("DNP3MonitoringDashboard", () => {
 
     await waitFor(() => {
       const outstationPanel = getTabPanel("outstations");
-      expect(within(outstationPanel).getByText("Main Substation")).toBeInTheDocument();
+      expect(within(outstationPanel).getByText("outstation-1")).toBeInTheDocument();
     });
 
-    // Select outstation
+    // Select outstation (desktop cards render the id, not the name)
     const outstationPanel = getTabPanel("outstations");
     const cards = within(outstationPanel).getAllByTestId("card");
     const outstationCard = cards.find(card => 
-      card.textContent.includes("Main Substation")
+      card.textContent.includes("outstation-1")
     );
     fireEvent.click(outstationCard);
 
@@ -457,10 +475,11 @@ describe("DNP3MonitoringDashboard", () => {
     await user.click(performanceTab);
 
     await waitFor(() => {
-      expect(screen.getByText("Device Performance: outstation-1")).toBeInTheDocument();
-      expect(screen.getByText("10/s")).toBeInTheDocument();
-      expect(screen.getByText("25ms")).toBeInTheDocument();
-      expect(screen.getByText("2%")).toBeInTheDocument();
+      const performancePanel = getTabPanel("performance");
+      expect(within(performancePanel).getByText("Device Performance: outstation-1")).toBeInTheDocument();
+      expect(within(performancePanel).getByText("10/s")).toBeInTheDocument();
+      expect(within(performancePanel).getByText("25ms")).toBeInTheDocument();
+      expect(within(performancePanel).getByText("2%")).toBeInTheDocument();
     });
   });
 
@@ -496,7 +515,7 @@ describe("DNP3MonitoringDashboard", () => {
 
     await waitFor(() => {
       const outstationPanel = getTabPanel("outstations");
-      expect(within(outstationPanel).getByText("Main Substation")).toBeInTheDocument();
+      expect(within(outstationPanel).getByText("outstation-1")).toBeInTheDocument();
     });
 
     const outstationPanel = getTabPanel("outstations");
@@ -510,6 +529,8 @@ describe("DNP3MonitoringDashboard", () => {
   });
 
   it("should handle refresh button click", async () => {
+    // The outstations panel has multiple buttons (Refresh + one Integrity
+    // Poll per outstation), so pick the Refresh one explicitly.
     const user = userEvent.setup();
     render(
       <DNP3MonitoringDashboard
@@ -524,7 +545,8 @@ describe("DNP3MonitoringDashboard", () => {
     await user.click(outstationTab);
 
     const outstationPanel = getTabPanel("outstations");
-    const refreshButton = within(outstationPanel).getByTestId("button");
+    const buttons = within(outstationPanel).getAllByTestId("button");
+    const refreshButton = buttons.find(btn => btn.textContent.includes("Refresh"));
     await user.click(refreshButton);
 
     await waitFor(() => {
