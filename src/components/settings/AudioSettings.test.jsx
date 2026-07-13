@@ -1,6 +1,6 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import React from "react";
 import AudioSettings from "./AudioSettings";
 
@@ -78,6 +78,10 @@ describe("AudioSettings", () => {
     };
   });
 
+  afterEach(() => {
+    cleanup();
+  });
+
   it("should render audio settings with correct content", () => {
     render(<AudioSettings />);
 
@@ -126,15 +130,16 @@ describe("AudioSettings", () => {
     expect(sliderInput).toBeDisabled();
   });
 
-  it("should call setVolume with correct value when slider changes", async () => {
+  it("should call setVolume with correct value when slider changes", () => {
     render(<AudioSettings />);
 
     const sliderInput = screen.getByTestId("slider-input");
     fireEvent.change(sliderInput, { target: { value: "50" } });
 
-    await waitFor(() => {
-      expect(mockSetVolume).toHaveBeenCalledWith(0.5);
-    });
+    // The mocked slider's onChange calls setVolume synchronously —
+    // no need for waitFor here, and using it was what caused the
+    // hanging/teardown race in the previous run.
+    expect(mockSetVolume).toHaveBeenCalledWith(0.5);
   });
 
   it("should render volume slider with correct min and max values", () => {
