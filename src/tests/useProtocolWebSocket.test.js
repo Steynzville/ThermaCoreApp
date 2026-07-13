@@ -40,6 +40,34 @@ vi.mock("../services/protocolWebSocketService", () => {
   };
 });
 
+// IMPORTANT: vi.clearAllMocks() only clears call history — it does NOT undo
+// mockReturnValue/mockResolvedValue/mockRejectedValue configured in earlier
+// tests. Several tests below reconfigure connect()/isConnected() away from
+// their defaults (e.g. rejecting connect, isConnected -> true). Left
+// unreset, those configs leak into later tests. That's especially dangerous
+// here because useModbusRegisters/useOPCUANodes/useDNP3Points/useMQTTMessages
+// all auto-connect on mount (autoConnect defaults to true), so a leaked
+// rejected connect() fires on every subsequent render. This top-level
+// beforeEach runs before every test in the file and fully resets each mock
+// back to its known-good default implementation.
+const resetProtocolMockDefaults = () => {
+  for (const ws of Object.values(protocolWS)) {
+    ws.connect.mockReset().mockResolvedValue(true);
+    ws.disconnect.mockReset();
+    ws.subscribe.mockReset();
+    ws.unsubscribe.mockReset();
+    ws.send.mockReset();
+    ws.isConnected.mockReset().mockReturnValue(false);
+    ws.onStatusChange.mockReset();
+    ws.offStatusChange.mockReset();
+    ws.getStatus.mockReset().mockReturnValue("disconnected");
+  }
+};
+
+beforeEach(() => {
+  resetProtocolMockDefaults();
+});
+
 describe("useProtocolWebSocket Hook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
