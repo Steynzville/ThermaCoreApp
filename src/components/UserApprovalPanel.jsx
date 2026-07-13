@@ -28,6 +28,22 @@ import {
   SelectValue,
 } from "./ui/select";
 
+// Error boundary wrapper component
+const UserApprovalPanelError = ({ error, resetError }) => {
+  return (
+    <div className="p-6 text-center">
+      <div className="text-red-600 dark:text-red-400 mb-4">
+        <p className="text-lg font-semibold">Something went wrong</p>
+        <p className="text-sm mt-1">{error?.message || "Failed to load user approvals"}</p>
+      </div>
+      <Button onClick={resetError} variant="outline">
+        <RefreshCw className="h-4 w-4 mr-2" />
+        Try Again
+      </Button>
+    </div>
+  );
+};
+
 const UserApprovalPanel = () => {
   const [pendingUsers, setPendingUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -37,19 +53,26 @@ const UserApprovalPanel = () => {
   const [rejectionReason, setRejectionReason] = useState("");
   const [availableRoles, setAvailableRoles] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const [error, setError] = useState(null);
 
   const fetchPendingUsers = useCallback(async () => {
     setIsLoading(true);
+    setHasError(false);
     try {
       const result = await getPendingUsers({ per_page: 100 });
 
       if (result.success) {
-        setPendingUsers(result.data);
+        setPendingUsers(result.data || []);
       } else {
         toast.error(result.message || "Failed to fetch pending users");
+        setHasError(true);
+        setError(new Error(result.message || "Failed to fetch pending users"));
       }
-    } catch (_error) {
+    } catch (err) {
       toast.error("Failed to fetch pending users");
+      setHasError(true);
+      setError(err);
     } finally {
       setIsLoading(false);
     }
@@ -60,10 +83,13 @@ const UserApprovalPanel = () => {
       const result = await getRoles();
 
       if (result.success) {
-        setAvailableRoles(result.data);
+        setAvailableRoles(result.data || []);
       } else {
+        setAvailableRoles([]);
       }
-    } catch (_error) {}
+    } catch (_error) {
+      setAvailableRoles([]);
+    }
   }, []);
 
   // Fetch pending users on mount
@@ -73,6 +99,7 @@ const UserApprovalPanel = () => {
   }, [fetchPendingUsers, fetchRoles]);
 
   const handleApproveClick = (user) => {
+    if (!user) return;
     setSelectedUser(user);
     setActionType("approve");
     // Pre-select current role if exists
@@ -80,6 +107,7 @@ const UserApprovalPanel = () => {
   };
 
   const handleRejectClick = (user) => {
+    if (!user) return;
     setSelectedUser(user);
     setActionType("reject");
     setRejectionReason("");
@@ -137,6 +165,18 @@ const UserApprovalPanel = () => {
     setRejectionReason("");
   };
 
+  const resetError = () => {
+    setHasError(false);
+    setError(null);
+    fetchPendingUsers();
+    fetchRoles();
+  };
+
+  // If there's an error, show the error UI
+  if (hasError) {
+    return <UserApprovalPanelError error={error} resetError={resetError} />;
+  }
+
   return (
     <div className="space-y-4">
       <Card>
@@ -174,7 +214,6 @@ const UserApprovalPanel = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {/* Mobile-friendly card layout */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {pendingUsers.map((user) => (
                   <Card key={user.id} className="border shadow-sm">
@@ -284,20 +323,30 @@ const UserApprovalPanel = () => {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="role-select">Assign Role</Label>
-              <Select value={selectedRoleId} onValueChange={setSelectedRoleId}>
-                <SelectTrigger id="role-select">
-                  <SelectValue placeholder="Select a role" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableRoles.map((role) => (
-                    <SelectItem key={role.id} value={role.id.toString()}>
-                      {formatRoleName(role)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {availableRoles && availableRoles.length > 0 ? (
+                <Select value={selectedRoleId} onValueChange={setSelectedRoleId}>
+                  <SelectTrigger id="role-select">
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableRoles.map((role) => (
+                      <SelectItem key={role.id} value={role.id.toString()}>
+                        {formatRoleName(role)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                  <p className="text-sm text-yellow-700 dark:text-yellow-400">
+                    No roles available. Please create a role first in the system settings.
+                  </p>
+                </div>
+              )}
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Select the role to assign to this user
+                {availableRoles && availableRoles.length > 0
+                  ? "Select the role to assign to this user"
+                  : "Contact an administrator to set up roles"}
               </p>
             </div>
           </div>
@@ -306,7 +355,10 @@ const UserApprovalPanel = () => {
             <Button variant="outline" onClick={closeDialog}>
               Cancel
             </Button>
-            <Button onClick={handleApproveConfirm} disabled={isSubmitting}>
+            <Button
+              onClick={handleApproveConfirm}
+              disabled={isSubmitting || !selectedRoleId || (availableRoles && availableRoles.length === 0)}
+            >
               {isSubmitting ? (
                 <span className="flex items-center gap-2">
                   <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
