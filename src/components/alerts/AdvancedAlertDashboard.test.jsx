@@ -83,6 +83,11 @@ vi.mock("../ui/input", () => ({
   ),
 }));
 
+// Select mock: a native <select> can only contain <option>/<optgroup>.
+// Rendering SelectTrigger/SelectContent wrapper divs inside it produces
+// invalid HTML that gets silently reparented by the DOM, corrupting the
+// surrounding tree. We render the trigger/value as no-ops and only put
+// real <option> elements (from SelectItem) inside the actual <select>.
 vi.mock("../ui/select", () => ({
   Select: ({ children, value, onValueChange }) => (
     <div data-testid="select" data-value={value}>
@@ -95,10 +100,10 @@ vi.mock("../ui/select", () => ({
       </select>
     </div>
   ),
-  SelectTrigger: ({ children, className }) => <div data-testid="select-trigger" className={className}>{children}</div>,
-  SelectValue: () => <span data-testid="select-value">Select value</span>,
-  SelectContent: ({ children }) => <div data-testid="select-content">{children}</div>,
-  SelectItem: ({ children, value }) => <option data-testid="select-item" value={value}>{children}</option>,
+  SelectTrigger: () => null,
+  SelectValue: () => null,
+  SelectContent: ({ children }) => <>{children}</>,
+  SelectItem: ({ children, value }) => <option value={value}>{children}</option>,
 }));
 
 vi.mock("../ui/textarea", () => ({
@@ -232,11 +237,12 @@ describe("AdvancedAlertDashboard", () => {
     render(<AdvancedAlertDashboard />);
 
     await waitFor(() => {
-      // Use getAllByText for "Critical" since it appears in both the card and the select options
-      const criticalElements = screen.getAllByText("Critical");
-      expect(criticalElements.length).toBeGreaterThan(0);
-      expect(screen.getByText("Warning")).toBeInTheDocument();
-      expect(screen.getByText("Resolved")).toBeInTheDocument();
+      // "Critical", "Warning", and "Resolved" each appear twice: once as a
+      // statistics card label and once as a filter dropdown option — so we
+      // assert presence via getAllByText rather than assuming uniqueness.
+      expect(screen.getAllByText("Critical").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Warning").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Resolved").length).toBeGreaterThan(0);
       expect(screen.getByText("Avg. Resolution")).toBeInTheDocument();
       expect(screen.getByText("15m")).toBeInTheDocument();
     });
