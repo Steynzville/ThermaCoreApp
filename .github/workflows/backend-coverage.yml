@@ -106,7 +106,16 @@ jobs:
         id: tests
         run: |
           echo "🧪 Running backend tests with coverage..."
-          docker-compose -f docker-compose.ci.yml run --rm backend python -m pytest -v --tb=short --cov=app --cov-report=json --cov-report=term --cov-report=term-missing --cov-fail-under=60 --cov-branch 2>&1 | tee coverage_output.txt
+          docker-compose -f docker-compose.ci.yml run --rm backend python -m pytest -v --tb=short \
+            --cov=app \
+            --cov-report=json \
+            --cov-report=html \
+            --cov-report=xml \
+            --cov-report=term \
+            --cov-report=term-missing \
+            --cov-fail-under=60 \
+            --cov-branch \
+            --cov-config=.coveragerc 2>&1 | tee coverage_output.txt
 
       - name: Extract Coverage from Output
         id: coverage
@@ -115,6 +124,10 @@ jobs:
           echo "📊 Extracting coverage from test output..."
           # Extract the coverage percentage from the pytest output
           COVERAGE=$(grep -oP 'Total coverage: \K[0-9.]+' coverage_output.txt || echo "0")
+          # Fallback: try to extract from coverage.json if grep fails
+          if [ "$COVERAGE" = "0" ] && [ -f backend/coverage.json ]; then
+            COVERAGE=$(cat backend/coverage.json | python3 -c "import sys, json; print(json.load(sys.stdin)['totals']['percent_covered'])" 2>/dev/null || echo "0")
+          fi
           echo "COVERAGE=$COVERAGE" >> $GITHUB_ENV
           echo "Total coverage extracted: $COVERAGE%"
 
@@ -139,12 +152,17 @@ jobs:
           echo ""
           echo "═══════════════════════════════════════════════════════════"
 
-      - name: Upload Coverage Report
+      - name: Upload Full Coverage Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: backend-coverage-report
-          path: backend/coverage.json
+          path: |
+            backend/coverage.json
+            backend/coverage.xml
+            backend/htmlcov/
+            backend/.coverage
+          retention-days: 30
 
       - name: Stop Services
         if: always()
