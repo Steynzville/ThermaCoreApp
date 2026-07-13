@@ -65,6 +65,9 @@ jobs:
             --coverage \
             --coverage.reporter=text \
             --coverage.reporter=json-summary \
+            --coverage.reporter=json \
+            --coverage.reporter=lcov \
+            --coverage.reporter=html \
             --coverage.reportsDirectory=coverage \
             --testNamePattern="^(?!.*AdminPanel User Creation Form).*" 2>&1 | tee coverage_output.txt || {
               EXIT_CODE=$?
@@ -83,9 +86,7 @@ jobs:
         if: always()
         run: |
           echo "📊 Extracting coverage from test output..."
-          # Extract the coverage percentage from the vitest output
           COVERAGE=$(grep -oP 'All files\s+\|\s+[0-9.]+\s+\|\s+[0-9.]+\s+\|\s+[0-9.]+\s+\|\s+\K[0-9.]+' coverage_output.txt | head -1 || echo "0")
-          # Fallback: try to extract from coverage-summary.json if grep fails
           if [ "$COVERAGE" = "0" ] && [ -f coverage/coverage-summary.json ]; then
             COVERAGE=$(cat coverage/coverage-summary.json | jq -r '.total.statements.pct' || echo "0")
           fi
@@ -99,13 +100,15 @@ jobs:
           echo "📁 Coverage check:"
           ls -la coverage/ 2>/dev/null || echo "No coverage directory"
 
-      - name: Upload Coverage Report
+      - name: Upload Full Coverage Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: frontend-coverage-report
-          path: coverage/
-          retention-days: 14
+          path: |
+            coverage/
+            !coverage/coverage_output.txt
+          retention-days: 30
 
       - name: 📊 Display Coverage Summary
         if: always()
@@ -118,7 +121,6 @@ jobs:
           echo "  📈 Total Coverage: ${{ env.COVERAGE }}%"
           echo ""
           
-          # Color coding based on coverage percentage
           COVERAGE_INT=$(echo "${{ env.COVERAGE }}" | cut -d'.' -f1)
           if [ "$COVERAGE_INT" -ge 80 ]; then
             echo "  🟢 EXCELLENT! Coverage is above 80%"
