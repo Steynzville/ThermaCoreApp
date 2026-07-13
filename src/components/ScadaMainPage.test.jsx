@@ -1,4 +1,5 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+```jsx
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import React from "react";
@@ -20,12 +21,18 @@ vi.mock("./analytics/PerformanceAnalyticsDashboard", () => ({
   ),
 }));
 
+// The visualization dashboard mock is defined via vi.hoisted so individual
+// tests (e.g. the error boundary test) can swap its implementation at
+// runtime with mockImplementation(). A plain vi.doMock() call inside a test
+// does NOT work here because ScadaMainPage statically imports this module,
+// so it's already resolved via the vi.mock() factory below before any test
+// body runs.
+const { mockVisualizationDashboard } = vi.hoisted(() => ({
+  mockVisualizationDashboard: vi.fn(),
+}));
+
 vi.mock("./visualization/ComprehensiveVisualizationDashboard", () => ({
-  default: ({ embedded, defaultTab }) => (
-    <div data-testid="mock-visualization-dashboard">
-      Mock Visualization Dashboard - Tab: {defaultTab} - Embedded: {String(embedded)}
-    </div>
-  ),
+  default: (props) => mockVisualizationDashboard(props),
 }));
 
 // Mock react-router-dom
@@ -48,6 +55,13 @@ vi.mock("../styles/theme.css", () => ({}));
 describe("ScadaMainPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Restore the default (non-throwing) implementation before every test,
+    // since some tests override it (see the error boundary test below).
+    mockVisualizationDashboard.mockImplementation(({ embedded, defaultTab }) => (
+      <div data-testid="mock-visualization-dashboard">
+        Mock Visualization Dashboard - Tab: {defaultTab} - Embedded: {String(embedded)}
+      </div>
+    ));
   });
 
   const renderWithRouter = (ui, initialEntries = ["/"]) => {
@@ -216,23 +230,26 @@ describe("ScadaMainPage", () => {
   });
 
   it("should handle error boundary and display error UI", () => {
-    // Force an error by rendering with a broken child
-    const ErrorThrowingComponent = () => {
+    // Force the visualization dashboard mock to throw during render so the
+    // ScadaErrorBoundary catches it. Swapping mockImplementation() on the
+    // vi.hoisted mock works because ScadaMainPage's import already resolves
+    // to this mock function (unlike vi.doMock, which can't affect an
+    // already-resolved static import).
+    mockVisualizationDashboard.mockImplementation(() => {
       throw new Error("Test error");
-    };
+    });
 
-    // Override the mock temporarily
-    vi.doMock("./visualization/ComprehensiveVisualizationDashboard", () => ({
-      default: ErrorThrowingComponent,
-    }));
+    // React logs caught errors to console.error; suppress the noise here.
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    // Re-render with error
     renderWithRouter(<ScadaMainPage />);
 
     // Error boundary should catch and display error UI
     expect(screen.getByText("SCADA Page Error")).toBeInTheDocument();
     expect(screen.getByText("Test error")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Reload Page" })).toBeInTheDocument();
+
+    consoleErrorSpy.mockRestore();
   });
 
   it("should maintain sub-tab state when switching between main tabs", async () => {
@@ -305,12 +322,17 @@ describe("ScadaMainPage", () => {
     expect(healthButton).toHaveAttribute("data-state", "inactive");
   });
 
-  it("should handle tab switching with fireEvent", () => {
+  it("should handle tab switching with userEvent", async () => {
+    // Radix's Tabs.Trigger needs the fuller pointer/focus event sequence
+    // that userEvent simulates to activate a tab; a bare fireEvent.click
+    // doesn't reliably trigger Radix's internal activation logic.
+    const user = userEvent.setup();
     renderWithRouter(<ScadaMainPage />);
 
     const alertsTab = screen.getByRole("tab", { name: /alerts/i });
-    fireEvent.click(alertsTab);
+    await user.click(alertsTab);
 
     expect(screen.getByTestId("mock-alerts-dashboard")).toBeInTheDocument();
   });
 });
+```
