@@ -330,10 +330,12 @@ describe("MQTTManagementPanel", () => {
     const topicInput = inputs.find(input => input.id === "pub-topic");
     await user.type(topicInput, "sensors/test");
 
-    // Find textarea and enter payload
+    // Find textarea and enter payload.
+    // userEvent.type treats { and } as special key-sequence markers (e.g. {enter}),
+    // so literal curly braces must be escaped as {{ and }}.
     const textareas = screen.getAllByTestId("textarea");
     const payloadTextarea = textareas.find(textarea => textarea.id === "pub-payload");
-    await user.type(payloadTextarea, '{"test": "value"}');
+    await user.type(payloadTextarea, '{{"test": "value"}}');
 
     // Find and click Publish button
     const buttons = screen.getAllByTestId("button");
@@ -447,14 +449,17 @@ describe("MQTTManagementPanel", () => {
     vi.useFakeTimers();
     render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
 
-    await waitFor(() => {
+    // Use vi.waitFor (not @testing-library's waitFor) since the latter polls
+    // with real setTimeout internally and will hang forever once fake timers
+    // are active.
+    await vi.waitFor(() => {
       expect(apiGetJson).toHaveBeenCalledTimes(3);
     });
 
-    // Advance timers
-    vi.advanceTimersByTime(3000);
+    // advanceTimersByTimeAsync also flushes microtasks/promises along the way
+    await vi.advanceTimersByTimeAsync(3000);
 
-    await waitFor(() => {
+    await vi.waitFor(() => {
       expect(apiGetJson).toHaveBeenCalledTimes(6);
     });
 
