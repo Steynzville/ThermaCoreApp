@@ -332,11 +332,17 @@ describe("ModbusDeviceModal", () => {
     const readTab = tabs.find(tab => tab.textContent.includes("Read"));
     await user.click(readTab);
 
-    const inputs = screen.getAllByTestId("input");
-    const addressInput = inputs[0];
-    const countInput = inputs[1];
+    // Query by label instead of positional index: since the mocked Tabs
+    // component renders every panel at once, getAllByTestId("input")
+    // would also include the Write tab's inputs.
+    const addressInput = screen.getByLabelText("Start Address");
+    const countInput = screen.getByLabelText("Count");
 
+    // Count defaults to "1" (not empty), so clear before typing or
+    // userEvent.type will append and produce "15" instead of "5".
+    await user.clear(addressInput);
     await user.type(addressInput, "40001");
+    await user.clear(countInput);
     await user.type(countInput, "5");
 
     const buttons = screen.getAllByTestId("button");
@@ -373,11 +379,15 @@ describe("ModbusDeviceModal", () => {
     const writeTab = tabs.find(tab => tab.textContent.includes("Write"));
     await user.click(writeTab);
 
-    const inputs = screen.getAllByTestId("input");
-    const addressInput = inputs[0];
-    const valueInput = inputs[1];
+    // Query by label instead of positional index: inputs[0]/inputs[1]
+    // would actually resolve to the Read tab's fields since all panels
+    // are rendered simultaneously by the mocked Tabs component.
+    const addressInput = screen.getByLabelText("Address");
+    const valueInput = screen.getByLabelText("Value");
 
+    await user.clear(addressInput);
     await user.type(addressInput, "40001");
+    await user.clear(valueInput);
     await user.type(valueInput, "100");
 
     const buttons = screen.getAllByTestId("button");
@@ -442,8 +452,8 @@ describe("ModbusDeviceModal", () => {
     const writeTab = tabs.find(tab => tab.textContent.includes("Write"));
     await user.click(writeTab);
 
-    const inputs = screen.getAllByTestId("input");
-    const addressInput = inputs[0];
+    const addressInput = screen.getByLabelText("Address");
+    await user.clear(addressInput);
     await user.type(addressInput, "40001");
 
     const buttons = screen.getAllByTestId("button");
@@ -552,7 +562,18 @@ describe("ModbusDeviceModal", () => {
     const writeTab = tabs.find(tab => tab.textContent.includes("Write"));
     await user.click(writeTab);
 
-    expect(screen.getByText(/Warning: Writing to registers can affect device operation/)).toBeInTheDocument();
+    // The warning text is split across a <strong> tag and a sibling text
+    // node, so a plain string/regex matcher can't find it as one node.
+    // Use a function matcher that checks the parent element's full
+    // textContent instead.
+    expect(
+      screen.getByText((_, element) => {
+        if (!element || element.tagName.toLowerCase() !== "p") return false;
+        return /Warning: Writing to registers can affect device operation/.test(
+          element.textContent
+        );
+      })
+    ).toBeInTheDocument();
   });
 
   it("should display empty state when no registers", async () => {
