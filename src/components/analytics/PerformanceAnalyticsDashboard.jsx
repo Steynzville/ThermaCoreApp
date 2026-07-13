@@ -15,7 +15,7 @@ import {
   TrendingUp,
   Zap,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -85,12 +85,17 @@ const PerformanceAnalyticsDashboard = ({
     loadAnalyticsData();
   }, [loadAnalyticsData]);
 
-  // Update active tab when defaultTab changes
+  // Sync active tab only when the defaultTab prop itself changes externally —
+  // not whenever it merely differs from the user's current tab selection.
+  // (Comparing defaultTab directly against activeTab here would revert any
+  // user-initiated tab click straight back to defaultTab on every render.)
+  const prevDefaultTabRef = useRef(defaultTab);
   useEffect(() => {
-    if (defaultTab !== activeTab) {
+    if (defaultTab !== prevDefaultTabRef.current) {
       setActiveTab(defaultTab);
+      prevDefaultTabRef.current = defaultTab;
     }
-  }, [defaultTab, activeTab]);
+  }, [defaultTab]);
 
   const handleExportReport = async (reportType, format) => {
     const result = await analyticsService.generateReport({
@@ -622,7 +627,7 @@ const PerformanceAnalyticsDashboard = ({
                       >
                         {energyData?.byDevice.map((entry, index) => (
                           <Cell
-                            key={`cell-${entry.device}`}
+                            key={`cell-${entry.id}`}
                             fill={COLORS[index % COLORS.length]}
                           />
                         ))}
