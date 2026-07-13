@@ -1,0 +1,602 @@
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import React from "react";
+import ModbusDeviceModal from "./ModbusDeviceModal";
+
+// Mock hooks and utilities
+vi.mock("@/hooks/use-media-query", () => ({
+  useMediaQuery: vi.fn(),
+}));
+
+vi.mock("@/utils/apiFetch", () => ({
+  apiGetJson: vi.fn(),
+  apiPostJson: vi.fn(),
+}));
+
+vi.mock("sonner", () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+  },
+}));
+
+// Mock UI components
+vi.mock("@/components/ui/badge", () => ({
+  Badge: ({ children, variant }) => <span data-testid="badge" data-variant={variant}>{children}</span>,
+}));
+
+vi.mock("@/components/ui/button", () => ({
+  Button: ({ children, onClick, disabled, variant, size, className }) => (
+    <button
+      data-testid="button"
+      data-variant={variant}
+      data-size={size}
+      onClick={onClick}
+      disabled={disabled}
+      className={className}
+    >
+      {children}
+    </button>
+  ),
+}));
+
+vi.mock("@/components/ui/dialog", () => ({
+  Dialog: ({ children, open }) => open ? <div data-testid="dialog">{children}</div> : null,
+  DialogContent: ({ children, className }) => <div data-testid="dialog-content" className={className}>{children}</div>,
+  DialogHeader: ({ children }) => <div data-testid="dialog-header">{children}</div>,
+  DialogTitle: ({ children }) => <div data-testid="dialog-title">{children}</div>,
+  DialogDescription: ({ children }) => <div data-testid="dialog-description">{children}</div>,
+}));
+
+vi.mock("@/components/ui/drawer", () => ({
+  Drawer: ({ children, open }) => open ? <div data-testid="drawer">{children}</div> : null,
+  DrawerContent: ({ children, className }) => <div data-testid="drawer-content" className={className}>{children}</div>,
+  DrawerHeader: ({ children }) => <div data-testid="drawer-header">{children}</div>,
+  DrawerTitle: ({ children }) => <div data-testid="drawer-title">{children}</div>,
+  DrawerDescription: ({ children }) => <div data-testid="drawer-description">{children}</div>,
+}));
+
+vi.mock("@/components/ui/input", () => ({
+  Input: ({ id, type, value, onChange, placeholder, className }) => (
+    <input
+      id={id}
+      type={type}
+      data-testid="input"
+      value={value || ""}
+      onChange={onChange}
+      placeholder={placeholder}
+      className={className}
+    />
+  ),
+}));
+
+vi.mock("@/components/ui/label", () => ({
+  Label: ({ children, htmlFor }) => <label data-testid="label" htmlFor={htmlFor}>{children}</label>,
+}));
+
+vi.mock("@/components/ui/tabs", () => ({
+  Tabs: ({ children, defaultValue, value, onValueChange }) => (
+    <div data-testid="tabs" data-value={value || defaultValue}>
+      {children}
+    </div>
+  ),
+  TabsList: ({ children, className }) => <div data-testid="tabs-list" className={className}>{children}</div>,
+  TabsTrigger: ({ children, value, className, onClick }) => (
+    <button 
+      data-testid="tabs-trigger" 
+      data-value={value} 
+      className={className}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  ),
+  TabsContent: ({ children, value, className }) => (
+    <div data-testid="tabs-content" data-value={value} className={className}>
+      {children}
+    </div>
+  ),
+}));
+
+// Mock icons
+vi.mock("lucide-react", () => ({
+  Activity: () => <span data-testid="activity-icon">Activity</span>,
+  AlertCircle: () => <span data-testid="alert-icon">AlertCircle</span>,
+  CheckCircle: () => <span data-testid="check-icon">CheckCircle</span>,
+  Clock: () => <span data-testid="clock-icon">Clock</span>,
+  RefreshCw: () => <span data-testid="refresh-icon">RefreshCw</span>,
+  Settings: () => <span data-testid="settings-icon">Settings</span>,
+  Zap: () => <span data-testid="zap-icon">Zap</span>,
+}));
+
+// Import mocked modules
+import { useMediaQuery } from "@/hooks/use-media-query";
+import { apiGetJson, apiPostJson } from "@/utils/apiFetch";
+import { toast } from "sonner";
+
+// Helper to get tab panel
+const getTabPanel = (value) => {
+  const panels = screen.getAllByTestId("tabs-content");
+  return panels.find((el) => el.getAttribute("data-value") === value);
+};
+
+describe("ModbusDeviceModal", () => {
+  const mockOnClose = vi.fn();
+  const mockTenantId = "tenant-123";
+  const mockDevice = {
+    device_id: "modbus-1",
+    host: "192.168.1.100",
+    port: 502,
+    unit_id: 1,
+  };
+
+  const mockDeviceData = {
+    connected: true,
+    last_poll: "2026-07-13T10:00:00Z",
+    response_time: 25,
+    readings: {
+      temp: {
+        address: 40001,
+        name: "Temperature",
+        processed_value: 45.2,
+        type: "float",
+        timestamp: "2026-07-13T10:00:00Z",
+      },
+      pressure: {
+        address: 40002,
+        name: "Pressure",
+        processed_value: 101.3,
+        type: "float",
+        timestamp: "2026-07-13T10:00:00Z",
+      },
+    },
+  };
+
+  const mockRegistersData = {
+    registers: [
+      { address: 40001, value: 45.2, name: "Temperature", type: "float" },
+      { address: 40002, value: 101.3, name: "Pressure", type: "float" },
+    ],
+    timestamp: "2026-07-13T10:00:00Z",
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useMediaQuery.mockReturnValue(true);
+    apiGetJson.mockImplementation((url) => {
+      if (url.includes("/data")) {
+        return Promise.resolve(mockDeviceData);
+      }
+      return Promise.resolve({});
+    });
+    apiPostJson.mockResolvedValue({ success: true });
+  });
+
+  it("should render desktop dialog when isOpen is true", () => {
+    useMediaQuery.mockReturnValue(true);
+    render(
+      <ModbusDeviceModal
+        device={mockDevice}
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+
+    expect(screen.getByTestId("dialog")).toBeInTheDocument();
+    expect(screen.getByText(`Modbus Device: ${mockDevice.device_id}`)).toBeInTheDocument();
+    expect(screen.getByText(`${mockDevice.host}:${mockDevice.port} (Unit ID: ${mockDevice.unit_id})`)).toBeInTheDocument();
+  });
+
+  it("should render mobile drawer when isOpen is true and on mobile", () => {
+    useMediaQuery.mockReturnValue(false);
+    render(
+      <ModbusDeviceModal
+        device={mockDevice}
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+
+    expect(screen.getByTestId("drawer")).toBeInTheDocument();
+    expect(screen.getByText(`Modbus Device: ${mockDevice.device_id}`)).toBeInTheDocument();
+  });
+
+  it("should not render when isOpen is false", () => {
+    render(
+      <ModbusDeviceModal
+        device={mockDevice}
+        isOpen={false}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+
+    expect(screen.queryByTestId("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("drawer")).not.toBeInTheDocument();
+  });
+
+  it("should fetch device data on mount when open", async () => {
+    render(
+      <ModbusDeviceModal
+        device={mockDevice}
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+
+    await waitFor(() => {
+      expect(apiGetJson).toHaveBeenCalledWith(
+        `/api/v1/protocols/modbus/devices/${mockDevice.device_id}/data?tenant_id=${mockTenantId}`
+      );
+    });
+  });
+
+  it("should display device overview with connection status", async () => {
+    render(
+      <ModbusDeviceModal
+        device={mockDevice}
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+
+    await waitFor(() => {
+      const overviewPanel = getTabPanel("overview");
+      expect(within(overviewPanel).getByText("Connected")).toBeInTheDocument();
+      expect(within(overviewPanel).getByText("Registers")).toBeInTheDocument();
+      expect(within(overviewPanel).getByText("2")).toBeInTheDocument();
+      expect(within(overviewPanel).getByText("Modbus TCP")).toBeInTheDocument();
+      expect(within(overviewPanel).getByText("25ms")).toBeInTheDocument();
+    });
+  });
+
+  it("should display disconnected status when device is not connected", async () => {
+    apiGetJson.mockResolvedValueOnce({
+      connected: false,
+      last_poll: "2026-07-13T10:00:00Z",
+    });
+
+    render(
+      <ModbusDeviceModal
+        device={mockDevice}
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+
+    await waitFor(() => {
+      const overviewPanel = getTabPanel("overview");
+      expect(within(overviewPanel).getByText("Disconnected")).toBeInTheDocument();
+    });
+  });
+
+  it("should display registers in the registers tab", async () => {
+    const user = userEvent.setup();
+    render(
+      <ModbusDeviceModal
+        device={mockDevice}
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Connected")).toBeInTheDocument();
+    });
+
+    const tabs = screen.getAllByTestId("tabs-trigger");
+    const registersTab = tabs.find(tab => tab.textContent.includes("Registers"));
+    await user.click(registersTab);
+
+    await waitFor(() => {
+      const registersPanel = getTabPanel("registers");
+      expect(within(registersPanel).getByText("Temperature")).toBeInTheDocument();
+      expect(within(registersPanel).getByText("Pressure")).toBeInTheDocument();
+      expect(within(registersPanel).getByText("45.2")).toBeInTheDocument();
+      expect(within(registersPanel).getByText("101.3")).toBeInTheDocument();
+    });
+  });
+
+  it("should handle read registers", async () => {
+    const user = userEvent.setup();
+    render(
+      <ModbusDeviceModal
+        device={mockDevice}
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Connected")).toBeInTheDocument();
+    });
+
+    const tabs = screen.getAllByTestId("tabs-trigger");
+    const readTab = tabs.find(tab => tab.textContent.includes("Read"));
+    await user.click(readTab);
+
+    const inputs = screen.getAllByTestId("input");
+    const addressInput = inputs[0];
+    const countInput = inputs[1];
+
+    await user.type(addressInput, "40001");
+    await user.type(countInput, "5");
+
+    const buttons = screen.getAllByTestId("button");
+    const readButton = buttons.find(btn => btn.textContent.includes("Read Registers"));
+    await user.click(readButton);
+
+    await waitFor(() => {
+      expect(apiPostJson).toHaveBeenCalledWith(
+        `/api/v1/protocols/modbus/devices/${mockDevice.device_id}/read?tenant_id=${mockTenantId}`,
+        {
+          address: 40001,
+          count: 5,
+          register_type: "holding_register",
+        }
+      );
+      expect(toast.success).toHaveBeenCalledWith("Registers read successfully");
+    });
+  });
+
+  it("should handle write register", async () => {
+    const user = userEvent.setup();
+    render(
+      <ModbusDeviceModal
+        device={mockDevice}
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Connected")).toBeInTheDocument();
+    });
+
+    const tabs = screen.getAllByTestId("tabs-trigger");
+    const writeTab = tabs.find(tab => tab.textContent.includes("Write"));
+    await user.click(writeTab);
+
+    const inputs = screen.getAllByTestId("input");
+    const addressInput = inputs[0];
+    const valueInput = inputs[1];
+
+    await user.type(addressInput, "40001");
+    await user.type(valueInput, "100");
+
+    const buttons = screen.getAllByTestId("button");
+    const writeButton = buttons.find(btn => btn.textContent.includes("Write Register"));
+    await user.click(writeButton);
+
+    await waitFor(() => {
+      expect(apiPostJson).toHaveBeenCalledWith(
+        `/api/v1/protocols/modbus/devices/${mockDevice.device_id}/write?tenant_id=${mockTenantId}`,
+        {
+          address: 40001,
+          value: 100,
+          register_type: "holding_register",
+        }
+      );
+      expect(toast.success).toHaveBeenCalledWith("Register written successfully");
+    });
+  });
+
+  it("should handle read registers error", async () => {
+    apiPostJson.mockRejectedValueOnce(new Error("Network error"));
+    const user = userEvent.setup();
+    render(
+      <ModbusDeviceModal
+        device={mockDevice}
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Connected")).toBeInTheDocument();
+    });
+
+    const tabs = screen.getAllByTestId("tabs-trigger");
+    const readTab = tabs.find(tab => tab.textContent.includes("Read"));
+    await user.click(readTab);
+
+    const buttons = screen.getAllByTestId("button");
+    const readButton = buttons.find(btn => btn.textContent.includes("Read Registers"));
+    await user.click(readButton);
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("Failed to read registers");
+    });
+  });
+
+  it("should handle write register error", async () => {
+    apiPostJson.mockRejectedValueOnce(new Error("Network error"));
+    const user = userEvent.setup();
+    render(
+      <ModbusDeviceModal
+        device={mockDevice}
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Connected")).toBeInTheDocument();
+    });
+
+    const tabs = screen.getAllByTestId("tabs-trigger");
+    const writeTab = tabs.find(tab => tab.textContent.includes("Write"));
+    await user.click(writeTab);
+
+    const inputs = screen.getAllByTestId("input");
+    const addressInput = inputs[0];
+    await user.type(addressInput, "40001");
+
+    const buttons = screen.getAllByTestId("button");
+    const writeButton = buttons.find(btn => btn.textContent.includes("Write Register"));
+    await user.click(writeButton);
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("Failed to write register");
+    });
+  });
+
+  it("should handle API error when fetching device data", async () => {
+    apiGetJson.mockRejectedValueOnce(new Error("Network error"));
+    render(
+      <ModbusDeviceModal
+        device={mockDevice}
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("Failed to load device details");
+    });
+  });
+
+  it("should display error message when device has error", async () => {
+    apiGetJson.mockResolvedValueOnce({
+      connected: false,
+      error: "Connection timeout",
+    });
+
+    render(
+      <ModbusDeviceModal
+        device={mockDevice}
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+
+    await waitFor(() => {
+      const overviewPanel = getTabPanel("overview");
+      expect(within(overviewPanel).getByText("Error: Connection timeout")).toBeInTheDocument();
+    });
+  });
+
+  it("should handle refresh button click", async () => {
+    const user = userEvent.setup();
+    render(
+      <ModbusDeviceModal
+        device={mockDevice}
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Connected")).toBeInTheDocument();
+    });
+
+    const buttons = screen.getAllByTestId("button");
+    const refreshButton = buttons.find(btn => 
+      btn.querySelector('[data-testid="refresh-icon"]')
+    );
+    await user.click(refreshButton);
+
+    await waitFor(() => {
+      expect(apiGetJson).toHaveBeenCalledWith(
+        `/api/v1/protocols/modbus/devices/${mockDevice.device_id}/data?tenant_id=${mockTenantId}`
+      );
+    });
+  });
+
+  it("should handle tenantId without query param", async () => {
+    render(
+      <ModbusDeviceModal
+        device={mockDevice}
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={null}
+      />
+    );
+
+    await waitFor(() => {
+      expect(apiGetJson).toHaveBeenCalledWith(
+        `/api/v1/protocols/modbus/devices/${mockDevice.device_id}/data`
+      );
+    });
+  });
+
+  it("should display warning in write tab", async () => {
+    const user = userEvent.setup();
+    render(
+      <ModbusDeviceModal
+        device={mockDevice}
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Connected")).toBeInTheDocument();
+    });
+
+    const tabs = screen.getAllByTestId("tabs-trigger");
+    const writeTab = tabs.find(tab => tab.textContent.includes("Write"));
+    await user.click(writeTab);
+
+    expect(screen.getByText(/Warning: Writing to registers can affect device operation/)).toBeInTheDocument();
+  });
+
+  it("should display empty state when no registers", async () => {
+    apiGetJson.mockResolvedValueOnce({
+      connected: true,
+      readings: {},
+    });
+
+    const user = userEvent.setup();
+    render(
+      <ModbusDeviceModal
+        device={mockDevice}
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Connected")).toBeInTheDocument();
+    });
+
+    const tabs = screen.getAllByTestId("tabs-trigger");
+    const registersTab = tabs.find(tab => tab.textContent.includes("Registers"));
+    await user.click(registersTab);
+
+    await waitFor(() => {
+      const registersPanel = getTabPanel("registers");
+      expect(within(registersPanel).getByText("No register data available")).toBeInTheDocument();
+    });
+  });
+
+  it("should close dialog when onClose is called", () => {
+    render(
+      <ModbusDeviceModal
+        device={mockDevice}
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+
+    expect(screen.getByTestId("dialog")).toBeInTheDocument();
+  });
+});
