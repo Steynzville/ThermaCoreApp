@@ -207,6 +207,22 @@ async function fillCreateUserRequiredFields(user, { username = "newuser", email 
   await user.type(screen.getByLabelText(/^Password/i), password);
 }
 
+// The submit button's label text lives in a nested <span>, and the words
+// "Reset Password" also appear as the modal heading and on background table
+// rows, so scope to the open modal and query by role to get a single,
+// unambiguous element whose `disabled` state actually reflects the button.
+function resetSubmitButton() {
+  return within(screen.getByTestId("password-reset-modal")).getByRole("button", {
+    name: /Reset Password|Resetting/i,
+  });
+}
+
+// Same idea for "Create User": its label is a nested <span>, so getByText
+// returns the span (which is never itself disabled). Resolve to the button.
+function createUserSubmitButton() {
+  return screen.getByText("Create User").closest("button");
+}
+
 // ---------------------------------------------------------------------------
 // Setup / teardown
 // ---------------------------------------------------------------------------
@@ -589,7 +605,7 @@ describe("Create User modal", () => {
     expect(await screen.findByText("Unable to load roles. Please refresh the page.")).toBeInTheDocument();
 
     // Create button should be disabled in this state
-    expect(screen.getByText("Create User")).toBeDisabled();
+    expect(createUserSubmitButton()).toBeDisabled();
   });
 
   it("fills optional fields (first/last name, phone, company, department, position)", async () => {
@@ -776,7 +792,7 @@ describe("Self password reset", () => {
 
     await user.type(screen.getByPlaceholderText("Enter new password"), "goodpass1");
     await user.type(screen.getByPlaceholderText("Confirm new password"), "goodpass1");
-    await user.click(screen.getByText("Reset Password"));
+    await user.click(resetSubmitButton());
 
     await waitFor(() => {
       expect(apiPost).toHaveBeenCalledWith(
@@ -828,7 +844,7 @@ describe("Password reset modal — validation & visibility", () => {
 
     await user.type(screen.getByPlaceholderText("Enter new password"), "123");
     expect(await screen.findByText("Password must be at least 6 characters long")).toBeInTheDocument();
-    expect(screen.getByText("Reset Password")).toBeDisabled();
+    expect(resetSubmitButton()).toBeDisabled();
   });
 
   it("shows a mismatch error once length is valid but confirm differs", async () => {
@@ -841,7 +857,7 @@ describe("Password reset modal — validation & visibility", () => {
     await user.type(screen.getByPlaceholderText("Confirm new password"), "password2");
 
     expect(await screen.findByText("Passwords do not match")).toBeInTheDocument();
-    expect(screen.getByText("Reset Password")).toBeDisabled();
+    expect(resetSubmitButton()).toBeDisabled();
   });
 
   it("enables submit once both fields are valid and matching", async () => {
@@ -855,7 +871,7 @@ describe("Password reset modal — validation & visibility", () => {
 
     expect(screen.queryByText("Passwords do not match")).not.toBeInTheDocument();
     expect(screen.queryByText("Password must be at least 6 characters long")).not.toBeInTheDocument();
-    expect(screen.getByText("Reset Password")).toBeEnabled();
+    expect(resetSubmitButton()).toBeEnabled();
   });
 
   it("toggles visibility independently for new and confirm password fields", async () => {
@@ -913,7 +929,7 @@ describe("Password reset modal — submission outcomes", () => {
     renderPanel();
     await screen.findByText("John Doe");
     await openResetAndFill(user);
-    await user.click(screen.getByText("Reset Password"));
+    await user.click(resetSubmitButton());
 
     await waitFor(() => {
       expect(toast.success).toHaveBeenCalledWith("Password reset successfully for John Doe");
@@ -928,7 +944,7 @@ describe("Password reset modal — submission outcomes", () => {
     renderPanel();
     await screen.findByText("John Doe");
     await openResetAndFill(user);
-    await user.click(screen.getByText("Reset Password"));
+    await user.click(resetSubmitButton());
 
     expect(await screen.findByTestId("password-error")).toHaveTextContent("Weak password");
   });
@@ -940,7 +956,7 @@ describe("Password reset modal — submission outcomes", () => {
     renderPanel();
     await screen.findByText("John Doe");
     await openResetAndFill(user);
-    await user.click(screen.getByText("Reset Password"));
+    await user.click(resetSubmitButton());
 
     expect(await screen.findByTestId("password-error")).toHaveTextContent("Server said no");
   });
@@ -952,7 +968,7 @@ describe("Password reset modal — submission outcomes", () => {
     renderPanel();
     await screen.findByText("John Doe");
     await openResetAndFill(user);
-    await user.click(screen.getByText("Reset Password"));
+    await user.click(resetSubmitButton());
 
     expect(await screen.findByTestId("password-error")).toHaveTextContent("Failed to reset password");
   });
@@ -964,7 +980,7 @@ describe("Password reset modal — submission outcomes", () => {
     renderPanel();
     await screen.findByText("John Doe");
     await openResetAndFill(user);
-    await user.click(screen.getByText("Reset Password"));
+    await user.click(resetSubmitButton());
 
     expect(await screen.findByTestId("password-error")).toHaveTextContent(/Unable to connect to backend server/);
   });
@@ -976,7 +992,7 @@ describe("Password reset modal — submission outcomes", () => {
     renderPanel();
     await screen.findByText("John Doe");
     await openResetAndFill(user);
-    await user.click(screen.getByText("Reset Password"));
+    await user.click(resetSubmitButton());
 
     expect(await screen.findByTestId("password-error")).toHaveTextContent(/Network error occurred/);
   });
@@ -988,7 +1004,7 @@ describe("Password reset modal — submission outcomes", () => {
     renderPanel();
     await screen.findByText("John Doe");
     await openResetAndFill(user);
-    await user.click(screen.getByText("Reset Password"));
+    await user.click(resetSubmitButton());
 
     expect(await screen.findByTestId("password-error")).toHaveTextContent(/request timed out/);
   });
@@ -1000,7 +1016,7 @@ describe("Password reset modal — submission outcomes", () => {
     renderPanel();
     await screen.findByText("John Doe");
     await openResetAndFill(user);
-    await user.click(screen.getByText("Reset Password"));
+    await user.click(resetSubmitButton());
 
     expect(await screen.findByTestId("password-error")).toHaveTextContent(/Cross-origin request blocked/);
   });
@@ -1012,7 +1028,7 @@ describe("Password reset modal — submission outcomes", () => {
     renderPanel();
     await screen.findByText("John Doe");
     await openResetAndFill(user);
-    await user.click(screen.getByText("Reset Password"));
+    await user.click(resetSubmitButton());
 
     expect(await screen.findByTestId("password-error")).toHaveTextContent("something odd happened");
   });
@@ -1029,7 +1045,7 @@ describe("Password reset modal — submission outcomes", () => {
     renderPanel();
     await screen.findByText("John Doe");
     await openResetAndFill(user);
-    await user.click(screen.getByText("Reset Password"));
+    await user.click(resetSubmitButton());
 
     expect(await screen.findByText("Resetting...")).toBeInTheDocument();
     expect(screen.getByText("Cancel")).toBeDisabled();
