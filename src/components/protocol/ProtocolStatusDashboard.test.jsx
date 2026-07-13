@@ -418,8 +418,9 @@ describe("ProtocolStatusDashboard", () => {
     await vi.waitFor(() => {
       expect(screen.getByText("Total Protocols")).toBeInTheDocument();
       expect(screen.getByText("Active")).toBeInTheDocument();
-      expect(screen.getByText("Uptime Rate")).toBeInTheDocument();
-      expect(screen.getByText("100%")).toBeInTheDocument();
+      const uptimeRateLabel = screen.getByText("Uptime Rate");
+      expect(uptimeRateLabel).toBeInTheDocument();
+      expect(uptimeRateLabel.nextSibling).toHaveTextContent("100%");
       expect(screen.getByText("Health Score")).toBeInTheDocument();
       expect(screen.getByText("95%")).toBeInTheDocument();
     });
