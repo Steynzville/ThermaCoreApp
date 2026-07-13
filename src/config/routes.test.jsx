@@ -102,14 +102,14 @@ const renderRoute = (path) => {
           {routes.map((route) => {
             // Skip routes with null component (special handling)
             if (!route.component && !route.specialHandling) return null;
-            
+
             const Component = route.component;
             const element = route.specialHandling ? (
               <div data-testid={`special-${route.specialHandling}`}>Special Handler</div>
             ) : Component ? (
               <Component />
             ) : null;
-            
+
             return (
               <Route
                 key={route.path}
@@ -125,114 +125,114 @@ const renderRoute = (path) => {
 };
 
 describe("Routes Configuration", () => {
-  it("should render register page for /register", () => {
+  it("should render register page for /register", async () => {
     renderRoute("/register");
-    expect(screen.getByTestId("register-page")).toBeInTheDocument();
+    expect(await screen.findByTestId("register-page")).toBeInTheDocument();
   });
 
-  it("should render dashboard for /dashboard", () => {
+  it("should render dashboard for /dashboard", async () => {
     renderRoute("/dashboard");
-    expect(screen.getByTestId("dashboard-page")).toBeInTheDocument();
+    expect(await screen.findByTestId("dashboard-page")).toBeInTheDocument();
   });
 
-  it("should render history for /history", () => {
+  it("should render history for /history", async () => {
     renderRoute("/history");
-    expect(screen.getByTestId("history-page")).toBeInTheDocument();
+    expect(await screen.findByTestId("history-page")).toBeInTheDocument();
   });
 
-  it("should render settings for /settings", () => {
+  it("should render settings for /settings", async () => {
     renderRoute("/settings");
-    expect(screen.getByTestId("settings-page")).toBeInTheDocument();
+    expect(await screen.findByTestId("settings-page")).toBeInTheDocument();
   });
 
-  it("should render alerts for /alerts", () => {
+  it("should render alerts for /alerts", async () => {
     renderRoute("/alerts");
-    expect(screen.getByTestId("alerts-page")).toBeInTheDocument();
+    expect(await screen.findByTestId("alerts-page")).toBeInTheDocument();
   });
 
-  it("should render remote control for /remote-control", () => {
+  it("should render remote control for /remote-control", async () => {
     renderRoute("/remote-control");
-    expect(screen.getByTestId("remote-control-page")).toBeInTheDocument();
+    expect(await screen.findByTestId("remote-control-page")).toBeInTheDocument();
   });
 
-  it("should render grid view for /grid-view", () => {
+  it("should render grid view for /grid-view", async () => {
     renderRoute("/grid-view");
-    expect(screen.getByTestId("grid-view-page")).toBeInTheDocument();
+    expect(await screen.findByTestId("grid-view-page")).toBeInTheDocument();
   });
 
-  it("should render alarms for /alarms", () => {
+  it("should render alarms for /alarms", async () => {
     renderRoute("/alarms");
-    expect(screen.getByTestId("alarms-page")).toBeInTheDocument();
+    expect(await screen.findByTestId("alarms-page")).toBeInTheDocument();
   });
 
-  it("should render reports for /reports", () => {
+  it("should render reports for /reports", async () => {
     renderRoute("/reports");
-    expect(screen.getByTestId("reports-page")).toBeInTheDocument();
+    expect(await screen.findByTestId("reports-page")).toBeInTheDocument();
   });
 
-  it("should render documents for /documents", () => {
+  it("should render documents for /documents", async () => {
     renderRoute("/documents");
-    expect(screen.getByTestId("documents-page")).toBeInTheDocument();
+    expect(await screen.findByTestId("documents-page")).toBeInTheDocument();
   });
 
-  it("should render admin panel for /admin", () => {
+  it("should render admin panel for /admin", async () => {
     renderRoute("/admin");
-    expect(screen.getByTestId("admin-page")).toBeInTheDocument();
+    expect(await screen.findByTestId("admin-page")).toBeInTheDocument();
   });
 
-  it("should render analytics for /analytics", () => {
+  it("should render analytics for /analytics", async () => {
     renderRoute("/analytics");
-    expect(screen.getByTestId("analytics-page")).toBeInTheDocument();
+    expect(await screen.findByTestId("analytics-page")).toBeInTheDocument();
   });
 
-  it("should render advanced analytics for /advanced-analytics", () => {
+  it("should render advanced analytics for /advanced-analytics", async () => {
     renderRoute("/advanced-analytics");
-    expect(screen.getByTestId("advanced-analytics-page")).toBeInTheDocument();
+    expect(await screen.findByTestId("advanced-analytics-page")).toBeInTheDocument();
   });
 
-  it("should render SCADA main for /scada-dashboard", () => {
+  it("should render SCADA main for /scada-dashboard", async () => {
     renderRoute("/scada-dashboard");
-    expect(screen.getByTestId("scada-main-page")).toBeInTheDocument();
+    expect(await screen.findByTestId("scada-main-page")).toBeInTheDocument();
   });
 
-  it("should render realtime SCADA for /realtime-scada", () => {
+  it("should render realtime SCADA for /realtime-scada", async () => {
     renderRoute("/realtime-scada");
-    expect(screen.getByTestId("realtime-scada-page")).toBeInTheDocument();
+    expect(await screen.findByTestId("realtime-scada-page")).toBeInTheDocument();
   });
 
-  it("should render protocol manager for /protocol-manager", () => {
+  it("should render protocol manager for /protocol-manager", async () => {
     renderRoute("/protocol-manager");
-    expect(screen.getByTestId("protocol-manager-page")).toBeInTheDocument();
+    expect(await screen.findByTestId("protocol-manager-page")).toBeInTheDocument();
   });
 
-  it("should render system health for /system-health", () => {
+  it("should render system health for /system-health", async () => {
     renderRoute("/system-health");
-    expect(screen.getByTestId("system-health-page")).toBeInTheDocument();
+    expect(await screen.findByTestId("system-health-page")).toBeInTheDocument();
   });
 
-  it("should render synchronize units for /synchronize-units", () => {
+  it("should render synchronize units for /synchronize-units", async () => {
     renderRoute("/synchronize-units");
-    expect(screen.getByTestId("synchronize-units-page")).toBeInTheDocument();
+    expect(await screen.findByTestId("synchronize-units-page")).toBeInTheDocument();
   });
 
-  it("should render unit performance for /unit-performance/:id", () => {
+  it("should render unit performance for /unit-performance/:id", async () => {
     renderRoute("/unit-performance/123");
-    expect(screen.getByTestId("unit-performance-page")).toBeInTheDocument();
+    expect(await screen.findByTestId("unit-performance-page")).toBeInTheDocument();
   });
 
-  it("should handle /units route with special handling", () => {
+  it("should handle /units route with special handling", async () => {
     renderRoute("/units");
-    expect(screen.getByTestId("special-unit-role-based")).toBeInTheDocument();
+    expect(await screen.findByTestId("special-unit-role-based")).toBeInTheDocument();
   });
 
-  it("should handle /unit/:id route with special handling", () => {
+  it("should handle /unit/:id route with special handling", async () => {
     renderRoute("/unit/123");
-    expect(screen.getByTestId("special-unit-role-based")).toBeInTheDocument();
+    expect(await screen.findByTestId("special-unit-role-based")).toBeInTheDocument();
   });
 
-  it("should handle /unit-details/:id route with special handling", () => {
+  it("should handle /unit-details/:id route with special handling", async () => {
     renderRoute("/unit-details/123");
-    expect(screen.getByTestId("special-unit-details-role-based")).toBeInTheDocument();
+    expect(await screen.findByTestId("special-unit-details-role-based")).toBeInTheDocument();
   });
 
   it("should have correct number of routes", () => {
