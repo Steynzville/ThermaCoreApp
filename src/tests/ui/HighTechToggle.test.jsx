@@ -141,8 +141,14 @@ describe("HighTechToggle", () => {
       <HighTechToggle isPerformance={false} onToggle={mockOnToggle} />
     );
 
-    const toggleContainer = container.querySelector(".shadow-\\[0_0_20px_rgba\\(30,58,138,0.8\\)\\]");
+    // Check for shadow classes using classList instead of selector
+    const toggleContainer = container.querySelector(".relative.bg-white.dark\\:bg-gray-900");
     expect(toggleContainer).toBeInTheDocument();
+    
+    // Check that it has shadow classes - use a more reliable approach
+    const hasShadowClass = toggleContainer.className.includes("shadow-[0_0_20px_rgba(30,58,138,0.8)]") ||
+                          toggleContainer.className.includes("shadow-\\[0_0_20px_rgba(30,58,138,0.8)\\]");
+    expect(hasShadowClass).toBe(true);
   });
 
   it("renders with correct button text", () => {
