@@ -98,10 +98,10 @@ vi.mock("@/components/ui/select", () => ({
       </select>
     </div>
   ),
-  SelectTrigger: ({ children, id }) => <div data-testid="select-trigger" id={id}>{children}</div>,
-  SelectValue: () => <span data-testid="select-value">Select value</span>,
-  SelectContent: ({ children }) => <div data-testid="select-content">{children}</div>,
-  SelectItem: ({ children, value }) => <option data-testid="select-item" value={value}>{children}</option>,
+  SelectTrigger: () => null,
+  SelectValue: () => null,
+  SelectContent: ({ children }) => <>{children}</>,
+  SelectItem: ({ children, value }) => <option value={value}>{children}</option>,
 }));
 
 vi.mock("@/components/ui/tabs", () => ({
@@ -153,10 +153,7 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { apiGetJson, apiPostJson } from "@/utils/apiFetch";
 import { toast } from "sonner";
 
-// Helper: since the Tabs mock renders ALL TabsContent panels simultaneously
-// (it ignores the active tab value), text like a topic name can legitimately
-// appear in multiple panels at once (Subscriptions, Messages, Topic Hierarchy).
-// This scopes queries to a specific panel by its data-value.
+// Helper to get tab panel
 const getTabPanel = (value) => {
   const panels = screen.getAllByTestId("tabs-content");
   return panels.find((el) => el.getAttribute("data-value") === value);
@@ -206,7 +203,7 @@ describe("MQTTManagementPanel", () => {
     expect(screen.getByTestId("dialog")).toBeInTheDocument();
     expect(screen.getByText("MQTT Management")).toBeInTheDocument();
 
-    await waitFor(() => {
+    await vi.waitFor(() => {
       expect(screen.getByText("Connected")).toBeInTheDocument();
     });
   });
@@ -218,7 +215,7 @@ describe("MQTTManagementPanel", () => {
     expect(screen.getByTestId("drawer")).toBeInTheDocument();
     expect(screen.getByText("MQTT Management")).toBeInTheDocument();
 
-    await waitFor(() => {
+    await vi.waitFor(() => {
       expect(screen.getByText("Connected")).toBeInTheDocument();
     });
   });
@@ -233,7 +230,7 @@ describe("MQTTManagementPanel", () => {
   it("should fetch data on mount when open", async () => {
     render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
 
-    await waitFor(() => {
+    await vi.waitFor(() => {
       expect(apiGetJson).toHaveBeenCalledWith(
         `/api/v1/protocols/mqtt/status?tenant_id=${mockTenantId}`
       );
@@ -249,7 +246,7 @@ describe("MQTTManagementPanel", () => {
   it("should display subscriptions", async () => {
     render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
 
-    await waitFor(() => {
+    await vi.waitFor(() => {
       const subscriptionsPanel = getTabPanel("subscriptions");
       expect(within(subscriptionsPanel).getByText("sensors/temp")).toBeInTheDocument();
       expect(within(subscriptionsPanel).getByText("sensors/humidity")).toBeInTheDocument();
@@ -259,7 +256,7 @@ describe("MQTTManagementPanel", () => {
   it("should display messages", async () => {
     render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
 
-    await waitFor(() => {
+    await vi.waitFor(() => {
       expect(screen.getByText('{"value": 25.5}')).toBeInTheDocument();
       expect(screen.getByText('{"value": 60}')).toBeInTheDocument();
     });
@@ -277,7 +274,7 @@ describe("MQTTManagementPanel", () => {
     const subscribeButton = buttons.find(btn => btn.textContent.includes("Subscribe"));
     await user.click(subscribeButton);
 
-    await waitFor(() => {
+    await vi.waitFor(() => {
       expect(apiPostJson).toHaveBeenCalledWith(
         `/api/v1/protocols/mqtt/subscribe?tenant_id=${mockTenantId}`,
         { topic: "sensors/pressure", qos: 0 }
@@ -290,7 +287,7 @@ describe("MQTTManagementPanel", () => {
     const user = userEvent.setup();
     render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
 
-    await waitFor(() => {
+    await vi.waitFor(() => {
       const subscriptionsPanel = getTabPanel("subscriptions");
       expect(within(subscriptionsPanel).getByText("sensors/temp")).toBeInTheDocument();
     });
@@ -300,7 +297,7 @@ describe("MQTTManagementPanel", () => {
     );
     await user.click(trashButtons[0]);
 
-    await waitFor(() => {
+    await vi.waitFor(() => {
       expect(apiPostJson).toHaveBeenCalledWith(
         `/api/v1/protocols/mqtt/unsubscribe?tenant_id=${mockTenantId}`,
         { topic: "sensors/temp" }
@@ -310,29 +307,26 @@ describe("MQTTManagementPanel", () => {
   });
 
   it("should handle publish message", async () => {
+    const user = userEvent.setup();
     render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
 
-    // Click on Publish tab
     const tabs = screen.getAllByTestId("tabs-trigger");
     const publishTab = tabs.find(tab => tab.textContent.includes("Publish"));
-    fireEvent.click(publishTab);
+    await user.click(publishTab);
 
-    // Find topic input and enter topic
     const inputs = screen.getAllByTestId("input");
     const topicInput = inputs.find(input => input.id === "pub-topic");
-    fireEvent.change(topicInput, { target: { value: "sensors/test" } });
+    await user.type(topicInput, "sensors/test");
 
-    // Find textarea and enter payload using fireEvent to avoid curly brace escaping
     const textareas = screen.getAllByTestId("textarea");
     const payloadTextarea = textareas.find(textarea => textarea.id === "pub-payload");
     fireEvent.change(payloadTextarea, { target: { value: '{"test": "value"}' } });
 
-    // Find and click Publish button
     const buttons = screen.getAllByTestId("button");
     const publishButton = buttons.find(btn => btn.textContent.includes("Publish Message"));
-    fireEvent.click(publishButton);
+    await user.click(publishButton);
 
-    await waitFor(() => {
+    await vi.waitFor(() => {
       expect(apiPostJson).toHaveBeenCalledWith(
         `/api/v1/protocols/mqtt/publish?tenant_id=${mockTenantId}`,
         expect.objectContaining({
@@ -350,7 +344,7 @@ describe("MQTTManagementPanel", () => {
     const user = userEvent.setup();
     render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
 
-    await waitFor(() => {
+    await vi.waitFor(() => {
       expect(screen.getByText('{"value": 25.5}')).toBeInTheDocument();
     });
 
@@ -364,7 +358,7 @@ describe("MQTTManagementPanel", () => {
     const user = userEvent.setup();
     render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
 
-    await waitFor(() => {
+    await vi.waitFor(() => {
       expect(screen.getByText('{"value": 25.5}')).toBeInTheDocument();
     });
 
@@ -389,7 +383,7 @@ describe("MQTTManagementPanel", () => {
     const subscribeButton = buttons.find(btn => btn.textContent.includes("Subscribe"));
     await user.click(subscribeButton);
 
-    await waitFor(() => {
+    await vi.waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith("Failed to subscribe to topic");
     });
   });
@@ -423,7 +417,7 @@ describe("MQTTManagementPanel", () => {
   it("should display connection status badge", async () => {
     render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
 
-    await waitFor(() => {
+    await vi.waitFor(() => {
       expect(screen.getByText("Connected")).toBeInTheDocument();
       const badges = screen.getAllByTestId("badge");
       expect(badges[0]).toHaveAttribute("data-variant", "default");
@@ -431,7 +425,7 @@ describe("MQTTManagementPanel", () => {
   });
 
   it("should auto-refresh data every 3 seconds", async () => {
-    vi.useFakeTimers();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
 
     // Initial calls: 3 (status, subscriptions, messages)
@@ -453,7 +447,7 @@ describe("MQTTManagementPanel", () => {
   it("should display QoS badges correctly", async () => {
     render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
 
-    await waitFor(() => {
+    await vi.waitFor(() => {
       const badges = screen.getAllByTestId("badge");
       const qosBadges = badges.filter(b => b.textContent.includes("QoS"));
       expect(qosBadges.length).toBeGreaterThan(0);
@@ -469,7 +463,7 @@ describe("MQTTManagementPanel", () => {
   it("should handle tenantId without query param", async () => {
     render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={null} />);
 
-    await waitFor(() => {
+    await vi.waitFor(() => {
       expect(apiGetJson).toHaveBeenCalledWith("/api/v1/protocols/mqtt/status");
     });
   });
