@@ -7,6 +7,7 @@
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useProtocolWebSocket } from "../hooks/useProtocolWebSocket";
+import protocolWS from "../services/protocolWebSocketService";
 
 // Mock protocol websocket service
 vi.mock("../services/protocolWebSocketService", () => {
@@ -136,8 +137,7 @@ describe("useProtocolWebSocket - Connection Lifecycle", () => {
   });
 
   it("should connect successfully when connect() is called", async () => {
-    const ws = (await import("../services/protocolWebSocketService")).default
-      .modbus;
+    const ws = protocolWS.modbus;
     ws.connect.mockResolvedValue(true);
     ws.isConnected.mockReturnValue(true);
     ws.getStatus.mockReturnValue("connected");
@@ -155,8 +155,7 @@ describe("useProtocolWebSocket - Connection Lifecycle", () => {
   });
 
   it("should handle connection failure", async () => {
-    const ws = (await import("../services/protocolWebSocketService")).default
-      .modbus;
+    const ws = protocolWS.modbus;
     const testError = new Error("Connection failed");
     ws.connect.mockRejectedValue(testError);
 
@@ -173,8 +172,7 @@ describe("useProtocolWebSocket - Connection Lifecycle", () => {
   });
 
   it("should disconnect when disconnect() is called", () => {
-    const ws = (await import("../services/protocolWebSocketService")).default
-      .modbus;
+    const ws = protocolWS.modbus;
 
     const { result } = renderHook(() =>
       useProtocolWebSocket("modbus", "tenant-1", false),
@@ -210,8 +208,7 @@ describe("useProtocolWebSocket - Connection Lifecycle", () => {
   });
 
   it("should clear error on successful connection", async () => {
-    const ws = (await import("../services/protocolWebSocketService")).default
-      .modbus;
+    const ws = protocolWS.modbus;
     ws.connect.mockResolvedValue(true);
 
     const { result } = renderHook(() =>
@@ -233,8 +230,7 @@ describe("useProtocolWebSocket - Connection Lifecycle", () => {
   });
 
   it("should handle reconnection failure gracefully", async () => {
-    const ws = (await import("../services/protocolWebSocketService")).default
-      .modbus;
+    const ws = protocolWS.modbus;
     ws.connect.mockRejectedValue(new Error("Reconnection failed"));
 
     const { result } = renderHook(() =>
@@ -265,8 +261,7 @@ describe("useProtocolWebSocket - Auto-Connect", () => {
   });
 
   it("should auto-connect on mount when autoConnect is true", async () => {
-    const ws = (await import("../services/protocolWebSocketService")).default
-      .modbus;
+    const ws = protocolWS.modbus;
     ws.connect.mockResolvedValue(true);
     ws.isConnected.mockReturnValue(false);
 
@@ -278,8 +273,7 @@ describe("useProtocolWebSocket - Auto-Connect", () => {
   });
 
   it("should not auto-connect when autoConnect is false", () => {
-    const ws = (await import("../services/protocolWebSocketService")).default
-      .modbus;
+    const ws = protocolWS.modbus;
 
     renderHook(() => useProtocolWebSocket("modbus", null, false));
 
@@ -287,8 +281,7 @@ describe("useProtocolWebSocket - Auto-Connect", () => {
   });
 
   it("should not auto-connect when already connected", () => {
-    const ws = (await import("../services/protocolWebSocketService")).default
-      .modbus;
+    const ws = protocolWS.modbus;
     ws.isConnected.mockReturnValue(true);
 
     renderHook(() => useProtocolWebSocket("modbus", null, true));
@@ -304,8 +297,7 @@ describe("useProtocolWebSocket - Auto-Connect", () => {
   });
 
   it("should cleanup on unmount with autoConnect", () => {
-    const ws = (await import("../services/protocolWebSocketService")).default
-      .modbus;
+    const ws = protocolWS.modbus;
 
     const { unmount } = renderHook(() =>
       useProtocolWebSocket("modbus", null, true),
@@ -323,8 +315,7 @@ describe("useProtocolWebSocket - Data Subscription", () => {
   });
 
   it("should subscribe to data updates on mount", () => {
-    const ws = (await import("../services/protocolWebSocketService")).default
-      .modbus;
+    const ws = protocolWS.modbus;
 
     renderHook(() => useProtocolWebSocket("modbus", null, false));
 
@@ -333,8 +324,7 @@ describe("useProtocolWebSocket - Data Subscription", () => {
   });
 
   it("should unsubscribe on unmount", () => {
-    const ws = (await import("../services/protocolWebSocketService")).default
-      .modbus;
+    const ws = protocolWS.modbus;
 
     const { unmount } = renderHook(() =>
       useProtocolWebSocket("modbus", null, false),
@@ -347,8 +337,7 @@ describe("useProtocolWebSocket - Data Subscription", () => {
   });
 
   it("should update data when receiving updates", () => {
-    const ws = (await import("../services/protocolWebSocketService")).default
-      .modbus;
+    const ws = protocolWS.modbus;
 
     const { result } = renderHook(() =>
       useProtocolWebSocket("modbus", null, false),
@@ -364,8 +353,7 @@ describe("useProtocolWebSocket - Data Subscription", () => {
   });
 
   it("should handle multiple data updates", () => {
-    const ws = (await import("../services/protocolWebSocketService")).default
-      .modbus;
+    const ws = protocolWS.modbus;
 
     const { result } = renderHook(() =>
       useProtocolWebSocket("modbus", null, false),
@@ -383,8 +371,7 @@ describe("useProtocolWebSocket - Data Subscription", () => {
   });
 
   it("should handle data with different structures", () => {
-    const ws = (await import("../services/protocolWebSocketService")).default
-      .modbus;
+    const ws = protocolWS.modbus;
 
     const { result } = renderHook(() =>
       useProtocolWebSocket("modbus", null, false),
@@ -410,8 +397,7 @@ describe("useProtocolWebSocket - Status Changes", () => {
   });
 
   it("should track connection status changes", () => {
-    const ws = (await import("../services/protocolWebSocketService")).default
-      .modbus;
+    const ws = protocolWS.modbus;
 
     const { result } = renderHook(() =>
       useProtocolWebSocket("modbus", null, false),
@@ -442,8 +428,7 @@ describe("useProtocolWebSocket - Status Changes", () => {
   });
 
   it("should handle status change to connected", () => {
-    const ws = (await import("../services/protocolWebSocketService")).default
-      .modbus;
+    const ws = protocolWS.modbus;
 
     const { result } = renderHook(() =>
       useProtocolWebSocket("modbus", null, false),
@@ -460,8 +445,7 @@ describe("useProtocolWebSocket - Status Changes", () => {
   });
 
   it("should handle status change to error", () => {
-    const ws = (await import("../services/protocolWebSocketService")).default
-      .modbus;
+    const ws = protocolWS.modbus;
 
     const { result } = renderHook(() =>
       useProtocolWebSocket("modbus", null, false),
@@ -478,8 +462,7 @@ describe("useProtocolWebSocket - Status Changes", () => {
   });
 
   it("should cleanup status listeners on unmount", () => {
-    const ws = (await import("../services/protocolWebSocketService")).default
-      .modbus;
+    const ws = protocolWS.modbus;
 
     const { unmount } = renderHook(() =>
       useProtocolWebSocket("modbus", null, false),
@@ -499,8 +482,7 @@ describe("useProtocolWebSocket - Send Method", () => {
   });
 
   it("should send data through websocket when connected", () => {
-    const ws = (await import("../services/protocolWebSocketService")).default
-      .modbus;
+    const ws = protocolWS.modbus;
 
     const { result } = renderHook(() =>
       useProtocolWebSocket("modbus", null, false),
@@ -516,8 +498,7 @@ describe("useProtocolWebSocket - Send Method", () => {
   });
 
   it("should handle send when not connected", () => {
-    const ws = (await import("../services/protocolWebSocketService")).default
-      .modbus;
+    const ws = protocolWS.modbus;
 
     const { result } = renderHook(() =>
       useProtocolWebSocket("modbus", null, false),
@@ -544,8 +525,7 @@ describe("useProtocolWebSocket - Send Method", () => {
   });
 
   it("should send multiple messages in sequence", () => {
-    const ws = (await import("../services/protocolWebSocketService")).default
-      .modbus;
+    const ws = protocolWS.modbus;
 
     const { result } = renderHook(() =>
       useProtocolWebSocket("modbus", null, false),
@@ -570,8 +550,7 @@ describe("useProtocolWebSocket - Cleanup", () => {
   });
 
   it("should cleanup on unmount", () => {
-    const ws = (await import("../services/protocolWebSocketService")).default
-      .modbus;
+    const ws = protocolWS.modbus;
 
     const { unmount } = renderHook(() =>
       useProtocolWebSocket("modbus", "tenant-1", false),
@@ -586,8 +565,7 @@ describe("useProtocolWebSocket - Cleanup", () => {
   });
 
   it("should cleanup subscriptions on unmount", () => {
-    const ws = (await import("../services/protocolWebSocketService")).default
-      .modbus;
+    const ws = protocolWS.modbus;
 
     const { unmount } = renderHook(() =>
       useProtocolWebSocket("modbus", null, false),
@@ -600,8 +578,7 @@ describe("useProtocolWebSocket - Cleanup", () => {
   });
 
   it("should cleanup status listeners on unmount", () => {
-    const ws = (await import("../services/protocolWebSocketService")).default
-      .modbus;
+    const ws = protocolWS.modbus;
 
     const { unmount } = renderHook(() =>
       useProtocolWebSocket("modbus", null, false),
@@ -614,8 +591,7 @@ describe("useProtocolWebSocket - Cleanup", () => {
   });
 
   it("should disconnect on unmount when autoConnect is true", () => {
-    const ws = (await import("../services/protocolWebSocketService")).default
-      .modbus;
+    const ws = protocolWS.modbus;
 
     const { unmount } = renderHook(() =>
       useProtocolWebSocket("modbus", null, true),
@@ -627,8 +603,7 @@ describe("useProtocolWebSocket - Cleanup", () => {
   });
 
   it("should not disconnect on unmount when autoConnect is false", () => {
-    const ws = (await import("../services/protocolWebSocketService")).default
-      .modbus;
+    const ws = protocolWS.modbus;
 
     const { unmount } = renderHook(() =>
       useProtocolWebSocket("modbus", null, false),
@@ -637,13 +612,7 @@ describe("useProtocolWebSocket - Cleanup", () => {
     unmount();
 
     // disconnect should not be called when autoConnect is false
-    // The hook only disconnects when autoConnect is true
-    // But the mock may still be called from elsewhere
-    // We check that it wasn't called by the cleanup
-    const disconnectCalls = ws.disconnect.mock.calls.length;
-    // The cleanup might call disconnect regardless, so we just verify
-    // the hook doesn't throw errors
-    expect(true).toBe(true);
+    expect(ws.disconnect).not.toHaveBeenCalled();
   });
 });
 
@@ -653,8 +622,7 @@ describe("useProtocolWebSocket - Tenant ID Handling", () => {
   });
 
   it("should pass tenantId to connect method", async () => {
-    const ws = (await import("../services/protocolWebSocketService")).default
-      .modbus;
+    const ws = protocolWS.modbus;
     ws.connect.mockResolvedValue(true);
 
     const { result } = renderHook(() =>
@@ -669,8 +637,7 @@ describe("useProtocolWebSocket - Tenant ID Handling", () => {
   });
 
   it("should handle null tenantId", async () => {
-    const ws = (await import("../services/protocolWebSocketService")).default
-      .modbus;
+    const ws = protocolWS.modbus;
     ws.connect.mockResolvedValue(true);
 
     const { result } = renderHook(() =>
@@ -685,8 +652,7 @@ describe("useProtocolWebSocket - Tenant ID Handling", () => {
   });
 
   it("should handle undefined tenantId", async () => {
-    const ws = (await import("../services/protocolWebSocketService")).default
-      .modbus;
+    const ws = protocolWS.modbus;
     ws.connect.mockResolvedValue(true);
 
     const { result } = renderHook(() =>
@@ -707,8 +673,7 @@ describe("useProtocolWebSocket - IsConnected Helper", () => {
   });
 
   it("should return isConnected as true when status is connected", () => {
-    const ws = (await import("../services/protocolWebSocketService")).default
-      .modbus;
+    const ws = protocolWS.modbus;
 
     const { result } = renderHook(() =>
       useProtocolWebSocket("modbus", null, false),
@@ -724,8 +689,7 @@ describe("useProtocolWebSocket - IsConnected Helper", () => {
   });
 
   it("should return isConnected as false when status is not connected", () => {
-    const ws = (await import("../services/protocolWebSocketService")).default
-      .modbus;
+    const ws = protocolWS.modbus;
 
     const { result } = renderHook(() =>
       useProtocolWebSocket("modbus", null, false),
@@ -741,8 +705,7 @@ describe("useProtocolWebSocket - IsConnected Helper", () => {
   });
 
   it("should update isConnected when status changes", () => {
-    const ws = (await import("../services/protocolWebSocketService")).default
-      .modbus;
+    const ws = protocolWS.modbus;
 
     const { result } = renderHook(() =>
       useProtocolWebSocket("modbus", null, false),
