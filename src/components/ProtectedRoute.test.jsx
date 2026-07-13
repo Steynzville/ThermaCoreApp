@@ -278,7 +278,7 @@ describe("ProtectedRoute", () => {
     expect(screen.queryByTestId("operator-component")).not.toBeInTheDocument();
   });
 
-  it("should fallback to dashboard if no component found for role", () => {
+  it("should render null if no component found for role", () => {
     mockUseAuth.mockReturnValue({
       isAuthenticated: true,
       userRole: "unknown-role",
@@ -290,7 +290,7 @@ describe("ProtectedRoute", () => {
       operator: MockOperatorComponent,
     };
 
-    renderWithRouter(
+    const { container } = renderWithRouter(
       <ProtectedRoute 
         component={MockComponent} 
         componentMap={componentMap}
@@ -298,24 +298,39 @@ describe("ProtectedRoute", () => {
       />
     );
 
-    // The component renders null when ComponentToRender is undefined,
-    // which means the router falls through to the dashboard route.
-    // Since we're on the "/" route, we should see the dashboard.
-    expect(screen.getByTestId("dashboard-page")).toBeInTheDocument();
+    // The component should render null (empty container)
+    // Side navigation is rendered before the component check
+    expect(screen.getByTestId("side-navigation")).toBeInTheDocument();
+    // But no component should be rendered
     expect(screen.queryByTestId("mock-component")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("admin-component")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("operator-component")).not.toBeInTheDocument();
+    // The main content area should be empty
+    const mainElement = container.querySelector("main");
+    if (mainElement) {
+      expect(mainElement).toBeEmptyDOMElement();
+    }
   });
 
-  it("should fallback to dashboard if no Component or componentMap provided", () => {
+  it("should render null if no Component or componentMap provided", () => {
     mockUseAuth.mockReturnValue({
       isAuthenticated: true,
       userRole: "admin",
       isLoading: false,
     });
 
-    // @ts-ignore - intentionally testing missing props
-    renderWithRouter(<ProtectedRoute roles={[]} />);
+    const { container } = renderWithRouter(
+      // @ts-ignore - intentionally testing missing props
+      <ProtectedRoute roles={[]} />
+    );
 
-    expect(screen.getByTestId("dashboard-page")).toBeInTheDocument();
+    // Side navigation is still rendered
+    expect(screen.getByTestId("side-navigation")).toBeInTheDocument();
+    // But the main content area should be empty
+    const mainElement = container.querySelector("main");
+    if (mainElement) {
+      expect(mainElement).toBeEmptyDOMElement();
+    }
   });
 
   it("should handle superadmin role correctly", () => {
