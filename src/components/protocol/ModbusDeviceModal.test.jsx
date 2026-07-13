@@ -338,12 +338,9 @@ describe("ModbusDeviceModal", () => {
     const addressInput = screen.getByLabelText("Start Address");
     const countInput = screen.getByLabelText("Count");
 
-    // Count defaults to "1" (not empty), so clear before typing or
-    // userEvent.type will append and produce "15" instead of "5".
-    await user.clear(addressInput);
-    await user.type(addressInput, "40001");
-    await user.clear(countInput);
-    await user.type(countInput, "5");
+    // Use fireEvent.change directly to set values, bypassing userEvent.clear issues
+    fireEvent.change(addressInput, { target: { value: "40001" } });
+    fireEvent.change(countInput, { target: { value: "5" } });
 
     const buttons = screen.getAllByTestId("button");
     const readButton = buttons.find(btn => btn.textContent.includes("Read Registers"));
@@ -385,10 +382,8 @@ describe("ModbusDeviceModal", () => {
     const addressInput = screen.getByLabelText("Address");
     const valueInput = screen.getByLabelText("Value");
 
-    await user.clear(addressInput);
-    await user.type(addressInput, "40001");
-    await user.clear(valueInput);
-    await user.type(valueInput, "100");
+    fireEvent.change(addressInput, { target: { value: "40001" } });
+    fireEvent.change(valueInput, { target: { value: "100" } });
 
     const buttons = screen.getAllByTestId("button");
     const writeButton = buttons.find(btn => btn.textContent.includes("Write Register"));
@@ -453,8 +448,7 @@ describe("ModbusDeviceModal", () => {
     await user.click(writeTab);
 
     const addressInput = screen.getByLabelText("Address");
-    await user.clear(addressInput);
-    await user.type(addressInput, "40001");
+    fireEvent.change(addressInput, { target: { value: "40001" } });
 
     const buttons = screen.getAllByTestId("button");
     const writeButton = buttons.find(btn => btn.textContent.includes("Write Register"));
