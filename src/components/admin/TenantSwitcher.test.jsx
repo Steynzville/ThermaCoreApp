@@ -35,7 +35,7 @@ vi.mock("@/components/ui/dropdown-menu", () => ({
   DropdownMenuSeparator: () => <div data-testid="dropdown-separator" />,
 }));
 
-// Mock the Button component
+// Mock the Button component - simplified to avoid icon text issues
 vi.mock("@/components/ui/button", () => ({
   Button: ({ children, onClick, className }) => (
     <button data-testid="button" onClick={onClick} className={className}>
@@ -82,8 +82,6 @@ describe("TenantSwitcher", () => {
     
     const button = screen.getByTestId("button");
     expect(button).toHaveTextContent("All Tenants");
-    expect(button).toHaveTextContent("Building2");
-    expect(button).toHaveTextContent("ChevronDown");
   });
 
   it("should display the active tenant name when a tenant is selected", () => {
@@ -100,14 +98,14 @@ describe("TenantSwitcher", () => {
 
     expect(screen.getByTestId("dropdown-content")).toBeInTheDocument();
     expect(screen.getByTestId("dropdown-label")).toHaveTextContent("Switch Tenant");
-    expect(screen.getByTestId("dropdown-separator")).toBeInTheDocument();
+    expect(screen.getAllByTestId("dropdown-separator")).toHaveLength(2);
   });
 
   it("should display all available tenants as options", () => {
     render(<TenantSwitcher />);
 
     const items = screen.getAllByTestId("dropdown-item");
-    // All Tenants + 2 tenants
+    // All Tenants + 2 tenants = 3 items
     expect(items).toHaveLength(3);
     expect(items[0]).toHaveTextContent("All Tenants");
     expect(items[1]).toHaveTextContent("Tenant One");
@@ -118,9 +116,11 @@ describe("TenantSwitcher", () => {
     render(<TenantSwitcher />);
 
     const items = screen.getAllByTestId("dropdown-item");
-    // Check the "All Tenants" item (first one)
+    // Check the "All Tenants" item (first one) - it should contain the Check icon
     expect(items[0]).toHaveTextContent("All Tenants");
-    expect(items[0]).toHaveTextContent("Check");
+    // The icon is rendered as text "Check" from the mock
+    // We'll check that the text includes the icon text
+    expect(items[0].textContent).toContain("Check");
   });
 
   it("should show checkmark next to the currently selected tenant", () => {
@@ -130,12 +130,12 @@ describe("TenantSwitcher", () => {
 
     const items = screen.getAllByTestId("dropdown-item");
     // "All Tenants" should NOT have checkmark
-    expect(items[0]).not.toHaveTextContent("Check");
+    expect(items[0].textContent).not.toContain("Check");
     // "Tenant One" should have checkmark
-    expect(items[1]).toHaveTextContent("Tenant One");
-    expect(items[1]).toHaveTextContent("Check");
+    expect(items[1].textContent).toContain("Tenant One");
+    expect(items[1].textContent).toContain("Check");
     // "Tenant Two" should NOT have checkmark
-    expect(items[2]).not.toHaveTextContent("Check");
+    expect(items[2].textContent).not.toContain("Check");
   });
 
   it("should display message when no available tenants are listed", () => {
@@ -144,8 +144,9 @@ describe("TenantSwitcher", () => {
     render(<TenantSwitcher />);
 
     const items = screen.getAllByTestId("dropdown-item");
-    expect(items).toHaveLength(1);
-    expect(items[0]).toHaveTextContent("No tenants available");
+    // Should have 2 items: All Tenants + No tenants available
+    expect(items).toHaveLength(2);
+    expect(items[1]).toHaveTextContent("No tenants available");
   });
 
   it("should call switchTenant with null when 'All Tenants' is clicked", async () => {
@@ -205,10 +206,19 @@ describe("TenantSwitcher", () => {
     expect(button).toHaveClass("flex", "items-center", "gap-2", "min-w-[200px]");
   });
 
-  it("should render with building icon", () => {
+  it("should render the building icon in the button", () => {
     render(<TenantSwitcher />);
 
     const button = screen.getByTestId("button");
-    expect(button).toHaveTextContent("Building2");
+    // The icon is rendered as text "Building2" from the mock
+    expect(button.textContent).toContain("Building2");
+  });
+
+  it("should render chevron icon in the button", () => {
+    render(<TenantSwitcher />);
+
+    const button = screen.getByTestId("button");
+    // The icon is rendered as text "ChevronDown" from the mock
+    expect(button.textContent).toContain("ChevronDown");
   });
 });
