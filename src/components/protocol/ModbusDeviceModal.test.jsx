@@ -122,6 +122,18 @@ const getTabPanel = (value) => {
   return panels.find((el) => el.getAttribute("data-value") === value);
 };
 
+// Helper to wait for device data to finish loading.
+// NOTE: the mocked Tabs component renders every TabsContent panel at once
+// (it doesn't hide inactive tabs), so both the header Badge and the
+// Overview tab's connection-status text can contain "Connected"
+// simultaneously. Scoping to the unique header Badge avoids ambiguous
+// multi-match errors from screen.getByText("Connected").
+const waitForDeviceLoaded = async () => {
+  await waitFor(() => {
+    expect(screen.getByTestId("badge")).toHaveTextContent("Connected");
+  });
+};
+
 describe("ModbusDeviceModal", () => {
   const mockOnClose = vi.fn();
   const mockTenantId = "tenant-123";
@@ -288,9 +300,7 @@ describe("ModbusDeviceModal", () => {
       />
     );
 
-    await waitFor(() => {
-      expect(screen.getByText("Connected")).toBeInTheDocument();
-    });
+    await waitForDeviceLoaded();
 
     const tabs = screen.getAllByTestId("tabs-trigger");
     const registersTab = tabs.find(tab => tab.textContent.includes("Registers"));
@@ -316,9 +326,7 @@ describe("ModbusDeviceModal", () => {
       />
     );
 
-    await waitFor(() => {
-      expect(screen.getByText("Connected")).toBeInTheDocument();
-    });
+    await waitForDeviceLoaded();
 
     const tabs = screen.getAllByTestId("tabs-trigger");
     const readTab = tabs.find(tab => tab.textContent.includes("Read"));
@@ -359,9 +367,7 @@ describe("ModbusDeviceModal", () => {
       />
     );
 
-    await waitFor(() => {
-      expect(screen.getByText("Connected")).toBeInTheDocument();
-    });
+    await waitForDeviceLoaded();
 
     const tabs = screen.getAllByTestId("tabs-trigger");
     const writeTab = tabs.find(tab => tab.textContent.includes("Write"));
@@ -403,9 +409,7 @@ describe("ModbusDeviceModal", () => {
       />
     );
 
-    await waitFor(() => {
-      expect(screen.getByText("Connected")).toBeInTheDocument();
-    });
+    await waitForDeviceLoaded();
 
     const tabs = screen.getAllByTestId("tabs-trigger");
     const readTab = tabs.find(tab => tab.textContent.includes("Read"));
@@ -432,9 +436,7 @@ describe("ModbusDeviceModal", () => {
       />
     );
 
-    await waitFor(() => {
-      expect(screen.getByText("Connected")).toBeInTheDocument();
-    });
+    await waitForDeviceLoaded();
 
     const tabs = screen.getAllByTestId("tabs-trigger");
     const writeTab = tabs.find(tab => tab.textContent.includes("Write"));
@@ -501,9 +503,7 @@ describe("ModbusDeviceModal", () => {
       />
     );
 
-    await waitFor(() => {
-      expect(screen.getByText("Connected")).toBeInTheDocument();
-    });
+    await waitForDeviceLoaded();
 
     const buttons = screen.getAllByTestId("button");
     const refreshButton = buttons.find(btn => 
@@ -546,9 +546,7 @@ describe("ModbusDeviceModal", () => {
       />
     );
 
-    await waitFor(() => {
-      expect(screen.getByText("Connected")).toBeInTheDocument();
-    });
+    await waitForDeviceLoaded();
 
     const tabs = screen.getAllByTestId("tabs-trigger");
     const writeTab = tabs.find(tab => tab.textContent.includes("Write"));
@@ -573,9 +571,7 @@ describe("ModbusDeviceModal", () => {
       />
     );
 
-    await waitFor(() => {
-      expect(screen.getByText("Connected")).toBeInTheDocument();
-    });
+    await waitForDeviceLoaded();
 
     const tabs = screen.getAllByTestId("tabs-trigger");
     const registersTab = tabs.find(tab => tab.textContent.includes("Registers"));
