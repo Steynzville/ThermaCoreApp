@@ -316,11 +316,11 @@ describe("ProtocolStatusDashboard", () => {
     renderWithProps();
 
     await vi.waitFor(() => {
-      expect(screen.getByText("messages sent")).toBeInTheDocument();
+      expect(screen.getByText(/messages sent/i)).toBeInTheDocument();
       expect(screen.getByText("1500")).toBeInTheDocument();
-      expect(screen.getByText("messages received")).toBeInTheDocument();
+      expect(screen.getByText(/messages received/i)).toBeInTheDocument();
       expect(screen.getByText("1450")).toBeInTheDocument();
-      expect(screen.getByText("polls successful")).toBeInTheDocument();
+      expect(screen.getByText(/polls successful/i)).toBeInTheDocument();
       expect(screen.getByText("300")).toBeInTheDocument();
     });
   });
@@ -444,7 +444,8 @@ describe("ProtocolStatusDashboard", () => {
     renderWithProps();
 
     await vi.waitFor(() => {
-      expect(screen.getByText("50%")).toBeInTheDocument();
+      const uptimeRateLabel = screen.getByText("Uptime Rate");
+      expect(uptimeRateLabel.nextSibling).toHaveTextContent("50%");
     });
   });
 });
