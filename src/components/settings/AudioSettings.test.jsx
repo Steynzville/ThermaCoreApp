@@ -22,25 +22,34 @@ vi.mock("../../context/SettingsContext", () => ({
   }),
 }));
 
-// Mock Radix UI Slider for testing environment
-vi.mock("@radix-ui/react-slider", () => ({
-  Root: ({ children, onValueChange, defaultValue, ...props }) => (
-    <div data-testid="slider-root" {...props}>
-      <input
-        type="range"
-        min="0"
-        max="100"
-        defaultValue={defaultValue ? defaultValue[0] : 75}
-        onChange={(e) => onValueChange && onValueChange([parseInt(e.target.value)])}
-        data-testid="slider-input"
-        disabled={props.disabled}
-      />
-      {children}
-    </div>
-  ),
-  Track: ({ children }) => <div data-testid="slider-track">{children}</div>,
-  Range: () => <div data-testid="slider-range" />,
-  Thumb: () => <div data-testid="slider-thumb" />,
+// Mock the local Slider wrapper (not the raw @radix-ui/react-slider primitives).
+// This keeps the test independent of how ui/slider.jsx forwards props to Radix,
+// and lets us properly support the *controlled* `value` prop AudioSettings uses.
+vi.mock("../ui/slider", () => ({
+  Slider: ({ id, value, onValueChange, min = 0, max = 100, disabled, className }) => {
+    const numericValue = Array.isArray(value) ? value[0] : value;
+    const displayMin = Math.round(min * 100);
+    const displayMax = Math.round(max * 100);
+    const displayValue = Math.round((numericValue ?? 0) * 100);
+
+    return (
+      <div data-testid="slider-root" className={className}>
+        <input
+          id={id}
+          type="range"
+          min={displayMin}
+          max={displayMax}
+          value={displayValue}
+          disabled={disabled}
+          data-testid="slider-input"
+          onChange={(e) => {
+            const percent = parseInt(e.target.value, 10);
+            onValueChange && onValueChange([percent / 100]);
+          }}
+        />
+      </div>
+    );
+  },
 }));
 
 describe("AudioSettings", () => {
@@ -78,7 +87,7 @@ describe("AudioSettings", () => {
 
     const sliderInput = screen.getByTestId("slider-input");
     expect(sliderInput).toBeInTheDocument();
-    
+
     // Verify slider has correct initial value
     expect(sliderInput).toHaveValue("75");
   });
@@ -89,7 +98,7 @@ describe("AudioSettings", () => {
       soundEnabled: true,
       volume: 0.5,
     };
-    
+
     render(<AudioSettings />);
     expect(screen.getByText("50%")).toBeInTheDocument();
   });
@@ -110,10 +119,11 @@ describe("AudioSettings", () => {
     render(<AudioSettings />);
 
     const sliderInput = screen.getByTestId("slider-input");
-    
-    // Simulate range input change
+
+    // Range inputs aren't well supported by userEvent's high-level API,
+    // so fireEvent.change remains the pragmatic choice here.
     fireEvent.change(sliderInput, { target: { value: "50" } });
-    
+
     await waitFor(() => {
       expect(mockSetVolume).toHaveBeenCalledWith(0.5);
     });
@@ -121,7 +131,7 @@ describe("AudioSettings", () => {
 
   it("should render volume slider with correct min and max values", () => {
     render(<AudioSettings />);
-    
+
     const sliderInput = screen.getByTestId("slider-input");
     expect(sliderInput).toHaveAttribute("min", "0");
     expect(sliderInput).toHaveAttribute("max", "100");
