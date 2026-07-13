@@ -4,6 +4,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import React from "react";
 import TenantSwitcher from "./TenantSwitcher";
 
+// Mock lucide-react icons to render as simple text elements so JSDOM-based
+// text/testid assertions can find them (real SVGs don't expose readable text)
+vi.mock("lucide-react", () => ({
+  Building2: () => <span data-testid="building-icon">Building2</span>,
+  ChevronDown: () => <span data-testid="chevron-icon">ChevronDown</span>,
+  Check: () => <span data-testid="check-icon">Check</span>,
+}));
+
 // Mock the TenantContext
 const mockSwitchTenant = vi.fn();
 let mockTenantState = {
@@ -62,14 +70,14 @@ describe("TenantSwitcher", () => {
 
   it("should return null if user is not an admin", () => {
     mockTenantState.isAdmin = false;
-    
+
     const { container } = render(<TenantSwitcher />);
     expect(container.firstChild).toBeNull();
   });
 
   it("should return null if isLoading is true", () => {
     mockTenantState.isLoading = true;
-    
+
     const { container } = render(<TenantSwitcher />);
     expect(container.firstChild).toBeNull();
   });
@@ -79,14 +87,14 @@ describe("TenantSwitcher", () => {
 
     expect(screen.getByTestId("dropdown-menu")).toBeInTheDocument();
     expect(screen.getByTestId("dropdown-trigger")).toBeInTheDocument();
-    
+
     const button = screen.getByTestId("button");
     expect(button).toHaveTextContent("All Tenants");
   });
 
   it("should display the active tenant name when a tenant is selected", () => {
     mockTenantState.currentTenant = { id: "tenant-1", name: "Tenant One" };
-    
+
     render(<TenantSwitcher />);
 
     const button = screen.getByTestId("button");
@@ -118,14 +126,12 @@ describe("TenantSwitcher", () => {
     const items = screen.getAllByTestId("dropdown-item");
     // Check the "All Tenants" item (first one) - it should contain the Check icon
     expect(items[0]).toHaveTextContent("All Tenants");
-    // The icon is rendered as text "Check" from the mock
-    // We'll check that the text includes the icon text
     expect(items[0].textContent).toContain("Check");
   });
 
   it("should show checkmark next to the currently selected tenant", () => {
     mockTenantState.currentTenant = { id: "tenant-1", name: "Tenant One" };
-    
+
     render(<TenantSwitcher />);
 
     const items = screen.getAllByTestId("dropdown-item");
@@ -140,7 +146,7 @@ describe("TenantSwitcher", () => {
 
   it("should display message when no available tenants are listed", () => {
     mockTenantState.availableTenants = [];
-    
+
     render(<TenantSwitcher />);
 
     const items = screen.getAllByTestId("dropdown-item");
@@ -176,15 +182,15 @@ describe("TenantSwitcher", () => {
     render(<TenantSwitcher />);
 
     const items = screen.getAllByTestId("dropdown-item");
-    
+
     // Click "Tenant One"
     await user.click(items[1]);
     expect(mockSwitchTenant).toHaveBeenCalledWith("tenant-1");
-    
+
     // Click "Tenant Two"
     await user.click(items[2]);
     expect(mockSwitchTenant).toHaveBeenCalledWith("tenant-2");
-    
+
     // Click "All Tenants"
     await user.click(items[0]);
     expect(mockSwitchTenant).toHaveBeenCalledWith(null);
@@ -210,7 +216,6 @@ describe("TenantSwitcher", () => {
     render(<TenantSwitcher />);
 
     const button = screen.getByTestId("button");
-    // The icon is rendered as text "Building2" from the mock
     expect(button.textContent).toContain("Building2");
   });
 
@@ -218,7 +223,6 @@ describe("TenantSwitcher", () => {
     render(<TenantSwitcher />);
 
     const button = screen.getByTestId("button");
-    // The icon is rendered as text "ChevronDown" from the mock
     expect(button.textContent).toContain("ChevronDown");
   });
 });
