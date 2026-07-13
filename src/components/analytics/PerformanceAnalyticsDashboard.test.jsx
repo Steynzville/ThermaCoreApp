@@ -80,53 +80,48 @@ vi.mock("../ui/select", () => ({
   SelectItem: ({ children, value }) => <option data-testid="select-item" value={value}>{children}</option>,
 }));
 
-// Tabs mock: the real shadcn/Radix Tabs only mounts the TabsContent panel
-// matching the active value, and TabsTrigger clicks call onValueChange.
-// A naive mock that just renders `children` unconditionally would render
-// ALL FOUR panels simultaneously (Performance + Health + Energy +
-// Predictive all at once), which breaks getByText everywhere since device
-// names like "Turbine 1" appear in every panel. This mock uses shared
-// closure state (set by Tabs on every render) so TabsContent can check
-// whether its `value` matches the currently active tab, and TabsTrigger
-// can actually trigger a tab switch.
-vi.mock("../ui/tabs", () => {
-  let activeValue;
-  let changeHandler;
+// Tabs mock - uses a module-level variable to track state across renders
+let activeTabValue = "performance";
+let tabChangeHandler = null;
 
-  return {
-    Tabs: ({ children, value, onValueChange }) => {
-      activeValue = value;
-      changeHandler = onValueChange;
-      return (
-        <div data-testid="tabs" data-value={value}>
-          {children}
-        </div>
-      );
-    },
-    TabsList: ({ children, className }) => (
-      <div data-testid="tabs-list" className={className}>
+vi.mock("../ui/tabs", () => ({
+  Tabs: ({ children, value, onValueChange }) => {
+    activeTabValue = value;
+    tabChangeHandler = onValueChange;
+    return (
+      <div data-testid="tabs" data-value={value}>
         {children}
       </div>
-    ),
-    TabsTrigger: ({ children, value }) => (
-      <button
-        data-testid="tabs-trigger"
-        data-value={value}
-        onClick={() => changeHandler && changeHandler(value)}
-      >
+    );
+  },
+  TabsList: ({ children, className }) => (
+    <div data-testid="tabs-list" className={className}>
+      {children}
+    </div>
+  ),
+  TabsTrigger: ({ children, value }) => (
+    <button
+      data-testid="tabs-trigger"
+      data-value={value}
+      onClick={() => {
+        if (tabChangeHandler) {
+          tabChangeHandler(value);
+        }
+      }}
+    >
+      {children}
+    </button>
+  ),
+  TabsContent: ({ children, value }) => {
+    // Only render if this panel's value matches the active tab
+    if (activeTabValue !== value) return null;
+    return (
+      <div data-testid="tabs-content" data-value={value}>
         {children}
-      </button>
-    ),
-    TabsContent: ({ children, value }) => {
-      if (activeValue !== value) return null;
-      return (
-        <div data-testid="tabs-content" data-value={value}>
-          {children}
-        </div>
-      );
-    },
-  };
-});
+      </div>
+    );
+  },
+}));
 
 // Mock icons
 vi.mock("lucide-react", () => ({
@@ -221,6 +216,9 @@ const mockEnergyData = {
 describe("PerformanceAnalyticsDashboard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Reset tab state for each test
+    activeTabValue = "performance";
+    tabChangeHandler = null;
     useTenant.mockReturnValue({
       currentTenant: { id: "tenant-1", name: "Tenant 1" },
     });
@@ -235,12 +233,6 @@ describe("PerformanceAnalyticsDashboard", () => {
   });
 
   it("should load analytics data on mount", async () => {
-    // The component's load effect is synchronous (no real await), so by
-    // the time render() returns, React has already flushed past the
-    // initial "loading" render into the loaded state — the
-    // "Loading analytics..." text is never actually observable here.
-    // Assert what's actually verifiable: the service functions ran and
-    // the dashboard ends up populated.
     render(<PerformanceAnalyticsDashboard embedded={false} />);
 
     await waitFor(() => {
@@ -275,10 +267,6 @@ describe("PerformanceAnalyticsDashboard", () => {
     render(<PerformanceAnalyticsDashboard embedded={false} />);
 
     await waitFor(() => {
-      // "Efficiency"/"Uptime" are used both as the KPI card label AND as
-      // the per-device sub-label in the Device Performance list below, so
-      // they appear 3 times each — assert presence via getAllByText and
-      // rely on the (unique) percentage values for the real check.
       expect(screen.getAllByText("Efficiency").length).toBeGreaterThan(0);
       expect(screen.getByText("88%")).toBeInTheDocument();
       expect(screen.getAllByText("Uptime").length).toBeGreaterThan(0);
@@ -322,7 +310,10 @@ describe("PerformanceAnalyticsDashboard", () => {
     const healthTab = tabs.find(tab => tab.textContent.includes("Equipment Health"));
     await user.click(healthTab);
 
+    // The Tabs mock's onValueChange should have updated activeTabValue
     await waitFor(() => {
+      // After clicking the health tab, the health panel should be visible
+      // and the performance panel should be hidden
       expect(screen.getByText("Overall System Health")).toBeInTheDocument();
       expect(screen.getByText("87")).toBeInTheDocument();
     });
@@ -363,8 +354,6 @@ describe("PerformanceAnalyticsDashboard", () => {
     await waitFor(() => {
       expect(screen.getByText("Total")).toBeInTheDocument();
       expect(screen.getByText("4500")).toBeInTheDocument();
-      // "kWh" is used as a standalone label on both the Total card and
-      // the Peak card, so it appears twice.
       expect(screen.getAllByText("kWh").length).toBeGreaterThan(0);
       expect(screen.getByText("Average")).toBeInTheDocument();
       expect(screen.getByText("642")).toBeInTheDocument();
@@ -386,7 +375,6 @@ describe("PerformanceAnalyticsDashboard", () => {
     await waitFor(() => {
       expect(screen.getByText("Predictive Maintenance Insights")).toBeInTheDocument();
       expect(screen.getByText("Maintenance Recommended")).toBeInTheDocument();
-      // "Remaining Lifetime" is rendered once per device (2 devices).
       expect(screen.getAllByText("Remaining Lifetime").length).toBeGreaterThan(0);
     });
   });
@@ -407,7 +395,6 @@ describe("PerformanceAnalyticsDashboard", () => {
 
   it("should handle export report", async () => {
     const user = userEvent.setup();
-    // Mock URL.createObjectURL and document.createElement
     const mockCreateObjectURL = vi.fn(() => "blob:test");
     const mockRevokeObjectURL = vi.fn();
     const mockClick = vi.fn();
@@ -416,11 +403,6 @@ describe("PerformanceAnalyticsDashboard", () => {
     global.URL.createObjectURL = mockCreateObjectURL;
     global.URL.revokeObjectURL = mockRevokeObjectURL;
 
-    // Capture the REAL createElement before overriding it. The original
-    // version called `document.createElement(tag)` inside its own
-    // fallback branch — since that reassigns document.createElement to
-    // itself, any non-"a" tag (i.e. every div/button/etc React renders)
-    // recursed into the mock infinitely and crashed the test.
     const originalCreateElement = document.createElement.bind(document);
     const createElementSpy = vi
       .spyOn(document, "createElement")
@@ -446,8 +428,6 @@ describe("PerformanceAnalyticsDashboard", () => {
     const exportButton = buttons.find(btn => btn.textContent.includes("Export"));
     await user.click(exportButton);
 
-    // handleExportReport is async and not awaited by the onClick handler,
-    // so give it a tick to resolve before asserting.
     await waitFor(() => {
       expect(analyticsService.generateReport).toHaveBeenCalledWith(
         expect.objectContaining({
