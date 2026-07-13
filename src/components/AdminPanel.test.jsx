@@ -15,7 +15,7 @@
  * - Settings tab: toggle each setting both directions
  */
 
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BrowserRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -156,7 +156,6 @@ const twoUsersResponse = {
       last_name: "Smith",
       role: { name: "operator" },
       is_active: false,
-      // no company / phone_number / department / position -> N/A branches
     },
   ],
 };
@@ -194,7 +193,7 @@ async function goToPasswordTab(user) {
 
 async function goToSettingsTab(user) {
   const tabs = screen.getAllByText("Settings");
-  await user.click(tabs[tabs.length - 1]); // last "Settings" text is the tab
+  await user.click(tabs[tabs.length - 1]);
 }
 
 async function openCreateUserModal(user) {
@@ -208,18 +207,12 @@ async function fillCreateUserRequiredFields(user, { username = "newuser", email 
   await user.type(screen.getByLabelText(/^Password/i), password);
 }
 
-// The submit button's label text lives in a nested <span>, and the words
-// "Reset Password" also appear as the modal heading and on background table
-// rows, so scope to the open modal and query by role to get a single,
-// unambiguous element whose `disabled` state actually reflects the button.
 function resetSubmitButton() {
   return within(screen.getByTestId("password-reset-modal")).getByRole("button", {
     name: /Reset Password|Resetting/i,
   });
 }
 
-// Same idea for "Create User": its label is a nested <span>, so getByText
-// returns the span (which is never itself disabled). Resolve to the button.
 function createUserSubmitButton() {
   return screen.getByText("Create User").closest("button");
 }
@@ -351,11 +344,9 @@ describe("User list states", () => {
     expect(await screen.findByText("John Doe")).toBeInTheDocument();
     expect(screen.getByText("Jane Smith")).toBeInTheDocument();
 
-    // Jane has no company/phone/department/position -> N/A fallback branch
     const janeRow = screen.getByText("Jane Smith").closest("tr");
     expect(within(janeRow).getAllByText("N/A").length).toBeGreaterThan(0);
 
-    // Status branches: Active vs Inactive
     const johnRow = screen.getByText("John Doe").closest("tr");
     expect(within(johnRow).getByText("Active")).toBeInTheDocument();
     expect(within(janeRow).getByText("Inactive")).toBeInTheDocument();
@@ -377,9 +368,9 @@ describe("Create User modal", () => {
 
     expect(screen.getByText("Create New User")).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByRole("option", { name: "Admin" })).toBeInTheDocument();
-      expect(screen.getByRole("option", { name: "Operator" })).toBeInTheDocument();
-      expect(screen.getByRole("option", { name: "Viewer" })).toBeInTheDocument();
+      expect(screen.getByRole("option", { name: "admin" })).toBeInTheDocument();
+      expect(screen.getByRole("option", { name: "operator" })).toBeInTheDocument();
+      expect(screen.getByRole("option", { name: "viewer" })).toBeInTheDocument();
     });
   });
 
@@ -392,7 +383,7 @@ describe("Create User modal", () => {
     await openCreateUserModal(user);
 
     await waitFor(() => {
-      expect(screen.getByRole("option", { name: "Admin" })).toBeInTheDocument();
+      expect(screen.getByRole("option", { name: "admin" })).toBeInTheDocument();
     });
   });
 
@@ -455,7 +446,7 @@ describe("Create User modal", () => {
     await openCreateUserModal(user);
 
     await waitFor(() => {
-      expect(screen.getByRole("option", { name: "Admin" })).toBeInTheDocument();
+      expect(screen.getByRole("option", { name: "admin" })).toBeInTheDocument();
     });
   });
 
@@ -464,7 +455,7 @@ describe("Create User modal", () => {
     renderPanel();
     await waitFor(() => screen.getByText("User Management"));
     await openCreateUserModal(user);
-    await waitFor(() => screen.getByRole("option", { name: "Admin" }));
+    await waitFor(() => screen.getByRole("option", { name: "admin" }));
 
     await user.click(screen.getByText("Create User"));
     expect(toast.error).toHaveBeenCalledWith("Username is required");
@@ -487,7 +478,7 @@ describe("Create User modal", () => {
     renderPanel();
     await waitFor(() => screen.getByText("User Management"));
     await openCreateUserModal(user);
-    await waitFor(() => screen.getByRole("option", { name: "Admin" }));
+    await waitFor(() => screen.getByRole("option", { name: "admin" }));
 
     await fillCreateUserRequiredFields(user, { password: "123" });
     await user.selectOptions(screen.getByLabelText(/Role/i), "1");
@@ -519,7 +510,7 @@ describe("Create User modal", () => {
     renderPanel();
     await waitFor(() => screen.getByText("User Management"));
     await openCreateUserModal(user);
-    await waitFor(() => screen.getByRole("option", { name: "Admin" }));
+    await waitFor(() => screen.getByRole("option", { name: "admin" }));
 
     await fillCreateUserRequiredFields(user);
     await user.selectOptions(screen.getByLabelText(/Role/i), "1");
@@ -529,7 +520,7 @@ describe("Create User modal", () => {
       expect(toast.success).toHaveBeenCalledWith("User newuser created successfully");
     });
     expect(screen.queryByText("Create New User")).not.toBeInTheDocument();
-    expect(getAllUsers).toHaveBeenCalledTimes(2); // initial mount + post-create refresh
+    expect(getAllUsers).toHaveBeenCalledTimes(2);
   });
 
   it("shows a server error message on failed creation (result.error)", async () => {
@@ -539,7 +530,7 @@ describe("Create User modal", () => {
     renderPanel();
     await waitFor(() => screen.getByText("User Management"));
     await openCreateUserModal(user);
-    await waitFor(() => screen.getByRole("option", { name: "Admin" }));
+    await waitFor(() => screen.getByRole("option", { name: "admin" }));
 
     await fillCreateUserRequiredFields(user);
     await user.selectOptions(screen.getByLabelText(/Role/i), "1");
@@ -555,7 +546,7 @@ describe("Create User modal", () => {
     renderPanel();
     await waitFor(() => screen.getByText("User Management"));
     await openCreateUserModal(user);
-    await waitFor(() => screen.getByRole("option", { name: "Admin" }));
+    await waitFor(() => screen.getByRole("option", { name: "admin" }));
 
     await fillCreateUserRequiredFields(user);
     await user.selectOptions(screen.getByLabelText(/Role/i), "1");
@@ -571,7 +562,7 @@ describe("Create User modal", () => {
     renderPanel();
     await waitFor(() => screen.getByText("User Management"));
     await openCreateUserModal(user);
-    await waitFor(() => screen.getByRole("option", { name: "Admin" }));
+    await waitFor(() => screen.getByRole("option", { name: "admin" }));
 
     await fillCreateUserRequiredFields(user);
     await user.selectOptions(screen.getByLabelText(/Role/i), "1");
@@ -587,7 +578,7 @@ describe("Create User modal", () => {
     renderPanel();
     await waitFor(() => screen.getByText("User Management"));
     await openCreateUserModal(user);
-    await waitFor(() => screen.getByRole("option", { name: "Admin" }));
+    await waitFor(() => screen.getByRole("option", { name: "admin" }));
 
     await fillCreateUserRequiredFields(user);
     await user.selectOptions(screen.getByLabelText(/Role/i), "1");
@@ -605,7 +596,6 @@ describe("Create User modal", () => {
     await openCreateUserModal(user);
     expect(await screen.findByText("Unable to load roles. Please refresh the page.")).toBeInTheDocument();
 
-    // Create button should be disabled in this state
     expect(createUserSubmitButton()).toBeDisabled();
   });
 
@@ -616,7 +606,7 @@ describe("Create User modal", () => {
     renderPanel();
     await waitFor(() => screen.getByText("User Management"));
     await openCreateUserModal(user);
-    await waitFor(() => screen.getByRole("option", { name: "Admin" }));
+    await waitFor(() => screen.getByRole("option", { name: "admin" }));
 
     await fillCreateUserRequiredFields(user);
     await user.type(screen.getByLabelText(/First Name/i), "New");
@@ -701,23 +691,21 @@ describe("Edit User modal", () => {
     const johnRow = screen.getByText("John Doe").closest("tr");
     await user.click(within(johnRow).getByTestId("icon-edit").closest("button"));
 
-    // Edit Email
     const emailInput = screen.getByLabelText("Email");
     await user.clear(emailInput);
     await user.type(emailInput, "john.updated@thermacore.com");
 
-    // Edit Company
     const companyInput = screen.getByLabelText("Company");
     await user.clear(companyInput);
     await user.type(companyInput, "Thermacore Inc.");
 
-    // Edit Phone
     const phoneInput = screen.getByLabelText("Phone");
     await user.clear(phoneInput);
     await user.type(phoneInput, "555-9999");
 
-    // Edit Role
-    await user.selectOptions(screen.getByLabelText("Role"), "operator");
+    // The role select uses the role name as the option value, not the id
+    const roleSelect = screen.getByLabelText("Role");
+    await user.selectOptions(roleSelect, "operator");
 
     await user.click(screen.getByText("Save"));
 
@@ -954,7 +942,6 @@ describe("Password reset modal — validation & visibility", () => {
 
     expect(screen.queryByTestId("password-reset-modal")).not.toBeInTheDocument();
 
-    // reopen and confirm fields are cleared
     await openResetForJohn(user);
     expect(screen.getByPlaceholderText("Enter new password")).toHaveValue("");
   });
@@ -1116,7 +1103,7 @@ describe("Settings tab", () => {
 
     const row = screen.getByText("Email Notifications").closest("div").parentElement;
     const toggle = within(row).getByTestId("button");
-    expect(toggle).toHaveTextContent("Disable"); // starts true -> Disable shown
+    expect(toggle).toHaveTextContent("Disable");
 
     await user.click(toggle);
     expect(toggle).toHaveTextContent("Enable");
@@ -1147,7 +1134,7 @@ describe("Settings tab", () => {
 
     const row = screen.getByText("Maintenance Mode").closest("div").parentElement;
     const toggle = within(row).getByTestId("button");
-    expect(toggle).toHaveTextContent("Enable"); // starts false -> Enable shown
+    expect(toggle).toHaveTextContent("Enable");
 
     await user.click(toggle);
     expect(toggle).toHaveTextContent("Disable");
