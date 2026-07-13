@@ -71,6 +71,11 @@ vi.mock("../ui/card", () => ({
   CardTitle: ({ children, className }) => <div data-testid="card-title" className={className}>{children}</div>,
 }));
 
+// Select mock: a native <select> can only contain <option>/<optgroup>.
+// Rendering SelectTrigger/SelectContent wrapper divs inside it produces
+// invalid HTML that gets silently reparented by the DOM, corrupting the
+// surrounding tree. We render the trigger/value as no-ops and only put
+// real <option> elements (from SelectItem) inside the actual <select>.
 vi.mock("../ui/select", () => ({
   Select: ({ children, value, onValueChange }) => (
     <div data-testid="select" data-value={value}>
@@ -83,53 +88,58 @@ vi.mock("../ui/select", () => ({
       </select>
     </div>
   ),
-  SelectTrigger: ({ children, className }) => <div data-testid="select-trigger" className={className}>{children}</div>,
-  SelectValue: () => <span data-testid="select-value">Select value</span>,
-  SelectContent: ({ children }) => <div data-testid="select-content">{children}</div>,
-  SelectItem: ({ children, value }) => <option data-testid="select-item" value={value}>{children}</option>,
+  SelectTrigger: () => null,
+  SelectValue: () => null,
+  SelectContent: ({ children }) => <>{children}</>,
+  SelectItem: ({ children, value }) => <option value={value}>{children}</option>,
 }));
 
-// Tabs mock - simple version that renders content based on value
+// Tabs mock: uses React Context so TabsTrigger clicks (which the real
+// component never wires an onClick prop for) correctly notify Tabs and
+// TabsContent re-evaluates which panel is active — mirroring how the
+// real Radix-style Tabs primitive works via context rather than prop
+// drilling / displayName sniffing.
 vi.mock("../ui/tabs", () => {
-  let activeValue = "performance";
-  
-  return {
-    Tabs: ({ children, value, onValueChange }) => {
-      activeValue = value;
-      return (
-        <div data-testid="tabs" data-value={value}>
-          {React.Children.map(children, (child) => {
-            if (React.isValidElement(child) && child.type && child.type.displayName === "TabsContent") {
-              return React.cloneElement(child, { activeValue });
-            }
-            return child;
-          })}
-        </div>
-      );
-    },
-    TabsList: ({ children, className }) => (
-      <div data-testid="tabs-list" className={className}>
+  const TabsContext = React.createContext({ activeValue: undefined, onValueChange: undefined });
+
+  const Tabs = ({ children, value, onValueChange }) => (
+    <TabsContext.Provider value={{ activeValue: value, onValueChange }}>
+      <div data-testid="tabs" data-value={value}>
         {children}
       </div>
-    ),
-    TabsTrigger: ({ children, value, onClick }) => (
+    </TabsContext.Provider>
+  );
+
+  const TabsList = ({ children, className }) => (
+    <div data-testid="tabs-list" className={className}>
+      {children}
+    </div>
+  );
+
+  const TabsTrigger = ({ children, value }) => {
+    const { onValueChange } = React.useContext(TabsContext);
+    return (
       <button
         data-testid="tabs-trigger"
         data-value={value}
-        onClick={onClick}
+        onClick={() => onValueChange && onValueChange(value)}
       >
         {children}
       </button>
-    ),
-    TabsContent: ({ children, value, activeValue }) => {
-      if (activeValue !== value) return null;
-      return (
-        <div data-testid="tabs-content" data-value={value}>
-          {children}
-        </div>
-      );
-    },
+    );
   };
+
+  const TabsContent = ({ children, value }) => {
+    const { activeValue } = React.useContext(TabsContext);
+    if (activeValue !== value) return null;
+    return (
+      <div data-testid="tabs-content" data-value={value}>
+        {children}
+      </div>
+    );
+  };
+
+  return { Tabs, TabsList, TabsTrigger, TabsContent };
 });
 
 // Mock icons
