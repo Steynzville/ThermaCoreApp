@@ -42,7 +42,7 @@ vi.mock("react-router-dom", async () => {
   return {
     ...actual,
     useSearchParams: () => [
-      new URLSearchParams(),
+      new URLSearchParams(window.location.search),
       mockSetSearchParams,
     ],
   };
@@ -256,11 +256,13 @@ describe("ScadaDashboard", () => {
   });
 
   it("should use URL params for initial tab state", () => {
+    // Use a full URL with search params in the initial entry
     renderWithRouter(
       <ScadaDashboard />,
       ["/?tab=alerts"]
     );
 
+    // After the component mounts, it should show the alerts tab
     expect(screen.getByTestId("mock-alerts-dashboard")).toBeInTheDocument();
   });
 
@@ -270,6 +272,7 @@ describe("ScadaDashboard", () => {
       ["/?tab=visualization&subtab=processflow"]
     );
 
+    // Should show Process Flow sub-tab
     expect(screen.getByText(/Tab: process/)).toBeInTheDocument();
     const processFlowButton = screen.getByRole("button", { name: "Process Flow" });
     expect(processFlowButton).toHaveAttribute("data-state", "active");
