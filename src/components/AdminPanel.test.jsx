@@ -213,17 +213,6 @@ function createUserSubmitButton() {
   return screen.getByText("Create User").closest("button");
 }
 
-function getRoleOption(name) {
-  // The role options might be rendered as divs or buttons in the custom Select
-  // Try multiple ways to find them
-  const options = screen.getAllByText(name);
-  return options.find(el => 
-    el.closest('[role="option"]') || 
-    el.closest('.select-item') ||
-    el.closest('button')
-  );
-}
-
 // ---------------------------------------------------------------------------
 // Setup / teardown
 // ---------------------------------------------------------------------------
@@ -374,9 +363,7 @@ describe("Create User modal", () => {
     await openCreateUserModal(user);
 
     expect(screen.getByText("Create New User")).toBeInTheDocument();
-    // Check that roles are loaded by looking for the role select or role options
     await waitFor(() => {
-      // The roles are loaded and displayed in the select
       const roleSelect = screen.getByLabelText(/Role/i);
       expect(roleSelect).toBeInTheDocument();
     });
@@ -713,9 +700,9 @@ describe("Edit User modal", () => {
     await user.clear(phoneInput);
     await user.type(phoneInput, "555-9999");
 
-    // The role select uses the role name as the option value
+    // The role select uses capitalized option values (e.g., "Operator", not "operator")
     const roleSelect = screen.getByLabelText("Role");
-    await user.selectOptions(roleSelect, "operator");
+    await user.selectOptions(roleSelect, "Operator");
 
     await user.click(screen.getByText("Save"));
 
@@ -931,12 +918,13 @@ describe("Password reset modal — validation & visibility", () => {
     const confirmPasswordInput = screen.getByPlaceholderText("Confirm new password");
     expect(confirmPasswordInput).toHaveAttribute("type", "password");
 
+    // Get all eye icons - use the last one for confirm password
     const eyeIcons = screen.getAllByTestId("eye-icon");
-    await user.click(eyeIcons[1]);
+    await user.click(eyeIcons[eyeIcons.length - 1]);
     expect(confirmPasswordInput).toHaveAttribute("type", "text");
 
     const eyeOffIcons = screen.getAllByTestId("eye-off-icon");
-    await user.click(eyeOffIcons[1]);
+    await user.click(eyeOffIcons[eyeOffIcons.length - 1]);
     expect(confirmPasswordInput).toHaveAttribute("type", "password");
   });
 
