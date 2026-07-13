@@ -417,10 +417,11 @@ describe("DNP3MonitoringDashboard", () => {
     await waitFor(() => {
       const performancePanel = getTabPanel("performance");
       expect(within(performancePanel).getByText("Performance Metrics")).toBeInTheDocument();
-      expect(within(performancePanel).getByText("1500")).toBeInTheDocument();
-      expect(within(performancePanel).getByText("1450")).toBeInTheDocument();
-      expect(within(performancePanel).getByText("50")).toBeInTheDocument();
-      expect(within(performancePanel).getByText("45ms")).toBeInTheDocument();
+      // These numbers might be formatted with commas, so use regex matching
+      expect(within(performancePanel).getByText(/1,?500/)).toBeInTheDocument();
+      expect(within(performancePanel).getByText(/1,?450/)).toBeInTheDocument();
+      expect(within(performancePanel).getByText(/50/)).toBeInTheDocument();
+      expect(within(performancePanel).getByText(/45ms/)).toBeInTheDocument();
     });
   });
 
