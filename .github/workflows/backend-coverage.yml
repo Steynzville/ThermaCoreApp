@@ -1,4 +1,4 @@
-name: CI Main - Backend Tests
+name: Backend Coverage Report
 
 permissions:
   contents: read
