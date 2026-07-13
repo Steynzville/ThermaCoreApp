@@ -32,6 +32,8 @@ const AudioSettings = () => {
             <input
               id="soundEffectsToggle"
               type="checkbox"
+              role="switch"
+              aria-checked={settings.soundEnabled}
               checked={settings.soundEnabled}
               onChange={toggleSound}
               className="sr-only peer"
