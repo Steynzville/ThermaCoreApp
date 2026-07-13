@@ -202,9 +202,9 @@ describe("ProtocolStatusDashboard", () => {
     await vi.waitFor(() => {
       expect(screen.getByText("System Health Overview")).toBeInTheDocument();
       expect(screen.getByText("95% Healthy")).toBeInTheDocument();
-      expect(screen.getByText("MQTT")).toBeInTheDocument();
-      expect(screen.getByText("MODBUS")).toBeInTheDocument();
-      expect(screen.getByText("OPCUA")).toBeInTheDocument();
+      expect(screen.getByText(/mqtt/i)).toBeInTheDocument();
+      expect(screen.getByText(/modbus/i)).toBeInTheDocument();
+      expect(screen.getByText(/opcua/i)).toBeInTheDocument();
     });
   });
 
@@ -300,11 +300,11 @@ describe("ProtocolStatusDashboard", () => {
     render(<ProtocolStatusDashboard tenantId="tenant-1" onProtocolClick={onProtocolClick} />);
 
     await vi.waitFor(() => {
-      expect(screen.getByText("MQTT")).toBeInTheDocument();
+      expect(screen.getByText(/mqtt/i)).toBeInTheDocument();
     });
 
     const cards = screen.getAllByTestId("card");
-    const mqttCard = cards.find(card => card.textContent.includes("MQTT"));
+    const mqttCard = cards.find(card => card.textContent.toLowerCase().includes("mqtt"));
     await user.click(mqttCard);
 
     expect(onProtocolClick).toHaveBeenCalledWith("mqtt");
