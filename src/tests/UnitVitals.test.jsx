@@ -9,9 +9,12 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import UnitVitals from "../components/unit-details/UnitVitals";
-import { useSettings } from "../context/SettingsContext";
-import { useUnits } from "../context/UnitContext";
+import { SettingsProvider } from "../context/SettingsContext";
+import { useUnits, UnitProvider } from "../context/UnitContext";
 import { useRealtimeMetrics } from "../hooks/useRealtimeData";
+import { AuthProvider } from "../context/AuthContext";
+import { TenantProvider } from "../context/TenantContext";
+import { BrowserRouter } from "react-router-dom";
 
 // Mock the useRealtimeMetrics hook to prevent it from calling useTenant
 vi.mock("../hooks/useRealtimeData", () => ({
@@ -49,6 +52,19 @@ vi.mock("../context/UnitContext", async () => {
   };
 });
 
+// Mock useAuth
+vi.mock("../context/AuthContext", async () => {
+  const actual = await vi.importActual("../context/AuthContext");
+  return {
+    ...actual,
+    useAuth: vi.fn(() => ({
+      user: { id: 1, username: "testuser" },
+      backendRole: "user",
+      isAuthenticated: true,
+    })),
+  };
+});
+
 const mockUnit = {
   id: 1,
   name: "Test Unit",
@@ -71,7 +87,19 @@ const mockUnit = {
 
 describe("UnitVitals Component", () => {
   const renderComponent = (unit = mockUnit) => {
-    return render(<UnitVitals unit={unit} />);
+    return render(
+      <BrowserRouter>
+        <AuthProvider>
+          <TenantProvider>
+            <SettingsProvider>
+              <UnitProvider>
+                <UnitVitals unit={unit} />
+              </UnitProvider>
+            </SettingsProvider>
+          </TenantProvider>
+        </AuthProvider>
+      </BrowserRouter>,
+    );
   };
 
   afterEach(() => {
@@ -171,7 +199,11 @@ describe("UnitVitals Component", () => {
 
     it("renders a flowRate of 0 as 0 L/min instead of the mock defaults", () => {
       renderComponent({ ...mockUnit, flowRate: 0 });
-      expect(screen.getByText("0 L/min")).toBeInTheDocument();
+      // Both inlet and outlet derive from flowRate, so a flowRate of 0
+      // legitimately produces two "0 L/min" readings (inlet, and outlet
+      // at 0 * 0.95 = 0) — not the 45.5 / 42.1 mock defaults.
+      const zeroReadings = screen.getAllByText("0 L/min");
+      expect(zeroReadings.length).toBe(2);
     });
 
     it("renders a water level of 0 correctly", () => {
