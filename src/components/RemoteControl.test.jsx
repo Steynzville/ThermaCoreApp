@@ -5,6 +5,7 @@ import {
   vi,
   beforeEach,
   afterEach,
+  waitFor,
 } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
@@ -774,7 +775,7 @@ describe("RemoteControl Component", () => {
       }
     });
 
-    it("should show action count in history header", () => {
+    it("should show action count in history header", async () => {
       render(
         <TestWrapper role="admin">
           <RemoteControl unit={mockUnit} />
@@ -790,12 +791,13 @@ describe("RemoteControl Component", () => {
       const actionButtons = screen.getAllByTestId("alert-dialog-action");
       fireEvent.click(actionButtons[0]);
       
-      // Should update the count
-      const updatedHeader = screen.getByText(/Last \d+ actions recorded/i);
-      const updatedCount = parseInt(updatedHeader.textContent.match(/\d+/)[0]);
-      
-      // Verify the count increased by 1
-      expect(updatedCount).toBe(initialCount + 1);
+      // Wait for the state to update
+      await waitFor(() => {
+        const updatedHeader = screen.getByText(/Last \d+ actions recorded/i);
+        const updatedCount = parseInt(updatedHeader.textContent.match(/\d+/)[0]);
+        // Verify the count increased by 1
+        expect(updatedCount).toBe(initialCount + 1);
+      });
     });
 
     it("should keep only last 10 actions in history", () => {
