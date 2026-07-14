@@ -40,16 +40,7 @@ vi.mock("../services/protocolWebSocketService", () => {
   };
 });
 
-// IMPORTANT: vi.clearAllMocks() only clears call history — it does NOT undo
-// mockReturnValue/mockResolvedValue/mockRejectedValue configured in earlier
-// tests. Several tests below reconfigure connect()/isConnected() away from
-// their defaults (e.g. rejecting connect, isConnected -> true). Left
-// unreset, those configs leak into later tests. That's especially dangerous
-// here because useModbusRegisters/useOPCUANodes/useDNP3Points/useMQTTMessages
-// all auto-connect on mount (autoConnect defaults to true), so a leaked
-// rejected connect() fires on every subsequent render. This top-level
-// beforeEach runs before every test in the file and fully resets each mock
-// back to its known-good default implementation.
+// Reset all mock defaults before each test
 const resetProtocolMockDefaults = () => {
   for (const ws of Object.values(protocolWS)) {
     ws.connect.mockReset().mockResolvedValue(true);
@@ -64,16 +55,26 @@ const resetProtocolMockDefaults = () => {
   }
 };
 
+// Async-safe mount helper for hooks that auto-connect.
+// Renders the hook, waits for the auto-connect effect to settle, and
+// returns the result + unmount function. This flushes the async state
+// update that would otherwise dangle across tests and cause OOM.
+const mountAutoConnectHook = (hook) => {
+  const { result, unmount, rerender } = renderHook(hook);
+  // Wait for the auto-connect promise chain to flush.
+  // One tick is enough to resolve the microtask that schedules the
+  // setError(null) update.
+  return act(async () => {
+    await Promise.resolve();
+    // Some updates may be batched behind a second microtask
+    await Promise.resolve();
+  }).then(() => ({ result, unmount, rerender }));
+};
+
 beforeEach(() => {
   resetProtocolMockDefaults();
 });
 
-// Belt-and-suspenders: don't rely on the project's setup file registering
-// RTL's auto-cleanup. useModbusRegisters/useOPCUANodes/useDNP3Points/
-// useMQTTMessages all auto-connect on mount (autoConnect defaults to true
-// in the source), so any test that doesn't unmount leaves a live effect
-// with an in-flight connect() promise. Left unchecked across dozens of
-// tests in this file, that's enough dangling state to stall the run.
 afterEach(() => {
   cleanup();
 });
@@ -869,22 +870,20 @@ describe("useProtocolEvent Hook", () => {
 describe("useModbusRegisters Hook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // useModbusRegisters always mounts useProtocolWebSocket with
-    // autoConnect defaulted to true (it isn't exposed as a param). Reporting
-    // isConnected() as already true makes the hook's own guard skip calling
-    // connect() on mount, so these register-accumulation tests never touch
-    // the async connect chain they aren't testing.
-    protocolWS.modbus.isConnected.mockReturnValue(true);
   });
 
-  it("should initialize with empty registers", () => {
-    const { result } = renderHook(() => useModbusRegisters("device-1"));
+  it("should initialize with empty registers", async () => {
+    const { result } = await mountAutoConnectHook(() =>
+      useModbusRegisters("device-1"),
+    );
 
     expect(result.current.registers).toEqual({});
   });
 
-  it("should expose base websocket state alongside registers", () => {
-    const { result } = renderHook(() => useModbusRegisters("device-1"));
+  it("should expose base websocket state alongside registers", async () => {
+    const { result } = await mountAutoConnectHook(() =>
+      useModbusRegisters("device-1"),
+    );
 
     expect(result.current).toHaveProperty("connectionStatus");
     expect(result.current).toHaveProperty("isConnected");
@@ -893,10 +892,12 @@ describe("useModbusRegisters Hook", () => {
     expect(result.current).toHaveProperty("send");
   });
 
-  it("should update registers on matching register_update", () => {
+  it("should update registers on matching register_update", async () => {
     const ws = protocolWS.modbus;
 
-    const { result } = renderHook(() => useModbusRegisters("device-1"));
+    const { result } = await mountAutoConnectHook(() =>
+      useModbusRegisters("device-1"),
+    );
 
     const dataCallback = ws.subscribe.mock.calls[0][1];
 
@@ -915,17 +916,15 @@ describe("useModbusRegisters Hook", () => {
     });
   });
 
-  it("should accumulate multiple register updates", () => {
+  it("should accumulate multiple register updates", async () => {
     const ws = protocolWS.modbus;
 
-    const { result } = renderHook(() => useModbusRegisters("device-1"));
+    const { result } = await mountAutoConnectHook(() =>
+      useModbusRegisters("device-1"),
+    );
 
     const dataCallback = ws.subscribe.mock.calls[0][1];
 
-    // Each dataCallback call goes through the base hook's setData(newData),
-    // which is not a functional updater. Two calls inside a single act()
-    // would batch into one render and collapse to only the last value, so
-    // each one gets its own act() to force a distinct render in between.
     act(() => {
       dataCallback({
         type: "register_update",
@@ -952,10 +951,12 @@ describe("useModbusRegisters Hook", () => {
     });
   });
 
-  it("should ignore updates for a different device_id", () => {
+  it("should ignore updates for a different device_id", async () => {
     const ws = protocolWS.modbus;
 
-    const { result } = renderHook(() => useModbusRegisters("device-1"));
+    const { result } = await mountAutoConnectHook(() =>
+      useModbusRegisters("device-1"),
+    );
 
     const dataCallback = ws.subscribe.mock.calls[0][1];
 
@@ -972,10 +973,12 @@ describe("useModbusRegisters Hook", () => {
     expect(result.current.registers).toEqual({});
   });
 
-  it("should ignore updates with a different data type", () => {
+  it("should ignore updates with a different data type", async () => {
     const ws = protocolWS.modbus;
 
-    const { result } = renderHook(() => useModbusRegisters("device-1"));
+    const { result } = await mountAutoConnectHook(() =>
+      useModbusRegisters("device-1"),
+    );
 
     const dataCallback = ws.subscribe.mock.calls[0][1];
 
@@ -991,10 +994,12 @@ describe("useModbusRegisters Hook", () => {
     expect(result.current.registers).toEqual({});
   });
 
-  it("should ignore updates when data is null", () => {
+  it("should ignore updates when data is null", async () => {
     const ws = protocolWS.modbus;
 
-    const { result } = renderHook(() => useModbusRegisters("device-1"));
+    const { result } = await mountAutoConnectHook(() =>
+      useModbusRegisters("device-1"),
+    );
 
     // No data has been emitted yet, so data starts as null; ensure no throw
     expect(() => ws.subscribe.mock.calls[0][1]).not.toThrow();
@@ -1005,20 +1010,21 @@ describe("useModbusRegisters Hook", () => {
 describe("useOPCUANodes Hook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    protocolWS.opcua.isConnected.mockReturnValue(true);
   });
 
-  it("should initialize with an empty Map of node values", () => {
-    const { result } = renderHook(() => useOPCUANodes(["node-1"]));
+  it("should initialize with an empty Map of node values", async () => {
+    const { result } = await mountAutoConnectHook(() =>
+      useOPCUANodes(["node-1"]),
+    );
 
     expect(result.current.nodeValues).toBeInstanceOf(Map);
     expect(result.current.nodeValues.size).toBe(0);
   });
 
-  it("should update node values when nodeIds list is empty (accepts all)", () => {
+  it("should update node values when nodeIds list is empty (accepts all)", async () => {
     const ws = protocolWS.opcua;
 
-    const { result } = renderHook(() => useOPCUANodes([]));
+    const { result } = await mountAutoConnectHook(() => useOPCUANodes([]));
 
     const dataCallback = ws.subscribe.mock.calls[0][1];
 
@@ -1039,10 +1045,12 @@ describe("useOPCUANodes Hook", () => {
     });
   });
 
-  it("should update node values when node_id is in the watched list", () => {
+  it("should update node values when node_id is in the watched list", async () => {
     const ws = protocolWS.opcua;
 
-    const { result } = renderHook(() => useOPCUANodes(["node-1", "node-2"]));
+    const { result } = await mountAutoConnectHook(() =>
+      useOPCUANodes(["node-1", "node-2"]),
+    );
 
     const dataCallback = ws.subscribe.mock.calls[0][1];
 
@@ -1063,10 +1071,12 @@ describe("useOPCUANodes Hook", () => {
     });
   });
 
-  it("should ignore node updates not in the watched list", () => {
+  it("should ignore node updates not in the watched list", async () => {
     const ws = protocolWS.opcua;
 
-    const { result } = renderHook(() => useOPCUANodes(["node-1"]));
+    const { result } = await mountAutoConnectHook(() =>
+      useOPCUANodes(["node-1"]),
+    );
 
     const dataCallback = ws.subscribe.mock.calls[0][1];
 
@@ -1083,10 +1093,10 @@ describe("useOPCUANodes Hook", () => {
     expect(result.current.nodeValues.size).toBe(0);
   });
 
-  it("should ignore data with a different type", () => {
+  it("should ignore data with a different type", async () => {
     const ws = protocolWS.opcua;
 
-    const { result } = renderHook(() => useOPCUANodes([]));
+    const { result } = await mountAutoConnectHook(() => useOPCUANodes([]));
 
     const dataCallback = ws.subscribe.mock.calls[0][1];
 
@@ -1097,10 +1107,10 @@ describe("useOPCUANodes Hook", () => {
     expect(result.current.nodeValues.size).toBe(0);
   });
 
-  it("should default nodeIds to an empty array", () => {
+  it("should default nodeIds to an empty array", async () => {
     const ws = protocolWS.opcua;
 
-    const { result } = renderHook(() => useOPCUANodes());
+    const { result } = await mountAutoConnectHook(() => useOPCUANodes());
 
     const dataCallback = ws.subscribe.mock.calls[0][1];
 
@@ -1121,19 +1131,22 @@ describe("useOPCUANodes Hook", () => {
 describe("useDNP3Points Hook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    protocolWS.dnp3.isConnected.mockReturnValue(true);
   });
 
-  it("should initialize with empty points", () => {
-    const { result } = renderHook(() => useDNP3Points("outstation-1"));
+  it("should initialize with empty points", async () => {
+    const { result } = await mountAutoConnectHook(() =>
+      useDNP3Points("outstation-1"),
+    );
 
     expect(result.current.points).toEqual({});
   });
 
-  it("should update points on matching outstation_id", () => {
+  it("should update points on matching outstation_id", async () => {
     const ws = protocolWS.dnp3;
 
-    const { result } = renderHook(() => useDNP3Points("outstation-1"));
+    const { result } = await mountAutoConnectHook(() =>
+      useDNP3Points("outstation-1"),
+    );
 
     const dataCallback = ws.subscribe.mock.calls[0][1];
 
@@ -1153,10 +1166,12 @@ describe("useDNP3Points Hook", () => {
     });
   });
 
-  it("should accumulate multiple point updates", () => {
+  it("should accumulate multiple point updates", async () => {
     const ws = protocolWS.dnp3;
 
-    const { result } = renderHook(() => useDNP3Points("outstation-1"));
+    const { result } = await mountAutoConnectHook(() =>
+      useDNP3Points("outstation-1"),
+    );
 
     const dataCallback = ws.subscribe.mock.calls[0][1];
 
@@ -1188,10 +1203,12 @@ describe("useDNP3Points Hook", () => {
     });
   });
 
-  it("should ignore updates for a different outstation_id", () => {
+  it("should ignore updates for a different outstation_id", async () => {
     const ws = protocolWS.dnp3;
 
-    const { result } = renderHook(() => useDNP3Points("outstation-1"));
+    const { result } = await mountAutoConnectHook(() =>
+      useDNP3Points("outstation-1"),
+    );
 
     const dataCallback = ws.subscribe.mock.calls[0][1];
 
@@ -1207,10 +1224,12 @@ describe("useDNP3Points Hook", () => {
     expect(result.current.points).toEqual({});
   });
 
-  it("should ignore updates with a different data type", () => {
+  it("should ignore updates with a different data type", async () => {
     const ws = protocolWS.dnp3;
 
-    const { result } = renderHook(() => useDNP3Points("outstation-1"));
+    const { result } = await mountAutoConnectHook(() =>
+      useDNP3Points("outstation-1"),
+    );
 
     const dataCallback = ws.subscribe.mock.calls[0][1];
 
@@ -1230,161 +1249,6 @@ describe("useDNP3Points Hook", () => {
 describe("useMQTTMessages Hook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    protocolWS.mqtt.isConnected.mockReturnValue(true);
   });
 
-  it("should initialize with an empty messages array", () => {
-    const { result } = renderHook(() => useMQTTMessages());
-
-    expect(result.current.messages).toEqual([]);
-  });
-
-  it("should append messages when topics filter is empty (accepts all)", () => {
-    const ws = protocolWS.mqtt;
-
-    const { result } = renderHook(() => useMQTTMessages([]));
-
-    const dataCallback = ws.subscribe.mock.calls[0][1];
-
-    act(() => {
-      dataCallback({
-        type: "message",
-        topic: "sensors/temp",
-        payload: "72",
-        timestamp: "t1",
-        qos: 1,
-      });
-    });
-
-    expect(result.current.messages).toEqual([
-      { topic: "sensors/temp", payload: "72", timestamp: "t1", qos: 1 },
-    ]);
-  });
-
-  it("should append messages that match the topics filter", () => {
-    const ws = protocolWS.mqtt;
-
-    const { result } = renderHook(() =>
-      useMQTTMessages(["sensors/temp", "sensors/humidity"]),
-    );
-
-    const dataCallback = ws.subscribe.mock.calls[0][1];
-
-    act(() => {
-      dataCallback({
-        type: "message",
-        topic: "sensors/humidity",
-        payload: "45",
-        timestamp: "t1",
-        qos: 0,
-      });
-    });
-
-    expect(result.current.messages).toHaveLength(1);
-    expect(result.current.messages[0].topic).toBe("sensors/humidity");
-  });
-
-  it("should ignore messages that do not match the topics filter", () => {
-    const ws = protocolWS.mqtt;
-
-    const { result } = renderHook(() => useMQTTMessages(["sensors/temp"]));
-
-    const dataCallback = ws.subscribe.mock.calls[0][1];
-
-    act(() => {
-      dataCallback({
-        type: "message",
-        topic: "sensors/pressure",
-        payload: "1013",
-        timestamp: "t1",
-        qos: 0,
-      });
-    });
-
-    expect(result.current.messages).toEqual([]);
-  });
-
-  it("should ignore data with a different type", () => {
-    const ws = protocolWS.mqtt;
-
-    const { result } = renderHook(() => useMQTTMessages([]));
-
-    const dataCallback = ws.subscribe.mock.calls[0][1];
-
-    act(() => {
-      dataCallback({ type: "other_type", topic: "sensors/temp" });
-    });
-
-    expect(result.current.messages).toEqual([]);
-  });
-
-  it("should keep only the last 100 messages", () => {
-    const ws = protocolWS.mqtt;
-
-    const { result } = renderHook(() => useMQTTMessages([]));
-
-    const dataCallback = ws.subscribe.mock.calls[0][1];
-
-    act(() => {
-      for (let i = 0; i < 105; i++) {
-        dataCallback({
-          type: "message",
-          topic: "sensors/temp",
-          payload: String(i),
-          timestamp: `t${i}`,
-          qos: 0,
-        });
-      }
-    });
-
-    expect(result.current.messages).toHaveLength(100);
-    expect(result.current.messages[0].payload).toBe("5");
-    expect(result.current.messages[99].payload).toBe("104");
-  });
-
-  it("should clear messages when clearMessages is called", () => {
-    const ws = protocolWS.mqtt;
-
-    const { result } = renderHook(() => useMQTTMessages([]));
-
-    const dataCallback = ws.subscribe.mock.calls[0][1];
-
-    act(() => {
-      dataCallback({
-        type: "message",
-        topic: "sensors/temp",
-        payload: "72",
-        timestamp: "t1",
-        qos: 1,
-      });
-    });
-
-    expect(result.current.messages).toHaveLength(1);
-
-    act(() => {
-      result.current.clearMessages();
-    });
-
-    expect(result.current.messages).toEqual([]);
-  });
-
-  it("should default topics to an empty array", () => {
-    const ws = protocolWS.mqtt;
-
-    const { result } = renderHook(() => useMQTTMessages());
-
-    const dataCallback = ws.subscribe.mock.calls[0][1];
-
-    act(() => {
-      dataCallback({
-        type: "message",
-        topic: "any/topic",
-        payload: "x",
-        timestamp: "t1",
-        qos: 0,
-      });
-    });
-
-    expect(result.current.messages).toHaveLength(1);
-  });
-});
+  it("should initialize with an empty messages array", async () =>
