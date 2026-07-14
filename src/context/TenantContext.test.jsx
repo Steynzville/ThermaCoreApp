@@ -15,7 +15,7 @@ import React from "react";
 import { TenantProvider, useTenant } from "../context/TenantContext";
 import { apiGetJson } from "../utils/apiFetch";
 
-// Mock AuthContext - FIXED: Use vi.mock properly
+// Mock AuthContext
 const mockUser = { id: 1, username: "testuser", email: "test@example.com" };
 let mockBackendRole = "user";
 
@@ -69,9 +69,6 @@ describe("TenantContext", () => {
       
       consoleSpy.mockRestore();
     });
-
-    // FIXED: This test is removed because the hook throws in test environment too
-    // The fallback only works when the error is caught, not when thrown
   });
 
   describe("TenantProvider - Initialization", () => {
@@ -146,8 +143,11 @@ describe("TenantContext", () => {
     });
 
     it("should not load tenant when user is not authenticated", async () => {
-      // FIXED: Mock useAuth to return null user
-      vi.mocked(useAuth).mockReturnValueOnce({
+      // Clear any previous calls
+      vi.mocked(apiGetJson).mockClear();
+      
+      // Mock useAuth to return null user
+      vi.mocked(useAuth).mockReturnValue({
         user: null,
         backendRole: null,
       });
@@ -161,6 +161,7 @@ describe("TenantContext", () => {
       });
 
       expect(result.current.currentTenant).toBeNull();
+      // Verify apiGetJson was NOT called
       expect(apiGetJson).not.toHaveBeenCalled();
     });
 
@@ -656,8 +657,5 @@ describe("TenantContext", () => {
 
       expect(result.current.currentTenant).toEqual({ id: "tenant-3", name: "Tenant C" });
     });
-
-    // FIXED: This test was failing because rerender doesn't trigger API calls
-    // The test is removed since it's not a real use case - available tenants are loaded once on mount
   });
 });
