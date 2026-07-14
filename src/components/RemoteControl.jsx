@@ -196,7 +196,7 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
     return () => clearInterval(interval);
   }, []);
 
-  // Helper function to add action to history
+  // Helper function to add action to history - with debug line
   const addAction = (action, description = "Manual control via remote interface") => {
     const newAction = {
       id: actionIdCounter.current++,
@@ -204,11 +204,17 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
       description,
       timestamp: getCurrentTimestamp(),
     };
+    
+    // DEBUG: Log when actions are added
+    console.log("Added action:", action, "New length:", actionHistory.length + 1);
+    
     // Use functional update to ensure we're working with the latest state
     setActionHistory(prev => {
       const updated = [newAction, ...prev];
       // Keep only last 10 actions
-      return updated.slice(0, 10);
+      const result = updated.slice(0, 10);
+      console.log("Updated history:", result.map(a => a.action));
+      return result;
     });
   };
 
@@ -247,9 +253,11 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
     if (!checked) {
       setWaterProductionOn(false);
       setAutoSwitchEnabled(false);
-      // Add cascade actions
-      addAction(ACTION_TYPES.WATER_PRODUCTION_OFF, "Cascaded off - machine power off");
-      addAction(ACTION_TYPES.AUTO_SWITCH_OFF, "Cascaded off - machine power off");
+      // Add cascade actions with a small delay to ensure they appear after the main action
+      setTimeout(() => {
+        addAction(ACTION_TYPES.WATER_PRODUCTION_OFF, "Cascaded off - machine power off");
+        addAction(ACTION_TYPES.AUTO_SWITCH_OFF, "Cascaded off - machine power off");
+      }, 50);
     }
   };
 
@@ -268,7 +276,9 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
     // When machine control is toggled to "on" and water production is switched to "off", automatic control should automatically toggle to "off"
     if (machineOn && !checked) {
       setAutoSwitchEnabled(false);
-      addAction(ACTION_TYPES.AUTO_SWITCH_OFF, "Cascaded off - water production off");
+      setTimeout(() => {
+        addAction(ACTION_TYPES.AUTO_SWITCH_OFF, "Cascaded off - water production off");
+      }, 50);
     }
   };
 
@@ -313,7 +323,7 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
     // Set refreshing state to trigger animation
     setIsRefreshing(true);
     
-    // Record the action
+    // Record the action immediately
     addAction(ACTION_TYPES.REFRESH_FEED, "Video feed refreshed");
     
     // Clear any existing timeout
