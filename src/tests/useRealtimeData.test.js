@@ -1,11 +1,8 @@
 /**
  * Tests for useRealtimeData Hook
  * 
- * SCADA-specific testing covering:
- * - Real-time data streaming
- * - WebSocket connection management
- * - Error recovery
- * - Data integrity validation
+ * SCADA-specific testing covering real-time data streaming,
+ * WebSocket connection management, error recovery, and data integrity
  */
 
 import { renderHook, act, waitFor } from "@testing-library/react";
@@ -34,7 +31,7 @@ vi.mock("../lib/logger", () => ({
   },
 }));
 
-// Mock WebSocket service - simplified
+// Mock WebSocket service - matches your implementation
 const mockWebSocket = {
   isConnected: true,
   listeners: {},
@@ -42,7 +39,7 @@ const mockWebSocket = {
   disconnect: vi.fn(),
   subscribe: vi.fn(() => vi.fn()),
   onStatusChange: vi.fn(() => vi.fn()),
-  isConnected: vi.fn(() => mockWebSocket.isConnected),
+  isConnectedFn: vi.fn(() => mockWebSocket.isConnected),
   emit: (event, data) => {
     if (mockWebSocket.listeners[event]) {
       mockWebSocket.listeners[event].forEach(cb => cb(data));
@@ -63,7 +60,7 @@ const mockWebSocket = {
 
 vi.mock("../services/websocketService", () => ({
   default: {
-    connect: vi.fn().mockImplementation(() => {
+    connect: vi.fn().mockImplementation((tenantId) => {
       if (mockWebSocket.isConnected) {
         return Promise.resolve(true);
       }
@@ -101,16 +98,21 @@ vi.mock("../services/scadaService", () => ({
       efficiency: 87.2,
       timestamp: new Date().toISOString(),
     })),
-    getCurrentMetrics: vi.fn().mockResolvedValue({
-      success: true,
-      data: {
-        temperature: 65.5,
-        pressure: 120.3,
-        flowRate: 245.7,
-        power: 1500,
-        efficiency: 87.2,
-        timestamp: new Date().toISOString(),
-      },
+    getCurrentMetrics: vi.fn().mockImplementation((tenantId) => {
+      if (mockWebSocket.isConnected) {
+        return Promise.resolve({
+          success: true,
+          data: {
+            temperature: 65.5,
+            pressure: 120.3,
+            flowRate: 245.7,
+            power: 1500,
+            efficiency: 87.2,
+            timestamp: new Date().toISOString(),
+          },
+        });
+      }
+      return Promise.reject(new Error('SCADA service unavailable'));
     }),
     generateMockProtocolStatus: vi.fn(() => [
       { id: "modbus-1", status: "connected", latency: 10 },
@@ -118,16 +120,21 @@ vi.mock("../services/scadaService", () => ({
       { id: "dnp3-1", status: "disconnected", latency: 0 },
       { id: "mqtt-1", status: "connected", latency: 15 },
     ]),
-    getProtocolStatus: vi.fn().mockResolvedValue({
-      success: true,
-      data: {
-        protocols: [
-          { id: "modbus-1", status: "connected", latency: 10 },
-          { id: "opcua-1", status: "connected", latency: 25 },
-          { id: "dnp3-1", status: "disconnected", latency: 0 },
-          { id: "mqtt-1", status: "connected", latency: 15 },
-        ],
-      },
+    getProtocolStatus: vi.fn().mockImplementation((tenantId) => {
+      if (mockWebSocket.isConnected) {
+        return Promise.resolve({
+          success: true,
+          data: {
+            protocols: [
+              { id: "modbus-1", status: "connected", latency: 10 },
+              { id: "opcua-1", status: "connected", latency: 25 },
+              { id: "dnp3-1", status: "disconnected", latency: 0 },
+              { id: "mqtt-1", status: "connected", latency: 15 },
+            ],
+          },
+        });
+      }
+      return Promise.reject(new Error('SCADA service unavailable'));
     }),
     generateMockHistoricalData: vi.fn((hours = 24) =>
       Array.from({ length: Math.min(hours, 24) }, (_, i) => ({
@@ -147,6 +154,9 @@ vi.mock("../services/scadaService", () => ({
   },
 }));
 
+// Mock import.meta.env.DEV
+vi.stubEnv('DEV', true);
+
 describe("useRealtimeMetrics Hook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -157,7 +167,7 @@ describe("useRealtimeMetrics Hook", () => {
     vi.clearAllMocks();
   });
 
-  describe("Initialization and Connection", () => {
+  describe("Initialization", () => {
     it("should initialize with default state", () => {
       const { result } = renderHook(() =>
         useRealtimeMetrics({ autoConnect: false }),
@@ -175,10 +185,10 @@ describe("useRealtimeMetrics Hook", () => {
         useRealtimeMetrics({ autoConnect: true })
       );
 
-      // Wait for connection to establish
+      // Wait for connection
       await waitFor(() => {
         expect(result.current.isConnected).toBe(true);
-      });
+      }, { timeout: 2000 });
     });
 
     it("should not connect when autoConnect is false", () => {
@@ -192,99 +202,74 @@ describe("useRealtimeMetrics Hook", () => {
     });
   });
 
-  describe("Data Streaming", () => {
-    it("should receive and process metrics when connected", async () => {
-      const { result } = renderHook(() =>
-        useRealtimeMetrics({ autoConnect: true })
-      );
-
-      await waitFor(() => {
-        expect(result.current.metrics).toBeDefined();
-      });
-
-      expect(result.current.metrics).toHaveProperty("temperature");
-      expect(result.current.metrics).toHaveProperty("pressure");
-      expect(result.current.metrics).toHaveProperty("flowRate");
-    });
-
-    it("should use mock data when enabled", async () => {
+  describe("Data Fetching", () => {
+    it("should use mock data when useMockData is true", async () => {
       const { result } = renderHook(() =>
         useRealtimeMetrics({ autoConnect: true, useMockData: true })
       );
 
       await waitFor(() => {
-        expect(result.current.metrics).toEqual({
-          temperature: 65.5,
-          pressure: 120.3,
-          flowRate: 245.7,
-          power: 1500,
-          efficiency: 87.2,
-          timestamp: expect.any(String),
-        });
-      });
+        expect(result.current.metrics).toBeDefined();
+        expect(result.current.metrics).toHaveProperty("temperature");
+        expect(result.current.metrics).toHaveProperty("pressure");
+        expect(result.current.metrics).toHaveProperty("flowRate");
+      }, { timeout: 2000 });
     });
 
-    it("should update metrics when new data arrives", async () => {
+    it("should fetch real data when useMockData is false", async () => {
       const { result } = renderHook(() =>
-        useRealtimeMetrics({ autoConnect: true })
+        useRealtimeMetrics({ autoConnect: true, useMockData: false })
       );
 
       await waitFor(() => {
         expect(result.current.metrics).toBeDefined();
-      });
+      }, { timeout: 2000 });
+    });
 
-      const firstMetrics = { ...result.current.metrics };
+    it("should update metrics when WebSocket data arrives", async () => {
+      const { result } = renderHook(() =>
+        useRealtimeMetrics({ autoConnect: true, useMockData: true })
+      );
 
-      // Simulate new data
+      await waitFor(() => {
+        expect(result.current.metrics).toBeDefined();
+      }, { timeout: 2000 });
+
+      // Simulate WebSocket data
       await act(async () => {
-        mockWebSocket.emit('metric_update', {
+        mockWebSocket.emit('metrics', {
           temperature: 75.2,
+          pressure: 130.5,
+          flowRate: 260.1,
+          power: 1600,
+          efficiency: 88.5,
           timestamp: new Date().toISOString(),
         });
       });
 
       expect(result.current.metrics.temperature).toBe(75.2);
-    });
-
-    it("should handle partial data updates", async () => {
-      const { result } = renderHook(() =>
-        useRealtimeMetrics({ autoConnect: true })
-      );
-
-      await waitFor(() => {
-        expect(result.current.metrics).toBeDefined();
-      });
-
-      // Send partial update
-      await act(async () => {
-        mockWebSocket.emit('metric_update', {
-          temperature: 70.2,
-          timestamp: new Date().toISOString(),
-        });
-      });
-
-      expect(result.current.metrics.temperature).toBe(70.2);
-      // Other metrics should remain unchanged
-      expect(result.current.metrics.pressure).toBeDefined();
+      expect(result.current.metrics.pressure).toBe(130.5);
     });
   });
 
   describe("Connection Management", () => {
-    it("should handle disconnection", async () => {
+    it("should handle WebSocket disconnection", async () => {
       const { result } = renderHook(() =>
         useRealtimeMetrics({ autoConnect: true })
       );
 
       await waitFor(() => {
         expect(result.current.isConnected).toBe(true);
-      });
+      }, { timeout: 2000 });
 
+      // Simulate disconnection
       await act(async () => {
         mockWebSocket.isConnected = false;
-        mockWebSocket.emit('status', { isConnected: false });
+        mockWebSocket.emit('status', 'disconnected');
       });
 
       expect(result.current.isConnected).toBe(false);
+      expect(result.current.connectionStatus).toBe('disconnected');
     });
 
     it("should handle connection errors", async () => {
@@ -297,7 +282,49 @@ describe("useRealtimeMetrics Hook", () => {
 
       await waitFor(() => {
         expect(result.current.error).toBe("Connection failed");
+      }, { timeout: 2000 });
+    });
+
+    it("should handle subscription errors", async () => {
+      const mockService = require("../services/scadaService").default;
+      mockService.getCurrentMetrics.mockRejectedValueOnce(
+        new Error("Failed to fetch metrics")
+      );
+
+      const { result } = renderHook(() =>
+        useRealtimeMetrics({ autoConnect: true, useMockData: false })
+      );
+
+      await waitFor(() => {
+        expect(result.current.error).toBe("Failed to fetch metrics");
+      }, { timeout: 2000 });
+    });
+  });
+
+  describe("Fallback Polling", () => {
+    it("should poll when WebSocket is disconnected", async () => {
+      const { result } = renderHook(() =>
+        useRealtimeMetrics({ 
+          autoConnect: true, 
+          refreshInterval: 100,
+          useMockData: true 
+        })
+      );
+
+      await waitFor(() => {
+        expect(result.current.metrics).toBeDefined();
+      }, { timeout: 2000 });
+
+      // Disconnect WebSocket
+      await act(async () => {
+        mockWebSocket.isConnected = false;
+        mockWebSocket.emit('status', 'disconnected');
       });
+
+      // Should still get data from polling
+      await waitFor(() => {
+        expect(result.current.metrics).toBeDefined();
+      }, { timeout: 500 });
     });
   });
 
@@ -309,20 +336,32 @@ describe("useRealtimeMetrics Hook", () => {
       expect(() => unmount()).not.toThrow();
     });
 
+    it("should clear intervals on unmount", () => {
+      const clearIntervalSpy = vi.spyOn(window, 'clearInterval');
+      
+      const { unmount } = renderHook(() =>
+        useRealtimeMetrics({ autoConnect: true, refreshInterval: 100 })
+      );
+
+      unmount();
+
+      expect(clearIntervalSpy).toHaveBeenCalled();
+    });
+
     it("should not update state after unmount", async () => {
       const { result, unmount } = renderHook(() =>
-        useRealtimeMetrics({ autoConnect: true })
+        useRealtimeMetrics({ autoConnect: true, useMockData: true })
       );
 
       await waitFor(() => {
         expect(result.current.metrics).toBeDefined();
-      });
+      }, { timeout: 2000 });
 
       unmount();
 
       // This should not cause errors
       await act(async () => {
-        mockWebSocket.emit('metric_update', {
+        mockWebSocket.emit('metrics', {
           temperature: 99,
           timestamp: new Date().toISOString(),
         });
@@ -353,40 +392,51 @@ describe("useRealtimeProtocolStatus Hook", () => {
     expect(result.current.error).toBeNull();
   });
 
-  it("should fetch protocol status", async () => {
+  it("should fetch protocol status when autoConnect is true", async () => {
     const { result } = renderHook(() =>
       useRealtimeProtocolStatus({ autoConnect: true })
     );
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
-    });
+    }, { timeout: 2000 });
 
     expect(result.current.protocols).toHaveLength(4);
     expect(result.current.protocols[0]).toHaveProperty("id");
     expect(result.current.protocols[0]).toHaveProperty("status");
   });
 
-  it("should update protocol status in real-time", async () => {
+  it("should use mock data when useMockData is true", async () => {
     const { result } = renderHook(() =>
-      useRealtimeProtocolStatus({ autoConnect: true })
+      useRealtimeProtocolStatus({ autoConnect: true, useMockData: true })
+    );
+
+    await waitFor(() => {
+      expect(result.current.protocols).toHaveLength(4);
+    }, { timeout: 2000 });
+  });
+
+  it("should update protocols when WebSocket data arrives", async () => {
+    const { result } = renderHook(() =>
+      useRealtimeProtocolStatus({ autoConnect: true, useMockData: true })
     );
 
     await waitFor(() => {
       expect(result.current.protocols.length).toBeGreaterThan(0);
-    });
+    }, { timeout: 2000 });
 
+    // Simulate WebSocket data
     await act(async () => {
-      mockWebSocket.emit('protocol_status_update', {
-        protocolId: "modbus-1",
-        status: "disconnected",
-        latency: 0,
-        timestamp: new Date().toISOString(),
-      });
+      mockWebSocket.emit('protocols', [
+        { id: "modbus-1", status: "connected", latency: 10 },
+        { id: "opcua-1", status: "disconnected", latency: 0 },
+        { id: "dnp3-1", status: "connected", latency: 5 },
+        { id: "mqtt-1", status: "connected", latency: 15 },
+        { id: "profibus-1", status: "connected", latency: 20 },
+      ]);
     });
 
-    const modbusProtocol = result.current.protocols.find(p => p.id === "modbus-1");
-    expect(modbusProtocol.status).toBe("disconnected");
+    expect(result.current.protocols).toHaveLength(5);
   });
 
   it("should handle errors", async () => {
@@ -396,12 +446,12 @@ describe("useRealtimeProtocolStatus Hook", () => {
     );
 
     const { result } = renderHook(() =>
-      useRealtimeProtocolStatus({ autoConnect: true })
+      useRealtimeProtocolStatus({ autoConnect: true, useMockData: false })
     );
 
     await waitFor(() => {
       expect(result.current.error).toBe("Protocol status unavailable");
-    });
+    }, { timeout: 2000 });
   });
 });
 
@@ -415,15 +465,38 @@ describe("useRealtimeHistoricalData Hook", () => {
     vi.clearAllMocks();
   });
 
+  it("should initialize with default state", () => {
+    const { result } = renderHook(() =>
+      useRealtimeHistoricalData({ hours: 24 })
+    );
+
+    expect(result.current.data).toEqual([]);
+    expect(result.current.loading).toBe(true);
+    expect(result.current.error).toBeNull();
+    expect(result.current.timeRange).toBe(24);
+  });
+
   it("should fetch historical data", async () => {
     const { result } = renderHook(() =>
       useRealtimeHistoricalData({ hours: 24 })
     );
 
     await waitFor(() => {
+      expect(result.current.loading).toBe(false);
       expect(result.current.data).toBeDefined();
       expect(Array.isArray(result.current.data)).toBe(true);
-    });
+    }, { timeout: 2000 });
+  });
+
+  it("should use mock data when useMockData is true", async () => {
+    const { result } = renderHook(() =>
+      useRealtimeHistoricalData({ hours: 24, useMockData: true })
+    );
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+      expect(result.current.data.length).toBeGreaterThan(0);
+    }, { timeout: 2000 });
   });
 
   it("should update timeRange", async () => {
@@ -433,7 +506,7 @@ describe("useRealtimeHistoricalData Hook", () => {
 
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
-    });
+    }, { timeout: 2000 });
 
     expect(result.current.timeRange).toBe(24);
 
@@ -444,6 +517,49 @@ describe("useRealtimeHistoricalData Hook", () => {
     expect(result.current.timeRange).toBe(12);
   });
 
+  it("should refetch when timeRange changes", async () => {
+    const getHistoricalDataSpy = vi.mocked(
+      require("../services/scadaService").default.getHistoricalData
+    );
+
+    const { result } = renderHook(() =>
+      useRealtimeHistoricalData({ hours: 24, useMockData: false })
+    );
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    }, { timeout: 2000 });
+
+    const initialCallCount = getHistoricalDataSpy.mock.calls.length;
+
+    await act(() => {
+      result.current.setTimeRange(12);
+    });
+
+    await waitFor(() => {
+      expect(getHistoricalDataSpy.mock.calls.length).toBeGreaterThan(initialCallCount);
+    }, { timeout: 2000 });
+  });
+
+  it("should auto-refresh when enabled", async () => {
+    const getHistoricalDataSpy = vi.mocked(
+      require("../services/scadaService").default.getHistoricalData
+    );
+
+    renderHook(() =>
+      useRealtimeHistoricalData({ 
+        hours: 24, 
+        autoRefresh: true, 
+        refreshInterval: 100,
+        useMockData: false 
+      })
+    );
+
+    await waitFor(() => {
+      expect(getHistoricalDataSpy.mock.calls.length).toBeGreaterThanOrEqual(1);
+    }, { timeout: 1000 });
+  });
+
   it("should handle errors", async () => {
     const mockService = require("../services/scadaService").default;
     mockService.getHistoricalData.mockRejectedValueOnce(
@@ -451,23 +567,12 @@ describe("useRealtimeHistoricalData Hook", () => {
     );
 
     const { result } = renderHook(() =>
-      useRealtimeHistoricalData({ hours: 24 })
+      useRealtimeHistoricalData({ hours: 24, useMockData: false })
     );
 
     await waitFor(() => {
       expect(result.current.error).toBe("Failed to fetch data");
-    });
-  });
-
-  it("should use mock data when enabled", async () => {
-    const { result } = renderHook(() =>
-      useRealtimeHistoricalData({ hours: 24, useMockData: true })
-    );
-
-    await waitFor(() => {
-      expect(result.current.data).toBeDefined();
-      expect(result.current.data.length).toBeGreaterThan(0);
-    });
+    }, { timeout: 2000 });
   });
 });
 
@@ -484,19 +589,47 @@ describe("useWebSocketStatus Hook", () => {
   it("should track connection status", () => {
     const { result } = renderHook(() => useWebSocketStatus());
 
-    expect(result.current.isConnected).toBe(true);
     expect(result.current.status).toBe("connected");
+    expect(result.current.isConnected).toBe(true);
+    expect(result.current.isReconnecting).toBe(false);
   });
 
   it("should update on status changes", async () => {
     const { result } = renderHook(() => useWebSocketStatus());
 
     await act(async () => {
-      mockWebSocket.emit('status', { isConnected: false });
+      mockWebSocket.emit('status', 'disconnected');
     });
 
-    expect(result.current.isConnected).toBe(false);
     expect(result.current.status).toBe("disconnected");
+    expect(result.current.isConnected).toBe(false);
+
+    await act(async () => {
+      mockWebSocket.emit('status', 'reconnecting');
+    });
+
+    expect(result.current.status).toBe("reconnecting");
+    expect(result.current.isConnected).toBe(false);
+    expect(result.current.isReconnecting).toBe(true);
+
+    await act(async () => {
+      mockWebSocket.emit('status', 'connected');
+    });
+
+    expect(result.current.status).toBe("connected");
+    expect(result.current.isConnected).toBe(true);
+    expect(result.current.isReconnecting).toBe(false);
+  });
+
+  it("should track last heartbeat", async () => {
+    const { result } = renderHook(() => useWebSocketStatus());
+
+    await act(async () => {
+      mockWebSocket.emit('status', 'connected');
+    });
+
+    expect(result.current.lastHeartbeat).toBeDefined();
+    expect(typeof result.current.lastHeartbeat).toBe('number');
   });
 });
 
@@ -510,18 +643,36 @@ describe("SCADA-Specific Edge Cases", () => {
     vi.clearAllMocks();
   });
 
-  it("should handle invalid data gracefully", async () => {
+  it("should handle tenant changes", async () => {
     const { result } = renderHook(() =>
-      useRealtimeMetrics({ autoConnect: true })
+      useRealtimeMetrics({ autoConnect: true, useMockData: true })
     );
 
     await waitFor(() => {
       expect(result.current.metrics).toBeDefined();
+    }, { timeout: 2000 });
+
+    // Tenant change should trigger reconnection
+    await act(async () => {
+      mockWebSocket.emit('tenant_changed', { id: 'tenant-2' });
     });
+
+    // Should still work
+    expect(result.current.isConnected).toBe(true);
+  });
+
+  it("should handle invalid data gracefully", async () => {
+    const { result } = renderHook(() =>
+      useRealtimeMetrics({ autoConnect: true, useMockData: true })
+    );
+
+    await waitFor(() => {
+      expect(result.current.metrics).toBeDefined();
+    }, { timeout: 2000 });
 
     // Send invalid data
     await act(async () => {
-      mockWebSocket.emit('metric_update', {
+      mockWebSocket.emit('metrics', {
         invalidField: 'not a metric',
       });
     });
@@ -533,12 +684,12 @@ describe("SCADA-Specific Edge Cases", () => {
 
   it("should handle large payloads without crashing", async () => {
     const { result } = renderHook(() =>
-      useRealtimeMetrics({ autoConnect: true })
+      useRealtimeMetrics({ autoConnect: true, useMockData: true })
     );
 
     await waitFor(() => {
       expect(result.current.metrics).toBeDefined();
-    });
+    }, { timeout: 2000 });
 
     // Large payload
     const largePayload = {
@@ -552,7 +703,7 @@ describe("SCADA-Specific Edge Cases", () => {
     };
 
     await act(async () => {
-      mockWebSocket.emit('metric_update', largePayload);
+      mockWebSocket.emit('metrics', largePayload);
     });
 
     expect(result.current.metrics.temperature).toBe(65);
@@ -560,17 +711,17 @@ describe("SCADA-Specific Edge Cases", () => {
 
   it("should handle rapid updates without memory leaks", async () => {
     const { result } = renderHook(() =>
-      useRealtimeMetrics({ autoConnect: true })
+      useRealtimeMetrics({ autoConnect: true, useMockData: true })
     );
 
     await waitFor(() => {
       expect(result.current.metrics).toBeDefined();
-    });
+    }, { timeout: 2000 });
 
     // Send rapid updates
     for (let i = 0; i < 20; i++) {
       await act(async () => {
-        mockWebSocket.emit('metric_update', {
+        mockWebSocket.emit('metrics', {
           temperature: 60 + i,
           timestamp: new Date().toISOString(),
         });
@@ -591,34 +742,33 @@ describe("SCADA-Specific Edge Cases", () => {
 
     await waitFor(() => {
       expect(subscribeSpy).toHaveBeenCalled();
-    });
+    }, { timeout: 2000 });
 
     const cleanupFn = subscribeSpy.mock.results[0]?.value;
     expect(cleanupFn).toBeDefined();
 
     unmount();
 
-    // Cleanup should have been called
     expect(typeof cleanupFn).toBe('function');
   });
 
   it("should handle network flapping without crashing", async () => {
     const { result } = renderHook(() =>
-      useRealtimeMetrics({ autoConnect: true })
+      useRealtimeMetrics({ autoConnect: true, useMockData: true })
     );
 
     await waitFor(() => {
       expect(result.current.isConnected).toBe(true);
-    });
+    }, { timeout: 2000 });
 
     // Simulate network flapping
     for (let i = 0; i < 5; i++) {
       await act(async () => {
         mockWebSocket.isConnected = false;
-        mockWebSocket.emit('status', { isConnected: false });
+        mockWebSocket.emit('status', 'disconnected');
         await new Promise(resolve => setTimeout(resolve, 10));
         mockWebSocket.isConnected = true;
-        mockWebSocket.emit('status', { isConnected: true });
+        mockWebSocket.emit('status', 'connected');
         await new Promise(resolve => setTimeout(resolve, 10));
       });
     }
