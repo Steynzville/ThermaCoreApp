@@ -40,9 +40,6 @@ import { apiGetJson } from "../utils/apiFetch";
 const MultiProtocolManager = () => {
   const [protocolsStatus, setProtocolsStatus] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedProtocol, setSelectedProtocol] = useState("modbus");
-  const [isAddDeviceOpen, setIsAddDeviceOpen] = useState(false);
-  const [newDevice, setNewDevice] = useState({});
   const [refreshing, setRefreshing] = useState(false);
 
   const [modbusModalOpen, setModbusModalOpen] = useState(false);
@@ -64,6 +61,7 @@ const MultiProtocolManager = () => {
   const [isPolling, setIsPolling] = useState(false);
   const [isMounted, setIsMounted] = useState(true);
 
+  // Page visibility handling
   useEffect(() => {
     const handleVisibilityChange = () => {
       setIsPageVisible(!document.hidden);
@@ -76,6 +74,7 @@ const MultiProtocolManager = () => {
     };
   }, []);
 
+  // Check if we're in mock mode
   const isMockMode =
     import.meta.env.VITE_MOCK_MODE === "true" || import.meta.env.DEV;
 
@@ -205,8 +204,7 @@ const MultiProtocolManager = () => {
         }
       }
 
-      // BUG FIX: re-throw so callers (e.g. handleRefresh) can detect failure
-      // instead of silently reporting success.
+      // Re-throw so callers can detect failure
       throw error;
     } finally {
       if (isMounted) {
@@ -214,7 +212,7 @@ const MultiProtocolManager = () => {
         setRefreshing(false);
       }
     }
-  }, [consecutiveErrors, isMounted, isMockMode]);
+  }, [isMounted, isMockMode]);
 
   const handleRefresh = useCallback(async () => {
     if (refreshing || isPolling) return;
@@ -224,53 +222,73 @@ const MultiProtocolManager = () => {
 
     try {
       await loadData();
-      // BUG FIX: this now only runs when loadData actually resolves.
       toast.success("Protocol status refreshed", { duration: 2000 });
     } catch (_error) {
-      // Error handling / toast is done in loadData; don't report success.
+      // Error handling is done in loadData
     } finally {
       setRefreshing(false);
     }
   }, [refreshing, isPolling, loadData]);
 
-  useEffect(() => {
-    loadData().catch(() => {});
+  // ============================================================
+  // FIXED: Self-scheduling polling loop with refs
+  // ============================================================
 
+  // Keep "live" values in refs so the polling loop always sees current state
+  const loadDataRef = useRef(loadData);
+  const consecutiveErrorsRef = useRef(consecutiveErrors);
+  const isPageVisibleRef = useRef(isPageVisible);
+  const isMountedRef = useRef(isMounted);
+  const isMockModeRef = useRef(isMockMode);
+
+  // Sync refs with latest values every render
+  useEffect(() => {
+    loadDataRef.current = loadData;
+    consecutiveErrorsRef.current = consecutiveErrors;
+    isPageVisibleRef.current = isPageVisible;
+    isMountedRef.current = isMounted;
+    isMockModeRef.current = isMockMode;
+  });
+
+  // Load once on mount, then keep polling indefinitely with backoff.
+  useEffect(() => {
+    let cancelled = false;
     let timeoutId = null;
 
-    const getPollingInterval = () => {
-      const baseInterval = 10000;
-      const maxInterval = 60000;
-      return Math.min(baseInterval * 1.5 ** consecutiveErrors, maxInterval);
-    };
-
-    const scheduleNextPoll = () => {
-      const currentInterval = getPollingInterval();
-      timeoutId = setTimeout(() => {
-        if (isPageVisible && !isPolling && isMounted) {
+    const scheduleNext = () => {
+      if (cancelled || isMockModeRef.current) return;
+      const interval = Math.min(
+        10000 * 1.5 ** consecutiveErrorsRef.current,
+        60000
+      );
+      timeoutId = setTimeout(async () => {
+        if (cancelled) return;
+        if (isPageVisibleRef.current && isMountedRef.current) {
           setIsPolling(true);
-          loadData()
-            .catch(() => {})
-            .finally(() => {
-              setIsPolling(false);
-              scheduleNextPoll();
-            });
-        } else if (isMounted) {
-          scheduleNextPoll();
+          try {
+            await loadDataRef.current();
+          } catch {
+            // toasting/backoff bookkeeping already happened inside loadData
+          } finally {
+            setIsPolling(false);
+          }
         }
-      }, currentInterval);
+        scheduleNext();
+      }, interval);
     };
 
-    if (!isMockMode) {
-      scheduleNextPoll();
-    }
+    // Initial load
+    loadDataRef.current().catch(() => {});
+
+    // Start the polling loop
+    scheduleNext();
 
     return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
+      cancelled = true;
+      if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [consecutiveErrors, isPageVisible, isPolling, isMounted, isMockMode, loadData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleProtocolConfigure = useCallback((protocolName) => {
     switch (protocolName) {
@@ -328,12 +346,7 @@ const MultiProtocolManager = () => {
     }
   };
 
-  const handleAddDevice = () => {
-    setNewDevice({});
-    setIsAddDeviceOpen(false);
-    toast.success(`New ${selectedProtocol} device configuration saved.`);
-  };
-
+  // Loading state
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen" data-testid="loading-state">
@@ -347,6 +360,7 @@ const MultiProtocolManager = () => {
     );
   }
 
+  // Error state
   if (!protocolsStatus) {
     return (
       <div className="flex items-center justify-center min-h-screen px-4" data-testid="error-state">
@@ -389,6 +403,7 @@ const MultiProtocolManager = () => {
 
   return (
     <div className="min-h-screen bg-background w-full transition-all duration-300">
+      {/* Header */}
       <div className="bg-background border-b border-border px-4 sm:px-6 lg:px-8 py-4">
         <div className="max-w-[2000px] mx-auto">
           <div className="flex items-center gap-3">
@@ -440,8 +455,10 @@ const MultiProtocolManager = () => {
         </div>
       </div>
 
+      {/* Main Content */}
       <div className="px-4 sm:px-6 lg:px-8 py-6 pb-24">
         <div className="max-w-[2000px] mx-auto space-y-4 sm:space-y-6">
+          {/* Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
               <CardContent className="p-4 sm:p-6">
@@ -515,6 +532,7 @@ const MultiProtocolManager = () => {
             </Card>
           </div>
 
+          {/* Protocol Status Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {Object.entries(protocolsStatus.protocols).map(
               ([protocolName, protocol]) => (
@@ -626,6 +644,7 @@ const MultiProtocolManager = () => {
             )}
           </div>
 
+          {/* Add Device Button - Opens Wizard */}
           <Button
             className="fixed bottom-6 right-6 rounded-full w-14 h-14 shadow-lg z-50"
             aria-label="Add new device"
@@ -634,87 +653,7 @@ const MultiProtocolManager = () => {
             <Plus className="h-6 w-6" />
           </Button>
 
-          <Dialog open={isAddDeviceOpen} onOpenChange={setIsAddDeviceOpen}>
-            <DialogContent className="max-w-md mx-4 sm:mx-auto">
-              <DialogHeader>
-                <DialogTitle className="break-words">
-                  Add New {selectedProtocol.toUpperCase()} Device
-                </DialogTitle>
-                <DialogDescription className="break-words">
-                  Configure a new device for {selectedProtocol} protocol
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="protocol">Protocol</Label>
-                  <Select
-                    value={selectedProtocol}
-                    onValueChange={(value) => {
-                      setSelectedProtocol(value);
-                      setNewDevice({});
-                    }}
-                  >
-                    <SelectTrigger className="min-h-[44px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {protocolsStatus.summary.supported_protocols.map(
-                        (protocol) => (
-                          <SelectItem key={protocol} value={protocol}>
-                            {protocol.toUpperCase()}
-                          </SelectItem>
-                        ),
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="device-id">Device ID</Label>
-                  <Input
-                    id="device-id"
-                    placeholder="e.g., pump_001"
-                    value={newDevice.id || ""}
-                    onChange={(e) =>
-                      setNewDevice({ ...newDevice, id: e.target.value })
-                    }
-                    className="min-h-[44px]"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="host">Host/IP Address</Label>
-                  <Input
-                    id="host"
-                    placeholder="192.168.1.100"
-                    value={newDevice.host || ""}
-                    onChange={(e) =>
-                      setNewDevice({ ...newDevice, host: e.target.value })
-                    }
-                    className="min-h-[44px]"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="port">Port</Label>
-                  <Input
-                    id="port"
-                    type="number"
-                    placeholder="502"
-                    value={newDevice.port || ""}
-                    onChange={(e) =>
-                      setNewDevice({ ...newDevice, port: e.target.value })
-                    }
-                    className="min-h-[44px]"
-                  />
-                </div>
-                <Button
-                  onClick={handleAddDevice}
-                  className="w-full min-h-[44px]"
-                >
-                  Add Device
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-
+          {/* Protocol-specific modals */}
           <ModbusDeviceModal
             device={selectedModbusDevice}
             isOpen={modbusModalOpen}
@@ -751,6 +690,7 @@ const MultiProtocolManager = () => {
             tenantId={null}
           />
 
+          {/* Simulator Configuration Dialog */}
           <Dialog
             open={simulatorDialogOpen}
             onOpenChange={setSimulatorDialogOpen}
