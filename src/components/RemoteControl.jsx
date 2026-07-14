@@ -48,6 +48,34 @@ const ConnectionPill = ({ isConnected }) =>
     </div>
   );
 
+// Helper function to format timestamp
+const getCurrentTimestamp = () => {
+  const now = new Date();
+  return now.toLocaleString('en-US', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+};
+
+// Action type definitions
+const ACTION_TYPES = {
+  MACHINE_POWER_ON: 'Machine powered on',
+  MACHINE_POWER_OFF: 'Machine powered off',
+  WATER_PRODUCTION_ON: 'Water production enabled',
+  WATER_PRODUCTION_OFF: 'Water production disabled',
+  AUTO_SWITCH_ON: 'Auto switch enabled',
+  AUTO_SWITCH_OFF: 'Auto switch disabled',
+  VIDEO_FEED_START: 'Video feed started',
+  VIDEO_FEED_STOP: 'Video feed stopped',
+  CAMERA_CHANGED: 'Camera changed',
+  REFRESH_FEED: 'Video feed refreshed',
+};
+
 const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -73,9 +101,32 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
   const [videoFeedActive, setVideoFeedActive] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [videoContainerRef, setVideoContainerRef] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [actionHistory, setActionHistory] = useState([
+    {
+      id: 1,
+      action: "Water production enabled",
+      description: "Manual control via remote interface",
+      timestamp: "2024-08-08 14:30:00",
+    },
+    {
+      id: 2,
+      action: "Machine powered on",
+      description: "Manual control via remote interface",
+      timestamp: "2024-08-08 14:25:00",
+    },
+    {
+      id: 3,
+      action: "Auto switch enabled",
+      description: "Automatic control configuration updated",
+      timestamp: "2024-08-08 09:15:00",
+    },
+  ]);
 
-  // Use ref to track mounted state
+  // Use refs to track mounted state and timeout
   const isMountedRef = useRef(true);
+  const refreshTimeoutRef = useRef(null);
+  const actionIdCounter = useRef(4); // Start after initial items
 
   // Listen for fullscreen changes
   useEffect(() => {
@@ -126,6 +177,10 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
+      // Clear any pending refresh timeout
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -144,6 +199,17 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
     return () => clearInterval(interval);
   }, []);
 
+  // Helper function to add action to history
+  const addAction = (action, description = "Manual control via remote interface") => {
+    const newAction = {
+      id: actionIdCounter.current++,
+      action,
+      description,
+      timestamp: getCurrentTimestamp(),
+    };
+    setActionHistory(prev => [newAction, ...prev.slice(0, 9)]); // Keep last 10 actions
+  };
+
   if (!unit) {
     return (
       <div className="min-h-screen bg-blue-50 dark:bg-gray-950 p-6 flex items-center justify-center">
@@ -151,7 +217,6 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
             Unit Not Found
           </h1>
-          {/* FIX 2: Restored dual behavior based on propUnit */}
           <button
             type="button"
             onClick={() => (propUnit ? navigate("/grid-view") : navigate(-1))}
@@ -170,15 +235,19 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
     // Play appropriate audio based on power state
     if (checked) {
       playSound("power-on.mp3", settings.soundEnabled, settings.volume);
+      addAction(ACTION_TYPES.MACHINE_POWER_ON, "Machine turned on via remote interface");
     } else {
       playSound("power-off.mp3", settings.soundEnabled, settings.volume);
+      addAction(ACTION_TYPES.MACHINE_POWER_OFF, "Machine turned off via remote interface");
     }
 
-    // FIX 3: Removed prop mutation - status is now driven by machineOn state
     // When machine control is toggled to "off", water production and automatic controls should both automatically toggle to "off"
     if (!checked) {
       setWaterProductionOn(false);
       setAutoSwitchEnabled(false);
+      // Add cascade actions
+      addAction(ACTION_TYPES.WATER_PRODUCTION_OFF, "Cascaded off - machine power off");
+      addAction(ACTION_TYPES.AUTO_SWITCH_OFF, "Cascaded off - machine power off");
     }
   };
 
@@ -188,23 +257,34 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
     // Play appropriate audio based on water state
     if (checked) {
       playSound("water-on.mp3", settings.soundEnabled, settings.volume);
+      addAction(ACTION_TYPES.WATER_PRODUCTION_ON, "Water production enabled via remote interface");
     } else {
       playSound("water-off.mp3", settings.soundEnabled, settings.volume);
+      addAction(ACTION_TYPES.WATER_PRODUCTION_OFF, "Water production disabled via remote interface");
     }
 
     // When machine control is toggled to "on" and water production is switched to "off", automatic control should automatically toggle to "off"
     if (machineOn && !checked) {
       setAutoSwitchEnabled(false);
+      addAction(ACTION_TYPES.AUTO_SWITCH_OFF, "Cascaded off - water production off");
     }
   };
 
   const handleAutoSwitchToggle = (checked) => {
     setAutoSwitchEnabled(checked);
     playSound("cool-tones.mp3", settings.soundEnabled, settings.volume);
+    
+    if (checked) {
+      addAction(ACTION_TYPES.AUTO_SWITCH_ON, "Auto switch enabled via remote interface");
+    } else {
+      addAction(ACTION_TYPES.AUTO_SWITCH_OFF, "Auto switch disabled via remote interface");
+    }
   };
 
   const handleCameraChange = (cameraId) => {
+    const cameraName = availableCameras.find(cam => cam.id === cameraId)?.name || cameraId;
     setSelectedCamera(cameraId);
+    addAction(ACTION_TYPES.CAMERA_CHANGED, `Switched to ${cameraName}`);
   };
 
   const toggleVideoFeed = () => {
@@ -215,10 +295,40 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
     if (newVideoFeedState) {
       // Starting video feed - play video-off.mp3
       playSound("video-off.mp3", settings.soundEnabled, settings.volume);
+      addAction(ACTION_TYPES.VIDEO_FEED_START, "Live video feed started");
     } else {
       // Stopping video feed - play video-on.mp3
       playSound("video-on.mp3", settings.soundEnabled, settings.volume);
+      addAction(ACTION_TYPES.VIDEO_FEED_STOP, "Live video feed stopped");
     }
+  };
+
+  const handleRefreshFeed = () => {
+    if (!videoFeedActive || !isConnected || isRefreshing) {
+      return;
+    }
+    
+    // Set refreshing state to trigger animation
+    setIsRefreshing(true);
+    
+    // Record the action
+    addAction(ACTION_TYPES.REFRESH_FEED, "Video feed refreshed");
+    
+    // Simulate refresh with a timeout (like fetching a new frame)
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current);
+    }
+    
+    refreshTimeoutRef.current = setTimeout(() => {
+      if (isMountedRef.current) {
+        setIsRefreshing(false);
+      }
+    }, 800); // Animation lasts 800ms
+    
+    // In a real implementation, this would:
+    // 1. Request a new frame from the camera
+    // 2. Update the video stream
+    // 3. The loading state would be shown during the fetch
   };
 
   const toggleFullscreen = async () => {
@@ -289,7 +399,6 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
           <div className="flex items-center space-x-4 mt-4">
             <ConnectionPill isConnected={isConnected} />
             <div className="flex items-center space-x-2">
-              {/* FIX 3: Status driven by machineOn state instead of mutating unit.status */}
               {machineOn ? (
                 <CheckCircle className="h-6 w-6 text-green-500" />
               ) : (
@@ -660,44 +769,60 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
               {/* Video Feed Display Area */}
               <div
                 ref={setVideoContainerRef}
-                className={`relative bg-gray-400 dark:bg-gray-800 rounded-lg aspect-video flex items-center justify-center border-2 border-dashed border-gray-400 dark:border-gray-600 ${
+                className={`relative bg-gray-400 dark:bg-gray-800 rounded-lg aspect-video flex items-center justify-center border-2 border-dashed border-gray-400 dark:border-gray-600 overflow-hidden ${
                   isFullscreen ? "bg-black" : ""
-                }`}
+                } ${isRefreshing ? "animate-pulse" : ""}`}
               >
                 {videoFeedActive && isConnected ? (
                   <div className="text-center">
-                    <div className="animate-pulse">
-                      <Camera className="h-12 w-12 text-white dark:text-purple-400 mx-auto mb-2" />
-                      <p className="text-white dark:text-purple-400 font-medium">
-                        Live Feed Active
-                      </p>
-                      <p className="text-sm text-white dark:text-gray-400 mt-1">
-                        {
-                          availableCameras.find(
-                            (cam) => cam.id === selectedCamera,
-                          )?.name
-                        }
-                      </p>
-                      {availableCameras.find((cam) => cam.id === selectedCamera)
-                        ?.position && (
-                        <p className="text-xs text-gray-200 dark:text-gray-500 mt-1">
-                          {
-                            availableCameras.find(
-                              (cam) => cam.id === selectedCamera,
-                            )?.position
-                          }
+                    {isRefreshing ? (
+                      // Loading state during refresh
+                      <>
+                        <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-500 border-t-transparent mx-auto mb-3" />
+                        <p className="text-white dark:text-purple-400 font-medium">
+                          Refreshing feed...
                         </p>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {}}
-                      className="mt-4 px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg transition-colors flex items-center space-x-1 mx-auto"
-                      data-testid="button-refresh-feed"
-                    >
-                      <RotateCcw className="h-3 w-3" />
-                      <span>Refresh</span>
-                    </button>
+                        <p className="text-sm text-white dark:text-gray-400 mt-1">
+                          Fetching latest frame
+                        </p>
+                      </>
+                    ) : (
+                      // Normal active feed
+                      <>
+                        <div className="animate-pulse">
+                          <Camera className="h-12 w-12 text-white dark:text-purple-400 mx-auto mb-2" />
+                          <p className="text-white dark:text-purple-400 font-medium">
+                            Live Feed Active
+                          </p>
+                          <p className="text-sm text-white dark:text-gray-400 mt-1">
+                            {
+                              availableCameras.find(
+                                (cam) => cam.id === selectedCamera,
+                              )?.name
+                            }
+                          </p>
+                          {availableCameras.find((cam) => cam.id === selectedCamera)
+                            ?.position && (
+                            <p className="text-xs text-gray-200 dark:text-gray-500 mt-1">
+                              {
+                                availableCameras.find(
+                                  (cam) => cam.id === selectedCamera,
+                                )?.position
+                              }
+                            </p>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleRefreshFeed}
+                          className="mt-4 px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg transition-colors flex items-center space-x-1 mx-auto"
+                          data-testid="button-refresh-feed"
+                        >
+                          <RotateCcw className={`h-3 w-3 ${isRefreshing ? "animate-spin" : ""}`} />
+                          <span>{isRefreshing ? "Refreshing..." : "Refresh"}</span>
+                        </button>
+                      </>
+                    )}
                   </div>
                 ) : (
                   <div className="text-center">
@@ -771,55 +896,44 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
           </CardContent>
         </Card>
 
-        {/* Control History */}
+        {/* Control History - Now dynamic */}
         <Card className="bg-white dark:bg-gray-900 mt-6">
           <CardHeader>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               Recent Control Actions
             </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Last {actionHistory.length} actions recorded
+            </p>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700">
-                <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    Water production enabled
-                  </p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                    Manual control via remote interface
-                  </p>
-                </div>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  2024-08-08 14:30
-                </span>
+            {actionHistory.length === 0 ? (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                <p>No actions recorded yet</p>
+                <p className="text-sm mt-1">Actions will appear here when you use the controls above</p>
               </div>
-              <div className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700">
-                <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    Machine powered on
-                  </p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                    Manual control via remote interface
-                  </p>
-                </div>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  2024-08-08 14:25
-                </span>
+            ) : (
+              <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                {actionHistory.map((item) => (
+                  <div 
+                    key={item.id} 
+                    className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                        {item.action}
+                      </p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                        {item.description}
+                      </p>
+                    </div>
+                    <span className="text-xs text-gray-500 dark:text-gray-400 ml-4 whitespace-nowrap">
+                      {item.timestamp}
+                    </span>
+                  </div>
+                ))}
               </div>
-              <div className="flex items-center justify-between py-2">
-                <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    Auto switch enabled
-                  </p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                    Automatic control configuration updated
-                  </p>
-                </div>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  2024-08-08 09:15
-                </span>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>
