@@ -6,7 +6,7 @@ import {
   beforeEach,
   afterEach,
 } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import RemoteControl from "../components/RemoteControl";
 import { AuthProvider } from "../context/AuthContext";
@@ -177,10 +177,13 @@ describe("RemoteControl Component", () => {
     mockLocationState = { unit: mockUnit };
     // Reset permissions mock to default
     canControlUnits.mockReturnValue(true);
+    // Reset timers
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers();
   });
 
   describe("Component Rendering", () => {
@@ -343,7 +346,6 @@ describe("RemoteControl Component", () => {
 
   describe("Permission Checks - No Control Permission", () => {
     it("should disable all switches and hide confirm dialogs when user lacks control permission", () => {
-      // Use mockReturnValue instead of mockReturnValueOnce to handle React 19 + StrictMode
       canControlUnits.mockReturnValue(false);
 
       render(
@@ -468,6 +470,75 @@ describe("RemoteControl Component", () => {
         expect(true).toBe(true);
       }
     });
+
+    it("should show refresh button when video feed is active", () => {
+      render(
+        <TestWrapper>
+          <RemoteControl unit={mockUnit} />
+        </TestWrapper>,
+      );
+
+      // Start video feed
+      const buttons = screen.getAllByRole("button");
+      const videoButton = buttons.find(btn => 
+        btn.textContent?.includes("Start Feed")
+      );
+      
+      if (videoButton) {
+        fireEvent.click(videoButton);
+        
+        // Refresh button should appear
+        const refreshButtons = screen.getAllByTestId("button-refresh-feed");
+        expect(refreshButtons.length).toBeGreaterThan(0);
+      }
+    });
+
+    it("should trigger refresh animation when refresh button is clicked", async () => {
+      render(
+        <TestWrapper>
+          <RemoteControl unit={mockUnit} />
+        </TestWrapper>,
+      );
+
+      // Start video feed first
+      const buttons = screen.getAllByRole("button");
+      const videoButton = buttons.find(btn => 
+        btn.textContent?.includes("Start Feed")
+      );
+      
+      if (videoButton) {
+        fireEvent.click(videoButton);
+        
+        // Find and click refresh button
+        const refreshButton = screen.getByTestId("button-refresh-feed");
+        expect(refreshButton).toBeInTheDocument();
+        
+        fireEvent.click(refreshButton);
+        
+        // Should show refreshing state
+        expect(screen.getByText(/Refreshing feed.../i)).toBeInTheDocument();
+        
+        // Fast-forward timers
+        act(() => {
+          vi.advanceTimersByTime(800);
+        });
+        
+        // Should return to normal state
+        expect(screen.getByText(/Live Feed Active/i)).toBeInTheDocument();
+      }
+    });
+
+    it("should not allow refresh when video feed is inactive", () => {
+      render(
+        <TestWrapper>
+          <RemoteControl unit={mockUnit} />
+        </TestWrapper>,
+      );
+
+      // Refresh button should not be visible when feed is inactive
+      const refreshButtons = screen.queryAllByTestId("button-refresh-feed");
+      expect(refreshButtons.length).toBe(0);
+    });
   });
 
   describe("Camera Selection", () => {
@@ -564,7 +635,6 @@ describe("RemoteControl Component", () => {
     });
 
     it("should respect sound settings when playing audio", () => {
-      // Override settings for this test by passing custom settings to TestWrapper
       render(
         <TestWrapper 
           role="admin" 
@@ -575,19 +645,161 @@ describe("RemoteControl Component", () => {
       );
 
       const actionButtons = screen.getAllByTestId("alert-dialog-action");
-      
-      // Try to toggle machine
       fireEvent.click(actionButtons[0]);
       
-      // Verify correct sound settings were used
       expect(playSound).toHaveBeenCalledWith("power-off.mp3", false, 0.3);
+    });
+  });
+
+  describe("Action History Tracking", () => {
+    it("should record machine power toggle in action history", () => {
+      render(
+        <TestWrapper role="admin">
+          <RemoteControl unit={mockUnit} />
+        </TestWrapper>,
+      );
+
+      const actionButtons = screen.getAllByTestId("alert-dialog-action");
+      fireEvent.click(actionButtons[0]);
+      
+      // Check that action appears in history
+      expect(screen.getByText(/Machine powered off/i)).toBeInTheDocument();
+      expect(screen.getByText(/Machine turned off via remote interface/i)).toBeInTheDocument();
+    });
+
+    it("should record water production toggle in action history", () => {
+      render(
+        <TestWrapper role="admin">
+          <RemoteControl unit={mockUnit} />
+        </TestWrapper>,
+      );
+
+      const actionButtons = screen.getAllByTestId("alert-dialog-action");
+      fireEvent.click(actionButtons[1]);
+      
+      expect(screen.getByText(/Water production disabled/i)).toBeInTheDocument();
+      expect(screen.getByText(/Water production disabled via remote interface/i)).toBeInTheDocument();
+    });
+
+    it("should record auto switch toggle in action history", () => {
+      const unitWithAutoOff = { ...mockUnit, autoSwitchEnabled: false };
+      render(
+        <TestWrapper role="admin">
+          <RemoteControl unit={unitWithAutoOff} />
+        </TestWrapper>,
+      );
+
+      const actionButtons = screen.getAllByTestId("alert-dialog-action");
+      fireEvent.click(actionButtons[2]);
+      
+      expect(screen.getByText(/Auto switch enabled/i)).toBeInTheDocument();
+      expect(screen.getByText(/Auto switch enabled via remote interface/i)).toBeInTheDocument();
+    });
+
+    it("should record camera change in action history", () => {
+      render(
+        <TestWrapper role="admin">
+          <RemoteControl unit={mockUnit} />
+        </TestWrapper>,
+      );
+
+      const select = screen.getByTestId("select-camera");
+      fireEvent.change(select, { target: { value: "cam2" } });
+      
+      expect(screen.getByText(/Camera changed/i)).toBeInTheDocument();
+      expect(screen.getByText(/Switched to Alternate Cam 1/i)).toBeInTheDocument();
+    });
+
+    it("should record video feed toggle in action history", () => {
+      render(
+        <TestWrapper role="admin">
+          <RemoteControl unit={mockUnit} />
+        </TestWrapper>,
+      );
+
+      const buttons = screen.getAllByRole("button");
+      const videoButton = buttons.find(btn => 
+        btn.textContent?.includes("Start Feed")
+      );
+      
+      if (videoButton) {
+        fireEvent.click(videoButton);
+        expect(screen.getByText(/Video feed started/i)).toBeInTheDocument();
+        
+        fireEvent.click(videoButton);
+        expect(screen.getByText(/Video feed stopped/i)).toBeInTheDocument();
+      }
+    });
+
+    it("should record refresh action in history when refresh button is clicked", () => {
+      render(
+        <TestWrapper role="admin">
+          <RemoteControl unit={mockUnit} />
+        </TestWrapper>,
+      );
+
+      // Start video feed first
+      const buttons = screen.getAllByRole("button");
+      const videoButton = buttons.find(btn => 
+        btn.textContent?.includes("Start Feed")
+      );
+      
+      if (videoButton) {
+        fireEvent.click(videoButton);
+        
+        // Click refresh
+        const refreshButton = screen.getByTestId("button-refresh-feed");
+        fireEvent.click(refreshButton);
+        
+        // Should record refresh action
+        expect(screen.getByText(/Video feed refreshed/i)).toBeInTheDocument();
+        
+        // Fast-forward timers to complete animation
+        act(() => {
+          vi.advanceTimersByTime(800);
+        });
+      }
+    });
+
+    it("should show action count in history header", () => {
+      render(
+        <TestWrapper role="admin">
+          <RemoteControl unit={mockUnit} />
+        </TestWrapper>,
+      );
+
+      // Initial actions: 3 hardcoded
+      expect(screen.getByText(/Last 3 actions recorded/i)).toBeInTheDocument();
+      
+      // Add an action
+      const actionButtons = screen.getAllByTestId("alert-dialog-action");
+      fireEvent.click(actionButtons[0]);
+      
+      // Should show 4 actions now
+      expect(screen.getByText(/Last 4 actions recorded/i)).toBeInTheDocument();
+    });
+
+    it("should keep only last 10 actions in history", () => {
+      render(
+        <TestWrapper role="admin">
+          <RemoteControl unit={mockUnit} />
+        </TestWrapper>,
+      );
+
+      const actionButtons = screen.getAllByTestId("alert-dialog-action");
+      
+      // Add 10 more actions (total 13)
+      for (let i = 0; i < 10; i++) {
+        fireEvent.click(actionButtons[0]);
+      }
+      
+      // Should only show 10 most recent
+      expect(screen.getByText(/Last 10 actions recorded/i)).toBeInTheDocument();
     });
   });
 
   describe("Disabled Controls When Disconnected", () => {
     it("should disable controls when connection is lost", () => {
-      // Note: The component sets isConnected to true with useState and never updates it
-      // This is a known limitation - the connection status is static in this component
       render(
         <TestWrapper>
           <RemoteControl unit={mockUnit} />
