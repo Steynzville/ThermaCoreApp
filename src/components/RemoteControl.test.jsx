@@ -662,9 +662,9 @@ describe("RemoteControl Component", () => {
       const actionButtons = screen.getAllByTestId("alert-dialog-action");
       fireEvent.click(actionButtons[0]);
       
-      // Check that action appears in history
-      expect(screen.getByText(/Machine powered off/i)).toBeInTheDocument();
-      expect(screen.getByText(/Machine turned off via remote interface/i)).toBeInTheDocument();
+      // Check that action appears in history - be specific about which element
+      expect(screen.getByText("Machine powered off")).toBeInTheDocument();
+      expect(screen.getByText("Machine turned off via remote interface")).toBeInTheDocument();
     });
 
     it("should record water production toggle in action history", () => {
@@ -677,8 +677,9 @@ describe("RemoteControl Component", () => {
       const actionButtons = screen.getAllByTestId("alert-dialog-action");
       fireEvent.click(actionButtons[1]);
       
-      expect(screen.getByText(/Water production disabled/i)).toBeInTheDocument();
-      expect(screen.getByText(/Water production disabled via remote interface/i)).toBeInTheDocument();
+      // Use exact text matching instead of regex
+      expect(screen.getByText("Water production disabled")).toBeInTheDocument();
+      expect(screen.getByText("Water production disabled via remote interface")).toBeInTheDocument();
     });
 
     it("should record auto switch toggle in action history", () => {
@@ -692,8 +693,9 @@ describe("RemoteControl Component", () => {
       const actionButtons = screen.getAllByTestId("alert-dialog-action");
       fireEvent.click(actionButtons[2]);
       
-      expect(screen.getByText(/Auto switch enabled/i)).toBeInTheDocument();
-      expect(screen.getByText(/Auto switch enabled via remote interface/i)).toBeInTheDocument();
+      // Use exact text matching instead of regex
+      expect(screen.getByText("Auto switch enabled")).toBeInTheDocument();
+      expect(screen.getByText("Auto switch enabled via remote interface")).toBeInTheDocument();
     });
 
     it("should record camera change in action history", () => {
@@ -706,8 +708,8 @@ describe("RemoteControl Component", () => {
       const select = screen.getByTestId("select-camera");
       fireEvent.change(select, { target: { value: "cam2" } });
       
-      expect(screen.getByText(/Camera changed/i)).toBeInTheDocument();
-      expect(screen.getByText(/Switched to Alternate Cam 1/i)).toBeInTheDocument();
+      expect(screen.getByText("Camera changed")).toBeInTheDocument();
+      expect(screen.getByText("Switched to Alternate Cam 1")).toBeInTheDocument();
     });
 
     it("should record video feed toggle in action history", () => {
@@ -724,10 +726,12 @@ describe("RemoteControl Component", () => {
       
       if (videoButton) {
         fireEvent.click(videoButton);
-        expect(screen.getByText(/Video feed started/i)).toBeInTheDocument();
+        expect(screen.getByText("Video feed started")).toBeInTheDocument();
+        expect(screen.getByText("Live video feed started")).toBeInTheDocument();
         
         fireEvent.click(videoButton);
-        expect(screen.getByText(/Video feed stopped/i)).toBeInTheDocument();
+        expect(screen.getByText("Video feed stopped")).toBeInTheDocument();
+        expect(screen.getByText("Live video feed stopped")).toBeInTheDocument();
       }
     });
 
@@ -751,8 +755,9 @@ describe("RemoteControl Component", () => {
         const refreshButton = screen.getByTestId("button-refresh-feed");
         fireEvent.click(refreshButton);
         
-        // Should record refresh action
-        expect(screen.getByText(/Video feed refreshed/i)).toBeInTheDocument();
+        // Should record refresh action - use exact text matching
+        expect(screen.getByText("Video feed refreshed")).toBeInTheDocument();
+        expect(screen.getByText("Video feed refreshed")).toBeInTheDocument(); // Both title and description
         
         // Fast-forward timers to complete animation
         act(() => {
@@ -769,14 +774,18 @@ describe("RemoteControl Component", () => {
       );
 
       // Initial actions: 3 hardcoded
-      expect(screen.getByText(/Last 3 actions recorded/i)).toBeInTheDocument();
+      // The header shows "Last X actions recorded" with X being the count
+      const headerText = screen.getByText(/Last \d+ actions recorded/i);
+      expect(headerText).toBeInTheDocument();
+      expect(headerText.textContent).toMatch(/Last 3 actions recorded/);
       
       // Add an action
       const actionButtons = screen.getAllByTestId("alert-dialog-action");
       fireEvent.click(actionButtons[0]);
       
       // Should show 4 actions now
-      expect(screen.getByText(/Last 4 actions recorded/i)).toBeInTheDocument();
+      const updatedHeader = screen.getByText(/Last \d+ actions recorded/i);
+      expect(updatedHeader.textContent).toMatch(/Last 4 actions recorded/);
     });
 
     it("should keep only last 10 actions in history", () => {
@@ -794,7 +803,8 @@ describe("RemoteControl Component", () => {
       }
       
       // Should only show 10 most recent
-      expect(screen.getByText(/Last 10 actions recorded/i)).toBeInTheDocument();
+      const headerText = screen.getByText(/Last \d+ actions recorded/i);
+      expect(headerText.textContent).toMatch(/Last 10 actions recorded/);
     });
   });
 
