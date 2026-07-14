@@ -1,4 +1,4 @@
-name: Isolated Protocol WebSocket Test
+name: Protocol WebSocket Test
 
 permissions:
   contents: read
