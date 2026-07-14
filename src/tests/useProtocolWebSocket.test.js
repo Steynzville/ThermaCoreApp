@@ -40,7 +40,7 @@ vi.mock("../services/protocolWebSocketService", () => {
   };
 });
 
-// Reset all mock defaults before each test
+// Reset all mock defaults
 const resetProtocolMockDefaults = () => {
   for (const ws of Object.values(protocolWS)) {
     ws.connect.mockReset().mockResolvedValue(true);
@@ -55,9 +55,7 @@ const resetProtocolMockDefaults = () => {
   }
 };
 
-// Simple mount helper - just flushes pending promises from the auto-connect effect.
-// We don't need to wait for the connection to be established since the tests
-// only care about the hook mounting without OOM.
+// Simple mount helper - just flushes pending promises
 const mountAutoConnectHook = async (hook) => {
   const { result, unmount, rerender } = renderHook(hook);
 
@@ -856,6 +854,15 @@ describe("useProtocolEvent Hook", () => {
 describe("useModbusRegisters Hook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetProtocolMockDefaults();
+    // Force connected state to avoid auto-connect issues
+    protocolWS.modbus.isConnected.mockReturnValue(true);
+    protocolWS.modbus.getStatus.mockReturnValue("connected");
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    resetProtocolMockDefaults();
   });
 
   it("should initialize with empty registers", async () => {
@@ -1002,6 +1009,14 @@ describe("useModbusRegisters Hook", () => {
 describe("useOPCUANodes Hook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetProtocolMockDefaults();
+    protocolWS.opcua.isConnected.mockReturnValue(true);
+    protocolWS.opcua.getStatus.mockReturnValue("connected");
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    resetProtocolMockDefaults();
   });
 
   it("should initialize with an empty Map of node values", async () => {
@@ -1129,6 +1144,14 @@ describe("useOPCUANodes Hook", () => {
 describe("useDNP3Points Hook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetProtocolMockDefaults();
+    protocolWS.dnp3.isConnected.mockReturnValue(true);
+    protocolWS.dnp3.getStatus.mockReturnValue("connected");
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    resetProtocolMockDefaults();
   });
 
   it("should initialize with empty points", async () => {
@@ -1252,6 +1275,14 @@ describe("useDNP3Points Hook", () => {
 describe("useMQTTMessages Hook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetProtocolMockDefaults();
+    protocolWS.mqtt.isConnected.mockReturnValue(true);
+    protocolWS.mqtt.getStatus.mockReturnValue("connected");
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    resetProtocolMockDefaults();
   });
 
   it("should initialize with an empty messages array", async () => {
