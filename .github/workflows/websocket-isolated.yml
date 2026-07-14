@@ -1,0 +1,30 @@
+name: WebSocket Isolated
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.4.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+      - uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-store-
+      - run: pnpm install --frozen-lockfile
+      - run: |
+          echo "Running useProtocolWebSocket test..."
+          pnpm vitest run src/tests/useProtocolWebSocket.test.js --reporter=verbose --testTimeout=5000 --no-coverage
+        env:
+          NODE_OPTIONS: "--max-old-space-size=512"
