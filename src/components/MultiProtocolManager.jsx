@@ -11,32 +11,31 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import DNP3MonitoringDashboard from "@/components/protocol/DNP3MonitoringDashboard";
-import ModbusDeviceModal from "@/components/protocol/ModbusDeviceModal";
-import MQTTManagementPanel from "@/components/protocol/MQTTManagementPanel";
-import OPCUANodeBrowser from "@/components/protocol/OPCUANodeBrowser";
-import ProtocolWizard from "@/components/protocol/ProtocolWizard";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import DNP3MonitoringDashboard from "./protocol/DNP3MonitoringDashboard";
+import ModbusDeviceModal from "./protocol/ModbusDeviceModal";
+import MQTTManagementPanel from "./protocol/MQTTManagementPanel";
+import OPCUANodeBrowser from "./protocol/OPCUANodeBrowser";
+import ProtocolWizard from "./protocol/ProtocolWizard";
+import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from "./ui/dialog";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { apiGetJson } from "@/utils/apiFetch";
-import "../styles/theme.css";
+} from "./ui/select";
+import { apiGetJson } from "../utils/apiFetch";
 
 const MultiProtocolManager = () => {
   const [protocolsStatus, setProtocolsStatus] = useState(null);
@@ -46,7 +45,6 @@ const MultiProtocolManager = () => {
   const [newDevice, setNewDevice] = useState({});
   const [refreshing, setRefreshing] = useState(false);
 
-  // Protocol-specific modal states
   const [modbusModalOpen, setModbusModalOpen] = useState(false);
   const [selectedModbusDevice, setSelectedModbusDevice] = useState(null);
   const [opcuaBrowserOpen, setOpcuaBrowserOpen] = useState(false);
@@ -61,13 +59,11 @@ const MultiProtocolManager = () => {
     noiseLevel: 5,
   });
 
-  // Enhanced polling state management with exponential backoff and page visibility
   const [consecutiveErrors, setConsecutiveErrors] = useState(0);
   const [isPageVisible, setIsPageVisible] = useState(true);
   const [isPolling, setIsPolling] = useState(false);
   const [isMounted, setIsMounted] = useState(true);
 
-  // Page visibility handling
   useEffect(() => {
     const handleVisibilityChange = () => {
       setIsPageVisible(!document.hidden);
@@ -80,7 +76,6 @@ const MultiProtocolManager = () => {
     };
   }, []);
 
-  // Check if we're in mock mode (fallback to development mode if VITE_MOCK_MODE is not explicitly configured)
   const isMockMode =
     import.meta.env.VITE_MOCK_MODE === "true" || import.meta.env.DEV;
 
@@ -175,20 +170,18 @@ const MultiProtocolManager = () => {
     try {
       setConsecutiveErrors(0);
       const data = await fetchProtocolsStatus();
-      
-      // Only update state if component is still mounted
+
       if (isMounted) {
         setProtocolsStatus(data);
         setLoading(false);
-        
-        // Show success toast only if we had previous errors
+
         if (consecutiveErrors > 0) {
           toast.success("Protocol status loaded successfully");
         }
       }
     } catch (error) {
       if (!isMounted) return;
-      
+
       setConsecutiveErrors((prev) => prev + 1);
 
       if (!isMockMode) {
@@ -200,9 +193,8 @@ const MultiProtocolManager = () => {
         } else if (error.message?.includes("Unauthorized")) {
           errorMessage = "Session expired. Please log in again.";
         }
-        
-        // Only show toast if not in testing environment
-        if (import.meta.env.MODE !== 'test') {
+
+        if (import.meta.env.MODE !== "test") {
           toast.error(errorMessage, {
             duration: 4000,
             action: {
@@ -212,12 +204,10 @@ const MultiProtocolManager = () => {
           });
         }
       }
-      
-      // Only update loading state if still mounted
-      if (isMounted) {
-        setLoading(false);
-        setRefreshing(false);
-      }
+
+      // BUG FIX: re-throw so callers (e.g. handleRefresh) can detect failure
+      // instead of silently reporting success.
+      throw error;
     } finally {
       if (isMounted) {
         setLoading(false);
@@ -234,18 +224,17 @@ const MultiProtocolManager = () => {
 
     try {
       await loadData();
-      // Only show toast on successful refresh
+      // BUG FIX: this now only runs when loadData actually resolves.
       toast.success("Protocol status refreshed", { duration: 2000 });
     } catch (_error) {
-      // Error handling is done in loadData
+      // Error handling / toast is done in loadData; don't report success.
     } finally {
       setRefreshing(false);
     }
   }, [refreshing, isPolling, loadData]);
 
-  // Enhanced polling with exponential backoff
   useEffect(() => {
-    loadData();
+    loadData().catch(() => {});
 
     let timeoutId = null;
 
@@ -260,10 +249,12 @@ const MultiProtocolManager = () => {
       timeoutId = setTimeout(() => {
         if (isPageVisible && !isPolling && isMounted) {
           setIsPolling(true);
-          loadData().finally(() => {
-            setIsPolling(false);
-            scheduleNextPoll();
-          });
+          loadData()
+            .catch(() => {})
+            .finally(() => {
+              setIsPolling(false);
+              scheduleNextPoll();
+            });
         } else if (isMounted) {
           scheduleNextPoll();
         }
@@ -281,28 +272,27 @@ const MultiProtocolManager = () => {
     };
   }, [consecutiveErrors, isPageVisible, isPolling, isMounted, isMockMode, loadData]);
 
-  // FIXED: Use useCallback for protocol configuration handlers
   const handleProtocolConfigure = useCallback((protocolName) => {
-    switch(protocolName) {
-      case 'modbus':
-        setSelectedModbusDevice({ 
-          device_id: "default", 
-          host: "localhost", 
-          port: 502, 
-          unit_id: 1 
+    switch (protocolName) {
+      case "modbus":
+        setSelectedModbusDevice({
+          device_id: "default",
+          host: "localhost",
+          port: 502,
+          unit_id: 1,
         });
         setModbusModalOpen(true);
         break;
-      case 'opcua':
+      case "opcua":
         setOpcuaBrowserOpen(true);
         break;
-      case 'dnp3':
+      case "dnp3":
         setDnp3DashboardOpen(true);
         break;
-      case 'mqtt':
+      case "mqtt":
         setMqttPanelOpen(true);
         break;
-      case 'simulator':
+      case "simulator":
         setSimulatorDialogOpen(true);
         break;
       default:
@@ -344,7 +334,6 @@ const MultiProtocolManager = () => {
     toast.success(`New ${selectedProtocol} device configuration saved.`);
   };
 
-  // FIXED: Show loading with minimum duration to prevent flicker
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen" data-testid="loading-state">
@@ -358,7 +347,6 @@ const MultiProtocolManager = () => {
     );
   }
 
-  // FIXED: Error state with proper test ID
   if (!protocolsStatus) {
     return (
       <div className="flex items-center justify-center min-h-screen px-4" data-testid="error-state">
@@ -373,7 +361,7 @@ const MultiProtocolManager = () => {
               : "Could not retrieve protocol status."}
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button onClick={() => loadData()} disabled={isPolling}>
+            <Button onClick={() => loadData().catch(() => {})} disabled={isPolling}>
               <RefreshCw
                 className={`h-4 w-4 mr-2 ${isPolling ? "animate-spin" : ""}`}
               />
@@ -401,7 +389,6 @@ const MultiProtocolManager = () => {
 
   return (
     <div className="min-h-screen bg-background w-full transition-all duration-300">
-      {/* Header */}
       <div className="bg-background border-b border-border px-4 sm:px-6 lg:px-8 py-4">
         <div className="max-w-[2000px] mx-auto">
           <div className="flex items-center gap-3">
@@ -418,10 +405,7 @@ const MultiProtocolManager = () => {
             </div>
             <div className="flex flex-wrap items-center gap-2 sm:gap-4">
               {isMockMode && (
-                <Badge
-                  variant="warning"
-                  className="font-semibold"
-                >
+                <Badge variant="warning" className="font-semibold">
                   Demo Mode
                 </Badge>
               )}
@@ -456,10 +440,8 @@ const MultiProtocolManager = () => {
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="px-4 sm:px-6 lg:px-8 py-6 pb-24">
         <div className="max-w-[2000px] mx-auto space-y-4 sm:space-y-6">
-          {/* Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
               <CardContent className="p-4 sm:p-6">
@@ -533,7 +515,6 @@ const MultiProtocolManager = () => {
             </Card>
           </div>
 
-          {/* Protocol Status Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {Object.entries(protocolsStatus.protocols).map(
               ([protocolName, protocol]) => (
@@ -584,7 +565,6 @@ const MultiProtocolManager = () => {
                         </div>
                       )}
 
-                      {/* FIXED: Error display with proper styling */}
                       {protocol.error && (
                         <div className="p-2 bg-destructive/10 border border-destructive/20 rounded-md">
                           <p className="text-xs text-destructive font-medium break-words">
@@ -598,7 +578,6 @@ const MultiProtocolManager = () => {
                         </div>
                       )}
 
-                      {/* FIXED: Metrics with test IDs */}
                       {protocol.metrics && (
                         <div className="p-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-md" data-testid="metrics-container">
                           <p className="text-xs font-semibold text-slate-800 dark:text-gray-200 mb-1">
@@ -619,7 +598,6 @@ const MultiProtocolManager = () => {
                         </div>
                       )}
 
-                      {/* FIXED: Configure buttons with proper event handlers */}
                       <div className="flex gap-2 pt-2">
                         <Button
                           size="sm"
@@ -648,7 +626,6 @@ const MultiProtocolManager = () => {
             )}
           </div>
 
-          {/* Add Device Button - Opens Wizard */}
           <Button
             className="fixed bottom-6 right-6 rounded-full w-14 h-14 shadow-lg z-50"
             aria-label="Add new device"
@@ -657,7 +634,6 @@ const MultiProtocolManager = () => {
             <Plus className="h-6 w-6" />
           </Button>
 
-          {/* Legacy Add Device Dialog (keeping for compatibility) */}
           <Dialog open={isAddDeviceOpen} onOpenChange={setIsAddDeviceOpen}>
             <DialogContent className="max-w-md mx-4 sm:mx-auto">
               <DialogHeader>
@@ -739,7 +715,6 @@ const MultiProtocolManager = () => {
             </DialogContent>
           </Dialog>
 
-          {/* Protocol-specific modals - FIXED: Properly controlled with open prop */}
           <ModbusDeviceModal
             device={selectedModbusDevice}
             isOpen={modbusModalOpen}
