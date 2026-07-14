@@ -187,10 +187,7 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
   // Simulate connection status changes (for demo/development)
   useEffect(() => {
     // This would normally be driven by WebSocket events
-    // For now, we'll keep it connected with a periodic check
     const interval = setInterval(() => {
-      // In a real implementation, this would check actual connection status
-      // For now, we'll just keep it true to avoid showing disconnection warnings
       if (isMountedRef.current) {
         setIsConnected(true);
       }
@@ -207,7 +204,12 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
       description,
       timestamp: getCurrentTimestamp(),
     };
-    setActionHistory(prev => [newAction, ...prev.slice(0, 9)]); // Keep last 10 actions
+    // Use functional update to ensure we're working with the latest state
+    setActionHistory(prev => {
+      const updated = [newAction, ...prev];
+      // Keep only last 10 actions
+      return updated.slice(0, 10);
+    });
   };
 
   if (!unit) {
@@ -314,16 +316,18 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
     // Record the action
     addAction(ACTION_TYPES.REFRESH_FEED, "Video feed refreshed");
     
-    // Simulate refresh with a timeout (like fetching a new frame)
+    // Clear any existing timeout
     if (refreshTimeoutRef.current) {
       clearTimeout(refreshTimeoutRef.current);
     }
     
+    // Simulate refresh with a timeout (like fetching a new frame)
     refreshTimeoutRef.current = setTimeout(() => {
       if (isMountedRef.current) {
         setIsRefreshing(false);
+        refreshTimeoutRef.current = null;
       }
-    }, 800); // Animation lasts 800ms
+    }, 800);
     
     // In a real implementation, this would:
     // 1. Request a new frame from the camera
@@ -815,7 +819,8 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
                         <button
                           type="button"
                           onClick={handleRefreshFeed}
-                          className="mt-4 px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg transition-colors flex items-center space-x-1 mx-auto"
+                          disabled={isRefreshing}
+                          className="mt-4 px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg transition-colors flex items-center space-x-1 mx-auto disabled:opacity-50 disabled:cursor-not-allowed"
                           data-testid="button-refresh-feed"
                         >
                           <RotateCcw className={`h-3 w-3 ${isRefreshing ? "animate-spin" : ""}`} />
