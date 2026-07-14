@@ -2,13 +2,17 @@
  * Custom React Hook for Real-Time SCADA Data
  *
  * Provides easy integration of WebSocket-based real-time data
- * with automatic reconnection and tenant-aware filtering.
+ * with automatic reconnection (exponential backoff) and
+ * tenant-aware filtering.
  */
 
 import { useEffect, useRef, useState } from "react";
 import { useTenant } from "../context/TenantContext";
 import scadaService from "../services/scadaService";
 import websocketService from "../services/websocketService";
+
+const BASE_RECONNECT_DELAY_MS = 1000;
+const MAX_RECONNECT_DELAY_MS = 30000;
 
 /**
  * Hook for real-time SCADA metrics
@@ -24,13 +28,28 @@ export const useRealtimeMetrics = ({
   useMockData = import.meta.env.DEV,
 } = {}) => {
   const { currentTenant } = useTenant();
+  // IMPORTANT: only depend on the primitive tenant id, never the tenant
+  // object itself. `currentTenant` is a new object reference on every
+  // provider render even when the id hasn't changed, which previously
+  // caused the connection effect to tear down/reconnect on every render
+  // (an effective infinite loop under React 18 strict/dev re-renders).
+  const tenantId = currentTenant?.id || null;
+
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState("disconnected");
+
   const fallbackIntervalRef = useRef(null);
+  const reconnectTimeoutRef = useRef(null);
+  const reconnectAttemptsRef = useRef(0);
   const isMountedRef = useRef(true);
   const isConnectingRef = useRef(false); // Prevent race conditions
+  const tenantIdRef = useRef(tenantId);
+
+  useEffect(() => {
+    tenantIdRef.current = tenantId;
+  }, [tenantId]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -45,54 +64,90 @@ export const useRealtimeMetrics = ({
 
     let unsubscribe;
     let statusUnsubscribe;
+    let cancelled = false;
 
-    const setupConnection = async () => {
-      // Prevent duplicate connection attempts
-      if (isConnectingRef.current) {
-        return;
-      }
-
-      isConnectingRef.current = true;
-
+    const fetchMetricsOnce = async () => {
       try {
-        setLoading(true);
-
-        // Subscribe to connection status
-        statusUnsubscribe = websocketService.onStatusChange((status) => {
-          if (isMountedRef.current) {
-            setConnectionStatus(status);
-          }
-        });
-
-        // Connect to WebSocket with tenant context
-        const tenantId = currentTenant?.id || null;
-        await websocketService.connect(tenantId);
-
-        // Subscribe to metrics stream
-        unsubscribe = websocketService.subscribe("metrics", (data) => {
-          if (isMountedRef.current) {
-            setMetrics(data);
-            setError(null);
-            setLoading(false);
-          }
-        });
-
-        // Initial data fetch
         if (useMockData) {
-          setMetrics(scadaService.generateMockMetrics());
-          setLoading(false);
-        } else {
-          const result = await scadaService.getCurrentMetrics(tenantId);
-          if (result.success && isMountedRef.current) {
-            setMetrics(result.data);
+          if (isMountedRef.current) {
+            setMetrics(scadaService.generateMockMetrics());
             setLoading(false);
           }
+          return;
+        }
+        const result = await scadaService.getCurrentMetrics(tenantIdRef.current);
+        if (result.success && isMountedRef.current) {
+          setMetrics(result.data);
+          setError(null);
+          setLoading(false);
         }
       } catch (err) {
         if (isMountedRef.current) {
           setError(err.message);
           setLoading(false);
         }
+      }
+    };
+
+    const scheduleReconnect = () => {
+      if (!isMountedRef.current || cancelled) return;
+      const attempt = reconnectAttemptsRef.current;
+      const delay = Math.min(
+        BASE_RECONNECT_DELAY_MS * 2 ** attempt,
+        MAX_RECONNECT_DELAY_MS,
+      );
+      reconnectAttemptsRef.current += 1;
+      reconnectTimeoutRef.current = setTimeout(() => {
+        if (!cancelled) setupConnection();
+      }, delay);
+    };
+
+    const setupConnection = async () => {
+      // Prevent duplicate connection attempts
+      if (isConnectingRef.current || cancelled) {
+        return;
+      }
+
+      isConnectingRef.current = true;
+
+      try {
+        if (isMountedRef.current) setLoading(true);
+
+        // Subscribe to connection status (once)
+        if (!statusUnsubscribe) {
+          statusUnsubscribe = websocketService.onStatusChange((status) => {
+            if (isMountedRef.current) {
+              setConnectionStatus(status);
+              if (status === "connected") {
+                reconnectAttemptsRef.current = 0;
+              }
+            }
+          });
+        }
+
+        // Connect to WebSocket with tenant context
+        await websocketService.connect(tenantIdRef.current);
+
+        // Subscribe to metrics stream (once)
+        if (!unsubscribe) {
+          unsubscribe = websocketService.subscribe("metrics", (data) => {
+            if (isMountedRef.current) {
+              setMetrics(data);
+              setError(null);
+              setLoading(false);
+            }
+          });
+        }
+
+        // Initial data fetch
+        await fetchMetricsOnce();
+        reconnectAttemptsRef.current = 0;
+      } catch (err) {
+        if (isMountedRef.current) {
+          setError(err.message);
+          setLoading(false);
+        }
+        scheduleReconnect();
       } finally {
         isConnectingRef.current = false;
       }
@@ -104,17 +159,7 @@ export const useRealtimeMetrics = ({
     const setupFallbackPolling = () => {
       fallbackIntervalRef.current = setInterval(async () => {
         if (!websocketService.isConnected() && isMountedRef.current) {
-          try {
-            const tenantId = currentTenant?.id || null;
-            if (useMockData) {
-              setMetrics(scadaService.generateMockMetrics());
-            } else {
-              const result = await scadaService.getCurrentMetrics(tenantId);
-              if (result.success && isMountedRef.current) {
-                setMetrics(result.data);
-              }
-            }
-          } catch (_err) {}
+          await fetchMetricsOnce();
         }
       }, refreshInterval);
     };
@@ -123,13 +168,18 @@ export const useRealtimeMetrics = ({
 
     // Cleanup
     return () => {
+      cancelled = true;
       if (unsubscribe) unsubscribe();
       if (statusUnsubscribe) statusUnsubscribe();
       if (fallbackIntervalRef.current) {
         clearInterval(fallbackIntervalRef.current);
       }
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
     };
-  }, [autoConnect, currentTenant, refreshInterval, useMockData]);
+    // NOTE: depend on the primitive `tenantId`, not `currentTenant`.
+  }, [autoConnect, tenantId, refreshInterval, useMockData]);
 
   return {
     metrics,
@@ -149,12 +199,22 @@ export const useRealtimeProtocolStatus = ({
   useMockData = import.meta.env.DEV,
 } = {}) => {
   const { currentTenant } = useTenant();
+  const tenantId = currentTenant?.id || null;
+
   const [protocols, setProtocols] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
   const fallbackIntervalRef = useRef(null);
+  const reconnectTimeoutRef = useRef(null);
+  const reconnectAttemptsRef = useRef(0);
   const isMountedRef = useRef(true);
   const isConnectingRef = useRef(false); // Prevent race conditions
+  const tenantIdRef = useRef(tenantId);
+
+  useEffect(() => {
+    tenantIdRef.current = tenantId;
+  }, [tenantId]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -167,50 +227,78 @@ export const useRealtimeProtocolStatus = ({
     if (!autoConnect) return;
 
     let unsubscribe;
+    let cancelled = false;
 
-    const setupConnection = async () => {
-      // Prevent duplicate connection attempts
-      if (isConnectingRef.current) {
-        return;
-      }
-
-      isConnectingRef.current = true;
-
+    const fetchProtocolsOnce = async () => {
       try {
-        setLoading(true);
-
-        const tenantId = currentTenant?.id || null;
-
-        // Ensure WebSocket is connected
-        if (!websocketService.isConnected()) {
-          await websocketService.connect(tenantId);
-        }
-
-        // Subscribe to protocol status stream
-        unsubscribe = websocketService.subscribe("protocols", (data) => {
-          if (isMountedRef.current) {
-            setProtocols(data);
-            setError(null);
-            setLoading(false);
-          }
-        });
-
-        // Initial data fetch
         if (useMockData) {
-          setProtocols(scadaService.generateMockProtocolStatus());
-          setLoading(false);
-        } else {
-          const result = await scadaService.getProtocolStatus(tenantId);
-          if (result.success && isMountedRef.current) {
-            setProtocols(result.data);
+          if (isMountedRef.current) {
+            setProtocols(scadaService.generateMockProtocolStatus());
             setLoading(false);
           }
+          return;
+        }
+        const result = await scadaService.getProtocolStatus(tenantIdRef.current);
+        if (result.success && isMountedRef.current) {
+          setProtocols(result.data);
+          setError(null);
+          setLoading(false);
         }
       } catch (err) {
         if (isMountedRef.current) {
           setError(err.message);
           setLoading(false);
         }
+      }
+    };
+
+    const scheduleReconnect = () => {
+      if (!isMountedRef.current || cancelled) return;
+      const attempt = reconnectAttemptsRef.current;
+      const delay = Math.min(
+        BASE_RECONNECT_DELAY_MS * 2 ** attempt,
+        MAX_RECONNECT_DELAY_MS,
+      );
+      reconnectAttemptsRef.current += 1;
+      reconnectTimeoutRef.current = setTimeout(() => {
+        if (!cancelled) setupConnection();
+      }, delay);
+    };
+
+    const setupConnection = async () => {
+      if (isConnectingRef.current || cancelled) {
+        return;
+      }
+
+      isConnectingRef.current = true;
+
+      try {
+        if (isMountedRef.current) setLoading(true);
+
+        // Ensure WebSocket is connected
+        if (!websocketService.isConnected()) {
+          await websocketService.connect(tenantIdRef.current);
+        }
+
+        // Subscribe to protocol status stream (once)
+        if (!unsubscribe) {
+          unsubscribe = websocketService.subscribe("protocols", (data) => {
+            if (isMountedRef.current) {
+              setProtocols(data);
+              setError(null);
+              setLoading(false);
+            }
+          });
+        }
+
+        await fetchProtocolsOnce();
+        reconnectAttemptsRef.current = 0;
+      } catch (err) {
+        if (isMountedRef.current) {
+          setError(err.message);
+          setLoading(false);
+        }
+        scheduleReconnect();
       } finally {
         isConnectingRef.current = false;
       }
@@ -221,27 +309,21 @@ export const useRealtimeProtocolStatus = ({
     // Setup fallback polling
     fallbackIntervalRef.current = setInterval(async () => {
       if (!websocketService.isConnected() && isMountedRef.current) {
-        try {
-          const tenantId = currentTenant?.id || null;
-          if (useMockData) {
-            setProtocols(scadaService.generateMockProtocolStatus());
-          } else {
-            const result = await scadaService.getProtocolStatus(tenantId);
-            if (result.success && isMountedRef.current) {
-              setProtocols(result.data);
-            }
-          }
-        } catch (_err) {}
+        await fetchProtocolsOnce();
       }
     }, refreshInterval);
 
     return () => {
+      cancelled = true;
       if (unsubscribe) unsubscribe();
       if (fallbackIntervalRef.current) {
         clearInterval(fallbackIntervalRef.current);
       }
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
     };
-  }, [autoConnect, currentTenant, refreshInterval, useMockData]);
+  }, [autoConnect, tenantId, refreshInterval, useMockData]);
 
   return {
     protocols,
@@ -260,12 +342,20 @@ export const useRealtimeHistoricalData = ({
   useMockData = import.meta.env.DEV,
 } = {}) => {
   const { currentTenant } = useTenant();
+  const tenantId = currentTenant?.id || null;
+
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [timeRange, setTimeRange] = useState(hours);
+
   const refreshIntervalRef = useRef(null);
   const isMountedRef = useRef(true);
+  const tenantIdRef = useRef(tenantId);
+
+  useEffect(() => {
+    tenantIdRef.current = tenantId;
+  }, [tenantId]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -277,9 +367,8 @@ export const useRealtimeHistoricalData = ({
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setLoading(true);
+        if (isMountedRef.current) setLoading(true);
 
-        const tenantId = currentTenant?.id || null;
         const endTime = new Date().toISOString();
         const startTime = new Date(
           Date.now() - timeRange * 60 * 60 * 1000,
@@ -293,7 +382,7 @@ export const useRealtimeHistoricalData = ({
           }
         } else {
           const result = await scadaService.getHistoricalData({
-            tenantId,
+            tenantId: tenantIdRef.current,
             startTime,
             endTime,
             interval: timeRange > 24 ? "1h" : "5m",
@@ -301,6 +390,7 @@ export const useRealtimeHistoricalData = ({
 
           if (result.success && isMountedRef.current) {
             setData(result.data);
+            setError(null);
             setLoading(false);
           }
         }
@@ -324,7 +414,8 @@ export const useRealtimeHistoricalData = ({
         clearInterval(refreshIntervalRef.current);
       }
     };
-  }, [timeRange, currentTenant, autoRefresh, refreshInterval, useMockData]);
+    // NOTE: depend on the primitive `tenantId`, not `currentTenant`.
+  }, [timeRange, tenantId, autoRefresh, refreshInterval, useMockData]);
 
   return {
     data,
