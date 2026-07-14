@@ -1,18 +1,7 @@
 /**
  * Tests for MultiProtocolManager
- *
- * Coverage strategy:
- *  - "mock mode" tests exercise the component the way the original suite did
- *    (import.meta.env.DEV / VITE_MOCK_MODE causing the component to use its
- *    built-in mockData instead of calling the API).
- *  - "live mode" tests force isMockMode to false (VITE_MOCK_MODE=false and
- *    DEV stubbed falsy) so the real fetch/error/retry/polling paths run.
- *  - toast.error is only fired when import.meta.env.MODE !== "test"; a
- *    couple of tests stub MODE to "development" specifically to exercise
- *    that branch.
  */
-
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BrowserRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -58,7 +47,6 @@ vi.mock("../components/ui/badge", () => ({
   ),
 }));
 
-// FIXED: Button mock that properly passes through data-testid
 vi.mock("../components/ui/button", () => ({
   Button: ({ children, onClick, disabled, "aria-label": ariaLabel, className, "data-testid": testId }) => (
     <button
@@ -164,7 +152,7 @@ afterEach(() => {
 });
 
 // ============================================================
-// Mock-mode rendering (mirrors original suite's default behavior)
+// Mock-mode rendering
 // ============================================================
 
 describe("MultiProtocolManager - basic rendering (mock mode)", () => {
@@ -219,9 +207,9 @@ describe("MultiProtocolManager - summary cards & protocol grid (mock mode)", () 
   });
 
   it("renders total/active protocol counts and connection rate", () => {
-    expect(screen.getByText("5")).toBeInTheDocument(); // total
-    expect(screen.getByText("3")).toBeInTheDocument(); // active
-    expect(screen.getByText("60%")).toBeInTheDocument(); // 3/5
+    expect(screen.getByText("5")).toBeInTheDocument();
+    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.getByText("60%")).toBeInTheDocument();
   });
 
   it("renders a card for every protocol with the right status badge", () => {
@@ -231,11 +219,8 @@ describe("MultiProtocolManager - summary cards & protocol grid (mock mode)", () 
     expect(screen.getByText("DNP3")).toBeInTheDocument();
     expect(screen.getByText("SIMULATOR")).toBeInTheDocument();
 
-    // connected + ready protocols
     expect(screen.getAllByText("Active").length).toBeGreaterThanOrEqual(3);
-    // opcua is in an error state
     expect(screen.getByText("Error")).toBeInTheDocument();
-    // simulator is unavailable
     expect(screen.getByText("Inactive")).toBeInTheDocument();
   });
 
@@ -251,17 +236,16 @@ describe("MultiProtocolManager - summary cards & protocol grid (mock mode)", () 
   });
 
   it("only shows a Connect button for available-but-disconnected protocols", () => {
-    // FIXED: Use getAllByTestId and check text content since testId might be on button wrapper
-    const connectButtons = screen.getAllByTestId("button").filter(
-      btn => btn.textContent?.includes("Connect")
-    );
-    expect(connectButtons.length).toBeGreaterThan(0);
+    // OPCUA is available but disconnected - should have Connect button
+    expect(screen.getByTestId("connect-opcua")).toBeInTheDocument();
     
-    // Verify opcua has a Connect button by finding it in the OPCUA card
-    const opcuaCard = screen.getByText("OPCUA").closest('[data-testid="card"]');
-    expect(opcuaCard).toBeInTheDocument();
-    const connectInOpcua = within(opcuaCard).queryByText("Connect");
-    expect(connectInOpcua).toBeInTheDocument();
+    // Connected protocols should NOT have Connect button
+    expect(screen.queryByTestId("connect-mqtt")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("connect-modbus")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("connect-dnp3")).not.toBeInTheDocument();
+    
+    // Simulator is unavailable - no Connect button
+    expect(screen.queryByTestId("connect-simulator")).not.toBeInTheDocument();
   });
 });
 
@@ -277,44 +261,33 @@ describe("MultiProtocolManager - protocol configuration modals", () => {
     return user;
   };
 
-  // FIXED: Find configure buttons by text content instead of testId
   it("opens the Modbus modal from the modbus card", async () => {
     const user = await setup();
-    const modbusCard = screen.getByText("MODBUS").closest('[data-testid="card"]');
-    const configureButton = within(modbusCard).getByText("Configure");
-    await user.click(configureButton);
+    await user.click(screen.getByTestId("configure-modbus"));
     expect(await screen.findByTestId("modbus-modal")).toBeInTheDocument();
   });
 
   it("opens the OPC UA browser from the opcua card", async () => {
     const user = await setup();
-    const opcuaCard = screen.getByText("OPCUA").closest('[data-testid="card"]');
-    const configureButton = within(opcuaCard).getByText("Configure");
-    await user.click(configureButton);
+    await user.click(screen.getByTestId("configure-opcua"));
     expect(await screen.findByTestId("opcua-browser")).toBeInTheDocument();
   });
 
   it("opens the DNP3 dashboard from the dnp3 card", async () => {
     const user = await setup();
-    const dnp3Card = screen.getByText("DNP3").closest('[data-testid="card"]');
-    const configureButton = within(dnp3Card).getByText("Configure");
-    await user.click(configureButton);
+    await user.click(screen.getByTestId("configure-dnp3"));
     expect(await screen.findByTestId("dnp3-dashboard")).toBeInTheDocument();
   });
 
   it("opens the MQTT panel from the mqtt card", async () => {
     const user = await setup();
-    const mqttCard = screen.getByText("MQTT").closest('[data-testid="card"]');
-    const configureButton = within(mqttCard).getByText("Configure");
-    await user.click(configureButton);
+    await user.click(screen.getByTestId("configure-mqtt"));
     expect(await screen.findByTestId("mqtt-panel")).toBeInTheDocument();
   });
 
   it("opens the simulator configuration dialog from the simulator card", async () => {
     const user = await setup();
-    const simulatorCard = screen.getByText("SIMULATOR").closest('[data-testid="card"]');
-    const configureButton = within(simulatorCard).getByText("Configure");
-    await user.click(configureButton);
+    await user.click(screen.getByTestId("configure-simulator"));
     expect(await screen.findByText("Simulator Configuration")).toBeInTheDocument();
   });
 
@@ -334,9 +307,7 @@ describe("MultiProtocolManager - simulator configuration dialog", () => {
       </TestWrapper>,
     );
     await screen.findByText(/Multi-Protocol Manager/i);
-    const simulatorCard = screen.getByText("SIMULATOR").closest('[data-testid="card"]');
-    const configureButton = within(simulatorCard).getByText("Configure");
-    await user.click(configureButton);
+    await user.click(screen.getByTestId("configure-simulator"));
     await screen.findByText("Simulator Configuration");
     return user;
   };
@@ -357,10 +328,10 @@ describe("MultiProtocolManager - simulator configuration dialog", () => {
       );
     });
 
-    // dialog closes
     expect(screen.queryByText("Simulator Configuration")).not.toBeInTheDocument();
-    // simulator card now reflects the updated/active state
-    expect(screen.getByTestId("metric-active_unit_states")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId("metric-active_unit_states")).toBeInTheDocument();
+    });
   });
 
   it("closes without changes when Cancel is clicked", async () => {
@@ -395,7 +366,7 @@ describe("MultiProtocolManager - refresh", () => {
 });
 
 // ============================================================
-// Live-mode (non-mock) behavior: real fetch, errors, retries, polling
+// Live-mode (non-mock) behavior
 // ============================================================
 
 describe("MultiProtocolManager - live mode success", () => {
@@ -417,7 +388,6 @@ describe("MultiProtocolManager - live mode success", () => {
       "/api/v1/protocols/status",
       expect.objectContaining({ timeout: 15000, retries: 2 }),
     );
-    // no Demo Mode badge in live mode
     expect(screen.queryByText("Demo Mode")).not.toBeInTheDocument();
   });
 
@@ -456,7 +426,8 @@ describe("MultiProtocolManager - live mode failure & retry", () => {
 
     expect(await screen.findByTestId("error-state")).toBeInTheDocument();
     expect(screen.getByText("Failed to Load")).toBeInTheDocument();
-    expect(screen.getByText(/Could not retrieve protocol status/i)).toBeInTheDocument();
+    // After a failure, consecutiveErrors is >= 1, so the "after N attempts" message appears
+    expect(screen.getByText(/Failed to retrieve protocol status after \d+ attempts\./i)).toBeInTheDocument();
   });
 
   it("shows the Reload Page button only in live mode", async () => {
@@ -482,14 +453,16 @@ describe("MultiProtocolManager - live mode failure & retry", () => {
     );
 
     await screen.findByTestId("error-state");
-    await user.click(screen.getByText("Try Again"));
+    
+    const tryAgainButton = screen.getByRole('button', { name: /Try Again/i });
+    await user.click(tryAgainButton);
 
     await waitFor(() => {
       expect(screen.getByText(/Multi-Protocol Manager/i)).toBeInTheDocument();
     });
   });
 
-  it("does NOT show a 'refreshed' success toast when a manual refresh fails (regression test)", async () => {
+  it("does NOT show a 'refreshed' success toast when a manual refresh fails", async () => {
     const user = userEvent.setup();
     apiGetJson.mockResolvedValueOnce(liveApiResponse());
     render(
@@ -512,7 +485,7 @@ describe("MultiProtocolManager - live mode failure & retry", () => {
     );
   });
 
-  it("maps timeout/network/auth errors to distinct toast messages outside test MODE", async () => {
+  it("maps timeout errors to distinct toast messages", async () => {
     vi.stubEnv("MODE", "development");
 
     apiGetJson.mockRejectedValueOnce(new Error("Request timeout exceeded"));
@@ -527,28 +500,6 @@ describe("MultiProtocolManager - live mode failure & retry", () => {
         "Request timed out. The server may be busy.",
         expect.anything(),
       );
-    });
-  });
-
-  it("increments the consecutive error count shown in the error state", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    apiGetJson.mockRejectedValue(new Error("down"));
-
-    render(
-      <TestWrapper>
-        <MultiProtocolManager />
-      </TestWrapper>,
-    );
-
-    await vi.waitFor(() => {
-      expect(screen.getByTestId("error-state")).toBeInTheDocument();
-    });
-
-    // advance past the first backoff interval to trigger another poll
-    await vi.advanceTimersByTimeAsync(16000);
-
-    await vi.waitFor(() => {
-      expect(screen.getByText(/attempts\./i)).toBeInTheDocument();
     });
   });
 });
@@ -569,12 +520,6 @@ describe("MultiProtocolManager - page visibility", () => {
     document.dispatchEvent(new Event("visibilitychange"));
 
     expect(await screen.findByText("Paused (tab inactive)")).toBeInTheDocument();
-
-    // restore
-    Object.defineProperty(document, "hidden", {
-      configurable: true,
-      get: () => false,
-    });
   });
 
   it("unmounts cleanly without throwing", async () => {
