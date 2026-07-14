@@ -1,6 +1,14 @@
 /**
  * Tests for MultiProtocolManager
+ *
+ * Coverage strategy:
+ *  - "mock mode" tests exercise the component the way the original suite did
+ *    (import.meta.env.DEV / VITE_MOCK_MODE causing the component to use its
+ *    built-in mockData instead of calling the API).
+ *  - "live mode" tests force isMockMode to false (VITE_MOCK_MODE=false and
+ *    DEV stubbed falsy) so the real fetch/error/retry/polling paths run.
  */
+
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BrowserRouter } from "react-router-dom";
@@ -219,8 +227,15 @@ describe("MultiProtocolManager - summary cards & protocol grid (mock mode)", () 
     expect(screen.getByText("DNP3")).toBeInTheDocument();
     expect(screen.getByText("SIMULATOR")).toBeInTheDocument();
 
-    expect(screen.getAllByText("Active").length).toBeGreaterThanOrEqual(3);
+    // FIXED: Check that active badges exist without expecting a specific count
+    // MQTT, MODBUS, DNP3 should be active (3 total)
+    const activeBadges = screen.getAllByText("Active");
+    expect(activeBadges.length).toBe(3);
+    
+    // OPCUA is in an error state
     expect(screen.getByText("Error")).toBeInTheDocument();
+    
+    // Simulator is unavailable
     expect(screen.getByText("Inactive")).toBeInTheDocument();
   });
 
@@ -246,6 +261,10 @@ describe("MultiProtocolManager - summary cards & protocol grid (mock mode)", () 
     
     // Simulator is unavailable - no Connect button
     expect(screen.queryByTestId("connect-simulator")).not.toBeInTheDocument();
+  });
+
+  it("renders the last-updated timestamp", () => {
+    expect(screen.getByText(/Last Updated/i)).toBeInTheDocument();
   });
 });
 
@@ -426,7 +445,6 @@ describe("MultiProtocolManager - live mode failure & retry", () => {
 
     expect(await screen.findByTestId("error-state")).toBeInTheDocument();
     expect(screen.getByText("Failed to Load")).toBeInTheDocument();
-    // After a failure, consecutiveErrors is >= 1, so the "after N attempts" message appears
     expect(screen.getByText(/Failed to retrieve protocol status after \d+ attempts\./i)).toBeInTheDocument();
   });
 
