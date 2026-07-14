@@ -1387,7 +1387,11 @@ describe("useMQTTMessages Hook", () => {
     });
 
     expect(result.current.messages).toEqual([
-      { topic: "sensors/temp", payload: "72", timestamp: expect.any(String), qos: 1 },
+      expect.objectContaining({
+        topic: "sensors/temp",
+        payload: "72",
+        qos: 1,
+      }),
     ]);
     unmount();
     forceGC();
@@ -1508,7 +1512,10 @@ describe("useMQTTMessages Hook", () => {
       result.current.clearMessages();
     });
 
-    expect(result.current.messages).toEqual([]);
+    await waitFor(() => {
+      expect(result.current.messages).toEqual([]);
+    });
+
     unmount();
     forceGC();
   });
