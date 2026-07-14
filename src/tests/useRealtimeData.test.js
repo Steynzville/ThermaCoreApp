@@ -58,7 +58,7 @@ const mockWebSocket = {
   },
   removeListener(event, cb) {
     mockWebSocket.listeners[event] =
-      (mockWebSocket.listeners[event] || []).filter((fn) => fn !== cb);
+      (mockWebSocket.listeners[event] || []).filter((fn) => fn !== cb) || [];
   },
   reset() {
     mockWebSocket.isConnected = true;
@@ -68,26 +68,26 @@ const mockWebSocket = {
 
 vi.mock("../services/websocketService", () => ({
   default: {
-    connect: vi.fn().mockImplementation(() => {
-      if (mockWebSocket.isConnected) {
-        return Promise.resolve(true);
-      }
-      return Promise.reject(new Error("Connection failed"));
-    }),
-    disconnect: vi.fn().mockImplementation(() => {
-      mockWebSocket.isConnected = false;
-    }),
-    subscribe: vi.fn().mockImplementation((event, callback) => {
-      mockWebSocket.addListener(event, callback);
-      return () => mockWebSocket.removeListener(event, callback);
-    }),
-    onStatusChange: vi.fn().mockImplementation((callback) => {
-      mockWebSocket.addListener("status", callback);
-      return () => mockWebSocket.removeListener("status", callback);
-    }),
-    isConnected: vi.fn(() => mockWebSocket.isConnected),
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+    subscribe: vi.fn(),
+    onStatusChange: vi.fn(),
+    isConnected: vi.fn(),
   },
 }));
+
+vi.mock("../services/scadaService", () => ({
+  default: {
+    generateMockMetrics: vi.fn(),
+    getCurrentMetrics: vi.fn(),
+    generateMockProtocolStatus: vi.fn(),
+    getProtocolStatus: vi.fn(),
+    generateMockHistoricalData: vi.fn(),
+    getHistoricalData: vi.fn(),
+  },
+}));
+
+vi.stubEnv("DEV", true);
 
 const makeMetrics = (overrides = {}) => ({
   temperature: 65.5,
@@ -106,50 +106,75 @@ const makeProtocols = () => [
   { id: "mqtt-1", status: "connected", latency: 15 },
 ];
 
-vi.mock("../services/scadaService", () => ({
-  default: {
-    generateMockMetrics: vi.fn(() => makeMetrics()),
-    getCurrentMetrics: vi.fn().mockImplementation(() => {
-      if (mockWebSocket.isConnected) {
-        return Promise.resolve({ success: true, data: makeMetrics() });
-      }
-      return Promise.reject(new Error("SCADA service unavailable"));
-    }),
-    generateMockProtocolStatus: vi.fn(() => makeProtocols()),
-    // NOTE: matches the hook, which reads `result.data` directly —
-    // NOT `result.data.protocols`.
-    getProtocolStatus: vi.fn().mockImplementation(() => {
-      if (mockWebSocket.isConnected) {
-        return Promise.resolve({ success: true, data: makeProtocols() });
-      }
-      return Promise.reject(new Error("SCADA service unavailable"));
-    }),
-    generateMockHistoricalData: vi.fn((hours = 24) =>
-      Array.from({ length: Math.min(hours, 24) }, (_, i) => ({
-        timestamp: new Date(Date.now() - i * 3600000).toISOString(),
-        value: Math.random() * 100,
-        metric: "temperature",
-      })),
-    ),
-    getHistoricalData: vi.fn().mockResolvedValue({
-      success: true,
-      data: Array.from({ length: 24 }, (_, i) => ({
-        timestamp: new Date(Date.now() - i * 3600000).toISOString(),
-        value: Math.random() * 100,
-        metric: "temperature",
-      })),
-    }),
-  },
-}));
+const makeHistoricalData = (hours = 24) =>
+  Array.from({ length: Math.min(hours, 24) }, (_, i) => ({
+    timestamp: new Date(Date.now() - i * 3600000).toISOString(),
+    value: Math.random() * 100,
+    metric: "temperature",
+  }));
 
-vi.stubEnv("DEV", true);
-
+// Re-apply all mock implementations. This is critical because the
+// global Vitest config may have `mockReset` or `restoreMocks` enabled,
+// which wipes out the implementations from vi.mock factories between tests.
 const resetAll = () => {
   vi.clearAllMocks();
   mockWebSocket.reset();
   mockCurrentTenant = { id: "tenant-1", name: "Test Tenant" };
-  // vi.clearAllMocks() clears call history but keeps mockImplementation,
-  // so the default implementations above remain in effect between tests.
+
+  // WebSocket service implementations
+  vi.mocked(websocketService.connect).mockImplementation(() => {
+    if (mockWebSocket.isConnected) {
+      return Promise.resolve(true);
+    }
+    return Promise.reject(new Error("Connection failed"));
+  });
+
+  vi.mocked(websocketService.disconnect).mockImplementation(() => {
+    mockWebSocket.isConnected = false;
+  });
+
+  vi.mocked(websocketService.subscribe).mockImplementation((event, callback) => {
+    mockWebSocket.addListener(event, callback);
+    return () => mockWebSocket.removeListener(event, callback);
+  });
+
+  vi.mocked(websocketService.onStatusChange).mockImplementation((callback) => {
+    mockWebSocket.addListener("status", callback);
+    return () => mockWebSocket.removeListener("status", callback);
+  });
+
+  vi.mocked(websocketService.isConnected).mockImplementation(() => mockWebSocket.isConnected);
+
+  // SCADA service implementations
+  vi.mocked(scadaService.generateMockMetrics).mockImplementation(() => makeMetrics());
+
+  vi.mocked(scadaService.getCurrentMetrics).mockImplementation(() => {
+    if (mockWebSocket.isConnected) {
+      return Promise.resolve({ success: true, data: makeMetrics() });
+    }
+    return Promise.reject(new Error("SCADA service unavailable"));
+  });
+
+  vi.mocked(scadaService.generateMockProtocolStatus).mockImplementation(() => makeProtocols());
+
+  vi.mocked(scadaService.getProtocolStatus).mockImplementation(() => {
+    if (mockWebSocket.isConnected) {
+      return Promise.resolve({ success: true, data: makeProtocols() });
+    }
+    return Promise.reject(new Error("SCADA service unavailable"));
+  });
+
+  vi.mocked(scadaService.generateMockHistoricalData).mockImplementation((hours = 24) =>
+    makeHistoricalData(hours)
+  );
+
+  vi.mocked(scadaService.getHistoricalData).mockImplementation((params) => {
+    const hours = params?.interval === "1h" ? 48 : 24;
+    return Promise.resolve({
+      success: true,
+      data: makeHistoricalData(hours),
+    });
+  });
 };
 
 describe("useRealtimeMetrics Hook", () => {
@@ -275,12 +300,12 @@ describe("useRealtimeMetrics Hook", () => {
       expect(websocketService.connect).toHaveBeenCalledTimes(1);
 
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(1000); // first retry (~1s)
+        await vi.advanceTimersByTimeAsync(1000);
       });
       expect(websocketService.connect).toHaveBeenCalledTimes(2);
 
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(2000); // second retry (~2s)
+        await vi.advanceTimersByTimeAsync(2000);
       });
       expect(websocketService.connect).toHaveBeenCalledTimes(3);
 
@@ -312,9 +337,6 @@ describe("useRealtimeMetrics Hook", () => {
       const callsAfterInitialConnect = vi.mocked(websocketService.connect).mock
         .calls.length;
 
-      // Simulate a provider re-render that creates a brand-new tenant
-      // object with the same id. This previously caused an infinite
-      // reconnect loop because the effect depended on the object itself.
       for (let i = 0; i < 5; i++) {
         mockCurrentTenant = { id: "tenant-1", name: "Test Tenant" };
         rerender();
@@ -559,8 +581,10 @@ describe("useRealtimeHistoricalData Hook", () => {
   });
 
   it("should initialize with default state", () => {
+    // Pass useMockData: false so we test the real hook behavior
+    // The mock data branch is synchronous and would populate state immediately
     const { result } = renderHook(() =>
-      useRealtimeHistoricalData({ hours: 24 }),
+      useRealtimeHistoricalData({ hours: 24, useMockData: false }),
     );
 
     expect(result.current.data).toEqual([]);
@@ -816,7 +840,10 @@ describe("SCADA-Specific Edge Cases", () => {
       });
     }
 
-    await waitFor(() => expect(result.current.metrics.temperature).toBe(79));
+    // Wait for the final update to be applied
+    await waitFor(() => {
+      expect(result.current.metrics.temperature).toBe(79);
+    });
   });
 
   it("should cleanup subscriptions properly", async () => {
@@ -828,6 +855,7 @@ describe("SCADA-Specific Edge Cases", () => {
 
     const cleanupFn = vi.mocked(websocketService.subscribe).mock.results[0]
       ?.value;
+    expect(cleanupFn).toBeDefined();
     expect(typeof cleanupFn).toBe("function");
     expect(() => unmount()).not.toThrow();
   });
@@ -864,10 +892,6 @@ describe("SCADA-Specific Edge Cases", () => {
     await waitFor(() => expect(result.current.metrics).toBeDefined());
     const callsBefore = vi.mocked(websocketService.connect).mock.calls.length;
 
-    // Force repeated re-renders with a fresh tenant object each time,
-    // mimicking a parent/provider that re-renders frequently. If the
-    // dependency array still referenced the tenant object, this would
-    // trigger a reconnect (and in production, an unbounded loop).
     for (let i = 0; i < 10; i++) {
       mockCurrentTenant = { id: "tenant-1", name: "Test Tenant" };
       rerender();
