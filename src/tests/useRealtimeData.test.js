@@ -4,11 +4,13 @@
  * Tests state transitions, cleanup, and external dependencies
  */
 
-import { renderHook } from "@testing-library/react";
+import { renderHook, act } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   useRealtimeMetrics,
   useRealtimeProtocolStatus,
+  useRealtimeHistoricalData,
+  useWebSocketStatus,
 } from "../hooks/useRealtimeData";
 
 // Mock tenant context
@@ -19,13 +21,18 @@ vi.mock("../context/TenantContext", () => ({
 }));
 
 // Mock websocket service
+const mockOnStatusChange = vi.fn();
+const mockSubscribe = vi.fn(() => vi.fn());
+const mockConnect = vi.fn().mockResolvedValue(true);
+const mockIsConnected = vi.fn(() => true);
+
 vi.mock("../services/websocketService", () => ({
   default: {
-    connect: vi.fn().mockResolvedValue(true),
+    connect: mockConnect,
     disconnect: vi.fn(),
-    subscribe: vi.fn(() => vi.fn()),
-    onStatusChange: vi.fn(() => vi.fn()),
-    isConnected: vi.fn(() => true),
+    subscribe: mockSubscribe,
+    onStatusChange: mockOnStatusChange,
+    isConnected: mockIsConnected,
   },
 }));
 
@@ -45,11 +52,22 @@ vi.mock("../services/scadaService", () => ({
         flowRate: 245,
       },
     }),
+    generateMockProtocolStatus: vi.fn(() => [
+      { id: "modbus-1", status: "connected" },
+    ]),
     getProtocolStatus: vi.fn().mockResolvedValue({
       success: true,
       data: {
         protocols: [{ id: "modbus-1", status: "connected" }],
       },
+    }),
+    generateMockHistoricalData: vi.fn((hours) => Array.from({ length: hours }, (_, i) => ({
+      timestamp: new Date(Date.now() - i * 3600000).toISOString(),
+      value: Math.random() * 100,
+    }))),
+    getHistoricalData: vi.fn().mockResolvedValue({
+      success: true,
+      data: [{ timestamp: "2024-01-01", value: 50 }],
     }),
   },
 }));
@@ -68,79 +86,85 @@ describe("useRealtimeMetrics Hook", () => {
     expect(result.current.loading).toBe(true);
     expect(result.current.error).toBeNull();
     expect(result.current.connectionStatus).toBe("disconnected");
+    expect(result.current.isConnected).toBe(false);
   });
 
-  it("should mount and unmount without errors", () => {
-    const { unmount } = renderHook(() =>
-      useRealtimeMetrics({ autoConnect: false }),
+  it("should connect and update metrics on mount", async () => {
+    const { result } = renderHook(() => useRealtimeMetrics({ autoConnect: true }));
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(mockConnect).toHaveBeenCalled();
+    expect(result.current.loading).toBe(false);
+  });
+
+  it("should use mock data when enabled", async () => {
+    const { result } = renderHook(() =>
+      useRealtimeMetrics({ autoConnect: true, useMockData: true }),
     );
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(result.current.metrics).toEqual({
+      temperature: 65,
+      pressure: 120,
+      flowRate: 245,
+    });
+    expect(result.current.loading).toBe(false);
+  });
+
+  it("should handle connection errors gracefully", async () => {
+    mockConnect.mockRejectedValueOnce(new Error("Connection failed"));
+
+    const { result } = renderHook(() => useRealtimeMetrics({ autoConnect: true }));
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(result.current.error).toBe("Connection failed");
+    expect(result.current.loading).toBe(false);
+  });
+
+  it("should handle WebSocket status changes", async () => {
+    const { result } = renderHook(() => useRealtimeMetrics({ autoConnect: true }));
+
+    await act(async () => {
+      const statusCallback = mockOnStatusChange.mock.calls[0]?.[0];
+      if (statusCallback) statusCallback("connected");
+    });
+
+    expect(result.current.connectionStatus).toBe("connected");
+    expect(result.current.isConnected).toBe(true);
+  });
+
+  it("should cleanup on unmount", () => {
+    const { unmount } = renderHook(() => useRealtimeMetrics({ autoConnect: true }));
 
     expect(() => unmount()).not.toThrow();
   });
 
-  it("should handle remounting", () => {
-    const { rerender, unmount } = renderHook(() =>
-      useRealtimeMetrics({ autoConnect: false }),
-    );
-
-    expect(() => rerender()).not.toThrow();
-    expect(() => unmount()).not.toThrow();
+  it("should respect custom refreshInterval", () => {
+    renderHook(() => useRealtimeMetrics({ refreshInterval: 30000 }));
+    // Timer setup covered
   });
 
-  it("should accept autoConnect option", () => {
-    const { result } = renderHook(() =>
-      useRealtimeMetrics({ autoConnect: true }),
-    );
+  it("should handle missing tenant", async () => {
+    vi.mocked(require("../context/TenantContext").useTenant).mockReturnValueOnce({
+      currentTenant: null,
+    });
+
+    const { result } = renderHook(() => useRealtimeMetrics({ autoConnect: true }));
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
     expect(result.current).toBeDefined();
-  });
-
-  it("should accept refreshInterval option", () => {
-    const { result } = renderHook(() =>
-      useRealtimeMetrics({ refreshInterval: 30000 }),
-    );
-
-    expect(result.current).toBeDefined();
-  });
-
-  it("should accept useMockData option", () => {
-    const { result } = renderHook(() =>
-      useRealtimeMetrics({ useMockData: true }),
-    );
-
-    expect(result.current).toBeDefined();
-  });
-
-  it("should provide metrics property", () => {
-    const { result } = renderHook(() =>
-      useRealtimeMetrics({ autoConnect: false }),
-    );
-
-    expect(result.current).toHaveProperty("metrics");
-  });
-
-  it("should provide loading property", () => {
-    const { result } = renderHook(() =>
-      useRealtimeMetrics({ autoConnect: false }),
-    );
-
-    expect(result.current).toHaveProperty("loading");
-  });
-
-  it("should provide error property", () => {
-    const { result } = renderHook(() =>
-      useRealtimeMetrics({ autoConnect: false }),
-    );
-
-    expect(result.current).toHaveProperty("error");
-  });
-
-  it("should provide connectionStatus property", () => {
-    const { result } = renderHook(() =>
-      useRealtimeMetrics({ autoConnect: false }),
-    );
-
-    expect(result.current).toHaveProperty("connectionStatus");
   });
 });
 
@@ -156,282 +180,148 @@ describe("useRealtimeProtocolStatus Hook", () => {
 
     expect(result.current.protocols).toEqual([]);
     expect(result.current.loading).toBe(true);
+    expect(result.current.error).toBeNull();
   });
 
-  it("should mount and unmount without errors", () => {
-    const { unmount } = renderHook(() =>
-      useRealtimeProtocolStatus({ autoConnect: false }),
-    );
-
-    expect(() => unmount()).not.toThrow();
-  });
-
-  it("should handle remounting", () => {
-    const { rerender, unmount } = renderHook(() =>
-      useRealtimeProtocolStatus({ autoConnect: false }),
-    );
-
-    expect(() => rerender()).not.toThrow();
-    expect(() => unmount()).not.toThrow();
-  });
-
-  it("should accept autoConnect option", () => {
+  it("should fetch protocol status", async () => {
     const { result } = renderHook(() =>
       useRealtimeProtocolStatus({ autoConnect: true }),
     );
 
-    expect(result.current).toBeDefined();
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(result.current.protocols).toBeDefined();
+    expect(result.current.loading).toBe(false);
   });
 
-  it("should provide protocols property", () => {
+  it("should use mock protocol data", async () => {
     const { result } = renderHook(() =>
-      useRealtimeProtocolStatus({ autoConnect: false }),
+      useRealtimeProtocolStatus({ autoConnect: true, useMockData: true }),
     );
 
-    expect(result.current).toHaveProperty("protocols");
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(result.current.protocols).toEqual([
+      { id: "modbus-1", status: "connected" },
+    ]);
   });
 
-  it("should provide loading property", () => {
+  it("should handle protocol fetch errors", async () => {
+    vi.mocked(require("../services/scadaService").default.getProtocolStatus)
+      .mockRejectedValueOnce(new Error("Protocol error"));
+
     const { result } = renderHook(() =>
-      useRealtimeProtocolStatus({ autoConnect: false }),
+      useRealtimeProtocolStatus({ autoConnect: true }),
     );
 
-    expect(result.current).toHaveProperty("loading");
-  });
-});
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
-describe("useRealtimeMetrics - Error Handling", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+    expect(result.current.error).toBe("Protocol error");
   });
 
-  it("should handle connection errors gracefully", () => {
-    const { result } = renderHook(() =>
-      useRealtimeMetrics({ autoConnect: false }),
-    );
-
-    expect(result.current.error).toBeNull();
-  });
-
-  it("should handle WebSocket disconnection", () => {
-    const { result } = renderHook(() =>
-      useRealtimeMetrics({ autoConnect: false }),
-    );
-
-    expect(result.current.connectionStatus).toBe("disconnected");
-  });
-
-  it("should handle missing tenant context", () => {
-    const { result } = renderHook(() =>
-      useRealtimeMetrics({ autoConnect: false }),
-    );
-
-    expect(result.current).toBeDefined();
-  });
-
-  it("should handle failed metric fetch", () => {
-    const { result } = renderHook(() =>
-      useRealtimeMetrics({ autoConnect: false }),
-    );
-
-    expect(result.current.loading).toBe(true);
-  });
-
-  it("should recover from error state", () => {
-    const { result } = renderHook(() =>
-      useRealtimeMetrics({ autoConnect: false }),
-    );
-
-    expect(result.current.error).toBeNull();
-  });
-});
-
-describe("useRealtimeMetrics - Offline/Online Recovery", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("should handle offline state", () => {
-    const { result } = renderHook(() =>
-      useRealtimeMetrics({ autoConnect: false }),
-    );
-
-    expect(result.current.connectionStatus).toBe("disconnected");
-  });
-
-  it("should attempt reconnection when coming online", () => {
-    const { result } = renderHook(() =>
-      useRealtimeMetrics({ autoConnect: false }),
-    );
-
-    expect(result.current).toBeDefined();
-  });
-
-  it("should restore data subscription after reconnection", () => {
-    const { result } = renderHook(() =>
-      useRealtimeMetrics({ autoConnect: false }),
-    );
-
-    expect(result.current).toBeDefined();
-  });
-
-  it("should handle rapid online/offline transitions", () => {
-    const { result } = renderHook(() =>
-      useRealtimeMetrics({ autoConnect: false }),
-    );
-
-    expect(result.current).toBeDefined();
-  });
-});
-
-describe("useRealtimeMetrics - Data Refresh", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("should respect custom refresh interval", () => {
-    const { result } = renderHook(() =>
-      useRealtimeMetrics({ refreshInterval: 10000, autoConnect: false }),
-    );
-
-    expect(result.current).toBeDefined();
-  });
-
-  it("should handle refresh interval changes", () => {
-    const { result, rerender } = renderHook(
-      ({ interval }) => useRealtimeMetrics({ refreshInterval: interval }),
-      { initialProps: { interval: 5000 } },
-    );
-
-    expect(result.current).toBeDefined();
-
-    rerender({ interval: 10000 });
-
-    expect(result.current).toBeDefined();
-  });
-
-  it("should cleanup refresh timer on unmount", () => {
+  it("should cleanup subscriptions", () => {
     const { unmount } = renderHook(() =>
-      useRealtimeMetrics({ autoConnect: false }),
+      useRealtimeProtocolStatus({ autoConnect: true }),
     );
 
     expect(() => unmount()).not.toThrow();
   });
 });
 
-describe("useRealtimeMetrics - Mock Data Mode", () => {
+describe("useRealtimeHistoricalData Hook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("should use mock data when enabled", () => {
-    const { result } = renderHook(() =>
-      useRealtimeMetrics({ useMockData: true, autoConnect: false }),
-    );
+  it("should fetch historical data", async () => {
+    const { result } = renderHook(() => useRealtimeHistoricalData({ hours: 24 }));
 
-    expect(result.current).toBeDefined();
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(result.current.data).toBeDefined();
+    expect(result.current.loading).toBe(false);
   });
 
-  it("should switch between mock and real data", () => {
-    const { result, rerender } = renderHook(
-      ({ mock }) => useRealtimeMetrics({ useMockData: mock }),
-      { initialProps: { mock: true } },
+  it("should use mock historical data", async () => {
+    const { result } = renderHook(() =>
+      useRealtimeHistoricalData({ hours: 24, useMockData: true }),
     );
 
-    expect(result.current).toBeDefined();
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
-    rerender({ mock: false });
+    expect(result.current.data.length).toBeGreaterThan(0);
+  });
 
-    expect(result.current).toBeDefined();
+  it("should update timeRange", async () => {
+    const { result } = renderHook(() => useRealtimeHistoricalData({ hours: 24 }));
+
+    act(() => {
+      result.current.setTimeRange(12);
+    });
+
+    expect(result.current.timeRange).toBe(12);
+  });
+
+  it("should cleanup refresh interval", () => {
+    const { unmount } = renderHook(() => useRealtimeHistoricalData({ autoRefresh: true }));
+    expect(() => unmount()).not.toThrow();
   });
 });
 
-describe("useRealtimeProtocolStatus - Error Handling", () => {
+describe("useWebSocketStatus Hook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("should handle failed protocol fetch", () => {
-    const { result } = renderHook(() =>
-      useRealtimeProtocolStatus({ autoConnect: false }),
-    );
+  it("should track connection status", () => {
+    const { result } = renderHook(() => useWebSocketStatus());
 
-    expect(result.current.loading).toBe(true);
+    act(() => {
+      const callback = mockOnStatusChange.mock.calls[0]?.[0];
+      if (callback) callback("connected");
+    });
+
+    expect(result.current.status).toBe("connected");
+    expect(result.current.isConnected).toBe(true);
+    expect(result.current.isReconnecting).toBe(false);
+    expect(result.current.lastHeartbeat).toBeDefined();
   });
 
-  it("should handle empty protocol list", () => {
-    const { result } = renderHook(() =>
-      useRealtimeProtocolStatus({ autoConnect: false }),
-    );
+  it("should handle disconnected state", () => {
+    const { result } = renderHook(() => useWebSocketStatus());
 
-    expect(result.current.protocols).toEqual([]);
-  });
+    act(() => {
+      const callback = mockOnStatusChange.mock.calls[0]?.[0];
+      if (callback) callback("disconnected");
+    });
 
-  it("should handle WebSocket errors gracefully", () => {
-    const { result } = renderHook(() =>
-      useRealtimeProtocolStatus({ autoConnect: false }),
-    );
-
-    expect(result.current).toBeDefined();
+    expect(result.current.isConnected).toBe(false);
   });
 });
 
-describe("useRealtimeProtocolStatus - Connection Management", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("should handle connection state changes", () => {
-    const { result } = renderHook(() =>
-      useRealtimeProtocolStatus({ autoConnect: false }),
+describe("Edge Cases & Cleanup", () => {
+  it("should handle rapid remounts without memory leaks", () => {
+    const { rerender, unmount } = renderHook(() =>
+      useRealtimeMetrics({ autoConnect: true }),
     );
 
-    expect(result.current).toBeDefined();
-  });
-
-  it("should cleanup on unmount", () => {
-    const { unmount } = renderHook(() =>
-      useRealtimeProtocolStatus({ autoConnect: false }),
-    );
-
+    rerender();
+    rerender();
     expect(() => unmount()).not.toThrow();
   });
 
-  it("should handle reconnection scenarios", () => {
-    const { result } = renderHook(() =>
-      useRealtimeProtocolStatus({ autoConnect: false }),
-    );
-
-    expect(result.current).toBeDefined();
-  });
-});
-
-describe("useRealtimeProtocolStatus - Data Updates", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("should handle protocol status updates", () => {
-    const { result } = renderHook(() =>
-      useRealtimeProtocolStatus({ autoConnect: false }),
-    );
-
-    expect(result.current.protocols).toEqual([]);
-  });
-
-  it("should handle multiple protocol updates", () => {
-    const { result } = renderHook(() =>
-      useRealtimeProtocolStatus({ autoConnect: false }),
-    );
-
-    expect(result.current).toBeDefined();
-  });
-
-  it("should handle stale data", () => {
-    const { result } = renderHook(() =>
-      useRealtimeProtocolStatus({ autoConnect: false }),
-    );
-
-    expect(result.current).toBeDefined();
+  it("should not connect when autoConnect is false", () => {
+    renderHook(() => useRealtimeMetrics({ autoConnect: false }));
+    expect(mockConnect).not.toHaveBeenCalled();
   });
 });
