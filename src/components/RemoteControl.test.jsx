@@ -82,7 +82,6 @@ vi.mock("../components/ui/switch", () => ({
       data-checked={checked}
       disabled={disabled}
       onClick={() => {
-        // When the switch is clicked, call onCheckedChange to simulate the toggle
         if (onCheckedChange) {
           onCheckedChange(!checked);
         }
@@ -802,7 +801,8 @@ describe("RemoteControl Component", () => {
       // Get the current action count from the header
       const headerText = screen.getByText(/Last \d+ actions recorded/i);
       const initialCount = parseInt(headerText.textContent.match(/\d+/)[0]);
-      expect(initialCount).toBe(3); // Should start with 3 hardcoded actions
+      // Should start with 3 hardcoded actions
+      expect(initialCount).toBe(3);
       
       // Click the switch to open dialog
       const switches = screen.getAllByTestId("switch");
@@ -812,10 +812,10 @@ describe("RemoteControl Component", () => {
       const actionButtons = screen.getAllByTestId("alert-dialog-action");
       fireEvent.click(actionButtons[0]);
       
-      // The count should now be 4
+      // The count should now be 6 (1 power off + 2 cascades: water off + auto off)
       const updatedHeader = screen.getByText(/Last \d+ actions recorded/i);
       const updatedCount = parseInt(updatedHeader.textContent.match(/\d+/)[0]);
-      expect(updatedCount).toBe(4);
+      expect(updatedCount).toBe(6);
     });
 
     it("should keep only last 10 actions in history", () => {
