@@ -16,19 +16,33 @@ import {
 } from "../hooks/useProtocolWebSocket";
 import protocolWS from "../services/protocolWebSocketService";
 
-// Mock protocol websocket service
+// Mock protocol websocket service - with proper connect that calls onStatusChange
 vi.mock("../services/protocolWebSocketService", () => {
-  const createMockProtocolWS = () => ({
-    connect: vi.fn().mockResolvedValue(true),
-    disconnect: vi.fn(),
-    subscribe: vi.fn(),
-    unsubscribe: vi.fn(),
-    send: vi.fn(),
-    isConnected: vi.fn(() => false),
-    onStatusChange: vi.fn(),
-    offStatusChange: vi.fn(),
-    getStatus: vi.fn(() => "disconnected"),
-  });
+  // We need to capture onStatusChange reference inside the mock
+  let statusChangeCallback = null;
+
+  const createMockProtocolWS = () => {
+    const mock = {
+      connect: vi.fn().mockImplementation((protocol, tenantId) => {
+        // Call the status change callback if it exists
+        if (statusChangeCallback) {
+          statusChangeCallback("connected");
+        }
+        return Promise.resolve(true);
+      }),
+      disconnect: vi.fn(),
+      subscribe: vi.fn(),
+      unsubscribe: vi.fn(),
+      send: vi.fn(),
+      isConnected: vi.fn(() => false),
+      onStatusChange: vi.fn((cb) => {
+        statusChangeCallback = cb;
+      }),
+      offStatusChange: vi.fn(),
+      getStatus: vi.fn(() => "disconnected"),
+    };
+    return mock;
+  };
 
   return {
     default: {
@@ -855,7 +869,15 @@ describe("useModbusRegisters Hook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetProtocolMockDefaults();
-    // Force connected state to avoid auto-connect issues
+    // Make sure connect calls the status callback
+    protocolWS.modbus.connect.mockImplementation((protocol, tenantId) => {
+      // Find and call the status callback
+      const statusCallback = protocolWS.modbus.onStatusChange.mock.calls[0]?.[0];
+      if (statusCallback) {
+        statusCallback("connected");
+      }
+      return Promise.resolve(true);
+    });
     protocolWS.modbus.isConnected.mockReturnValue(true);
     protocolWS.modbus.getStatus.mockReturnValue("connected");
   });
@@ -1010,6 +1032,13 @@ describe("useOPCUANodes Hook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetProtocolMockDefaults();
+    protocolWS.opcua.connect.mockImplementation((protocol, tenantId) => {
+      const statusCallback = protocolWS.opcua.onStatusChange.mock.calls[0]?.[0];
+      if (statusCallback) {
+        statusCallback("connected");
+      }
+      return Promise.resolve(true);
+    });
     protocolWS.opcua.isConnected.mockReturnValue(true);
     protocolWS.opcua.getStatus.mockReturnValue("connected");
   });
@@ -1145,6 +1174,13 @@ describe("useDNP3Points Hook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetProtocolMockDefaults();
+    protocolWS.dnp3.connect.mockImplementation((protocol, tenantId) => {
+      const statusCallback = protocolWS.dnp3.onStatusChange.mock.calls[0]?.[0];
+      if (statusCallback) {
+        statusCallback("connected");
+      }
+      return Promise.resolve(true);
+    });
     protocolWS.dnp3.isConnected.mockReturnValue(true);
     protocolWS.dnp3.getStatus.mockReturnValue("connected");
   });
@@ -1276,6 +1312,13 @@ describe("useMQTTMessages Hook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetProtocolMockDefaults();
+    protocolWS.mqtt.connect.mockImplementation((protocol, tenantId) => {
+      const statusCallback = protocolWS.mqtt.onStatusChange.mock.calls[0]?.[0];
+      if (statusCallback) {
+        statusCallback("connected");
+      }
+      return Promise.resolve(true);
+    });
     protocolWS.mqtt.isConnected.mockReturnValue(true);
     protocolWS.mqtt.getStatus.mockReturnValue("connected");
   });
