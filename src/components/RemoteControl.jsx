@@ -151,12 +151,13 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
             Unit Not Found
           </h1>
+          {/* FIX 2: Restored dual behavior based on propUnit */}
           <button
             type="button"
-            onClick={() => navigate("/grid-view")}
+            onClick={() => (propUnit ? navigate("/grid-view") : navigate(-1))}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            Return to Grid View
+            {propUnit ? "Return to Grid View" : "Back to Unit Details"}
           </button>
         </div>
       </div>
@@ -173,11 +174,7 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
       playSound("power-off.mp3", settings.soundEnabled, settings.volume);
     }
 
-    // Update unit status based on power state
-    if (unit) {
-      unit.status = checked ? "online" : "offline";
-    }
-
+    // FIX 3: Removed prop mutation - status is now driven by machineOn state
     // When machine control is toggled to "off", water production and automatic controls should both automatically toggle to "off"
     if (!checked) {
       setWaterProductionOn(false);
@@ -263,9 +260,6 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
     { id: "cam3", name: "Alternate Cam 2", position: "" },
   ];
 
-  // Helper function to check if controls should be disabled
-  const areControlsDisabled = !isConnected || !hasControlPermission;
-
   return (
     <div
       className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-6 ${className}`}
@@ -295,15 +289,20 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
           <div className="flex items-center space-x-4 mt-4">
             <ConnectionPill isConnected={isConnected} />
             <div className="flex items-center space-x-2">
-              {unit.status === "online" ? (
+              {/* FIX 3: Status driven by machineOn state instead of mutating unit.status */}
+              {machineOn ? (
                 <CheckCircle className="h-6 w-6 text-green-500" />
               ) : (
                 <AlertTriangle className="h-6 w-6 text-red-500" />
               )}
               <span
-                className={`text-sm font-medium px-3 py-1 rounded-full ${unit.status === "online" ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400" : "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"}`}
+                className={`text-sm font-medium px-3 py-1 rounded-full ${
+                  machineOn 
+                    ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400" 
+                    : "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"
+                }`}
               >
-                {unit.status.toUpperCase()}
+                {(machineOn ? "online" : "offline").toUpperCase()}
               </span>
             </div>
           </div>
