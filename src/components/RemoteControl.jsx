@@ -102,6 +102,7 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [videoContainerRef, setVideoContainerRef] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [debugMessage, setDebugMessage] = useState("");
   const [actionHistory, setActionHistory] = useState([
     {
       id: 1,
@@ -127,6 +128,7 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
   const isMountedRef = useRef(true);
   const refreshTimeoutRef = useRef(null);
   const actionIdCounter = useRef(4); // Start after initial items
+  const debugTimeoutRef = useRef(null);
 
   // Listen for fullscreen changes
   useEffect(() => {
@@ -181,6 +183,9 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
       if (refreshTimeoutRef.current) {
         clearTimeout(refreshTimeoutRef.current);
       }
+      if (debugTimeoutRef.current) {
+        clearTimeout(debugTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -196,7 +201,7 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
     return () => clearInterval(interval);
   }, []);
 
-  // Helper function to add action to history - with debug line
+  // Helper function to add action to history - with visual debug
   const addAction = (action, description = "Manual control via remote interface") => {
     const newAction = {
       id: actionIdCounter.current++,
@@ -205,16 +210,20 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
       timestamp: getCurrentTimestamp(),
     };
     
-    // DEBUG: Log when actions are added
-    console.log("Added action:", action, "New length:", actionHistory.length + 1);
+    // Show visual debug message on mobile
+    setDebugMessage(`✅ Added: ${action}`);
+    if (debugTimeoutRef.current) {
+      clearTimeout(debugTimeoutRef.current);
+    }
+    debugTimeoutRef.current = setTimeout(() => {
+      setDebugMessage("");
+    }, 3000);
     
     // Use functional update to ensure we're working with the latest state
     setActionHistory(prev => {
       const updated = [newAction, ...prev];
       // Keep only last 10 actions
-      const result = updated.slice(0, 10);
-      console.log("Updated history:", result.map(a => a.action));
-      return result;
+      return updated.slice(0, 10);
     });
   };
 
@@ -338,11 +347,6 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
         refreshTimeoutRef.current = null;
       }
     }, 800);
-    
-    // In a real implementation, this would:
-    // 1. Request a new frame from the camera
-    // 2. Update the video stream
-    // 3. The loading state would be shown during the fetch
   };
 
   const toggleFullscreen = async () => {
@@ -430,6 +434,13 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
             </div>
           </div>
         </div>
+
+        {/* Debug Message Banner - Mobile Friendly */}
+        {debugMessage && (
+          <div className="mb-4 p-3 bg-green-100 dark:bg-green-900/30 border border-green-400 dark:border-green-700 rounded-lg text-green-800 dark:text-green-200 text-sm font-medium animate-pulse">
+            {debugMessage}
+          </div>
+        )}
 
         {/* Connection Warning */}
         {!isConnected && (
