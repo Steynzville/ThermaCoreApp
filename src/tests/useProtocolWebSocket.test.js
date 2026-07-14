@@ -1044,16 +1044,493 @@ describe("useModbusRegisters Hook", () => {
   });
 });
 
-// Skip the remaining protocol hooks to isolate the issue
-// We'll re-enable them once the OOM is fixed
-describe.skip("useOPCUANodes Hook", () => {
-  // ... tests
+describe("useOPCUANodes Hook", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetProtocolMockDefaults();
+    protocolWS.opcua.connect.mockImplementation((protocol, tenantId) => {
+      const statusCallback = protocolWS.opcua.onStatusChange.mock.calls[0]?.[0];
+      if (statusCallback) {
+        statusCallback("connected");
+      }
+      return Promise.resolve(true);
+    });
+    protocolWS.opcua.isConnected.mockReturnValue(true);
+    protocolWS.opcua.getStatus.mockReturnValue("connected");
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    resetProtocolMockDefaults();
+    cleanup();
+    forceGC();
+  });
+
+  it("should initialize with an empty Map of node values", async () => {
+    const { result, unmount } = await mountAutoConnectHook(() =>
+      useOPCUANodes(["node-1"]),
+    );
+
+    expect(result.current.nodeValues).toBeInstanceOf(Map);
+    expect(result.current.nodeValues.size).toBe(0);
+    unmount();
+    forceGC();
+  });
+
+  it("should update node values when nodeIds list is empty (accepts all)", async () => {
+    const ws = protocolWS.opcua;
+
+    const { result, unmount } = await mountAutoConnectHook(() => useOPCUANodes([]));
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({
+        type: "node_value_update",
+        node_id: "node-1",
+        value: 1,
+        timestamp: "t1",
+        quality: "good",
+      });
+    });
+
+    expect(result.current.nodeValues.get("node-1")).toEqual({
+      value: 1,
+      timestamp: "t1",
+      quality: "good",
+    });
+    unmount();
+    forceGC();
+  });
+
+  it("should update node values when node_id is in the watched list", async () => {
+    const ws = protocolWS.opcua;
+
+    const { result, unmount } = await mountAutoConnectHook(() =>
+      useOPCUANodes(["node-1", "node-2"]),
+    );
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({
+        type: "node_value_update",
+        node_id: "node-2",
+        value: 5,
+        timestamp: "t2",
+        quality: "good",
+      });
+    });
+
+    expect(result.current.nodeValues.get("node-2")).toEqual({
+      value: 5,
+      timestamp: "t2",
+      quality: "good",
+    });
+    unmount();
+    forceGC();
+  });
+
+  it("should ignore node updates not in the watched list", async () => {
+    const ws = protocolWS.opcua;
+
+    const { result, unmount } = await mountAutoConnectHook(() =>
+      useOPCUANodes(["node-1"]),
+    );
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({
+        type: "node_value_update",
+        node_id: "node-99",
+        value: 5,
+        timestamp: "t2",
+        quality: "good",
+      });
+    });
+
+    expect(result.current.nodeValues.size).toBe(0);
+    unmount();
+    forceGC();
+  });
+
+  it("should ignore data with a different type", async () => {
+    const ws = protocolWS.opcua;
+
+    const { result, unmount } = await mountAutoConnectHook(() => useOPCUANodes([]));
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({ type: "other_type", node_id: "node-1", value: 1 });
+    });
+
+    expect(result.current.nodeValues.size).toBe(0);
+    unmount();
+    forceGC();
+  });
+
+  it("should default nodeIds to an empty array", async () => {
+    const ws = protocolWS.opcua;
+
+    const { result, unmount } = await mountAutoConnectHook(() => useOPCUANodes());
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({
+        type: "node_value_update",
+        node_id: "node-1",
+        value: 1,
+        timestamp: "t1",
+        quality: "good",
+      });
+    });
+
+    expect(result.current.nodeValues.get("node-1")).toBeDefined();
+    unmount();
+    forceGC();
+  });
 });
 
-describe.skip("useDNP3Points Hook", () => {
-  // ... tests
+describe("useDNP3Points Hook", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetProtocolMockDefaults();
+    protocolWS.dnp3.connect.mockImplementation((protocol, tenantId) => {
+      const statusCallback = protocolWS.dnp3.onStatusChange.mock.calls[0]?.[0];
+      if (statusCallback) {
+        statusCallback("connected");
+      }
+      return Promise.resolve(true);
+    });
+    protocolWS.dnp3.isConnected.mockReturnValue(true);
+    protocolWS.dnp3.getStatus.mockReturnValue("connected");
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    resetProtocolMockDefaults();
+    cleanup();
+    forceGC();
+  });
+
+  it("should initialize with empty points", async () => {
+    const { result, unmount } = await mountAutoConnectHook(() =>
+      useDNP3Points("outstation-1"),
+    );
+
+    expect(result.current.points).toEqual({});
+    unmount();
+    forceGC();
+  });
+
+  it("should update points on matching outstation_id", async () => {
+    const ws = protocolWS.dnp3;
+
+    const { result, unmount } = await mountAutoConnectHook(() =>
+      useDNP3Points("outstation-1"),
+    );
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({
+        type: "point_update",
+        outstation_id: "outstation-1",
+        index: 1,
+        value: 10,
+        timestamp: "t1",
+        quality: "good",
+      });
+    });
+
+    expect(result.current.points).toEqual({
+      1: { value: 10, timestamp: "t1", quality: "good" },
+    });
+    unmount();
+    forceGC();
+  });
+
+  it("should accumulate multiple point updates", async () => {
+    const ws = protocolWS.dnp3;
+
+    const { result, unmount } = await mountAutoConnectHook(() =>
+      useDNP3Points("outstation-1"),
+    );
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({
+        type: "point_update",
+        outstation_id: "outstation-1",
+        index: 1,
+        value: 10,
+        timestamp: "t1",
+        quality: "good",
+      });
+    });
+
+    act(() => {
+      dataCallback({
+        type: "point_update",
+        outstation_id: "outstation-1",
+        index: 2,
+        value: 20,
+        timestamp: "t2",
+        quality: "good",
+      });
+    });
+
+    expect(result.current.points).toEqual({
+      1: { value: 10, timestamp: "t1", quality: "good" },
+      2: { value: 20, timestamp: "t2", quality: "good" },
+    });
+    unmount();
+    forceGC();
+  });
+
+  it("should ignore updates for a different outstation_id", async () => {
+    const ws = protocolWS.dnp3;
+
+    const { result, unmount } = await mountAutoConnectHook(() =>
+      useDNP3Points("outstation-1"),
+    );
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({
+        type: "point_update",
+        outstation_id: "outstation-2",
+        index: 1,
+        value: 10,
+      });
+    });
+
+    expect(result.current.points).toEqual({});
+    unmount();
+    forceGC();
+  });
+
+  it("should ignore updates with a different data type", async () => {
+    const ws = protocolWS.dnp3;
+
+    const { result, unmount } = await mountAutoConnectHook(() =>
+      useDNP3Points("outstation-1"),
+    );
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({
+        type: "other_type",
+        outstation_id: "outstation-1",
+        index: 1,
+        value: 10,
+      });
+    });
+
+    expect(result.current.points).toEqual({});
+    unmount();
+    forceGC();
+  });
 });
 
-describe.skip("useMQTTMessages Hook", () => {
-  // ... tests
+describe("useMQTTMessages Hook", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetProtocolMockDefaults();
+    protocolWS.mqtt.connect.mockImplementation((protocol, tenantId) => {
+      const statusCallback = protocolWS.mqtt.onStatusChange.mock.calls[0]?.[0];
+      if (statusCallback) {
+        statusCallback("connected");
+      }
+      return Promise.resolve(true);
+    });
+    protocolWS.mqtt.isConnected.mockReturnValue(true);
+    protocolWS.mqtt.getStatus.mockReturnValue("connected");
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    resetProtocolMockDefaults();
+    cleanup();
+    forceGC();
+  });
+
+  it("should initialize with an empty messages array", async () => {
+    const { result, unmount } = await mountAutoConnectHook(() => useMQTTMessages());
+
+    expect(result.current.messages).toEqual([]);
+    unmount();
+    forceGC();
+  });
+
+  it("should append messages when topics filter is empty (accepts all)", async () => {
+    const ws = protocolWS.mqtt;
+
+    const { result, unmount } = await mountAutoConnectHook(() => useMQTTMessages([]));
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({
+        type: "message",
+        topic: "sensors/temp",
+        payload: "72",
+        timestamp: "t1",
+        qos: 1,
+      });
+    });
+
+    expect(result.current.messages).toEqual([
+      { topic: "sensors/temp", payload: "72", timestamp: "t1", qos: 1 },
+    ]);
+    unmount();
+    forceGC();
+  });
+
+  it("should append messages that match the topics filter", async () => {
+    const ws = protocolWS.mqtt;
+
+    const { result, unmount } = await mountAutoConnectHook(() =>
+      useMQTTMessages(["sensors/temp", "sensors/humidity"]),
+    );
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({
+        type: "message",
+        topic: "sensors/humidity",
+        payload: "45",
+        timestamp: "t1",
+        qos: 0,
+      });
+    });
+
+    expect(result.current.messages).toHaveLength(1);
+    expect(result.current.messages[0].topic).toBe("sensors/humidity");
+    unmount();
+    forceGC();
+  });
+
+  it("should ignore messages that do not match the topics filter", async () => {
+    const ws = protocolWS.mqtt;
+
+    const { result, unmount } = await mountAutoConnectHook(() =>
+      useMQTTMessages(["sensors/temp"]),
+    );
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({
+        type: "message",
+        topic: "sensors/pressure",
+        payload: "1013",
+        timestamp: "t1",
+        qos: 0,
+      });
+    });
+
+    expect(result.current.messages).toEqual([]);
+    unmount();
+    forceGC();
+  });
+
+  it("should ignore data with a different type", async () => {
+    const ws = protocolWS.mqtt;
+
+    const { result, unmount } = await mountAutoConnectHook(() => useMQTTMessages([]));
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({ type: "other_type", topic: "sensors/temp" });
+    });
+
+    expect(result.current.messages).toEqual([]);
+    unmount();
+    forceGC();
+  });
+
+  it("should keep only the last 100 messages", async () => {
+    const ws = protocolWS.mqtt;
+
+    const { result, unmount } = await mountAutoConnectHook(() => useMQTTMessages([]));
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      for (let i = 0; i < 105; i++) {
+        dataCallback({
+          type: "message",
+          topic: "sensors/temp",
+          payload: String(i),
+          timestamp: `t${i}`,
+          qos: 0,
+        });
+      }
+    });
+
+    expect(result.current.messages).toHaveLength(100);
+    expect(result.current.messages[0].payload).toBe("5");
+    expect(result.current.messages[99].payload).toBe("104");
+    unmount();
+    forceGC();
+  });
+
+  it("should clear messages when clearMessages is called", async () => {
+    const ws = protocolWS.mqtt;
+
+    const { result, unmount } = await mountAutoConnectHook(() => useMQTTMessages([]));
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({
+        type: "message",
+        topic: "sensors/temp",
+        payload: "72",
+        timestamp: "t1",
+        qos: 1,
+      });
+    });
+
+    expect(result.current.messages).toHaveLength(1);
+
+    act(() => {
+      result.current.clearMessages();
+    });
+
+    expect(result.current.messages).toEqual([]);
+    unmount();
+    forceGC();
+  });
+
+  it("should default topics to an empty array", async () => {
+    const ws = protocolWS.mqtt;
+
+    const { result, unmount } = await mountAutoConnectHook(() => useMQTTMessages());
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({
+        type: "message",
+        topic: "any/topic",
+        payload: "x",
+        timestamp: "t1",
+        qos: 0,
+      });
+    });
+
+    expect(result.current.messages).toHaveLength(1);
+    unmount();
+    forceGC();
+  });
 });
