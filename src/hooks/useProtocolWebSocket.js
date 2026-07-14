@@ -12,17 +12,21 @@ import protocolWS from "../services/protocolWebSocketService";
  * @param {string} protocol - Protocol type (modbus, opcua, dnp3, mqtt)
  * @param {string} tenantId - Tenant ID for scoped data
  * @param {boolean} autoConnect - Auto-connect on mount (default: true)
+ * @param {Function} onData - Optional callback invoked for every raw message
  * @returns {Object} WebSocket state and methods
  */
 export const useProtocolWebSocket = (
   protocol,
   tenantId = null,
   autoConnect = true,
+  onData = null,
 ) => {
   const [connectionStatus, setConnectionStatus] = useState("disconnected");
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const isMounted = useRef(true);
+  const onDataRef = useRef(onData);
+  onDataRef.current = onData;
 
   const ws = protocolWS[protocol];
 
@@ -61,6 +65,8 @@ export const useProtocolWebSocket = (
     const handleData = (newData) => {
       if (isMounted.current) {
         setData(newData);
+        // Call the optional onData callback for every raw message
+        onDataRef.current?.(newData);
       }
     };
 
@@ -165,30 +171,30 @@ export const useProtocolEvent = (
  * @param {string} tenantId - Tenant ID
  */
 export const useModbusRegisters = (deviceId, tenantId = null) => {
-  const { data, ...rest } = useProtocolWebSocket("modbus", tenantId);
   const [registers, setRegisters] = useState({});
   const processedKeysRef = useRef(new Set());
 
-  useEffect(() => {
+  const handleRaw = useCallback((raw) => {
     if (
-      data &&
-      data.type === "register_update" &&
-      data.device_id === deviceId
+      raw &&
+      raw.type === "register_update" &&
+      raw.device_id === deviceId
     ) {
-      const key = `${data.address}-${data.timestamp}`;
-      // Prevent processing the same data multiple times
+      const key = `${raw.address}-${raw.timestamp}`;
       if (processedKeysRef.current.has(key)) return;
       processedKeysRef.current.add(key);
 
       setRegisters((prev) => ({
         ...prev,
-        [data.address]: {
-          value: data.value,
-          timestamp: data.timestamp,
+        [raw.address]: {
+          value: raw.value,
+          timestamp: raw.timestamp,
         },
       }));
     }
-  }, [data, deviceId]);
+  }, [deviceId]);
+
+  const { data, ...rest } = useProtocolWebSocket("modbus", tenantId, true, handleRaw);
 
   return {
     registers,
@@ -202,29 +208,33 @@ export const useModbusRegisters = (deviceId, tenantId = null) => {
  * @param {string} tenantId - Tenant ID
  */
 export const useOPCUANodes = (nodeIds = [], tenantId = null) => {
-  const { data, ...rest } = useProtocolWebSocket("opcua", tenantId);
   const [nodeValues, setNodeValues] = useState(new Map());
   const processedKeysRef = useRef(new Set());
+  const nodeIdsRef = useRef(nodeIds);
+  nodeIdsRef.current = nodeIds;
 
-  useEffect(() => {
-    if (data && data.type === "node_value_update") {
-      if (nodeIds.length === 0 || nodeIds.includes(data.node_id)) {
-        const key = `${data.node_id}-${data.timestamp}`;
-        if (processedKeysRef.current.has(key)) return;
-        processedKeysRef.current.add(key);
+  const handleRaw = useCallback((raw) => {
+    if (raw && raw.type === "node_value_update") {
+      const currentNodeIds = nodeIdsRef.current;
+      if (currentNodeIds.length > 0 && !currentNodeIds.includes(raw.node_id)) return;
 
-        setNodeValues((prev) => {
-          const updated = new Map(prev);
-          updated.set(data.node_id, {
-            value: data.value,
-            timestamp: data.timestamp,
-            quality: data.quality,
-          });
-          return updated;
+      const key = `${raw.node_id}-${raw.timestamp}`;
+      if (processedKeysRef.current.has(key)) return;
+      processedKeysRef.current.add(key);
+
+      setNodeValues((prev) => {
+        const updated = new Map(prev);
+        updated.set(raw.node_id, {
+          value: raw.value,
+          timestamp: raw.timestamp,
+          quality: raw.quality,
         });
-      }
+        return updated;
+      });
     }
-  }, [data, nodeIds]);
+  }, []);
+
+  const { data, ...rest } = useProtocolWebSocket("opcua", tenantId, true, handleRaw);
 
   return {
     nodeValues,
@@ -238,30 +248,31 @@ export const useOPCUANodes = (nodeIds = [], tenantId = null) => {
  * @param {string} tenantId - Tenant ID
  */
 export const useDNP3Points = (outstationId, tenantId = null) => {
-  const { data, ...rest } = useProtocolWebSocket("dnp3", tenantId);
   const [points, setPoints] = useState({});
   const processedKeysRef = useRef(new Set());
 
-  useEffect(() => {
+  const handleRaw = useCallback((raw) => {
     if (
-      data &&
-      data.type === "point_update" &&
-      data.outstation_id === outstationId
+      raw &&
+      raw.type === "point_update" &&
+      raw.outstation_id === outstationId
     ) {
-      const key = `${data.index}-${data.timestamp}`;
+      const key = `${raw.index}-${raw.timestamp}`;
       if (processedKeysRef.current.has(key)) return;
       processedKeysRef.current.add(key);
 
       setPoints((prev) => ({
         ...prev,
-        [data.index]: {
-          value: data.value,
-          timestamp: data.timestamp,
-          quality: data.quality,
+        [raw.index]: {
+          value: raw.value,
+          timestamp: raw.timestamp,
+          quality: raw.quality,
         },
       }));
     }
-  }, [data, outstationId]);
+  }, [outstationId]);
+
+  const { data, ...rest } = useProtocolWebSocket("dnp3", tenantId, true, handleRaw);
 
   return {
     points,
@@ -275,29 +286,35 @@ export const useDNP3Points = (outstationId, tenantId = null) => {
  * @param {string} tenantId - Tenant ID
  */
 export const useMQTTMessages = (topics = [], tenantId = null) => {
-  const { data, ...rest } = useProtocolWebSocket("mqtt", tenantId);
   const [messages, setMessages] = useState([]);
   const processedKeysRef = useRef(new Set());
+  const topicsRef = useRef(topics);
+  topicsRef.current = topics;
 
-  useEffect(() => {
-    if (data && data.type === "message") {
-      if (topics.length === 0 || topics.includes(data.topic)) {
-        const key = `${data.topic}-${data.timestamp}`;
-        if (processedKeysRef.current.has(key)) return;
-        processedKeysRef.current.add(key);
+  const handleRaw = useCallback((raw) => {
+    if (!raw || raw.type !== "message") return;
 
-        setMessages((prev) => [
-          ...prev.slice(-100), // Keep last 100 messages
-          {
-            topic: data.topic,
-            payload: data.payload,
-            timestamp: data.timestamp,
-            qos: data.qos,
-          },
-        ]);
-      }
-    }
-  }, [data, topics]);
+    const currentTopics = topicsRef.current;
+    if (currentTopics.length > 0 && !currentTopics.includes(raw.topic)) return;
+
+    const key = `${raw.topic}-${raw.timestamp}`;
+    if (processedKeysRef.current.has(key)) return;
+    processedKeysRef.current.add(key);
+
+    setMessages((prev) => {
+      const newMessage = {
+        topic: raw.topic,
+        payload: raw.payload,
+        timestamp: raw.timestamp,
+        qos: raw.qos,
+      };
+      // Keep last 100 messages: keep 99 existing + add the new one = 100 total
+      const trimmed = prev.slice(-99);
+      return [...trimmed, newMessage];
+    });
+  }, []);
+
+  const { data, ...rest } = useProtocolWebSocket("mqtt", tenantId, true, handleRaw);
 
   const clearMessages = () => {
     processedKeysRef.current.clear();
