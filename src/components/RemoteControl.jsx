@@ -13,7 +13,7 @@ import {
   Wifi,
   WifiOff,
 } from "lucide-react";
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
@@ -66,16 +66,19 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
     unit?.watergeneration && unit?.waterProductionOn,
   );
   const [autoSwitchEnabled, setAutoSwitchEnabled] = useState(
-    unit?.autoSwitchEnabled,
+    unit?.autoSwitchEnabled || false,
   );
-  const [isConnected, _setIsConnected] = useState(true);
+  const [isConnected, setIsConnected] = useState(true);
   const [selectedCamera, setSelectedCamera] = useState("cam1");
   const [videoFeedActive, setVideoFeedActive] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [videoContainerRef, setVideoContainerRef] = useState(null);
 
-  // Listen for fullscreen changes (moved before early return to avoid conditional hook call)
-  React.useEffect(() => {
+  // Use ref to track mounted state
+  const isMountedRef = useRef(true);
+
+  // Listen for fullscreen changes
+  useEffect(() => {
     // Guard for SSR safety
     if (typeof document === "undefined") {
       return;
@@ -119,6 +122,28 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
     };
   }, []);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  // Simulate connection status changes (for demo/development)
+  useEffect(() => {
+    // This would normally be driven by WebSocket events
+    // For now, we'll keep it connected with a periodic check
+    const interval = setInterval(() => {
+      // In a real implementation, this would check actual connection status
+      // For now, we'll just keep it true to avoid showing disconnection warnings
+      if (isMountedRef.current) {
+        setIsConnected(true);
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   if (!unit) {
     return (
       <div className="min-h-screen bg-blue-50 dark:bg-gray-950 p-6 flex items-center justify-center">
@@ -128,10 +153,10 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
           </h1>
           <button
             type="button"
-            onClick={() => (propUnit ? navigate("/grid-view") : navigate(-1))}
+            onClick={() => navigate("/grid-view")}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            {propUnit ? "Return to Grid View" : "Back to Unit Details"}
+            Return to Grid View
           </button>
         </div>
       </div>
@@ -227,7 +252,9 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
           await document.msExitFullscreen();
         }
       }
-    } catch (_error) {}
+    } catch (_error) {
+      // Silent catch for fullscreen errors
+    }
   };
 
   const availableCameras = [
@@ -235,6 +262,9 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
     { id: "cam2", name: "Alternate Cam 1", position: "" },
     { id: "cam3", name: "Alternate Cam 2", position: "" },
   ];
+
+  // Helper function to check if controls should be disabled
+  const areControlsDisabled = !isConnected || !hasControlPermission;
 
   return (
     <div
@@ -328,6 +358,7 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
                         <Switch
                           checked={machineOn}
                           onCheckedChange={() => {}}
+                          disabled={!isConnected}
                           aria-label="Machine Power"
                         />
                       </div>
