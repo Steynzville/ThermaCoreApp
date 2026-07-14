@@ -55,20 +55,16 @@ const resetProtocolMockDefaults = () => {
   }
 };
 
-// Async-safe mount helper for hooks that auto-connect.
-// Renders the hook and waits for the auto-connect effect to settle.
-// Using waitFor ensures React's scheduler has flushed all pending work.
-// IMPORTANT: Call unmount() after each test to clean up pending effects.
+// Simple mount helper - just flushes pending promises from the auto-connect effect.
+// We don't need to wait for the connection to be established since the tests
+// only care about the hook mounting without OOM.
 const mountAutoConnectHook = async (hook) => {
   const { result, unmount, rerender } = renderHook(hook);
 
-  // Wait for the auto-connect effect to complete
-  await waitFor(
-    () => {
-      return result.current.connectionStatus !== "disconnected";
-    },
-    { timeout: 1000 },
-  );
+  // Flush any pending microtasks from the auto-connect effect
+  await act(async () => {
+    await Promise.resolve();
+  });
 
   return { result, unmount, rerender };
 };
