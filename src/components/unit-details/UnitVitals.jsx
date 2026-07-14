@@ -21,6 +21,11 @@ import { useUnits } from "../../context/UnitContext";
 import { useRealtimeMetrics } from "../../hooks/useRealtimeData";
 import { Card, CardContent, CardHeader } from "../ui/card";
 
+// A single source of truth for "no GPS set yet" — avoids seeding the edit
+// field (and the saved value, if the user hits Save without noticing) with
+// a real-world New York coordinate.
+const GPS_PLACEHOLDER = "Not set";
+
 const UnitVitals = ({ unit }) => {
   const { formatTemperature } = useSettings();
   const { updateUnitName, updateUnitLocation, updateUnitGPS } = useUnits();
@@ -29,9 +34,7 @@ const UnitVitals = ({ unit }) => {
   const [isEditingGPS, setIsEditingGPS] = useState(false);
   const [editedName, setEditedName] = useState(unit.name || "");
   const [editedLocation, setEditedLocation] = useState(unit.location || "");
-  const [editedGPS, setEditedGPS] = useState(
-    unit.gpsCoordinates || "40.7128° N, 74.0060° W",
-  );
+  const [editedGPS, setEditedGPS] = useState(unit.gpsCoordinates || "");
 
   // Check if unit is offline/switched off or in maintenance
   const isOffline =
@@ -90,11 +93,23 @@ const UnitVitals = ({ unit }) => {
     if (val === undefined || val === null || isOffline)
       return "text-gray-900 dark:text-gray-100";
     const num = parseFloat(val);
+    if (Number.isNaN(num)) return "text-gray-900 dark:text-gray-100";
     if (num >= 90 || num < 10)
       return "text-red-600 dark:text-red-400 font-bold";
     if (num >= 70) return "text-yellow-600 dark:text-yellow-400 font-semibold";
     return "text-green-600 dark:text-green-400 font-medium";
   };
+
+  // Resolve inlet/outlet flow rate values once, using nullish coalescing so
+  // a legitimate reading of 0 isn't mistaken for "missing" and replaced by
+  // the mock defaults (the previous `||` / truthy checks did exactly that).
+  const flowRateInlet =
+    liveUnit.flow_rate_inlet ?? unit.flowRate ?? 45.5;
+  const flowRateOutlet =
+    liveUnit.flow_rate_outlet ??
+    (unit.flowRate !== undefined && unit.flowRate !== null
+      ? +(unit.flowRate * 0.95).toFixed(1)
+      : 42.1);
 
   const handleSaveName = async () => {
     try {
@@ -122,7 +137,7 @@ const UnitVitals = ({ unit }) => {
       setIsEditingGPS(false);
     } catch (_error) {
       // Reset to original value on error
-      setEditedGPS(unit.gpsCoordinates || "40.7128° N, 74.0060° W");
+      setEditedGPS(unit.gpsCoordinates || "");
     }
   };
 
@@ -137,7 +152,7 @@ const UnitVitals = ({ unit }) => {
   };
 
   const handleCancelGPSEdit = () => {
-    setEditedGPS(unit.gpsCoordinates || "40.7128° N, 74.0060° W");
+    setEditedGPS(unit.gpsCoordinates || "");
     setIsEditingGPS(false);
   };
 
@@ -170,7 +185,7 @@ const UnitVitals = ({ unit }) => {
                 </p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   {parseFloat(
-                    liveUnit.currentPower || unit.currentPower,
+                    liveUnit.currentPower ?? unit.currentPower,
                   ).toFixed(1)}{" "}
                   kW
                 </p>
@@ -185,7 +200,7 @@ const UnitVitals = ({ unit }) => {
                     Water Level
                   </p>
                   <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                    {liveUnit.water_level || unit.water_level} L
+                    {liveUnit.water_level ?? unit.water_level} L
                   </p>
                 </div>
               </div>
@@ -199,7 +214,7 @@ const UnitVitals = ({ unit }) => {
                 </p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   {formatTemperature(
-                    liveUnit.temp_outside || unit.temp_outside,
+                    liveUnit.temp_outside ?? unit.temp_outside,
                   )}
                 </p>
               </div>
@@ -248,7 +263,7 @@ const UnitVitals = ({ unit }) => {
                   Humidity
                 </p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  {liveUnit.humidity || unit.humidity}%
+                  {liveUnit.humidity ?? unit.humidity}%
                 </p>
               </div>
             </div>
@@ -278,12 +293,12 @@ const UnitVitals = ({ unit }) => {
                     <div
                       className="bg-green-500 h-2.5 rounded-full"
                       style={{
-                        width: `${liveUnit.battery_level || unit.battery_level}%`,
+                        width: `${liveUnit.battery_level ?? unit.battery_level}%`,
                       }}
                     ></div>
                   </div>
                   <p className="text-lg font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
-                    {liveUnit.battery_level || unit.battery_level}%
+                    {liveUnit.battery_level ?? unit.battery_level}%
                   </p>
                 </div>
               </div>
@@ -295,12 +310,8 @@ const UnitVitals = ({ unit }) => {
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   Flow Rate Inlet
                 </p>
-                <p
-                  className={`text-lg ${getFlowRateColor(liveUnit.flow_rate_inlet || unit.flowRate || 45.5)}`}
-                >
-                  {isOffline
-                    ? "N/A"
-                    : `${liveUnit.flow_rate_inlet || unit.flowRate || 45.5} L/min`}
+                <p className={`text-lg ${getFlowRateColor(flowRateInlet)}`}>
+                  {isOffline ? "N/A" : `${flowRateInlet} L/min`}
                 </p>
               </div>
             </div>
@@ -311,12 +322,8 @@ const UnitVitals = ({ unit }) => {
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   Flow Rate Outlet
                 </p>
-                <p
-                  className={`text-lg ${getFlowRateColor(liveUnit.flow_rate_outlet || unit.flowRate * 0.95 || 42.1)}`}
-                >
-                  {isOffline
-                    ? "N/A"
-                    : `${liveUnit.flow_rate_outlet || (unit.flowRate ? (unit.flowRate * 0.95).toFixed(1) : 42.1)} L/min`}
+                <p className={`text-lg ${getFlowRateColor(flowRateOutlet)}`}>
+                  {isOffline ? "N/A" : `${flowRateOutlet} L/min`}
                 </p>
               </div>
             </div>
@@ -478,8 +485,7 @@ const UnitVitals = ({ unit }) => {
                       ) : (
                         <div className="flex items-center space-x-2 flex-1">
                           <p className="text-xs text-gray-500 dark:text-gray-500 flex-1">
-                            GPS:{" "}
-                            {unit.gpsCoordinates || "40.7128° N, 74.0060° W"}
+                            GPS: {unit.gpsCoordinates || GPS_PLACEHOLDER}
                           </p>
                           <button
                             type="button"
