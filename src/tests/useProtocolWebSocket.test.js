@@ -922,6 +922,10 @@ describe("useModbusRegisters Hook", () => {
 
     const dataCallback = ws.subscribe.mock.calls[0][1];
 
+    // Each dataCallback call goes through the base hook's setData(newData),
+    // which is not a functional updater. Two calls inside a single act()
+    // would batch into one render and collapse to only the last value, so
+    // each one gets its own act() to force a distinct render in between.
     act(() => {
       dataCallback({
         type: "register_update",
@@ -930,6 +934,9 @@ describe("useModbusRegisters Hook", () => {
         value: 100,
         timestamp: "t1",
       });
+    });
+
+    act(() => {
       dataCallback({
         type: "register_update",
         device_id: "device-1",
@@ -1162,6 +1169,9 @@ describe("useDNP3Points Hook", () => {
         timestamp: "t1",
         quality: "good",
       });
+    });
+
+    act(() => {
       dataCallback({
         type: "point_update",
         outstation_id: "outstation-1",
