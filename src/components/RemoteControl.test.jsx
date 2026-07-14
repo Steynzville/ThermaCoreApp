@@ -6,7 +6,7 @@ import {
   beforeEach,
   afterEach,
 } from "vitest";
-import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import RemoteControl from "../components/RemoteControl";
 import { AuthProvider } from "../context/AuthContext";
@@ -81,7 +81,12 @@ vi.mock("../components/ui/switch", () => ({
       data-testid="switch"
       data-checked={checked}
       disabled={disabled}
-      onClick={() => onCheckedChange?.(!checked)}
+      onClick={() => {
+        // When the switch is clicked, call onCheckedChange to simulate the toggle
+        if (onCheckedChange) {
+          onCheckedChange(!checked);
+        }
+      }}
       {...props}
     />
   ),
@@ -659,10 +664,15 @@ describe("RemoteControl Component", () => {
         </TestWrapper>,
       );
 
+      // Find and click the switch to open dialog
+      const switches = screen.getAllByTestId("switch");
+      fireEvent.click(switches[0]);
+      
+      // Click the confirm button in the dialog
       const actionButtons = screen.getAllByTestId("alert-dialog-action");
       fireEvent.click(actionButtons[0]);
       
-      // Check that action appears in history - be specific about which element
+      // Check that action appears in history
       expect(screen.getByText("Machine powered off")).toBeInTheDocument();
       expect(screen.getByText("Machine turned off via remote interface")).toBeInTheDocument();
     });
@@ -674,10 +684,14 @@ describe("RemoteControl Component", () => {
         </TestWrapper>,
       );
 
+      // Find and click the switch to open dialog
+      const switches = screen.getAllByTestId("switch");
+      fireEvent.click(switches[1]);
+      
+      // Click the confirm button in the dialog
       const actionButtons = screen.getAllByTestId("alert-dialog-action");
       fireEvent.click(actionButtons[1]);
       
-      // Use exact text matching instead of regex
       expect(screen.getByText("Water production disabled")).toBeInTheDocument();
       expect(screen.getByText("Water production disabled via remote interface")).toBeInTheDocument();
     });
@@ -690,10 +704,14 @@ describe("RemoteControl Component", () => {
         </TestWrapper>,
       );
 
+      // Find and click the switch to open dialog
+      const switches = screen.getAllByTestId("switch");
+      fireEvent.click(switches[2]);
+      
+      // Click the confirm button in the dialog
       const actionButtons = screen.getAllByTestId("alert-dialog-action");
       fireEvent.click(actionButtons[2]);
       
-      // Use getAllByText since there are two elements with this text
       const autoSwitchTexts = screen.getAllByText("Auto switch enabled");
       expect(autoSwitchTexts.length).toBe(2);
       expect(autoSwitchTexts[0]).toBeInTheDocument(); // Title
@@ -774,7 +792,7 @@ describe("RemoteControl Component", () => {
       }
     });
 
-    it("should show action count in history header", async () => {
+    it("should show action count in history header", () => {
       render(
         <TestWrapper role="admin">
           <RemoteControl unit={mockUnit} />
@@ -784,19 +802,20 @@ describe("RemoteControl Component", () => {
       // Get the current action count from the header
       const headerText = screen.getByText(/Last \d+ actions recorded/i);
       const initialCount = parseInt(headerText.textContent.match(/\d+/)[0]);
-      expect(initialCount).toBeGreaterThan(0);
+      expect(initialCount).toBe(3); // Should start with 3 hardcoded actions
       
-      // Add an action
+      // Click the switch to open dialog
+      const switches = screen.getAllByTestId("switch");
+      fireEvent.click(switches[0]);
+      
+      // Click the confirm button
       const actionButtons = screen.getAllByTestId("alert-dialog-action");
       fireEvent.click(actionButtons[0]);
       
-      // Wait for the state to update
-      await waitFor(() => {
-        const updatedHeader = screen.getByText(/Last \d+ actions recorded/i);
-        const updatedCount = parseInt(updatedHeader.textContent.match(/\d+/)[0]);
-        // Verify the count increased by 1
-        expect(updatedCount).toBe(initialCount + 1);
-      });
+      // The count should now be 4
+      const updatedHeader = screen.getByText(/Last \d+ actions recorded/i);
+      const updatedCount = parseInt(updatedHeader.textContent.match(/\d+/)[0]);
+      expect(updatedCount).toBe(4);
     });
 
     it("should keep only last 10 actions in history", () => {
@@ -806,10 +825,12 @@ describe("RemoteControl Component", () => {
         </TestWrapper>,
       );
 
+      const switches = screen.getAllByTestId("switch");
       const actionButtons = screen.getAllByTestId("alert-dialog-action");
       
       // Add 10 more actions (total 13)
       for (let i = 0; i < 10; i++) {
+        fireEvent.click(switches[0]);
         fireEvent.click(actionButtons[0]);
       }
       
