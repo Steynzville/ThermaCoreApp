@@ -1,6 +1,6 @@
 [build]
   publish = "dist"
-  command = "pnpm install --frozen-lockfile && pnpm run build"
+  command = "rm -rf .netlify .cache node_modules/.cache && pnpm install --frozen-lockfile && pnpm run build"
 
 [build.environment]
   NODE_VERSION = "20.18.0"
