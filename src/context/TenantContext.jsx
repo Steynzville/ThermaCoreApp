@@ -10,21 +10,8 @@ const API_BASE_URL_FALLBACK = "https://thermacoreapp.onrender.com";
 
 export const useTenant = () => {
   const context = useContext(TenantContext);
+  // FIXED: Always throw when used outside provider - no test detection
   if (!context) {
-    if (typeof window !== "undefined" && (window.__vitest_worker__ || process.env.NODE_ENV === "test")) {
-      const stack = new Error().stack || "";
-      if (stack.includes("TenantContext.test")) {
-        throw new Error("useTenant must be used within a TenantProvider");
-      }
-      return {
-        currentTenant: { id: "tenant-1", name: "Mock Tenant", features: [] },
-        availableTenants: [{ id: "tenant-1", name: "Mock Tenant" }],
-        isLoading: false,
-        error: null,
-        changeTenant: async () => {},
-        isAdmin: false,
-      };
-    }
     throw new Error("useTenant must be used within a TenantProvider");
   }
   return context;
