@@ -6,7 +6,7 @@ import {
   beforeEach,
   afterEach,
 } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import RemoteControl from "../components/RemoteControl";
 import { AuthProvider } from "../context/AuthContext";
@@ -138,8 +138,13 @@ vi.mock("../context/SettingsContext", async () => {
   };
 });
 
-// Test wrapper with all providers
-const TestWrapper = ({ children, unit = mockUnit, role = "admin" }) => {
+// Test wrapper with all providers - now accepts settings as a prop
+const TestWrapper = ({ 
+  children, 
+  unit = mockUnit, 
+  role = "admin",
+  settings = { soundEnabled: true, volume: 0.5 }
+}) => {
   mockUseAuth.mockReturnValue({
     user: { id: 1, username: "admin", role },
     isAuthenticated: true,
@@ -149,10 +154,7 @@ const TestWrapper = ({ children, unit = mockUnit, role = "admin" }) => {
   });
 
   mockUseSettings.mockReturnValue({
-    settings: {
-      soundEnabled: true,
-      volume: 0.5,
-    },
+    settings,
   });
 
   mockLocationState = { unit: unit };
@@ -173,19 +175,6 @@ describe("RemoteControl Component", () => {
     vi.clearAllMocks();
     mockNavigate.mockClear();
     mockLocationState = { unit: mockUnit };
-    mockUseAuth.mockReturnValue({
-      user: { id: 1, username: "admin", role: "admin" },
-      isAuthenticated: true,
-      token: "mock-token-123",
-      logout: vi.fn(),
-      backendRole: "admin",
-    });
-    mockUseSettings.mockReturnValue({
-      settings: {
-        soundEnabled: true,
-        volume: 0.5,
-      },
-    });
     // Reset permissions mock to default
     canControlUnits.mockReturnValue(true);
   });
@@ -354,7 +343,7 @@ describe("RemoteControl Component", () => {
 
   describe("Permission Checks - No Control Permission", () => {
     it("should disable all switches and hide confirm dialogs when user lacks control permission", () => {
-      // FIX 1: Use mockReturnValue instead of mockReturnValueOnce to handle React 19 + StrictMode
+      // Use mockReturnValue instead of mockReturnValueOnce to handle React 19 + StrictMode
       canControlUnits.mockReturnValue(false);
 
       render(
@@ -575,25 +564,22 @@ describe("RemoteControl Component", () => {
     });
 
     it("should respect sound settings when playing audio", () => {
-      mockUseSettings.mockReturnValue({
-        settings: {
-          soundEnabled: false,
-          volume: 0.3,
-        },
-      });
-
+      // Override settings for this test by passing custom settings to TestWrapper
       render(
-        <TestWrapper role="admin">
+        <TestWrapper 
+          role="admin" 
+          settings={{ soundEnabled: false, volume: 0.3 }}
+        >
           <RemoteControl unit={mockUnit} />
         </TestWrapper>,
       );
 
-      const switches = screen.getAllByTestId("switch");
       const actionButtons = screen.getAllByTestId("alert-dialog-action");
       
       // Try to toggle machine
       fireEvent.click(actionButtons[0]);
       
+      // Verify correct sound settings were used
       expect(playSound).toHaveBeenCalledWith("power-off.mp3", false, 0.3);
     });
   });
