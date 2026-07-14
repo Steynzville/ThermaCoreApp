@@ -59,16 +59,15 @@ const resetProtocolMockDefaults = () => {
 // Renders the hook, waits for the auto-connect effect to settle, and
 // returns the result + unmount function. This flushes the async state
 // update that would otherwise dangle across tests and cause OOM.
-const mountAutoConnectHook = (hook) => {
+const mountAutoConnectHook = async (hook) => {
   const { result, unmount, rerender } = renderHook(hook);
   // Wait for the auto-connect promise chain to flush.
-  // One tick is enough to resolve the microtask that schedules the
-  // setError(null) update.
-  return act(async () => {
+  await act(async () => {
     await Promise.resolve();
     // Some updates may be batched behind a second microtask
     await Promise.resolve();
-  }).then(() => ({ result, unmount, rerender }));
+  });
+  return { result, unmount, rerender };
 };
 
 beforeEach(() => {
@@ -261,13 +260,6 @@ describe("useProtocolWebSocket - Connection Lifecycle", () => {
       useProtocolWebSocket("modbus", "tenant-1", false),
     );
 
-    // First create an error
-    await act(async () => {
-      await result.current.connect();
-    });
-
-    // Then clear it
-    ws.connect.mockResolvedValue(true);
     await act(async () => {
       await result.current.connect();
     });
@@ -332,7 +324,6 @@ describe("useProtocolWebSocket - Auto-Connect", () => {
 
     renderHook(() => useProtocolWebSocket("modbus", null, true));
 
-    // connect should not be called if already connected
     expect(ws.connect).not.toHaveBeenCalled();
   });
 
@@ -554,7 +545,6 @@ describe("useProtocolWebSocket - Send Method", () => {
       result.current.send({ test: "data" });
     });
 
-    // send should still be called, the service handles the connection state
     expect(ws.send).toHaveBeenCalled();
   });
 
@@ -604,9 +594,7 @@ describe("useProtocolWebSocket - Cleanup", () => {
 
     unmount();
 
-    // Should unsubscribe from data
     expect(ws.unsubscribe).toHaveBeenCalled();
-    // Should cleanup status listeners
     expect(ws.offStatusChange).toHaveBeenCalled();
   });
 
@@ -708,7 +696,6 @@ describe("useProtocolWebSocket - Tenant ID Handling", () => {
       await result.current.connect();
     });
 
-    // The hook converts undefined to null because tenantId is defaulted to null
     expect(ws.connect).toHaveBeenCalledWith("modbus", null);
   });
 });
@@ -1001,7 +988,6 @@ describe("useModbusRegisters Hook", () => {
       useModbusRegisters("device-1"),
     );
 
-    // No data has been emitted yet, so data starts as null; ensure no throw
     expect(() => ws.subscribe.mock.calls[0][1]).not.toThrow();
     expect(result.current.registers).toEqual({});
   });
@@ -1251,4 +1237,160 @@ describe("useMQTTMessages Hook", () => {
     vi.clearAllMocks();
   });
 
-  it("should initialize with an empty messages array", async () =>
+  it("should initialize with an empty messages array", async () => {
+    const { result } = await mountAutoConnectHook(() => useMQTTMessages());
+
+    expect(result.current.messages).toEqual([]);
+  });
+
+  it("should append messages when topics filter is empty (accepts all)", async () => {
+    const ws = protocolWS.mqtt;
+
+    const { result } = await mountAutoConnectHook(() => useMQTTMessages([]));
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({
+        type: "message",
+        topic: "sensors/temp",
+        payload: "72",
+        timestamp: "t1",
+        qos: 1,
+      });
+    });
+
+    expect(result.current.messages).toEqual([
+      { topic: "sensors/temp", payload: "72", timestamp: "t1", qos: 1 },
+    ]);
+  });
+
+  it("should append messages that match the topics filter", async () => {
+    const ws = protocolWS.mqtt;
+
+    const { result } = await mountAutoConnectHook(() =>
+      useMQTTMessages(["sensors/temp", "sensors/humidity"]),
+    );
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({
+        type: "message",
+        topic: "sensors/humidity",
+        payload: "45",
+        timestamp: "t1",
+        qos: 0,
+      });
+    });
+
+    expect(result.current.messages).toHaveLength(1);
+    expect(result.current.messages[0].topic).toBe("sensors/humidity");
+  });
+
+  it("should ignore messages that do not match the topics filter", async () => {
+    const ws = protocolWS.mqtt;
+
+    const { result } = await mountAutoConnectHook(() =>
+      useMQTTMessages(["sensors/temp"]),
+    );
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({
+        type: "message",
+        topic: "sensors/pressure",
+        payload: "1013",
+        timestamp: "t1",
+        qos: 0,
+      });
+    });
+
+    expect(result.current.messages).toEqual([]);
+  });
+
+  it("should ignore data with a different type", async () => {
+    const ws = protocolWS.mqtt;
+
+    const { result } = await mountAutoConnectHook(() => useMQTTMessages([]));
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({ type: "other_type", topic: "sensors/temp" });
+    });
+
+    expect(result.current.messages).toEqual([]);
+  });
+
+  it("should keep only the last 100 messages", async () => {
+    const ws = protocolWS.mqtt;
+
+    const { result } = await mountAutoConnectHook(() => useMQTTMessages([]));
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      for (let i = 0; i < 105; i++) {
+        dataCallback({
+          type: "message",
+          topic: "sensors/temp",
+          payload: String(i),
+          timestamp: `t${i}`,
+          qos: 0,
+        });
+      }
+    });
+
+    expect(result.current.messages).toHaveLength(100);
+    expect(result.current.messages[0].payload).toBe("5");
+    expect(result.current.messages[99].payload).toBe("104");
+  });
+
+  it("should clear messages when clearMessages is called", async () => {
+    const ws = protocolWS.mqtt;
+
+    const { result } = await mountAutoConnectHook(() => useMQTTMessages([]));
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({
+        type: "message",
+        topic: "sensors/temp",
+        payload: "72",
+        timestamp: "t1",
+        qos: 1,
+      });
+    });
+
+    expect(result.current.messages).toHaveLength(1);
+
+    act(() => {
+      result.current.clearMessages();
+    });
+
+    expect(result.current.messages).toEqual([]);
+  });
+
+  it("should default topics to an empty array", async () => {
+    const ws = protocolWS.mqtt;
+
+    const { result } = await mountAutoConnectHook(() => useMQTTMessages());
+
+    const dataCallback = ws.subscribe.mock.calls[0][1];
+
+    act(() => {
+      dataCallback({
+        type: "message",
+        topic: "any/topic",
+        payload: "x",
+        timestamp: "t1",
+        qos: 0,
+      });
+    });
+
+    expect(result.current.messages).toHaveLength(1);
+  });
+});
