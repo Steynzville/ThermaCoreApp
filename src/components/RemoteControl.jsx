@@ -103,6 +103,7 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
   const [videoContainerRef, setVideoContainerRef] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [debugMessage, setDebugMessage] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [actionHistory, setActionHistory] = useState([
     {
       id: 1,
@@ -201,6 +202,17 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
     return () => clearInterval(interval);
   }, []);
 
+  // Helper function to show debug message on mobile
+  const showDebug = (message, isError = false) => {
+    setDebugMessage(message);
+    if (debugTimeoutRef.current) {
+      clearTimeout(debugTimeoutRef.current);
+    }
+    debugTimeoutRef.current = setTimeout(() => {
+      setDebugMessage("");
+    }, 4000);
+  };
+
   // Helper function to add action to history - with visual debug
   const addAction = (action, description = "Manual control via remote interface") => {
     const newAction = {
@@ -211,13 +223,7 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
     };
     
     // Show visual debug message on mobile
-    setDebugMessage(`✅ Added: ${action}`);
-    if (debugTimeoutRef.current) {
-      clearTimeout(debugTimeoutRef.current);
-    }
-    debugTimeoutRef.current = setTimeout(() => {
-      setDebugMessage("");
-    }, 3000);
+    showDebug(`✅ Added: ${action}`);
     
     // Use functional update to ensure we're working with the latest state
     setActionHistory(prev => {
@@ -246,7 +252,10 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
     );
   }
 
+  // DEBUG: Track when handlers are called
   const handleMachineToggle = (checked) => {
+    showDebug(`🔄 Machine toggle: ${checked ? 'ON' : 'OFF'}`);
+    
     setMachineOn(checked);
 
     // Play appropriate audio based on power state
@@ -271,6 +280,8 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
   };
 
   const handleWaterProductionToggle = (checked) => {
+    showDebug(`🔄 Water toggle: ${checked ? 'ON' : 'OFF'}`);
+    
     setWaterProductionOn(checked);
 
     // Play appropriate audio based on water state
@@ -292,6 +303,8 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
   };
 
   const handleAutoSwitchToggle = (checked) => {
+    showDebug(`🔄 Auto toggle: ${checked ? 'ON' : 'OFF'}`);
+    
     setAutoSwitchEnabled(checked);
     playSound("cool-tones.mp3", settings.soundEnabled, settings.volume);
     
@@ -388,6 +401,12 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
     { id: "cam3", name: "Alternate Cam 2", position: "" },
   ];
 
+  // Helper to debug when buttons are clicked
+  const handleContinueClick = (handler, ...args) => {
+    showDebug(`🔘 Continue button clicked!`);
+    handler(...args);
+  };
+
   return (
     <div
       className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-6 ${className}`}
@@ -437,7 +456,15 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
 
         {/* Debug Message Banner - Mobile Friendly */}
         {debugMessage && (
-          <div className="mb-4 p-3 bg-green-100 dark:bg-green-900/30 border border-green-400 dark:border-green-700 rounded-lg text-green-800 dark:text-green-200 text-sm font-medium animate-pulse">
+          <div className={`mb-4 p-3 border rounded-lg text-sm font-medium animate-pulse ${
+            debugMessage.includes('✅') 
+              ? 'bg-green-100 dark:bg-green-900/30 border-green-400 dark:border-green-700 text-green-800 dark:text-green-200'
+              : debugMessage.includes('🔄')
+              ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-400 dark:border-blue-700 text-blue-800 dark:text-blue-200'
+              : debugMessage.includes('🔘')
+              ? 'bg-yellow-100 dark:bg-yellow-900/30 border-yellow-400 dark:border-yellow-700 text-yellow-800 dark:text-yellow-200'
+              : 'bg-red-100 dark:bg-red-900/30 border-red-400 dark:border-red-700 text-red-800 dark:text-red-200'
+          }`}>
             {debugMessage}
           </div>
         )}
@@ -487,7 +514,7 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
                 {hasControlPermission ? (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <div className="cursor-pointer">
+                      <div className="cursor-pointer" onClick={() => showDebug('👆 Switch clicked - dialog opening')}>
                         <Switch
                           checked={machineOn}
                           onCheckedChange={() => {}} // This triggers the dialog via the AlertDialogTrigger
@@ -511,7 +538,7 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
                           onClick={() => {
-                            // Toggle machine state when confirmed
+                            showDebug('🔘 Machine Continue clicked!');
                             handleMachineToggle(!machineOn);
                           }}
                         >
@@ -570,7 +597,7 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
                   {hasControlPermission ? (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <div className="cursor-pointer">
+                        <div className="cursor-pointer" onClick={() => showDebug('👆 Water switch clicked - dialog opening')}>
                           <Switch
                             checked={waterProductionOn}
                             onCheckedChange={() => {}} // This triggers the dialog via the AlertDialogTrigger
@@ -594,7 +621,7 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
                           <AlertDialogAction
                             onClick={() => {
-                              // Toggle water production state when confirmed
+                              showDebug('🔘 Water Continue clicked!');
                               handleWaterProductionToggle(!waterProductionOn);
                             }}
                           >
@@ -655,7 +682,7 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
                 {hasControlPermission ? (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <div className="cursor-pointer">
+                      <div className="cursor-pointer" onClick={() => showDebug('👆 Auto switch clicked - dialog opening')}>
                         <Switch
                           checked={autoSwitchEnabled}
                           onCheckedChange={() => {}} // This triggers the dialog via the AlertDialogTrigger
@@ -680,7 +707,7 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
                           onClick={() => {
-                            // Toggle auto switch state when confirmed
+                            showDebug('🔘 Auto Continue clicked!');
                             handleAutoSwitchToggle(!autoSwitchEnabled);
                           }}
                         >
