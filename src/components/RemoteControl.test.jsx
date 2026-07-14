@@ -5,9 +5,8 @@ import {
   vi,
   beforeEach,
   afterEach,
-  waitFor,
 } from "vitest";
-import { render, screen, fireEvent, act } from "@testing-library/react";
+import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import RemoteControl from "../components/RemoteControl";
 import { AuthProvider } from "../context/AuthContext";
