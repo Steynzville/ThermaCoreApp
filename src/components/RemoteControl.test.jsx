@@ -354,7 +354,8 @@ describe("RemoteControl Component", () => {
 
   describe("Permission Checks - No Control Permission", () => {
     it("should disable all switches and hide confirm dialogs when user lacks control permission", () => {
-      canControlUnits.mockReturnValueOnce(false);
+      // FIX 1: Use mockReturnValue instead of mockReturnValueOnce to handle React 19 + StrictMode
+      canControlUnits.mockReturnValue(false);
 
       render(
         <TestWrapper role="viewer">
