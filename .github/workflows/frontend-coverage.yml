@@ -1,13 +1,10 @@
-name: Protocol WebSocket Test
-
-permissions:
-  contents: read
+name: WebSocket Test
 
 on:
   workflow_dispatch:
 
 jobs:
-  isolated-test:
+  websocket-test:
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
@@ -36,34 +33,12 @@ jobs:
           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: ${{ runner.os }}-pnpm-store-
 
-      - name: Install Frontend Dependencies
+      - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run only useProtocolWebSocket test (with low heap limit)
+      - name: Run test
         env:
           NODE_OPTIONS: "--max-old-space-size=512"
         run: |
-          echo "═══════════════════════════════════════════════════════════"
-          echo "     🧪 Running useProtocolWebSocket test in isolation    "
-          echo "     📉 Heap limit: 512MB (crashes fast on infinite loop) "
-          echo "═══════════════════════════════════════════════════════════"
-          echo ""
-          
-          pnpm vitest run src/tests/useProtocolWebSocket.test.js \
-            --reporter=verbose \
-            --testTimeout=5000 \
-            --pool=forks \
-            --poolOptions.forks.singleFork=true \
-            --no-coverage 2>&1 | tee test-output.txt
-          
-          EXIT_CODE=$?
-          echo ""
-          echo "═══════════════════════════════════════════════════════════"
-          echo "  📊 Exit Code: $EXIT_CODE"
-          echo "═══════════════════════════════════════════════════════════"
-          echo ""
-          echo "📋 Last 50 lines of output:"
-          echo "═══════════════════════════════════════════════════════════"
-          tail -50 test-output.txt
-          
-          exit $EXIT_CODE
+          echo "Running useProtocolWebSocket test..."
+          pnpm vitest run src/tests/useProtocolWebSocket.test.js --reporter=verbose --testTimeout=5000 --no-coverage
