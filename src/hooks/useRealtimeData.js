@@ -128,6 +128,14 @@ export const useRealtimeMetrics = ({
         // Connect to WebSocket with tenant context
         await websocketService.connect(tenantIdRef.current);
 
+        // A successful connect() is itself authoritative: don't wait on a
+        // separate status-stream event to mark us connected, since a
+        // service implementation may not emit one synchronously (or at
+        // all) alongside connect() resolving.
+        if (isMountedRef.current) {
+          setConnectionStatus("connected");
+        }
+
         // Subscribe to metrics stream (once)
         if (!unsubscribe) {
           unsubscribe = websocketService.subscribe("metrics", (data) => {
@@ -146,6 +154,7 @@ export const useRealtimeMetrics = ({
         if (isMountedRef.current) {
           setError(err.message);
           setLoading(false);
+          setConnectionStatus("disconnected");
         }
         scheduleReconnect();
       } finally {
