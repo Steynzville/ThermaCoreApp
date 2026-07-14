@@ -4,7 +4,7 @@
  * Provides easy-to-use hook for consuming real-time protocol data
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import protocolWS from "../services/protocolWebSocketService";
 
 /**
@@ -22,6 +22,7 @@ export const useProtocolWebSocket = (
   const [connectionStatus, setConnectionStatus] = useState("disconnected");
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  const isMounted = useRef(true);
 
   const ws = protocolWS[protocol];
 
@@ -34,9 +35,13 @@ export const useProtocolWebSocket = (
 
     try {
       await ws.connect(protocol, tenantId);
-      setError(null);
+      if (isMounted.current) {
+        setError(null);
+      }
     } catch (err) {
-      setError(err);
+      if (isMounted.current) {
+        setError(err);
+      }
     }
   }, [protocol, tenantId, ws]);
 
@@ -54,7 +59,9 @@ export const useProtocolWebSocket = (
     const dataKey = `${protocol}-data-${Date.now()}`;
 
     const handleData = (newData) => {
-      setData(newData);
+      if (isMounted.current) {
+        setData(newData);
+      }
     };
 
     ws.subscribe(dataKey, handleData);
@@ -69,7 +76,9 @@ export const useProtocolWebSocket = (
     if (!ws) return;
 
     const handleStatusChange = (status) => {
-      setConnectionStatus(status);
+      if (isMounted.current) {
+        setConnectionStatus(status);
+      }
     };
 
     ws.onStatusChange(handleStatusChange);
@@ -86,6 +95,7 @@ export const useProtocolWebSocket = (
     }
 
     return () => {
+      isMounted.current = false;
       if (autoConnect && ws) {
         ws.disconnect();
       }
@@ -127,6 +137,7 @@ export const useProtocolEvent = (
   _tenantId = null,
 ) => {
   const ws = protocolWS[protocol];
+  const isMounted = useRef(true);
 
   useEffect(() => {
     if (!ws || !callback) return;
@@ -134,7 +145,7 @@ export const useProtocolEvent = (
     const eventKey = `${protocol}-event-${eventType}-${Date.now()}`;
 
     const handleEvent = (data) => {
-      if (data.type === eventType) {
+      if (isMounted.current && data.type === eventType) {
         callback(data);
       }
     };
@@ -142,6 +153,7 @@ export const useProtocolEvent = (
     ws.subscribe(eventKey, handleEvent);
 
     return () => {
+      isMounted.current = false;
       ws.unsubscribe(eventKey);
     };
   }, [protocol, eventType, callback, ws]);
@@ -155,6 +167,7 @@ export const useProtocolEvent = (
 export const useModbusRegisters = (deviceId, tenantId = null) => {
   const { data, ...rest } = useProtocolWebSocket("modbus", tenantId);
   const [registers, setRegisters] = useState({});
+  const processedKeysRef = useRef(new Set());
 
   useEffect(() => {
     if (
@@ -162,6 +175,11 @@ export const useModbusRegisters = (deviceId, tenantId = null) => {
       data.type === "register_update" &&
       data.device_id === deviceId
     ) {
+      const key = `${data.address}-${data.timestamp}`;
+      // Prevent processing the same data multiple times
+      if (processedKeysRef.current.has(key)) return;
+      processedKeysRef.current.add(key);
+
       setRegisters((prev) => ({
         ...prev,
         [data.address]: {
@@ -186,10 +204,15 @@ export const useModbusRegisters = (deviceId, tenantId = null) => {
 export const useOPCUANodes = (nodeIds = [], tenantId = null) => {
   const { data, ...rest } = useProtocolWebSocket("opcua", tenantId);
   const [nodeValues, setNodeValues] = useState(new Map());
+  const processedKeysRef = useRef(new Set());
 
   useEffect(() => {
     if (data && data.type === "node_value_update") {
       if (nodeIds.length === 0 || nodeIds.includes(data.node_id)) {
+        const key = `${data.node_id}-${data.timestamp}`;
+        if (processedKeysRef.current.has(key)) return;
+        processedKeysRef.current.add(key);
+
         setNodeValues((prev) => {
           const updated = new Map(prev);
           updated.set(data.node_id, {
@@ -217,6 +240,7 @@ export const useOPCUANodes = (nodeIds = [], tenantId = null) => {
 export const useDNP3Points = (outstationId, tenantId = null) => {
   const { data, ...rest } = useProtocolWebSocket("dnp3", tenantId);
   const [points, setPoints] = useState({});
+  const processedKeysRef = useRef(new Set());
 
   useEffect(() => {
     if (
@@ -224,6 +248,10 @@ export const useDNP3Points = (outstationId, tenantId = null) => {
       data.type === "point_update" &&
       data.outstation_id === outstationId
     ) {
+      const key = `${data.index}-${data.timestamp}`;
+      if (processedKeysRef.current.has(key)) return;
+      processedKeysRef.current.add(key);
+
       setPoints((prev) => ({
         ...prev,
         [data.index]: {
@@ -249,10 +277,15 @@ export const useDNP3Points = (outstationId, tenantId = null) => {
 export const useMQTTMessages = (topics = [], tenantId = null) => {
   const { data, ...rest } = useProtocolWebSocket("mqtt", tenantId);
   const [messages, setMessages] = useState([]);
+  const processedKeysRef = useRef(new Set());
 
   useEffect(() => {
     if (data && data.type === "message") {
       if (topics.length === 0 || topics.includes(data.topic)) {
+        const key = `${data.topic}-${data.timestamp}`;
+        if (processedKeysRef.current.has(key)) return;
+        processedKeysRef.current.add(key);
+
         setMessages((prev) => [
           ...prev.slice(-100), // Keep last 100 messages
           {
@@ -266,7 +299,10 @@ export const useMQTTMessages = (topics = [], tenantId = null) => {
     }
   }, [data, topics]);
 
-  const clearMessages = () => setMessages([]);
+  const clearMessages = () => {
+    processedKeysRef.current.clear();
+    setMessages([]);
+  };
 
   return {
     messages,
