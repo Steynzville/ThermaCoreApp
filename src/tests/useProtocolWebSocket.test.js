@@ -1381,13 +1381,13 @@ describe("useMQTTMessages Hook", () => {
         type: "message",
         topic: "sensors/temp",
         payload: "72",
-        timestamp: "t1",
+        timestamp: new Date().toISOString(),
         qos: 1,
       });
     });
 
     expect(result.current.messages).toEqual([
-      { topic: "sensors/temp", payload: "72", timestamp: "t1", qos: 1 },
+      { topic: "sensors/temp", payload: "72", timestamp: expect.any(String), qos: 1 },
     ]);
     unmount();
     forceGC();
@@ -1407,7 +1407,7 @@ describe("useMQTTMessages Hook", () => {
         type: "message",
         topic: "sensors/humidity",
         payload: "45",
-        timestamp: "t1",
+        timestamp: new Date().toISOString(),
         qos: 0,
       });
     });
@@ -1432,7 +1432,7 @@ describe("useMQTTMessages Hook", () => {
         type: "message",
         topic: "sensors/pressure",
         payload: "1013",
-        timestamp: "t1",
+        timestamp: new Date().toISOString(),
         qos: 0,
       });
     });
@@ -1471,7 +1471,8 @@ describe("useMQTTMessages Hook", () => {
           type: "message",
           topic: "sensors/temp",
           payload: String(i),
-          timestamp: `t${i}`,
+          // Use unique timestamps so processedKeysRef doesn't dedupe them
+          timestamp: new Date(Date.now() + i).toISOString(),
           qos: 0,
         });
       }
@@ -1496,7 +1497,7 @@ describe("useMQTTMessages Hook", () => {
         type: "message",
         topic: "sensors/temp",
         payload: "72",
-        timestamp: "t1",
+        timestamp: new Date().toISOString(),
         qos: 1,
       });
     });
@@ -1524,7 +1525,7 @@ describe("useMQTTMessages Hook", () => {
         type: "message",
         topic: "any/topic",
         payload: "x",
-        timestamp: "t1",
+        timestamp: new Date().toISOString(),
         qos: 0,
       });
     });
