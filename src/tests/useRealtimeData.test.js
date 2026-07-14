@@ -20,20 +20,24 @@ vi.mock("../context/TenantContext", () => ({
   }),
 }));
 
-// Simple mocks (hoisted safely)
-vi.mock("../services/websocketService", () => ({
-  default: {
-    connect: vi.fn().mockResolvedValue(true),
-    disconnect: vi.fn(),
-    subscribe: vi.fn(() => vi.fn()),
-    onStatusChange: vi.fn((cb) => {
-      // Store callback for test triggering
-      (globalThis as any).wsStatusCallback = cb;
-      return () => {};
-    }),
-    isConnected: vi.fn(() => true),
-  },
-}));
+// Simple mocks
+vi.mock("../services/websocketService", () => {
+  let statusCallback = null;
+  return {
+    default: {
+      connect: vi.fn().mockResolvedValue(true),
+      disconnect: vi.fn(),
+      subscribe: vi.fn(() => vi.fn()),
+      onStatusChange: vi.fn((cb) => {
+        statusCallback = cb;
+        return () => {};
+      }),
+      isConnected: vi.fn(() => true),
+      // Expose for tests
+      getStatusCallback: () => statusCallback,
+    },
+  };
+});
 
 vi.mock("../services/scadaService", () => ({
   default: {
@@ -126,7 +130,8 @@ describe("useRealtimeMetrics Hook", () => {
     const { result } = renderHook(() => useRealtimeMetrics({ autoConnect: true }));
 
     await act(async () => {
-      const cb = (globalThis as any).wsStatusCallback;
+      const wsService = require("../services/websocketService").default;
+      const cb = wsService.getStatusCallback();
       if (cb) cb("connected");
     });
 
@@ -199,7 +204,8 @@ describe("useWebSocketStatus Hook", () => {
     const { result } = renderHook(() => useWebSocketStatus());
 
     act(() => {
-      const cb = (globalThis as any).wsStatusCallback;
+      const wsService = require("../services/websocketService").default;
+      const cb = wsService.getStatusCallback();
       if (cb) cb("connected");
     });
 
@@ -210,7 +216,6 @@ describe("useWebSocketStatus Hook", () => {
 describe("Edge Cases", () => {
   it("should not connect when autoConnect=false", () => {
     renderHook(() => useRealtimeMetrics({ autoConnect: false }));
-    // No connect call expected
   });
 
   it("should cleanup properly on unmount", () => {
