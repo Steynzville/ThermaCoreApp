@@ -469,7 +469,7 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
                       <div className="cursor-pointer">
                         <Switch
                           checked={machineOn}
-                          onCheckedChange={() => {}}
+                          onCheckedChange={() => {}} // This triggers the dialog via the AlertDialogTrigger
                           disabled={!isConnected}
                           aria-label="Machine Power"
                         />
@@ -489,7 +489,10 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
-                          onClick={() => handleMachineToggle(!machineOn)}
+                          onClick={() => {
+                            // Toggle machine state when confirmed
+                            handleMachineToggle(!machineOn);
+                          }}
                         >
                           Continue
                         </AlertDialogAction>
@@ -549,7 +552,7 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
                         <div className="cursor-pointer">
                           <Switch
                             checked={waterProductionOn}
-                            onCheckedChange={() => {}}
+                            onCheckedChange={() => {}} // This triggers the dialog via the AlertDialogTrigger
                             disabled={!isConnected || !machineOn}
                             aria-label="Water Production"
                           />
@@ -569,9 +572,10 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
                           <AlertDialogAction
-                            onClick={() =>
-                              handleWaterProductionToggle(!waterProductionOn)
-                            }
+                            onClick={() => {
+                              // Toggle water production state when confirmed
+                              handleWaterProductionToggle(!waterProductionOn);
+                            }}
                           >
                             Continue
                           </AlertDialogAction>
@@ -633,7 +637,7 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
                       <div className="cursor-pointer">
                         <Switch
                           checked={autoSwitchEnabled}
-                          onCheckedChange={() => {}}
+                          onCheckedChange={() => {}} // This triggers the dialog via the AlertDialogTrigger
                           disabled={!isConnected || !machineOn}
                           aria-label="Auto Switch"
                         />
@@ -654,9 +658,10 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
-                          onClick={() =>
-                            handleAutoSwitchToggle(!autoSwitchEnabled)
-                          }
+                          onClick={() => {
+                            // Toggle auto switch state when confirmed
+                            handleAutoSwitchToggle(!autoSwitchEnabled);
+                          }}
                         >
                           Continue
                         </AlertDialogAction>
