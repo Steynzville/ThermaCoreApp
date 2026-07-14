@@ -693,7 +693,7 @@ describe("RemoteControl Component", () => {
       const actionButtons = screen.getAllByTestId("alert-dialog-action");
       fireEvent.click(actionButtons[2]);
       
-      // FIX: Use getAllByText and check the first one (title) and second one (description)
+      // Use getAllByText since there are two elements with this text
       const autoSwitchTexts = screen.getAllByText("Auto switch enabled");
       expect(autoSwitchTexts.length).toBe(2);
       expect(autoSwitchTexts[0]).toBeInTheDocument(); // Title
@@ -761,7 +761,7 @@ describe("RemoteControl Component", () => {
         const refreshButton = screen.getByTestId("button-refresh-feed");
         fireEvent.click(refreshButton);
         
-        // FIX: Use getAllByText since there are two elements with this text
+        // Use getAllByText since there are two elements with this text
         const refreshTexts = screen.getAllByText("Video feed refreshed");
         expect(refreshTexts.length).toBe(2);
         expect(refreshTexts[0]).toBeInTheDocument(); // Title
@@ -781,13 +781,10 @@ describe("RemoteControl Component", () => {
         </TestWrapper>,
       );
 
-      // Initial actions: 3 hardcoded
-      // The header shows "Last X actions recorded" with X being the count
+      // Get the current action count from the header
       const headerText = screen.getByText(/Last \d+ actions recorded/i);
-      expect(headerText).toBeInTheDocument();
-      // FIX: Just check that it shows the count dynamically
-      // Don't hardcode "3" or "4" as the count may vary
-      expect(headerText.textContent).toMatch(/Last \d+ actions recorded/);
+      const initialCount = parseInt(headerText.textContent.match(/\d+/)[0]);
+      expect(initialCount).toBeGreaterThan(0);
       
       // Add an action
       const actionButtons = screen.getAllByTestId("alert-dialog-action");
@@ -795,9 +792,10 @@ describe("RemoteControl Component", () => {
       
       // Should update the count
       const updatedHeader = screen.getByText(/Last \d+ actions recorded/i);
-      expect(updatedHeader).toBeInTheDocument();
-      // Just verify it updated (count changed from initial)
-      expect(updatedHeader.textContent).not.toBe(headerText.textContent);
+      const updatedCount = parseInt(updatedHeader.textContent.match(/\d+/)[0]);
+      
+      // Verify the count increased by 1
+      expect(updatedCount).toBe(initialCount + 1);
     });
 
     it("should keep only last 10 actions in history", () => {
