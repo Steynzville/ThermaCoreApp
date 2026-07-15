@@ -134,7 +134,6 @@ const MultiProtocolManager = () => {
 
   const fetchProtocolsStatus = async () => {
     if (isMockMode) {
-      // FIXED: Removed random connection flapping - only increment message count
       return {
         ...mockData,
         timestamp: new Date().toISOString(),
@@ -172,7 +171,8 @@ const MultiProtocolManager = () => {
         setProtocolsStatus(data);
         setLoading(false);
 
-        if (consecutiveErrors > 0) {
+        // ✅ FIX: Use ref to get current error count, avoiding stale closure
+        if (consecutiveErrorsRef.current > 0) {
           toast.success("Protocol status loaded successfully");
         }
       }
@@ -191,15 +191,14 @@ const MultiProtocolManager = () => {
           errorMessage = "Session expired. Please log in again.";
         }
 
-        if (import.meta.env.MODE !== "test") {
-          toast.error(errorMessage, {
-            duration: 4000,
-            action: {
-              label: "Retry",
-              onClick: () => loadData(),
-            },
-          });
-        }
+        // ✅ FIX: Remove MODE !== "test" check - let tests mock toast instead
+        toast.error(errorMessage, {
+          duration: 4000,
+          action: {
+            label: "Retry",
+            onClick: () => loadData(),
+          },
+        });
       }
 
       throw error;
@@ -226,6 +225,15 @@ const MultiProtocolManager = () => {
       setRefreshing(false);
     }
   }, [refreshing, isPolling, loadData]);
+
+  // ✅ FIX: Add connect handler
+  const handleConnect = useCallback((protocolName) => {
+    toast.success(`Connecting to ${protocolName.toUpperCase()}...`, {
+      duration: 2000,
+    });
+    // In a real implementation, this would trigger the actual connection logic
+    // For now, it's a placeholder that shows a toast
+  }, []);
 
   // Self-scheduling polling loop with refs
   const loadDataRef = useRef(loadData);
@@ -339,6 +347,11 @@ const MultiProtocolManager = () => {
     }
   };
 
+  // ✅ FIX: Round the backoff display to whole seconds
+  const getBackoffSeconds = () => {
+    return Math.round(Math.min(10 * 1.5 ** consecutiveErrors, 60));
+  };
+
   // Loading state
   if (loading) {
     return (
@@ -385,8 +398,7 @@ const MultiProtocolManager = () => {
           </div>
           {consecutiveErrors > 0 && (
             <p className="text-sm text-muted-foreground mt-3">
-              Next automatic retry in{" "}
-              {Math.min(10 * 1.5 ** consecutiveErrors, 60)} seconds
+              Next automatic retry in {getBackoffSeconds()} seconds
             </p>
           )}
         </div>
@@ -620,11 +632,13 @@ const MultiProtocolManager = () => {
                           <Settings className="h-4 w-4 sm:h-3 sm:w-3 mr-1" />
                           <span className="truncate">Configure</span>
                         </Button>
+                        {/* ✅ FIX: Add onClick handler to Connect button */}
                         {!protocol.connected && protocol.available && (
                           <Button
                             size="sm"
                             className="flex-1 min-h-[44px] sm:min-h-0"
                             data-testid={`connect-${protocolName}`}
+                            onClick={() => handleConnect(protocolName)}
                           >
                             <span className="truncate">Connect</span>
                           </Button>
