@@ -227,15 +227,10 @@ describe("MultiProtocolManager - summary cards & protocol grid (mock mode)", () 
     expect(screen.getByText("DNP3")).toBeInTheDocument();
     expect(screen.getByText("SIMULATOR")).toBeInTheDocument();
 
-    // FIXED: Check that active badges exist without expecting a specific count
-    // MQTT, MODBUS, DNP3 should be active (3 total)
     const activeBadges = screen.getAllByText("Active");
     expect(activeBadges.length).toBe(3);
     
-    // OPCUA is in an error state
     expect(screen.getByText("Error")).toBeInTheDocument();
-    
-    // Simulator is unavailable
     expect(screen.getByText("Inactive")).toBeInTheDocument();
   });
 
@@ -251,20 +246,25 @@ describe("MultiProtocolManager - summary cards & protocol grid (mock mode)", () 
   });
 
   it("only shows a Connect button for available-but-disconnected protocols", () => {
-    // OPCUA is available but disconnected - should have Connect button
     expect(screen.getByTestId("connect-opcua")).toBeInTheDocument();
-    
-    // Connected protocols should NOT have Connect button
     expect(screen.queryByTestId("connect-mqtt")).not.toBeInTheDocument();
     expect(screen.queryByTestId("connect-modbus")).not.toBeInTheDocument();
     expect(screen.queryByTestId("connect-dnp3")).not.toBeInTheDocument();
-    
-    // Simulator is unavailable - no Connect button
     expect(screen.queryByTestId("connect-simulator")).not.toBeInTheDocument();
   });
 
   it("renders the last-updated timestamp", () => {
     expect(screen.getByText(/Last Updated/i)).toBeInTheDocument();
+  });
+
+  it("shows a success toast when Connect button is clicked", async () => {
+    const user = userEvent.setup();
+    const connectButton = screen.getByTestId("connect-opcua");
+    await user.click(connectButton);
+    expect(toast.success).toHaveBeenCalledWith(
+      "Connecting to OPCUA...",
+      expect.objectContaining({ duration: 2000 })
+    );
   });
 });
 
@@ -480,6 +480,34 @@ describe("MultiProtocolManager - live mode failure & retry", () => {
     });
   });
 
+  it("shows recovery success toast after errors are resolved", async () => {
+    const user = userEvent.setup();
+    
+    // First request fails
+    apiGetJson.mockRejectedValueOnce(new Error("boom"));
+    // Second request succeeds
+    apiGetJson.mockResolvedValueOnce(liveApiResponse());
+
+    render(
+      <TestWrapper>
+        <MultiProtocolManager />
+      </TestWrapper>,
+    );
+
+    await screen.findByTestId("error-state");
+    
+    const tryAgainButton = screen.getByRole('button', { name: /Try Again/i });
+    await user.click(tryAgainButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Multi-Protocol Manager/i)).toBeInTheDocument();
+    });
+
+    expect(toast.success).toHaveBeenCalledWith(
+      "Protocol status loaded successfully"
+    );
+  });
+
   it("does NOT show a 'refreshed' success toast when a manual refresh fails", async () => {
     const user = userEvent.setup();
     apiGetJson.mockResolvedValueOnce(liveApiResponse());
@@ -504,7 +532,7 @@ describe("MultiProtocolManager - live mode failure & retry", () => {
   });
 
   it("maps timeout errors to distinct toast messages", async () => {
-    vi.stubEnv("MODE", "development");
+    const toastSpy = vi.spyOn(toast, 'error');
 
     apiGetJson.mockRejectedValueOnce(new Error("Request timeout exceeded"));
     render(
@@ -514,7 +542,7 @@ describe("MultiProtocolManager - live mode failure & retry", () => {
     );
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith(
+      expect(toastSpy).toHaveBeenCalledWith(
         "Request timed out. The server may be busy.",
         expect.anything(),
       );
@@ -548,5 +576,178 @@ describe("MultiProtocolManager - page visibility", () => {
     );
     await screen.findByText(/Multi-Protocol Manager/i);
     expect(() => unmount()).not.toThrow();
+  });
+});
+
+// ============================================================
+// Polling & backoff behavior (using fake timers)
+// ============================================================
+
+describe("MultiProtocolManager - polling & backoff", () => {
+  beforeEach(() => {
+    forceLiveMode();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("schedules a background poll after the initial load", async () => {
+    apiGetJson.mockResolvedValue(liveApiResponse());
+
+    render(
+      <TestWrapper>
+        <MultiProtocolManager />
+      </TestWrapper>,
+    );
+
+    await screen.findByText(/Multi-Protocol Manager/i);
+    
+    // Fast-forward past the initial load
+    await vi.advanceTimersByTimeAsync(1000);
+    
+    // After 10s, the first poll should trigger
+    await vi.advanceTimersByTimeAsync(10000);
+    
+    // The component should still be rendered (poll happened)
+    expect(screen.getByText(/Multi-Protocol Manager/i)).toBeInTheDocument();
+    // apiGetJson should have been called for initial load + first poll
+    expect(apiGetJson).toHaveBeenCalledTimes(2);
+  });
+
+  // ✅ FIXED: Actually asserts the backoff interval increases
+  // NOTE: The 14999/+1 boundary check below is specifically designed to catch
+  // a stale-ref bug where consecutiveErrorsRef might not be updated before
+  // the next backoff interval is computed. If the ref were stale, the second
+  // poll would fire at 10s instead of 15s, causing this test to fail.
+  it("increases backoff interval after consecutive errors", async () => {
+    let callCount = 0;
+    apiGetJson.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return Promise.resolve(liveApiResponse());
+      }
+      return Promise.reject(new Error("Network error"));
+    });
+
+    render(
+      <TestWrapper>
+        <MultiProtocolManager />
+      </TestWrapper>,
+    );
+
+    await screen.findByText(/Multi-Protocol Manager/i);
+    await vi.advanceTimersByTimeAsync(1000);
+
+    // After initial load, callCount should be 1
+    expect(callCount).toBe(1);
+    expect(apiGetJson).toHaveBeenCalledTimes(1);
+
+    // First poll should happen at 10s (10 * 1.5^0 = 10s)
+    await vi.advanceTimersByTimeAsync(9999);
+    expect(apiGetJson).toHaveBeenCalledTimes(1); // Not yet
+    await vi.advanceTimersByTimeAsync(1);
+    expect(apiGetJson).toHaveBeenCalledTimes(2); // First poll fired
+    expect(callCount).toBe(2);
+
+    // Second poll should happen at 15s (10 * 1.5^1 = 15s)
+    // The 14999/+1 boundary check proves the ref has been correctly updated
+    // If the ref were stale, the second poll would fire at 10s instead.
+    await vi.advanceTimersByTimeAsync(14999);
+    expect(apiGetJson).toHaveBeenCalledTimes(2); // Not yet
+    await vi.advanceTimersByTimeAsync(1);
+    expect(apiGetJson).toHaveBeenCalledTimes(3); // Second poll fired
+    expect(callCount).toBe(3);
+
+    // Third poll should happen at 22.5s (10 * 1.5^2 = 22.5s ≈ 23s)
+    await vi.advanceTimersByTimeAsync(22999);
+    expect(apiGetJson).toHaveBeenCalledTimes(3); // Not yet
+    await vi.advanceTimersByTimeAsync(1);
+    expect(apiGetJson).toHaveBeenCalledTimes(4); // Third poll fired
+    expect(callCount).toBe(4);
+  });
+
+  // ✅ FIXED: Actually asserts the backoff caps at 60 seconds
+  it("caps backoff at 60 seconds", async () => {
+    let callCount = 0;
+    apiGetJson.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return Promise.resolve(liveApiResponse());
+      }
+      return Promise.reject(new Error("Network error"));
+    });
+
+    render(
+      <TestWrapper>
+        <MultiProtocolManager />
+      </TestWrapper>,
+    );
+
+    await screen.findByText(/Multi-Protocol Manager/i);
+    await vi.advanceTimersByTimeAsync(1000);
+
+    // Initial load
+    expect(callCount).toBe(1);
+    expect(apiGetJson).toHaveBeenCalledTimes(1);
+
+    // First poll: 10s
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(apiGetJson).toHaveBeenCalledTimes(2);
+
+    // Second poll: 15s
+    await vi.advanceTimersByTimeAsync(15000);
+    expect(apiGetJson).toHaveBeenCalledTimes(3);
+
+    // Third poll: 22.5s ≈ 23s
+    await vi.advanceTimersByTimeAsync(23000);
+    expect(apiGetJson).toHaveBeenCalledTimes(4);
+
+    // Fourth poll: 33.75s ≈ 34s
+    await vi.advanceTimersByTimeAsync(34000);
+    expect(apiGetJson).toHaveBeenCalledTimes(5);
+
+    // Fifth poll: 50.625s ≈ 51s
+    await vi.advanceTimersByTimeAsync(51000);
+    expect(apiGetJson).toHaveBeenCalledTimes(6);
+
+    // Sixth poll: Should cap at 60s
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(apiGetJson).toHaveBeenCalledTimes(7);
+
+    // Seventh poll: Still 60s
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(apiGetJson).toHaveBeenCalledTimes(8);
+
+    // The interval should be capped at 60s, not increasing further
+    // The component should still be rendered
+    expect(screen.getByText(/Multi-Protocol Manager/i)).toBeInTheDocument();
+  });
+
+  it("skips polling when the tab is hidden", async () => {
+    apiGetJson.mockResolvedValue(liveApiResponse());
+
+    render(
+      <TestWrapper>
+        <MultiProtocolManager />
+      </TestWrapper>,
+    );
+
+    await screen.findByText(/Multi-Protocol Manager/i);
+    await vi.advanceTimersByTimeAsync(1000);
+
+    // Hide the tab
+    Object.defineProperty(document, "hidden", {
+      configurable: true,
+      get: () => true,
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+
+    // After 10s, the poll should NOT fire because the tab is hidden
+    await vi.advanceTimersByTimeAsync(10000);
+    
+    // apiGetJson should still only have been called once (initial load)
+    expect(apiGetJson).toHaveBeenCalledTimes(1);
   });
 });
