@@ -69,21 +69,39 @@ vi.mock("@/components/ui/card", () => ({
   CardTitle: ({ children }) => <div>{children}</div>,
 }));
 
-// ✅ FIX: Proper Select mock with value attribute
+// ✅ FIX: Proper Select mock without nested divs inside select
 vi.mock("@/components/ui/select", () => ({
-  Select: ({ children, value, onValueChange }) => (
-    <div data-testid="select">
-      <select 
-        data-testid="select-trigger" 
-        value={value || "24h"}
-        onChange={(e) => onValueChange(e.target.value)}
-      >
-        {children}
-      </select>
-    </div>
-  ),
-  SelectContent: ({ children }) => <div>{children}</div>,
-  SelectItem: ({ children, value }) => <option value={value}>{children}</option>,
+  Select: ({ children, value, onValueChange }) => {
+    // Extract SelectItem children to build options
+    const options = [];
+    const items = [];
+    React.Children.forEach(children, (child) => {
+      if (child.type?.name === 'SelectContent' || child.type?.displayName === 'SelectContent') {
+        React.Children.forEach(child.props.children, (item) => {
+          if (item.type?.name === 'SelectItem' || item.type?.displayName === 'SelectItem') {
+            options.push({ value: item.props.value, label: item.props.children });
+            items.push(item);
+          }
+        });
+      }
+    });
+
+    return (
+      <div data-testid="select">
+        <select 
+          data-testid="select-trigger" 
+          value={value || "24h"}
+          onChange={(e) => onValueChange(e.target.value)}
+        >
+          {options.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+      </div>
+    );
+  },
+  SelectContent: ({ children }) => <>{children}</>,
+  SelectItem: ({ children, value }) => null, // Rendered via Select
   SelectTrigger: ({ children }) => <>{children}</>,
   SelectValue: () => null,
 }));
@@ -233,7 +251,6 @@ describe("AdvancedAnalyticsDashboard", () => {
       await waitForDataLoad();
 
       // Data points should now be scaled by 7x (5,000 * 7 = 35,000)
-      // Wait for the update to complete
       await waitFor(() => {
         expect(screen.getByText("35,000")).toBeInTheDocument();
       }, { timeout: 2000 });
