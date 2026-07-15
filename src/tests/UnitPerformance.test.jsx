@@ -4,7 +4,6 @@
  * Coverage includes:
  * - Performance metric calculation
  * - Threshold validation
- * - Alerting behavior
  * - Trend indicators
  * - ROI calculations
  * - Environmental metrics
@@ -19,8 +18,8 @@ import UnitContext from "@/context/UnitContext";
 
 // Mock navigate and params
 const mockNavigate = vi.fn();
-const mockParams = { id: "TC003" };
-const mockLocation = { state: null };
+let mockParams = { id: "TC003" };
+let mockLocation = { state: null };
 
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual("react-router-dom");
@@ -34,84 +33,87 @@ vi.mock("react-router-dom", async () => {
 
 // Mock format currency
 vi.mock("@/utils/formatCurrency", () => ({
-  formatCurrency: (value) => `$${value.toLocaleString()}`,
+  formatCurrency: (value) => `$${value.toFixed(2)}`,
 }));
 
-// Mock child components
+// Mock child components with proper isOpen handling
 vi.mock("@/components/FinancialAssumptions", () => ({
-  default: ({ isOpen, onClose, onSave, currentAssumptions }) => (
-    <div data-testid="financial-assumptions-modal">
-      <button onClick={onClose}>Close</button>
-      <button onClick={() => onSave(currentAssumptions)}>Save</button>
-    </div>
-  ),
+  default: ({ isOpen, onClose, onSave, currentAssumptions }) =>
+    isOpen ? (
+      <div data-testid="financial-assumptions-modal">
+        <button onClick={onClose}>Close</button>
+        <button
+          onClick={() =>
+            onSave({
+              electricityCost: 0.5,
+              rebate: 60,
+              feedInTariff: 0.1,
+            })
+          }
+        >
+          Save
+        </button>
+      </div>
+    ) : null,
 }));
 
+// ✅ FIX: Add Save Zero button to test the Infinity guard
 vi.mock("@/components/ROIAssumptions", () => ({
-  default: ({ isOpen, onClose, onSave, currentAssumptions }) => (
-    <div data-testid="roi-assumptions-modal">
-      <button onClick={onClose}>Close</button>
-      <button onClick={() => onSave(currentAssumptions)}>Save</button>
-    </div>
-  ),
+  default: ({ isOpen, onClose, onSave, currentAssumptions }) =>
+    isOpen ? (
+      <div data-testid="roi-assumptions-modal">
+        <button onClick={onClose}>Close</button>
+        <button onClick={() => onSave({ initialInvestment: 300000 })}>Save</button>
+        <button onClick={() => onSave({ initialInvestment: 0 })}>Save Zero</button>
+      </div>
+    ) : null,
 }));
 
 vi.mock("@/components/EnvironmentalAssumptions", () => ({
-  default: ({ isOpen, onClose, onSave, currentAssumptions }) => (
-    <div data-testid="environmental-assumptions-modal">
-      <button onClick={onClose}>Close</button>
-      <button onClick={() => onSave(currentAssumptions)}>Save</button>
-    </div>
-  ),
+  default: ({ isOpen, onClose, onSave, currentAssumptions }) =>
+    isOpen ? (
+      <div data-testid="environmental-assumptions-modal">
+        <button onClick={onClose}>Close</button>
+        <button
+          onClick={() =>
+            onSave({
+              dieselPricePerLiter: 2.0,
+            })
+          }
+        >
+          Save
+        </button>
+      </div>
+    ) : null,
 }));
 
-// Test wrapper
-const TestWrapper = ({ children, unitsValue = [] }) => {
-  const mockUnitsContext = {
-    units:
-      unitsValue.length > 0
-        ? unitsValue
-        : [
-            {
-              id: "TC003",
-              name: "ThermaCore Unit 003",
-              status: "online",
-              currentPower: 1250,
-              parasiticLoad: 150,
-              userLoad: 900,
-              efficiency: 92.5,
-              temperature: 65,
-              pressure: 125,
-              fuelConsumption: 85,
-              operatingHours: 12500,
-              serialNumber: "TC003-2024-001",
-              location: "Plant A",
-            },
-          ],
-    loading: false,
-    getUnit: (unitId) => {
-      const units =
-        unitsValue.length > 0
-          ? unitsValue
-          : [
-              {
-                id: "TC003",
-                name: "ThermaCore Unit 003",
-                status: "online",
-                currentPower: 1250,
-                parasiticLoad: 150,
-                userLoad: 900,
-                efficiency: 92.5,
-                temperature: 65,
-                pressure: 125,
-                fuelConsumption: 85,
-                operatingHours: 12500,
-                serialNumber: "TC003-2024-001",
-                location: "Plant A",
-              },
-            ];
-      return units.find((unit) => unit.id === unitId);
+// Test wrapper with configurable units
+const TestWrapper = ({ children, unitsValue = [], loading = false }) => {
+  const defaultUnits = [
+    {
+      id: "TC003",
+      name: "ThermaCore Unit 003",
+      status: "online",
+      currentPower: 1250,
+      parasiticLoad: 150,
+      userLoad: 900,
+      efficiency: 92.5,
+      temperature: 65,
+      pressure: 125,
+      fuelConsumption: 85,
+      operatingHours: 12500,
+      serialNumber: "TC003-2024-001",
+      location: "Plant A",
+      watergeneration: false,
     },
+  ];
+
+  const units = unitsValue.length > 0 ? unitsValue : defaultUnits;
+
+  const mockUnitsContext = {
+    units,
+    loading,
+    getUnit: (unitId) => units.find((unit) => unit.id === unitId),
   };
 
   return (
@@ -134,8 +136,13 @@ const TestWrapper = ({ children, unitsValue = [] }) => {
 describe("UnitPerformance", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockParams = { id: "TC003" };
+    mockLocation = { state: null };
   });
 
+  // ============================================================
+  // COMPONENT RENDERING TESTS
+  // ============================================================
   describe("Component Rendering", () => {
     it("should render unit performance component", () => {
       render(
@@ -144,34 +151,18 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      const unitNameElements = screen.getAllByText(/ThermaCore Unit 003/i);
-      expect(unitNameElements.length).toBeGreaterThan(0);
+      expect(screen.getByText(/ThermaCore Unit 003/i)).toBeInTheDocument();
     });
 
     it("should display loading state", () => {
-      const loadingContext = {
-        units: [],
-        loading: true,
-        getUnit: () => null,
-      };
-
-      const { container } = render(
-        <BrowserRouter>
-          <AuthContext.Provider
-            value={{
-              user: { id: "1", username: "testuser", role: "admin" },
-              isAuthenticated: true,
-              userRole: "admin",
-            }}
-          >
-            <UnitContext.Provider value={loadingContext}>
-              <UnitPerformance />
-            </UnitContext.Provider>
-          </AuthContext.Provider>
-        </BrowserRouter>,
+      render(
+        <TestWrapper loading={true}>
+          <UnitPerformance />
+        </TestWrapper>,
       );
 
-      expect(container).toBeTruthy();
+      expect(screen.getByText(/Loading unit performance data/i)).toBeInTheDocument();
+      expect(document.querySelector(".animate-spin")).toBeInTheDocument();
     });
 
     it("should show back button", () => {
@@ -181,11 +172,134 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      const backButtons = screen.getAllByRole("button", { name: /back/i });
-      expect(backButtons.length).toBeGreaterThan(0);
+      const backButton = screen.getByTestId("button-back-to-unit-details");
+      expect(backButton).toBeInTheDocument();
+    });
+
+    it("should navigate back when back button clicked", async () => {
+      render(
+        <TestWrapper>
+          <UnitPerformance />
+        </TestWrapper>,
+      );
+
+      const backButton = screen.getByTestId("button-back-to-unit-details");
+      fireEvent.click(backButton);
+
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith(-1);
+      });
     });
   });
 
+  // ============================================================
+  // UNIT RESOLUTION TESTS
+  // ============================================================
+  describe("Unit Resolution", () => {
+    it("should use propUnit when provided", () => {
+      const propUnit = {
+        id: "PROP001",
+        name: "Prop Unit",
+        status: "online",
+        currentPower: 100,
+        parasiticLoad: 10,
+        userLoad: 50,
+        watergeneration: false,
+      };
+
+      render(
+        <TestWrapper>
+          <UnitPerformance unit={propUnit} />
+        </TestWrapper>,
+      );
+
+      expect(screen.getByText(/Prop Unit/i)).toBeInTheDocument();
+    });
+
+    it("should use location.state.unit when provided", () => {
+      mockLocation = {
+        state: {
+          unit: {
+            id: "STATE001",
+            name: "State Unit",
+            status: "online",
+            currentPower: 100,
+            parasiticLoad: 10,
+            userLoad: 50,
+            watergeneration: false,
+          },
+        },
+      };
+
+      render(
+        <TestWrapper>
+          <UnitPerformance />
+        </TestWrapper>,
+      );
+
+      expect(screen.getByText(/State Unit/i)).toBeInTheDocument();
+    });
+
+    it("should use params.id to lookup unit", () => {
+      render(
+        <TestWrapper>
+          <UnitPerformance />
+        </TestWrapper>,
+      );
+
+      expect(screen.getByText(/ThermaCore Unit 003/i)).toBeInTheDocument();
+    });
+
+    it("should show Unit Not Found when unit doesn't exist", () => {
+      mockParams = { id: "NONEXISTENT" };
+
+      render(
+        <TestWrapper>
+          <UnitPerformance />
+        </TestWrapper>,
+      );
+
+      expect(screen.getByText(/Unit Not Found/i)).toBeInTheDocument();
+      expect(screen.getByText(/Unit with ID "NONEXISTENT" could not be found/i)).toBeInTheDocument();
+    });
+
+    // ✅ FIX: Properly handle window.history mock with restoration
+    it("should go back when Go Back button is clicked", () => {
+      const mockHistoryBack = vi.fn();
+      const originalHistory = window.history;
+      
+      try {
+        Object.defineProperty(window, "history", {
+          value: { ...originalHistory, back: mockHistoryBack },
+          writable: true,
+          configurable: true,
+        });
+
+        mockParams = { id: "NONEXISTENT" };
+
+        render(
+          <TestWrapper>
+            <UnitPerformance />
+          </TestWrapper>,
+        );
+
+        const goBackButton = screen.getByTestId("button-go-back");
+        fireEvent.click(goBackButton);
+
+        expect(mockHistoryBack).toHaveBeenCalled();
+      } finally {
+        Object.defineProperty(window, "history", {
+          value: originalHistory,
+          writable: true,
+          configurable: true,
+        });
+      }
+    });
+  });
+
+  // ============================================================
+  // PERFORMANCE METRICS DISPLAY TESTS
+  // ============================================================
   describe("Performance Metrics Display", () => {
     it("should display power metrics", () => {
       const { container } = render(
@@ -195,18 +309,20 @@ describe("UnitPerformance", () => {
       );
 
       expect(container.textContent).toMatch(/Power Generation|kW/i);
+      expect(container.textContent).toMatch(/Live: Power Generation/i);
     });
 
-    it("should display efficiency information", () => {
+    it("should display current power metrics", () => {
       const { container } = render(
         <TestWrapper>
           <UnitPerformance />
         </TestWrapper>,
       );
 
-      // The component doesn't display efficiency directly, but it does display
-      // ROI and savings which are derived from efficiency
-      expect(container.textContent).toMatch(/ROI|Savings|%|Payback/i);
+      expect(container.textContent).toMatch(/Live: Power Generation/i);
+      expect(container.textContent).toMatch(/Live: Parasitic Load/i);
+      expect(container.textContent).toMatch(/Live: User Load/i);
+      expect(container.textContent).toMatch(/Live: Feed-in Load/i);
     });
 
     it("should display operating metrics", () => {
@@ -216,19 +332,9 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      // Check for operating metrics that are actually displayed
-      expect(container.textContent).toMatch(/Unit Uptime|Hours Since/i);
-    });
-
-    it("should display pressure metrics", () => {
-      const { container } = render(
-        <TestWrapper>
-          <UnitPerformance />
-        </TestWrapper>,
-      );
-
-      // The component displays unit uptime and related metrics
-      expect(container.textContent).toMatch(/Unit Uptime|Hours Since|Days Since/i);
+      expect(container.textContent).toMatch(/Unit Uptime/i);
+      expect(container.textContent).toMatch(/Hours Since Maintenance/i);
+      expect(container.textContent).toMatch(/Days Since Last Issue/i);
     });
 
     it("should display fuel information", () => {
@@ -238,7 +344,7 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      expect(container.textContent).toMatch(/Diesel Displaced|Fuel|L/i);
+      expect(container.textContent).toMatch(/Diesel Displaced/i);
     });
 
     it("should display time-based information", () => {
@@ -248,10 +354,38 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      expect(container.textContent).toMatch(/Hours Since|Days Since|Time/i);
+      expect(container.textContent).toMatch(/Hours Since/i);
+      expect(container.textContent).toMatch(/Days Since/i);
+    });
+
+    it("should display water generation when unit has watergeneration", () => {
+      const waterUnit = [
+        {
+          id: "TC003",
+          name: "ThermaCore Unit 003",
+          status: "online",
+          currentPower: 1250,
+          parasiticLoad: 150,
+          userLoad: 900,
+          watergeneration: true,
+          serialNumber: "TC003-2024-001",
+          location: "Plant A",
+        },
+      ];
+
+      render(
+        <TestWrapper unitsValue={waterUnit}>
+          <UnitPerformance />
+        </TestWrapper>,
+      );
+
+      expect(screen.getByText(/Water Generated/i)).toBeInTheDocument();
     });
   });
 
+  // ============================================================
+  // PERFORMANCE CARDS TESTS
+  // ============================================================
   describe("Performance Cards", () => {
     it("should render performance cards with icons", () => {
       const { container } = render(
@@ -271,11 +405,9 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      const trendIcons = container.querySelectorAll(
-        ".text-green-500, .text-red-500",
-      );
-      // Trend indicators may or may not be present depending on data
-      expect(trendIcons.length).toBeGreaterThanOrEqual(0);
+      const upTrends = container.querySelectorAll(".text-green-500");
+      const downTrends = container.querySelectorAll(".text-red-500");
+      expect(upTrends.length + downTrends.length).toBeGreaterThanOrEqual(0);
     });
 
     it("should display color-coded cards", () => {
@@ -286,136 +418,46 @@ describe("UnitPerformance", () => {
       );
 
       const coloredCards = container.querySelectorAll(
-        ".border-blue-200, .border-green-200, .border-orange-200, .border-purple-200, .border-yellow-200, .border-red-200",
+        ".border-blue-200, .border-green-200, .border-orange-200, .border-purple-200, .border-yellow-200",
       );
       expect(coloredCards.length).toBeGreaterThan(0);
     });
-  });
 
-  describe("Threshold Validation", () => {
-    it("should indicate when efficiency is above threshold", () => {
-      const { container } = render(
+    it("should display asterisk on environmental cards", () => {
+      render(
         <TestWrapper>
           <UnitPerformance />
         </TestWrapper>,
       );
 
-      // The component displays ROI and savings which reflect high efficiency
-      // Check for ROI percentage which indicates good efficiency
-      expect(container.textContent).toMatch(/ROI|Savings|%|Payback/i);
-    });
-
-    it("should indicate when efficiency is below threshold", () => {
-      const lowEfficiencyUnits = [
-        {
-          id: "TC003",
-          name: "ThermaCore Unit 003",
-          status: "online",
-          currentPower: 1000,
-          parasiticLoad: 150,
-          userLoad: 700,
-          efficiency: 70,
-          temperature: 65,
-          pressure: 125,
-          fuelConsumption: 85,
-          operatingHours: 12500,
-          serialNumber: "TC003-2024-001",
-          location: "Plant A",
-        },
-      ];
-
-      const { container } = render(
-        <TestWrapper unitsValue={lowEfficiencyUnits}>
-          <UnitPerformance />
-        </TestWrapper>,
-      );
-
-      // Check that the unit name is displayed and the component renders
-      expect(container.textContent).toMatch(/ThermaCore Unit 003/i);
-      // Lower efficiency should result in lower ROI
-      expect(container.textContent).toMatch(/ROI|Savings|%|Payback/i);
-    });
-
-    it("should show warning for high temperature", () => {
-      const highTempUnits = [
-        {
-          id: "TC003",
-          name: "ThermaCore Unit 003",
-          status: "online",
-          currentPower: 1000,
-          parasiticLoad: 150,
-          userLoad: 700,
-          efficiency: 85,
-          temperature: 95,
-          pressure: 125,
-          fuelConsumption: 85,
-          operatingHours: 12500,
-          serialNumber: "TC003-2024-001",
-          location: "Plant A",
-        },
-      ];
-
-      const { container } = render(
-        <TestWrapper unitsValue={highTempUnits}>
-          <UnitPerformance />
-        </TestWrapper>,
-      );
-
-      // The component displays unit name and performance metrics
-      // Temperature isn't displayed directly, but the unit name and status are
-      expect(container.textContent).toMatch(/ThermaCore Unit 003/i);
-      // Check for online status which indicates the unit is still running
-      expect(container.textContent).toMatch(/online/i);
+      const asterisks = screen.queryAllByText("*");
+      expect(asterisks.length).toBeGreaterThan(0);
     });
   });
 
-  describe("Trend Indicators", () => {
-    it("should show upward trend icon for improving metrics", () => {
-      const { container } = render(
-        <TestWrapper>
-          <UnitPerformance />
-        </TestWrapper>,
-      );
-
-      const upTrends = container.querySelectorAll(".text-green-500");
-      expect(upTrends.length).toBeGreaterThanOrEqual(0);
-    });
-
-    it("should show downward trend icon for declining metrics", () => {
-      const { container } = render(
-        <TestWrapper>
-          <UnitPerformance />
-        </TestWrapper>,
-      );
-
-      const downTrends = container.querySelectorAll(".text-red-500");
-      expect(downTrends.length).toBeGreaterThanOrEqual(0);
-    });
-  });
-
+  // ============================================================
+  // ROI AND FINANCIAL METRICS TESTS
+  // ============================================================
   describe("ROI and Financial Metrics", () => {
-    it("should display financial assumptions", () => {
-      render(
+    it("should calculate ROI correctly", () => {
+      const { container } = render(
         <TestWrapper>
           <UnitPerformance />
         </TestWrapper>,
       );
 
-      // Look for the financial assumptions button
-      const buttons = screen.getAllByRole("button");
-      expect(buttons.length).toBeGreaterThan(0);
+      const roiText = container.textContent;
+      expect(roiText).toMatch(/ROI.*%/);
     });
 
-    it("should show environmental metrics", () => {
-      render(
+    it("should show Payback Period", () => {
+      const { container } = render(
         <TestWrapper>
           <UnitPerformance />
         </TestWrapper>,
       );
 
-      // Check for environmental impact section
-      const envElements = screen.queryAllByText(/Environmental Impact|CO₂|Diesel/i);
-      expect(envElements.length).toBeGreaterThan(0);
+      expect(container.textContent).toMatch(/Payback Period/i);
     });
 
     it("should format currency values", () => {
@@ -426,48 +468,166 @@ describe("UnitPerformance", () => {
       );
 
       const dollarSigns = screen.queryAllByText(/\$/);
-      expect(dollarSigns.length).toBeGreaterThanOrEqual(0);
+      expect(dollarSigns.length).toBeGreaterThan(0);
     });
-  });
 
-  describe("Navigation", () => {
-    it("should navigate back when back button clicked", async () => {
+    it("should show N/A for payback period when annual savings is 0", () => {
+      const zeroPowerUnit = [
+        {
+          id: "TC003",
+          name: "ThermaCore Unit 003",
+          status: "offline",
+          currentPower: 0,
+          parasiticLoad: 0,
+          userLoad: 0,
+          watergeneration: false,
+          serialNumber: "TC003-2024-001",
+          location: "Plant A",
+        },
+      ];
+
+      render(
+        <TestWrapper unitsValue={zeroPowerUnit}>
+          <UnitPerformance />
+        </TestWrapper>,
+      );
+
+      expect(screen.getByText(/N/A/)).toBeInTheDocument();
+    });
+
+    // ✅ FIX: Actually test the zero initialInvestment guard
+    it("should handle zero initialInvestment gracefully", async () => {
       render(
         <TestWrapper>
           <UnitPerformance />
         </TestWrapper>,
       );
 
-      const backButtons = screen.getAllByRole("button", { name: /back/i });
-      const backButton = backButtons[0];
-      fireEvent.click(backButton);
+      // Open ROI modal
+      const roiButton = screen.getByTestId("button-roi-assumptions");
+      fireEvent.click(roiButton);
 
       await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith(-1);
+        expect(screen.getByTestId("roi-assumptions-modal")).toBeInTheDocument();
+      });
+
+      // Click "Save Zero" to set initialInvestment to 0
+      const saveZeroButton = screen.getByText("Save Zero");
+      fireEvent.click(saveZeroButton);
+
+      // ROI should not show Infinity
+      await waitFor(() => {
+        expect(screen.queryByText(/Infinity/)).not.toBeInTheDocument();
+      });
+
+      // ROI should show 0.00% or N/A
+      await waitFor(() => {
+        const roiText = screen.getByText(/0.00%/);
+        expect(roiText).toBeInTheDocument();
       });
     });
   });
 
-  describe("Unit Not Found", () => {
-    it("should handle missing unit gracefully", () => {
-      const emptyContext = {
-        units: [],
-        loading: false,
-        getUnit: () => null,
-      };
-
+  // ============================================================
+  // ENVIRONMENTAL METRICS TESTS
+  // ============================================================
+  describe("Environmental Metrics", () => {
+    it("should display environmental impact section", () => {
       render(
-        <BrowserRouter>
-          <UnitContext.Provider value={emptyContext}>
-            <UnitPerformance />
-          </UnitContext.Provider>
-        </BrowserRouter>,
+        <TestWrapper>
+          <UnitPerformance />
+        </TestWrapper>,
       );
 
-      expect(screen).toBeTruthy();
+      expect(screen.getByText(/Environmental Impact/i)).toBeInTheDocument();
+    });
+
+    it("should show CO2 saved metrics", () => {
+      const { container } = render(
+        <TestWrapper>
+          <UnitPerformance />
+        </TestWrapper>,
+      );
+
+      expect(container.textContent).toMatch(/CO₂ saved/);
     });
   });
 
+  // ============================================================
+  // ASSUMPTION MODALS TESTS
+  // ============================================================
+  describe("Assumption Modals", () => {
+    it("should open financial assumptions modal", async () => {
+      render(
+        <TestWrapper>
+          <UnitPerformance />
+        </TestWrapper>,
+      );
+
+      const button = screen.getByTestId("button-financial-assumptions");
+      fireEvent.click(button);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("financial-assumptions-modal")).toBeInTheDocument();
+      });
+    });
+
+    it("should close financial assumptions modal", async () => {
+      render(
+        <TestWrapper>
+          <UnitPerformance />
+        </TestWrapper>,
+      );
+
+      const button = screen.getByTestId("button-financial-assumptions");
+      fireEvent.click(button);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("financial-assumptions-modal")).toBeInTheDocument();
+      });
+
+      const closeButton = screen.getByText("Close");
+      fireEvent.click(closeButton);
+
+      await waitFor(() => {
+        expect(screen.queryByTestId("financial-assumptions-modal")).not.toBeInTheDocument();
+      });
+    });
+
+    it("should open ROI assumptions modal", async () => {
+      render(
+        <TestWrapper>
+          <UnitPerformance />
+        </TestWrapper>,
+      );
+
+      const button = screen.getByTestId("button-roi-assumptions");
+      fireEvent.click(button);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("roi-assumptions-modal")).toBeInTheDocument();
+      });
+    });
+
+    it("should open environmental assumptions modal", async () => {
+      render(
+        <TestWrapper>
+          <UnitPerformance />
+        </TestWrapper>,
+      );
+
+      const button = screen.getByTestId("button-environmental-assumptions");
+      fireEvent.click(button);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("environmental-assumptions-modal")).toBeInTheDocument();
+      });
+    });
+  });
+
+  // ============================================================
+  // OPERATING STATUS TESTS
+  // ============================================================
   describe("Operating Status", () => {
     it("should display unit running status", () => {
       render(
@@ -476,8 +636,7 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      const runningElements = screen.getAllByText(/online/i);
-      expect(runningElements.length).toBeGreaterThan(0);
+      expect(screen.getByText(/online/i)).toBeInTheDocument();
     });
 
     it("should handle offline status", () => {
@@ -489,11 +648,7 @@ describe("UnitPerformance", () => {
           currentPower: 0,
           parasiticLoad: 0,
           userLoad: 0,
-          efficiency: 0,
-          temperature: 0,
-          pressure: 0,
-          fuelConsumption: 0,
-          operatingHours: 12500,
+          watergeneration: false,
           serialNumber: "TC003-2024-001",
           location: "Plant A",
         },
@@ -505,11 +660,37 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      const offlineElements = screen.getAllByText(/offline/i);
-      expect(offlineElements.length).toBeGreaterThan(0);
+      expect(screen.getByText(/offline/i)).toBeInTheDocument();
+    });
+
+    it("should handle maintenance status", () => {
+      const maintenanceUnits = [
+        {
+          id: "TC003",
+          name: "ThermaCore Unit 003",
+          status: "maintenance",
+          currentPower: 0,
+          parasiticLoad: 0,
+          userLoad: 0,
+          watergeneration: false,
+          serialNumber: "TC003-2024-001",
+          location: "Plant A",
+        },
+      ];
+
+      render(
+        <TestWrapper unitsValue={maintenanceUnits}>
+          <UnitPerformance />
+        </TestWrapper>,
+      );
+
+      expect(screen.getByText(/maintenance/i)).toBeInTheDocument();
     });
   });
 
+  // ============================================================
+  // ACCESSIBILITY TESTS
+  // ============================================================
   describe("Accessibility", () => {
     it("should have accessible metric labels", () => {
       render(
@@ -518,8 +699,7 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      const unitLabels = screen.getAllByText(/ThermaCore Unit 003/i);
-      expect(unitLabels.length).toBeGreaterThan(0);
+      expect(screen.getByText(/ThermaCore Unit 003/i)).toBeInTheDocument();
     });
 
     it("should have clickable back button", () => {
@@ -529,11 +709,14 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      const backButtons = screen.getAllByRole("button", { name: /back/i });
-      expect(backButtons[0]).toBeEnabled();
+      const backButton = screen.getByTestId("button-back-to-unit-details");
+      expect(backButton).toBeEnabled();
     });
   });
 
+  // ============================================================
+  // RESPONSIVE DESIGN TESTS
+  // ============================================================
   describe("Responsive Design", () => {
     it("should render on mobile viewports", () => {
       const { container } = render(
@@ -552,10 +735,13 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      expect(container.querySelector(".grid, .flex")).toBeTruthy();
+      expect(container.querySelector(".grid")).toBeTruthy();
     });
   });
 
+  // ============================================================
+  // DARK MODE TESTS
+  // ============================================================
   describe("Dark Mode", () => {
     it("should support dark mode styling", () => {
       const { container } = render(
@@ -569,22 +755,28 @@ describe("UnitPerformance", () => {
     });
   });
 
+  // ============================================================
+  // ERROR STATES TESTS
+  // ============================================================
   describe("Error States", () => {
     it("should handle invalid unit ID", () => {
-      expect(() => {
-        render(
-          <TestWrapper>
-            <UnitPerformance />
-          </TestWrapper>,
-        );
-      }).not.toThrow();
+      mockParams = { id: "INVALID" };
+
+      render(
+        <TestWrapper>
+          <UnitPerformance />
+        </TestWrapper>,
+      );
+
+      expect(screen.getByText(/Unit Not Found/i)).toBeInTheDocument();
     });
 
-    it("should handle missing unit data", () => {
+    it("should handle missing unit data gracefully", () => {
       const incompleteUnits = [
         {
           id: "TC003",
           name: "ThermaCore Unit 003",
+          // Missing other fields
         },
       ];
 
@@ -594,32 +786,7 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      const unitLabels = screen.getAllByText(/ThermaCore Unit 003/i);
-      expect(unitLabels.length).toBeGreaterThan(0);
-    });
-  });
-
-  describe("Performance Card Component", () => {
-    it("should render with all props", () => {
-      const { container } = render(
-        <TestWrapper>
-          <UnitPerformance />
-        </TestWrapper>,
-      );
-
-      const cards = container.querySelectorAll(".hover\\:shadow-md");
-      expect(cards.length).toBeGreaterThan(0);
-    });
-
-    it("should display asterisk when specified", () => {
-      render(
-        <TestWrapper>
-          <UnitPerformance />
-        </TestWrapper>,
-      );
-
-      const asterisks = screen.queryAllByText("*");
-      expect(asterisks.length).toBeGreaterThanOrEqual(0);
+      expect(screen.getByText(/ThermaCore Unit 003/i)).toBeInTheDocument();
     });
   });
 });
