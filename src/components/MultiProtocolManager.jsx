@@ -171,7 +171,7 @@ const MultiProtocolManager = () => {
         setProtocolsStatus(data);
         setLoading(false);
 
-        // ✅ FIX: Use ref to get current error count, avoiding stale closure
+        // Use ref to get current error count, avoiding stale closure
         if (consecutiveErrorsRef.current > 0) {
           toast.success("Protocol status loaded successfully");
         }
@@ -191,7 +191,6 @@ const MultiProtocolManager = () => {
           errorMessage = "Session expired. Please log in again.";
         }
 
-        // ✅ FIX: Remove MODE !== "test" check - let tests mock toast instead
         toast.error(errorMessage, {
           duration: 4000,
           action: {
@@ -226,7 +225,6 @@ const MultiProtocolManager = () => {
     }
   }, [refreshing, isPolling, loadData]);
 
-  // ✅ FIX: Add connect handler
   const handleConnect = useCallback((protocolName) => {
     toast.success(`Connecting to ${protocolName.toUpperCase()}...`, {
       duration: 2000,
@@ -255,21 +253,30 @@ const MultiProtocolManager = () => {
   useEffect(() => {
     let cancelled = false;
     let timeoutId = null;
+    // Local, synchronous error counter used purely for backoff scheduling.
+    // consecutiveErrorsRef can't be used here: it's only refreshed by the
+    // ref-sync effect above, which runs *after* React commits a render. The
+    // poll callback below calls scheduleNext() synchronously, in the same
+    // tick as the setConsecutiveErrors() update inside loadData's catch
+    // block, so the ref would still hold the pre-increment value at the
+    // moment we need it. Keeping a local counter in this closure sidesteps
+    // that render-timing gap entirely.
+    let localErrorCount = 0;
 
     const scheduleNext = () => {
       if (cancelled || isMockModeRef.current) return;
-      const interval = Math.min(
-        10000 * 1.5 ** consecutiveErrorsRef.current,
-        60000
-      );
+      const interval = Math.min(10000 * 1.5 ** localErrorCount, 60000);
       timeoutId = setTimeout(async () => {
         if (cancelled) return;
         if (isPageVisibleRef.current && isMountedRef.current) {
           setIsPolling(true);
           try {
             await loadDataRef.current();
+            localErrorCount = 0;
           } catch {
-            // toasting/backoff bookkeeping already happened inside loadData
+            localErrorCount += 1;
+            // toasting/error-count bookkeeping for UI display already
+            // happened inside loadData via setConsecutiveErrors
           } finally {
             setIsPolling(false);
           }
@@ -279,7 +286,9 @@ const MultiProtocolManager = () => {
     };
 
     // Initial load
-    loadDataRef.current().catch(() => {});
+    loadDataRef.current().catch(() => {
+      localErrorCount += 1;
+    });
 
     // Start the polling loop
     scheduleNext();
@@ -347,7 +356,7 @@ const MultiProtocolManager = () => {
     }
   };
 
-  // ✅ FIX: Round the backoff display to whole seconds
+  // Round the backoff display to whole seconds
   const getBackoffSeconds = () => {
     return Math.round(Math.min(10 * 1.5 ** consecutiveErrors, 60));
   };
@@ -632,7 +641,6 @@ const MultiProtocolManager = () => {
                           <Settings className="h-4 w-4 sm:h-3 sm:w-3 mr-1" />
                           <span className="truncate">Configure</span>
                         </Button>
-                        {/* ✅ FIX: Add onClick handler to Connect button */}
                         {!protocol.connected && protocol.available && (
                           <Button
                             size="sm"
