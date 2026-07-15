@@ -17,7 +17,6 @@ vi.useRealTimers();
 // Clean up DOM after each test to prevent memory leaks and test pollution
 afterEach(() => {
   cleanup();
-  // REMOVED: document.body.innerHTML = ''; // This was causing issues with async continuations
   
   // Reset any global state
   vi.clearAllMocks();
@@ -25,6 +24,45 @@ afterEach(() => {
   // CRITICAL: Re-apply real timers after clearing mocks
   vi.useRealTimers();
 });
+
+/**
+ * -----------------------------
+ * SUPPRESS ACT WARNINGS
+ * -----------------------------
+ */
+// Store original console methods
+const originalConsoleError = console.error;
+const originalConsoleWarn = console.warn;
+
+// Filter out act warnings and other expected warnings
+console.error = (...args) => {
+  const message = typeof args[0] === 'string' ? args[0] : '';
+  
+  // Suppress act warnings
+  if (
+    message.includes('The current testing environment is not configured to support act') ||
+    message.includes('Warning: An update to %s inside a test was not wrapped in act') ||
+    message.includes('Warning: ReactDOM.render is no longer supported')
+  ) {
+    return;
+  }
+  
+  originalConsoleError(...args);
+};
+
+console.warn = (...args) => {
+  const message = typeof args[0] === 'string' ? args[0] : '';
+  
+  // Suppress known harmless warnings
+  if (
+    message.includes('React Router Future Flag Warning') ||
+    message.includes('ReactDOM.render is no longer supported')
+  ) {
+    return;
+  }
+  
+  originalConsoleWarn(...args);
+};
 
 /**
  * -----------------------------
@@ -132,10 +170,6 @@ if (!window.sessionStorage) {
   });
 }
 
-// Reset storage before each test (but ONLY if needed)
-// We'll handle this per test file instead
-// DO NOT auto-clear here - let tests manage their own storage state
-
 /**
  * -----------------------------
  * WINDOW LOCATION MOCK
@@ -199,16 +233,6 @@ if (!window.cancelAnimationFrame) {
     value: vi.fn(),
   });
 }
-
-// ============================================================
-// CRITICAL FIX: DO NOT mock setTimeout or setInterval
-// React's scheduler (used by react-router-dom v7 Navigate)
-// relies on real setTimeout and MessageChannel to flush
-// startTransition updates. Mocking them breaks navigation.
-// ============================================================
-
-// REMOVED: setTimeout mock - let jsdom handle it natively
-// REMOVED: setInterval mock - let jsdom handle it natively
 
 // Keep clearTimeout and clearInterval if they're missing
 if (!window.clearTimeout) {
@@ -469,9 +493,6 @@ beforeEach(() => {
   if (navigator.msSaveBlob && typeof navigator.msSaveBlob === 'function' && navigator.msSaveBlob.mockClear) {
     navigator.msSaveBlob.mockClear();
   }
-
-  // Clear any leftover DOM from previous tests
-  // REMOVED: document.body.innerHTML = ''; // This was causing issues with async continuations
 });
 
 /**
@@ -491,28 +512,6 @@ vi.mock("framer-motion", () => ({
  * GLOBAL STABILITY
  * -----------------------------
  */
-
-// Store console spies at module level
-let consoleErrorSpy = null;
-let consoleWarnSpy = null;
-
-beforeAll(() => {
-  // Create spies that persist for the entire test run
-  consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-  consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-});
-
-// Restore console mocks after all tests
-afterAll(() => {
-  if (consoleErrorSpy) {
-    consoleErrorSpy.mockRestore();
-    consoleErrorSpy = null;
-  }
-  if (consoleWarnSpy) {
-    consoleWarnSpy.mockRestore();
-    consoleWarnSpy = null;
-  }
-});
 
 // IMPORTANT: Export a helper to reset storage for tests that need it
 // This is NOT automatically called - tests must call it if they need clean storage
