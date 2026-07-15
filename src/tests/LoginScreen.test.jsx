@@ -150,8 +150,8 @@ describe("LoginScreen", () => {
       );
 
       const errorElement = screen.getByText("Test error message");
-      // CSS modules add prefixes, so use toHaveClass with the class name
-      expect(errorElement).toHaveClass("visible");
+      // Check if the class name contains "visible" (works with CSS modules)
+      expect(errorElement.className).toContain("visible");
     });
 
     it("should hide error when error prop is empty", () => {
@@ -164,7 +164,7 @@ describe("LoginScreen", () => {
       // The error container should exist but without the visible class
       const errorElement = document.querySelector("[class*='loginError']");
       expect(errorElement).toBeInTheDocument();
-      expect(errorElement).not.toHaveClass("visible");
+      expect(errorElement.className).not.toContain("visible");
     });
   });
 
@@ -174,6 +174,9 @@ describe("LoginScreen", () => {
   describe("Client-side validation", () => {
     it("should block submit and show an error when fields are empty", () => {
       const mockSetError = vi.fn();
+      // Create a fresh spy for authService.login
+      const loginSpy = vi.spyOn(authService, "login");
+      
       render(
         <TestWrapper>
           <LoginScreen error="" setError={mockSetError} />
@@ -185,8 +188,7 @@ describe("LoginScreen", () => {
       expect(mockSetError).toHaveBeenCalledWith(
         "Please enter both username and password",
       );
-      // Use expect(...).not.toHaveBeenCalled() instead of checking calls
-      expect(authService.login).not.toHaveBeenCalled();
+      expect(loginSpy).not.toHaveBeenCalled();
     });
 
     it("should show validation message for passwords under 6 characters", () => {
@@ -246,8 +248,8 @@ describe("LoginScreen", () => {
       const passwordInput = screen.getByPlaceholderText("Enter password");
       fireEvent.change(passwordInput, { target: { value: "123" } });
 
-      // CSS modules add prefixes, so use toHaveClass with the class name
-      expect(passwordInput).toHaveClass("inputError");
+      // Check if the class name contains "inputError" (works with CSS modules)
+      expect(passwordInput.className).toContain("inputError");
     });
 
     it("should remove error class when password becomes valid", () => {
@@ -259,14 +261,14 @@ describe("LoginScreen", () => {
 
       const passwordInput = screen.getByPlaceholderText("Enter password");
       fireEvent.change(passwordInput, { target: { value: "123" } });
-      expect(passwordInput).toHaveClass("inputError");
+      expect(passwordInput.className).toContain("inputError");
 
       fireEvent.change(passwordInput, { target: { value: "123456" } });
-      expect(passwordInput).not.toHaveClass("inputError");
+      expect(passwordInput.className).not.toContain("inputError");
     });
 
     it("should block submission when password is too short", async () => {
-      vi.spyOn(authService, "login").mockResolvedValue({
+      const loginSpy = vi.spyOn(authService, "login").mockResolvedValue({
         success: true,
         token: "test-token",
         user: { id: 1, username: "user" },
@@ -282,7 +284,7 @@ describe("LoginScreen", () => {
       fillAndSubmit("user", "123");
 
       // Should NOT call login
-      expect(authService.login).not.toHaveBeenCalled();
+      expect(loginSpy).not.toHaveBeenCalled();
       
       // Should show error
       expect(mockSetError).toHaveBeenCalledWith(
@@ -468,8 +470,8 @@ describe("LoginScreen", () => {
       const usernameInput = screen.getByPlaceholderText("Enter username");
       fireEvent.focus(usernameInput);
 
-      // CSS modules add prefixes, so use toHaveClass with the class name
-      expect(usernameInput).toHaveClass("inputFocused");
+      // Check if the class name contains "inputFocused" (works with CSS modules)
+      expect(usernameInput.className).toContain("inputFocused");
     });
 
     it("should remove inputFocused class on username blur", () => {
@@ -483,7 +485,7 @@ describe("LoginScreen", () => {
       fireEvent.focus(usernameInput);
       fireEvent.blur(usernameInput);
 
-      expect(usernameInput).not.toHaveClass("inputFocused");
+      expect(usernameInput.className).not.toContain("inputFocused");
     });
 
     it("should apply inputFocused class on password focus", () => {
@@ -496,7 +498,7 @@ describe("LoginScreen", () => {
       const passwordInput = screen.getByPlaceholderText("Enter password");
       fireEvent.focus(passwordInput);
 
-      expect(passwordInput).toHaveClass("inputFocused");
+      expect(passwordInput.className).toContain("inputFocused");
     });
 
     it("should remove inputFocused class on password blur", () => {
@@ -510,7 +512,7 @@ describe("LoginScreen", () => {
       fireEvent.focus(passwordInput);
       fireEvent.blur(passwordInput);
 
-      expect(passwordInput).not.toHaveClass("inputFocused");
+      expect(passwordInput.className).not.toContain("inputFocused");
     });
   });
 
@@ -525,9 +527,11 @@ describe("LoginScreen", () => {
         </TestWrapper>,
       );
 
-      const logo = document.querySelector("[class*='logo']");
+      // Find the logo element by its alt text
+      const logo = screen.getByAltText("ThermaCore Logo");
       expect(logo).toBeInTheDocument();
-      expect(logo).toHaveClass("logoSpin");
+      // Check if the class name contains "logoSpin" (works with CSS modules)
+      expect(logo.className).toContain("logoSpin");
     });
   });
 
