@@ -71,7 +71,6 @@ describe("LoginScreen", () => {
   // ============================================================
   describe("Error handling", () => {
     it("should display error message on failed login", async () => {
-      // Mock authService.login to return failure
       vi.spyOn(authService, "login").mockResolvedValue({
         success: false,
         message: "Invalid username or password. Please try again.",
@@ -94,7 +93,6 @@ describe("LoginScreen", () => {
         );
       });
 
-      // AuthContext maps message → error, so LoginScreen receives result.error
       await waitForInDocument(() => {
         expect(mockSetError).toHaveBeenCalledWith(
           "Invalid username or password. Please try again.",
@@ -152,6 +150,7 @@ describe("LoginScreen", () => {
       );
 
       const errorElement = screen.getByText("Test error message");
+      // CSS modules add prefixes, so use toHaveClass with the class name
       expect(errorElement).toHaveClass("visible");
     });
 
@@ -162,8 +161,10 @@ describe("LoginScreen", () => {
         </TestWrapper>,
       );
 
-      const container = document.querySelector(".loginError");
-      expect(container).not.toHaveClass("visible");
+      // The error container should exist but without the visible class
+      const errorElement = document.querySelector("[class*='loginError']");
+      expect(errorElement).toBeInTheDocument();
+      expect(errorElement).not.toHaveClass("visible");
     });
   });
 
@@ -184,6 +185,7 @@ describe("LoginScreen", () => {
       expect(mockSetError).toHaveBeenCalledWith(
         "Please enter both username and password",
       );
+      // Use expect(...).not.toHaveBeenCalled() instead of checking calls
       expect(authService.login).not.toHaveBeenCalled();
     });
 
@@ -244,6 +246,7 @@ describe("LoginScreen", () => {
       const passwordInput = screen.getByPlaceholderText("Enter password");
       fireEvent.change(passwordInput, { target: { value: "123" } });
 
+      // CSS modules add prefixes, so use toHaveClass with the class name
       expect(passwordInput).toHaveClass("inputError");
     });
 
@@ -262,7 +265,6 @@ describe("LoginScreen", () => {
       expect(passwordInput).not.toHaveClass("inputError");
     });
 
-    // 🔥 UPDATED - Now expects the validation to block submission
     it("should block submission when password is too short", async () => {
       vi.spyOn(authService, "login").mockResolvedValue({
         success: true,
@@ -466,6 +468,7 @@ describe("LoginScreen", () => {
       const usernameInput = screen.getByPlaceholderText("Enter username");
       fireEvent.focus(usernameInput);
 
+      // CSS modules add prefixes, so use toHaveClass with the class name
       expect(usernameInput).toHaveClass("inputFocused");
     });
 
@@ -522,7 +525,8 @@ describe("LoginScreen", () => {
         </TestWrapper>,
       );
 
-      const logo = document.querySelector(".logo");
+      const logo = document.querySelector("[class*='logo']");
+      expect(logo).toBeInTheDocument();
       expect(logo).toHaveClass("logoSpin");
     });
   });
@@ -576,7 +580,6 @@ describe("LoginScreen", () => {
         </TestWrapper>,
       );
 
-      // With mocked SocialButton, it renders "Sign in with Google"
       fireEvent.click(screen.getByText("Sign in with Google"));
 
       await waitForInDocument(() => {
@@ -609,9 +612,9 @@ describe("LoginScreen", () => {
         </TestWrapper>,
       );
 
-      // The biometric button is nested in the biometric section
+      // Find the biometric button by its container
       const biometricHeading = screen.getByText("Biometric Sign In");
-      const container = biometricHeading.closest(".biometricSection");
+      const container = biometricHeading.closest("[class*='biometricSection']");
       const triggerButton = container.querySelector("button");
       fireEvent.click(triggerButton);
 
@@ -637,7 +640,9 @@ describe("LoginScreen", () => {
         ).toBeInTheDocument();
       });
 
-      const closeButton = screen.getByText("Close");
+      // Use getAllByText and pick the first one (the button, not the sr-only span)
+      const closeButtons = screen.getAllByText("Close");
+      const closeButton = closeButtons[0]; // First one is the button
       fireEvent.click(closeButton);
 
       // Wait for dialog to close
