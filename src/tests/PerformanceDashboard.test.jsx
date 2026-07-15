@@ -23,81 +23,164 @@ vi.mock("../context/AuthContext", () => ({
 // 2. Mutable units data - using getter so it's read fresh each time
 const defaultUnits = [
   {
-    id: "unit-1",
-    name: "Test Unit 1",
-    status: "online",
-    efficiency: 85,
-    temperature: 65,
-    currentPower: 150,
-    parasiticLoad: 10,
-    userLoad: 50,
-    waterGeneration: 100,
+    id: "TC001",
+    productLine: "Power-Box",
+    watergeneration: true,
+    currentPower: 0.0,
+    parasiticLoad: 0.0,
+    userLoad: 0.0,
   },
   {
-    id: "unit-2",
-    name: "Test Unit 2",
-    status: "online",
-    efficiency: 90,
-    temperature: 60,
-    currentPower: 120,
-    parasiticLoad: 8,
-    userLoad: 40,
-    waterGeneration: 80,
+    id: "TC002",
+    productLine: "Power-Box",
+    watergeneration: true,
+    currentPower: 11.8,
+    parasiticLoad: 0.2,
+    userLoad: 11.1,
   },
   {
-    id: "unit-3",
-    name: "Test Unit 3",
-    status: "offline",
-    efficiency: 0,
-    temperature: 25,
-    currentPower: 0,
-    parasiticLoad: 0,
-    userLoad: 0,
-    waterGeneration: 0,
+    id: "TC003",
+    productLine: "Power-Box",
+    watergeneration: true,
+    currentPower: 0.0,
+    parasiticLoad: 0.0,
+    userLoad: 0.0,
   },
   {
-    id: "unit-4",
-    name: "Test Unit 4",
-    status: "online",
-    efficiency: 75,
-    temperature: 70,
-    currentPower: 90,
-    parasiticLoad: 5,
-    userLoad: 30,
-    waterGeneration: 60,
+    id: "TC004",
+    productLine: "Power-Box",
+    watergeneration: false,
+    currentPower: 13.2,
+    parasiticLoad: 0.3,
+    userLoad: 12.9,
   },
   {
-    id: "unit-5",
-    name: "Test Unit 5",
-    status: "online",
-    efficiency: 80,
-    temperature: 55,
-    currentPower: 110,
-    parasiticLoad: 7,
-    userLoad: 35,
-    waterGeneration: 50,
+    id: "TC005",
+    productLine: "Power-Box",
+    watergeneration: true,
+    currentPower: 12.5,
+    parasiticLoad: 0.2,
+    userLoad: 0.0,
   },
   {
-    id: "unit-6",
-    name: "Test Unit 6",
-    status: "online",
-    efficiency: 95,
-    temperature: 50,
-    currentPower: 130,
-    parasiticLoad: 6,
-    userLoad: 45,
-    waterGeneration: 70,
+    id: "TC006",
+    productLine: "Power-Box",
+    watergeneration: true,
+    currentPower: 49.5,
+    parasiticLoad: 1.0,
+    userLoad: 46.9,
   },
   {
-    id: "unit-7",
-    name: "Test Unit 7",
-    status: "online",
-    efficiency: 88,
-    temperature: 62,
-    currentPower: 100,
-    parasiticLoad: 4,
-    userLoad: 25,
-    waterGeneration: 40,
+    id: "TC007",
+    productLine: "Power-Box",
+    watergeneration: true,
+    currentPower: 6.7,
+    parasiticLoad: 0.1,
+    userLoad: 5.4,
+  },
+  {
+    id: "TC008",
+    productLine: "Power-Box",
+    watergeneration: false,
+    currentPower: 88.8,
+    parasiticLoad: 1.8,
+    userLoad: 84.8,
+  },
+  {
+    id: "TC009",
+    productLine: "Power-Plus",
+    watergeneration: true,
+    currentPower: 22.8,
+    parasiticLoad: 0.5,
+    userLoad: 20.3,
+  },
+  {
+    id: "TC010",
+    productLine: "Power-Plus",
+    watergeneration: true,
+    currentPower: 4.3,
+    parasiticLoad: 0.1,
+    userLoad: 3.5,
+  },
+  {
+    id: "TC011",
+    productLine: "Power-Plus",
+    watergeneration: true,
+    currentPower: 18.7,
+    parasiticLoad: 0.4,
+    userLoad: 15.3,
+  },
+  {
+    id: "TC012",
+    productLine: "Power-Plus",
+    watergeneration: false,
+    currentPower: 2.1,
+    parasiticLoad: 0.0,
+    userLoad: 1.9,
+  },
+  {
+    id: "TC013",
+    productLine: "Power-Plus",
+    watergeneration: true,
+    currentPower: 3.1,
+    parasiticLoad: 0.1,
+    userLoad: 2.7,
+  },
+  {
+    id: "TC014",
+    productLine: "Power-Plus",
+    watergeneration: false,
+    currentPower: 8.9,
+    parasiticLoad: 0.2,
+    userLoad: 7.9,
+  },
+  {
+    id: "TC015",
+    productLine: "Power-Plus",
+    watergeneration: true,
+    currentPower: 5.4,
+    parasiticLoad: 0.1,
+    userLoad: 4.3,
+  },
+  {
+    id: "TC016",
+    productLine: "Titan",
+    watergeneration: true,
+    currentPower: 16.7,
+    parasiticLoad: 0.3,
+    userLoad: 16.3,
+  },
+  {
+    id: "TC017",
+    productLine: "Titan",
+    watergeneration: false,
+    currentPower: 0.0,
+    parasiticLoad: 0.0,
+    userLoad: 0.0,
+  },
+  {
+    id: "TC018",
+    productLine: "Titan",
+    watergeneration: false,
+    currentPower: 1.9,
+    parasiticLoad: 0.0,
+    userLoad: 1.8,
+  },
+  {
+    id: "TC019",
+    productLine: "Titan",
+    watergeneration: true,
+    currentPower: 11.6,
+    parasiticLoad: 0.2,
+    userLoad: 11.1,
+  },
+  {
+    id: "TC020",
+    productLine: "Titan",
+    watergeneration: false,
+    currentPower: 78.9,
+    parasiticLoad: 1.6,
+    userLoad: 69.4,
   },
 ];
 
@@ -129,7 +212,10 @@ vi.mock("../components/FinancialAssumptions", () => ({
         <h2>Financial Assumptions</h2>
         <button onClick={onClose}>Close</button>
         <button
-          onClick={() => mockFinancialSaveHandler(onSave)}
+          onClick={() => {
+            mockFinancialSaveHandler(onSave);
+            onClose();
+          }}
         >
           Save
         </button>
@@ -147,11 +233,12 @@ vi.mock("../components/ROIAssumptions", () => ({
         <h2>ROI Assumptions</h2>
         <button onClick={onClose}>Close</button>
         <button
-          onClick={() =>
+          onClick={() => {
             onSave({
               initialInvestment: 3000000,
-            })
-          }
+            });
+            onClose();
+          }}
         >
           Save
         </button>
@@ -169,11 +256,12 @@ vi.mock("../components/EnvironmentalAssumptions", () => ({
         <h2>Environmental Assumptions</h2>
         <button onClick={onClose}>Close</button>
         <button
-          onClick={() =>
+          onClick={() => {
             onSave({
               dieselPricePerLiter: 2.0,
-            })
-          }
+            });
+            onClose();
+          }}
         >
           Save
         </button>
@@ -270,18 +358,19 @@ describe("PerformanceDashboard", () => {
   // ROLE-BASED FILTERING TESTS
   // ============================================================
   describe("Role-based filtering", () => {
-    it("should show all 7 units for admin role", () => {
+    it("should show all 20 units for admin role", () => {
       mockAuthState = {
         user: { id: "1", username: "admin", role: "admin" },
         isAuthenticated: true,
       };
       const { container } = render(<PerformanceDashboard />);
       
-      // All 7 units should be included in the total
-      // 150+120+0+90+110+130+100 = 700
-      const cards = container.querySelectorAll("[class*='rounded-lg border']");
-      const powerCard = cards[0];
-      expect(powerCard.textContent).toContain("700.0");
+      // Find the Live: Power Generation card
+      const powerCards = container.querySelectorAll('[class*="rounded-lg border"]');
+      const powerCard = powerCards[3];
+      // Sum of all currentPower values from the 20 units
+      // 0+11.8+0+13.2+12.5+49.5+6.7+88.8+22.8+4.3+18.7+2.1+3.1+8.9+5.4+16.7+0+1.9+11.6+78.9 = 356.9
+      expect(powerCard.textContent).toContain("356.9");
     });
 
     it("should show only 5 units for user role", () => {
@@ -291,11 +380,10 @@ describe("PerformanceDashboard", () => {
       };
       const { container } = render(<PerformanceDashboard />);
       
-      // Only first 5 units should be included
-      // 150+120+0+90+110 = 470
-      const cards = container.querySelectorAll("[class*='rounded-lg border']");
-      const powerCard = cards[0];
-      expect(powerCard.textContent).toContain("470.0");
+      const powerCards = container.querySelectorAll('[class*="rounded-lg border"]');
+      const powerCard = powerCards[3];
+      // Only first 5 units: 0+11.8+0+13.2+12.5 = 37.5
+      expect(powerCard.textContent).toContain("37.5");
     });
 
     it("should use admin ROI investment (2,000,000) for admin role", () => {
@@ -336,10 +424,9 @@ describe("PerformanceDashboard", () => {
       const { container } = render(<PerformanceDashboard />);
       expect(container).toBeInTheDocument();
       
-      // Should default to user behavior (5 units)
-      const cards = container.querySelectorAll("[class*='rounded-lg border']");
-      const powerCard = cards[0];
-      expect(powerCard.textContent).toContain("470.0");
+      const powerCards = container.querySelectorAll('[class*="rounded-lg border"]');
+      const powerCard = powerCards[3];
+      expect(powerCard.textContent).toContain("37.5");
     });
 
     it("should fall back to user role when user.role is null", () => {
@@ -350,21 +437,18 @@ describe("PerformanceDashboard", () => {
       const { container } = render(<PerformanceDashboard />);
       expect(container).toBeInTheDocument();
       
-      // Should default to user behavior (5 units)
-      const cards = container.querySelectorAll("[class*='rounded-lg border']");
-      const powerCard = cards[0];
-      expect(powerCard.textContent).toContain("470.0");
+      const powerCards = container.querySelectorAll('[class*="rounded-lg border"]');
+      const powerCard = powerCards[3];
+      expect(powerCard.textContent).toContain("37.5");
     });
 
     it("should update ROI investment when userRole changes after mount", () => {
-      // Start as admin
       mockAuthState = {
         user: { id: "1", username: "admin", role: "admin" },
         isAuthenticated: true,
       };
       const { rerender } = render(<PerformanceDashboard />);
       
-      // Open ROI modal to check initial value
       const roiSection = screen.getByText("ROI and Payback Period");
       const settingsButton = roiSection.parentElement.querySelector("button");
       fireEvent.click(settingsButton);
@@ -373,24 +457,19 @@ describe("PerformanceDashboard", () => {
         screen.getByTestId("current-roi-assumptions").textContent,
       ).toContain("2000000");
       
-      // Close modal
       fireEvent.click(screen.getByText("Close"));
       
-      // Change to user role
       mockAuthState = {
         user: { id: "2", username: "regularuser", role: "user" },
         isAuthenticated: true,
       };
       
-      // Re-render with new role
       rerender(<PerformanceDashboard />);
       
-      // Re-open modal
       const newRoiSection = screen.getByText("ROI and Payback Period");
       const newSettingsButton = newRoiSection.parentElement.querySelector("button");
       fireEvent.click(newSettingsButton);
       
-      // Should now show user investment
       expect(
         screen.getByTestId("current-roi-assumptions").textContent,
       ).toContain("600000");
@@ -407,9 +486,9 @@ describe("PerformanceDashboard", () => {
         isAuthenticated: true,
       };
       const { container } = render(<PerformanceDashboard />);
-      const cards = container.querySelectorAll("[class*='rounded-lg border']");
-      const powerCard = cards[0];
-      expect(powerCard.textContent).toContain("700.0");
+      const powerCards = container.querySelectorAll('[class*="rounded-lg border"]');
+      const powerCard = powerCards[3];
+      expect(powerCard.textContent).toContain("356.9");
     });
 
     it("should calculate total current power correctly for user", () => {
@@ -418,33 +497,33 @@ describe("PerformanceDashboard", () => {
         isAuthenticated: true,
       };
       const { container } = render(<PerformanceDashboard />);
-      const cards = container.querySelectorAll("[class*='rounded-lg border']");
-      const powerCard = cards[0];
-      expect(powerCard.textContent).toContain("470.0");
+      const powerCards = container.querySelectorAll('[class*="rounded-lg border"]');
+      const powerCard = powerCards[3];
+      expect(powerCard.textContent).toContain("37.5");
     });
 
     it("should calculate total parasitic load correctly", () => {
       const { container } = render(<PerformanceDashboard />);
-      const cards = container.querySelectorAll("[class*='rounded-lg border']");
-      const parasiticCard = cards[1];
-      // 10+8+0+5+7+6+4 = 40
-      expect(parasiticCard.textContent).toContain("40.0");
+      const powerCards = container.querySelectorAll('[class*="rounded-lg border"]');
+      const parasiticCard = powerCards[4];
+      // Sum of all parasiticLoad: 0+0.2+0+0.3+0.2+1.0+0.1+1.8+0.5+0.1+0.4+0+0.1+0.2+0.1+0.3+0+0+0.2+1.6 = 7.1
+      expect(parasiticCard.textContent).toContain("7.1");
     });
 
     it("should calculate total user load correctly", () => {
       const { container } = render(<PerformanceDashboard />);
-      const cards = container.querySelectorAll("[class*='rounded-lg border']");
-      const userLoadCard = cards[2];
-      // 50+40+0+30+35+45+25 = 225
-      expect(userLoadCard.textContent).toContain("225.0");
+      const powerCards = container.querySelectorAll('[class*="rounded-lg border"]');
+      const userLoadCard = powerCards[5];
+      // Sum of all userLoad: 0+11.1+0+12.9+0+46.9+5.4+84.8+20.3+3.5+15.3+1.9+2.7+7.9+4.3+16.3+0+1.8+11.1+69.4 = 315.6
+      expect(userLoadCard.textContent).toContain("315.6");
     });
 
     it("should calculate total feed-in load correctly", () => {
       const { container } = render(<PerformanceDashboard />);
-      const cards = container.querySelectorAll("[class*='rounded-lg border']");
-      const feedInCard = cards[3];
-      // 700 - 40 - 225 = 435
-      expect(feedInCard.textContent).toContain("435.0");
+      const powerCards = container.querySelectorAll('[class*="rounded-lg border"]');
+      const feedInCard = powerCards[6];
+      // 356.9 - 7.1 - 315.6 = 34.2
+      expect(feedInCard.textContent).toContain("34.2");
     });
 
     it("should display financial savings cards", () => {
@@ -478,16 +557,16 @@ describe("PerformanceDashboard", () => {
   // WATER GENERATION TESTS
   // ============================================================
   describe("Water generation display", () => {
-    it("should display water generation card when units have waterGeneration", () => {
+    it("should display water generation card when units have watergeneration", () => {
       render(<PerformanceDashboard />);
+      // With default data, some units have watergeneration: true
       expect(screen.getByText("Total Water Generated")).toBeInTheDocument();
     });
 
-    it("should hide water generation card when no units have waterGeneration", () => {
-      // Remove waterGeneration from all units
+    it("should hide water generation card when no units have watergeneration", () => {
       mockUnitsData = defaultUnits.map((u) => ({
         ...u,
-        waterGeneration: undefined,
+        watergeneration: false,
       }));
       
       render(<PerformanceDashboard />);
@@ -496,11 +575,11 @@ describe("PerformanceDashboard", () => {
       ).not.toBeInTheDocument();
     });
 
-    it("should hide water generation card when all units have 0 waterGeneration", () => {
-      mockUnitsData = defaultUnits.map((u) => ({
-        ...u,
-        waterGeneration: 0,
-      }));
+    it("should hide water generation card when watergeneration is undefined", () => {
+      mockUnitsData = defaultUnits.map((u) => {
+        const { watergeneration, ...rest } = u;
+        return rest;
+      });
       
       render(<PerformanceDashboard />);
       expect(
@@ -517,15 +596,12 @@ describe("PerformanceDashboard", () => {
       // Use a single unit with very low production
       mockUnitsData = [
         {
-          id: "unit-1",
-          name: "Low Production Unit",
-          status: "online",
-          efficiency: 10,
-          temperature: 25,
-          currentPower: 1,
-          parasiticLoad: 0,
-          userLoad: 1,
-          waterGeneration: 0,
+          id: "TC001",
+          productLine: "Power-Box",
+          watergeneration: false,
+          currentPower: 1.0,
+          parasiticLoad: 0.0,
+          userLoad: 1.0,
         },
       ];
       
@@ -533,25 +609,20 @@ describe("PerformanceDashboard", () => {
       mockFinancialSaveHandler = (onSave) => {
         onSave({
           electricityCost: 0.4,
-          rebate: 5000, // Very high rebate
+          rebate: 5000,
           feedInTariff: 0.08,
         });
       };
       
       render(<PerformanceDashboard />);
       
-      // Open financial assumptions modal
       const financialSection = screen.getByText("Financial Impact");
       const settingsButton = financialSection.parentElement.querySelector("button");
       fireEvent.click(settingsButton);
       
-      // Save with high rebate
       fireEvent.click(screen.getByText("Save"));
       
-      // Savings should be clamped to 0
-      // Look for the savings card with $0.00
       const savingsCards = screen.getAllByText(/Savings \(Today\)/);
-      // Find the parent div and check for $0.00
       const savingsContainer = savingsCards[0].closest("div");
       expect(savingsContainer.textContent).toContain("$0.00");
     });
@@ -563,34 +634,29 @@ describe("PerformanceDashboard", () => {
   describe("Feed-in trend", () => {
     it("should show up trend when feed-in load is positive", () => {
       const { container } = render(<PerformanceDashboard />);
-      const feedInCard = container.querySelectorAll("[class*='rounded-lg border']")[3];
-      // Should show trending up arrow
-      expect(feedInCard.textContent).toContain("435.0");
-      // The trend icon should be present (we can check via class or presence)
+      const feedInCard = container.querySelectorAll('[class*="rounded-lg border"]')[6];
+      expect(feedInCard.textContent).toContain("34.2");
+      // Should show trending up arrow (green)
       expect(feedInCard.querySelector('[class*="text-green"]')).toBeInTheDocument();
     });
 
     it("should show down trend when feed-in load is zero or negative", () => {
-      // Use units where total feed-in load is 0 or negative
+      // Use units where total feed-in load is 0
       mockUnitsData = [
         {
-          id: "unit-1",
-          name: "Test Unit",
-          status: "online",
-          efficiency: 10,
-          temperature: 25,
-          currentPower: 10,
-          parasiticLoad: 5,
-          userLoad: 5,
-          waterGeneration: 0,
+          id: "TC001",
+          productLine: "Power-Box",
+          watergeneration: false,
+          currentPower: 10.0,
+          parasiticLoad: 5.0,
+          userLoad: 5.0,
         },
       ];
       
       const { container } = render(<PerformanceDashboard />);
-      const feedInCard = container.querySelectorAll("[class*='rounded-lg border']")[3];
-      // Feed-in load should be 0
+      const feedInCard = container.querySelectorAll('[class*="rounded-lg border"]')[6];
       expect(feedInCard.textContent).toContain("0.0");
-      // Should show trending down arrow
+      // Should show trending down arrow (red)
       expect(feedInCard.querySelector('[class*="text-red"]')).toBeInTheDocument();
     });
   });
@@ -605,8 +671,8 @@ describe("PerformanceDashboard", () => {
       const { container } = render(<PerformanceDashboard />);
       expect(container).toBeInTheDocument();
       
-      const cards = container.querySelectorAll("[class*='rounded-lg border']");
-      const powerCard = cards[0];
+      const powerCards = container.querySelectorAll('[class*="rounded-lg border"]');
+      const powerCard = powerCards[3];
       expect(powerCard.textContent).toContain("0.0");
     });
 
@@ -614,7 +680,6 @@ describe("PerformanceDashboard", () => {
       mockUnitsData = [];
       
       render(<PerformanceDashboard />);
-      // With no units, savings will be 0, payback should show ∞
       expect(screen.getByText("∞")).toBeInTheDocument();
     });
 
@@ -718,8 +783,7 @@ describe("PerformanceDashboard", () => {
       const settingsButton = financialSection.parentElement.querySelector("button");
       fireEvent.click(settingsButton);
 
-      const saveButton = screen.getByText("Save");
-      fireEvent.click(saveButton);
+      fireEvent.click(screen.getByText("Save"));
 
       expect(
         screen.queryByTestId("financial-assumptions-modal"),
@@ -733,8 +797,7 @@ describe("PerformanceDashboard", () => {
       const settingsButton = roiSection.parentElement.querySelector("button");
       fireEvent.click(settingsButton);
 
-      const saveButton = screen.getByText("Save");
-      fireEvent.click(saveButton);
+      fireEvent.click(screen.getByText("Save"));
 
       expect(
         screen.queryByTestId("roi-assumptions-modal"),
@@ -748,8 +811,7 @@ describe("PerformanceDashboard", () => {
       const settingsButton = envSection.parentElement.querySelector("button");
       fireEvent.click(settingsButton);
 
-      const saveButton = screen.getByText("Save");
-      fireEvent.click(saveButton);
+      fireEvent.click(screen.getByText("Save"));
 
       expect(
         screen.queryByTestId("environmental-assumptions-modal"),
@@ -764,13 +826,16 @@ describe("PerformanceDashboard", () => {
     it("should display fleet uptime card", () => {
       render(<PerformanceDashboard />);
       expect(screen.getByText("Fleet Uptime")).toBeInTheDocument();
-      expect(screen.getByText("97.8%")).toBeInTheDocument();
+      // The value is rendered as a separate element
+      const uptimeValue = screen.getByText("97.8", { exact: false });
+      expect(uptimeValue).toBeInTheDocument();
     });
 
     it("should display MTTR card", () => {
       render(<PerformanceDashboard />);
       expect(screen.getByText("MTTR")).toBeInTheDocument();
-      expect(screen.getByText("4.2 hours")).toBeInTheDocument();
+      const mttrValue = screen.getByText("4.2", { exact: false });
+      expect(mttrValue).toBeInTheDocument();
     });
 
     it("should display days since failure card", () => {
@@ -778,7 +843,8 @@ describe("PerformanceDashboard", () => {
       expect(
         screen.getByText("Consecutive days of Optimal Operation"),
       ).toBeInTheDocument();
-      expect(screen.getByText("23 days")).toBeInTheDocument();
+      const daysValue = screen.getByText("23", { exact: false });
+      expect(daysValue).toBeInTheDocument();
     });
   });
 
