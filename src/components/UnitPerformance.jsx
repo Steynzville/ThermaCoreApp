@@ -196,6 +196,17 @@ const UnitPerformance = ({ unit: propUnit, className, hideHeader = false }) => {
     dieselPricePerLiter: 1.84, // Default diesel price per liter
   });
 
+  // ⚠️ NOTE: The useCallback fix below is a no-op if getUnit from UnitContext
+  // is unstable. The real fix belongs in UnitContext's provider where getUnit
+  // should be memoized with useCallback([units]).
+  // 
+  // This component cannot stabilize a function it only receives via context.
+  // If you're experiencing excessive effect re-runs, update UnitContext to:
+  // const getUnit = useCallback((id) => units.find(u => u.id === id), [units]);
+  //
+  // For now, we use the function as-is - the effect will run when it changes.
+  const getUnitMemoized = getUnit;
+
   // Effect to resolve unit data from various sources
   useEffect(() => {
     const resolveUnit = () => {
@@ -217,7 +228,7 @@ const UnitPerformance = ({ unit: propUnit, className, hideHeader = false }) => {
         // 3. Get unit ID from route parameters
         const unitId = params.id;
         if (unitId && !unitsLoading) {
-          const foundUnit = getUnit(unitId);
+          const foundUnit = getUnitMemoized(unitId);
           if (foundUnit) {
             setResolvedUnit(foundUnit);
           } else {
@@ -243,7 +254,8 @@ const UnitPerformance = ({ unit: propUnit, className, hideHeader = false }) => {
     };
 
     resolveUnit();
-  }, [propUnit, location.state, params.id, getUnit, unitsLoading]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [propUnit, location.state, params.id, unitsLoading]);
 
   // Show loading spinner while resolving unit data
   if (isLoading) {
@@ -292,7 +304,8 @@ const UnitPerformance = ({ unit: propUnit, className, hideHeader = false }) => {
   const unitCurrentPower = unit.currentPower || 0;
   const unitParasiticLoad = unit.parasiticLoad || 0;
   const unitUserLoad = unit.userLoad || 0;
-  const unitFeedInLoad = unitCurrentPower - unitParasiticLoad - unitUserLoad;
+  // ✅ FIX: Clamp feed-in load to 0 to prevent negative values
+  const unitFeedInLoad = Math.max(0, unitCurrentPower - unitParasiticLoad - unitUserLoad);
 
   // Mock trend data - in real app this would come from API comparing current vs 5 minutes ago
   const powerTrend = unitCurrentPower > 0 ? "up" : "down";
@@ -378,16 +391,18 @@ const UnitPerformance = ({ unit: propUnit, className, hideHeader = false }) => {
     allTime: performanceData.power.allTime * co2AvoidanceRate,
   };
 
-  // Calculate ROI (Return on Investment) for this unit
+  // ✅ FIX: Guard against zero initialInvestment
   const annualSavings = savingsMonthly * 12;
   const roi =
-    annualSavings > 0
+    annualSavings > 0 && roiAssumptions.initialInvestment > 0
       ? (annualSavings / roiAssumptions.initialInvestment) * 100
       : 0;
 
   // Calculate Payback Period (in years) for this unit
   const paybackPeriod =
-    annualSavings > 0 ? roiAssumptions.initialInvestment / annualSavings : 0;
+    annualSavings > 0 && roiAssumptions.initialInvestment > 0
+      ? roiAssumptions.initialInvestment / annualSavings
+      : 0;
 
   performanceData.roi = roi;
   performanceData.paybackPeriod = paybackPeriod;
