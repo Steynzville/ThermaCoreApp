@@ -66,7 +66,6 @@ const UserRegistrationForm = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // ✅ FIX: Use functional update for error clearing (no onFocus)
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -87,7 +86,6 @@ const UserRegistrationForm = () => {
     setIsSubmitting(true);
 
     try {
-      // ✅ FIX: Trim all text fields before submitting
       const submitData = {
         username: formData.username.trim(),
         email: formData.email.trim(),
@@ -108,7 +106,6 @@ const UserRegistrationForm = () => {
         toast.error(result.message || "Registration failed. Please try again.");
       }
     } catch (error) {
-      // ✅ FIX: Log the actual error for debugging, but show user-friendly message
       console.error("Registration error:", error);
       toast.error("Registration failed. Please try again.");
     } finally {
@@ -118,7 +115,6 @@ const UserRegistrationForm = () => {
 
   const handleModalClose = () => {
     setShowConfirmationModal(false);
-    // Reset form data to prevent stale data
     setFormData({
       username: "",
       email: "",
@@ -136,16 +132,12 @@ const UserRegistrationForm = () => {
 
   const handleModalOpenChange = (open) => {
     if (!open) {
-      // If modal is closed without clicking "Return to Login"
-      // Navigate to login anyway to clean up the state
       setShowConfirmationModal(false);
       navigate("/login");
     } else {
       setShowConfirmationModal(open);
     }
   };
-
-  // ✅ FIX: Removed onFocus error clearing - only clear on change
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
@@ -168,7 +160,8 @@ const UserRegistrationForm = () => {
         </CardHeader>
 
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          {/* ✅ FIX: Added noValidate to prevent browser native validation from blocking submit */}
+          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             {/* Account Credentials Section */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
@@ -394,20 +387,23 @@ const UserRegistrationForm = () => {
             <DialogTitle className="text-center text-2xl">
               Thank You for Your Application!
             </DialogTitle>
-            <DialogDescription className="text-center pt-4">
-              <div className="space-y-3">
-                <p className="text-base">
-                  Your registration has been successfully submitted.
-                </p>
-                <p className="text-base">
-                  An administrator will review your application and you will
-                  receive an email confirmation once your access has been
-                  approved.
-                </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400 pt-2">
-                  Please check your email (including spam folder) for the
-                  approval notification.
-                </p>
+            {/* ✅ FIX: Use asChild to prevent <p> containing <div> warning */}
+            <DialogDescription asChild>
+              <div className="text-center pt-4">
+                <div className="space-y-3">
+                  <p className="text-base">
+                    Your registration has been successfully submitted.
+                  </p>
+                  <p className="text-base">
+                    An administrator will review your application and you will
+                    receive an email confirmation once your access has been
+                    approved.
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 pt-2">
+                    Please check your email (including spam folder) for the
+                    approval notification.
+                  </p>
+                </div>
               </div>
             </DialogDescription>
           </DialogHeader>
