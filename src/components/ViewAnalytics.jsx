@@ -18,9 +18,10 @@ import {
 import PageHeader from "./PageHeader";
 import { Card, CardContent, CardHeader } from "./ui/card";
 
-// Format revenue to handle millions and thousands
-const formatRevenue = (amount) => {
-  if (amount >= 1000000) {
+// ✅ FIX: Format revenue to handle millions and thousands correctly
+// Handles the 999.5K-1M boundary properly
+export const formatRevenue = (amount) => {
+  if (amount >= 999500) {
     return `$${(amount / 1000000).toFixed(2)}M`;
   }
   if (amount >= 1000) {
@@ -81,7 +82,8 @@ const monthlyTrend = [
 
 const COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6"];
 
-const renderCustomizedLabel = ({
+// ✅ FIX: Export for testing
+export const renderCustomizedLabel = ({
   cx,
   cy,
   midAngle,
@@ -111,7 +113,8 @@ const renderCustomizedLabel = ({
   );
 };
 
-const ViewAnalytics = ({ className }) => {
+// ✅ FIX: Add default className to prevent "undefined" in DOM
+const ViewAnalytics = ({ className = "" }) => {
   return (
     <div
       className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-6 ${className}`}
