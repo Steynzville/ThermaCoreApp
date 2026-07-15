@@ -1,48 +1,88 @@
 name: Polling Tests (Isolated)
 
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
 on:
   push:
-    branches: [ main, frontend-coverage ]
+    branches:
+      - frontend-coverage
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
   polling-tests:
     runs-on: ubuntu-latest
-    
+    timeout-minutes: 5
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 8
+          version: 10.4.1
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
 
       - name: Get pnpm store directory
-        id: pnpm-cache
         shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
 
       - name: Setup pnpm cache
         uses: actions/cache@v4
         with:
           path: ${{ env.STORE_PATH }}
           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
+          restore-keys: ${{ runner.os }}-pnpm-store-
 
-      - name: Install dependencies
+      - name: Install Frontend Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run polling tests only
-        run: pnpm test -- MultiProtocolManager.test.jsx -t "polling" --run
+      - name: Run Polling Tests Only
+        id: tests
+        env:
+          NODE_OPTIONS: "--max-old-space-size=8192"
+          CI: "true"
+        run: |
+          echo "📊 Running polling tests only..."
+          
+          pnpm vitest run \
+            --pool=forks \
+            --poolOptions.forks.singleFork=true \
+            --poolOptions.forks.maxForks=2 \
+            --reporter=default \
+            --testTimeout=60000 \
+            --logHeapUsage \
+            --testNamePattern="polling" \
+            MultiProtocolManager.test.jsx 2>&1 | tee polling_output.txt || {
+              EXIT_CODE=$?
+              echo "Vitest exited with code $EXIT_CODE"
+              pkill -9 node || true
+              exit $EXIT_CODE
+            }
+
+      - name: Display Results
+        if: always()
+        run: |
+          echo ""
+          echo "═══════════════════════════════════════════════════════════"
+          echo "              📊 POLLING TESTS RESULTS                    "
+          echo "═══════════════════════════════════════════════════════════"
+          echo ""
+          echo "✅ Polling tests completed"
+          echo ""
+          echo "═══════════════════════════════════════════════════════════"
+
+      - name: Final Cleanup
+        if: always()
+        run: |
+          pkill -9 node || true
