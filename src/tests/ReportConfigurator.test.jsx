@@ -98,6 +98,25 @@ describe("ReportConfigurator", () => {
     );
   };
 
+  // Helper to make the form valid
+  const makeFormValid = () => {
+    // 1. Select master scope
+    const allUnits = screen.getByText("All Units");
+    fireEvent.click(allUnits);
+    
+    // 2. Click "All Time" to clear date range requirement
+    const allTimeButton = screen.getByText("All Time");
+    fireEvent.click(allTimeButton);
+    
+    // 3. Select a section
+    const energySection = screen.getByText("Energy Production");
+    const row = energySection.closest("div");
+    const checkbox = row?.querySelector('input[type="checkbox"]');
+    if (checkbox) {
+      fireEvent.click(checkbox);
+    }
+  };
+
   describe("Basic Rendering", () => {
     it("should render without crashing", () => {
       const { container } = renderComponent();
@@ -164,14 +183,14 @@ describe("ReportConfigurator", () => {
   });
 
   describe("Report Type Selection", () => {
-    it("should select a report type when clicked", async () => {
+    it("should select a report type when clicked", () => {
       renderComponent();
       const energyReport = screen.getByText("Energy Report");
       fireEvent.click(energyReport);
       expect(energyReport.closest("button")).toHaveClass("border-blue-500");
     });
 
-    it("should deselect a report type when clicked again", async () => {
+    it("should deselect a report type when clicked again", () => {
       renderComponent();
       const energyReport = screen.getByText("Energy Report");
       fireEvent.click(energyReport);
@@ -181,14 +200,14 @@ describe("ReportConfigurator", () => {
   });
 
   describe("Scope Selection", () => {
-    it("should select a scope when clicked", async () => {
+    it("should select a scope when clicked", () => {
       renderComponent();
       const singleUnit = screen.getByText("Single Unit");
       fireEvent.click(singleUnit);
       expect(singleUnit.closest("button")).toHaveClass("border-blue-500");
     });
 
-    it("should show unit selection for single scope", async () => {
+    it("should show unit selection for single scope", () => {
       renderComponent();
       const singleUnit = screen.getByText("Single Unit");
       fireEvent.click(singleUnit);
@@ -196,7 +215,7 @@ describe("ReportConfigurator", () => {
       expect(screen.getByText("Unit 2")).toBeInTheDocument();
     });
 
-    it("should show client selection for client scope", async () => {
+    it("should show client selection for client scope", () => {
       renderComponent();
       const clientPortfolio = screen.getByText("Client Portfolio");
       fireEvent.click(clientPortfolio);
@@ -212,24 +231,11 @@ describe("ReportConfigurator", () => {
       expect(generateButton).toBeDisabled();
     });
 
-    it("should enable generate button when master scope and section selected", async () => {
+    it("should enable generate button when form is valid", async () => {
       renderComponent();
-      
-      // Select master scope
-      const allUnits = screen.getByText("All Units");
-      fireEvent.click(allUnits);
-      
-      // Select a section
-      const energySection = screen.getByText("Energy Production");
-      const row = energySection.closest("div");
-      const checkbox = row?.querySelector('input[type="checkbox"]');
-      if (checkbox) {
-        fireEvent.click(checkbox);
-      }
+      makeFormValid();
       
       const generateButton = screen.getByText("Generate & Download Report");
-      
-      // Wait for state to update
       await waitFor(() => {
         expect(generateButton).not.toBeDisabled();
       }, { timeout: 2000 });
@@ -241,21 +247,10 @@ describe("ReportConfigurator", () => {
       const onGenerate = vi.fn().mockResolvedValue(undefined);
       renderComponent({ onGenerate });
       
-      // Select master scope
-      const allUnits = screen.getByText("All Units");
-      fireEvent.click(allUnits);
-      
-      // Select a section
-      const energySection = screen.getByText("Energy Production");
-      const row = energySection.closest("div");
-      const checkbox = row?.querySelector('input[type="checkbox"]');
-      if (checkbox) {
-        fireEvent.click(checkbox);
-      }
+      makeFormValid();
       
       const generateButton = screen.getByText("Generate & Download Report");
       
-      // Wait for button to be enabled
       await waitFor(() => {
         expect(generateButton).not.toBeDisabled();
       }, { timeout: 2000 });
@@ -271,17 +266,7 @@ describe("ReportConfigurator", () => {
       const onGenerate = vi.fn(() => new Promise((resolve) => setTimeout(resolve, 500)));
       renderComponent({ onGenerate });
       
-      // Select master scope
-      const allUnits = screen.getByText("All Units");
-      fireEvent.click(allUnits);
-      
-      // Select a section
-      const energySection = screen.getByText("Energy Production");
-      const row = energySection.closest("div");
-      const checkbox = row?.querySelector('input[type="checkbox"]');
-      if (checkbox) {
-        fireEvent.click(checkbox);
-      }
+      makeFormValid();
       
       const generateButton = screen.getByText("Generate & Download Report");
       
@@ -297,17 +282,7 @@ describe("ReportConfigurator", () => {
     it("should show success alert when no onGenerate is provided", async () => {
       renderComponent({ onGenerate: undefined });
       
-      // Select master scope
-      const allUnits = screen.getByText("All Units");
-      fireEvent.click(allUnits);
-      
-      // Select a section
-      const energySection = screen.getByText("Energy Production");
-      const row = energySection.closest("div");
-      const checkbox = row?.querySelector('input[type="checkbox"]');
-      if (checkbox) {
-        fireEvent.click(checkbox);
-      }
+      makeFormValid();
       
       const generateButton = screen.getByText("Generate & Download Report");
       
@@ -328,17 +303,7 @@ describe("ReportConfigurator", () => {
       const onGenerate = vi.fn().mockRejectedValue(new Error("API Error"));
       renderComponent({ onGenerate });
       
-      // Select master scope
-      const allUnits = screen.getByText("All Units");
-      fireEvent.click(allUnits);
-      
-      // Select a section
-      const energySection = screen.getByText("Energy Production");
-      const row = energySection.closest("div");
-      const checkbox = row?.querySelector('input[type="checkbox"]');
-      if (checkbox) {
-        fireEvent.click(checkbox);
-      }
+      makeFormValid();
       
       const generateButton = screen.getByText("Generate & Download Report");
       
@@ -355,14 +320,14 @@ describe("ReportConfigurator", () => {
   });
 
   describe("Pause Scheduled Reports", () => {
-    it("should open alert dialog when pause button is clicked", async () => {
+    it("should open alert dialog when pause button is clicked", () => {
       renderComponent({ showPauseScheduled: true });
       const pauseButton = screen.getByText("Pause Scheduled Reports");
       fireEvent.click(pauseButton);
       expect(screen.getByText("Confirm Pause")).toBeInTheDocument();
     });
 
-    it("should close dialog when cancel is clicked", async () => {
+    it("should close dialog when cancel is clicked", () => {
       renderComponent({ showPauseScheduled: true });
       const pauseButton = screen.getByText("Pause Scheduled Reports");
       fireEvent.click(pauseButton);
@@ -371,7 +336,7 @@ describe("ReportConfigurator", () => {
       expect(screen.queryByText("Confirm Pause")).not.toBeInTheDocument();
     });
 
-    it("should confirm pause when pause is clicked", async () => {
+    it("should confirm pause when pause is clicked", () => {
       renderComponent({ showPauseScheduled: true });
       const pauseButton = screen.getByText("Pause Scheduled Reports");
       fireEvent.click(pauseButton);
@@ -395,21 +360,9 @@ describe("ReportConfigurator", () => {
 
     it("should enable schedule button when form is valid", async () => {
       renderComponent({ showScheduling: true });
-      
-      // Select master scope
-      const allUnits = screen.getByText("All Units");
-      fireEvent.click(allUnits);
-      
-      // Select a section
-      const energySection = screen.getByText("Energy Production");
-      const row = energySection.closest("div");
-      const checkbox = row?.querySelector('input[type="checkbox"]');
-      if (checkbox) {
-        fireEvent.click(checkbox);
-      }
+      makeFormValid();
       
       const scheduleButton = screen.getByText("Schedule Report");
-      
       await waitFor(() => {
         expect(scheduleButton).not.toBeDisabled();
       }, { timeout: 2000 });
