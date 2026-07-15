@@ -3,8 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import LoginScreen from "../components/LoginScreen";
 import { AuthProvider } from "../context/AuthContext";
-import { SettingsProvider } from "../context/SettingsContext";
-import { ThemeProvider } from "../context/ThemeContext";
 import * as authService from "../services/authService";
 
 // Mock react-router-dom
@@ -13,21 +11,35 @@ vi.mock("react-router-dom", () => ({
   useNavigate: () => mockNavigate,
 }));
 
-// Mock audio player
-vi.mock("../utils/audioPlayer", () => ({
-  default: vi.fn(),
+// Mock SettingsContext
+const mockToggleSound = vi.fn();
+let mockSoundEnabled = true;
+vi.mock("../context/SettingsContext", () => ({
+  useSettings: () => ({
+    settings: { soundEnabled: mockSoundEnabled },
+    toggleSound: mockToggleSound,
+  }),
+  SettingsProvider: ({ children }) => children,
 }));
 
-// Test wrapper with all required providers
-const TestWrapper = ({ children }) => (
-  <ThemeProvider>
-    <SettingsProvider>
-      <AuthProvider>{children}</AuthProvider>
-    </SettingsProvider>
-  </ThemeProvider>
-);
+// Mock ThemeContext
+vi.mock("../context/ThemeContext", () => ({
+  useTheme: () => ({ actualTheme: "light" }),
+  ThemeProvider: ({ children }) => children,
+}));
 
-describe("LoginScreen - Error Handling", () => {
+// Mock SocialButton to make it testable with accessible names
+vi.mock("../components/SocialButton", () => ({
+  default: ({ provider, onClick }) => (
+    <button onClick={onClick} type="button">
+      Sign in with {provider}
+    </button>
+  ),
+}));
+
+const TestWrapper = ({ children }) => <AuthProvider>{children}</AuthProvider>;
+
+describe("LoginScreen", () => {
   const ensureDocumentBody = () => {
     if (!document.body) {
       document.documentElement.appendChild(document.createElement("body"));
@@ -36,172 +48,634 @@ describe("LoginScreen - Error Handling", () => {
   const waitForInDocument = (callback, options) =>
     waitFor(callback, { container: document.body, ...options });
 
+  const fillAndSubmit = (username, password) => {
+    fireEvent.change(screen.getByPlaceholderText("Enter username"), {
+      target: { value: username },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Enter password"), {
+      target: { value: password },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Sign In" }));
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     ensureDocumentBody();
-    mockNavigate.mockClear();
+    mockSoundEnabled = true;
+    // Reset any mocks
+    vi.spyOn(authService, "login").mockReset();
   });
 
-  it("should display error message on failed login", async () => {
-    // Mock failed login
-    vi.spyOn(authService, "login").mockResolvedValue({
-      success: false,
-      message: "Invalid username or password. Please try again.",
-    });
+  // ============================================================
+  // ERROR HANDLING TESTS
+  // ============================================================
+  describe("Error handling", () => {
+    it("should display error message on failed login", async () => {
+      // Mock authService.login to return failure
+      vi.spyOn(authService, "login").mockResolvedValue({
+        success: false,
+        message: "Invalid username or password. Please try again.",
+      });
 
-    const mockSetError = vi.fn();
-    render(
-      <TestWrapper>
-        <LoginScreen error="" setError={mockSetError} />
-      </TestWrapper>,
-    );
-
-    // Fill in the form
-    const usernameInput = screen.getByPlaceholderText("Enter username");
-    const passwordInput = screen.getByPlaceholderText("Enter password");
-    const submitButton = screen.getByRole("button", { name: "Sign In" });
-
-    fireEvent.change(usernameInput, { target: { value: "wronguser" } });
-    fireEvent.change(passwordInput, { target: { value: "wrongpass" } });
-    fireEvent.click(submitButton);
-
-    // Wait for login to complete
-    await waitForInDocument(() => {
-      expect(authService.login).toHaveBeenCalledWith(
-        "wronguser",
-        "wrongpass",
-        false,
+      const mockSetError = vi.fn();
+      render(
+        <TestWrapper>
+          <LoginScreen error="" setError={mockSetError} />
+        </TestWrapper>,
       );
+
+      fillAndSubmit("wronguser", "wrongpass");
+
+      await waitForInDocument(() => {
+        expect(authService.login).toHaveBeenCalledWith(
+          "wronguser",
+          "wrongpass",
+          false,
+        );
+      });
+
+      // AuthContext maps message → error, so LoginScreen receives result.error
+      await waitForInDocument(() => {
+        expect(mockSetError).toHaveBeenCalledWith(
+          "Invalid username or password. Please try again.",
+        );
+      });
+
+      expect(mockNavigate).not.toHaveBeenCalled();
     });
 
-    // Verify error was set
-    await waitForInDocument(() => {
+    it("should retain form data on failed login", async () => {
+      vi.spyOn(authService, "login").mockResolvedValue({
+        success: false,
+        message: "Invalid credentials",
+      });
+
+      const mockSetError = vi.fn();
+      render(
+        <TestWrapper>
+          <LoginScreen error="" setError={mockSetError} />
+        </TestWrapper>,
+      );
+
+      const usernameInput = screen.getByPlaceholderText("Enter username");
+      const passwordInput = screen.getByPlaceholderText("Enter password");
+      fillAndSubmit("testuser", "testpass");
+
+      await waitForInDocument(() => {
+        expect(authService.login).toHaveBeenCalled();
+      });
+
+      expect(usernameInput.value).toBe("testuser");
+      expect(passwordInput.value).toBe("testpass");
+    });
+
+    it("should clear error when user starts typing", () => {
+      const mockSetError = vi.fn();
+      render(
+        <TestWrapper>
+          <LoginScreen error="Previous error" setError={mockSetError} />
+        </TestWrapper>,
+      );
+
+      fireEvent.change(screen.getByPlaceholderText("Enter username"), {
+        target: { value: "newuser" },
+      });
+
+      expect(mockSetError).toHaveBeenCalledWith("");
+    });
+
+    it("should show error with visible class when error prop is set", () => {
+      render(
+        <TestWrapper>
+          <LoginScreen error="Test error message" setError={vi.fn()} />
+        </TestWrapper>,
+      );
+
+      const errorElement = screen.getByText("Test error message");
+      expect(errorElement).toHaveClass("visible");
+    });
+
+    it("should hide error when error prop is empty", () => {
+      render(
+        <TestWrapper>
+          <LoginScreen error="" setError={vi.fn()} />
+        </TestWrapper>,
+      );
+
+      const container = document.querySelector(".loginError");
+      expect(container).not.toHaveClass("visible");
+    });
+  });
+
+  // ============================================================
+  // CLIENT-SIDE VALIDATION TESTS
+  // ============================================================
+  describe("Client-side validation", () => {
+    it("should block submit and show an error when fields are empty", () => {
+      const mockSetError = vi.fn();
+      render(
+        <TestWrapper>
+          <LoginScreen error="" setError={mockSetError} />
+        </TestWrapper>,
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: "Sign In" }));
+
       expect(mockSetError).toHaveBeenCalledWith(
-        "Invalid username or password. Please try again.",
+        "Please enter both username and password",
       );
+      expect(authService.login).not.toHaveBeenCalled();
     });
 
-    // Verify no navigation occurred
-    expect(mockNavigate).not.toHaveBeenCalled();
-  });
+    it("should show validation message for passwords under 6 characters", () => {
+      render(
+        <TestWrapper>
+          <LoginScreen error="" setError={vi.fn()} />
+        </TestWrapper>,
+      );
 
-  it("should not navigate on failed login", async () => {
-    // Mock failed login
-    vi.spyOn(authService, "login").mockResolvedValue({
-      success: false,
-      message: "Invalid username or password. Please try again.",
+      fireEvent.change(screen.getByPlaceholderText("Enter password"), {
+        target: { value: "123" },
+      });
+
+      expect(
+        screen.getByText("Password must be at least 6 characters"),
+      ).toBeInTheDocument();
     });
 
-    const mockSetError = vi.fn();
-    render(
-      <TestWrapper>
-        <LoginScreen error="" setError={mockSetError} />
-      </TestWrapper>,
-    );
+    it("should clear password validation message once 6+ characters are entered", () => {
+      render(
+        <TestWrapper>
+          <LoginScreen error="" setError={vi.fn()} />
+        </TestWrapper>,
+      );
 
-    const usernameInput = screen.getByPlaceholderText("Enter username");
-    const passwordInput = screen.getByPlaceholderText("Enter password");
-    const submitButton = screen.getByRole("button", { name: "Sign In" });
+      const passwordInput = screen.getByPlaceholderText("Enter password");
+      fireEvent.change(passwordInput, { target: { value: "123" } });
+      fireEvent.change(passwordInput, { target: { value: "123456" } });
 
-    fireEvent.change(usernameInput, { target: { value: "testuser" } });
-    fireEvent.change(passwordInput, { target: { value: "wrongpassword" } });
-    fireEvent.click(submitButton);
+      expect(
+        screen.queryByText("Password must be at least 6 characters"),
+      ).not.toBeInTheDocument();
+    });
 
-    await waitForInDocument(() => {
+    it("should show no validation message on empty password", () => {
+      render(
+        <TestWrapper>
+          <LoginScreen error="" setError={vi.fn()} />
+        </TestWrapper>,
+      );
+
+      const passwordInput = screen.getByPlaceholderText("Enter password");
+      fireEvent.change(passwordInput, { target: { value: "" } });
+
+      expect(
+        screen.queryByText("Password must be at least 6 characters"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should apply error class to password input when invalid", () => {
+      render(
+        <TestWrapper>
+          <LoginScreen error="" setError={vi.fn()} />
+        </TestWrapper>,
+      );
+
+      const passwordInput = screen.getByPlaceholderText("Enter password");
+      fireEvent.change(passwordInput, { target: { value: "123" } });
+
+      expect(passwordInput).toHaveClass("inputError");
+    });
+
+    it("should remove error class when password becomes valid", () => {
+      render(
+        <TestWrapper>
+          <LoginScreen error="" setError={vi.fn()} />
+        </TestWrapper>,
+      );
+
+      const passwordInput = screen.getByPlaceholderText("Enter password");
+      fireEvent.change(passwordInput, { target: { value: "123" } });
+      expect(passwordInput).toHaveClass("inputError");
+
+      fireEvent.change(passwordInput, { target: { value: "123456" } });
+      expect(passwordInput).not.toHaveClass("inputError");
+    });
+
+    // 🔥 UPDATED - Now expects the validation to block submission
+    it("should block submission when password is too short", async () => {
+      vi.spyOn(authService, "login").mockResolvedValue({
+        success: true,
+        token: "test-token",
+        user: { id: 1, username: "user" },
+      });
+
+      const mockSetError = vi.fn();
+      render(
+        <TestWrapper>
+          <LoginScreen error="" setError={mockSetError} />
+        </TestWrapper>,
+      );
+
+      fillAndSubmit("user", "123");
+
+      // Should NOT call login
+      expect(authService.login).not.toHaveBeenCalled();
+      
+      // Should show error
       expect(mockSetError).toHaveBeenCalledWith(
-        "Invalid username or password. Please try again.",
+        "Password must be at least 6 characters",
+      );
+    });
+  });
+
+  // ============================================================
+  // SUCCESSFUL LOGIN TESTS
+  // ============================================================
+  describe("Successful login", () => {
+    it("should navigate to dashboard on successful login", async () => {
+      vi.spyOn(authService, "login").mockResolvedValue({
+        success: true,
+        user: { id: 1, username: "admin", role: "admin", email: "admin@test.com" },
+        token: "test-token",
+        message: "Login successful",
+      });
+
+      const mockSetError = vi.fn();
+      render(
+        <TestWrapper>
+          <LoginScreen error="" setError={mockSetError} />
+        </TestWrapper>,
+      );
+
+      fillAndSubmit("admin", "correctpass");
+
+      await waitForInDocument(
+        () => {
+          expect(mockNavigate).toHaveBeenCalledWith("/dashboard");
+        },
+        { timeout: 3000 },
       );
     });
 
-    // Ensure navigation did NOT happen
-    expect(mockNavigate).not.toHaveBeenCalled();
-  });
+    it("should pass keepMeSignedIn=true to login when checkbox is checked", async () => {
+      vi.spyOn(authService, "login").mockResolvedValue({
+        success: true,
+        token: "test-token",
+        user: { id: 1, username: "admin", role: "admin" },
+      });
 
-  it("should retain form data on failed login", async () => {
-    // Mock failed login
-    vi.spyOn(authService, "login").mockResolvedValue({
-      success: false,
-      message: "Invalid username or password. Please try again.",
+      render(
+        <TestWrapper>
+          <LoginScreen error="" setError={vi.fn()} />
+        </TestWrapper>,
+      );
+
+      const checkbox = screen.getByRole("checkbox");
+      fireEvent.click(checkbox);
+      expect(checkbox).toBeChecked();
+
+      fillAndSubmit("admin", "correctpass");
+
+      await waitForInDocument(() => {
+        expect(authService.login).toHaveBeenCalledWith(
+          "admin",
+          "correctpass",
+          true,
+        );
+      });
     });
 
-    const mockSetError = vi.fn();
-    render(
-      <TestWrapper>
-        <LoginScreen error="" setError={mockSetError} />
-      </TestWrapper>,
-    );
+    it("should pass keepMeSignedIn=false when checkbox is unchecked", async () => {
+      vi.spyOn(authService, "login").mockResolvedValue({
+        success: true,
+        token: "test-token",
+        user: { id: 1, username: "admin", role: "admin" },
+      });
 
-    const usernameInput = screen.getByPlaceholderText("Enter username");
-    const passwordInput = screen.getByPlaceholderText("Enter password");
-    const submitButton = screen.getByRole("button", { name: "Sign In" });
+      render(
+        <TestWrapper>
+          <LoginScreen error="" setError={vi.fn()} />
+        </TestWrapper>,
+      );
 
-    fireEvent.change(usernameInput, { target: { value: "testuser" } });
-    fireEvent.change(passwordInput, { target: { value: "testpass" } });
-    fireEvent.click(submitButton);
+      // Checkbox is unchecked by default
+      fillAndSubmit("admin", "correctpass");
 
-    await waitForInDocument(() => {
-      expect(mockSetError).toHaveBeenCalled();
+      await waitForInDocument(() => {
+        expect(authService.login).toHaveBeenCalledWith(
+          "admin",
+          "correctpass",
+          false,
+        );
+      });
     });
 
-    // Verify form data is retained
-    expect(usernameInput.value).toBe("testuser");
-    expect(passwordInput.value).toBe("testpass");
-  });
+    it("should show loading indicator while login request is pending", async () => {
+      let resolveLogin;
+      vi.spyOn(authService, "login").mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            resolveLogin = resolve;
+          }),
+      );
 
-  it("should navigate to dashboard on successful login", async () => {
-    // Mock successful login - ensure it returns the format AuthContext expects
-    vi.spyOn(authService, "login").mockResolvedValue({
-      success: true,
-      user: {
-        id: 1,
-        username: "admin",
-        email: "admin@test.com",
-        role: "admin",
-        firstName: "Admin",
-        lastName: "User",
-      },
-      token: "test-token",
-      message: "Login successful",
-    });
+      render(
+        <TestWrapper>
+          <LoginScreen error="" setError={vi.fn()} />
+        </TestWrapper>,
+      );
 
-    const mockSetError = vi.fn();
-    render(
-      <TestWrapper>
-        <LoginScreen error="" setError={mockSetError} />
-      </TestWrapper>,
-    );
+      fillAndSubmit("admin", "correctpass");
 
-    const usernameInput = screen.getByPlaceholderText("Enter username");
-    const passwordInput = screen.getByPlaceholderText("Enter password");
-    const submitButton = screen.getByRole("button", { name: "Sign In" });
+      await waitForInDocument(() => {
+        expect(screen.getByRole("img", { name: "Icon" })).toBeInTheDocument();
+      });
 
-    fireEvent.change(usernameInput, { target: { value: "admin" } });
-    fireEvent.change(passwordInput, { target: { value: "correctpass" } });
-    fireEvent.click(submitButton);
+      resolveLogin({ success: true, token: "test-token", user: { id: 1, username: "admin", role: "admin" } });
 
-    // Wait for navigation
-    await waitForInDocument(
-      () => {
+      await waitForInDocument(() => {
         expect(mockNavigate).toHaveBeenCalledWith("/dashboard");
-      },
-      { timeout: 3000 },
-    );
+      });
+    });
   });
 
-  it("should clear error when user starts typing", async () => {
-    const mockSetError = vi.fn();
-    render(
-      <TestWrapper>
-        <LoginScreen error="Previous error" setError={mockSetError} />
-      </TestWrapper>,
-    );
+  // ============================================================
+  // NAVIGATION LINKS TESTS
+  // ============================================================
+  describe("Navigation links", () => {
+    it("should navigate to /forgot-password", () => {
+      render(
+        <TestWrapper>
+          <LoginScreen error="" setError={vi.fn()} />
+        </TestWrapper>,
+      );
 
-    const usernameInput = screen.getByPlaceholderText("Enter username");
+      fireEvent.click(screen.getByText("Forgot Password?"));
+      expect(mockNavigate).toHaveBeenCalledWith("/forgot-password");
+    });
 
-    // Type in username field
-    fireEvent.change(usernameInput, { target: { value: "newuser" } });
+    it("should navigate to /register", () => {
+      render(
+        <TestWrapper>
+          <LoginScreen error="" setError={vi.fn()} />
+        </TestWrapper>,
+      );
 
-    // Verify error was cleared
-    expect(mockSetError).toHaveBeenCalledWith("");
+      fireEvent.click(screen.getByText("Create Account"));
+      expect(mockNavigate).toHaveBeenCalledWith("/register");
+    });
+  });
+
+  // ============================================================
+  // PASSWORD VISIBILITY TOGGLE TESTS
+  // ============================================================
+  describe("Password visibility toggle", () => {
+    it("should toggle password field between hidden and visible", () => {
+      render(
+        <TestWrapper>
+          <LoginScreen error="" setError={vi.fn()} />
+        </TestWrapper>,
+      );
+
+      const passwordInput = screen.getByPlaceholderText("Enter password");
+      expect(passwordInput).toHaveAttribute("type", "password");
+
+      const toggleButton = passwordInput.parentElement.querySelector(
+        'button[type="button"]',
+      );
+      fireEvent.click(toggleButton);
+      expect(passwordInput).toHaveAttribute("type", "text");
+
+      fireEvent.click(toggleButton);
+      expect(passwordInput).toHaveAttribute("type", "password");
+    });
+  });
+
+  // ============================================================
+  // FOCUS AND BLUR HANDLING TESTS
+  // ============================================================
+  describe("Focus and blur handling", () => {
+    it("should apply inputFocused class on username focus", () => {
+      render(
+        <TestWrapper>
+          <LoginScreen error="" setError={vi.fn()} />
+        </TestWrapper>,
+      );
+
+      const usernameInput = screen.getByPlaceholderText("Enter username");
+      fireEvent.focus(usernameInput);
+
+      expect(usernameInput).toHaveClass("inputFocused");
+    });
+
+    it("should remove inputFocused class on username blur", () => {
+      render(
+        <TestWrapper>
+          <LoginScreen error="" setError={vi.fn()} />
+        </TestWrapper>,
+      );
+
+      const usernameInput = screen.getByPlaceholderText("Enter username");
+      fireEvent.focus(usernameInput);
+      fireEvent.blur(usernameInput);
+
+      expect(usernameInput).not.toHaveClass("inputFocused");
+    });
+
+    it("should apply inputFocused class on password focus", () => {
+      render(
+        <TestWrapper>
+          <LoginScreen error="" setError={vi.fn()} />
+        </TestWrapper>,
+      );
+
+      const passwordInput = screen.getByPlaceholderText("Enter password");
+      fireEvent.focus(passwordInput);
+
+      expect(passwordInput).toHaveClass("inputFocused");
+    });
+
+    it("should remove inputFocused class on password blur", () => {
+      render(
+        <TestWrapper>
+          <LoginScreen error="" setError={vi.fn()} />
+        </TestWrapper>,
+      );
+
+      const passwordInput = screen.getByPlaceholderText("Enter password");
+      fireEvent.focus(passwordInput);
+      fireEvent.blur(passwordInput);
+
+      expect(passwordInput).not.toHaveClass("inputFocused");
+    });
+  });
+
+  // ============================================================
+  // LOGO ANIMATION TESTS
+  // ============================================================
+  describe("Logo animation", () => {
+    it("should animate logo on mount", () => {
+      render(
+        <TestWrapper>
+          <LoginScreen error="" setError={vi.fn()} />
+        </TestWrapper>,
+      );
+
+      const logo = document.querySelector(".logo");
+      expect(logo).toHaveClass("logoSpin");
+    });
+  });
+
+  // ============================================================
+  // SOUND TOGGLE TESTS
+  // ============================================================
+  describe("Sound toggle", () => {
+    it("should show mute icon and title when sound is enabled", () => {
+      mockSoundEnabled = true;
+      render(
+        <TestWrapper>
+          <LoginScreen error="" setError={vi.fn()} />
+        </TestWrapper>,
+      );
+
+      expect(screen.getByTitle("Mute sounds")).toBeInTheDocument();
+    });
+
+    it("should show unmute icon and title when sound is disabled", () => {
+      mockSoundEnabled = false;
+      render(
+        <TestWrapper>
+          <LoginScreen error="" setError={vi.fn()} />
+        </TestWrapper>,
+      );
+
+      expect(screen.getByTitle("Enable sounds")).toBeInTheDocument();
+    });
+
+    it("should call toggleSound when volume button is clicked", () => {
+      render(
+        <TestWrapper>
+          <LoginScreen error="" setError={vi.fn()} />
+        </TestWrapper>,
+      );
+
+      fireEvent.click(screen.getByTitle("Mute sounds"));
+      expect(mockToggleSound).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // ============================================================
+  // PROVIDER DIALOGS ('COMING SOON') TESTS
+  // ============================================================
+  describe("Provider dialogs ('coming soon')", () => {
+    it("should show a coming-soon dialog for Google sign-in", async () => {
+      render(
+        <TestWrapper>
+          <LoginScreen error="" setError={vi.fn()} />
+        </TestWrapper>,
+      );
+
+      // With mocked SocialButton, it renders "Sign in with Google"
+      fireEvent.click(screen.getByText("Sign in with Google"));
+
+      await waitForInDocument(() => {
+        expect(
+          screen.getByText(/Google sign-in is coming soon/i),
+        ).toBeInTheDocument();
+      });
+    });
+
+    it("should show a coming-soon dialog for Apple sign-in", async () => {
+      render(
+        <TestWrapper>
+          <LoginScreen error="" setError={vi.fn()} />
+        </TestWrapper>,
+      );
+
+      fireEvent.click(screen.getByText("Sign in with Apple"));
+
+      await waitForInDocument(() => {
+        expect(
+          screen.getByText(/Apple sign-in is coming soon/i),
+        ).toBeInTheDocument();
+      });
+    });
+
+    it("should show a coming-soon dialog for biometric sign-in", async () => {
+      render(
+        <TestWrapper>
+          <LoginScreen error="" setError={vi.fn()} />
+        </TestWrapper>,
+      );
+
+      // The biometric button is nested in the biometric section
+      const biometricHeading = screen.getByText("Biometric Sign In");
+      const container = biometricHeading.closest(".biometricSection");
+      const triggerButton = container.querySelector("button");
+      fireEvent.click(triggerButton);
+
+      await waitForInDocument(() => {
+        expect(
+          screen.getByText(/Biometric authentication is coming soon/i),
+        ).toBeInTheDocument();
+      });
+    });
+
+    it("should close dialog when Close button is clicked", async () => {
+      render(
+        <TestWrapper>
+          <LoginScreen error="" setError={vi.fn()} />
+        </TestWrapper>,
+      );
+
+      fireEvent.click(screen.getByText("Sign in with Google"));
+      
+      await waitForInDocument(() => {
+        expect(
+          screen.getByText(/Google sign-in is coming soon/i),
+        ).toBeInTheDocument();
+      });
+
+      const closeButton = screen.getByText("Close");
+      fireEvent.click(closeButton);
+
+      // Wait for dialog to close
+      await waitForInDocument(() => {
+        expect(
+          screen.queryByText(/Google sign-in is coming soon/i),
+        ).not.toBeInTheDocument();
+      });
+    });
+  });
+
+  // ============================================================
+  // "KEEP ME SIGNED IN" TOGGLE TESTS
+  // ============================================================
+  describe("Keep me signed in checkbox", () => {
+    it("should be unchecked by default", () => {
+      render(
+        <TestWrapper>
+          <LoginScreen error="" setError={vi.fn()} />
+        </TestWrapper>,
+      );
+
+      const checkbox = screen.getByRole("checkbox");
+      expect(checkbox).not.toBeChecked();
+    });
+
+    it("should toggle when clicked", () => {
+      render(
+        <TestWrapper>
+          <LoginScreen error="" setError={vi.fn()} />
+        </TestWrapper>,
+      );
+
+      const checkbox = screen.getByRole("checkbox");
+      fireEvent.click(checkbox);
+      expect(checkbox).toBeChecked();
+      fireEvent.click(checkbox);
+      expect(checkbox).not.toBeChecked();
+    });
   });
 });
