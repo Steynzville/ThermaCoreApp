@@ -9,6 +9,7 @@ on:
   push:
     branches:
       - frontend-coverage
+      - main
   pull_request:
     branches:
       - main
@@ -21,6 +22,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -45,7 +48,8 @@ jobs:
           restore-keys: ${{ runner.os }}-pnpm-store-
 
       - name: Install Frontend Dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          pnpm install --frozen-lockfile
 
       - name: Run Polling Tests Only
         id: tests
@@ -63,7 +67,8 @@ jobs:
             --testTimeout=60000 \
             --logHeapUsage \
             --testNamePattern="polling" \
-            MultiProtocolManager.test.jsx 2>&1 | tee polling_output.txt || {
+            --run \
+            src/tests/MultiProtocolManager.test.jsx 2>&1 | tee polling_output.txt || {
               EXIT_CODE=$?
               echo "Vitest exited with code $EXIT_CODE"
               pkill -9 node || true
