@@ -58,12 +58,17 @@ describe("UserRegistrationForm", () => {
     vi.clearAllMocks();
     mockNavigate.mockClear();
     selfRegister.mockReset();
+    toast.error.mockClear();
+    toast.success.mockClear();
   });
 
   afterEach(() => {
     cleanup();
   });
 
+  // ============================================================
+  // RENDERING TESTS
+  // ============================================================
   it("should render without crashing", () => {
     const { container } = render(<UserRegistrationForm />, { wrapper: TestWrapper });
     expect(container).toBeTruthy();
@@ -84,8 +89,10 @@ describe("UserRegistrationForm", () => {
     expect(screen.getByLabelText(/^Position/i)).toBeTruthy();
   });
 
-  // SKIP: Validation tests that are failing due to DOM rendering issues
-  it.skip("should display validation errors for empty required fields", async () => {
+  // ============================================================
+  // VALIDATION TESTS
+  // ============================================================
+  it("should display validation errors for empty required fields", async () => {
     render(<UserRegistrationForm />, { wrapper: TestWrapper });
 
     const submitButton = screen.getByRole("button", { name: /Create Account/i });
@@ -95,11 +102,19 @@ describe("UserRegistrationForm", () => {
     });
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalled();
+      expect(toast.error).toHaveBeenCalledWith("Please fix the errors in the form");
     });
+
+    await waitFor(() => {
+      expect(screen.getByText(/Username.*at least 3 characters/i)).toBeInTheDocument();
+    });
+    expect(screen.getByText(/Valid email is required/i)).toBeInTheDocument();
+    expect(screen.getByText(/Password.*at least 6 characters/i)).toBeInTheDocument();
+    expect(screen.getByText(/First name is required/i)).toBeInTheDocument();
+    expect(screen.getByText(/Last name is required/i)).toBeInTheDocument();
   });
 
-  it.skip("should validate username length", async () => {
+  it("should validate username length", async () => {
     render(<UserRegistrationForm />, { wrapper: TestWrapper });
 
     const usernameInput = screen.getByLabelText(/^Username/i);
@@ -113,12 +128,11 @@ describe("UserRegistrationForm", () => {
     });
 
     await waitFor(() => {
-      const error = screen.queryByText(/Username.*at least 3 characters/i);
-      expect(error).toBeTruthy();
+      expect(screen.getByText(/Username.*at least 3 characters/i)).toBeInTheDocument();
     });
   });
 
-  it.skip("should validate email format", async () => {
+  it("should validate email format", async () => {
     render(<UserRegistrationForm />, { wrapper: TestWrapper });
 
     const emailInput = screen.getByLabelText(/^Email/i);
@@ -132,14 +146,11 @@ describe("UserRegistrationForm", () => {
     });
 
     await waitFor(() => {
-      const emailError = screen.queryByText(/valid email/i) || 
-                          screen.queryByText(/email.*invalid/i) ||
-                          screen.queryByText(/Please enter a valid email/i);
-      expect(emailError).toBeTruthy();
+      expect(screen.getByText(/Valid email is required/i)).toBeInTheDocument();
     });
   });
 
-  it.skip("should validate password length", async () => {
+  it("should validate password length", async () => {
     render(<UserRegistrationForm />, { wrapper: TestWrapper });
 
     const passwordInput = screen.getByLabelText(/^Password/i);
@@ -153,11 +164,37 @@ describe("UserRegistrationForm", () => {
     });
 
     await waitFor(() => {
-      const error = screen.queryByText(/Password.*at least 6 characters/i);
-      expect(error).toBeTruthy();
+      expect(screen.getByText(/Password.*at least 6 characters/i)).toBeInTheDocument();
     });
   });
 
+  it("should clear field error when user starts typing", async () => {
+    render(<UserRegistrationForm />, { wrapper: TestWrapper });
+
+    const submitButton = screen.getByRole("button", { name: /Create Account/i });
+    await act(async () => {
+      fireEvent.click(submitButton);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/Username.*at least 3 characters/i)).toBeInTheDocument();
+    });
+
+    const usernameInput = screen.getByLabelText(/^Username/i);
+    await act(async () => {
+      fireEvent.change(usernameInput, { target: { value: "testuser" } });
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText(/Username.*at least 3 characters/i)
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  // ============================================================
+  // PASSWORD VISIBILITY TESTS
+  // ============================================================
   it("should toggle password visibility", async () => {
     render(<UserRegistrationForm />, { wrapper: TestWrapper });
 
@@ -179,31 +216,10 @@ describe("UserRegistrationForm", () => {
     expect(passwordInput.type).toBe("password");
   });
 
-  it.skip("should clear field error when user starts typing", async () => {
-    render(<UserRegistrationForm />, { wrapper: TestWrapper });
-
-    const submitButton = screen.getByRole("button", { name: /Create Account/i });
-    await act(async () => {
-      fireEvent.click(submitButton);
-    });
-
-    await waitFor(() => {
-      expect(screen.queryByText(/Username.*at least 3 characters/i)).toBeTruthy();
-    });
-
-    const usernameInput = screen.getByLabelText(/^Username/i);
-    await act(async () => {
-      fireEvent.change(usernameInput, { target: { value: "testuser" } });
-    });
-
-    await waitFor(() => {
-      expect(
-        screen.queryByText(/Username.*at least 3 characters/i)
-      ).toBeNull();
-    }, { timeout: 3000 });
-  });
-
-  it.skip("should submit form with valid data", async () => {
+  // ============================================================
+  // SUBMISSION TESTS
+  // ============================================================
+  it("should submit form with valid data", async () => {
     selfRegister.mockResolvedValue({ success: true });
 
     render(<UserRegistrationForm />, { wrapper: TestWrapper });
@@ -232,30 +248,71 @@ describe("UserRegistrationForm", () => {
     });
 
     await waitFor(() => {
-      expect(selfRegister).toHaveBeenCalled();
+      expect(selfRegister).toHaveBeenCalledWith(
+        expect.objectContaining({
+          username: "testuser",
+          email: "test@example.com",
+          password: "password123",
+          firstName: "John",
+          lastName: "Doe",
+        })
+      );
     });
 
     await waitFor(() => {
-      const successMessage = screen.queryByText(/Thank You/i);
-      if (successMessage) {
-        expect(successMessage).toBeTruthy();
-      } else {
-        expect(toast.success).toHaveBeenCalled();
-      }
+      expect(screen.getByText(/Thank You for Your Application!/i)).toBeInTheDocument();
     });
 
-    const returnButton = screen.queryByRole("button", {
-      name: /Return to Login/i,
+    const returnButton = screen.getByRole("button", { name: /Return to Login/i });
+    await act(async () => {
+      fireEvent.click(returnButton);
     });
-    if (returnButton) {
-      await act(async () => {
-        fireEvent.click(returnButton);
-      });
-      expect(mockNavigate).toHaveBeenCalledWith("/login");
-    }
+
+    expect(mockNavigate).toHaveBeenCalledWith("/login");
   });
 
-  it.skip("should handle registration failure", async () => {
+  // ✅ FIX: Test trimming whitespace before submit
+  it("should trim whitespace from text fields before submitting", async () => {
+    selfRegister.mockResolvedValue({ success: true });
+
+    render(<UserRegistrationForm />, { wrapper: TestWrapper });
+
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText(/^Username/i), {
+        target: { value: "  testuser  " },
+      });
+      fireEvent.change(screen.getByLabelText(/^Email/i), {
+        target: { value: "  test@example.com  " },
+      });
+      fireEvent.change(screen.getByLabelText(/^Password/i), {
+        target: { value: "password123" },
+      });
+      fireEvent.change(screen.getByLabelText(/^First Name/i), {
+        target: { value: "  John  " },
+      });
+      fireEvent.change(screen.getByLabelText(/^Last Name/i), {
+        target: { value: "  Doe  " },
+      });
+    });
+
+    const submitButton = screen.getByRole("button", { name: /Create Account/i });
+    await act(async () => {
+      fireEvent.click(submitButton);
+    });
+
+    await waitFor(() => {
+      expect(selfRegister).toHaveBeenCalledWith(
+        expect.objectContaining({
+          username: "testuser",
+          email: "test@example.com",
+          firstName: "John",
+          lastName: "Doe",
+        })
+      );
+    });
+  });
+
+  it("should handle registration failure", async () => {
     const errorMessage = "Username already taken";
     selfRegister.mockResolvedValue({
       success: false,
@@ -290,9 +347,49 @@ describe("UserRegistrationForm", () => {
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(errorMessage);
     });
+
+    expect(screen.queryByText(/Thank You for Your Application!/i)).not.toBeInTheDocument();
   });
 
-  it("should navigate to login on cancel", async () => {
+  // ✅ FIX: Exception handler now uses generic user-friendly message
+  it("should handle registration exception with user-friendly message", async () => {
+    selfRegister.mockRejectedValue(new Error("Network error"));
+
+    render(<UserRegistrationForm />, { wrapper: TestWrapper });
+
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText(/^Username/i), {
+        target: { value: "testuser" },
+      });
+      fireEvent.change(screen.getByLabelText(/^Email/i), {
+        target: { value: "test@example.com" },
+      });
+      fireEvent.change(screen.getByLabelText(/^Password/i), {
+        target: { value: "password123" },
+      });
+      fireEvent.change(screen.getByLabelText(/^First Name/i), {
+        target: { value: "John" },
+      });
+      fireEvent.change(screen.getByLabelText(/^Last Name/i), {
+        target: { value: "Doe" },
+      });
+    });
+
+    const submitButton = screen.getByRole("button", { name: /Create Account/i });
+    await act(async () => {
+      fireEvent.click(submitButton);
+    });
+
+    await waitFor(() => {
+      // Should show generic user-friendly message, not the raw error
+      expect(toast.error).toHaveBeenCalledWith("Registration failed. Please try again.");
+    });
+  });
+
+  // ============================================================
+  // NAVIGATION TESTS
+  // ============================================================
+  it("should navigate to login when clicking 'Already have an account?'", async () => {
     render(<UserRegistrationForm />, { wrapper: TestWrapper });
 
     const alreadyHaveAccountButton = screen.getByText(/Already have an account\? Sign in/i);
@@ -303,9 +400,79 @@ describe("UserRegistrationForm", () => {
     expect(mockNavigate).toHaveBeenCalledWith("/login");
   });
 
+  // ============================================================
+  // RESPONSIVE DESIGN TESTS
+  // ============================================================
   it("should be mobile responsive", () => {
     const { container } = render(<UserRegistrationForm />, { wrapper: TestWrapper });
     const responsiveGrid = container.querySelector(".md\\:grid-cols-2");
     expect(responsiveGrid).toBeTruthy();
+  });
+
+  // ============================================================
+  // EDGE CASE TESTS
+  // ============================================================
+  it("should handle whitespace-only username", async () => {
+    render(<UserRegistrationForm />, { wrapper: TestWrapper });
+
+    const usernameInput = screen.getByLabelText(/^Username/i);
+    await act(async () => {
+      fireEvent.change(usernameInput, { target: { value: "   " } });
+    });
+
+    const submitButton = screen.getByRole("button", { name: /Create Account/i });
+    await act(async () => {
+      fireEvent.click(submitButton);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/Username.*at least 3 characters/i)).toBeInTheDocument();
+    });
+  });
+
+  it("should show loading state during submission", async () => {
+    let resolveRegistration;
+    const registrationPromise = new Promise((resolve) => {
+      resolveRegistration = resolve;
+    });
+    selfRegister.mockReturnValue(registrationPromise);
+
+    render(<UserRegistrationForm />, { wrapper: TestWrapper });
+
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText(/^Username/i), {
+        target: { value: "testuser" },
+      });
+      fireEvent.change(screen.getByLabelText(/^Email/i), {
+        target: { value: "test@example.com" },
+      });
+      fireEvent.change(screen.getByLabelText(/^Password/i), {
+        target: { value: "password123" },
+      });
+      fireEvent.change(screen.getByLabelText(/^First Name/i), {
+        target: { value: "John" },
+      });
+      fireEvent.change(screen.getByLabelText(/^Last Name/i), {
+        target: { value: "Doe" },
+      });
+    });
+
+    const submitButton = screen.getByRole("button", { name: /Create Account/i });
+    await act(async () => {
+      fireEvent.click(submitButton);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/Creating Account\.\.\./i)).toBeInTheDocument();
+      expect(submitButton).toBeDisabled();
+    });
+
+    await act(async () => {
+      resolveRegistration({ success: true });
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Creating Account\.\.\./i)).not.toBeInTheDocument();
+    });
   });
 });
