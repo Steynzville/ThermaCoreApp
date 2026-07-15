@@ -105,7 +105,6 @@ describe("UserRegistrationForm", () => {
       expect(toast.error).toHaveBeenCalledWith("Please fix the errors in the form");
     });
 
-    // Check for specific error messages
     await waitFor(() => {
       expect(screen.getByText(/Username must be at least 3 characters/i)).toBeInTheDocument();
     });
@@ -136,6 +135,23 @@ describe("UserRegistrationForm", () => {
   it("should validate email format", async () => {
     render(<UserRegistrationForm />, { wrapper: TestWrapper });
 
+    // Fill in other required fields first so only email validation fails
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText(/^Username/i), {
+        target: { value: "testuser" },
+      });
+      fireEvent.change(screen.getByLabelText(/^Password/i), {
+        target: { value: "password123" },
+      });
+      fireEvent.change(screen.getByLabelText(/^First Name/i), {
+        target: { value: "John" },
+      });
+      fireEvent.change(screen.getByLabelText(/^Last Name/i), {
+        target: { value: "Doe" },
+      });
+    });
+
+    // Set invalid email
     const emailInput = screen.getByLabelText(/^Email/i);
     await act(async () => {
       fireEvent.change(emailInput, { target: { value: "invalid-email" } });
@@ -179,18 +195,15 @@ describe("UserRegistrationForm", () => {
       fireEvent.click(submitButton);
     });
 
-    // Wait for username error to appear
     await waitFor(() => {
       expect(screen.getByText(/Username must be at least 3 characters/i)).toBeInTheDocument();
     });
 
-    // Start typing in username field
     const usernameInput = screen.getByLabelText(/^Username/i);
     await act(async () => {
       fireEvent.change(usernameInput, { target: { value: "testuser" } });
     });
 
-    // Error should be cleared
     await waitFor(() => {
       expect(screen.queryByText(/Username must be at least 3 characters/i)).not.toBeInTheDocument();
     });
