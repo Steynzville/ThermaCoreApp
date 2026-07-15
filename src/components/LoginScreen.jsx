@@ -112,6 +112,12 @@ const LoginScreen = ({ error, setError }) => {
         return;
       }
 
+      // ✅ FIX: Validate password length before submitting
+      if (!passwordValidation.isValid) {
+        setError("Password must be at least 6 characters");
+        return;
+      }
+
       const result = await login(
         formData.username,
         formData.password,
@@ -136,6 +142,7 @@ const LoginScreen = ({ error, setError }) => {
       formData.username,
       formData.password,
       keepMeSignedIn,
+      passwordValidation.isValid, // ✅ ADDED: Include validation state in dependencies
       login,
       navigate,
       setError,
