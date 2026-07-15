@@ -199,7 +199,7 @@ describe("SynchronizeUnitsOverview Component", () => {
 
   describe("Unit Selection", () => {
     it("should allow selecting individual units", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderComponent();
 
       const checkboxes = screen.getAllByRole("checkbox");
@@ -213,7 +213,7 @@ describe("SynchronizeUnitsOverview Component", () => {
     });
 
     it("should show selected count in sync button", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderComponent();
 
       const checkboxes = screen.getAllByRole("checkbox");
@@ -223,7 +223,7 @@ describe("SynchronizeUnitsOverview Component", () => {
     });
 
     it("should select all units when select all is clicked", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderComponent();
 
       const selectAllButton = screen.getByText("Select All");
@@ -236,7 +236,7 @@ describe("SynchronizeUnitsOverview Component", () => {
     });
 
     it("should clear selection when clear is clicked", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderComponent();
 
       const selectAllButton = screen.getByText("Select All");
@@ -252,7 +252,7 @@ describe("SynchronizeUnitsOverview Component", () => {
     });
 
     it("should toggle unit selection when checkbox is clicked", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderComponent();
 
       const checkboxes = screen.getAllByRole("checkbox");
@@ -269,7 +269,7 @@ describe("SynchronizeUnitsOverview Component", () => {
 
   describe("Sync Operations", () => {
     it("should sync all units when sync all is clicked", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderComponent();
 
       const syncAllButton = screen.getByText("Sync All Units");
@@ -288,7 +288,7 @@ describe("SynchronizeUnitsOverview Component", () => {
     });
 
     it("should sync selected units when sync selected is clicked", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderComponent();
 
       // Select first unit
@@ -318,7 +318,7 @@ describe("SynchronizeUnitsOverview Component", () => {
     });
 
     it("should disable sync all during sync", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderComponent();
 
       const syncAllButton = screen.getByText("Sync All Units");
@@ -328,7 +328,7 @@ describe("SynchronizeUnitsOverview Component", () => {
     });
 
     it("should update last sync time after successful sync", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderComponent();
 
       const syncAllButton = screen.getByText("Sync All Units");
@@ -344,7 +344,7 @@ describe("SynchronizeUnitsOverview Component", () => {
     });
 
     it("should update unit statuses after sync", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderComponent();
 
       const syncAllButton = screen.getByText("Sync All Units");
@@ -359,7 +359,7 @@ describe("SynchronizeUnitsOverview Component", () => {
     });
 
     it("keeps an online unit with critical health marked as an error after sync (regression: case-sensitive healthStatus check)", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderComponent();
 
       const syncAllButton = screen.getByText("Sync All Units");
@@ -455,7 +455,7 @@ describe("SynchronizeUnitsOverview Component", () => {
 
   describe("UI Interactions", () => {
     it("should highlight selected units with blue border", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderComponent();
 
       const checkboxes = screen.getAllByRole("checkbox");
@@ -466,7 +466,7 @@ describe("SynchronizeUnitsOverview Component", () => {
     });
 
     it("should show selected count", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderComponent();
 
       const checkboxes = screen.getAllByRole("checkbox");
@@ -481,7 +481,7 @@ describe("SynchronizeUnitsOverview Component", () => {
 
   describe("Timer and Async Behavior", () => {
     it("should show syncing state during sync", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderComponent();
 
       const syncAllButton = screen.getByText("Sync All Units");
@@ -492,7 +492,7 @@ describe("SynchronizeUnitsOverview Component", () => {
     });
 
     it("should complete sync after all units are processed", async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       renderComponent();
 
       const syncAllButton = screen.getByText("Sync All Units");
