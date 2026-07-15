@@ -37,6 +37,50 @@ import { Checkbox } from "../ui/checkbox";
 import { Label } from "../ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 
+// Map of allowed sections to their display labels, icons, and colors
+const SECTION_CONFIG = {
+  energyProduction: {
+    label: "Energy Production",
+    icon: Activity,
+    color: "text-blue-600",
+  },
+  waterProduction: {
+    label: "Water Production",
+    icon: Activity,
+    color: "text-cyan-600",
+  },
+  temperaturePressure: {
+    label: "Temperature & Pressure",
+    icon: Activity,
+    color: "text-orange-600",
+  },
+  alertsAlarms: {
+    label: "Alerts & Alarms",
+    icon: AlertTriangle,
+    color: "text-orange-600",
+  },
+  maintenance: {
+    label: "Maintenance",
+    icon: Wrench,
+    color: "text-gray-600",
+  },
+  performance: {
+    label: "Performance",
+    icon: Activity,
+    color: "text-green-600",
+  },
+  compliance: {
+    label: "Compliance",
+    icon: Shield,
+    color: "text-purple-600",
+  },
+  salesRevenue: {
+    label: "Sales and Revenue",
+    icon: DollarSign,
+    color: "text-green-600",
+  },
+};
+
 const ReportConfigurator = ({
   allowedScopes = ["single", "multiple", "client", "master"],
   allowedSections = [
@@ -72,24 +116,17 @@ const ReportConfigurator = ({
     },
     selectedUnits: [],
     selectedClients: [],
-    reportSections: {
-      vitalStatistics: false,
-      alertsAlarms: false,
-      maintenance: false,
-      performance: false,
-      compliance: false,
-      salesRevenue: false,
-    },
+    reportSections: Object.fromEntries(allowedSections.map((s) => [s, false])),
   });
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [scheduledDate, setScheduledDate] = useState();
   const [isSchedulePopoverOpen, setIsSchedulePopoverOpen] = useState(false);
+  const [scheduledReportMessage, setScheduledReportMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
-  // Filter report types based on allowed sections
-  const filteredReportTypes = dataProviders.reportTypes.filter((type) =>
-    type.sections.every((section) => allowedSections.includes(section)),
-  );
+  // Remove unused filteredReportTypes - it was dead code
+  // The cards render from availableReportTypes directly
 
   // Filter report sections based on allowed sections
   const filteredReportSections = Object.fromEntries(
@@ -99,59 +136,54 @@ const ReportConfigurator = ({
   );
 
   const handleReportTypeChange = (reportTypeId) => {
-    const selectedType = filteredReportTypes.find(
+    const selectedType = availableReportTypes.find(
       (type) => type.id === reportTypeId,
     );
-    if (selectedType) {
-      const isCurrentlySelected = selectedReports.includes(reportTypeId);
-      let newSelectedReports;
+    if (!selectedType) return;
 
-      if (isCurrentlySelected) {
-        // Remove from selection
-        newSelectedReports = selectedReports.filter(
-          (id) => id !== reportTypeId,
-        );
-      } else {
-        // Add to selection
-        newSelectedReports = [...selectedReports, reportTypeId];
-      }
+    const isCurrentlySelected = selectedReports.includes(reportTypeId);
+    let newSelectedReports;
 
-      setSelectedReports(newSelectedReports);
-
-      // Update report config with all selected report types
-      const newSections = { ...reportConfig.reportSections };
-
-      // Reset all sections first
-      Object.keys(newSections).forEach((key) => {
-        newSections[key] = false;
-      });
-
-      // Enable sections for all selected report types
-      newSelectedReports.forEach((reportId) => {
-        const reportType = filteredReportTypes.find(
-          (type) => type.id === reportId,
-        );
-        if (reportType) {
-          if (reportId === "all-sections") {
-            allowedSections.forEach((section) => {
-              newSections[section] = true;
-            });
-          } else {
-            reportType.sections.forEach((section) => {
-              if (allowedSections.includes(section)) {
-                newSections[section] = true;
-              }
-            });
-          }
-        }
-      });
-
-      setReportConfig((prev) => ({
-        ...prev,
-        reportTypes: newSelectedReports,
-        reportSections: newSections,
-      }));
+    if (isCurrentlySelected) {
+      newSelectedReports = selectedReports.filter((id) => id !== reportTypeId);
+    } else {
+      newSelectedReports = [...selectedReports, reportTypeId];
     }
+
+    setSelectedReports(newSelectedReports);
+
+    const newSections = { ...reportConfig.reportSections };
+
+    // Reset all sections first
+    Object.keys(newSections).forEach((key) => {
+      newSections[key] = false;
+    });
+
+    // Enable sections for all selected report types
+    newSelectedReports.forEach((reportId) => {
+      const reportType = availableReportTypes.find(
+        (type) => type.id === reportId,
+      );
+      if (reportType) {
+        if (reportId === "all-sections") {
+          allowedSections.forEach((section) => {
+            newSections[section] = true;
+          });
+        } else {
+          reportType.sections.forEach((section) => {
+            if (allowedSections.includes(section)) {
+              newSections[section] = true;
+            }
+          });
+        }
+      }
+    });
+
+    setReportConfig((prev) => ({
+      ...prev,
+      reportTypes: newSelectedReports,
+      reportSections: newSections,
+    }));
   };
 
   const handleScopeChange = (scope) => {
@@ -161,6 +193,8 @@ const ReportConfigurator = ({
       selectedUnits: [],
       selectedClients: [],
     }));
+    // Clear any previous error when scope changes
+    setErrorMessage("");
   };
 
   const handleUnitSelection = (unitId, checked) => {
@@ -173,6 +207,9 @@ const ReportConfigurator = ({
   };
 
   const handleClientSelection = (clientId, checked) => {
+    // BUG FIX: Guard against undefined clients
+    if (!dataProviders.clients) return;
+    
     setReportConfig((prev) => ({
       ...prev,
       selectedClients: checked
@@ -183,11 +220,12 @@ const ReportConfigurator = ({
 
   const handleSelectAllSections = (checked) => {
     const newSections = {};
+    allowedSections.forEach((key) => {
+      newSections[key] = checked;
+    });
     Object.keys(reportConfig.reportSections).forEach((key) => {
-      if (allowedSections.includes(key)) {
-        newSections[key] = checked;
-      } else {
-        newSections[key] = reportConfig.reportSections[key];
+      if (!allowedSections.includes(key)) {
+        newSections[key] = false;
       }
     });
 
@@ -208,7 +246,6 @@ const ReportConfigurator = ({
       [section]: checked,
     };
 
-    // Find matching report types based on selected sections
     const selectedSectionKeys = Object.keys(newSections).filter(
       (key) => newSections[key],
     );
@@ -216,29 +253,26 @@ const ReportConfigurator = ({
     let matchingReportTypes = [];
 
     if (selectedSectionKeys.length > 0) {
-      // Find report types that exactly match or are subsets of selected sections
-      const exactMatches = filteredReportTypes.filter(
+      const exactMatches = availableReportTypes.filter(
         (type) =>
           type.sections.length === selectedSectionKeys.length &&
           type.sections.every((section) =>
             selectedSectionKeys.includes(section),
           ) &&
-          type.id !== "all-sections", // Exclude "all-sections" from auto-selection
+          type.id !== "all-sections",
       );
 
-      const subsetMatches = filteredReportTypes.filter(
+      const subsetMatches = availableReportTypes.filter(
         (type) =>
           type.sections.every((section) =>
             selectedSectionKeys.includes(section),
           ) && type.id !== "all-sections",
       );
 
-      // Combine exact matches and subset matches, prioritizing exact matches
       matchingReportTypes = [
         ...exactMatches.map((t) => t.id),
         ...subsetMatches.map((t) => t.id),
       ];
-      // Remove duplicates
       matchingReportTypes = [...new Set(matchingReportTypes)];
     }
 
@@ -252,29 +286,32 @@ const ReportConfigurator = ({
   };
 
   const handleGenerateReport = async () => {
-    // Play sound effect when generating report
     playSound("sky.mp3", settings.soundEnabled, settings.volume);
 
     setIsGenerating(true);
+    setErrorMessage("");
 
-    if (onGenerate) {
-      try {
+    try {
+      if (onGenerate) {
         await onGenerate(reportConfig);
-      } catch (_error) {}
-    } else {
-      // Default behavior - simulate report generation
-      setTimeout(() => {
-        setIsGenerating(false);
+      } else {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
         alert("Report generated successfully! Download will begin shortly.");
-      }, 3000);
-      return;
+      }
+    } catch (error) {
+      // BUG FIX: Don't re-throw from an onClick handler — it causes
+      // unhandled promise rejections. Show the error to the user and
+      // log it, but keep the UI stable.
+      const msg = error.message || "Failed to generate report";
+      setErrorMessage(msg);
+      alert(`Failed to generate report: ${msg}`);
+      console.error("Report generation failed:", error);
+    } finally {
+      setIsGenerating(false);
     }
-
-    setIsGenerating(false);
   };
 
   const isConfigValid = () => {
-    // Date range is valid if both dates are set OR both are empty (All Time)
     const hasValidDateRange =
       (reportConfig.dateRange.startDate && reportConfig.dateRange.endDate) ||
       (!reportConfig.dateRange.startDate && !reportConfig.dateRange.endDate);
@@ -299,43 +336,31 @@ const ReportConfigurator = ({
   };
 
   const getSectionIcon = (section) => {
-    const iconMap = {
-      vitalStatistics: Activity,
-      alertsAlarms: AlertTriangle,
-      maintenance: Wrench,
-      performance: Activity,
-      compliance: Shield,
-      salesRevenue: DollarSign,
-    };
-    return iconMap[section] || FileText;
+    return SECTION_CONFIG[section]?.icon || FileText;
   };
 
   const getSectionColor = (section) => {
-    const colorMap = {
-      vitalStatistics: "text-blue-600",
-      alertsAlarms: "text-orange-600",
-      maintenance: "text-gray-600",
-      performance: "text-green-600",
-      compliance: "text-purple-600",
-      salesRevenue: "text-green-600",
-    };
-    return colorMap[section] || "text-gray-600";
+    return SECTION_CONFIG[section]?.color || "text-gray-600";
   };
 
   const getSectionLabel = (section) => {
-    const labelMap = {
-      vitalStatistics: "Vital Statistics",
-      alertsAlarms: "Alerts & Alarms",
-      maintenance: "Maintenance",
-      performance: "Performance",
-      compliance: "Compliance",
-      salesRevenue: "Sales and Revenue",
-    };
-    return labelMap[section] || section;
+    return SECTION_CONFIG[section]?.label || section;
+  };
+
+  const isDateDisabled = (date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return date < today;
   };
 
   return (
     <div className={`space-y-6 ${className}`}>
+      {errorMessage && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-800 dark:text-red-200">
+          {errorMessage}
+        </div>
+      )}
+
       {availableReportTypes && availableReportTypes.length > 0 && (
         <Card className="bg-white dark:bg-gray-900">
           <CardHeader className="flex flex-row items-center space-x-2">
@@ -539,8 +564,10 @@ const ReportConfigurator = ({
               </div>
             )}
 
-          {/* Client Selection */}
-          {reportConfig.scope === "client" && (
+          {/* Client Selection - Guard against missing clients array */}
+          {reportConfig.scope === "client" && 
+           dataProviders.clients && 
+           dataProviders.clients.length > 0 && (
             <div className="mt-4">
               <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
                 Select Clients
@@ -686,7 +713,12 @@ const ReportConfigurator = ({
                   dateRange: { startDate: "", endDate: "" },
                 }))
               }
-              className={`w-full ${!reportConfig.dateRange.startDate && !reportConfig.dateRange.endDate ? "bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 border-blue-500" : "border-gray-200 dark:border-gray-700 hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"}`}
+              className={`w-full ${
+                !reportConfig.dateRange.startDate &&
+                !reportConfig.dateRange.endDate
+                  ? "bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 border-blue-500"
+                  : "border-gray-200 dark:border-gray-700 hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+              }`}
             >
               All Time
             </Button>
@@ -798,12 +830,21 @@ const ReportConfigurator = ({
                   onSelect={(date) => {
                     setScheduledDate(date);
                     setIsSchedulePopoverOpen(false);
-                    alert(`Report scheduled for ${format(date, "PPP")}`);
+                    setScheduledReportMessage(
+                      `Report scheduled for ${format(date, "PPP")}`,
+                    );
                   }}
+                  disabled={isDateDisabled}
                   initialFocus
                 />
               </PopoverContent>
             </Popover>
+          )}
+
+          {scheduledReportMessage && (
+            <div className="text-sm text-green-600 dark:text-green-400 text-center">
+              {scheduledReportMessage}
+            </div>
           )}
 
           {showPauseScheduled && (
