@@ -105,18 +105,14 @@ describe("UserRegistrationForm", () => {
       expect(toast.error).toHaveBeenCalledWith("Please fix the errors in the form");
     });
 
-    // Use more flexible text matching
+    // Check for specific error messages
     await waitFor(() => {
-      const usernameError = screen.getByText((content) => 
-        content.includes("Username") && content.includes("at least 3 characters")
-      );
-      expect(usernameError).toBeInTheDocument();
+      expect(screen.getByText(/Username must be at least 3 characters/i)).toBeInTheDocument();
     });
-    
-    expect(screen.getByText((content) => content.includes("Valid email") && content.includes("required"))).toBeInTheDocument();
-    expect(screen.getByText((content) => content.includes("Password") && content.includes("at least 6 characters"))).toBeInTheDocument();
-    expect(screen.getByText("First name is required")).toBeInTheDocument();
-    expect(screen.getByText("Last name is required")).toBeInTheDocument();
+    expect(screen.getByText(/Valid email is required/i)).toBeInTheDocument();
+    expect(screen.getByText(/Password must be at least 6 characters/i)).toBeInTheDocument();
+    expect(screen.getByText(/First name is required/i)).toBeInTheDocument();
+    expect(screen.getByText(/Last name is required/i)).toBeInTheDocument();
   });
 
   it("should validate username length", async () => {
@@ -133,10 +129,7 @@ describe("UserRegistrationForm", () => {
     });
 
     await waitFor(() => {
-      const usernameError = screen.getByText((content) => 
-        content.includes("Username") && content.includes("at least 3 characters")
-      );
-      expect(usernameError).toBeInTheDocument();
+      expect(screen.getByText(/Username must be at least 3 characters/i)).toBeInTheDocument();
     });
   });
 
@@ -153,13 +146,11 @@ describe("UserRegistrationForm", () => {
       fireEvent.click(submitButton);
     });
 
-    // Use a more flexible matcher for the email error
+    // Check for the email validation error
     await waitFor(() => {
-      const emailError = screen.getByText((content) => 
-        content.includes("Valid email") && content.includes("required")
-      );
+      const emailError = screen.getByText(/Valid email is required/i);
       expect(emailError).toBeInTheDocument();
-    });
+    }, { timeout: 3000 });
   });
 
   it("should validate password length", async () => {
@@ -176,10 +167,7 @@ describe("UserRegistrationForm", () => {
     });
 
     await waitFor(() => {
-      const passwordError = screen.getByText((content) => 
-        content.includes("Password") && content.includes("at least 6 characters")
-      );
-      expect(passwordError).toBeInTheDocument();
+      expect(screen.getByText(/Password must be at least 6 characters/i)).toBeInTheDocument();
     });
   });
 
@@ -193,10 +181,7 @@ describe("UserRegistrationForm", () => {
 
     // Wait for username error to appear
     await waitFor(() => {
-      const usernameError = screen.getByText((content) => 
-        content.includes("Username") && content.includes("at least 3 characters")
-      );
-      expect(usernameError).toBeInTheDocument();
+      expect(screen.getByText(/Username must be at least 3 characters/i)).toBeInTheDocument();
     });
 
     // Start typing in username field
@@ -207,10 +192,7 @@ describe("UserRegistrationForm", () => {
 
     // Error should be cleared
     await waitFor(() => {
-      const usernameErrors = screen.queryAllByText((content) => 
-        content.includes("Username") && content.includes("at least 3 characters")
-      );
-      expect(usernameErrors.length).toBe(0);
+      expect(screen.queryByText(/Username must be at least 3 characters/i)).not.toBeInTheDocument();
     });
   });
 
@@ -445,10 +427,7 @@ describe("UserRegistrationForm", () => {
     });
 
     await waitFor(() => {
-      const usernameError = screen.getByText((content) => 
-        content.includes("Username") && content.includes("at least 3 characters")
-      );
-      expect(usernameError).toBeInTheDocument();
+      expect(screen.getByText(/Username must be at least 3 characters/i)).toBeInTheDocument();
     });
   });
 
