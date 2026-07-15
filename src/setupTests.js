@@ -1,17 +1,4 @@
 // src/setupTests.js
-
-// ============================================================
-// CRITICAL: Tell React's act() that this is a supported test
-// environment. Testing Library's render()/cleanup() set this up
-// internally for the calls they make, but any test that invokes
-// act() directly (e.g. to flush a manually-triggered setTimeout
-// callback) needs this flag set globally up front, or React logs
-// "The current testing environment is not configured to support
-// act(...)" even though act() still works correctly.
-// Must be set before React is imported/used anywhere below.
-// ============================================================
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-
 import "@testing-library/jest-dom";
 import { vi, beforeAll, beforeEach, afterEach, afterAll } from "vitest";
 import React from "react";
