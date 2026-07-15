@@ -46,11 +46,130 @@ import {
   useRealtimeProtocolStatus,
 } from "../hooks/useRealtimeData";
 
+// ✅ FIX: Single source of truth for time range configuration
+const TIME_RANGE_CONFIG = {
+  "1h":  { factor: 0.1, periodDays: 0.1, label: "Last Hour" },
+  "24h": { factor: 1,   periodDays: 1,   label: "Last 24h" },
+  "7d":  { factor: 7,   periodDays: 7,   label: "Last 7 Days" },
+  "30d": { factor: 30,  periodDays: 30,  label: "Last 30 Days" },
+};
+
+// ✅ FIX: Export for testing
+export const generateMockData = (metrics, timeRange = "24h", customAnomalies = null) => {
+  // Get config for the time range, fallback to 24h if unknown
+  const config = TIME_RANGE_CONFIG[timeRange] ?? TIME_RANGE_CONFIG["24h"];
+  const { factor, periodDays } = config;
+
+  // Use custom anomalies if provided, otherwise use defaults
+  const defaultAnomalies = [
+    {
+      sensor_id: "SENS_001",
+      unit_id: "UNIT003",
+      sensor_type: "temperature",
+      value: 95.2,
+      timestamp: "2024-01-15T14:32:00Z",
+      anomaly_score: 4.2,
+      confidence: 89.5,
+    },
+    {
+      sensor_id: "SENS_015",
+      unit_id: "UNIT002",
+      sensor_type: "pressure",
+      value: 145.8,
+      timestamp: "2024-01-15T13:18:00Z",
+      anomaly_score: 3.8,
+      confidence: 92.1,
+    },
+  ];
+
+  return {
+    overview: {
+      total_units: 12,
+      active_units: metrics?.activeUnits?.value || 10,
+      total_sensors: 48,
+      recent_readings: Math.round((metrics?.dataPoints?.count || 2856) * factor),
+      uptime_percentage: parseFloat(
+        metrics?.activeUnits?.percentage || 83.3,
+      ),
+    },
+    trends: {
+      current_week_readings: Math.round(19992 * factor),
+      previous_week_readings: Math.round(18456 * factor),
+      trend_percentage: 8.3,
+    },
+    performance: {
+      avg_temperature_24h: parseFloat(
+        metrics?.temperature?.current || 67.8,
+      ),
+      max_temperature_24h: parseFloat(
+        metrics?.temperature?.max || 89.4,
+      ),
+      data_quality_score: metrics?.dataQuality?.score || 94.2,
+    },
+    unitsPerformance: [
+      {
+        unit_id: "UNIT001",
+        unit_name: "Boiler Alpha",
+        performance_score: 98,
+        status: "online",
+        reading_count: Math.round(144 * factor),
+      },
+      {
+        unit_id: "UNIT002",
+        unit_name: "Chiller Beta",
+        performance_score: 87,
+        status: "online",
+        reading_count: Math.round(140 * factor),
+      },
+      {
+        unit_id: "UNIT003",
+        unit_name: "HVAC Gamma",
+        performance_score: 92,
+        status: "online",
+        reading_count: Math.round(138 * factor),
+      },
+      {
+        unit_id: "UNIT004",
+        unit_name: "Pump Delta",
+        performance_score: 76,
+        status: "maintenance",
+        reading_count: Math.round(89 * factor),
+      },
+      {
+        unit_id: "UNIT005",
+        unit_name: "Compressor Epsilon",
+        performance_score: 45,
+        status: "offline",
+        reading_count: Math.round(12 * factor),
+      },
+    ],
+    temperatureTrends: [
+      { timestamp: "00:00", temperature: 65.2, pressure: 98.5 },
+      { timestamp: "04:00", temperature: 67.8, pressure: 102.1 },
+      { timestamp: "08:00", temperature: 72.4, pressure: 105.8 },
+      { timestamp: "12:00", temperature: 78.9, pressure: 108.2 },
+      { timestamp: "16:00", temperature: 81.3, pressure: 110.6 },
+      { timestamp: "20:00", temperature: 75.6, pressure: 106.9 },
+      { timestamp: "24:00", temperature: 69.1, pressure: 103.4 },
+    ],
+    alertPatterns: {
+      period_days: periodDays,
+      total_potential_alerts: Math.round(23 * factor),
+      avg_alerts_per_day: Math.round((3.3 * factor) * 10) / 10,
+      sensor_type_breakdown: {
+        temperature: Math.round(12 * factor),
+        pressure: Math.round(7 * factor),
+        flow: Math.round(4 * factor),
+      },
+    },
+    anomalies: customAnomalies !== null ? customAnomalies : defaultAnomalies,
+  };
+};
+
 const AdvancedAnalyticsDashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedTimeRange, setSelectedTimeRange] = useState("24h");
-  const [_selectedUnit, _setSelectedUnit] = useState("all");
 
   // Real-time data hooks
   const { metrics: realtimeMetrics, connectionStatus } = useRealtimeMetrics({
@@ -62,122 +181,23 @@ const AdvancedAnalyticsDashboard = () => {
     useMockData: true,
   });
 
-  // Mock data for demonstration - in real app, this would come from API
+  // Use stable dependency - JSON string of metrics to detect actual changes
+  const metricsKey = JSON.stringify(realtimeMetrics);
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       setLoading(true);
 
-      // Simulate API call
+      // Simulate API call with current metrics
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      const mockData = {
-        overview: {
-          total_units: 12,
-          active_units: realtimeMetrics?.activeUnits?.value || 10,
-          total_sensors: 48,
-          recent_readings: realtimeMetrics?.dataPoints?.count || 2856,
-          uptime_percentage: parseFloat(
-            realtimeMetrics?.activeUnits?.percentage || 83.3,
-          ),
-        },
-        trends: {
-          current_week_readings: 19992,
-          previous_week_readings: 18456,
-          trend_percentage: 8.3,
-        },
-        performance: {
-          avg_temperature_24h: parseFloat(
-            realtimeMetrics?.temperature?.current || 67.8,
-          ),
-          max_temperature_24h: parseFloat(
-            realtimeMetrics?.temperature?.max || 89.4,
-          ),
-          data_quality_score: realtimeMetrics?.dataQuality?.score || 94.2,
-        },
-        unitsPerformance: [
-          {
-            unit_id: "UNIT001",
-            unit_name: "Boiler Alpha",
-            performance_score: 98,
-            status: "online",
-            reading_count: 144,
-          },
-          {
-            unit_id: "UNIT002",
-            unit_name: "Chiller Beta",
-            performance_score: 87,
-            status: "online",
-            reading_count: 140,
-          },
-          {
-            unit_id: "UNIT003",
-            unit_name: "HVAC Gamma",
-            performance_score: 92,
-            status: "online",
-            reading_count: 138,
-          },
-          {
-            unit_id: "UNIT004",
-            unit_name: "Pump Delta",
-            performance_score: 76,
-            status: "maintenance",
-            reading_count: 89,
-          },
-          {
-            unit_id: "UNIT005",
-            unit_name: "Compressor Epsilon",
-            performance_score: 45,
-            status: "offline",
-            reading_count: 12,
-          },
-        ],
-        temperatureTrends: [
-          { timestamp: "00:00", temperature: 65.2, pressure: 98.5 },
-          { timestamp: "04:00", temperature: 67.8, pressure: 102.1 },
-          { timestamp: "08:00", temperature: 72.4, pressure: 105.8 },
-          { timestamp: "12:00", temperature: 78.9, pressure: 108.2 },
-          { timestamp: "16:00", temperature: 81.3, pressure: 110.6 },
-          { timestamp: "20:00", temperature: 75.6, pressure: 106.9 },
-          { timestamp: "24:00", temperature: 69.1, pressure: 103.4 },
-        ],
-        alertPatterns: {
-          period_days: 7,
-          total_potential_alerts: 23,
-          avg_alerts_per_day: 3.3,
-          sensor_type_breakdown: {
-            temperature: 12,
-            pressure: 7,
-            flow: 4,
-          },
-        },
-        anomalies: [
-          {
-            sensor_id: "SENS_001",
-            unit_id: "UNIT003",
-            sensor_type: "temperature",
-            value: 95.2,
-            timestamp: "2024-01-15T14:32:00Z",
-            anomaly_score: 4.2,
-            confidence: 89.5,
-          },
-          {
-            sensor_id: "SENS_015",
-            unit_id: "UNIT002",
-            sensor_type: "pressure",
-            value: 145.8,
-            timestamp: "2024-01-15T13:18:00Z",
-            anomaly_score: 3.8,
-            confidence: 92.1,
-          },
-        ],
-      };
-
+      const mockData = generateMockData(realtimeMetrics, selectedTimeRange);
       setDashboardData(mockData);
       setLoading(false);
     };
 
     fetchDashboardData();
-  }, [realtimeMetrics]);
+  }, [metricsKey, selectedTimeRange]);
 
   const formatValue = (value, unit = "") => {
     if (typeof value === "number") {
@@ -205,7 +225,7 @@ const AdvancedAnalyticsDashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen" data-testid="loading-spinner">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-muted-foreground">
