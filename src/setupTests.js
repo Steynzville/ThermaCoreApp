@@ -27,42 +27,24 @@ afterEach(() => {
 
 /**
  * -----------------------------
- * SUPPRESS ACT WARNINGS
+ * SUPPRESS ACT WARNINGS - Minimal approach
  * -----------------------------
  */
-// Store original console methods
-const originalConsoleError = console.error;
-const originalConsoleWarn = console.warn;
-
-// Filter out act warnings and other expected warnings
+// Only suppress the specific act warnings, not all console errors
+const originalError = console.error;
 console.error = (...args) => {
   const message = typeof args[0] === 'string' ? args[0] : '';
   
-  // Suppress act warnings
-  if (
-    message.includes('The current testing environment is not configured to support act') ||
-    message.includes('Warning: An update to %s inside a test was not wrapped in act') ||
-    message.includes('Warning: ReactDOM.render is no longer supported')
-  ) {
+  // Only suppress act warnings
+  if (message.includes('The current testing environment is not configured to support act')) {
     return;
   }
   
-  originalConsoleError(...args);
+  originalError(...args);
 };
 
-console.warn = (...args) => {
-  const message = typeof args[0] === 'string' ? args[0] : '';
-  
-  // Suppress known harmless warnings
-  if (
-    message.includes('React Router Future Flag Warning') ||
-    message.includes('ReactDOM.render is no longer supported')
-  ) {
-    return;
-  }
-  
-  originalConsoleWarn(...args);
-};
+// Keep console.warn unchanged - don't suppress any warnings
+// This prevents hiding actual issues
 
 /**
  * -----------------------------
