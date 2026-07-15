@@ -9,7 +9,7 @@ import {
   Wrench,
   Zap,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useAuth } from "../context/AuthContext";
 import { units } from "../data/mockUnits";
@@ -171,15 +171,33 @@ const SummaryCard = ({
 };
 
 const PerformanceDashboard = ({ className, hideHeader = false }) => {
-  const { userRole } = useAuth();
+  // ✅ FIX: Get user from AuthContext and extract role
+  const { user } = useAuth();
+  const userRole = user?.role || "user";
+  
   const [showFinancialAssumptions, setShowFinancialAssumptions] =
     useState(false);
   const [showROIAssumptions, setShowROIAssumptions] = useState(false);
   const [showEnvironmentalAssumptions, setShowEnvironmentalAssumptions] =
     useState(false);
+  
+  // ✅ FIX: Derive ROI assumptions from userRole instead of storing in state
+  const getInitialInvestment = (role) => {
+    return role === "admin" ? 2000000 : 600000;
+  };
+  
   const [roiAssumptions, setRoiAssumptions] = useState({
-    initialInvestment: userRole === "admin" ? 2000000 : 600000, // Default initial investment based on role
+    initialInvestment: getInitialInvestment(userRole),
   });
+  
+  // ✅ FIX: Update roiAssumptions when userRole changes
+  useEffect(() => {
+    setRoiAssumptions((prev) => ({
+      ...prev,
+      initialInvestment: getInitialInvestment(userRole),
+    }));
+  }, [userRole]);
+
   const [financialAssumptions, setFinancialAssumptions] = useState({
     electricityCost: 0.4, // Cost per kWh
     rebate: 50, // Rebate per month
@@ -189,8 +207,8 @@ const PerformanceDashboard = ({ className, hideHeader = false }) => {
     dieselPricePerLiter: 1.84, // Default diesel price per liter
   });
 
-  // Filter units based on user role - User role only sees first 5 units
-  const filteredUnits = userRole === "user" ? units.slice(0, 6) : units;
+  // ✅ FIX: User role only sees first 5 units (matching comment)
+  const filteredUnits = userRole === "user" ? units.slice(0, 5) : units;
 
   // Calculate aggregate power metrics from actual mockUnits data
   const totalCurrentPower = filteredUnits.reduce(
@@ -209,7 +227,6 @@ const PerformanceDashboard = ({ className, hideHeader = false }) => {
     totalCurrentPower - totalParasiticLoad - totalUserLoad;
 
   // Mock trend data - in real app this would come from API comparing current vs 5 minutes ago
-  // All tiles will show trend arrows that update every 5 minutes
   const powerTrend = "up";
   const parasiticTrend = "down";
   const userTrend = "up";
@@ -242,16 +259,18 @@ const PerformanceDashboard = ({ className, hideHeader = false }) => {
     },
   };
 
-  const performanceData =
+  // ✅ FIX: Create a fresh performance data object instead of mutating
+  const basePerformanceData =
     userRole === "admin" ? adminPerformanceData : userPerformanceData;
+  
+  const performanceData = { ...basePerformanceData };
 
   // Calculate diesel displaced based on total current power generation
-  // Assuming 1 kW of power generation displaces approximately 0.25 liters of diesel per hour
   const dieselDisplacementRate = 0.25; // liters per kW per hour
 
-  const dieselDisplacedDaily = totalCurrentPower * 24 * dieselDisplacementRate; // liters per day
-  const dieselDisplacedMonthly = dieselDisplacedDaily * 30; // liters per month
-  const dieselDisplacedAllTime = dieselDisplacedMonthly * 15; // liters for 15 months
+  const dieselDisplacedDaily = totalCurrentPower * 24 * dieselDisplacementRate;
+  const dieselDisplacedMonthly = dieselDisplacedDaily * 30;
+  const dieselDisplacedAllTime = dieselDisplacedMonthly * 15;
 
   performanceData.dieselDisplaced = {
     daily: dieselDisplacedDaily,
@@ -260,11 +279,11 @@ const PerformanceDashboard = ({ className, hideHeader = false }) => {
   };
 
   // Calculate financial impact based on financial assumptions
-  const totalPowerGeneratedToday = performanceData.power.today; // kWh from the card "Total Power Generated" today
-  const totalParasiticLoadKWh = totalParasiticLoad * 24; // Convert kW to kWh for the day
-  const totalUserLoadKWh = totalUserLoad * 24; // Convert kW to kWh for the day
-  const _feedInPowerToday =
-    totalPowerGeneratedToday - totalParasiticLoadKWh - totalUserLoadKWh; // kWh
+  const totalPowerGeneratedToday = performanceData.power.today;
+  const totalParasiticLoadKWh = totalParasiticLoad * 24;
+  const totalUserLoadKWh = totalUserLoad * 24;
+  // ✅ FIX: Remove unused variable
+  // const feedInPowerToday = totalPowerGeneratedToday - totalParasiticLoadKWh - totalUserLoadKWh;
 
   // Calculate money earned from feed-in
   const moneyEarnedFromFeedIn =
@@ -282,13 +301,13 @@ const PerformanceDashboard = ({ className, hideHeader = false }) => {
 
   // Calculate savings monthly and all time
   const savingsMonthly = savingsDaily * 30;
-  const savingsAllTime = savingsMonthly * 15; // 15 months
+  const savingsAllTime = savingsMonthly * 15;
 
-  // Add calculated savings to performance data
+  // Add calculated savings to performance data (clamped to 0)
   performanceData.savings = {
-    daily: Math.max(0, savingsDaily), // Ensure non-negative
-    monthly: Math.max(0, savingsMonthly), // Ensure non-negative
-    allTime: Math.max(0, savingsAllTime), // Ensure non-negative
+    daily: Math.max(0, savingsDaily),
+    monthly: Math.max(0, savingsMonthly),
+    allTime: Math.max(0, savingsAllTime),
   };
 
   performanceData.co2Avoided = {
@@ -297,12 +316,18 @@ const PerformanceDashboard = ({ className, hideHeader = false }) => {
     allTime: 1881088.8,
   };
 
-  // Calculate ROI (Return on Investment)
+  // ✅ FIX: Guard against zero/negative annual savings for ROI calculations
   const annualSavings = savingsMonthly * 12;
-  const roi = (annualSavings / roiAssumptions.initialInvestment) * 100;
-
-  // Calculate Payback Period (in years)
-  const paybackPeriod = roiAssumptions.initialInvestment / annualSavings;
+  let roi = 0;
+  let paybackPeriod = 0;
+  
+  if (annualSavings > 0) {
+    roi = (annualSavings / roiAssumptions.initialInvestment) * 100;
+    paybackPeriod = roiAssumptions.initialInvestment / annualSavings;
+  } else {
+    roi = 0;
+    paybackPeriod = Infinity; // Or a large number like 999
+  }
 
   performanceData.roi = roi;
   performanceData.paybackPeriod = paybackPeriod;
@@ -310,10 +335,7 @@ const PerformanceDashboard = ({ className, hideHeader = false }) => {
   performanceData.mttr = 4.2;
   performanceData.daysSinceFailure = 23;
 
-  // Diesel price per liter (mock value - in real app this would come from API)
   const dieselPricePerLiter = environmentalAssumptions.dieselPricePerLiter;
-
-  // Carbon pollution saved per liter of diesel (kg CO2 per liter)
   const co2PerLiterDiesel = 2.64;
 
   return (
@@ -321,7 +343,6 @@ const PerformanceDashboard = ({ className, hideHeader = false }) => {
       className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-3 lg:p-4 xl:p-6 ${className}`}
     >
       <div className="max-w-7xl mx-auto">
-        {/* Header - only show if hideHeader is false */}
         {!hideHeader && (
           <div className="mb-6 lg:mb-8">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 lg:mb-6">
@@ -335,7 +356,6 @@ const PerformanceDashboard = ({ className, hideHeader = false }) => {
               </div>
             </div>
 
-            {/* Breadcrumb */}
             <nav className="text-sm text-gray-600 dark:text-gray-400">
               <span className="hover:text-gray-900 dark:hover:text-gray-100 cursor-pointer">
                 Home
@@ -348,7 +368,6 @@ const PerformanceDashboard = ({ className, hideHeader = false }) => {
           </div>
         )}
 
-        {/* Main Summary Cards */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <SummaryCard
             title="Total Power Generated"
@@ -365,7 +384,7 @@ const PerformanceDashboard = ({ className, hideHeader = false }) => {
             icon={Zap}
             color="blue"
           />
-          {filteredUnits.some((u) => u.watergeneration) && (
+          {filteredUnits.some((u) => u.waterGeneration) && (
             <SummaryCard
               title="Total Water Generated"
               todayValue={performanceData.water.today.toLocaleString()}
@@ -378,7 +397,6 @@ const PerformanceDashboard = ({ className, hideHeader = false }) => {
           )}
         </div>
 
-        {/* Current Power Metrics */}
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
             Current Power Generation
@@ -420,7 +438,6 @@ const PerformanceDashboard = ({ className, hideHeader = false }) => {
           </div>
         </div>
 
-        {/* Financial Impact */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
@@ -484,7 +501,6 @@ const PerformanceDashboard = ({ className, hideHeader = false }) => {
           </div>
         </div>
 
-        {/* ROI and Payback Period */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
@@ -531,14 +547,17 @@ const PerformanceDashboard = ({ className, hideHeader = false }) => {
             <PerformanceCard
               icon={Clock}
               title="Payback Period"
-              value={`${performanceData.paybackPeriod.toFixed(2)} years`}
+              value={
+                performanceData.paybackPeriod === Infinity
+                  ? "∞"
+                  : `${performanceData.paybackPeriod.toFixed(2)} years`
+              }
               unit=""
               color="purple"
             />
           </div>
         </div>
 
-        {/* Environmental Impact */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
@@ -613,7 +632,6 @@ const PerformanceDashboard = ({ className, hideHeader = false }) => {
             />
           </div>
 
-          {/* Disclaimer */}
           <div className="mt-6 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
             <p className="text-xs text-gray-600 dark:text-gray-400">
               * Environmental calculations are based on diesel generator
@@ -622,7 +640,6 @@ const PerformanceDashboard = ({ className, hideHeader = false }) => {
           </div>
         </div>
 
-        {/* Fleet Performance */}
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
             Fleet Performance
@@ -653,7 +670,6 @@ const PerformanceDashboard = ({ className, hideHeader = false }) => {
           </div>
         </div>
 
-        {/* Financial Assumptions Modal */}
         <FinancialAssumptions
           isOpen={showFinancialAssumptions}
           onClose={() => setShowFinancialAssumptions(false)}
