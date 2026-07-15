@@ -46,7 +46,7 @@ import {
   useRealtimeProtocolStatus,
 } from "../hooks/useRealtimeData";
 
-// ✅ FIX: Single source of truth for time range configuration
+// Single source of truth for time range configuration
 const TIME_RANGE_CONFIG = {
   "1h":  { factor: 0.1, periodDays: 0.1, label: "Last Hour" },
   "24h": { factor: 1,   periodDays: 1,   label: "Last 24h" },
@@ -54,7 +54,7 @@ const TIME_RANGE_CONFIG = {
   "30d": { factor: 30,  periodDays: 30,  label: "Last 30 Days" },
 };
 
-// ✅ FIX: Export for testing
+// Export for testing
 export const generateMockData = (metrics, timeRange = "24h", customAnomalies = null) => {
   // Get config for the time range, fallback to 24h if unknown
   const config = TIME_RANGE_CONFIG[timeRange] ?? TIME_RANGE_CONFIG["24h"];
