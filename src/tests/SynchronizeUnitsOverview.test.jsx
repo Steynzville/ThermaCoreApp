@@ -9,9 +9,17 @@
  * real classification bug in the component — see SynchronizeUnitsOverview.jsx
  * for details. Uses fireEvent (not userEvent) because userEvent's internal
  * delay-based timers deadlock under vi.useFakeTimers().
+ *
+ * IMPORTANT: `waitFor` polls using real setTimeout under the hood. With
+ * vi.useFakeTimers() active, nothing ever advances that internal timer, so
+ * `waitFor` hangs until Vitest's own (real) test timeout kills it — a
+ * confusing "Test timed out in 60000ms" with no other clue. Once a fake
+ * timer advance (vi.advanceTimersByTimeAsync) has already driven the async
+ * work to completion, there's nothing left to poll for: wrap the advance in
+ * act() so React flushes the resulting state update, then assert directly.
  */
 
-import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { render, screen, fireEvent, within, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import SynchronizeUnitsOverview from "../components/SynchronizeUnitsOverview";
@@ -196,7 +204,14 @@ describe("SynchronizeUnitsOverview Component", () => {
       // Of the 4 mock units: TC001 synced, TC002 error (alert),
       // TC003 pending (offline), TC004 error (critical health).
       renderComponent();
-      const syncedCard = screen.getByText("Synchronized").closest(".bg-white");
+      // "Synchronized" appears twice: the summary card's <p> label, and a
+      // per-unit-row <span> for every synced unit (TC001 here). Disambiguate
+      // by tag rather than assuming DOM order, since that's an implementation
+      // detail that could silently flip.
+      const syncedLabel = screen
+        .getAllByText("Synchronized")
+        .find((el) => el.tagName === "P");
+      const syncedCard = syncedLabel.closest(".bg-white");
       const errorCard = screen.getByText("Errors").closest(".bg-white");
       const pendingCard = screen.getByText("Pending").closest(".bg-white");
 
@@ -298,13 +313,13 @@ describe("SynchronizeUnitsOverview Component", () => {
         screen.getByText(/Synchronization in progress/),
       ).toBeInTheDocument();
 
-      await vi.advanceTimersByTimeAsync(FULL_SYNC_MS);
-
-      await waitFor(() => {
-        expect(
-          screen.getByText(/Synchronization completed successfully/),
-        ).toBeInTheDocument();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(FULL_SYNC_MS);
       });
+
+      expect(
+        screen.getByText(/Synchronization completed successfully/),
+      ).toBeInTheDocument();
     });
 
     it("syncs only the selected units when Sync Selected is used", async () => {
@@ -318,49 +333,52 @@ describe("SynchronizeUnitsOverview Component", () => {
         screen.getByText(/Synchronization in progress/),
       ).toBeInTheDocument();
 
-      await vi.advanceTimersByTimeAsync(1 * 300 + 1000);
-
-      await waitFor(() => {
-        expect(
-          screen.getByText(/Synchronization completed successfully/),
-        ).toBeInTheDocument();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1 * 300 + 1000);
       });
+
+      expect(
+        screen.getByText(/Synchronization completed successfully/),
+      ).toBeInTheDocument();
     });
 
     it("updates the last-sync timestamp after a full sync", async () => {
       renderComponent();
       fireEvent.click(screen.getByRole("button", { name: /Sync All Units/i }));
-      await vi.advanceTimersByTimeAsync(FULL_SYNC_MS);
 
-      await waitFor(() => {
-        expect(screen.getByText(/Last sync:/)).toBeInTheDocument();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(FULL_SYNC_MS);
       });
+
+      expect(screen.getByText(/Last sync:/)).toBeInTheDocument();
     });
 
     it("still marks an offline unit as an error after a full sync attempt", async () => {
       renderComponent();
       fireEvent.click(screen.getByRole("button", { name: /Sync All Units/i }));
-      await vi.advanceTimersByTimeAsync(FULL_SYNC_MS);
 
-      await waitFor(() => {
-        const row = screen.getByText("ThermaCore Unit 003").closest(
-          ".flex.items-center.justify-between",
-        );
-        expect(within(row).getByText("Sync Failed")).toBeInTheDocument();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(FULL_SYNC_MS);
       });
+
+      const row = screen.getByText("ThermaCore Unit 003").closest(
+        ".flex.items-center.justify-between",
+      );
+      expect(within(row).getByText("Sync Failed")).toBeInTheDocument();
     });
 
     it("leaves a healthy unit synchronized after a full sync", async () => {
       renderComponent();
       fireEvent.click(screen.getByRole("button", { name: /Sync All Units/i }));
-      await vi.advanceTimersByTimeAsync(FULL_SYNC_MS);
 
-      await waitFor(() => {
-        const row = screen.getByText("ThermaCore Unit 001").closest(
-          ".flex.items-center.justify-between",
-        );
-        expect(within(row).getByText("Synchronized")).toBeInTheDocument();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(FULL_SYNC_MS);
       });
+
+      const row = screen.getByText("ThermaCore Unit 001").closest(
+        ".flex.items-center.justify-between",
+      );
+      expect(within(row).getByText("Synchronized")).toBeInTheDocument();
     });
   });
 
