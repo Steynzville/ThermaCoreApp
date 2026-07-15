@@ -39,12 +39,14 @@ const UserRegistrationForm = () => {
   const validateForm = () => {
     const newErrors = {};
 
-    // Required fields
-    if (!formData.username || formData.username.length < 3) {
+    // Required fields - with trimming
+    const trimmedUsername = formData.username.trim();
+    if (!trimmedUsername || trimmedUsername.length < 3) {
       newErrors.username = "Username must be at least 3 characters";
     }
 
-    if (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    const trimmedEmail = formData.email.trim();
+    if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
       newErrors.email = "Valid email is required";
     }
 
@@ -52,11 +54,11 @@ const UserRegistrationForm = () => {
       newErrors.password = "Password must be at least 6 characters";
     }
 
-    if (!formData.firstName) {
+    if (!formData.firstName.trim()) {
       newErrors.firstName = "First name is required";
     }
 
-    if (!formData.lastName) {
+    if (!formData.lastName.trim()) {
       newErrors.lastName = "Last name is required";
     }
 
@@ -64,10 +66,11 @@ const UserRegistrationForm = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  // ✅ FIX: Use functional update for error clearing (no onFocus)
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear error for this field when user starts typing
+    // Clear error for this field when user starts typing using functional update
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
@@ -84,20 +87,65 @@ const UserRegistrationForm = () => {
     setIsSubmitting(true);
 
     try {
-      const result = await selfRegister(formData);
+      // ✅ FIX: Trim all text fields before submitting
+      const submitData = {
+        username: formData.username.trim(),
+        email: formData.email.trim(),
+        password: formData.password,
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        phoneNumber: formData.phoneNumber.trim(),
+        company: formData.company.trim(),
+        department: formData.department.trim(),
+        position: formData.position.trim(),
+      };
+
+      const result = await selfRegister(submitData);
 
       if (result.success) {
-        // Show confirmation modal instead of toast
         setShowConfirmationModal(true);
       } else {
         toast.error(result.message || "Registration failed. Please try again.");
       }
-    } catch (_error) {
+    } catch (error) {
+      // ✅ FIX: Log the actual error for debugging, but show user-friendly message
+      console.error("Registration error:", error);
       toast.error("Registration failed. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  const handleModalClose = () => {
+    setShowConfirmationModal(false);
+    // Reset form data to prevent stale data
+    setFormData({
+      username: "",
+      email: "",
+      password: "",
+      firstName: "",
+      lastName: "",
+      phoneNumber: "",
+      company: "",
+      department: "",
+      position: "",
+    });
+    setErrors({});
+    navigate("/login");
+  };
+
+  const handleModalOpenChange = (open) => {
+    if (!open) {
+      // If modal is closed without clicking "Return to Login"
+      // Navigate to login anyway to clean up the state
+      setShowConfirmationModal(false);
+      navigate("/login");
+    } else {
+      setShowConfirmationModal(open);
+    }
+  };
+
+  // ✅ FIX: Removed onFocus error clearing - only clear on change
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
@@ -334,7 +382,7 @@ const UserRegistrationForm = () => {
       {/* Confirmation Modal */}
       <Dialog
         open={showConfirmationModal}
-        onOpenChange={setShowConfirmationModal}
+        onOpenChange={handleModalOpenChange}
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -365,10 +413,7 @@ const UserRegistrationForm = () => {
           </DialogHeader>
           <DialogFooter className="sm:justify-center">
             <Button
-              onClick={() => {
-                setShowConfirmationModal(false);
-                navigate("/login");
-              }}
+              onClick={handleModalClose}
               className="w-full sm:w-auto"
             >
               Return to Login
