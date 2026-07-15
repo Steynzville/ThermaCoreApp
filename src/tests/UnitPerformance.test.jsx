@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * Tests for UnitPerformance Component
  *
@@ -263,7 +264,6 @@ describe("UnitPerformance", () => {
       expect(screen.getByText(/Unit with ID "NONEXISTENT" could not be found/i)).toBeInTheDocument();
     });
 
-    // ✅ FIX: Properly handle window.history mock with restoration
     it("should go back when Go Back button is clicked", () => {
       const mockHistoryBack = vi.fn();
       const originalHistory = window.history;
@@ -492,10 +492,9 @@ describe("UnitPerformance", () => {
         </TestWrapper>,
       );
 
-      expect(screen.getByText(/N/A/)).toBeInTheDocument();
+      expect(screen.getByText("N/A")).toBeInTheDocument();
     });
 
-    // ✅ FIX: Actually test the zero initialInvestment guard
     it("should handle zero initialInvestment gracefully", async () => {
       render(
         <TestWrapper>
@@ -520,10 +519,9 @@ describe("UnitPerformance", () => {
         expect(screen.queryByText(/Infinity/)).not.toBeInTheDocument();
       });
 
-      // ROI should show 0.00% or N/A
+      // ROI should show 0.00%
       await waitFor(() => {
-        const roiText = screen.getByText(/0.00%/);
-        expect(roiText).toBeInTheDocument();
+        expect(screen.getByText("0.00%")).toBeInTheDocument();
       });
     });
   });
