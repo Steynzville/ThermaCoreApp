@@ -3,6 +3,7 @@
  * Tests rendering, data loading, interactions, and all edge cases
  */
 
+import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { act } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -69,36 +70,22 @@ vi.mock("@/components/ui/card", () => ({
   CardTitle: ({ children }) => <div>{children}</div>,
 }));
 
-// ✅ FIX: Simplified Select mock - just render a select with options
+// ✅ FIX: Simplified Select mock - just render a select with hardcoded options
 vi.mock("@/components/ui/select", () => ({
-  Select: ({ children, value, onValueChange }) => {
-    // Extract options from children
-    let options = [];
-    const extractOptions = (node) => {
-      if (!node) return;
-      if (node.type?.name === 'SelectItem' || node.type?.displayName === 'SelectItem') {
-        options.push({ value: node.props.value, label: node.props.children });
-      }
-      if (node.props?.children) {
-        React.Children.forEach(node.props.children, extractOptions);
-      }
-    };
-    React.Children.forEach(children, extractOptions);
-
-    return (
-      <div data-testid="select">
-        <select 
-          data-testid="select-trigger" 
-          value={value || "24h"}
-          onChange={(e) => onValueChange(e.target.value)}
-        >
-          {options.map((opt) => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-          ))}
-        </select>
-      </div>
-    );
-  },
+  Select: ({ value, onValueChange }) => (
+    <div data-testid="select">
+      <select 
+        data-testid="select-trigger" 
+        value={value || "24h"}
+        onChange={(e) => onValueChange(e.target.value)}
+      >
+        <option value="1h">Last Hour</option>
+        <option value="24h">Last 24h</option>
+        <option value="7d">Last 7 Days</option>
+        <option value="30d">Last 30 Days</option>
+      </select>
+    </div>
+  ),
   SelectContent: ({ children }) => <>{children}</>,
   SelectItem: ({ children, value }) => null,
   SelectTrigger: ({ children }) => <>{children}</>,
@@ -107,16 +94,16 @@ vi.mock("@/components/ui/select", () => ({
 
 // Tabs mock with actual switching state
 vi.mock("@/components/ui/tabs", () => {
-  const React = require("react");
+  const ReactMock = require("react");
   return {
     Tabs: ({ children, defaultValue }) => {
-      const [active, setActive] = React.useState(defaultValue);
-      return React.Children.map(children, (child) =>
-        React.cloneElement(child, { activeTab: active, onTabChange: setActive })
+      const [active, setActive] = ReactMock.useState(defaultValue);
+      return ReactMock.Children.map(children, (child) =>
+        ReactMock.cloneElement(child, { activeTab: active, onTabChange: setActive })
       );
     },
     TabsList: ({ children, activeTab, onTabChange }) =>
-      <div>{React.Children.map(children, (c) => React.cloneElement(c, { activeTab, onTabChange }))}</div>,
+      <div>{ReactMock.Children.map(children, (c) => ReactMock.cloneElement(c, { activeTab, onTabChange }))}</div>,
     TabsTrigger: ({ children, value, onTabChange }) =>
       <button data-tab-value={value} onClick={() => onTabChange(value)}>{children}</button>,
     TabsContent: ({ children, value, activeTab }) =>
