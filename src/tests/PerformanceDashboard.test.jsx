@@ -294,6 +294,17 @@ describe("PerformanceDashboard", () => {
     };
   });
 
+  // Helper to get card by title
+  const getCardByTitle = (title) => {
+    const elements = document.querySelectorAll('[class*="rounded-lg border"]');
+    for (const el of elements) {
+      if (el.textContent.includes(title)) {
+        return el;
+      }
+    }
+    return null;
+  };
+
   // ============================================================
   // RENDERING TESTS
   // ============================================================
@@ -363,13 +374,12 @@ describe("PerformanceDashboard", () => {
         user: { id: "1", username: "admin", role: "admin" },
         isAuthenticated: true,
       };
-      const { container } = render(<PerformanceDashboard />);
+      render(<PerformanceDashboard />);
       
-      // Find the Live: Power Generation card
-      const powerCards = container.querySelectorAll('[class*="rounded-lg border"]');
-      const powerCard = powerCards[3];
+      // Find the Live: Power Generation card by title
+      const powerCard = getCardByTitle("Live: Power Generation");
+      expect(powerCard).toBeInTheDocument();
       // Sum of all currentPower values from the 20 units
-      // 0+11.8+0+13.2+12.5+49.5+6.7+88.8+22.8+4.3+18.7+2.1+3.1+8.9+5.4+16.7+0+1.9+11.6+78.9 = 356.9
       expect(powerCard.textContent).toContain("356.9");
     });
 
@@ -378,10 +388,10 @@ describe("PerformanceDashboard", () => {
         user: { id: "2", username: "regularuser", role: "user" },
         isAuthenticated: true,
       };
-      const { container } = render(<PerformanceDashboard />);
+      render(<PerformanceDashboard />);
       
-      const powerCards = container.querySelectorAll('[class*="rounded-lg border"]');
-      const powerCard = powerCards[3];
+      const powerCard = getCardByTitle("Live: Power Generation");
+      expect(powerCard).toBeInTheDocument();
       // Only first 5 units: 0+11.8+0+13.2+12.5 = 37.5
       expect(powerCard.textContent).toContain("37.5");
     });
@@ -421,11 +431,10 @@ describe("PerformanceDashboard", () => {
         user: null,
         isAuthenticated: false,
       };
-      const { container } = render(<PerformanceDashboard />);
-      expect(container).toBeInTheDocument();
+      render(<PerformanceDashboard />);
       
-      const powerCards = container.querySelectorAll('[class*="rounded-lg border"]');
-      const powerCard = powerCards[3];
+      const powerCard = getCardByTitle("Live: Power Generation");
+      expect(powerCard).toBeInTheDocument();
       expect(powerCard.textContent).toContain("37.5");
     });
 
@@ -434,11 +443,10 @@ describe("PerformanceDashboard", () => {
         user: { id: "3", username: "unknown", role: null },
         isAuthenticated: true,
       };
-      const { container } = render(<PerformanceDashboard />);
-      expect(container).toBeInTheDocument();
+      render(<PerformanceDashboard />);
       
-      const powerCards = container.querySelectorAll('[class*="rounded-lg border"]');
-      const powerCard = powerCards[3];
+      const powerCard = getCardByTitle("Live: Power Generation");
+      expect(powerCard).toBeInTheDocument();
       expect(powerCard.textContent).toContain("37.5");
     });
 
@@ -485,9 +493,10 @@ describe("PerformanceDashboard", () => {
         user: { id: "1", username: "admin", role: "admin" },
         isAuthenticated: true,
       };
-      const { container } = render(<PerformanceDashboard />);
-      const powerCards = container.querySelectorAll('[class*="rounded-lg border"]');
-      const powerCard = powerCards[3];
+      render(<PerformanceDashboard />);
+      
+      const powerCard = getCardByTitle("Live: Power Generation");
+      expect(powerCard).toBeInTheDocument();
       expect(powerCard.textContent).toContain("356.9");
     });
 
@@ -496,32 +505,36 @@ describe("PerformanceDashboard", () => {
         user: { id: "2", username: "regularuser", role: "user" },
         isAuthenticated: true,
       };
-      const { container } = render(<PerformanceDashboard />);
-      const powerCards = container.querySelectorAll('[class*="rounded-lg border"]');
-      const powerCard = powerCards[3];
+      render(<PerformanceDashboard />);
+      
+      const powerCard = getCardByTitle("Live: Power Generation");
+      expect(powerCard).toBeInTheDocument();
       expect(powerCard.textContent).toContain("37.5");
     });
 
     it("should calculate total parasitic load correctly", () => {
-      const { container } = render(<PerformanceDashboard />);
-      const powerCards = container.querySelectorAll('[class*="rounded-lg border"]');
-      const parasiticCard = powerCards[4];
-      // Sum of all parasiticLoad: 0+0.2+0+0.3+0.2+1.0+0.1+1.8+0.5+0.1+0.4+0+0.1+0.2+0.1+0.3+0+0+0.2+1.6 = 7.1
+      render(<PerformanceDashboard />);
+      
+      const parasiticCard = getCardByTitle("Live: Parasitic Load");
+      expect(parasiticCard).toBeInTheDocument();
+      // Sum of all parasiticLoad: 7.1
       expect(parasiticCard.textContent).toContain("7.1");
     });
 
     it("should calculate total user load correctly", () => {
-      const { container } = render(<PerformanceDashboard />);
-      const powerCards = container.querySelectorAll('[class*="rounded-lg border"]');
-      const userLoadCard = powerCards[5];
-      // Sum of all userLoad: 0+11.1+0+12.9+0+46.9+5.4+84.8+20.3+3.5+15.3+1.9+2.7+7.9+4.3+16.3+0+1.8+11.1+69.4 = 315.6
+      render(<PerformanceDashboard />);
+      
+      const userLoadCard = getCardByTitle("Live: User Load");
+      expect(userLoadCard).toBeInTheDocument();
+      // Sum of all userLoad: 315.6
       expect(userLoadCard.textContent).toContain("315.6");
     });
 
     it("should calculate total feed-in load correctly", () => {
-      const { container } = render(<PerformanceDashboard />);
-      const powerCards = container.querySelectorAll('[class*="rounded-lg border"]');
-      const feedInCard = powerCards[6];
+      render(<PerformanceDashboard />);
+      
+      const feedInCard = getCardByTitle("Live: Feed-in Load");
+      expect(feedInCard).toBeInTheDocument();
       // 356.9 - 7.1 - 315.6 = 34.2
       expect(feedInCard.textContent).toContain("34.2");
     });
@@ -559,7 +572,6 @@ describe("PerformanceDashboard", () => {
   describe("Water generation display", () => {
     it("should display water generation card when units have watergeneration", () => {
       render(<PerformanceDashboard />);
-      // With default data, some units have watergeneration: true
       expect(screen.getByText("Total Water Generated")).toBeInTheDocument();
     });
 
@@ -593,7 +605,6 @@ describe("PerformanceDashboard", () => {
   // ============================================================
   describe("Savings clamping", () => {
     it("should clamp savings to 0 when they'd otherwise be negative", () => {
-      // Use a single unit with very low production
       mockUnitsData = [
         {
           id: "TC001",
@@ -605,7 +616,6 @@ describe("PerformanceDashboard", () => {
         },
       ];
       
-      // Set a very high rebate to force negative savings
       mockFinancialSaveHandler = (onSave) => {
         onSave({
           electricityCost: 0.4,
@@ -633,15 +643,16 @@ describe("PerformanceDashboard", () => {
   // ============================================================
   describe("Feed-in trend", () => {
     it("should show up trend when feed-in load is positive", () => {
-      const { container } = render(<PerformanceDashboard />);
-      const feedInCard = container.querySelectorAll('[class*="rounded-lg border"]')[6];
+      render(<PerformanceDashboard />);
+      
+      const feedInCard = getCardByTitle("Live: Feed-in Load");
+      expect(feedInCard).toBeInTheDocument();
       expect(feedInCard.textContent).toContain("34.2");
       // Should show trending up arrow (green)
       expect(feedInCard.querySelector('[class*="text-green"]')).toBeInTheDocument();
     });
 
     it("should show down trend when feed-in load is zero or negative", () => {
-      // Use units where total feed-in load is 0
       mockUnitsData = [
         {
           id: "TC001",
@@ -653,8 +664,10 @@ describe("PerformanceDashboard", () => {
         },
       ];
       
-      const { container } = render(<PerformanceDashboard />);
-      const feedInCard = container.querySelectorAll('[class*="rounded-lg border"]')[6];
+      render(<PerformanceDashboard />);
+      
+      const feedInCard = getCardByTitle("Live: Feed-in Load");
+      expect(feedInCard).toBeInTheDocument();
       expect(feedInCard.textContent).toContain("0.0");
       // Should show trending down arrow (red)
       expect(feedInCard.querySelector('[class*="text-red"]')).toBeInTheDocument();
@@ -668,11 +681,10 @@ describe("PerformanceDashboard", () => {
     it("should handle empty units data gracefully", () => {
       mockUnitsData = [];
       
-      const { container } = render(<PerformanceDashboard />);
-      expect(container).toBeInTheDocument();
+      render(<PerformanceDashboard />);
       
-      const powerCards = container.querySelectorAll('[class*="rounded-lg border"]');
-      const powerCard = powerCards[3];
+      const powerCard = getCardByTitle("Live: Power Generation");
+      expect(powerCard).toBeInTheDocument();
       expect(powerCard.textContent).toContain("0.0");
     });
 
@@ -826,16 +838,17 @@ describe("PerformanceDashboard", () => {
     it("should display fleet uptime card", () => {
       render(<PerformanceDashboard />);
       expect(screen.getByText("Fleet Uptime")).toBeInTheDocument();
-      // The value is rendered as a separate element
-      const uptimeValue = screen.getByText("97.8", { exact: false });
-      expect(uptimeValue).toBeInTheDocument();
+      // Use getAllByText and pick the one with 97.8
+      const values = screen.getAllByText("97.8");
+      expect(values.length).toBeGreaterThan(0);
     });
 
     it("should display MTTR card", () => {
       render(<PerformanceDashboard />);
       expect(screen.getByText("MTTR")).toBeInTheDocument();
-      const mttrValue = screen.getByText("4.2", { exact: false });
-      expect(mttrValue).toBeInTheDocument();
+      // Use getAllByText and pick the one with 4.2
+      const values = screen.getAllByText("4.2");
+      expect(values.length).toBeGreaterThan(0);
     });
 
     it("should display days since failure card", () => {
@@ -843,8 +856,8 @@ describe("PerformanceDashboard", () => {
       expect(
         screen.getByText("Consecutive days of Optimal Operation"),
       ).toBeInTheDocument();
-      const daysValue = screen.getByText("23", { exact: false });
-      expect(daysValue).toBeInTheDocument();
+      const values = screen.getAllByText("23");
+      expect(values.length).toBeGreaterThan(0);
     });
   });
 
