@@ -20,53 +20,60 @@ vi.mock("react-router-dom", async () => {
   };
 });
 
-// Mock units data with more variety
-const mockUnits = [
-  {
-    id: 1,
-    name: "ThermaCore Unit 001",
-    location: "Plant A",
-    client: "Client Alpha",
-    status: "online",
-    hasAlert: false,
-    healthStatus: "good",
-    currentPower: 75.5,
-    water_level: 150,
-  },
-  {
-    id: 2,
-    name: "ThermaCore Unit 002",
-    location: "Plant B",
-    client: "Client Beta",
-    status: "online",
-    hasAlert: true,
-    healthStatus: "warning",
-    currentPower: 60.2,
-    water_level: 120,
-  },
-  {
-    id: 3,
-    name: "ThermaCore Unit 003",
-    location: "Plant C",
-    client: "Client Gamma",
-    status: "offline",
-    hasAlert: false,
-    healthStatus: "critical",
-    currentPower: 0,
-    water_level: 80,
-  },
-  {
-    id: 4,
-    name: "ThermaCore Unit 004",
-    location: "Plant D",
-    client: "Client Delta",
-    status: "online",
-    hasAlert: false,
-    healthStatus: "good",
-    currentPower: 90.1,
-    water_level: 200,
-  },
-];
+// `vi.mock` factories are hoisted above the rest of the module, so a plain
+// `const mockUnits = [...]` declared below would still be in its temporal
+// dead zone when the factory below runs, throwing "Cannot access
+// 'mockUnits' before initialization". `vi.hoisted` runs its callback at the
+// same hoisted point, so the value exists by the time the mock factory (and
+// the rest of this file) reference it.
+const { mockUnits } = vi.hoisted(() => ({
+  mockUnits: [
+    {
+      id: 1,
+      name: "ThermaCore Unit 001",
+      location: "Plant A",
+      client: "Client Alpha",
+      status: "online",
+      hasAlert: false,
+      healthStatus: "good",
+      currentPower: 75.5,
+      water_level: 150,
+    },
+    {
+      id: 2,
+      name: "ThermaCore Unit 002",
+      location: "Plant B",
+      client: "Client Beta",
+      status: "online",
+      hasAlert: true,
+      healthStatus: "warning",
+      currentPower: 60.2,
+      water_level: 120,
+    },
+    {
+      id: 3,
+      name: "ThermaCore Unit 003",
+      location: "Plant C",
+      client: "Client Gamma",
+      status: "offline",
+      hasAlert: false,
+      healthStatus: "critical",
+      currentPower: 0,
+      water_level: 80,
+    },
+    {
+      id: 4,
+      name: "ThermaCore Unit 004",
+      location: "Plant D",
+      client: "Client Delta",
+      status: "online",
+      hasAlert: false,
+      healthStatus: "good",
+      currentPower: 90.1,
+      water_level: 200,
+    },
+  ],
+}));
 
 vi.mock("../data/mockUnits", () => ({
   units: mockUnits,
@@ -194,35 +201,36 @@ describe("SynchronizeUnitsOverview Component", () => {
     it("should allow selecting individual units", async () => {
       const user = userEvent.setup();
       renderComponent();
-      
+
       const checkboxes = screen.getAllByRole("checkbox");
-      expect(checkboxes.length).toBe(mockUnits.length + 1); // +1 for "Select All" if present
-      
-      // Click first unit checkbox
-      await user.click(checkboxes[1]);
-      expect(checkboxes[1]).toBeChecked();
+      // One checkbox per unit — "Select All" is a plain button, not a
+      // checkbox, so there's no extra master checkbox to account for.
+      expect(checkboxes.length).toBe(mockUnits.length);
+
+      // Click first unit's checkbox
+      await user.click(checkboxes[0]);
+      expect(checkboxes[0]).toBeChecked();
     });
 
     it("should show selected count in sync button", async () => {
       const user = userEvent.setup();
       renderComponent();
-      
+
       const checkboxes = screen.getAllByRole("checkbox");
-      await user.click(checkboxes[1]);
-      
+      await user.click(checkboxes[0]);
+
       expect(screen.getByText(/Sync Selected \(1\)/)).toBeInTheDocument();
     });
 
     it("should select all units when select all is clicked", async () => {
       const user = userEvent.setup();
       renderComponent();
-      
+
       const selectAllButton = screen.getByText("Select All");
       await user.click(selectAllButton);
-      
+
       const checkboxes = screen.getAllByRole("checkbox");
       checkboxes.forEach((checkbox) => {
-        // Skip the first checkbox if it's "Select All"
         expect(checkbox).toBeChecked();
       });
     });
@@ -230,13 +238,13 @@ describe("SynchronizeUnitsOverview Component", () => {
     it("should clear selection when clear is clicked", async () => {
       const user = userEvent.setup();
       renderComponent();
-      
+
       const selectAllButton = screen.getByText("Select All");
       await user.click(selectAllButton);
-      
+
       const clearButton = screen.getByText("Clear");
       await user.click(clearButton);
-      
+
       const checkboxes = screen.getAllByRole("checkbox");
       checkboxes.forEach((checkbox) => {
         expect(checkbox).not.toBeChecked();
@@ -246,16 +254,16 @@ describe("SynchronizeUnitsOverview Component", () => {
     it("should toggle unit selection when checkbox is clicked", async () => {
       const user = userEvent.setup();
       renderComponent();
-      
+
       const checkboxes = screen.getAllByRole("checkbox");
       // Initially unchecked
-      expect(checkboxes[1]).not.toBeChecked();
-      
-      await user.click(checkboxes[1]);
-      expect(checkboxes[1]).toBeChecked();
-      
-      await user.click(checkboxes[1]);
-      expect(checkboxes[1]).not.toBeChecked();
+      expect(checkboxes[0]).not.toBeChecked();
+
+      await user.click(checkboxes[0]);
+      expect(checkboxes[0]).toBeChecked();
+
+      await user.click(checkboxes[0]);
+      expect(checkboxes[0]).not.toBeChecked();
     });
   });
 
@@ -263,16 +271,16 @@ describe("SynchronizeUnitsOverview Component", () => {
     it("should sync all units when sync all is clicked", async () => {
       const user = userEvent.setup();
       renderComponent();
-      
+
       const syncAllButton = screen.getByText("Sync All Units");
       await user.click(syncAllButton);
-      
+
       // Should show syncing state
       expect(screen.getByText(/Synchronization in progress/)).toBeInTheDocument();
-      
+
       // Fast-forward timers
       await vi.advanceTimersByTimeAsync(3000);
-      
+
       // Should show success state
       await waitFor(() => {
         expect(screen.getByText(/Synchronization completed successfully/)).toBeInTheDocument();
@@ -282,20 +290,20 @@ describe("SynchronizeUnitsOverview Component", () => {
     it("should sync selected units when sync selected is clicked", async () => {
       const user = userEvent.setup();
       renderComponent();
-      
+
       // Select first unit
       const checkboxes = screen.getAllByRole("checkbox");
-      await user.click(checkboxes[1]);
-      
+      await user.click(checkboxes[0]);
+
       const syncSelectedButton = screen.getByText(/Sync Selected/);
       await user.click(syncSelectedButton);
-      
+
       // Should show syncing state
       expect(screen.getByText(/Synchronization in progress/)).toBeInTheDocument();
-      
+
       // Fast-forward timers
       await vi.advanceTimersByTimeAsync(3000);
-      
+
       // Should show success state
       await waitFor(() => {
         expect(screen.getByText(/Synchronization completed successfully/)).toBeInTheDocument();
@@ -304,7 +312,7 @@ describe("SynchronizeUnitsOverview Component", () => {
 
     it("should disable sync selected when no units are selected", () => {
       renderComponent();
-      
+
       const syncSelectedButton = screen.getByText(/Sync Selected \(0\)/);
       expect(syncSelectedButton).toBeDisabled();
     });
@@ -312,22 +320,22 @@ describe("SynchronizeUnitsOverview Component", () => {
     it("should disable sync all during sync", async () => {
       const user = userEvent.setup();
       renderComponent();
-      
+
       const syncAllButton = screen.getByText("Sync All Units");
       await user.click(syncAllButton);
-      
+
       expect(syncAllButton).toBeDisabled();
     });
 
     it("should update last sync time after successful sync", async () => {
       const user = userEvent.setup();
       renderComponent();
-      
+
       const syncAllButton = screen.getByText("Sync All Units");
       await user.click(syncAllButton);
-      
+
       await vi.advanceTimersByTimeAsync(3000);
-      
+
       // Last sync time should be updated
       await waitFor(() => {
         const lastSyncText = screen.getByText(/Last sync:/);
@@ -338,15 +346,35 @@ describe("SynchronizeUnitsOverview Component", () => {
     it("should update unit statuses after sync", async () => {
       const user = userEvent.setup();
       renderComponent();
-      
+
       const syncAllButton = screen.getByText("Sync All Units");
       await user.click(syncAllButton);
-      
+
       await vi.advanceTimersByTimeAsync(3000);
-      
+
       // Unit statuses should be updated
       await waitFor(() => {
         expect(screen.getByText("Synchronized")).toBeInTheDocument();
+      });
+    });
+
+    it("keeps an online unit with critical health marked as an error after sync (regression: case-sensitive healthStatus check)", async () => {
+      const user = userEvent.setup();
+      renderComponent();
+
+      const syncAllButton = screen.getByText("Sync All Units");
+      await user.click(syncAllButton);
+      await vi.advanceTimersByTimeAsync(3000);
+
+      // Unit 004 is online with no alert and "good" health, so it should
+      // synchronize successfully — this is the counterpart check to make
+      // sure the fix to the "critical" comparison didn't flip healthy
+      // units into an error state.
+      await waitFor(() => {
+        const unitRow = screen.getByText("ThermaCore Unit 004").closest(
+          ".flex.items-center.justify-between",
+        );
+        expect(within(unitRow).getByText("Synchronized")).toBeInTheDocument();
       });
     });
   });
@@ -429,24 +457,24 @@ describe("SynchronizeUnitsOverview Component", () => {
     it("should highlight selected units with blue border", async () => {
       const user = userEvent.setup();
       renderComponent();
-      
+
       const checkboxes = screen.getAllByRole("checkbox");
-      await user.click(checkboxes[1]);
-      
-      const row = checkboxes[1].closest(".flex")?.parentElement;
+      await user.click(checkboxes[0]);
+
+      const row = checkboxes[0].closest(".flex")?.parentElement;
       expect(row).toHaveClass("border-blue-500");
     });
 
     it("should show selected count", async () => {
       const user = userEvent.setup();
       renderComponent();
-      
+
       const checkboxes = screen.getAllByRole("checkbox");
-      await user.click(checkboxes[1]);
-      
+      await user.click(checkboxes[0]);
+
       expect(screen.getByText(/Sync Selected \(1\)/)).toBeInTheDocument();
-      
-      await user.click(checkboxes[2]);
+
+      await user.click(checkboxes[1]);
       expect(screen.getByText(/Sync Selected \(2\)/)).toBeInTheDocument();
     });
   });
@@ -455,10 +483,10 @@ describe("SynchronizeUnitsOverview Component", () => {
     it("should show syncing state during sync", async () => {
       const user = userEvent.setup();
       renderComponent();
-      
+
       const syncAllButton = screen.getByText("Sync All Units");
       await user.click(syncAllButton);
-      
+
       // Should show spinning refresh icon and syncing text
       expect(screen.getByText(/Synchronization in progress/)).toBeInTheDocument();
     });
@@ -466,12 +494,12 @@ describe("SynchronizeUnitsOverview Component", () => {
     it("should complete sync after all units are processed", async () => {
       const user = userEvent.setup();
       renderComponent();
-      
+
       const syncAllButton = screen.getByText("Sync All Units");
       await user.click(syncAllButton);
-      
+
       await vi.advanceTimersByTimeAsync(3000);
-      
+
       await waitFor(() => {
         expect(screen.getByText(/Synchronization completed successfully/)).toBeInTheDocument();
       });
