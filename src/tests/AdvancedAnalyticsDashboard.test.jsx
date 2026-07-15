@@ -69,22 +69,21 @@ vi.mock("@/components/ui/card", () => ({
   CardTitle: ({ children }) => <div>{children}</div>,
 }));
 
-// ✅ FIX: Proper Select mock without nested divs inside select
+// ✅ FIX: Simplified Select mock - just render a select with options
 vi.mock("@/components/ui/select", () => ({
   Select: ({ children, value, onValueChange }) => {
-    // Extract SelectItem children to build options
-    const options = [];
-    const items = [];
-    React.Children.forEach(children, (child) => {
-      if (child.type?.name === 'SelectContent' || child.type?.displayName === 'SelectContent') {
-        React.Children.forEach(child.props.children, (item) => {
-          if (item.type?.name === 'SelectItem' || item.type?.displayName === 'SelectItem') {
-            options.push({ value: item.props.value, label: item.props.children });
-            items.push(item);
-          }
-        });
+    // Extract options from children
+    let options = [];
+    const extractOptions = (node) => {
+      if (!node) return;
+      if (node.type?.name === 'SelectItem' || node.type?.displayName === 'SelectItem') {
+        options.push({ value: node.props.value, label: node.props.children });
       }
-    });
+      if (node.props?.children) {
+        React.Children.forEach(node.props.children, extractOptions);
+      }
+    };
+    React.Children.forEach(children, extractOptions);
 
     return (
       <div data-testid="select">
@@ -101,7 +100,7 @@ vi.mock("@/components/ui/select", () => ({
     );
   },
   SelectContent: ({ children }) => <>{children}</>,
-  SelectItem: ({ children, value }) => null, // Rendered via Select
+  SelectItem: ({ children, value }) => null,
   SelectTrigger: ({ children }) => <>{children}</>,
   SelectValue: () => null,
 }));
