@@ -3,7 +3,6 @@
  * Tests rendering, data loading, interactions, and all edge cases
  */
 
-import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { act } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -70,44 +69,61 @@ vi.mock("@/components/ui/card", () => ({
   CardTitle: ({ children }) => <div>{children}</div>,
 }));
 
-// ✅ FIX: Simplified Select mock - just render a select with hardcoded options
-vi.mock("@/components/ui/select", () => ({
-  Select: ({ value, onValueChange }) => (
-    <div data-testid="select">
-      <select 
-        data-testid="select-trigger" 
-        value={value || "24h"}
-        onChange={(e) => onValueChange(e.target.value)}
-      >
-        <option value="1h">Last Hour</option>
-        <option value="24h">Last 24h</option>
-        <option value="7d">Last 7 Days</option>
-        <option value="30d">Last 30 Days</option>
-      </select>
-    </div>
-  ),
-  SelectContent: ({ children }) => <>{children}</>,
-  SelectItem: ({ children, value }) => null,
-  SelectTrigger: ({ children }) => <>{children}</>,
-  SelectValue: () => null,
-}));
+// ✅ CORRECT FIX: Use React.createElement to avoid JSX transform issues
+vi.mock("@/components/ui/select", () => {
+  const React = require("react");
+  return {
+    Select: ({ value, onValueChange }) =>
+      React.createElement(
+        "div",
+        { "data-testid": "select" },
+        React.createElement(
+          "select",
+          {
+            "data-testid": "select-trigger",
+            value: value || "24h",
+            onChange: (e) => onValueChange(e.target.value),
+          },
+          React.createElement("option", { value: "1h" }, "Last Hour"),
+          React.createElement("option", { value: "24h" }, "Last 24h"),
+          React.createElement("option", { value: "7d" }, "Last 7 Days"),
+          React.createElement("option", { value: "30d" }, "Last 30 Days")
+        )
+      ),
+    SelectContent: ({ children }) => children,
+    SelectItem: () => null,
+    SelectTrigger: ({ children }) => children,
+    SelectValue: () => null,
+  };
+});
 
-// Tabs mock with actual switching state
 vi.mock("@/components/ui/tabs", () => {
-  const ReactMock = require("react");
+  const React = require("react");
   return {
     Tabs: ({ children, defaultValue }) => {
-      const [active, setActive] = ReactMock.useState(defaultValue);
-      return ReactMock.Children.map(children, (child) =>
-        ReactMock.cloneElement(child, { activeTab: active, onTabChange: setActive })
+      const [active, setActive] = React.useState(defaultValue);
+      return React.Children.map(children, (child) =>
+        React.cloneElement(child, { activeTab: active, onTabChange: setActive })
       );
     },
     TabsList: ({ children, activeTab, onTabChange }) =>
-      <div>{ReactMock.Children.map(children, (c) => ReactMock.cloneElement(c, { activeTab, onTabChange }))}</div>,
+      React.createElement(
+        "div",
+        null,
+        React.Children.map(children, (c) =>
+          React.cloneElement(c, { activeTab, onTabChange })
+        )
+      ),
     TabsTrigger: ({ children, value, onTabChange }) =>
-      <button data-tab-value={value} onClick={() => onTabChange(value)}>{children}</button>,
+      React.createElement(
+        "button",
+        { "data-tab-value": value, onClick: () => onTabChange(value) },
+        children
+      ),
     TabsContent: ({ children, value, activeTab }) =>
-      activeTab === value ? <div data-testid={`tab-content-${value}`}>{children}</div> : null,
+      activeTab === value
+        ? React.createElement("div", { "data-testid": `tab-content-${value}` }, children)
+        : null,
   };
 });
 
@@ -275,6 +291,13 @@ describe("AdvancedAnalyticsDashboard", () => {
       render(<AdvancedAnalyticsDashboard />);
       await waitForDataLoad();
 
+      // Check that all tab triggers are rendered (always visible)
+      expect(screen.getByText("Trends & Performance")).toBeInTheDocument();
+      expect(screen.getByText("Anomaly Detection")).toBeInTheDocument();
+      expect(screen.getByText("Alert Analysis")).toBeInTheDocument();
+      expect(screen.getByText("Unit Comparison")).toBeInTheDocument();
+
+      // ✅ RESTORED: Verify only the active tab content is visible
       expect(screen.getByTestId("tab-content-trends")).toBeInTheDocument();
       expect(screen.queryByTestId("tab-content-anomalies")).not.toBeInTheDocument();
       expect(screen.queryByTestId("tab-content-alerts")).not.toBeInTheDocument();
@@ -288,6 +311,12 @@ describe("AdvancedAnalyticsDashboard", () => {
       const anomaliesTab = screen.getByText("Anomaly Detection");
       fireEvent.click(anomaliesTab);
       
+      // Wait for tab content to update
+      await waitFor(() => {
+        expect(screen.getByText("Recent Anomalies")).toBeInTheDocument();
+      });
+
+      // ✅ RESTORED: Verify only the active tab content is visible
       expect(screen.getByTestId("tab-content-anomalies")).toBeInTheDocument();
       expect(screen.queryByTestId("tab-content-trends")).not.toBeInTheDocument();
     });
@@ -299,6 +328,12 @@ describe("AdvancedAnalyticsDashboard", () => {
       const alertsTab = screen.getByText("Alert Analysis");
       fireEvent.click(alertsTab);
       
+      // Wait for tab content to update
+      await waitFor(() => {
+        expect(screen.getByText("Alert Patterns")).toBeInTheDocument();
+      });
+
+      // ✅ RESTORED: Verify only the active tab content is visible
       expect(screen.getByTestId("tab-content-alerts")).toBeInTheDocument();
       expect(screen.queryByTestId("tab-content-trends")).not.toBeInTheDocument();
     });
@@ -310,6 +345,12 @@ describe("AdvancedAnalyticsDashboard", () => {
       const unitsTab = screen.getByText("Unit Comparison");
       fireEvent.click(unitsTab);
       
+      // Wait for tab content to update
+      await waitFor(() => {
+        expect(screen.getByText("Boiler Alpha")).toBeInTheDocument();
+      });
+
+      // ✅ RESTORED: Verify only the active tab content is visible
       expect(screen.getByTestId("tab-content-units")).toBeInTheDocument();
       expect(screen.queryByTestId("tab-content-trends")).not.toBeInTheDocument();
     });
@@ -406,10 +447,11 @@ describe("AdvancedAnalyticsDashboard", () => {
       const anomaliesTab = screen.getByText("Anomaly Detection");
       fireEvent.click(anomaliesTab);
       
-      // Look for anomaly data with more specific queries
-      // The sensor IDs are rendered inside Badge components
-      const sensorIds = screen.getAllByText(/SENS_/);
-      expect(sensorIds.length).toBeGreaterThan(0);
+      // Wait for anomalies to load
+      await waitFor(() => {
+        const sensorIds = screen.getAllByText(/SENS_/);
+        expect(sensorIds.length).toBeGreaterThan(0);
+      });
       
       // Check for scores
       expect(screen.getByText("Score: 4.2")).toBeInTheDocument();
@@ -423,8 +465,9 @@ describe("AdvancedAnalyticsDashboard", () => {
       const anomaliesTab = screen.getByText("Anomaly Detection");
       fireEvent.click(anomaliesTab);
       
-      // Look for the temperature value with its unit
-      expect(screen.getByText("95.2°C")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("95.2°C")).toBeInTheDocument();
+      });
     });
 
     it("should show pressure unit for pressure anomalies", async () => {
@@ -434,7 +477,9 @@ describe("AdvancedAnalyticsDashboard", () => {
       const anomaliesTab = screen.getByText("Anomaly Detection");
       fireEvent.click(anomaliesTab);
       
-      expect(screen.getByText("145.8 PSI")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("145.8 PSI")).toBeInTheDocument();
+      });
     });
 
     it("should calculate average confidence correctly", async () => {
@@ -444,8 +489,10 @@ describe("AdvancedAnalyticsDashboard", () => {
       const anomaliesTab = screen.getByText("Anomaly Detection");
       fireEvent.click(anomaliesTab);
       
-      // Average of 89.5 and 92.1 = 90.8
-      expect(screen.getByText("90.8%")).toBeInTheDocument();
+      await waitFor(() => {
+        // Average of 89.5 and 92.1 = 90.8
+        expect(screen.getByText("90.8%")).toBeInTheDocument();
+      });
     });
   });
 
@@ -460,8 +507,10 @@ describe("AdvancedAnalyticsDashboard", () => {
       const alertsTab = screen.getByText("Alert Analysis");
       fireEvent.click(alertsTab);
       
-      expect(screen.getByText("23")).toBeInTheDocument();
-      expect(screen.getByText("Total Alerts")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("23")).toBeInTheDocument();
+        expect(screen.getByText("Total Alerts")).toBeInTheDocument();
+      });
     });
 
     it("should display daily average alerts", async () => {
@@ -471,8 +520,10 @@ describe("AdvancedAnalyticsDashboard", () => {
       const alertsTab = screen.getByText("Alert Analysis");
       fireEvent.click(alertsTab);
       
-      expect(screen.getByText("3.3")).toBeInTheDocument();
-      expect(screen.getByText("Daily Average")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("3.3")).toBeInTheDocument();
+        expect(screen.getByText("Daily Average")).toBeInTheDocument();
+      });
     });
   });
 
@@ -487,11 +538,13 @@ describe("AdvancedAnalyticsDashboard", () => {
       const unitsTab = screen.getByText("Unit Comparison");
       fireEvent.click(unitsTab);
       
-      expect(screen.getByText("Boiler Alpha")).toBeInTheDocument();
-      expect(screen.getByText("Chiller Beta")).toBeInTheDocument();
-      expect(screen.getByText("HVAC Gamma")).toBeInTheDocument();
-      expect(screen.getByText("Pump Delta")).toBeInTheDocument();
-      expect(screen.getByText("Compressor Epsilon")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("Boiler Alpha")).toBeInTheDocument();
+        expect(screen.getByText("Chiller Beta")).toBeInTheDocument();
+        expect(screen.getByText("HVAC Gamma")).toBeInTheDocument();
+        expect(screen.getByText("Pump Delta")).toBeInTheDocument();
+        expect(screen.getByText("Compressor Epsilon")).toBeInTheDocument();
+      });
     });
 
     it("should display performance scores for each unit", async () => {
@@ -501,11 +554,13 @@ describe("AdvancedAnalyticsDashboard", () => {
       const unitsTab = screen.getByText("Unit Comparison");
       fireEvent.click(unitsTab);
       
-      expect(screen.getByText("98%")).toBeInTheDocument();
-      expect(screen.getByText("87%")).toBeInTheDocument();
-      expect(screen.getByText("92%")).toBeInTheDocument();
-      expect(screen.getByText("76%")).toBeInTheDocument();
-      expect(screen.getByText("45%")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("98%")).toBeInTheDocument();
+        expect(screen.getByText("87%")).toBeInTheDocument();
+        expect(screen.getByText("92%")).toBeInTheDocument();
+        expect(screen.getByText("76%")).toBeInTheDocument();
+        expect(screen.getByText("45%")).toBeInTheDocument();
+      });
     });
 
     it("should display status badges for each unit", async () => {
@@ -545,8 +600,10 @@ describe("AdvancedAnalyticsDashboard", () => {
       const alertsTab = screen.getByText("Alert Analysis");
       fireEvent.click(alertsTab);
       
-      expect(screen.getByTestId("pie-chart")).toBeInTheDocument();
-      expect(screen.getByTestId("pie")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByTestId("pie-chart")).toBeInTheDocument();
+        expect(screen.getByTestId("pie")).toBeInTheDocument();
+      });
     });
   });
 
