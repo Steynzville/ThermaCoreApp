@@ -9,7 +9,7 @@
  *    DEV stubbed falsy) so the real fetch/error/retry/polling paths run.
  */
 
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BrowserRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -153,7 +153,11 @@ const forceLiveMode = () => {
   vi.stubEnv("DEV", "");
 };
 
+// ============================================================
+// CRITICAL: Clean up after each test to prevent polling leaks
+// ============================================================
 afterEach(() => {
+  cleanup(); // Unmounts all components, runs polling cleanup
   vi.unstubAllEnvs();
   vi.clearAllMocks();
   vi.useRealTimers();
@@ -580,7 +584,7 @@ describe("MultiProtocolManager - page visibility", () => {
 });
 
 // ============================================================
-// Polling behavior - simplified to avoid hanging
+// Polling behavior (using fake timers)
 // ============================================================
 
 describe("MultiProtocolManager - polling", () => {
