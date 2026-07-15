@@ -7,23 +7,31 @@ const FinancialAssumptions = ({
   onSave,
   currentAssumptions,
 }) => {
-  const [assumptions, setAssumptions] = useState({
-    electricityCost: 0.4, // Cost per kWh
-    rebate: 0.05, // Rebate per kWh
-    feedInTariff: 0.08, // Feed-in tariff per kWh
-  });
+  // Default values
+  const DEFAULT_ASSUMPTIONS = {
+    electricityCost: 0.4,
+    rebate: 0.05,
+    feedInTariff: 0.08,
+  };
+
+  const [assumptions, setAssumptions] = useState(DEFAULT_ASSUMPTIONS);
 
   // Update local state when currentAssumptions prop changes or modal opens
   useEffect(() => {
-    if (isOpen && currentAssumptions) {
-      setAssumptions(currentAssumptions);
+    if (isOpen) {
+      // Always sync when modal opens - use currentAssumptions or defaults
+      setAssumptions(currentAssumptions || DEFAULT_ASSUMPTIONS);
     }
   }, [isOpen, currentAssumptions]);
 
   const handleInputChange = (field, value) => {
+    const numValue = parseFloat(value);
+    // Clamp to 0 if negative or invalid
+    const clampedValue = isNaN(numValue) || numValue < 0 ? 0 : numValue;
+    
     setAssumptions((prev) => ({
       ...prev,
-      [field]: parseFloat(value) || 0,
+      [field]: clampedValue,
     }));
   };
 
@@ -33,10 +41,8 @@ const FinancialAssumptions = ({
   };
 
   const handleCancel = () => {
-    // Reset to current saved assumptions
-    if (currentAssumptions) {
-      setAssumptions(currentAssumptions);
-    }
+    // Reset to current assumptions or defaults
+    setAssumptions(currentAssumptions || DEFAULT_ASSUMPTIONS);
     onClose();
   };
 
@@ -82,13 +88,14 @@ const FinancialAssumptions = ({
 
           <div>
             <label
-              htmlFor="rebatePerMonth"
+              htmlFor="rebatePerKwh"
               className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
             >
-              Rebate per month ($)
+              {/* FIXED: Changed from "per month" to "per kWh" to match data model */}
+              Rebate per kWh ($)
             </label>
             <input
-              id="rebatePerMonth"
+              id="rebatePerKwh"
               type="number"
               step="0.01"
               min="0"
