@@ -18,16 +18,16 @@ import {
 import PageHeader from "./PageHeader";
 import { Card, CardContent, CardHeader } from "./ui/card";
 
-// ✅ FIX: Format revenue to handle millions and thousands correctly
-// Handles the 999.5K-1M boundary properly
+// ✅ FIX: Format revenue with Math.round to handle floating point edge cases
 export const formatRevenue = (amount) => {
-  if (amount >= 999500) {
-    return `$${(amount / 1000000).toFixed(2)}M`;
+  const roundedAmount = Math.round(amount);
+  if (roundedAmount >= 999500) {
+    return `$${(roundedAmount / 1000000).toFixed(2)}M`;
   }
-  if (amount >= 1000) {
-    return `$${(amount / 1000).toFixed(0)}K`;
+  if (roundedAmount >= 1000) {
+    return `$${(roundedAmount / 1000).toFixed(0)}K`;
   }
-  return `$${amount}`;
+  return `$${roundedAmount}`;
 };
 
 // REALISTIC SALES DATA BASED ON ACTUAL 20 UNITS
@@ -82,7 +82,6 @@ const monthlyTrend = [
 
 const COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6"];
 
-// ✅ FIX: Export for testing
 export const renderCustomizedLabel = ({
   cx,
   cy,
