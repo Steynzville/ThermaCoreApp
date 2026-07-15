@@ -9,6 +9,7 @@
 
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { act } from "react";
 import { BrowserRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import React from "react";
@@ -106,12 +107,11 @@ vi.mock("sonner", () => ({
   },
 }));
 
-// Mock apiFetch - IMPORTANT: This must be before the import
+// Mock apiFetch
 vi.mock("../utils/apiFetch", () => ({
   apiGetJson: vi.fn(),
 }));
 
-// Import after mock
 import { toast } from "sonner";
 import { apiGetJson } from "../utils/apiFetch";
 import MultiProtocolManager from "../components/MultiProtocolManager";
@@ -653,33 +653,46 @@ describe("MultiProtocolManager - polling", () => {
     await screen.findByText(/Multi-Protocol Manager/i);
     
     // Wait for the component to settle
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 200));
     
     // Clear initial timeout calls
     setTimeoutSpy.mockClear();
     
-    // Find the polling timeout
+    // Wait for the first poll to be scheduled
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Get the first polling timeout
     const pollingCalls = setTimeoutSpy.mock.calls.filter(
       call => typeof call[0] === 'function' && call[1] >= 10000
     );
     
+    // There should be at least one polling timeout
+    expect(pollingCalls.length).toBeGreaterThan(0);
+    expect(pollingCalls[0][1]).toBe(10000);
+    
+    // Execute the callback to simulate a poll (this will trigger the error)
     if (pollingCalls.length > 0 && typeof pollingCalls[0][0] === 'function') {
-      // Execute the callback to simulate a poll (this will trigger the error)
-      await pollingCalls[0][0]();
+      await act(async () => {
+        await pollingCalls[0][0]();
+      });
     }
     
-    // Wait for the error to be processed
-    await new Promise(resolve => setTimeout(resolve, 50));
+    // Wait for the error to be processed and new timeout to be scheduled
+    await new Promise(resolve => setTimeout(resolve, 200));
     
-    // A new timeout should be scheduled with a longer delay
-    const newPollingCalls = setTimeoutSpy.mock.calls.filter(
+    // Get all polling timeouts now
+    const allPollingCalls = setTimeoutSpy.mock.calls.filter(
       call => typeof call[0] === 'function' && call[1] >= 10000
     );
     
-    // Should have a new polling timeout with a longer delay
-    expect(newPollingCalls.length).toBeGreaterThan(0);
-    // The new delay should be 15s (10 * 1.5)
-    const lastDelay = newPollingCalls[newPollingCalls.length - 1][1];
+    // There should be at least two polling timeouts total
+    expect(allPollingCalls.length).toBeGreaterThan(1);
+    
+    // The first delay should be 10000
+    expect(allPollingCalls[0][1]).toBe(10000);
+    
+    // The last delay should be 15000 (backoff increased)
+    const lastDelay = allPollingCalls[allPollingCalls.length - 1][1];
     expect(lastDelay).toBe(15000);
     
     setTimeoutSpy.mockRestore();
@@ -709,7 +722,7 @@ describe("MultiProtocolManager - polling", () => {
     await screen.findByText(/Multi-Protocol Manager/i);
     
     // Wait for the component to settle
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 200));
     
     // Clear initial timeout calls
     setTimeoutSpy.mockClear();
@@ -724,10 +737,12 @@ describe("MultiProtocolManager - polling", () => {
       if (pollingCalls.length === 0) break;
       
       if (pollingCalls.length > 0 && typeof pollingCalls[0][0] === 'function') {
-        await pollingCalls[0][0]();
+        await act(async () => {
+          await pollingCalls[0][0]();
+        });
         errorCount++;
         // Wait a tiny bit for state updates
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise(resolve => setTimeout(resolve, 50));
       }
     }
     
@@ -778,15 +793,11 @@ describe("MultiProtocolManager - polling", () => {
       call => typeof call[0] === 'function' && call[1] >= 10000
     );
     
-    // When tab is hidden, no polling should be scheduled
-    // The component may have existing timeouts, but no new ones should be added
-    // Check that we don't have any polling timeouts scheduled after visibility change
-    const recentCalls = setTimeoutSpy.mock.calls.filter(
-      call => typeof call[0] === 'function' && call[1] >= 10000
-    );
-    
-    // There should be no recent polling calls after hiding the tab
-    // (existing timeouts might still exist, but we're checking for new ones)
+    // There should be no polling calls after hiding the tab
+    // (The component may have existing timeouts, but we're checking for new ones)
+    // Instead of checking length, we verify that any polling calls found are not newly scheduled
+    // after the visibility change. This is a best-effort check.
+    expect(pollingCalls.length).toBe(0);
     
     setTimeoutSpy.mockRestore();
     unmount();
