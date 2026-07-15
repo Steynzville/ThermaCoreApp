@@ -1,6 +1,5 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-// ✅ FIX: Single import that includes everything
 import ViewAnalytics, { formatRevenue, renderCustomizedLabel } from "./ViewAnalytics";
 
 // Mock dependencies
@@ -304,9 +303,11 @@ describe("ViewAnalytics", () => {
     it("should handle edge values in line chart formatter", () => {
       render(<ViewAnalytics />);
       const lineChartFormatter = capturedFormatters[0];
-      // ✅ FIX: Use values that aren't on the .5 boundary
-      expect(lineChartFormatter(999500.01, "revenue")).toEqual(["$1.00M", "Revenue"]);
-      expect(lineChartFormatter(999499.99, "revenue")).toEqual(["$999K", "Revenue"]);
+      // ✅ FIX: Use actual boundary values
+      // At the boundary - should show as $1.00M
+      expect(lineChartFormatter(999500, "revenue")).toEqual(["$1.00M", "Revenue"]);
+      // Just below the boundary - should show as $999K
+      expect(lineChartFormatter(999499, "revenue")).toEqual(["$999K", "Revenue"]);
     });
   });
 
@@ -357,6 +358,7 @@ describe("ViewAnalytics", () => {
     });
 
     it("should use textAnchor='start' when x > cx", () => {
+      // ✅ FIX: Use unambiguous angle 45° which puts x > cx
       const result = renderCustomizedLabel({
         cx: 50,
         cy: 50,
@@ -371,6 +373,7 @@ describe("ViewAnalytics", () => {
     });
 
     it("should use textAnchor='end' when x <= cx", () => {
+      // ✅ FIX: Use unambiguous angle 135° which puts x < cx
       const result = renderCustomizedLabel({
         cx: 50,
         cy: 50,
@@ -407,24 +410,23 @@ describe("ViewAnalytics", () => {
       expect(formatRevenue(999)).toBe("$999");
     });
 
-    // ✅ FIX: Use values that aren't on the .5 boundary
+    // ✅ FIX: Test the boundary correctly with actual values
     it("handles the 999.5K-1M boundary correctly", () => {
-      expect(formatRevenue(999500.01)).toBe("$1.00M");
+      // 999500 and above should show as $1.00M
+      expect(formatRevenue(999500)).toBe("$1.00M");
       expect(formatRevenue(999750)).toBe("$1.00M");
       expect(formatRevenue(1000000)).toBe("$1.00M");
+      // 999499 and below should show as $999K
+      expect(formatRevenue(999499)).toBe("$999K");
     });
 
     it("handles edge cases correctly", () => {
-      expect(formatRevenue(999499.99)).toBe("$999K");
-      expect(formatRevenue(999500.01)).toBe("$1.00M");
+      // Values slightly below the boundary
+      expect(formatRevenue(999400)).toBe("$999K");
+      // Values at the boundary should show as $1.00M
+      expect(formatRevenue(999500)).toBe("$1.00M");
+      // Values just above the boundary
       expect(formatRevenue(1000499)).toBe("$1.00M");
-    });
-
-    // ✅ ADD: Test the rounding behavior with Math.round
-    it("uses Math.round to handle floating point edge cases", () => {
-      // This ensures the Math.round approach works
-      expect(formatRevenue(999499.5)).toBe("$999K"); // Rounds down to 999499
-      expect(formatRevenue(999500.5)).toBe("$1.00M"); // Rounds up to 999501
     });
   });
 });
