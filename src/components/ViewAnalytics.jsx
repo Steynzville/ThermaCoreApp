@@ -18,9 +18,12 @@ import {
 import PageHeader from "./PageHeader";
 import { Card, CardContent, CardHeader } from "./ui/card";
 
-// ✅ FIX: Format revenue with Math.round to handle floating point edge cases
+// ✅ FIX: Format revenue correctly with proper boundary handling
 export const formatRevenue = (amount) => {
+  // Round to nearest integer to handle floating point edge cases
   const roundedAmount = Math.round(amount);
+  // Use 999500 as the threshold for displaying as millions
+  // This catches values that should show as $1.00M (like 999500 → $1.00M)
   if (roundedAmount >= 999500) {
     return `$${(roundedAmount / 1000000).toFixed(2)}M`;
   }
