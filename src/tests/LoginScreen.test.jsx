@@ -62,8 +62,6 @@ describe("LoginScreen", () => {
     vi.clearAllMocks();
     ensureDocumentBody();
     mockSoundEnabled = true;
-    // Reset any mocks
-    vi.spyOn(authService, "login").mockReset();
   });
 
   // ============================================================
@@ -150,7 +148,6 @@ describe("LoginScreen", () => {
       );
 
       const errorElement = screen.getByText("Test error message");
-      // Check if the class name contains "visible" (works with CSS modules)
       expect(errorElement.className).toContain("visible");
     });
 
@@ -161,7 +158,6 @@ describe("LoginScreen", () => {
         </TestWrapper>,
       );
 
-      // The error container should exist but without the visible class
       const errorElement = document.querySelector("[class*='loginError']");
       expect(errorElement).toBeInTheDocument();
       expect(errorElement.className).not.toContain("visible");
@@ -174,7 +170,6 @@ describe("LoginScreen", () => {
   describe("Client-side validation", () => {
     it("should block submit and show an error when fields are empty", () => {
       const mockSetError = vi.fn();
-      // Create a fresh spy for authService.login
       const loginSpy = vi.spyOn(authService, "login");
       
       render(
@@ -183,7 +178,9 @@ describe("LoginScreen", () => {
         </TestWrapper>,
       );
 
-      fireEvent.click(screen.getByRole("button", { name: "Sign In" }));
+      // Submit the form directly using fireEvent.submit
+      const form = document.querySelector("form");
+      fireEvent.submit(form);
 
       expect(mockSetError).toHaveBeenCalledWith(
         "Please enter both username and password",
@@ -248,7 +245,6 @@ describe("LoginScreen", () => {
       const passwordInput = screen.getByPlaceholderText("Enter password");
       fireEvent.change(passwordInput, { target: { value: "123" } });
 
-      // Check if the class name contains "inputError" (works with CSS modules)
       expect(passwordInput.className).toContain("inputError");
     });
 
@@ -283,10 +279,7 @@ describe("LoginScreen", () => {
 
       fillAndSubmit("user", "123");
 
-      // Should NOT call login
       expect(loginSpy).not.toHaveBeenCalled();
-      
-      // Should show error
       expect(mockSetError).toHaveBeenCalledWith(
         "Password must be at least 6 characters",
       );
@@ -363,7 +356,6 @@ describe("LoginScreen", () => {
         </TestWrapper>,
       );
 
-      // Checkbox is unchecked by default
       fillAndSubmit("admin", "correctpass");
 
       await waitForInDocument(() => {
@@ -470,7 +462,6 @@ describe("LoginScreen", () => {
       const usernameInput = screen.getByPlaceholderText("Enter username");
       fireEvent.focus(usernameInput);
 
-      // Check if the class name contains "inputFocused" (works with CSS modules)
       expect(usernameInput.className).toContain("inputFocused");
     });
 
@@ -527,10 +518,8 @@ describe("LoginScreen", () => {
         </TestWrapper>,
       );
 
-      // Find the logo element by its alt text
       const logo = screen.getByAltText("ThermaCore Logo");
       expect(logo).toBeInTheDocument();
-      // Check if the class name contains "logoSpin" (works with CSS modules)
       expect(logo.className).toContain("logoSpin");
     });
   });
@@ -616,7 +605,6 @@ describe("LoginScreen", () => {
         </TestWrapper>,
       );
 
-      // Find the biometric button by its container
       const biometricHeading = screen.getByText("Biometric Sign In");
       const container = biometricHeading.closest("[class*='biometricSection']");
       const triggerButton = container.querySelector("button");
@@ -644,12 +632,10 @@ describe("LoginScreen", () => {
         ).toBeInTheDocument();
       });
 
-      // Use getAllByText and pick the first one (the button, not the sr-only span)
       const closeButtons = screen.getAllByText("Close");
-      const closeButton = closeButtons[0]; // First one is the button
+      const closeButton = closeButtons[0];
       fireEvent.click(closeButton);
 
-      // Wait for dialog to close
       await waitForInDocument(() => {
         expect(
           screen.queryByText(/Google sign-in is coming soon/i),
