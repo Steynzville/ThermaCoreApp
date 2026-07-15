@@ -4,7 +4,6 @@
  * Coverage strategy:
  *  - "mock mode" tests exercise the component the way the original suite did
  *  - "live mode" tests force isMockMode to false
- *  - Polling tests are included but isolated to prevent hangs
  */
 
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
@@ -162,7 +161,7 @@ afterEach(() => {
 });
 
 // ============================================================
-// Mock-mode rendering tests
+// Mock-mode rendering
 // ============================================================
 
 describe("MultiProtocolManager - basic rendering (mock mode)", () => {
@@ -587,26 +586,19 @@ describe("MultiProtocolManager - page visibility", () => {
 });
 
 // ============================================================
-// Polling behavior - ISOLATED TESTS
+// Polling behavior (using fake timers)
 // ============================================================
-// These tests are isolated in their own describe block so they
-// can be run separately if needed. They use a combination of
-// real timers and setTimeout spying to avoid hanging.
-// 
-// To run only these tests:
-//   pnpm test -- MultiProtocolManager.test.jsx -t "polling"
 describe("MultiProtocolManager - polling", () => {
   beforeEach(() => {
     forceLiveMode();
-    vi.useRealTimers();
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   it("schedules a background poll after the initial load", async () => {
-    const setTimeoutSpy = vi.spyOn(global, 'setTimeout');
     apiGetJson.mockResolvedValue(liveApiResponse());
 
     render(
@@ -617,25 +609,18 @@ describe("MultiProtocolManager - polling", () => {
 
     await screen.findByText(/Multi-Protocol Manager/i);
     
-    // Find the setTimeout call that schedules the polling
-    const setTimeoutCalls = setTimeoutSpy.mock.calls;
-    const pollingCall = setTimeoutCalls.find(call => 
-      typeof call[0] === 'function' && call[1] >= 10000 && call[1] <= 60000
-    );
+    // Fast-forward past the initial load
+    await vi.advanceTimersByTimeAsync(1000);
     
-    // Verify that a polling timeout was scheduled
-    expect(pollingCall).toBeDefined();
+    // After 10s, the first poll should trigger
+    await vi.advanceTimersByTimeAsync(10000);
     
-    // Verify the delay is reasonable (between 10s and 60s)
-    expect(pollingCall[1]).toBeGreaterThanOrEqual(10000);
-    expect(pollingCall[1]).toBeLessThanOrEqual(60000);
-    
-    setTimeoutSpy.mockRestore();
+    // apiGetJson should have been called for initial load + first poll
+    expect(apiGetJson).toHaveBeenCalledTimes(2);
   });
 
   it("increases backoff interval after consecutive errors", async () => {
-    const setTimeoutSpy = vi.spyOn(global, 'setTimeout');
-    
+    // Mock API to fail after first success
     let callCount = 0;
     apiGetJson.mockImplementation(() => {
       callCount++;
@@ -652,51 +637,38 @@ describe("MultiProtocolManager - polling", () => {
     );
 
     await screen.findByText(/Multi-Protocol Manager/i);
-    
-    // Wait for the component to settle
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    // Clear the initial setTimeout calls
-    setTimeoutSpy.mockClear();
-    
-    // Simulate a failed poll by calling the setTimeout callback directly
-    // This is a bit of a hack, but it's the only way to test the backoff
-    // without actually waiting for real time to pass.
-    // 
-    // We're relying on the fact that the first setTimeout callback will
-    // be the polling function. This is fragile, but it's the best we can do.
-    const firstPollingCall = setTimeoutSpy.mock.calls.find(call => 
-      typeof call[0] === 'function' && call[1] >= 10000
-    );
-    
-    if (firstPollingCall && typeof firstPollingCall[0] === 'function') {
-      // Execute the callback to simulate a poll
-      await firstPollingCall[0]();
-    }
-    
-    // Wait for the component to process the error
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    // Now check for a new setTimeout with a longer delay
-    const newPollingCalls = setTimeoutSpy.mock.calls.filter(call => 
-      typeof call[0] === 'function' && call[1] >= 10000
-    );
-    
-    // There should be a new polling timeout scheduled
-    expect(newPollingCalls.length).toBeGreaterThan(0);
-    
-    // The new delay should be 15s (10 * 1.5) or more
-    const lastDelay = newPollingCalls[newPollingCalls.length - 1][1];
-    expect(lastDelay).toBeGreaterThanOrEqual(15000);
-    
-    setTimeoutSpy.mockRestore();
+    await vi.advanceTimersByTimeAsync(1000);
+
+    // Initial load
+    expect(apiGetJson).toHaveBeenCalledTimes(1);
+
+    // First poll: 10s
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(apiGetJson).toHaveBeenCalledTimes(2);
+
+    // After the first error, the component should have
+    // increased the backoff interval. The next poll should
+    // happen at 15s (10 * 1.5)
+    // Wait 14s - should not have fired yet
+    await vi.advanceTimersByTimeAsync(14000);
+    expect(apiGetJson).toHaveBeenCalledTimes(2);
+
+    // Wait 1 more second to reach 15s
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(apiGetJson).toHaveBeenCalledTimes(3);
+
+    // After the second error, the backoff should increase again
+    // to 22.5s (10 * 1.5^2) ≈ 23s
+    // Wait 22s - should not have fired yet
+    await vi.advanceTimersByTimeAsync(22000);
+    expect(apiGetJson).toHaveBeenCalledTimes(3);
+
+    // Wait 1 more second to reach 23s
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(apiGetJson).toHaveBeenCalledTimes(4);
   });
 
   it("caps backoff at 60 seconds", async () => {
-    // This test is complex and requires multiple error cycles
-    // We'll use a more direct approach by spying on setTimeout
-    const setTimeoutSpy = vi.spyOn(global, 'setTimeout');
-    
     let callCount = 0;
     apiGetJson.mockImplementation(() => {
       callCount++;
@@ -713,42 +685,41 @@ describe("MultiProtocolManager - polling", () => {
     );
 
     await screen.findByText(/Multi-Protocol Manager/i);
-    
-    // Wait for the component to settle
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    // Clear the initial setTimeout calls
-    setTimeoutSpy.mockClear();
-    
-    // Simulate multiple error cycles
-    for (let i = 0; i < 6; i++) {
-      // Find the next polling call
-      const pollingCall = setTimeoutSpy.mock.calls.find(call => 
-        typeof call[0] === 'function' && call[1] >= 10000
-      );
-      
-      if (pollingCall && typeof pollingCall[0] === 'function') {
-        await pollingCall[0]();
-        await new Promise(resolve => setTimeout(resolve, 50));
-      }
-    }
-    
-    // After many errors, the delay should be capped at 60s
-    const allCalls = setTimeoutSpy.mock.calls.filter(call => 
-      typeof call[0] === 'function' && call[1] >= 10000
-    );
-    
-    if (allCalls.length > 0) {
-      const lastDelay = allCalls[allCalls.length - 1][1];
-      // The delay should be 60s (capped)
-      expect(lastDelay).toBe(60000);
-    }
-    
-    setTimeoutSpy.mockRestore();
+    await vi.advanceTimersByTimeAsync(1000);
+
+    // Initial load
+    expect(apiGetJson).toHaveBeenCalledTimes(1);
+
+    // First poll: 10s
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(apiGetJson).toHaveBeenCalledTimes(2);
+
+    // Second poll: 15s (10 * 1.5^1)
+    await vi.advanceTimersByTimeAsync(15000);
+    expect(apiGetJson).toHaveBeenCalledTimes(3);
+
+    // Third poll: 22.5s ≈ 23s (10 * 1.5^2)
+    await vi.advanceTimersByTimeAsync(23000);
+    expect(apiGetJson).toHaveBeenCalledTimes(4);
+
+    // Fourth poll: 33.75s ≈ 34s (10 * 1.5^3)
+    await vi.advanceTimersByTimeAsync(34000);
+    expect(apiGetJson).toHaveBeenCalledTimes(5);
+
+    // Fifth poll: 50.625s ≈ 51s (10 * 1.5^4)
+    await vi.advanceTimersByTimeAsync(51000);
+    expect(apiGetJson).toHaveBeenCalledTimes(6);
+
+    // Sixth poll should cap at 60s (10 * 1.5^5 = 75.9, capped to 60)
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(apiGetJson).toHaveBeenCalledTimes(7);
+
+    // Seventh poll: still 60s
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(apiGetJson).toHaveBeenCalledTimes(8);
   });
 
   it("skips polling when the tab is hidden", async () => {
-    const setTimeoutSpy = vi.spyOn(global, 'setTimeout');
     apiGetJson.mockResolvedValue(liveApiResponse());
 
     render(
@@ -758,28 +729,19 @@ describe("MultiProtocolManager - polling", () => {
     );
 
     await screen.findByText(/Multi-Protocol Manager/i);
-    
-    // Clear the initial setTimeout calls
-    setTimeoutSpy.mockClear();
-    
+    await vi.advanceTimersByTimeAsync(1000);
+
     // Hide the tab
     Object.defineProperty(document, "hidden", {
       configurable: true,
       get: () => true,
     });
     document.dispatchEvent(new Event("visibilitychange"));
+
+    // After 10s, the poll should NOT fire because the tab is hidden
+    await vi.advanceTimersByTimeAsync(10000);
     
-    // Wait a moment for the component to react
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    // No new setTimeout calls should be scheduled for polling
-    const pollingCalls = setTimeoutSpy.mock.calls.filter(call => 
-      typeof call[0] === 'function' && call[1] >= 10000
-    );
-    
-    // When tab is hidden, no polling should be scheduled
-    expect(pollingCalls.length).toBe(0);
-    
-    setTimeoutSpy.mockRestore();
+    // apiGetJson should still only have been called once (initial load)
+    expect(apiGetJson).toHaveBeenCalledTimes(1);
   });
 });
