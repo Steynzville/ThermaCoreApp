@@ -27,27 +27,6 @@ afterEach(() => {
 
 /**
  * -----------------------------
- * SUPPRESS ACT WARNINGS - Minimal approach
- * -----------------------------
- */
-// Only suppress the specific act warnings, not all console errors
-const originalError = console.error;
-console.error = (...args) => {
-  const message = typeof args[0] === 'string' ? args[0] : '';
-  
-  // Only suppress act warnings
-  if (message.includes('The current testing environment is not configured to support act')) {
-    return;
-  }
-  
-  originalError(...args);
-};
-
-// Keep console.warn unchanged - don't suppress any warnings
-// This prevents hiding actual issues
-
-/**
- * -----------------------------
  * GLOBAL MATCHMEDIA FIX
  * -----------------------------
  */
