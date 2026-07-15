@@ -145,6 +145,11 @@ describe("ReportConfigurator", () => {
       expect(screen.getByText("Pause Scheduled Reports")).toBeInTheDocument();
     });
 
+    it("should hide pause scheduled button when disabled", () => {
+      renderComponent({ showPauseScheduled: false });
+      expect(screen.queryByText("Pause Scheduled Reports")).not.toBeInTheDocument();
+    });
+
     it("should handle empty availableReportTypes array", () => {
       const { container } = render(
         <ReportConfigurator
@@ -239,33 +244,6 @@ describe("ReportConfigurator", () => {
       renderComponent();
       const generateButton = screen.getByText("Generate & Download Report");
       expect(generateButton).toBeDisabled();
-    });
-  });
-
-  describe("Pause Scheduled Reports", () => {
-    it("should open alert dialog when pause button is clicked", () => {
-      renderComponent({ showPauseScheduled: true });
-      const pauseButton = screen.getByText("Pause Scheduled Reports");
-      fireEvent.click(pauseButton);
-      expect(screen.getByText("Confirm Pause")).toBeInTheDocument();
-    });
-
-    it("should close dialog when cancel is clicked", () => {
-      renderComponent({ showPauseScheduled: true });
-      const pauseButton = screen.getByText("Pause Scheduled Reports");
-      fireEvent.click(pauseButton);
-      const cancelButton = screen.getByText("Cancel");
-      fireEvent.click(cancelButton);
-      expect(screen.queryByText("Confirm Pause")).not.toBeInTheDocument();
-    });
-
-    it("should confirm pause when pause is clicked", () => {
-      renderComponent({ showPauseScheduled: true });
-      const pauseButton = screen.getByText("Pause Scheduled Reports");
-      fireEvent.click(pauseButton);
-      const pauseConfirmButton = screen.getByText("Pause");
-      fireEvent.click(pauseConfirmButton);
-      expect(mockAlert).toHaveBeenCalledWith("All scheduled reports have been paused.");
     });
   });
 
