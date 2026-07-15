@@ -16,6 +16,19 @@ import { useNavigate } from "react-router-dom";
 import { units } from "../data/mockUnits";
 import { Card, CardContent, CardHeader } from "./ui/card";
 
+// A unit is "problematic" if anything about it should block a clean sync,
+// regardless of whether it's currently reachable. Centralizing this means
+// the on-mount classification and the post-sync classification can never
+// drift apart again the way they had (see isUnitProblematic usage below).
+//
+// NOTE ON REAL DATA: `healthStatus` values from ../data/mockUnits are
+// capitalized ("Optimal" / "Warning" / "Critical") — don't lowercase this
+// comparison, or every critical unit silently stops being flagged.
+const isUnitProblematic = (unit) =>
+  Boolean(unit?.hasAlert) ||
+  Boolean(unit?.hasAlarm) ||
+  unit?.healthStatus === "Critical";
+
 const SynchronizeUnitsOverview = ({ className }) => {
   const navigate = useNavigate();
   const [syncStatus, setSyncStatus] = useState("idle"); // idle, syncing, success, error
@@ -27,17 +40,18 @@ const SynchronizeUnitsOverview = ({ className }) => {
     // Initialize unit sync states based on mock data
     const initialStates = {};
     units.forEach((unit) => {
-      // Use unit properties from mock data to determine sync status.
-      // NOTE: named distinctly from the component's own `syncStatus` state
-      // above — reusing that name here was shadowing it and made the two
-      // easy to confuse while reading/debugging.
+      // BUG FIX: this used to only look at `status`/`hasAlert`, so a unit
+      // that was online with no alert but `healthStatus: "Critical" (and/or
+      // hasAlarm: true)` displayed as "Synchronized" until an operator
+      // manually ran a sync. Offline units still start as "pending" rather
+      // than "error" — they simply haven't been attempted yet.
       let initialSyncStatus = "pending";
-      if (unit.status === "online" && !unit.hasAlert) {
-        initialSyncStatus = "synced";
-      } else if (unit.status === "online" && unit.hasAlert) {
-        initialSyncStatus = "error";
-      } else if (unit.status === "offline") {
+      if (unit.status === "offline") {
         initialSyncStatus = "pending";
+      } else if (isUnitProblematic(unit)) {
+        initialSyncStatus = "error";
+      } else if (unit.status === "online") {
+        initialSyncStatus = "synced";
       }
 
       initialStates[unit.id] = {
@@ -82,9 +96,7 @@ const SynchronizeUnitsOverview = ({ className }) => {
       let finalStatus = "synced";
       if (unit.status === "offline") {
         finalStatus = "error";
-      } else if (unit.hasAlert) {
-        finalStatus = "error";
-      } else if (unit.healthStatus === "critical") {
+      } else if (isUnitProblematic(unit)) {
         finalStatus = "error";
       }
 
@@ -130,9 +142,7 @@ const SynchronizeUnitsOverview = ({ className }) => {
       let finalStatus = "synced";
       if (unit?.status === "offline") {
         finalStatus = "error";
-      } else if (unit?.hasAlert) {
-        finalStatus = "error";
-      } else if (unit?.healthStatus === "critical") {
+      } else if (isUnitProblematic(unit)) {
         finalStatus = "error";
       }
 
@@ -462,7 +472,12 @@ const SynchronizeUnitsOverview = ({ className }) => {
                             {unit.name}
                           </h4>
                           <p className="text-sm text-gray-600 dark:text-gray-400">
-                            {unit.location} • {unit.client}
+                            {/* BUG FIX: `unit.client` is an object
+                                ({ name, contact, email, phone }) in the
+                                real data source, not a string. Rendering
+                                it directly threw "Objects are not valid
+                                as a React child" for every unit. */}
+                            {unit.location} • {unit.client?.name}
                           </p>
                         </div>
                       </div>
