@@ -105,13 +105,18 @@ describe("UserRegistrationForm", () => {
       expect(toast.error).toHaveBeenCalledWith("Please fix the errors in the form");
     });
 
+    // Use more flexible text matching
     await waitFor(() => {
-      expect(screen.getByText(/Username.*at least 3 characters/i)).toBeInTheDocument();
+      const usernameError = screen.getByText((content) => 
+        content.includes("Username") && content.includes("at least 3 characters")
+      );
+      expect(usernameError).toBeInTheDocument();
     });
-    expect(screen.getByText(/Valid email is required/i)).toBeInTheDocument();
-    expect(screen.getByText(/Password.*at least 6 characters/i)).toBeInTheDocument();
-    expect(screen.getByText(/First name is required/i)).toBeInTheDocument();
-    expect(screen.getByText(/Last name is required/i)).toBeInTheDocument();
+    
+    expect(screen.getByText((content) => content.includes("Valid email") && content.includes("required"))).toBeInTheDocument();
+    expect(screen.getByText((content) => content.includes("Password") && content.includes("at least 6 characters"))).toBeInTheDocument();
+    expect(screen.getByText("First name is required")).toBeInTheDocument();
+    expect(screen.getByText("Last name is required")).toBeInTheDocument();
   });
 
   it("should validate username length", async () => {
@@ -128,7 +133,10 @@ describe("UserRegistrationForm", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText(/Username.*at least 3 characters/i)).toBeInTheDocument();
+      const usernameError = screen.getByText((content) => 
+        content.includes("Username") && content.includes("at least 3 characters")
+      );
+      expect(usernameError).toBeInTheDocument();
     });
   });
 
@@ -145,8 +153,12 @@ describe("UserRegistrationForm", () => {
       fireEvent.click(submitButton);
     });
 
+    // Use a more flexible matcher for the email error
     await waitFor(() => {
-      expect(screen.getByText(/Valid email is required/i)).toBeInTheDocument();
+      const emailError = screen.getByText((content) => 
+        content.includes("Valid email") && content.includes("required")
+      );
+      expect(emailError).toBeInTheDocument();
     });
   });
 
@@ -164,7 +176,10 @@ describe("UserRegistrationForm", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText(/Password.*at least 6 characters/i)).toBeInTheDocument();
+      const passwordError = screen.getByText((content) => 
+        content.includes("Password") && content.includes("at least 6 characters")
+      );
+      expect(passwordError).toBeInTheDocument();
     });
   });
 
@@ -176,19 +191,26 @@ describe("UserRegistrationForm", () => {
       fireEvent.click(submitButton);
     });
 
+    // Wait for username error to appear
     await waitFor(() => {
-      expect(screen.getByText(/Username.*at least 3 characters/i)).toBeInTheDocument();
+      const usernameError = screen.getByText((content) => 
+        content.includes("Username") && content.includes("at least 3 characters")
+      );
+      expect(usernameError).toBeInTheDocument();
     });
 
+    // Start typing in username field
     const usernameInput = screen.getByLabelText(/^Username/i);
     await act(async () => {
       fireEvent.change(usernameInput, { target: { value: "testuser" } });
     });
 
+    // Error should be cleared
     await waitFor(() => {
-      expect(
-        screen.queryByText(/Username.*at least 3 characters/i)
-      ).not.toBeInTheDocument();
+      const usernameErrors = screen.queryAllByText((content) => 
+        content.includes("Username") && content.includes("at least 3 characters")
+      );
+      expect(usernameErrors.length).toBe(0);
     });
   });
 
@@ -271,7 +293,6 @@ describe("UserRegistrationForm", () => {
     expect(mockNavigate).toHaveBeenCalledWith("/login");
   });
 
-  // ✅ FIX: Test trimming whitespace before submit
   it("should trim whitespace from text fields before submitting", async () => {
     selfRegister.mockResolvedValue({ success: true });
 
@@ -351,7 +372,6 @@ describe("UserRegistrationForm", () => {
     expect(screen.queryByText(/Thank You for Your Application!/i)).not.toBeInTheDocument();
   });
 
-  // ✅ FIX: Exception handler now uses generic user-friendly message
   it("should handle registration exception with user-friendly message", async () => {
     selfRegister.mockRejectedValue(new Error("Network error"));
 
@@ -381,7 +401,6 @@ describe("UserRegistrationForm", () => {
     });
 
     await waitFor(() => {
-      // Should show generic user-friendly message, not the raw error
       expect(toast.error).toHaveBeenCalledWith("Registration failed. Please try again.");
     });
   });
@@ -426,7 +445,10 @@ describe("UserRegistrationForm", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText(/Username.*at least 3 characters/i)).toBeInTheDocument();
+      const usernameError = screen.getByText((content) => 
+        content.includes("Username") && content.includes("at least 3 characters")
+      );
+      expect(usernameError).toBeInTheDocument();
     });
   });
 
