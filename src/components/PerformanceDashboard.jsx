@@ -282,8 +282,6 @@ const PerformanceDashboard = ({ className, hideHeader = false }) => {
   const totalPowerGeneratedToday = performanceData.power.today;
   const totalParasiticLoadKWh = totalParasiticLoad * 24;
   const totalUserLoadKWh = totalUserLoad * 24;
-  // ✅ FIX: Remove unused variable
-  // const feedInPowerToday = totalPowerGeneratedToday - totalParasiticLoadKWh - totalUserLoadKWh;
 
   // Calculate money earned from feed-in
   const moneyEarnedFromFeedIn =
@@ -326,7 +324,7 @@ const PerformanceDashboard = ({ className, hideHeader = false }) => {
     paybackPeriod = roiAssumptions.initialInvestment / annualSavings;
   } else {
     roi = 0;
-    paybackPeriod = Infinity; // Or a large number like 999
+    paybackPeriod = Infinity;
   }
 
   performanceData.roi = roi;
@@ -384,7 +382,8 @@ const PerformanceDashboard = ({ className, hideHeader = false }) => {
             icon={Zap}
             color="blue"
           />
-          {filteredUnits.some((u) => u.waterGeneration) && (
+          {/* ✅ FIX: Use correct property name 'watergeneration' */}
+          {filteredUnits.some((u) => u.watergeneration) && (
             <SummaryCard
               title="Total Water Generated"
               todayValue={performanceData.water.today.toLocaleString()}
