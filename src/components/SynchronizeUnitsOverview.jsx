@@ -27,18 +27,21 @@ const SynchronizeUnitsOverview = ({ className }) => {
     // Initialize unit sync states based on mock data
     const initialStates = {};
     units.forEach((unit) => {
-      // Use unit properties from mock data to determine sync status
-      let syncStatus = "pending";
+      // Use unit properties from mock data to determine sync status.
+      // NOTE: named distinctly from the component's own `syncStatus` state
+      // above — reusing that name here was shadowing it and made the two
+      // easy to confuse while reading/debugging.
+      let initialSyncStatus = "pending";
       if (unit.status === "online" && !unit.hasAlert) {
-        syncStatus = "synced";
+        initialSyncStatus = "synced";
       } else if (unit.status === "online" && unit.hasAlert) {
-        syncStatus = "error";
+        initialSyncStatus = "error";
       } else if (unit.status === "offline") {
-        syncStatus = "pending";
+        initialSyncStatus = "pending";
       }
 
       initialStates[unit.id] = {
-        status: syncStatus,
+        status: initialSyncStatus,
         lastSync:
           unit.status === "online"
             ? new Date(Date.now() - Math.random() * 86400000).toISOString()
@@ -81,7 +84,7 @@ const SynchronizeUnitsOverview = ({ className }) => {
         finalStatus = "error";
       } else if (unit.hasAlert) {
         finalStatus = "error";
-      } else if (unit.healthStatus === "Critical") {
+      } else if (unit.healthStatus === "critical") {
         finalStatus = "error";
       }
 
@@ -129,7 +132,7 @@ const SynchronizeUnitsOverview = ({ className }) => {
         finalStatus = "error";
       } else if (unit?.hasAlert) {
         finalStatus = "error";
-      } else if (unit?.healthStatus === "Critical") {
+      } else if (unit?.healthStatus === "critical") {
         finalStatus = "error";
       }
 
