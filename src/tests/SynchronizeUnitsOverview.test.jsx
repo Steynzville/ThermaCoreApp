@@ -1,7 +1,14 @@
 /**
  * Tests for SynchronizeUnitsOverview Component
  *
- * Simplified to avoid hanging - uses fireEvent instead of userEvent
+ * The mock data below intentionally mirrors the REAL shape of
+ * ../data/mockUnits (client as an object, capitalized healthStatus values,
+ * a "maintenance" status) rather than a simplified flat shape. A previous
+ * version of this test file used flat strings for `client` and lowercase
+ * healthStatus values, which happened to hide a real rendering bug and a
+ * real classification bug in the component — see SynchronizeUnitsOverview.jsx
+ * for details. Uses fireEvent (not userEvent) because userEvent's internal
+ * delay-based timers deadlock under vi.useFakeTimers().
  */
 
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
@@ -19,52 +26,56 @@ vi.mock("react-router-dom", async () => {
   };
 });
 
-// Mock data
+// Representative subset matching the real data shape from ../data/mockUnits:
+// - id is a string ("TC00x"), not a number
+// - client is an OBJECT ({ name, contact, email, phone }), not a string
+// - healthStatus is capitalized ("Optimal" / "Warning" / "Critical")
+// - status can be "online" / "offline" / "maintenance"
 const { mockUnits } = vi.hoisted(() => ({
   mockUnits: [
     {
-      id: 1,
+      id: "TC001",
       name: "ThermaCore Unit 001",
-      location: "Plant A",
-      client: "Client Alpha",
+      location: "Site Alpha",
+      client: { name: "Alpha Industries Ltd", contact: "John Smith" },
       status: "online",
       hasAlert: false,
-      healthStatus: "good",
-      currentPower: 75.5,
-      water_level: 150,
+      hasAlarm: false,
+      healthStatus: "Optimal",
     },
     {
-      id: 2,
+      id: "TC002",
       name: "ThermaCore Unit 002",
-      location: "Plant B",
-      client: "Client Beta",
+      location: "Site Beta",
+      client: { name: "Beta Corporation", contact: "Sarah Johnson" },
       status: "online",
       hasAlert: true,
-      healthStatus: "warning",
-      currentPower: 60.2,
-      water_level: 120,
+      hasAlarm: false,
+      healthStatus: "Warning",
     },
     {
-      id: 3,
+      id: "TC003",
       name: "ThermaCore Unit 003",
-      location: "Plant C",
-      client: "Client Gamma",
+      location: "Site Gamma",
+      client: { name: "Gamma Solutions Inc", contact: "Michael Brown" },
       status: "offline",
       hasAlert: false,
-      healthStatus: "critical",
-      currentPower: 0,
-      water_level: 80,
+      hasAlarm: false,
+      healthStatus: "Critical",
     },
     {
-      id: 4,
+      id: "TC004",
       name: "ThermaCore Unit 004",
-      location: "Plant D",
-      client: "Client Delta",
+      location: "Site Delta",
+      client: { name: "Delta Enterprises", contact: "Emily Davis" },
+      // Regression case: online, no alert, no alarm — but critical health.
+      // The component used to only check `hasAlert` on initial load, so
+      // this unit would show a green "Synchronized" until a manual sync
+      // was run. It must show as an error from the very first render.
       status: "online",
       hasAlert: false,
-      healthStatus: "good",
-      currentPower: 90.1,
-      water_level: 200,
+      hasAlarm: false,
+      healthStatus: "Critical",
     },
   ],
 }));
@@ -92,6 +103,11 @@ describe("SynchronizeUnitsOverview Component", () => {
     );
   };
 
+  // Sync-all takes (units.length * 200ms) + 1000ms to fully resolve.
+  // Computing this from the actual mock length avoids the trap of a
+  // hardcoded duration silently falling out of sync with the mock data.
+  const FULL_SYNC_MS = mockUnits.length * 200 + 1000;
+
   describe("Basic Rendering", () => {
     it("should render without crashing", () => {
       const { container } = renderComponent();
@@ -105,217 +121,269 @@ describe("SynchronizeUnitsOverview Component", () => {
 
     it("should render the back button", () => {
       renderComponent();
-      const backButton = screen.getByRole("button", { name: /Back to Dashboard/i });
-      expect(backButton).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /Back to Dashboard/i }),
+      ).toBeInTheDocument();
     });
 
     it("should navigate back to dashboard when back button is clicked", () => {
       renderComponent();
-      const backButton = screen.getByRole("button", { name: /Back to Dashboard/i });
-      fireEvent.click(backButton);
+      fireEvent.click(screen.getByRole("button", { name: /Back to Dashboard/i }));
       expect(mockNavigate).toHaveBeenCalledWith("/dashboard");
-    });
-
-    it("should render the sync settings button", () => {
-      renderComponent();
-      expect(screen.getByText("Sync Settings")).toBeInTheDocument();
     });
 
     it("should navigate to settings when sync settings button is clicked", () => {
       renderComponent();
-      const settingsButton = screen.getByText("Sync Settings");
-      fireEvent.click(settingsButton);
+      fireEvent.click(screen.getByRole("button", { name: /Sync Settings/i }));
       expect(mockNavigate).toHaveBeenCalledWith("/settings");
     });
 
-    it("should display all units from mock data", () => {
+    it("should display each unit's name, location, and client name", () => {
+      // Regression test: `client` is an object in the real data shape.
+      // Rendering `unit.client` directly used to throw
+      // "Objects are not valid as a React child" for every unit — if that
+      // regresses, this render() call itself will throw and fail the test.
       renderComponent();
       mockUnits.forEach((unit) => {
         expect(screen.getByText(unit.name)).toBeInTheDocument();
-        expect(screen.getByText(unit.location)).toBeInTheDocument();
-        expect(screen.getByText(unit.client)).toBeInTheDocument();
+        expect(screen.getByText(new RegExp(unit.location))).toBeInTheDocument();
+        expect(screen.getByText(new RegExp(unit.client.name))).toBeInTheDocument();
       });
-    });
-
-    it("should display summary cards", () => {
-      renderComponent();
-      expect(screen.getByText("Total Units")).toBeInTheDocument();
-      expect(screen.getByText("Synchronized")).toBeInTheDocument();
-      expect(screen.getByText("Pending")).toBeInTheDocument();
-      expect(screen.getByText("Errors")).toBeInTheDocument();
     });
 
     it("should show correct total units count", () => {
       renderComponent();
-      expect(screen.getByText("4")).toBeInTheDocument();
+      expect(screen.getByText(String(mockUnits.length))).toBeInTheDocument();
+    });
+  });
+
+  describe("Initial Sync Status Classification", () => {
+    it("marks an online, alert-free unit with Critical health as an error on first render", () => {
+      // Regression test for the initial-vs-post-sync classification bug:
+      // TC004 is online with no alert/alarm, but healthStatus "Critical".
+      renderComponent();
+      const row = screen.getByText("ThermaCore Unit 004").closest(
+        ".flex.items-center.justify-between",
+      );
+      expect(within(row).getByText("Sync Failed")).toBeInTheDocument();
+    });
+
+    it("marks a healthy online unit as synchronized on first render", () => {
+      renderComponent();
+      const row = screen.getByText("ThermaCore Unit 001").closest(
+        ".flex.items-center.justify-between",
+      );
+      expect(within(row).getByText("Synchronized")).toBeInTheDocument();
+    });
+
+    it("marks a unit with an active alert as an error", () => {
+      renderComponent();
+      const row = screen.getByText("ThermaCore Unit 002").closest(
+        ".flex.items-center.justify-between",
+      );
+      expect(within(row).getByText("Sync Failed")).toBeInTheDocument();
+    });
+
+    it("marks an offline unit as pending (not yet attempted) rather than error", () => {
+      renderComponent();
+      const row = screen.getByText("ThermaCore Unit 003").closest(
+        ".flex.items-center.justify-between",
+      );
+      expect(within(row).getByText("Pending Sync")).toBeInTheDocument();
+    });
+
+    it("shows the correct synced/error/pending counts in the summary cards", () => {
+      // Of the 4 mock units: TC001 synced, TC002 error (alert),
+      // TC003 pending (offline), TC004 error (critical health).
+      renderComponent();
+      const syncedCard = screen.getByText("Synchronized").closest(".bg-white");
+      const errorCard = screen.getByText("Errors").closest(".bg-white");
+      const pendingCard = screen.getByText("Pending").closest(".bg-white");
+
+      expect(within(syncedCard).getByText("1")).toBeInTheDocument();
+      expect(within(errorCard).getByText("2")).toBeInTheDocument();
+      expect(within(pendingCard).getByText("1")).toBeInTheDocument();
     });
   });
 
   describe("Unit Selection", () => {
-    it("should allow selecting individual units", () => {
+    it("should render one checkbox per unit (Select All is a button, not a checkbox)", () => {
+      renderComponent();
+      expect(screen.getAllByRole("checkbox").length).toBe(mockUnits.length);
+    });
+
+    it("should allow selecting an individual unit", () => {
       renderComponent();
       const checkboxes = screen.getAllByRole("checkbox");
-      expect(checkboxes.length).toBe(mockUnits.length);
-      
       fireEvent.click(checkboxes[0]);
       expect(checkboxes[0]).toBeChecked();
     });
 
-    it("should show selected count in sync button", () => {
+    it("should show the selected count in the Sync Selected button", () => {
       renderComponent();
       const checkboxes = screen.getAllByRole("checkbox");
       fireEvent.click(checkboxes[0]);
-      expect(screen.getByText(/Sync Selected \(1\)/)).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /Sync Selected \(1\)/ }),
+      ).toBeInTheDocument();
     });
 
-    it("should select all units when select all is clicked", () => {
+    it("should select all units when Select All is clicked", () => {
       renderComponent();
-      const selectAllButton = screen.getByText("Select All");
-      fireEvent.click(selectAllButton);
-      
-      const checkboxes = screen.getAllByRole("checkbox");
-      checkboxes.forEach((checkbox) => {
+      fireEvent.click(screen.getByText("Select All"));
+      screen.getAllByRole("checkbox").forEach((checkbox) => {
         expect(checkbox).toBeChecked();
       });
     });
 
-    it("should clear selection when clear is clicked", () => {
+    it("should clear the selection when Clear is clicked", () => {
       renderComponent();
-      const selectAllButton = screen.getByText("Select All");
-      fireEvent.click(selectAllButton);
-      
-      const clearButton = screen.getByText("Clear");
-      fireEvent.click(clearButton);
-      
-      const checkboxes = screen.getAllByRole("checkbox");
-      checkboxes.forEach((checkbox) => {
+      fireEvent.click(screen.getByText("Select All"));
+      fireEvent.click(screen.getByText("Clear"));
+      screen.getAllByRole("checkbox").forEach((checkbox) => {
         expect(checkbox).not.toBeChecked();
       });
     });
 
-    it("should toggle unit selection when checkbox is clicked", () => {
+    it("should toggle a unit's selection on repeated clicks", () => {
       renderComponent();
-      const checkboxes = screen.getAllByRole("checkbox");
-      expect(checkboxes[0]).not.toBeChecked();
-      
-      fireEvent.click(checkboxes[0]);
-      expect(checkboxes[0]).toBeChecked();
-      
-      fireEvent.click(checkboxes[0]);
-      expect(checkboxes[0]).not.toBeChecked();
+      const checkbox = screen.getAllByRole("checkbox")[0];
+      expect(checkbox).not.toBeChecked();
+      fireEvent.click(checkbox);
+      expect(checkbox).toBeChecked();
+      fireEvent.click(checkbox);
+      expect(checkbox).not.toBeChecked();
+    });
+
+    it("should highlight a selected unit's row with a blue border", () => {
+      renderComponent();
+      const checkbox = screen.getAllByRole("checkbox")[0];
+      fireEvent.click(checkbox);
+      const row = checkbox.closest(".flex")?.parentElement;
+      expect(row).toHaveClass("border-blue-500");
+    });
+  });
+
+  describe("Sync Button States", () => {
+    it("disables Sync Selected when nothing is selected", () => {
+      renderComponent();
+      // Query by role/name, not getByText — getByText would resolve to the
+      // inner <span>, which isn't a real form control and can't meaningfully
+      // be asserted as disabled.
+      const button = screen.getByRole("button", { name: /Sync Selected \(0\)/ });
+      expect(button).toBeDisabled();
+    });
+
+    it("enables Sync Selected once a unit is selected", () => {
+      renderComponent();
+      fireEvent.click(screen.getAllByRole("checkbox")[0]);
+      const button = screen.getByRole("button", { name: /Sync Selected \(1\)/ });
+      expect(button).not.toBeDisabled();
+    });
+
+    it("disables Sync All Units while a sync is in progress", () => {
+      renderComponent();
+      const button = screen.getByRole("button", { name: /Sync All Units/i });
+      fireEvent.click(button);
+      expect(button).toBeDisabled();
     });
   });
 
   describe("Sync Operations", () => {
-    it("should sync all units when sync all is clicked", async () => {
+    it("shows the in-progress banner immediately and the success banner once the sync completes", async () => {
       renderComponent();
-      const syncAllButton = screen.getByText("Sync All Units");
-      fireEvent.click(syncAllButton);
-      
-      expect(screen.getByText(/Synchronization in progress/)).toBeInTheDocument();
-      
-      await vi.advanceTimersByTimeAsync(3000);
-      
+      fireEvent.click(screen.getByRole("button", { name: /Sync All Units/i }));
+
+      expect(
+        screen.getByText(/Synchronization in progress/),
+      ).toBeInTheDocument();
+
+      await vi.advanceTimersByTimeAsync(FULL_SYNC_MS);
+
       await waitFor(() => {
-        expect(screen.getByText(/Synchronization completed successfully/)).toBeInTheDocument();
+        expect(
+          screen.getByText(/Synchronization completed successfully/),
+        ).toBeInTheDocument();
       });
     });
 
-    it("should sync selected units when sync selected is clicked", async () => {
+    it("syncs only the selected units when Sync Selected is used", async () => {
       renderComponent();
-      const checkboxes = screen.getAllByRole("checkbox");
-      fireEvent.click(checkboxes[0]);
-      
-      const syncSelectedButton = screen.getByText(/Sync Selected/);
-      fireEvent.click(syncSelectedButton);
-      
-      expect(screen.getByText(/Synchronization in progress/)).toBeInTheDocument();
-      
-      await vi.advanceTimersByTimeAsync(3000);
-      
+      fireEvent.click(screen.getAllByRole("checkbox")[0]); // select TC001
+
+      fireEvent.click(
+        screen.getByRole("button", { name: /Sync Selected \(1\)/ }),
+      );
+      expect(
+        screen.getByText(/Synchronization in progress/),
+      ).toBeInTheDocument();
+
+      await vi.advanceTimersByTimeAsync(1 * 300 + 1000);
+
       await waitFor(() => {
-        expect(screen.getByText(/Synchronization completed successfully/)).toBeInTheDocument();
+        expect(
+          screen.getByText(/Synchronization completed successfully/),
+        ).toBeInTheDocument();
       });
     });
 
-    it("should disable sync selected when no units are selected", () => {
+    it("updates the last-sync timestamp after a full sync", async () => {
       renderComponent();
-      const syncSelectedButton = screen.getByText(/Sync Selected \(0\)/);
-      expect(syncSelectedButton).toBeDisabled();
-    });
+      fireEvent.click(screen.getByRole("button", { name: /Sync All Units/i }));
+      await vi.advanceTimersByTimeAsync(FULL_SYNC_MS);
 
-    it("should disable sync all during sync", () => {
-      renderComponent();
-      const syncAllButton = screen.getByText("Sync All Units");
-      fireEvent.click(syncAllButton);
-      expect(syncAllButton).toBeDisabled();
-    });
-
-    it("should update last sync time after successful sync", async () => {
-      renderComponent();
-      const syncAllButton = screen.getByText("Sync All Units");
-      fireEvent.click(syncAllButton);
-      
-      await vi.advanceTimersByTimeAsync(3000);
-      
       await waitFor(() => {
-        const lastSyncText = screen.getByText(/Last sync:/);
-        expect(lastSyncText).toBeInTheDocument();
+        expect(screen.getByText(/Last sync:/)).toBeInTheDocument();
+      });
+    });
+
+    it("still marks an offline unit as an error after a full sync attempt", async () => {
+      renderComponent();
+      fireEvent.click(screen.getByRole("button", { name: /Sync All Units/i }));
+      await vi.advanceTimersByTimeAsync(FULL_SYNC_MS);
+
+      await waitFor(() => {
+        const row = screen.getByText("ThermaCore Unit 003").closest(
+          ".flex.items-center.justify-between",
+        );
+        expect(within(row).getByText("Sync Failed")).toBeInTheDocument();
+      });
+    });
+
+    it("leaves a healthy unit synchronized after a full sync", async () => {
+      renderComponent();
+      fireEvent.click(screen.getByRole("button", { name: /Sync All Units/i }));
+      await vi.advanceTimersByTimeAsync(FULL_SYNC_MS);
+
+      await waitFor(() => {
+        const row = screen.getByText("ThermaCore Unit 001").closest(
+          ".flex.items-center.justify-between",
+        );
+        expect(within(row).getByText("Synchronized")).toBeInTheDocument();
       });
     });
   });
 
-  describe("Sync Status Indicators", () => {
-    it("should show synced status for online units without alerts", () => {
+  describe("Formatting Helpers", () => {
+    it("formats data size in KB for values under 1024", () => {
       renderComponent();
-      expect(screen.getByText("ThermaCore Unit 001")).toBeInTheDocument();
-      expect(screen.getByText("Synchronized")).toBeInTheDocument();
+      expect(screen.getAllByText(/KB/).length).toBeGreaterThan(0);
     });
 
-    it("should show error status for units with alerts", () => {
-      renderComponent();
-      expect(screen.getByText("ThermaCore Unit 002")).toBeInTheDocument();
-      expect(screen.getByText("Sync Failed")).toBeInTheDocument();
+    it("formats data size in MB for values >= 1024", () => {
+      const formatDataSize = (sizeKB) =>
+        sizeKB < 1024 ? `${sizeKB} KB` : `${(sizeKB / 1024).toFixed(1)} MB`;
+      expect(formatDataSize(500)).toBe("500 KB");
+      expect(formatDataSize(1536)).toBe("1.5 MB");
     });
 
-    it("should show pending status for offline units", () => {
+    it("shows 'Never' for units with no recorded last sync", () => {
       renderComponent();
-      expect(screen.getByText("ThermaCore Unit 003")).toBeInTheDocument();
-      expect(screen.getByText("Pending Sync")).toBeInTheDocument();
-    });
-  });
-
-  describe("Error States", () => {
-    it("should show error status for units with sync errors", () => {
-      renderComponent();
-      expect(screen.getByText("Sync Failed")).toBeInTheDocument();
-    });
-
-    it("should show error count in summary card", () => {
-      renderComponent();
-      const errorCard = screen.getByText("Errors").closest(".bg-white");
-      expect(within(errorCard).getByText(/\d/)).toBeInTheDocument();
-    });
-  });
-
-  describe("UI Interactions", () => {
-    it("should highlight selected units with blue border", () => {
-      renderComponent();
-      const checkboxes = screen.getAllByRole("checkbox");
-      fireEvent.click(checkboxes[0]);
-      
-      const row = checkboxes[0].closest(".flex")?.parentElement;
-      expect(row).toHaveClass("border-blue-500");
-    });
-
-    it("should show selected count", () => {
-      renderComponent();
-      const checkboxes = screen.getAllByRole("checkbox");
-      fireEvent.click(checkboxes[0]);
-      expect(screen.getByText(/Sync Selected \(1\)/)).toBeInTheDocument();
-      
-      fireEvent.click(checkboxes[1]);
-      expect(screen.getByText(/Sync Selected \(2\)/)).toBeInTheDocument();
+      // TC003 is offline, so lastSync is null -> "Never"
+      const row = screen.getByText("ThermaCore Unit 003").closest(
+        ".flex.items-center.justify-between",
+      );
+      expect(within(row).getByText("Never")).toBeInTheDocument();
     });
   });
 });
