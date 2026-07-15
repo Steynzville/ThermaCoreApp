@@ -484,10 +484,6 @@ describe("MultiProtocolManager - live mode failure & retry", () => {
     });
   });
 
-  // ✅ FIX: This test was failing because the toast success was being called
-  // but with a different message format. The component uses "Protocol status loaded successfully"
-  // but we need to verify it's actually called with the right arguments.
-  // We'll check that toast.success was called at all, and then verify the message.
   it("shows recovery success toast after errors are resolved", async () => {
     const user = userEvent.setup();
     
@@ -511,16 +507,11 @@ describe("MultiProtocolManager - live mode failure & retry", () => {
       expect(screen.getByText(/Multi-Protocol Manager/i)).toBeInTheDocument();
     });
 
-    // Check that toast.success was called at all
-    expect(toast.success).toHaveBeenCalled();
-    
-    // Check that it was called with the recovery message
+    // Check that toast.success was called with the recovery message
     // The component uses "Protocol status loaded successfully" when consecutiveErrorsRef.current > 0
-    const successCalls = toast.success.mock.calls;
-    const recoveryCall = successCalls.find(call => 
-      call[0] === "Protocol status loaded successfully"
+    expect(toast.success).toHaveBeenCalledWith(
+      "Protocol status loaded successfully"
     );
-    expect(recoveryCall).toBeDefined();
   });
 
   it("does NOT show a 'refreshed' success toast when a manual refresh fails", async () => {
@@ -595,14 +586,144 @@ describe("MultiProtocolManager - page visibility", () => {
 });
 
 // ============================================================
-// Polling behavior - SKIPPED to prevent hanging
+// Polling behavior (using fake timers) - NOW RE-ENABLED ✅
 // ============================================================
-// The polling tests are skipped because the component's infinite polling loop
-// with fake timers can cause the test runner to hang. The core functionality
-// is tested through the manual refresh and live mode tests above.
-describe.skip("MultiProtocolManager - polling (skipped due to hanging)", () => {
-  it.skip("schedules a background poll after the initial load", () => {});
-  it.skip("increases backoff interval after consecutive errors", () => {});
-  it.skip("caps backoff at 60 seconds", () => {});
-  it.skip("skips polling when the tab is hidden", () => {});
+describe("MultiProtocolManager - polling", () => {
+  beforeEach(() => {
+    forceLiveMode();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("schedules a background poll after the initial load", async () => {
+    apiGetJson.mockResolvedValue(liveApiResponse());
+
+    render(
+      <TestWrapper>
+        <MultiProtocolManager />
+      </TestWrapper>,
+    );
+
+    await screen.findByText(/Multi-Protocol Manager/i);
+    
+    // Fast-forward past the initial load
+    await vi.advanceTimersByTimeAsync(1000);
+    
+    // After 10s, the first poll should trigger
+    await vi.advanceTimersByTimeAsync(10000);
+    
+    // apiGetJson should have been called for initial load + first poll
+    expect(apiGetJson).toHaveBeenCalledTimes(2);
+  });
+
+  it("increases backoff interval after consecutive errors", async () => {
+    let callCount = 0;
+    apiGetJson.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return Promise.resolve(liveApiResponse());
+      }
+      return Promise.reject(new Error("Network error"));
+    });
+
+    render(
+      <TestWrapper>
+        <MultiProtocolManager />
+      </TestWrapper>,
+    );
+
+    await screen.findByText(/Multi-Protocol Manager/i);
+    await vi.advanceTimersByTimeAsync(1000);
+
+    // Initial load
+    expect(apiGetJson).toHaveBeenCalledTimes(1);
+
+    // First poll: should happen at 10s
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(apiGetJson).toHaveBeenCalledTimes(2);
+
+    // Second poll: should happen at 15s (10 * 1.5)
+    await vi.advanceTimersByTimeAsync(15000);
+    expect(apiGetJson).toHaveBeenCalledTimes(3);
+
+    // Third poll: should happen at 22.5s ≈ 23s (10 * 1.5^2)
+    await vi.advanceTimersByTimeAsync(23000);
+    expect(apiGetJson).toHaveBeenCalledTimes(4);
+  });
+
+  it("caps backoff at 60 seconds", async () => {
+    let callCount = 0;
+    apiGetJson.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return Promise.resolve(liveApiResponse());
+      }
+      return Promise.reject(new Error("Network error"));
+    });
+
+    render(
+      <TestWrapper>
+        <MultiProtocolManager />
+      </TestWrapper>,
+    );
+
+    await screen.findByText(/Multi-Protocol Manager/i);
+    await vi.advanceTimersByTimeAsync(1000);
+
+    // Initial load
+    expect(apiGetJson).toHaveBeenCalledTimes(1);
+
+    // First poll: 10s
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(apiGetJson).toHaveBeenCalledTimes(2);
+
+    // Second poll: 15s
+    await vi.advanceTimersByTimeAsync(15000);
+    expect(apiGetJson).toHaveBeenCalledTimes(3);
+
+    // Third poll: 23s
+    await vi.advanceTimersByTimeAsync(23000);
+    expect(apiGetJson).toHaveBeenCalledTimes(4);
+
+    // Fourth poll: 34s
+    await vi.advanceTimersByTimeAsync(34000);
+    expect(apiGetJson).toHaveBeenCalledTimes(5);
+
+    // Fifth poll: 51s
+    await vi.advanceTimersByTimeAsync(51000);
+    expect(apiGetJson).toHaveBeenCalledTimes(6);
+
+    // Sixth poll: Should cap at 60s
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(apiGetJson).toHaveBeenCalledTimes(7);
+  });
+
+  it("skips polling when the tab is hidden", async () => {
+    apiGetJson.mockResolvedValue(liveApiResponse());
+
+    render(
+      <TestWrapper>
+        <MultiProtocolManager />
+      </TestWrapper>,
+    );
+
+    await screen.findByText(/Multi-Protocol Manager/i);
+    await vi.advanceTimersByTimeAsync(1000);
+
+    // Hide the tab
+    Object.defineProperty(document, "hidden", {
+      configurable: true,
+      get: () => true,
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+
+    // After 10s, the poll should NOT fire because the tab is hidden
+    await vi.advanceTimersByTimeAsync(10000);
+    
+    // apiGetJson should still only have been called once (initial load)
+    expect(apiGetJson).toHaveBeenCalledTimes(1);
+  });
 });
