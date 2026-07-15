@@ -5,7 +5,7 @@
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { act } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import AdvancedAnalyticsDashboard, { generateMockData } from "../components/AdvancedAnalyticsDashboard";
 
 // Mock heavy charting and layout libraries
@@ -134,16 +134,17 @@ describe("AdvancedAnalyticsDashboard", () => {
   });
 
   afterEach(() => {
+    // ✅ FIX: Clean up fake timers properly
     vi.useRealTimers();
+    vi.clearAllMocks();
   });
 
-  // Helper to wait for data to load with proper act handling
+  // Helper to wait for data to load - using real timers approach
   const waitForDataLoad = async () => {
+    // Instead of fake timers, let's use a real wait
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(1000);
+      await new Promise((resolve) => setTimeout(resolve, 100));
     });
-    // Flush any pending microtasks
-    await act(async () => {});
   };
 
   // ============================================================
@@ -230,13 +231,11 @@ describe("AdvancedAnalyticsDashboard", () => {
       await waitForDataLoad();
 
       const select = screen.getByTestId("select-trigger");
-      await act(async () => {
-        fireEvent.change(select, { target: { value: "7d" } });
-      });
+      fireEvent.change(select, { target: { value: "7d" } });
       
       // Wait for the change to take effect
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(0);
+        await new Promise((resolve) => setTimeout(resolve, 10));
       });
       
       expect(select).toHaveValue("7d");
@@ -251,9 +250,7 @@ describe("AdvancedAnalyticsDashboard", () => {
 
       // Change to 7d
       const select = screen.getByTestId("select-trigger");
-      await act(async () => {
-        fireEvent.change(select, { target: { value: "7d" } });
-      });
+      fireEvent.change(select, { target: { value: "7d" } });
 
       // Wait for data to update (component fetches again)
       await waitForDataLoad();
@@ -270,18 +267,14 @@ describe("AdvancedAnalyticsDashboard", () => {
 
       // Switch to Alerts tab
       const alertsTab = screen.getByText("Alert Analysis");
-      await act(async () => {
-        fireEvent.click(alertsTab);
-      });
+      fireEvent.click(alertsTab);
 
       // Default is 1-day for 24h range
       expect(screen.getByText("1-day alert analysis")).toBeInTheDocument();
 
       // Change to 30d
       const select = screen.getByTestId("select-trigger");
-      await act(async () => {
-        fireEvent.change(select, { target: { value: "30d" } });
-      });
+      fireEvent.change(select, { target: { value: "30d" } });
 
       // Wait for data to update
       await waitForDataLoad();
@@ -319,9 +312,7 @@ describe("AdvancedAnalyticsDashboard", () => {
       await waitForDataLoad();
 
       const anomaliesTab = screen.getByText("Anomaly Detection");
-      await act(async () => {
-        fireEvent.click(anomaliesTab);
-      });
+      fireEvent.click(anomaliesTab);
       
       // Wait for tab content to update
       await waitFor(() => {
@@ -338,9 +329,7 @@ describe("AdvancedAnalyticsDashboard", () => {
       await waitForDataLoad();
 
       const alertsTab = screen.getByText("Alert Analysis");
-      await act(async () => {
-        fireEvent.click(alertsTab);
-      });
+      fireEvent.click(alertsTab);
       
       // Wait for tab content to update
       await waitFor(() => {
@@ -357,9 +346,7 @@ describe("AdvancedAnalyticsDashboard", () => {
       await waitForDataLoad();
 
       const unitsTab = screen.getByText("Unit Comparison");
-      await act(async () => {
-        fireEvent.click(unitsTab);
-      });
+      fireEvent.click(unitsTab);
       
       // Wait for tab content to update
       await waitFor(() => {
@@ -382,9 +369,7 @@ describe("AdvancedAnalyticsDashboard", () => {
 
       // Switch to Unit Comparison to find the values
       const unitsTab = screen.getByText("Unit Comparison");
-      await act(async () => {
-        fireEvent.click(unitsTab);
-      });
+      fireEvent.click(unitsTab);
       
       // Look for formatted values in the unit cards - they'll have % signs
       expect(screen.getByText("98%")).toBeInTheDocument();
@@ -402,9 +387,7 @@ describe("AdvancedAnalyticsDashboard", () => {
       await waitForDataLoad();
 
       const unitsTab = screen.getByText("Unit Comparison");
-      await act(async () => {
-        fireEvent.click(unitsTab);
-      });
+      fireEvent.click(unitsTab);
       
       const boilerAlpha = screen.getByText("Boiler Alpha");
       const parent = boilerAlpha.closest('[class*="flex items-center justify-between"]');
@@ -418,9 +401,7 @@ describe("AdvancedAnalyticsDashboard", () => {
       await waitForDataLoad();
 
       const unitsTab = screen.getByText("Unit Comparison");
-      await act(async () => {
-        fireEvent.click(unitsTab);
-      });
+      fireEvent.click(unitsTab);
       
       const chillerBeta = screen.getByText("Chiller Beta");
       const parent = chillerBeta.closest('[class*="flex items-center justify-between"]');
@@ -434,9 +415,7 @@ describe("AdvancedAnalyticsDashboard", () => {
       await waitForDataLoad();
 
       const unitsTab = screen.getByText("Unit Comparison");
-      await act(async () => {
-        fireEvent.click(unitsTab);
-      });
+      fireEvent.click(unitsTab);
       
       const compressorEpsilon = screen.getByText("Compressor Epsilon");
       const parent = compressorEpsilon.closest('[class*="flex items-center justify-between"]');
@@ -469,9 +448,7 @@ describe("AdvancedAnalyticsDashboard", () => {
       await waitForDataLoad();
 
       const anomaliesTab = screen.getByText("Anomaly Detection");
-      await act(async () => {
-        fireEvent.click(anomaliesTab);
-      });
+      fireEvent.click(anomaliesTab);
       
       // Wait for anomalies to load
       await waitFor(() => {
@@ -489,9 +466,7 @@ describe("AdvancedAnalyticsDashboard", () => {
       await waitForDataLoad();
 
       const anomaliesTab = screen.getByText("Anomaly Detection");
-      await act(async () => {
-        fireEvent.click(anomaliesTab);
-      });
+      fireEvent.click(anomaliesTab);
       
       await waitFor(() => {
         expect(screen.getByText("95.2°C")).toBeInTheDocument();
@@ -503,9 +478,7 @@ describe("AdvancedAnalyticsDashboard", () => {
       await waitForDataLoad();
 
       const anomaliesTab = screen.getByText("Anomaly Detection");
-      await act(async () => {
-        fireEvent.click(anomaliesTab);
-      });
+      fireEvent.click(anomaliesTab);
       
       await waitFor(() => {
         expect(screen.getByText("145.8 PSI")).toBeInTheDocument();
@@ -517,9 +490,7 @@ describe("AdvancedAnalyticsDashboard", () => {
       await waitForDataLoad();
 
       const anomaliesTab = screen.getByText("Anomaly Detection");
-      await act(async () => {
-        fireEvent.click(anomaliesTab);
-      });
+      fireEvent.click(anomaliesTab);
       
       await waitFor(() => {
         // Average of 89.5 and 92.1 = 90.8
@@ -537,9 +508,7 @@ describe("AdvancedAnalyticsDashboard", () => {
       await waitForDataLoad();
 
       const alertsTab = screen.getByText("Alert Analysis");
-      await act(async () => {
-        fireEvent.click(alertsTab);
-      });
+      fireEvent.click(alertsTab);
       
       await waitFor(() => {
         expect(screen.getByText("23")).toBeInTheDocument();
@@ -552,9 +521,7 @@ describe("AdvancedAnalyticsDashboard", () => {
       await waitForDataLoad();
 
       const alertsTab = screen.getByText("Alert Analysis");
-      await act(async () => {
-        fireEvent.click(alertsTab);
-      });
+      fireEvent.click(alertsTab);
       
       await waitFor(() => {
         expect(screen.getByText("3.3")).toBeInTheDocument();
@@ -572,9 +539,7 @@ describe("AdvancedAnalyticsDashboard", () => {
       await waitForDataLoad();
 
       const unitsTab = screen.getByText("Unit Comparison");
-      await act(async () => {
-        fireEvent.click(unitsTab);
-      });
+      fireEvent.click(unitsTab);
       
       await waitFor(() => {
         expect(screen.getByText("Boiler Alpha")).toBeInTheDocument();
@@ -590,9 +555,7 @@ describe("AdvancedAnalyticsDashboard", () => {
       await waitForDataLoad();
 
       const unitsTab = screen.getByText("Unit Comparison");
-      await act(async () => {
-        fireEvent.click(unitsTab);
-      });
+      fireEvent.click(unitsTab);
       
       await waitFor(() => {
         expect(screen.getByText("98%")).toBeInTheDocument();
@@ -608,9 +571,7 @@ describe("AdvancedAnalyticsDashboard", () => {
       await waitForDataLoad();
 
       const unitsTab = screen.getByText("Unit Comparison");
-      await act(async () => {
-        fireEvent.click(unitsTab);
-      });
+      fireEvent.click(unitsTab);
       
       const badges = document.querySelectorAll('[data-variant]');
       expect(badges.length).toBeGreaterThan(0);
@@ -640,9 +601,7 @@ describe("AdvancedAnalyticsDashboard", () => {
       await waitForDataLoad();
 
       const alertsTab = screen.getByText("Alert Analysis");
-      await act(async () => {
-        fireEvent.click(alertsTab);
-      });
+      fireEvent.click(alertsTab);
       
       await waitFor(() => {
         expect(screen.getByTestId("pie-chart")).toBeInTheDocument();
