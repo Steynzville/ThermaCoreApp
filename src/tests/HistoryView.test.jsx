@@ -30,14 +30,14 @@ vi.mock("../components/PageHeader", () => ({
   ),
 }));
 
-// Mock UI Card components
+// Mock UI Card components - remove data-testid from Card
 vi.mock("../components/ui/card", () => ({
   Card: ({ children, className }) => (
-    <div data-testid="card" className={className}>
+    <div className={className}>
       {children}
     </div>
   ),
-  CardContent: ({ children }) => <div data-testid="card-content">{children}</div>,
+  CardContent: ({ children }) => <div>{children}</div>,
 }));
 
 // Mock lucide-react icons
@@ -90,7 +90,6 @@ describe("HistoryView", () => {
     vi.clearAllMocks();
   });
 
-  // ✅ FIX: Wrap render in act()
   const renderComponent = () => {
     let result;
     act(() => {
@@ -192,19 +191,21 @@ describe("HistoryView", () => {
   });
 
   describe("Severity UI", () => {
-    // ✅ FIX: Use waitFor with proper container
+    // ✅ FIX: Use findByText to wait for elements to appear
     it("renders severity indicators", async () => {
       unitService.getEventHistory.mockResolvedValue(mockEvents);
 
       renderComponent();
 
-      await screen.findAllByText("Event History");
+      // Wait for the page header to appear
+      await screen.findByText("Event History");
       
-      // Wait for cards to appear using screen queries directly
-      await waitFor(() => {
-        const cards = screen.queryAllByTestId("card");
-        expect(cards.length).toBeGreaterThan(0);
-      });
+      // Wait for a specific event to appear
+      await screen.findByText("Maintenance completed");
+      
+      // Now check that events are rendered
+      const events = screen.getAllByText(/Maintenance completed|Diagnostic check performed|Calibration completed/);
+      expect(events.length).toBeGreaterThan(0);
     });
   });
 
@@ -243,7 +244,7 @@ describe("HistoryView", () => {
       expect(loadMoreElements.length).toBeGreaterThan(0);
     });
 
-    // ✅ FIX: Use proper container and waitFor
+    // ✅ FIX: Use findByText to wait for elements
     it("loads more events on click", async () => {
       const events = Array.from({ length: 15 }, (_, i) => ({
         id: `e-${i}`,
@@ -256,7 +257,7 @@ describe("HistoryView", () => {
 
       renderComponent();
 
-      await screen.findAllByText("Event History");
+      await screen.findByText("Event History");
       
       const buttons = screen.getAllByText(/Load more Events/i);
       expect(buttons.length).toBeGreaterThan(0);
@@ -271,7 +272,7 @@ describe("HistoryView", () => {
         });
       }
 
-      // Wait for more elements to appear using screen queries
+      // Wait for more elements to appear
       await waitFor(() => {
         const unitElements = screen.queryAllByText(/ThermaCore Unit/);
         expect(unitElements.length).toBeGreaterThan(initialCount);
@@ -339,25 +340,23 @@ describe("HistoryView", () => {
       const testElements = await screen.findAllByText(/Test event/);
       expect(testElements.length).toBeGreaterThan(0);
       
-      // Use queryAllByText to avoid errors if not found
       const dateElements = screen.queryAllByText(/2025/);
       expect(dateElements.length).toBeGreaterThan(0);
     });
   });
 
   describe("Severity Colors", () => {
-    // ✅ FIX: Use screen queries directly
+    // ✅ FIX: Check for severity classes on elements
     it("applies correct severity colors", async () => {
       unitService.getEventHistory.mockResolvedValue([]);
 
       renderComponent();
 
-      await screen.findAllByText("Event History");
+      await screen.findByText("Event History");
 
-      await waitFor(() => {
-        const cards = screen.queryAllByTestId("card");
-        expect(cards.length).toBeGreaterThan(0);
-      });
+      // Look for elements with border-l- classes that indicate severity
+      const severityElements = document.querySelectorAll('.border-l-red-500, .border-l-yellow-500, .border-l-blue-500, .border-l-green-500');
+      expect(severityElements.length).toBeGreaterThan(0);
     });
   });
 });
