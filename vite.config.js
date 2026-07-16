@@ -4,7 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 
 export default defineConfig({
-  plugins: [react()], // ✅ Remove tailwindcss from test environment
+  plugins: [react(), tailwindcss()],
 
   resolve: {
     alias: {
@@ -38,19 +38,13 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "jsdom",
-    environmentOptions: {
-      jsdom: {
-        resources: "usable",
-      },
-    },
 
-    setupFiles: ["./src/setupTests.js"],
+    setupFiles: "./src/setupTests.js",
 
     testTimeout: 60000,
 
-    // ✅ IMPORTANT: Disable isolation to prevent act() issues
-    isolate: false,
-
+    // IMPORTANT: keep minimal — avoid destabilizing JSDOM
+    isolate: true,
     clearMocks: true,
     restoreMocks: true,
 
@@ -66,32 +60,5 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "json-summary"],
     },
-
-    // ✅ Suppress act() warnings
-    onConsoleLog(log, type) {
-      // Filter out act() warnings and other noise
-      const suppressedMessages = [
-        'The current testing environment is not configured to support act(...)',
-        'React does not recognize the',
-        'In HTML, <',
-        'You provided a `value` prop to a form field without an `onChange` handler',
-        'The tag <text> is unrecognized in this browser',
-        'Warning: React does not recognize the',
-        'Warning: In HTML, <',
-        'Warning: You provided a',
-        'WARNING: Panel defaultSize prop recommended',
-        'Warning: `value` prop on `input` should not be null',
-      ];
-
-      if (type === 'stderr' && suppressedMessages.some(msg => log.includes(msg))) {
-        return;
-      }
-
-      // Allow other logs through
-      console[type === 'stderr' ? 'error' : 'log'](log);
-    },
-
-    // ✅ Retry failed tests
-    retry: 1,
   },
 });
