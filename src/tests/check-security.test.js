@@ -11,17 +11,26 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const SCRIPT_PATH = "../../scripts/check-security.js";
 
-// ✅ Simple mocks - no importOriginal needed, these persist for the whole file
-vi.mock("node:fs", () => ({
-  existsSync: vi.fn(),
-  readFileSync: vi.fn(),
-}));
+// ✅ Add default export to both mocks to satisfy Vite's interop shim
+vi.mock("node:fs", () => {
+  const existsSync = vi.fn();
+  const readFileSync = vi.fn();
+  return {
+    existsSync,
+    readFileSync,
+    default: { existsSync, readFileSync },
+  };
+});
 
-vi.mock("node:child_process", () => ({
-  execSync: vi.fn(),
-}));
+vi.mock("node:child_process", () => {
+  const execSync = vi.fn();
+  return {
+    execSync,
+    default: { execSync },
+  };
+});
 
-// ✅ Import the mocks once - they'll be reconfigured per test
+// ✅ Import the mocks - these are the same instances as in the mocks
 import { existsSync, readFileSync } from "node:fs";
 import { execSync } from "node:child_process";
 
