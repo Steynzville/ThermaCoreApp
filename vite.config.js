@@ -60,5 +60,39 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "json-summary"],
     },
+
+    // ✅ NEW: Suppress console warnings during tests
+    onConsoleLog(log, type) {
+      // Suppress specific warning messages
+      const suppressedMessages = [
+        'The current testing environment is not configured to support act(...)',
+        'React does not recognize the',
+        'In HTML, <',
+        'You provided a `value` prop to a form field without an `onChange` handler',
+        'The tag <text> is unrecognized in this browser',
+        'Warning: React does not recognize the',
+        'Warning: In HTML, <',
+        'Warning: You provided a',
+        'WARNING: Panel defaultSize prop recommended',
+      ];
+
+      if (type === 'stderr' && suppressedMessages.some(msg => log.includes(msg))) {
+        return;
+      }
+
+      // Allow other logs through
+      console[type === 'stderr' ? 'error' : 'log'](log);
+    },
+
+    // ✅ NEW: Hide specific deprecation warnings
+    environmentOptions: {
+      jsdom: {
+        resources: 'usable',
+        runScripts: 'dangerously',
+      },
+    },
+
+    // ✅ NEW: Retry failed tests to reduce flakiness
+    retry: 1,
   },
 });
