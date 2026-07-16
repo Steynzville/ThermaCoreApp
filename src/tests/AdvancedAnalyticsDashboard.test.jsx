@@ -2,8 +2,8 @@
  * Tests for AdvancedAnalyticsDashboard Component
  */
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor, act } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
 import AdvancedAnalyticsDashboard, { generateMockData } from "../components/AdvancedAnalyticsDashboard";
 
 // Mock heavy charting and layout libraries
@@ -126,23 +126,44 @@ vi.mock("@/components/ui/tabs", () => {
 });
 
 describe("AdvancedAnalyticsDashboard", () => {
-  // Simple wait helper - just use a real setTimeout
+  // ✅ FIX: Better wait helper using act()
   const waitForDataLoad = async () => {
-    await new Promise((resolve) => setTimeout(resolve, 1100));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 1100));
+    });
   };
+
+  // ✅ FIX: Wrap render in act()
+  const renderComponent = () => {
+    let result;
+    act(() => {
+      result = render(<AdvancedAnalyticsDashboard />);
+    });
+    return result;
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useRealTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
 
   // ============================================================
   // LOADING STATE TESTS
   // ============================================================
   describe("Loading state", () => {
     it("should show loading spinner initially", () => {
-      render(<AdvancedAnalyticsDashboard />);
+      renderComponent();
       expect(screen.getByTestId("loading-spinner")).toBeInTheDocument();
       expect(screen.getByText("Loading analytics dashboard...")).toBeInTheDocument();
     });
 
     it("should render dashboard content after data loads", async () => {
-      render(<AdvancedAnalyticsDashboard />);
+      renderComponent();
       await waitForDataLoad();
 
       expect(screen.getByText("Advanced Analytics")).toBeInTheDocument();
@@ -155,7 +176,7 @@ describe("AdvancedAnalyticsDashboard", () => {
   // ============================================================
   describe("Overview cards", () => {
     it("should display active units count", async () => {
-      render(<AdvancedAnalyticsDashboard />);
+      renderComponent();
       await waitForDataLoad();
 
       expect(screen.getByText("9/12")).toBeInTheDocument();
@@ -163,7 +184,7 @@ describe("AdvancedAnalyticsDashboard", () => {
     });
 
     it("should display data points count", async () => {
-      render(<AdvancedAnalyticsDashboard />);
+      renderComponent();
       await waitForDataLoad();
 
       expect(screen.getByText("5,000")).toBeInTheDocument();
@@ -171,7 +192,7 @@ describe("AdvancedAnalyticsDashboard", () => {
     });
 
     it("should display average temperature", async () => {
-      render(<AdvancedAnalyticsDashboard />);
+      renderComponent();
       await waitForDataLoad();
 
       expect(screen.getByText("70.1°C")).toBeInTheDocument();
@@ -179,7 +200,7 @@ describe("AdvancedAnalyticsDashboard", () => {
     });
 
     it("should display data quality score", async () => {
-      render(<AdvancedAnalyticsDashboard />);
+      renderComponent();
       await waitForDataLoad();
 
       expect(screen.getByText("88.8%")).toBeInTheDocument();
@@ -191,7 +212,7 @@ describe("AdvancedAnalyticsDashboard", () => {
   // ============================================================
   describe("Live badge", () => {
     it("should show Live badge when connectionStatus is connected", async () => {
-      render(<AdvancedAnalyticsDashboard />);
+      renderComponent();
       await waitForDataLoad();
 
       expect(screen.getByText("Live")).toBeInTheDocument();
@@ -203,19 +224,22 @@ describe("AdvancedAnalyticsDashboard", () => {
   // ============================================================
   describe("Time range select", () => {
     it("should default to 24h", async () => {
-      render(<AdvancedAnalyticsDashboard />);
+      renderComponent();
       await waitForDataLoad();
 
       const select = screen.getByTestId("select-trigger");
       expect(select).toHaveValue("24h");
     });
 
+    // ✅ FIX: Wrap interaction in act()
     it("should update when selection changes", async () => {
-      render(<AdvancedAnalyticsDashboard />);
+      renderComponent();
       await waitForDataLoad();
 
       const select = screen.getByTestId("select-trigger");
-      fireEvent.change(select, { target: { value: "7d" } });
+      await act(async () => {
+        fireEvent.change(select, { target: { value: "7d" } });
+      });
       
       // Allow time for state to update
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -223,8 +247,9 @@ describe("AdvancedAnalyticsDashboard", () => {
       expect(select).toHaveValue("7d");
     });
 
+    // ✅ FIX: Wrap interactions in act()
     it("should update data when time range changes", async () => {
-      render(<AdvancedAnalyticsDashboard />);
+      renderComponent();
       await waitForDataLoad();
 
       // Initial data points should be 5,000
@@ -232,7 +257,9 @@ describe("AdvancedAnalyticsDashboard", () => {
 
       // Change to 7d
       const select = screen.getByTestId("select-trigger");
-      fireEvent.change(select, { target: { value: "7d" } });
+      await act(async () => {
+        fireEvent.change(select, { target: { value: "7d" } });
+      });
 
       // Wait for data to update
       await waitForDataLoad();
@@ -246,12 +273,14 @@ describe("AdvancedAnalyticsDashboard", () => {
     // ✅ FIX: Skip this test for now - it's failing due to timing issues
     // The functionality is tested indirectly by other tests
     it.skip("should update alert period days when time range changes", async () => {
-      render(<AdvancedAnalyticsDashboard />);
+      renderComponent();
       await waitForDataLoad();
 
       // Switch to Alerts tab
       const alertsTab = screen.getByText("Alert Analysis");
-      fireEvent.click(alertsTab);
+      await act(async () => {
+        fireEvent.click(alertsTab);
+      });
 
       // Wait for tab content to load
       await new Promise((resolve) => setTimeout(resolve, 200));
@@ -261,7 +290,9 @@ describe("AdvancedAnalyticsDashboard", () => {
 
       // Change to 30d
       const select = screen.getByTestId("select-trigger");
-      fireEvent.change(select, { target: { value: "30d" } });
+      await act(async () => {
+        fireEvent.change(select, { target: { value: "30d" } });
+      });
 
       // Wait for data to update
       await waitForDataLoad();
@@ -278,7 +309,7 @@ describe("AdvancedAnalyticsDashboard", () => {
   // ============================================================
   describe("Tab switching", () => {
     it("should show Trends tab by default", async () => {
-      render(<AdvancedAnalyticsDashboard />);
+      renderComponent();
       await waitForDataLoad();
 
       // Check that all tab triggers are rendered
@@ -294,12 +325,15 @@ describe("AdvancedAnalyticsDashboard", () => {
       expect(screen.queryByTestId("tab-content-units")).not.toBeInTheDocument();
     });
 
+    // ✅ FIX: Wrap interaction in act()
     it("should switch to Anomalies tab", async () => {
-      render(<AdvancedAnalyticsDashboard />);
+      renderComponent();
       await waitForDataLoad();
 
       const anomaliesTab = screen.getByText("Anomaly Detection");
-      fireEvent.click(anomaliesTab);
+      await act(async () => {
+        fireEvent.click(anomaliesTab);
+      });
       
       // Wait for tab content to update
       await waitFor(() => {
@@ -311,12 +345,15 @@ describe("AdvancedAnalyticsDashboard", () => {
       expect(screen.queryByTestId("tab-content-trends")).not.toBeInTheDocument();
     });
 
+    // ✅ FIX: Wrap interaction in act()
     it("should switch to Alert Analysis tab", async () => {
-      render(<AdvancedAnalyticsDashboard />);
+      renderComponent();
       await waitForDataLoad();
 
       const alertsTab = screen.getByText("Alert Analysis");
-      fireEvent.click(alertsTab);
+      await act(async () => {
+        fireEvent.click(alertsTab);
+      });
       
       await waitFor(() => {
         expect(screen.getByText("Alert Patterns")).toBeInTheDocument();
@@ -326,12 +363,15 @@ describe("AdvancedAnalyticsDashboard", () => {
       expect(screen.queryByTestId("tab-content-trends")).not.toBeInTheDocument();
     });
 
+    // ✅ FIX: Wrap interaction in act()
     it("should switch to Unit Comparison tab", async () => {
-      render(<AdvancedAnalyticsDashboard />);
+      renderComponent();
       await waitForDataLoad();
 
       const unitsTab = screen.getByText("Unit Comparison");
-      fireEvent.click(unitsTab);
+      await act(async () => {
+        fireEvent.click(unitsTab);
+      });
       
       await waitFor(() => {
         expect(screen.getByText("Boiler Alpha")).toBeInTheDocument();
@@ -347,11 +387,13 @@ describe("AdvancedAnalyticsDashboard", () => {
   // ============================================================
   describe("Performance color", () => {
     it("should show green for scores >= 90", async () => {
-      render(<AdvancedAnalyticsDashboard />);
+      renderComponent();
       await waitForDataLoad();
 
       const unitsTab = screen.getByText("Unit Comparison");
-      fireEvent.click(unitsTab);
+      await act(async () => {
+        fireEvent.click(unitsTab);
+      });
       
       const boilerAlpha = screen.getByText("Boiler Alpha");
       const parent = boilerAlpha.closest('[class*="flex items-center justify-between"]');
@@ -361,11 +403,13 @@ describe("AdvancedAnalyticsDashboard", () => {
     });
 
     it("should show yellow for scores 70-89", async () => {
-      render(<AdvancedAnalyticsDashboard />);
+      renderComponent();
       await waitForDataLoad();
 
       const unitsTab = screen.getByText("Unit Comparison");
-      fireEvent.click(unitsTab);
+      await act(async () => {
+        fireEvent.click(unitsTab);
+      });
       
       const chillerBeta = screen.getByText("Chiller Beta");
       const parent = chillerBeta.closest('[class*="flex items-center justify-between"]');
@@ -375,11 +419,13 @@ describe("AdvancedAnalyticsDashboard", () => {
     });
 
     it("should show red for scores < 70", async () => {
-      render(<AdvancedAnalyticsDashboard />);
+      renderComponent();
       await waitForDataLoad();
 
       const unitsTab = screen.getByText("Unit Comparison");
-      fireEvent.click(unitsTab);
+      await act(async () => {
+        fireEvent.click(unitsTab);
+      });
       
       const compressorEpsilon = screen.getByText("Compressor Epsilon");
       const parent = compressorEpsilon.closest('[class*="flex items-center justify-between"]');
@@ -394,11 +440,13 @@ describe("AdvancedAnalyticsDashboard", () => {
   // ============================================================
   describe("Anomalies", () => {
     it("should display anomaly list", async () => {
-      render(<AdvancedAnalyticsDashboard />);
+      renderComponent();
       await waitForDataLoad();
 
       const anomaliesTab = screen.getByText("Anomaly Detection");
-      fireEvent.click(anomaliesTab);
+      await act(async () => {
+        fireEvent.click(anomaliesTab);
+      });
       
       // Wait for anomalies to load
       await new Promise((resolve) => setTimeout(resolve, 200));
@@ -414,11 +462,13 @@ describe("AdvancedAnalyticsDashboard", () => {
     });
 
     it("should show temperature unit for temperature anomalies", async () => {
-      render(<AdvancedAnalyticsDashboard />);
+      renderComponent();
       await waitForDataLoad();
 
       const anomaliesTab = screen.getByText("Anomaly Detection");
-      fireEvent.click(anomaliesTab);
+      await act(async () => {
+        fireEvent.click(anomaliesTab);
+      });
       
       await new Promise((resolve) => setTimeout(resolve, 200));
       
@@ -428,11 +478,13 @@ describe("AdvancedAnalyticsDashboard", () => {
     });
 
     it("should show pressure unit for pressure anomalies", async () => {
-      render(<AdvancedAnalyticsDashboard />);
+      renderComponent();
       await waitForDataLoad();
 
       const anomaliesTab = screen.getByText("Anomaly Detection");
-      fireEvent.click(anomaliesTab);
+      await act(async () => {
+        fireEvent.click(anomaliesTab);
+      });
       
       await new Promise((resolve) => setTimeout(resolve, 200));
       
@@ -442,11 +494,13 @@ describe("AdvancedAnalyticsDashboard", () => {
     });
 
     it("should calculate average confidence correctly", async () => {
-      render(<AdvancedAnalyticsDashboard />);
+      renderComponent();
       await waitForDataLoad();
 
       const anomaliesTab = screen.getByText("Anomaly Detection");
-      fireEvent.click(anomaliesTab);
+      await act(async () => {
+        fireEvent.click(anomaliesTab);
+      });
       
       await new Promise((resolve) => setTimeout(resolve, 200));
       
@@ -461,11 +515,13 @@ describe("AdvancedAnalyticsDashboard", () => {
   // ============================================================
   describe("Alert patterns", () => {
     it("should display total alerts", async () => {
-      render(<AdvancedAnalyticsDashboard />);
+      renderComponent();
       await waitForDataLoad();
 
       const alertsTab = screen.getByText("Alert Analysis");
-      fireEvent.click(alertsTab);
+      await act(async () => {
+        fireEvent.click(alertsTab);
+      });
       
       await waitFor(() => {
         expect(screen.getByText("23")).toBeInTheDocument();
@@ -474,11 +530,13 @@ describe("AdvancedAnalyticsDashboard", () => {
     });
 
     it("should display daily average alerts", async () => {
-      render(<AdvancedAnalyticsDashboard />);
+      renderComponent();
       await waitForDataLoad();
 
       const alertsTab = screen.getByText("Alert Analysis");
-      fireEvent.click(alertsTab);
+      await act(async () => {
+        fireEvent.click(alertsTab);
+      });
       
       await waitFor(() => {
         expect(screen.getByText("3.3")).toBeInTheDocument();
@@ -492,11 +550,13 @@ describe("AdvancedAnalyticsDashboard", () => {
   // ============================================================
   describe("Unit comparison", () => {
     it("should display all units", async () => {
-      render(<AdvancedAnalyticsDashboard />);
+      renderComponent();
       await waitForDataLoad();
 
       const unitsTab = screen.getByText("Unit Comparison");
-      fireEvent.click(unitsTab);
+      await act(async () => {
+        fireEvent.click(unitsTab);
+      });
       
       await waitFor(() => {
         expect(screen.getByText("Boiler Alpha")).toBeInTheDocument();
@@ -508,11 +568,13 @@ describe("AdvancedAnalyticsDashboard", () => {
     });
 
     it("should display performance scores for each unit", async () => {
-      render(<AdvancedAnalyticsDashboard />);
+      renderComponent();
       await waitForDataLoad();
 
       const unitsTab = screen.getByText("Unit Comparison");
-      fireEvent.click(unitsTab);
+      await act(async () => {
+        fireEvent.click(unitsTab);
+      });
       
       await waitFor(() => {
         expect(screen.getByText("98%")).toBeInTheDocument();
@@ -524,11 +586,13 @@ describe("AdvancedAnalyticsDashboard", () => {
     });
 
     it("should display status badges for each unit", async () => {
-      render(<AdvancedAnalyticsDashboard />);
+      renderComponent();
       await waitForDataLoad();
 
       const unitsTab = screen.getByText("Unit Comparison");
-      fireEvent.click(unitsTab);
+      await act(async () => {
+        fireEvent.click(unitsTab);
+      });
       
       const badges = document.querySelectorAll('[data-variant]');
       expect(badges.length).toBeGreaterThan(0);
@@ -540,25 +604,27 @@ describe("AdvancedAnalyticsDashboard", () => {
   // ============================================================
   describe("Charts", () => {
     it("should render line chart in Trends tab", async () => {
-      render(<AdvancedAnalyticsDashboard />);
+      renderComponent();
       await waitForDataLoad();
 
       expect(screen.getByTestId("line-chart")).toBeInTheDocument();
     });
 
     it("should render bar chart in Trends tab", async () => {
-      render(<AdvancedAnalyticsDashboard />);
+      renderComponent();
       await waitForDataLoad();
 
       expect(screen.getByTestId("bar-chart")).toBeInTheDocument();
     });
 
     it("should render pie chart in Alerts tab", async () => {
-      render(<AdvancedAnalyticsDashboard />);
+      renderComponent();
       await waitForDataLoad();
 
       const alertsTab = screen.getByText("Alert Analysis");
-      fireEvent.click(alertsTab);
+      await act(async () => {
+        fireEvent.click(alertsTab);
+      });
       
       await waitFor(() => {
         expect(screen.getByTestId("pie-chart")).toBeInTheDocument();
@@ -572,7 +638,7 @@ describe("AdvancedAnalyticsDashboard", () => {
   // ============================================================
   describe("Real-time button", () => {
     it("should render Real-time button", async () => {
-      render(<AdvancedAnalyticsDashboard />);
+      renderComponent();
       await waitForDataLoad();
 
       expect(screen.getByText("Real-time")).toBeInTheDocument();
@@ -584,13 +650,21 @@ describe("AdvancedAnalyticsDashboard", () => {
   // ============================================================
   describe("Component lifecycle", () => {
     it("should mount and unmount without errors", async () => {
-      const { unmount } = render(<AdvancedAnalyticsDashboard />);
+      let unmount;
+      act(() => {
+        const result = render(<AdvancedAnalyticsDashboard />);
+        unmount = result.unmount;
+      });
       await waitForDataLoad();
       expect(() => unmount()).not.toThrow();
     });
 
     it("should handle multiple renders", async () => {
-      const { rerender } = render(<AdvancedAnalyticsDashboard />);
+      let rerender;
+      act(() => {
+        const result = render(<AdvancedAnalyticsDashboard />);
+        rerender = result.rerender;
+      });
       await waitForDataLoad();
       expect(() => rerender(<AdvancedAnalyticsDashboard />)).not.toThrow();
     });
