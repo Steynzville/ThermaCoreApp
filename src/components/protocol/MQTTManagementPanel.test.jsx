@@ -111,7 +111,7 @@ vi.mock("@/components/ui/scroll-area", () => ({
   ScrollArea: ({ children, className }) => <div data-testid="scroll-area" className={className}>{children}</div>,
 }));
 
-// ✅ FIXED: Proper Select mock that handles value changes correctly
+// ✅ FIXED: Proper Select mock - SelectContent renders as fragment, not div
 vi.mock("@/components/ui/select", () => ({
   Select: ({ children, value, onValueChange }) => {
     const selectValue = value !== undefined && value !== null ? String(value) : "";
@@ -134,7 +134,8 @@ vi.mock("@/components/ui/select", () => ({
   },
   SelectTrigger: ({ children, id }) => <button data-testid="select-trigger" id={id}>{children}</button>,
   SelectValue: ({ placeholder }) => <span data-testid="select-value">{placeholder}</span>,
-  SelectContent: ({ children }) => <div data-testid="select-content">{children}</div>,
+  // ✅ FIX: render as fragment so options are direct children of <select>
+  SelectContent: ({ children }) => <>{children}</>,
   SelectItem: ({ children, value }) => <option data-testid="select-item" value={value}>{children}</option>,
 }));
 
@@ -350,6 +351,7 @@ describe("MQTTManagementPanel", () => {
       });
     });
 
+    // ✅ FIXED: SelectContent now renders as fragment, options are direct children
     it("should update subscription QoS when changed", async () => {
       const user = setupUserEvent();
       renderComponent();
@@ -445,6 +447,7 @@ describe("MQTTManagementPanel", () => {
       });
     });
 
+    // ✅ FIXED: SelectContent now renders as fragment, options are direct children
     it("should update publish QoS and retain flag", async () => {
       const user = setupUserEvent();
       renderComponent();
@@ -578,7 +581,6 @@ describe("MQTTManagementPanel", () => {
       });
     });
 
-    // ✅ NEW: Test fallback for unknown QoS values
     it("should fall back to outline variant for unknown QoS values", async () => {
       apiGetJson.mockImplementation((url) => {
         if (url.includes("/status")) return Promise.resolve(mockStatus);
@@ -695,7 +697,6 @@ describe("MQTTManagementPanel", () => {
       useMediaQuery.mockReturnValue(false);
     });
 
-    // ✅ NEW: Mobile filter test
     it("should filter messages by topic in the mobile drawer", async () => {
       const user = setupUserEvent();
       renderComponent();
@@ -710,6 +711,7 @@ describe("MQTTManagementPanel", () => {
       expect(filterInput.value).toBe("sensors/humidity");
     });
 
+    // ✅ FIXED: SelectContent now renders as fragment, options are direct children
     it("should cover subscribe/QoS/unsubscribe/publish/retain in the mobile drawer", async () => {
       const user = setupUserEvent();
       renderComponent();
@@ -718,7 +720,6 @@ describe("MQTTManagementPanel", () => {
         expect(screen.getByTestId("drawer")).toBeInTheDocument();
       });
 
-      // ✅ Subscription QoS change + subscribe
       const selects = screen.getAllByTestId("select-native");
       fireEvent.change(selects[0], { target: { value: "1" } });
       
@@ -737,7 +738,6 @@ describe("MQTTManagementPanel", () => {
         );
       });
 
-      // ✅ Unsubscribe
       await waitFor(() => {
         const panel = getTabPanel("subscriptions");
         expect(within(panel).getByText("sensors/temp")).toBeInTheDocument();
@@ -755,7 +755,6 @@ describe("MQTTManagementPanel", () => {
         );
       });
 
-      // ✅ Publish QoS + retain (mobile uses "Retain Message" with capital M)
       const selects2 = screen.getAllByTestId("select-native");
       fireEvent.change(selects2[1], { target: { value: "2" } });
       
@@ -789,7 +788,6 @@ describe("MQTTManagementPanel", () => {
         );
       });
 
-      // ✅ Clear messages (mobile "Clear" button + Refresh button)
       const refreshButton = screen
         .getAllByTestId("button")
         .find((btn) => btn.querySelector('[data-testid="refresh-icon"]'));
