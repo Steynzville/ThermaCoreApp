@@ -1,6 +1,16 @@
 /**
- * ProtocolWizard.test.jsx - Final Fixed Version
- * All 50 tests should pass
+ * ProtocolWizard.test.jsx - Complete Test Coverage
+ * 
+ * Covers:
+ * - All 4 protocols (Modbus, OPC-UA, DNP3, MQTT)
+ * - All steps and navigation
+ * - Connection testing (success, failure, loading)
+ * - Configuration saving with payload verification
+ * - Mobile (Drawer) view
+ * - Edge cases and error handling
+ * - State reset on close
+ * 
+ * Target: 85%+ function coverage
  */
 
 import {
@@ -33,7 +43,7 @@ import { toast } from "sonner";
 import { apiPostJson } from "@/utils/apiFetch";
 import { useMediaQuery } from "@/hooks/use-media-query";
 
-describe("ProtocolWizard - Enhanced Coverage", () => {
+describe("ProtocolWizard - Complete Coverage", () => {
   const defaultProps = {
     isOpen: true,
     onClose: vi.fn(),
@@ -47,6 +57,7 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
   });
 
   // ============ HELPER FUNCTIONS ============
+  // ✅ FIXED: No silent fallbacks - return null and let tests fail
 
   const getDialog = async () => {
     await waitFor(
@@ -112,8 +123,11 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
     }
   };
 
+  // ✅ FIXED: Returns null if not found (no fallback)
   const findInputByLabel = async (labelText) => {
     const content = await getDialogContent();
+    
+    // Try label association
     const label = content.queryByText(new RegExp(labelText, "i"));
     if (label) {
       const labelElement = label.closest("div") || label.closest("label");
@@ -122,6 +136,8 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
         if (input) return input;
       }
     }
+    
+    // Try placeholder
     const inputs = content.queryAllByRole("textbox");
     for (const input of inputs) {
       const placeholder = input.getAttribute("placeholder");
@@ -129,12 +145,16 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
         return input;
       }
     }
-    const allInputs = content.queryAllByRole("textbox");
-    return allInputs.length > 0 ? allInputs[0] : null;
+    
+    // ✅ NO FALLBACK - return null
+    return null;
   };
 
+  // ✅ FIXED: Returns null if not found (no fallback)
   const findNumberInputByLabel = async (labelText) => {
     const content = await getDialogContent();
+    
+    // Try label association
     const label = content.queryByText(new RegExp(labelText, "i"));
     if (label) {
       const labelElement = label.closest("div") || label.closest("label");
@@ -143,6 +163,8 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
         if (input) return input;
       }
     }
+    
+    // Try by role
     const inputs = content.queryAllByRole("spinbutton");
     for (const input of inputs) {
       const labelId = input.getAttribute("aria-labelledby");
@@ -153,10 +175,12 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
         }
       }
     }
-    return inputs.length > 0 ? inputs[0] : null;
+    
+    // ✅ NO FALLBACK - return null
+    return null;
   };
 
-  // ============ TEST SUITES ============
+  // ============ COMPONENT RENDERING ============
 
   describe("Component Rendering", () => {
     it("should render wizard when open", async () => {
@@ -191,6 +215,8 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
     });
   });
 
+  // ============ PROTOCOL SELECTION ============
+
   describe("Protocol Selection - All Protocols", () => {
     const protocols = ["modbus", "opcua", "dnp3", "mqtt"];
 
@@ -213,6 +239,8 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
       });
     }
   });
+
+  // ============ STEP NAVIGATION ============
 
   describe("Step Navigation - All Branches", () => {
     it("should navigate through all Modbus steps", async () => {
@@ -295,6 +323,8 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
     });
   });
 
+  // ============ MODBUS CONFIGURATION ============
+
   describe("Modbus Configuration - Full Coverage", () => {
     it("should render and fill device information step", async () => {
       render(<ProtocolWizard {...defaultProps} />);
@@ -304,17 +334,16 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
       expect(content.queryAllByText(/Device ID/i).length).toBeGreaterThan(0);
       expect(content.queryAllByText(/Unit ID/i).length).toBeGreaterThan(0);
 
+      // ✅ FIXED: Hard fail if input not found
       const deviceInput = await findInputByLabel("Device ID");
-      if (deviceInput) {
-        fireEvent.change(deviceInput, { target: { value: "PLC-001" } });
-        expect(deviceInput).toHaveValue("PLC-001");
-      }
+      expect(deviceInput).toBeTruthy();
+      fireEvent.change(deviceInput, { target: { value: "PLC-001" } });
+      expect(deviceInput).toHaveValue("PLC-001");
 
       const unitInput = await findNumberInputByLabel("Unit ID");
-      if (unitInput) {
-        fireEvent.change(unitInput, { target: { value: "5" } });
-        expect(unitInput).toHaveValue(5);
-      }
+      expect(unitInput).toBeTruthy();
+      fireEvent.change(unitInput, { target: { value: "5" } });
+      expect(unitInput).toHaveValue(5);
     });
 
     it("should render connection settings step", async () => {
@@ -327,20 +356,20 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
       expect(content.queryAllByText(/Timeout/i).length).toBeGreaterThan(0);
 
       const hostInput = await findInputByLabel("Host/IP Address");
-      if (hostInput) {
-        fireEvent.change(hostInput, { target: { value: "192.168.1.100" } });
-        expect(hostInput).toHaveValue("192.168.1.100");
-      }
+      expect(hostInput).toBeTruthy();
+      fireEvent.change(hostInput, { target: { value: "192.168.1.100" } });
+      expect(hostInput).toHaveValue("192.168.1.100");
 
       const portInput = await findNumberInputByLabel("Port");
-      if (portInput) {
-        fireEvent.change(portInput, { target: { value: "502" } });
-        expect(portInput).toHaveValue(502);
-      }
+      expect(portInput).toBeTruthy();
+      fireEvent.change(portInput, { target: { value: "502" } });
+      expect(portInput).toHaveValue(502);
     });
   });
 
-  describe("OPC-UA Configuration - Full Coverage (FIXED)", () => {
+  // ============ OPC-UA CONFIGURATION ============
+
+  describe("OPC-UA Configuration - Full Coverage", () => {
     it("should render and fill server info step", async () => {
       render(<ProtocolWizard {...defaultProps} />);
       await navigateToStep(1, "opcua");
@@ -349,16 +378,14 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
       expect(content.queryAllByText(/Endpoint URL/i).length).toBeGreaterThan(0);
 
       const endpointInput = await findInputByLabel("Endpoint URL");
-      if (endpointInput) {
-        fireEvent.change(endpointInput, {
-          target: { value: "opc.tcp://localhost:4840" },
-        });
-        expect(endpointInput).toHaveValue("opc.tcp://localhost:4840");
-      }
+      expect(endpointInput).toBeTruthy();
+      fireEvent.change(endpointInput, {
+        target: { value: "opc.tcp://localhost:4840" },
+      });
+      expect(endpointInput).toHaveValue("opc.tcp://localhost:4840");
     });
 
-    // FIXED: Skip the problematic select test - it's a Radix UI issue
-    it.skip("should render security configuration step with select", async () => {
+    it("should render security configuration step", async () => {
       render(<ProtocolWizard {...defaultProps} />);
       await navigateToStep(2, "opcua");
 
@@ -366,31 +393,40 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
       expect(content.queryAllByText(/Security Mode/i).length).toBeGreaterThan(0);
       expect(content.queryAllByText(/Username \(optional\)/i).length).toBeGreaterThan(0);
       expect(content.queryAllByText(/Password \(optional\)/i).length).toBeGreaterThan(0);
+      
+      // Verify the Select component exists
+      const selectTrigger = screen.queryByRole("combobox");
+      expect(selectTrigger).toBeTruthy();
     });
 
-    // FIXED: Remove the problematic authentication test
-    it.skip("should handle optional authentication fields", async () => {
+    it("should handle optional authentication fields", async () => {
       render(<ProtocolWizard {...defaultProps} />);
       await navigateToStep(2, "opcua");
 
-      const content = await getDialogContent();
-      // Just verify the fields exist
-      const usernameLabels = content.queryAllByText(/Username \(optional\)/i);
-      const passwordLabels = content.queryAllByText(/Password \(optional\)/i);
-      expect(usernameLabels.length + passwordLabels.length).toBeGreaterThan(0);
-    });
+      const usernameInput = await findInputByLabel("Username");
+      expect(usernameInput).toBeTruthy();
+      fireEvent.change(usernameInput, { target: { value: "admin" } });
+      expect(usernameInput).toHaveValue("admin");
 
-    // REPLACEMENT: Simple test that works
-    it("should render OPC-UA security fields", async () => {
-      render(<ProtocolWizard {...defaultProps} />);
-      await navigateToStep(2, "opcua");
-
+      // Password input might be type="password", find by label
       const content = await getDialogContent();
-      // Just verify the fields exist without interacting with select
-      expect(content.queryAllByText(/Security/i).length).toBeGreaterThan(0);
-      expect(content.queryAllByText(/Username/i).length).toBeGreaterThan(0);
+      const passwordLabel = content.queryByText(/Password \(optional\)/i);
+      expect(passwordLabel).toBeTruthy();
+      
+      // Find password input by its label association
+      const labelElement = passwordLabel.closest("div") || passwordLabel.closest("label");
+      if (labelElement) {
+        const passwordInput = labelElement.querySelector('input[type="password"]');
+        expect(passwordInput).toBeTruthy();
+        if (passwordInput) {
+          fireEvent.change(passwordInput, { target: { value: "password123" } });
+          expect(passwordInput).toHaveValue("password123");
+        }
+      }
     });
   });
+
+  // ============ DNP3 CONFIGURATION ============
 
   describe("DNP3 Configuration - Full Coverage", () => {
     it("should render and fill addresses step", async () => {
@@ -402,16 +438,14 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
       expect(content.queryAllByText(/Outstation Address/i).length).toBeGreaterThan(0);
 
       const masterInput = await findNumberInputByLabel("Master Address");
-      if (masterInput) {
-        fireEvent.change(masterInput, { target: { value: "1" } });
-        expect(masterInput).toHaveValue(1);
-      }
+      expect(masterInput).toBeTruthy();
+      fireEvent.change(masterInput, { target: { value: "1" } });
+      expect(masterInput).toHaveValue(1);
 
       const outstationInput = await findNumberInputByLabel("Outstation Address");
-      if (outstationInput) {
-        fireEvent.change(outstationInput, { target: { value: "10" } });
-        expect(outstationInput).toHaveValue(10);
-      }
+      expect(outstationInput).toBeTruthy();
+      fireEvent.change(outstationInput, { target: { value: "10" } });
+      expect(outstationInput).toHaveValue(10);
     });
 
     it("should render connection settings step", async () => {
@@ -424,6 +458,8 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
     });
   });
 
+  // ============ MQTT CONFIGURATION ============
+
   describe("MQTT Configuration - Full Coverage", () => {
     it("should render and fill broker info step", async () => {
       render(<ProtocolWizard {...defaultProps} />);
@@ -435,22 +471,19 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
       expect(content.queryAllByText(/Client ID/i).length).toBeGreaterThan(0);
 
       const hostInput = await findInputByLabel("Broker Host");
-      if (hostInput) {
-        fireEvent.change(hostInput, { target: { value: "broker.hivemq.com" } });
-        expect(hostInput).toHaveValue("broker.hivemq.com");
-      }
+      expect(hostInput).toBeTruthy();
+      fireEvent.change(hostInput, { target: { value: "broker.hivemq.com" } });
+      expect(hostInput).toHaveValue("broker.hivemq.com");
 
       const portInput = await findNumberInputByLabel("Port");
-      if (portInput) {
-        fireEvent.change(portInput, { target: { value: "1883" } });
-        expect(portInput).toHaveValue(1883);
-      }
+      expect(portInput).toBeTruthy();
+      fireEvent.change(portInput, { target: { value: "1883" } });
+      expect(portInput).toHaveValue(1883);
 
       const clientInput = await findInputByLabel("Client ID");
-      if (clientInput) {
-        fireEvent.change(clientInput, { target: { value: "test-client" } });
-        expect(clientInput).toHaveValue("test-client");
-      }
+      expect(clientInput).toBeTruthy();
+      fireEvent.change(clientInput, { target: { value: "test-client" } });
+      expect(clientInput).toHaveValue("test-client");
     });
 
     it("should render TLS checkbox", async () => {
@@ -459,9 +492,13 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
 
       const content = await getDialogContent();
       const checkbox = content.queryByRole("checkbox");
+      expect(checkbox).toBeTruthy();
+      
       if (checkbox) {
         fireEvent.click(checkbox);
         expect(checkbox).toBeChecked();
+        fireEvent.click(checkbox);
+        expect(checkbox).not.toBeChecked();
       }
     });
 
@@ -473,7 +510,55 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
       expect(content.queryAllByText(/Username/i).length).toBeGreaterThan(0);
       expect(content.queryAllByText(/Password/i).length).toBeGreaterThan(0);
     });
+
+    // ✅ NEW: Test TLS affects saved config
+    it("should include TLS setting in saved config", async () => {
+      render(<ProtocolWizard {...defaultProps} />);
+      
+      await navigateToStep(1, "mqtt");
+      
+      const hostInput = await findInputByLabel("Broker Host");
+      expect(hostInput).toBeTruthy();
+      fireEvent.change(hostInput, { target: { value: "broker.hivemq.com" } });
+      
+      const portInput = await findNumberInputByLabel("Port");
+      expect(portInput).toBeTruthy();
+      fireEvent.change(portInput, { target: { value: "1883" } });
+      
+      const clientInput = await findInputByLabel("Client ID");
+      expect(clientInput).toBeTruthy();
+      fireEvent.change(clientInput, { target: { value: "test-client" } });
+      
+      // Toggle TLS on
+      const checkbox = screen.getByRole("checkbox");
+      expect(checkbox).toBeTruthy();
+      fireEvent.click(checkbox);
+      expect(checkbox).toBeChecked();
+      
+      await navigateToStep(4, "mqtt");
+      
+      const content = await getDialogContent();
+      const saveButtons = content.queryAllByRole("button", { name: /save configuration/i });
+      expect(saveButtons.length).toBeGreaterThan(0);
+      
+      apiPostJson.mockResolvedValue({ success: true });
+      fireEvent.click(saveButtons[0]);
+      
+      await waitFor(() => {
+        expect(apiPostJson).toHaveBeenCalledWith(
+          expect.stringContaining("tenant_id=tenant-1"),
+          expect.objectContaining({
+            broker_host: "broker.hivemq.com",
+            broker_port: 1883,
+            client_id: "test-client",
+            use_tls: true, // ✅ Verifies TLS is saved
+          })
+        );
+      });
+    });
   });
+
+  // ============ CONNECTION TESTING ============
 
   describe("Connection Testing - Complete Coverage", () => {
     it("should render test connection step for all protocols", async () => {
@@ -501,14 +586,14 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
 
       const content = await getDialogContent();
       const buttons = content.queryAllByRole("button", { name: /test connection/i });
-      if (buttons.length > 0) {
-        fireEvent.click(buttons[0]);
+      expect(buttons.length).toBeGreaterThan(0);
+      
+      fireEvent.click(buttons[0]);
 
-        await waitFor(() => {
-          const loadingButton = screen.queryByRole("button", { name: /testing/i });
-          expect(loadingButton).toBeInTheDocument();
-        });
-      }
+      await waitFor(() => {
+        const loadingButton = screen.queryByRole("button", { name: /testing/i });
+        expect(loadingButton).toBeInTheDocument();
+      });
     });
 
     it("should display success result when connection succeeds", async () => {
@@ -524,15 +609,15 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
 
       const content = await getDialogContent();
       const buttons = content.queryAllByRole("button", { name: /test connection/i });
-      if (buttons.length > 0) {
-        fireEvent.click(buttons[0]);
+      expect(buttons.length).toBeGreaterThan(0);
+      
+      fireEvent.click(buttons[0]);
 
-        await waitFor(() => {
-          expect(toast.success).toHaveBeenCalledWith("Connection test successful!");
-          const resultMessage = screen.queryByText(successMessage);
-          expect(resultMessage).toBeInTheDocument();
-        });
-      }
+      await waitFor(() => {
+        expect(toast.success).toHaveBeenCalledWith("Connection test successful!");
+        const resultMessage = screen.queryByText(successMessage);
+        expect(resultMessage).toBeInTheDocument();
+      });
     });
 
     it("should display failure result when connection fails", async () => {
@@ -544,15 +629,15 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
 
       const content = await getDialogContent();
       const buttons = content.queryAllByRole("button", { name: /test connection/i });
-      if (buttons.length > 0) {
-        fireEvent.click(buttons[0]);
+      expect(buttons.length).toBeGreaterThan(0);
+      
+      fireEvent.click(buttons[0]);
 
-        await waitFor(() => {
-          expect(toast.error).toHaveBeenCalledWith("Connection test failed");
-          const errorText = screen.queryByText(errorMessage);
-          expect(errorText).toBeInTheDocument();
-        });
-      }
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith("Connection test failed");
+        const errorText = screen.queryByText(errorMessage);
+        expect(errorText).toBeInTheDocument();
+      });
     });
 
     it("should display error details when provided", async () => {
@@ -566,14 +651,14 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
 
       const content = await getDialogContent();
       const buttons = content.queryAllByRole("button", { name: /test connection/i });
-      if (buttons.length > 0) {
-        fireEvent.click(buttons[0]);
+      expect(buttons.length).toBeGreaterThan(0);
+      
+      fireEvent.click(buttons[0]);
 
-        await waitFor(() => {
-          const details = screen.queryByText(/Port 502 is blocked/i);
-          expect(details).toBeInTheDocument();
-        });
-      }
+      await waitFor(() => {
+        const details = screen.queryByText(/Port 502 is blocked/i);
+        expect(details).toBeInTheDocument();
+      });
     });
 
     it("should handle API errors with no details", async () => {
@@ -584,15 +669,17 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
 
       const content = await getDialogContent();
       const buttons = content.queryAllByRole("button", { name: /test connection/i });
-      if (buttons.length > 0) {
-        fireEvent.click(buttons[0]);
+      expect(buttons.length).toBeGreaterThan(0);
+      
+      fireEvent.click(buttons[0]);
 
-        await waitFor(() => {
-          expect(toast.error).toHaveBeenCalledWith("Connection test failed");
-        });
-      }
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith("Connection test failed");
+      });
     });
   });
+
+  // ============ SAVE CONFIGURATION ============
 
   describe("Save Configuration - Complete Coverage", () => {
     it("should render save button only on final step", async () => {
@@ -608,26 +695,58 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
       expect(saveButtons.length).toBeGreaterThan(0);
     });
 
-    it("should save configuration successfully", async () => {
-      apiPostJson.mockResolvedValue({ success: true });
-
+    it("should save configuration successfully with full payload verification", async () => {
       render(<ProtocolWizard {...defaultProps} />);
+      
+      // Fill Modbus configuration
+      await navigateToStep(1, "modbus");
+      const deviceInput = await findInputByLabel("Device ID");
+      expect(deviceInput).toBeTruthy();
+      fireEvent.change(deviceInput, { target: { value: "PLC-001" } });
+      
+      const unitInput = await findNumberInputByLabel("Unit ID");
+      expect(unitInput).toBeTruthy();
+      fireEvent.change(unitInput, { target: { value: "5" } });
+      
+      await navigateToStep(2, "modbus");
+      const hostInput = await findInputByLabel("Host/IP Address");
+      expect(hostInput).toBeTruthy();
+      fireEvent.change(hostInput, { target: { value: "192.168.1.100" } });
+      
+      const portInput = await findNumberInputByLabel("Port");
+      expect(portInput).toBeTruthy();
+      fireEvent.change(portInput, { target: { value: "502" } });
+      
+      const timeoutInput = await findNumberInputByLabel("Timeout");
+      expect(timeoutInput).toBeTruthy();
+      fireEvent.change(timeoutInput, { target: { value: "10" } });
+      
+      // Navigate to save
       await navigateToStep(4, "modbus");
-
+      
       const content = await getDialogContent();
       const saveButtons = content.queryAllByRole("button", { name: /save configuration/i });
-      if (saveButtons.length > 0) {
-        fireEvent.click(saveButtons[0]);
-
-        await waitFor(() => {
-          expect(apiPostJson).toHaveBeenCalled();
-          expect(toast.success).toHaveBeenCalledWith(
-            "MODBUS device configured successfully"
-          );
-          expect(defaultProps.onSuccess).toHaveBeenCalled();
-          expect(defaultProps.onClose).toHaveBeenCalled();
-        });
-      }
+      expect(saveButtons.length).toBeGreaterThan(0);
+      
+      apiPostJson.mockResolvedValue({ success: true });
+      fireEvent.click(saveButtons[0]);
+      
+      // ✅ FIXED: Verify full payload
+      await waitFor(() => {
+        expect(apiPostJson).toHaveBeenCalledWith(
+          expect.stringContaining("tenant_id=tenant-1"),
+          expect.objectContaining({
+            device_id: "PLC-001",
+            host: "192.168.1.100",
+            port: 502,
+            unit_id: 5,
+            timeout: 10,
+          })
+        );
+        expect(toast.success).toHaveBeenCalledWith("MODBUS device configured successfully");
+        expect(defaultProps.onSuccess).toHaveBeenCalled();
+        expect(defaultProps.onClose).toHaveBeenCalled();
+      });
     });
 
     it("should disable save button when connection test failed", async () => {
@@ -638,12 +757,12 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
 
       const content = await getDialogContent();
       const testButtons = content.queryAllByRole("button", { name: /test connection/i });
-      if (testButtons.length > 0) {
-        fireEvent.click(testButtons[0]);
-        await waitFor(() => {
-          expect(toast.error).toHaveBeenCalled();
-        });
-      }
+      expect(testButtons.length).toBeGreaterThan(0);
+      
+      fireEvent.click(testButtons[0]);
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalled();
+      });
 
       const nextButton = screen.getByRole("button", { name: /next/i });
       fireEvent.click(nextButton);
@@ -651,9 +770,8 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
       await waitFor(() => {
         const content2 = within(screen.getByRole("dialog"));
         const saveButtons = content2.queryAllByRole("button", { name: /save configuration/i });
-        if (saveButtons.length > 0) {
-          expect(saveButtons[0]).toBeDisabled();
-        }
+        expect(saveButtons.length).toBeGreaterThan(0);
+        expect(saveButtons[0]).toBeDisabled();
       });
     });
 
@@ -665,13 +783,13 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
 
       const content = await getDialogContent();
       const saveButtons = content.queryAllByRole("button", { name: /save configuration/i });
-      if (saveButtons.length > 0) {
-        fireEvent.click(saveButtons[0]);
+      expect(saveButtons.length).toBeGreaterThan(0);
+      
+      fireEvent.click(saveButtons[0]);
 
-        await waitFor(() => {
-          expect(toast.error).toHaveBeenCalledWith("Failed to save configuration");
-        });
-      }
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith("Failed to save configuration");
+      });
     });
 
     it("should include tenant ID in save and test requests", async () => {
@@ -682,16 +800,16 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
 
       const content = await getDialogContent();
       const saveButtons = content.queryAllByRole("button", { name: /save configuration/i });
-      if (saveButtons.length > 0) {
-        fireEvent.click(saveButtons[0]);
+      expect(saveButtons.length).toBeGreaterThan(0);
+      
+      fireEvent.click(saveButtons[0]);
 
-        await waitFor(() => {
-          expect(apiPostJson).toHaveBeenCalledWith(
-            expect.stringContaining("tenant_id=custom-tenant"),
-            expect.any(Object)
-          );
-        });
-      }
+      await waitFor(() => {
+        expect(apiPostJson).toHaveBeenCalledWith(
+          expect.stringContaining("tenant_id=custom-tenant"),
+          expect.any(Object)
+        );
+      });
     });
 
     it("should handle save when tenantId is not provided", async () => {
@@ -702,20 +820,22 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
 
       const content = await getDialogContent();
       const saveButtons = content.queryAllByRole("button", { name: /save configuration/i });
-      if (saveButtons.length > 0) {
-        fireEvent.click(saveButtons[0]);
+      expect(saveButtons.length).toBeGreaterThan(0);
+      
+      fireEvent.click(saveButtons[0]);
 
-        await waitFor(() => {
-          expect(apiPostJson).toHaveBeenCalledWith(
-            expect.not.stringContaining("tenant_id"),
-            expect.any(Object)
-          );
-        });
-      }
+      await waitFor(() => {
+        expect(apiPostJson).toHaveBeenCalledWith(
+          expect.not.stringContaining("tenant_id"),
+          expect.any(Object)
+        );
+      });
     });
   });
 
-  describe("Mobile/Drawer View (FIXED - SKIP PROBLEMATIC TESTS)", () => {
+  // ============ MOBILE / DRAWER VIEW ============
+
+  describe("Mobile/Drawer View", () => {
     it("should render Drawer instead of Dialog on mobile", async () => {
       useMediaQuery.mockReturnValue(false);
       render(<ProtocolWizard {...defaultProps} />);
@@ -729,8 +849,7 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
       });
     });
 
-    // FIXED: Skip these tests - Radix UI Drawer has internal height calculation issues in test env
-    it.skip("should show step progress in mobile view", async () => {
+    it("should show step progress in mobile view", async () => {
       useMediaQuery.mockReturnValue(false);
       render(<ProtocolWizard {...defaultProps} />);
 
@@ -746,7 +865,7 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
       expect(stepNumbers.length).toBeGreaterThan(0);
     });
 
-    it.skip("should navigate in mobile view", async () => {
+    it("should navigate in mobile view", async () => {
       useMediaQuery.mockReturnValue(false);
       render(<ProtocolWizard {...defaultProps} />);
 
@@ -771,24 +890,16 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
         expect(dialog).toBeInTheDocument();
       });
 
-      defaultProps.onClose.mockClear();
-    });
-
-    // REPLACEMENT: Basic test that works
-    it("should render mobile drawer with content", async () => {
-      useMediaQuery.mockReturnValue(false);
-      render(<ProtocolWizard {...defaultProps} />);
+      const closeButton = screen.getByRole("button", { name: /close/i });
+      fireEvent.click(closeButton);
 
       await waitFor(() => {
-        const drawer = screen.getByRole("dialog");
-        expect(drawer).toBeInTheDocument();
-        const content = within(drawer);
-        const button = content.queryByRole("button", { name: /next/i });
-        // Button exists but might be disabled
-        expect(button).toBeInTheDocument();
+        expect(defaultProps.onClose).toHaveBeenCalled();
       });
     });
   });
+
+  // ============ EDGE CASES ============
 
   describe("Edge Cases and Error Handling", () => {
     it("should handle empty configuration fields", async () => {
@@ -805,11 +916,11 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
 
       const content = await getDialogContent();
       const inputs = content.queryAllByRole("textbox");
-      if (inputs.length > 0) {
-        const testValue = "!@#$%^&*()_+-=[]{}|;:',.<>?/";
-        fireEvent.change(inputs[0], { target: { value: testValue } });
-        expect(inputs[0]).toHaveValue(testValue);
-      }
+      expect(inputs.length).toBeGreaterThan(0);
+      
+      const testValue = "!@#$%^&*()_+-=[]{}|;:',.<>?/";
+      fireEvent.change(inputs[0], { target: { value: testValue } });
+      expect(inputs[0]).toHaveValue(testValue);
     });
 
     it("should handle very long input values", async () => {
@@ -818,11 +929,11 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
 
       const content = await getDialogContent();
       const inputs = content.queryAllByRole("textbox");
-      if (inputs.length > 0) {
-        const longValue = "a".repeat(1000);
-        fireEvent.change(inputs[0], { target: { value: longValue } });
-        expect(inputs[0]).toHaveValue(longValue);
-      }
+      expect(inputs.length).toBeGreaterThan(0);
+      
+      const longValue = "a".repeat(1000);
+      fireEvent.change(inputs[0], { target: { value: longValue } });
+      expect(inputs[0]).toHaveValue(longValue);
     });
 
     it("should handle port number edge cases", async () => {
@@ -831,17 +942,20 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
 
       const content = await getDialogContent();
       const inputs = content.queryAllByRole("spinbutton");
-      if (inputs.length > 0) {
-        const portInput = inputs[0];
-        fireEvent.change(portInput, { target: { value: "0" } });
-        expect(portInput).toHaveValue(0);
+      expect(inputs.length).toBeGreaterThan(0);
+      
+      const portInput = inputs[0];
+      fireEvent.change(portInput, { target: { value: "0" } });
+      expect(portInput).toHaveValue(0);
 
-        fireEvent.change(portInput, { target: { value: "65535" } });
-        expect(portInput).toHaveValue(65535);
-      }
+      fireEvent.change(portInput, { target: { value: "65535" } });
+      expect(portInput).toHaveValue(65535);
+      
+      // ✅ Test empty string handling (NaN case)
+      fireEvent.change(portInput, { target: { value: "" } });
+      expect(portInput).toHaveValue(null);
     });
 
-    // FIXED: Simplified rapid navigation test
     it("should handle navigation clicks", async () => {
       render(<ProtocolWizard {...defaultProps} />);
       await selectProtocol("modbus");
@@ -869,52 +983,77 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
 
       const content = await getDialogContent();
       const saveButtons = content.queryAllByRole("button", { name: /save configuration/i });
-      if (saveButtons.length > 0) {
-        fireEvent.click(saveButtons[0]);
+      expect(saveButtons.length).toBeGreaterThan(0);
+      
+      fireEvent.click(saveButtons[0]);
 
-        const closeButton = screen.getByRole("button", { name: /close/i });
-        fireEvent.click(closeButton);
-
-        await waitFor(() => {
-          expect(defaultProps.onClose).toHaveBeenCalled();
-        });
-      }
-    });
-  });
-
-  describe("isStepValid - All Branches", () => {
-    it("should return true for step 0 when protocol is selected", async () => {
-      render(<ProtocolWizard {...defaultProps} />);
-      const nextButton = screen.getByRole("button", { name: /next/i });
-      expect(nextButton).toBeDisabled();
-
-      await selectProtocol("modbus");
-      expect(nextButton).not.toBeDisabled();
-    });
-
-    it("should allow navigation through all steps after protocol selection", async () => {
-      render(<ProtocolWizard {...defaultProps} />);
-      await selectProtocol("modbus");
-
-      let nextButton = screen.getByRole("button", { name: /next/i });
-      expect(nextButton).not.toBeDisabled();
-      fireEvent.click(nextButton);
+      const closeButton = screen.getByRole("button", { name: /close/i });
+      fireEvent.click(closeButton);
 
       await waitFor(() => {
-        const content = within(screen.getByRole("dialog"));
-        expect(content.queryAllByText(/Device Information/i).length).toBeGreaterThan(0);
-      });
-
-      nextButton = screen.getByRole("button", { name: /next/i });
-      expect(nextButton).not.toBeDisabled();
-      fireEvent.click(nextButton);
-
-      await waitFor(() => {
-        const content = within(screen.getByRole("dialog"));
-        expect(content.queryAllByText(/Connection Settings/i).length).toBeGreaterThan(0);
+        expect(defaultProps.onClose).toHaveBeenCalled();
       });
     });
   });
+
+  // ============ STATE MANAGEMENT ============
+
+  describe("State Management and Reset", () => {
+    // ✅ FIXED: Properly tests state reset
+    it("should reset state when closing and reopening", async () => {
+      const { rerender } = render(<ProtocolWizard {...defaultProps} />);
+      
+      // Fill data
+      await selectProtocol("modbus");
+      await navigateToStep(1, "modbus");
+      
+      const content = await getDialogContent();
+      const inputs = content.queryAllByRole("textbox");
+      expect(inputs.length).toBeGreaterThan(0);
+      
+      fireEvent.change(inputs[0], { target: { value: "PLC-001" } });
+      expect(inputs[0]).toHaveValue("PLC-001");
+      
+      // Close
+      const closeButton = screen.getByRole("button", { name: /close/i });
+      fireEvent.click(closeButton);
+      
+      await waitFor(() => {
+        expect(defaultProps.onClose).toHaveBeenCalled();
+      });
+      
+      // Reopen with same component instance
+      rerender(<ProtocolWizard {...defaultProps} isOpen={true} />);
+      
+      // Should be on step 0 (protocol selection)
+      await waitFor(() => {
+        const newContent = within(screen.getByRole("dialog"));
+        expect(newContent.queryAllByText(/Select Protocol/i).length).toBeGreaterThan(0);
+      });
+      
+      // Select protocol and verify fields are empty (reset)
+      await selectProtocol("modbus");
+      await navigateToStep(1, "modbus");
+      
+      const newContent2 = within(screen.getByRole("dialog"));
+      const newInputs = newContent2.queryAllByRole("textbox");
+      expect(newInputs.length).toBeGreaterThan(0);
+      // Should be empty (reset to DEFAULT_CONFIG)
+      expect(newInputs[0]).toHaveValue("");
+    });
+
+    it("should call onClose when dialog closes", async () => {
+      render(<ProtocolWizard {...defaultProps} />);
+      const closeButton = screen.getByRole("button", { name: /close/i });
+      fireEvent.click(closeButton);
+
+      await waitFor(() => {
+        expect(defaultProps.onClose).toHaveBeenCalled();
+      });
+    });
+  });
+
+  // ============ PROTOCOL-SPECIFIC STEPS ============
 
   describe("getCurrentSteps - Protocol-Specific Steps", () => {
     it("should return correct steps for each protocol", async () => {
@@ -948,40 +1087,6 @@ describe("ProtocolWizard - Enhanced Coverage", () => {
         }
         unmount();
       }
-    });
-  });
-
-  describe("Close and Reset - Complete Coverage", () => {
-    it("should reset state when closing", async () => {
-      render(<ProtocolWizard {...defaultProps} />);
-
-      await selectProtocol("modbus");
-      await navigateToStep(1, "modbus");
-
-      const content = await getDialogContent();
-      const inputs = content.queryAllByRole("textbox");
-      if (inputs.length > 0) {
-        fireEvent.change(inputs[0], { target: { value: "TEST-001" } });
-      }
-
-      defaultProps.onClose();
-
-      render(<ProtocolWizard {...defaultProps} isOpen={true} />);
-
-      await waitFor(() => {
-        const newContent = within(screen.getByRole("dialog"));
-        expect(newContent.queryAllByText(/Select Protocol/i).length).toBeGreaterThan(0);
-      });
-    });
-
-    it("should call onClose when dialog closes", async () => {
-      render(<ProtocolWizard {...defaultProps} />);
-      const closeButton = screen.getByRole("button", { name: /close/i });
-      fireEvent.click(closeButton);
-
-      await waitFor(() => {
-        expect(defaultProps.onClose).toHaveBeenCalled();
-      });
     });
   });
 });
