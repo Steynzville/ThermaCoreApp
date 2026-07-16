@@ -1,41 +1,28 @@
 /**
  * Tests for scripts/check-security.js
  *
- * The script is a side-effect-only CLI script: it reads process.env/argv,
- * shells out to `find`, reads matched files, and calls process.exit().
- * It exports nothing, so each test:
- *   1. Sets process.env.NODE_ENV / process.argv as needed
- *   2. Configures the mocked modules
- *   3. Dynamically imports the script, then flushes microtasks
+ * The script is a side-effect-only CLI script that runs its top-level
+ * check on import and never exports anything. Because dynamic import()
+ * caches the module just like a static import, each test needs
+ * vi.resetModules() to force the script to actually re-execute — and
+ * because that also invalidates any module bindings captured before the
+ * reset, we re-import the mocked "node:fs" / "node:child_process" modules
+ * fresh inside run() every time, rather than destructuring them once at
+ * the top of the file.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const SCRIPT_PATH = "../../scripts/check-security.js";
 
-// Mock node:fs with default export
-vi.mock("node:fs", async (importOriginal) => {
-  const actual = await importOriginal();
-  return {
-    ...actual,
-    default: actual,
-    existsSync: vi.fn(),
-    readFileSync: vi.fn(),
-  };
-});
+vi.mock("node:fs", () => ({
+  existsSync: vi.fn(),
+  readFileSync: vi.fn(),
+}));
 
-vi.mock("node:child_process", async (importOriginal) => {
-  const actual = await importOriginal();
-  return {
-    ...actual,
-    default: actual,
-    execSync: vi.fn(),
-  };
-});
-
-// Import the mocked modules
-import { existsSync, readFileSync } from "node:fs";
-import { execSync } from "node:child_process";
+vi.mock("node:child_process", () => ({
+  execSync: vi.fn(),
+}));
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 10));
 
@@ -45,7 +32,6 @@ let originalArgv;
 beforeEach(() => {
   originalArgv = [...process.argv];
   exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {});
-  vi.clearAllMocks();
 });
 
 afterEach(() => {
@@ -55,9 +41,9 @@ afterEach(() => {
 });
 
 /**
- * Configures the mocks and imports the script.
- * 
- * ✅ FIX: Always set NODE_ENV=production for tests so the script runs
+ * Resets the module registry (forcing the script to re-run from scratch),
+ * re-imports the fresh mock instances that resetModules produces, wires
+ * them up, then imports the script and waits for its async work to settle.
  */
 async function run({
   execOutput = "",
@@ -66,43 +52,43 @@ async function run({
   existsReturn = true,
   readImpl,
   readReturn = "",
-  nodeEnv = "production", // ✅ Force production by default
+  nodeEnv = "production",
   argv = [],
 } = {}) {
-  // ✅ Set environment for the script to run
   vi.stubEnv("NODE_ENV", nodeEnv);
   process.argv = ["node", "check-security.js", ...argv];
 
-  // Reset mock implementations
-  execSync.mockReset();
-  existsSync.mockReset();
-  readFileSync.mockReset();
+  vi.resetModules();
+
+  // Re-import AFTER resetModules, so we get the mock instances the script
+  // will actually receive on its own fresh import below.
+  const fsMod = await import("node:fs");
+  const cpMod = await import("node:child_process");
 
   if (execImpl) {
-    execSync.mockImplementation(execImpl);
+    cpMod.execSync.mockImplementation(execImpl);
   } else {
-    execSync.mockReturnValue(execOutput);
+    cpMod.execSync.mockReturnValue(execOutput);
   }
 
   if (existsImpl) {
-    existsSync.mockImplementation(existsImpl);
+    fsMod.existsSync.mockImplementation(existsImpl);
   } else {
-    existsSync.mockReturnValue(existsReturn);
+    fsMod.existsSync.mockReturnValue(existsReturn);
   }
 
   if (readImpl) {
-    readFileSync.mockImplementation(readImpl);
+    fsMod.readFileSync.mockImplementation(readImpl);
   } else {
-    readFileSync.mockReturnValue(readReturn);
+    fsMod.readFileSync.mockReturnValue(readReturn);
   }
 
   exitSpy.mockClear();
 
-  // ✅ Import the script - it will run because NODE_ENV=production
   await import(SCRIPT_PATH);
   await flush();
 
-  return { fsMod: { existsSync, readFileSync }, cpMod: { execSync } };
+  return { fsMod, cpMod };
 }
 
 describe("check-security - early exit conditions", () => {
@@ -181,7 +167,7 @@ describe("check-security - critical SECURITY_PATTERNS", () => {
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
 
-  it("flags the username.toLowerCase() === \"admin\" login check pattern", async () => {
+  it('flags the username.toLowerCase() === "admin" login check pattern', async () => {
     await run({
       execOutput: "src/login.jsx\n",
       readReturn: 'if (username.toLowerCase() === "admin") { grant(); }',
@@ -189,7 +175,7 @@ describe("check-security - critical SECURITY_PATTERNS", () => {
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
 
-  it("flags the password === \"admin123\" comparison pattern", async () => {
+  it('flags the password === "admin123" comparison pattern', async () => {
     await run({
       execOutput: "src/config.js\n",
       readReturn: 'if (password === "admin123") { grant(); }',
@@ -197,7 +183,7 @@ describe("check-security - critical SECURITY_PATTERNS", () => {
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
 
-  it("flags the password === \"user123\" comparison pattern", async () => {
+  it('flags the password === "user123" comparison pattern', async () => {
     await run({
       execOutput: "src/config.js\n",
       readReturn: 'if (password === "user123") { grant(); }',
@@ -253,7 +239,7 @@ describe("check-security - ROLE_PATTERNS scoped to auth-context files", () => {
   it("flags an auth-admin pattern inside auth.js", async () => {
     await run({
       execOutput: "src/auth.js\n",
-      readReturn: 'function checkAuthForAdmin() { return auth.admin; }',
+      readReturn: "function checkAuthForAdmin() { return auth.admin; }",
     });
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
