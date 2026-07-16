@@ -3,6 +3,7 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import AdminPanel from "../components/AdminPanel";
+import { toast } from "sonner"; // ✅ FIX: Import toast directly
 
 // Setup hoisted mocks
 const { 
@@ -142,6 +143,9 @@ describe("AdminPanel User Creation Form", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetAllUsers.mockResolvedValue(mockUsers);
+    // ✅ Clear toast mocks between tests
+    toast.success.mockClear();
+    toast.error.mockClear();
   });
 
   it("should render without crashing", async () => {
@@ -303,12 +307,12 @@ describe("AdminPanel User Creation Form", () => {
 
     // Should show validation errors via toast
     await waitFor(() => {
-      // Toast should be called with error
-      const { toast } = require("sonner");
+      // ✅ FIX: Use imported toast directly
       expect(toast.error).toHaveBeenCalled();
     });
   });
 
+  // ✅ FIX: Select a role before submitting
   it("should create a user when form is valid", async () => {
     mockApiGet.mockResolvedValue({
       ok: true,
@@ -341,6 +345,13 @@ describe("AdminPanel User Creation Form", () => {
       expect(screen.getByText(/Create New User/i)).toBeInTheDocument();
     });
 
+    // ✅ FIX: Wait for roles to finish loading and select a role
+    const roleSelect = await screen.findByRole("combobox");
+    await waitFor(() => {
+      expect(roleSelect).not.toBeDisabled();
+    });
+    fireEvent.change(roleSelect, { target: { value: "admin-id" } });
+
     // Fill in the form fields
     const usernameInput = screen.getByPlaceholderText(/Enter username/i);
     fireEvent.change(usernameInput, { target: { value: "newuser" } });
@@ -357,7 +368,7 @@ describe("AdminPanel User Creation Form", () => {
 
     // Should show success toast
     await waitFor(() => {
-      const { toast } = require("sonner");
+      // ✅ FIX: Use imported toast directly
       expect(toast.success).toHaveBeenCalled();
     });
   });
@@ -394,6 +405,13 @@ describe("AdminPanel User Creation Form", () => {
       expect(screen.getByText(/Create New User/i)).toBeInTheDocument();
     });
 
+    // ✅ FIX: Select a role
+    const roleSelect = await screen.findByRole("combobox");
+    await waitFor(() => {
+      expect(roleSelect).not.toBeDisabled();
+    });
+    fireEvent.change(roleSelect, { target: { value: "admin-id" } });
+
     const usernameInput = screen.getByPlaceholderText(/Enter username/i);
     fireEvent.change(usernameInput, { target: { value: "existinguser" } });
 
@@ -407,7 +425,7 @@ describe("AdminPanel User Creation Form", () => {
     fireEvent.click(createButton);
 
     await waitFor(() => {
-      const { toast } = require("sonner");
+      // ✅ FIX: Use imported toast directly
       expect(toast.error).toHaveBeenCalled();
     });
   });
