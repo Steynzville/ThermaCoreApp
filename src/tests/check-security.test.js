@@ -13,7 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const SCRIPT_PATH = "../../scripts/check-security.js";
 
-// ✅ Use importOriginal pattern for node:fs with default export
+// Mock node:fs with default export
 vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal();
   return {
@@ -33,7 +33,7 @@ vi.mock("node:child_process", async (importOriginal) => {
   };
 });
 
-// ✅ Import the mocked modules once at the top
+// Import the mocked modules
 import { existsSync, readFileSync } from "node:fs";
 import { execSync } from "node:child_process";
 
@@ -45,7 +45,6 @@ let originalArgv;
 beforeEach(() => {
   originalArgv = [...process.argv];
   exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {});
-  // ✅ Clear mock calls and reset implementations
   vi.clearAllMocks();
 });
 
@@ -57,6 +56,8 @@ afterEach(() => {
 
 /**
  * Configures the mocks and imports the script.
+ * 
+ * ✅ FIX: Always set NODE_ENV=production for tests so the script runs
  */
 async function run({
   execOutput = "",
@@ -65,8 +66,14 @@ async function run({
   existsReturn = true,
   readImpl,
   readReturn = "",
+  nodeEnv = "production", // ✅ Force production by default
+  argv = [],
 } = {}) {
-  // ✅ Reset mock implementations (not the mock itself)
+  // ✅ Set environment for the script to run
+  vi.stubEnv("NODE_ENV", nodeEnv);
+  process.argv = ["node", "check-security.js", ...argv];
+
+  // Reset mock implementations
   execSync.mockReset();
   existsSync.mockReset();
   readFileSync.mockReset();
@@ -89,10 +96,9 @@ async function run({
     readFileSync.mockReturnValue(readReturn);
   }
 
-  // Re-spy on exit fresh
   exitSpy.mockClear();
 
-  // ✅ Import the script - it will use the mocked modules
+  // ✅ Import the script - it will run because NODE_ENV=production
   await import(SCRIPT_PATH);
   await flush();
 
@@ -101,10 +107,7 @@ async function run({
 
 describe("check-security - early exit conditions", () => {
   it("does nothing when NODE_ENV is not production and --build is not passed", async () => {
-    vi.stubEnv("NODE_ENV", "development");
-    process.argv = ["node", "check-security.js"];
-
-    const { fsMod, cpMod } = await run();
+    const { fsMod, cpMod } = await run({ nodeEnv: "development", argv: [] });
 
     expect(cpMod.execSync).not.toHaveBeenCalled();
     expect(fsMod.readFileSync).not.toHaveBeenCalled();
@@ -112,20 +115,14 @@ describe("check-security - early exit conditions", () => {
   });
 
   it("runs the scan when NODE_ENV=production even without --build", async () => {
-    vi.stubEnv("NODE_ENV", "production");
-    process.argv = ["node", "check-security.js"];
-
-    const { cpMod } = await run({ execOutput: "" });
+    const { cpMod } = await run({ nodeEnv: "production", argv: [], execOutput: "" });
 
     expect(cpMod.execSync).toHaveBeenCalled();
     expect(exitSpy).toHaveBeenCalledWith(0);
   });
 
   it("runs the scan when --build is passed even if NODE_ENV isn't production", async () => {
-    vi.stubEnv("NODE_ENV", "test");
-    process.argv = ["node", "check-security.js", "--build"];
-
-    const { cpMod } = await run({ execOutput: "" });
+    const { cpMod } = await run({ nodeEnv: "development", argv: ["--build"], execOutput: "" });
 
     expect(cpMod.execSync).toHaveBeenCalled();
     expect(exitSpy).toHaveBeenCalledWith(0);
@@ -133,11 +130,6 @@ describe("check-security - early exit conditions", () => {
 });
 
 describe("check-security - find invocation", () => {
-  beforeEach(() => {
-    vi.stubEnv("NODE_ENV", "production");
-    process.argv = ["node", "check-security.js"];
-  });
-
   it("invokes find scoped to dist and src for js/jsx/html files", async () => {
     const { cpMod } = await run({ execOutput: "" });
 
@@ -173,11 +165,6 @@ describe("check-security - find invocation", () => {
 });
 
 describe("check-security - critical SECURITY_PATTERNS", () => {
-  beforeEach(() => {
-    vi.stubEnv("NODE_ENV", "production");
-    process.argv = ["node", "check-security.js"];
-  });
-
   it("flags a leftover admin123 credential", async () => {
     await run({
       execOutput: "src/config.js\n",
@@ -247,11 +234,6 @@ describe("check-security - critical SECURITY_PATTERNS", () => {
 });
 
 describe("check-security - ROLE_PATTERNS scoped to auth-context files", () => {
-  beforeEach(() => {
-    vi.stubEnv("NODE_ENV", "production");
-    process.argv = ["node", "check-security.js"];
-  });
-
   it("flags a hardcoded admin username check inside AuthContext.jsx", async () => {
     await run({
       execOutput: "src/context/AuthContext.jsx\n",
@@ -302,11 +284,6 @@ describe("check-security - ROLE_PATTERNS scoped to auth-context files", () => {
 });
 
 describe("check-security - ALLOWED_FILES exclusions", () => {
-  beforeEach(() => {
-    vi.stubEnv("NODE_ENV", "production");
-    process.argv = ["node", "check-security.js"];
-  });
-
   it.each([
     ["scripts/check-security.js", "scripts/check-security.js"],
     ["README.md", "README.md"],
@@ -337,11 +314,6 @@ describe("check-security - ALLOWED_FILES exclusions", () => {
 });
 
 describe("check-security - filesystem edge cases", () => {
-  beforeEach(() => {
-    vi.stubEnv("NODE_ENV", "production");
-    process.argv = ["node", "check-security.js"];
-  });
-
   it("skips files that no longer exist on disk", async () => {
     const { fsMod } = await run({
       execOutput: "src/deleted-file.js\n",
