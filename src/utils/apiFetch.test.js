@@ -64,33 +64,59 @@ const sessionStorageMock = {
 };
 global.sessionStorage = sessionStorageMock;
 
-// Mock window.location and history
+// ✅ FIX: Store original window and restore after tests
+const originalWindow = global.window;
+
+// ✅ FIX: Create window mocks WITHOUT replacing the entire window object
 const mockLocation = {
   pathname: "/test",
   search: "",
   href: "",
+  origin: "http://localhost",
+  hostname: "localhost",
+  port: "",
+  protocol: "http:",
 };
+
 const mockHistory = {
   pushState: vi.fn(),
+  replaceState: vi.fn(),
+  back: vi.fn(),
+  forward: vi.fn(),
+  go: vi.fn(),
+  length: 1,
+  state: null,
 };
-global.window = {
-  location: mockLocation,
-  history: mockHistory,
-  dispatchEvent: vi.fn(),
-  addEventListener: vi.fn(),
-  removeEventListener: vi.fn(),
-};
+
+// ✅ FIX: Extend window instead of replacing it
+Object.defineProperty(global.window, "location", {
+  value: mockLocation,
+  writable: true,
+  configurable: true,
+});
+
+Object.defineProperty(global.window, "history", {
+  value: mockHistory,
+  writable: true,
+  configurable: true,
+});
+
+Object.defineProperty(global.window, "dispatchEvent", {
+  value: vi.fn(),
+  writable: true,
+  configurable: true,
+});
+
+// Mock PopStateEvent
+global.PopStateEvent = vi.fn();
 
 // Mock AbortController
 const mockAbort = vi.fn();
 const mockAbortController = vi.fn().mockImplementation(() => ({
   abort: mockAbort,
-  signal: {},
+  signal: { aborted: false },
 }));
 global.AbortController = mockAbortController;
-
-// Mock PopStateEvent
-global.PopStateEvent = vi.fn();
 
 // ============================================================
 // TEST SUITE
@@ -108,6 +134,9 @@ describe("apiFetch - Core Functionality", () => {
     mockAbort.mockClear();
     mockAbortController.mockClear();
 
+    // ✅ FIX: Ensure setTimeout is available
+    vi.useRealTimers();
+
     // Default successful response
     mockFetch.mockResolvedValue({
       ok: true,
@@ -119,6 +148,7 @@ describe("apiFetch - Core Functionality", () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers();
   });
 
   // ============================================================
@@ -482,9 +512,7 @@ describe("apiFetch - Core Functionality", () => {
       await expect(apiFetch("/api/test")).rejects.toThrow("Failed to fetch");
     });
 
-    // ✅ FIXED: Removed mockAbort assertion - abort() only fires from the real
-    // setTimeout, which is cleared before it elapses since fetch rejects
-    // synchronously in this mock.
+    // ✅ FIXED: Removed mockAbort assertion
     it("should handle timeout errors", async () => {
       const abortError = new Error("AbortError");
       abortError.name = "AbortError";
@@ -538,8 +566,20 @@ describe("apiFetch - Core Functionality", () => {
 
     it("should fallback to location.href when history API is not available", async () => {
       mockLocation.pathname = "/dashboard";
-      const originalHistory = window.history;
-      window.history = null;
+      const originalHistory = global.window.history;
+      const originalLocation = global.window.location;
+
+      // Create a clean window mock without history
+      const cleanWindow = {
+        location: { ...mockLocation, href: "" },
+        history: null,
+        dispatchEvent: vi.fn(),
+      };
+      Object.defineProperty(global, "window", {
+        value: cleanWindow,
+        writable: true,
+        configurable: true,
+      });
 
       mockFetch.mockResolvedValue({
         ok: false,
@@ -547,19 +587,13 @@ describe("apiFetch - Core Functionality", () => {
         statusText: "Unauthorized",
       });
 
-      const originalHref = window.location.href;
-      Object.defineProperty(window.location, "href", {
-        value: "/login",
-        writable: true,
-      });
-
       await expect(apiFetch("/api/test")).rejects.toThrow();
 
-      window.history = originalHistory;
-      // Restore location
-      Object.defineProperty(window.location, "href", {
-        value: originalHref,
+      // Restore
+      Object.defineProperty(global, "window", {
+        value: originalWindow,
         writable: true,
+        configurable: true,
       });
     });
 
@@ -575,7 +609,7 @@ describe("apiFetch - Core Functionality", () => {
 
       await expect(apiFetch("/api/test")).rejects.toThrow();
       expect(mockHistory.pushState).toHaveBeenCalledWith(null, "", "/login");
-      expect(window.dispatchEvent).toHaveBeenCalled();
+      expect(global.window.dispatchEvent).toHaveBeenCalled();
     });
 
     it("should handle AbortError from fetch abort", async () => {
@@ -1165,7 +1199,6 @@ describe("apiFetch - Core Functionality", () => {
       expect(elapsedTime).toBeGreaterThanOrEqual(740);
     });
 
-    // Network error messages - comprehensive test
     const networkErrorMessages = [
       "Failed to fetch",
       "Network request failed",
