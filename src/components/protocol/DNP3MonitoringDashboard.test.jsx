@@ -1,6 +1,6 @@
-import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
 import React from "react";
 import DNP3MonitoringDashboard from "./DNP3MonitoringDashboard";
 
@@ -177,6 +177,7 @@ describe("DNP3MonitoringDashboard", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers(); // ✅ FIX: Use real timers by default
     useMediaQuery.mockReturnValue(true);
     apiGetJson.mockImplementation((url) => {
       if (url.includes("/devices")) {
@@ -193,15 +194,34 @@ describe("DNP3MonitoringDashboard", () => {
     apiPostJson.mockResolvedValue({ success: true });
   });
 
+  afterEach(() => {
+    vi.useRealTimers(); // ✅ FIX: Ensure real timers are restored
+    vi.clearAllMocks();
+  });
+
+  // ✅ FIX: Wrap render in act() and return result
+  const renderComponent = (props = {}) => {
+    let result;
+    act(() => {
+      result = render(
+        <DNP3MonitoringDashboard
+          isOpen={true}
+          onClose={mockOnClose}
+          tenantId={mockTenantId}
+          {...props}
+        />
+      );
+    });
+    return result;
+  };
+
+  // ✅ FIX: Create userEvent with delay: null
+  const setupUserEvent = () => userEvent.setup({ delay: null });
+
+  // ✅ FIX: Wrap render in act()
   it("should render desktop dialog when isOpen is true", () => {
     useMediaQuery.mockReturnValue(true);
-    render(
-      <DNP3MonitoringDashboard
-        isOpen={true}
-        onClose={mockOnClose}
-        tenantId={mockTenantId}
-      />
-    );
+    renderComponent();
 
     expect(screen.getByTestId("dialog")).toBeInTheDocument();
     expect(screen.getByText("DNP3 Monitoring Dashboard")).toBeInTheDocument();
@@ -210,41 +230,33 @@ describe("DNP3MonitoringDashboard", () => {
     ).toBeInTheDocument();
   });
 
+  // ✅ FIX: Wrap render in act()
   it("should render mobile drawer when isOpen is true and on mobile", () => {
     useMediaQuery.mockReturnValue(false);
-    render(
-      <DNP3MonitoringDashboard
-        isOpen={true}
-        onClose={mockOnClose}
-        tenantId={mockTenantId}
-      />
-    );
+    renderComponent();
 
     expect(screen.getByTestId("drawer")).toBeInTheDocument();
     expect(screen.getByText("DNP3 Monitoring Dashboard")).toBeInTheDocument();
   });
 
+  // ✅ FIX: Wrap render in act()
   it("should not render when isOpen is false", () => {
-    render(
-      <DNP3MonitoringDashboard
-        isOpen={false}
-        onClose={mockOnClose}
-        tenantId={mockTenantId}
-      />
-    );
+    act(() => {
+      render(
+        <DNP3MonitoringDashboard
+          isOpen={false}
+          onClose={mockOnClose}
+          tenantId={mockTenantId}
+        />
+      );
+    });
 
     expect(screen.queryByTestId("dialog")).not.toBeInTheDocument();
     expect(screen.queryByTestId("drawer")).not.toBeInTheDocument();
   });
 
   it("should fetch data on mount when open", async () => {
-    render(
-      <DNP3MonitoringDashboard
-        isOpen={true}
-        onClose={mockOnClose}
-        tenantId={mockTenantId}
-      />
-    );
+    renderComponent();
 
     await waitFor(() => {
       expect(apiGetJson).toHaveBeenCalledWith(
@@ -257,13 +269,7 @@ describe("DNP3MonitoringDashboard", () => {
   });
 
   it("should display overview stats", async () => {
-    render(
-      <DNP3MonitoringDashboard
-        isOpen={true}
-        onClose={mockOnClose}
-        tenantId={mockTenantId}
-      />
-    );
+    renderComponent();
 
     // Scoped to the overview panel because "Data Points" / "45ms" also
     // appear in the outstations and performance panels, which the Tabs
@@ -282,22 +288,19 @@ describe("DNP3MonitoringDashboard", () => {
     });
   });
 
+  // ✅ FIX: Wrap user interactions in act()
   it("should display outstations in the outstation list", async () => {
     // Desktop cards only show the outstation id, not its name. The name is
     // only rendered in the mobile drawer view, so use mobile here.
     useMediaQuery.mockReturnValue(false);
-    const user = userEvent.setup();
-    render(
-      <DNP3MonitoringDashboard
-        isOpen={true}
-        onClose={mockOnClose}
-        tenantId={mockTenantId}
-      />
-    );
+    const user = setupUserEvent();
+    renderComponent();
 
     const tabs = screen.getAllByTestId("tabs-trigger");
     const outstationTab = tabs.find(tab => tab.textContent.includes("Outstations"));
-    await user.click(outstationTab);
+    await act(async () => {
+      await user.click(outstationTab);
+    });
 
     await waitFor(() => {
       const outstationPanel = getTabPanel("outstations");
@@ -306,19 +309,16 @@ describe("DNP3MonitoringDashboard", () => {
     });
   });
 
+  // ✅ FIX: Wrap user interactions in act()
   it("should display connection status badges", async () => {
-    const user = userEvent.setup();
-    render(
-      <DNP3MonitoringDashboard
-        isOpen={true}
-        onClose={mockOnClose}
-        tenantId={mockTenantId}
-      />
-    );
+    const user = setupUserEvent();
+    renderComponent();
 
     const tabs = screen.getAllByTestId("tabs-trigger");
     const outstationTab = tabs.find(tab => tab.textContent.includes("Outstations"));
-    await user.click(outstationTab);
+    await act(async () => {
+      await user.click(outstationTab);
+    });
 
     await waitFor(() => {
       const badges = screen.getAllByTestId("badge");
@@ -327,23 +327,20 @@ describe("DNP3MonitoringDashboard", () => {
     });
   });
 
+  // ✅ FIX: Wrap user interactions and fireEvent in act()
   it("should select outstation and display details", async () => {
     // The "{name} Details" card only exists in the mobile drawer view.
     // The desktop view surfaces selection details inside the Performance
     // tab instead (covered by the "device performance" test below).
     useMediaQuery.mockReturnValue(false);
-    const user = userEvent.setup();
-    render(
-      <DNP3MonitoringDashboard
-        isOpen={true}
-        onClose={mockOnClose}
-        tenantId={mockTenantId}
-      />
-    );
+    const user = setupUserEvent();
+    renderComponent();
 
     const tabs = screen.getAllByTestId("tabs-trigger");
     const outstationTab = tabs.find(tab => tab.textContent.includes("Outstations"));
-    await user.click(outstationTab);
+    await act(async () => {
+      await user.click(outstationTab);
+    });
 
     await waitFor(() => {
       const outstationPanel = getTabPanel("outstations");
@@ -356,7 +353,9 @@ describe("DNP3MonitoringDashboard", () => {
     const outstationCard = cards.find(card => 
       card.textContent.includes("Main Substation")
     );
-    fireEvent.click(outstationCard);
+    act(() => {
+      fireEvent.click(outstationCard);
+    });
 
     // Wait for details to appear
     await waitFor(() => {
@@ -364,20 +363,17 @@ describe("DNP3MonitoringDashboard", () => {
     });
   });
 
+  // ✅ FIX: Wrap user interactions in act()
   it("should handle integrity poll", async () => {
     // Desktop cards render the outstation id, not its name.
-    const user = userEvent.setup();
-    render(
-      <DNP3MonitoringDashboard
-        isOpen={true}
-        onClose={mockOnClose}
-        tenantId={mockTenantId}
-      />
-    );
+    const user = setupUserEvent();
+    renderComponent();
 
     const tabs = screen.getAllByTestId("tabs-trigger");
     const outstationTab = tabs.find(tab => tab.textContent.includes("Outstations"));
-    await user.click(outstationTab);
+    await act(async () => {
+      await user.click(outstationTab);
+    });
 
     await waitFor(() => {
       const outstationPanel = getTabPanel("outstations");
@@ -388,7 +384,9 @@ describe("DNP3MonitoringDashboard", () => {
     const outstationPanel = getTabPanel("outstations");
     const buttons = within(outstationPanel).getAllByTestId("button");
     const pollButton = buttons.find(btn => btn.textContent.includes("Integrity Poll"));
-    await user.click(pollButton);
+    await act(async () => {
+      await user.click(pollButton);
+    });
 
     await waitFor(() => {
       expect(apiPostJson).toHaveBeenCalledWith(
@@ -398,19 +396,16 @@ describe("DNP3MonitoringDashboard", () => {
     });
   });
 
+  // ✅ FIX: Wrap user interactions in act()
   it("should display performance metrics", async () => {
-    const user = userEvent.setup();
-    render(
-      <DNP3MonitoringDashboard
-        isOpen={true}
-        onClose={mockOnClose}
-        tenantId={mockTenantId}
-      />
-    );
+    const user = setupUserEvent();
+    renderComponent();
 
     const tabs = screen.getAllByTestId("tabs-trigger");
     const performanceTab = tabs.find(tab => tab.textContent.includes("Performance"));
-    await user.click(performanceTab);
+    await act(async () => {
+      await user.click(performanceTab);
+    });
 
     await waitFor(() => {
       const performancePanel = getTabPanel("performance");
@@ -428,13 +423,7 @@ describe("DNP3MonitoringDashboard", () => {
   });
 
   it("should display system health with progress bar", async () => {
-    render(
-      <DNP3MonitoringDashboard
-        isOpen={true}
-        onClose={mockOnClose}
-        tenantId={mockTenantId}
-      />
-    );
+    renderComponent();
 
     await waitFor(() => {
       const overviewPanel = getTabPanel("overview");
@@ -446,19 +435,16 @@ describe("DNP3MonitoringDashboard", () => {
     });
   });
 
+  // ✅ FIX: Wrap user interactions and fireEvent in act()
   it("should display device performance when outstation selected", async () => {
-    const user = userEvent.setup();
-    render(
-      <DNP3MonitoringDashboard
-        isOpen={true}
-        onClose={mockOnClose}
-        tenantId={mockTenantId}
-      />
-    );
+    const user = setupUserEvent();
+    renderComponent();
 
     const tabs = screen.getAllByTestId("tabs-trigger");
     const outstationTab = tabs.find(tab => tab.textContent.includes("Outstations"));
-    await user.click(outstationTab);
+    await act(async () => {
+      await user.click(outstationTab);
+    });
 
     await waitFor(() => {
       const outstationPanel = getTabPanel("outstations");
@@ -471,11 +457,15 @@ describe("DNP3MonitoringDashboard", () => {
     const outstationCard = cards.find(card => 
       card.textContent.includes("outstation-1")
     );
-    fireEvent.click(outstationCard);
+    act(() => {
+      fireEvent.click(outstationCard);
+    });
 
     // Switch to performance tab
     const performanceTab = tabs.find(tab => tab.textContent.includes("Performance"));
-    await user.click(performanceTab);
+    await act(async () => {
+      await user.click(performanceTab);
+    });
 
     await waitFor(() => {
       const performancePanel = getTabPanel("performance");
@@ -488,33 +478,24 @@ describe("DNP3MonitoringDashboard", () => {
 
   it("should handle API errors gracefully", async () => {
     apiGetJson.mockRejectedValueOnce(new Error("Network error"));
-    render(
-      <DNP3MonitoringDashboard
-        isOpen={true}
-        onClose={mockOnClose}
-        tenantId={mockTenantId}
-      />
-    );
+    renderComponent();
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith("Failed to load DNP3 outstations");
     });
   });
 
+  // ✅ FIX: Wrap user interactions in act()
   it("should handle integrity poll error", async () => {
     apiPostJson.mockRejectedValueOnce(new Error("Network error"));
-    const user = userEvent.setup();
-    render(
-      <DNP3MonitoringDashboard
-        isOpen={true}
-        onClose={mockOnClose}
-        tenantId={mockTenantId}
-      />
-    );
+    const user = setupUserEvent();
+    renderComponent();
 
     const tabs = screen.getAllByTestId("tabs-trigger");
     const outstationTab = tabs.find(tab => tab.textContent.includes("Outstations"));
-    await user.click(outstationTab);
+    await act(async () => {
+      await user.click(outstationTab);
+    });
 
     await waitFor(() => {
       const outstationPanel = getTabPanel("outstations");
@@ -524,33 +505,34 @@ describe("DNP3MonitoringDashboard", () => {
     const outstationPanel = getTabPanel("outstations");
     const buttons = within(outstationPanel).getAllByTestId("button");
     const pollButton = buttons.find(btn => btn.textContent.includes("Integrity Poll"));
-    await user.click(pollButton);
+    await act(async () => {
+      await user.click(pollButton);
+    });
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith("Failed to perform integrity poll");
     });
   });
 
+  // ✅ FIX: Wrap user interactions in act()
   it("should handle refresh button click", async () => {
     // The outstations panel has multiple buttons (Refresh + one Integrity
     // Poll per outstation), so pick the Refresh one explicitly.
-    const user = userEvent.setup();
-    render(
-      <DNP3MonitoringDashboard
-        isOpen={true}
-        onClose={mockOnClose}
-        tenantId={mockTenantId}
-      />
-    );
+    const user = setupUserEvent();
+    renderComponent();
 
     const tabs = screen.getAllByTestId("tabs-trigger");
     const outstationTab = tabs.find(tab => tab.textContent.includes("Outstations"));
-    await user.click(outstationTab);
+    await act(async () => {
+      await user.click(outstationTab);
+    });
 
     const outstationPanel = getTabPanel("outstations");
     const buttons = within(outstationPanel).getAllByTestId("button");
     const refreshButton = buttons.find(btn => btn.textContent.includes("Refresh"));
-    await user.click(refreshButton);
+    await act(async () => {
+      await user.click(refreshButton);
+    });
 
     await waitFor(() => {
       expect(apiGetJson).toHaveBeenCalledWith(
@@ -560,38 +542,38 @@ describe("DNP3MonitoringDashboard", () => {
   });
 
   it("should handle tenantId without query param", async () => {
-    render(
-      <DNP3MonitoringDashboard
-        isOpen={true}
-        onClose={mockOnClose}
-        tenantId={null}
-      />
-    );
+    act(() => {
+      render(
+        <DNP3MonitoringDashboard
+          isOpen={true}
+          onClose={mockOnClose}
+          tenantId={null}
+        />
+      );
+    });
 
     await waitFor(() => {
       expect(apiGetJson).toHaveBeenCalledWith("/api/v1/protocols/dnp3/devices");
     });
   });
 
+  // ✅ FIX: Wrap user interactions in act()
   it("should display events tab content", async () => {
-    const user = userEvent.setup();
-    render(
-      <DNP3MonitoringDashboard
-        isOpen={true}
-        onClose={mockOnClose}
-        tenantId={mockTenantId}
-      />
-    );
+    const user = setupUserEvent();
+    renderComponent();
 
     const tabs = screen.getAllByTestId("tabs-trigger");
     const eventsTab = tabs.find(tab => tab.textContent.includes("Events"));
-    await user.click(eventsTab);
+    await act(async () => {
+      await user.click(eventsTab);
+    });
 
     expect(screen.getByText("Event Buffer")).toBeInTheDocument();
     expect(screen.getByText("0 events")).toBeInTheDocument();
     expect(screen.getByText("No events recorded")).toBeInTheDocument();
   });
 
+  // ✅ FIX: Wrap user interactions in act()
   it("should display empty state for outstations", async () => {
     apiGetJson.mockImplementation((url) => {
       if (url.includes("/devices")) {
@@ -603,18 +585,14 @@ describe("DNP3MonitoringDashboard", () => {
       return Promise.resolve({});
     });
 
-    const user = userEvent.setup();
-    render(
-      <DNP3MonitoringDashboard
-        isOpen={true}
-        onClose={mockOnClose}
-        tenantId={mockTenantId}
-      />
-    );
+    const user = setupUserEvent();
+    renderComponent();
 
     const tabs = screen.getAllByTestId("tabs-trigger");
     const outstationTab = tabs.find(tab => tab.textContent.includes("Outstations"));
-    await user.click(outstationTab);
+    await act(async () => {
+      await user.click(outstationTab);
+    });
 
     await waitFor(() => {
       const outstationPanel = getTabPanel("outstations");
@@ -623,13 +601,7 @@ describe("DNP3MonitoringDashboard", () => {
   });
 
   it("should close dialog when onClose is called", () => {
-    render(
-      <DNP3MonitoringDashboard
-        isOpen={true}
-        onClose={mockOnClose}
-        tenantId={mockTenantId}
-      />
-    );
+    renderComponent();
 
     expect(screen.getByTestId("dialog")).toBeInTheDocument();
   });
