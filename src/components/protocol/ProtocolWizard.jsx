@@ -42,42 +42,45 @@ import {
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { apiPostJson } from "@/utils/apiFetch";
 
+// Default configuration values
+const DEFAULT_CONFIG = {
+  // Modbus
+  device_id: "",
+  host: "",
+  port: 502,
+  unit_id: 1,
+  timeout: 5,
+
+  // OPC-UA
+  endpoint_url: "",
+  security_mode: "None",
+  security_policy: "None",
+  username: "",
+  password: "",
+
+  // DNP3
+  master_address: 1,
+  outstation_address: 10,
+  dnp3_port: 20000,
+  link_timeout: 5,
+  app_timeout: 5,
+
+  // MQTT
+  broker_host: "",
+  broker_port: 1883,
+  client_id: "",
+  use_tls: false,
+  mqtt_username: "",
+  mqtt_password: "",
+};
+
 const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const [currentStep, setCurrentStep] = useState(0);
   const [protocol, setProtocol] = useState("");
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState(null);
-  const [config, setConfig] = useState({
-    // Modbus
-    device_id: "",
-    host: "",
-    port: 502,
-    unit_id: 1,
-    timeout: 5,
-
-    // OPC-UA
-    endpoint_url: "",
-    security_mode: "None",
-    security_policy: "None",
-    username: "",
-    password: "",
-
-    // DNP3
-    master_address: 1,
-    outstation_address: 10,
-    dnp3_port: 20000,
-    link_timeout: 5,
-    app_timeout: 5,
-
-    // MQTT
-    broker_host: "",
-    broker_port: 1883,
-    client_id: "",
-    use_tls: false,
-    mqtt_username: "",
-    mqtt_password: "",
-  });
+  const [config, setConfig] = useState(DEFAULT_CONFIG);
 
   const steps = {
     modbus: [
@@ -111,6 +114,30 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
   };
 
   const getCurrentSteps = () => steps[protocol] || steps.modbus;
+
+  // ✅ FIXED: Safe number handler - handles empty string and NaN
+  const handleNumberChange = (field, value) => {
+    if (value === "") {
+      setConfig({ ...config, [field]: "" });
+      return;
+    }
+    const parsed = parseInt(value, 10);
+    if (isNaN(parsed)) {
+      setConfig({ ...config, [field]: "" });
+      return;
+    }
+    setConfig({ ...config, [field]: parsed });
+  };
+
+  // ✅ FIXED: Safe string handler
+  const handleStringChange = (field, value) => {
+    setConfig({ ...config, [field]: value });
+  };
+
+  // ✅ FIXED: Safe boolean handler
+  const handleBooleanChange = (field, value) => {
+    setConfig({ ...config, [field]: value });
+  };
 
   const isStepValid = () => {
     // Step 0: Protocol selection - required
@@ -174,13 +201,17 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
     }
   };
 
+  // ✅ FIXED: Properly resets config to DEFAULT_CONFIG instead of empty object
   const handleClose = () => {
     setCurrentStep(0);
     setProtocol("");
     setTestResult(null);
-    setConfig({});
+    setConfig(DEFAULT_CONFIG);
     onClose();
   };
+
+  // ✅ FIXED: Consistent save disable logic
+  const isSaveDisabled = testResult && !testResult.success;
 
   const renderStepContent = () => {
     // Step 0: Protocol Selection
@@ -227,7 +258,7 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
                 id="device-id"
                 value={config.device_id}
                 onChange={(e) =>
-                  setConfig({ ...config, device_id: e.target.value })
+                  handleStringChange("device_id", e.target.value)
                 }
                 placeholder="pump_001"
               />
@@ -239,10 +270,7 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
                 type="number"
                 value={config.unit_id}
                 onChange={(e) =>
-                  setConfig({
-                    ...config,
-                    unit_id: parseInt(e.target.value, 10),
-                  })
+                  handleNumberChange("unit_id", e.target.value)
                 }
               />
             </div>
@@ -258,7 +286,9 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
               <Input
                 id="host"
                 value={config.host}
-                onChange={(e) => setConfig({ ...config, host: e.target.value })}
+                onChange={(e) =>
+                  handleStringChange("host", e.target.value)
+                }
                 placeholder="192.168.1.100"
               />
             </div>
@@ -270,7 +300,7 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
                   type="number"
                   value={config.port}
                   onChange={(e) =>
-                    setConfig({ ...config, port: parseInt(e.target.value, 10) })
+                    handleNumberChange("port", e.target.value)
                   }
                 />
               </div>
@@ -281,10 +311,7 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
                   type="number"
                   value={config.timeout}
                   onChange={(e) =>
-                    setConfig({
-                      ...config,
-                      timeout: parseInt(e.target.value, 10),
-                    })
+                    handleNumberChange("timeout", e.target.value)
                   }
                 />
               </div>
@@ -306,7 +333,7 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
                 id="endpoint"
                 value={config.endpoint_url}
                 onChange={(e) =>
-                  setConfig({ ...config, endpoint_url: e.target.value })
+                  handleStringChange("endpoint_url", e.target.value)
                 }
                 placeholder="opc.tcp://localhost:4840"
               />
@@ -323,7 +350,7 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
               <Select
                 value={config.security_mode}
                 onValueChange={(value) =>
-                  setConfig({ ...config, security_mode: value })
+                  handleStringChange("security_mode", value)
                 }
               >
                 <SelectTrigger id="security-mode">
@@ -344,7 +371,7 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
                 id="username"
                 value={config.username}
                 onChange={(e) =>
-                  setConfig({ ...config, username: e.target.value })
+                  handleStringChange("username", e.target.value)
                 }
               />
             </div>
@@ -355,7 +382,7 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
                 type="password"
                 value={config.password}
                 onChange={(e) =>
-                  setConfig({ ...config, password: e.target.value })
+                  handleStringChange("password", e.target.value)
                 }
               />
             </div>
@@ -378,10 +405,7 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
                   type="number"
                   value={config.master_address}
                   onChange={(e) =>
-                    setConfig({
-                      ...config,
-                      master_address: parseInt(e.target.value, 10),
-                    })
+                    handleNumberChange("master_address", e.target.value)
                   }
                 />
               </div>
@@ -392,10 +416,7 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
                   type="number"
                   value={config.outstation_address}
                   onChange={(e) =>
-                    setConfig({
-                      ...config,
-                      outstation_address: parseInt(e.target.value, 10),
-                    })
+                    handleNumberChange("outstation_address", e.target.value)
                   }
                 />
               </div>
@@ -412,7 +433,9 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
               <Input
                 id="dnp3-host"
                 value={config.host}
-                onChange={(e) => setConfig({ ...config, host: e.target.value })}
+                onChange={(e) =>
+                  handleStringChange("host", e.target.value)
+                }
                 placeholder="192.168.1.100"
               />
             </div>
@@ -423,10 +446,7 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
                 type="number"
                 value={config.dnp3_port}
                 onChange={(e) =>
-                  setConfig({
-                    ...config,
-                    dnp3_port: parseInt(e.target.value, 10),
-                  })
+                  handleNumberChange("dnp3_port", e.target.value)
                 }
               />
             </div>
@@ -447,7 +467,7 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
                 id="broker-host"
                 value={config.broker_host}
                 onChange={(e) =>
-                  setConfig({ ...config, broker_host: e.target.value })
+                  handleStringChange("broker_host", e.target.value)
                 }
                 placeholder="broker.hivemq.com"
               />
@@ -460,10 +480,7 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
                   type="number"
                   value={config.broker_port}
                   onChange={(e) =>
-                    setConfig({
-                      ...config,
-                      broker_port: parseInt(e.target.value, 10),
-                    })
+                    handleNumberChange("broker_port", e.target.value)
                   }
                 />
               </div>
@@ -473,7 +490,7 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
                   id="client-id"
                   value={config.client_id}
                   onChange={(e) =>
-                    setConfig({ ...config, client_id: e.target.value })
+                    handleStringChange("client_id", e.target.value)
                   }
                   placeholder="thermacore-client"
                 />
@@ -485,7 +502,7 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
                 id="use-tls"
                 checked={config.use_tls}
                 onChange={(e) =>
-                  setConfig({ ...config, use_tls: e.target.checked })
+                  handleBooleanChange("use_tls", e.target.checked)
                 }
                 className="w-4 h-4"
               />
@@ -504,7 +521,7 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
                 id="mqtt-username"
                 value={config.mqtt_username}
                 onChange={(e) =>
-                  setConfig({ ...config, mqtt_username: e.target.value })
+                  handleStringChange("mqtt_username", e.target.value)
                 }
               />
             </div>
@@ -515,7 +532,7 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
                 type="password"
                 value={config.mqtt_password}
                 onChange={(e) =>
-                  setConfig({ ...config, mqtt_password: e.target.value })
+                  handleStringChange("mqtt_password", e.target.value)
                 }
               />
             </div>
@@ -604,6 +621,37 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
     return null;
   };
 
+  // Navigation buttons for desktop/mobile consistency
+  const renderNavigation = () => (
+    <div className="flex justify-between mt-6">
+      <Button
+        variant="outline"
+        onClick={handleBack}
+        disabled={currentStep === 0}
+      >
+        <ArrowLeft className="h-4 w-4 mr-2" />
+        Back
+      </Button>
+      {currentStep < getCurrentSteps().length - 1 && (
+        <Button onClick={handleNext} disabled={!isStepValid()}>
+          Next
+          <ArrowRight className="h-4 w-4 ml-2" />
+        </Button>
+      )}
+      {currentStep === getCurrentSteps().length - 1 && (
+        // ✅ FIXED: Consistent save disabled logic
+        <Button
+          onClick={saveConfiguration}
+          disabled={isSaveDisabled}
+        >
+          <CheckCircle className="h-4 w-4 mr-2" />
+          Save Configuration
+        </Button>
+      )}
+    </div>
+  );
+
+  // Mobile (Drawer) View
   if (!isDesktop) {
     return (
       <Drawer open={isOpen} onOpenChange={handleClose}>
@@ -656,37 +704,14 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
 
             <div className="min-h-[300px]">{renderStepContent()}</div>
 
-            <div className="flex justify-between mt-6">
-              <Button
-                variant="outline"
-                onClick={handleBack}
-                disabled={currentStep === 0}
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
-              </Button>
-              {currentStep < getCurrentSteps().length - 1 && (
-                <Button onClick={handleNext} disabled={!isStepValid()}>
-                  Next
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              )}
-              {currentStep === getCurrentSteps().length - 1 && (
-                <Button
-                  onClick={saveConfiguration}
-                  disabled={testResult?.success === false}
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Save Configuration
-                </Button>
-              )}
-            </div>
+            {renderNavigation()}
           </div>
         </DrawerContent>
       </Drawer>
     );
   }
 
+  // Desktop (Dialog) View
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl w-full">
@@ -736,31 +761,7 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
         <div className="min-h-[300px]">{renderStepContent()}</div>
 
         {/* Navigation */}
-        <div className="flex justify-between mt-6">
-          <Button
-            variant="outline"
-            onClick={handleBack}
-            disabled={currentStep === 0}
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-          {currentStep < getCurrentSteps().length - 1 && (
-            <Button onClick={handleNext} disabled={!isStepValid()}>
-              Next
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
-          )}
-          {currentStep === getCurrentSteps().length - 1 && (
-            <Button
-              onClick={saveConfiguration}
-              disabled={testResult && !testResult.success}
-            >
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Save Configuration
-            </Button>
-          )}
-        </div>
+        {renderNavigation()}
       </DialogContent>
     </Dialog>
   );
