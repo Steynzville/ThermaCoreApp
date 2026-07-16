@@ -6,7 +6,7 @@
  * "Open Maps" confirm flow, and edge cases around missing/zero values.
  */
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, act } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import UnitVitals from "../components/unit-details/UnitVitals";
 import { SettingsProvider } from "../context/SettingsContext";
@@ -86,20 +86,25 @@ const mockUnit = {
 };
 
 describe("UnitVitals Component", () => {
+  // ✅ FIX: Wrap render in act() to handle async effects
   const renderComponent = (unit = mockUnit) => {
-    return render(
-      <BrowserRouter>
-        <AuthProvider>
-          <TenantProvider>
-            <SettingsProvider>
-              <UnitProvider>
-                <UnitVitals unit={unit} />
-              </UnitProvider>
-            </SettingsProvider>
-          </TenantProvider>
-        </AuthProvider>
-      </BrowserRouter>,
-    );
+    let result;
+    act(() => {
+      result = render(
+        <BrowserRouter>
+          <AuthProvider>
+            <TenantProvider>
+              <SettingsProvider>
+                <UnitProvider>
+                  <UnitVitals unit={unit} />
+                </UnitProvider>
+              </SettingsProvider>
+            </TenantProvider>
+          </AuthProvider>
+        </BrowserRouter>,
+      );
+    });
+    return result;
   };
 
   afterEach(() => {
@@ -245,14 +250,18 @@ describe("UnitVitals Component", () => {
   });
 
   describe("machine name inline edit", () => {
+    // ✅ FIX: Wrap interactions in act()
     it("enters edit mode and shows input with current value", () => {
       renderComponent();
       const editButtons = screen.getAllByRole("button");
       // First edit icon button belongs to Machine Name
-      fireEvent.click(editButtons[0]);
+      act(() => {
+        fireEvent.click(editButtons[0]);
+      });
       expect(screen.getByDisplayValue("Test Unit")).toBeInTheDocument();
     });
 
+    // ✅ FIX: Wrap interactions in act()
     it("saves the new name and exits edit mode", async () => {
       const updateUnitName = vi.fn().mockResolvedValue({ success: true });
       useUnits.mockReturnValue({
@@ -262,12 +271,18 @@ describe("UnitVitals Component", () => {
       });
       renderComponent();
 
-      fireEvent.click(screen.getAllByRole("button")[0]);
+      act(() => {
+        fireEvent.click(screen.getAllByRole("button")[0]);
+      });
       const input = screen.getByDisplayValue("Test Unit");
-      fireEvent.change(input, { target: { value: "Renamed Unit" } });
+      act(() => {
+        fireEvent.change(input, { target: { value: "Renamed Unit" } });
+      });
 
       const saveButton = input.parentElement.querySelectorAll("button")[0];
-      fireEvent.click(saveButton);
+      act(() => {
+        fireEvent.click(saveButton);
+      });
 
       await waitFor(() => {
         expect(updateUnitName).toHaveBeenCalledWith(1, "Renamed Unit");
@@ -277,6 +292,7 @@ describe("UnitVitals Component", () => {
       });
     });
 
+    // ✅ FIX: Wrap interactions in act()
     it("reverts to original name when save fails", async () => {
       const updateUnitName = vi.fn().mockRejectedValue(new Error("network"));
       useUnits.mockReturnValue({
@@ -286,12 +302,18 @@ describe("UnitVitals Component", () => {
       });
       renderComponent();
 
-      fireEvent.click(screen.getAllByRole("button")[0]);
+      act(() => {
+        fireEvent.click(screen.getAllByRole("button")[0]);
+      });
       const input = screen.getByDisplayValue("Test Unit");
-      fireEvent.change(input, { target: { value: "Bad Name" } });
+      act(() => {
+        fireEvent.change(input, { target: { value: "Bad Name" } });
+      });
 
       const saveButton = input.parentElement.querySelectorAll("button")[0];
-      fireEvent.click(saveButton);
+      act(() => {
+        fireEvent.click(saveButton);
+      });
 
       await waitFor(() => {
         expect(updateUnitName).toHaveBeenCalled();
@@ -303,14 +325,21 @@ describe("UnitVitals Component", () => {
       });
     });
 
+    // ✅ FIX: Wrap interactions in act()
     it("cancels name edit and restores original value", () => {
       renderComponent();
-      fireEvent.click(screen.getAllByRole("button")[0]);
+      act(() => {
+        fireEvent.click(screen.getAllByRole("button")[0]);
+      });
       const input = screen.getByDisplayValue("Test Unit");
-      fireEvent.change(input, { target: { value: "Discard Me" } });
+      act(() => {
+        fireEvent.change(input, { target: { value: "Discard Me" } });
+      });
 
       const cancelButton = input.parentElement.querySelectorAll("button")[1];
-      fireEvent.click(cancelButton);
+      act(() => {
+        fireEvent.click(cancelButton);
+      });
 
       expect(screen.getByText("Test Unit")).toBeInTheDocument();
       expect(screen.queryByText("Discard Me")).not.toBeInTheDocument();
@@ -318,13 +347,17 @@ describe("UnitVitals Component", () => {
   });
 
   describe("location inline edit", () => {
+    // ✅ FIX: Wrap interactions in act()
     it("enters edit mode for location", () => {
       renderComponent();
       const editButtons = screen.getAllByRole("button");
-      fireEvent.click(editButtons[1]);
+      act(() => {
+        fireEvent.click(editButtons[1]);
+      });
       expect(screen.getByDisplayValue("Test Location")).toBeInTheDocument();
     });
 
+    // ✅ FIX: Wrap interactions in act()
     it("saves the new location and exits edit mode", async () => {
       const updateUnitLocation = vi.fn().mockResolvedValue({ success: true });
       useUnits.mockReturnValue({
@@ -334,18 +367,25 @@ describe("UnitVitals Component", () => {
       });
       renderComponent();
 
-      fireEvent.click(screen.getAllByRole("button")[1]);
+      act(() => {
+        fireEvent.click(screen.getAllByRole("button")[1]);
+      });
       const input = screen.getByDisplayValue("Test Location");
-      fireEvent.change(input, { target: { value: "New Location" } });
+      act(() => {
+        fireEvent.change(input, { target: { value: "New Location" } });
+      });
 
       const saveButton = input.parentElement.querySelectorAll("button")[0];
-      fireEvent.click(saveButton);
+      act(() => {
+        fireEvent.click(saveButton);
+      });
 
       await waitFor(() => {
         expect(updateUnitLocation).toHaveBeenCalledWith(1, "New Location");
       });
     });
 
+    // ✅ FIX: Wrap interactions in act()
     it("reverts to original location when save fails", async () => {
       const updateUnitLocation = vi
         .fn()
@@ -357,10 +397,17 @@ describe("UnitVitals Component", () => {
       });
       renderComponent();
 
-      fireEvent.click(screen.getAllByRole("button")[1]);
+      act(() => {
+        fireEvent.click(screen.getAllByRole("button")[1]);
+      });
       const input = screen.getByDisplayValue("Test Location");
-      fireEvent.change(input, { target: { value: "Bad Location" } });
-      fireEvent.click(input.parentElement.querySelectorAll("button")[0]);
+      act(() => {
+        fireEvent.change(input, { target: { value: "Bad Location" } });
+      });
+      const saveButton = input.parentElement.querySelectorAll("button")[0];
+      act(() => {
+        fireEvent.click(saveButton);
+      });
 
       await waitFor(() => {
         expect(screen.getByDisplayValue("Test Location")).toBeInTheDocument();
@@ -374,16 +421,20 @@ describe("UnitVitals Component", () => {
       expect(screen.getByText(/GPS: Not set/)).toBeInTheDocument();
     });
 
+    // ✅ FIX: Wrap interactions in act()
     it("does not seed the edit field with a fake coordinate default", () => {
       renderComponent({ ...mockUnit, gpsCoordinates: undefined });
       // Find and click the GPS edit icon (last edit icon in the location block)
       const editButtons = screen.getAllByRole("button");
       // Buttons order: [name edit, location edit, gps edit, gps open-maps]
-      fireEvent.click(editButtons[2]);
+      act(() => {
+        fireEvent.click(editButtons[2]);
+      });
       const gpsInput = screen.getByPlaceholderText("Enter GPS coordinates");
       expect(gpsInput.value).toBe("");
     });
 
+    // ✅ FIX: Wrap interactions in act()
     it("saves new GPS coordinates", async () => {
       const updateUnitGPS = vi.fn().mockResolvedValue({ success: true });
       useUnits.mockReturnValue({
@@ -394,27 +445,40 @@ describe("UnitVitals Component", () => {
       renderComponent();
 
       const editButtons = screen.getAllByRole("button");
-      fireEvent.click(editButtons[2]);
+      act(() => {
+        fireEvent.click(editButtons[2]);
+      });
       const gpsInput = screen.getByPlaceholderText("Enter GPS coordinates");
-      fireEvent.change(gpsInput, { target: { value: "51.5074° N, 0.1278° W" } });
+      act(() => {
+        fireEvent.change(gpsInput, { target: { value: "51.5074° N, 0.1278° W" } });
+      });
 
       const saveButton = gpsInput.parentElement.querySelectorAll("button")[0];
-      fireEvent.click(saveButton);
+      act(() => {
+        fireEvent.click(saveButton);
+      });
 
       await waitFor(() => {
         expect(updateUnitGPS).toHaveBeenCalledWith(1, "51.5074° N, 0.1278° W");
       });
     });
 
+    // ✅ FIX: Wrap interactions in act()
     it("cancels GPS edit and restores original coordinates", () => {
       renderComponent();
       const editButtons = screen.getAllByRole("button");
-      fireEvent.click(editButtons[2]);
+      act(() => {
+        fireEvent.click(editButtons[2]);
+      });
       const gpsInput = screen.getByPlaceholderText("Enter GPS coordinates");
-      fireEvent.change(gpsInput, { target: { value: "0, 0" } });
+      act(() => {
+        fireEvent.change(gpsInput, { target: { value: "0, 0" } });
+      });
 
       const cancelButton = gpsInput.parentElement.querySelectorAll("button")[1];
-      fireEvent.click(cancelButton);
+      act(() => {
+        fireEvent.click(cancelButton);
+      });
 
       expect(screen.getByText(/40.7128° N, 74.0060° W/)).toBeInTheDocument();
     });
@@ -434,12 +498,15 @@ describe("UnitVitals Component", () => {
       openSpy.mockRestore();
     });
 
+    // ✅ FIX: Wrap interactions in act()
     it("opens maps with the unit location when confirmed", () => {
       confirmSpy.mockReturnValue(true);
       renderComponent();
       const editButtons = screen.getAllByRole("button");
       // Open Maps (Navigation icon) is the last button in the GPS row
-      fireEvent.click(editButtons[editButtons.length - 1]);
+      act(() => {
+        fireEvent.click(editButtons[editButtons.length - 1]);
+      });
 
       expect(openSpy).toHaveBeenCalledWith(
         expect.stringContaining(encodeURIComponent("Test Location")),
@@ -447,20 +514,26 @@ describe("UnitVitals Component", () => {
       );
     });
 
+    // ✅ FIX: Wrap interactions in act()
     it("does not open maps when the confirm dialog is declined", () => {
       confirmSpy.mockReturnValue(false);
       renderComponent();
       const editButtons = screen.getAllByRole("button");
-      fireEvent.click(editButtons[editButtons.length - 1]);
+      act(() => {
+        fireEvent.click(editButtons[editButtons.length - 1]);
+      });
 
       expect(openSpy).not.toHaveBeenCalled();
     });
 
+    // ✅ FIX: Wrap interactions in act()
     it("falls back to 'Current Location' when unit has no location", () => {
       confirmSpy.mockReturnValue(true);
       renderComponent({ ...mockUnit, location: "" });
       const editButtons = screen.getAllByRole("button");
-      fireEvent.click(editButtons[editButtons.length - 1]);
+      act(() => {
+        fireEvent.click(editButtons[editButtons.length - 1]);
+      });
 
       expect(openSpy).toHaveBeenCalledWith(
         expect.stringContaining(encodeURIComponent("Current Location")),
@@ -470,33 +543,39 @@ describe("UnitVitals Component", () => {
   });
 
   describe("live metrics integration", () => {
+    // ✅ FIX: Wrap mock update in act()
     it("recomputes temp/pressure/flow values when metrics stream in", () => {
-      useRealtimeMetrics.mockReturnValue({
-        metrics: {
-          temperature: { current: "80" },
-          pressure: { current: "110" },
-          flow_rate_inlet: { current: "50" },
-          flow_rate_outlet: { current: "40" },
-        },
-        loading: false,
-        error: null,
-        connectionStatus: "connected",
-        isConnected: true,
+      act(() => {
+        useRealtimeMetrics.mockReturnValue({
+          metrics: {
+            temperature: { current: "80" },
+            pressure: { current: "110" },
+            flow_rate_inlet: { current: "50" },
+            flow_rate_outlet: { current: "40" },
+          },
+          loading: false,
+          error: null,
+          connectionStatus: "connected",
+          isConnected: true,
+        });
       });
       const { container } = renderComponent();
       expect(container).toBeTruthy();
     });
 
+    // ✅ FIX: Wrap mock update in act()
     it("does not recompute live values while offline even if metrics stream in", () => {
-      useRealtimeMetrics.mockReturnValue({
-        metrics: {
-          temperature: { current: "80" },
-          pressure: { current: "110" },
-        },
-        loading: false,
-        error: null,
-        connectionStatus: "connected",
-        isConnected: true,
+      act(() => {
+        useRealtimeMetrics.mockReturnValue({
+          metrics: {
+            temperature: { current: "80" },
+            pressure: { current: "110" },
+          },
+          loading: false,
+          error: null,
+          connectionStatus: "connected",
+          isConnected: true,
+        });
       });
       renderComponent({ ...mockUnit, status: "offline" });
       expect(screen.getAllByText("N/A").length).toBeGreaterThan(0);
