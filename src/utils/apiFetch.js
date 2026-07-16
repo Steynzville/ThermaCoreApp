@@ -45,10 +45,14 @@ export const apiFetch = async (
   if (import.meta.env.DEV && url.includes("/tenants/current")) {
   }
 
-  // Default headers
-  const defaultHeaders = {
-    "Content-Type": "application/json",
-  };
+  // ✅ FIX: Detect FormData bodies so we don't force a JSON content-type
+  const isFormData =
+    typeof FormData !== "undefined" && fetchOptions.body instanceof FormData;
+
+  // Default headers - skip Content-Type for FormData
+  const defaultHeaders = isFormData
+    ? {}
+    : { "Content-Type": "application/json" };
 
   // Add authorization header if token exists
   if (token) {
