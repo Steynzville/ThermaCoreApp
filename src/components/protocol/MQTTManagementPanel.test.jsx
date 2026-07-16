@@ -1,6 +1,6 @@
-import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
 import React from "react";
 import MQTTManagementPanel from "./MQTTManagementPanel";
 
@@ -186,6 +186,7 @@ describe("MQTTManagementPanel", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers(); // ✅ FIX: Use real timers by default
     useMediaQuery.mockReturnValue(true); // Desktop mode by default
     apiGetJson.mockImplementation((url) => {
       if (url.includes("/status")) return Promise.resolve(mockStatus);
@@ -196,9 +197,33 @@ describe("MQTTManagementPanel", () => {
     apiPostJson.mockResolvedValue({ success: true });
   });
 
+  afterEach(() => {
+    vi.useRealTimers(); // ✅ FIX: Ensure real timers are restored
+    vi.clearAllMocks();
+  });
+
+  // ✅ FIX: Wrap render in act()
+  const renderComponent = (props = {}) => {
+    let result;
+    act(() => {
+      result = render(
+        <MQTTManagementPanel 
+          isOpen={true} 
+          onClose={mockOnClose} 
+          tenantId={mockTenantId} 
+          {...props} 
+        />
+      );
+    });
+    return result;
+  };
+
+  // ✅ FIX: Create userEvent with delay: null for tests with fake timers
+  const setupUserEvent = () => userEvent.setup({ delay: null });
+
   it("should render desktop dialog when isOpen is true", async () => {
     useMediaQuery.mockReturnValue(true);
-    render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
+    renderComponent();
 
     expect(screen.getByTestId("dialog")).toBeInTheDocument();
     expect(screen.getByText("MQTT Management")).toBeInTheDocument();
@@ -210,7 +235,7 @@ describe("MQTTManagementPanel", () => {
 
   it("should render mobile drawer when isOpen is true and on mobile", async () => {
     useMediaQuery.mockReturnValue(false);
-    render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
+    renderComponent();
 
     expect(screen.getByTestId("drawer")).toBeInTheDocument();
     expect(screen.getByText("MQTT Management")).toBeInTheDocument();
@@ -221,14 +246,16 @@ describe("MQTTManagementPanel", () => {
   });
 
   it("should not render when isOpen is false", () => {
-    render(<MQTTManagementPanel isOpen={false} onClose={mockOnClose} tenantId={mockTenantId} />);
+    act(() => {
+      render(<MQTTManagementPanel isOpen={false} onClose={mockOnClose} tenantId={mockTenantId} />);
+    });
 
     expect(screen.queryByTestId("dialog")).not.toBeInTheDocument();
     expect(screen.queryByTestId("drawer")).not.toBeInTheDocument();
   });
 
   it("should fetch data on mount when open", async () => {
-    render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
+    renderComponent();
 
     await vi.waitFor(() => {
       expect(apiGetJson).toHaveBeenCalledWith(
@@ -244,7 +271,7 @@ describe("MQTTManagementPanel", () => {
   });
 
   it("should display subscriptions", async () => {
-    render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
+    renderComponent();
 
     await vi.waitFor(() => {
       const subscriptionsPanel = getTabPanel("subscriptions");
@@ -254,7 +281,7 @@ describe("MQTTManagementPanel", () => {
   });
 
   it("should display messages", async () => {
-    render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
+    renderComponent();
 
     await vi.waitFor(() => {
       expect(screen.getByText('{"value": 25.5}')).toBeInTheDocument();
@@ -262,17 +289,22 @@ describe("MQTTManagementPanel", () => {
     });
   });
 
+  // ✅ FIX: Use userEvent with delay: null in act()
   it("should handle subscribe to new topic", async () => {
-    const user = userEvent.setup();
-    render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
+    const user = setupUserEvent();
+    renderComponent();
 
     const topicInputs = screen.getAllByTestId("input");
     const topicInput = topicInputs[0];
-    await user.type(topicInput, "sensors/pressure");
+    await act(async () => {
+      await user.type(topicInput, "sensors/pressure");
+    });
 
     const buttons = screen.getAllByTestId("button");
     const subscribeButton = buttons.find(btn => btn.textContent.includes("Subscribe"));
-    await user.click(subscribeButton);
+    await act(async () => {
+      await user.click(subscribeButton);
+    });
 
     await vi.waitFor(() => {
       expect(apiPostJson).toHaveBeenCalledWith(
@@ -283,9 +315,10 @@ describe("MQTTManagementPanel", () => {
     });
   });
 
+  // ✅ FIX: Use userEvent with delay: null in act()
   it("should handle unsubscribe from topic", async () => {
-    const user = userEvent.setup();
-    render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
+    const user = setupUserEvent();
+    renderComponent();
 
     await vi.waitFor(() => {
       const subscriptionsPanel = getTabPanel("subscriptions");
@@ -295,7 +328,9 @@ describe("MQTTManagementPanel", () => {
     const trashButtons = screen.getAllByTestId("button").filter(btn => 
       btn.querySelector('[data-testid="trash-icon"]')
     );
-    await user.click(trashButtons[0]);
+    await act(async () => {
+      await user.click(trashButtons[0]);
+    });
 
     await vi.waitFor(() => {
       expect(apiPostJson).toHaveBeenCalledWith(
@@ -306,25 +341,34 @@ describe("MQTTManagementPanel", () => {
     });
   });
 
+  // ✅ FIX: Use userEvent with delay: null in act()
   it("should handle publish message", async () => {
-    const user = userEvent.setup();
-    render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
+    const user = setupUserEvent();
+    renderComponent();
 
     const tabs = screen.getAllByTestId("tabs-trigger");
     const publishTab = tabs.find(tab => tab.textContent.includes("Publish"));
-    await user.click(publishTab);
+    await act(async () => {
+      await user.click(publishTab);
+    });
 
     const inputs = screen.getAllByTestId("input");
     const topicInput = inputs.find(input => input.id === "pub-topic");
-    await user.type(topicInput, "sensors/test");
+    await act(async () => {
+      await user.type(topicInput, "sensors/test");
+    });
 
     const textareas = screen.getAllByTestId("textarea");
     const payloadTextarea = textareas.find(textarea => textarea.id === "pub-payload");
-    fireEvent.change(payloadTextarea, { target: { value: '{"test": "value"}' } });
+    act(() => {
+      fireEvent.change(payloadTextarea, { target: { value: '{"test": "value"}' } });
+    });
 
     const buttons = screen.getAllByTestId("button");
     const publishButton = buttons.find(btn => btn.textContent.includes("Publish Message"));
-    await user.click(publishButton);
+    await act(async () => {
+      await user.click(publishButton);
+    });
 
     await vi.waitFor(() => {
       expect(apiPostJson).toHaveBeenCalledWith(
@@ -340,23 +384,27 @@ describe("MQTTManagementPanel", () => {
     });
   });
 
+  // ✅ FIX: Use userEvent with delay: null in act()
   it("should filter messages by topic", async () => {
-    const user = userEvent.setup();
-    render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
+    const user = setupUserEvent();
+    renderComponent();
 
     await vi.waitFor(() => {
       expect(screen.getByText('{"value": 25.5}')).toBeInTheDocument();
     });
 
     const filterInput = screen.getByPlaceholderText("Filter by topic...");
-    await user.type(filterInput, "sensors/temp");
+    await act(async () => {
+      await user.type(filterInput, "sensors/temp");
+    });
 
     expect(screen.getByText('{"value": 25.5}')).toBeInTheDocument();
   });
 
+  // ✅ FIX: Use userEvent with delay: null in act()
   it("should clear messages", async () => {
-    const user = userEvent.setup();
-    render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
+    const user = setupUserEvent();
+    renderComponent();
 
     await vi.waitFor(() => {
       expect(screen.getByText('{"value": 25.5}')).toBeInTheDocument();
@@ -364,58 +412,73 @@ describe("MQTTManagementPanel", () => {
 
     const buttons = screen.getAllByTestId("button");
     const clearButton = buttons.find(btn => btn.textContent.includes("Clear"));
-    await user.click(clearButton);
+    await act(async () => {
+      await user.click(clearButton);
+    });
 
     expect(toast.info).toHaveBeenCalledWith("Message history cleared");
   });
 
+  // ✅ FIX: Use userEvent with delay: null in act()
   it("should handle API errors gracefully", async () => {
     apiPostJson.mockRejectedValueOnce(new Error("Network error"));
-    const user = userEvent.setup();
+    const user = setupUserEvent();
 
-    render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
+    renderComponent();
 
     const topicInputs = screen.getAllByTestId("input");
     const topicInput = topicInputs[0];
-    await user.type(topicInput, "sensors/test");
+    await act(async () => {
+      await user.type(topicInput, "sensors/test");
+    });
 
     const buttons = screen.getAllByTestId("button");
     const subscribeButton = buttons.find(btn => btn.textContent.includes("Subscribe"));
-    await user.click(subscribeButton);
+    await act(async () => {
+      await user.click(subscribeButton);
+    });
 
     await vi.waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith("Failed to subscribe to topic");
     });
   });
 
+  // ✅ FIX: Use userEvent with delay: null in act()
   it("should show error when subscribing with empty topic", async () => {
-    const user = userEvent.setup();
-    render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
+    const user = setupUserEvent();
+    renderComponent();
 
     const buttons = screen.getAllByTestId("button");
     const subscribeButton = buttons.find(btn => btn.textContent.includes("Subscribe"));
-    await user.click(subscribeButton);
+    await act(async () => {
+      await user.click(subscribeButton);
+    });
 
     expect(toast.error).toHaveBeenCalledWith("Topic is required");
   });
 
+  // ✅ FIX: Use userEvent with delay: null in act()
   it("should show error when publishing with empty topic or payload", async () => {
-    const user = userEvent.setup();
-    render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
+    const user = setupUserEvent();
+    renderComponent();
 
     const tabs = screen.getAllByTestId("tabs-trigger");
     const publishTab = tabs.find(tab => tab.textContent.includes("Publish"));
-    await user.click(publishTab);
+    await act(async () => {
+      await user.click(publishTab);
+    });
 
     const buttons = screen.getAllByTestId("button");
     const publishButton = buttons.find(btn => btn.textContent.includes("Publish Message"));
-    await user.click(publishButton);
+    await act(async () => {
+      await user.click(publishButton);
+    });
 
     expect(toast.error).toHaveBeenCalledWith("Topic and payload are required");
   });
 
   it("should display connection status badge", async () => {
-    render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
+    renderComponent();
 
     await vi.waitFor(() => {
       expect(screen.getByText("Connected")).toBeInTheDocument();
@@ -424,9 +487,21 @@ describe("MQTTManagementPanel", () => {
     });
   });
 
+  // ✅ FIX: Properly handle fake timers with act()
   it("should auto-refresh data every 3 seconds", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
+    
+    // ✅ FIX: Use regular render with act() wrapper
+    let result;
+    act(() => {
+      result = render(
+        <MQTTManagementPanel 
+          isOpen={true} 
+          onClose={mockOnClose} 
+          tenantId={mockTenantId} 
+        />
+      );
+    });
 
     // Initial calls: 3 (status, subscriptions, messages)
     await vi.waitFor(() => {
@@ -434,7 +509,9 @@ describe("MQTTManagementPanel", () => {
     });
 
     // After 3 seconds: auto-refresh calls status + messages (not subscriptions)
-    await vi.advanceTimersByTimeAsync(3000);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
 
     // Total calls: 3 initial + 2 refresh = 5
     await vi.waitFor(() => {
@@ -442,10 +519,10 @@ describe("MQTTManagementPanel", () => {
     });
 
     vi.useRealTimers();
-  });
+  }, 10000);
 
   it("should display QoS badges correctly", async () => {
-    render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
+    renderComponent();
 
     await vi.waitFor(() => {
       const badges = screen.getAllByTestId("badge");
@@ -455,13 +532,21 @@ describe("MQTTManagementPanel", () => {
   });
 
   it("should close dialog when onClose is called", () => {
-    render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
+    renderComponent();
 
     expect(screen.getByTestId("dialog")).toBeInTheDocument();
   });
 
   it("should handle tenantId without query param", async () => {
-    render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={null} />);
+    act(() => {
+      render(
+        <MQTTManagementPanel 
+          isOpen={true} 
+          onClose={mockOnClose} 
+          tenantId={null} 
+        />
+      );
+    });
 
     await vi.waitFor(() => {
       expect(apiGetJson).toHaveBeenCalledWith("/api/v1/protocols/mqtt/status");
