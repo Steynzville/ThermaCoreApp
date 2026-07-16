@@ -30,7 +30,7 @@ vi.mock("../components/PageHeader", () => ({
   ),
 }));
 
-// Mock UI Card components - remove data-testid from Card
+// Mock UI Card components
 vi.mock("../components/ui/card", () => ({
   Card: ({ children, className }) => (
     <div className={className}>
@@ -191,19 +191,14 @@ describe("HistoryView", () => {
   });
 
   describe("Severity UI", () => {
-    // ✅ FIX: Use findByText to wait for elements to appear
     it("renders severity indicators", async () => {
       unitService.getEventHistory.mockResolvedValue(mockEvents);
 
       renderComponent();
 
-      // Wait for the page header to appear
       await screen.findByText("Event History");
-      
-      // Wait for a specific event to appear
       await screen.findByText("Maintenance completed");
       
-      // Now check that events are rendered
       const events = screen.getAllByText(/Maintenance completed|Diagnostic check performed|Calibration completed/);
       expect(events.length).toBeGreaterThan(0);
     });
@@ -244,7 +239,7 @@ describe("HistoryView", () => {
       expect(loadMoreElements.length).toBeGreaterThan(0);
     });
 
-    // ✅ FIX: Use findByText to wait for elements
+    // ✅ FIX: Use a more reliable approach
     it("loads more events on click", async () => {
       const events = Array.from({ length: 15 }, (_, i) => ({
         id: `e-${i}`,
@@ -257,8 +252,10 @@ describe("HistoryView", () => {
 
       renderComponent();
 
+      // Wait for the page to load
       await screen.findByText("Event History");
       
+      // Find the load more button
       const buttons = screen.getAllByText(/Load more Events/i);
       expect(buttons.length).toBeGreaterThan(0);
       
@@ -266,17 +263,19 @@ describe("HistoryView", () => {
       const initialElements = screen.getAllByText(/ThermaCore Unit/);
       const initialCount = initialElements.length;
       
+      // Click the button with act
       if (buttons.length > 0) {
         act(() => {
           fireEvent.click(buttons[0]);
         });
       }
 
-      // Wait for more elements to appear
-      await waitFor(() => {
-        const unitElements = screen.queryAllByText(/ThermaCore Unit/);
-        expect(unitElements.length).toBeGreaterThan(initialCount);
-      }, { timeout: 3000 });
+      // Use a simple setTimeout-based wait instead of waitFor
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Check that more elements appeared
+      const unitElements = screen.getAllByText(/ThermaCore Unit/);
+      expect(unitElements.length).toBeGreaterThan(initialCount);
     });
 
     it("hides load more when not needed", async () => {
@@ -346,7 +345,6 @@ describe("HistoryView", () => {
   });
 
   describe("Severity Colors", () => {
-    // ✅ FIX: Check for severity classes on elements
     it("applies correct severity colors", async () => {
       unitService.getEventHistory.mockResolvedValue([]);
 
@@ -354,7 +352,6 @@ describe("HistoryView", () => {
 
       await screen.findByText("Event History");
 
-      // Look for elements with border-l- classes that indicate severity
       const severityElements = document.querySelectorAll('.border-l-red-500, .border-l-yellow-500, .border-l-blue-500, .border-l-green-500');
       expect(severityElements.length).toBeGreaterThan(0);
     });
