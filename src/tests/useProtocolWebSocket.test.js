@@ -20,6 +20,7 @@ import protocolWS from "../services/protocolWebSocketService";
 vi.mock("../services/protocolWebSocketService", () => {
   const createMockProtocolWS = () => {
     let statusChangeCallback = null;
+    let subscriptionCallbacks = {};
     const mock = {
       connect: vi.fn().mockImplementation((protocol, tenantId) => {
         // Call the status change callback if it exists
@@ -28,16 +29,38 @@ vi.mock("../services/protocolWebSocketService", () => {
         }
         return Promise.resolve(true);
       }),
-      disconnect: vi.fn(),
-      subscribe: vi.fn(),
-      unsubscribe: vi.fn(),
+      disconnect: vi.fn(() => {
+        // Clear all subscriptions on disconnect
+        subscriptionCallbacks = {};
+        if (statusChangeCallback) {
+          statusChangeCallback("disconnected");
+        }
+      }),
+      subscribe: vi.fn((key, callback) => {
+        subscriptionCallbacks[key] = callback;
+        return key;
+      }),
+      unsubscribe: vi.fn((key) => {
+        delete subscriptionCallbacks[key];
+      }),
       send: vi.fn(),
       isConnected: vi.fn(() => false),
       onStatusChange: vi.fn((cb) => {
         statusChangeCallback = cb;
+        // Return a cleanup function
+        return () => {
+          statusChangeCallback = null;
+        };
       }),
       offStatusChange: vi.fn(),
       getStatus: vi.fn(() => "disconnected"),
+      // Helper for tests to emit data
+      _emit: (data) => {
+        for (const callback of Object.values(subscriptionCallbacks)) {
+          callback(data);
+        }
+      },
+      _getSubscriptionCallbacks: () => subscriptionCallbacks,
     };
     return mock;
   };
@@ -56,20 +79,44 @@ vi.mock("../services/protocolWebSocketService", () => {
 const resetProtocolMockDefaults = () => {
   for (const ws of Object.values(protocolWS)) {
     ws.connect.mockReset().mockResolvedValue(true);
-    ws.disconnect.mockReset();
-    ws.subscribe.mockReset();
-    ws.unsubscribe.mockReset();
+    ws.disconnect.mockReset(() => {
+      // Reset internal state
+      ws._getSubscriptionCallbacks = () => ({});
+    });
+    ws.subscribe.mockReset().mockImplementation((key, callback) => {
+      ws._getSubscriptionCallbacks()[key] = callback;
+      return key;
+    });
+    ws.unsubscribe.mockReset().mockImplementation((key) => {
+      delete ws._getSubscriptionCallbacks()[key];
+    });
     ws.send.mockReset();
     ws.isConnected.mockReset().mockReturnValue(false);
-    ws.onStatusChange.mockReset();
+    ws.onStatusChange.mockReset().mockImplementation((cb) => {
+      ws._statusCallback = cb;
+      return () => {
+        ws._statusCallback = null;
+      };
+    });
     ws.offStatusChange.mockReset();
     ws.getStatus.mockReset().mockReturnValue("disconnected");
+    // Clear internal state
+    ws._getSubscriptionCallbacks = () => ({});
+    ws._statusCallback = null;
   }
 };
 
-// Simple mount helper - just flushes pending promises
+// Simple mount helper - flushes pending promises and handles async effects
 const mountAutoConnectHook = async (hook) => {
-  const { result, unmount, rerender } = renderHook(hook);
+  let result, unmount, rerender;
+  
+  // ✅ FIX: Wrap renderHook in act() to catch async effects
+  await act(async () => {
+    const rendered = renderHook(hook);
+    result = rendered.result;
+    unmount = rendered.unmount;
+    rerender = rendered.rerender;
+  });
 
   // Flush any pending microtasks from the auto-connect effect
   await act(async () => {
@@ -80,7 +127,7 @@ const mountAutoConnectHook = async (hook) => {
   return { result, unmount, rerender };
 };
 
-// Force garbage collection if available
+// Force garbage collection if available - ✅ FIX: Check if gc exists
 const forceGC = () => {
   if (typeof global.gc === "function") {
     global.gc();
@@ -95,6 +142,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   forceGC();
+  vi.clearAllMocks();
 });
 
 describe("useProtocolWebSocket Hook", () => {
@@ -103,6 +151,7 @@ describe("useProtocolWebSocket Hook", () => {
   });
 
   it("should initialize with default state", () => {
+    // ✅ FIX: This test is synchronous and doesn't need act()
     const { result } = renderHook(() =>
       useProtocolWebSocket("modbus", null, false),
     );
@@ -114,6 +163,7 @@ describe("useProtocolWebSocket Hook", () => {
   });
 
   it("should mount and unmount without errors", () => {
+    // ✅ FIX: This test is synchronous and doesn't need act()
     const { unmount } = renderHook(() =>
       useProtocolWebSocket("modbus", "tenant-1", false),
     );
@@ -122,6 +172,7 @@ describe("useProtocolWebSocket Hook", () => {
   });
 
   it("should provide connect method", () => {
+    // ✅ FIX: This test is synchronous and doesn't need act()
     const { result } = renderHook(() =>
       useProtocolWebSocket("modbus", "tenant-1", false),
     );
@@ -210,6 +261,7 @@ describe("useProtocolWebSocket - Connection Lifecycle", () => {
       useProtocolWebSocket("modbus", "tenant-1", false),
     );
 
+    // ✅ FIX: Wrap in act() to handle async state updates
     await act(async () => {
       await result.current.connect();
     });
@@ -227,6 +279,7 @@ describe("useProtocolWebSocket - Connection Lifecycle", () => {
       useProtocolWebSocket("modbus", "tenant-1", false),
     );
 
+    // ✅ FIX: Wrap in act() to handle async state updates
     await act(async () => {
       await result.current.connect();
     });
@@ -242,6 +295,7 @@ describe("useProtocolWebSocket - Connection Lifecycle", () => {
       useProtocolWebSocket("modbus", "tenant-1", false),
     );
 
+    // ✅ FIX: Wrap in act() to handle state updates
     act(() => {
       result.current.disconnect();
     });
@@ -263,6 +317,7 @@ describe("useProtocolWebSocket - Connection Lifecycle", () => {
       useProtocolWebSocket("invalid-protocol", null, false),
     );
 
+    // ✅ FIX: Wrap in act() to handle async state updates
     await act(async () => {
       await result.current.connect();
     });
@@ -279,6 +334,7 @@ describe("useProtocolWebSocket - Connection Lifecycle", () => {
       useProtocolWebSocket("modbus", "tenant-1", false),
     );
 
+    // ✅ FIX: Wrap in act() to handle async state updates
     await act(async () => {
       await result.current.connect();
     });
@@ -294,6 +350,7 @@ describe("useProtocolWebSocket - Connection Lifecycle", () => {
       useProtocolWebSocket("modbus", "tenant-1", false),
     );
 
+    // ✅ FIX: Wrap in act() to handle async state updates
     await act(async () => {
       await result.current.connect();
     });
@@ -322,7 +379,10 @@ describe("useProtocolWebSocket - Auto-Connect", () => {
     ws.connect.mockResolvedValue(true);
     ws.isConnected.mockReturnValue(false);
 
-    renderHook(() => useProtocolWebSocket("modbus", "tenant-1", true));
+    // ✅ FIX: Use mountAutoConnectHook which wraps in act()
+    await mountAutoConnectHook(() =>
+      useProtocolWebSocket("modbus", "tenant-1", true)
+    );
 
     await waitFor(() => {
       expect(ws.connect).toHaveBeenCalledWith("modbus", "tenant-1");
@@ -681,6 +741,7 @@ describe("useProtocolWebSocket - Tenant ID Handling", () => {
       useProtocolWebSocket("modbus", "custom-tenant-123", false),
     );
 
+    // ✅ FIX: Wrap in act() to handle async state updates
     await act(async () => {
       await result.current.connect();
     });
@@ -696,6 +757,7 @@ describe("useProtocolWebSocket - Tenant ID Handling", () => {
       useProtocolWebSocket("modbus", null, false),
     );
 
+    // ✅ FIX: Wrap in act() to handle async state updates
     await act(async () => {
       await result.current.connect();
     });
@@ -711,6 +773,7 @@ describe("useProtocolWebSocket - Tenant ID Handling", () => {
       useProtocolWebSocket("modbus", undefined, false),
     );
 
+    // ✅ FIX: Wrap in act() to handle async state updates
     await act(async () => {
       await result.current.connect();
     });
