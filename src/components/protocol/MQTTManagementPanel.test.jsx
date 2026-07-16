@@ -1,10 +1,28 @@
+/**
+ * MQTTManagementPanel.test.jsx - Complete Test Coverage (FIXED)
+ * 
+ * Covers:
+ * - Rendering (Dialog/Drawer)
+ * - Data fetching on mount
+ * - Subscriptions (list, add, remove, QoS change)
+ * - Messages (list, filter, clear, filter X button)
+ * - Publish functionality (QoS, retain flag)
+ * - Error handling
+ * - Auto-refresh (with cleanup on unmount)
+ * - Connection status
+ * - QoS badges
+ * - Tenant ID handling
+ * - Mobile drawer interactions (all functionality)
+ */
+
 import { render, screen, fireEvent, waitFor, within, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
 import React from "react";
 import MQTTManagementPanel from "./MQTTManagementPanel";
 
-// Mock hooks and utilities
+// ============ MOCKS ============
+
 vi.mock("@/hooks/use-media-query", () => ({
   useMediaQuery: vi.fn(),
 }));
@@ -22,13 +40,17 @@ vi.mock("sonner", () => ({
   },
 }));
 
-// Mock UI components
+// ✅ UI component mocks that properly render children
 vi.mock("@/components/ui/badge", () => ({
-  Badge: ({ children, variant }) => <span data-testid="badge" data-variant={variant}>{children}</span>,
+  Badge: ({ children, variant, className }) => (
+    <span data-testid="badge" data-variant={variant} className={className}>
+      {children}
+    </span>
+  ),
 }));
 
 vi.mock("@/components/ui/button", () => ({
-  Button: ({ children, onClick, disabled, variant, size, className }) => (
+  Button: ({ children, onClick, disabled, variant, size, className, type }) => (
     <button
       data-testid="button"
       data-variant={variant}
@@ -36,6 +58,7 @@ vi.mock("@/components/ui/button", () => ({
       onClick={onClick}
       disabled={disabled}
       className={className}
+      type={type || "button"}
     >
       {children}
     </button>
@@ -43,7 +66,7 @@ vi.mock("@/components/ui/button", () => ({
 }));
 
 vi.mock("@/components/ui/card", () => ({
-  Card: ({ children }) => <div data-testid="card">{children}</div>,
+  Card: ({ children, className }) => <div data-testid="card" className={className}>{children}</div>,
   CardHeader: ({ children }) => <div data-testid="card-header">{children}</div>,
   CardContent: ({ children }) => <div data-testid="card-content">{children}</div>,
   CardTitle: ({ children }) => <div data-testid="card-title">{children}</div>,
@@ -66,7 +89,7 @@ vi.mock("@/components/ui/drawer", () => ({
 }));
 
 vi.mock("@/components/ui/input", () => ({
-  Input: ({ id, placeholder, value, onChange, className }) => (
+  Input: ({ id, placeholder, value, onChange, className, type, ...props }) => (
     <input
       id={id}
       data-testid="input"
@@ -74,6 +97,8 @@ vi.mock("@/components/ui/input", () => ({
       value={value || ""}
       onChange={onChange}
       className={className}
+      type={type || "text"}
+      {...props}
     />
   ),
 }));
@@ -83,7 +108,7 @@ vi.mock("@/components/ui/label", () => ({
 }));
 
 vi.mock("@/components/ui/scroll-area", () => ({
-  ScrollArea: ({ children }) => <div data-testid="scroll-area">{children}</div>,
+  ScrollArea: ({ children, className }) => <div data-testid="scroll-area" className={className}>{children}</div>,
 }));
 
 vi.mock("@/components/ui/select", () => ({
@@ -98,10 +123,10 @@ vi.mock("@/components/ui/select", () => ({
       </select>
     </div>
   ),
-  SelectTrigger: () => null,
-  SelectValue: () => null,
-  SelectContent: ({ children }) => <>{children}</>,
-  SelectItem: ({ children, value }) => <option value={value}>{children}</option>,
+  SelectTrigger: ({ children, id }) => <button data-testid="select-trigger" id={id}>{children}</button>,
+  SelectValue: ({ placeholder }) => <span data-testid="select-value">{placeholder}</span>,
+  SelectContent: ({ children }) => <div data-testid="select-content">{children}</div>,
+  SelectItem: ({ children, value }) => <option data-testid="select-item" value={value}>{children}</option>,
 }));
 
 vi.mock("@/components/ui/tabs", () => ({
@@ -110,7 +135,7 @@ vi.mock("@/components/ui/tabs", () => ({
       {children}
     </div>
   ),
-  TabsList: ({ children }) => <div data-testid="tabs-list">{children}</div>,
+  TabsList: ({ children, className }) => <div data-testid="tabs-list" className={className}>{children}</div>,
   TabsTrigger: ({ children, value }) => (
     <button data-testid="tabs-trigger" data-value={value}>
       {children}
@@ -153,41 +178,45 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { apiGetJson, apiPostJson } from "@/utils/apiFetch";
 import { toast } from "sonner";
 
-// Helper to get tab panel
+// ============ HELPERS ============
+
 const getTabPanel = (value) => {
   const panels = screen.getAllByTestId("tabs-content");
   return panels.find((el) => el.getAttribute("data-value") === value);
 };
 
+// ============ TEST DATA ============
+
+const mockSubscriptions = {
+  subscriptions: [
+    { topic: "sensors/temp", qos: 1 },
+    { topic: "sensors/humidity", qos: 0 },
+  ],
+};
+
+const mockMessages = {
+  messages: [
+    { topic: "sensors/temp", payload: '{"value": 25.5}', qos: 1, timestamp: "2026-07-13T10:00:00Z" },
+    { topic: "sensors/humidity", payload: '{"value": 60}', qos: 0, timestamp: "2026-07-13T10:01:00Z" },
+  ],
+};
+
+const mockStatus = {
+  connected: true,
+  broker: "localhost",
+  port: 1883,
+  client_id: "scada-client",
+};
+
+// ============ TEST SUITE ============
+
 describe("MQTTManagementPanel", () => {
   const mockOnClose = vi.fn();
   const mockTenantId = "tenant-123";
 
-  const mockSubscriptions = {
-    subscriptions: [
-      { topic: "sensors/temp", qos: 1 },
-      { topic: "sensors/humidity", qos: 0 },
-    ],
-  };
-
-  const mockMessages = {
-    messages: [
-      { topic: "sensors/temp", payload: '{"value": 25.5}', qos: 1, timestamp: "2026-07-13T10:00:00Z" },
-      { topic: "sensors/humidity", payload: '{"value": 60}', qos: 0, timestamp: "2026-07-13T10:01:00Z" },
-    ],
-  };
-
-  const mockStatus = {
-    connected: true,
-    broker: "localhost",
-    port: 1883,
-    client_id: "scada-client",
-  };
-
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useRealTimers(); // ✅ FIX: Use real timers by default
-    useMediaQuery.mockReturnValue(true); // Desktop mode by default
+    useMediaQuery.mockReturnValue(true);
     apiGetJson.mockImplementation((url) => {
       if (url.includes("/status")) return Promise.resolve(mockStatus);
       if (url.includes("/subscriptions")) return Promise.resolve(mockSubscriptions);
@@ -198,358 +227,530 @@ describe("MQTTManagementPanel", () => {
   });
 
   afterEach(() => {
-    vi.useRealTimers(); // ✅ FIX: Ensure real timers are restored
     vi.clearAllMocks();
+    vi.useRealTimers();
   });
 
-  // ✅ FIX: Wrap render in act()
   const renderComponent = (props = {}) => {
-    let result;
-    act(() => {
-      result = render(
-        <MQTTManagementPanel 
-          isOpen={true} 
-          onClose={mockOnClose} 
-          tenantId={mockTenantId} 
-          {...props} 
-        />
-      );
-    });
-    return result;
+    return render(
+      <MQTTManagementPanel 
+        isOpen={true} 
+        onClose={mockOnClose} 
+        tenantId={mockTenantId} 
+        {...props} 
+      />
+    );
   };
 
-  // ✅ FIX: Create userEvent with delay: null for tests with fake timers
   const setupUserEvent = () => userEvent.setup({ delay: null });
 
-  it("should render desktop dialog when isOpen is true", async () => {
-    useMediaQuery.mockReturnValue(true);
-    renderComponent();
+  // ============ RENDERING TESTS ============
 
-    expect(screen.getByTestId("dialog")).toBeInTheDocument();
-    expect(screen.getByText("MQTT Management")).toBeInTheDocument();
+  describe("Rendering", () => {
+    it("should render desktop dialog when isOpen is true", async () => {
+      useMediaQuery.mockReturnValue(true);
+      renderComponent();
 
-    await vi.waitFor(() => {
-      expect(screen.getByText("Connected")).toBeInTheDocument();
+      expect(screen.getByTestId("dialog")).toBeInTheDocument();
+      expect(screen.getByText("MQTT Management")).toBeInTheDocument();
+
+      await waitFor(() => {
+        expect(screen.getByText("Connected")).toBeInTheDocument();
+      });
     });
-  });
 
-  it("should render mobile drawer when isOpen is true and on mobile", async () => {
-    useMediaQuery.mockReturnValue(false);
-    renderComponent();
+    it("should render mobile drawer when isOpen is true and on mobile", async () => {
+      useMediaQuery.mockReturnValue(false);
+      renderComponent();
 
-    expect(screen.getByTestId("drawer")).toBeInTheDocument();
-    expect(screen.getByText("MQTT Management")).toBeInTheDocument();
+      expect(screen.getByTestId("drawer")).toBeInTheDocument();
+      expect(screen.getByText("MQTT Management")).toBeInTheDocument();
 
-    await vi.waitFor(() => {
-      expect(screen.getByText("Connected")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("Connected")).toBeInTheDocument();
+      });
     });
-  });
 
-  it("should not render when isOpen is false", () => {
-    act(() => {
+    it("should not render when isOpen is false", () => {
       render(<MQTTManagementPanel isOpen={false} onClose={mockOnClose} tenantId={mockTenantId} />);
-    });
-
-    expect(screen.queryByTestId("dialog")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("drawer")).not.toBeInTheDocument();
-  });
-
-  it("should fetch data on mount when open", async () => {
-    renderComponent();
-
-    await vi.waitFor(() => {
-      expect(apiGetJson).toHaveBeenCalledWith(
-        `/api/v1/protocols/mqtt/status?tenant_id=${mockTenantId}`
-      );
-      expect(apiGetJson).toHaveBeenCalledWith(
-        `/api/v1/protocols/mqtt/subscriptions?tenant_id=${mockTenantId}`
-      );
-      expect(apiGetJson).toHaveBeenCalledWith(
-        `/api/v1/protocols/mqtt/messages?tenant_id=${mockTenantId}`
-      );
+      expect(screen.queryByTestId("dialog")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("drawer")).not.toBeInTheDocument();
     });
   });
 
-  it("should display subscriptions", async () => {
-    renderComponent();
+  // ============ DATA FETCHING ============
 
-    await vi.waitFor(() => {
-      const subscriptionsPanel = getTabPanel("subscriptions");
-      expect(within(subscriptionsPanel).getByText("sensors/temp")).toBeInTheDocument();
-      expect(within(subscriptionsPanel).getByText("sensors/humidity")).toBeInTheDocument();
+  describe("Data Fetching", () => {
+    it("should fetch data on mount when open", async () => {
+      renderComponent();
+
+      await waitFor(() => {
+        expect(apiGetJson).toHaveBeenCalledWith(
+          `/api/v1/protocols/mqtt/status?tenant_id=${mockTenantId}`
+        );
+        expect(apiGetJson).toHaveBeenCalledWith(
+          `/api/v1/protocols/mqtt/subscriptions?tenant_id=${mockTenantId}`
+        );
+        expect(apiGetJson).toHaveBeenCalledWith(
+          `/api/v1/protocols/mqtt/messages?tenant_id=${mockTenantId}`
+        );
+      });
+    });
+
+    it("should display subscriptions", async () => {
+      renderComponent();
+
+      await waitFor(() => {
+        const subscriptionsPanel = getTabPanel("subscriptions");
+        expect(within(subscriptionsPanel).getByText("sensors/temp")).toBeInTheDocument();
+        expect(within(subscriptionsPanel).getByText("sensors/humidity")).toBeInTheDocument();
+      });
+    });
+
+    it("should display messages", async () => {
+      renderComponent();
+
+      await waitFor(() => {
+        expect(screen.getByText('{"value": 25.5}')).toBeInTheDocument();
+        expect(screen.getByText('{"value": 60}')).toBeInTheDocument();
+      });
     });
   });
 
-  it("should display messages", async () => {
-    renderComponent();
+  // ============ SUBSCRIPTIONS ============
 
-    await vi.waitFor(() => {
-      expect(screen.getByText('{"value": 25.5}')).toBeInTheDocument();
-      expect(screen.getByText('{"value": 60}')).toBeInTheDocument();
-    });
-  });
+  describe("Subscriptions", () => {
+    it("should handle subscribe to new topic", async () => {
+      const user = setupUserEvent();
+      renderComponent();
 
-  // ✅ FIX: Use userEvent with delay: null in act()
-  it("should handle subscribe to new topic", async () => {
-    const user = setupUserEvent();
-    renderComponent();
-
-    const topicInputs = screen.getAllByTestId("input");
-    const topicInput = topicInputs[0];
-    await act(async () => {
+      const topicInputs = screen.getAllByTestId("input");
+      const topicInput = topicInputs[0];
       await user.type(topicInput, "sensors/pressure");
-    });
 
-    const buttons = screen.getAllByTestId("button");
-    const subscribeButton = buttons.find(btn => btn.textContent.includes("Subscribe"));
-    await act(async () => {
+      const buttons = screen.getAllByTestId("button");
+      const subscribeButton = buttons.find(btn => btn.textContent.includes("Subscribe"));
       await user.click(subscribeButton);
+
+      await waitFor(() => {
+        expect(apiPostJson).toHaveBeenCalledWith(
+          `/api/v1/protocols/mqtt/subscribe?tenant_id=${mockTenantId}`,
+          { topic: "sensors/pressure", qos: 0 }
+        );
+        expect(toast.success).toHaveBeenCalledWith("Subscribed to sensors/pressure");
+      });
     });
 
-    await vi.waitFor(() => {
-      expect(apiPostJson).toHaveBeenCalledWith(
-        `/api/v1/protocols/mqtt/subscribe?tenant_id=${mockTenantId}`,
-        { topic: "sensors/pressure", qos: 0 }
+    it("should update subscription QoS when changed", async () => {
+      const user = setupUserEvent();
+      renderComponent();
+
+      const selects = screen.getAllByTestId("select-native");
+      fireEvent.change(selects[0], { target: { value: "2" } });
+
+      const topicInputs = screen.getAllByTestId("input");
+      await user.type(topicInputs[0], "sensors/pressure");
+
+      const subscribeButton = screen
+        .getAllByTestId("button")
+        .find((btn) => btn.textContent.includes("Subscribe"));
+      await user.click(subscribeButton);
+
+      await waitFor(() => {
+        expect(apiPostJson).toHaveBeenCalledWith(
+          `/api/v1/protocols/mqtt/subscribe?tenant_id=${mockTenantId}`,
+          { topic: "sensors/pressure", qos: 2 }
+        );
+      });
+    });
+
+    it("should handle unsubscribe from topic", async () => {
+      const user = setupUserEvent();
+      renderComponent();
+
+      await waitFor(() => {
+        const subscriptionsPanel = getTabPanel("subscriptions");
+        expect(within(subscriptionsPanel).getByText("sensors/temp")).toBeInTheDocument();
+      });
+
+      const trashButtons = screen.getAllByTestId("button").filter(btn => 
+        btn.querySelector('[data-testid="trash-icon"]')
       );
-      expect(toast.success).toHaveBeenCalledWith("Subscribed to sensors/pressure");
-    });
-  });
-
-  // ✅ FIX: Use userEvent with delay: null in act()
-  it("should handle unsubscribe from topic", async () => {
-    const user = setupUserEvent();
-    renderComponent();
-
-    await vi.waitFor(() => {
-      const subscriptionsPanel = getTabPanel("subscriptions");
-      expect(within(subscriptionsPanel).getByText("sensors/temp")).toBeInTheDocument();
-    });
-
-    const trashButtons = screen.getAllByTestId("button").filter(btn => 
-      btn.querySelector('[data-testid="trash-icon"]')
-    );
-    await act(async () => {
       await user.click(trashButtons[0]);
+
+      await waitFor(() => {
+        expect(apiPostJson).toHaveBeenCalledWith(
+          `/api/v1/protocols/mqtt/unsubscribe?tenant_id=${mockTenantId}`,
+          { topic: "sensors/temp" }
+        );
+        expect(toast.success).toHaveBeenCalledWith("Unsubscribed from sensors/temp");
+      });
     });
 
-    await vi.waitFor(() => {
-      expect(apiPostJson).toHaveBeenCalledWith(
-        `/api/v1/protocols/mqtt/unsubscribe?tenant_id=${mockTenantId}`,
-        { topic: "sensors/temp" }
-      );
-      expect(toast.success).toHaveBeenCalledWith("Unsubscribed from sensors/temp");
+    it("should show error when subscribing with empty topic", async () => {
+      const user = setupUserEvent();
+      renderComponent();
+
+      const buttons = screen.getAllByTestId("button");
+      const subscribeButton = buttons.find(btn => btn.textContent.includes("Subscribe"));
+      await user.click(subscribeButton);
+
+      expect(toast.error).toHaveBeenCalledWith("Topic is required");
     });
   });
 
-  // ✅ FIX: Use userEvent with delay: null in act()
-  it("should handle publish message", async () => {
-    const user = setupUserEvent();
-    renderComponent();
+  // ============ PUBLISH ============
 
-    const tabs = screen.getAllByTestId("tabs-trigger");
-    const publishTab = tabs.find(tab => tab.textContent.includes("Publish"));
-    await act(async () => {
+  describe("Publish", () => {
+    it("should handle publish message", async () => {
+      const user = setupUserEvent();
+      renderComponent();
+
+      const tabs = screen.getAllByTestId("tabs-trigger");
+      const publishTab = tabs.find(tab => tab.textContent.includes("Publish"));
       await user.click(publishTab);
-    });
 
-    const inputs = screen.getAllByTestId("input");
-    const topicInput = inputs.find(input => input.id === "pub-topic");
-    await act(async () => {
+      const inputs = screen.getAllByTestId("input");
+      const topicInput = inputs.find(input => input.id === "pub-topic");
       await user.type(topicInput, "sensors/test");
-    });
 
-    const textareas = screen.getAllByTestId("textarea");
-    const payloadTextarea = textareas.find(textarea => textarea.id === "pub-payload");
-    act(() => {
+      const textareas = screen.getAllByTestId("textarea");
+      const payloadTextarea = textareas.find(textarea => textarea.id === "pub-payload");
       fireEvent.change(payloadTextarea, { target: { value: '{"test": "value"}' } });
-    });
 
-    const buttons = screen.getAllByTestId("button");
-    const publishButton = buttons.find(btn => btn.textContent.includes("Publish Message"));
-    await act(async () => {
+      const buttons = screen.getAllByTestId("button");
+      const publishButton = buttons.find(btn => btn.textContent.includes("Publish Message"));
       await user.click(publishButton);
+
+      await waitFor(() => {
+        expect(apiPostJson).toHaveBeenCalledWith(
+          `/api/v1/protocols/mqtt/publish?tenant_id=${mockTenantId}`,
+          expect.objectContaining({
+            topic: "sensors/test",
+            payload: '{"test": "value"}',
+            qos: 0,
+            retain: false,
+          })
+        );
+        expect(toast.success).toHaveBeenCalledWith("Message published successfully");
+      });
     });
 
-    await vi.waitFor(() => {
-      expect(apiPostJson).toHaveBeenCalledWith(
-        `/api/v1/protocols/mqtt/publish?tenant_id=${mockTenantId}`,
-        expect.objectContaining({
-          topic: "sensors/test",
-          payload: '{"test": "value"}',
-          qos: 0,
-          retain: false,
-        })
-      );
-      expect(toast.success).toHaveBeenCalledWith("Message published successfully");
-    });
-  });
+    it("should update publish QoS and retain flag", async () => {
+      const user = setupUserEvent();
+      renderComponent();
 
-  // ✅ FIX: Use userEvent with delay: null in act()
-  it("should filter messages by topic", async () => {
-    const user = setupUserEvent();
-    renderComponent();
-
-    await vi.waitFor(() => {
-      expect(screen.getByText('{"value": 25.5}')).toBeInTheDocument();
-    });
-
-    const filterInput = screen.getByPlaceholderText("Filter by topic...");
-    await act(async () => {
-      await user.type(filterInput, "sensors/temp");
-    });
-
-    expect(screen.getByText('{"value": 25.5}')).toBeInTheDocument();
-  });
-
-  // ✅ FIX: Use userEvent with delay: null in act()
-  it("should clear messages", async () => {
-    const user = setupUserEvent();
-    renderComponent();
-
-    await vi.waitFor(() => {
-      expect(screen.getByText('{"value": 25.5}')).toBeInTheDocument();
-    });
-
-    const buttons = screen.getAllByTestId("button");
-    const clearButton = buttons.find(btn => btn.textContent.includes("Clear"));
-    await act(async () => {
-      await user.click(clearButton);
-    });
-
-    expect(toast.info).toHaveBeenCalledWith("Message history cleared");
-  });
-
-  // ✅ FIX: Use userEvent with delay: null in act()
-  it("should handle API errors gracefully", async () => {
-    apiPostJson.mockRejectedValueOnce(new Error("Network error"));
-    const user = setupUserEvent();
-
-    renderComponent();
-
-    const topicInputs = screen.getAllByTestId("input");
-    const topicInput = topicInputs[0];
-    await act(async () => {
-      await user.type(topicInput, "sensors/test");
-    });
-
-    const buttons = screen.getAllByTestId("button");
-    const subscribeButton = buttons.find(btn => btn.textContent.includes("Subscribe"));
-    await act(async () => {
-      await user.click(subscribeButton);
-    });
-
-    await vi.waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("Failed to subscribe to topic");
-    });
-  });
-
-  // ✅ FIX: Use userEvent with delay: null in act()
-  it("should show error when subscribing with empty topic", async () => {
-    const user = setupUserEvent();
-    renderComponent();
-
-    const buttons = screen.getAllByTestId("button");
-    const subscribeButton = buttons.find(btn => btn.textContent.includes("Subscribe"));
-    await act(async () => {
-      await user.click(subscribeButton);
-    });
-
-    expect(toast.error).toHaveBeenCalledWith("Topic is required");
-  });
-
-  // ✅ FIX: Use userEvent with delay: null in act()
-  it("should show error when publishing with empty topic or payload", async () => {
-    const user = setupUserEvent();
-    renderComponent();
-
-    const tabs = screen.getAllByTestId("tabs-trigger");
-    const publishTab = tabs.find(tab => tab.textContent.includes("Publish"));
-    await act(async () => {
+      const tabs = screen.getAllByTestId("tabs-trigger");
+      const publishTab = tabs.find(tab => tab.textContent.includes("Publish"));
       await user.click(publishTab);
-    });
 
-    const buttons = screen.getAllByTestId("button");
-    const publishButton = buttons.find(btn => btn.textContent.includes("Publish Message"));
-    await act(async () => {
+      const selects = screen.getAllByTestId("select-native");
+      fireEvent.change(selects[1], { target: { value: "1" } });
+
+      const retainCheckbox = screen.getByLabelText("Retain message");
+      await user.click(retainCheckbox);
+
+      const inputs = screen.getAllByTestId("input");
+      const topicInput = inputs.find((i) => i.id === "pub-topic");
+      await user.type(topicInput, "sensors/test");
+
+      const payloadTextarea = screen
+        .getAllByTestId("textarea")
+        .find((t) => t.id === "pub-payload");
+      fireEvent.change(payloadTextarea, { target: { value: '{"a":1}' } });
+
+      const publishButton = screen
+        .getAllByTestId("button")
+        .find((btn) => btn.textContent.includes("Publish Message"));
       await user.click(publishButton);
+
+      await waitFor(() => {
+        expect(apiPostJson).toHaveBeenCalledWith(
+          `/api/v1/protocols/mqtt/publish?tenant_id=${mockTenantId}`,
+          expect.objectContaining({
+            topic: "sensors/test",
+            payload: '{"a":1}',
+            qos: 1,
+            retain: true,
+          })
+        );
+      });
     });
 
-    expect(toast.error).toHaveBeenCalledWith("Topic and payload are required");
+    it("should show error when publishing with empty topic or payload", async () => {
+      const user = setupUserEvent();
+      renderComponent();
+
+      const tabs = screen.getAllByTestId("tabs-trigger");
+      const publishTab = tabs.find(tab => tab.textContent.includes("Publish"));
+      await user.click(publishTab);
+
+      const buttons = screen.getAllByTestId("button");
+      const publishButton = buttons.find(btn => btn.textContent.includes("Publish Message"));
+      await user.click(publishButton);
+
+      expect(toast.error).toHaveBeenCalledWith("Topic and payload are required");
+    });
   });
 
-  it("should display connection status badge", async () => {
-    renderComponent();
+  // ============ MESSAGES ============
 
-    await vi.waitFor(() => {
-      expect(screen.getByText("Connected")).toBeInTheDocument();
-      const badges = screen.getAllByTestId("badge");
-      expect(badges[0]).toHaveAttribute("data-variant", "default");
+  describe("Messages", () => {
+    it("should filter messages by topic", async () => {
+      const user = setupUserEvent();
+      renderComponent();
+
+      await waitFor(() => {
+        expect(screen.getByText('{"value": 25.5}')).toBeInTheDocument();
+      });
+
+      const filterInput = screen.getByPlaceholderText("Filter by topic...");
+      await user.type(filterInput, "sensors/temp");
+
+      expect(screen.getByText('{"value": 25.5}')).toBeInTheDocument();
+    });
+
+    it("should clear the topic filter via the X button", async () => {
+      const user = setupUserEvent();
+      renderComponent();
+
+      await waitFor(() => {
+        expect(screen.getByText('{"value": 25.5}')).toBeInTheDocument();
+      });
+
+      const filterInput = screen.getByPlaceholderText("Filter by topic...");
+      await user.type(filterInput, "sensors/temp");
+      expect(filterInput.value).toBe("sensors/temp");
+
+      const clearFilterButton = screen.getByTestId("x-icon").closest("button");
+      await user.click(clearFilterButton);
+
+      expect(filterInput.value).toBe("");
+    });
+
+    it("should clear messages", async () => {
+      const user = setupUserEvent();
+      renderComponent();
+
+      await waitFor(() => {
+        expect(screen.getByText('{"value": 25.5}')).toBeInTheDocument();
+      });
+
+      const buttons = screen.getAllByTestId("button");
+      const clearButton = buttons.find(btn => btn.textContent.includes("Clear"));
+      await user.click(clearButton);
+
+      expect(toast.info).toHaveBeenCalledWith("Message history cleared");
     });
   });
 
-  // ✅ FIX: Properly handle fake timers with act()
-  it("should auto-refresh data every 3 seconds", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    
-    // ✅ FIX: Use regular render with act() wrapper
-    let result;
-    act(() => {
-      result = render(
-        <MQTTManagementPanel 
-          isOpen={true} 
-          onClose={mockOnClose} 
-          tenantId={mockTenantId} 
-        />
-      );
+  // ============ STATUS ============
+
+  describe("Connection Status", () => {
+    it("should display connection status badge", async () => {
+      renderComponent();
+
+      await waitFor(() => {
+        expect(screen.getByText("Connected")).toBeInTheDocument();
+        const badges = screen.getAllByTestId("badge");
+        expect(badges[0]).toHaveAttribute("data-variant", "default");
+      });
     });
 
-    // Initial calls: 3 (status, subscriptions, messages)
-    await vi.waitFor(() => {
-      expect(apiGetJson).toHaveBeenCalledTimes(3);
-    });
+    it("should display QoS badges correctly", async () => {
+      renderComponent();
 
-    // After 3 seconds: auto-refresh calls status + messages (not subscriptions)
-    await act(async () => {
+      await waitFor(() => {
+        const badges = screen.getAllByTestId("badge");
+        const qosBadges = badges.filter(b => b.textContent.includes("QoS"));
+        expect(qosBadges.length).toBeGreaterThan(0);
+      });
+    });
+  });
+
+  // ============ ERROR HANDLING ============
+
+  describe("Error Handling", () => {
+    it("should handle API errors gracefully", async () => {
+      apiPostJson.mockRejectedValueOnce(new Error("Network error"));
+      const user = setupUserEvent();
+
+      renderComponent();
+
+      const topicInputs = screen.getAllByTestId("input");
+      const topicInput = topicInputs[0];
+      await user.type(topicInput, "sensors/test");
+
+      const buttons = screen.getAllByTestId("button");
+      const subscribeButton = buttons.find(btn => btn.textContent.includes("Subscribe"));
+      await user.click(subscribeButton);
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith("Failed to subscribe to topic");
+      });
+    });
+  });
+
+  // ============ AUTO-REFRESH ============
+
+  describe("Auto-Refresh", () => {
+    it("should auto-refresh data every 3 seconds", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      
+      renderComponent();
+
+      await waitFor(() => {
+        expect(apiGetJson).toHaveBeenCalledTimes(3);
+      });
+
       await vi.advanceTimersByTimeAsync(3000);
-    });
 
-    // Total calls: 3 initial + 2 refresh = 5
-    await vi.waitFor(() => {
-      expect(apiGetJson).toHaveBeenCalledTimes(5);
-    });
+      await waitFor(() => {
+        expect(apiGetJson).toHaveBeenCalledTimes(5);
+      });
 
-    vi.useRealTimers();
-  }, 10000);
+      vi.useRealTimers();
+    }, 10000);
 
-  it("should display QoS badges correctly", async () => {
-    renderComponent();
+    it("should clear the auto-refresh interval on unmount", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      const clearIntervalSpy = vi.spyOn(global, "clearInterval");
 
-    await vi.waitFor(() => {
-      const badges = screen.getAllByTestId("badge");
-      const qosBadges = badges.filter(b => b.textContent.includes("QoS"));
-      expect(qosBadges.length).toBeGreaterThan(0);
-    });
-  });
-
-  it("should close dialog when onClose is called", () => {
-    renderComponent();
-
-    expect(screen.getByTestId("dialog")).toBeInTheDocument();
-  });
-
-  it("should handle tenantId without query param", async () => {
-    act(() => {
-      render(
-        <MQTTManagementPanel 
-          isOpen={true} 
-          onClose={mockOnClose} 
-          tenantId={null} 
-        />
+      const { unmount } = render(
+        <MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />
       );
+
+      await waitFor(() => {
+        expect(apiGetJson).toHaveBeenCalledTimes(3);
+      });
+
+      unmount();
+
+      expect(clearIntervalSpy).toHaveBeenCalled();
+      clearIntervalSpy.mockRestore();
+      vi.useRealTimers();
+    });
+  });
+
+  // ============ TENANT ID ============
+
+  describe("Tenant ID Handling", () => {
+    it("should handle tenantId without query param", async () => {
+      render(<MQTTManagementPanel isOpen={true} onClose={mockOnClose} tenantId={null} />);
+
+      await waitFor(() => {
+        expect(apiGetJson).toHaveBeenCalledWith("/api/v1/protocols/mqtt/status");
+      });
+    });
+  });
+
+  // ============ CLOSE ============
+
+  describe("Close", () => {
+    it("should close dialog when onClose is called", () => {
+      renderComponent();
+      expect(screen.getByTestId("dialog")).toBeInTheDocument();
+    });
+  });
+
+  // ============ MOBILE DRAWER ============
+
+  describe("Mobile Drawer Interactions", () => {
+    beforeEach(() => {
+      useMediaQuery.mockReturnValue(false);
     });
 
-    await vi.waitFor(() => {
-      expect(apiGetJson).toHaveBeenCalledWith("/api/v1/protocols/mqtt/status");
+    it("should cover subscribe/QoS/unsubscribe/publish/retain in the mobile drawer", async () => {
+      const user = setupUserEvent();
+      renderComponent();
+
+      await waitFor(() => {
+        expect(screen.getByTestId("drawer")).toBeInTheDocument();
+      });
+
+      // ✅ Subscription QoS change + subscribe
+      const selects = screen.getAllByTestId("select-native");
+      fireEvent.change(selects[0], { target: { value: "1" } });
+      
+      const topicInputs = screen.getAllByTestId("input");
+      await user.type(topicInputs[0], "mobile/topic");
+      
+      const subscribeButton = screen
+        .getAllByTestId("button")
+        .find((btn) => btn.textContent.includes("Subscribe"));
+      await user.click(subscribeButton);
+      
+      await waitFor(() => {
+        expect(apiPostJson).toHaveBeenCalledWith(
+          `/api/v1/protocols/mqtt/subscribe?tenant_id=${mockTenantId}`,
+          { topic: "mobile/topic", qos: 1 }
+        );
+      });
+
+      // ✅ Unsubscribe
+      await waitFor(() => {
+        const panel = getTabPanel("subscriptions");
+        expect(within(panel).getByText("sensors/temp")).toBeInTheDocument();
+      });
+      
+      const trashButton = screen
+        .getAllByTestId("button")
+        .find((btn) => btn.querySelector('[data-testid="trash-icon"]'));
+      await user.click(trashButton);
+      
+      await waitFor(() => {
+        expect(apiPostJson).toHaveBeenCalledWith(
+          `/api/v1/protocols/mqtt/unsubscribe?tenant_id=${mockTenantId}`,
+          { topic: "sensors/temp" }
+        );
+      });
+
+      // ✅ Publish QoS + retain (mobile uses "Retain Message" with capital M)
+      const selects2 = screen.getAllByTestId("select-native");
+      fireEvent.change(selects2[1], { target: { value: "2" } });
+      
+      const retainCheckbox = screen.getByLabelText("Retain Message");
+      await user.click(retainCheckbox);
+      
+      const pubTopicInput = screen
+        .getAllByTestId("input")
+        .find((i) => i.id === "pub-topic");
+      await user.type(pubTopicInput, "mobile/pub");
+      
+      const payloadTextarea = screen
+        .getAllByTestId("textarea")
+        .find((t) => t.id === "pub-payload");
+      fireEvent.change(payloadTextarea, { target: { value: '{"m":1}' } });
+      
+      const publishButton = screen
+        .getAllByTestId("button")
+        .find((btn) => btn.textContent.trim() === "Publish");
+      await user.click(publishButton);
+      
+      await waitFor(() => {
+        expect(apiPostJson).toHaveBeenCalledWith(
+          `/api/v1/protocols/mqtt/publish?tenant_id=${mockTenantId}`,
+          expect.objectContaining({
+            topic: "mobile/pub",
+            payload: '{"m":1}',
+            qos: 2,
+            retain: true,
+          })
+        );
+      });
+
+      // ✅ Clear messages (mobile "Clear" button + Refresh button)
+      const refreshButton = screen
+        .getAllByTestId("button")
+        .find((btn) => btn.querySelector('[data-testid="refresh-icon"]'));
+      await user.click(refreshButton);
+
+      const clearButton = screen
+        .getAllByTestId("button")
+        .find((btn) => btn.textContent.includes("Clear"));
+      await user.click(clearButton);
+      
+      expect(toast.info).toHaveBeenCalledWith("Message history cleared");
     });
   });
 });
