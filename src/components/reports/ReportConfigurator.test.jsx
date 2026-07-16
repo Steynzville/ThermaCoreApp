@@ -1,18 +1,7 @@
 /**
  * ReportConfigurator.test.jsx - Complete Test Coverage (FIXED)
  * 
- * Covers:
- * - Basic rendering and prop handling
- * - Report type selection/deselection
- * - Scope selection with unit/client filtering
- * - Unit and client selection (handleUnitSelection, handleClientSelection)
- * - Section selection (handleSelectAllSections, handleSectionToggle)
- * - Form validation (isConfigValid)
- * - Report generation (handleGenerateReport - success/error paths)
- * - Scheduling and pause functionality
- * - Edge cases and guard clauses
- * 
- * Target: 85%+ function coverage
+ * All 68 tests should pass
  */
 
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
@@ -21,7 +10,6 @@ import ReportConfigurator from "@/components/reports/ReportConfigurator";
 
 // ============ MOCKS ============
 
-// Mock settings context
 vi.mock("@/context/SettingsContext", () => ({
   useSettings: () => ({
     settings: {
@@ -31,16 +19,13 @@ vi.mock("@/context/SettingsContext", () => ({
   }),
 }));
 
-// Mock audio player
 vi.mock("@/utils/audioPlayer", () => ({
   default: vi.fn(),
 }));
 
-// Mock alert
 const mockAlert = vi.fn();
 global.alert = mockAlert;
 
-// Mock date-fns format
 vi.mock("date-fns", () => ({
   format: vi.fn((date, formatStr) => {
     if (formatStr === "yyyy-MM-dd") return "2024-01-15";
@@ -122,14 +107,12 @@ const mockAvailableReportTypes = [
 // ============ RESIZE/INTERSECTION OBSERVER STUBS ============
 
 beforeAll(() => {
-  // Stub ResizeObserver for Radix UI
   global.ResizeObserver = class ResizeObserver {
     observe() {}
     unobserve() {}
     disconnect() {}
   };
 
-  // Stub IntersectionObserver for Radix UI
   global.IntersectionObserver = class IntersectionObserver {
     constructor() {}
     observe() {}
@@ -138,7 +121,6 @@ beforeAll(() => {
     takeRecords() { return []; }
   };
 
-  // Stub getBoundingClientRect for Radix UI positioning
   Element.prototype.getBoundingClientRect = vi.fn(() => ({
     width: 100,
     height: 100,
@@ -204,6 +186,22 @@ describe("ReportConfigurator", () => {
       if (checkbox) return checkbox;
     }
     return null;
+  };
+
+  // ✅ Helper to find error message by content in the error div
+  const findErrorMessage = (text) => {
+    return screen.getByText((content, element) => {
+      // Only match elements that are inside the error div (has bg-red-50 class)
+      const isInErrorDiv = element?.closest?.('.bg-red-50') !== null;
+      return isInErrorDiv && element?.textContent?.includes(text) ?? false;
+    });
+  };
+
+  const queryErrorMessage = (text) => {
+    return screen.queryByText((content, element) => {
+      const isInErrorDiv = element?.closest?.('.bg-red-50') !== null;
+      return isInErrorDiv && element?.textContent?.includes(text) ?? false;
+    });
   };
 
   // ============ BASIC RENDERING ============
@@ -432,7 +430,7 @@ describe("ReportConfigurator", () => {
       expect(screen.queryByText("Select Units")).not.toBeInTheDocument();
     });
 
-    // ✅ FIXED: Correctly handles error message with flexible matcher
+    // ✅ FIXED: Use error div helper to find error message
     it("should clear error message when scope changes", async () => {
       const errorMessage = "Test error";
       const onGenerate = vi.fn().mockRejectedValue(new Error(errorMessage));
@@ -447,11 +445,9 @@ describe("ReportConfigurator", () => {
       const generateButton = screen.getByText("Generate & Download Report");
       fireEvent.click(generateButton);
       
-      // ✅ Wait for error to appear in the UI using flexible matcher
+      // ✅ Find error message only inside the error div
       await waitFor(() => {
-        const errorElement = screen.getByText((content, element) => {
-          return element?.textContent?.includes(errorMessage) ?? false;
-        });
+        const errorElement = findErrorMessage(errorMessage);
         expect(errorElement).toBeInTheDocument();
       }, { timeout: 2000 });
       
@@ -461,7 +457,8 @@ describe("ReportConfigurator", () => {
       // ✅ Wait for error to disappear
       await waitFor(() => {
         const errorElements = screen.queryAllByText((content, element) => {
-          return element?.textContent?.includes(errorMessage) ?? false;
+          const isInErrorDiv = element?.closest?.('.bg-red-50') !== null;
+          return isInErrorDiv && element?.textContent?.includes(errorMessage) ?? false;
         });
         expect(errorElements.length).toBe(0);
       }, { timeout: 2000 });
@@ -792,6 +789,7 @@ describe("ReportConfigurator", () => {
       });
     });
 
+    // ✅ FIXED: Use error div helper to find error message
     it("should show error message when onGenerate rejects (catch path)", async () => {
       const errorMessage = "Server unavailable";
       const onGenerate = vi.fn().mockRejectedValue(new Error(errorMessage));
@@ -804,10 +802,8 @@ describe("ReportConfigurator", () => {
       fireEvent.click(generateButton);
       
       await waitFor(() => {
-        // Error message appears in UI
-        const errorElement = screen.getByText((content, element) => {
-          return element?.textContent?.includes(errorMessage) ?? false;
-        });
+        // ✅ Find error message only inside the error div
+        const errorElement = findErrorMessage(errorMessage);
         expect(errorElement).toBeInTheDocument();
         expect(mockAlert).toHaveBeenCalledWith(
           expect.stringContaining(errorMessage)
@@ -815,6 +811,7 @@ describe("ReportConfigurator", () => {
       });
     });
 
+    // ✅ FIXED: Use error div helper to find error message
     it("should handle error without message property", async () => {
       const onGenerate = vi.fn().mockRejectedValue({});
       renderComponent({ onGenerate });
@@ -826,9 +823,7 @@ describe("ReportConfigurator", () => {
       fireEvent.click(generateButton);
       
       await waitFor(() => {
-        const errorElement = screen.getByText((content, element) => {
-          return element?.textContent?.includes("Failed to generate report") ?? false;
-        });
+        const errorElement = findErrorMessage("Failed to generate report");
         expect(errorElement).toBeInTheDocument();
         expect(mockAlert).toHaveBeenCalledWith(
           expect.stringContaining("Failed to generate report")
@@ -836,6 +831,7 @@ describe("ReportConfigurator", () => {
       });
     });
 
+    // ✅ FIXED: Use error div helper to find error message
     it("should handle error with non-Error object", async () => {
       const onGenerate = vi.fn().mockRejectedValue("String error");
       renderComponent({ onGenerate });
@@ -848,9 +844,7 @@ describe("ReportConfigurator", () => {
       
       await waitFor(() => {
         // String error has no .message, so generic fallback appears
-        const errorElement = screen.getByText((content, element) => {
-          return element?.textContent?.includes("Failed to generate report") ?? false;
-        });
+        const errorElement = findErrorMessage("Failed to generate report");
         expect(errorElement).toBeInTheDocument();
       });
     });
