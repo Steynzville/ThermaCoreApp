@@ -245,22 +245,22 @@ describe("check-security - ROLE_PATTERNS scoped to auth-context files", () => {
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
 
-  // ✅ FIXED: Use a string that actually matches the regex patterns
+  // ✅ FIXED: Contains literal "admin" (with quotes) AND matches /auth.*admin/
   it("flags an auth-admin pattern inside auth.js", async () => {
     await run({
       execOutput: "src/auth.js\n",
-      // The script looks for /auth.*admin/ pattern
-      readReturn: 'function checkAuthForAdmin() { return true; }',
+      // Contains "admin" (quoted) for ROLE_PATTERNS, and matches /auth.*admin/
+      readReturn: 'const config = "admin"; // auth check requires admin validation',
     });
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
 
-  // ✅ FIXED: Use a string that actually matches the regex patterns
+  // ✅ FIXED: Contains literal "admin" (with quotes) AND matches /login.*admin/
   it("flags a login-admin pattern inside login.js", async () => {
     await run({
       execOutput: "src/login.js\n",
-      // The script looks for /login.*admin/ pattern
-      readReturn: "function loginAsAdmin() { /* login admin bypass */ }",
+      // Contains "admin" (quoted) for ROLE_PATTERNS, and matches /login.*admin/
+      readReturn: 'const bypass = "admin"; // login flow admin bypass',
     });
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
