@@ -9,6 +9,65 @@ import { cleanup } from "@testing-library/react";
 global.IS_REACT_ACT_ENVIRONMENT = true;
 
 // ============================================================
+// SAFE CONSOLE FILTERING - Only suppresses warnings, NOT errors
+// ============================================================
+const originalConsoleError = console.error;
+console.error = (...args) => {
+  const message = args[0]?.toString?.() || '';
+  
+  // ✅ Only suppress WARNINGS, not errors
+  const warningPatterns = [
+    // React act warnings (these are warnings, not errors)
+    'An update to %s inside a test was not wrapped in act',
+    'not wrapped in act',
+    'was not wrapped in act',
+    'When testing, code that causes React state updates should be wrapped into act',
+    
+    // React DOM warnings (harmless in tests)
+    'React does not recognize the',
+    'In HTML, <',
+    'You provided a `value` prop',
+    'The tag <text> is unrecognized',
+    'Panel defaultSize prop recommended',
+    '`value` prop on `input` should not be null',
+    'The current testing environment is not configured to support act',
+  ];
+
+  // ✅ Check if it's a warning (contains "Warning:" or matches warning patterns)
+  const isWarning = message.includes('Warning:') || 
+                    warningPatterns.some(pattern => message.includes(pattern));
+
+  // ✅ Only suppress if it's clearly a warning
+  if (isWarning) {
+    return;
+  }
+
+  // ✅ Pass through everything else (errors, exceptions, etc.)
+  originalConsoleError(...args);
+};
+
+const originalConsoleWarn = console.warn;
+console.warn = (...args) => {
+  const message = args[0]?.toString?.() || '';
+  
+  // ✅ Only suppress known harmless warnings
+  const harmlessWarnings = [
+    'React does not recognize the',
+    'The tag <text> is unrecognized',
+    'Panel defaultSize prop recommended',
+    '`value` prop on `input` should not be null',
+    'You provided a `value` prop',
+  ];
+
+  if (harmlessWarnings.some(pattern => message.includes(pattern))) {
+    return;
+  }
+
+  // ✅ Pass through other warnings
+  originalConsoleWarn(...args);
+};
+
+// ============================================================
 // CRITICAL: Ensure real timers for React's scheduler
 // ============================================================
 vi.useRealTimers();
