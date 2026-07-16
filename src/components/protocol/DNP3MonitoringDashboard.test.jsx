@@ -122,10 +122,6 @@ import { apiGetJson, apiPostJson } from "@/utils/apiFetch";
 import { toast } from "sonner";
 
 // Helper to get tab panel
-// NOTE: The Tabs mock renders every TabsContent panel unconditionally (it does
-// not hide inactive panels), so multiple panels' content coexists in the DOM
-// at once. Always scope queries to the specific panel you care about with
-// `within(getTabPanel(...))` to avoid "multiple elements found" errors.
 const getTabPanel = (value) => {
   const panels = screen.getAllByTestId("tabs-content");
   return panels.find((el) => el.getAttribute("data-value") === value);
@@ -177,7 +173,7 @@ describe("DNP3MonitoringDashboard", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useRealTimers(); // ✅ FIX: Use real timers by default
+    vi.useRealTimers();
     useMediaQuery.mockReturnValue(true);
     apiGetJson.mockImplementation((url) => {
       if (url.includes("/devices")) {
@@ -195,11 +191,10 @@ describe("DNP3MonitoringDashboard", () => {
   });
 
   afterEach(() => {
-    vi.useRealTimers(); // ✅ FIX: Ensure real timers are restored
+    vi.useRealTimers();
     vi.clearAllMocks();
   });
 
-  // ✅ FIX: Wrap render in act() and return result
   const renderComponent = (props = {}) => {
     let result;
     act(() => {
@@ -215,10 +210,31 @@ describe("DNP3MonitoringDashboard", () => {
     return result;
   };
 
-  // ✅ FIX: Create userEvent with delay: null
   const setupUserEvent = () => userEvent.setup({ delay: null });
 
-  // ✅ FIX: Wrap render in act()
+  // Helper to click a tab with act() wrapper
+  const clickTab = async (user, tabText) => {
+    const tabs = screen.getAllByTestId("tabs-trigger");
+    const tab = tabs.find(t => t.textContent.includes(tabText));
+    if (!tab) throw new Error(`Tab "${tabText}" not found`);
+    await act(async () => {
+      await user.click(tab);
+    });
+    return tab;
+  };
+
+  // Helper to find and click a button within a panel
+  const clickButtonInPanel = async (user, panelValue, buttonText) => {
+    const panel = getTabPanel(panelValue);
+    const buttons = within(panel).getAllByTestId("button");
+    const button = buttons.find(b => b.textContent.includes(buttonText));
+    if (!button) throw new Error(`Button "${buttonText}" not found in panel "${panelValue}"`);
+    await act(async () => {
+      await user.click(button);
+    });
+    return button;
+  };
+
   it("should render desktop dialog when isOpen is true", () => {
     useMediaQuery.mockReturnValue(true);
     renderComponent();
@@ -230,7 +246,6 @@ describe("DNP3MonitoringDashboard", () => {
     ).toBeInTheDocument();
   });
 
-  // ✅ FIX: Wrap render in act()
   it("should render mobile drawer when isOpen is true and on mobile", () => {
     useMediaQuery.mockReturnValue(false);
     renderComponent();
@@ -239,7 +254,6 @@ describe("DNP3MonitoringDashboard", () => {
     expect(screen.getByText("DNP3 Monitoring Dashboard")).toBeInTheDocument();
   });
 
-  // ✅ FIX: Wrap render in act()
   it("should not render when isOpen is false", () => {
     act(() => {
       render(
@@ -271,9 +285,6 @@ describe("DNP3MonitoringDashboard", () => {
   it("should display overview stats", async () => {
     renderComponent();
 
-    // Scoped to the overview panel because "Data Points" / "45ms" also
-    // appear in the outstations and performance panels, which the Tabs
-    // mock keeps mounted simultaneously.
     await waitFor(() => {
       const overviewPanel = getTabPanel("overview");
       expect(within(overviewPanel).getByText("Total Outstations")).toBeInTheDocument();
@@ -288,19 +299,12 @@ describe("DNP3MonitoringDashboard", () => {
     });
   });
 
-  // ✅ FIX: Wrap user interactions in act()
   it("should display outstations in the outstation list", async () => {
-    // Desktop cards only show the outstation id, not its name. The name is
-    // only rendered in the mobile drawer view, so use mobile here.
     useMediaQuery.mockReturnValue(false);
     const user = setupUserEvent();
     renderComponent();
 
-    const tabs = screen.getAllByTestId("tabs-trigger");
-    const outstationTab = tabs.find(tab => tab.textContent.includes("Outstations"));
-    await act(async () => {
-      await user.click(outstationTab);
-    });
+    await clickTab(user, "Outstations");
 
     await waitFor(() => {
       const outstationPanel = getTabPanel("outstations");
@@ -309,16 +313,11 @@ describe("DNP3MonitoringDashboard", () => {
     });
   });
 
-  // ✅ FIX: Wrap user interactions in act()
   it("should display connection status badges", async () => {
     const user = setupUserEvent();
     renderComponent();
 
-    const tabs = screen.getAllByTestId("tabs-trigger");
-    const outstationTab = tabs.find(tab => tab.textContent.includes("Outstations"));
-    await act(async () => {
-      await user.click(outstationTab);
-    });
+    await clickTab(user, "Outstations");
 
     await waitFor(() => {
       const badges = screen.getAllByTestId("badge");
@@ -327,27 +326,18 @@ describe("DNP3MonitoringDashboard", () => {
     });
   });
 
-  // ✅ FIX: Wrap user interactions and fireEvent in act()
   it("should select outstation and display details", async () => {
-    // The "{name} Details" card only exists in the mobile drawer view.
-    // The desktop view surfaces selection details inside the Performance
-    // tab instead (covered by the "device performance" test below).
     useMediaQuery.mockReturnValue(false);
     const user = setupUserEvent();
     renderComponent();
 
-    const tabs = screen.getAllByTestId("tabs-trigger");
-    const outstationTab = tabs.find(tab => tab.textContent.includes("Outstations"));
-    await act(async () => {
-      await user.click(outstationTab);
-    });
+    await clickTab(user, "Outstations");
 
     await waitFor(() => {
       const outstationPanel = getTabPanel("outstations");
       expect(within(outstationPanel).getByText("Main Substation")).toBeInTheDocument();
     });
 
-    // Find the outstation card within the outstation panel
     const outstationPanel = getTabPanel("outstations");
     const cards = within(outstationPanel).getAllByTestId("card");
     const outstationCard = cards.find(card => 
@@ -357,36 +347,23 @@ describe("DNP3MonitoringDashboard", () => {
       fireEvent.click(outstationCard);
     });
 
-    // Wait for details to appear
     await waitFor(() => {
       expect(screen.getByText("Main Substation Details")).toBeInTheDocument();
     });
   });
 
-  // ✅ FIX: Wrap user interactions in act()
   it("should handle integrity poll", async () => {
-    // Desktop cards render the outstation id, not its name.
     const user = setupUserEvent();
     renderComponent();
 
-    const tabs = screen.getAllByTestId("tabs-trigger");
-    const outstationTab = tabs.find(tab => tab.textContent.includes("Outstations"));
-    await act(async () => {
-      await user.click(outstationTab);
-    });
+    await clickTab(user, "Outstations");
 
     await waitFor(() => {
       const outstationPanel = getTabPanel("outstations");
       expect(within(outstationPanel).getByText("outstation-1")).toBeInTheDocument();
     });
 
-    // Find and click Integrity Poll button within the outstation panel
-    const outstationPanel = getTabPanel("outstations");
-    const buttons = within(outstationPanel).getAllByTestId("button");
-    const pollButton = buttons.find(btn => btn.textContent.includes("Integrity Poll"));
-    await act(async () => {
-      await user.click(pollButton);
-    });
+    await clickButtonInPanel(user, "outstations", "Integrity Poll");
 
     await waitFor(() => {
       expect(apiPostJson).toHaveBeenCalledWith(
@@ -396,21 +373,15 @@ describe("DNP3MonitoringDashboard", () => {
     });
   });
 
-  // ✅ FIX: Wrap user interactions in act()
   it("should display performance metrics", async () => {
     const user = setupUserEvent();
     renderComponent();
 
-    const tabs = screen.getAllByTestId("tabs-trigger");
-    const performanceTab = tabs.find(tab => tab.textContent.includes("Performance"));
-    await act(async () => {
-      await user.click(performanceTab);
-    });
+    await clickTab(user, "Performance");
 
     await waitFor(() => {
       const performancePanel = getTabPanel("performance");
       expect(within(performancePanel).getByText("Performance Metrics")).toBeInTheDocument();
-      // Check for the presence of the performance metrics labels instead of specific numbers
       expect(within(performancePanel).getByText("Response Time")).toBeInTheDocument();
       expect(within(performancePanel).getByText("Average")).toBeInTheDocument();
       expect(within(performancePanel).getByText("Min")).toBeInTheDocument();
@@ -435,23 +406,17 @@ describe("DNP3MonitoringDashboard", () => {
     });
   });
 
-  // ✅ FIX: Wrap user interactions and fireEvent in act()
   it("should display device performance when outstation selected", async () => {
     const user = setupUserEvent();
     renderComponent();
 
-    const tabs = screen.getAllByTestId("tabs-trigger");
-    const outstationTab = tabs.find(tab => tab.textContent.includes("Outstations"));
-    await act(async () => {
-      await user.click(outstationTab);
-    });
+    await clickTab(user, "Outstations");
 
     await waitFor(() => {
       const outstationPanel = getTabPanel("outstations");
       expect(within(outstationPanel).getByText("outstation-1")).toBeInTheDocument();
     });
 
-    // Select outstation (desktop cards render the id, not the name)
     const outstationPanel = getTabPanel("outstations");
     const cards = within(outstationPanel).getAllByTestId("card");
     const outstationCard = cards.find(card => 
@@ -461,11 +426,7 @@ describe("DNP3MonitoringDashboard", () => {
       fireEvent.click(outstationCard);
     });
 
-    // Switch to performance tab
-    const performanceTab = tabs.find(tab => tab.textContent.includes("Performance"));
-    await act(async () => {
-      await user.click(performanceTab);
-    });
+    await clickTab(user, "Performance");
 
     await waitFor(() => {
       const performancePanel = getTabPanel("performance");
@@ -485,54 +446,32 @@ describe("DNP3MonitoringDashboard", () => {
     });
   });
 
-  // ✅ FIX: Wrap user interactions in act()
   it("should handle integrity poll error", async () => {
     apiPostJson.mockRejectedValueOnce(new Error("Network error"));
     const user = setupUserEvent();
     renderComponent();
 
-    const tabs = screen.getAllByTestId("tabs-trigger");
-    const outstationTab = tabs.find(tab => tab.textContent.includes("Outstations"));
-    await act(async () => {
-      await user.click(outstationTab);
-    });
+    await clickTab(user, "Outstations");
 
     await waitFor(() => {
       const outstationPanel = getTabPanel("outstations");
       expect(within(outstationPanel).getByText("outstation-1")).toBeInTheDocument();
     });
 
-    const outstationPanel = getTabPanel("outstations");
-    const buttons = within(outstationPanel).getAllByTestId("button");
-    const pollButton = buttons.find(btn => btn.textContent.includes("Integrity Poll"));
-    await act(async () => {
-      await user.click(pollButton);
-    });
+    await clickButtonInPanel(user, "outstations", "Integrity Poll");
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith("Failed to perform integrity poll");
     });
   });
 
-  // ✅ FIX: Wrap user interactions in act()
   it("should handle refresh button click", async () => {
-    // The outstations panel has multiple buttons (Refresh + one Integrity
-    // Poll per outstation), so pick the Refresh one explicitly.
     const user = setupUserEvent();
     renderComponent();
 
-    const tabs = screen.getAllByTestId("tabs-trigger");
-    const outstationTab = tabs.find(tab => tab.textContent.includes("Outstations"));
-    await act(async () => {
-      await user.click(outstationTab);
-    });
+    await clickTab(user, "Outstations");
 
-    const outstationPanel = getTabPanel("outstations");
-    const buttons = within(outstationPanel).getAllByTestId("button");
-    const refreshButton = buttons.find(btn => btn.textContent.includes("Refresh"));
-    await act(async () => {
-      await user.click(refreshButton);
-    });
+    await clickButtonInPanel(user, "outstations", "Refresh");
 
     await waitFor(() => {
       expect(apiGetJson).toHaveBeenCalledWith(
@@ -557,23 +496,17 @@ describe("DNP3MonitoringDashboard", () => {
     });
   });
 
-  // ✅ FIX: Wrap user interactions in act()
   it("should display events tab content", async () => {
     const user = setupUserEvent();
     renderComponent();
 
-    const tabs = screen.getAllByTestId("tabs-trigger");
-    const eventsTab = tabs.find(tab => tab.textContent.includes("Events"));
-    await act(async () => {
-      await user.click(eventsTab);
-    });
+    await clickTab(user, "Events");
 
     expect(screen.getByText("Event Buffer")).toBeInTheDocument();
     expect(screen.getByText("0 events")).toBeInTheDocument();
     expect(screen.getByText("No events recorded")).toBeInTheDocument();
   });
 
-  // ✅ FIX: Wrap user interactions in act()
   it("should display empty state for outstations", async () => {
     apiGetJson.mockImplementation((url) => {
       if (url.includes("/devices")) {
@@ -588,11 +521,7 @@ describe("DNP3MonitoringDashboard", () => {
     const user = setupUserEvent();
     renderComponent();
 
-    const tabs = screen.getAllByTestId("tabs-trigger");
-    const outstationTab = tabs.find(tab => tab.textContent.includes("Outstations"));
-    await act(async () => {
-      await user.click(outstationTab);
-    });
+    await clickTab(user, "Outstations");
 
     await waitFor(() => {
       const outstationPanel = getTabPanel("outstations");
@@ -602,7 +531,6 @@ describe("DNP3MonitoringDashboard", () => {
 
   it("should close dialog when onClose is called", () => {
     renderComponent();
-
     expect(screen.getByTestId("dialog")).toBeInTheDocument();
   });
 });
