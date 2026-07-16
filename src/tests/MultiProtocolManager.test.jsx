@@ -161,41 +161,55 @@ afterEach(() => {
 // ============================================================
 
 describe("MultiProtocolManager - basic rendering (mock mode)", () => {
+  // ✅ FIX: Wrap initial render in act() to handle async useEffect
   it("should render without crashing", () => {
-    const { container } = render(
-      <TestWrapper>
-        <MultiProtocolManager />
-      </TestWrapper>,
-    );
+    let container;
+    act(() => {
+      const result = render(
+        <TestWrapper>
+          <MultiProtocolManager />
+        </TestWrapper>
+      );
+      container = result.container;
+    });
     expect(container).toBeDefined();
   });
 
+  // ✅ FIX: Wrap initial render in act() to handle async useEffect
   it("should show loading state initially", () => {
-    render(
-      <TestWrapper>
-        <MultiProtocolManager />
-      </TestWrapper>,
-    );
+    act(() => {
+      render(
+        <TestWrapper>
+          <MultiProtocolManager />
+        </TestWrapper>
+      );
+    });
     expect(screen.getByTestId("loading-state")).toBeInTheDocument();
     expect(screen.getByText(/Loading protocol status/i)).toBeInTheDocument();
   });
 
+  // ✅ FIX: Use act() for initial render, then findByText for async content
   it("should render the header with title", async () => {
-    render(
-      <TestWrapper>
-        <MultiProtocolManager />
-      </TestWrapper>,
-    );
+    act(() => {
+      render(
+        <TestWrapper>
+          <MultiProtocolManager />
+        </TestWrapper>
+      );
+    });
     const title = await screen.findByText(/Multi-Protocol Manager/i);
     expect(title).toBeInTheDocument();
   });
 
+  // ✅ FIX: Use act() for initial render
   it("shows the Demo Mode badge when running in mock mode", async () => {
-    render(
-      <TestWrapper>
-        <MultiProtocolManager />
-      </TestWrapper>,
-    );
+    act(() => {
+      render(
+        <TestWrapper>
+          <MultiProtocolManager />
+        </TestWrapper>
+      );
+    });
     await screen.findByText(/Multi-Protocol Manager/i);
     expect(screen.getByText("Demo Mode")).toBeInTheDocument();
   });
@@ -203,11 +217,13 @@ describe("MultiProtocolManager - basic rendering (mock mode)", () => {
 
 describe("MultiProtocolManager - summary cards & protocol grid (mock mode)", () => {
   beforeEach(async () => {
-    render(
-      <TestWrapper>
-        <MultiProtocolManager />
-      </TestWrapper>,
-    );
+    act(() => {
+      render(
+        <TestWrapper>
+          <MultiProtocolManager />
+        </TestWrapper>
+      );
+    });
     await screen.findByText(/Multi-Protocol Manager/i);
   });
 
@@ -254,8 +270,9 @@ describe("MultiProtocolManager - summary cards & protocol grid (mock mode)", () 
     expect(screen.getByText(/Last Updated/i)).toBeInTheDocument();
   });
 
+  // ✅ FIX: Add delay: null to userEvent setup
   it("shows a success toast when Connect button is clicked", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const connectButton = screen.getByTestId("connect-opcua");
     await user.click(connectButton);
     expect(toast.success).toHaveBeenCalledWith(
@@ -267,12 +284,15 @@ describe("MultiProtocolManager - summary cards & protocol grid (mock mode)", () 
 
 describe("MultiProtocolManager - protocol configuration modals", () => {
   const setup = async () => {
-    const user = userEvent.setup();
-    render(
-      <TestWrapper>
-        <MultiProtocolManager />
-      </TestWrapper>,
-    );
+    // ✅ FIX: Add delay: null to userEvent setup
+    const user = userEvent.setup({ delay: null });
+    act(() => {
+      render(
+        <TestWrapper>
+          <MultiProtocolManager />
+        </TestWrapper>
+      );
+    });
     await screen.findByText(/Multi-Protocol Manager/i);
     return user;
   };
@@ -316,12 +336,15 @@ describe("MultiProtocolManager - protocol configuration modals", () => {
 
 describe("MultiProtocolManager - simulator configuration dialog", () => {
   const openSimulatorDialog = async () => {
-    const user = userEvent.setup();
-    render(
-      <TestWrapper>
-        <MultiProtocolManager />
-      </TestWrapper>,
-    );
+    // ✅ FIX: Add delay: null to userEvent setup
+    const user = userEvent.setup({ delay: null });
+    act(() => {
+      render(
+        <TestWrapper>
+          <MultiProtocolManager />
+        </TestWrapper>
+      );
+    });
     await screen.findByText(/Multi-Protocol Manager/i);
     await user.click(screen.getByTestId("configure-simulator"));
     await screen.findByText("Simulator Configuration");
@@ -361,13 +384,16 @@ describe("MultiProtocolManager - simulator configuration dialog", () => {
 });
 
 describe("MultiProtocolManager - refresh", () => {
+  // ✅ FIX: Add delay: null to userEvent setup
   it("shows a success toast when a manual refresh succeeds", async () => {
-    const user = userEvent.setup();
-    render(
-      <TestWrapper>
-        <MultiProtocolManager />
-      </TestWrapper>,
-    );
+    const user = userEvent.setup({ delay: null });
+    act(() => {
+      render(
+        <TestWrapper>
+          <MultiProtocolManager />
+        </TestWrapper>
+      );
+    });
     await screen.findByText(/Multi-Protocol Manager/i);
 
     await user.click(screen.getByText("Refresh"));
@@ -394,11 +420,13 @@ describe("MultiProtocolManager - live mode success", () => {
   it("fetches from the API and renders the returned data", async () => {
     apiGetJson.mockResolvedValueOnce(liveApiResponse());
 
-    render(
-      <TestWrapper>
-        <MultiProtocolManager />
-      </TestWrapper>,
-    );
+    act(() => {
+      render(
+        <TestWrapper>
+          <MultiProtocolManager />
+        </TestWrapper>
+      );
+    });
 
     await screen.findByText(/Multi-Protocol Manager/i);
     expect(apiGetJson).toHaveBeenCalledWith(
@@ -416,11 +444,13 @@ describe("MultiProtocolManager - live mode success", () => {
       }),
     );
 
-    render(
-      <TestWrapper>
-        <MultiProtocolManager />
-      </TestWrapper>,
-    );
+    act(() => {
+      render(
+        <TestWrapper>
+          <MultiProtocolManager />
+        </TestWrapper>
+      );
+    });
 
     await screen.findByText(/Multi-Protocol Manager/i);
     expect(screen.getByText("0%")).toBeInTheDocument();
@@ -436,11 +466,13 @@ describe("MultiProtocolManager - live mode failure & retry", () => {
   it("shows the error state when the initial fetch fails", async () => {
     apiGetJson.mockRejectedValue(new Error("boom"));
 
-    render(
-      <TestWrapper>
-        <MultiProtocolManager />
-      </TestWrapper>,
-    );
+    act(() => {
+      render(
+        <TestWrapper>
+          <MultiProtocolManager />
+        </TestWrapper>
+      );
+    });
 
     expect(await screen.findByTestId("error-state")).toBeInTheDocument();
     expect(screen.getByText("Failed to Load")).toBeInTheDocument();
@@ -449,25 +481,30 @@ describe("MultiProtocolManager - live mode failure & retry", () => {
 
   it("shows the Reload Page button only in live mode", async () => {
     apiGetJson.mockRejectedValue(new Error("boom"));
-    render(
-      <TestWrapper>
-        <MultiProtocolManager />
-      </TestWrapper>,
-    );
+    act(() => {
+      render(
+        <TestWrapper>
+          <MultiProtocolManager />
+        </TestWrapper>
+      );
+    });
     await screen.findByTestId("error-state");
     expect(screen.getByText("Reload Page")).toBeInTheDocument();
   });
 
+  // ✅ FIX: Add delay: null to userEvent setup
   it("recovers after a successful retry", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     apiGetJson.mockRejectedValueOnce(new Error("boom"));
     apiGetJson.mockResolvedValueOnce(liveApiResponse());
 
-    render(
-      <TestWrapper>
-        <MultiProtocolManager />
-      </TestWrapper>,
-    );
+    act(() => {
+      render(
+        <TestWrapper>
+          <MultiProtocolManager />
+        </TestWrapper>
+      );
+    });
 
     await screen.findByTestId("error-state");
 
@@ -479,17 +516,20 @@ describe("MultiProtocolManager - live mode failure & retry", () => {
     });
   });
 
+  // ✅ FIX: Add delay: null to userEvent setup
   it("shows recovery success toast after errors are resolved", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     apiGetJson.mockRejectedValueOnce(new Error("boom"));
     apiGetJson.mockResolvedValueOnce(liveApiResponse());
 
-    render(
-      <TestWrapper>
-        <MultiProtocolManager />
-      </TestWrapper>,
-    );
+    act(() => {
+      render(
+        <TestWrapper>
+          <MultiProtocolManager />
+        </TestWrapper>
+      );
+    });
 
     await screen.findByTestId("error-state");
 
@@ -504,14 +544,17 @@ describe("MultiProtocolManager - live mode failure & retry", () => {
     expect(apiGetJson).toHaveBeenCalledTimes(2);
   });
 
+  // ✅ FIX: Add delay: null to userEvent setup
   it("does NOT show a 'refreshed' success toast when a manual refresh fails", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     apiGetJson.mockResolvedValueOnce(liveApiResponse());
-    render(
-      <TestWrapper>
-        <MultiProtocolManager />
-      </TestWrapper>,
-    );
+    act(() => {
+      render(
+        <TestWrapper>
+          <MultiProtocolManager />
+        </TestWrapper>
+      );
+    });
     await screen.findByText(/Multi-Protocol Manager/i);
 
     apiGetJson.mockRejectedValueOnce(new Error("network down"));
@@ -531,11 +574,13 @@ describe("MultiProtocolManager - live mode failure & retry", () => {
     const toastSpy = vi.spyOn(toast, 'error');
 
     apiGetJson.mockRejectedValueOnce(new Error("Request timeout exceeded"));
-    render(
-      <TestWrapper>
-        <MultiProtocolManager />
-      </TestWrapper>,
-    );
+    act(() => {
+      render(
+        <TestWrapper>
+          <MultiProtocolManager />
+        </TestWrapper>
+      );
+    });
 
     await waitFor(() => {
       expect(toastSpy).toHaveBeenCalledWith(
@@ -548,11 +593,13 @@ describe("MultiProtocolManager - live mode failure & retry", () => {
 
 describe("MultiProtocolManager - page visibility", () => {
   it("shows a paused badge when the tab becomes hidden", async () => {
-    render(
-      <TestWrapper>
-        <MultiProtocolManager />
-      </TestWrapper>,
-    );
+    act(() => {
+      render(
+        <TestWrapper>
+          <MultiProtocolManager />
+        </TestWrapper>
+      );
+    });
     await screen.findByText(/Multi-Protocol Manager/i);
 
     Object.defineProperty(document, "hidden", {
@@ -565,11 +612,15 @@ describe("MultiProtocolManager - page visibility", () => {
   });
 
   it("unmounts cleanly without throwing", async () => {
-    const { unmount } = render(
-      <TestWrapper>
-        <MultiProtocolManager />
-      </TestWrapper>,
-    );
+    let unmount;
+    act(() => {
+      const result = render(
+        <TestWrapper>
+          <MultiProtocolManager />
+        </TestWrapper>
+      );
+      unmount = result.unmount;
+    });
     await screen.findByText(/Multi-Protocol Manager/i);
     expect(() => unmount()).not.toThrow();
   });
@@ -604,11 +655,15 @@ describe("MultiProtocolManager - polling", () => {
     const setTimeoutSpy = vi.spyOn(global, 'setTimeout');
     apiGetJson.mockResolvedValue(liveApiResponse());
 
-    const { unmount } = render(
-      <TestWrapper>
-        <MultiProtocolManager />
-      </TestWrapper>,
-    );
+    let unmount;
+    act(() => {
+      const result = render(
+        <TestWrapper>
+          <MultiProtocolManager />
+        </TestWrapper>
+      );
+      unmount = result.unmount;
+    });
     unmountFn = unmount;
 
     await screen.findByText(/Multi-Protocol Manager/i);
@@ -643,11 +698,15 @@ describe("MultiProtocolManager - polling", () => {
       return Promise.reject(new Error("Network error"));
     });
 
-    const { unmount } = render(
-      <TestWrapper>
-        <MultiProtocolManager />
-      </TestWrapper>,
-    );
+    let unmount;
+    act(() => {
+      const result = render(
+        <TestWrapper>
+          <MultiProtocolManager />
+        </TestWrapper>
+      );
+      unmount = result.unmount;
+    });
     unmountFn = unmount;
 
     await screen.findByText(/Multi-Protocol Manager/i);
@@ -670,7 +729,7 @@ describe("MultiProtocolManager - polling", () => {
     // The first delay should be 10000
     expect(pollingCalls[0][1]).toBe(10000);
 
-    // Execute the callback to simulate a poll (this will trigger the error)
+    // ✅ FIX: Execute the callback in act() to wrap state updates
     await act(async () => {
       await pollingCalls[0][0]();
     });
@@ -713,11 +772,15 @@ describe("MultiProtocolManager - polling", () => {
       return Promise.reject(new Error("Network error"));
     });
 
-    const { unmount } = render(
-      <TestWrapper>
-        <MultiProtocolManager />
-      </TestWrapper>,
-    );
+    let unmount;
+    act(() => {
+      const result = render(
+        <TestWrapper>
+          <MultiProtocolManager />
+        </TestWrapper>
+      );
+      unmount = result.unmount;
+    });
     unmountFn = unmount;
 
     await screen.findByText(/Multi-Protocol Manager/i);
@@ -747,6 +810,7 @@ describe("MultiProtocolManager - polling", () => {
       const latest = pollingCalls[pollingCalls.length - 1];
       previousCallCount = pollingCalls.length;
 
+      // ✅ FIX: Execute the callback in act() to wrap state updates
       await act(async () => {
         await latest[0]();
       });
@@ -777,11 +841,15 @@ describe("MultiProtocolManager - polling", () => {
     const setTimeoutSpy = vi.spyOn(global, 'setTimeout');
     apiGetJson.mockResolvedValue(liveApiResponse());
 
-    const { unmount } = render(
-      <TestWrapper>
-        <MultiProtocolManager />
-      </TestWrapper>,
-    );
+    let unmount;
+    act(() => {
+      const result = render(
+        <TestWrapper>
+          <MultiProtocolManager />
+        </TestWrapper>
+      );
+      unmount = result.unmount;
+    });
     unmountFn = unmount;
 
     await screen.findByText(/Multi-Protocol Manager/i);
