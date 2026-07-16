@@ -134,7 +134,6 @@ vi.mock("@/components/ui/select", () => ({
   },
   SelectTrigger: ({ children, id }) => <button data-testid="select-trigger" id={id}>{children}</button>,
   SelectValue: ({ placeholder }) => <span data-testid="select-value">{placeholder}</span>,
-  // ✅ FIX: render as fragment so options are direct children of <select>
   SelectContent: ({ children }) => <>{children}</>,
   SelectItem: ({ children, value }) => <option data-testid="select-item" value={value}>{children}</option>,
 }));
@@ -172,7 +171,7 @@ vi.mock("@/components/ui/textarea", () => ({
   ),
 }));
 
-// Mock icons
+// Mock icons - render text so buttons have visible content
 vi.mock("lucide-react", () => ({
   Filter: () => <span data-testid="filter-icon">Filter</span>,
   MessageSquare: () => <span data-testid="message-square-icon">MessageSquare</span>,
@@ -351,7 +350,6 @@ describe("MQTTManagementPanel", () => {
       });
     });
 
-    // ✅ FIXED: SelectContent now renders as fragment, options are direct children
     it("should update subscription QoS when changed", async () => {
       const user = setupUserEvent();
       renderComponent();
@@ -447,7 +445,7 @@ describe("MQTTManagementPanel", () => {
       });
     });
 
-    // ✅ FIXED: SelectContent now renders as fragment, options are direct children
+    // ✅ FIXED: Use fireEvent.click for retain checkbox (userEvent timing issue)
     it("should update publish QoS and retain flag", async () => {
       const user = setupUserEvent();
       renderComponent();
@@ -462,8 +460,9 @@ describe("MQTTManagementPanel", () => {
       });
       fireEvent.change(selects[1], { target: { value: "1" } });
 
+      // ✅ FIX: Use fireEvent.click instead of user.click for checkbox
       const retainCheckbox = screen.getByLabelText("Retain message");
-      await user.click(retainCheckbox);
+      fireEvent.click(retainCheckbox);
 
       const inputs = screen.getAllByTestId("input");
       const topicInput = inputs.find((i) => i.id === "pub-topic");
@@ -711,7 +710,7 @@ describe("MQTTManagementPanel", () => {
       expect(filterInput.value).toBe("sensors/humidity");
     });
 
-    // ✅ FIXED: SelectContent now renders as fragment, options are direct children
+    // ✅ FIXED: Use fireEvent.click for checkbox AND includes() for button text
     it("should cover subscribe/QoS/unsubscribe/publish/retain in the mobile drawer", async () => {
       const user = setupUserEvent();
       renderComponent();
@@ -758,8 +757,9 @@ describe("MQTTManagementPanel", () => {
       const selects2 = screen.getAllByTestId("select-native");
       fireEvent.change(selects2[1], { target: { value: "2" } });
       
+      // ✅ FIX: Use fireEvent.click instead of user.click for checkbox
       const retainCheckbox = screen.getByLabelText("Retain Message");
-      await user.click(retainCheckbox);
+      fireEvent.click(retainCheckbox);
       
       const pubTopicInput = screen
         .getAllByTestId("input")
@@ -771,9 +771,10 @@ describe("MQTTManagementPanel", () => {
         .find((t) => t.id === "pub-payload");
       fireEvent.change(payloadTextarea, { target: { value: '{"m":1}' } });
       
+      // ✅ FIX: Use includes() instead of exact match (icon renders text)
       const publishButton = screen
         .getAllByTestId("button")
-        .find((btn) => btn.textContent.trim() === "Publish");
+        .find((btn) => btn.textContent.includes("Publish"));
       await user.click(publishButton);
       
       await waitFor(() => {
