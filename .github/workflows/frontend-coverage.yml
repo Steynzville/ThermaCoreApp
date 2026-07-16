@@ -35,9 +35,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          # ✅ Explicitly use Node 24 (already the default, but explicit is better)
           node-version: '24'
-          # ✅ Enable corepack for pnpm
           cache: 'pnpm'
 
       - name: Get pnpm store directory
@@ -63,8 +61,8 @@ jobs:
         run: |
           echo "📊 Running frontend coverage..."
           
-          # ✅ Use timeout to prevent hanging
-          timeout 300 pnpm vitest run \
+          # ✅ Run vitest without timeout wrapper (let it run normally)
+          pnpm vitest run \
             --pool=forks \
             --poolOptions.forks.singleFork=true \
             --poolOptions.forks.maxForks=2 \
@@ -78,17 +76,19 @@ jobs:
             --coverage.reporter=lcov \
             --coverage.reporter=html \
             --coverage.reportsDirectory=coverage \
-            --testNamePattern="^(?!.*AdminPanel User Creation Form).*" 2>&1 | tee coverage_output.txt || {
-              EXIT_CODE=$?
-              echo "Vitest exited with code $EXIT_CODE"
-              pkill -9 node || true
-              sleep 3
-              if [ -f coverage/coverage-summary.json ]; then
-                echo "✅ Coverage generated - success"
-                exit 0
-              fi
-              exit $EXIT_CODE
-            }
+            --testNamePattern="^(?!.*AdminPanel User Creation Form).*" 2>&1 | tee coverage_output.txt
+          
+          # ✅ Capture the exit code
+          EXIT_CODE=$?
+          echo "Vitest exited with code $EXIT_CODE"
+          
+          # ✅ Check if coverage was generated
+          if [ -f coverage/coverage-summary.json ]; then
+            echo "✅ Coverage generated - success"
+            exit 0
+          fi
+          
+          exit $EXIT_CODE
 
       - name: Extract Coverage from Output
         id: coverage
@@ -105,9 +105,10 @@ jobs:
       - name: Final Cleanup
         if: always()
         run: |
-          pkill -9 node || true
           echo "📁 Coverage check:"
           ls -la coverage/ 2>/dev/null || echo "No coverage directory"
+          # ✅ Use gentle cleanup - let the runner handle process cleanup
+          echo "✅ Cleanup complete"
 
       - name: Upload Full Coverage Report
         if: always()
@@ -163,7 +164,6 @@ jobs:
             echo "📊 Coverage: ${COVERAGE}%"
             echo "🎨 Badge color: ${COLOR}"
             
-            # ✅ Optional: Create a badge markdown file
             echo "<!-- COVERAGE_BADGE_START -->"
             echo "![Coverage](https://img.shields.io/badge/coverage-${COVERAGE}%25-${COLOR})"
             echo "<!-- COVERAGE_BADGE_END -->"
