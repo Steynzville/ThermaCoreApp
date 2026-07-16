@@ -10,23 +10,29 @@
  *      (resetModules can hand back fresh mock instances, so we always
  *      grab the current one right before configuring it)
  *   4. Dynamically imports the script, then flushes microtasks
- *
- * Adjust the relative import path to the script if your test file lives
- * somewhere other than src/tests/.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const SCRIPT_PATH = "../../scripts/check-security.js";
 
-vi.mock("node:fs", () => ({
-  existsSync: vi.fn(),
-  readFileSync: vi.fn(),
-}));
+// ✅ FIX: Use importOriginal pattern for node:fs
+vi.mock("node:fs", async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    existsSync: vi.fn(),
+    readFileSync: vi.fn(),
+  };
+});
 
-vi.mock("node:child_process", () => ({
-  execSync: vi.fn(),
-}));
+vi.mock("node:child_process", async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    execSync: vi.fn(),
+  };
+});
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 10));
 
