@@ -188,19 +188,19 @@ describe("ReportConfigurator", () => {
     return null;
   };
 
-  // ✅ Helper to find error message by content in the error div
+  // ✅ FIXED: Proper parentheses for operator precedence
   const findErrorMessage = (text) => {
     return screen.getByText((content, element) => {
       // Only match elements that are inside the error div (has bg-red-50 class)
       const isInErrorDiv = element?.closest?.('.bg-red-50') !== null;
-      return isInErrorDiv && element?.textContent?.includes(text) ?? false;
+      return (isInErrorDiv && element?.textContent?.includes(text)) ?? false;
     });
   };
 
   const queryErrorMessage = (text) => {
     return screen.queryByText((content, element) => {
       const isInErrorDiv = element?.closest?.('.bg-red-50') !== null;
-      return isInErrorDiv && element?.textContent?.includes(text) ?? false;
+      return (isInErrorDiv && element?.textContent?.includes(text)) ?? false;
     });
   };
 
@@ -430,13 +430,12 @@ describe("ReportConfigurator", () => {
       expect(screen.queryByText("Select Units")).not.toBeInTheDocument();
     });
 
-    // ✅ FIXED: Use error div helper to find error message
+    // ✅ FIXED: Proper parentheses in findErrorMessage
     it("should clear error message when scope changes", async () => {
       const errorMessage = "Test error";
       const onGenerate = vi.fn().mockRejectedValue(new Error(errorMessage));
       renderComponent({ onGenerate });
       
-      // Build valid config
       fireEvent.click(screen.getByText("Energy Report"));
       fireEvent.click(screen.getByText("All Units"));
       const energySection = getInputNearText("Energy Production");
@@ -445,20 +444,17 @@ describe("ReportConfigurator", () => {
       const generateButton = screen.getByText("Generate & Download Report");
       fireEvent.click(generateButton);
       
-      // ✅ Find error message only inside the error div
       await waitFor(() => {
         const errorElement = findErrorMessage(errorMessage);
         expect(errorElement).toBeInTheDocument();
       }, { timeout: 2000 });
       
-      // Change scope - should clear error
       fireEvent.click(screen.getByText("Single Unit"));
       
-      // ✅ Wait for error to disappear
       await waitFor(() => {
         const errorElements = screen.queryAllByText((content, element) => {
           const isInErrorDiv = element?.closest?.('.bg-red-50') !== null;
-          return isInErrorDiv && element?.textContent?.includes(errorMessage) ?? false;
+          return (isInErrorDiv && element?.textContent?.includes(errorMessage)) ?? false;
         });
         expect(errorElements.length).toBe(0);
       }, { timeout: 2000 });
@@ -789,7 +785,7 @@ describe("ReportConfigurator", () => {
       });
     });
 
-    // ✅ FIXED: Use error div helper to find error message
+    // ✅ FIXED: Proper parentheses in findErrorMessage
     it("should show error message when onGenerate rejects (catch path)", async () => {
       const errorMessage = "Server unavailable";
       const onGenerate = vi.fn().mockRejectedValue(new Error(errorMessage));
@@ -802,7 +798,6 @@ describe("ReportConfigurator", () => {
       fireEvent.click(generateButton);
       
       await waitFor(() => {
-        // ✅ Find error message only inside the error div
         const errorElement = findErrorMessage(errorMessage);
         expect(errorElement).toBeInTheDocument();
         expect(mockAlert).toHaveBeenCalledWith(
@@ -811,7 +806,7 @@ describe("ReportConfigurator", () => {
       });
     });
 
-    // ✅ FIXED: Use error div helper to find error message
+    // ✅ FIXED: Proper parentheses in findErrorMessage
     it("should handle error without message property", async () => {
       const onGenerate = vi.fn().mockRejectedValue({});
       renderComponent({ onGenerate });
@@ -831,7 +826,7 @@ describe("ReportConfigurator", () => {
       });
     });
 
-    // ✅ FIXED: Use error div helper to find error message
+    // ✅ FIXED: Proper parentheses in findErrorMessage
     it("should handle error with non-Error object", async () => {
       const onGenerate = vi.fn().mockRejectedValue("String error");
       renderComponent({ onGenerate });
@@ -843,7 +838,6 @@ describe("ReportConfigurator", () => {
       fireEvent.click(generateButton);
       
       await waitFor(() => {
-        // String error has no .message, so generic fallback appears
         const errorElement = findErrorMessage("Failed to generate report");
         expect(errorElement).toBeInTheDocument();
       });
