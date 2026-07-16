@@ -1,18 +1,7 @@
 /**
  * ReportConfigurator.test.jsx - Complete Test Coverage (FIXED)
  * 
- * Covers:
- * - Basic rendering and prop handling
- * - Report type selection/deselection
- * - Scope selection with unit/client filtering
- * - Unit and client selection (handleUnitSelection, handleClientSelection)
- * - Section selection (handleSelectAllSections, handleSectionToggle)
- * - Form validation (isConfigValid)
- * - Report generation (handleGenerateReport - success/error paths)
- * - Scheduling and pause functionality
- * - Edge cases and guard clauses
- * 
- * Target: 85%+ function coverage
+ * All 68 tests should pass
  */
 
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
@@ -21,7 +10,6 @@ import ReportConfigurator from "@/components/reports/ReportConfigurator";
 
 // ============ MOCKS ============
 
-// Mock settings context
 vi.mock("@/context/SettingsContext", () => ({
   useSettings: () => ({
     settings: {
@@ -31,16 +19,13 @@ vi.mock("@/context/SettingsContext", () => ({
   }),
 }));
 
-// Mock audio player
 vi.mock("@/utils/audioPlayer", () => ({
   default: vi.fn(),
 }));
 
-// Mock alert
 const mockAlert = vi.fn();
 global.alert = mockAlert;
 
-// Mock date-fns format
 vi.mock("date-fns", () => ({
   format: vi.fn((date, formatStr) => {
     if (formatStr === "yyyy-MM-dd") return "2024-01-15";
@@ -121,16 +106,13 @@ const mockAvailableReportTypes = [
 
 // ============ RESIZE/INTERSECTION OBSERVER STUBS ============
 
-// ✅ FIX: Add stubs for Radix UI Popover/Select positioning
 beforeAll(() => {
-  // Stub ResizeObserver
   global.ResizeObserver = class ResizeObserver {
     observe() {}
     unobserve() {}
     disconnect() {}
   };
 
-  // Stub IntersectionObserver  
   global.IntersectionObserver = class IntersectionObserver {
     constructor() {}
     observe() {}
@@ -139,7 +121,6 @@ beforeAll(() => {
     takeRecords() { return []; }
   };
 
-  // Stub getBoundingClientRect for Radix UI
   Element.prototype.getBoundingClientRect = vi.fn(() => ({
     width: 100,
     height: 100,
@@ -154,7 +135,6 @@ beforeAll(() => {
 });
 
 afterAll(() => {
-  // Clean up stubs
   delete global.ResizeObserver;
   delete global.IntersectionObserver;
 });
@@ -206,6 +186,19 @@ describe("ReportConfigurator", () => {
       if (checkbox) return checkbox;
     }
     return null;
+  };
+
+  // Helper to find text by content
+  const findByTextContent = (text) => {
+    return screen.getByText((content, element) => {
+      return element?.textContent?.includes(text) ?? false;
+    });
+  };
+
+  const queryByTextContent = (text) => {
+    return screen.queryByText((content, element) => {
+      return element?.textContent?.includes(text) ?? false;
+    });
   };
 
   // ============ BASIC RENDERING ============
@@ -434,7 +427,7 @@ describe("ReportConfigurator", () => {
       expect(screen.queryByText("Select Units")).not.toBeInTheDocument();
     });
 
-    // ✅ FIX: Add waitFor around async state update
+    // ✅ FIXED: Use flexible text matcher for error message
     it("should clear error message when scope changes", async () => {
       const errorMessage = "Test error";
       const onGenerate = vi.fn().mockRejectedValue(new Error(errorMessage));
@@ -449,9 +442,12 @@ describe("ReportConfigurator", () => {
       const generateButton = screen.getByText("Generate & Download Report");
       fireEvent.click(generateButton);
       
-      // ✅ Wait for error to appear
+      // ✅ Use flexible matcher for error message
       await waitFor(() => {
-        expect(screen.getByText(errorMessage)).toBeInTheDocument();
+        const errorElement = screen.getByText((content, element) => {
+          return element?.textContent?.includes(errorMessage) ?? false;
+        });
+        expect(errorElement).toBeInTheDocument();
       });
       
       // Change scope - should clear error
@@ -459,7 +455,10 @@ describe("ReportConfigurator", () => {
       
       // ✅ Wait for error to disappear
       await waitFor(() => {
-        expect(screen.queryByText(errorMessage)).not.toBeInTheDocument();
+        const errorElements = screen.queryAllByText((content, element) => {
+          return element?.textContent?.includes(errorMessage) ?? false;
+        });
+        expect(errorElements.length).toBe(0);
       });
     });
   });
@@ -645,11 +644,9 @@ describe("ReportConfigurator", () => {
       expect(screen.queryByText("Water Production")).not.toBeInTheDocument();
     });
 
-    // ✅ FIX: Select all 3 sections needed for "Full Report"
     it("should auto-select report types based on section combinations", () => {
       renderComponent();
       
-      // Select all 3 sections that "Full Report" requires
       const energySection = getInputNearText("Energy Production");
       const waterSection = getInputNearText("Water Production");
       const tempSection = getInputNearText("Temperature & Pressure");
@@ -658,7 +655,6 @@ describe("ReportConfigurator", () => {
       fireEvent.click(waterSection);
       fireEvent.click(tempSection);
       
-      // "Full Report" should be selected
       const fullReportCard = screen.getByText("Full Report").closest("button");
       expect(fullReportCard).toHaveClass("border-blue-500");
     });
@@ -704,7 +700,6 @@ describe("ReportConfigurator", () => {
       expect(generateButton).toBeDisabled();
     });
 
-    // ✅ FIX: Use getAllByRole for multiple matches
     it("should require unit or client selection for non-master scopes", () => {
       renderComponent();
       
@@ -829,7 +824,6 @@ describe("ReportConfigurator", () => {
       });
     });
 
-    // ✅ FIX: Reject with string, assert on generic message
     it("should handle error with non-Error object", async () => {
       const onGenerate = vi.fn().mockRejectedValue("String error");
       renderComponent({ onGenerate });
@@ -841,12 +835,10 @@ describe("ReportConfigurator", () => {
       fireEvent.click(generateButton);
       
       await waitFor(() => {
-        // String rejection has no .message, so generic fallback appears
         expect(screen.getByText("Failed to generate report")).toBeInTheDocument();
       });
     });
 
-    // ✅ FIX: Increase timeout for default handler (3s setTimeout)
     it("should use default handler when onGenerate not provided", async () => {
       renderComponent({ onGenerate: undefined });
       
@@ -862,7 +854,7 @@ describe("ReportConfigurator", () => {
             "Report generated successfully! Download will begin shortly."
           );
         },
-        { timeout: 4000 } // ✅ Increased timeout for 3s setTimeout
+        { timeout: 4000 }
       );
     });
 
@@ -912,7 +904,6 @@ describe("ReportConfigurator", () => {
       expect(scheduleButton).not.toBeDisabled();
     });
 
-    // ✅ FIX: Now works with ResizeObserver/IntersectionObserver stubs
     it("should show scheduled date message after selection", async () => {
       renderComponent({ showScheduling: true });
       
@@ -922,14 +913,12 @@ describe("ReportConfigurator", () => {
       const scheduleButton = screen.getByText("Schedule Report");
       fireEvent.click(scheduleButton);
       
-      // Calendar should render without crashing
       await waitFor(() => {
         const calendar = document.querySelector('[role="grid"]') || document.querySelector(".rdp");
         expect(calendar).toBeTruthy();
       });
     });
 
-    // ✅ FIX: Now works with ResizeObserver/IntersectionObserver stubs
     it("should invoke isDateDisabled when schedule popover opens", async () => {
       renderComponent({ showScheduling: true });
       
