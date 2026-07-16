@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor, act } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
 
 import Dashboard from "../components/Dashboard";
 import { AuthProvider } from "../context/AuthContext";
@@ -96,19 +96,26 @@ vi.mock("../components/ui/HighTechToggle", () => ({
   ),
 }));
 
-// Test wrapper with providers
+// ✅ FIX: Proper AuthProvider mock
+const mockAuthValue = {
+  user: { id: 1, username: "testuser", role: "admin" },
+  userRole: "admin",
+  isAuthenticated: true,
+  login: vi.fn(),
+  logout: vi.fn(),
+};
+
+// ✅ FIX: Test wrapper with proper provider structure
 const TestWrapper = ({ children, userRole = "admin" }) => {
-  const authContextValue = {
-    user: { id: 1, username: "testuser", role: userRole },
+  const authValue = {
+    ...mockAuthValue,
     userRole: userRole,
-    isAuthenticated: true,
-    login: vi.fn(),
-    logout: vi.fn(),
+    user: { ...mockAuthValue.user, role: userRole },
   };
 
   return (
     <ThemeProvider>
-      <AuthProvider value={authContextValue}>{children}</AuthProvider>
+      <AuthProvider value={authValue}>{children}</AuthProvider>
     </ThemeProvider>
   );
 };
@@ -116,6 +123,7 @@ const TestWrapper = ({ children, userRole = "admin" }) => {
 describe("Dashboard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers();
 
     Storage.prototype.getItem = vi.fn((key) => {
       if (key === "thermacore_user") {
@@ -128,25 +136,33 @@ describe("Dashboard", () => {
     });
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+
+  // ✅ FIX: Wrap render in act()
+  const renderComponent = (userRole = "admin") => {
+    let result;
+    act(() => {
+      result = render(
+        <TestWrapper userRole={userRole}>
+          <Dashboard />
+        </TestWrapper>
+      );
+    });
+    return result;
+  };
+
   describe("Rendering - Operator View", () => {
     it("should render dashboard header with title", () => {
-      render(
-        <TestWrapper>
-          <Dashboard />
-        </TestWrapper>,
-      );
-
+      renderComponent();
       const titles = screen.getAllByText("Dashboard Overview");
       expect(titles.length).toBeGreaterThan(0);
     });
 
     it("should render dashboard description", () => {
-      render(
-        <TestWrapper>
-          <Dashboard />
-        </TestWrapper>,
-      );
-
+      renderComponent();
       const descriptions = screen.getAllByText(
         "Monitor your ThermaCore units in real-time",
       );
@@ -154,45 +170,25 @@ describe("Dashboard", () => {
     });
 
     it("should render breadcrumb navigation", () => {
-      render(
-        <TestWrapper>
-          <Dashboard />
-        </TestWrapper>,
-      );
-
+      renderComponent();
       expect(screen.getAllByText("Home").length).toBeGreaterThan(0);
       expect(screen.getAllByText("Dashboard").length).toBeGreaterThan(0);
     });
 
     it("should render notification bell", () => {
-      render(
-        <TestWrapper>
-          <Dashboard />
-        </TestWrapper>,
-      );
-
+      renderComponent();
       expect(screen.getAllByTestId("notification-bell").length).toBeGreaterThan(0);
     });
 
     it("should render view toggle", () => {
-      render(
-        <TestWrapper>
-          <Dashboard />
-        </TestWrapper>,
-      );
-
+      renderComponent();
       expect(screen.getAllByTestId("view-toggle").length).toBeGreaterThan(0);
     });
   });
 
   describe("Status Dials", () => {
     it("should render all 6 status dials", () => {
-      render(
-        <TestWrapper>
-          <Dashboard />
-        </TestWrapper>,
-      );
-
+      renderComponent();
       expect(screen.getAllByTestId("status-dial-total-units").length).toBeGreaterThan(0);
       expect(screen.getAllByTestId("status-dial-online").length).toBeGreaterThan(0);
       expect(screen.getAllByTestId("status-dial-offline").length).toBeGreaterThan(0);
@@ -201,36 +197,28 @@ describe("Dashboard", () => {
       expect(screen.getAllByTestId("status-dial-alarms").length).toBeGreaterThan(0);
     });
 
+    // ✅ FIX: Wrap interaction in act()
     it("should navigate when Total Units dial is clicked", () => {
-      render(
-        <TestWrapper>
-          <Dashboard />
-        </TestWrapper>,
-      );
-
-      fireEvent.click(screen.getAllByTestId("status-dial-total-units")[0]);
+      renderComponent();
+      act(() => {
+        fireEvent.click(screen.getAllByTestId("status-dial-total-units")[0]);
+      });
       expect(mockNavigate).toHaveBeenCalledWith("/grid-view?status=all");
     });
 
+    // ✅ FIX: Wrap interaction in act()
     it("should navigate when Online dial is clicked", () => {
-      render(
-        <TestWrapper>
-          <Dashboard />
-        </TestWrapper>,
-      );
-
-      fireEvent.click(screen.getAllByTestId("status-dial-online")[0]);
+      renderComponent();
+      act(() => {
+        fireEvent.click(screen.getAllByTestId("status-dial-online")[0]);
+      });
       expect(mockNavigate).toHaveBeenCalledWith("/grid-view?status=online");
     });
   });
 
   describe("Quick Actions - Admin Only", () => {
     it("should not render quick actions for regular users", () => {
-      const { container } = render(
-        <TestWrapper userRole="user">
-          <Dashboard />
-        </TestWrapper>,
-      );
+      const { container } = renderComponent("user");
 
       // Search within the container for quick action testids
       const quickActionElements = container.querySelectorAll('[data-testid^="quick-action-"]');
@@ -238,11 +226,7 @@ describe("Dashboard", () => {
     });
 
     it("should render quick actions for admin users", () => {
-      const { container } = render(
-        <TestWrapper userRole="admin">
-          <Dashboard />
-        </TestWrapper>,
-      );
+      const { container } = renderComponent("admin");
 
       // Search within the container for quick action testids
       const quickActionElements = container.querySelectorAll('[data-testid^="quick-action-"]');
@@ -252,27 +236,20 @@ describe("Dashboard", () => {
 
   describe("View Switching", () => {
     it("should start in operator view by default", () => {
-      render(
-        <TestWrapper>
-          <Dashboard />
-        </TestWrapper>,
-      );
-
+      renderComponent();
       expect(screen.queryAllByTestId("performance-dashboard").length).toBe(0);
     });
 
+    // ✅ FIX: Wrap interactions in act()
     it("should handle rapid toggle clicks", () => {
-      render(
-        <TestWrapper>
-          <Dashboard />
-        </TestWrapper>,
-      );
-
+      renderComponent();
       const toggle = screen.getAllByTestId("view-toggle")[0];
 
-      fireEvent.click(toggle);
-      fireEvent.click(toggle);
-      fireEvent.click(toggle);
+      act(() => {
+        fireEvent.click(toggle);
+        fireEvent.click(toggle);
+        fireEvent.click(toggle);
+      });
 
       expect(toggle).toBeInTheDocument();
     });
@@ -280,12 +257,7 @@ describe("Dashboard", () => {
 
   describe("Layout and Styling", () => {
     it("should have proper container structure", () => {
-      const { container } = render(
-        <TestWrapper>
-          <Dashboard />
-        </TestWrapper>,
-      );
-
+      const { container } = renderComponent();
       expect(container.querySelector(".min-h-screen")).toBeInTheDocument();
       expect(container.querySelector(".max-w-7xl")).toBeInTheDocument();
     });
@@ -294,27 +266,19 @@ describe("Dashboard", () => {
   describe("Edge Cases", () => {
     it("should handle undefined user role", () => {
       Storage.prototype.getItem = vi.fn(() => null);
-
-      render(
-        <TestWrapper userRole={null}>
-          <Dashboard />
-        </TestWrapper>,
-      );
-
+      renderComponent(null);
       expect(screen.getAllByText("Dashboard Overview").length).toBeGreaterThan(0);
     });
 
+    // ✅ FIX: Wrap interactions in act()
     it("should handle multiple quick action clicks", () => {
-      render(
-        <TestWrapper userRole="admin">
-          <Dashboard />
-        </TestWrapper>,
-      );
-
+      renderComponent("admin");
       const btn = screen.getAllByTestId("quick-action-sales-analytics")[0];
 
-      fireEvent.click(btn);
-      fireEvent.click(btn);
+      act(() => {
+        fireEvent.click(btn);
+        fireEvent.click(btn);
+      });
 
       expect(mockNavigate).toHaveBeenCalledTimes(2);
     });
@@ -322,12 +286,7 @@ describe("Dashboard", () => {
 
   describe("Accessibility", () => {
     it("should render main heading", () => {
-      render(
-        <TestWrapper>
-          <Dashboard />
-        </TestWrapper>,
-      );
-
+      renderComponent();
       expect(screen.getAllByText("Dashboard Overview")[0].tagName).toBe("H1");
     });
   });
