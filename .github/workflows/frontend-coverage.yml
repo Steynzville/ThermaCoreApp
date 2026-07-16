@@ -14,6 +14,10 @@ on:
       - main
   workflow_dispatch:
 
+# ✅ Suppress Node 20 deprecation warnings
+env:
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
+
 jobs:
   frontend-coverage:
     runs-on: ubuntu-latest
@@ -31,7 +35,10 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
+          # ✅ Explicitly use Node 24 (already the default, but explicit is better)
           node-version: '24'
+          # ✅ Enable corepack for pnpm
+          cache: 'pnpm'
 
       - name: Get pnpm store directory
         shell: bash
@@ -42,7 +49,8 @@ jobs:
         with:
           path: ${{ env.STORE_PATH }}
           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-store-
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
       - name: Install Frontend Dependencies
         run: pnpm install --frozen-lockfile
@@ -55,7 +63,8 @@ jobs:
         run: |
           echo "📊 Running frontend coverage..."
           
-          pnpm vitest run \
+          # ✅ Use timeout to prevent hanging
+          timeout 300 pnpm vitest run \
             --pool=forks \
             --poolOptions.forks.singleFork=true \
             --poolOptions.forks.maxForks=2 \
@@ -153,4 +162,9 @@ jobs:
             
             echo "📊 Coverage: ${COVERAGE}%"
             echo "🎨 Badge color: ${COLOR}"
+            
+            # ✅ Optional: Create a badge markdown file
+            echo "<!-- COVERAGE_BADGE_START -->"
+            echo "![Coverage](https://img.shields.io/badge/coverage-${COVERAGE}%25-${COLOR})"
+            echo "<!-- COVERAGE_BADGE_END -->"
           fi
