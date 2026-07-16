@@ -1,6 +1,6 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, act } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
 
 import AlertsView from "../components/AlertsView";
 
@@ -13,16 +13,27 @@ vi.mock("react-router-dom", async () => {
   };
 });
 
+// ✅ FIX: Wrap render in act()
 const renderAlertsView = (props = {}) => {
-  return render(
-    <BrowserRouter>
-      <AlertsView userRole="admin" {...props} />
-    </BrowserRouter>,
-  );
+  let result;
+  act(() => {
+    result = render(
+      <BrowserRouter>
+        <AlertsView userRole="admin" {...props} />
+      </BrowserRouter>,
+    );
+  });
+  return result;
 };
 
 describe("AlertsView", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useRealTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
     vi.clearAllMocks();
   });
 
@@ -71,12 +82,14 @@ describe("AlertsView", () => {
   });
 
   describe("Alert Filtering", () => {
-    // Skipping these tests because they're flaky due to multiple renders in test environment
-    it.skip("should filter critical alerts", () => {
+    // ✅ FIX: Re-enabled with act() wrapping
+    it("should filter critical alerts", () => {
       renderAlertsView();
 
       const filterSelects = screen.getAllByRole("combobox");
-      fireEvent.change(filterSelects[0], { target: { value: "critical" } });
+      act(() => {
+        fireEvent.change(filterSelects[0], { target: { value: "critical" } });
+      });
 
       // Should show critical alerts
       const offlineElements = screen.getAllByText("Unit Offline");
@@ -90,11 +103,14 @@ describe("AlertsView", () => {
       expect(maintenanceElement).not.toBeInTheDocument();
     });
 
-    it.skip("should filter warning alerts", () => {
+    // ✅ FIX: Re-enabled with act() wrapping
+    it("should filter warning alerts", () => {
       renderAlertsView();
 
       const filterSelects = screen.getAllByRole("combobox");
-      fireEvent.change(filterSelects[0], { target: { value: "warning" } });
+      act(() => {
+        fireEvent.change(filterSelects[0], { target: { value: "warning" } });
+      });
 
       // Should show warning alerts
       const waterElements = screen.getAllByText("Low Water Level");
@@ -108,11 +124,14 @@ describe("AlertsView", () => {
       expect(offlineElement).not.toBeInTheDocument();
     });
 
-    it.skip("should filter info alerts", () => {
+    // ✅ FIX: Re-enabled with act() wrapping
+    it("should filter info alerts", () => {
       renderAlertsView();
 
       const filterSelects = screen.getAllByRole("combobox");
-      fireEvent.change(filterSelects[0], { target: { value: "info" } });
+      act(() => {
+        fireEvent.change(filterSelects[0], { target: { value: "info" } });
+      });
 
       // Should show info alerts
       const maintenanceElements = screen.getAllByText("Maintenance Scheduled");
@@ -126,11 +145,14 @@ describe("AlertsView", () => {
       expect(waterElement).not.toBeInTheDocument();
     });
 
-    it.skip("should filter success alerts", () => {
+    // ✅ FIX: Re-enabled with act() wrapping
+    it("should filter success alerts", () => {
       renderAlertsView();
 
       const filterSelects = screen.getAllByRole("combobox");
-      fireEvent.change(filterSelects[0], { target: { value: "success" } });
+      act(() => {
+        fireEvent.change(filterSelects[0], { target: { value: "success" } });
+      });
 
       // Should show success alerts
       const restoredElements = screen.getAllByText("System Restored");
@@ -141,16 +163,21 @@ describe("AlertsView", () => {
       expect(offlineElement).not.toBeInTheDocument();
     });
 
+    // ✅ FIX: Wrap interactions in act()
     it("should show all alerts when 'All Alerts' filter is selected", () => {
       renderAlertsView();
 
       const filterSelects = screen.getAllByRole("combobox");
 
       // Filter to critical first
-      fireEvent.change(filterSelects[0], { target: { value: "critical" } });
+      act(() => {
+        fireEvent.change(filterSelects[0], { target: { value: "critical" } });
+      });
 
       // Now switch back to all
-      fireEvent.change(filterSelects[0], { target: { value: "all" } });
+      act(() => {
+        fireEvent.change(filterSelects[0], { target: { value: "all" } });
+      });
 
       // Should show all alerts again
       const offlineElements = screen.getAllByText("Unit Offline");
@@ -195,13 +222,16 @@ describe("AlertsView", () => {
   });
 
   describe("Alert Interaction", () => {
+    // ✅ FIX: Wrap interaction in act()
     it("should navigate to unit details on alert click", () => {
       renderAlertsView();
 
       const alertCard = screen.getAllByText("Unit Offline")[0].closest("div");
-      if (alertCard) {
-        fireEvent.click(alertCard);
-      }
+      act(() => {
+        if (alertCard) {
+          fireEvent.click(alertCard);
+        }
+      });
 
       expect(mockNavigate).toHaveBeenCalledWith(
         "/unit-details/1?tab=alerts",
@@ -215,13 +245,16 @@ describe("AlertsView", () => {
       );
     });
 
+    // ✅ FIX: Wrap interaction in act()
     it("should pass alert information when navigating", () => {
       renderAlertsView();
 
       const alertCard = screen.getAllByText("Low Water Level")[0].closest("div");
-      if (alertCard) {
-        fireEvent.click(alertCard);
-      }
+      act(() => {
+        if (alertCard) {
+          fireEvent.click(alertCard);
+        }
+      });
 
       expect(mockNavigate).toHaveBeenCalledWith(
         expect.stringContaining("/unit-details/"),
@@ -248,11 +281,14 @@ describe("AlertsView", () => {
       expect(deviceNames.length).toBeGreaterThan(0);
     });
 
+    // ✅ FIX: Wrap interaction in act()
     it("should update count when filter is applied", () => {
       renderAlertsView();
 
       const filterSelects = screen.getAllByRole("combobox");
-      fireEvent.change(filterSelects[0], { target: { value: "critical" } });
+      act(() => {
+        fireEvent.change(filterSelects[0], { target: { value: "critical" } });
+      });
 
       // Should show only critical alerts
       const offlineElements = screen.getAllByText("Unit Offline");
@@ -267,18 +303,23 @@ describe("AlertsView", () => {
   });
 
   describe("Empty States", () => {
+    // ✅ FIX: Wrap interactions in act()
     it("should handle different filter values", () => {
       renderAlertsView();
 
       const filterSelects = screen.getAllByRole("combobox");
 
       // Test success filter
-      fireEvent.change(filterSelects[0], { target: { value: "success" } });
+      act(() => {
+        fireEvent.change(filterSelects[0], { target: { value: "success" } });
+      });
       const restoredElements = screen.getAllByText("System Restored");
       expect(restoredElements.length).toBeGreaterThan(0);
 
       // Test info filter
-      fireEvent.change(filterSelects[0], { target: { value: "info" } });
+      act(() => {
+        fireEvent.change(filterSelects[0], { target: { value: "info" } });
+      });
       const maintenanceElements = screen.getAllByText("Maintenance Scheduled");
       expect(maintenanceElements.length).toBeGreaterThan(0);
     });
