@@ -2,19 +2,16 @@
  * Tests for scripts/check-security.js
  *
  * The script is a side-effect-only CLI script that runs its top-level
- * check on import and never exports anything. Because dynamic import()
- * caches the module just like a static import, each test needs
- * vi.resetModules() to force the script to actually re-execute — and
- * because that also invalidates any module bindings captured before the
- * reset, we re-import the mocked "node:fs" / "node:child_process" modules
- * fresh inside run() every time, rather than destructuring them once at
- * the top of the file.
+ * check on import and never exports anything. Because Vite caches modules
+ * by their exact specifier, we use a query string to bust the cache and
+ * force fresh execution for each test.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const SCRIPT_PATH = "../../scripts/check-security.js";
 
+// ✅ Simple mocks - no importOriginal needed, these persist for the whole file
 vi.mock("node:fs", () => ({
   existsSync: vi.fn(),
   readFileSync: vi.fn(),
@@ -23,6 +20,10 @@ vi.mock("node:fs", () => ({
 vi.mock("node:child_process", () => ({
   execSync: vi.fn(),
 }));
+
+// ✅ Import the mocks once - they'll be reconfigured per test
+import { existsSync, readFileSync } from "node:fs";
+import { execSync } from "node:child_process";
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 10));
 
@@ -41,9 +42,10 @@ afterEach(() => {
 });
 
 /**
- * Resets the module registry (forcing the script to re-run from scratch),
- * re-imports the fresh mock instances that resetModules produces, wires
- * them up, then imports the script and waits for its async work to settle.
+ * Configures mocks and imports the script with a cache-busting query string.
+ * 
+ * 🔑 The query string (?t=timestamp-random) ensures Vite treats each import
+ * as a distinct module, forcing the script's top-level code to re-execute.
  */
 async function run({
   execOutput = "",
@@ -58,37 +60,37 @@ async function run({
   vi.stubEnv("NODE_ENV", nodeEnv);
   process.argv = ["node", "check-security.js", ...argv];
 
-  vi.resetModules();
-
-  // Re-import AFTER resetModules, so we get the mock instances the script
-  // will actually receive on its own fresh import below.
-  const fsMod = await import("node:fs");
-  const cpMod = await import("node:child_process");
+  // ✅ Reset mock implementations (the mocks themselves persist)
+  execSync.mockReset();
+  existsSync.mockReset();
+  readFileSync.mockReset();
 
   if (execImpl) {
-    cpMod.execSync.mockImplementation(execImpl);
+    execSync.mockImplementation(execImpl);
   } else {
-    cpMod.execSync.mockReturnValue(execOutput);
+    execSync.mockReturnValue(execOutput);
   }
 
   if (existsImpl) {
-    fsMod.existsSync.mockImplementation(existsImpl);
+    existsSync.mockImplementation(existsImpl);
   } else {
-    fsMod.existsSync.mockReturnValue(existsReturn);
+    existsSync.mockReturnValue(existsReturn);
   }
 
   if (readImpl) {
-    fsMod.readFileSync.mockImplementation(readImpl);
+    readFileSync.mockImplementation(readImpl);
   } else {
-    fsMod.readFileSync.mockReturnValue(readReturn);
+    readFileSync.mockReturnValue(readReturn);
   }
 
   exitSpy.mockClear();
 
-  await import(SCRIPT_PATH);
+  // ✅ Cache-bust with unique query string - forces fresh execution
+  const cacheBuster = `?t=${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+  await import(`${SCRIPT_PATH}${cacheBuster}`);
   await flush();
 
-  return { fsMod, cpMod };
+  return { fsMod: { existsSync, readFileSync }, cpMod: { execSync } };
 }
 
 describe("check-security - early exit conditions", () => {
