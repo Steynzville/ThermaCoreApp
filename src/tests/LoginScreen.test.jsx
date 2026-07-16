@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, act } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import LoginScreen from "../components/LoginScreen";
@@ -48,14 +48,34 @@ describe("LoginScreen", () => {
   const waitForInDocument = (callback, options) =>
     waitFor(callback, { container: document.body, ...options });
 
+  // ✅ FIX: Wrap interactions in act()
   const fillAndSubmit = (username, password) => {
-    fireEvent.change(screen.getByPlaceholderText("Enter username"), {
-      target: { value: username },
+    act(() => {
+      fireEvent.change(screen.getByPlaceholderText("Enter username"), {
+        target: { value: username },
+      });
     });
-    fireEvent.change(screen.getByPlaceholderText("Enter password"), {
-      target: { value: password },
+    act(() => {
+      fireEvent.change(screen.getByPlaceholderText("Enter password"), {
+        target: { value: password },
+      });
     });
-    fireEvent.click(screen.getByRole("button", { name: "Sign In" }));
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: "Sign In" }));
+    });
+  };
+
+  // ✅ FIX: Wrap render in act()
+  const renderComponent = (props = {}) => {
+    let result;
+    act(() => {
+      result = render(
+        <TestWrapper>
+          <LoginScreen error="" setError={vi.fn()} {...props} />
+        </TestWrapper>
+      );
+    });
+    return result;
   };
 
   beforeEach(() => {
@@ -68,6 +88,7 @@ describe("LoginScreen", () => {
   // ERROR HANDLING TESTS
   // ============================================================
   describe("Error handling", () => {
+    // ✅ FIX: Already has proper async handling
     it("should display error message on failed login", async () => {
       vi.spyOn(authService, "login").mockResolvedValue({
         success: false,
@@ -75,11 +96,7 @@ describe("LoginScreen", () => {
       });
 
       const mockSetError = vi.fn();
-      render(
-        <TestWrapper>
-          <LoginScreen error="" setError={mockSetError} />
-        </TestWrapper>,
-      );
+      renderComponent({ error: "", setError: mockSetError });
 
       fillAndSubmit("wronguser", "wrongpass");
 
@@ -100,6 +117,7 @@ describe("LoginScreen", () => {
       expect(mockNavigate).not.toHaveBeenCalled();
     });
 
+    // ✅ FIX: Already has proper async handling
     it("should retain form data on failed login", async () => {
       vi.spyOn(authService, "login").mockResolvedValue({
         success: false,
@@ -107,11 +125,7 @@ describe("LoginScreen", () => {
       });
 
       const mockSetError = vi.fn();
-      render(
-        <TestWrapper>
-          <LoginScreen error="" setError={mockSetError} />
-        </TestWrapper>,
-      );
+      renderComponent({ error: "", setError: mockSetError });
 
       const usernameInput = screen.getByPlaceholderText("Enter username");
       const passwordInput = screen.getByPlaceholderText("Enter password");
@@ -125,38 +139,29 @@ describe("LoginScreen", () => {
       expect(passwordInput.value).toBe("testpass");
     });
 
+    // ✅ FIX: Wrap interaction in act()
     it("should clear error when user starts typing", () => {
       const mockSetError = vi.fn();
-      render(
-        <TestWrapper>
-          <LoginScreen error="Previous error" setError={mockSetError} />
-        </TestWrapper>,
-      );
+      renderComponent({ error: "Previous error", setError: mockSetError });
 
-      fireEvent.change(screen.getByPlaceholderText("Enter username"), {
-        target: { value: "newuser" },
+      act(() => {
+        fireEvent.change(screen.getByPlaceholderText("Enter username"), {
+          target: { value: "newuser" },
+        });
       });
 
       expect(mockSetError).toHaveBeenCalledWith("");
     });
 
     it("should show error with visible class when error prop is set", () => {
-      render(
-        <TestWrapper>
-          <LoginScreen error="Test error message" setError={vi.fn()} />
-        </TestWrapper>,
-      );
+      renderComponent({ error: "Test error message", setError: vi.fn() });
 
       const errorElement = screen.getByText("Test error message");
       expect(errorElement.className).toContain("visible");
     });
 
     it("should hide error when error prop is empty", () => {
-      render(
-        <TestWrapper>
-          <LoginScreen error="" setError={vi.fn()} />
-        </TestWrapper>,
-      );
+      renderComponent({ error: "", setError: vi.fn() });
 
       const errorElement = document.querySelector("[class*='loginError']");
       expect(errorElement).toBeInTheDocument();
@@ -168,19 +173,18 @@ describe("LoginScreen", () => {
   // CLIENT-SIDE VALIDATION TESTS
   // ============================================================
   describe("Client-side validation", () => {
+    // ✅ FIX: Wrap form submission in act()
     it("should block submit and show an error when fields are empty", () => {
       const mockSetError = vi.fn();
       const loginSpy = vi.spyOn(authService, "login");
       
-      render(
-        <TestWrapper>
-          <LoginScreen error="" setError={mockSetError} />
-        </TestWrapper>,
-      );
+      renderComponent({ error: "", setError: mockSetError });
 
       // Submit the form directly using fireEvent.submit
       const form = document.querySelector("form");
-      fireEvent.submit(form);
+      act(() => {
+        fireEvent.submit(form);
+      });
 
       expect(mockSetError).toHaveBeenCalledWith(
         "Please enter both username and password",
@@ -188,15 +192,14 @@ describe("LoginScreen", () => {
       expect(loginSpy).not.toHaveBeenCalled();
     });
 
+    // ✅ FIX: Wrap interactions in act()
     it("should show validation message for passwords under 6 characters", () => {
-      render(
-        <TestWrapper>
-          <LoginScreen error="" setError={vi.fn()} />
-        </TestWrapper>,
-      );
+      renderComponent({ error: "", setError: vi.fn() });
 
-      fireEvent.change(screen.getByPlaceholderText("Enter password"), {
-        target: { value: "123" },
+      act(() => {
+        fireEvent.change(screen.getByPlaceholderText("Enter password"), {
+          target: { value: "123" },
+        });
       });
 
       expect(
@@ -204,65 +207,66 @@ describe("LoginScreen", () => {
       ).toBeInTheDocument();
     });
 
+    // ✅ FIX: Wrap interactions in act()
     it("should clear password validation message once 6+ characters are entered", () => {
-      render(
-        <TestWrapper>
-          <LoginScreen error="" setError={vi.fn()} />
-        </TestWrapper>,
-      );
+      renderComponent({ error: "", setError: vi.fn() });
 
       const passwordInput = screen.getByPlaceholderText("Enter password");
-      fireEvent.change(passwordInput, { target: { value: "123" } });
-      fireEvent.change(passwordInput, { target: { value: "123456" } });
+      act(() => {
+        fireEvent.change(passwordInput, { target: { value: "123" } });
+      });
+      act(() => {
+        fireEvent.change(passwordInput, { target: { value: "123456" } });
+      });
 
       expect(
         screen.queryByText("Password must be at least 6 characters"),
       ).not.toBeInTheDocument();
     });
 
+    // ✅ FIX: Wrap interaction in act()
     it("should show no validation message on empty password", () => {
-      render(
-        <TestWrapper>
-          <LoginScreen error="" setError={vi.fn()} />
-        </TestWrapper>,
-      );
+      renderComponent({ error: "", setError: vi.fn() });
 
       const passwordInput = screen.getByPlaceholderText("Enter password");
-      fireEvent.change(passwordInput, { target: { value: "" } });
+      act(() => {
+        fireEvent.change(passwordInput, { target: { value: "" } });
+      });
 
       expect(
         screen.queryByText("Password must be at least 6 characters"),
       ).not.toBeInTheDocument();
     });
 
+    // ✅ FIX: Wrap interaction in act()
     it("should apply error class to password input when invalid", () => {
-      render(
-        <TestWrapper>
-          <LoginScreen error="" setError={vi.fn()} />
-        </TestWrapper>,
-      );
+      renderComponent({ error: "", setError: vi.fn() });
 
       const passwordInput = screen.getByPlaceholderText("Enter password");
-      fireEvent.change(passwordInput, { target: { value: "123" } });
+      act(() => {
+        fireEvent.change(passwordInput, { target: { value: "123" } });
+      });
 
       expect(passwordInput.className).toContain("inputError");
     });
 
+    // ✅ FIX: Wrap interactions in act()
     it("should remove error class when password becomes valid", () => {
-      render(
-        <TestWrapper>
-          <LoginScreen error="" setError={vi.fn()} />
-        </TestWrapper>,
-      );
+      renderComponent({ error: "", setError: vi.fn() });
 
       const passwordInput = screen.getByPlaceholderText("Enter password");
-      fireEvent.change(passwordInput, { target: { value: "123" } });
+      act(() => {
+        fireEvent.change(passwordInput, { target: { value: "123" } });
+      });
       expect(passwordInput.className).toContain("inputError");
 
-      fireEvent.change(passwordInput, { target: { value: "123456" } });
+      act(() => {
+        fireEvent.change(passwordInput, { target: { value: "123456" } });
+      });
       expect(passwordInput.className).not.toContain("inputError");
     });
 
+    // ✅ FIX: Wrap interactions in act()
     it("should block submission when password is too short", async () => {
       const loginSpy = vi.spyOn(authService, "login").mockResolvedValue({
         success: true,
@@ -271,11 +275,7 @@ describe("LoginScreen", () => {
       });
 
       const mockSetError = vi.fn();
-      render(
-        <TestWrapper>
-          <LoginScreen error="" setError={mockSetError} />
-        </TestWrapper>,
-      );
+      renderComponent({ error: "", setError: mockSetError });
 
       fillAndSubmit("user", "123");
 
@@ -290,6 +290,7 @@ describe("LoginScreen", () => {
   // SUCCESSFUL LOGIN TESTS
   // ============================================================
   describe("Successful login", () => {
+    // ✅ FIX: Already has proper async handling
     it("should navigate to dashboard on successful login", async () => {
       vi.spyOn(authService, "login").mockResolvedValue({
         success: true,
@@ -299,11 +300,7 @@ describe("LoginScreen", () => {
       });
 
       const mockSetError = vi.fn();
-      render(
-        <TestWrapper>
-          <LoginScreen error="" setError={mockSetError} />
-        </TestWrapper>,
-      );
+      renderComponent({ error: "", setError: mockSetError });
 
       fillAndSubmit("admin", "correctpass");
 
@@ -315,6 +312,7 @@ describe("LoginScreen", () => {
       );
     });
 
+    // ✅ FIX: Already has proper async handling
     it("should pass keepMeSignedIn=true to login when checkbox is checked", async () => {
       vi.spyOn(authService, "login").mockResolvedValue({
         success: true,
@@ -322,14 +320,12 @@ describe("LoginScreen", () => {
         user: { id: 1, username: "admin", role: "admin" },
       });
 
-      render(
-        <TestWrapper>
-          <LoginScreen error="" setError={vi.fn()} />
-        </TestWrapper>,
-      );
+      renderComponent({ error: "", setError: vi.fn() });
 
       const checkbox = screen.getByRole("checkbox");
-      fireEvent.click(checkbox);
+      act(() => {
+        fireEvent.click(checkbox);
+      });
       expect(checkbox).toBeChecked();
 
       fillAndSubmit("admin", "correctpass");
@@ -343,6 +339,7 @@ describe("LoginScreen", () => {
       });
     });
 
+    // ✅ FIX: Already has proper async handling
     it("should pass keepMeSignedIn=false when checkbox is unchecked", async () => {
       vi.spyOn(authService, "login").mockResolvedValue({
         success: true,
@@ -350,11 +347,7 @@ describe("LoginScreen", () => {
         user: { id: 1, username: "admin", role: "admin" },
       });
 
-      render(
-        <TestWrapper>
-          <LoginScreen error="" setError={vi.fn()} />
-        </TestWrapper>,
-      );
+      renderComponent({ error: "", setError: vi.fn() });
 
       fillAndSubmit("admin", "correctpass");
 
@@ -367,6 +360,7 @@ describe("LoginScreen", () => {
       });
     });
 
+    // ✅ FIX: Already has proper async handling
     it("should show loading indicator while login request is pending", async () => {
       let resolveLogin;
       vi.spyOn(authService, "login").mockImplementation(
@@ -376,11 +370,7 @@ describe("LoginScreen", () => {
           }),
       );
 
-      render(
-        <TestWrapper>
-          <LoginScreen error="" setError={vi.fn()} />
-        </TestWrapper>,
-      );
+      renderComponent({ error: "", setError: vi.fn() });
 
       fillAndSubmit("admin", "correctpass");
 
@@ -400,25 +390,23 @@ describe("LoginScreen", () => {
   // NAVIGATION LINKS TESTS
   // ============================================================
   describe("Navigation links", () => {
+    // ✅ FIX: Wrap interactions in act()
     it("should navigate to /forgot-password", () => {
-      render(
-        <TestWrapper>
-          <LoginScreen error="" setError={vi.fn()} />
-        </TestWrapper>,
-      );
+      renderComponent({ error: "", setError: vi.fn() });
 
-      fireEvent.click(screen.getByText("Forgot Password?"));
+      act(() => {
+        fireEvent.click(screen.getByText("Forgot Password?"));
+      });
       expect(mockNavigate).toHaveBeenCalledWith("/forgot-password");
     });
 
+    // ✅ FIX: Wrap interactions in act()
     it("should navigate to /register", () => {
-      render(
-        <TestWrapper>
-          <LoginScreen error="" setError={vi.fn()} />
-        </TestWrapper>,
-      );
+      renderComponent({ error: "", setError: vi.fn() });
 
-      fireEvent.click(screen.getByText("Create Account"));
+      act(() => {
+        fireEvent.click(screen.getByText("Create Account"));
+      });
       expect(mockNavigate).toHaveBeenCalledWith("/register");
     });
   });
@@ -427,12 +415,9 @@ describe("LoginScreen", () => {
   // PASSWORD VISIBILITY TOGGLE TESTS
   // ============================================================
   describe("Password visibility toggle", () => {
+    // ✅ FIX: Wrap interaction in act()
     it("should toggle password field between hidden and visible", () => {
-      render(
-        <TestWrapper>
-          <LoginScreen error="" setError={vi.fn()} />
-        </TestWrapper>,
-      );
+      renderComponent({ error: "", setError: vi.fn() });
 
       const passwordInput = screen.getByPlaceholderText("Enter password");
       expect(passwordInput).toHaveAttribute("type", "password");
@@ -440,10 +425,14 @@ describe("LoginScreen", () => {
       const toggleButton = passwordInput.parentElement.querySelector(
         'button[type="button"]',
       );
-      fireEvent.click(toggleButton);
+      act(() => {
+        fireEvent.click(toggleButton);
+      });
       expect(passwordInput).toHaveAttribute("type", "text");
 
-      fireEvent.click(toggleButton);
+      act(() => {
+        fireEvent.click(toggleButton);
+      });
       expect(passwordInput).toHaveAttribute("type", "password");
     });
   });
@@ -452,56 +441,56 @@ describe("LoginScreen", () => {
   // FOCUS AND BLUR HANDLING TESTS
   // ============================================================
   describe("Focus and blur handling", () => {
+    // ✅ FIX: Wrap interactions in act()
     it("should apply inputFocused class on username focus", () => {
-      render(
-        <TestWrapper>
-          <LoginScreen error="" setError={vi.fn()} />
-        </TestWrapper>,
-      );
+      renderComponent({ error: "", setError: vi.fn() });
 
       const usernameInput = screen.getByPlaceholderText("Enter username");
-      fireEvent.focus(usernameInput);
+      act(() => {
+        fireEvent.focus(usernameInput);
+      });
 
       expect(usernameInput.className).toContain("inputFocused");
     });
 
+    // ✅ FIX: Wrap interactions in act()
     it("should remove inputFocused class on username blur", () => {
-      render(
-        <TestWrapper>
-          <LoginScreen error="" setError={vi.fn()} />
-        </TestWrapper>,
-      );
+      renderComponent({ error: "", setError: vi.fn() });
 
       const usernameInput = screen.getByPlaceholderText("Enter username");
-      fireEvent.focus(usernameInput);
-      fireEvent.blur(usernameInput);
+      act(() => {
+        fireEvent.focus(usernameInput);
+      });
+      act(() => {
+        fireEvent.blur(usernameInput);
+      });
 
       expect(usernameInput.className).not.toContain("inputFocused");
     });
 
+    // ✅ FIX: Wrap interactions in act()
     it("should apply inputFocused class on password focus", () => {
-      render(
-        <TestWrapper>
-          <LoginScreen error="" setError={vi.fn()} />
-        </TestWrapper>,
-      );
+      renderComponent({ error: "", setError: vi.fn() });
 
       const passwordInput = screen.getByPlaceholderText("Enter password");
-      fireEvent.focus(passwordInput);
+      act(() => {
+        fireEvent.focus(passwordInput);
+      });
 
       expect(passwordInput.className).toContain("inputFocused");
     });
 
+    // ✅ FIX: Wrap interactions in act()
     it("should remove inputFocused class on password blur", () => {
-      render(
-        <TestWrapper>
-          <LoginScreen error="" setError={vi.fn()} />
-        </TestWrapper>,
-      );
+      renderComponent({ error: "", setError: vi.fn() });
 
       const passwordInput = screen.getByPlaceholderText("Enter password");
-      fireEvent.focus(passwordInput);
-      fireEvent.blur(passwordInput);
+      act(() => {
+        fireEvent.focus(passwordInput);
+      });
+      act(() => {
+        fireEvent.blur(passwordInput);
+      });
 
       expect(passwordInput.className).not.toContain("inputFocused");
     });
@@ -512,11 +501,7 @@ describe("LoginScreen", () => {
   // ============================================================
   describe("Logo animation", () => {
     it("should animate logo on mount", () => {
-      render(
-        <TestWrapper>
-          <LoginScreen error="" setError={vi.fn()} />
-        </TestWrapper>,
-      );
+      renderComponent({ error: "", setError: vi.fn() });
 
       const logo = screen.getByAltText("ThermaCore Logo");
       expect(logo).toBeInTheDocument();
@@ -530,34 +515,25 @@ describe("LoginScreen", () => {
   describe("Sound toggle", () => {
     it("should show mute icon and title when sound is enabled", () => {
       mockSoundEnabled = true;
-      render(
-        <TestWrapper>
-          <LoginScreen error="" setError={vi.fn()} />
-        </TestWrapper>,
-      );
+      renderComponent({ error: "", setError: vi.fn() });
 
       expect(screen.getByTitle("Mute sounds")).toBeInTheDocument();
     });
 
     it("should show unmute icon and title when sound is disabled", () => {
       mockSoundEnabled = false;
-      render(
-        <TestWrapper>
-          <LoginScreen error="" setError={vi.fn()} />
-        </TestWrapper>,
-      );
+      renderComponent({ error: "", setError: vi.fn() });
 
       expect(screen.getByTitle("Enable sounds")).toBeInTheDocument();
     });
 
+    // ✅ FIX: Wrap interaction in act()
     it("should call toggleSound when volume button is clicked", () => {
-      render(
-        <TestWrapper>
-          <LoginScreen error="" setError={vi.fn()} />
-        </TestWrapper>,
-      );
+      renderComponent({ error: "", setError: vi.fn() });
 
-      fireEvent.click(screen.getByTitle("Mute sounds"));
+      act(() => {
+        fireEvent.click(screen.getByTitle("Mute sounds"));
+      });
       expect(mockToggleSound).toHaveBeenCalledTimes(1);
     });
   });
@@ -566,14 +542,13 @@ describe("LoginScreen", () => {
   // PROVIDER DIALOGS ('COMING SOON') TESTS
   // ============================================================
   describe("Provider dialogs ('coming soon')", () => {
+    // ✅ FIX: Already has proper async handling
     it("should show a coming-soon dialog for Google sign-in", async () => {
-      render(
-        <TestWrapper>
-          <LoginScreen error="" setError={vi.fn()} />
-        </TestWrapper>,
-      );
+      renderComponent({ error: "", setError: vi.fn() });
 
-      fireEvent.click(screen.getByText("Sign in with Google"));
+      act(() => {
+        fireEvent.click(screen.getByText("Sign in with Google"));
+      });
 
       await waitForInDocument(() => {
         expect(
@@ -582,14 +557,13 @@ describe("LoginScreen", () => {
       });
     });
 
+    // ✅ FIX: Already has proper async handling
     it("should show a coming-soon dialog for Apple sign-in", async () => {
-      render(
-        <TestWrapper>
-          <LoginScreen error="" setError={vi.fn()} />
-        </TestWrapper>,
-      );
+      renderComponent({ error: "", setError: vi.fn() });
 
-      fireEvent.click(screen.getByText("Sign in with Apple"));
+      act(() => {
+        fireEvent.click(screen.getByText("Sign in with Apple"));
+      });
 
       await waitForInDocument(() => {
         expect(
@@ -598,17 +572,16 @@ describe("LoginScreen", () => {
       });
     });
 
+    // ✅ FIX: Already has proper async handling
     it("should show a coming-soon dialog for biometric sign-in", async () => {
-      render(
-        <TestWrapper>
-          <LoginScreen error="" setError={vi.fn()} />
-        </TestWrapper>,
-      );
+      renderComponent({ error: "", setError: vi.fn() });
 
       const biometricHeading = screen.getByText("Biometric Sign In");
       const container = biometricHeading.closest("[class*='biometricSection']");
       const triggerButton = container.querySelector("button");
-      fireEvent.click(triggerButton);
+      act(() => {
+        fireEvent.click(triggerButton);
+      });
 
       await waitForInDocument(() => {
         expect(
@@ -617,14 +590,13 @@ describe("LoginScreen", () => {
       });
     });
 
+    // ✅ FIX: Already has proper async handling
     it("should close dialog when Close button is clicked", async () => {
-      render(
-        <TestWrapper>
-          <LoginScreen error="" setError={vi.fn()} />
-        </TestWrapper>,
-      );
+      renderComponent({ error: "", setError: vi.fn() });
 
-      fireEvent.click(screen.getByText("Sign in with Google"));
+      act(() => {
+        fireEvent.click(screen.getByText("Sign in with Google"));
+      });
       
       await waitForInDocument(() => {
         expect(
@@ -634,7 +606,9 @@ describe("LoginScreen", () => {
 
       const closeButtons = screen.getAllByText("Close");
       const closeButton = closeButtons[0];
-      fireEvent.click(closeButton);
+      act(() => {
+        fireEvent.click(closeButton);
+      });
 
       await waitForInDocument(() => {
         expect(
@@ -649,27 +623,24 @@ describe("LoginScreen", () => {
   // ============================================================
   describe("Keep me signed in checkbox", () => {
     it("should be unchecked by default", () => {
-      render(
-        <TestWrapper>
-          <LoginScreen error="" setError={vi.fn()} />
-        </TestWrapper>,
-      );
+      renderComponent({ error: "", setError: vi.fn() });
 
       const checkbox = screen.getByRole("checkbox");
       expect(checkbox).not.toBeChecked();
     });
 
+    // ✅ FIX: Wrap interactions in act()
     it("should toggle when clicked", () => {
-      render(
-        <TestWrapper>
-          <LoginScreen error="" setError={vi.fn()} />
-        </TestWrapper>,
-      );
+      renderComponent({ error: "", setError: vi.fn() });
 
       const checkbox = screen.getByRole("checkbox");
-      fireEvent.click(checkbox);
+      act(() => {
+        fireEvent.click(checkbox);
+      });
       expect(checkbox).toBeChecked();
-      fireEvent.click(checkbox);
+      act(() => {
+        fireEvent.click(checkbox);
+      });
       expect(checkbox).not.toBeChecked();
     });
   });
