@@ -1,12 +1,24 @@
 import { render } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "../../components/ui/resizable";
 
+// ✅ This test file doesn't need a global AbortController mock
+// But we should ensure we don't inherit any from other tests
+
 describe("Resizable Components", () => {
+  beforeEach(() => {
+    // No global mocks needed - this test should run clean
+  });
+
+  afterEach(() => {
+    // Clean up any stray mocks
+    vi.clearAllMocks();
+  });
+
   it("renders ResizablePanelGroup", () => {
     const { container } = render(<ResizablePanelGroup />);
     expect(
