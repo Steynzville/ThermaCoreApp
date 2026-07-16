@@ -5,22 +5,20 @@
  * shells out to `find`, reads matched files, and calls process.exit().
  * It exports nothing, so each test:
  *   1. Sets process.env.NODE_ENV / process.argv as needed
- *   2. Calls vi.resetModules() so the script's top-level IIFE re-runs
- *   3. Re-imports the mocked "node:fs" / "node:child_process" modules
- *      (resetModules can hand back fresh mock instances, so we always
- *      grab the current one right before configuring it)
- *   4. Dynamically imports the script, then flushes microtasks
+ *   2. Configures the mocked modules
+ *   3. Dynamically imports the script, then flushes microtasks
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const SCRIPT_PATH = "../../scripts/check-security.js";
 
-// ✅ FIX: Use importOriginal pattern for node:fs
+// ✅ Use importOriginal pattern for node:fs with default export
 vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal();
   return {
     ...actual,
+    default: actual,
     existsSync: vi.fn(),
     readFileSync: vi.fn(),
   };
@@ -30,9 +28,14 @@ vi.mock("node:child_process", async (importOriginal) => {
   const actual = await importOriginal();
   return {
     ...actual,
+    default: actual,
     execSync: vi.fn(),
   };
 });
+
+// ✅ Import the mocked modules once at the top
+import { existsSync, readFileSync } from "node:fs";
+import { execSync } from "node:child_process";
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 10));
 
@@ -42,6 +45,8 @@ let originalArgv;
 beforeEach(() => {
   originalArgv = [...process.argv];
   exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {});
+  // ✅ Clear mock calls and reset implementations
+  vi.clearAllMocks();
 });
 
 afterEach(() => {
@@ -51,9 +56,7 @@ afterEach(() => {
 });
 
 /**
- * Resets modules, re-imports the (possibly fresh) fs/child_process mocks,
- * configures them, then imports the script and waits for its async work
- * to settle.
+ * Configures the mocks and imports the script.
  */
 async function run({
   execOutput = "",
@@ -63,37 +66,37 @@ async function run({
   readImpl,
   readReturn = "",
 } = {}) {
-  vi.resetModules();
-
-  const fsMod = await import("node:fs");
-  const cpMod = await import("node:child_process");
+  // ✅ Reset mock implementations (not the mock itself)
+  execSync.mockReset();
+  existsSync.mockReset();
+  readFileSync.mockReset();
 
   if (execImpl) {
-    cpMod.execSync.mockImplementation(execImpl);
+    execSync.mockImplementation(execImpl);
   } else {
-    cpMod.execSync.mockReturnValue(execOutput);
+    execSync.mockReturnValue(execOutput);
   }
 
   if (existsImpl) {
-    fsMod.existsSync.mockImplementation(existsImpl);
+    existsSync.mockImplementation(existsImpl);
   } else {
-    fsMod.existsSync.mockReturnValue(existsReturn);
+    existsSync.mockReturnValue(existsReturn);
   }
 
   if (readImpl) {
-    fsMod.readFileSync.mockImplementation(readImpl);
+    readFileSync.mockImplementation(readImpl);
   } else {
-    fsMod.readFileSync.mockReturnValue(readReturn);
+    readFileSync.mockReturnValue(readReturn);
   }
 
-  // Re-spy on exit fresh, since resetModules doesn't affect process itself
-  // but we want call counts scoped to this run.
+  // Re-spy on exit fresh
   exitSpy.mockClear();
 
+  // ✅ Import the script - it will use the mocked modules
   await import(SCRIPT_PATH);
   await flush();
 
-  return { fsMod, cpMod };
+  return { fsMod: { existsSync, readFileSync }, cpMod: { execSync } };
 }
 
 describe("check-security - early exit conditions", () => {
