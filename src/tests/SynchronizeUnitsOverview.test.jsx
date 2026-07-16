@@ -103,12 +103,17 @@ describe("SynchronizeUnitsOverview Component", () => {
     vi.clearAllMocks();
   });
 
+  // ✅ FIX: Wrap render in act() to handle async effects
   const renderComponent = () => {
-    return render(
-      <MemoryRouter>
-        <SynchronizeUnitsOverview />
-      </MemoryRouter>,
-    );
+    let result;
+    act(() => {
+      result = render(
+        <MemoryRouter>
+          <SynchronizeUnitsOverview />
+        </MemoryRouter>
+      );
+    });
+    return result;
   };
 
   // Sync-all takes (units.length * 200ms) + 1000ms to fully resolve.
@@ -134,15 +139,21 @@ describe("SynchronizeUnitsOverview Component", () => {
       ).toBeInTheDocument();
     });
 
+    // ✅ FIX: Wrap interaction in act()
     it("should navigate back to dashboard when back button is clicked", () => {
       renderComponent();
-      fireEvent.click(screen.getByRole("button", { name: /Back to Dashboard/i }));
+      act(() => {
+        fireEvent.click(screen.getByRole("button", { name: /Back to Dashboard/i }));
+      });
       expect(mockNavigate).toHaveBeenCalledWith("/dashboard");
     });
 
+    // ✅ FIX: Wrap interaction in act()
     it("should navigate to settings when sync settings button is clicked", () => {
       renderComponent();
-      fireEvent.click(screen.getByRole("button", { name: /Sync Settings/i }));
+      act(() => {
+        fireEvent.click(screen.getByRole("button", { name: /Sync Settings/i }));
+      });
       expect(mockNavigate).toHaveBeenCalledWith("/settings");
     });
 
@@ -227,53 +238,75 @@ describe("SynchronizeUnitsOverview Component", () => {
       expect(screen.getAllByRole("checkbox").length).toBe(mockUnits.length);
     });
 
+    // ✅ FIX: Wrap interaction in act()
     it("should allow selecting an individual unit", () => {
       renderComponent();
       const checkboxes = screen.getAllByRole("checkbox");
-      fireEvent.click(checkboxes[0]);
+      act(() => {
+        fireEvent.click(checkboxes[0]);
+      });
       expect(checkboxes[0]).toBeChecked();
     });
 
+    // ✅ FIX: Wrap interaction in act()
     it("should show the selected count in the Sync Selected button", () => {
       renderComponent();
       const checkboxes = screen.getAllByRole("checkbox");
-      fireEvent.click(checkboxes[0]);
+      act(() => {
+        fireEvent.click(checkboxes[0]);
+      });
       expect(
         screen.getByRole("button", { name: /Sync Selected \(1\)/ }),
       ).toBeInTheDocument();
     });
 
+    // ✅ FIX: Wrap interaction in act()
     it("should select all units when Select All is clicked", () => {
       renderComponent();
-      fireEvent.click(screen.getByText("Select All"));
+      act(() => {
+        fireEvent.click(screen.getByText("Select All"));
+      });
       screen.getAllByRole("checkbox").forEach((checkbox) => {
         expect(checkbox).toBeChecked();
       });
     });
 
+    // ✅ FIX: Wrap interaction in act()
     it("should clear the selection when Clear is clicked", () => {
       renderComponent();
-      fireEvent.click(screen.getByText("Select All"));
-      fireEvent.click(screen.getByText("Clear"));
+      act(() => {
+        fireEvent.click(screen.getByText("Select All"));
+      });
+      act(() => {
+        fireEvent.click(screen.getByText("Clear"));
+      });
       screen.getAllByRole("checkbox").forEach((checkbox) => {
         expect(checkbox).not.toBeChecked();
       });
     });
 
+    // ✅ FIX: Wrap interactions in act()
     it("should toggle a unit's selection on repeated clicks", () => {
       renderComponent();
       const checkbox = screen.getAllByRole("checkbox")[0];
       expect(checkbox).not.toBeChecked();
-      fireEvent.click(checkbox);
+      act(() => {
+        fireEvent.click(checkbox);
+      });
       expect(checkbox).toBeChecked();
-      fireEvent.click(checkbox);
+      act(() => {
+        fireEvent.click(checkbox);
+      });
       expect(checkbox).not.toBeChecked();
     });
 
+    // ✅ FIX: Wrap interaction in act()
     it("should highlight a selected unit's row with a blue border", () => {
       renderComponent();
       const checkbox = screen.getAllByRole("checkbox")[0];
-      fireEvent.click(checkbox);
+      act(() => {
+        fireEvent.click(checkbox);
+      });
       const row = checkbox.closest(".flex")?.parentElement;
       expect(row).toHaveClass("border-blue-500");
     });
@@ -289,25 +322,34 @@ describe("SynchronizeUnitsOverview Component", () => {
       expect(button).toBeDisabled();
     });
 
+    // ✅ FIX: Wrap interaction in act()
     it("enables Sync Selected once a unit is selected", () => {
       renderComponent();
-      fireEvent.click(screen.getAllByRole("checkbox")[0]);
+      act(() => {
+        fireEvent.click(screen.getAllByRole("checkbox")[0]);
+      });
       const button = screen.getByRole("button", { name: /Sync Selected \(1\)/ });
       expect(button).not.toBeDisabled();
     });
 
+    // ✅ FIX: Wrap interaction in act()
     it("disables Sync All Units while a sync is in progress", () => {
       renderComponent();
       const button = screen.getByRole("button", { name: /Sync All Units/i });
-      fireEvent.click(button);
+      act(() => {
+        fireEvent.click(button);
+      });
       expect(button).toBeDisabled();
     });
   });
 
   describe("Sync Operations", () => {
+    // ✅ FIX: Already using act() with timer advancement correctly
     it("shows the in-progress banner immediately and the success banner once the sync completes", async () => {
       renderComponent();
-      fireEvent.click(screen.getByRole("button", { name: /Sync All Units/i }));
+      act(() => {
+        fireEvent.click(screen.getByRole("button", { name: /Sync All Units/i }));
+      });
 
       expect(
         screen.getByText(/Synchronization in progress/),
@@ -322,13 +364,18 @@ describe("SynchronizeUnitsOverview Component", () => {
       ).toBeInTheDocument();
     });
 
+    // ✅ FIX: Already using act() with timer advancement correctly
     it("syncs only the selected units when Sync Selected is used", async () => {
       renderComponent();
-      fireEvent.click(screen.getAllByRole("checkbox")[0]); // select TC001
+      act(() => {
+        fireEvent.click(screen.getAllByRole("checkbox")[0]); // select TC001
+      });
 
-      fireEvent.click(
-        screen.getByRole("button", { name: /Sync Selected \(1\)/ }),
-      );
+      act(() => {
+        fireEvent.click(
+          screen.getByRole("button", { name: /Sync Selected \(1\)/ }),
+        );
+      });
       expect(
         screen.getByText(/Synchronization in progress/),
       ).toBeInTheDocument();
@@ -342,9 +389,12 @@ describe("SynchronizeUnitsOverview Component", () => {
       ).toBeInTheDocument();
     });
 
+    // ✅ FIX: Already using act() with timer advancement correctly
     it("updates the last-sync timestamp after a full sync", async () => {
       renderComponent();
-      fireEvent.click(screen.getByRole("button", { name: /Sync All Units/i }));
+      act(() => {
+        fireEvent.click(screen.getByRole("button", { name: /Sync All Units/i }));
+      });
 
       await act(async () => {
         await vi.advanceTimersByTimeAsync(FULL_SYNC_MS);
@@ -353,9 +403,12 @@ describe("SynchronizeUnitsOverview Component", () => {
       expect(screen.getByText(/Last sync:/)).toBeInTheDocument();
     });
 
+    // ✅ FIX: Already using act() with timer advancement correctly
     it("still marks an offline unit as an error after a full sync attempt", async () => {
       renderComponent();
-      fireEvent.click(screen.getByRole("button", { name: /Sync All Units/i }));
+      act(() => {
+        fireEvent.click(screen.getByRole("button", { name: /Sync All Units/i }));
+      });
 
       await act(async () => {
         await vi.advanceTimersByTimeAsync(FULL_SYNC_MS);
@@ -367,9 +420,12 @@ describe("SynchronizeUnitsOverview Component", () => {
       expect(within(row).getByText("Sync Failed")).toBeInTheDocument();
     });
 
+    // ✅ FIX: Already using act() with timer advancement correctly
     it("leaves a healthy unit synchronized after a full sync", async () => {
       renderComponent();
-      fireEvent.click(screen.getByRole("button", { name: /Sync All Units/i }));
+      act(() => {
+        fireEvent.click(screen.getByRole("button", { name: /Sync All Units/i }));
+      });
 
       await act(async () => {
         await vi.advanceTimersByTimeAsync(FULL_SYNC_MS);
