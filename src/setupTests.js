@@ -4,6 +4,10 @@ import { vi, beforeAll, beforeEach, afterEach, afterAll } from "vitest";
 import React from "react";
 import { cleanup } from "@testing-library/react";
 
+// ✅ FIX: Tell React it's running in a test environment
+// This suppresses "not configured to support act(...)" warnings
+global.IS_REACT_ACT_ENVIRONMENT = true;
+
 // ============================================================
 // CRITICAL: Ensure real timers for React's scheduler
 // ============================================================
