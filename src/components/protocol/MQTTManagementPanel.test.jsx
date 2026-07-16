@@ -15,7 +15,7 @@
  * - Mobile drawer interactions (all functionality)
  */
 
-import { render, screen, fireEvent, waitFor, within, act } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
 import React from "react";
@@ -111,13 +111,18 @@ vi.mock("@/components/ui/scroll-area", () => ({
   ScrollArea: ({ children, className }) => <div data-testid="scroll-area" className={className}>{children}</div>,
 }));
 
+// ✅ FIXED: Proper Select mock that handles value changes correctly
 vi.mock("@/components/ui/select", () => ({
   Select: ({ children, value, onValueChange }) => (
     <div data-testid="select" data-value={value}>
       <select
         data-testid="select-native"
-        value={value}
-        onChange={(e) => onValueChange && onValueChange(e.target.value)}
+        value={value !== undefined && value !== null ? String(value) : ""}
+        onChange={(e) => {
+          if (onValueChange) {
+            onValueChange(e.target.value);
+          }
+        }}
       >
         {children}
       </select>
@@ -329,7 +334,7 @@ describe("MQTTManagementPanel", () => {
       await user.type(topicInput, "sensors/pressure");
 
       const buttons = screen.getAllByTestId("button");
-      const subscribeButton = buttons.find(btn => btn.textContent.includes("Subscribe"));
+      const subscribeButton = buttons.find((btn) => btn.textContent.includes("Subscribe"));
       await user.click(subscribeButton);
 
       await waitFor(() => {
@@ -341,16 +346,21 @@ describe("MQTTManagementPanel", () => {
       });
     });
 
+    // ✅ FIXED: Properly handle select value change
     it("should update subscription QoS when changed", async () => {
       const user = setupUserEvent();
       renderComponent();
 
+      // Get the select and change its value
       const selects = screen.getAllByTestId("select-native");
+      // The first select is for subscription QoS
       fireEvent.change(selects[0], { target: { value: "2" } });
 
+      // Get the topic input and type
       const topicInputs = screen.getAllByTestId("input");
       await user.type(topicInputs[0], "sensors/pressure");
 
+      // Click subscribe
       const subscribeButton = screen
         .getAllByTestId("button")
         .find((btn) => btn.textContent.includes("Subscribe"));
@@ -373,7 +383,7 @@ describe("MQTTManagementPanel", () => {
         expect(within(subscriptionsPanel).getByText("sensors/temp")).toBeInTheDocument();
       });
 
-      const trashButtons = screen.getAllByTestId("button").filter(btn => 
+      const trashButtons = screen.getAllByTestId("button").filter((btn) => 
         btn.querySelector('[data-testid="trash-icon"]')
       );
       await user.click(trashButtons[0]);
@@ -392,7 +402,7 @@ describe("MQTTManagementPanel", () => {
       renderComponent();
 
       const buttons = screen.getAllByTestId("button");
-      const subscribeButton = buttons.find(btn => btn.textContent.includes("Subscribe"));
+      const subscribeButton = buttons.find((btn) => btn.textContent.includes("Subscribe"));
       await user.click(subscribeButton);
 
       expect(toast.error).toHaveBeenCalledWith("Topic is required");
@@ -407,19 +417,19 @@ describe("MQTTManagementPanel", () => {
       renderComponent();
 
       const tabs = screen.getAllByTestId("tabs-trigger");
-      const publishTab = tabs.find(tab => tab.textContent.includes("Publish"));
+      const publishTab = tabs.find((tab) => tab.textContent.includes("Publish"));
       await user.click(publishTab);
 
       const inputs = screen.getAllByTestId("input");
-      const topicInput = inputs.find(input => input.id === "pub-topic");
+      const topicInput = inputs.find((input) => input.id === "pub-topic");
       await user.type(topicInput, "sensors/test");
 
       const textareas = screen.getAllByTestId("textarea");
-      const payloadTextarea = textareas.find(textarea => textarea.id === "pub-payload");
+      const payloadTextarea = textareas.find((textarea) => textarea.id === "pub-payload");
       fireEvent.change(payloadTextarea, { target: { value: '{"test": "value"}' } });
 
       const buttons = screen.getAllByTestId("button");
-      const publishButton = buttons.find(btn => btn.textContent.includes("Publish Message"));
+      const publishButton = buttons.find((btn) => btn.textContent.includes("Publish Message"));
       await user.click(publishButton);
 
       await waitFor(() => {
@@ -436,29 +446,39 @@ describe("MQTTManagementPanel", () => {
       });
     });
 
+    // ✅ FIXED: Properly handle select value change and retain checkbox
     it("should update publish QoS and retain flag", async () => {
       const user = setupUserEvent();
       renderComponent();
 
+      // Navigate to Publish tab
       const tabs = screen.getAllByTestId("tabs-trigger");
-      const publishTab = tabs.find(tab => tab.textContent.includes("Publish"));
+      const publishTab = tabs.find((tab) => tab.textContent.includes("Publish"));
       await user.click(publishTab);
 
+      // Change QoS - the second select is for publish QoS
       const selects = screen.getAllByTestId("select-native");
+      // Wait for selects to be ready
+      await waitFor(() => {
+        expect(selects.length).toBeGreaterThan(1);
+      });
       fireEvent.change(selects[1], { target: { value: "1" } });
 
+      // Toggle retain checkbox - desktop uses "Retain message" (lowercase m)
       const retainCheckbox = screen.getByLabelText("Retain message");
       await user.click(retainCheckbox);
 
+      // Fill in topic
       const inputs = screen.getAllByTestId("input");
       const topicInput = inputs.find((i) => i.id === "pub-topic");
       await user.type(topicInput, "sensors/test");
 
-      const payloadTextarea = screen
-        .getAllByTestId("textarea")
-        .find((t) => t.id === "pub-payload");
+      // Fill in payload
+      const textareas = screen.getAllByTestId("textarea");
+      const payloadTextarea = textareas.find((t) => t.id === "pub-payload");
       fireEvent.change(payloadTextarea, { target: { value: '{"a":1}' } });
 
+      // Click publish
       const publishButton = screen
         .getAllByTestId("button")
         .find((btn) => btn.textContent.includes("Publish Message"));
@@ -482,11 +502,11 @@ describe("MQTTManagementPanel", () => {
       renderComponent();
 
       const tabs = screen.getAllByTestId("tabs-trigger");
-      const publishTab = tabs.find(tab => tab.textContent.includes("Publish"));
+      const publishTab = tabs.find((tab) => tab.textContent.includes("Publish"));
       await user.click(publishTab);
 
       const buttons = screen.getAllByTestId("button");
-      const publishButton = buttons.find(btn => btn.textContent.includes("Publish Message"));
+      const publishButton = buttons.find((btn) => btn.textContent.includes("Publish Message"));
       await user.click(publishButton);
 
       expect(toast.error).toHaveBeenCalledWith("Topic and payload are required");
@@ -537,7 +557,7 @@ describe("MQTTManagementPanel", () => {
       });
 
       const buttons = screen.getAllByTestId("button");
-      const clearButton = buttons.find(btn => btn.textContent.includes("Clear"));
+      const clearButton = buttons.find((btn) => btn.textContent.includes("Clear"));
       await user.click(clearButton);
 
       expect(toast.info).toHaveBeenCalledWith("Message history cleared");
@@ -562,7 +582,7 @@ describe("MQTTManagementPanel", () => {
 
       await waitFor(() => {
         const badges = screen.getAllByTestId("badge");
-        const qosBadges = badges.filter(b => b.textContent.includes("QoS"));
+        const qosBadges = badges.filter((b) => b.textContent.includes("QoS"));
         expect(qosBadges.length).toBeGreaterThan(0);
       });
     });
@@ -582,7 +602,7 @@ describe("MQTTManagementPanel", () => {
       await user.type(topicInput, "sensors/test");
 
       const buttons = screen.getAllByTestId("button");
-      const subscribeButton = buttons.find(btn => btn.textContent.includes("Subscribe"));
+      const subscribeButton = buttons.find((btn) => btn.textContent.includes("Subscribe"));
       await user.click(subscribeButton);
 
       await waitFor(() => {
@@ -660,6 +680,7 @@ describe("MQTTManagementPanel", () => {
       useMediaQuery.mockReturnValue(false);
     });
 
+    // ✅ FIXED: Properly handle mobile drawer interactions
     it("should cover subscribe/QoS/unsubscribe/publish/retain in the mobile drawer", async () => {
       const user = setupUserEvent();
       renderComponent();
@@ -670,6 +691,7 @@ describe("MQTTManagementPanel", () => {
 
       // ✅ Subscription QoS change + subscribe
       const selects = screen.getAllByTestId("select-native");
+      // First select is subscription QoS
       fireEvent.change(selects[0], { target: { value: "1" } });
       
       const topicInputs = screen.getAllByTestId("input");
@@ -707,8 +729,10 @@ describe("MQTTManagementPanel", () => {
 
       // ✅ Publish QoS + retain (mobile uses "Retain Message" with capital M)
       const selects2 = screen.getAllByTestId("select-native");
+      // Second select is publish QoS
       fireEvent.change(selects2[1], { target: { value: "2" } });
       
+      // Mobile uses "Retain Message" (capital M)
       const retainCheckbox = screen.getByLabelText("Retain Message");
       await user.click(retainCheckbox);
       
