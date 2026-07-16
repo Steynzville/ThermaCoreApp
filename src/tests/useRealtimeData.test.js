@@ -296,7 +296,8 @@ describe("useRealtimeMetrics Hook", () => {
         useRealtimeMetrics({ autoConnect: true }),
       );
 
-      await vi.waitFor(() => expect(result.current.error).toBe("Connection failed"));
+      // ✅ FIX 1: Use waitFor (from RTL) not vi.waitFor
+      await waitFor(() => expect(result.current.error).toBe("Connection failed"));
       expect(websocketService.connect).toHaveBeenCalledTimes(1);
 
       await act(async () => {
@@ -309,7 +310,7 @@ describe("useRealtimeMetrics Hook", () => {
       });
       expect(websocketService.connect).toHaveBeenCalledTimes(3);
 
-      await vi.waitFor(() => expect(result.current.isConnected).toBe(true));
+      await waitFor(() => expect(result.current.isConnected).toBe(true));
     });
 
     it("should handle subscription errors", async () => {
@@ -418,7 +419,8 @@ describe("useRealtimeMetrics Hook", () => {
         useRealtimeMetrics({ autoConnect: true }),
       );
 
-      await vi.waitFor(() =>
+      // ✅ FIX 1: Use waitFor (from RTL) not vi.waitFor
+      await waitFor(() =>
         expect(result.current.error).toBe("Connection failed"),
       );
 
@@ -536,13 +538,14 @@ describe("useRealtimeProtocolStatus Hook", () => {
       useRealtimeProtocolStatus({ autoConnect: true, useMockData: false }),
     );
 
-    await vi.waitFor(() => expect(result.current.error).toBeTruthy());
+    // ✅ FIX 1: Use waitFor (from RTL) not vi.waitFor
+    await waitFor(() => expect(result.current.error).toBeTruthy());
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(1000);
     });
 
-    await vi.waitFor(() =>
+    await waitFor(() =>
       expect(result.current.protocols.length).toBeGreaterThan(0),
     );
   });
@@ -581,11 +584,15 @@ describe("useRealtimeHistoricalData Hook", () => {
   });
 
   it("should initialize with default state", () => {
-    // Pass useMockData: false so we test the real hook behavior
-    // The mock data branch is synchronous and would populate state immediately
-    const { result } = renderHook(() =>
-      useRealtimeHistoricalData({ hours: 24, useMockData: false }),
-    );
+    // ✅ FIX 2: Wrap in act() because the hook's useEffect
+    // will schedule an async state update on mount
+    let result;
+    act(() => {
+      const rendered = renderHook(() =>
+        useRealtimeHistoricalData({ hours: 24, useMockData: false }),
+      );
+      result = rendered.result;
+    });
 
     expect(result.current.data).toEqual([]);
     expect(result.current.loading).toBe(true);
