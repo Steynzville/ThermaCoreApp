@@ -188,10 +188,8 @@ describe("ReportConfigurator", () => {
     return null;
   };
 
-  // ✅ FIXED: Proper parentheses for operator precedence
   const findErrorMessage = (text) => {
     return screen.getByText((content, element) => {
-      // Only match elements that are inside the error div (has bg-red-50 class)
       const isInErrorDiv = element?.closest?.('.bg-red-50') !== null;
       return (isInErrorDiv && element?.textContent?.includes(text)) ?? false;
     });
@@ -430,16 +428,18 @@ describe("ReportConfigurator", () => {
       expect(screen.queryByText("Select Units")).not.toBeInTheDocument();
     });
 
-    // ✅ FIXED: Proper parentheses in findErrorMessage
+    // ✅ FIXED: Removed the extra section toggle click
     it("should clear error message when scope changes", async () => {
       const errorMessage = "Test error";
       const onGenerate = vi.fn().mockRejectedValue(new Error(errorMessage));
       renderComponent({ onGenerate });
       
+      // Selecting "Energy Report" automatically enables the "energyProduction" section
       fireEvent.click(screen.getByText("Energy Report"));
       fireEvent.click(screen.getByText("All Units"));
-      const energySection = getInputNearText("Energy Production");
-      fireEvent.click(energySection);
+      
+      // ❌ REMOVED: const energySection = getInputNearText("Energy Production");
+      // ❌ REMOVED: fireEvent.click(energySection);
       
       const generateButton = screen.getByText("Generate & Download Report");
       fireEvent.click(generateButton);
@@ -785,7 +785,6 @@ describe("ReportConfigurator", () => {
       });
     });
 
-    // ✅ FIXED: Proper parentheses in findErrorMessage
     it("should show error message when onGenerate rejects (catch path)", async () => {
       const errorMessage = "Server unavailable";
       const onGenerate = vi.fn().mockRejectedValue(new Error(errorMessage));
@@ -806,7 +805,6 @@ describe("ReportConfigurator", () => {
       });
     });
 
-    // ✅ FIXED: Proper parentheses in findErrorMessage
     it("should handle error without message property", async () => {
       const onGenerate = vi.fn().mockRejectedValue({});
       renderComponent({ onGenerate });
@@ -826,7 +824,6 @@ describe("ReportConfigurator", () => {
       });
     });
 
-    // ✅ FIXED: Proper parentheses in findErrorMessage
     it("should handle error with non-Error object", async () => {
       const onGenerate = vi.fn().mockRejectedValue("String error");
       renderComponent({ onGenerate });
