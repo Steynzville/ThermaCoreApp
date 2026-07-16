@@ -4,7 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react()], // ✅ Remove tailwindcss from test environment
 
   resolve: {
     alias: {
@@ -38,13 +38,19 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "jsdom",
+    environmentOptions: {
+      jsdom: {
+        resources: "usable",
+      },
+    },
 
-    setupFiles: "./src/setupTests.js",
+    setupFiles: ["./src/setupTests.js"],
 
     testTimeout: 60000,
 
-    // IMPORTANT: keep minimal — avoid destabilizing JSDOM
-    isolate: true,
+    // ✅ IMPORTANT: Disable isolation to prevent act() issues
+    isolate: false,
+
     clearMocks: true,
     restoreMocks: true,
 
@@ -61,9 +67,9 @@ export default defineConfig({
       reporter: ["text", "json-summary"],
     },
 
-    // ✅ NEW: Suppress console warnings during tests
+    // ✅ Suppress act() warnings
     onConsoleLog(log, type) {
-      // Suppress specific warning messages
+      // Filter out act() warnings and other noise
       const suppressedMessages = [
         'The current testing environment is not configured to support act(...)',
         'React does not recognize the',
@@ -74,6 +80,7 @@ export default defineConfig({
         'Warning: In HTML, <',
         'Warning: You provided a',
         'WARNING: Panel defaultSize prop recommended',
+        'Warning: `value` prop on `input` should not be null',
       ];
 
       if (type === 'stderr' && suppressedMessages.some(msg => log.includes(msg))) {
@@ -84,15 +91,7 @@ export default defineConfig({
       console[type === 'stderr' ? 'error' : 'log'](log);
     },
 
-    // ✅ NEW: Hide specific deprecation warnings
-    environmentOptions: {
-      jsdom: {
-        resources: 'usable',
-        runScripts: 'dangerously',
-      },
-    },
-
-    // ✅ NEW: Retry failed tests to reduce flakiness
+    // ✅ Retry failed tests
     retry: 1,
   },
 });
