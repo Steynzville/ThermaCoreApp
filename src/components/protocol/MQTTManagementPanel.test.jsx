@@ -10,9 +10,9 @@
  * - Error handling
  * - Auto-refresh (with cleanup on unmount)
  * - Connection status
- * - QoS badges
+ * - QoS badges (including fallback for unknown QoS)
  * - Tenant ID handling
- * - Mobile drawer interactions (all functionality)
+ * - Mobile drawer interactions (all functionality including filter)
  */
 
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
@@ -113,21 +113,25 @@ vi.mock("@/components/ui/scroll-area", () => ({
 
 // ✅ FIXED: Proper Select mock that handles value changes correctly
 vi.mock("@/components/ui/select", () => ({
-  Select: ({ children, value, onValueChange }) => (
-    <div data-testid="select" data-value={value}>
-      <select
-        data-testid="select-native"
-        value={value !== undefined && value !== null ? String(value) : ""}
-        onChange={(e) => {
-          if (onValueChange) {
-            onValueChange(e.target.value);
-          }
-        }}
-      >
-        {children}
-      </select>
-    </div>
-  ),
+  Select: ({ children, value, onValueChange }) => {
+    const selectValue = value !== undefined && value !== null ? String(value) : "";
+    return (
+      <div data-testid="select" data-value={selectValue}>
+        <select
+          data-testid="select-native"
+          value={selectValue}
+          onChange={(e) => {
+            const newValue = e.target.value;
+            if (onValueChange) {
+              onValueChange(newValue);
+            }
+          }}
+        >
+          {children}
+        </select>
+      </div>
+    );
+  },
   SelectTrigger: ({ children, id }) => <button data-testid="select-trigger" id={id}>{children}</button>,
   SelectValue: ({ placeholder }) => <span data-testid="select-value">{placeholder}</span>,
   SelectContent: ({ children }) => <div data-testid="select-content">{children}</div>,
@@ -346,21 +350,16 @@ describe("MQTTManagementPanel", () => {
       });
     });
 
-    // ✅ FIXED: Properly handle select value change
     it("should update subscription QoS when changed", async () => {
       const user = setupUserEvent();
       renderComponent();
 
-      // Get the select and change its value
       const selects = screen.getAllByTestId("select-native");
-      // The first select is for subscription QoS
       fireEvent.change(selects[0], { target: { value: "2" } });
 
-      // Get the topic input and type
       const topicInputs = screen.getAllByTestId("input");
       await user.type(topicInputs[0], "sensors/pressure");
 
-      // Click subscribe
       const subscribeButton = screen
         .getAllByTestId("button")
         .find((btn) => btn.textContent.includes("Subscribe"));
@@ -446,39 +445,31 @@ describe("MQTTManagementPanel", () => {
       });
     });
 
-    // ✅ FIXED: Properly handle select value change and retain checkbox
     it("should update publish QoS and retain flag", async () => {
       const user = setupUserEvent();
       renderComponent();
 
-      // Navigate to Publish tab
       const tabs = screen.getAllByTestId("tabs-trigger");
       const publishTab = tabs.find((tab) => tab.textContent.includes("Publish"));
       await user.click(publishTab);
 
-      // Change QoS - the second select is for publish QoS
       const selects = screen.getAllByTestId("select-native");
-      // Wait for selects to be ready
       await waitFor(() => {
         expect(selects.length).toBeGreaterThan(1);
       });
       fireEvent.change(selects[1], { target: { value: "1" } });
 
-      // Toggle retain checkbox - desktop uses "Retain message" (lowercase m)
       const retainCheckbox = screen.getByLabelText("Retain message");
       await user.click(retainCheckbox);
 
-      // Fill in topic
       const inputs = screen.getAllByTestId("input");
       const topicInput = inputs.find((i) => i.id === "pub-topic");
       await user.type(topicInput, "sensors/test");
 
-      // Fill in payload
       const textareas = screen.getAllByTestId("textarea");
       const payloadTextarea = textareas.find((t) => t.id === "pub-payload");
       fireEvent.change(payloadTextarea, { target: { value: '{"a":1}' } });
 
-      // Click publish
       const publishButton = screen
         .getAllByTestId("button")
         .find((btn) => btn.textContent.includes("Publish Message"));
@@ -586,6 +577,30 @@ describe("MQTTManagementPanel", () => {
         expect(qosBadges.length).toBeGreaterThan(0);
       });
     });
+
+    // ✅ NEW: Test fallback for unknown QoS values
+    it("should fall back to outline variant for unknown QoS values", async () => {
+      apiGetJson.mockImplementation((url) => {
+        if (url.includes("/status")) return Promise.resolve(mockStatus);
+        if (url.includes("/subscriptions")) return Promise.resolve(mockSubscriptions);
+        if (url.includes("/messages")) {
+          return Promise.resolve({
+            messages: [
+              { topic: "sensors/weird", payload: "{}", qos: 5, timestamp: "2026-07-13T10:00:00Z" },
+            ],
+          });
+        }
+        return Promise.resolve({});
+      });
+
+      renderComponent();
+
+      await waitFor(() => {
+        const badges = screen.getAllByTestId("badge");
+        const unknownQosBadge = badges.find((b) => b.textContent.includes("QoS 5"));
+        expect(unknownQosBadge).toHaveAttribute("data-variant", "outline");
+      });
+    });
   });
 
   // ============ ERROR HANDLING ============
@@ -680,7 +695,21 @@ describe("MQTTManagementPanel", () => {
       useMediaQuery.mockReturnValue(false);
     });
 
-    // ✅ FIXED: Properly handle mobile drawer interactions
+    // ✅ NEW: Mobile filter test
+    it("should filter messages by topic in the mobile drawer", async () => {
+      const user = setupUserEvent();
+      renderComponent();
+
+      await waitFor(() => {
+        expect(screen.getByText('{"value": 25.5}')).toBeInTheDocument();
+      });
+
+      const filterInput = screen.getByPlaceholderText("Filter by topic...");
+      await user.type(filterInput, "sensors/humidity");
+
+      expect(filterInput.value).toBe("sensors/humidity");
+    });
+
     it("should cover subscribe/QoS/unsubscribe/publish/retain in the mobile drawer", async () => {
       const user = setupUserEvent();
       renderComponent();
@@ -691,7 +720,6 @@ describe("MQTTManagementPanel", () => {
 
       // ✅ Subscription QoS change + subscribe
       const selects = screen.getAllByTestId("select-native");
-      // First select is subscription QoS
       fireEvent.change(selects[0], { target: { value: "1" } });
       
       const topicInputs = screen.getAllByTestId("input");
@@ -729,10 +757,8 @@ describe("MQTTManagementPanel", () => {
 
       // ✅ Publish QoS + retain (mobile uses "Retain Message" with capital M)
       const selects2 = screen.getAllByTestId("select-native");
-      // Second select is publish QoS
       fireEvent.change(selects2[1], { target: { value: "2" } });
       
-      // Mobile uses "Retain Message" (capital M)
       const retainCheckbox = screen.getByLabelText("Retain Message");
       await user.click(retainCheckbox);
       
