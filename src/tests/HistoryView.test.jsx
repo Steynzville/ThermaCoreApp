@@ -2,9 +2,9 @@
  * Tests for HistoryView Component
  */
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, act } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
 // Change from @/ to relative import
 import HistoryView from "../components/HistoryView";
 import * as unitService from "../services/unitService";
@@ -81,18 +81,33 @@ const TestWrapper = ({ children }) => (
 describe("HistoryView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers();
     mockUseAuth.mockReturnValue({ userRole: "admin" });
   });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+
+  // ✅ FIX: Wrap render in act()
+  const renderComponent = () => {
+    let result;
+    act(() => {
+      result = render(
+        <TestWrapper>
+          <HistoryView />
+        </TestWrapper>
+      );
+    });
+    return result;
+  };
 
   describe("Rendering", () => {
     it("renders history view", async () => {
       unitService.getEventHistory.mockResolvedValue([]);
 
-      render(
-        <TestWrapper>
-          <HistoryView />
-        </TestWrapper>,
-      );
+      renderComponent();
 
       const titleElements = await screen.findAllByText("Event History");
       expect(titleElements.length).toBeGreaterThan(0);
@@ -106,11 +121,7 @@ describe("HistoryView", () => {
         () => new Promise(() => {})
       );
 
-      render(
-        <TestWrapper>
-          <HistoryView />
-        </TestWrapper>,
-      );
+      renderComponent();
 
       const loadingElements = screen.getAllByText(/Loading event history/i);
       expect(loadingElements.length).toBeGreaterThan(0);
@@ -118,13 +129,10 @@ describe("HistoryView", () => {
   });
 
   describe("Hardcoded Notifications", () => {
+    // ✅ FIX: Use renderComponent helper
     const setup = () => {
       unitService.getEventHistory.mockResolvedValue([]);
-      return render(
-        <TestWrapper>
-          <HistoryView />
-        </TestWrapper>,
-      );
+      return renderComponent();
     };
 
     it("renders NH3 leak alert", async () => {
@@ -162,11 +170,7 @@ describe("HistoryView", () => {
     it("renders API events", async () => {
       unitService.getEventHistory.mockResolvedValue(mockEvents);
 
-      render(
-        <TestWrapper>
-          <HistoryView />
-        </TestWrapper>,
-      );
+      renderComponent();
 
       const unitElements = await screen.findAllByText("ThermaCore Unit 007");
       expect(unitElements.length).toBeGreaterThan(0);
@@ -178,11 +182,7 @@ describe("HistoryView", () => {
     it("handles API errors gracefully", async () => {
       unitService.getEventHistory.mockRejectedValue(new Error("fail"));
 
-      render(
-        <TestWrapper>
-          <HistoryView />
-        </TestWrapper>,
-      );
+      renderComponent();
 
       const titleElements = await screen.findAllByText("Event History");
       expect(titleElements.length).toBeGreaterThan(0);
@@ -193,21 +193,24 @@ describe("HistoryView", () => {
   });
 
   describe("Severity UI", () => {
-    // SKIP: This test uses container which is undefined in the test environment
-    it.skip("renders severity indicators", async () => {
+    // ✅ FIX: Re-enable with proper act() wrapping
+    it("renders severity indicators", async () => {
       unitService.getEventHistory.mockResolvedValue(mockEvents);
 
-      render(
-        <TestWrapper>
-          <HistoryView />
-        </TestWrapper>,
-      );
+      renderComponent();
 
       await screen.findAllByText("Event History");
       
       await waitFor(() => {
         const cards = screen.getAllByTestId("card");
         expect(cards.length).toBeGreaterThan(0);
+        
+        // Check that at least one card has severity styling
+        const hasSeverityClass = cards.some(card => 
+          card.className.includes('border-l-') || 
+          card.className.includes('bg-')
+        );
+        expect(hasSeverityClass).toBe(true);
       });
     });
   });
@@ -216,11 +219,7 @@ describe("HistoryView", () => {
     it("shows status labels", async () => {
       unitService.getEventHistory.mockResolvedValue([]);
 
-      render(
-        <TestWrapper>
-          <HistoryView />
-        </TestWrapper>,
-      );
+      renderComponent();
 
       await screen.findAllByText("Event History");
       
@@ -243,11 +242,7 @@ describe("HistoryView", () => {
 
       unitService.getEventHistory.mockResolvedValue(events);
 
-      render(
-        <TestWrapper>
-          <HistoryView />
-        </TestWrapper>,
-      );
+      renderComponent();
 
       await screen.findAllByText("Event History");
       
@@ -255,8 +250,8 @@ describe("HistoryView", () => {
       expect(loadMoreElements.length).toBeGreaterThan(0);
     });
 
-    // SKIP: This test uses container which is undefined in the test environment
-    it.skip("loads more events on click", async () => {
+    // ✅ FIX: Re-enable with proper act() wrapping
+    it("loads more events on click", async () => {
       const events = Array.from({ length: 15 }, (_, i) => ({
         id: `e-${i}`,
         unitName: `ThermaCore Unit ${i}`,
@@ -266,11 +261,7 @@ describe("HistoryView", () => {
 
       unitService.getEventHistory.mockResolvedValue(events);
 
-      render(
-        <TestWrapper>
-          <HistoryView />
-        </TestWrapper>,
-      );
+      renderComponent();
 
       await screen.findAllByText("Event History");
       
@@ -281,7 +272,9 @@ describe("HistoryView", () => {
       const initialCount = initialElements.length;
       
       if (buttons.length > 0) {
-        fireEvent.click(buttons[0]);
+        act(() => {
+          fireEvent.click(buttons[0]);
+        });
       }
 
       await waitFor(() => {
@@ -300,11 +293,7 @@ describe("HistoryView", () => {
         },
       ]);
 
-      render(
-        <TestWrapper>
-          <HistoryView />
-        </TestWrapper>,
-      );
+      renderComponent();
 
       await screen.findAllByText("Event History");
 
@@ -318,11 +307,7 @@ describe("HistoryView", () => {
       mockUseAuth.mockReturnValue({ userRole: "admin" });
       unitService.getEventHistory.mockResolvedValue([]);
 
-      render(
-        <TestWrapper>
-          <HistoryView />
-        </TestWrapper>,
-      );
+      renderComponent();
 
       const nh3Elements = await screen.findAllByText("NH3 LEAK DETECTED");
       expect(nh3Elements.length).toBeGreaterThan(1);
@@ -332,11 +317,7 @@ describe("HistoryView", () => {
       mockUseAuth.mockReturnValue({ userRole: "user" });
       unitService.getEventHistory.mockResolvedValue([]);
 
-      render(
-        <TestWrapper>
-          <HistoryView />
-        </TestWrapper>,
-      );
+      renderComponent();
 
       const nh3Elements = await screen.findAllByText("NH3 LEAK DETECTED");
       expect(nh3Elements.length).toBeGreaterThan(0);
@@ -356,11 +337,7 @@ describe("HistoryView", () => {
 
       unitService.getEventHistory.mockResolvedValue(testEvents);
 
-      render(
-        <TestWrapper>
-          <HistoryView />
-        </TestWrapper>,
-      );
+      renderComponent();
 
       await screen.findAllByText("Event History");
       
@@ -373,15 +350,11 @@ describe("HistoryView", () => {
   });
 
   describe("Severity Colors", () => {
-    // SKIP: This test uses container which is undefined in the test environment
-    it.skip("applies correct severity colors", async () => {
+    // ✅ FIX: Re-enable with proper act() wrapping
+    it("applies correct severity colors", async () => {
       unitService.getEventHistory.mockResolvedValue([]);
 
-      render(
-        <TestWrapper>
-          <HistoryView />
-        </TestWrapper>,
-      );
+      renderComponent();
 
       await screen.findAllByText("Event History");
 
