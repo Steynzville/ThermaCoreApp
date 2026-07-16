@@ -61,7 +61,7 @@ jobs:
         run: |
           echo "📊 Running frontend coverage..."
           
-          # ✅ Run vitest without timeout wrapper (let it run normally)
+          # ✅ Run vitest - removed testNamePattern to run ALL tests
           pnpm vitest run \
             --pool=forks \
             --poolOptions.forks.singleFork=true \
@@ -76,7 +76,7 @@ jobs:
             --coverage.reporter=lcov \
             --coverage.reporter=html \
             --coverage.reportsDirectory=coverage \
-            --testNamePattern="^(?!.*AdminPanel User Creation Form).*" 2>&1 | tee coverage_output.txt
+            2>&1 | tee coverage_output.txt
           
           # ✅ Capture the exit code
           EXIT_CODE=$?
