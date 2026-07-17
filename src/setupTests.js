@@ -4,6 +4,12 @@ import { vi, beforeAll, beforeEach, afterEach, afterAll } from "vitest";
 import React from "react";
 import { cleanup } from "@testing-library/react";
 
+// ============================================================
+// DEBUG MODE: Set to true to see ALL warnings
+// Usage: VITEST_DEBUG=true pnpm vitest run
+// ============================================================
+const SHOW_ALL_WARNINGS = process.env.VITEST_DEBUG === 'true' || false;
+
 // ✅ FIX: Tell React it's running in a test environment
 // This suppresses "not configured to support act(...)" warnings
 global.IS_REACT_ACT_ENVIRONMENT = true;
@@ -38,17 +44,21 @@ console.error = (...args) => {
     'select cannot contain',
     'option cannot contain',
     
-    // ✅ NEW: Auth service warnings (expected with test tokens)
+    // Auth service warnings (expected with test tokens)
     'isTokenValid: could not decode token',
     'isTokenValid: could not decode token or no exp claim',
+    
+    // Audio/Media warnings
+    'The AudioContext is not allowed to start',
+    'The AudioContext was not allowed to start',
   ];
 
   // ✅ Check if it's a warning (contains "Warning:" or matches warning patterns)
   const isWarning = message.includes('Warning:') || 
                     warningPatterns.some(pattern => message.includes(pattern));
 
-  // ✅ Only suppress if it's clearly a warning
-  if (isWarning) {
+  // ✅ Only suppress if it's clearly a warning and NOT in debug mode
+  if (!SHOW_ALL_WARNINGS && isWarning) {
     return;
   }
 
@@ -68,17 +78,52 @@ console.warn = (...args) => {
     '`value` prop on `input` should not be null',
     'You provided a `value` prop',
     
-    // ✅ NEW: Auth service warnings (expected with test tokens)
+    // Auth service warnings (expected with test tokens)
     'isTokenValid: could not decode token',
     'isTokenValid: could not decode token or no exp claim',
   ];
 
-  if (harmlessWarnings.some(pattern => message.includes(pattern))) {
+  if (!SHOW_ALL_WARNINGS && harmlessWarnings.some(pattern => message.includes(pattern))) {
     return;
   }
 
   // ✅ Pass through other warnings
   originalConsoleWarn(...args);
+};
+
+// ============================================================
+// SUPPRESS STDOUT WARNINGS (Vitest captures these as stderr)
+// ============================================================
+const originalConsoleLog = console.log;
+console.log = (...args) => {
+  const message = args[0]?.toString?.() || '';
+  
+  // ✅ Same warning patterns for stdout/stderr
+  const stdoutPatterns = [
+    'isTokenValid: could not decode token',
+    'isTokenValid: could not decode token or no exp claim',
+    'An update to %s inside a test was not wrapped in act',
+    'not wrapped in act',
+    'was not wrapped in act',
+    'When testing, code that causes React state updates should be wrapped into act',
+    'React does not recognize the',
+    'In HTML, <',
+    'You provided a `value` prop',
+    'The tag <text> is unrecognized',
+    'Panel defaultSize prop recommended',
+    '`value` prop on `input` should not be null',
+    'cannot be a child of',
+    'cannot be a descendant of',
+    'select cannot contain',
+    'option cannot contain',
+    'The AudioContext is not allowed to start',
+  ];
+
+  if (!SHOW_ALL_WARNINGS && stdoutPatterns.some(pattern => message.includes(pattern))) {
+    return;
+  }
+
+  originalConsoleLog(...args);
 };
 
 // ============================================================
