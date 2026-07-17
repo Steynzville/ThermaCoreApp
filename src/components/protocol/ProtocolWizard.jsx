@@ -12,7 +12,7 @@ import {
   CheckCircle,
   Loader2,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -79,8 +79,12 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [protocol, setProtocol] = useState("");
   const [testing, setTesting] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [testResult, setTestResult] = useState(null);
   const [config, setConfig] = useState(DEFAULT_CONFIG);
+  
+  // Version guard for stale test results
+  const configVersionRef = useRef(0);
 
   const steps = {
     modbus: [
@@ -115,28 +119,41 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
 
   const getCurrentSteps = () => steps[protocol] || steps.modbus;
 
-  // ✅ FIXED: Safe number handler - handles empty string and NaN
+  // Clear testResult and increment version on any edit
   const handleNumberChange = (field, value) => {
+    configVersionRef.current += 1;
+    setTestResult(null);
     if (value === "") {
-      setConfig({ ...config, [field]: "" });
+      setConfig((prev) => ({ ...prev, [field]: "" }));
       return;
     }
     const parsed = parseInt(value, 10);
     if (isNaN(parsed)) {
-      setConfig({ ...config, [field]: "" });
+      setConfig((prev) => ({ ...prev, [field]: "" }));
       return;
     }
-    setConfig({ ...config, [field]: parsed });
+    setConfig((prev) => ({ ...prev, [field]: parsed }));
   };
 
-  // ✅ FIXED: Safe string handler
+  // Clear testResult and increment version on any edit
   const handleStringChange = (field, value) => {
-    setConfig({ ...config, [field]: value });
+    configVersionRef.current += 1;
+    setConfig((prev) => ({ ...prev, [field]: value }));
+    setTestResult(null);
   };
 
-  // ✅ FIXED: Safe boolean handler
+  // Clear testResult and increment version on any edit
   const handleBooleanChange = (field, value) => {
-    setConfig({ ...config, [field]: value });
+    configVersionRef.current += 1;
+    setConfig((prev) => ({ ...prev, [field]: value }));
+    setTestResult(null);
+  };
+
+  const handleProtocolSelect = (protocolName) => {
+    setProtocol(protocolName);
+    setConfig(DEFAULT_CONFIG);
+    setTestResult(null);
+    configVersionRef.current += 1;
   };
 
   const isStepValid = () => {
@@ -144,13 +161,21 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
     if (currentStep === 0) {
       return Boolean(protocol);
     }
-
-    // Allow navigation through all other steps
-    // Field validation will be handled when saving or testing connection
     return true;
   };
 
+  // Save disabled until connection test passes
+  const isSaveDisabled = () => {
+    if (saving) return true;
+    if (!testResult || !testResult.success) {
+      return true;
+    }
+    return false;
+  };
+
+  // Version guard prevents stale test results, but always clears testing state
   const testConnection = async () => {
+    const versionAtStart = configVersionRef.current;
     setTesting(true);
     setTestResult(null);
 
@@ -158,25 +183,34 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
       const url = `/api/v1/protocols/${protocol}/test-connection${tenantId ? `?tenant_id=${tenantId}` : ""}`;
       const result = await apiPostJson(url, config);
 
-      setTestResult({
-        success: true,
-        message: result.message || "Connection successful",
-        details: result.details,
-      });
-      toast.success("Connection test successful!");
+      // Only update UI if config hasn't changed mid-flight
+      if (configVersionRef.current === versionAtStart) {
+        setTestResult({
+          success: true,
+          message: result?.message || "Connection successful",
+          details: result?.details,
+        });
+        toast.success("Connection test successful!");
+      }
     } catch (error) {
-      setTestResult({
-        success: false,
-        message: error.message || "Connection failed",
-        details: error.details,
-      });
-      toast.error("Connection test failed");
+      // Only update UI if config hasn't changed mid-flight
+      if (configVersionRef.current === versionAtStart) {
+        setTestResult({
+          success: false,
+          message: error?.message || "Connection failed",
+          details: error?.details,
+        });
+        toast.error("Connection test failed");
+      }
     } finally {
+      // ALWAYS clear testing state - even if config changed
       setTesting(false);
     }
   };
 
+  // Prevent double-submit with saving flag
   const saveConfiguration = async () => {
+    setSaving(true);
     try {
       const url = `/api/v1/protocols/${protocol}/devices${tenantId ? `?tenant_id=${tenantId}` : ""}`;
       await apiPostJson(url, config);
@@ -186,6 +220,7 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
       handleClose();
     } catch (_error) {
       toast.error("Failed to save configuration");
+      setSaving(false);
     }
   };
 
@@ -201,17 +236,22 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
     }
   };
 
-  // ✅ FIXED: Properly resets config to DEFAULT_CONFIG instead of empty object
   const handleClose = () => {
     setCurrentStep(0);
     setProtocol("");
     setTestResult(null);
+    setTesting(false);
+    setSaving(false);
     setConfig(DEFAULT_CONFIG);
+    configVersionRef.current = 0;
     onClose();
   };
 
-  // ✅ FIXED: Consistent save disable logic
-  const isSaveDisabled = testResult && !testResult.success;
+  const handleDialogOpenChange = (open) => {
+    if (!open) {
+      handleClose();
+    }
+  };
 
   const renderStepContent = () => {
     // Step 0: Protocol Selection
@@ -228,7 +268,7 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
                     ? "border-primary bg-primary/5"
                     : "hover:border-primary/50"
                 }`}
-                onClick={() => setProtocol(p)}
+                onClick={() => handleProtocolSelect(p)}
               >
                 <CardContent className="p-6 text-center">
                   <h4 className="text-xl font-bold uppercase">{p}</h4>
@@ -627,22 +667,21 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
       <Button
         variant="outline"
         onClick={handleBack}
-        disabled={currentStep === 0}
+        disabled={currentStep === 0 || testing}
       >
         <ArrowLeft className="h-4 w-4 mr-2" />
         Back
       </Button>
       {currentStep < getCurrentSteps().length - 1 && (
-        <Button onClick={handleNext} disabled={!isStepValid()}>
+        <Button onClick={handleNext} disabled={!isStepValid() || testing}>
           Next
           <ArrowRight className="h-4 w-4 ml-2" />
         </Button>
       )}
       {currentStep === getCurrentSteps().length - 1 && (
-        // ✅ FIXED: Consistent save disabled logic
         <Button
           onClick={saveConfiguration}
-          disabled={isSaveDisabled}
+          disabled={isSaveDisabled()}
         >
           <CheckCircle className="h-4 w-4 mr-2" />
           Save Configuration
@@ -654,7 +693,7 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
   // Mobile (Drawer) View
   if (!isDesktop) {
     return (
-      <Drawer open={isOpen} onOpenChange={handleClose}>
+      <Drawer open={isOpen} onOpenChange={handleDialogOpenChange}>
         <DrawerContent className="h-[90vh]">
           <DrawerHeader className="text-left">
             <DrawerTitle>Protocol Configuration</DrawerTitle>
@@ -713,7 +752,7 @@ const ProtocolWizard = ({ isOpen, onClose, onSuccess, tenantId }) => {
 
   // Desktop (Dialog) View
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="max-w-2xl w-full">
         <DialogHeader>
           <DialogTitle>Protocol Configuration Wizard</DialogTitle>
