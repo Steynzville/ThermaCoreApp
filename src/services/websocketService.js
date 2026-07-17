@@ -27,6 +27,7 @@ class WebSocketService {
     this._pendingReject = null;
     this._isDisconnecting = false;
     this._currentRejectConnect = null;
+    this._connectionEpoch = 0;
   }
 
   /**
@@ -49,6 +50,8 @@ class WebSocketService {
     // Reset disconnecting flag on new connect attempt
     this._isDisconnecting = false;
 
+    // Bump epoch for this connection attempt
+    const epochAtConnect = ++this._connectionEpoch;
     const connectId = ++this._pendingConnectId;
 
     this._pendingConnect = new Promise((resolve, reject) => {
@@ -57,7 +60,8 @@ class WebSocketService {
 
       // Helper to reject this specific connect attempt
       const rejectConnect = (error) => {
-        if (!isResolved && !isRejected) {
+        // Only reject if this is still the current connection attempt
+        if (!isResolved && !isRejected && epochAtConnect === this._connectionEpoch) {
           isRejected = true;
           this._currentRejectConnect = null;
           if (this._connectTimeout) {
@@ -90,7 +94,8 @@ class WebSocketService {
 
       // Helper to resolve this specific connect attempt
       const resolveConnect = (value) => {
-        if (!isResolved && !isRejected) {
+        // Only resolve if this is still the current connection attempt
+        if (!isResolved && !isRejected && epochAtConnect === this._connectionEpoch) {
           isResolved = true;
           cleanup();
           resolve(value);
@@ -130,7 +135,7 @@ class WebSocketService {
 
         // Store timeout on instance so it can be cleaned up externally
         this._connectTimeout = setTimeout(() => {
-          if (!isResolved && !isRejected) {
+          if (!isResolved && !isRejected && epochAtConnect === this._connectionEpoch) {
             rejectConnect(new Error("WebSocket connection timeout"));
           }
         }, 10000);
@@ -141,7 +146,8 @@ class WebSocketService {
             // If disconnect was called, don't resolve - we'll reject via disconnect
             return;
           }
-          if (!isResolved && !isRejected) {
+          // Only resolve if this is still the current connection attempt
+          if (!isResolved && !isRejected && epochAtConnect === this._connectionEpoch) {
             this.connectionStatus = "connected";
             this.reconnectAttempts = 0;
             this.reconnectDelay = 1000;
@@ -162,7 +168,7 @@ class WebSocketService {
         };
 
         this.ws.onerror = (error) => {
-          if (!isResolved && !isRejected) {
+          if (!isResolved && !isRejected && epochAtConnect === this._connectionEpoch) {
             this.connectionStatus = "error";
             this.notifyStatusChange("error");
             rejectConnect(error);
@@ -176,14 +182,14 @@ class WebSocketService {
 
           // If disconnect was called, reject with client disconnect error
           if (this._isDisconnecting) {
-            if (!isResolved && !isRejected) {
+            if (!isResolved && !isRejected && epochAtConnect === this._connectionEpoch) {
               rejectConnect(new Error("WebSocket disconnected by client"));
             }
             return;
           }
 
           // If we're still trying to connect and this was a manual disconnect
-          if (!isResolved && !isRejected) {
+          if (!isResolved && !isRejected && epochAtConnect === this._connectionEpoch) {
             if (!this.shouldReconnect) {
               rejectConnect(new Error("WebSocket connection closed manually"));
               return;
@@ -196,14 +202,17 @@ class WebSocketService {
           // Attempt reconnection only if shouldReconnect flag is true
           if (
             this.shouldReconnect &&
-            this.reconnectAttempts < this.maxReconnectAttempts
+            this.reconnectAttempts < this.maxReconnectAttempts &&
+            epochAtConnect === this._connectionEpoch
           ) {
             this.scheduleReconnect();
           }
         };
       } catch (error) {
         cleanup();
-        rejectConnect(error);
+        if (epochAtConnect === this._connectionEpoch) {
+          rejectConnect(error);
+        }
       }
     });
 
@@ -243,7 +252,15 @@ class WebSocketService {
     this.connectionStatus = "reconnecting";
     this.notifyStatusChange("reconnecting");
 
+    // Capture the current epoch when this reconnect is scheduled
+    const epochAtSchedule = this._connectionEpoch;
+
     this.reconnectTimeout = setTimeout(() => {
+      // Bail out if disconnect() or a new connect() happened since this was scheduled
+      if (epochAtSchedule !== this._connectionEpoch) {
+        return;
+      }
+
       // Clear the pending connect before retrying
       this._pendingConnect = null;
       this._pendingReject = null;
@@ -287,7 +304,8 @@ class WebSocketService {
    * Properly rejects any in-flight connect() promise
    */
   disconnect() {
-    // Set disconnecting flag first to prevent onopen from resolving
+    // Bump epoch FIRST so any in-flight timer/callback becomes a no-op
+    this._connectionEpoch++;
     this._isDisconnecting = true;
 
     if (this.reconnectTimeout) {
