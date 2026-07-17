@@ -1087,5 +1087,296 @@ describe("WebSocket Service", () => {
       global.WebSocket = MockWebSocket;
       websocketService.disconnect();
     }, 15000);
+
+    // ============================================================
+    // ADDITIONAL BRANCH COVERAGE TESTS
+    // ============================================================
+
+    // 1. isConnected() - ws is null
+    it("should return false when ws is null", () => {
+      websocketService.ws = null;
+      websocketService.connectionStatus = "connected";
+      expect(websocketService.isConnected()).toBe(false);
+    });
+
+    // 2. handleMessage() - data.data is undefined
+    it("should not cache data when data.data is undefined", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
+      await websocketService.connect();
+
+      websocketService.handleMessage({
+        stream: "test-stream",
+        data: undefined,
+      });
+
+      const cached = websocketService.getCachedData("test-stream");
+      expect(cached).toBeNull();
+    });
+
+    // 3. onStatusChange() - initial callback
+    it("should call status listener immediately with current status", () => {
+      websocketService.connectionStatus = "connected";
+      const callback = vi.fn();
+      websocketService.onStatusChange(callback);
+      expect(callback).toHaveBeenCalledWith("connected");
+    });
+
+    // 4. subscribeAllStreams() - ws is null
+    it("should handle subscribeAllStreams when ws is null", () => {
+      websocketService.ws = null;
+      expect(() => {
+        websocketService.subscribeAllStreams();
+      }).not.toThrow();
+    });
+
+    // 5. subscribe() - ws is null
+    it("should not send subscription message when ws is null", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
+      await websocketService.connect();
+
+      // Force ws to null
+      websocketService.ws = null;
+
+      const callback = vi.fn();
+      expect(() => {
+        websocketService.subscribe("test-stream", callback);
+      }).not.toThrow();
+    });
+
+    // 6. unsubscribe() - ws is null
+    it("should not send unsubscribe message when ws is null", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
+      await websocketService.connect();
+
+      const callback = vi.fn();
+      const unsubscribe = websocketService.subscribe("test-stream", callback);
+
+      // Force ws to null
+      websocketService.ws = null;
+
+      expect(() => {
+        unsubscribe();
+      }).not.toThrow();
+    });
+
+    // 7. disconnect() - ws.close() throws error
+    it("should handle ws.close() error gracefully", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
+      await websocketService.connect();
+
+      const ws = websocketService.ws;
+      // Mock close to throw
+      ws.close = vi.fn(() => {
+        throw new Error("Close error");
+      });
+
+      expect(() => {
+        websocketService.disconnect();
+      }).not.toThrow();
+
+      expect(websocketService.isConnected()).toBe(false);
+    });
+
+    // 8. startHeartbeat() - ws.send() throws error
+    it("should handle heartbeat send error gracefully", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
+      await websocketService.connect();
+
+      const ws = websocketService.ws;
+      // Mock send to throw
+      ws.send = vi.fn(() => {
+        throw new Error("Send error");
+      });
+
+      expect(() => {
+        websocketService.startHeartbeat();
+      }).not.toThrow();
+
+      expect(websocketService.heartbeatInterval).not.toBeNull();
+    });
+
+    // 9. connect() - oldWs.close() throws error
+    it("should handle oldWs.close() error gracefully when reconnecting", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
+      await websocketService.connect();
+
+      const oldWs = websocketService.ws;
+      // Mock close to throw
+      oldWs.close = vi.fn(() => {
+        throw new Error("Close error");
+      });
+
+      await expect(websocketService.connect("new-tenant")).resolves.toBeUndefined();
+
+      expect(websocketService.tenantId).toBe("new-tenant");
+      expect(websocketService.isConnected()).toBe(true);
+    });
+
+    // 10. getCachedData() - non-object cached data
+    it("should return cached primitive values correctly", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
+      await websocketService.connect();
+
+      const primitiveValues = [42, "hello", true];
+      
+      for (const value of primitiveValues) {
+        const stream = `test-stream-${String(value)}`;
+        websocketService.handleMessage({
+          stream: stream,
+          data: value,
+        });
+
+        const cached = websocketService.getCachedData(stream);
+        expect(cached).toBeTruthy();
+        expect(cached.value).toBe(value);
+        expect(cached._cached).toBe(true);
+        expect(cached._cachedAt).toBeTruthy();
+      }
+    });
+
+    // 11. getCachedData() - null cached data
+    it("should return null when cached data is null", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
+      await websocketService.connect();
+
+      websocketService.handleMessage({
+        stream: "test-stream",
+        data: null,
+      });
+
+      const cached = websocketService.getCachedData("test-stream");
+      expect(cached).toBeNull();
+    });
+
+    // 12. handleMessage() - callback throws error
+    it("should handle callback errors gracefully", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
+      await websocketService.connect();
+
+      const errorCallback = vi.fn(() => {
+        throw new Error("Callback error");
+      });
+      const normalCallback = vi.fn();
+
+      websocketService.subscribe("test-stream", errorCallback);
+      websocketService.subscribe("test-stream", normalCallback);
+
+      expect(() => {
+        websocketService.handleMessage({
+          stream: "test-stream",
+          data: { value: 123 },
+        });
+      }).not.toThrow();
+
+      expect(errorCallback).toHaveBeenCalled();
+      expect(normalCallback).toHaveBeenCalled();
+    });
+
+    // 13. handleMessage() - null stream
+    it("should ignore messages with null stream", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
+      await websocketService.connect();
+
+      const callback = vi.fn();
+      websocketService.subscribe("test-stream", callback);
+
+      websocketService.handleMessage({
+        stream: null,
+        data: { value: 123 },
+      });
+
+      expect(callback).not.toHaveBeenCalled();
+    });
+
+    // 14. handleMessage() - undefined stream
+    it("should ignore messages with undefined stream", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
+      await websocketService.connect();
+
+      const callback = vi.fn();
+      websocketService.subscribe("test-stream", callback);
+
+      websocketService.handleMessage({
+        stream: undefined,
+        data: { value: 123 },
+      });
+
+      expect(callback).not.toHaveBeenCalled();
+    });
+
+    // 15. connect() - with existing ws and ws.readyState is OPEN
+    it("should close existing connection when reconnecting", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
+      await websocketService.connect();
+
+      const closeSpy = vi.spyOn(websocketService.ws, "close");
+
+      await websocketService.connect("new-tenant");
+
+      expect(closeSpy).toHaveBeenCalled();
+      expect(websocketService.tenantId).toBe("new-tenant");
+    });
+
+    // 16. subscribeAllStreams() - with no listeners
+    it("should handle subscribeAllStreams with no listeners gracefully", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
+      await websocketService.connect();
+
+      websocketService.listeners.clear();
+
+      expect(() => {
+        websocketService.subscribeAllStreams();
+      }).not.toThrow();
+    });
+
+    // 17. handleMessage() - with data.data being an empty string
+    it("should cache empty string data values", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
+      await websocketService.connect();
+
+      websocketService.handleMessage({
+        stream: "test-stream",
+        data: "",
+      });
+
+      const cached = websocketService.getCachedData("test-stream");
+      expect(cached).toBeTruthy();
+      expect(cached.value).toBe("");
+      expect(cached._cached).toBe(true);
+    });
+
+    // 18. handleMessage() - with data.data being false
+    it("should cache false data values", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
+      await websocketService.connect();
+
+      websocketService.handleMessage({
+        stream: "test-stream",
+        data: false,
+      });
+
+      const cached = websocketService.getCachedData("test-stream");
+      expect(cached).toBeTruthy();
+      expect(cached.value).toBe(false);
+      expect(cached._cached).toBe(true);
+    });
+
+    // 19. getCachedData() - cached data with object that has _cached property
+    it("should handle cached data that already has _cached property", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
+      await websocketService.connect();
+
+      websocketService.handleMessage({
+        stream: "test-stream",
+        data: { value: 123, _cached: "original" },
+      });
+
+      const cached = websocketService.getCachedData("test-stream");
+      expect(cached).toBeTruthy();
+      expect(cached.value).toBe(123);
+      expect(cached._cached).toBe(true);
+      // The original _cached property should be overwritten
+      expect(cached._cached).toBe(true);
+    });
   });
 });
