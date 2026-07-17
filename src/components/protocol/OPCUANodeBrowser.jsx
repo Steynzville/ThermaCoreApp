@@ -75,24 +75,20 @@ const OPCUANodeBrowser = ({ isOpen, onClose, tenantId }) => {
     }
   };
 
-  // Toggle node expansion
-  const toggleNode = async (nodeId) => {
-    const newExpanded = new Set(expandedNodes);
-
-    if (newExpanded.has(nodeId)) {
-      newExpanded.delete(nodeId);
-    } else {
-      newExpanded.add(nodeId);
-
-      // Fetch children if not already loaded
-      const node = findNode(nodes, nodeId);
-      if (node && !node.children) {
-        const children = await fetchChildNodes(nodeId);
-        updateNodeChildren(nodes, nodeId, children);
+  // ✅ FIXED: Immutable update - returns new tree, never mutates input
+  const updateNodeChildren = (nodeList, nodeId, children) => {
+    return nodeList.map((node) => {
+      if (node.nodeId === nodeId) {
+        return { ...node, children };
       }
-    }
-
-    setExpandedNodes(newExpanded);
+      if (node.children) {
+        const updatedChildren = updateNodeChildren(node.children, nodeId, children);
+        if (updatedChildren !== node.children) {
+          return { ...node, children: updatedChildren };
+        }
+      }
+      return node;
+    });
   };
 
   // Find node in tree
@@ -107,18 +103,24 @@ const OPCUANodeBrowser = ({ isOpen, onClose, tenantId }) => {
     return null;
   };
 
-  // Update node children
-  const updateNodeChildren = (nodeList, nodeId, children) => {
-    for (const node of nodeList) {
-      if (node.nodeId === nodeId) {
-        node.children = children;
-        return;
-      }
-      if (node.children) {
-        updateNodeChildren(node.children, nodeId, children);
+  // Toggle node expansion
+  const toggleNode = async (nodeId) => {
+    const newExpanded = new Set(expandedNodes);
+
+    if (newExpanded.has(nodeId)) {
+      newExpanded.delete(nodeId);
+    } else {
+      newExpanded.add(nodeId);
+
+      // Fetch children if not already loaded
+      const node = findNode(nodes, nodeId);
+      if (node && !node.children) {
+        const children = await fetchChildNodes(nodeId);
+        setNodes((prevNodes) => updateNodeChildren(prevNodes, nodeId, children));
       }
     }
-    setNodes([...nodeList]);
+
+    setExpandedNodes(newExpanded);
   };
 
   // Subscribe to node
