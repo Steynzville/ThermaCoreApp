@@ -52,7 +52,6 @@ describe("SCADA Service", () => {
       expect(callUrl).toContain(`tenant_id=${tenantId}`);
     });
 
-    // ✅ NEW: Test for response fallback when data property is missing
     it("should fallback to response if response.data is undefined", async () => {
       const mockRawResponse = { rawField: "rawValue" };
       apiFetch.apiGetJson.mockResolvedValue(mockRawResponse);
@@ -63,7 +62,6 @@ describe("SCADA Service", () => {
       expect(result.data).toEqual(mockRawResponse);
     });
 
-    // ✅ NEW: Test for error without message
     it("should handle error without message in catch block", async () => {
       apiFetch.apiGetJson.mockRejectedValue({});
 
@@ -102,7 +100,6 @@ describe("SCADA Service", () => {
       expect(result.success).toBe(true);
     });
 
-    // ✅ NEW: Test with all query parameters
     it("should fetch historical data with all query params", async () => {
       const mockResponse = { data: [] };
       apiFetch.apiGetJson.mockResolvedValue(mockResponse);
@@ -136,7 +133,6 @@ describe("SCADA Service", () => {
       expect(result.data).toEqual(mockProtocols);
     });
 
-    // ✅ NEW: Test with tenant ID
     it("should fetch protocol status with tenant ID", async () => {
       const mockResponse = { data: [] };
       apiFetch.apiGetJson.mockResolvedValue(mockResponse);
@@ -166,7 +162,6 @@ describe("SCADA Service", () => {
       expect(result.data).toEqual(mockDevices);
     });
 
-    // ✅ NEW: Test for response fallback
     it("should fallback to response if response.data is undefined", async () => {
       const mockRawResponse = { rawField: "rawValue" };
       apiFetch.apiGetJson.mockResolvedValue(mockRawResponse);
@@ -177,7 +172,6 @@ describe("SCADA Service", () => {
       expect(result.data).toEqual(mockRawResponse);
     });
 
-    // ✅ NEW: Test for error without message
     it("should handle error without message in catch block", async () => {
       apiFetch.apiGetJson.mockRejectedValue({});
 
@@ -189,7 +183,6 @@ describe("SCADA Service", () => {
     });
   });
 
-  // ✅ NEW: getScadaStatus tests
   describe("getScadaStatus", () => {
     it("should fetch scada status successfully", async () => {
       const mockResponse = { data: { system: "OK" } };
@@ -254,6 +247,17 @@ describe("SCADA Service", () => {
       const hours = 24;
       const data = scadaService.generateMockHistoricalData(hours);
 
+      // The function generates one data point per hour for the specified hours
+      expect(data).toHaveLength(hours);
+      expect(data[0]).toHaveProperty("timestamp");
+      expect(data[0]).toHaveProperty("temperature");
+      expect(data[0]).toHaveProperty("pressure");
+    });
+
+    it("should generate mock historical data with default hours when not specified", () => {
+      const data = scadaService.generateMockHistoricalData();
+
+      // If no hours specified, it should default to 24 hours
       expect(data).toHaveLength(24);
       expect(data[0]).toHaveProperty("timestamp");
       expect(data[0]).toHaveProperty("temperature");
@@ -272,16 +276,6 @@ describe("SCADA Service", () => {
         expect(protocol).toHaveProperty("devices");
         expect(protocol).toHaveProperty("lastUpdate");
       });
-    });
-
-    // ✅ NEW: More specific mock data tests
-    it("should generate mock historical data with correct length", () => {
-      const historical = scadaService.generateMockHistoricalData(12);
-      expect(Array.isArray(historical)).toBe(true);
-      expect(historical.length).toBe(12);
-      expect(historical[0]).toHaveProperty("timestamp");
-      expect(historical[0]).toHaveProperty("temperature");
-      expect(historical[0]).toHaveProperty("pressure");
     });
 
     it("should generate mock protocol status with 4 protocols", () => {
