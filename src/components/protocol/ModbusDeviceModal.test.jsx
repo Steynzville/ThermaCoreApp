@@ -166,14 +166,6 @@ describe("ModbusDeviceModal", () => {
     },
   };
 
-  const mockRegistersData = {
-    registers: [
-      { address: 40001, value: 45.2, name: "Temperature", type: "float" },
-      { address: 40002, value: 101.3, name: "Pressure", type: "float" },
-    ],
-    timestamp: "2026-07-13T10:00:00Z",
-  };
-
   beforeEach(() => {
     vi.clearAllMocks();
     useMediaQuery.mockReturnValue(true);
@@ -332,13 +324,9 @@ describe("ModbusDeviceModal", () => {
     const readTab = tabs.find(tab => tab.textContent.includes("Read"));
     await user.click(readTab);
 
-    // Query by label instead of positional index: since the mocked Tabs
-    // component renders every panel at once, getAllByTestId("input")
-    // would also include the Write tab's inputs.
     const addressInput = screen.getByLabelText("Start Address");
     const countInput = screen.getByLabelText("Count");
 
-    // Use fireEvent.change directly to set values, bypassing userEvent.clear issues
     fireEvent.change(addressInput, { target: { value: "40001" } });
     fireEvent.change(countInput, { target: { value: "5" } });
 
@@ -376,9 +364,6 @@ describe("ModbusDeviceModal", () => {
     const writeTab = tabs.find(tab => tab.textContent.includes("Write"));
     await user.click(writeTab);
 
-    // Query by label instead of positional index: inputs[0]/inputs[1]
-    // would actually resolve to the Read tab's fields since all panels
-    // are rendered simultaneously by the mocked Tabs component.
     const addressInput = screen.getByLabelText("Address");
     const valueInput = screen.getByLabelText("Value");
 
@@ -556,10 +541,6 @@ describe("ModbusDeviceModal", () => {
     const writeTab = tabs.find(tab => tab.textContent.includes("Write"));
     await user.click(writeTab);
 
-    // The warning text is split across a <strong> tag and a sibling text
-    // node, so a plain string/regex matcher can't find it as one node.
-    // Use a function matcher that checks the parent element's full
-    // textContent instead.
     expect(
       screen.getByText((_, element) => {
         if (!element || element.tagName.toLowerCase() !== "p") return false;
@@ -598,7 +579,28 @@ describe("ModbusDeviceModal", () => {
     });
   });
 
-  it("should close dialog when onClose is called", () => {
+  // ============================================================
+  // ADDITIONAL BRANCH COVERAGE TESTS
+  // ============================================================
+
+  it("should not fetch device data when device_id is missing", () => {
+    render(
+      <ModbusDeviceModal
+        device={{ host: "10.0.0.5" }}
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+    expect(apiGetJson).not.toHaveBeenCalled();
+  });
+
+  it("should display Unknown status before device data resolves", async () => {
+    let resolvePromise;
+    apiGetJson.mockImplementation(
+      () => new Promise((resolve) => { resolvePromise = resolve; })
+    );
+
     render(
       <ModbusDeviceModal
         device={mockDevice}
@@ -608,6 +610,300 @@ describe("ModbusDeviceModal", () => {
       />
     );
 
-    expect(screen.getByTestId("dialog")).toBeInTheDocument();
+    const overviewPanel = getTabPanel("overview");
+    expect(within(overviewPanel).getByText("Unknown")).toBeInTheDocument();
+
+    resolvePromise(mockDeviceData);
+    await waitForDeviceLoaded();
+  });
+
+  it("should default port to 502 and unit_id to 1 when not provided", async () => {
+    render(
+      <ModbusDeviceModal
+        device={{ device_id: "modbus-2", host: "10.0.0.5" }}
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+    expect(screen.getByText("10.0.0.5:502 (Unit ID: 1)")).toBeInTheDocument();
+    await waitForDeviceLoaded();
+  });
+
+  // ✅ NEW: Test for host fallback branch
+  it("should default host to Unknown when not provided", async () => {
+    render(
+      <ModbusDeviceModal
+        device={{ device_id: "modbus-3", port: 1502, unit_id: 2 }}
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+    expect(screen.getByText("Unknown:1502 (Unit ID: 2)")).toBeInTheDocument();
+    await waitForDeviceLoaded();
+  });
+
+  it("should handle registers array with boolean values and missing name/type", async () => {
+    apiGetJson.mockResolvedValueOnce({
+      connected: true,
+      registers: [
+        { address: 40010, value: true },
+        { address: 40011, value: false, name: "Pump", type: "coil" },
+      ],
+    });
+
+    const user = userEvent.setup();
+    render(
+      <ModbusDeviceModal
+        device={mockDevice}
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+
+    await waitForDeviceLoaded();
+    const tabs = screen.getAllByTestId("tabs-trigger");
+    await user.click(tabs.find((t) => t.textContent.includes("Registers")));
+
+    const registersPanel = getTabPanel("registers");
+    expect(within(registersPanel).getAllByText("Address 40010")).toHaveLength(2);
+    expect(within(registersPanel).getByText("1")).toBeInTheDocument();
+    expect(within(registersPanel).getByText("Pump")).toBeInTheDocument();
+    expect(within(registersPanel).getByText(/Address 40011 \(coil\)/)).toBeInTheDocument();
+    expect(within(registersPanel).getByText("0")).toBeInTheDocument();
+  });
+
+  it("should handle registers provided as an address-value object map", async () => {
+    apiGetJson.mockResolvedValueOnce({
+      connected: true,
+      registers: { "40020": 123, "40021": 456 },
+      timestamp: "2026-07-13T10:00:00Z",
+    });
+
+    const user = userEvent.setup();
+    render(
+      <ModbusDeviceModal
+        device={mockDevice}
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+
+    await waitForDeviceLoaded();
+    const tabs = screen.getAllByTestId("tabs-trigger");
+    await user.click(tabs.find((t) => t.textContent.includes("Registers")));
+
+    const registersPanel = getTabPanel("registers");
+    expect(within(registersPanel).getAllByText("Address 40020")).toHaveLength(2);
+    expect(within(registersPanel).getByText("123")).toBeInTheDocument();
+    expect(within(registersPanel).getAllByText("Address 40021")).toHaveLength(2);
+    expect(within(registersPanel).getByText("456")).toBeInTheDocument();
+  });
+
+  it("should handle readings with raw_value as an array and as a scalar", async () => {
+    apiGetJson.mockResolvedValueOnce({
+      connected: true,
+      readings: {
+        flow: { address: 40030, name: "Flow", raw_value: [77, 88], type: "int" },
+        status: { address: 40031, name: "Status", raw_value: 5, type: "int" },
+      },
+    });
+
+    const user = userEvent.setup();
+    render(
+      <ModbusDeviceModal
+        device={mockDevice}
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+
+    await waitForDeviceLoaded();
+    const tabs = screen.getAllByTestId("tabs-trigger");
+    await user.click(tabs.find((t) => t.textContent.includes("Registers")));
+
+    const registersPanel = getTabPanel("registers");
+    expect(within(registersPanel).getByText("77")).toBeInTheDocument();
+    expect(within(registersPanel).getByText("5")).toBeInTheDocument();
+  });
+
+  it("should display N/A when response_time is missing", async () => {
+    apiGetJson.mockResolvedValueOnce({ connected: true });
+
+    render(
+      <ModbusDeviceModal
+        device={mockDevice}
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+
+    await waitForDeviceLoaded();
+    const overviewPanel = getTabPanel("overview");
+    expect(within(overviewPanel).getByText("N/A")).toBeInTheDocument();
+  });
+
+  it("should not display last poll time when last_poll is missing", async () => {
+    apiGetJson.mockResolvedValueOnce({ connected: true, response_time: 10 });
+
+    render(
+      <ModbusDeviceModal
+        device={mockDevice}
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+
+    await waitForDeviceLoaded();
+    const overviewPanel = getTabPanel("overview");
+    expect(within(overviewPanel).queryByText(/Last poll:/)).not.toBeInTheDocument();
+  });
+
+  it("should display N/A for an invalid register timestamp", async () => {
+    apiGetJson.mockResolvedValueOnce({
+      connected: true,
+      registers: [{ address: 40040, value: 1, name: "Bad Timestamp" }],
+      timestamp: "not-a-valid-date",
+    });
+
+    const user = userEvent.setup();
+    render(
+      <ModbusDeviceModal
+        device={mockDevice}
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+
+    await waitForDeviceLoaded();
+    const tabs = screen.getAllByTestId("tabs-trigger");
+    await user.click(tabs.find((t) => t.textContent.includes("Registers")));
+
+    const registersPanel = getTabPanel("registers");
+    expect(within(registersPanel).getByText("N/A")).toBeInTheDocument();
+  });
+
+  it("should call read/write endpoints without tenant_id when tenantId is not provided", async () => {
+    const user = userEvent.setup();
+    render(
+      <ModbusDeviceModal
+        device={mockDevice}
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={null}
+      />
+    );
+
+    await waitForDeviceLoaded();
+
+    const tabs = screen.getAllByTestId("tabs-trigger");
+    await user.click(tabs.find((t) => t.textContent.includes("Read")));
+    const readButtons = screen.getAllByTestId("button");
+    await user.click(readButtons.find((b) => b.textContent.includes("Read Registers")));
+
+    await waitFor(() => {
+      expect(apiPostJson).toHaveBeenCalledWith(
+        `/api/v1/protocols/modbus/devices/${mockDevice.device_id}/read`,
+        expect.any(Object)
+      );
+    });
+
+    await user.click(tabs.find((t) => t.textContent.includes("Write")));
+    const writeButtons = screen.getAllByTestId("button");
+    await user.click(writeButtons.find((b) => b.textContent.includes("Write Register")));
+
+    await waitFor(() => {
+      expect(apiPostJson).toHaveBeenCalledWith(
+        `/api/v1/protocols/modbus/devices/${mockDevice.device_id}/write`,
+        expect.any(Object)
+      );
+    });
+  });
+
+  it("should show loading state on refresh button during fetch", async () => {
+    const user = userEvent.setup();
+    render(
+      <ModbusDeviceModal
+        device={mockDevice}
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+
+    await waitForDeviceLoaded();
+
+    let resolveFetch;
+    apiGetJson.mockImplementationOnce(
+      () => new Promise((resolve) => { resolveFetch = resolve; })
+    );
+
+    const buttons = screen.getAllByTestId("button");
+    const refreshButton = buttons.find((btn) =>
+      btn.querySelector('[data-testid="refresh-icon"]')
+    );
+
+    expect(refreshButton).not.toBeDisabled();
+    await user.click(refreshButton);
+    expect(refreshButton).toBeDisabled();
+
+    resolveFetch(mockDeviceData);
+
+    await waitFor(() => {
+      expect(refreshButton).not.toBeDisabled();
+    });
+  });
+
+  it("should show no register data when neither readings nor registers are present", async () => {
+    apiGetJson.mockResolvedValueOnce({
+      connected: true,
+    });
+
+    const user = userEvent.setup();
+    render(
+      <ModbusDeviceModal
+        device={mockDevice}
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+
+    await waitForDeviceLoaded();
+
+    const tabs = screen.getAllByTestId("tabs-trigger");
+    const registersTab = tabs.find(tab => tab.textContent.includes("Registers"));
+    await user.click(registersTab);
+
+    await waitFor(() => {
+      const registersPanel = getTabPanel("registers");
+      expect(within(registersPanel).getByText("No register data available")).toBeInTheDocument();
+    });
+  });
+
+  it("should clear interval on unmount", async () => {
+    const clearIntervalSpy = vi.spyOn(window, "clearInterval");
+    
+    const { unmount } = render(
+      <ModbusDeviceModal
+        device={mockDevice}
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+
+    await waitForDeviceLoaded();
+
+    unmount();
+
+    expect(clearIntervalSpy).toHaveBeenCalled();
   });
 });
