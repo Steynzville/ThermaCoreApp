@@ -508,9 +508,10 @@ class WebSocketService {
 
   /**
    * Check if WebSocket is connected
+   * ✅ FIXED: Always returns a boolean, not null/undefined
    */
   isConnected() {
-    return (
+    return !!(
       this.connectionStatus === "connected" &&
       this.ws &&
       this.ws.readyState === WebSocket.OPEN
