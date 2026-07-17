@@ -584,9 +584,10 @@ export const updateProfile = async (profileData) => {
       };
     }
 
+    // Fixed: Consistent error message with "Please try again"
     throw {
       success: false,
-      message: result?.error?.message || result?.message || "Unable to update profile.",
+      message: result?.error?.message || result?.message || "Unable to update profile. Please try again.",
     };
   } catch (error) {
     if (error?.success === false) {
