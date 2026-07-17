@@ -51,6 +51,28 @@ describe("SCADA Service", () => {
       const callUrl = apiFetch.apiGetJson.mock.calls[0][0];
       expect(callUrl).toContain(`tenant_id=${tenantId}`);
     });
+
+    // ✅ NEW: Test for response fallback when data property is missing
+    it("should fallback to response if response.data is undefined", async () => {
+      const mockRawResponse = { rawField: "rawValue" };
+      apiFetch.apiGetJson.mockResolvedValue(mockRawResponse);
+
+      const result = await scadaService.getCurrentMetrics();
+
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual(mockRawResponse);
+    });
+
+    // ✅ NEW: Test for error without message
+    it("should handle error without message in catch block", async () => {
+      apiFetch.apiGetJson.mockRejectedValue({});
+
+      const result = await scadaService.getCurrentMetrics();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Failed to fetch current metrics");
+      expect(result.data).toBeNull();
+    });
   });
 
   describe("getHistoricalData", () => {
@@ -79,6 +101,24 @@ describe("SCADA Service", () => {
 
       expect(result.success).toBe(true);
     });
+
+    // ✅ NEW: Test with all query parameters
+    it("should fetch historical data with all query params", async () => {
+      const mockResponse = { data: [] };
+      apiFetch.apiGetJson.mockResolvedValue(mockResponse);
+
+      const result = await scadaService.getHistoricalData({
+        tenantId: "tenant-123",
+        startTime: "2026-06-26T00:00:00Z",
+        endTime: "2026-06-27T00:00:00Z",
+        interval: "1h",
+      });
+
+      expect(result.success).toBe(true);
+      expect(apiFetch.apiGetJson).toHaveBeenCalledWith(
+        expect.stringContaining("/api/v1/scada/historical-data?tenant_id=tenant-123&start_time=2026-06-26T00%3A00%3A00Z&end_time=2026-06-27T00%3A00%3A00Z&interval=1h")
+      );
+    });
   });
 
   describe("getProtocolStatus", () => {
@@ -94,6 +134,19 @@ describe("SCADA Service", () => {
 
       expect(result.success).toBe(true);
       expect(result.data).toEqual(mockProtocols);
+    });
+
+    // ✅ NEW: Test with tenant ID
+    it("should fetch protocol status with tenant ID", async () => {
+      const mockResponse = { data: [] };
+      apiFetch.apiGetJson.mockResolvedValue(mockResponse);
+
+      const result = await scadaService.getProtocolStatus("tenant-456");
+
+      expect(result.success).toBe(true);
+      expect(apiFetch.apiGetJson).toHaveBeenCalledWith(
+        expect.stringContaining("/api/v1/protocols/status?tenant_id=tenant-456")
+      );
     });
   });
 
@@ -111,6 +164,73 @@ describe("SCADA Service", () => {
 
       expect(result.success).toBe(true);
       expect(result.data).toEqual(mockDevices);
+    });
+
+    // ✅ NEW: Test for response fallback
+    it("should fallback to response if response.data is undefined", async () => {
+      const mockRawResponse = { rawField: "rawValue" };
+      apiFetch.apiGetJson.mockResolvedValue(mockRawResponse);
+
+      const result = await scadaService.getDeviceStatus();
+
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual(mockRawResponse);
+    });
+
+    // ✅ NEW: Test for error without message
+    it("should handle error without message in catch block", async () => {
+      apiFetch.apiGetJson.mockRejectedValue({});
+
+      const result = await scadaService.getDeviceStatus();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Failed to fetch device status");
+      expect(result.data).toBeNull();
+    });
+  });
+
+  // ✅ NEW: getScadaStatus tests
+  describe("getScadaStatus", () => {
+    it("should fetch scada status successfully", async () => {
+      const mockResponse = { data: { system: "OK" } };
+      apiFetch.apiGetJson.mockResolvedValue(mockResponse);
+
+      const result = await scadaService.getScadaStatus();
+
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual({ system: "OK" });
+      expect(apiFetch.apiGetJson).toHaveBeenCalledWith(
+        expect.stringContaining("/api/v1/scada/status")
+      );
+    });
+
+    it("should fallback to response if response.data is undefined", async () => {
+      const mockRawResponse = { system: "OK_RAW" };
+      apiFetch.apiGetJson.mockResolvedValue(mockRawResponse);
+
+      const result = await scadaService.getScadaStatus();
+
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual(mockRawResponse);
+    });
+
+    it("should handle scada status errors gracefully", async () => {
+      apiFetch.apiGetJson.mockRejectedValue(new Error("Scada status failed"));
+
+      const result = await scadaService.getScadaStatus();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Scada status failed");
+    });
+
+    it("should handle error without message in catch block", async () => {
+      apiFetch.apiGetJson.mockRejectedValue({});
+
+      const result = await scadaService.getScadaStatus();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Failed to fetch SCADA status");
+      expect(result.data).toBeNull();
     });
   });
 
@@ -152,6 +272,25 @@ describe("SCADA Service", () => {
         expect(protocol).toHaveProperty("devices");
         expect(protocol).toHaveProperty("lastUpdate");
       });
+    });
+
+    // ✅ NEW: More specific mock data tests
+    it("should generate mock historical data with correct length", () => {
+      const historical = scadaService.generateMockHistoricalData(12);
+      expect(Array.isArray(historical)).toBe(true);
+      expect(historical.length).toBe(12);
+      expect(historical[0]).toHaveProperty("timestamp");
+      expect(historical[0]).toHaveProperty("temperature");
+      expect(historical[0]).toHaveProperty("pressure");
+    });
+
+    it("should generate mock protocol status with 4 protocols", () => {
+      const statuses = scadaService.generateMockProtocolStatus();
+      expect(Array.isArray(statuses)).toBe(true);
+      expect(statuses.length).toBe(4);
+      expect(statuses[0]).toHaveProperty("name");
+      expect(statuses[0]).toHaveProperty("status");
+      expect(statuses[0]).toHaveProperty("devices");
     });
   });
 });
