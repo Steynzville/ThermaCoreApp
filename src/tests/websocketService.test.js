@@ -324,40 +324,41 @@ describe("WebSocket Service", () => {
 
       global.WebSocket = MockWebSocket.createFlaky();
 
-      // Start the connection
+      // Start the connection — it opens, then closes ~50ms later,
+      // scheduling one reconnect attempt.
       const connectPromise = websocketService.connect();
 
-      // Advance past the initial open delay (10ms) + close delay (50ms)
-      // Use the async variant so queued microtasks (which register the
-      // mock's setTimeout calls) get a chance to run between ticks.
+      // Advance past the initial open + close cycle
       await vi.advanceTimersByTimeAsync(100);
-
-      // Wait for the reconnection cycle (reconnectDelay default 1000ms)
-      await vi.advanceTimersByTimeAsync(1200);
-
-      // Catch any rejection from the original promise (it may reject
-      // if the flaky connection fails before reconnect succeeds)
       await connectPromise.catch(() => {});
 
-      // Now the connection should be established
+      // By now the flaky socket has opened and closed again, and a
+      // reconnect has been scheduled (default reconnectDelay: 1000ms).
+      expect(websocketService.getStatus()).toBe("reconnecting");
+      expect(websocketService.reconnectTimeout).not.toBeNull();
+
+      // Swap to a stable mock BEFORE the scheduled reconnect fires, so the
+      // automatic reconnect succeeds and actually stays open. (If we left
+      // the flaky mock in place, the reconnect would open-then-close again,
+      // and we'd land back in "reconnecting" depending on exact timing.)
+      global.WebSocket = MockWebSocket.createInstantOpen();
+
+      // Advance past the scheduled reconnect delay.
+      await vi.advanceTimersByTimeAsync(1200);
+
       expect(websocketService.isConnected()).toBe(true);
 
       // Disconnect and reconnect with new tenant
       websocketService.disconnect();
       global.WebSocket = MockWebSocket.createInstantOpen();
 
-      // Connect with new tenant - this will be instant with the new mock
       const newConnectPromise = websocketService.connect("new-tenant");
-
-      // Advance enough time for the instant open, flushing microtasks too
       await vi.advanceTimersByTimeAsync(10);
-
       await newConnectPromise;
 
       expect(websocketService.tenantId).toBe("new-tenant");
       expect(websocketService.isConnected()).toBe(true);
 
-      // Restore real timers
       vi.useRealTimers();
     }, 10000);
   });
