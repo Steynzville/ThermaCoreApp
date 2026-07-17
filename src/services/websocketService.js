@@ -28,6 +28,7 @@ class WebSocketService {
     this._isDisconnecting = false;
     this._currentRejectConnect = null;
     this._connectionEpoch = 0;
+    this._pendingConnectTenantId = null;
   }
 
   /**
@@ -36,9 +37,23 @@ class WebSocketService {
    * @returns {Promise} - Resolves when connected
    */
   connect(tenantId = null) {
-    // If there's a pending connect, return that promise
-    if (this._pendingConnect) {
+    // If there's a pending connect with the SAME tenant, return that promise
+    if (this._pendingConnect && this._pendingConnectTenantId === tenantId) {
       return this._pendingConnect;
+    }
+
+    // If there's a pending connect with a DIFFERENT tenant, reject the stale one
+    if (this._pendingConnect) {
+      if (this._currentRejectConnect) {
+        this._currentRejectConnect(new Error("WebSocket connect superseded by new tenant"));
+      } else if (this._pendingReject) {
+        this._pendingReject(new Error("WebSocket connect superseded by new tenant"));
+      }
+      // Clear the pending connect state
+      this._pendingConnect = null;
+      this._pendingReject = null;
+      this._currentRejectConnect = null;
+      this._pendingConnectTenantId = null;
     }
 
     // Clear any pending reconnect timeout when manually connecting
@@ -53,6 +68,7 @@ class WebSocketService {
     // Bump epoch for this connection attempt
     const epochAtConnect = ++this._connectionEpoch;
     const connectId = ++this._pendingConnectId;
+    this._pendingConnectTenantId = tenantId;
 
     this._pendingConnect = new Promise((resolve, reject) => {
       let isResolved = false;
@@ -71,6 +87,7 @@ class WebSocketService {
           if (this._pendingConnectId === connectId) {
             this._pendingConnect = null;
             this._pendingReject = null;
+            this._pendingConnectTenantId = null;
           }
           reject(error);
         }
@@ -89,6 +106,7 @@ class WebSocketService {
           this._pendingConnect = null;
           this._pendingReject = null;
           this._currentRejectConnect = null;
+          this._pendingConnectTenantId = null;
         }
       };
 
@@ -265,6 +283,7 @@ class WebSocketService {
       this._pendingConnect = null;
       this._pendingReject = null;
       this._currentRejectConnect = null;
+      this._pendingConnectTenantId = null;
       this.connect(this.tenantId).catch((_error) => {
         // Connection error will be handled by onerror/onclose
       });
@@ -333,6 +352,7 @@ class WebSocketService {
     // Clear pending connect
     this._pendingConnect = null;
     this._pendingConnectId++;
+    this._pendingConnectTenantId = null;
 
     this.stopHeartbeat();
     this.shouldReconnect = false;
