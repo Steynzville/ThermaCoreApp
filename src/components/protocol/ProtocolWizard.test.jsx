@@ -45,16 +45,96 @@ import { toast } from "sonner";
 import { apiPostJson } from "@/utils/apiFetch";
 import { useMediaQuery } from "@/hooks/use-media-query";
 
-// Radix Select needs these DOM APIs for jsdom
+// ============================================================
+// ✅ FIXED: Complete jsdom polyfills for Radix UI and Vaul
+// ============================================================
+
 beforeAll(() => {
+  // Basic DOM APIs
   window.HTMLElement.prototype.hasPointerCapture = vi.fn();
   window.HTMLElement.prototype.scrollIntoView = vi.fn();
-  
-  // Fix for Radix Select positioning
+
+  // getComputedStyle mock
   Object.defineProperty(window, 'getComputedStyle', {
     value: () => ({
       getPropertyValue: () => '',
     }),
+  });
+
+  // ✅ FIXED: ResizeObserver - Radix Select (Popper) and Vaul Drawer both need this
+  class MockResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  window.ResizeObserver = MockResizeObserver;
+  global.ResizeObserver = MockResizeObserver;
+
+  // ✅ FIXED: IntersectionObserver - used by some Radix components
+  class MockIntersectionObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+    takeRecords() {
+      return [];
+    }
+  }
+  window.IntersectionObserver = MockIntersectionObserver;
+  global.IntersectionObserver = MockIntersectionObserver;
+
+  // ✅ FIXED: Ensure getBoundingClientRect returns a full DOMRect-shaped object
+  window.HTMLElement.prototype.getBoundingClientRect = vi.fn(() => ({
+    width: 0,
+    height: 0,
+    top: 0,
+    left: 0,
+    bottom: 0,
+    right: 0,
+    x: 0,
+    y: 0,
+    toJSON() {},
+  }));
+
+  // ✅ FIXED: Element.prototype.getClientRects for some dropdown measurements
+  window.Element.prototype.getClientRects = vi.fn(() => ({
+    item: () => ({
+      width: 0,
+      height: 0,
+      top: 0,
+      left: 0,
+      bottom: 0,
+      right: 0,
+      x: 0,
+      y: 0,
+    }),
+    length: 1,
+    [Symbol.iterator]: function* () {
+      yield {
+        width: 0,
+        height: 0,
+        top: 0,
+        left: 0,
+        bottom: 0,
+        right: 0,
+        x: 0,
+        y: 0,
+      };
+    },
+  }));
+
+  // ✅ FIXED: matchMedia for drawer responsive behavior
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation(query => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
   });
 });
 
@@ -477,7 +557,7 @@ describe("ProtocolWizard - Complete Coverage", () => {
       }
     });
 
-    // ✅ FIXED: Use userEvent for select dropdown to avoid Radix positioning issues
+    // ✅ FIXED: Now works with ResizeObserver polyfill
     it("should change security mode via select dropdown", async () => {
       render(<ProtocolWizard {...defaultProps} />);
       await navigateToStep(2, "opcua");
@@ -486,7 +566,7 @@ describe("ProtocolWizard - Complete Coverage", () => {
       const trigger = screen.getByRole("combobox");
       expect(trigger).toBeInTheDocument();
       
-      // Click to open dropdown - use fireEvent to avoid positioning issues
+      // Click to open dropdown
       fireEvent.click(trigger);
       
       // Wait for options to appear
@@ -1267,7 +1347,7 @@ describe("ProtocolWizard - Complete Coverage", () => {
       });
     });
 
-    // ✅ FIXED: Find close button by its aria-label or X icon
+    // ✅ FIXED: Now works with ResizeObserver polyfill
     it("should close drawer when close button is clicked", async () => {
       useMediaQuery.mockReturnValue(false);
 
@@ -1396,14 +1476,55 @@ describe("ProtocolWizard - Complete Coverage", () => {
       });
     });
 
-    it.skip("should show step progress in mobile view", async () => {
-      // Radix UI Drawer height issue in test environment
-      // Keep skipped but documented
+    // ✅ FIXED: Now works with ResizeObserver polyfill
+    it("should show step progress in mobile view", async () => {
+      useMediaQuery.mockReturnValue(false);
+      
+      render(<ProtocolWizard {...defaultProps} />);
+      await selectProtocol("modbus");
+      
+      await waitFor(() => {
+        const drawer = screen.getByRole("dialog");
+        expect(drawer).toBeInTheDocument();
+        
+        // Look for step indicators - they should show numbers 1-5
+        const content = within(drawer);
+        // Step indicators are the circles with numbers
+        const indicators = content.queryAllByText(/[1-5]/);
+        expect(indicators.length).toBeGreaterThan(0);
+      });
     });
 
-    it.skip("should navigate in mobile view", async () => {
-      // Radix UI Drawer height issue in test environment
-      // Keep skipped but documented
+    // ✅ FIXED: Now works with ResizeObserver polyfill
+    it("should navigate in mobile view", async () => {
+      useMediaQuery.mockReturnValue(false);
+      
+      const user = setupUserEvent();
+      render(<ProtocolWizard {...defaultProps} />);
+      
+      await selectProtocol("modbus");
+      
+      // Find and click Next button
+      const nextButton = screen.getByRole("button", { name: /next/i });
+      fireEvent.click(nextButton);
+      
+      await waitFor(() => {
+        const drawer = screen.getByRole("dialog");
+        const content = within(drawer);
+        // Should show Device Info step
+        expect(content.queryByText(/Device Information/i)).toBeInTheDocument();
+      });
+      
+      // Click Back button
+      const backButton = screen.getByRole("button", { name: /back/i });
+      fireEvent.click(backButton);
+      
+      await waitFor(() => {
+        const drawer = screen.getByRole("dialog");
+        const content = within(drawer);
+        // Should show Protocol Selection again
+        expect(content.queryByText(/Select Protocol/i)).toBeInTheDocument();
+      });
     });
   });
 
