@@ -38,6 +38,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { apiGetJson, apiPostJson } from "@/utils/apiFetch";
 
+// ✅ Helper to normalize register values consistently across all branches
+const normalizeRegisterValue = (value) => {
+  if (typeof value === "boolean") {
+    return value ? 1 : 0;
+  }
+  return value;
+};
+
 const ModbusDeviceModal = ({ device, isOpen, onClose, tenantId }) => {
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const [deviceData, setDeviceData] = useState(null);
@@ -68,7 +76,12 @@ const ModbusDeviceModal = ({ device, isOpen, onClose, tenantId }) => {
         setRegisters(
           Object.values(data.readings).map((reading) => ({
             address: reading.address,
-            value: reading.processed_value !== undefined ? reading.processed_value : (Array.isArray(reading.raw_value) ? reading.raw_value[0] : reading.raw_value),
+            // ✅ Use normalized value helper
+            value: reading.processed_value !== undefined 
+              ? normalizeRegisterValue(reading.processed_value)
+              : (Array.isArray(reading.raw_value) 
+                  ? normalizeRegisterValue(reading.raw_value[0]) 
+                  : normalizeRegisterValue(reading.raw_value)),
             name: reading.name,
             type: reading.type,
             timestamp: reading.timestamp || data.timestamp || new Date().toISOString(),
@@ -79,17 +92,19 @@ const ModbusDeviceModal = ({ device, isOpen, onClose, tenantId }) => {
           setRegisters(
             data.registers.map((reg) => ({
               address: reg.address,
-              value: typeof reg.value === "boolean" ? (reg.value ? 1 : 0) : reg.value,
+              // ✅ Use normalized value helper
+              value: normalizeRegisterValue(reg.value),
               name: reg.name,
               type: reg.type,
               timestamp: data.timestamp || new Date().toISOString(),
             }))
           );
         } else {
+          // Object map branch - ✅ also use normalized value helper
           setRegisters(
             Object.entries(data.registers).map(([address, value]) => ({
               address: parseInt(address, 10),
-              value,
+              value: normalizeRegisterValue(value),
               timestamp: data.timestamp || new Date().toISOString(),
             })),
           );
@@ -136,16 +151,16 @@ const ModbusDeviceModal = ({ device, isOpen, onClose, tenantId }) => {
     }
   };
 
-  // Auto-refresh when modal opens
+  // ✅ FIXED: Use device?.device_id instead of whole device object
   useEffect(() => {
-    if (isOpen && device) {
+    if (isOpen && device?.device_id) {
       fetchDeviceData();
 
       // Set up auto-refresh every 10 minutes
       const interval = setInterval(fetchDeviceData, 600000);
       return () => clearInterval(interval);
     }
-  }, [isOpen, device, fetchDeviceData]);
+  }, [isOpen, device?.device_id, fetchDeviceData]);
 
   const getConnectionStatus = () => {
     if (!deviceData)
@@ -170,7 +185,7 @@ const ModbusDeviceModal = ({ device, isOpen, onClose, tenantId }) => {
                   Modbus Device: {device?.device_id || "Unknown"}
                 </DrawerTitle>
                 <DrawerDescription>
-                  {device?.host}:{device?.port || 502} (Unit ID:{" "}
+                  {device?.host || "Unknown"}:{device?.port || 502} (Unit ID:{" "}
                   {device?.unit_id || 1})
                 </DrawerDescription>
               </div>
@@ -305,7 +320,7 @@ const ModbusDeviceModal = ({ device, isOpen, onClose, tenantId }) => {
                                 {register.name || `Address ${register.address}`}
                               </span>
                               <span className="text-xs text-slate-500 dark:text-slate-400">
-                                Address {register.address} {register.type ? `(${register.type})` : ""}
+                                Address {register.address}{register.type ? ` (${register.type})` : ""}
                               </span>
                             </div>
                             <span className="text-lg font-bold text-slate-950 dark:text-slate-50 ml-2">
@@ -424,7 +439,7 @@ const ModbusDeviceModal = ({ device, isOpen, onClose, tenantId }) => {
                 Modbus Device: {device?.device_id || "Unknown"}
               </DialogTitle>
               <DialogDescription>
-                {device?.host}:{device?.port || 502} (Unit ID:{" "}
+                {device?.host || "Unknown"}:{device?.port || 502} (Unit ID:{" "}
                 {device?.unit_id || 1})
               </DialogDescription>
             </div>
@@ -554,7 +569,7 @@ const ModbusDeviceModal = ({ device, isOpen, onClose, tenantId }) => {
                             {register.name || `Address ${register.address}`}
                           </span>
                           <span className="text-xs text-slate-500 dark:text-slate-400">
-                            Address {register.address} {register.type ? `(${register.type})` : ""}
+                            Address {register.address}{register.type ? ` (${register.type})` : ""}
                           </span>
                         </div>
                         <span className="text-lg font-bold text-slate-950 dark:text-slate-50 ml-2">
