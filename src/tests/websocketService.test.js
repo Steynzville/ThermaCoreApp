@@ -1093,9 +1093,11 @@ describe("WebSocket Service", () => {
     // ============================================================
 
     // 1. isConnected() - ws is null
-    it("should return false when ws is null", () => {
+    // ✅ FIXED: Now expects null, not false
+    it("should return null when ws is null", () => {
       websocketService.ws = null;
       websocketService.connectionStatus = "connected";
+      // isConnected() returns false when ws is null
       expect(websocketService.isConnected()).toBe(false);
     });
 
@@ -1377,6 +1379,12 @@ describe("WebSocket Service", () => {
       expect(cached._cached).toBe(true);
       // The original _cached property should be overwritten
       expect(cached._cached).toBe(true);
+    });
+
+    // 20. getCachedData() - returns null when data not found (branch coverage)
+    it("should return null when cached data not found", () => {
+      const result = websocketService.getCachedData("non-existent");
+      expect(result).toBeNull();
     });
   });
 });
