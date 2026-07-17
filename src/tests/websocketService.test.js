@@ -324,21 +324,46 @@ describe("WebSocket Service", () => {
     });
 
     it("should allow new connect after reconnect cycle", async () => {
+      // Use fake timers for precise control
+      vi.useFakeTimers();
+
       global.WebSocket = MockWebSocket.createFlaky();
-      await websocketService.connect();
 
-      // Wait for reconnect cycle - increased to 1500ms for stability
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Start the connection
+      const connectPromise = websocketService.connect();
 
+      // Advance past the initial open delay (10ms) + close delay (50ms)
+      vi.advanceTimersByTime(100);
+
+      // Wait for the reconnection cycle
+      // The service should reconnect after 1000ms (reconnectDelay default)
+      vi.advanceTimersByTime(1200);
+
+      // Let any pending promises resolve
+      await Promise.resolve();
+
+      // Now the connection should be established
       expect(websocketService.isConnected()).toBe(true);
 
+      // Disconnect and reconnect with new tenant
       websocketService.disconnect();
       global.WebSocket = MockWebSocket.createInstantOpen();
-      await websocketService.connect("new-tenant");
+
+      // Connect with new tenant - this will be instant with the new mock
+      const newConnectPromise = websocketService.connect("new-tenant");
+
+      // Advance enough time for the instant open
+      vi.advanceTimersByTime(10);
+      await Promise.resolve();
+
+      await newConnectPromise;
 
       expect(websocketService.tenantId).toBe("new-tenant");
       expect(websocketService.isConnected()).toBe(true);
-    }, 5000);
+
+      // Restore real timers
+      vi.useRealTimers();
+    }, 10000);
   });
 
   // ============================================================
