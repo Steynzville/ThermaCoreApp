@@ -2,7 +2,7 @@
  * Tests for SCADA Service
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
 import scadaService from "../services/scadaService";
 import * as apiFetch from "../utils/apiFetch";
 
@@ -14,6 +14,10 @@ vi.mock("../utils/apiFetch", () => ({
 describe("SCADA Service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   describe("getCurrentMetrics", () => {
@@ -39,7 +43,7 @@ describe("SCADA Service", () => {
       const result = await scadaService.getCurrentMetrics();
 
       expect(result.success).toBe(false);
-      expect(result.error).toBeTruthy();
+      expect(result.error).toBe("Network error");
     });
 
     it("should include tenant ID in request when provided", async () => {
@@ -70,6 +74,39 @@ describe("SCADA Service", () => {
       expect(result.success).toBe(false);
       expect(result.error).toBe("Failed to fetch current metrics");
       expect(result.data).toBeNull();
+    });
+
+    it("should handle error when rejection is null", async () => {
+      apiFetch.apiGetJson.mockRejectedValue(null);
+
+      const result = await scadaService.getCurrentMetrics();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Failed to fetch current metrics");
+      expect(result.data).toBeNull();
+    });
+
+    it("should handle error when rejection is undefined", async () => {
+      apiFetch.apiGetJson.mockRejectedValue(undefined);
+
+      const result = await scadaService.getCurrentMetrics();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Failed to fetch current metrics");
+      expect(result.data).toBeNull();
+    });
+
+    it("should preserve falsy data values (0, false, empty string) with ?? operator", async () => {
+      const falsyValues = [0, false, ""];
+
+      for (const value of falsyValues) {
+        apiFetch.apiGetJson.mockResolvedValue({ data: value });
+
+        const result = await scadaService.getCurrentMetrics();
+
+        expect(result.success).toBe(true);
+        expect(result.data).toBe(value);
+      }
     });
   });
 
@@ -113,8 +150,78 @@ describe("SCADA Service", () => {
 
       expect(result.success).toBe(true);
       expect(apiFetch.apiGetJson).toHaveBeenCalledWith(
-        expect.stringContaining("/api/v1/scada/historical-data?tenant_id=tenant-123&start_time=2026-06-26T00%3A00%3A00Z&end_time=2026-06-27T00%3A00%3A00Z&interval=1h")
+        expect.stringContaining(
+          "/api/v1/scada/historical-data?tenant_id=tenant-123&start_time=2026-06-26T00%3A00%3A00Z&end_time=2026-06-27T00%3A00%3A00Z&interval=1h"
+        )
       );
+    });
+
+    it("should omit tenant_id when not provided", async () => {
+      apiFetch.apiGetJson.mockResolvedValue({ data: [] });
+      await scadaService.getHistoricalData({
+        startTime: "2026-01-01T00:00:00Z",
+      });
+      const callUrl = apiFetch.apiGetJson.mock.calls[0][0];
+      expect(callUrl).not.toContain("tenant_id");
+    });
+
+    it("should handle errors with a message", async () => {
+      apiFetch.apiGetJson.mockRejectedValue(new Error("Historical fetch failed"));
+
+      const result = await scadaService.getHistoricalData();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Historical fetch failed");
+      expect(result.data).toBeNull();
+    });
+
+    it("should handle error without message in catch block", async () => {
+      apiFetch.apiGetJson.mockRejectedValue({});
+
+      const result = await scadaService.getHistoricalData();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Failed to fetch historical data");
+      expect(result.data).toBeNull();
+    });
+
+    it("should handle error when rejection is null", async () => {
+      apiFetch.apiGetJson.mockRejectedValue(null);
+
+      const result = await scadaService.getHistoricalData();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Failed to fetch historical data");
+      expect(result.data).toBeNull();
+    });
+
+    it("should handle error when rejection is undefined", async () => {
+      apiFetch.apiGetJson.mockRejectedValue(undefined);
+
+      const result = await scadaService.getHistoricalData();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Failed to fetch historical data");
+      expect(result.data).toBeNull();
+    });
+
+    it("should preserve falsy data values with ?? operator", async () => {
+      apiFetch.apiGetJson.mockResolvedValue({ data: 0 });
+
+      const result = await scadaService.getHistoricalData();
+
+      expect(result.success).toBe(true);
+      expect(result.data).toBe(0);
+    });
+
+    it("should fallback to response if response.data is undefined", async () => {
+      const mockRawResponse = { rawField: "rawValue" };
+      apiFetch.apiGetJson.mockResolvedValue(mockRawResponse);
+
+      const result = await scadaService.getHistoricalData();
+
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual(mockRawResponse);
     });
   });
 
@@ -143,6 +250,65 @@ describe("SCADA Service", () => {
       expect(apiFetch.apiGetJson).toHaveBeenCalledWith(
         expect.stringContaining("/api/v1/protocols/status?tenant_id=tenant-456")
       );
+    });
+
+    it("should handle errors with a message", async () => {
+      apiFetch.apiGetJson.mockRejectedValue(new Error("Protocol fetch failed"));
+
+      const result = await scadaService.getProtocolStatus();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Protocol fetch failed");
+      expect(result.data).toBeNull();
+    });
+
+    it("should handle error without message in catch block", async () => {
+      apiFetch.apiGetJson.mockRejectedValue({});
+
+      const result = await scadaService.getProtocolStatus();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Failed to fetch protocol status");
+      expect(result.data).toBeNull();
+    });
+
+    it("should handle error when rejection is null", async () => {
+      apiFetch.apiGetJson.mockRejectedValue(null);
+
+      const result = await scadaService.getProtocolStatus();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Failed to fetch protocol status");
+      expect(result.data).toBeNull();
+    });
+
+    it("should handle error when rejection is undefined", async () => {
+      apiFetch.apiGetJson.mockRejectedValue(undefined);
+
+      const result = await scadaService.getProtocolStatus();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Failed to fetch protocol status");
+      expect(result.data).toBeNull();
+    });
+
+    it("should preserve falsy data values with ?? operator", async () => {
+      apiFetch.apiGetJson.mockResolvedValue({ data: false });
+
+      const result = await scadaService.getProtocolStatus();
+
+      expect(result.success).toBe(true);
+      expect(result.data).toBe(false);
+    });
+
+    it("should fallback to response if response.data is undefined", async () => {
+      const mockRawResponse = { rawField: "rawValue" };
+      apiFetch.apiGetJson.mockResolvedValue(mockRawResponse);
+
+      const result = await scadaService.getProtocolStatus();
+
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual(mockRawResponse);
     });
   });
 
@@ -180,6 +346,42 @@ describe("SCADA Service", () => {
       expect(result.success).toBe(false);
       expect(result.error).toBe("Failed to fetch device status");
       expect(result.data).toBeNull();
+    });
+
+    it("should include tenant ID in request when provided", async () => {
+      apiFetch.apiGetJson.mockResolvedValue({ data: {} });
+      await scadaService.getDeviceStatus("tenant-789");
+      const callUrl = apiFetch.apiGetJson.mock.calls[0][0];
+      expect(callUrl).toContain("tenant_id=tenant-789");
+    });
+
+    it("should handle errors with a message", async () => {
+      apiFetch.apiGetJson.mockRejectedValue(new Error("Device fetch failed"));
+
+      const result = await scadaService.getDeviceStatus();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Device fetch failed");
+      expect(result.data).toBeNull();
+    });
+
+    it("should handle error when rejection is null", async () => {
+      apiFetch.apiGetJson.mockRejectedValue(null);
+
+      const result = await scadaService.getDeviceStatus();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Failed to fetch device status");
+      expect(result.data).toBeNull();
+    });
+
+    it("should preserve falsy data values with ?? operator", async () => {
+      apiFetch.apiGetJson.mockResolvedValue({ data: "" });
+
+      const result = await scadaService.getDeviceStatus();
+
+      expect(result.success).toBe(true);
+      expect(result.data).toBe("");
     });
   });
 
@@ -225,6 +427,25 @@ describe("SCADA Service", () => {
       expect(result.error).toBe("Failed to fetch SCADA status");
       expect(result.data).toBeNull();
     });
+
+    it("should handle error when rejection is null", async () => {
+      apiFetch.apiGetJson.mockRejectedValue(null);
+
+      const result = await scadaService.getScadaStatus();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Failed to fetch SCADA status");
+      expect(result.data).toBeNull();
+    });
+
+    it("should preserve falsy data values with ?? operator", async () => {
+      apiFetch.apiGetJson.mockResolvedValue({ data: 0 });
+
+      const result = await scadaService.getScadaStatus();
+
+      expect(result.success).toBe(true);
+      expect(result.data).toBe(0);
+    });
   });
 
   describe("Mock Data Generators", () => {
@@ -247,8 +468,7 @@ describe("SCADA Service", () => {
       const hours = 24;
       const data = scadaService.generateMockHistoricalData(hours);
 
-      // The function generates one data point per hour for the specified hours
-      expect(data).toHaveLength(hours);
+      expect(data).toHaveLength(24);
       expect(data[0]).toHaveProperty("timestamp");
       expect(data[0]).toHaveProperty("temperature");
       expect(data[0]).toHaveProperty("pressure");
@@ -257,7 +477,6 @@ describe("SCADA Service", () => {
     it("should generate mock historical data with default hours when not specified", () => {
       const data = scadaService.generateMockHistoricalData();
 
-      // If no hours specified, it should default to 24 hours
       expect(data).toHaveLength(24);
       expect(data[0]).toHaveProperty("timestamp");
       expect(data[0]).toHaveProperty("temperature");
@@ -285,6 +504,64 @@ describe("SCADA Service", () => {
       expect(statuses[0]).toHaveProperty("name");
       expect(statuses[0]).toHaveProperty("status");
       expect(statuses[0]).toHaveProperty("devices");
+    });
+
+    // ✅ Branch coverage tests for mock generators
+    it("covers the 'up' trend and excellent/no-issues branch", () => {
+      vi.spyOn(Math, "random").mockReturnValue(0.9);
+      const metrics = scadaService.generateMockMetrics();
+      expect(metrics.temperature.trend).toBe("up");
+      expect(metrics.dataQuality.status).toBe("excellent");
+      expect(metrics.dataQuality.issues).toBe(0);
+    });
+
+    // ✅ FIXED: Use 0.5 to get "down" trend and "good" status
+    it("covers the 'down' trend and good/issues branch", () => {
+      vi.spyOn(Math, "random").mockReturnValue(0.5);
+      const metrics = scadaService.generateMockMetrics();
+      expect(metrics.temperature.trend).toBe("down");
+      expect(metrics.dataQuality.status).toBe("good");
+      expect(metrics.dataQuality.issues).toBeGreaterThan(0);
+    });
+
+    it("covers the 'stable' trend branch", () => {
+      vi.spyOn(Math, "random").mockReturnValue(0.5);
+      const metrics = scadaService.generateMockMetrics();
+      expect(metrics.activeUnits.trend).toBe("stable");
+    });
+
+    it("covers the 'fair' dataQuality branch", () => {
+      vi.spyOn(Math, "random").mockReturnValue(0.01);
+      const metrics = scadaService.generateMockMetrics();
+      // With MIN_DATA_QUALITY=70 and DATA_QUALITY_RANGE=30, random=0.01 gives ~70
+      expect(metrics.dataQuality.status).toBe("fair");
+      expect(metrics.dataQuality.issues).toBeGreaterThan(0);
+    });
+
+    it("covers the disconnected protocol branch", () => {
+      vi.spyOn(Math, "random").mockReturnValue(0.05);
+      const protocols = scadaService.generateMockProtocolStatus();
+      expect(protocols.every((p) => p.status === "disconnected")).toBe(true);
+    });
+
+    it("covers the connected protocol branch", () => {
+      vi.spyOn(Math, "random").mockReturnValue(0.9);
+      const protocols = scadaService.generateMockProtocolStatus();
+      expect(protocols.every((p) => p.status === "connected")).toBe(true);
+    });
+
+    it("covers both trend branches for pressure and flow metrics", () => {
+      // Test up trend
+      vi.spyOn(Math, "random").mockReturnValue(0.9);
+      const metricsUp = scadaService.generateMockMetrics();
+      expect(metricsUp.pressure.trend).toBe("up");
+      expect(metricsUp.flow_rate_inlet.trend).toBe("up");
+
+      // Test down trend
+      vi.spyOn(Math, "random").mockReturnValue(0.1);
+      const metricsDown = scadaService.generateMockMetrics();
+      expect(metricsDown.pressure.trend).toBe("down");
+      expect(metricsDown.flow_rate_inlet.trend).toBe("down");
     });
   });
 });
