@@ -92,8 +92,9 @@ class DeviceStatusService {
       ...currentDevice,
       ...newStatus,
       lastSeen: new Date(),
+      // ✅ FIX: Only update lastStatusChange if status field is provided AND actually changed
       lastStatusChange:
-        currentDevice.status !== newStatus.status
+        newStatus.status !== undefined && currentDevice.status !== newStatus.status
           ? new Date()
           : currentDevice.lastStatusChange,
       isOnline: this.isDeviceOnline(newStatus.status || currentDevice.status),
@@ -238,7 +239,9 @@ class DeviceStatusService {
     this.listeners.forEach((listener) => {
       try {
         listener(statusChange);
-      } catch (_error) {}
+      } catch (_error) {
+        // Ignore listener errors
+      }
     });
   }
 
