@@ -10,8 +10,8 @@ class WebSocketService {
     this.ws = null;
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 10;
-    this.reconnectDelay = 1000; // Start with 1 second
-    this.maxReconnectDelay = 30000; // Max 30 seconds
+    this.reconnectDelay = 1000;
+    this.maxReconnectDelay = 30000;
     this.listeners = new Map();
     this.connectionStatus = "disconnected";
     this.statusListeners = new Set();
@@ -20,7 +20,13 @@ class WebSocketService {
     this.reconnectTimeout = null;
     this.heartbeatInterval = null;
     this.lastHeartbeat = null;
-    this.shouldReconnect = true; // Explicit flag for reconnection control
+    this.shouldReconnect = true;
+    this._pendingConnect = null;
+    this._pendingConnectId = 0;
+    this._connectTimeout = null;
+    this._pendingReject = null;
+    this._isDisconnecting = false;
+    this._currentRejectConnect = null;
   }
 
   /**
@@ -29,15 +35,86 @@ class WebSocketService {
    * @returns {Promise} - Resolves when connected
    */
   connect(tenantId = null) {
-    return new Promise((resolve, reject) => {
+    // If there's a pending connect, return that promise
+    if (this._pendingConnect) {
+      return this._pendingConnect;
+    }
+
+    // Clear any pending reconnect timeout when manually connecting
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+
+    // Reset disconnecting flag on new connect attempt
+    this._isDisconnecting = false;
+
+    const connectId = ++this._pendingConnectId;
+
+    this._pendingConnect = new Promise((resolve, reject) => {
+      let isResolved = false;
+      let isRejected = false;
+
+      // Helper to reject this specific connect attempt
+      const rejectConnect = (error) => {
+        if (!isResolved && !isRejected) {
+          isRejected = true;
+          this._currentRejectConnect = null;
+          if (this._connectTimeout) {
+            clearTimeout(this._connectTimeout);
+            this._connectTimeout = null;
+          }
+          if (this._pendingConnectId === connectId) {
+            this._pendingConnect = null;
+            this._pendingReject = null;
+          }
+          reject(error);
+        }
+      };
+
+      // Store reject function for cleanup/disconnect handling
+      this._pendingReject = reject;
+      this._currentRejectConnect = rejectConnect;
+
+      const cleanup = () => {
+        if (this._connectTimeout) {
+          clearTimeout(this._connectTimeout);
+          this._connectTimeout = null;
+        }
+        if (this._pendingConnectId === connectId) {
+          this._pendingConnect = null;
+          this._pendingReject = null;
+          this._currentRejectConnect = null;
+        }
+      };
+
+      // Helper to resolve this specific connect attempt
+      const resolveConnect = (value) => {
+        if (!isResolved && !isRejected) {
+          isResolved = true;
+          cleanup();
+          resolve(value);
+        }
+      };
+
       try {
         // Close existing connection if any
         if (this.ws) {
-          this.disconnect();
+          const oldWs = this.ws;
+          oldWs.onopen = null;
+          oldWs.onclose = null;
+          oldWs.onmessage = null;
+          oldWs.onerror = null;
+          try {
+            oldWs.close();
+          } catch (_e) {
+            // Ignore close errors
+          }
+          this.ws = null;
         }
 
         this.tenantId = tenantId;
-        this.shouldReconnect = true; // Enable reconnection on connect
+        this.shouldReconnect = true;
         const baseUrl =
           import.meta.env.VITE_WS_URL ||
           (
@@ -51,31 +128,70 @@ class WebSocketService {
 
         this.ws = new WebSocket(wsUrl);
 
+        // Store timeout on instance so it can be cleaned up externally
+        this._connectTimeout = setTimeout(() => {
+          if (!isResolved && !isRejected) {
+            rejectConnect(new Error("WebSocket connection timeout"));
+          }
+        }, 10000);
+
         this.ws.onopen = () => {
-          this.connectionStatus = "connected";
-          this.reconnectAttempts = 0;
-          this.reconnectDelay = 1000;
-          this.notifyStatusChange("connected");
-          this.startHeartbeat();
-          resolve();
+          // Check if disconnect was called during connection attempt
+          if (this._isDisconnecting) {
+            // If disconnect was called, don't resolve - we'll reject via disconnect
+            return;
+          }
+          if (!isResolved && !isRejected) {
+            this.connectionStatus = "connected";
+            this.reconnectAttempts = 0;
+            this.reconnectDelay = 1000;
+            this.notifyStatusChange("connected");
+            this.startHeartbeat();
+            this.subscribeAllStreams();
+            resolveConnect();
+          }
         };
 
         this.ws.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
             this.handleMessage(data);
-          } catch (_error) {}
+          } catch (_error) {
+            // Ignore malformed messages
+          }
         };
 
-        this.ws.onerror = (_error) => {
-          this.connectionStatus = "error";
-          this.notifyStatusChange("error");
+        this.ws.onerror = (error) => {
+          if (!isResolved && !isRejected) {
+            this.connectionStatus = "error";
+            this.notifyStatusChange("error");
+            rejectConnect(error);
+          }
         };
 
         this.ws.onclose = () => {
           this.connectionStatus = "disconnected";
           this.stopHeartbeat();
           this.notifyStatusChange("disconnected");
+
+          // If disconnect was called, reject with client disconnect error
+          if (this._isDisconnecting) {
+            if (!isResolved && !isRejected) {
+              rejectConnect(new Error("WebSocket disconnected by client"));
+            }
+            return;
+          }
+
+          // If we're still trying to connect and this was a manual disconnect
+          if (!isResolved && !isRejected) {
+            if (!this.shouldReconnect) {
+              rejectConnect(new Error("WebSocket connection closed manually"));
+              return;
+            }
+            // For auto-reconnect, reject the original promise
+            // and let the reconnect attempt create a new one
+            rejectConnect(new Error("WebSocket connection closed before opening"));
+          }
 
           // Attempt reconnection only if shouldReconnect flag is true
           if (
@@ -85,17 +201,30 @@ class WebSocketService {
             this.scheduleReconnect();
           }
         };
-
-        // Connection timeout
-        setTimeout(() => {
-          if (this.connectionStatus !== "connected") {
-            reject(new Error("WebSocket connection timeout"));
-          }
-        }, 10000);
       } catch (error) {
-        reject(error);
+        cleanup();
+        rejectConnect(error);
       }
     });
+
+    return this._pendingConnect;
+  }
+
+  /**
+   * Resubscribe all streams after reconnection
+   */
+  subscribeAllStreams() {
+    for (const [stream, callbacks] of this.listeners) {
+      if (callbacks.size > 0 && this.ws && this.ws.readyState === WebSocket.OPEN) {
+        this.ws.send(
+          JSON.stringify({
+            type: "subscribe",
+            stream: stream,
+            tenant_id: this.tenantId,
+          })
+        );
+      }
+    }
   }
 
   /**
@@ -115,7 +244,13 @@ class WebSocketService {
     this.notifyStatusChange("reconnecting");
 
     this.reconnectTimeout = setTimeout(() => {
-      this.connect(this.tenantId).catch((_error) => {});
+      // Clear the pending connect before retrying
+      this._pendingConnect = null;
+      this._pendingReject = null;
+      this._currentRejectConnect = null;
+      this.connect(this.tenantId).catch((_error) => {
+        // Connection error will be handled by onerror/onclose
+      });
     }, delay);
   }
 
@@ -123,14 +258,18 @@ class WebSocketService {
    * Start heartbeat to detect connection issues
    */
   startHeartbeat() {
+    this.stopHeartbeat();
+
     this.heartbeatInterval = setInterval(() => {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
         try {
           this.ws.send(JSON.stringify({ type: "ping" }));
           this.lastHeartbeat = Date.now();
-        } catch (_error) {}
+        } catch (_error) {
+          // Ignore send errors
+        }
       }
-    }, 30000); // Ping every 30 seconds
+    }, 30000);
   }
 
   /**
@@ -145,18 +284,56 @@ class WebSocketService {
 
   /**
    * Disconnect from WebSocket server
+   * Properly rejects any in-flight connect() promise
    */
   disconnect() {
+    // Set disconnecting flag first to prevent onopen from resolving
+    this._isDisconnecting = true;
+
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout);
       this.reconnectTimeout = null;
     }
 
+    if (this._connectTimeout) {
+      clearTimeout(this._connectTimeout);
+      this._connectTimeout = null;
+    }
+
+    // CRITICAL FIX: Reject any pending connect promise using the wrapper
+    if (this._currentRejectConnect) {
+      this._currentRejectConnect(new Error("WebSocket disconnected by client"));
+      this._currentRejectConnect = null;
+    }
+
+    // Also handle raw reject as fallback
+    if (this._pendingReject) {
+      this._pendingReject(new Error("WebSocket disconnected by client"));
+      this._pendingReject = null;
+    }
+
+    // Clear pending connect
+    this._pendingConnect = null;
+    this._pendingConnectId++;
+
     this.stopHeartbeat();
-    this.shouldReconnect = false; // Disable automatic reconnection
+    this.shouldReconnect = false;
 
     if (this.ws) {
-      this.ws.close();
+      // Store reference before nulling
+      const wsToClose = this.ws;
+      
+      // Null handlers AFTER storing reference
+      wsToClose.onopen = null;
+      wsToClose.onclose = null;
+      wsToClose.onmessage = null;
+      wsToClose.onerror = null;
+
+      try {
+        wsToClose.close();
+      } catch (_error) {
+        // Ignore close errors
+      }
       this.ws = null;
     }
 
@@ -166,9 +343,6 @@ class WebSocketService {
 
   /**
    * Subscribe to specific data stream
-   * @param {string} stream - Stream identifier (e.g., 'metrics', 'temperature', 'protocols')
-   * @param {Function} callback - Callback function to receive data
-   * @returns {Function} - Unsubscribe function
    */
   subscribe(stream, callback) {
     if (!this.listeners.has(stream)) {
@@ -177,31 +351,26 @@ class WebSocketService {
 
     this.listeners.get(stream).add(callback);
 
-    // Send subscription message to server
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(
         JSON.stringify({
           type: "subscribe",
           stream: stream,
           tenant_id: this.tenantId,
-        }),
+        })
       );
     }
 
-    // Return unsubscribe function
     return () => this.unsubscribe(stream, callback);
   }
 
   /**
    * Unsubscribe from data stream
-   * @param {string} stream - Stream identifier
-   * @param {Function} callback - Callback to remove
    */
   unsubscribe(stream, callback) {
     if (this.listeners.has(stream)) {
       this.listeners.get(stream).delete(callback);
 
-      // If no more listeners for this stream, unsubscribe from server
       if (this.listeners.get(stream).size === 0) {
         this.listeners.delete(stream);
 
@@ -210,7 +379,7 @@ class WebSocketService {
             JSON.stringify({
               type: "unsubscribe",
               stream: stream,
-            }),
+            })
           );
         }
       }
@@ -219,42 +388,45 @@ class WebSocketService {
 
   /**
    * Handle incoming WebSocket messages
-   * @param {Object} data - Parsed message data
    */
   handleMessage(data) {
-    // Handle pong response
     if (data.type === "pong") {
       this.lastHeartbeat = Date.now();
       return;
     }
 
-    // Cache the data for offline resilience
-    if (data.stream && data.data) {
+    if (data.stream && data.data !== undefined && data.data !== null) {
       this.dataCache.set(data.stream, {
         data: data.data,
         timestamp: Date.now(),
       });
     }
 
-    // Notify all listeners for this stream
     if (data.stream && this.listeners.has(data.stream)) {
       const callbacks = this.listeners.get(data.stream);
       callbacks.forEach((callback) => {
         try {
           callback(data.data);
-        } catch (_error) {}
+        } catch (_error) {
+          // Ignore callback errors
+        }
       });
     }
   }
 
   /**
    * Get cached data for a stream (offline support)
-   * @param {string} stream - Stream identifier
-   * @returns {Object|null} - Cached data or null
    */
   getCachedData(stream) {
     const cached = this.dataCache.get(stream);
     if (cached) {
+      if (typeof cached.data !== "object" || cached.data === null) {
+        return {
+          value: cached.data,
+          _cached: true,
+          _cachedAt: cached.timestamp,
+        };
+      }
       return {
         ...cached.data,
         _cached: true,
@@ -266,13 +438,9 @@ class WebSocketService {
 
   /**
    * Subscribe to connection status changes
-   * @param {Function} callback - Callback to receive status updates
-   * @returns {Function} - Unsubscribe function
    */
   onStatusChange(callback) {
     this.statusListeners.add(callback);
-
-    // Immediately notify of current status
     callback(this.connectionStatus);
 
     return () => {
@@ -282,19 +450,19 @@ class WebSocketService {
 
   /**
    * Notify all status listeners of connection status change
-   * @param {string} status - New connection status
    */
   notifyStatusChange(status) {
     this.statusListeners.forEach((callback) => {
       try {
         callback(status);
-      } catch (_error) {}
+      } catch (_error) {
+        // Ignore callback errors
+      }
     });
   }
 
   /**
    * Get current connection status
-   * @returns {string} - Connection status
    */
   getStatus() {
     return this.connectionStatus;
@@ -302,7 +470,6 @@ class WebSocketService {
 
   /**
    * Check if WebSocket is connected
-   * @returns {boolean} - True if connected
    */
   isConnected() {
     return (
