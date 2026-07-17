@@ -37,9 +37,12 @@ const isTokenValid = (token) => {
       }
     }
     // If we can't decode or no exp claim, assume valid (will be validated by API)
+    // Log a warning for debugging malformed tokens
+    console.warn("isTokenValid: could not decode token or no exp claim, deferring to server validation");
     return true;
   } catch (_error) {
     // If we can't decode, assume valid (will be validated by API)
+    console.warn("isTokenValid: could not decode token, deferring to server validation");
     return true;
   }
 };
@@ -107,6 +110,15 @@ const restoreFromLocalStorage = () => {
     const storedUser = localStorage.getItem("user");
     const storedExpiry = localStorage.getItem("token_expiry");
 
+    // FIX: Clean up partial/orphaned state instead of silently returning false
+    if (storedToken || storedUser) {
+      // If only one exists, clean up the orphaned data
+      if (!storedToken || !storedUser) {
+        clearAuthState();
+        return false;
+      }
+    }
+
     if (storedToken && storedUser) {
       // Check if token has expired
       if (storedExpiry) {
@@ -130,6 +142,7 @@ const restoreFromLocalStorage = () => {
         tokenExpiry = storedExpiry ? parseInt(storedExpiry, 10) : null;
         return true;
       } catch (_e) {
+        // User JSON is corrupted - clear everything
         clearAuthState();
         return false;
       }
@@ -584,7 +597,6 @@ export const updateProfile = async (profileData) => {
       };
     }
 
-    // Fixed: Consistent error message with "Please try again"
     throw {
       success: false,
       message: result?.error?.message || result?.message || "Unable to update profile. Please try again.",
