@@ -1,6 +1,6 @@
-import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
 import React from "react";
 import OPCUANodeBrowser from "./OPCUANodeBrowser";
 
@@ -142,12 +142,68 @@ const mockNodeValues = {
   },
 };
 
+const mockNestedChildrenNodes = {
+  children: [
+    {
+      nodeId: "ns=2;s=Device1/SubFolder",
+      displayName: "SubFolder",
+      nodeClass: "Object",
+      hasChildren: true,
+    },
+  ],
+};
+
+const mockGrandchildNodes = {
+  children: [
+    {
+      nodeId: "ns=2;s=Device1/SubFolder/Humidity",
+      displayName: "Humidity",
+      nodeClass: "Variable",
+      hasChildren: false,
+      dataType: "Double",
+    },
+  ],
+};
+
+const mockRootNodesWithMethod = {
+  nodes: [
+    {
+      nodeId: "ns=2;s=Device1",
+      displayName: "Device One",
+      nodeClass: "Object",
+      hasChildren: true,
+    },
+    {
+      nodeId: "ns=2;s=Calculate",
+      displayName: "Calculate Method",
+      nodeClass: "Method",
+      hasChildren: false,
+    },
+  ],
+};
+
+const mockRootNodesWithDetails = {
+  nodes: [
+    {
+      nodeId: "ns=2;s=Detailed",
+      displayName: "Detailed Node",
+      nodeClass: "Variable",
+      hasChildren: false,
+      dataType: "String",
+      accessLevel: "Read/Write",
+      description: "A fully described node",
+      value: "hello",
+    },
+  ],
+};
+
 describe("OPCUANodeBrowser", () => {
   const mockOnClose = vi.fn();
   const mockTenantId = "tenant-123";
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers();
     useMediaQuery.mockReturnValue(true);
     apiGetJson.mockImplementation((url) => {
       if (url.includes("/nodes") && !url.includes("/children")) {
@@ -162,6 +218,11 @@ describe("OPCUANodeBrowser", () => {
       return Promise.resolve({});
     });
     apiPostJson.mockResolvedValue({ success: true });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    vi.useRealTimers();
   });
 
   it("should render desktop dialog when isOpen is true", () => {
@@ -251,9 +312,6 @@ describe("OPCUANodeBrowser", () => {
       expect(screen.getByText("Device One")).toBeInTheDocument();
     });
 
-    // The expand/collapse toggle is a plain native <button> wrapping the
-    // chevron icon — it does NOT use the mocked Button component, so it
-    // won't show up via getAllByTestId("button"). Find it via the icon.
     const chevronIcon = screen.getByTestId("chevron-right-icon");
     const expandButton = chevronIcon.closest("button");
     await user.click(expandButton);
@@ -281,12 +339,9 @@ describe("OPCUANodeBrowser", () => {
       expect(screen.getByText("Temperature Sensor")).toBeInTheDocument();
     });
 
-    // Click on Temperature Sensor node
     const nodeButton = screen.getByText("Temperature Sensor");
     await user.click(nodeButton);
 
-    // Once selected, "Temperature Sensor" appears twice (tree row + details
-    // heading), so scope the assertion to the heading specifically.
     await waitFor(() => {
       expect(
         screen.getByRole("heading", { name: "Temperature Sensor" })
@@ -310,11 +365,9 @@ describe("OPCUANodeBrowser", () => {
       expect(screen.getByText("Temperature Sensor")).toBeInTheDocument();
     });
 
-    // Click on Temperature Sensor node
     const nodeButton = screen.getByText("Temperature Sensor");
     await user.click(nodeButton);
 
-    // Click Subscribe button
     const buttons = screen.getAllByTestId("button");
     const subscribeButton = buttons.find(btn => btn.textContent.includes("Subscribe"));
     await user.click(subscribeButton);
@@ -345,11 +398,9 @@ describe("OPCUANodeBrowser", () => {
       expect(screen.getByText("Temperature Sensor")).toBeInTheDocument();
     });
 
-    // Click on Temperature Sensor node
     const nodeButton = screen.getByText("Temperature Sensor");
     await user.click(nodeButton);
 
-    // First subscribe
     let buttons = screen.getAllByTestId("button");
     let subscribeButton = buttons.find(btn => btn.textContent.includes("Subscribe"));
     await user.click(subscribeButton);
@@ -361,8 +412,6 @@ describe("OPCUANodeBrowser", () => {
       );
     });
 
-    // Now unsubscribe - the button text should have changed
-    // Re-fetch buttons after state update
     await waitFor(async () => {
       const updatedButtons = screen.getAllByTestId("button");
       const unsubscribeButton = updatedButtons.find(btn => btn.textContent.includes("Unsubscribe"));
@@ -397,7 +446,6 @@ describe("OPCUANodeBrowser", () => {
     const searchInput = screen.getByPlaceholderText("Search nodes...");
     await user.type(searchInput, "Temperature");
 
-    // Should show Temperature Sensor but not Device One
     expect(screen.getByText("Temperature Sensor")).toBeInTheDocument();
     expect(screen.queryByText("Device One")).not.toBeInTheDocument();
   });
@@ -457,11 +505,9 @@ describe("OPCUANodeBrowser", () => {
       expect(screen.getByText("Temperature Sensor")).toBeInTheDocument();
     });
 
-    // Click on Temperature Sensor node
     const nodeButton = screen.getByText("Temperature Sensor");
     await user.click(nodeButton);
 
-    // Subscribe
     const buttons = screen.getAllByTestId("button");
     const subscribeButton = buttons.find(btn => btn.textContent.includes("Subscribe"));
     await user.click(subscribeButton);
@@ -530,8 +576,6 @@ describe("OPCUANodeBrowser", () => {
     const nodeButton = screen.getByText("Temperature Sensor");
     await user.click(nodeButton);
 
-    // Subscribe first — must succeed (default resolved mock) so an
-    // "Unsubscribe" button actually appears afterward.
     let buttons = screen.getAllByTestId("button");
     let subscribeButton = buttons.find(btn => btn.textContent.includes("Subscribe"));
     await user.click(subscribeButton);
@@ -540,7 +584,6 @@ describe("OPCUANodeBrowser", () => {
       expect(toast.success).toHaveBeenCalledWith("Subscribed to Temperature Sensor");
     });
 
-    // Now queue the rejection for the unsubscribe call specifically
     apiPostJson.mockRejectedValueOnce(new Error("Network error"));
 
     const updatedButtons = screen.getAllByTestId("button");
@@ -567,8 +610,6 @@ describe("OPCUANodeBrowser", () => {
   });
 
   it("should display loading state", async () => {
-    // Delay the API response to show loading state, then resolve with
-    // the actual mock data so the component can finish rendering.
     apiGetJson.mockImplementation(
       () => new Promise((resolve) => setTimeout(() => resolve(mockRootNodes), 100))
     );
@@ -614,5 +655,628 @@ describe("OPCUANodeBrowser", () => {
     );
 
     expect(screen.getByTestId("dialog")).toBeInTheDocument();
+  });
+
+  // ============================================================
+  // ADDITIONAL BRANCH COVERAGE TESTS
+  // ============================================================
+
+  it("should collapse node when expand icon clicked twice", async () => {
+    const user = userEvent.setup();
+    render(<OPCUANodeBrowser isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
+
+    await waitFor(() => expect(screen.getByText("Device One")).toBeInTheDocument());
+
+    const expandButton = screen.getByTestId("chevron-right-icon").closest("button");
+    await user.click(expandButton);
+    await waitFor(() => expect(screen.getByText("Temperature")).toBeInTheDocument());
+
+    const collapseButton = screen.getByTestId("chevron-down-icon").closest("button");
+    await user.click(collapseButton);
+
+    await waitFor(() => {
+      expect(screen.queryByText("Temperature")).not.toBeInTheDocument();
+    });
+  });
+
+  it("should not refetch children when already loaded", async () => {
+    const user = userEvent.setup();
+    render(<OPCUANodeBrowser isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
+
+    await waitFor(() => expect(screen.getByText("Device One")).toBeInTheDocument());
+
+    const expandButton = screen.getByTestId("chevron-right-icon").closest("button");
+    await user.click(expandButton);
+    await waitFor(() => expect(screen.getByText("Temperature")).toBeInTheDocument());
+
+    const childrenCallCount = apiGetJson.mock.calls.filter((c) => c[0].includes("/children")).length;
+
+    const collapseButton = screen.getByTestId("chevron-down-icon").closest("button");
+    await user.click(collapseButton);
+    await waitFor(() => expect(screen.queryByText("Temperature")).not.toBeInTheDocument());
+
+    const reExpandButton = screen.getByTestId("chevron-right-icon").closest("button");
+    await user.click(reExpandButton);
+    await waitFor(() => expect(screen.getByText("Temperature")).toBeInTheDocument());
+
+    const finalChildrenCallCount = apiGetJson.mock.calls.filter((c) => c[0].includes("/children")).length;
+    expect(finalChildrenCallCount).toBe(childrenCallCount);
+  });
+
+  it("should expand a nested grandchild node", async () => {
+    const user = userEvent.setup();
+    apiGetJson.mockImplementation((url) => {
+      if (url.includes("SubFolder/children")) {
+        return Promise.resolve(mockGrandchildNodes);
+      }
+      if (url.includes(`${encodeURIComponent("ns=2;s=Device1")}/children`)) {
+        return Promise.resolve(mockNestedChildrenNodes);
+      }
+      if (url.includes("/nodes") && !url.includes("/children")) {
+        return Promise.resolve(mockRootNodes);
+      }
+      return Promise.resolve({});
+    });
+
+    render(<OPCUANodeBrowser isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
+    await waitFor(() => expect(screen.getByText("Device One")).toBeInTheDocument());
+
+    await user.click(screen.getByTestId("chevron-right-icon").closest("button"));
+    await waitFor(() => expect(screen.getByText("SubFolder")).toBeInTheDocument());
+
+    const chevrons = screen.getAllByTestId("chevron-right-icon");
+    await user.click(chevrons[chevrons.length - 1].closest("button"));
+
+    await waitFor(() => {
+      expect(apiGetJson).toHaveBeenCalledWith(
+        `/api/v1/protocols/opcua/nodes/${encodeURIComponent("ns=2;s=Device1/SubFolder")}/children?tenant_id=${mockTenantId}`
+      );
+      expect(screen.getByText("Humidity")).toBeInTheDocument();
+    });
+  });
+
+  it("should render Database icon for unrecognized node class", async () => {
+    apiGetJson.mockImplementation((url) => {
+      if (url.includes("/nodes") && !url.includes("/children")) return Promise.resolve(mockRootNodesWithMethod);
+      return Promise.resolve({});
+    });
+
+    render(<OPCUANodeBrowser isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Calculate Method")).toBeInTheDocument();
+      expect(screen.getAllByTestId("database-icon").length).toBeGreaterThan(0);
+    });
+  });
+
+  // ✅ FIXED: Scope to the specific row
+  it("should toggle subscription via the inline tree eye icon", async () => {
+    const user = userEvent.setup();
+    render(<OPCUANodeBrowser isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
+
+    await waitFor(() => expect(screen.getByText("Temperature Sensor")).toBeInTheDocument());
+
+    const row = screen.getByText("Temperature Sensor").closest("button");
+    const eyeOffIcon = within(row).getByTestId("eye-off-icon");
+    await user.click(eyeOffIcon.closest("button"));
+
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith("Subscribed to Temperature Sensor");
+      expect(within(row).getByTestId("eye-icon")).toBeInTheDocument();
+    });
+
+    await user.click(within(row).getByTestId("eye-icon").closest("button"));
+
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith("Unsubscribed from Temperature Sensor");
+    });
+  });
+
+  it("should fetch children, subscribe, and unsubscribe without tenantId", async () => {
+    const user = userEvent.setup();
+    apiGetJson.mockImplementation((url) => {
+      if (url === "/api/v1/protocols/opcua/nodes") return Promise.resolve(mockRootNodes);
+      if (url === `/api/v1/protocols/opcua/nodes/${encodeURIComponent("ns=2;s=Device1")}/children`) {
+        return Promise.resolve(mockChildrenNodes);
+      }
+      return Promise.resolve({});
+    });
+
+    render(<OPCUANodeBrowser isOpen={true} onClose={mockOnClose} tenantId={null} />);
+    await waitFor(() => expect(screen.getByText("Device One")).toBeInTheDocument());
+
+    await user.click(screen.getByTestId("chevron-right-icon").closest("button"));
+    await waitFor(() => {
+      expect(apiGetJson).toHaveBeenCalledWith(
+        `/api/v1/protocols/opcua/nodes/${encodeURIComponent("ns=2;s=Device1")}/children`
+      );
+    });
+
+    await user.click(screen.getByText("Temperature Sensor"));
+    const subscribeButton = screen.getAllByTestId("button").find((b) => b.textContent.includes("Subscribe"));
+    await user.click(subscribeButton);
+
+    await waitFor(() => {
+      expect(apiPostJson).toHaveBeenCalledWith("/api/v1/protocols/opcua/subscribe", {
+        nodeId: "ns=2;s=Temperature",
+        samplingInterval: 1000,
+      });
+    });
+
+    const unsubscribeButton = screen.getAllByTestId("button").find((b) => b.textContent.includes("Unsubscribe"));
+    await user.click(unsubscribeButton);
+
+    await waitFor(() => {
+      expect(apiPostJson).toHaveBeenCalledWith("/api/v1/protocols/opcua/unsubscribe", {
+        nodeId: "ns=2;s=Temperature",
+      });
+    });
+  });
+
+  it("should return empty children when the children fetch fails", async () => {
+    const user = userEvent.setup();
+    apiGetJson.mockImplementation((url) => {
+      if (url.includes("/children")) return Promise.reject(new Error("Network error"));
+      if (url.includes("/nodes")) return Promise.resolve(mockRootNodes);
+      return Promise.resolve({});
+    });
+
+    render(<OPCUANodeBrowser isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
+    await waitFor(() => expect(screen.getByText("Device One")).toBeInTheDocument());
+
+    await user.click(screen.getByTestId("chevron-right-icon").closest("button"));
+
+    await waitFor(() => {
+      expect(screen.queryByText("Temperature")).not.toBeInTheDocument();
+      expect(screen.getByText("Device One")).toBeInTheDocument();
+    });
+  });
+
+  it("should poll and display updated values for subscribed nodes", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup();
+
+    render(<OPCUANodeBrowser isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
+    await waitFor(() => expect(screen.getByText("Temperature Sensor")).toBeInTheDocument());
+
+    await user.click(screen.getByText("Temperature Sensor"));
+    const subscribeButton = screen.getAllByTestId("button").find((b) => b.textContent.includes("Subscribe"));
+    await user.click(subscribeButton);
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Subscribed to Temperature Sensor"));
+
+    await vi.advanceTimersByTimeAsync(2000);
+
+    await waitFor(() => {
+      expect(apiGetJson).toHaveBeenCalledWith(
+        `/api/v1/protocols/opcua/values?tenant_id=${mockTenantId}`
+      );
+      expect(screen.getByText("26")).toBeInTheDocument();
+    });
+
+    vi.useRealTimers();
+  });
+
+  it("should not poll values when there are no subscribed nodes", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+
+    render(<OPCUANodeBrowser isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
+    await waitFor(() => expect(screen.getByText("Device One")).toBeInTheDocument());
+
+    apiGetJson.mockClear();
+    await vi.advanceTimersByTimeAsync(2000);
+
+    expect(apiGetJson).not.toHaveBeenCalledWith(
+      expect.stringContaining("/values")
+    );
+
+    vi.useRealTimers();
+  });
+
+  it("should swallow errors during value polling", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup();
+
+    render(<OPCUANodeBrowser isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
+    await waitFor(() => expect(screen.getByText("Temperature Sensor")).toBeInTheDocument());
+
+    await user.click(screen.getByText("Temperature Sensor"));
+    const subscribeButton = screen.getAllByTestId("button").find((b) => b.textContent.includes("Subscribe"));
+    await user.click(subscribeButton);
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Subscribed to Temperature Sensor"));
+
+    toast.error.mockClear();
+
+    apiGetJson.mockImplementation((url) => {
+      if (url.includes("/values")) return Promise.reject(new Error("poll failed"));
+      return Promise.resolve({});
+    });
+
+    await vi.advanceTimersByTimeAsync(2000);
+
+    expect(toast.error).not.toHaveBeenCalled();
+
+    vi.useRealTimers();
+  });
+
+  it("should show placeholder text when no node is selected (desktop)", async () => {
+    render(<OPCUANodeBrowser isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
+    await waitFor(() => expect(screen.getByText("Device One")).toBeInTheDocument());
+
+    expect(screen.getByText("Select a node to view details")).toBeInTheDocument();
+  });
+
+  it("should display accessLevel and description when present", async () => {
+    const user = userEvent.setup();
+    apiGetJson.mockImplementation((url) => {
+      if (url.includes("/nodes") && !url.includes("/children")) return Promise.resolve(mockRootNodesWithDetails);
+      return Promise.resolve({});
+    });
+
+    render(<OPCUANodeBrowser isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
+    await waitFor(() => expect(screen.getByText("Detailed Node")).toBeInTheDocument());
+
+    await user.click(screen.getByText("Detailed Node"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Read/Write")).toBeInTheDocument();
+      expect(screen.getByText("A fully described node")).toBeInTheDocument();
+    });
+  });
+
+  it("should select a node and show its value in the mobile drawer", async () => {
+    const user = userEvent.setup();
+    useMediaQuery.mockReturnValue(false);
+
+    render(<OPCUANodeBrowser isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
+    await waitFor(() => expect(screen.getByText("Temperature Sensor")).toBeInTheDocument());
+
+    await user.click(screen.getByText("Temperature Sensor"));
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", { name: "Temperature Sensor" })
+      ).toBeInTheDocument();
+      expect(screen.getByText("Current Value")).toBeInTheDocument();
+      expect(screen.getByText("25.5")).toBeInTheDocument();
+    });
+  });
+
+  it("should show em dash when node value is undefined", async () => {
+    apiGetJson.mockImplementation((url) => {
+      if (url.includes("/nodes") && !url.includes("/children")) {
+        return Promise.resolve({
+          nodes: [
+            {
+              nodeId: "ns=2;s=Temp",
+              displayName: "Temperature",
+              nodeClass: "Variable",
+              hasChildren: false,
+              dataType: "Double",
+            },
+          ],
+        });
+      }
+      if (url.includes("/values")) {
+        return Promise.resolve({ values: {} });
+      }
+      return Promise.resolve({});
+    });
+
+    const user = userEvent.setup();
+    render(
+      <OPCUANodeBrowser
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Temperature")).toBeInTheDocument();
+    });
+
+    const nodeButton = screen.getByText("Temperature");
+    await user.click(nodeButton);
+
+    const buttons = screen.getAllByTestId("button");
+    const subscribeButton = buttons.find(btn => btn.textContent.includes("Subscribe"));
+    await user.click(subscribeButton);
+
+    await waitFor(() => {
+      expect(screen.getByText("Current Value")).toBeInTheDocument();
+      expect(screen.getByText("—")).toBeInTheDocument();
+    });
+  });
+
+  it("should display timestamp when node value has timestamp", async () => {
+    const user = userEvent.setup();
+    render(
+      <OPCUANodeBrowser
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Temperature Sensor")).toBeInTheDocument();
+    });
+
+    const nodeButton = screen.getByText("Temperature Sensor");
+    await user.click(nodeButton);
+
+    const buttons = screen.getAllByTestId("button");
+    const subscribeButton = buttons.find(btn => btn.textContent.includes("Subscribe"));
+    await user.click(subscribeButton);
+
+    await waitFor(() => {
+      expect(screen.getByText("Current Value")).toBeInTheDocument();
+      expect(screen.getByText(/10:00/)).toBeInTheDocument();
+    });
+  });
+
+  it("should show chevron when hasChildren is false but children array exists", async () => {
+    apiGetJson.mockImplementation((url) => {
+      if (url.includes("/nodes") && !url.includes("/children")) {
+        return Promise.resolve({
+          nodes: [
+            {
+              nodeId: "ns=2;s=Device1",
+              displayName: "Device One",
+              nodeClass: "Object",
+              hasChildren: false,
+              children: [{ nodeId: "ns=2;s=Device1/Temp", displayName: "Temp", nodeClass: "Variable" }],
+            },
+          ],
+        });
+      }
+      if (url.includes("/children")) {
+        return Promise.resolve({ children: [] });
+      }
+      return Promise.resolve({});
+    });
+
+    render(
+      <OPCUANodeBrowser
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Device One")).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId("chevron-right-icon")).toBeInTheDocument();
+  });
+
+  it("should handle empty children response gracefully", async () => {
+    apiGetJson.mockImplementation((url) => {
+      if (url.includes("/nodes") && !url.includes("/children")) {
+        return Promise.resolve({
+          nodes: [
+            {
+              nodeId: "ns=2;s=Device1",
+              displayName: "Device One",
+              nodeClass: "Object",
+              hasChildren: true,
+            },
+          ],
+        });
+      }
+      if (url.includes("/children")) {
+        return Promise.resolve({ children: [] });
+      }
+      return Promise.resolve({});
+    });
+
+    const user = userEvent.setup();
+    render(
+      <OPCUANodeBrowser
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Device One")).toBeInTheDocument();
+    });
+
+    const chevronIcon = screen.getByTestId("chevron-right-icon");
+    const expandButton = chevronIcon.closest("button");
+    await user.click(expandButton);
+
+    await waitFor(() => {
+      expect(screen.queryByText("Temperature")).not.toBeInTheDocument();
+    });
+  });
+
+  it("should recursively update nested node children", async () => {
+    const user = userEvent.setup();
+    render(
+      <OPCUANodeBrowser
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Device One")).toBeInTheDocument();
+    });
+
+    const chevronIcon = screen.getByTestId("chevron-right-icon");
+    const expandButton = chevronIcon.closest("button");
+    await user.click(expandButton);
+
+    await waitFor(() => {
+      expect(screen.getByText("Temperature")).toBeInTheDocument();
+    });
+
+    apiGetJson.mockClear();
+    await user.click(expandButton);
+    await user.click(expandButton);
+
+    expect(apiGetJson).not.toHaveBeenCalledWith(
+      expect.stringContaining("/children")
+    );
+  });
+
+  // ✅ FIXED: Scope to the specific row
+  it("should show subscribe/unsubscribe button for Variable nodes in tree", async () => {
+    const user = userEvent.setup();
+    render(
+      <OPCUANodeBrowser
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Temperature Sensor")).toBeInTheDocument();
+    });
+
+    const row = screen.getByText("Temperature Sensor").closest("button");
+    const eyeOffIcon = within(row).getByTestId("eye-off-icon");
+    expect(eyeOffIcon).toBeInTheDocument();
+
+    const eyeButton = eyeOffIcon.closest("button");
+    await user.click(eyeButton);
+
+    await waitFor(() => {
+      expect(apiPostJson).toHaveBeenCalledWith(
+        `/api/v1/protocols/opcua/subscribe?tenant_id=${mockTenantId}`,
+        expect.any(Object)
+      );
+    });
+  });
+
+  // ✅ FIXED: Scope to the specific row
+  it("should show Eye icon for subscribed nodes in tree", async () => {
+    const user = userEvent.setup();
+    render(
+      <OPCUANodeBrowser
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Temperature Sensor")).toBeInTheDocument();
+    });
+
+    const row = screen.getByText("Temperature Sensor").closest("button");
+    const eyeOffIcon = within(row).getByTestId("eye-off-icon");
+    const eyeButton = eyeOffIcon.closest("button");
+    await user.click(eyeButton);
+
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith("Subscribed to Temperature Sensor");
+      expect(within(row).getByTestId("eye-icon")).toBeInTheDocument();
+    });
+  });
+
+  it("should display 0 value correctly when node value is 0", async () => {
+    apiGetJson.mockImplementation((url) => {
+      if (url.includes("/nodes") && !url.includes("/children")) {
+        return Promise.resolve({
+          nodes: [
+            {
+              nodeId: "ns=2;s=Zero",
+              displayName: "Zero Value",
+              nodeClass: "Variable",
+              hasChildren: false,
+              dataType: "Integer",
+              value: 0,
+            },
+          ],
+        });
+      }
+      if (url.includes("/values")) {
+        return Promise.resolve({
+          values: { "ns=2;s=Zero": { value: 0, timestamp: "2026-07-13T10:00:00Z" } },
+        });
+      }
+      return Promise.resolve({});
+    });
+
+    const user = userEvent.setup();
+    render(
+      <OPCUANodeBrowser
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Zero Value")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByText("Zero Value"));
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", { name: "Zero Value" })
+      ).toBeInTheDocument();
+    });
+
+    const subscribeButton = screen.getAllByTestId("button").find((b) => b.textContent.includes("Subscribe"));
+    await user.click(subscribeButton);
+
+    await waitFor(() => {
+      expect(screen.getByText("Current Value")).toBeInTheDocument();
+      expect(screen.getByText("0")).toBeInTheDocument();
+    });
+  });
+
+  // ✅ FIXED: Scope to the specific row
+  it("should not refetch root nodes when subscribing/unsubscribing", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    
+    const user = userEvent.setup();
+    render(
+      <OPCUANodeBrowser
+        isOpen={true}
+        onClose={mockOnClose}
+        tenantId={mockTenantId}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Device One")).toBeInTheDocument();
+    });
+
+    const expandButton = screen.getByTestId("chevron-right-icon").closest("button");
+    await user.click(expandButton);
+
+    await waitFor(() => {
+      expect(screen.getByText("Temperature")).toBeInTheDocument();
+    });
+
+    apiGetJson.mockClear();
+
+    const row = screen.getByText("Temperature Sensor").closest("button");
+    const eyeOffIcon = within(row).getByTestId("eye-off-icon");
+    await user.click(eyeOffIcon.closest("button"));
+
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith("Subscribed to Temperature Sensor");
+      expect(within(row).getByTestId("eye-icon")).toBeInTheDocument();
+    });
+
+    await vi.advanceTimersByTimeAsync(2100);
+
+    expect(apiGetJson).not.toHaveBeenCalledWith(
+      expect.stringContaining("/nodes")
+    );
+
+    expect(screen.getByText("Temperature")).toBeInTheDocument();
+    
+    vi.useRealTimers();
   });
 });
