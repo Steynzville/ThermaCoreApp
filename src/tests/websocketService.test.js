@@ -33,7 +33,16 @@ class MockWebSocket {
     this._closeTimer = null;
     this._errorTimer = null;
 
-    // Schedule the initial behavior
+    // Defer scheduling to a microtask so subclass constructors (which run
+    // synchronously right after super() returns, but BEFORE this microtask)
+    // have already applied their overrides (e.g. _openDelay = 5000) by the
+    // time we actually read this._openDelay and call setTimeout.
+    queueMicrotask(() => this._scheduleOpen());
+  }
+
+  _scheduleOpen() {
+    if (this._closed) return; // already closed before we even got to schedule
+
     this._openTimer = setTimeout(() => {
       if (this._shouldError) {
         this._triggerError();
@@ -73,7 +82,7 @@ class MockWebSocket {
     if (this._closed) return;
     this._closed = true;
     this.readyState = MockWebSocket.CLOSED;
-    
+
     // Clear any pending timers
     if (this._openTimer) {
       clearTimeout(this._openTimer);
@@ -87,7 +96,7 @@ class MockWebSocket {
       clearTimeout(this._errorTimer);
       this._errorTimer = null;
     }
-    
+
     const onclose = this.onclose;
     this.onclose = null;
     this.onopen = null;
@@ -203,12 +212,12 @@ describe("WebSocket Service", () => {
   beforeEach(() => {
     originalWebSocket = global.WebSocket;
     global.WebSocket = MockWebSocket;
-    
+
     // Reset the service state
     websocketService.disconnect();
     vi.clearAllMocks();
     vi.useRealTimers();
-    
+
     // Reset all internal state
     websocketService.listeners = new Map();
     websocketService.statusListeners = new Set();
@@ -904,7 +913,7 @@ describe("WebSocket Service", () => {
       // Wait for the connection attempt to be in progress
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Verify the promise is pending
+      // Verify the promise is still pending (should be, since slow connecting takes 5000ms)
       expect(websocketService._pendingReject).not.toBeNull();
       expect(websocketService._currentRejectConnect).not.toBeNull();
 
@@ -929,9 +938,9 @@ describe("WebSocket Service", () => {
       const connectPromise = websocketService.connect("test-tenant");
 
       await new Promise(resolve => setTimeout(resolve, 100));
-      
+
       expect(websocketService._pendingReject).not.toBeNull();
-      
+
       websocketService.disconnect();
 
       await expect(connectPromise).rejects.toThrow(
