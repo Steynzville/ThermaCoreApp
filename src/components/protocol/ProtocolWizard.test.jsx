@@ -20,6 +20,7 @@ import {
   screen,
   waitFor,
   within,
+  act,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
@@ -51,18 +52,28 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 // ============================================================
 
 beforeAll(() => {
-  // Basic DOM APIs
+  // ✅ Vaul Drawer pointer capture methods
   window.HTMLElement.prototype.hasPointerCapture = vi.fn();
+  window.HTMLElement.prototype.setPointerCapture = vi.fn();
+  window.HTMLElement.prototype.releasePointerCapture = vi.fn();
   window.HTMLElement.prototype.scrollIntoView = vi.fn();
 
-  // getComputedStyle mock
+  // ✅ getComputedStyle - wrap real implementation so Vaul can read transform
+  const realGetComputedStyle = window.getComputedStyle;
   Object.defineProperty(window, 'getComputedStyle', {
-    value: () => ({
-      getPropertyValue: () => '',
-    }),
+    value: (el, pseudo) => {
+      const style = realGetComputedStyle(el, pseudo);
+      return {
+        ...style,
+        getPropertyValue: (prop) => style.getPropertyValue(prop) || '',
+        transform: style.transform || 'none',
+        webkitTransform: style.webkitTransform || 'none',
+        mozTransform: style.mozTransform || 'none',
+      };
+    },
   });
 
-  // ✅ FIXED: ResizeObserver - Radix Select (Popper) and Vaul Drawer both need this
+  // ✅ ResizeObserver - Radix Select (Popper) and Vaul Drawer both need this
   class MockResizeObserver {
     observe() {}
     unobserve() {}
@@ -71,7 +82,7 @@ beforeAll(() => {
   window.ResizeObserver = MockResizeObserver;
   global.ResizeObserver = MockResizeObserver;
 
-  // ✅ FIXED: IntersectionObserver - used by some Radix components
+  // ✅ IntersectionObserver - used by some Radix components
   class MockIntersectionObserver {
     observe() {}
     unobserve() {}
@@ -83,7 +94,7 @@ beforeAll(() => {
   window.IntersectionObserver = MockIntersectionObserver;
   global.IntersectionObserver = MockIntersectionObserver;
 
-  // ✅ FIXED: Ensure getBoundingClientRect returns a full DOMRect-shaped object
+  // ✅ getBoundingClientRect - full DOMRect shape
   window.HTMLElement.prototype.getBoundingClientRect = vi.fn(() => ({
     width: 0,
     height: 0,
@@ -96,7 +107,7 @@ beforeAll(() => {
     toJSON() {},
   }));
 
-  // ✅ FIXED: Element.prototype.getClientRects for some dropdown measurements
+  // ✅ getClientRects - for dropdown measurements
   window.Element.prototype.getClientRects = vi.fn(() => ({
     item: () => ({
       width: 0,
@@ -123,7 +134,7 @@ beforeAll(() => {
     },
   }));
 
-  // ✅ FIXED: matchMedia for drawer responsive behavior
+  // ✅ matchMedia - for drawer responsive behavior
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
     value: vi.fn().mockImplementation(query => ({
@@ -196,7 +207,6 @@ describe("ProtocolWizard - Complete Coverage", () => {
 
   // ============ HELPER FUNCTIONS ============
 
-  // ✅ FIXED: Define setupUserEvent helper
   const setupUserEvent = () => userEvent.setup();
 
   const getDialog = async () => {
@@ -565,24 +575,19 @@ describe("ProtocolWizard - Complete Coverage", () => {
       render(<ProtocolWizard {...defaultProps} />);
       await navigateToStep(2, "opcua");
 
-      // Find the select trigger
       const trigger = screen.getByRole("combobox");
       expect(trigger).toBeInTheDocument();
       
-      // Click to open dropdown
       fireEvent.click(trigger);
       
-      // Wait for options to appear
       await waitFor(() => {
         const option = screen.queryByText("Sign and Encrypt");
         expect(option).toBeInTheDocument();
       });
 
-      // Click the option
       const option = screen.getByText("Sign and Encrypt");
       fireEvent.click(option);
 
-      // Verify the trigger shows the selected value
       await waitFor(() => {
         expect(trigger).toHaveTextContent(/Sign and Encrypt/i);
       });
@@ -869,9 +874,7 @@ describe("ProtocolWizard - Complete Coverage", () => {
         expect(screen.getByRole("button", { name: /testing/i })).toBeDisabled();
       });
 
-      // Back and Next should be disabled during testing
       expect(screen.getByRole("button", { name: /back/i })).toBeDisabled();
-      // Next button not visible on step 3 (it's the last step before complete)
 
       resolveTest({ success: true, message: "OK" });
 
@@ -1205,9 +1208,7 @@ describe("ProtocolWizard - Complete Coverage", () => {
         resolveSave = resolve;
       });
       
-      // Mock test connection first
       apiPostJson.mockResolvedValueOnce({ success: true, message: "OK" });
-      // Mock save with pending promise
       apiPostJson.mockImplementationOnce(() => savePromise);
 
       render(<ProtocolWizard {...defaultProps} />);
@@ -1224,18 +1225,14 @@ describe("ProtocolWizard - Complete Coverage", () => {
       const content = await getDialogContent();
       const saveButtons = content.queryAllByRole("button", { name: /save configuration/i });
       
-      // First click should disable the button
       fireEvent.click(saveButtons[0]);
       expect(saveButtons[0]).toBeDisabled();
       
-      // Second click while disabled should be a no-op
       fireEvent.click(saveButtons[0]);
       
-      // Resolve save
       resolveSave({ success: true });
       
       await waitFor(() => {
-        // Should only be called once for save (plus once for test = 2 total)
         expect(apiPostJson).toHaveBeenCalledTimes(2);
         expect(toast.success).toHaveBeenCalledWith("MODBUS device configured successfully");
       });
@@ -1372,27 +1369,19 @@ describe("ProtocolWizard - Complete Coverage", () => {
         expect(drawer).toBeInTheDocument();
       });
 
-      // Find close button - use a more reliable approach
       let closeButton = null;
       
-      // Try to find by role and name first
       try {
         closeButton = screen.getByRole("button", { name: /close/i });
-      } catch (_e) {
-        // Not found, try other approaches
-      }
+      } catch (_e) {}
       
       if (!closeButton) {
-        // Try finding by aria-label
         try {
           closeButton = screen.getByLabelText(/close/i);
-        } catch (_e) {
-          // Not found
-        }
+        } catch (_e) {}
       }
       
       if (!closeButton) {
-        // Look for button with X or × in the drawer header
         const drawer = screen.getByRole("dialog");
         const buttons = within(drawer).queryAllByRole("button");
         for (const btn of buttons) {
@@ -1404,12 +1393,10 @@ describe("ProtocolWizard - Complete Coverage", () => {
         }
       }
       
-      // If we found a close button, click it
       if (closeButton) {
         fireEvent.click(closeButton);
         expect(onCloseMock).toHaveBeenCalled();
       } else {
-        // Fallback: look for any button that's not "Back" or "Next" in the header
         const drawer = screen.getByRole("dialog");
         const header = drawer.querySelector('[class*="header"]') || drawer;
         const buttons = within(header).queryAllByRole("button");
@@ -1425,14 +1412,11 @@ describe("ProtocolWizard - Complete Coverage", () => {
           fireEvent.click(closeButton);
           expect(onCloseMock).toHaveBeenCalled();
         } else {
-          // Last resort: click the backdrop/overlay
           const overlay = document.querySelector('[data-radix-drawer-overlay]');
           if (overlay) {
             fireEvent.click(overlay);
             expect(onCloseMock).toHaveBeenCalled();
           } else {
-            // If we can't find any close mechanism, skip the assertion but log
-            // The component still renders correctly
             expect(screen.getByRole("dialog")).toBeInTheDocument();
           }
         }
@@ -1478,7 +1462,6 @@ describe("ProtocolWizard - Complete Coverage", () => {
       });
     });
 
-    // ✅ FIXED: Now works with ResizeObserver polyfill and setupUserEvent
     it("should show step progress in mobile view", async () => {
       useMediaQuery.mockReturnValue(false);
       
@@ -1488,16 +1471,12 @@ describe("ProtocolWizard - Complete Coverage", () => {
       await waitFor(() => {
         const drawer = screen.getByRole("dialog");
         expect(drawer).toBeInTheDocument();
-        
-        // Look for step indicators - they should show numbers 1-5
         const content = within(drawer);
-        // Step indicators are the circles with numbers
         const indicators = content.queryAllByText(/[1-5]/);
         expect(indicators.length).toBeGreaterThan(0);
       });
     });
 
-    // ✅ FIXED: Now works with ResizeObserver polyfill and setupUserEvent
     it("should navigate in mobile view", async () => {
       useMediaQuery.mockReturnValue(false);
       const user = setupUserEvent();
@@ -1505,25 +1484,21 @@ describe("ProtocolWizard - Complete Coverage", () => {
       render(<ProtocolWizard {...defaultProps} />);
       await selectProtocol("modbus");
 
-      // Find and click Next button
       const nextButton = screen.getByRole("button", { name: /next/i });
       await user.click(nextButton);
 
       await waitFor(() => {
         const drawer = screen.getByRole("dialog");
         const content = within(drawer);
-        // Should show Device Info step
         expect(content.queryByText(/Device Information/i)).toBeInTheDocument();
       });
 
-      // Click Back button
       const backButton = screen.getByRole("button", { name: /back/i });
       await user.click(backButton);
 
       await waitFor(() => {
         const drawer = screen.getByRole("dialog");
         const content = within(drawer);
-        // Should show Protocol Selection again
         expect(content.queryByText(/Select Protocol/i)).toBeInTheDocument();
       });
     });
