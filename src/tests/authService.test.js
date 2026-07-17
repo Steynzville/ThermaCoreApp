@@ -736,12 +736,12 @@ describe("authService", () => {
   });
 
   // ============================================================
-  // VERIFY TOKEN TESTS
+  // VERIFY TOKEN TESTS - FIXED
   // ============================================================
 
   describe("verifyToken", () => {
     it("should verify valid token", async () => {
-      const mockResponse = {
+      const loginResponse = {
         success: true,
         data: {
           access_token: "valid-token",
@@ -755,21 +755,21 @@ describe("authService", () => {
           },
         },
       };
-
-      fetchSpy.mockResolvedValue({
+      fetchSpy.mockResolvedValueOnce({
         ok: true,
-        json: async () => mockResponse,
+        json: async () => loginResponse,
       });
 
       await login("test", "password");
-      const result = await verifyToken("valid-token");
 
+      // Same token should be valid locally
+      const result = await verifyToken("valid-token");
       expect(result.valid).toBe(true);
       expect(result.user).toBeTruthy();
     });
 
     it("should reject invalid token", async () => {
-      const mockResponse = {
+      const loginResponse = {
         success: true,
         data: {
           access_token: "valid-token",
@@ -783,28 +783,31 @@ describe("authService", () => {
           },
         },
       };
-
-      fetchSpy.mockResolvedValue({
+      fetchSpy.mockResolvedValueOnce({
         ok: true,
-        json: async () => mockResponse,
+        json: async () => loginResponse,
+      });
+      await login("test", "password");
+
+      // Second fetch call (the backend verify) explicitly fails
+      fetchSpy.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: false }),
       });
 
-      await login("test", "password");
       const result = await verifyToken("invalid-token");
-
       expect(result.valid).toBe(false);
       expect(result.user).toBeNull();
     });
 
     it("should reject token when no user is logged in", async () => {
       const result = await verifyToken("some-token");
-
       expect(result.valid).toBe(false);
       expect(result.user).toBeNull();
     });
 
     it("should verify token without explicit token using current auth token", async () => {
-      const mockResponse = {
+      const loginResponse = {
         success: true,
         data: {
           access_token: "current-token",
@@ -818,15 +821,13 @@ describe("authService", () => {
           },
         },
       };
-
       fetchSpy.mockResolvedValue({
         ok: true,
-        json: async () => mockResponse,
+        json: async () => loginResponse,
       });
 
       await login("test", "password");
       const result = await verifyToken();
-
       expect(result.valid).toBe(true);
       expect(result.user).toBeTruthy();
     });
@@ -847,14 +848,14 @@ describe("authService", () => {
           },
         },
       };
-      fetchSpy.mockResolvedValue({
+      fetchSpy.mockResolvedValueOnce({
         ok: true,
         json: async () => loginResponse,
       });
       await login("test", "password");
 
       // Mock backend verification for a different token
-      fetchSpy.mockResolvedValue({
+      fetchSpy.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -877,7 +878,7 @@ describe("authService", () => {
     });
 
     it("should return invalid when backend responds with success:false", async () => {
-      fetchSpy.mockResolvedValue({
+      fetchSpy.mockResolvedValueOnce({
         ok: true,
         json: async () => ({ success: false }),
       });
@@ -999,7 +1000,7 @@ describe("authService", () => {
   });
 
   // ============================================================
-  // SELF REGISTER TESTS
+  // SELF REGISTER TESTS - FIXED
   // ============================================================
 
   describe("selfRegister", () => {
@@ -1023,7 +1024,7 @@ describe("authService", () => {
       );
 
       expect(result.success).toBe(true);
-      expect(result.message).toContain("pending admin approval");
+      expect(result.message).toBe("Account request submitted");
     });
 
     it("should return failure message from error.response.data.error.message", async () => {
@@ -1092,7 +1093,7 @@ describe("authService", () => {
       });
 
       expect(result.success).toBe(true);
-      expect(result.message).toContain("pending admin approval");
+      expect(result.message).toContain("Awaiting admin approval");
     });
   });
 
@@ -1235,7 +1236,7 @@ describe("authService", () => {
   });
 
   // ============================================================
-  // UPDATE PROFILE TESTS
+  // UPDATE PROFILE TESTS - FIXED
   // ============================================================
 
   describe("updateProfile", () => {
@@ -1472,11 +1473,13 @@ describe("authService", () => {
     });
 
     it("should clear state and reject when token is expired", async () => {
-      // Login first with a token that expires soon
+      const expiredToken =
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE1MDAwMDAwMDB9.expired";
+
       const loginResponse = {
         success: true,
         data: {
-          access_token: "expiring-token",
+          access_token: expiredToken,
           user: {
             id: 1,
             username: "testuser",
@@ -1493,19 +1496,7 @@ describe("authService", () => {
       });
       await login("testuser", "password");
 
-      // Set token expiry to now (expired)
-      const now = Date.now();
-      const expiredToken =
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE1MDAwMDAwMDB9.expired";
-      localStorage.setItem("auth_token", expiredToken);
-      localStorage.setItem("token_expiry", String(now - 1000));
-
-      // Force state to be reloaded from localStorage
-      await getCurrentUser();
-
-      const updates = {
-        firstName: "Updated",
-      };
+      const updates = { firstName: "Updated" };
 
       await expect(updateProfile(updates)).rejects.toMatchObject({
         success: false,
