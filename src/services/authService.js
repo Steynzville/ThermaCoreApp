@@ -1,115 +1,219 @@
-// Authentication Service Module
-// This service encapsulates all authentication-related operations
+/**
+ * Authentication Service
+ * Handles user authentication, registration, and profile management
+ */
 
 import { apiPost } from "../utils/apiFetch";
 
-// Build-time credential handling - completely removed in production builds
-const mockUsers = import.meta.env.DEV
-  ? [
-      {
-        id: 1,
-        username: "admin",
-        email: "admin@thermacore.com",
-        password: "dev_admin_credential",
-        role: "admin",
-        firstName: "Admin",
-        lastName: "User",
-        lastLogin: new Date().toISOString(),
-      },
-      {
-        id: 2,
-        username: "user",
-        email: "user@thermacore.com",
-        password: "dev_user_credential",
-        role: "user",
-        firstName: "Regular",
-        lastName: "User",
-        lastLogin: new Date(Date.now() - 86400000).toISOString(),
-      },
-    ]
-  : [];
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "https://thermacoreapp.onrender.com";
 
-// Mock session storage
+// In-memory auth state
 let currentUser = null;
 let authToken = null;
+let tokenExpiry = null;
+
+// Token expiry buffer (5 minutes before actual expiry to allow for refresh)
+const TOKEN_EXPIRY_BUFFER_MS = 5 * 60 * 1000;
 
 /**
- * Authenticate user with username/email and password
- * @param {string} identifier - Username or email
- * @param {string} password - User password
- * @param {boolean} keepMeSignedIn - Whether to request extended JWT expiry
- * @returns {Promise<Object>} Authentication result
+ * Check if a token is expired or about to expire
+ * @param {string} token - The token to check
+ * @returns {boolean} - True if the token is valid (not expired and not near expiry)
  */
-export const login = async (identifier, password, keepMeSignedIn = false) => {
-  // Try development fallback first (only in DEV mode)
-  if (import.meta.env.DEV) {
-    const mockUser = mockUsers.find(
-      (u) => (u.username === identifier || u.email === identifier) && 
-             u.password === password
-    );
-
-    if (mockUser) {
-      authToken = `mock_dev_token_${Date.now()}`;
-      currentUser = {
-        id: mockUser.id,
-        username: mockUser.username,
-        email: mockUser.email,
-        role: mockUser.role,
-        firstName: mockUser.firstName,
-        lastName: mockUser.lastName,
-      };
-      return {
-        success: true,
-        user: currentUser,
-        token: authToken,
-        message: "Login successful (Development Mode)",
-      };
+const isTokenValid = (token) => {
+  if (!token) return false;
+  
+  try {
+    // Try to decode JWT to check expiry
+    const parts = token.split('.');
+    if (parts.length === 3) {
+      const payload = JSON.parse(atob(parts[1]));
+      if (payload.exp) {
+        const expiryTime = payload.exp * 1000; // Convert to milliseconds
+        const now = Date.now();
+        // Check if token is expired or within buffer window
+        return expiryTime > now + TOKEN_EXPIRY_BUFFER_MS;
+      }
     }
+    // If we can't decode or no exp claim, assume valid (will be validated by API)
+    return true;
+  } catch (_error) {
+    // If we can't decode, assume valid (will be validated by API)
+    return true;
+  }
+};
+
+/**
+ * Set auth state and persist to localStorage if keepMeSignedIn
+ */
+const setAuthState = (user, token, keepMeSignedIn = false) => {
+  currentUser = user;
+  authToken = token;
+  
+  // Store token expiry if we can decode it
+  if (token) {
+    try {
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(atob(parts[1]));
+        if (payload.exp) {
+          tokenExpiry = payload.exp * 1000;
+        }
+      }
+    } catch (_e) {
+      // Ignore decode errors
+    }
+  } else {
+    tokenExpiry = null;
   }
 
-  const API_BASE_URL =
-    import.meta.env.VITE_API_BASE_URL || "https://thermacoreapp.onrender.com";
+  if (keepMeSignedIn && user && token) {
+    try {
+      localStorage.setItem("auth_token", token);
+      localStorage.setItem("user", JSON.stringify(user));
+      if (tokenExpiry) {
+        localStorage.setItem("token_expiry", String(tokenExpiry));
+      }
+    } catch (_e) {
+      // Ignore localStorage errors
+    }
+  }
+};
 
+/**
+ * Clear auth state and localStorage
+ */
+const clearAuthState = () => {
+  currentUser = null;
+  authToken = null;
+  tokenExpiry = null;
   try {
-    // FIXED: Correct endpoint with /api/v1 prefix
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("token_expiry");
+  } catch (_e) {
+    // Ignore localStorage errors
+  }
+};
+
+/**
+ * Restore auth state from localStorage
+ * @returns {boolean} - True if session was restored successfully
+ */
+const restoreFromLocalStorage = () => {
+  try {
+    const storedToken = localStorage.getItem("auth_token");
+    const storedUser = localStorage.getItem("user");
+    const storedExpiry = localStorage.getItem("token_expiry");
+
+    if (storedToken && storedUser) {
+      // Check if token has expired
+      if (storedExpiry) {
+        const expiry = parseInt(storedExpiry, 10);
+        if (expiry < Date.now()) {
+          // Token expired - clear localStorage
+          clearAuthState();
+          return false;
+        }
+      }
+
+      // Validate token structure (basic check)
+      if (!isTokenValid(storedToken)) {
+        clearAuthState();
+        return false;
+      }
+
+      try {
+        currentUser = JSON.parse(storedUser);
+        authToken = storedToken;
+        tokenExpiry = storedExpiry ? parseInt(storedExpiry, 10) : null;
+        return true;
+      } catch (_e) {
+        clearAuthState();
+        return false;
+      }
+    }
+    return false;
+  } catch (_e) {
+    return false;
+  }
+};
+
+/**
+ * Login user with username/email and password
+ * @param {string} username - Username or email
+ * @param {string} password - User password
+ * @param {boolean} keepMeSignedIn - Whether to persist session
+ * @returns {Promise<Object>} - Login result with user data and token
+ */
+export const login = async (username, password, keepMeSignedIn = false) => {
+  try {
     const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        username: identifier,
-        password: password,
+        username,
+        password,
         keep_me_signed_in: keepMeSignedIn,
       }),
     });
 
     const result = await response.json();
 
-    if (response.ok && result.success) {
-      const { access_token, user } = result.data;
-
-      authToken = access_token;
-      currentUser = {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        role: user.role?.name || user.role,
-        firstName: user.first_name,
-        lastName: user.last_name,
-      };
-
-      return {
-        success: true,
-        user: currentUser,
-        token: authToken,
-        message: result.message || "Login successful",
-      };
-    } else {
-      return {
+    // Handle HTTP-level failures (401, 403, 500, etc.)
+    // IMPORTANT: Use generic message for login to prevent account enumeration
+    if (!response.ok) {
+      throw {
         success: false,
         message: "Invalid username or password. Please try again.",
       };
     }
-  } catch (_error) {
+
+    // Handle success: false in a 200 response (business-logic failure)
+    // IMPORTANT: Use generic message for login to prevent account enumeration
+    if (result.success === false) {
+      throw {
+        success: false,
+        message: "Invalid username or password. Please try again.",
+      };
+    }
+
+    // Extract user data with proper field mapping
+    const userData = result.data?.user || result.data || {};
+    const role = userData.role?.name || userData.role || "user";
+
+    const user = {
+      id: userData.id,
+      username: userData.username,
+      email: userData.email,
+      role: role,
+      firstName: userData.first_name || userData.firstName || "",
+      lastName: userData.last_name || userData.lastName || "",
+    };
+
+    // Store auth state - try multiple token locations (4 levels of fallback)
+    const token = result.data?.access_token ||
+                  result.data?.token ||
+                  result.access_token ||
+                  result.token ||
+                  null;
+
+    setAuthState(user, token, keepMeSignedIn);
+
+    return {
+      success: true,
+      token: token,
+      user: user,
+      message: result.message || "Login successful",
+    };
+  } catch (error) {
+    // If it's already a shaped error, return it
+    if (error?.success === false) {
+      return error;
+    }
+
+    // Handle network or other errors with generic message
     return {
       success: false,
       message: "Invalid username or password. Please try again.",
@@ -118,143 +222,214 @@ export const login = async (identifier, password, keepMeSignedIn = false) => {
 };
 
 /**
- * Log out the current user
- * @returns {Promise<Object>} Logout result
+ * Logout current user
+ * @returns {Promise<Object>} - Logout result
  */
-export const logout = () => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      currentUser = null;
-      authToken = null;
-      resolve({
-        success: true,
-        message: "Logout successful",
-      });
-    }, 200);
-  });
+export const logout = async () => {
+  clearAuthState();
+  return {
+    success: true,
+    message: "Logout successful",
+  };
 };
 
 /**
  * Get current authenticated user
- * @returns {Object|null} Current user object or null if not authenticated
+ * @returns {Promise<Object|null>} - Current user or null
  */
-export const getCurrentUser = () => {
-  return Promise.resolve(currentUser);
+export const getCurrentUser = async () => {
+  // If we have a user but token is expired, clear state
+  if (currentUser && authToken && !isTokenValid(authToken)) {
+    clearAuthState();
+    return null;
+  }
+
+  // Check localStorage first for persisted session
+  if (!currentUser) {
+    const restored = restoreFromLocalStorage();
+    if (!restored) {
+      return null;
+    }
+  }
+
+  return currentUser;
 };
 
 /**
  * Check if user is authenticated
- * @returns {boolean} Authentication status
+ * @returns {boolean} - Authentication status
  */
 export const isAuthenticated = () => {
-  return currentUser !== null && authToken !== null;
+  // If we have a user but token is expired, clear state and return false
+  if (currentUser && authToken && !isTokenValid(authToken)) {
+    clearAuthState();
+    return false;
+  }
+  return !!currentUser && !!authToken;
 };
 
 /**
  * Get current auth token
- * @returns {string|null} Current auth token or null if not authenticated
+ * @returns {string|null} - Auth token or null
  */
 export const getAuthToken = () => {
+  // If token is expired, clear state and return null
+  if (authToken && !isTokenValid(authToken)) {
+    clearAuthState();
+    return null;
+  }
   return authToken;
 };
 
 /**
  * Verify token validity
  * @param {string} token - Token to verify
- * @returns {Promise<Object>} Verification result
+ * @returns {Promise<Object>} - Verification result
  */
-export const verifyToken = (token) => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const isValid = token === authToken && currentUser !== null;
-      resolve({
-        valid: isValid,
-        user: isValid ? currentUser : null,
-      });
-    }, 200);
-  });
+export const verifyToken = async (token) => {
+  // If no token provided and we're already authenticated, verify current token
+  const tokenToVerify = token || authToken;
+  if (!tokenToVerify) {
+    return { valid: false, user: null };
+  }
+
+  // Check token expiry locally first
+  if (!isTokenValid(tokenToVerify)) {
+    if (tokenToVerify === authToken) {
+      clearAuthState();
+    }
+    return { valid: false, user: null };
+  }
+
+  // If token matches current auth token and we have a user, it's valid
+  if (tokenToVerify === authToken && currentUser) {
+    return { valid: true, user: currentUser };
+  }
+
+  // Otherwise, try to verify with the backend
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/auth/verify`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${tokenToVerify}`,
+      },
+    });
+
+    const result = await response.json();
+
+    if (response.ok && result.success) {
+      const userData = result.data?.user || result.data || {};
+      const user = {
+        id: userData.id,
+        username: userData.username,
+        email: userData.email,
+        role: userData.role?.name || userData.role || "user",
+        firstName: userData.first_name || userData.firstName || "",
+        lastName: userData.last_name || userData.lastName || "",
+      };
+
+      // If this is the current token, update user state
+      if (tokenToVerify === authToken) {
+        currentUser = user;
+      }
+
+      return { valid: true, user };
+    }
+
+    // If verification failed and this is our current token, clear state
+    if (tokenToVerify === authToken) {
+      clearAuthState();
+    }
+
+    return { valid: false, user: null };
+  } catch (_error) {
+    return { valid: false, user: null };
+  }
 };
 
 /**
  * Register a new user
  * @param {Object} userData - User registration data
- * @returns {Promise<Object>} Registration result
+ * @param {string} userData.username - Username
+ * @param {string} userData.email - Email address
+ * @param {string} userData.password - Password
+ * @param {string} userData.firstName - First name
+ * @param {string} userData.lastName - Last name
+ * @returns {Promise<Object>} - Registration result
  */
-export const register = (userData) => {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      const existingUser = mockUsers.find(
-        (u) => u.username === userData.username || u.email === userData.email,
-      );
+export const register = async (userData) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: userData.username,
+        email: userData.email,
+        password: userData.password,
+        first_name: userData.firstName || userData.first_name || "",
+        last_name: userData.lastName || userData.last_name || "",
+      }),
+    });
 
-      if (existingUser) {
-        reject({
-          success: false,
-          message: "User already exists",
-        });
-      } else {
-        const newUser = {
-          id: mockUsers.length + 1,
-          username: userData.username,
-          email: userData.email,
-          password: userData.password,
-          role: userData.role || "user",
-          firstName: userData.firstName,
-          lastName: userData.lastName,
-          lastLogin: null,
-        };
+    const result = await response.json();
 
-        mockUsers.push(newUser);
+    if (response.ok && result.success) {
+      return {
+        success: true,
+        message: result.message || "Registration successful. Please log in.",
+        data: result.data,
+      };
+    }
 
-        resolve({
-          success: true,
-          message: "Registration successful",
-          user: {
-            id: newUser.id,
-            username: newUser.username,
-            email: newUser.email,
-            role: newUser.role,
-            firstName: newUser.firstName,
-            lastName: newUser.lastName,
-          },
-        });
-      }
-    }, 800);
-  });
+    // Handle failure with proper error shaping
+    throw {
+      success: false,
+      message: result?.error?.message || result?.message || "Registration failed. Please try again.",
+    };
+  } catch (error) {
+    if (error?.success === false) {
+      return error;
+    }
+    return {
+      success: false,
+      message: "Registration failed. Please try again.",
+    };
+  }
 };
 
 /**
- * Self-register a new user (public registration)
+ * Self-register a new user (with admin approval workflow)
+ * @param {Object} userData - User registration data
+ * @returns {Promise<Object>} - Registration result
  */
 export const selfRegister = async (userData) => {
   try {
-    const result = await apiPost("/auth/self-register", {
+    const response = await apiPost("/auth/self-register", {
       username: userData.username,
       email: userData.email,
       password: userData.password,
-      first_name: userData.firstName,
-      last_name: userData.lastName,
-      phone_number: userData.phoneNumber,
-      company: userData.company,
-      department: userData.department,
-      position: userData.position,
+      first_name: userData.firstName || userData.first_name || "",
+      last_name: userData.lastName || userData.last_name || "",
     });
 
     return {
       success: true,
-      message:
-        result?.data?.message ||
-        result?.message ||
-        "Registration request submitted successfully. Your account is pending admin approval.",
+      message: response.message || "Registration submitted. Awaiting admin approval.",
+      data: response.data,
     };
   } catch (error) {
+    // Handle error with proper message extraction
+    // Note: For self-register, specific messages are okay since this isn't a login endpoint
+    const errorMessage =
+      error?.response?.data?.error?.message ||
+      error?.response?.data?.message ||
+      error?.message ||
+      "Registration failed. Please try again.";
+
     return {
       success: false,
-      message:
-        error?.response?.data?.error?.message ||
-        error?.response?.data?.message ||
-        error?.message ||
-        "Registration failed. Please try again.",
+      message: errorMessage,
     };
   }
 };
@@ -262,42 +437,31 @@ export const selfRegister = async (userData) => {
 /**
  * Request password reset
  * @param {string} email - User email
- * @returns {Promise<Object>} Password reset result
+ * @returns {Promise<Object>} - Reset request result
  */
 export const requestPasswordReset = async (email) => {
-  const API_BASE_URL =
-    import.meta.env.VITE_API_BASE_URL || "https://thermacoreapp.onrender.com";
-
   try {
-    // FIXED: Correct endpoint with /api/v1 prefix
-    const response = await fetch(
-      `${API_BASE_URL}/api/v1/auth/forgot-password`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      },
-    );
+    const response = await fetch(`${API_BASE_URL}/api/v1/auth/request-password-reset`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
 
     const result = await response.json();
 
+    // Always return neutral message on success to prevent email enumeration
     if (response.ok && result.success) {
-      const okMsg = result?.data?.message ?? result?.message;
       return {
         success: true,
-        message:
-          okMsg || "If the email exists, a password reset link has been sent",
-      };
-    } else {
-      const errMsg =
-        result?.error?.message ?? result?.data?.message ?? result?.message;
-      return {
-        success: false,
-        message:
-          errMsg ||
-          "Unable to process password reset request. Please try again.",
+        message: "If the email exists, a password reset link has been sent",
       };
     }
+
+    // Also return neutral message on failure to prevent email enumeration
+    return {
+      success: false,
+      message: "Unable to process password reset request. Please try again.",
+    };
   } catch (_error) {
     return {
       success: false,
@@ -310,14 +474,10 @@ export const requestPasswordReset = async (email) => {
  * Reset password with token
  * @param {string} token - Reset token
  * @param {string} newPassword - New password
- * @returns {Promise<Object>} Password reset result
+ * @returns {Promise<Object>} - Reset result
  */
 export const resetPassword = async (token, newPassword) => {
-  const API_BASE_URL =
-    import.meta.env.VITE_API_BASE_URL || "https://thermacoreapp.onrender.com";
-
   try {
-    // FIXED: Correct endpoint with /api/v1 prefix
     const response = await fetch(`${API_BASE_URL}/api/v1/auth/reset-password`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -327,23 +487,25 @@ export const resetPassword = async (token, newPassword) => {
     const result = await response.json();
 
     if (response.ok && result.success) {
+      const message = result.data?.message || result.message || "Password reset successfully";
+
       return {
         success: true,
-        message:
-          result?.data?.message ||
-          result?.message ||
-          "Password reset successfully",
-      };
-    } else {
-      return {
-        success: false,
-        message:
-          result?.error?.message ||
-          result?.data?.message ||
-          result?.message ||
-          "Invalid or expired reset token. Please request a new one.",
+        message,
       };
     }
+
+    // Handle failure
+    const errorMessage =
+      result?.error?.message ||
+      result?.data?.message ||
+      result?.message ||
+      "Invalid or expired reset token. Please request a new one.";
+
+    return {
+      success: false,
+      message: errorMessage,
+    };
   } catch (_error) {
     return {
       success: false,
@@ -354,32 +516,99 @@ export const resetPassword = async (token, newPassword) => {
 
 /**
  * Update user profile
- * @param {Object} profileData - Updated profile data
- * @returns {Promise<Object>} Update result
+ * @param {Object} profileData - Profile data to update
+ * @returns {Promise<Object>} - Update result
  */
-export const updateProfile = (profileData) => {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      if (!currentUser) {
-        reject({
-          success: false,
-          message: "Not authenticated",
-        });
-        return;
+export const updateProfile = async (profileData) => {
+  if (!currentUser || !authToken) {
+    throw {
+      success: false,
+      message: "Not authenticated",
+    };
+  }
+
+  // Check token validity before making request
+  if (!isTokenValid(authToken)) {
+    clearAuthState();
+    throw {
+      success: false,
+      message: "Session expired. Please log in again.",
+    };
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/users/me`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${authToken}`,
+      },
+      body: JSON.stringify({
+        first_name: profileData.firstName || profileData.first_name,
+        last_name: profileData.lastName || profileData.last_name,
+        email: profileData.email,
+      }),
+    });
+
+    const result = await response.json();
+
+    // If token is invalid, clear state
+    if (response.status === 401) {
+      clearAuthState();
+      throw {
+        success: false,
+        message: "Session expired. Please log in again.",
+      };
+    }
+
+    if (response.ok && result.success) {
+      const userData = result.data?.user || result.data || {};
+      currentUser = {
+        ...currentUser,
+        firstName: userData.first_name || userData.firstName || currentUser.firstName,
+        lastName: userData.last_name || userData.lastName || currentUser.lastName,
+        email: userData.email || currentUser.email,
+      };
+
+      // Update localStorage
+      try {
+        localStorage.setItem("user", JSON.stringify(currentUser));
+      } catch (_e) {
+        // Ignore localStorage errors
       }
 
-      currentUser = { ...currentUser, ...profileData };
-
-      const userIndex = mockUsers.findIndex((u) => u.id === currentUser.id);
-      if (userIndex !== -1) {
-        mockUsers[userIndex] = { ...mockUsers[userIndex], ...profileData };
-      }
-
-      resolve({
+      return {
         success: true,
         user: currentUser,
-        message: "Profile updated successfully",
-      });
-    }, 500);
-  });
+        message: result.message || "Profile updated successfully",
+      };
+    }
+
+    throw {
+      success: false,
+      message: result?.error?.message || result?.message || "Unable to update profile.",
+    };
+  } catch (error) {
+    if (error?.success === false) {
+      throw error;
+    }
+    throw {
+      success: false,
+      message: "Unable to update profile. Please try again.",
+    };
+  }
+};
+
+export default {
+  login,
+  logout,
+  getCurrentUser,
+  isAuthenticated,
+  getAuthToken,
+  verifyToken,
+  register,
+  selfRegister,
+  requestPasswordReset,
+  resetPassword,
+  updateProfile,
 };
