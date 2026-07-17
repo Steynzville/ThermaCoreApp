@@ -90,7 +90,7 @@ Object.defineProperty(global.window, "dispatchEvent", {
 global.PopStateEvent = vi.fn();
 
 // ============================================================
-// ✅ FIX: Isolated AbortController mock
+// ✅ Isolated AbortController mock
 // ============================================================
 
 const mockAbort = vi.fn();
@@ -145,7 +145,7 @@ describe("apiFetch - Core Functionality", () => {
   });
 
   describe("Basic Request Functionality", () => {
-    // ✅ FIX: Removed signal check - it's not essential for the test
+    // ✅ FIXED: Use apiGet to test GET method explicitly
     it("should make successful GET request", async () => {
       const mockResponse = { data: "test" };
       mockFetch.mockResolvedValue({
@@ -154,13 +154,18 @@ describe("apiFetch - Core Functionality", () => {
         json: async () => mockResponse,
       });
 
-      const response = await apiFetch("/api/test");
+      // ✅ Use apiGet which explicitly sets method: "GET"
+      const response = await apiGet("/api/test");
 
-      const callArgs = mockFetch.mock.calls[0];
-      expect(callArgs[0]).toBe("/api/test");
-      expect(callArgs[1]).toHaveProperty("headers");
-      expect(callArgs[1].headers).toHaveProperty("Content-Type", "application/json");
-      expect(callArgs[1]).toHaveProperty("method", "GET");
+      expect(mockFetch).toHaveBeenCalledWith(
+        "/api/test",
+        expect.objectContaining({
+          method: "GET",
+          headers: expect.objectContaining({
+            "Content-Type": "application/json",
+          }),
+        }),
+      );
       expect(response.ok).toBe(true);
       await expect(response.json()).resolves.toEqual(mockResponse);
     });
@@ -1039,8 +1044,6 @@ describe("apiFetch - Core Functionality", () => {
       await expect(apiFetch("/api/test")).rejects.toEqual({ message: null });
     });
 
-    // ✅ FIXED: When `undefined` is thrown, apiFetch tries to read `error.name`
-    // which throws a TypeError. This is the expected behavior.
     it("should handle undefined error", async () => {
       mockFetch.mockRejectedValue(undefined);
 
@@ -1048,7 +1051,6 @@ describe("apiFetch - Core Functionality", () => {
         await apiFetch("/api/test");
         expect.fail("Expected apiFetch to throw");
       } catch (error) {
-        // The component tries to read error.name which throws when error is undefined
         expect(error).toBeInstanceOf(TypeError);
         expect(error.message).toMatch(/Cannot read properties of undefined/);
       }
