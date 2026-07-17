@@ -242,31 +242,37 @@ const OPCUANodeBrowser = ({ isOpen, onClose, tenantId }) => {
     );
   };
 
-  // Load data on open
+  // Effect 1: Fetch root nodes when modal opens
   useEffect(() => {
     if (isOpen) {
       fetchRootNodes();
-
-      // Set up polling for subscribed node values
-      const interval = setInterval(async () => {
-        if (subscribedNodes.size > 0) {
-          try {
-            const url = `/api/v1/protocols/opcua/values${tenantId ? `?tenant_id=${tenantId}` : ""}`;
-            const data = await apiGetJson(url);
-            setNodeValues((prev) => {
-              const updated = new Map(prev);
-              Object.entries(data.values || {}).forEach(([k, v]) => {
-                updated.set(k, v);
-              });
-              return updated;
-            });
-          } catch (_error) {}
-        }
-      }, 2000);
-
-      return () => clearInterval(interval);
     }
-  }, [isOpen, subscribedNodes.size, fetchRootNodes, tenantId]);
+  }, [isOpen, fetchRootNodes]);
+
+  // Effect 2: Poll for subscribed node values
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const interval = setInterval(async () => {
+      if (subscribedNodes.size > 0) {
+        try {
+          const url = `/api/v1/protocols/opcua/values${tenantId ? `?tenant_id=${tenantId}` : ""}`;
+          const data = await apiGetJson(url);
+          setNodeValues((prev) => {
+            const updated = new Map(prev);
+            Object.entries(data.values || {}).forEach(([k, v]) => {
+              updated.set(k, v);
+            });
+            return updated;
+          });
+        } catch (_error) {
+          // Silently ignore polling errors
+        }
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [isOpen, subscribedNodes.size, tenantId]);
 
   if (!isDesktop) {
     return (
@@ -326,7 +332,7 @@ const OPCUANodeBrowser = ({ isOpen, onClose, tenantId }) => {
               </ScrollArea>
             </div>
 
-            {/* Node Details - Hidden on mobile, or shown in a separate view */}
+            {/* Node Details - Mobile */}
             {selectedNode && (
               <div className="border rounded-lg p-4 overflow-y-auto h-1/3">
                 <div className="space-y-4">
@@ -348,12 +354,11 @@ const OPCUANodeBrowser = ({ isOpen, onClose, tenantId }) => {
                         <p className="text-sm text-slate-900 dark:text-slate-100">{selectedNode.dataType}</p>
                       </div>
                     )}
-                    {selectedNode.value && (
+                    {selectedNode.value !== undefined && (
                       <div>
                         <Label className="text-slate-700 dark:text-slate-300 font-semibold">Current Value</Label>
                         <p className="text-lg font-bold text-primary dark:text-sky-400">
-                          {nodeValues.get(selectedNode.nodeId) ||
-                            selectedNode.value}
+                          {nodeValues.get(selectedNode.nodeId)?.value ?? selectedNode.value}
                         </p>
                       </div>
                     )}
@@ -479,7 +484,7 @@ const OPCUANodeBrowser = ({ isOpen, onClose, tenantId }) => {
                         Current Value
                       </Label>
                       <p className="text-xl font-bold mt-1 text-slate-900 dark:text-white">
-                        {nodeValues.get(selectedNode.nodeId)?.value || "—"}
+                        {nodeValues.get(selectedNode.nodeId)?.value ?? "—"}
                       </p>
                       {nodeValues.get(selectedNode.nodeId)?.timestamp && (
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
