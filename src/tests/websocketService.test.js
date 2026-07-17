@@ -1092,12 +1092,10 @@ describe("WebSocket Service", () => {
     // ADDITIONAL BRANCH COVERAGE TESTS
     // ============================================================
 
-    // 1. isConnected() - ws is null
-    // ✅ FIXED: Now expects null, not false
-    it("should return null when ws is null", () => {
+    // ✅ FIXED: Test name matches actual behavior - isConnected() returns false when ws is null
+    it("should return false when ws is null", () => {
       websocketService.ws = null;
       websocketService.connectionStatus = "connected";
-      // isConnected() returns false when ws is null
       expect(websocketService.isConnected()).toBe(false);
     });
 
