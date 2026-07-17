@@ -110,7 +110,7 @@ const restoreFromLocalStorage = () => {
     const storedUser = localStorage.getItem("user");
     const storedExpiry = localStorage.getItem("token_expiry");
 
-    // FIX: Clean up partial/orphaned state instead of silently returning false
+    // Clean up partial/orphaned state instead of silently returning false
     if (storedToken || storedUser) {
       // If only one exists, clean up the orphaned data
       if (!storedToken || !storedUser) {
@@ -300,7 +300,6 @@ export const getAuthToken = () => {
  * @returns {Promise<Object>} - Verification result
  */
 export const verifyToken = async (token) => {
-  // If no token provided and we're already authenticated, verify current token
   const tokenToVerify = token || authToken;
   if (!tokenToVerify) {
     return { valid: false, user: null };
@@ -314,12 +313,8 @@ export const verifyToken = async (token) => {
     return { valid: false, user: null };
   }
 
-  // If token matches current auth token and we have a user, it's valid
-  if (tokenToVerify === authToken && currentUser) {
-    return { valid: true, user: currentUser };
-  }
-
-  // Otherwise, try to verify with the backend
+  // Always verify with the backend so we pick up any server-side changes,
+  // even when re-verifying the currently active session's token.
   try {
     const response = await fetch(`${API_BASE_URL}/api/v1/auth/verify`, {
       method: "POST",
@@ -342,7 +337,6 @@ export const verifyToken = async (token) => {
         lastName: userData.last_name || userData.lastName || "",
       };
 
-      // If this is the current token, update user state
       if (tokenToVerify === authToken) {
         currentUser = user;
       }
@@ -350,13 +344,17 @@ export const verifyToken = async (token) => {
       return { valid: true, user };
     }
 
-    // If verification failed and this is our current token, clear state
     if (tokenToVerify === authToken) {
       clearAuthState();
     }
 
     return { valid: false, user: null };
   } catch (_error) {
+    // Network failure: if we're re-verifying the currently active session,
+    // fall back to the cached user rather than treating this as invalid.
+    if (tokenToVerify === authToken && currentUser) {
+      return { valid: true, user: currentUser };
+    }
     return { valid: false, user: null };
   }
 };
@@ -576,11 +574,13 @@ export const updateProfile = async (profileData) => {
 
     if (response.ok && result.success) {
       const userData = result.data?.user || result.data || {};
+      // ✅ FIX: Merge role as well so server-side role changes are applied
       currentUser = {
         ...currentUser,
         firstName: userData.first_name || userData.firstName || currentUser.firstName,
         lastName: userData.last_name || userData.lastName || currentUser.lastName,
         email: userData.email || currentUser.email,
+        role: userData.role?.name || userData.role || currentUser.role,
       };
 
       // Update localStorage
