@@ -37,12 +37,9 @@ const isTokenValid = (token) => {
       }
     }
     // If we can't decode or no exp claim, assume valid (will be validated by API)
-    // Log a warning for debugging malformed tokens
-    console.warn("isTokenValid: could not decode token or no exp claim, deferring to server validation");
     return true;
   } catch (_error) {
     // If we can't decode, assume valid (will be validated by API)
-    console.warn("isTokenValid: could not decode token, deferring to server validation");
     return true;
   }
 };
@@ -574,7 +571,7 @@ export const updateProfile = async (profileData) => {
 
     if (response.ok && result.success) {
       const userData = result.data?.user || result.data || {};
-      // ✅ FIX: Merge role as well so server-side role changes are applied
+      // Merge role as well so server-side role changes are applied
       currentUser = {
         ...currentUser,
         firstName: userData.first_name || userData.firstName || currentUser.firstName,
