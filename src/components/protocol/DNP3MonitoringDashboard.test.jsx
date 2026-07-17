@@ -180,7 +180,7 @@ describe("DNP3MonitoringDashboard", () => {
     vi.useRealTimers();
     useMediaQuery.mockReturnValue(true);
     apiGetJson.mockImplementation((url) => {
-      // ✅ Check most-specific URLs first
+      // Check most-specific URLs first
       if (url.includes("/devices/outstation-1/performance")) {
         return Promise.resolve(mockDevicePerformance);
       }
@@ -788,7 +788,10 @@ describe("DNP3MonitoringDashboard", () => {
     const user = setupUserEvent();
     renderComponent();
     await waitFor(() => {
-      expect(within(getTabPanel("overview")).getByText("0")).toBeInTheDocument();
+      const overviewPanel = getTabPanel("overview");
+      // Scope to the Data Points card specifically
+      const dataPointsCard = within(overviewPanel).getByText("Data Points").closest('[data-testid="card"]');
+      expect(within(dataPointsCard).getByText("0")).toBeInTheDocument();
     });
     await clickTab(user, "Outstations");
     await waitFor(() => {
@@ -857,6 +860,7 @@ describe("DNP3MonitoringDashboard", () => {
   // NULL/UNDEFINED DATA BRANCHES
   // ============================================================
 
+  // ✅ FIXED: Scope to specific card to avoid multiple "0" matches
   it("should handle null devices data gracefully", async () => {
     apiGetJson.mockImplementation((url) => {
       if (url.includes("/devices")) {
@@ -873,10 +877,13 @@ describe("DNP3MonitoringDashboard", () => {
     await waitFor(() => {
       const overviewPanel = getTabPanel("overview");
       expect(within(overviewPanel).getByText("Total Outstations")).toBeInTheDocument();
-      expect(within(overviewPanel).getByText("0")).toBeInTheDocument();
+      // Scope to the stat's own card so multiple "0"s elsewhere don't collide
+      const totalCard = within(overviewPanel).getByText("Total Outstations").closest('[data-testid="card"]');
+      expect(within(totalCard).getByText("0")).toBeInTheDocument();
     });
   });
 
+  // ✅ FIXED: Scope to specific card to avoid multiple "0" matches
   it("should handle undefined devices data gracefully", async () => {
     apiGetJson.mockImplementation((url) => {
       if (url.includes("/devices")) {
@@ -892,12 +899,14 @@ describe("DNP3MonitoringDashboard", () => {
 
     await waitFor(() => {
       const overviewPanel = getTabPanel("overview");
-      expect(within(overviewPanel).getByText("Total Outstations")).toBeInTheDocument();
-      expect(within(overviewPanel).getByText("0")).toBeInTheDocument();
+      const totalCard = within(overviewPanel).getByText("Total Outstations").closest('[data-testid="card"]');
+      expect(within(totalCard).getByText("0")).toBeInTheDocument();
     });
   });
 
+  // ✅ FIXED: Use mobile view to see the name field
   it("should handle outstation with undefined connected status", async () => {
+    useMediaQuery.mockReturnValue(false); // mobile view shows outstation.name
     const mockOutstationsWithUndefined = {
       devices: {
         "outstation-1": {
@@ -931,7 +940,10 @@ describe("DNP3MonitoringDashboard", () => {
     await waitFor(() => {
       const outstationPanel = getTabPanel("outstations");
       expect(within(outstationPanel).getByText("Main Substation")).toBeInTheDocument();
-      expect(screen.getAllByText(/Disconnected/i).length).toBeGreaterThan(0);
+      // Should show Disconnected since connected is undefined (falsy)
+      const badges = screen.getAllByTestId("badge");
+      const disconnectedBadges = badges.filter(b => b.textContent.includes("Disconnected"));
+      expect(disconnectedBadges.length).toBeGreaterThan(0);
     });
   });
 
