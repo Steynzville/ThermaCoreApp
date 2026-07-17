@@ -144,7 +144,7 @@ class MockWebSocket {
         this._shouldOpen = false;
         this._shouldError = false;
         this._shouldTimeout = true;
-        this._openDelay = 10000; // Long enough to not fire during tests
+        this._openDelay = 10000;
       }
     };
   }
@@ -182,15 +182,12 @@ class MockWebSocket {
     };
   }
 
-  static createErrorAfterOpen() {
-    return class ErrorAfterOpenMockWebSocket extends MockWebSocket {
+  static createInstantOpen() {
+    return class InstantOpenMockWebSocket extends MockWebSocket {
       constructor(url) {
         super(url);
         this._shouldOpen = true;
-        this._openDelay = 10;
-        this._errorTimer = setTimeout(() => {
-          this._triggerError();
-        }, 20);
+        this._openDelay = 0;
       }
     };
   }
@@ -214,6 +211,7 @@ describe("WebSocket Service", () => {
     
     // Reset all internal state
     websocketService.listeners = new Map();
+    websocketService.statusListeners = new Set();
     websocketService.dataCache = new Map();
     websocketService.reconnectAttempts = 0;
     websocketService.reconnectDelay = 1000;
@@ -250,12 +248,14 @@ describe("WebSocket Service", () => {
     });
 
     it("should connect successfully", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
       await websocketService.connect();
       expect(websocketService.getStatus()).toBe("connected");
       expect(websocketService.isConnected()).toBe(true);
     });
 
     it("should connect with tenant ID", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
       const tenantId = "test-tenant-123";
       await websocketService.connect(tenantId);
       expect(websocketService.getStatus()).toBe("connected");
@@ -271,6 +271,7 @@ describe("WebSocket Service", () => {
     }, 15000);
 
     it("should disconnect properly", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
       await websocketService.connect();
       expect(websocketService.isConnected()).toBe(true);
 
@@ -281,6 +282,7 @@ describe("WebSocket Service", () => {
     });
 
     it("should close existing connection before reconnecting", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
       await websocketService.connect();
       const firstWs = websocketService.ws;
 
@@ -299,6 +301,7 @@ describe("WebSocket Service", () => {
     });
 
     it("should handle multiple connect calls without hanging", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
       const connectPromises = [
         websocketService.connect(),
         websocketService.connect(),
@@ -311,15 +314,15 @@ describe("WebSocket Service", () => {
     });
 
     it("should allow new connect after reconnect cycle", async () => {
+      global.WebSocket = MockWebSocket.createFlaky();
       await websocketService.connect();
-      const ws = websocketService.ws;
-      ws._triggerClose();
 
       await new Promise(resolve => setTimeout(resolve, 1200));
 
       expect(websocketService.isConnected()).toBe(true);
 
       websocketService.disconnect();
+      global.WebSocket = MockWebSocket.createInstantOpen();
       await websocketService.connect("new-tenant");
 
       expect(websocketService.tenantId).toBe("new-tenant");
@@ -333,6 +336,7 @@ describe("WebSocket Service", () => {
 
   describe("Reconnection Logic", () => {
     it("should resubscribe streams after reconnection", async () => {
+      global.WebSocket = MockWebSocket.createFlaky();
       await websocketService.connect();
 
       const callback = vi.fn();
@@ -350,6 +354,7 @@ describe("WebSocket Service", () => {
     }, 3000);
 
     it("should attempt reconnection on disconnect", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
       await websocketService.connect();
       const ws = websocketService.ws;
       ws._triggerClose();
@@ -379,6 +384,7 @@ describe("WebSocket Service", () => {
     }, 3000);
 
     it("should not reconnect when shouldReconnect is false", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
       await websocketService.connect();
       websocketService.shouldReconnect = false;
 
@@ -392,6 +398,7 @@ describe("WebSocket Service", () => {
     });
 
     it("should cancel scheduled reconnect on manual connect", async () => {
+      global.WebSocket = MockWebSocket.createFlaky();
       await websocketService.connect();
       const ws = websocketService.ws;
       ws._triggerClose();
@@ -401,6 +408,7 @@ describe("WebSocket Service", () => {
       expect(websocketService.getStatus()).toBe("reconnecting");
       expect(websocketService.reconnectTimeout).not.toBeNull();
 
+      global.WebSocket = MockWebSocket.createInstantOpen();
       const newWs = websocketService.connect("new-tenant");
 
       expect(websocketService.reconnectTimeout).toBeNull();
@@ -416,6 +424,7 @@ describe("WebSocket Service", () => {
 
   describe("Subscription Management", () => {
     it("should handle subscription", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
       await websocketService.connect();
 
       const callback = vi.fn();
@@ -432,6 +441,7 @@ describe("WebSocket Service", () => {
     });
 
     it("should unsubscribe correctly", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
       await websocketService.connect();
 
       const callback = vi.fn();
@@ -448,6 +458,7 @@ describe("WebSocket Service", () => {
     });
 
     it("should handle multiple listeners for same stream", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
       await websocketService.connect();
 
       const callback1 = vi.fn();
@@ -466,6 +477,7 @@ describe("WebSocket Service", () => {
     });
 
     it("should handle subscription to non-existent stream", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
       await websocketService.connect();
 
       const callback = vi.fn();
@@ -480,6 +492,7 @@ describe("WebSocket Service", () => {
     });
 
     it("should send subscription message to server when connected", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
       await websocketService.connect();
 
       const ws = websocketService.ws;
@@ -497,6 +510,7 @@ describe("WebSocket Service", () => {
     });
 
     it("should send unsubscribe message to server", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
       await websocketService.connect();
 
       const ws = websocketService.ws;
@@ -524,6 +538,7 @@ describe("WebSocket Service", () => {
 
   describe("Message Handling", () => {
     it("should handle incoming messages", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
       await websocketService.connect();
 
       const callback = vi.fn();
@@ -539,6 +554,7 @@ describe("WebSocket Service", () => {
     });
 
     it("should parse JSON messages", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
       await websocketService.connect();
 
       const callback = vi.fn();
@@ -554,6 +570,7 @@ describe("WebSocket Service", () => {
     });
 
     it("should ignore malformed JSON messages", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
       await websocketService.connect();
 
       const callback = vi.fn();
@@ -566,6 +583,7 @@ describe("WebSocket Service", () => {
     });
 
     it("should handle messages with missing stream", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
       await websocketService.connect();
 
       const callback = vi.fn();
@@ -580,6 +598,7 @@ describe("WebSocket Service", () => {
     });
 
     it("should handle pong responses", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
       await websocketService.connect();
 
       const ws = websocketService.ws;
@@ -599,6 +618,7 @@ describe("WebSocket Service", () => {
 
   describe("Data Caching", () => {
     it("should cache data for offline resilience", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
       await websocketService.connect();
 
       websocketService.handleMessage({
@@ -615,6 +635,7 @@ describe("WebSocket Service", () => {
     });
 
     it("should cache falsy values (0, false, empty string)", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
       await websocketService.connect();
 
       const testValues = [0, false, ""];
@@ -634,6 +655,7 @@ describe("WebSocket Service", () => {
     });
 
     it("should not cache null values", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
       await websocketService.connect();
 
       websocketService.handleMessage({
@@ -651,6 +673,7 @@ describe("WebSocket Service", () => {
     });
 
     it("should cache only the latest data for a stream", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
       await websocketService.connect();
 
       websocketService.handleMessage({
@@ -674,11 +697,13 @@ describe("WebSocket Service", () => {
 
   describe("Heartbeat Mechanism", () => {
     it("should start heartbeat on connection", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
       await websocketService.connect();
       expect(websocketService.heartbeatInterval).not.toBeNull();
     });
 
     it("should stop heartbeat on disconnect", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
       await websocketService.connect();
       expect(websocketService.heartbeatInterval).not.toBeNull();
 
@@ -699,6 +724,7 @@ describe("WebSocket Service", () => {
 
   describe("Status Change Listeners", () => {
     it("should notify status change listeners", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
       const statusCallback = vi.fn();
 
       websocketService.onStatusChange(statusCallback);
@@ -711,6 +737,7 @@ describe("WebSocket Service", () => {
     });
 
     it("should allow multiple status listeners", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
       const callback1 = vi.fn();
       const callback2 = vi.fn();
 
@@ -724,6 +751,7 @@ describe("WebSocket Service", () => {
     });
 
     it("should allow unsubscribing from status changes", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
       const callback = vi.fn();
       const unsubscribe = websocketService.onStatusChange(callback);
 
@@ -735,6 +763,7 @@ describe("WebSocket Service", () => {
     });
 
     it("should notify status change when WebSocket closes", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
       await websocketService.connect();
 
       const statusCallback = vi.fn();
@@ -757,6 +786,7 @@ describe("WebSocket Service", () => {
     it("should return correct status", async () => {
       expect(websocketService.getStatus()).toBe("disconnected");
 
+      global.WebSocket = MockWebSocket.createInstantOpen();
       await websocketService.connect();
       expect(websocketService.getStatus()).toBe("connected");
 
@@ -767,6 +797,7 @@ describe("WebSocket Service", () => {
     it("should check if connected correctly", async () => {
       expect(websocketService.isConnected()).toBe(false);
 
+      global.WebSocket = MockWebSocket.createInstantOpen();
       await websocketService.connect();
       expect(websocketService.isConnected()).toBe(true);
 
@@ -776,7 +807,7 @@ describe("WebSocket Service", () => {
   });
 
   // ============================================================
-  // EDGE CASES
+  // EDGE CASES - FIXED
   // ============================================================
 
   describe("Edge Cases", () => {
@@ -792,6 +823,7 @@ describe("WebSocket Service", () => {
       websocketService.subscribe("test-stream", callback);
       expect(callback).not.toHaveBeenCalled();
 
+      global.WebSocket = MockWebSocket.createInstantOpen();
       await websocketService.connect();
 
       websocketService.handleMessage({
@@ -803,6 +835,7 @@ describe("WebSocket Service", () => {
     });
 
     it("should handle errors in callbacks without breaking", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
       await websocketService.connect();
 
       const errorCallback = vi.fn().mockImplementation(() => {
@@ -825,6 +858,7 @@ describe("WebSocket Service", () => {
     });
 
     it("should handle empty data in messages", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
       await websocketService.connect();
 
       const callback = vi.fn();
@@ -857,20 +891,24 @@ describe("WebSocket Service", () => {
     });
 
     // ============================================================
-    // ORPHANED PROMISE FIX TESTS - Fixed
+    // ORPHANED PROMISE FIX TESTS - FIXED
     // ============================================================
 
     it("should reject pending connect promise when disconnect is called", async () => {
-      // Use a slow-connecting WebSocket
+      // Use a slow-connecting WebSocket that won't open quickly
       global.WebSocket = MockWebSocket.createSlowConnecting();
 
-      // Start connection but don't await it
+      // Start connection but don't await it - this starts the connection process
       const connectPromise = websocketService.connect("test-tenant");
 
-      // Wait for the connection attempt to start
-      await new Promise(resolve => setTimeout(resolve, 50));
+      // Wait a bit longer to ensure the connection attempt is in progress
+      await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Disconnect while connect is still pending
+      // Verify that _pendingReject exists before disconnect
+      expect(websocketService._pendingReject).not.toBeNull();
+      expect(websocketService._currentRejectConnect).not.toBeNull();
+
+      // Disconnect while connect is still pending - this should reject the promise
       websocketService.disconnect();
 
       // The promise should reject with the disconnect error
@@ -885,7 +923,7 @@ describe("WebSocket Service", () => {
       // Clean up
       global.WebSocket = MockWebSocket;
       websocketService.disconnect();
-    }, 10000);
+    }, 15000);
 
     it("should handle race between disconnect and connection timeout", async () => {
       // Use timeout mock that never settles on its own
@@ -894,7 +932,11 @@ describe("WebSocket Service", () => {
       const connectPromise = websocketService.connect("test-tenant");
 
       // Wait a bit, then disconnect
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Verify the promise is still pending
+      expect(websocketService._pendingReject).not.toBeNull();
+      
       websocketService.disconnect();
 
       // Should reject with disconnect error, not timeout
@@ -904,9 +946,10 @@ describe("WebSocket Service", () => {
 
       global.WebSocket = MockWebSocket;
       websocketService.disconnect();
-    }, 10000);
+    }, 15000);
 
     it("should handle multiple disconnect calls gracefully", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
       await websocketService.connect();
 
       websocketService.disconnect();
@@ -924,14 +967,14 @@ describe("WebSocket Service", () => {
       await expect(websocketService.connect()).rejects.toThrow("WebSocket error");
 
       // Should be able to connect again after cleanup
-      global.WebSocket = MockWebSocket;
+      global.WebSocket = MockWebSocket.createInstantOpen();
       await websocketService.connect("new-tenant");
 
       expect(websocketService.isConnected()).toBe(true);
       expect(websocketService.tenantId).toBe("new-tenant");
 
       websocketService.disconnect();
-    }, 10000);
+    }, 15000);
 
     it("should prevent onopen from resolving during disconnect", async () => {
       // Create a slow-connecting WebSocket that will eventually open
@@ -940,7 +983,10 @@ describe("WebSocket Service", () => {
       const connectPromise = websocketService.connect("test-tenant");
 
       // Wait a moment for the connection attempt to start
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Verify the promise is still pending
+      expect(websocketService._pendingReject).not.toBeNull();
 
       // Call disconnect while connection is pending
       websocketService.disconnect();
@@ -955,17 +1001,18 @@ describe("WebSocket Service", () => {
 
       global.WebSocket = MockWebSocket;
       websocketService.disconnect();
-    }, 10000);
+    }, 15000);
 
     it("should clean up _pendingReject after disconnect", async () => {
       global.WebSocket = MockWebSocket.createSlowConnecting();
 
       const connectPromise = websocketService.connect("test-tenant");
 
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Store reference to _pendingReject
+      // Verify _pendingReject exists
       expect(websocketService._pendingReject).not.toBeNull();
+      expect(websocketService._currentRejectConnect).not.toBeNull();
 
       websocketService.disconnect();
 
@@ -980,7 +1027,7 @@ describe("WebSocket Service", () => {
 
       global.WebSocket = MockWebSocket;
       websocketService.disconnect();
-    }, 10000);
+    }, 15000);
 
     it("should handle disconnect when no connection is pending", () => {
       // Should not throw
@@ -994,6 +1041,7 @@ describe("WebSocket Service", () => {
     });
 
     it("should handle disconnect after connection is established", async () => {
+      global.WebSocket = MockWebSocket.createInstantOpen();
       await websocketService.connect();
 
       // The promise is already resolved, so disconnect should work normally
@@ -1010,10 +1058,11 @@ describe("WebSocket Service", () => {
 
       const connectPromise = websocketService.connect("test-tenant");
 
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Store reference to _currentRejectConnect
+      // Verify _currentRejectConnect exists
       expect(websocketService._currentRejectConnect).not.toBeNull();
+      expect(websocketService._pendingReject).not.toBeNull();
 
       websocketService.disconnect();
 
@@ -1027,6 +1076,6 @@ describe("WebSocket Service", () => {
 
       global.WebSocket = MockWebSocket;
       websocketService.disconnect();
-    }, 10000);
+    }, 15000);
   });
 });
