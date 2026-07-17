@@ -57,7 +57,7 @@ describe("DeviceStatusService", () => {
     deviceStatusService.initialize();
   });
 
-  // ✅ NEW: Safety net to prevent state leakage between tests
+  // Safety net to prevent state leakage between tests
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
@@ -145,7 +145,7 @@ describe("DeviceStatusService", () => {
       expect(statusChange).toBeNull();
     });
 
-    // ✅ NEW: Update non-existent device
+    // Update non-existent device
     it("should return null when updating a device that doesn't exist", () => {
       const result = deviceStatusService.updateDeviceStatus("TC999", {
         status: "offline",
@@ -153,7 +153,7 @@ describe("DeviceStatusService", () => {
       expect(result).toBeNull();
     });
 
-    // ✅ NEW: Reconnection and message fallbacks
+    // Reconnection and message fallbacks
     it("should generate 'Device Online' message when device comes back online", () => {
       deviceStatusService.updateDeviceStatus("TC002", { status: "offline" });
       const statusChange = deviceStatusService.updateDeviceStatus("TC002", {
@@ -190,7 +190,7 @@ describe("DeviceStatusService", () => {
       expect(statusChange.changes[0].message).toContain("TC999");
     });
 
-    // ✅ NEW: Alert/alarm already-set branches
+    // Alert/alarm already-set branches
     it("should not re-trigger an alert change when hasAlert is already true", () => {
       deviceStatusService.updateDeviceStatus("TC002", { hasAlert: true });
       const statusChange = deviceStatusService.updateDeviceStatus("TC002", {
@@ -213,7 +213,7 @@ describe("DeviceStatusService", () => {
       expect(alarmChange).toBeUndefined();
     });
 
-    // ✅ NEW: Fix - lastStatusChange should NOT update when status doesn't change
+    // Fix - lastStatusChange should NOT update when status doesn't change
     it("should NOT update lastStatusChange when status field is not part of the update", () => {
       const before = deviceStatusService.getDeviceStatus("TC001").lastStatusChange;
       const beforeTime = before.getTime();
@@ -224,7 +224,7 @@ describe("DeviceStatusService", () => {
       expect(after.getTime()).toBe(beforeTime);
     });
 
-    // ✅ FIXED: Use fake timers to avoid timing flake
+    // Use fake timers to avoid timing flake
     it("should update lastStatusChange when status field IS part of the update", () => {
       vi.useFakeTimers();
       
@@ -277,7 +277,7 @@ describe("DeviceStatusService", () => {
       );
     });
 
-    // ✅ NEW: Listener error handling
+    // Listener error handling
     it("should not throw and should still notify other listeners if one listener throws", () => {
       const throwingListener = vi.fn(() => {
         throw new Error("listener boom");
@@ -295,7 +295,7 @@ describe("DeviceStatusService", () => {
       expect(goodListener).toHaveBeenCalledOnce();
     });
 
-    // ✅ NEW: Non-function listener
+    // Non-function listener
     it("should return null and not register a non-function listener", () => {
       const result = deviceStatusService.addStatusChangeListener(
         "not-a-function",
@@ -325,7 +325,7 @@ describe("DeviceStatusService", () => {
       expect(deviceStatusService.getHealthSeverity("Unknown")).toBe("info");
     });
 
-    // ✅ NEW: Health severity edge cases
+    // Health severity edge cases
     it("should handle undefined healthStatus via optional chaining", () => {
       expect(deviceStatusService.getHealthSeverity(undefined)).toBe("info");
     });
@@ -391,7 +391,7 @@ describe("DeviceStatusService", () => {
       expect(userDeviceIds).not.toContain("TC007");
     });
 
-    // ✅ NEW: Regex edge case - devices without TC pattern
+    // Regex edge case - devices without TC pattern
     it("should include devices whose id does not match the TC#### pattern for regular users", () => {
       deviceStatusService.devices.set("SENSOR-A", {
         id: "SENSOR-A",
@@ -416,7 +416,6 @@ describe("DeviceStatusService", () => {
   });
 
   describe("Status History", () => {
-    // ✅ FIX: Removed dangling setTimeout
     it("should maintain status change history", () => {
       deviceStatusService.updateDeviceStatus("TC001", { status: "offline" });
       const tc002 = deviceStatusService.getDeviceStatus("TC002");
@@ -463,7 +462,7 @@ describe("DeviceStatusService", () => {
   // ============================================================
 
   describe("Additional Branch Coverage", () => {
-    // ✅ NEW: Device status history with getStatusHistory limit
+    // Device status history with getStatusHistory limit
     it("should return limited number of history entries", () => {
       // Clear existing history
       deviceStatusService.statusHistory = [];
@@ -480,7 +479,7 @@ describe("DeviceStatusService", () => {
       expect(limitedHistory.length).toBe(5);
     });
 
-    // ✅ NEW: Status change with no changes (should return null)
+    // Status change with no changes (should return null)
     it("should return null when updating with no actual changes", () => {
       const currentStatus = deviceStatusService.getDeviceStatus("TC001");
       const result = deviceStatusService.updateDeviceStatus("TC001", {
@@ -492,7 +491,7 @@ describe("DeviceStatusService", () => {
       expect(result).toBeNull();
     });
 
-    // ✅ NEW: Multiple changes in one update
+    // Multiple changes in one update
     it("should detect multiple changes in a single update", () => {
       const statusChange = deviceStatusService.updateDeviceStatus("TC001", {
         status: "offline",
@@ -502,8 +501,8 @@ describe("DeviceStatusService", () => {
       });
 
       expect(statusChange).toBeTruthy();
-      // Should have 4 changes: connectivity, status, alert, alarm, health
-      expect(statusChange.changes.length).toBeGreaterThanOrEqual(4);
+      // Should have 5 changes: connectivity, status, alert, alarm, health
+      expect(statusChange.changes.length).toBeGreaterThanOrEqual(5);
       const changeTypes = statusChange.changes.map((c) => c.type);
       expect(changeTypes).toContain("connectivity");
       expect(changeTypes).toContain("status");
@@ -512,7 +511,7 @@ describe("DeviceStatusService", () => {
       expect(changeTypes).toContain("health");
     });
 
-    // ✅ FIXED: simulateStatusChanges with sequenced mock to avoid constant 0.05
+    // simulateStatusChanges with sequenced mock to avoid constant 0.05
     it("should simulate status changes with interval", () => {
       vi.useFakeTimers();
       const mockRandom = vi.spyOn(Math, "random");
@@ -546,7 +545,7 @@ describe("DeviceStatusService", () => {
       vi.useRealTimers();
     });
 
-    // ✅ NEW: initialize when already initialized
+    // initialize when already initialized
     it("should not re-initialize if already initialized", () => {
       const initializeSpy = vi.spyOn(deviceStatusService, "initialize");
       deviceStatusService.isInitialized = true;
@@ -557,7 +556,7 @@ describe("DeviceStatusService", () => {
       initializeSpy.mockRestore();
     });
 
-    // ✅ NEW: generateDeviceStatusNotifications when no history
+    // generateDeviceStatusNotifications when no history
     it("should return empty array when no history exists", () => {
       deviceStatusService.statusHistory = [];
       const notifications =
@@ -565,7 +564,7 @@ describe("DeviceStatusService", () => {
       expect(notifications).toEqual([]);
     });
 
-    // ✅ NEW: generateDeviceStatusNotifications with null/undefined role
+    // generateDeviceStatusNotifications with null/undefined role
     it("should handle null or undefined role gracefully", () => {
       // Create a status change first
       deviceStatusService.updateDeviceStatus("TC001", { status: "offline" });
@@ -579,7 +578,7 @@ describe("DeviceStatusService", () => {
       expect(notificationsUndefined.length).toBeGreaterThan(0);
     });
 
-    // ✅ NEW: updateDeviceStatus with only some fields changed
+    // updateDeviceStatus with only some fields changed
     it("should only create changes for fields that actually changed", () => {
       const statusChange = deviceStatusService.updateDeviceStatus("TC001", {
         status: "online", // Same as current
@@ -595,20 +594,27 @@ describe("DeviceStatusService", () => {
       expect(changeTypes).not.toContain("alarm");
     });
 
-    // ✅ NEW: getStatusHistory with limit larger than history
+    // ✅ FIXED: Use a device with known status to ensure all 3 updates create entries
     it("should return all history when limit exceeds available entries", () => {
       deviceStatusService.statusHistory = [];
-      for (let i = 0; i < 3; i++) {
-        deviceStatusService.updateDeviceStatus("TC001", {
-          status: i % 2 === 0 ? "online" : "offline",
-        });
+      
+      // Use TC003 which starts as "maintenance" - we'll toggle it between known states
+      // Each update should create an entry since we're changing status
+      const updates = [
+        { status: "online" },      // change 1: maintenance → online
+        { status: "offline" },     // change 2: online → offline
+        { status: "maintenance" }, // change 3: offline → maintenance
+      ];
+      
+      for (const update of updates) {
+        deviceStatusService.updateDeviceStatus("TC003", update);
       }
 
       const history = deviceStatusService.getStatusHistory(10);
       expect(history.length).toBe(3);
     });
 
-    // ✅ NEW: removeStatusChangeListener with non-existent listener
+    // removeStatusChangeListener with non-existent listener
     it("should handle removing a non-existent listener gracefully", () => {
       const listener = vi.fn();
       // Listener not added, so removing should not throw
@@ -617,7 +623,7 @@ describe("DeviceStatusService", () => {
       }).not.toThrow();
     });
 
-    // ✅ NEW: simulateStatusChanges with alert already true
+    // simulateStatusChanges with alert already true
     it("should not trigger alert if hasAlert is already true", () => {
       vi.useFakeTimers();
       const mockRandom = vi.spyOn(Math, "random");
