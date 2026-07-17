@@ -21,6 +21,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import ProtocolWizard from "@/components/protocol/ProtocolWizard";
@@ -194,6 +195,9 @@ describe("ProtocolWizard - Complete Coverage", () => {
   });
 
   // ============ HELPER FUNCTIONS ============
+
+  // ✅ FIXED: Define setupUserEvent helper
+  const setupUserEvent = () => userEvent.setup();
 
   const getDialog = async () => {
     await waitFor(
@@ -557,7 +561,6 @@ describe("ProtocolWizard - Complete Coverage", () => {
       }
     });
 
-    // ✅ FIXED: Now works with ResizeObserver polyfill
     it("should change security mode via select dropdown", async () => {
       render(<ProtocolWizard {...defaultProps} />);
       await navigateToStep(2, "opcua");
@@ -1347,7 +1350,6 @@ describe("ProtocolWizard - Complete Coverage", () => {
       });
     });
 
-    // ✅ FIXED: Now works with ResizeObserver polyfill
     it("should close drawer when close button is clicked", async () => {
       useMediaQuery.mockReturnValue(false);
 
@@ -1476,7 +1478,7 @@ describe("ProtocolWizard - Complete Coverage", () => {
       });
     });
 
-    // ✅ FIXED: Now works with ResizeObserver polyfill
+    // ✅ FIXED: Now works with ResizeObserver polyfill and setupUserEvent
     it("should show step progress in mobile view", async () => {
       useMediaQuery.mockReturnValue(false);
       
@@ -1495,30 +1497,29 @@ describe("ProtocolWizard - Complete Coverage", () => {
       });
     });
 
-    // ✅ FIXED: Now works with ResizeObserver polyfill
+    // ✅ FIXED: Now works with ResizeObserver polyfill and setupUserEvent
     it("should navigate in mobile view", async () => {
       useMediaQuery.mockReturnValue(false);
-      
       const user = setupUserEvent();
+
       render(<ProtocolWizard {...defaultProps} />);
-      
       await selectProtocol("modbus");
-      
+
       // Find and click Next button
       const nextButton = screen.getByRole("button", { name: /next/i });
-      fireEvent.click(nextButton);
-      
+      await user.click(nextButton);
+
       await waitFor(() => {
         const drawer = screen.getByRole("dialog");
         const content = within(drawer);
         // Should show Device Info step
         expect(content.queryByText(/Device Information/i)).toBeInTheDocument();
       });
-      
+
       // Click Back button
       const backButton = screen.getByRole("button", { name: /back/i });
-      fireEvent.click(backButton);
-      
+      await user.click(backButton);
+
       await waitFor(() => {
         const drawer = screen.getByRole("dialog");
         const content = within(drawer);
