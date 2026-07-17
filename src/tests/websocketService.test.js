@@ -29,15 +29,19 @@ class MockWebSocket {
     this._closeDelay = 50;
     this._shouldNeverOpen = false;
     this._shouldTimeout = false;
+    this._openTimer = null;
+    this._closeTimer = null;
+    this._errorTimer = null;
 
-    setTimeout(() => {
+    // Schedule the initial behavior
+    this._openTimer = setTimeout(() => {
       if (this._shouldError) {
         this._triggerError();
       } else if (this._shouldCloseImmediately) {
         this._triggerClose();
       } else if (this._shouldNeverOpen) {
         // Don't open, don't error - just close after a short delay
-        setTimeout(() => {
+        this._closeTimer = setTimeout(() => {
           this._triggerClose();
         }, 5);
       } else if (this._shouldTimeout) {
@@ -48,7 +52,7 @@ class MockWebSocket {
         if (this.listeners.open) this.listeners.open();
 
         if (this._shouldCloseAfterOpen) {
-          setTimeout(() => {
+          this._closeTimer = setTimeout(() => {
             this._triggerClose();
           }, this._closeDelay);
         }
@@ -69,6 +73,21 @@ class MockWebSocket {
     if (this._closed) return;
     this._closed = true;
     this.readyState = MockWebSocket.CLOSED;
+    
+    // Clear any pending timers
+    if (this._openTimer) {
+      clearTimeout(this._openTimer);
+      this._openTimer = null;
+    }
+    if (this._closeTimer) {
+      clearTimeout(this._closeTimer);
+      this._closeTimer = null;
+    }
+    if (this._errorTimer) {
+      clearTimeout(this._errorTimer);
+      this._errorTimer = null;
+    }
+    
     const onclose = this.onclose;
     this.onclose = null;
     this.onopen = null;
@@ -97,6 +116,7 @@ class MockWebSocket {
   _triggerError() {
     if (this._errorTriggered) return;
     this._errorTriggered = true;
+    this.readyState = MockWebSocket.CLOSED;
     if (this.onerror) {
       this.onerror(new Error("WebSocket error"));
     }
@@ -112,9 +132,7 @@ class MockWebSocket {
         super(url);
         this._shouldOpen = false;
         this._shouldError = true;
-        setTimeout(() => {
-          this._triggerError();
-        }, 5);
+        this._openDelay = 5;
       }
     };
   }
@@ -126,6 +144,7 @@ class MockWebSocket {
         this._shouldOpen = false;
         this._shouldError = false;
         this._shouldTimeout = true;
+        this._openDelay = 10000; // Long enough to not fire during tests
       }
     };
   }
@@ -148,6 +167,7 @@ class MockWebSocket {
         this._shouldOpen = false;
         this._shouldNeverOpen = true;
         this._shouldError = false;
+        this._openDelay = 5;
       }
     };
   }
@@ -158,6 +178,19 @@ class MockWebSocket {
         super(url);
         this._shouldOpen = true;
         this._openDelay = 5000;
+      }
+    };
+  }
+
+  static createErrorAfterOpen() {
+    return class ErrorAfterOpenMockWebSocket extends MockWebSocket {
+      constructor(url) {
+        super(url);
+        this._shouldOpen = true;
+        this._openDelay = 10;
+        this._errorTimer = setTimeout(() => {
+          this._triggerError();
+        }, 20);
       }
     };
   }
@@ -173,9 +206,13 @@ describe("WebSocket Service", () => {
   beforeEach(() => {
     originalWebSocket = global.WebSocket;
     global.WebSocket = MockWebSocket;
+    
+    // Reset the service state
     websocketService.disconnect();
     vi.clearAllMocks();
     vi.useRealTimers();
+    
+    // Reset all internal state
     websocketService.listeners = new Map();
     websocketService.dataCache = new Map();
     websocketService.reconnectAttempts = 0;
@@ -186,6 +223,13 @@ describe("WebSocket Service", () => {
     websocketService._pendingReject = null;
     websocketService._isDisconnecting = false;
     websocketService._currentRejectConnect = null;
+    websocketService.shouldReconnect = true;
+    websocketService.connectionStatus = "disconnected";
+    websocketService.ws = null;
+    websocketService.tenantId = null;
+    websocketService.reconnectTimeout = null;
+    websocketService.heartbeatInterval = null;
+    websocketService.lastHeartbeat = null;
   });
 
   afterEach(() => {
@@ -813,18 +857,18 @@ describe("WebSocket Service", () => {
     });
 
     // ============================================================
-    // NEW TESTS FOR ORPHANED PROMISE FIX
+    // ORPHANED PROMISE FIX TESTS - Fixed
     // ============================================================
 
     it("should reject pending connect promise when disconnect is called", async () => {
-      // Create a slow-connecting WebSocket
+      // Use a slow-connecting WebSocket
       global.WebSocket = MockWebSocket.createSlowConnecting();
 
       // Start connection but don't await it
       const connectPromise = websocketService.connect("test-tenant");
 
-      // Give it a moment to start connecting
-      await new Promise(resolve => setTimeout(resolve, 10));
+      // Wait for the connection attempt to start
+      await new Promise(resolve => setTimeout(resolve, 50));
 
       // Disconnect while connect is still pending
       websocketService.disconnect();
@@ -844,7 +888,7 @@ describe("WebSocket Service", () => {
     }, 10000);
 
     it("should handle race between disconnect and connection timeout", async () => {
-      // ✅ FIXED: Use createTimeout() which never settles on its own
+      // Use timeout mock that never settles on its own
       global.WebSocket = MockWebSocket.createTimeout();
 
       const connectPromise = websocketService.connect("test-tenant");
@@ -896,7 +940,7 @@ describe("WebSocket Service", () => {
       const connectPromise = websocketService.connect("test-tenant");
 
       // Wait a moment for the connection attempt to start
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise(resolve => setTimeout(resolve, 50));
 
       // Call disconnect while connection is pending
       websocketService.disconnect();
@@ -918,11 +962,10 @@ describe("WebSocket Service", () => {
 
       const connectPromise = websocketService.connect("test-tenant");
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise(resolve => setTimeout(resolve, 50));
 
       // Store reference to _pendingReject
-      const pendingRejectBefore = websocketService._pendingReject;
-      expect(pendingRejectBefore).not.toBeNull();
+      expect(websocketService._pendingReject).not.toBeNull();
 
       websocketService.disconnect();
 
@@ -930,9 +973,10 @@ describe("WebSocket Service", () => {
         "WebSocket disconnected by client"
       );
 
-      // _pendingReject should be cleared
+      // Both should be cleared
       expect(websocketService._pendingReject).toBeNull();
       expect(websocketService._pendingConnect).toBeNull();
+      expect(websocketService._currentRejectConnect).toBeNull();
 
       global.WebSocket = MockWebSocket;
       websocketService.disconnect();
@@ -966,7 +1010,7 @@ describe("WebSocket Service", () => {
 
       const connectPromise = websocketService.connect("test-tenant");
 
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise(resolve => setTimeout(resolve, 50));
 
       // Store reference to _currentRejectConnect
       expect(websocketService._currentRejectConnect).not.toBeNull();
