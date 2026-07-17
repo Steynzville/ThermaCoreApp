@@ -480,6 +480,20 @@ describe("authService", () => {
       expect(localStorage.getItem("auth_token")).toBe("persist-token");
       expect(JSON.parse(localStorage.getItem("user")).username).toBe("a");
     });
+
+    // ✅ NEW: keepMeSignedIn true but token is null
+    it("should not persist to localStorage when keepMeSignedIn is true but token is null", async () => {
+      fetchSpy.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: { user: { id: 1, username: "a", email: "a@a.com" } }, // no token
+        }),
+      });
+      await login("a", "p", true);
+      expect(localStorage.getItem("auth_token")).toBeNull();
+      expect(isAuthenticated()).toBe(false);
+    });
   });
 
   // ============================================================
@@ -611,6 +625,31 @@ describe("authService", () => {
       expect(localStorage.getItem("auth_token")).toBeNull();
       expect(localStorage.getItem("user")).toBeNull();
     });
+
+    // ✅ NEW: In-memory token expiry via getCurrentUser
+    it("should clear state via getCurrentUser when in-memory token expires", async () => {
+      const soonExp = Math.floor((Date.now() + 1000) / 1000);
+      const payload = btoa(JSON.stringify({ exp: soonExp }));
+      const jwt = `eyJhbGciOiJIUzI1NiJ9.${payload}.sig`;
+
+      fetchSpy.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: {
+            access_token: jwt,
+            user: { id: 1, username: "a", email: "a@a.com" },
+          },
+        }),
+      });
+      await login("a", "p");
+
+      // Advance past the buffer window
+      vi.advanceTimersByTime(10 * 60 * 1000);
+      const result = await getCurrentUser();
+      expect(result).toBeNull();
+      expect(isAuthenticated()).toBe(false);
+    });
   });
 
   // ============================================================
@@ -736,7 +775,7 @@ describe("authService", () => {
   });
 
   // ============================================================
-  // VERIFY TOKEN TESTS - FIXED
+  // VERIFY TOKEN TESTS
   // ============================================================
 
   describe("verifyToken", () => {
@@ -1000,7 +1039,7 @@ describe("authService", () => {
   });
 
   // ============================================================
-  // SELF REGISTER TESTS - FIXED
+  // SELF REGISTER TESTS
   // ============================================================
 
   describe("selfRegister", () => {
@@ -1236,7 +1275,7 @@ describe("authService", () => {
   });
 
   // ============================================================
-  // UPDATE PROFILE TESTS - FIXED
+  // UPDATE PROFILE TESTS
   // ============================================================
 
   describe("updateProfile", () => {
@@ -1499,6 +1538,178 @@ describe("authService", () => {
       const updates = { firstName: "Updated" };
 
       await expect(updateProfile(updates)).rejects.toMatchObject({
+        success: false,
+        message: "Session expired. Please log in again.",
+      });
+      expect(isAuthenticated()).toBe(false);
+    });
+  });
+
+  // ============================================================
+  // isTokenValid EDGE CASES
+  // ============================================================
+
+  describe("isTokenValid edge cases", () => {
+    it("should assume valid when JWT payload is malformed JSON", async () => {
+      // 3 segments, but payload isn't valid base64/JSON
+      const malformed = "eyJhbGciOiJIUzI1NiJ9.not-valid-base64!!.sig";
+      fetchSpy.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: {
+            access_token: malformed,
+            user: { id: 1, username: "a", email: "a@a.com" },
+          },
+        }),
+      });
+      const result = await login("a", "p");
+      expect(result.success).toBe(true);
+      expect(isAuthenticated()).toBe(true);
+    });
+  });
+
+  // ============================================================
+  // restoreFromLocalStorage TESTS
+  // ============================================================
+
+  describe("restoreFromLocalStorage happy path", () => {
+    it("should restore a valid, non-expired session from localStorage", async () => {
+      const futureExp = Math.floor((Date.now() + 60 * 60 * 1000) / 1000);
+      const payload = btoa(JSON.stringify({ exp: futureExp }));
+      const validToken = `eyJhbGciOiJIUzI1NiJ9.${payload}.sig`;
+      const user = { id: 1, username: "persisted", email: "p@p.com", role: "user" };
+
+      localStorage.setItem("auth_token", validToken);
+      localStorage.setItem("user", JSON.stringify(user));
+      localStorage.setItem("token_expiry", String(futureExp * 1000));
+
+      const result = await getCurrentUser();
+      expect(result).toEqual(user);
+      expect(isAuthenticated()).toBe(true);
+      expect(getAuthToken()).toBe(validToken);
+    });
+
+    it("should clear orphaned localStorage data when only token exists", async () => {
+      localStorage.setItem("auth_token", "some-token");
+      const result = await getCurrentUser();
+      expect(result).toBeNull();
+      expect(localStorage.getItem("auth_token")).toBeNull();
+    });
+
+    it("should clear orphaned localStorage data when only user exists", async () => {
+      localStorage.setItem("user", JSON.stringify({ id: 1, username: "orphaned" }));
+      const result = await getCurrentUser();
+      expect(result).toBeNull();
+      expect(localStorage.getItem("user")).toBeNull();
+    });
+
+    it("should clear state when stored user JSON is corrupted", async () => {
+      localStorage.setItem("auth_token", "some-token");
+      localStorage.setItem("user", "{not-valid-json");
+      const result = await getCurrentUser();
+      expect(result).toBeNull();
+      expect(localStorage.getItem("auth_token")).toBeNull();
+      expect(localStorage.getItem("user")).toBeNull();
+    });
+  });
+
+  // ============================================================
+  // setAuthState TOKEN EXPIRY TESTS
+  // ============================================================
+
+  describe("setAuthState persisted expiry", () => {
+    it("should persist token_expiry when token is a real decodable JWT", async () => {
+      const futureExp = Math.floor((Date.now() + 60 * 60 * 1000) / 1000);
+      const payload = btoa(JSON.stringify({ exp: futureExp }));
+      const jwt = `eyJhbGciOiJIUzI1NiJ9.${payload}.sig`;
+
+      fetchSpy.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: {
+            access_token: jwt,
+            user: { id: 1, username: "a", email: "a@a.com" },
+          },
+        }),
+      });
+
+      await login("a", "p", true);
+      expect(localStorage.getItem("token_expiry")).toBe(String(futureExp * 1000));
+    });
+  });
+
+  // ============================================================
+  // verifyToken ADDITIONAL BRANCHES
+  // ============================================================
+
+  describe("verifyToken additional branches", () => {
+    it("should return invalid immediately when no token and no active session", async () => {
+      const result = await verifyToken();
+      expect(result).toEqual({ valid: false, user: null });
+    });
+
+    it("should clear auth state when the current session's token has expired", async () => {
+      const pastExp = Math.floor((Date.now() - 60 * 1000) / 1000);
+      const payload = btoa(JSON.stringify({ exp: pastExp }));
+      const expiredJwt = `eyJhbGciOiJIUzI1NiJ9.${payload}.sig`;
+
+      fetchSpy.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: {
+            access_token: expiredJwt,
+            user: { id: 1, username: "a", email: "a@a.com" },
+          },
+        }),
+      });
+      await login("a", "p");
+
+      const result = await verifyToken(expiredJwt);
+      expect(result.valid).toBe(false);
+      expect(isAuthenticated()).toBe(false);
+    });
+
+    it("should handle network failure during backend verification", async () => {
+      fetchSpy.mockRejectedValueOnce(new Error("Network down"));
+      const result = await verifyToken("some-unknown-token");
+      expect(result).toEqual({ valid: false, user: null });
+    });
+  });
+
+  // ============================================================
+  // updateProfile SERVER-SIDE 401 TESTS
+  // ============================================================
+
+  describe("updateProfile server-side 401", () => {
+    it("should clear state on a live 401 from the server (not caught by local pre-check)", async () => {
+      // Login with a valid token that won't be caught by local expiry
+      const futureExp = Math.floor((Date.now() + 60 * 60 * 1000) / 1000);
+      const payload = btoa(JSON.stringify({ exp: futureExp }));
+      const validToken = `eyJhbGciOiJIUzI1NiJ9.${payload}.sig`;
+
+      fetchSpy.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: {
+            access_token: validToken,
+            user: { id: 1, username: "a", email: "a@a.com" },
+          },
+        }),
+      });
+      await login("a", "p");
+
+      // Mock the server returning a 401 (token revoked, etc.)
+      fetchSpy.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ success: false }),
+      });
+
+      await expect(updateProfile({ firstName: "X" })).rejects.toMatchObject({
         success: false,
         message: "Session expired. Please log in again.",
       });
