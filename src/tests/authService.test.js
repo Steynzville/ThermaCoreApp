@@ -494,7 +494,6 @@ describe("authService", () => {
       expect(isAuthenticated()).toBe(false);
     });
 
-    // ✅ NEW: JWT decodes but no exp claim
     it("should assume valid when JWT decodes but has no exp claim", async () => {
       const payload = btoa(JSON.stringify({ sub: "user-1" })); // no exp
       const jwt = `eyJhbGciOiJIUzI1NiJ9.${payload}.sig`;
@@ -514,6 +513,54 @@ describe("authService", () => {
       expect(result.success).toBe(true);
       expect(isAuthenticated()).toBe(true);
       expect(localStorage.getItem("token_expiry")).toBeNull();
+    });
+
+    // ✅ NEW: role as plain string branch
+    it("should handle role as plain string in login response", async () => {
+      fetchSpy.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: {
+            access_token: "token",
+            user: {
+              id: 1,
+              username: "test",
+              email: "test@example.com",
+              role: "operator", // plain string, not { name: "operator" }
+              first_name: "Test",
+              last_name: "User",
+            },
+          },
+        }),
+      });
+
+      const result = await login("test", "password");
+      expect(result.user.role).toBe("operator");
+    });
+
+    // ✅ NEW: role missing branch
+    it("should default role to 'user' when role is missing", async () => {
+      fetchSpy.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: {
+            access_token: "token",
+            user: {
+              id: 1,
+              username: "test",
+              email: "test@example.com",
+              // no role field
+              first_name: "Test",
+              last_name: "User",
+            },
+          },
+        }),
+      });
+
+      const result = await login("test", "password");
+      expect(result.user.role).toBe("user");
     });
   });
 
@@ -670,7 +717,6 @@ describe("authService", () => {
       expect(isAuthenticated()).toBe(false);
     });
 
-    // ✅ NEW: restore session when token_expiry key is absent
     it("should restore session when token_expiry key is absent from localStorage", async () => {
       const futureExp = Math.floor((Date.now() + 60 * 60 * 1000) / 1000);
       const payload = btoa(JSON.stringify({ exp: futureExp }));
@@ -686,7 +732,6 @@ describe("authService", () => {
       expect(isAuthenticated()).toBe(true);
     });
 
-    // ✅ NEW: clear state when embedded JWT exp is expired but token_expiry field is absent
     it("should clear state when embedded JWT exp is expired but token_expiry field is absent", async () => {
       const pastExp = Math.floor((Date.now() - 60 * 1000) / 1000);
       const payload = btoa(JSON.stringify({ exp: pastExp }));
@@ -1013,7 +1058,6 @@ describe("authService", () => {
       expect(result).toEqual({ valid: false, user: null });
     });
 
-    // ✅ NEW: backend verify responds with non-ok HTTP status
     it("should return invalid when backend verify responds with non-ok HTTP status", async () => {
       fetchSpy.mockResolvedValueOnce({
         ok: false,
@@ -1024,7 +1068,6 @@ describe("authService", () => {
       expect(result).toEqual({ valid: false, user: null });
     });
 
-    // ✅ NEW: extract user from result.data directly when no nested user field
     it("should extract user from result.data directly when no nested user field (verify path)", async () => {
       fetchSpy.mockResolvedValueOnce({
         ok: true,
@@ -1038,7 +1081,6 @@ describe("authService", () => {
       expect(result.user.username).toBe("flat");
     });
 
-    // ✅ NEW: role as plain string in verify response
     it("should handle role as a plain string in backend verify response", async () => {
       fetchSpy.mockResolvedValueOnce({
         ok: true,
@@ -1048,6 +1090,137 @@ describe("authService", () => {
         }),
       });
       const result = await verifyToken("string-role-token");
+      expect(result.user.role).toBe("manager");
+    });
+
+    // ✅ NEW: isTokenValid falsy token branch
+    it("should return invalid when token is null", async () => {
+      const result = await verifyToken(null);
+      expect(result).toEqual({ valid: false, user: null });
+    });
+
+    it("should return invalid when token is undefined", async () => {
+      const result = await verifyToken(undefined);
+      expect(result).toEqual({ valid: false, user: null });
+    });
+
+    // ✅ NEW: current token update branch
+    it("should update currentUser when verifying the current auth token", async () => {
+      const loginResponse = {
+        success: true,
+        data: {
+          access_token: "current-token",
+          user: {
+            id: 1,
+            username: "test",
+            email: "test@example.com",
+            role: "admin",
+            first_name: "Test",
+            last_name: "User",
+          },
+        },
+      };
+      fetchSpy.mockResolvedValueOnce({
+        ok: true,
+        json: async () => loginResponse,
+      });
+
+      await login("test", "password");
+      expect(getAuthToken()).toBe("current-token");
+
+      // Mock the verify endpoint returning updated user data
+      fetchSpy.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: {
+            user: {
+              id: 1,
+              username: "test",
+              email: "updated@example.com",
+              role: "admin",
+              first_name: "Updated",
+              last_name: "User",
+            },
+          },
+        }),
+      });
+
+      const result = await verifyToken("current-token");
+      expect(result.valid).toBe(true);
+      expect(result.user.email).toBe("updated@example.com");
+      // Current user should be updated - getCurrentUser returns the updated user
+      const currentUser = await getCurrentUser();
+      expect(currentUser.email).toBe("updated@example.com");
+    });
+
+    it("should not update currentUser when verifying a different token", async () => {
+      const loginResponse = {
+        success: true,
+        data: {
+          access_token: "current-token",
+          user: {
+            id: 1,
+            username: "test",
+            email: "test@example.com",
+            role: "admin",
+            first_name: "Test",
+            last_name: "User",
+          },
+        },
+      };
+      fetchSpy.mockResolvedValueOnce({
+        ok: true,
+        json: async () => loginResponse,
+      });
+
+      await login("test", "password");
+      expect(getAuthToken()).toBe("current-token");
+
+      // Mock the verify endpoint for a different token
+      fetchSpy.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: {
+            user: {
+              id: 5,
+              username: "other",
+              email: "other@example.com",
+              role: "user",
+              first_name: "Other",
+              last_name: "User",
+            },
+          },
+        }),
+      });
+
+      const result = await verifyToken("other-token");
+      expect(result.valid).toBe(true);
+      expect(result.user.username).toBe("other");
+      // Current user should NOT be updated (different token)
+      const currentUser = await getCurrentUser();
+      expect(currentUser.username).toBe("test");
+    });
+
+    // ✅ NEW: result.data direct with role as plain string
+    it("should handle role as plain string in verify response when data is direct", async () => {
+      fetchSpy.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: {
+            id: 10,
+            username: "strrole",
+            email: "s@s.com",
+            role: "manager",
+            first_name: "String",
+            last_name: "Role",
+          },
+        }),
+      });
+
+      const result = await verifyToken("string-role-token-direct");
       expect(result.user.role).toBe("manager");
     });
   });
@@ -1152,6 +1325,45 @@ describe("authService", () => {
 
       expect(result.success).toBe(false);
       expect(result.message).toBe("Email already registered");
+    });
+
+    // ✅ NEW: shaped error with success:false
+    it("should return shaped error when register fails with success:false", async () => {
+      fetchSpy.mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({
+          success: false,
+          message: "Username already exists",
+        }),
+      });
+
+      const userData = {
+        username: "existinguser",
+        email: "existing@example.com",
+        password: "password123",
+      };
+
+      const result = await register(userData);
+      expect(result.success).toBe(false);
+      expect(result.message).toBe("Username already exists");
+    });
+
+    // ✅ NEW: default message when no message provided
+    it("should return default message when register fails with no message", async () => {
+      fetchSpy.mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({}),
+      });
+
+      const userData = {
+        username: "newuser",
+        email: "new@example.com",
+        password: "password123",
+      };
+
+      const result = await register(userData);
+      expect(result.success).toBe(false);
+      expect(result.message).toBe("Registration failed. Please try again.");
     });
   });
 
@@ -1390,7 +1602,6 @@ describe("authService", () => {
       expect(result.message).toBe("Unable to reset password. Please try again.");
     });
 
-    // ✅ NEW: prefer error.message over other fields on resetPassword failure
     it("should prefer error.message over other fields on resetPassword failure", async () => {
       fetchSpy.mockResolvedValue({
         ok: false,
@@ -1698,20 +1909,72 @@ describe("authService", () => {
       expect(isAuthenticated()).toBe(false);
     });
 
-    // ✅ NEW: extract updated user from result.data directly when no nested user field
-    it("should extract updated user from result.data directly when no nested user field", async () => {
+    // ✅ NEW: extract updated user from result.data directly
+    it("should extract updated user from result.data when no nested user field", async () => {
       const futureExp = Math.floor((Date.now() + 60 * 60 * 1000) / 1000);
       const jwt = `eyJhbGciOiJIUzI1NiJ9.${btoa(JSON.stringify({ exp: futureExp }))}.sig`;
 
+      const loginResponse = {
+        success: true,
+        data: {
+          access_token: jwt,
+          user: {
+            id: 1,
+            username: "a",
+            email: "a@a.com",
+            role: "admin",
+            first_name: "Test",
+            last_name: "User",
+          },
+        },
+      };
+      fetchSpy.mockResolvedValueOnce({
+        ok: true,
+        json: async () => loginResponse,
+      });
+      await login("a", "p");
+
+      // Update response with data directly (no .user wrapper)
       fetchSpy.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
           data: {
-            access_token: jwt,
-            user: { id: 1, username: "a", email: "a@a.com" },
-          },
+            first_name: "Flat",
+            last_name: "User",
+            email: "flat@x.com",
+          }, // no .user wrapper
         }),
+      });
+
+      const result = await updateProfile({ firstName: "Flat" });
+      expect(result.user.firstName).toBe("Flat");
+      expect(result.user.lastName).toBe("User");
+      expect(result.user.email).toBe("flat@x.com");
+    });
+
+    // ✅ NEW: role as plain string in update response
+    it("should handle role as plain string in update response", async () => {
+      const futureExp = Math.floor((Date.now() + 60 * 60 * 1000) / 1000);
+      const jwt = `eyJhbGciOiJIUzI1NiJ9.${btoa(JSON.stringify({ exp: futureExp }))}.sig`;
+
+      const loginResponse = {
+        success: true,
+        data: {
+          access_token: jwt,
+          user: {
+            id: 1,
+            username: "a",
+            email: "a@a.com",
+            role: "admin",
+            first_name: "Test",
+            last_name: "User",
+          },
+        },
+      };
+      fetchSpy.mockResolvedValueOnce({
+        ok: true,
+        json: async () => loginResponse,
       });
       await login("a", "p");
 
@@ -1719,12 +1982,61 @@ describe("authService", () => {
         ok: true,
         json: async () => ({
           success: true,
-          data: { first_name: "Flat", last_name: "User", email: "flat@x.com" }, // no .user wrapper
+          data: {
+            user: {
+              id: 1,
+              username: "a",
+              email: "a@a.com",
+              role: "operator",
+              first_name: "Test",
+              last_name: "User",
+            },
+          },
         }),
       });
 
-      const result = await updateProfile({ firstName: "Flat" });
-      expect(result.user.firstName).toBe("Flat");
+      const result = await updateProfile({});
+      expect(result.user.role).toBe("operator");
+    });
+
+    // ✅ NEW: error.message branch
+    it("should use error.message when present in update failure response", async () => {
+      const futureExp = Math.floor((Date.now() + 60 * 60 * 1000) / 1000);
+      const jwt = `eyJhbGciOiJIUzI1NiJ9.${btoa(JSON.stringify({ exp: futureExp }))}.sig`;
+
+      const loginResponse = {
+        success: true,
+        data: {
+          access_token: jwt,
+          user: {
+            id: 1,
+            username: "a",
+            email: "a@a.com",
+            role: "admin",
+            first_name: "Test",
+            last_name: "User",
+          },
+        },
+      };
+      fetchSpy.mockResolvedValueOnce({
+        ok: true,
+        json: async () => loginResponse,
+      });
+      await login("a", "p");
+
+      fetchSpy.mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({
+          success: false,
+          error: { message: "Email already taken" },
+          message: "This should be ignored",
+        }),
+      });
+
+      await expect(updateProfile({ email: "taken@x.com" })).rejects.toMatchObject({
+        success: false,
+        message: "Email already taken",
+      });
     });
   });
 
@@ -1819,6 +2131,50 @@ describe("authService", () => {
 
       await login("a", "p", true);
       expect(localStorage.getItem("token_expiry")).toBe(String(futureExp * 1000));
+    });
+  });
+
+  // ============================================================
+  // clearAuthState - localStorage ERROR HANDLING
+  // ============================================================
+
+  describe("clearAuthState - localStorage error handling", () => {
+    it("should handle localStorage errors gracefully in clearAuthState", async () => {
+      // This tests the catch block in clearAuthState
+      // We need to make localStorage.removeItem throw
+      const originalRemoveItem = localStorage.removeItem;
+      localStorage.removeItem = vi.fn(() => {
+        throw new Error("Storage error");
+      });
+
+      // Login first
+      const loginResponse = {
+        success: true,
+        data: {
+          access_token: "token",
+          user: {
+            id: 1,
+            username: "test",
+            email: "test@example.com",
+            role: "admin",
+            first_name: "Test",
+            last_name: "User",
+          },
+        },
+      };
+      fetchSpy.mockResolvedValueOnce({
+        ok: true,
+        json: async () => loginResponse,
+      });
+      await login("test", "password");
+
+      // Logout should handle the storage error gracefully
+      const result = await logout();
+      expect(result.success).toBe(true);
+      expect(isAuthenticated()).toBe(false);
+
+      // Restore original
+      localStorage.removeItem = originalRemoveItem;
     });
   });
 });
