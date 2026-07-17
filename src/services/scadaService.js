@@ -16,8 +16,8 @@ const ACTIVE_UNITS_RANGE = 3;
 const TOTAL_UNITS = 12;
 const MIN_DATA_POINTS = 2500;
 const DATA_POINTS_RANGE = 500;
-const MIN_DATA_QUALITY = 90;
-const DATA_QUALITY_RANGE = 10;
+const MIN_DATA_QUALITY = 70; // Lowered from 90 to make "fair" branch reachable
+const DATA_QUALITY_RANGE = 30; // Increased from 10 to cover more range
 const MIN_TEMPERATURE = 65;
 const TEMPERATURE_RANGE = 10;
 const MIN_PRESSURE = 100;
@@ -47,13 +47,13 @@ export const getCurrentMetrics = async (tenantId = null) => {
 
     return {
       success: true,
-      data: response.data || response,
+      data: response.data ?? response, // Fixed: use ?? instead of ||
       timestamp: new Date().toISOString(),
     };
   } catch (error) {
     return {
       success: false,
-      error: error.message || "Failed to fetch current metrics",
+      error: error?.message || "Failed to fetch current metrics", // Fixed: optional chaining
       data: null,
     };
   }
@@ -87,13 +87,13 @@ export const getHistoricalData = async ({
 
     return {
       success: true,
-      data: response.data || response,
+      data: response.data ?? response, // Fixed: use ?? instead of ||
       timestamp: new Date().toISOString(),
     };
   } catch (error) {
     return {
       success: false,
-      error: error.message || "Failed to fetch historical data",
+      error: error?.message || "Failed to fetch historical data", // Fixed: optional chaining
       data: null,
     };
   }
@@ -114,13 +114,13 @@ export const getProtocolStatus = async (tenantId = null) => {
 
     return {
       success: true,
-      data: response.data || response,
+      data: response.data ?? response, // Fixed: use ?? instead of ||
       timestamp: new Date().toISOString(),
     };
   } catch (error) {
     return {
       success: false,
-      error: error.message || "Failed to fetch protocol status",
+      error: error?.message || "Failed to fetch protocol status", // Fixed: optional chaining
       data: null,
     };
   }
@@ -141,13 +141,13 @@ export const getDeviceStatus = async (tenantId = null) => {
 
     return {
       success: true,
-      data: response.data || response,
+      data: response.data ?? response, // Fixed: use ?? instead of ||
       timestamp: new Date().toISOString(),
     };
   } catch (error) {
     return {
       success: false,
-      error: error.message || "Failed to fetch device status",
+      error: error?.message || "Failed to fetch device status", // Fixed: optional chaining
       data: null,
     };
   }
@@ -164,13 +164,13 @@ export const getScadaStatus = async () => {
 
     return {
       success: true,
-      data: response.data || response,
+      data: response.data ?? response, // Fixed: use ?? instead of ||
       timestamp: new Date().toISOString(),
     };
   } catch (error) {
     return {
       success: false,
-      error: error.message || "Failed to fetch SCADA status",
+      error: error?.message || "Failed to fetch SCADA status", // Fixed: optional chaining
       data: null,
     };
   }
