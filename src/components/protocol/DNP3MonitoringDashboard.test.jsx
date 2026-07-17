@@ -860,7 +860,6 @@ describe("DNP3MonitoringDashboard", () => {
   // NULL/UNDEFINED DATA BRANCHES
   // ============================================================
 
-  // ✅ FIXED: Scope to specific card to avoid multiple "0" matches
   it("should handle null devices data gracefully", async () => {
     apiGetJson.mockImplementation((url) => {
       if (url.includes("/devices")) {
@@ -883,7 +882,6 @@ describe("DNP3MonitoringDashboard", () => {
     });
   });
 
-  // ✅ FIXED: Scope to specific card to avoid multiple "0" matches
   it("should handle undefined devices data gracefully", async () => {
     apiGetJson.mockImplementation((url) => {
       if (url.includes("/devices")) {
@@ -904,9 +902,8 @@ describe("DNP3MonitoringDashboard", () => {
     });
   });
 
-  // ✅ FIXED: Use mobile view to see the name field
   it("should handle outstation with undefined connected status", async () => {
-    useMediaQuery.mockReturnValue(false); // mobile view shows outstation.name
+    useMediaQuery.mockReturnValue(false);
     const mockOutstationsWithUndefined = {
       devices: {
         "outstation-1": {
@@ -1029,7 +1026,9 @@ describe("DNP3MonitoringDashboard", () => {
     });
   });
 
+  // ✅ FIXED: Added useMediaQuery.mockReturnValue(false) to match the sibling test pattern
   it("should handle selected outstation with null performance", async () => {
+    useMediaQuery.mockReturnValue(false); // mobile view shows outstation.name
     const outstationWithNoPerf = {
       id: "outstation-1",
       name: "Main Substation",
