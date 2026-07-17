@@ -83,7 +83,7 @@ import {
 
 // Mock EnhancedMetricCard
 vi.mock("@/components/EnhancedMetricCard", () => ({
-  default: ({ title, value, subValue, loading, trend }) => {
+  default: ({ title, value, subValue, loading, trend, variant, clickable, drillDownPath, tooltipContent }) => {
     if (loading) {
       return (
         <div data-testid={`metric-card-${title?.replace(/\s+/g, '-') || 'loading'}`}>
@@ -96,14 +96,22 @@ vi.mock("@/components/EnhancedMetricCard", () => ({
     const trendIcon = trend === "up" ? "↑" : trend === "down" ? "↓" : "";
     const trendColor = trend === "up" ? "text-green-600" : trend === "down" ? "text-destructive" : "";
     
+    const variantSuffix = variant ? `-${variant}` : '';
+    
     return (
-      <div data-testid={`metric-card-${title?.replace(/\s+/g, '-') || 'metric'}`}>
+      <div 
+        data-testid={`metric-card-${title?.replace(/\s+/g, '-') || 'metric'}${variantSuffix}`}
+        data-clickable={clickable ? "true" : "false"}
+        data-drilldown={drillDownPath || ""}
+        data-variant={variant || "default"}
+      >
         <div className="text-sm font-medium">{title}</div>
         <div className="text-2xl font-bold flex items-center gap-2">
           {value}
           {showTrend && <span className={trendColor} data-testid="trend-icon">{trendIcon}</span>}
         </div>
-        {subValue && <div className="text-xs text-muted-foreground">{subValue}</div>}
+        {subValue && <div className="text-xs text-muted-foreground" data-testid="sub-value">{subValue}</div>}
+        {tooltipContent && <div data-testid="tooltip-content">{tooltipContent}</div>}
       </div>
     );
   },
@@ -111,7 +119,7 @@ vi.mock("@/components/EnhancedMetricCard", () => ({
 
 // Mock Badge component
 vi.mock("@/components/ui/badge", () => ({
-  Badge: ({ children }) => <span data-testid="badge">{children}</span>,
+  Badge: ({ children, variant }) => <span data-testid="badge" data-variant={variant}>{children}</span>,
 }));
 
 // Mock Card components
@@ -123,7 +131,7 @@ vi.mock("@/components/ui/card", () => ({
   CardDescription: ({ children }) => <div data-testid="card-description">{children}</div>,
 }));
 
-// ✅ FIXED: Proper Select mock with valid DOM nesting
+// Mock Select components with proper DOM nesting
 vi.mock("@/components/ui/select", () => {
   const SelectContent = ({ children }) => <>{children}</>;
   const SelectItem = ({ children, value }) => (
@@ -180,8 +188,6 @@ vi.mock("lucide-react", () => ({
   CheckCircle: () => <span data-testid="check-circle-icon">CheckCircle</span>,
   Clock: () => <span data-testid="clock-icon">Clock</span>,
   Database: () => <span data-testid="database-icon">Database</span>,
-  TrendingDown: () => <span data-testid="trending-down-icon">TrendingDown</span>,
-  TrendingUp: () => <span data-testid="trending-up-icon">TrendingUp</span>,
   Wifi: () => <span data-testid="wifi-icon">Wifi</span>,
   WifiOff: () => <span data-testid="wifi-off-icon">WifiOff</span>,
 }));
@@ -690,6 +696,23 @@ describe("RealtimeScadaDashboard", () => {
         expect(loadingElements.length).toBeGreaterThan(0);
       });
     });
+
+    it("should handle null/undefined protocols gracefully", async () => {
+      useRealtimeProtocolStatus.mockReturnValue({
+        protocols: null,
+        loading: false,
+      });
+
+      render(
+        <TestWrapper>
+          <RealtimeScadaDashboard />
+        </TestWrapper>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getAllByText(/No protocol data available/i).length).toBeGreaterThan(0);
+      });
+    });
   });
 
   // ============================================================
@@ -745,10 +768,29 @@ describe("RealtimeScadaDashboard", () => {
         expect(screen.getAllByText(/Real-time sensor data over selected time period/i).length).toBeGreaterThan(0);
       });
     });
+
+    it("should handle empty historical data gracefully", async () => {
+      useRealtimeHistoricalData.mockReturnValue({
+        data: [],
+        loading: false,
+        setTimeRange: vi.fn(),
+      });
+
+      render(
+        <TestWrapper>
+          <RealtimeScadaDashboard />
+        </TestWrapper>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId("line-chart")).toBeInTheDocument();
+        expect(screen.getAllByText(/Temperature & Pressure Trends/i).length).toBeGreaterThan(0);
+      });
+    });
   });
 
   // ============================================================
-  // TIME RANGE TESTS
+  // TIME RANGE TESTS - FIXED
   // ============================================================
 
   describe("Time Range Selection", () => {
@@ -766,16 +808,8 @@ describe("RealtimeScadaDashboard", () => {
       });
     });
 
-    // ✅ FIXED: Expect a number, not a string, because handleTimeRangeChange does parseInt
-    it("should call setTimeRange when time range changes", async () => {
-      const setTimeRangeMock = vi.fn();
-      
-      useRealtimeHistoricalData.mockReturnValue({
-        data: defaultHistoricalData,
-        loading: false,
-        setTimeRange: setTimeRangeMock,
-      });
-
+    // ✅ FIXED: Test the props-driven behavior instead of the removed setTimeRange call
+    it("should update hours prop when time range changes", async () => {
       render(
         <TestWrapper>
           <RealtimeScadaDashboard />
@@ -788,14 +822,17 @@ describe("RealtimeScadaDashboard", () => {
 
       const select = screen.getByTestId("select-native");
       
-      fireEvent.change(select, { target: { value: '1' } });
+      // Get the initial call count
+      const initialCallCount = useRealtimeHistoricalData.mock.calls.length;
+      
+      fireEvent.change(select, { target: { value: "1" } });
 
       await waitFor(() => {
-        expect(setTimeRangeMock).toHaveBeenCalled();
-        // ✅ The component does parseInt(value, 10) before calling setTimeRange,
-        // so the mock receives a number, not a string
-        const callArg = setTimeRangeMock.mock.calls[0][0];
-        expect(callArg).toBe(1);
+        // Confirm the hook was called with the newly selected hours value
+        const calls = useRealtimeHistoricalData.mock.calls;
+        expect(calls.length).toBeGreaterThan(initialCallCount);
+        const lastCall = calls[calls.length - 1];
+        expect(lastCall[0]).toEqual({ hours: 1 });
       });
     });
 
@@ -948,6 +985,426 @@ describe("RealtimeScadaDashboard", () => {
         const documentText = document.body.textContent || '';
         expect(documentText).toContain('Active Units');
         expect(documentText).toContain('Temperature');
+      });
+    });
+  });
+
+  // ============================================================
+  // BRANCH COVERAGE TESTS
+  // ============================================================
+
+  describe("Branch Coverage - Data Quality Variants", () => {
+    it("should show error variant when data quality score is below 85", async () => {
+      const lowQualityMetrics = {
+        ...defaultMetrics,
+        dataQuality: { score: 60, status: "Poor" },
+      };
+
+      useRealtimeMetrics.mockReturnValue({
+        metrics: lowQualityMetrics,
+        loading: false,
+        error: null,
+      });
+
+      render(
+        <TestWrapper>
+          <RealtimeScadaDashboard />
+        </TestWrapper>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getAllByText(/60%/i).length).toBeGreaterThan(0);
+        const card = screen.getByTestId("metric-card-Data-Quality-error");
+        expect(card).toBeInTheDocument();
+        expect(card.dataset.variant).toBe("error");
+      });
+    });
+
+    it("should show warning variant when data quality score is between 85 and 94", async () => {
+      const warningQualityMetrics = {
+        ...defaultMetrics,
+        dataQuality: { score: 88, status: "Good" },
+      };
+
+      useRealtimeMetrics.mockReturnValue({
+        metrics: warningQualityMetrics,
+        loading: false,
+        error: null,
+      });
+
+      render(
+        <TestWrapper>
+          <RealtimeScadaDashboard />
+        </TestWrapper>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getAllByText(/88%/i).length).toBeGreaterThan(0);
+        const card = screen.getByTestId("metric-card-Data-Quality-warning");
+        expect(card).toBeInTheDocument();
+        expect(card.dataset.variant).toBe("warning");
+      });
+    });
+
+    it("should show success variant when data quality score is 95 or above", async () => {
+      render(
+        <TestWrapper>
+          <RealtimeScadaDashboard />
+        </TestWrapper>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getAllByText(/97.5%/i).length).toBeGreaterThan(0);
+        const card = screen.getByTestId("metric-card-Data-Quality-success");
+        expect(card).toBeInTheDocument();
+        expect(card.dataset.variant).toBe("success");
+      });
+    });
+
+    it("should show stable trend when data quality score is below 95", async () => {
+      const mediumQualityMetrics = {
+        ...defaultMetrics,
+        dataQuality: { score: 88, status: "Good" },
+      };
+
+      useRealtimeMetrics.mockReturnValue({
+        metrics: mediumQualityMetrics,
+        loading: false,
+        error: null,
+      });
+
+      render(
+        <TestWrapper>
+          <RealtimeScadaDashboard />
+        </TestWrapper>,
+      );
+
+      await waitFor(() => {
+        const card = screen.getByTestId("metric-card-Data-Quality-warning");
+        expect(card).toBeInTheDocument();
+        const trendIcon = card.querySelector('[data-testid="trend-icon"]');
+        expect(trendIcon).toBeNull();
+      });
+    });
+
+    it("should show up trend when data quality score is 95 or above", async () => {
+      render(
+        <TestWrapper>
+          <RealtimeScadaDashboard />
+        </TestWrapper>,
+      );
+
+      await waitFor(() => {
+        const card = screen.getByTestId("metric-card-Data-Quality-success");
+        expect(card).toBeInTheDocument();
+        const trendIcon = card.querySelector('[data-testid="trend-icon"]');
+        expect(trendIcon).toBeInTheDocument();
+        expect(trendIcon.textContent).toBe("↑");
+      });
+    });
+  });
+
+  describe("Branch Coverage - Null/Undefined Data Handling", () => {
+    it("should handle metrics with undefined activeUnits", async () => {
+      const incompleteMetrics = {
+        ...defaultMetrics,
+        activeUnits: undefined,
+      };
+
+      useRealtimeMetrics.mockReturnValue({
+        metrics: incompleteMetrics,
+        loading: false,
+        error: null,
+      });
+
+      render(
+        <TestWrapper>
+          <RealtimeScadaDashboard />
+        </TestWrapper>,
+      );
+
+      await waitFor(() => {
+        const documentText = document.body.textContent || '';
+        expect(documentText).toContain('0/0');
+      });
+    });
+
+    it("should handle metrics with undefined temperature unit", async () => {
+      const incompleteMetrics = {
+        ...defaultMetrics,
+        temperature: { current: 75, unit: undefined, min: 70, max: 80, trend: "stable" },
+      };
+
+      useRealtimeMetrics.mockReturnValue({
+        metrics: incompleteMetrics,
+        loading: false,
+        error: null,
+      });
+
+      render(
+        <TestWrapper>
+          <RealtimeScadaDashboard />
+        </TestWrapper>,
+      );
+
+      await waitFor(() => {
+        const documentText = document.body.textContent || '';
+        expect(documentText).toContain('75°C');
+      });
+    });
+
+    it("should handle metrics with undefined dataPoints trend", async () => {
+      const incompleteMetrics = {
+        ...defaultMetrics,
+        dataPoints: { count: 45678, rate: 120, trend: undefined },
+      };
+
+      useRealtimeMetrics.mockReturnValue({
+        metrics: incompleteMetrics,
+        loading: false,
+        error: null,
+      });
+
+      render(
+        <TestWrapper>
+          <RealtimeScadaDashboard />
+        </TestWrapper>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getAllByText(/Data Points/i).length).toBeGreaterThan(0);
+        const card = screen.getByTestId("metric-card-Data-Points");
+        expect(card).toBeInTheDocument();
+        const trendIcon = card.querySelector('[data-testid="trend-icon"]');
+        expect(trendIcon).toBeNull();
+      });
+    });
+
+    it("should handle subValue as null in metric cards", async () => {
+      const metricsWithNullSubValue = {
+        ...defaultMetrics,
+        temperature: { current: 75, unit: "°C", min: null, max: null, trend: "stable" },
+      };
+
+      useRealtimeMetrics.mockReturnValue({
+        metrics: metricsWithNullSubValue,
+        loading: false,
+        error: null,
+      });
+
+      render(
+        <TestWrapper>
+          <RealtimeScadaDashboard />
+        </TestWrapper>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getAllByText(/Temperature/i).length).toBeGreaterThan(0);
+        const card = screen.getByTestId("metric-card-Temperature");
+        expect(card).toBeInTheDocument();
+        const subValue = card.querySelector('[data-testid="sub-value"]');
+        expect(subValue).toBeNull();
+      });
+    });
+
+    it("should handle metrics with no dataQuality object", async () => {
+      const metricsWithoutQuality = {
+        activeUnits: { value: 18, total: 24, percentage: 75, trend: "up" },
+        temperature: { current: 75, unit: "°C", min: 70, max: 80, trend: "stable" },
+        dataPoints: { count: 45678, rate: 120, trend: "up" },
+        // dataQuality is missing entirely
+      };
+
+      useRealtimeMetrics.mockReturnValue({
+        metrics: metricsWithoutQuality,
+        loading: false,
+        error: null,
+      });
+
+      render(
+        <TestWrapper>
+          <RealtimeScadaDashboard />
+        </TestWrapper>,
+      );
+
+      await waitFor(() => {
+        const documentText = document.body.textContent || '';
+        expect(documentText).toContain('Active Units');
+        expect(documentText).toContain('Temperature');
+        expect(documentText).toContain('0%');
+      });
+    });
+
+    it("should handle metrics with missing temperature object", async () => {
+      const metricsWithoutTemp = {
+        activeUnits: { value: 18, total: 24, percentage: 75, trend: "up" },
+        dataPoints: { count: 45678, rate: 120, trend: "up" },
+        dataQuality: { score: 97.5, status: "Excellent" },
+      };
+
+      useRealtimeMetrics.mockReturnValue({
+        metrics: metricsWithoutTemp,
+        loading: false,
+        error: null,
+      });
+
+      render(
+        <TestWrapper>
+          <RealtimeScadaDashboard />
+        </TestWrapper>,
+      );
+
+      await waitFor(() => {
+        const documentText = document.body.textContent || '';
+        expect(documentText).toContain('Active Units');
+        expect(documentText).toContain('0°C');
+      });
+    });
+
+    it("should handle metrics with missing dataPoints object", async () => {
+      const metricsWithoutDataPoints = {
+        activeUnits: { value: 18, total: 24, percentage: 75, trend: "up" },
+        temperature: { current: 75, unit: "°C", min: 70, max: 80, trend: "stable" },
+        dataQuality: { score: 97.5, status: "Excellent" },
+      };
+
+      useRealtimeMetrics.mockReturnValue({
+        metrics: metricsWithoutDataPoints,
+        loading: false,
+        error: null,
+      });
+
+      render(
+        <TestWrapper>
+          <RealtimeScadaDashboard />
+        </TestWrapper>,
+      );
+
+      await waitFor(() => {
+        const documentText = document.body.textContent || '';
+        expect(documentText).toContain('Active Units');
+        expect(documentText).toContain('0');
+      });
+    });
+
+    it("should handle metrics with activeUnits value of 0", async () => {
+      const zeroUnitMetrics = {
+        ...defaultMetrics,
+        activeUnits: { value: 0, total: 24, percentage: 0, trend: "stable" },
+      };
+
+      useRealtimeMetrics.mockReturnValue({
+        metrics: zeroUnitMetrics,
+        loading: false,
+        error: null,
+      });
+
+      render(
+        <TestWrapper>
+          <RealtimeScadaDashboard />
+        </TestWrapper>,
+      );
+
+      await waitFor(() => {
+        const documentText = document.body.textContent || '';
+        expect(documentText).toContain('0/24');
+        expect(documentText).toContain('0%');
+      });
+    });
+  });
+
+  describe("Branch Coverage - EnhancedMetricCard Props", () => {
+    it("should handle clickable metric with drillDownPath", async () => {
+      render(
+        <TestWrapper>
+          <RealtimeScadaDashboard />
+        </TestWrapper>,
+      );
+
+      await waitFor(() => {
+        const card = screen.getByTestId("metric-card-Active-Units");
+        expect(card).toBeInTheDocument();
+        expect(card.dataset.clickable).toBe("true");
+        expect(card.dataset.drilldown).toContain("/grid-view");
+      });
+    });
+
+    it("should render tooltip content for metrics", async () => {
+      render(
+        <TestWrapper>
+          <RealtimeScadaDashboard />
+        </TestWrapper>,
+      );
+
+      await waitFor(() => {
+        const activeUnitsCard = screen.getByTestId("metric-card-Active-Units");
+        expect(activeUnitsCard).toBeInTheDocument();
+        const tooltip = activeUnitsCard.querySelector('[data-testid="tooltip-content"]');
+        expect(tooltip).toBeInTheDocument();
+        expect(tooltip.textContent).toContain("Active Units Status");
+      });
+    });
+  });
+
+  describe("Branch Coverage - Loading States", () => {
+    it("should handle metrics loading with null data", async () => {
+      useRealtimeMetrics.mockReturnValue({
+        metrics: null,
+        loading: true,
+        error: null,
+      });
+
+      useRealtimeProtocolStatus.mockReturnValue({
+        protocols: [],
+        loading: true,
+      });
+
+      useRealtimeHistoricalData.mockReturnValue({
+        data: [],
+        loading: true,
+        setTimeRange: vi.fn(),
+      });
+
+      render(
+        <TestWrapper>
+          <RealtimeScadaDashboard />
+        </TestWrapper>,
+      );
+
+      await waitFor(() => {
+        const loadingElements = document.querySelectorAll('.animate-pulse');
+        expect(loadingElements.length).toBeGreaterThan(0);
+      });
+    });
+
+    it("should handle partial loading - metrics loaded, protocols loading", async () => {
+      useRealtimeMetrics.mockReturnValue({
+        metrics: defaultMetrics,
+        loading: false,
+        error: null,
+      });
+
+      useRealtimeProtocolStatus.mockReturnValue({
+        protocols: [],
+        loading: true,
+      });
+
+      useRealtimeHistoricalData.mockReturnValue({
+        data: defaultHistoricalData,
+        loading: false,
+        setTimeRange: vi.fn(),
+      });
+
+      render(
+        <TestWrapper>
+          <RealtimeScadaDashboard />
+        </TestWrapper>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getAllByText(/Active Units/i).length).toBeGreaterThan(0);
+        const loadingElements = document.querySelectorAll('.animate-pulse');
+        expect(loadingElements.length).toBeGreaterThan(0);
       });
     });
   });
