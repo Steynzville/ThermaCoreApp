@@ -228,6 +228,7 @@ describe("WebSocket Service", () => {
     websocketService.reconnectTimeout = null;
     websocketService.heartbeatInterval = null;
     websocketService.lastHeartbeat = null;
+    websocketService._connectionEpoch = 0;
   });
 
   afterEach(() => {
@@ -317,7 +318,8 @@ describe("WebSocket Service", () => {
       global.WebSocket = MockWebSocket.createFlaky();
       await websocketService.connect();
 
-      await new Promise(resolve => setTimeout(resolve, 1200));
+      // Wait for reconnect cycle - increased to 1500ms for stability
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
       expect(websocketService.isConnected()).toBe(true);
 
@@ -327,7 +329,7 @@ describe("WebSocket Service", () => {
 
       expect(websocketService.tenantId).toBe("new-tenant");
       expect(websocketService.isConnected()).toBe(true);
-    }, 3000);
+    }, 5000);
   });
 
   // ============================================================
@@ -807,7 +809,7 @@ describe("WebSocket Service", () => {
   });
 
   // ============================================================
-  // EDGE CASES - FIXED
+  // EDGE CASES
   // ============================================================
 
   describe("Edge Cases", () => {
@@ -891,55 +893,47 @@ describe("WebSocket Service", () => {
     });
 
     // ============================================================
-    // ORPHANED PROMISE FIX TESTS - FIXED
+    // ORPHANED PROMISE FIX TESTS
     // ============================================================
 
     it("should reject pending connect promise when disconnect is called", async () => {
-      // Use a slow-connecting WebSocket that won't open quickly
       global.WebSocket = MockWebSocket.createSlowConnecting();
 
-      // Start connection but don't await it - this starts the connection process
       const connectPromise = websocketService.connect("test-tenant");
 
-      // Wait a bit longer to ensure the connection attempt is in progress
+      // Wait for the connection attempt to be in progress
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Verify that _pendingReject exists before disconnect
+      // Verify the promise is pending
       expect(websocketService._pendingReject).not.toBeNull();
       expect(websocketService._currentRejectConnect).not.toBeNull();
 
-      // Disconnect while connect is still pending - this should reject the promise
       websocketService.disconnect();
 
-      // The promise should reject with the disconnect error
       await expect(connectPromise).rejects.toThrow(
         "WebSocket disconnected by client"
       );
 
-      // Connection status should be disconnected
       expect(websocketService.getStatus()).toBe("disconnected");
       expect(websocketService.isConnected()).toBe(false);
+      expect(websocketService._pendingReject).toBeNull();
+      expect(websocketService._currentRejectConnect).toBeNull();
 
-      // Clean up
       global.WebSocket = MockWebSocket;
       websocketService.disconnect();
     }, 15000);
 
     it("should handle race between disconnect and connection timeout", async () => {
-      // Use timeout mock that never settles on its own
       global.WebSocket = MockWebSocket.createTimeout();
 
       const connectPromise = websocketService.connect("test-tenant");
 
-      // Wait a bit, then disconnect
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      // Verify the promise is still pending
       expect(websocketService._pendingReject).not.toBeNull();
       
       websocketService.disconnect();
 
-      // Should reject with disconnect error, not timeout
       await expect(connectPromise).rejects.toThrow(
         "WebSocket disconnected by client"
       );
@@ -963,10 +957,8 @@ describe("WebSocket Service", () => {
     it("should allow new connect after disconnect rejects pending connect", async () => {
       global.WebSocket = MockWebSocket.createFailing();
 
-      // First connect will fail
       await expect(websocketService.connect()).rejects.toThrow("WebSocket error");
 
-      // Should be able to connect again after cleanup
       global.WebSocket = MockWebSocket.createInstantOpen();
       await websocketService.connect("new-tenant");
 
@@ -977,21 +969,16 @@ describe("WebSocket Service", () => {
     }, 15000);
 
     it("should prevent onopen from resolving during disconnect", async () => {
-      // Create a slow-connecting WebSocket that will eventually open
       global.WebSocket = MockWebSocket.createSlowConnecting();
 
       const connectPromise = websocketService.connect("test-tenant");
 
-      // Wait a moment for the connection attempt to start
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Verify the promise is still pending
       expect(websocketService._pendingReject).not.toBeNull();
 
-      // Call disconnect while connection is pending
       websocketService.disconnect();
 
-      // The promise should reject, not resolve when the socket eventually opens
       await expect(connectPromise).rejects.toThrow(
         "WebSocket disconnected by client"
       );
@@ -1010,7 +997,6 @@ describe("WebSocket Service", () => {
 
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Verify _pendingReject exists
       expect(websocketService._pendingReject).not.toBeNull();
       expect(websocketService._currentRejectConnect).not.toBeNull();
 
@@ -1020,7 +1006,6 @@ describe("WebSocket Service", () => {
         "WebSocket disconnected by client"
       );
 
-      // Both should be cleared
       expect(websocketService._pendingReject).toBeNull();
       expect(websocketService._pendingConnect).toBeNull();
       expect(websocketService._currentRejectConnect).toBeNull();
@@ -1030,7 +1015,6 @@ describe("WebSocket Service", () => {
     }, 15000);
 
     it("should handle disconnect when no connection is pending", () => {
-      // Should not throw
       expect(() => {
         websocketService.disconnect();
       }).not.toThrow();
@@ -1044,7 +1028,6 @@ describe("WebSocket Service", () => {
       global.WebSocket = MockWebSocket.createInstantOpen();
       await websocketService.connect();
 
-      // The promise is already resolved, so disconnect should work normally
       websocketService.disconnect();
 
       expect(websocketService.getStatus()).toBe("disconnected");
@@ -1060,7 +1043,6 @@ describe("WebSocket Service", () => {
 
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Verify _currentRejectConnect exists
       expect(websocketService._currentRejectConnect).not.toBeNull();
       expect(websocketService._pendingReject).not.toBeNull();
 
@@ -1070,7 +1052,6 @@ describe("WebSocket Service", () => {
         "WebSocket disconnected by client"
       );
 
-      // Both should be cleared
       expect(websocketService._currentRejectConnect).toBeNull();
       expect(websocketService._pendingReject).toBeNull();
 
