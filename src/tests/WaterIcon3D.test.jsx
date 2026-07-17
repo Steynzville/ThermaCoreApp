@@ -159,14 +159,15 @@ describe("WaterIcon3D", () => {
       const droplet2 = droplets[1];
       const droplet3 = droplets[2];
       
-      expect(droplet1).toHaveStyle('animation-delay: 0s');
-      expect(droplet2).toHaveStyle('animation-delay: 0.7s');
-      expect(droplet3).toHaveStyle('animation-delay: 1.4s');
+      // ✅ FIXED: Check style attribute directly
+      expect(droplet1.getAttribute('style')).toContain('animation-delay: 0s');
+      expect(droplet2.getAttribute('style')).toContain('animation-delay: 0.7s');
+      expect(droplet3.getAttribute('style')).toContain('animation-delay: 1.4s');
       
       // All should have 2s duration
-      expect(droplet1).toHaveStyle('animation-duration: 2s');
-      expect(droplet2).toHaveStyle('animation-duration: 2s');
-      expect(droplet3).toHaveStyle('animation-duration: 2s');
+      expect(droplet1.getAttribute('style')).toContain('animation-duration: 2s');
+      expect(droplet2.getAttribute('style')).toContain('animation-duration: 2s');
+      expect(droplet3.getAttribute('style')).toContain('animation-duration: 2s');
     });
 
     it("renders droplets with different colors", () => {
@@ -287,11 +288,13 @@ describe("WaterIcon3D", () => {
       expect(perspectiveContainer).toHaveClass('h-14');
     });
 
+    // ✅ FIXED: Check style attribute directly
     it("maintains square aspect ratio", () => {
       const { container } = render(<WaterIcon3D waterLevel={5} />);
       
       const mainDiv = container.querySelector('.rounded-2xl');
-      expect(mainDiv).toHaveStyle('aspect-ratio: 1 / 1');
+      const styleAttr = mainDiv.getAttribute('style');
+      expect(styleAttr).toContain('aspect-ratio: 1 / 1');
     });
 
     it("applies hover scale transform to main container", () => {
