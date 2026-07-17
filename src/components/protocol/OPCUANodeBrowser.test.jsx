@@ -98,7 +98,8 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { apiGetJson, apiPostJson } from "@/utils/apiFetch";
 import { toast } from "sonner";
 
-const mockRootNodes = {
+// Factory functions to create fresh fixtures for each test
+const createMockRootNodes = () => ({
   nodes: [
     {
       nodeId: "ns=2;s=Device1",
@@ -115,9 +116,9 @@ const mockRootNodes = {
       value: 25.5,
     },
   ],
-};
+});
 
-const mockChildrenNodes = {
+const createMockChildrenNodes = () => ({
   children: [
     {
       nodeId: "ns=2;s=Device1/Temp",
@@ -134,15 +135,15 @@ const mockChildrenNodes = {
       dataType: "Double",
     },
   ],
-};
+});
 
-const mockNodeValues = {
+const createMockNodeValues = () => ({
   values: {
     "ns=2;s=Temperature": { value: 26.0, timestamp: "2026-07-13T10:00:00Z" },
   },
-};
+});
 
-const mockNestedChildrenNodes = {
+const createMockNestedChildrenNodes = () => ({
   children: [
     {
       nodeId: "ns=2;s=Device1/SubFolder",
@@ -151,9 +152,9 @@ const mockNestedChildrenNodes = {
       hasChildren: true,
     },
   ],
-};
+});
 
-const mockGrandchildNodes = {
+const createMockGrandchildNodes = () => ({
   children: [
     {
       nodeId: "ns=2;s=Device1/SubFolder/Humidity",
@@ -163,9 +164,9 @@ const mockGrandchildNodes = {
       dataType: "Double",
     },
   ],
-};
+});
 
-const mockRootNodesWithMethod = {
+const createMockRootNodesWithMethod = () => ({
   nodes: [
     {
       nodeId: "ns=2;s=Device1",
@@ -180,9 +181,9 @@ const mockRootNodesWithMethod = {
       hasChildren: false,
     },
   ],
-};
+});
 
-const mockRootNodesWithDetails = {
+const createMockRootNodesWithDetails = () => ({
   nodes: [
     {
       nodeId: "ns=2;s=Detailed",
@@ -195,7 +196,7 @@ const mockRootNodesWithDetails = {
       value: "hello",
     },
   ],
-};
+});
 
 describe("OPCUANodeBrowser", () => {
   const mockOnClose = vi.fn();
@@ -205,15 +206,16 @@ describe("OPCUANodeBrowser", () => {
     vi.clearAllMocks();
     vi.useRealTimers();
     useMediaQuery.mockReturnValue(true);
+    
     apiGetJson.mockImplementation((url) => {
       if (url.includes("/nodes") && !url.includes("/children")) {
-        return Promise.resolve(mockRootNodes);
+        return Promise.resolve(createMockRootNodes());
       }
       if (url.includes("/children")) {
-        return Promise.resolve(mockChildrenNodes);
+        return Promise.resolve(createMockChildrenNodes());
       }
       if (url.includes("/values")) {
-        return Promise.resolve(mockNodeValues);
+        return Promise.resolve(createMockNodeValues());
       }
       return Promise.resolve({});
     });
@@ -611,7 +613,7 @@ describe("OPCUANodeBrowser", () => {
 
   it("should display loading state", async () => {
     apiGetJson.mockImplementation(
-      () => new Promise((resolve) => setTimeout(() => resolve(mockRootNodes), 100))
+      () => new Promise((resolve) => setTimeout(() => resolve(createMockRootNodes()), 100))
     );
 
     render(
@@ -707,13 +709,13 @@ describe("OPCUANodeBrowser", () => {
     const user = userEvent.setup();
     apiGetJson.mockImplementation((url) => {
       if (url.includes("SubFolder/children")) {
-        return Promise.resolve(mockGrandchildNodes);
+        return Promise.resolve(createMockGrandchildNodes());
       }
       if (url.includes(`${encodeURIComponent("ns=2;s=Device1")}/children`)) {
-        return Promise.resolve(mockNestedChildrenNodes);
+        return Promise.resolve(createMockNestedChildrenNodes());
       }
       if (url.includes("/nodes") && !url.includes("/children")) {
-        return Promise.resolve(mockRootNodes);
+        return Promise.resolve(createMockRootNodes());
       }
       return Promise.resolve({});
     });
@@ -737,7 +739,7 @@ describe("OPCUANodeBrowser", () => {
 
   it("should render Database icon for unrecognized node class", async () => {
     apiGetJson.mockImplementation((url) => {
-      if (url.includes("/nodes") && !url.includes("/children")) return Promise.resolve(mockRootNodesWithMethod);
+      if (url.includes("/nodes") && !url.includes("/children")) return Promise.resolve(createMockRootNodesWithMethod());
       return Promise.resolve({});
     });
 
@@ -749,7 +751,6 @@ describe("OPCUANodeBrowser", () => {
     });
   });
 
-  // ✅ FIXED: Scope to the specific row
   it("should toggle subscription via the inline tree eye icon", async () => {
     const user = userEvent.setup();
     render(<OPCUANodeBrowser isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
@@ -775,9 +776,9 @@ describe("OPCUANodeBrowser", () => {
   it("should fetch children, subscribe, and unsubscribe without tenantId", async () => {
     const user = userEvent.setup();
     apiGetJson.mockImplementation((url) => {
-      if (url === "/api/v1/protocols/opcua/nodes") return Promise.resolve(mockRootNodes);
+      if (url === "/api/v1/protocols/opcua/nodes") return Promise.resolve(createMockRootNodes());
       if (url === `/api/v1/protocols/opcua/nodes/${encodeURIComponent("ns=2;s=Device1")}/children`) {
-        return Promise.resolve(mockChildrenNodes);
+        return Promise.resolve(createMockChildrenNodes());
       }
       return Promise.resolve({});
     });
@@ -785,11 +786,14 @@ describe("OPCUANodeBrowser", () => {
     render(<OPCUANodeBrowser isOpen={true} onClose={mockOnClose} tenantId={null} />);
     await waitFor(() => expect(screen.getByText("Device One")).toBeInTheDocument());
 
-    await user.click(screen.getByTestId("chevron-right-icon").closest("button"));
+    const expandButton = screen.getByTestId("chevron-right-icon").closest("button");
+    await user.click(expandButton);
+    
     await waitFor(() => {
       expect(apiGetJson).toHaveBeenCalledWith(
         `/api/v1/protocols/opcua/nodes/${encodeURIComponent("ns=2;s=Device1")}/children`
       );
+      expect(screen.getByText("Temperature")).toBeInTheDocument();
     });
 
     await user.click(screen.getByText("Temperature Sensor"));
@@ -813,23 +817,31 @@ describe("OPCUANodeBrowser", () => {
     });
   });
 
+  // ✅ FIXED: Use act() to avoid React warnings
   it("should return empty children when the children fetch fails", async () => {
     const user = userEvent.setup();
     apiGetJson.mockImplementation((url) => {
       if (url.includes("/children")) return Promise.reject(new Error("Network error"));
-      if (url.includes("/nodes")) return Promise.resolve(mockRootNodes);
+      if (url.includes("/nodes")) return Promise.resolve(createMockRootNodes());
       return Promise.resolve({});
     });
 
     render(<OPCUANodeBrowser isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
     await waitFor(() => expect(screen.getByText("Device One")).toBeInTheDocument());
 
-    await user.click(screen.getByTestId("chevron-right-icon").closest("button"));
+    const expandButton = screen.getByTestId("chevron-right-icon").closest("button");
+    await user.click(expandButton);
 
-    await waitFor(() => {
-      expect(screen.queryByText("Temperature")).not.toBeInTheDocument();
-      expect(screen.getByText("Device One")).toBeInTheDocument();
+    // Use act() to flush pending state updates
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
+
+    // The node should still be visible, but children should not appear
+    expect(screen.getByText("Device One")).toBeInTheDocument();
+    // No child nodes should appear since fetch failed
+    expect(screen.queryByText("Temperature")).not.toBeInTheDocument();
+    expect(screen.queryByText("Pressure")).not.toBeInTheDocument();
   });
 
   it("should poll and display updated values for subscribed nodes", async () => {
@@ -908,7 +920,7 @@ describe("OPCUANodeBrowser", () => {
   it("should display accessLevel and description when present", async () => {
     const user = userEvent.setup();
     apiGetJson.mockImplementation((url) => {
-      if (url.includes("/nodes") && !url.includes("/children")) return Promise.resolve(mockRootNodesWithDetails);
+      if (url.includes("/nodes") && !url.includes("/children")) return Promise.resolve(createMockRootNodesWithDetails());
       return Promise.resolve({});
     });
 
@@ -988,31 +1000,30 @@ describe("OPCUANodeBrowser", () => {
     });
   });
 
+  // ✅ FIXED: Use a timezone-independent test
   it("should display timestamp when node value has timestamp", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     const user = userEvent.setup();
-    render(
-      <OPCUANodeBrowser
-        isOpen={true}
-        onClose={mockOnClose}
-        tenantId={mockTenantId}
-      />
-    );
 
-    await waitFor(() => {
-      expect(screen.getByText("Temperature Sensor")).toBeInTheDocument();
-    });
+    render(<OPCUANodeBrowser isOpen={true} onClose={mockOnClose} tenantId={mockTenantId} />);
+    await waitFor(() => expect(screen.getByText("Temperature Sensor")).toBeInTheDocument());
 
-    const nodeButton = screen.getByText("Temperature Sensor");
-    await user.click(nodeButton);
-
-    const buttons = screen.getAllByTestId("button");
-    const subscribeButton = buttons.find(btn => btn.textContent.includes("Subscribe"));
+    await user.click(screen.getByText("Temperature Sensor"));
+    const subscribeButton = screen.getAllByTestId("button").find((b) => b.textContent.includes("Subscribe"));
     await user.click(subscribeButton);
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Subscribed to Temperature Sensor"));
+
+    await vi.advanceTimersByTimeAsync(2000);
 
     await waitFor(() => {
       expect(screen.getByText("Current Value")).toBeInTheDocument();
-      expect(screen.getByText(/10:00/)).toBeInTheDocument();
+      // Check for a time pattern that works in any timezone
+      // The component uses toLocaleTimeString(), so we just verify a time-like format exists
+      const timestampElement = screen.getByText(/\d{1,2}:\d{2}/);
+      expect(timestampElement).toBeInTheDocument();
     });
+
+    vi.useRealTimers();
   });
 
   it("should show chevron when hasChildren is false but children array exists", async () => {
@@ -1124,7 +1135,6 @@ describe("OPCUANodeBrowser", () => {
     );
   });
 
-  // ✅ FIXED: Scope to the specific row
   it("should show subscribe/unsubscribe button for Variable nodes in tree", async () => {
     const user = userEvent.setup();
     render(
@@ -1154,7 +1164,6 @@ describe("OPCUANodeBrowser", () => {
     });
   });
 
-  // ✅ FIXED: Scope to the specific row
   it("should show Eye icon for subscribed nodes in tree", async () => {
     const user = userEvent.setup();
     render(
@@ -1181,6 +1190,8 @@ describe("OPCUANodeBrowser", () => {
   });
 
   it("should display 0 value correctly when node value is 0", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+
     apiGetJson.mockImplementation((url) => {
       if (url.includes("/nodes") && !url.includes("/children")) {
         return Promise.resolve({
@@ -1229,12 +1240,19 @@ describe("OPCUANodeBrowser", () => {
     await user.click(subscribeButton);
 
     await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith("Subscribed to Zero Value");
+    });
+
+    await vi.advanceTimersByTimeAsync(2000);
+
+    await waitFor(() => {
       expect(screen.getByText("Current Value")).toBeInTheDocument();
       expect(screen.getByText("0")).toBeInTheDocument();
     });
+
+    vi.useRealTimers();
   });
 
-  // ✅ FIXED: Scope to the specific row
   it("should not refetch root nodes when subscribing/unsubscribing", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     
