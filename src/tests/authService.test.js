@@ -481,7 +481,6 @@ describe("authService", () => {
       expect(JSON.parse(localStorage.getItem("user")).username).toBe("a");
     });
 
-    // ✅ NEW: keepMeSignedIn true but token is null
     it("should not persist to localStorage when keepMeSignedIn is true but token is null", async () => {
       fetchSpy.mockResolvedValue({
         ok: true,
@@ -493,6 +492,28 @@ describe("authService", () => {
       await login("a", "p", true);
       expect(localStorage.getItem("auth_token")).toBeNull();
       expect(isAuthenticated()).toBe(false);
+    });
+
+    // ✅ NEW: JWT decodes but no exp claim
+    it("should assume valid when JWT decodes but has no exp claim", async () => {
+      const payload = btoa(JSON.stringify({ sub: "user-1" })); // no exp
+      const jwt = `eyJhbGciOiJIUzI1NiJ9.${payload}.sig`;
+
+      fetchSpy.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: {
+            access_token: jwt,
+            user: { id: 1, username: "a", email: "a@a.com" },
+          },
+        }),
+      });
+
+      const result = await login("a", "p", true);
+      expect(result.success).toBe(true);
+      expect(isAuthenticated()).toBe(true);
+      expect(localStorage.getItem("token_expiry")).toBeNull();
     });
   });
 
@@ -626,7 +647,6 @@ describe("authService", () => {
       expect(localStorage.getItem("user")).toBeNull();
     });
 
-    // ✅ NEW: In-memory token expiry via getCurrentUser
     it("should clear state via getCurrentUser when in-memory token expires", async () => {
       const soonExp = Math.floor((Date.now() + 1000) / 1000);
       const payload = btoa(JSON.stringify({ exp: soonExp }));
@@ -644,11 +664,43 @@ describe("authService", () => {
       });
       await login("a", "p");
 
-      // Advance past the buffer window
       vi.advanceTimersByTime(10 * 60 * 1000);
       const result = await getCurrentUser();
       expect(result).toBeNull();
       expect(isAuthenticated()).toBe(false);
+    });
+
+    // ✅ NEW: restore session when token_expiry key is absent
+    it("should restore session when token_expiry key is absent from localStorage", async () => {
+      const futureExp = Math.floor((Date.now() + 60 * 60 * 1000) / 1000);
+      const payload = btoa(JSON.stringify({ exp: futureExp }));
+      const validToken = `eyJhbGciOiJIUzI1NiJ9.${payload}.sig`;
+      const user = { id: 1, username: "nostamp", email: "n@n.com" };
+
+      localStorage.setItem("auth_token", validToken);
+      localStorage.setItem("user", JSON.stringify(user));
+      // no token_expiry set
+
+      const result = await getCurrentUser();
+      expect(result).toEqual(user);
+      expect(isAuthenticated()).toBe(true);
+    });
+
+    // ✅ NEW: clear state when embedded JWT exp is expired but token_expiry field is absent
+    it("should clear state when embedded JWT exp is expired but token_expiry field is absent", async () => {
+      const pastExp = Math.floor((Date.now() - 60 * 1000) / 1000);
+      const payload = btoa(JSON.stringify({ exp: pastExp }));
+      const expiredJwt = `eyJhbGciOiJIUzI1NiJ9.${payload}.sig`;
+      const user = { id: 1, username: "stale", email: "s@s.com" };
+
+      localStorage.setItem("auth_token", expiredJwt);
+      localStorage.setItem("user", JSON.stringify(user));
+      // no token_expiry key -> skips the storedExpiry<Date.now() branch,
+      // falls through to isTokenValid(storedToken) which must catch it
+
+      const result = await getCurrentUser();
+      expect(result).toBeNull();
+      expect(localStorage.getItem("auth_token")).toBeNull();
     });
   });
 
@@ -713,7 +765,6 @@ describe("authService", () => {
     });
 
     it("should return false when token is expired", async () => {
-      // Create an expired token
       const expiredToken =
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE1MDAwMDAwMDB9.expired";
       const user = { id: 1, username: "test", email: "test@example.com", role: "user" };
@@ -721,7 +772,6 @@ describe("authService", () => {
       localStorage.setItem("user", JSON.stringify(user));
       localStorage.setItem("token_expiry", "1500000000000");
 
-      // Force state to be set
       await getCurrentUser();
       expect(isAuthenticated()).toBe(false);
     });
@@ -801,7 +851,6 @@ describe("authService", () => {
 
       await login("test", "password");
 
-      // Same token should be valid locally
       const result = await verifyToken("valid-token");
       expect(result.valid).toBe(true);
       expect(result.user).toBeTruthy();
@@ -828,7 +877,6 @@ describe("authService", () => {
       });
       await login("test", "password");
 
-      // Second fetch call (the backend verify) explicitly fails
       fetchSpy.mockResolvedValueOnce({
         ok: true,
         json: async () => ({ success: false }),
@@ -872,7 +920,6 @@ describe("authService", () => {
     });
 
     it("should verify a token that differs from the current auth token via backend", async () => {
-      // Login first to set current user
       const loginResponse = {
         success: true,
         data: {
@@ -893,7 +940,6 @@ describe("authService", () => {
       });
       await login("test", "password");
 
-      // Mock backend verification for a different token
       fetchSpy.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
@@ -932,6 +978,77 @@ describe("authService", () => {
       const result = await verifyToken(expiredToken);
       expect(result.valid).toBe(false);
       expect(result.user).toBeNull();
+    });
+
+    it("should return invalid immediately when no token and no active session", async () => {
+      const result = await verifyToken();
+      expect(result).toEqual({ valid: false, user: null });
+    });
+
+    it("should clear auth state when the current session's token has expired", async () => {
+      const pastExp = Math.floor((Date.now() - 60 * 1000) / 1000);
+      const payload = btoa(JSON.stringify({ exp: pastExp }));
+      const expiredJwt = `eyJhbGciOiJIUzI1NiJ9.${payload}.sig`;
+
+      fetchSpy.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: {
+            access_token: expiredJwt,
+            user: { id: 1, username: "a", email: "a@a.com" },
+          },
+        }),
+      });
+      await login("a", "p");
+
+      const result = await verifyToken(expiredJwt);
+      expect(result.valid).toBe(false);
+      expect(isAuthenticated()).toBe(false);
+    });
+
+    it("should handle network failure during backend verification", async () => {
+      fetchSpy.mockRejectedValueOnce(new Error("Network down"));
+      const result = await verifyToken("some-unknown-token");
+      expect(result).toEqual({ valid: false, user: null });
+    });
+
+    // ✅ NEW: backend verify responds with non-ok HTTP status
+    it("should return invalid when backend verify responds with non-ok HTTP status", async () => {
+      fetchSpy.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: async () => ({ success: false, message: "Server error" }),
+      });
+      const result = await verifyToken("some-token-not-current");
+      expect(result).toEqual({ valid: false, user: null });
+    });
+
+    // ✅ NEW: extract user from result.data directly when no nested user field
+    it("should extract user from result.data directly when no nested user field (verify path)", async () => {
+      fetchSpy.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: { id: 9, username: "flat", email: "flat@f.com", role: "tech" }, // no .user wrapper
+        }),
+      });
+      const result = await verifyToken("flat-token");
+      expect(result.valid).toBe(true);
+      expect(result.user.username).toBe("flat");
+    });
+
+    // ✅ NEW: role as plain string in verify response
+    it("should handle role as a plain string in backend verify response", async () => {
+      fetchSpy.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: { user: { id: 2, username: "strrole", email: "s@s.com", role: "manager" } },
+        }),
+      });
+      const result = await verifyToken("string-role-token");
+      expect(result.user.role).toBe("manager");
     });
   });
 
@@ -1272,6 +1389,21 @@ describe("authService", () => {
       expect(result.success).toBe(false);
       expect(result.message).toBe("Unable to reset password. Please try again.");
     });
+
+    // ✅ NEW: prefer error.message over other fields on resetPassword failure
+    it("should prefer error.message over other fields on resetPassword failure", async () => {
+      fetchSpy.mockResolvedValue({
+        ok: false,
+        json: async () => ({
+          success: false,
+          error: { message: "Token already used" },
+          data: { message: "should not use this" },
+          message: "or this",
+        }),
+      });
+      const result = await resetPassword("token", "newPass123");
+      expect(result.message).toBe("Token already used");
+    });
   });
 
   // ============================================================
@@ -1280,7 +1412,6 @@ describe("authService", () => {
 
   describe("updateProfile", () => {
     it("should successfully update profile when authenticated", async () => {
-      // First login
       const loginResponse = {
         success: true,
         data: {
@@ -1303,7 +1434,6 @@ describe("authService", () => {
 
       await login("testuser", "password");
 
-      // Mock the profile update response
       const updateResponse = {
         success: true,
         data: {
@@ -1351,7 +1481,6 @@ describe("authService", () => {
     });
 
     it("should handle update failure with error message", async () => {
-      // Login first
       const loginResponse = {
         success: true,
         data: {
@@ -1374,7 +1503,6 @@ describe("authService", () => {
 
       await login("testuser", "password");
 
-      // Mock update failure
       fetchSpy.mockResolvedValue({
         ok: false,
         json: async () => ({
@@ -1394,7 +1522,6 @@ describe("authService", () => {
     });
 
     it("should use default error message when none provided", async () => {
-      // Login first
       const loginResponse = {
         success: true,
         data: {
@@ -1417,7 +1544,6 @@ describe("authService", () => {
 
       await login("testuser", "password");
 
-      // Mock update failure with no message
       fetchSpy.mockResolvedValue({
         ok: false,
         json: async () => ({}),
@@ -1434,7 +1560,6 @@ describe("authService", () => {
     });
 
     it("should handle network error during update", async () => {
-      // Login first
       const loginResponse = {
         success: true,
         data: {
@@ -1457,7 +1582,6 @@ describe("authService", () => {
 
       await login("testuser", "password");
 
-      // Mock network error
       fetchSpy.mockRejectedValue(new Error("Network error"));
 
       const updates = {
@@ -1543,6 +1667,65 @@ describe("authService", () => {
       });
       expect(isAuthenticated()).toBe(false);
     });
+
+    it("should clear state on a live 401 from the server (not caught by local pre-check)", async () => {
+      const futureExp = Math.floor((Date.now() + 60 * 60 * 1000) / 1000);
+      const payload = btoa(JSON.stringify({ exp: futureExp }));
+      const validToken = `eyJhbGciOiJIUzI1NiJ9.${payload}.sig`;
+
+      fetchSpy.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: {
+            access_token: validToken,
+            user: { id: 1, username: "a", email: "a@a.com" },
+          },
+        }),
+      });
+      await login("a", "p");
+
+      fetchSpy.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ success: false }),
+      });
+
+      await expect(updateProfile({ firstName: "X" })).rejects.toMatchObject({
+        success: false,
+        message: "Session expired. Please log in again.",
+      });
+      expect(isAuthenticated()).toBe(false);
+    });
+
+    // ✅ NEW: extract updated user from result.data directly when no nested user field
+    it("should extract updated user from result.data directly when no nested user field", async () => {
+      const futureExp = Math.floor((Date.now() + 60 * 60 * 1000) / 1000);
+      const jwt = `eyJhbGciOiJIUzI1NiJ9.${btoa(JSON.stringify({ exp: futureExp }))}.sig`;
+
+      fetchSpy.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: {
+            access_token: jwt,
+            user: { id: 1, username: "a", email: "a@a.com" },
+          },
+        }),
+      });
+      await login("a", "p");
+
+      fetchSpy.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: { first_name: "Flat", last_name: "User", email: "flat@x.com" }, // no .user wrapper
+        }),
+      });
+
+      const result = await updateProfile({ firstName: "Flat" });
+      expect(result.user.firstName).toBe("Flat");
+    });
   });
 
   // ============================================================
@@ -1551,7 +1734,6 @@ describe("authService", () => {
 
   describe("isTokenValid edge cases", () => {
     it("should assume valid when JWT payload is malformed JSON", async () => {
-      // 3 segments, but payload isn't valid base64/JSON
       const malformed = "eyJhbGciOiJIUzI1NiJ9.not-valid-base64!!.sig";
       fetchSpy.mockResolvedValue({
         ok: true,
@@ -1637,83 +1819,6 @@ describe("authService", () => {
 
       await login("a", "p", true);
       expect(localStorage.getItem("token_expiry")).toBe(String(futureExp * 1000));
-    });
-  });
-
-  // ============================================================
-  // verifyToken ADDITIONAL BRANCHES
-  // ============================================================
-
-  describe("verifyToken additional branches", () => {
-    it("should return invalid immediately when no token and no active session", async () => {
-      const result = await verifyToken();
-      expect(result).toEqual({ valid: false, user: null });
-    });
-
-    it("should clear auth state when the current session's token has expired", async () => {
-      const pastExp = Math.floor((Date.now() - 60 * 1000) / 1000);
-      const payload = btoa(JSON.stringify({ exp: pastExp }));
-      const expiredJwt = `eyJhbGciOiJIUzI1NiJ9.${payload}.sig`;
-
-      fetchSpy.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          success: true,
-          data: {
-            access_token: expiredJwt,
-            user: { id: 1, username: "a", email: "a@a.com" },
-          },
-        }),
-      });
-      await login("a", "p");
-
-      const result = await verifyToken(expiredJwt);
-      expect(result.valid).toBe(false);
-      expect(isAuthenticated()).toBe(false);
-    });
-
-    it("should handle network failure during backend verification", async () => {
-      fetchSpy.mockRejectedValueOnce(new Error("Network down"));
-      const result = await verifyToken("some-unknown-token");
-      expect(result).toEqual({ valid: false, user: null });
-    });
-  });
-
-  // ============================================================
-  // updateProfile SERVER-SIDE 401 TESTS
-  // ============================================================
-
-  describe("updateProfile server-side 401", () => {
-    it("should clear state on a live 401 from the server (not caught by local pre-check)", async () => {
-      // Login with a valid token that won't be caught by local expiry
-      const futureExp = Math.floor((Date.now() + 60 * 60 * 1000) / 1000);
-      const payload = btoa(JSON.stringify({ exp: futureExp }));
-      const validToken = `eyJhbGciOiJIUzI1NiJ9.${payload}.sig`;
-
-      fetchSpy.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          success: true,
-          data: {
-            access_token: validToken,
-            user: { id: 1, username: "a", email: "a@a.com" },
-          },
-        }),
-      });
-      await login("a", "p");
-
-      // Mock the server returning a 401 (token revoked, etc.)
-      fetchSpy.mockResolvedValueOnce({
-        ok: false,
-        status: 401,
-        json: async () => ({ success: false }),
-      });
-
-      await expect(updateProfile({ firstName: "X" })).rejects.toMatchObject({
-        success: false,
-        message: "Session expired. Please log in again.",
-      });
-      expect(isAuthenticated()).toBe(false);
     });
   });
 });
