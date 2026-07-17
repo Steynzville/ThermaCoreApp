@@ -41,7 +41,7 @@ class MockWebSocket {
   }
 
   _scheduleOpen() {
-    if (this._closed) return; // already closed before we even got to schedule
+    if (this._closed) return;
 
     this._openTimer = setTimeout(() => {
       if (this._shouldError) {
@@ -49,7 +49,6 @@ class MockWebSocket {
       } else if (this._shouldCloseImmediately) {
         this._triggerClose();
       } else if (this._shouldNeverOpen) {
-        // Don't open, don't error - just close after a short delay
         this._closeTimer = setTimeout(() => {
           this._triggerClose();
         }, 5);
@@ -83,7 +82,6 @@ class MockWebSocket {
     this._closed = true;
     this.readyState = MockWebSocket.CLOSED;
 
-    // Clear any pending timers
     if (this._openTimer) {
       clearTimeout(this._openTimer);
       this._openTimer = null;
@@ -213,12 +211,10 @@ describe("WebSocket Service", () => {
     originalWebSocket = global.WebSocket;
     global.WebSocket = MockWebSocket;
 
-    // Reset the service state
     websocketService.disconnect();
     vi.clearAllMocks();
     vi.useRealTimers();
 
-    // Reset all internal state
     websocketService.listeners = new Map();
     websocketService.statusListeners = new Set();
     websocketService.dataCache = new Map();
@@ -324,7 +320,6 @@ describe("WebSocket Service", () => {
     });
 
     it("should allow new connect after reconnect cycle", async () => {
-      // Use fake timers for precise control
       vi.useFakeTimers();
 
       global.WebSocket = MockWebSocket.createFlaky();
@@ -333,14 +328,16 @@ describe("WebSocket Service", () => {
       const connectPromise = websocketService.connect();
 
       // Advance past the initial open delay (10ms) + close delay (50ms)
-      vi.advanceTimersByTime(100);
+      // Use the async variant so queued microtasks (which register the
+      // mock's setTimeout calls) get a chance to run between ticks.
+      await vi.advanceTimersByTimeAsync(100);
 
-      // Wait for the reconnection cycle
-      // The service should reconnect after 1000ms (reconnectDelay default)
-      vi.advanceTimersByTime(1200);
+      // Wait for the reconnection cycle (reconnectDelay default 1000ms)
+      await vi.advanceTimersByTimeAsync(1200);
 
-      // Let any pending promises resolve
-      await Promise.resolve();
+      // Catch any rejection from the original promise (it may reject
+      // if the flaky connection fails before reconnect succeeds)
+      await connectPromise.catch(() => {});
 
       // Now the connection should be established
       expect(websocketService.isConnected()).toBe(true);
@@ -352,9 +349,8 @@ describe("WebSocket Service", () => {
       // Connect with new tenant - this will be instant with the new mock
       const newConnectPromise = websocketService.connect("new-tenant");
 
-      // Advance enough time for the instant open
-      vi.advanceTimersByTime(10);
-      await Promise.resolve();
+      // Advance enough time for the instant open, flushing microtasks too
+      await vi.advanceTimersByTimeAsync(10);
 
       await newConnectPromise;
 
@@ -935,10 +931,8 @@ describe("WebSocket Service", () => {
 
       const connectPromise = websocketService.connect("test-tenant");
 
-      // Wait for the connection attempt to be in progress
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Verify the promise is still pending (should be, since slow connecting takes 5000ms)
       expect(websocketService._pendingReject).not.toBeNull();
       expect(websocketService._currentRejectConnect).not.toBeNull();
 
