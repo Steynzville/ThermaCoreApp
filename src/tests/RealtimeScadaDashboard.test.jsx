@@ -3,14 +3,13 @@
  */
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { createContext } from "react";
 import { BrowserRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import RealtimeScadaDashboard from "@/components/RealtimeScadaDashboard";
 
 // ============================================================
-// RESIZE OBSERVER MOCK (Required for Recharts)
+// RESIZE OBSERVER MOCK
 // ============================================================
 
 class ResizeObserverMock {
@@ -124,7 +123,7 @@ vi.mock("@/components/ui/card", () => ({
   CardDescription: ({ children }) => <div data-testid="card-description">{children}</div>,
 }));
 
-// ✅ FIXED: Select mock with proper onChange handling
+// ✅ FIXED: Proper Select mock
 vi.mock("@/components/ui/select", () => ({
   Select: ({ children, value, onValueChange }) => (
     <div data-testid="select" data-value={value}>
@@ -753,9 +752,8 @@ describe("RealtimeScadaDashboard", () => {
       });
     });
 
-    // ✅ FIXED: Use userEvent for more reliable interaction
+    // ✅ FIXED: Use a different approach - find the select and change it directly
     it("should call setTimeRange when time range changes", async () => {
-      const user = userEvent.setup({ delay: null });
       const setTimeRangeMock = vi.fn();
       
       useRealtimeHistoricalData.mockReturnValue({
@@ -774,19 +772,17 @@ describe("RealtimeScadaDashboard", () => {
         expect(screen.getByTestId("select-native")).toBeInTheDocument();
       });
 
-      // Use fireEvent.change which is more reliable for select elements
       const select = screen.getByTestId("select-native");
       
-      // ✅ FIX: Use fireEvent.change with the value
+      // ✅ FIX: Simulate the select change
       fireEvent.change(select, { target: { value: '1' } });
 
-      // Wait for the mock to be called
       await waitFor(() => {
+        // Check that setTimeRange was called
         expect(setTimeRangeMock).toHaveBeenCalled();
-        // The actual value passed might be '1' or 1 depending on the component
-        // Let's check if it was called with any value
+        // The value should be a number
         const callArg = setTimeRangeMock.mock.calls[0][0];
-        // The component does parseInt, so it should be a number
+        // The component uses parseInt, so we expect a number
         expect(callArg).toBe(1);
       });
     });
