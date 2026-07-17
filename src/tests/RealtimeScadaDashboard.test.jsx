@@ -2,8 +2,8 @@
  * RealtimeScadaDashboard.test.jsx - Complete Test Coverage
  */
 
+import { Children, createContext, isValidElement } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { createContext } from "react";
 import { BrowserRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import RealtimeScadaDashboard from "@/components/RealtimeScadaDashboard";
@@ -123,29 +123,43 @@ vi.mock("@/components/ui/card", () => ({
   CardDescription: ({ children }) => <div data-testid="card-description">{children}</div>,
 }));
 
-// ✅ FIXED: Proper Select mock with working onChange
-vi.mock("@/components/ui/select", () => ({
-  Select: ({ children, value, onValueChange }) => (
-    <div data-testid="select" data-value={value}>
-      <select
-        data-testid="select-native"
-        value={value}
-        onChange={(e) => {
-          const newValue = e.target.value;
-          if (onValueChange) {
-            onValueChange(newValue);
-          }
-        }}
-      >
-        {children}
-      </select>
-    </div>
-  ),
-  SelectTrigger: ({ children }) => <button data-testid="select-trigger">{children}</button>,
-  SelectValue: () => <span data-testid="select-value">Last 24h</span>,
-  SelectContent: ({ children }) => <div data-testid="select-content">{children}</div>,
-  SelectItem: ({ children, value }) => <option data-testid="select-item" value={value}>{children}</option>,
-}));
+// ✅ FIXED: Proper Select mock with valid DOM nesting
+vi.mock("@/components/ui/select", () => {
+  const SelectContent = ({ children }) => <>{children}</>;
+  const SelectItem = ({ children, value }) => (
+    <option data-testid="select-item" value={value}>{children}</option>
+  );
+  const SelectTrigger = ({ children }) => (
+    <button data-testid="select-trigger" type="button">{children}</button>
+  );
+  const SelectValue = () => <span data-testid="select-value">Last 24h</span>;
+
+  const Select = ({ children, value, onValueChange }) => {
+    const childArray = Children.toArray(children).filter(isValidElement);
+    const trigger = childArray.find((c) => c.type === SelectTrigger);
+    const content = childArray.find((c) => c.type === SelectContent);
+
+    return (
+      <div data-testid="select" data-value={value}>
+        {trigger}
+        <select
+          data-testid="select-native"
+          value={value}
+          onChange={(e) => {
+            const newValue = e.target.value;
+            if (onValueChange) {
+              onValueChange(newValue);
+            }
+          }}
+        >
+          {content}
+        </select>
+      </div>
+    );
+  };
+
+  return { Select, SelectTrigger, SelectValue, SelectContent, SelectItem };
+});
 
 // Mock Recharts
 vi.mock("recharts", () => ({
@@ -752,7 +766,7 @@ describe("RealtimeScadaDashboard", () => {
       });
     });
 
-    // ✅ COMPLETELY FIXED: Directly test the component's behavior
+    // ✅ FIXED: Now works correctly with the fixed Select mock
     it("should call setTimeRange when time range changes", async () => {
       const setTimeRangeMock = vi.fn();
       
@@ -768,30 +782,23 @@ describe("RealtimeScadaDashboard", () => {
         </TestWrapper>,
       );
 
-      // Wait for the select to be rendered
       await waitFor(() => {
         expect(screen.getByTestId("select-native")).toBeInTheDocument();
       });
 
-      // Get the select element
       const select = screen.getByTestId("select-native");
       
-      // ✅ FIX: Use the actual onChange event on the select
-      // The component's handleTimeRangeChange will be called via onValueChange
+      // Now the select has proper <option> children, so this works correctly
       fireEvent.change(select, { target: { value: '1' } });
 
-      // Wait for the mock to be called with the correct value
       await waitFor(() => {
         expect(setTimeRangeMock).toHaveBeenCalled();
-        // Check that the value is a number (the component does parseInt)
+        // The value should be '1' (string) or 1 (number) depending on the component
+        // The component's handleTimeRangeChange does parseInt, so the mock receives the string
         const callArg = setTimeRangeMock.mock.calls[0][0];
-        // The component passes the value from onValueChange, which is a string
-        // But we want to verify it's not NaN
-        expect(callArg).not.toBeNaN();
-        // The component's handleTimeRangeChange does parseInt, so it should be 1
-        // But the mock might receive the string '1' from onValueChange
-        // Let's just check it's truthy
-        expect(callArg).toBeTruthy();
+        // The component's handleTimeRangeChange does parseInt, so the mock receives the string '1'
+        // from onValueChange
+        expect(callArg).toBe('1');
       });
     });
 
