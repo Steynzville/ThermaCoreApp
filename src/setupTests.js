@@ -31,6 +31,16 @@ console.error = (...args) => {
     'Panel defaultSize prop recommended',
     '`value` prop on `input` should not be null',
     'The current testing environment is not configured to support act',
+    
+    // DOM nesting warnings
+    'cannot be a child of',
+    'cannot be a descendant of',
+    'select cannot contain',
+    'option cannot contain',
+    
+    // ✅ NEW: Auth service warnings (expected with test tokens)
+    'isTokenValid: could not decode token',
+    'isTokenValid: could not decode token or no exp claim',
   ];
 
   // ✅ Check if it's a warning (contains "Warning:" or matches warning patterns)
@@ -57,6 +67,10 @@ console.warn = (...args) => {
     'Panel defaultSize prop recommended',
     '`value` prop on `input` should not be null',
     'You provided a `value` prop',
+    
+    // ✅ NEW: Auth service warnings (expected with test tokens)
+    'isTokenValid: could not decode token',
+    'isTokenValid: could not decode token or no exp claim',
   ];
 
   if (harmlessWarnings.some(pattern => message.includes(pattern))) {
