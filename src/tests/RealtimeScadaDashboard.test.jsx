@@ -766,7 +766,7 @@ describe("RealtimeScadaDashboard", () => {
       });
     });
 
-    // ✅ FIXED: Now works correctly with the fixed Select mock
+    // ✅ FIXED: Expect a number, not a string, because handleTimeRangeChange does parseInt
     it("should call setTimeRange when time range changes", async () => {
       const setTimeRangeMock = vi.fn();
       
@@ -788,17 +788,14 @@ describe("RealtimeScadaDashboard", () => {
 
       const select = screen.getByTestId("select-native");
       
-      // Now the select has proper <option> children, so this works correctly
       fireEvent.change(select, { target: { value: '1' } });
 
       await waitFor(() => {
         expect(setTimeRangeMock).toHaveBeenCalled();
-        // The value should be '1' (string) or 1 (number) depending on the component
-        // The component's handleTimeRangeChange does parseInt, so the mock receives the string
+        // ✅ The component does parseInt(value, 10) before calling setTimeRange,
+        // so the mock receives a number, not a string
         const callArg = setTimeRangeMock.mock.calls[0][0];
-        // The component's handleTimeRangeChange does parseInt, so the mock receives the string '1'
-        // from onValueChange
-        expect(callArg).toBe('1');
+        expect(callArg).toBe(1);
       });
     });
 
