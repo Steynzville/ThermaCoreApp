@@ -9,6 +9,7 @@
  * - Mobile (Drawer) view
  * - Edge cases and error handling
  * - State reset on close (with real component lifecycle)
+ * - Stale result race condition handling (guarded by UI, tested at load level)
  * 
  * Target: 85%+ function coverage
  */
@@ -20,9 +21,8 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-// ✅ FIXED: useState imported from React, not vitest
 import { useState } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import ProtocolWizard from "@/components/protocol/ProtocolWizard";
 
 // Mocks
@@ -45,8 +45,13 @@ import { toast } from "sonner";
 import { apiPostJson } from "@/utils/apiFetch";
 import { useMediaQuery } from "@/hooks/use-media-query";
 
+// Radix Select needs these DOM APIs for jsdom
+beforeAll(() => {
+  window.HTMLElement.prototype.hasPointerCapture = vi.fn();
+  window.HTMLElement.prototype.scrollIntoView = vi.fn();
+});
+
 // ============ TEST HARNESS ============
-// ✅ Reusable test harness for stateful tests with real component lifecycle
 
 const TestHarness = ({
   initialOpen = true,
@@ -122,21 +127,18 @@ describe("ProtocolWizard - Complete Coverage", () => {
   const selectProtocol = async (protocolName) => {
     const dialog = await getDialog();
 
-    // Try to find by text content in cards
     const cards = dialog.querySelectorAll('[class*="cursor-pointer"]');
     for (const card of cards) {
       const text = card.textContent?.toLowerCase() || "";
       if (text.includes(protocolName.toLowerCase())) {
         fireEvent.click(card);
         await waitFor(() => {
-          // Wait for the card to show selected state
           expect(card).toHaveClass(/border-primary/);
         });
         return card;
       }
     }
 
-    // Fallback: Try to find by text directly
     const content = within(dialog);
     const elements = content.queryAllByText(new RegExp(protocolName, "i"));
     for (const el of elements) {
@@ -181,7 +183,6 @@ describe("ProtocolWizard - Complete Coverage", () => {
   const findInputByLabel = async (labelText) => {
     const content = await getDialogContent();
 
-    // Try label association
     const label = content.queryByText(new RegExp(labelText, "i"));
     if (label) {
       const labelElement = label.closest("div") || label.closest("label");
@@ -191,7 +192,6 @@ describe("ProtocolWizard - Complete Coverage", () => {
       }
     }
 
-    // Try placeholder
     const inputs = content.queryAllByRole("textbox");
     for (const input of inputs) {
       const placeholder = input.getAttribute("placeholder");
@@ -206,7 +206,6 @@ describe("ProtocolWizard - Complete Coverage", () => {
   const findNumberInputByLabel = async (labelText) => {
     const content = await getDialogContent();
 
-    // Try label association
     const label = content.queryByText(new RegExp(labelText, "i"));
     if (label) {
       const labelElement = label.closest("div") || label.closest("label");
@@ -216,7 +215,6 @@ describe("ProtocolWizard - Complete Coverage", () => {
       }
     }
 
-    // Try by role
     const inputs = content.queryAllByRole("spinbutton");
     for (const input of inputs) {
       const labelId = input.getAttribute("aria-labelledby");
@@ -471,6 +469,26 @@ describe("ProtocolWizard - Complete Coverage", () => {
         }
       }
     });
+
+    it("should change security mode via select dropdown", async () => {
+      render(<ProtocolWizard {...defaultProps} />);
+      await navigateToStep(2, "opcua");
+
+      const trigger = screen.getByRole("combobox");
+      fireEvent.click(trigger);
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("option", { name: /Sign and Encrypt/i })
+        ).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole("option", { name: /Sign and Encrypt/i }));
+
+      await waitFor(() => {
+        expect(trigger).toHaveTextContent(/Sign and Encrypt/i);
+      });
+    });
   });
 
   // ============ DNP3 CONFIGURATION ============
@@ -495,13 +513,74 @@ describe("ProtocolWizard - Complete Coverage", () => {
       expect(outstationInput).toHaveValue(10);
     });
 
-    it("should render connection settings step", async () => {
+    it("should fill connection settings for DNP3", async () => {
       render(<ProtocolWizard {...defaultProps} />);
       await navigateToStep(2, "dnp3");
 
+      const hostInput = await findInputByLabel("Host/IP Address");
+      expect(hostInput).toBeTruthy();
+      fireEvent.change(hostInput, { target: { value: "10.0.0.5" } });
+      expect(hostInput).toHaveValue("10.0.0.5");
+
+      const portInput = await findNumberInputByLabel("Port");
+      expect(portInput).toBeTruthy();
+      fireEvent.change(portInput, { target: { value: "20000" } });
+      expect(portInput).toHaveValue(20000);
+    });
+
+    it("should save a full DNP3 configuration", async () => {
+      render(<ProtocolWizard {...defaultProps} />);
+      await selectProtocol("dnp3");
+
+      let nextButton = screen.getByRole("button", { name: /next/i });
+      fireEvent.click(nextButton);
+      
+      const masterInput = await findNumberInputByLabel("Master Address");
+      fireEvent.change(masterInput, { target: { value: "2" } });
+      const outstationInput = await findNumberInputByLabel("Outstation Address");
+      fireEvent.change(outstationInput, { target: { value: "11" } });
+
+      nextButton = screen.getByRole("button", { name: /next/i });
+      fireEvent.click(nextButton);
+
+      const hostInput = await findInputByLabel("Host/IP Address");
+      fireEvent.change(hostInput, { target: { value: "10.0.0.5" } });
+      const portInput = await findNumberInputByLabel("Port");
+      fireEvent.change(portInput, { target: { value: "20000" } });
+
+      nextButton = screen.getByRole("button", { name: /next/i });
+      fireEvent.click(nextButton);
+      await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
+
+      const testButton = screen.getByRole("button", { name: /test connection/i });
+      apiPostJson.mockResolvedValue({ success: true, message: "OK" });
+      fireEvent.click(testButton);
+
+      await waitFor(() => {
+        expect(toast.success).toHaveBeenCalledWith("Connection test successful!");
+      });
+
+      nextButton = screen.getByRole("button", { name: /next/i });
+      fireEvent.click(nextButton);
+      await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
+
       const content = await getDialogContent();
-      expect(content.queryAllByText(/Host\/IP Address/i).length).toBeGreaterThan(0);
-      expect(content.queryAllByText(/Port/i).length).toBeGreaterThan(0);
+      const saveButtons = content.queryAllByRole("button", { name: /save configuration/i });
+      apiPostJson.mockResolvedValue({ success: true });
+      fireEvent.click(saveButtons[0]);
+
+      await waitFor(() => {
+        expect(apiPostJson).toHaveBeenCalledWith(
+          expect.stringContaining("/api/v1/protocols/dnp3/devices"),
+          expect.objectContaining({
+            master_address: 2,
+            outstation_address: 11,
+            host: "10.0.0.5",
+            dnp3_port: 20000,
+          })
+        );
+        expect(toast.success).toHaveBeenCalledWith("DNP3 device configured successfully");
+      });
     });
   });
 
@@ -549,13 +628,22 @@ describe("ProtocolWizard - Complete Coverage", () => {
       }
     });
 
-    it("should render authentication step", async () => {
+    it("should fill authentication fields for MQTT", async () => {
       render(<ProtocolWizard {...defaultProps} />);
       await navigateToStep(2, "mqtt");
 
+      const usernameInput = await findInputByLabel("Username");
+      expect(usernameInput).toBeTruthy();
+      fireEvent.change(usernameInput, { target: { value: "mqtt-user" } });
+      expect(usernameInput).toHaveValue("mqtt-user");
+
       const content = await getDialogContent();
-      expect(content.queryAllByText(/Username/i).length).toBeGreaterThan(0);
-      expect(content.queryAllByText(/Password/i).length).toBeGreaterThan(0);
+      const passwordLabel = content.getByText(/^Password$/i);
+      const labelElement = passwordLabel.closest("div") || passwordLabel.closest("label");
+      const passwordInput = labelElement.querySelector('input[type="password"]');
+      expect(passwordInput).toBeTruthy();
+      fireEvent.change(passwordInput, { target: { value: "mqtt-pass" } });
+      expect(passwordInput).toHaveValue("mqtt-pass");
     });
 
     it("should include TLS setting in saved config", async () => {
@@ -563,7 +651,6 @@ describe("ProtocolWizard - Complete Coverage", () => {
 
       await selectProtocol("mqtt");
 
-      // Navigate to step 1 manually
       let nextButton = screen.getByRole("button", { name: /next/i });
       fireEvent.click(nextButton);
       await waitFor(() => {
@@ -572,25 +659,16 @@ describe("ProtocolWizard - Complete Coverage", () => {
       });
 
       const hostInput = await findInputByLabel("Broker Host");
-      expect(hostInput).toBeTruthy();
       fireEvent.change(hostInput, { target: { value: "broker.hivemq.com" } });
-
       const portInput = await findNumberInputByLabel("Port");
-      expect(portInput).toBeTruthy();
       fireEvent.change(portInput, { target: { value: "1883" } });
-
       const clientInput = await findInputByLabel("Client ID");
-      expect(clientInput).toBeTruthy();
       fireEvent.change(clientInput, { target: { value: "test-client" } });
-
-      // Toggle TLS on
       const checkbox = screen.getByRole("checkbox");
-      expect(checkbox).toBeTruthy();
       fireEvent.click(checkbox);
       expect(checkbox).toBeChecked();
 
-      // Navigate to step 4
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < 2; i++) {
         nextButton = screen.getByRole("button", { name: /next/i });
         fireEvent.click(nextButton);
         await waitFor(() => {
@@ -599,10 +677,21 @@ describe("ProtocolWizard - Complete Coverage", () => {
         });
       }
 
+      const testButton = screen.getByRole("button", { name: /test connection/i });
+      apiPostJson.mockResolvedValue({ success: true, message: "OK" });
+      fireEvent.click(testButton);
+
+      await waitFor(() => {
+        expect(toast.success).toHaveBeenCalledWith("Connection test successful!");
+      });
+
+      nextButton = screen.getByRole("button", { name: /next/i });
+      fireEvent.click(nextButton);
+      await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
+
       const content = await getDialogContent();
       const saveButtons = content.queryAllByRole("button", { name: /save configuration/i });
-      expect(saveButtons.length).toBeGreaterThan(0);
-
+      
       apiPostJson.mockResolvedValue({ success: true });
       fireEvent.click(saveButtons[0]);
 
@@ -639,9 +728,11 @@ describe("ProtocolWizard - Complete Coverage", () => {
     });
 
     it("should show loading state during connection test", async () => {
-      apiPostJson.mockImplementation(
-        () => new Promise((resolve) => setTimeout(resolve, 200))
-      );
+      let resolveTest;
+      const testPromise = new Promise((resolve) => {
+        resolveTest = resolve;
+      });
+      apiPostJson.mockImplementation(() => testPromise);
 
       render(<ProtocolWizard {...defaultProps} />);
       await navigateToStep(3, "modbus");
@@ -655,6 +746,40 @@ describe("ProtocolWizard - Complete Coverage", () => {
       await waitFor(() => {
         const loadingButton = screen.queryByRole("button", { name: /testing/i });
         expect(loadingButton).toBeInTheDocument();
+        expect(loadingButton).toBeDisabled();
+      });
+
+      resolveTest({ success: true, message: "OK" });
+
+      await waitFor(() => {
+        const button = screen.getByRole("button", { name: /test connection/i });
+        expect(button).not.toBeDisabled();
+        expect(button).not.toHaveTextContent(/testing/i);
+      });
+    });
+
+    it("should show loading state until an in-flight test resolves, then remain interactive", async () => {
+      let resolveTest;
+      apiPostJson.mockImplementation(() => new Promise((r) => { resolveTest = r; }));
+
+      render(<ProtocolWizard {...defaultProps} />);
+      await navigateToStep(3, "modbus");
+
+      fireEvent.click(screen.getByRole("button", { name: /test connection/i }));
+      
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /testing/i })).toBeDisabled();
+      });
+
+      // Back and Next should be disabled during testing
+      expect(screen.getByRole("button", { name: /back/i })).toBeDisabled();
+      // Next button not visible on step 3 (it's the last step before complete)
+
+      resolveTest({ success: true, message: "OK" });
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /test connection/i })).not.toBeDisabled();
+        expect(screen.getByRole("button", { name: /back/i })).not.toBeDisabled();
       });
     });
 
@@ -739,30 +864,32 @@ describe("ProtocolWizard - Complete Coverage", () => {
         expect(toast.error).toHaveBeenCalledWith("Connection test failed");
       });
     });
+
+    it("should handle undefined response from apiFetch gracefully", async () => {
+      apiPostJson.mockResolvedValue(undefined);
+
+      render(<ProtocolWizard {...defaultProps} />);
+      await navigateToStep(3, "modbus");
+
+      const testButton = screen.getByRole("button", { name: /test connection/i });
+      fireEvent.click(testButton);
+
+      await waitFor(() => {
+        expect(toast.success).toHaveBeenCalledWith("Connection test successful!");
+        const resultMessage = screen.queryByText(/Connection successful/i);
+        expect(resultMessage).toBeInTheDocument();
+      });
+    });
   });
 
   // ============ SAVE CONFIGURATION ============
 
   describe("Save Configuration - Complete Coverage", () => {
-    it("should render save button only on final step", async () => {
-      render(<ProtocolWizard {...defaultProps} />);
-
-      let saveButtons = screen.queryAllByRole("button", { name: /save configuration/i });
-      expect(saveButtons.length).toBe(0);
-
-      await navigateToStep(4, "modbus");
-
-      const content = await getDialogContent();
-      saveButtons = content.queryAllByRole("button", { name: /save configuration/i });
-      expect(saveButtons.length).toBeGreaterThan(0);
-    });
-
     it("should save configuration successfully with full payload verification", async () => {
       render(<ProtocolWizard {...defaultProps} />);
 
       await selectProtocol("modbus");
 
-      // Navigate to step 1
       let nextButton = screen.getByRole("button", { name: /next/i });
       fireEvent.click(nextButton);
       await waitFor(() => {
@@ -771,14 +898,10 @@ describe("ProtocolWizard - Complete Coverage", () => {
       });
 
       const deviceInput = await findInputByLabel("Device ID");
-      expect(deviceInput).toBeTruthy();
       fireEvent.change(deviceInput, { target: { value: "PLC-001" } });
-
       const unitInput = await findNumberInputByLabel("Unit ID");
-      expect(unitInput).toBeTruthy();
       fireEvent.change(unitInput, { target: { value: "5" } });
 
-      // Navigate to step 2
       nextButton = screen.getByRole("button", { name: /next/i });
       fireEvent.click(nextButton);
       await waitFor(() => {
@@ -787,26 +910,33 @@ describe("ProtocolWizard - Complete Coverage", () => {
       });
 
       const hostInput = await findInputByLabel("Host/IP Address");
-      expect(hostInput).toBeTruthy();
       fireEvent.change(hostInput, { target: { value: "192.168.1.100" } });
-
       const portInput = await findNumberInputByLabel("Port");
-      expect(portInput).toBeTruthy();
       fireEvent.change(portInput, { target: { value: "502" } });
-
       const timeoutInput = await findNumberInputByLabel("Timeout");
-      expect(timeoutInput).toBeTruthy();
       fireEvent.change(timeoutInput, { target: { value: "10" } });
 
-      // Navigate to step 3 and 4
-      for (let i = 0; i < 2; i++) {
-        nextButton = screen.getByRole("button", { name: /next/i });
-        fireEvent.click(nextButton);
-        await waitFor(() => {
-          const dialog = screen.getByRole("dialog");
-          expect(dialog).toBeInTheDocument();
-        });
-      }
+      nextButton = screen.getByRole("button", { name: /next/i });
+      fireEvent.click(nextButton);
+      await waitFor(() => {
+        const dialog = screen.getByRole("dialog");
+        expect(dialog).toBeInTheDocument();
+      });
+
+      const testButton = screen.getByRole("button", { name: /test connection/i });
+      apiPostJson.mockResolvedValue({ success: true, message: "OK" });
+      fireEvent.click(testButton);
+
+      await waitFor(() => {
+        expect(toast.success).toHaveBeenCalledWith("Connection test successful!");
+      });
+
+      nextButton = screen.getByRole("button", { name: /next/i });
+      fireEvent.click(nextButton);
+      await waitFor(() => {
+        const dialog = screen.getByRole("dialog");
+        expect(dialog).toBeInTheDocument();
+      });
 
       const content = await getDialogContent();
       const saveButtons = content.queryAllByRole("button", { name: /save configuration/i });
@@ -829,6 +959,119 @@ describe("ProtocolWizard - Complete Coverage", () => {
         expect(toast.success).toHaveBeenCalledWith("MODBUS device configured successfully");
         expect(defaultProps.onSuccess).toHaveBeenCalled();
         expect(defaultProps.onClose).toHaveBeenCalled();
+      });
+    });
+
+    it("should render save button only on final step", async () => {
+      render(<ProtocolWizard {...defaultProps} />);
+
+      let saveButtons = screen.queryAllByRole("button", { name: /save configuration/i });
+      expect(saveButtons.length).toBe(0);
+
+      await navigateToStep(4, "modbus");
+
+      const content = await getDialogContent();
+      saveButtons = content.queryAllByRole("button", { name: /save configuration/i });
+      expect(saveButtons.length).toBeGreaterThan(0);
+    });
+
+    it("should handle save errors with user-friendly message", async () => {
+      render(<ProtocolWizard {...defaultProps} />);
+      await navigateToStep(4, "modbus");
+
+      const backButton = screen.getByRole("button", { name: /back/i });
+      fireEvent.click(backButton);
+
+      const testButton = screen.getByRole("button", { name: /test connection/i });
+      apiPostJson.mockResolvedValue({ success: true, message: "OK" });
+      fireEvent.click(testButton);
+
+      await waitFor(() => {
+        expect(toast.success).toHaveBeenCalledWith("Connection test successful!");
+      });
+
+      const nextButton = screen.getByRole("button", { name: /next/i });
+      fireEvent.click(nextButton);
+      await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
+
+      apiPostJson.mockRejectedValue(new Error("Save failed"));
+
+      const content = await getDialogContent();
+      const saveButtons = content.queryAllByRole("button", { name: /save configuration/i });
+      fireEvent.click(saveButtons[0]);
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith("Failed to save configuration");
+      });
+    });
+
+    it("should include tenant ID in save and test requests", async () => {
+      apiPostJson.mockResolvedValue({ success: true });
+
+      render(<ProtocolWizard {...defaultProps} tenantId="custom-tenant" />);
+      await navigateToStep(4, "modbus");
+
+      const backButton = screen.getByRole("button", { name: /back/i });
+      fireEvent.click(backButton);
+
+      const testButton = screen.getByRole("button", { name: /test connection/i });
+      apiPostJson.mockResolvedValue({ success: true, message: "OK" });
+      fireEvent.click(testButton);
+
+      await waitFor(() => {
+        expect(toast.success).toHaveBeenCalledWith("Connection test successful!");
+      });
+
+      const nextButton = screen.getByRole("button", { name: /next/i });
+      fireEvent.click(nextButton);
+      await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
+
+      const content = await getDialogContent();
+      const saveButtons = content.queryAllByRole("button", { name: /save configuration/i });
+
+      apiPostJson.mockResolvedValue({ success: true });
+      fireEvent.click(saveButtons[0]);
+
+      await waitFor(() => {
+        expect(apiPostJson).toHaveBeenCalledWith(
+          expect.stringContaining("tenant_id=custom-tenant"),
+          expect.any(Object)
+        );
+      });
+    });
+
+    it("should handle save when tenantId is not provided", async () => {
+      apiPostJson.mockResolvedValue({ success: true });
+
+      render(<ProtocolWizard {...defaultProps} tenantId={null} />);
+      await navigateToStep(4, "modbus");
+
+      const backButton = screen.getByRole("button", { name: /back/i });
+      fireEvent.click(backButton);
+
+      const testButton = screen.getByRole("button", { name: /test connection/i });
+      apiPostJson.mockResolvedValue({ success: true, message: "OK" });
+      fireEvent.click(testButton);
+
+      await waitFor(() => {
+        expect(toast.success).toHaveBeenCalledWith("Connection test successful!");
+      });
+
+      const nextButton = screen.getByRole("button", { name: /next/i });
+      fireEvent.click(nextButton);
+      await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
+
+      const content = await getDialogContent();
+      const saveButtons = content.queryAllByRole("button", { name: /save configuration/i });
+
+      apiPostJson.mockResolvedValue({ success: true });
+      fireEvent.click(saveButtons[0]);
+
+      await waitFor(() => {
+        expect(apiPostJson).toHaveBeenCalledWith(
+          expect.not.stringContaining("tenant_id"),
+          expect.any(Object)
+        );
       });
     });
 
@@ -858,60 +1101,120 @@ describe("ProtocolWizard - Complete Coverage", () => {
       });
     });
 
-    it("should handle save errors with user-friendly message", async () => {
-      apiPostJson.mockRejectedValue(new Error("Save failed"));
+    it("should prevent double-submit on save", async () => {
+      let resolveSave;
+      const savePromise = new Promise((resolve) => {
+        resolveSave = resolve;
+      });
+      
+      // Mock test connection first
+      apiPostJson.mockResolvedValueOnce({ success: true, message: "OK" });
+      // Mock save with pending promise
+      apiPostJson.mockImplementationOnce(() => savePromise);
 
+      render(<ProtocolWizard {...defaultProps} />);
+      
+      await navigateToStep(3, "modbus");
+      const testButton = screen.getByRole("button", { name: /test connection/i });
+      fireEvent.click(testButton);
+      await waitFor(() => expect(toast.success).toHaveBeenCalled());
+
+      const nextButton = screen.getByRole("button", { name: /next/i });
+      fireEvent.click(nextButton);
+      await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
+
+      const content = await getDialogContent();
+      const saveButtons = content.queryAllByRole("button", { name: /save configuration/i });
+      
+      // First click should disable the button
+      fireEvent.click(saveButtons[0]);
+      expect(saveButtons[0]).toBeDisabled();
+      
+      // Second click while disabled should be a no-op
+      fireEvent.click(saveButtons[0]);
+      
+      // Resolve save
+      resolveSave({ success: true });
+      
+      await waitFor(() => {
+        // Should only be called once for save (plus once for test = 2 total)
+        expect(apiPostJson).toHaveBeenCalledTimes(2);
+        expect(toast.success).toHaveBeenCalledWith("MODBUS device configured successfully");
+      });
+    });
+
+    it("should not leak fields from a previously configured protocol", async () => {
+      render(<ProtocolWizard {...defaultProps} />);
+
+      await navigateToStep(2, "mqtt");
+      const content1 = await getDialogContent();
+      const passwordLabel = content1.getByText(/^Password$/i);
+      const labelElement = passwordLabel.closest("div") || passwordLabel.closest("label");
+      const passwordInput = labelElement.querySelector('input[type="password"]');
+      fireEvent.change(passwordInput, { target: { value: "leaked-secret" } });
+
+      const backButton = screen.getByRole("button", { name: /back/i });
+      fireEvent.click(backButton);
+      fireEvent.click(backButton);
+
+      await selectProtocol("modbus");
+      for (let i = 0; i < 3; i++) {
+        const nextBtn = screen.getByRole("button", { name: /next/i });
+        fireEvent.click(nextBtn);
+        await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
+      }
+
+      const testButton = screen.getByRole("button", { name: /test connection/i });
+      apiPostJson.mockResolvedValue({ success: true, message: "OK" });
+      fireEvent.click(testButton);
+
+      await waitFor(() => {
+        expect(toast.success).toHaveBeenCalledWith("Connection test successful!");
+      });
+
+      const nextBtn = screen.getByRole("button", { name: /next/i });
+      fireEvent.click(nextBtn);
+      await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
+
+      const content = await getDialogContent();
+      apiPostJson.mockResolvedValue({ success: true });
+      const saveButtons = content.queryAllByRole("button", { name: /save configuration/i });
+      fireEvent.click(saveButtons[0]);
+
+      await waitFor(() => {
+        expect(apiPostJson).toHaveBeenCalledWith(
+          expect.any(String),
+          expect.not.objectContaining({ mqtt_password: "leaked-secret" })
+        );
+      });
+    });
+
+    it("should require a successful connection test before saving", async () => {
       render(<ProtocolWizard {...defaultProps} />);
       await navigateToStep(4, "modbus");
 
       const content = await getDialogContent();
       const saveButtons = content.queryAllByRole("button", { name: /save configuration/i });
-      expect(saveButtons.length).toBeGreaterThan(0);
+      expect(saveButtons[0]).toBeDisabled();
 
-      fireEvent.click(saveButtons[0]);
+      const backButton = screen.getByRole("button", { name: /back/i });
+      fireEvent.click(backButton);
+
+      const testButton = screen.getByRole("button", { name: /test connection/i });
+      apiPostJson.mockResolvedValue({ success: true, message: "OK" });
+      fireEvent.click(testButton);
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith("Failed to save configuration");
+        expect(toast.success).toHaveBeenCalledWith("Connection test successful!");
       });
-    });
 
-    it("should include tenant ID in save and test requests", async () => {
-      apiPostJson.mockResolvedValue({ success: true });
-
-      render(<ProtocolWizard {...defaultProps} tenantId="custom-tenant" />);
-      await navigateToStep(4, "modbus");
-
-      const content = await getDialogContent();
-      const saveButtons = content.queryAllByRole("button", { name: /save configuration/i });
-      expect(saveButtons.length).toBeGreaterThan(0);
-
-      fireEvent.click(saveButtons[0]);
+      const nextButton = screen.getByRole("button", { name: /next/i });
+      fireEvent.click(nextButton);
 
       await waitFor(() => {
-        expect(apiPostJson).toHaveBeenCalledWith(
-          expect.stringContaining("tenant_id=custom-tenant"),
-          expect.any(Object)
-        );
-      });
-    });
-
-    it("should handle save when tenantId is not provided", async () => {
-      apiPostJson.mockResolvedValue({ success: true });
-
-      render(<ProtocolWizard {...defaultProps} tenantId={null} />);
-      await navigateToStep(4, "modbus");
-
-      const content = await getDialogContent();
-      const saveButtons = content.queryAllByRole("button", { name: /save configuration/i });
-      expect(saveButtons.length).toBeGreaterThan(0);
-
-      fireEvent.click(saveButtons[0]);
-
-      await waitFor(() => {
-        expect(apiPostJson).toHaveBeenCalledWith(
-          expect.not.stringContaining("tenant_id"),
-          expect.any(Object)
-        );
+        const content2 = within(screen.getByRole("dialog"));
+        const saveButtons2 = content2.queryAllByRole("button", { name: /save configuration/i });
+        expect(saveButtons2[0]).not.toBeDisabled();
       });
     });
   });
@@ -919,7 +1222,6 @@ describe("ProtocolWizard - Complete Coverage", () => {
   // ============ MOBILE / DRAWER VIEW ============
 
   describe("Mobile/Drawer View", () => {
-    // ✅ FIXED: Uses React useState correctly
     it("should render Drawer instead of Dialog on mobile", async () => {
       useMediaQuery.mockReturnValue(false);
 
@@ -972,32 +1274,25 @@ describe("ProtocolWizard - Complete Coverage", () => {
         expect(drawer).toBeInTheDocument();
       });
 
-      const closeButton = screen.queryByRole("button", { name: /close/i });
-      if (closeButton) {
-        fireEvent.click(closeButton);
+      const closeButton = await screen.findByRole("button", { name: /close/i });
+      fireEvent.click(closeButton);
 
-        expect(onCloseMock).toHaveBeenCalled();
+      expect(onCloseMock).toHaveBeenCalled();
 
-        rerender(
-          <ProtocolWizard
-            {...defaultProps}
-            isOpen={false}
-            onClose={onCloseMock}
-          />
-        );
+      rerender(
+        <ProtocolWizard
+          {...defaultProps}
+          isOpen={false}
+          onClose={onCloseMock}
+        />
+      );
 
-        await waitFor(() => {
-          const drawers = screen.queryAllByRole("dialog");
-          expect(drawers.length).toBe(0);
-        });
-      } else {
-        // If no close button found, verify drawer rendered
-        const drawer = screen.getByRole("dialog");
-        expect(drawer).toBeInTheDocument();
-      }
+      await waitFor(() => {
+        const drawers = screen.queryAllByRole("dialog");
+        expect(drawers.length).toBe(0);
+      });
     });
 
-    // ✅ FIXED: Uses React useState correctly
     it("should render mobile drawer with protocol options", async () => {
       useMediaQuery.mockReturnValue(false);
 
@@ -1024,7 +1319,6 @@ describe("ProtocolWizard - Complete Coverage", () => {
       });
     });
 
-    // Skip problematic mobile tests due to Radix UI Drawer height issue in test environment
     it.skip("should show step progress in mobile view", async () => {
       // Radix UI Drawer height issue in test environment
       // Keep skipped but documented
@@ -1092,6 +1386,18 @@ describe("ProtocolWizard - Complete Coverage", () => {
       expect(portInput).toHaveValue(null);
     });
 
+    it("should reset a number field to empty when cleared", async () => {
+      render(<ProtocolWizard {...defaultProps} />);
+      await navigateToStep(2, "modbus");
+
+      const timeoutInput = await findNumberInputByLabel("Timeout");
+      fireEvent.change(timeoutInput, { target: { value: "15" } });
+      expect(timeoutInput).toHaveValue(15);
+
+      fireEvent.change(timeoutInput, { target: { value: "" } });
+      expect(timeoutInput).toHaveValue(null);
+    });
+
     it("should handle navigation clicks", async () => {
       render(<ProtocolWizard {...defaultProps} />);
       await selectProtocol("modbus");
@@ -1109,11 +1415,12 @@ describe("ProtocolWizard - Complete Coverage", () => {
       );
     });
 
-    // ✅ FIXED: Uses React useState correctly
     it("should handle close during async operations", async () => {
-      apiPostJson.mockImplementation(
-        () => new Promise((resolve) => setTimeout(resolve, 500))
-      );
+      let resolveSave;
+      const savePromise = new Promise((resolve) => {
+        resolveSave = resolve;
+      });
+      apiPostJson.mockImplementation(() => savePromise);
 
       const onCloseMock = vi.fn();
       const AsyncTestHarness = () => {
@@ -1133,37 +1440,41 @@ describe("ProtocolWizard - Complete Coverage", () => {
 
       render(<AsyncTestHarness />);
 
-      // Navigate to save step
       await navigateToStep(4, "modbus");
+
+      const backButton = screen.getByRole("button", { name: /back/i });
+      fireEvent.click(backButton);
+
+      const testButton = screen.getByRole("button", { name: /test connection/i });
+      apiPostJson.mockResolvedValue({ success: true, message: "OK" });
+      fireEvent.click(testButton);
+
+      await waitFor(() => {
+        expect(toast.success).toHaveBeenCalledWith("Connection test successful!");
+      });
+
+      const nextButton = screen.getByRole("button", { name: /next/i });
+      fireEvent.click(nextButton);
+      await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
 
       const content = await getDialogContent();
       const saveButtons = content.queryAllByRole("button", { name: /save configuration/i });
       expect(saveButtons.length).toBeGreaterThan(0);
 
-      // Click save (starts async operation)
       fireEvent.click(saveButtons[0]);
 
-      // Immediately find and click close button
-      const closeButton = screen.queryByRole("button", { name: /close/i });
-      if (closeButton) {
-        fireEvent.click(closeButton);
+      const closeButton = await screen.findByRole("button", { name: /close/i });
+      fireEvent.click(closeButton);
 
-        await waitFor(() => {
-          expect(onCloseMock).toHaveBeenCalled();
-        });
-      } else {
-        // Fallback - verify the component handles the async operation
-        await waitFor(() => {
-          expect(apiPostJson).toHaveBeenCalled();
-        });
-      }
+      await waitFor(() => {
+        expect(onCloseMock).toHaveBeenCalled();
+      });
     });
   });
 
   // ============ STATE MANAGEMENT AND RESET ============
 
   describe("State Management and Reset", () => {
-    // ✅ FIXED: Uses React useState correctly via TestHarness
     it("should reset state when closing and reopening", async () => {
       const onCloseMock = vi.fn();
 
@@ -1175,13 +1486,11 @@ describe("ProtocolWizard - Complete Coverage", () => {
         />
       );
 
-      // Get dialog
       await waitFor(() => {
         const dialog = screen.getByRole("dialog");
         expect(dialog).toBeInTheDocument();
       });
 
-      // Select protocol and fill data
       await selectProtocol("modbus");
       await navigateToStep(1, "modbus");
 
@@ -1192,11 +1501,9 @@ describe("ProtocolWizard - Complete Coverage", () => {
       fireEvent.change(inputs[0], { target: { value: "PLC-001" } });
       expect(inputs[0]).toHaveValue("PLC-001");
 
-      // Close the wizard via the real close button
       const closeButton = screen.getByRole("button", { name: /close/i });
       fireEvent.click(closeButton);
 
-      // Wait for dialog to close
       await waitFor(() => {
         const dialogs = screen.queryAllByRole("dialog");
         expect(dialogs.length).toBe(0);
@@ -1204,28 +1511,23 @@ describe("ProtocolWizard - Complete Coverage", () => {
 
       expect(onCloseMock).toHaveBeenCalled();
 
-      // Reopen the wizard
       const reopenButton = screen.getByTestId("reopen-button");
       fireEvent.click(reopenButton);
 
-      // Wait for dialog to reopen
       await waitFor(() => {
         const dialog = screen.getByRole("dialog");
         expect(dialog).toBeInTheDocument();
       });
 
-      // Should be on step 0 (protocol selection)
       const newContent = within(screen.getByRole("dialog"));
       expect(newContent.queryAllByText(/Select Protocol/i).length).toBeGreaterThan(0);
 
-      // Select protocol again and verify fields are empty (reset)
       await selectProtocol("modbus");
       await navigateToStep(1, "modbus");
 
       const newContent2 = within(screen.getByRole("dialog"));
       const newInputs = newContent2.queryAllByRole("textbox");
       expect(newInputs.length).toBeGreaterThan(0);
-      // Should be empty (reset to DEFAULT_CONFIG)
       expect(newInputs[0]).toHaveValue("");
     });
 
@@ -1253,7 +1555,6 @@ describe("ProtocolWizard - Complete Coverage", () => {
       });
     });
 
-    // ✅ FIXED: Properly tests backdrop click with Radix UI overlay
     it("should close dialog when clicking backdrop", async () => {
       const onCloseMock = vi.fn();
 
@@ -1270,7 +1571,6 @@ describe("ProtocolWizard - Complete Coverage", () => {
         expect(dialog).toBeInTheDocument();
       });
 
-      // Try different selectors for Radix UI overlay
       const overlaySelectors = [
         '[data-slot="dialog-overlay"]',
         '[data-radix-dialog-overlay]',
@@ -1285,15 +1585,10 @@ describe("ProtocolWizard - Complete Coverage", () => {
       }
 
       if (overlay) {
-        // Radix UI uses pointer events for dismissal
-        // Try pointerDown + pointerUp which is more faithful to how Radix works
         fireEvent.pointerDown(overlay);
         fireEvent.pointerUp(overlay);
-        
-        // Also try click as fallback
         fireEvent.click(overlay);
 
-        // Wait a bit for the dismiss to process
         await waitFor(
           () => {
             expect(onCloseMock).toHaveBeenCalled();
@@ -1301,8 +1596,6 @@ describe("ProtocolWizard - Complete Coverage", () => {
           { timeout: 3000 }
         );
       } else {
-        // If overlay not found, fall back to close button test
-        // This is a reasonable fallback since backdrop-dismiss is Radix's behavior
         const closeButton = screen.getByRole("button", { name: /close/i });
         fireEvent.click(closeButton);
 
