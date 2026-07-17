@@ -11,8 +11,6 @@ import {
   CheckCircle,
   Clock,
   Database,
-  TrendingDown,
-  TrendingUp,
   Wifi,
   WifiOff,
 } from "lucide-react";
@@ -78,53 +76,6 @@ const ConnectionStatusBadge = ({ isConnected, isReconnecting }) => {
   }
 };
 
-// Metric card component - moved outside for performance
-const _MetricCard = ({
-  title,
-  icon: Icon,
-  value,
-  subValue,
-  trend,
-  loading,
-}) => {
-  const getTrendIcon = () => {
-    if (trend === "up")
-      return (
-        <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
-      );
-    if (trend === "down")
-      return <TrendingDown className="h-4 w-4 text-destructive" />;
-    return null;
-  };
-
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium truncate">{title}</CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-24 mb-2"></div>
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32"></div>
-          </div>
-        ) : (
-          <>
-            <div className="text-2xl font-bold flex items-center gap-2">
-              {value}
-              {getTrendIcon()}
-            </div>
-            {subValue && (
-              <p className="text-xs text-muted-foreground mt-1">{subValue}</p>
-            )}
-          </>
-        )}
-      </CardContent>
-    </Card>
-  );
-};
-
 // Protocol status indicator component - moved outside for performance
 const ProtocolStatusIndicator = ({ protocol }) => {
   const isOnline = protocol.status === "connected";
@@ -175,14 +126,13 @@ const RealtimeScadaDashboard = () => {
   const {
     data: historicalData,
     loading: historicalLoading,
-    setTimeRange,
   } = useRealtimeHistoricalData({
     hours: parseInt(selectedTimeRange, 10),
   });
 
   const { isConnected, isReconnecting } = useWebSocketStatus();
 
-  // Format chart data
+  // Format chart data with null-safety for NaN prevention
   const chartData = useMemo(() => {
     if (!historicalData || historicalData.length === 0) return [];
 
@@ -191,15 +141,14 @@ const RealtimeScadaDashboard = () => {
         hour: "2-digit",
         minute: "2-digit",
       }),
-      temperature: parseFloat(point.temperature),
-      pressure: parseFloat(point.pressure),
+      temperature: point.temperature != null ? parseFloat(point.temperature) : null,
+      pressure: point.pressure != null ? parseFloat(point.pressure) : null,
     }));
   }, [historicalData]);
 
-  // Handle time range change
+  // Handle time range change - single source of truth
   const handleTimeRangeChange = (value) => {
     setSelectedTimeRange(value);
-    setTimeRange(parseInt(value, 10));
   };
 
   if (metricsError) {
@@ -290,9 +239,10 @@ const RealtimeScadaDashboard = () => {
                 ? `${metrics.temperature?.current || 0}${metrics.temperature?.unit || "°C"}`
                 : "..."
             }
+            // ✅ FIX: Only show range when both min and max are present
             subValue={
-              metrics
-                ? `Range: ${metrics.temperature?.min}-${metrics.temperature?.max}${metrics.temperature?.unit}`
+              metrics && metrics.temperature?.min != null && metrics.temperature?.max != null
+                ? `Range: ${metrics.temperature.min}-${metrics.temperature.max}${metrics.temperature?.unit || ""}`
                 : null
             }
             trend={metrics?.temperature?.trend}
