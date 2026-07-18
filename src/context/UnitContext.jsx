@@ -1,3 +1,5 @@
+// src/context/UnitContext.jsx
+
 import {
   createContext,
   useCallback,
@@ -29,22 +31,34 @@ export const UnitProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Load initial units data
+  // Load initial units data with cleanup
   useEffect(() => {
+    let isMounted = true;
+    
     const loadUnits = async () => {
       try {
         setLoading(true);
         const unitsData = await getAllUnits();
-        setUnits(unitsData);
-        setError(null);
+        if (isMounted) {
+          setUnits(unitsData);
+          setError(null);
+        }
       } catch (err) {
-        setError(err.message);
+        if (isMounted) {
+          setError(err.message);
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     loadUnits();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Update a specific unit's information
@@ -56,29 +70,46 @@ export const UnitProvider = ({ children }) => {
     );
   }, []);
 
-  // Update unit name
+  // Update unit name with error handling (no re-throw for consistency)
   const updateUnitName = useCallback(
     async (unitId, newName) => {
-      await serviceUpdateUnitName(unitId, newName);
-      updateUnit(unitId, { name: newName });
+      try {
+        await serviceUpdateUnitName(unitId, newName);
+        updateUnit(unitId, { name: newName });
+        setError(null); // Clear any previous errors on success
+      } catch (err) {
+        setError(err.message);
+        // Do NOT re-throw - rely on error state for UI feedback
+        // This is consistent with refreshUnits behavior
+      }
     },
     [updateUnit],
   );
 
-  // Update unit location
+  // Update unit location with error handling (no re-throw)
   const updateUnitLocation = useCallback(
     async (unitId, newLocation) => {
-      await serviceUpdateUnitLocation(unitId, newLocation);
-      updateUnit(unitId, { location: newLocation });
+      try {
+        await serviceUpdateUnitLocation(unitId, newLocation);
+        updateUnit(unitId, { location: newLocation });
+        setError(null);
+      } catch (err) {
+        setError(err.message);
+      }
     },
     [updateUnit],
   );
 
-  // Update unit GPS coordinates
+  // Update unit GPS coordinates with error handling (no re-throw)
   const updateUnitGPS = useCallback(
     async (unitId, newGPS) => {
-      await serviceUpdateUnitGPS(unitId, newGPS);
-      updateUnit(unitId, { gpsCoordinates: newGPS });
+      try {
+        await serviceUpdateUnitGPS(unitId, newGPS);
+        updateUnit(unitId, { gpsCoordinates: newGPS });
+        setError(null);
+      } catch (err) {
+        setError(err.message);
+      }
     },
     [updateUnit],
   );
