@@ -5,31 +5,72 @@ import { units } from "../data/mockUnits";
 import PageHeader from "./PageHeader";
 import { Card, CardContent } from "./ui/card";
 
-const AlarmsView = ({ className, userRole }) => {
+// Default mock alarm data. Extracted to a module-level constant (rather than
+// re-created inside the component) so it has a stable identity and so tests
+// can override it via the `alarms` prop without needing to remount internals.
+const defaultAlarms = [
+  {
+    id: 1,
+    type: "critical",
+    title: "NH3 LEAK DETECTED",
+    message:
+      "Critical alarm: Toxic ammonia leak detected in system. Immediate attention required.",
+    device: "ThermaCore Unit 003",
+    timestamp: "2025-09-09 15:30",
+    acknowledged: false,
+  },
+  {
+    id: 2,
+    type: "critical",
+    title: "NH3 LEAK DETECTED",
+    message:
+      "Critical alarm: Toxic ammonia leak detected in system. Immediate attention required.",
+    device: "ThermaCore Unit 014",
+    timestamp: "2025-09-09 15:15",
+    acknowledged: false,
+  },
+];
+
+// Exported so these can be unit tested directly against every alarm `type`,
+// including the `default` fallback branch, without needing to thread
+// contrived data all the way through a full component render.
+export const getAlarmIcon = (type) => {
+  switch (type) {
+    case "critical":
+      return <Siren className="h-5 w-5 text-red-500" />;
+    case "warning":
+      return <AlertTriangle className="h-5 w-5 text-yellow-500" />;
+    case "info":
+      return <Info className="h-5 w-5 text-blue-500" />;
+    case "success":
+      return <CheckCircle className="h-5 w-5 text-green-500" />;
+    default:
+      return <AlertTriangle className="h-5 w-5 text-gray-500" />;
+  }
+};
+
+export const getAlarmColor = (type) => {
+  switch (type) {
+    case "critical":
+      return "border-l-red-500 bg-red-50 dark:bg-red-950/20";
+    case "warning":
+      return "border-l-yellow-500 bg-yellow-50 dark:bg-yellow-950/20";
+    case "info":
+      return "border-l-blue-500 bg-blue-50 dark:bg-blue-950/20";
+    case "success":
+      return "border-l-green-500 bg-green-50 dark:bg-green-950/20";
+    default:
+      return "border-l-gray-500 bg-gray-50 dark:bg-gray-950/20";
+  }
+};
+
+const AlarmsView = ({ className, userRole, alarms: alarmsProp }) => {
   const navigate = useNavigate();
 
-  const allAlarms = [
-    {
-      id: 1,
-      type: "critical",
-      title: "NH3 LEAK DETECTED",
-      message:
-        "Critical alarm: Toxic ammonia leak detected in system. Immediate attention required.",
-      device: "ThermaCore Unit 003",
-      timestamp: "2025-09-09 15:30",
-      acknowledged: false,
-    },
-    {
-      id: 2,
-      type: "critical",
-      title: "NH3 LEAK DETECTED",
-      message:
-        "Critical alarm: Toxic ammonia leak detected in system. Immediate attention required.",
-      device: "ThermaCore Unit 014",
-      timestamp: "2025-09-09 15:15",
-      acknowledged: false,
-    },
-  ];
+  // Tests can pass `alarms` to exercise scenarios the hardcoded default
+  // list can't reach (empty state, acknowledged alarms, non-critical types,
+  // malformed device names, unit lookups that miss).
+  const allAlarms = alarmsProp || defaultAlarms;
 
   // Filter alarms based on user role
   const alarms =
@@ -70,36 +111,6 @@ const AlarmsView = ({ className, userRole }) => {
           });
         }
       }
-    }
-  };
-
-  const getAlarmIcon = (type) => {
-    switch (type) {
-      case "critical":
-        return <Siren className="h-5 w-5 text-red-500" />;
-      case "warning":
-        return <AlertTriangle className="h-5 w-5 text-yellow-500" />;
-      case "info":
-        return <Info className="h-5 w-5 text-blue-500" />;
-      case "success":
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
-      default:
-        return <AlertTriangle className="h-5 w-5 text-gray-500" />;
-    }
-  };
-
-  const getAlarmColor = (type) => {
-    switch (type) {
-      case "critical":
-        return "border-l-red-500 bg-red-50 dark:bg-red-950/20";
-      case "warning":
-        return "border-l-yellow-500 bg-yellow-50 dark:bg-yellow-950/20";
-      case "info":
-        return "border-l-blue-500 bg-blue-50 dark:bg-blue-950/20";
-      case "success":
-        return "border-l-green-500 bg-green-50 dark:bg-green-950/20";
-      default:
-        return "border-l-gray-500 bg-gray-50 dark:bg-gray-950/20";
     }
   };
 
