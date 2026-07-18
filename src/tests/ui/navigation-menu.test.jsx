@@ -7,8 +7,12 @@
  * Radix's NavigationMenu opens content on both hover-intent and click/keyboard
  * activation. Hover-intent relies on timers that are unreliable under jsdom,
  * so these tests drive it via click/keyboard, which Radix also supports.
+ *
+ * jsdom doesn't implement ResizeObserver, which Radix's layout-measurement
+ * effects (used by the Indicator/Viewport) reach for. We stub a no-op
+ * version below so those effects don't throw instead of silently no-op'ing.
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
@@ -24,6 +28,16 @@ import {
   navigationMenuTriggerStyle,
   NavigationMenuViewport,
 } from "@/components/ui/navigation-menu";
+
+beforeAll(() => {
+  if (typeof window.ResizeObserver === "undefined") {
+    window.ResizeObserver = class ResizeObserver {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+  }
+});
 
 describe("NavigationMenu", () => {
   it("renders the root with data-viewport='true' by default", () => {
@@ -186,6 +200,12 @@ describe("NavigationMenu", () => {
       </NavigationMenu>,
     );
 
+    // Radix tracks which trigger is "active" (used to position/mount the
+    // Indicator) from pointerenter, not from click/keyboard activation. A
+    // plain click opens the content panel but never sets that ref, so the
+    // Indicator stays unmounted. Hover first to set it, then click so the
+    // panel opens deterministically without waiting on hover-intent timers.
+    await user.hover(screen.getByTestId("trigger"));
     await user.click(screen.getByTestId("trigger"));
     await screen.findByText("Pump Station 1");
 
