@@ -168,7 +168,8 @@ const UnitDetails = () => {
           </div>
         )}
         {activeTab === "alerts" && <AlertsTab unitId={unitId} />}
-        {activeTab === "remote-control" && unit && details && (
+        {/* "manage" and "remote-control" both display the remote control panel */}
+        {(activeTab === "remote-control" || activeTab === "manage") && unit && details && (
           <RemoteControl unit={unit} details={details} />
         )}
       </div>
