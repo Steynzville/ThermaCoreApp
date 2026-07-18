@@ -1,5 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { cleanup } from "@testing-library/react";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
 import { SettingsProvider, useSettings } from "../context/SettingsContext";
 
@@ -42,6 +43,11 @@ describe("SettingsContext", () => {
     vi.clearAllMocks();
   });
 
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
   describe("Provider", () => {
     it("should provide default settings", () => {
       const { result } = renderHook(() => useSettings(), {
@@ -54,8 +60,7 @@ describe("SettingsContext", () => {
       expect(result.current.settings.temperatureUnit).toBe("celsius");
     });
 
-    // SKIP: This test is flaky due to localStorage mock timing issues
-    it.skip("should load settings from localStorage on mount", () => {
+    it("should load settings from localStorage on mount", () => {
       const savedSettings = {
         soundEnabled: false,
         volume: 0.5,
@@ -108,8 +113,7 @@ describe("SettingsContext", () => {
       expect(result.current.settings.soundEnabled).toBe(true);
     });
 
-    // SKIP: This test is flaky due to localStorage mock timing issues
-    it.skip("should persist sound setting to localStorage", async () => {
+    it("should persist sound setting to localStorage", async () => {
       const { result } = renderHook(() => useSettings(), {
         wrapper: SettingsProvider,
       });
@@ -141,8 +145,7 @@ describe("SettingsContext", () => {
       expect(result.current.settings.volume).toBe(0.7);
     });
 
-    // SKIP: This test is flaky due to localStorage mock timing issues
-    it.skip("should persist volume to localStorage", async () => {
+    it("should persist volume to localStorage", async () => {
       const { result } = renderHook(() => useSettings(), {
         wrapper: SettingsProvider,
       });
@@ -203,8 +206,7 @@ describe("SettingsContext", () => {
       expect(result.current.settings.temperatureUnit).toBe("celsius");
     });
 
-    // SKIP: This test is flaky due to localStorage mock timing issues
-    it.skip("should persist temperature unit to localStorage", async () => {
+    it("should persist temperature unit to localStorage", async () => {
       const { result } = renderHook(() => useSettings(), {
         wrapper: SettingsProvider,
       });
@@ -237,8 +239,7 @@ describe("SettingsContext", () => {
   });
 
   describe("Multiple updates", () => {
-    // SKIP: This test is flaky due to localStorage mock timing issues
-    it.skip("should handle multiple rapid updates", () => {
+    it("should handle multiple rapid updates", () => {
       const { result } = renderHook(() => useSettings(), {
         wrapper: SettingsProvider,
       });
@@ -254,8 +255,7 @@ describe("SettingsContext", () => {
       expect(result.current.settings.temperatureUnit).toBe("fahrenheit");
     });
 
-    // SKIP: This test is flaky due to localStorage mock timing issues
-    it.skip("should persist all settings after multiple updates", async () => {
+    it("should persist all settings after multiple updates", async () => {
       const { result } = renderHook(() => useSettings(), {
         wrapper: SettingsProvider,
       });
