@@ -31,20 +31,21 @@ import {
 
 const TOOLTIP_TEXT = "Pressure Transmitter 101 — 42.3 PSI";
 
-function getVisibleContent(container) {
-  return container.querySelector('[data-slot="tooltip-content"]');
+// ✅ FIXED: Query from document.body since TooltipContent renders in a Portal
+function getVisibleContent() {
+  return document.body.querySelector('[data-slot="tooltip-content"]');
 }
 
-async function waitForVisibleContent(container) {
+async function waitForVisibleContent() {
   await waitFor(() => {
-    expect(getVisibleContent(container)).not.toBeNull();
+    expect(getVisibleContent()).not.toBeNull();
   });
-  return getVisibleContent(container);
+  return getVisibleContent();
 }
 
-async function waitForNoVisibleContent(container) {
+async function waitForNoVisibleContent() {
   await waitFor(() => {
-    expect(getVisibleContent(container)).toBeNull();
+    expect(getVisibleContent()).toBeNull();
   });
 }
 
@@ -59,17 +60,17 @@ function BasicTooltip({ tooltipProps } = {}) {
 
 describe("Tooltip", () => {
   it("does not show the tooltip content before interaction", () => {
-    const { container } = render(<BasicTooltip />);
-    expect(getVisibleContent(container)).not.toBeInTheDocument();
+    render(<BasicTooltip />);
+    expect(getVisibleContent()).not.toBeInTheDocument();
   });
 
   it("shows the tooltip content on hover", async () => {
     const user = userEvent.setup();
-    const { container } = render(<BasicTooltip />);
+    render(<BasicTooltip />);
 
     await user.hover(screen.getByTestId("trigger"));
 
-    const content = await waitForVisibleContent(container);
+    const content = await waitForVisibleContent();
     expect(content).toHaveTextContent(TOOLTIP_TEXT);
   });
 
@@ -81,32 +82,32 @@ describe("Tooltip", () => {
     // reports as zero-sized, making it non-deterministic here. Disabling it
     // isolates the specific behavior this test cares about: does the
     // tooltip close when the pointer leaves the trigger.
-    const { container } = render(
+    render(
       <BasicTooltip tooltipProps={{ disableHoverableContent: true }} />,
     );
 
     await user.hover(screen.getByTestId("trigger"));
-    await waitForVisibleContent(container);
+    await waitForVisibleContent();
 
     await user.unhover(screen.getByTestId("trigger"));
 
-    await waitForNoVisibleContent(container);
+    await waitForNoVisibleContent();
   });
 
   it("shows the tooltip content on keyboard focus (accessibility)", async () => {
     const user = userEvent.setup();
-    const { container } = render(<BasicTooltip />);
+    render(<BasicTooltip />);
 
     await user.tab();
     expect(screen.getByTestId("trigger")).toHaveFocus();
 
-    const content = await waitForVisibleContent(container);
+    const content = await waitForVisibleContent();
     expect(content).toHaveTextContent(TOOLTIP_TEXT);
   });
 
   it("hides the tooltip content on blur", async () => {
     const user = userEvent.setup();
-    const { container } = render(
+    render(
       <div>
         <BasicTooltip />
         <button type="button">Elsewhere</button>
@@ -114,35 +115,37 @@ describe("Tooltip", () => {
     );
 
     await user.tab();
-    await waitForVisibleContent(container);
+    await waitForVisibleContent();
 
     await user.tab();
-    await waitForNoVisibleContent(container);
+    await waitForNoVisibleContent();
   });
 
   it("renders the visible content with the expected data-slot attribute", async () => {
     const user = userEvent.setup();
-    const { container } = render(<BasicTooltip />);
+    render(<BasicTooltip />);
 
     await user.hover(screen.getByTestId("trigger"));
-    const content = await waitForVisibleContent(container);
+    const content = await waitForVisibleContent();
 
     expect(content).toHaveAttribute("data-slot", "tooltip-content");
   });
 
   it("renders an arrow element inside the visible tooltip content", async () => {
     const user = userEvent.setup();
-    const { container } = render(<BasicTooltip />);
+    render(<BasicTooltip />);
 
     await user.hover(screen.getByTestId("trigger"));
-    const content = await waitForVisibleContent(container);
+    const content = await waitForVisibleContent();
 
-    expect(content.querySelector("svg, [class*='arrow']")).not.toBeNull();
+    // The arrow is an SVG inside the content
+    const arrow = content.querySelector("svg");
+    expect(arrow).not.toBeNull();
   });
 
   it("merges a custom className onto the visible tooltip content", async () => {
     const user = userEvent.setup();
-    const { container } = render(
+    render(
       <Tooltip>
         <TooltipTrigger data-testid="trigger">FT-204</TooltipTrigger>
         <TooltipContent className="scada-tag-tooltip">
@@ -152,7 +155,7 @@ describe("Tooltip", () => {
     );
 
     await user.hover(screen.getByTestId("trigger"));
-    const content = await waitForVisibleContent(container);
+    const content = await waitForVisibleContent();
 
     expect(content).toHaveTextContent("Flow Transmitter 204");
     expect(content).toHaveClass("scada-tag-tooltip");
@@ -160,7 +163,7 @@ describe("Tooltip", () => {
 
   it("supports multiple independent tooltips sharing one TooltipProvider", async () => {
     const user = userEvent.setup();
-    const { container } = render(
+    render(
       <TooltipProvider delayDuration={0}>
         <Tooltip disableHoverableContent>
           <TooltipTrigger data-testid="trigger-1">PT-101</TooltipTrigger>
@@ -174,14 +177,14 @@ describe("Tooltip", () => {
     );
 
     await user.hover(screen.getByTestId("trigger-1"));
-    let content = await waitForVisibleContent(container);
+    let content = await waitForVisibleContent();
     expect(content).toHaveTextContent("Pressure Transmitter 101");
 
     await user.unhover(screen.getByTestId("trigger-1"));
-    await waitForNoVisibleContent(container);
+    await waitForNoVisibleContent();
 
     await user.hover(screen.getByTestId("trigger-2"));
-    content = await waitForVisibleContent(container);
+    content = await waitForVisibleContent();
     expect(content).toHaveTextContent("Flow Transmitter 204");
   });
 });
