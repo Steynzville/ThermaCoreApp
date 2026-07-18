@@ -1,7 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { act } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-// Change from @/ to relative import
+import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import ProcessFlowDiagram from "../components/visualization/ProcessFlowDiagram";
 
 // Mock UI card components
@@ -34,11 +33,8 @@ vi.mock("../components/ui/button", () => ({
 // Mock lucide icons
 vi.mock("lucide-react", () => ({
   Activity: () => <span data-testid="icon-activity">Activity</span>,
-  AlertTriangle: () => <span data-testid="icon-alert">AlertTriangle</span>,
-  CheckCircle: () => <span data-testid="icon-check">CheckCircle</span>,
   Minus: () => <span data-testid="icon-minus">Minus</span>,
   Plus: () => <span data-testid="icon-plus">Plus</span>,
-  XCircle: () => <span data-testid="icon-x">XCircle</span>,
 }));
 
 describe("ProcessFlowDiagram", () => {
@@ -61,12 +57,16 @@ describe("ProcessFlowDiagram", () => {
     c2: { flowRate: 8.3 },
   };
 
+  // Helper to get SVG container
+  const getSvgContainer = (container) => {
+    return container.querySelector('div[style*="touch-action: none"]') || container;
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
-    // Mock window methods for zoom/pan functionality
-    window.addEventListener = vi.fn();
-    window.removeEventListener = vi.fn();
-    // Mock ResizeObserver if the component uses it
+    vi.spyOn(window, "addEventListener");
+    vi.spyOn(window, "removeEventListener");
+
     if (!window.ResizeObserver) {
       window.ResizeObserver = vi.fn().mockImplementation(() => ({
         observe: vi.fn(),
@@ -74,7 +74,6 @@ describe("ProcessFlowDiagram", () => {
         disconnect: vi.fn(),
       }));
     }
-    // Mock getBoundingClientRect for SVG element
     Element.prototype.getBoundingClientRect = vi.fn().mockReturnValue({
       width: 800,
       height: 600,
@@ -85,6 +84,10 @@ describe("ProcessFlowDiagram", () => {
       x: 0,
       y: 0,
     });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   describe("Basic Rendering", () => {
@@ -117,6 +120,14 @@ describe("ProcessFlowDiagram", () => {
 
       expect(container.querySelector("svg")).toBeInTheDocument();
     });
+
+    it("should render legend items", () => {
+      render(<ProcessFlowDiagram nodes={mockNodes} />);
+
+      expect(screen.getAllByText("Running").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Warning").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Critical").length).toBeGreaterThan(0);
+    });
   });
 
   describe("Node Rendering", () => {
@@ -125,7 +136,6 @@ describe("ProcessFlowDiagram", () => {
         <ProcessFlowDiagram nodes={mockNodes} connections={mockConnections} />
       );
 
-      // Use getAllByText with the node labels
       expect(screen.getAllByText("Pump 1").length).toBeGreaterThan(0);
       expect(screen.getAllByText("Tank 1").length).toBeGreaterThan(0);
       expect(screen.getAllByText("Valve 1").length).toBeGreaterThan(0);
@@ -133,7 +143,6 @@ describe("ProcessFlowDiagram", () => {
 
     it("should render nodes with provided positions", () => {
       const { container } = render(<ProcessFlowDiagram nodes={mockNodes} />);
-      // Check for role="button" elements (nodes)
       expect(container.querySelectorAll('[role="button"]').length).toBe(3);
     });
 
@@ -160,71 +169,248 @@ describe("ProcessFlowDiagram", () => {
         expect(screen.getAllByText(node.label).length).toBeGreaterThan(0);
       });
     });
-  });
 
-  describe("Status Colors", () => {
-    it("should apply correct color for running status", () => {
-      const { container } = render(
-        <ProcessFlowDiagram
-          nodes={[{ id: "n1", label: "Node", x: 100, y: 100, status: "running" }]}
-        />
-      );
-
-      // Check for green circle (running status)
-      expect(container.querySelector('circle[fill="#22c55e"]')).toBeInTheDocument();
-    });
-
-    it("should apply correct color for warning status", () => {
-      const { container } = render(
-        <ProcessFlowDiagram
-          nodes={[{ id: "n1", label: "Node", x: 100, y: 100, status: "warning" }]}
-        />
-      );
-
-      expect(container.querySelector('circle[fill="#eab308"]')).toBeInTheDocument();
-    });
-
-    it("should apply correct color for error status", () => {
-      const { container } = render(
-        <ProcessFlowDiagram
-          nodes={[{ id: "n1", label: "Node", x: 100, y: 100, status: "error" }]}
-        />
-      );
-
-      expect(container.querySelector('circle[fill="#ef4444"]')).toBeInTheDocument();
-    });
-
-    it("should apply correct color for idle status", () => {
-      const { container } = render(
-        <ProcessFlowDiagram
-          nodes={[{ id: "n1", label: "Node", x: 100, y: 100, status: "idle" }]}
-        />
-      );
-
-      expect(container.querySelector('circle[fill="#6b7280"]')).toBeInTheDocument();
+    it("should handle nodes with x defined but y undefined", () => {
+      const mixedNodes = [
+        { id: "n1", label: "Node 1", x: 100 },
+        { id: "n2", label: "Node 2" },
+        { id: "n3", label: "Node 3", y: 200 },
+      ];
+      const { container } = render(<ProcessFlowDiagram nodes={mixedNodes} />);
+      expect(container.querySelector("svg")).toBeInTheDocument();
     });
   });
 
-  describe("Zoom and Pan Functionality", () => {
+  describe("Status Colors - Complete Coverage", () => {
+    const statusColorMap = [
+      { status: "running", color: "#22c55e" },
+      { status: "online", color: "#22c55e" },
+      { status: "normal", color: "#22c55e" },
+      { status: "warning", color: "#eab308" },
+      { status: "error", color: "#ef4444" },
+      { status: "critical", color: "#ef4444" },
+      { status: "offline", color: "#ef4444" },
+      { status: "idle", color: "#6b7280" },
+      { status: "unknown", color: "#94a3b8" },
+    ];
+
+    statusColorMap.forEach(({ status, color }) => {
+      it(`should apply correct color for ${status} status`, () => {
+        const { container } = render(
+          <ProcessFlowDiagram
+            nodes={[{ id: "n1", label: "Node", x: 100, y: 100, status }]}
+          />
+        );
+
+        expect(container.querySelector(`circle[fill="${color}"]`)).toBeInTheDocument();
+      });
+    });
+
+    it("should use default gray color for undefined status", () => {
+      const { container } = render(
+        <ProcessFlowDiagram
+          nodes={[{ id: "n1", label: "Node", x: 100, y: 100 }]}
+        />
+      );
+
+      expect(container.querySelector('circle[fill="#94a3b8"]')).toBeInTheDocument();
+    });
+
+    it("prefers liveData status over node status", () => {
+      const { container } = render(
+        <ProcessFlowDiagram
+          nodes={[{ id: "n1", label: "N", x: 0, y: 0, status: "idle" }]}
+          liveData={{ n1: { status: "running" } }}
+        />
+      );
+      expect(container.querySelector('circle.animate-pulse')).toBeInTheDocument();
+    });
+  });
+
+  describe("Connection Rendering - Edge Cases", () => {
+    it("renders inactive connections with dashed stroke and no label", () => {
+      const { container } = render(
+        <ProcessFlowDiagram nodes={mockNodes} connections={mockConnections} />
+      );
+      const path = container.querySelector('path[stroke-dasharray="5,5"]');
+      expect(path).toBeInTheDocument();
+    });
+
+    it("renders active connections with flow rate label and animated dot", () => {
+      const { container } = render(
+        <ProcessFlowDiagram
+          nodes={mockNodes}
+          connections={mockConnections}
+          liveData={mockLiveData}
+        />
+      );
+      expect(screen.getAllByText(/L\/s/).length).toBeGreaterThan(0);
+      expect(container.querySelector("animateMotion")).toBeInTheDocument();
+      expect(container.querySelector('path[stroke="#3b82f6"]')).toBeInTheDocument();
+    });
+
+    it("skips connections referencing missing nodes without crashing", () => {
+      const { container } = render(
+        <ProcessFlowDiagram
+          nodes={mockNodes}
+          connections={[{ id: "bad", from: "ghost1", to: "ghost2" }]}
+        />
+      );
+      expect(container.querySelector("svg")).toBeInTheDocument();
+    });
+
+    it("should render connections with flow rate = 0 as inactive", () => {
+      const liveDataWithZeroFlow = {
+        ...mockLiveData,
+        c1: { flowRate: 0 },
+        c2: { flowRate: 0 },
+      };
+      const { container } = render(
+        <ProcessFlowDiagram
+          nodes={mockNodes}
+          connections={mockConnections}
+          liveData={liveDataWithZeroFlow}
+        />
+      );
+
+      const inactivePaths = container.querySelectorAll('path[stroke="#d1d5db"]');
+      expect(inactivePaths.length).toBeGreaterThan(0);
+    });
+
+    it("should handle connections with missing liveData", () => {
+      const { container } = render(
+        <ProcessFlowDiagram
+          nodes={mockNodes}
+          connections={mockConnections}
+          liveData={{}}
+        />
+      );
+
+      const paths = container.querySelectorAll('path[stroke="#d1d5db"]');
+      expect(paths.length).toBeGreaterThan(0);
+    });
+
+    it("does not produce NaN path when connected nodes overlap", () => {
+      const { container } = render(
+        <ProcessFlowDiagram
+          nodes={[
+            { id: "a", label: "A", x: 100, y: 100 },
+            { id: "b", label: "B", x: 100, y: 100 },
+          ]}
+          connections={[{ id: "c1", from: "a", to: "b" }]}
+          liveData={{ c1: { flowRate: 5 } }}
+        />
+      );
+      const path = container.querySelector("path");
+      expect(path.getAttribute("d")).not.toMatch(/NaN/);
+    });
+  });
+
+  describe("Node Interaction", () => {
+    it("should call onNodeClick when node is clicked", () => {
+      const onNodeClick = vi.fn();
+      const { container } = render(
+        <ProcessFlowDiagram
+          nodes={mockNodes}
+          onNodeClick={onNodeClick}
+        />
+      );
+
+      const nodeElement = container.querySelector('[role="button"]');
+      expect(nodeElement).toBeTruthy();
+
+      if (nodeElement) {
+        fireEvent.click(nodeElement);
+        expect(onNodeClick).toHaveBeenCalledWith(
+          expect.objectContaining({ id: "pump1" })
+        );
+      }
+    });
+
+    it("should call onNodeClick when Enter key is pressed on a node", () => {
+      const onNodeClick = vi.fn();
+      const { container } = render(
+        <ProcessFlowDiagram
+          nodes={mockNodes}
+          onNodeClick={onNodeClick}
+        />
+      );
+
+      const nodeElement = container.querySelector('[role="button"]');
+      expect(nodeElement).toBeTruthy();
+
+      if (nodeElement) {
+        fireEvent.keyDown(nodeElement, { key: "Enter" });
+        expect(onNodeClick).toHaveBeenCalled();
+      }
+    });
+
+    it("should call onNodeClick when Space key is pressed on a node", () => {
+      const onNodeClick = vi.fn();
+      const { container } = render(
+        <ProcessFlowDiagram
+          nodes={mockNodes}
+          onNodeClick={onNodeClick}
+        />
+      );
+
+      const nodeElement = container.querySelector('[role="button"]');
+      expect(nodeElement).toBeTruthy();
+
+      if (nodeElement) {
+        fireEvent.keyDown(nodeElement, { key: " " });
+        expect(onNodeClick).toHaveBeenCalled();
+      }
+    });
+
+    it("should ignore other keys", () => {
+      const onNodeClick = vi.fn();
+      const { container } = render(
+        <ProcessFlowDiagram nodes={mockNodes} onNodeClick={onNodeClick} />
+      );
+      fireEvent.keyDown(container.querySelector('[role="button"]'), { key: "Tab" });
+      expect(onNodeClick).not.toHaveBeenCalled();
+    });
+
+    it("should not throw when onNodeClick is undefined and node is clicked", () => {
+      const { container } = render(
+        <ProcessFlowDiagram nodes={mockNodes} />
+      );
+
+      const nodeElement = container.querySelector('[role="button"]');
+      expect(nodeElement).toBeTruthy();
+
+      if (nodeElement) {
+        expect(() => fireEvent.click(nodeElement)).not.toThrow();
+      }
+    });
+
+    it("should have proper ARIA attributes on nodes", () => {
+      const { container } = render(
+        <ProcessFlowDiagram nodes={mockNodes} />
+      );
+
+      const nodeElement = container.querySelector('[role="button"]');
+      expect(nodeElement).toHaveAttribute('tabIndex', '0');
+    });
+  });
+
+  describe("Zoom Controls", () => {
     it("should zoom in when zoom in button is clicked", async () => {
       const { container } = render(
         <ProcessFlowDiagram nodes={mockNodes} connections={mockConnections} />
       );
 
-      // Find the zoom display element
       const zoomDisplay = container.querySelector(
         ".text-sm.text-muted-foreground"
       );
 
-      // Find the zoom in button (Plus icon)
       const zoomInButton = Array.from(container.querySelectorAll("button"))
         .find((btn) => btn.querySelector('[data-testid="icon-plus"]'));
 
       expect(zoomInButton).toBeTruthy();
-
       act(() => fireEvent.click(zoomInButton));
 
-      // Check that zoom increased
       await waitFor(() => {
         if (zoomDisplay) {
           expect(zoomDisplay.textContent).toContain("125%");
@@ -241,7 +427,6 @@ describe("ProcessFlowDiagram", () => {
         ".text-sm.text-muted-foreground"
       );
 
-      // First zoom in
       const zoomInButton = Array.from(container.querySelectorAll("button"))
         .find((btn) => btn.querySelector('[data-testid="icon-plus"]'));
 
@@ -253,7 +438,6 @@ describe("ProcessFlowDiagram", () => {
         }
       });
 
-      // Then zoom out
       const zoomOutButton = Array.from(container.querySelectorAll("button"))
         .find((btn) => btn.querySelector('[data-testid="icon-minus"]'));
 
@@ -275,7 +459,6 @@ describe("ProcessFlowDiagram", () => {
         ".text-sm.text-muted-foreground"
       );
 
-      // First zoom in
       const zoomInButton = Array.from(container.querySelectorAll("button"))
         .find((btn) => btn.querySelector('[data-testid="icon-plus"]'));
 
@@ -287,7 +470,6 @@ describe("ProcessFlowDiagram", () => {
         }
       });
 
-      // Then reset
       const resetButton = Array.from(container.querySelectorAll("button"))
         .find((btn) => btn.textContent === "Reset");
 
@@ -303,57 +485,181 @@ describe("ProcessFlowDiagram", () => {
       });
     });
 
-    it("should handle mouse interaction without crashing", async () => {
+    it("should disable zoom out button at minimum zoom (0.5)", async () => {
       const { container } = render(
         <ProcessFlowDiagram nodes={mockNodes} connections={mockConnections} />
       );
 
-      // Find the SVG element
-      const svgElement = container.querySelector("svg");
-      expect(svgElement).toBeTruthy();
+      const zoomOutButton = Array.from(container.querySelectorAll("button"))
+        .find((btn) => btn.querySelector('[data-testid="icon-minus"]'));
 
-      // Find zoom in button
+      for (let i = 0; i < 5; i++) {
+        if (zoomOutButton && !zoomOutButton.disabled) {
+          act(() => fireEvent.click(zoomOutButton));
+        }
+      }
+
+      await waitFor(() => {
+        if (zoomOutButton) {
+          expect(zoomOutButton.disabled).toBe(true);
+        }
+      });
+    });
+
+    it("should disable zoom in button at maximum zoom (3)", async () => {
+      const { container } = render(
+        <ProcessFlowDiagram nodes={mockNodes} connections={mockConnections} />
+      );
+
       const zoomInButton = Array.from(container.querySelectorAll("button"))
         .find((btn) => btn.querySelector('[data-testid="icon-plus"]'));
 
+      for (let i = 0; i < 10; i++) {
+        if (zoomInButton && !zoomInButton.disabled) {
+          act(() => fireEvent.click(zoomInButton));
+        }
+      }
+
+      await waitFor(() => {
+        if (zoomInButton) {
+          expect(zoomInButton.disabled).toBe(true);
+        }
+      });
+    });
+  });
+
+  describe("Touch Interactions", () => {
+    it("should handle touch start with 1 finger for panning when zoomed", () => {
+      const { container } = render(
+        <ProcessFlowDiagram nodes={mockNodes} connections={mockConnections} />
+      );
+
+      const svgContainer = getSvgContainer(container);
+
+      const zoomInButton = Array.from(container.querySelectorAll("button"))
+        .find((btn) => btn.querySelector('[data-testid="icon-plus"]'));
       if (zoomInButton) {
         act(() => fireEvent.click(zoomInButton));
       }
 
-      // Simulate mouse events on the SVG container
-      const svgContainer = container.querySelector('div[style*="touch-action: none"]') || container;
+      fireEvent.touchStart(svgContainer, {
+        touches: [{ clientX: 100, clientY: 100 }],
+      });
 
-      // Ensure drag events do not crash
+      expect(svgContainer).toBeTruthy();
+    });
+
+    it("should handle touch start with 2 fingers for pinch", () => {
+      const { container } = render(
+        <ProcessFlowDiagram nodes={mockNodes} connections={mockConnections} />
+      );
+
+      const svgContainer = getSvgContainer(container);
+
+      fireEvent.touchStart(svgContainer, {
+        touches: [
+          { clientX: 100, clientY: 100 },
+          { clientX: 200, clientY: 200 },
+        ],
+      });
+
+      expect(svgContainer).toBeTruthy();
+    });
+
+    it("should handle touch move with 2 fingers for pinch zoom", () => {
+      const { container } = render(
+        <ProcessFlowDiagram nodes={mockNodes} connections={mockConnections} />
+      );
+
+      const svgContainer = getSvgContainer(container);
+
+      fireEvent.touchStart(svgContainer, {
+        touches: [
+          { clientX: 100, clientY: 100 },
+          { clientX: 200, clientY: 200 },
+        ],
+      });
+
+      fireEvent.touchMove(svgContainer, {
+        touches: [
+          { clientX: 80, clientY: 80 },
+          { clientX: 220, clientY: 220 },
+        ],
+      });
+
+      expect(svgContainer).toBeTruthy();
+    });
+
+    it("should handle touch end to reset pan/pinch state", () => {
+      const { container } = render(
+        <ProcessFlowDiagram nodes={mockNodes} connections={mockConnections} />
+      );
+
+      const svgContainer = getSvgContainer(container);
+
+      fireEvent.touchStart(svgContainer, {
+        touches: [{ clientX: 100, clientY: 100 }],
+      });
+
+      fireEvent.touchEnd(svgContainer, {
+        touches: [],
+      });
+
+      expect(svgContainer).toBeTruthy();
+    });
+  });
+
+  describe("Mouse Interactions", () => {
+    it("should handle mouse drag for panning when zoomed", () => {
+      const { container } = render(
+        <ProcessFlowDiagram nodes={mockNodes} connections={mockConnections} />
+      );
+
+      const svgContainer = getSvgContainer(container);
+
+      const zoomInButton = Array.from(container.querySelectorAll("button"))
+        .find((btn) => btn.querySelector('[data-testid="icon-plus"]'));
+      if (zoomInButton) {
+        act(() => fireEvent.click(zoomInButton));
+      }
+
       act(() => {
         fireEvent.mouseDown(svgContainer, {
           clientX: 100,
           clientY: 100,
           button: 0,
         });
+      });
 
-        // Use a mock event for mouse move - using the actual window event
-        const mouseMoveEvent = new MouseEvent('mousemove', {
-          clientX: 150,
-          clientY: 150,
-          bubbles: true,
-        });
+      expect(svgContainer.style.cursor).toBe("grabbing");
+
+      const mouseMoveEvent = new MouseEvent('mousemove', {
+        clientX: 150,
+        clientY: 150,
+        bubbles: true,
+      });
+      act(() => {
         window.dispatchEvent(mouseMoveEvent);
+      });
 
-        const mouseUpEvent = new MouseEvent('mouseup', {
-          bubbles: true,
-        });
+      const mouseUpEvent = new MouseEvent('mouseup', {
+        bubbles: true,
+      });
+      act(() => {
         window.dispatchEvent(mouseUpEvent);
       });
 
-      expect(svgContainer).toBeTruthy();
+      expect(svgContainer.style.cursor).toBe("grab");
     });
 
-    it("should not pan when not zoomed in", () => {
+    it("should not pan when zoom is 1", () => {
       const { container } = render(
         <ProcessFlowDiagram nodes={mockNodes} connections={mockConnections} />
       );
 
-      const svgContainer = container.querySelector('div[style*="touch-action: none"]') || container;
+      const svgContainer = getSvgContainer(container);
+
+      expect(svgContainer.style.cursor).toBe("default");
 
       act(() => {
         fireEvent.mouseDown(svgContainer, {
@@ -361,29 +667,51 @@ describe("ProcessFlowDiagram", () => {
           clientY: 100,
           button: 0,
         });
+      });
 
-        const mouseMoveEvent = new MouseEvent('mousemove', {
-          clientX: 150,
-          clientY: 150,
-          bubbles: true,
-        });
+      expect(svgContainer.style.cursor).toBe("default");
+
+      const mouseMoveEvent = new MouseEvent('mousemove', {
+        clientX: 150,
+        clientY: 150,
+        bubbles: true,
+      });
+      act(() => {
         window.dispatchEvent(mouseMoveEvent);
+      });
 
-        const mouseUpEvent = new MouseEvent('mouseup', {
-          bubbles: true,
-        });
+      const mouseUpEvent = new MouseEvent('mouseup', {
+        bubbles: true,
+      });
+      act(() => {
         window.dispatchEvent(mouseUpEvent);
       });
 
-      expect(svgContainer).toBeTruthy();
+      expect(svgContainer.style.cursor).toBe("default");
     });
 
-    it("should have smooth transition on zoom", () => {
+    it("should handle mouse down without crashing", () => {
       const { container } = render(
         <ProcessFlowDiagram nodes={mockNodes} connections={mockConnections} />
       );
 
-      expect(container.querySelector("svg")).toBeInTheDocument();
+      const svgContainer = getSvgContainer(container);
+
+      const zoomInButton = Array.from(container.querySelectorAll("button"))
+        .find((btn) => btn.querySelector('[data-testid="icon-plus"]'));
+      if (zoomInButton) {
+        act(() => fireEvent.click(zoomInButton));
+      }
+
+      act(() => {
+        fireEvent.mouseDown(svgContainer, {
+          clientX: 100,
+          clientY: 100,
+          button: 0,
+        });
+      });
+
+      expect(svgContainer.style.cursor).toBe("grabbing");
     });
   });
 
@@ -396,11 +724,7 @@ describe("ProcessFlowDiagram", () => {
         />
       );
 
-      // The values are rendered inside SVG text elements
-      // Use getAllByText with a function matcher to find the values
-      // The text "45.2" appears as part of the SVG text content
       const valueElements = screen.getAllByText((content, element) => {
-        // Check if the content contains the value
         return content.includes("45.2") || content.includes("85.0") || content.includes("65.0");
       });
       expect(valueElements.length).toBeGreaterThan(0);
@@ -414,12 +738,25 @@ describe("ProcessFlowDiagram", () => {
         />
       );
 
-      // The units "L/min" and "%" are rendered inside SVG text elements
-      // Use getAllByText with a function matcher
       const unitElements = screen.getAllByText((content, element) => {
         return content.includes("L/min") || content.includes("%");
       });
       expect(unitElements.length).toBeGreaterThan(0);
+    });
+
+    it("should handle nodes without live data", () => {
+      const nodesWithoutData = [
+        { id: "n1", label: "Node 1", x: 100, y: 100 },
+        { id: "n2", label: "Node 2", x: 300, y: 100 },
+      ];
+      const { container } = render(
+        <ProcessFlowDiagram 
+          nodes={nodesWithoutData} 
+          liveData={{}}
+        />
+      );
+
+      expect(container.querySelector("svg")).toBeInTheDocument();
     });
   });
 
@@ -433,7 +770,6 @@ describe("ProcessFlowDiagram", () => {
       );
 
       expect(screen.getAllByText("Running").length).toBeGreaterThan(0);
-      // There should be at least 1 running node
       const runningCount = screen.getAllByText("1");
       expect(runningCount.length).toBeGreaterThan(0);
     });
@@ -447,7 +783,6 @@ describe("ProcessFlowDiagram", () => {
       );
 
       expect(screen.getAllByText("Warning").length).toBeGreaterThan(0);
-      // There should be at least 1 warning node
       const warningCount = screen.getAllByText("1");
       expect(warningCount.length).toBeGreaterThan(0);
     });
@@ -461,19 +796,137 @@ describe("ProcessFlowDiagram", () => {
       );
 
       expect(screen.getAllByText("Total Nodes").length).toBeGreaterThan(0);
-      // Total nodes should be 3
       const totalCount = screen.getAllByText("3");
       expect(totalCount.length).toBeGreaterThan(0);
     });
+
+    it("should display critical count", () => {
+      const nodesWithCritical = [
+        ...mockNodes,
+        { id: "critical1", label: "Critical Node", x: 400, y: 100, status: "critical" },
+      ];
+      const liveDataWithCritical = {
+        ...mockLiveData,
+        critical1: { status: "critical", value: 0, unit: "%" },
+      };
+      render(
+        <ProcessFlowDiagram 
+          nodes={nodesWithCritical} 
+          liveData={liveDataWithCritical}
+        />
+      );
+
+      expect(screen.getAllByText("Critical").length).toBeGreaterThan(0);
+    });
+
+    it("should handle nodes without status", () => {
+      const nodesWithoutStatus = [
+        { id: "n1", label: "Node 1", x: 100, y: 100 },
+        { id: "n2", label: "Node 2", x: 300, y: 100 },
+      ];
+      render(
+        <ProcessFlowDiagram 
+          nodes={nodesWithoutStatus} 
+          liveData={{}}
+        />
+      );
+
+      expect(screen.getAllByText("Total Nodes").length).toBeGreaterThan(0);
+    });
   });
 
-  describe("Legend", () => {
-    it("should display legend items", () => {
-      render(<ProcessFlowDiagram nodes={mockNodes} />);
+  describe("SVG Elements", () => {
+    it("should define arrow marker for connections", () => {
+      const { container } = render(
+        <ProcessFlowDiagram nodes={mockNodes} connections={mockConnections} />
+      );
 
-      expect(screen.getAllByText("Running").length).toBeGreaterThan(0);
-      expect(screen.getAllByText("Warning").length).toBeGreaterThan(0);
-      expect(screen.getAllByText("Critical").length).toBeGreaterThan(0);
+      const marker = container.querySelector('marker[id="arrowhead"]');
+      expect(marker).toBeInTheDocument();
+    });
+
+    it("should have proper aria-label on SVG", () => {
+      const { container } = render(
+        <ProcessFlowDiagram nodes={mockNodes} title="Test Flow" />
+      );
+
+      const svg = container.querySelector('svg[role="img"]');
+      expect(svg).toHaveAttribute('aria-label', 'Test Flow');
+    });
+
+    it("should have title element inside SVG", () => {
+      const { container } = render(
+        <ProcessFlowDiagram nodes={mockNodes} title="Test Flow" />
+      );
+
+      const title = container.querySelector('svg title');
+      expect(title).toBeInTheDocument();
+      expect(title).toHaveTextContent('Test Flow');
+    });
+  });
+
+  describe("Empty Data", () => {
+    it("should render with empty nodes array", () => {
+      const { container } = render(
+        <ProcessFlowDiagram nodes={[]} connections={[]} />
+      );
+
+      expect(container.querySelector("svg")).toBeInTheDocument();
+      expect(container.querySelectorAll('[role="button"]').length).toBe(0);
+    });
+
+    it("should render with empty connections array", () => {
+      const { container } = render(
+        <ProcessFlowDiagram nodes={mockNodes} connections={[]} />
+      );
+
+      expect(container.querySelector("svg")).toBeInTheDocument();
+    });
+
+    it("should render with undefined liveData", () => {
+      const { container } = render(
+        <ProcessFlowDiagram nodes={mockNodes} liveData={undefined} />
+      );
+
+      expect(container.querySelector("svg")).toBeInTheDocument();
+    });
+  });
+
+  describe("Transition Styles", () => {
+    it("should have smooth transition on SVG transform", () => {
+      const { container } = render(
+        <ProcessFlowDiagram nodes={mockNodes} connections={mockConnections} />
+      );
+
+      const svg = container.querySelector("svg");
+      expect(svg).toHaveStyle('transition: transform 0.2s ease');
+    });
+  });
+
+  describe("Container Styles", () => {
+    it("should have grab cursor when zoomed in", () => {
+      const { container } = render(
+        <ProcessFlowDiagram nodes={mockNodes} connections={mockConnections} />
+      );
+
+      const svgContainer = getSvgContainer(container);
+
+      const zoomInButton = Array.from(container.querySelectorAll("button"))
+        .find((btn) => btn.querySelector('[data-testid="icon-plus"]'));
+      if (zoomInButton) {
+        act(() => fireEvent.click(zoomInButton));
+      }
+
+      expect(svgContainer.style.cursor).toBe("grab");
+    });
+
+    it("should have default cursor when not zoomed in", () => {
+      const { container } = render(
+        <ProcessFlowDiagram nodes={mockNodes} connections={mockConnections} />
+      );
+
+      const svgContainer = getSvgContainer(container);
+      expect(svgContainer.style.cursor).toBe("default");
     });
   });
 });
