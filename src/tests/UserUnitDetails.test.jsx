@@ -661,9 +661,15 @@ describe("UserUnitDetails", () => {
       expect(screen.getAllByText("N/A").length).toBeGreaterThan(0);
     });
 
-    it("shows the pressure value when pressure is defined", () => {
-      renderWithUnit({ pressure: 101.3 });
-      expect(screen.getByText("101.3 kPa")).toBeInTheDocument();
+    // ✅ FIXED: Drive pressure through metrics, not unit.pressure
+    it("shows the pressure value derived from metrics.pressure.current", () => {
+      useRealtimeMetrics.mockReturnValue({
+        metrics: { pressure: { current: 50 } },
+      });
+      renderWithUnit({ pressure: 101.3 }); // just needs to be defined, not a specific value
+      // pressureBase: 50, idOffset ("1" -> 49) % 20 = 9
+      // pressure: 50 * 1.5 + 9 = 84
+      expect(screen.getByText("84 kPa")).toBeInTheDocument();
     });
   });
 
