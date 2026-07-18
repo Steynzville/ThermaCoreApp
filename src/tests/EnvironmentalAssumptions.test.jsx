@@ -1,12 +1,12 @@
-// src/tests/components/EnvironmentalAssumptions.test.jsx
+// src/tests/EnvironmentalAssumptions.test.jsx
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import EnvironmentalAssumptions from "../../components/EnvironmentalAssumptions";
+import EnvironmentalAssumptions from "../components/EnvironmentalAssumptions";
 
 // Mock the UI components
-vi.mock("../../components/ui/button", () => ({
+vi.mock("../components/ui/button", () => ({
   Button: ({ children, onClick, type }) => (
     <button type={type || "button"} onClick={onClick}>
       {children}
@@ -14,7 +14,7 @@ vi.mock("../../components/ui/button", () => ({
   ),
 }));
 
-vi.mock("../../components/ui/dialog", () => ({
+vi.mock("../components/ui/dialog", () => ({
   Dialog: ({ children, open, onOpenChange }) => (
     <div data-testid="dialog" data-open={open}>
       {children}
@@ -42,7 +42,7 @@ vi.mock("../../components/ui/dialog", () => ({
   ),
 }));
 
-vi.mock("../../components/ui/input", () => ({
+vi.mock("../components/ui/input", () => ({
   Input: ({ id, type, value, onChange, className, min, step, "aria-invalid": ariaInvalid, "aria-describedby": ariaDescribedBy }) => (
     <input
       id={id}
@@ -59,7 +59,7 @@ vi.mock("../../components/ui/input", () => ({
   ),
 }));
 
-vi.mock("../../components/ui/label", () => ({
+vi.mock("../components/ui/label", () => ({
   Label: ({ htmlFor, children, className }) => (
     <label htmlFor={htmlFor} className={className}>
       {children}
@@ -290,7 +290,6 @@ describe("EnvironmentalAssumptions", () => {
       expect(input).toHaveValue(2.99);
     });
 
-    // FIXED: Use fireEvent.change instead of fireEvent.clear
     it("should clear error when currentAssumptions changes", () => {
       const { rerender } = render(
         <EnvironmentalAssumptions {...defaultProps} />
@@ -298,21 +297,19 @@ describe("EnvironmentalAssumptions", () => {
       
       const input = screen.getByTestId("input-dieselPrice");
       const saveButton = screen.getByText("Save changes");
-      
-      // Trigger an error by emptying the input
+
       fireEvent.change(input, { target: { value: "" } });
       fireEvent.click(saveButton);
-      
+
       expect(screen.getByRole("alert")).toBeInTheDocument();
-      
-      // Change props - error should clear
+
       rerender(
         <EnvironmentalAssumptions
           {...defaultProps}
           currentAssumptions={{ dieselPricePerLiter: 2.99 }}
         />
       );
-      
+
       expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     });
 
@@ -422,7 +419,6 @@ describe("EnvironmentalAssumptions", () => {
       // Input should have error styling
       expect(input).toHaveClass("border-red-500");
       
-      // FIXED: aria-invalid should be "true" when there's an error
       expect(input).toHaveAttribute("aria-invalid", "true");
       expect(input).toHaveAttribute("aria-describedby", "dieselPrice-error");
     });
@@ -640,7 +636,6 @@ describe("EnvironmentalAssumptions", () => {
       expect(errorMessage).toHaveAttribute("id", "dieselPrice-error");
     });
 
-    // FIXED: Correct test for no error state
     it("should not have aria-invalid when no error", () => {
       render(<EnvironmentalAssumptions {...defaultProps} />);
       
