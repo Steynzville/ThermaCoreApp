@@ -81,8 +81,7 @@ describe("ForgotPassword", () => {
     expect(authService.requestPasswordReset).not.toHaveBeenCalled();
   });
 
-  // Skip async success path tests - need investigation
-  it.skip("submits valid email and shows success message", async () => {
+  it("submits valid email and shows success message", async () => {
     const user = userEvent.setup();
     const successMessage = "Password reset link sent to your email";
     vi.mocked(authService.requestPasswordReset).mockResolvedValue({
@@ -100,7 +99,7 @@ describe("ForgotPassword", () => {
     expect(successElement).toBeInTheDocument();
   });
 
-  it.skip("shows error message when request fails", async () => {
+  it("shows error message when request fails", async () => {
     const user = userEvent.setup();
     const errorMessage = "Email not found";
     vi.mocked(authService.requestPasswordReset).mockResolvedValue({
@@ -152,7 +151,7 @@ describe("ForgotPassword", () => {
     expect(screen.queryByText(errorMessage)).not.toBeInTheDocument();
   });
 
-  it.skip("disables inputs and button during submission", async () => {
+  it("disables inputs and button during submission", async () => {
     const user = userEvent.setup();
     vi.mocked(authService.requestPasswordReset).mockImplementation(
       () => new Promise(resolve => setTimeout(() => resolve({ success: true, message: "OK" }), 300))
@@ -179,7 +178,7 @@ describe("ForgotPassword", () => {
     expect(mockNavigate).toHaveBeenCalledWith("/login");
   });
 
-  it.skip("clears email field after successful submission", async () => {
+  it("clears email field after successful submission", async () => {
     const user = userEvent.setup();
     vi.mocked(authService.requestPasswordReset).mockResolvedValue({
       success: true,
@@ -195,7 +194,7 @@ describe("ForgotPassword", () => {
     });
   });
 
-  it.skip("handles trimming of email input", async () => {
+  it("handles trimming of email input", async () => {
     const user = userEvent.setup();
     vi.mocked(authService.requestPasswordReset).mockResolvedValue({
       success: true,
