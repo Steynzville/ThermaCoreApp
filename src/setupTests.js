@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom";
-import { vi, beforeAll, beforeEach, afterEach, afterAll } from "vitest";
+import { vi, beforeAll, beforeEach, afterEach } from "vitest";
 import React from "react";
 import { cleanup } from "@testing-library/react";
 
@@ -15,6 +15,18 @@ global.IS_REACT_ACT_ENVIRONMENT = true;
 
 // ============================================================
 // SAFE CONSOLE FILTERING - Only suppresses warnings, NOT errors
+// ============================================================
+//
+// NOTE: This is the ONLY console-filtering mechanism in this file.
+// A previous version also installed a vi.spyOn(console, ...) blanket
+// silence in beforeAll/afterAll, but that conflicted with the vitest
+// config's `restoreMocks: true` (which auto-restores vi.spyOn mocks
+// before every test). The spy was only actually active for the first
+// test in the run and silently got undone after that, making console
+// output inconsistent across the suite and bypassing the allowlist
+// below for test #1. Plain reassignment (not vi.spyOn) isn't touched
+// by restoreMocks, so this approach applies consistently to every
+// test in the file.
 // ============================================================
 
 const originalConsoleError = console.error;
@@ -659,28 +671,15 @@ export const resetStorage = () => {
 };
 
 // ============================================================
-// ✅ FIXED: Console spies are now DEBUG-aware
+// NOTE: The vi.spyOn(console, "error"/"warn") blanket-silence
+// block that used to live here (in beforeAll/afterAll) has been
+// removed. It conflicted with `restoreMocks: true` in
+// vite.config.js — that setting auto-restores any vi.spyOn mock
+// before every test, so the spy was only actually silencing
+// console output for the first test in the run and reverting
+// after that. The plain-reassignment overrides at the top of this
+// file (console.error = ..., console.warn = ..., console.log = ...)
+// are NOT vi.spyOn mocks, so they aren't touched by restoreMocks
+// and apply consistently across the whole suite. No replacement
+// code is needed here — the top-of-file overrides already cover it.
 // ============================================================
-// Store console spies at module level
-let consoleErrorSpy = null;
-let consoleWarnSpy = null;
-
-beforeAll(() => {
-  // ✅ Only silence if NOT in DEBUG mode
-  if (!SHOW_ALL_WARNINGS) {
-    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-  }
-});
-
-// Restore console mocks after all tests
-afterAll(() => {
-  if (consoleErrorSpy) {
-    consoleErrorSpy.mockRestore();
-    consoleErrorSpy = null;
-  }
-  if (consoleWarnSpy) {
-    consoleWarnSpy.mockRestore();
-    consoleWarnSpy = null;
-  }
-});
