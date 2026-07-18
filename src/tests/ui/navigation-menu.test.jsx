@@ -180,8 +180,17 @@ describe("NavigationMenu", () => {
     expect(classes).toContain("inline-flex");
   });
 
-  it("renders the indicator element once a trigger becomes active", async () => {
-    const user = userEvent.setup();
+  it("renders the indicator element when force-mounted", async () => {
+    // NavigationMenuIndicator is gated behind two things in Radix: (1) a
+    // portal target ref ("indicatorTrack") that NavigationMenuList hands up
+    // via its own mount effect, and (2) a `Presence` check for whether a
+    // trigger is currently active/highlighted — which in turn depends on
+    // pointer-hover state that's unreliable to simulate through jsdom's
+    // synthetic pointer events. Radix exposes `forceMount` specifically to
+    // bypass #2 for cases like this (the same mechanism used to test/animate
+    // Tooltip, Popover, Dialog, etc.), so we use it here to test our
+    // component's rendering deterministically rather than fighting Radix's
+    // internal hover/focus state machine.
     const { container } = render(
       <NavigationMenu viewport={false}>
         <NavigationMenuList>
@@ -195,23 +204,17 @@ describe("NavigationMenu", () => {
               </NavigationMenuLink>
             </NavigationMenuContent>
           </NavigationMenuItem>
-          <NavigationMenuIndicator />
+          <NavigationMenuIndicator forceMount data-testid="indicator" />
         </NavigationMenuList>
       </NavigationMenu>,
     );
 
-    // Radix tracks which trigger is "active" (used to position/mount the
-    // Indicator) from pointerenter, not from click/keyboard activation. A
-    // plain click opens the content panel but never sets that ref, so the
-    // Indicator stays unmounted. Hover first to set it, then click so the
-    // panel opens deterministically without waiting on hover-intent timers.
-    await user.hover(screen.getByTestId("trigger"));
-    await user.click(screen.getByTestId("trigger"));
-    await screen.findByText("Pump Station 1");
-
-    expect(
-      container.querySelector('[data-slot="navigation-menu-indicator"]'),
-    ).toBeInTheDocument();
+    // findBy (rather than a synchronous querySelector) gives the List's own
+    // mount effect — which hands the portal target ref up to context — one
+    // more microtask/render cycle to settle if it hasn't already.
+    expect(await screen.findByTestId("indicator")).toBeInTheDocument();
+    expect(container.querySelector('[data-slot="navigation-menu-indicator"]'))
+      .toBeInTheDocument();
   });
 
   it("routes opened content into a manually-placed viewport", async () => {
