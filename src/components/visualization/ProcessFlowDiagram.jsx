@@ -225,7 +225,7 @@ const ProcessFlowDiagram = ({
     const dy = y2 - y1;
     const offset = 30;
 
-    // ✅ FIXED: Guard against division by zero when nodes overlap
+    // ✅ Guard against division by zero when nodes overlap
     const distance = Math.sqrt(dx * dx + dy * dy);
     const cpX = distance === 0 ? midX : midX - (dy / distance) * offset;
     const cpY = distance === 0 ? midY : midY + (dx / distance) * offset;
