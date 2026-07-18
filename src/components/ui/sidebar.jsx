@@ -58,20 +58,47 @@ function SidebarProvider({
   // We use openProp and setOpenProp for control from outside the component.
   const [_open, _setOpen] = React.useState(defaultOpen);
   const open = openProp ?? _open;
+
+  // FIXED: Use functional update for state, side effects outside
   const setOpen = React.useCallback(
     (value) => {
+      // Compute the new state
       const openState = typeof value === "function" ? value(open) : value;
+      
+      // Update internal state (pure)
+      _setOpen(openState);
+      
+      // Side effects outside the updater
+      document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
       if (setOpenProp) {
         setOpenProp(openState);
-      } else {
-        _setOpen(openState);
       }
-
-      // This sets the cookie to keep the sidebar state.
-      document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
     },
-    [setOpenProp, open],
+    [setOpenProp, open]
   );
+
+  // Read cookie on mount to restore state
+  React.useEffect(() => {
+    // FIXED: Match the actual "; " separator format with \s*
+    const cookieMatch = document.cookie.match(new RegExp(`(^|;\\s*)${SIDEBAR_COOKIE_NAME}=([^;]+)`));
+    if (cookieMatch) {
+      const cookieValue = cookieMatch[2] === "true";
+      // Only override if not controlled externally
+      if (openProp === undefined) {
+        _setOpen(cookieValue);
+      }
+    }
+  }, []); // Empty dependency array - only runs on mount
+
+  // Warn about half-controlled usage
+  React.useEffect(() => {
+    if (openProp !== undefined && setOpenProp === undefined) {
+      console.warn(
+        "SidebarProvider: `open` prop provided without `onOpenChange`. " +
+        "The sidebar will appear controlled but won't update internal state."
+      );
+    }
+  }, [openProp, setOpenProp]);
 
   // Helper to toggle the sidebar.
   const toggleSidebar = React.useCallback(() => {
@@ -484,6 +511,7 @@ function SidebarMenuButton({
     };
   }
 
+  // Spread tooltip AFTER explicit props to prevent hidden override
   return (
     <Tooltip>
       <TooltipTrigger asChild>{button}</TooltipTrigger>
