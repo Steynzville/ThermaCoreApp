@@ -91,19 +91,18 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
   // Remote control states
   const [machineOn, setMachineOn] = useState(unit?.status === "online");
   const [waterProductionOn, setWaterProductionOn] = useState(
-    unit?.watergeneration && unit?.waterProductionOn,
+    Boolean(unit?.watergeneration && unit?.waterProductionOn),
   );
   const [autoSwitchEnabled, setAutoSwitchEnabled] = useState(
-    unit?.autoSwitchEnabled || false,
+    Boolean(unit?.autoSwitchEnabled ?? false),
   );
+  // TODO: Wire real connection status from WebSocket or API
   const [isConnected, setIsConnected] = useState(true);
   const [selectedCamera, setSelectedCamera] = useState("cam1");
   const [videoFeedActive, setVideoFeedActive] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [videoContainerRef, setVideoContainerRef] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [debugMessage, setDebugMessage] = useState("");
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [actionHistory, setActionHistory] = useState([
     {
       id: 1,
@@ -125,15 +124,29 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
     },
   ]);
 
-  // Use refs to track mounted state and timeout
+  // Use refs to track mounted state and timeouts
   const isMountedRef = useRef(true);
   const refreshTimeoutRef = useRef(null);
-  const actionIdCounter = useRef(4); // Start after initial items
-  const debugTimeoutRef = useRef(null);
+  const cascadeTimeoutRef = useRef([]);
+  const actionIdCounter = useRef(4);
+
+  // Sync state when unit prop changes
+  // Note: This can clobber optimistic UI updates if parent polls rapidly.
+  // Consider using a debounced sync or comparing values before updating.
+  useEffect(() => {
+    if (unit) {
+      setMachineOn(unit.status === "online");
+      setWaterProductionOn(
+        Boolean(unit.watergeneration && unit.waterProductionOn),
+      );
+      setAutoSwitchEnabled(
+        Boolean(unit.autoSwitchEnabled ?? false),
+      );
+    }
+  }, [unit]);
 
   // Listen for fullscreen changes
   useEffect(() => {
-    // Guard for SSR safety
     if (typeof document === "undefined") {
       return;
     }
@@ -148,7 +161,6 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
     };
 
     document.addEventListener("fullscreenchange", handleFullscreenChange);
-    // Guard webkit and ms prefixed events only when necessary
     if ("webkitFullscreenElement" in document) {
       document.addEventListener(
         "webkitfullscreenchange",
@@ -180,57 +192,27 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
-      // Clear any pending refresh timeout
       if (refreshTimeoutRef.current) {
         clearTimeout(refreshTimeoutRef.current);
       }
-      if (debugTimeoutRef.current) {
-        clearTimeout(debugTimeoutRef.current);
-      }
+      cascadeTimeoutRef.current.forEach((timeoutId) => {
+        clearTimeout(timeoutId);
+      });
+      cascadeTimeoutRef.current = [];
     };
   }, []);
 
-  // Simulate connection status changes (for demo/development)
-  useEffect(() => {
-    // This would normally be driven by WebSocket events
-    const interval = setInterval(() => {
+  // Helper to safely add cascade actions with mount guard and cleanup
+  const scheduleCascadeAction = (action, description, delay = 50) => {
+    const timeoutId = setTimeout(() => {
+      cascadeTimeoutRef.current = cascadeTimeoutRef.current.filter(id => id !== timeoutId);
+      
       if (isMountedRef.current) {
-        setIsConnected(true);
+        addAction(action, description);
       }
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  // Helper function to show debug message on mobile
-  const showDebug = (message, isError = false) => {
-    setDebugMessage(message);
-    if (debugTimeoutRef.current) {
-      clearTimeout(debugTimeoutRef.current);
-    }
-    debugTimeoutRef.current = setTimeout(() => {
-      setDebugMessage("");
-    }, 4000);
-  };
-
-  // Helper function to add action to history - with visual debug
-  const addAction = (action, description = "Manual control via remote interface") => {
-    const newAction = {
-      id: actionIdCounter.current++,
-      action,
-      description,
-      timestamp: getCurrentTimestamp(),
-    };
-    
-    // Show visual debug message on mobile
-    showDebug(`✅ Added: ${action}`);
-    
-    // Use functional update to ensure we're working with the latest state
-    setActionHistory(prev => {
-      const updated = [newAction, ...prev];
-      // Keep only last 10 actions
-      return updated.slice(0, 10);
-    });
+    }, delay);
+    cascadeTimeoutRef.current.push(timeoutId);
+    return timeoutId;
   };
 
   if (!unit) {
@@ -242,49 +224,61 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
           </h1>
           <button
             type="button"
-            onClick={() => (propUnit ? navigate("/grid-view") : navigate(-1))}
+            onClick={() => navigate(-1)}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            {propUnit ? "Return to Grid View" : "Back to Unit Details"}
+            Back to Unit Details
           </button>
         </div>
       </div>
     );
   }
 
-  // DEBUG: Track when handlers are called
-  const handleMachineToggle = (checked) => {
-    showDebug(`🔄 Machine toggle: ${checked ? 'ON' : 'OFF'}`);
+  // Helper function to add action to history
+  const addAction = (action, description = "Manual control via remote interface") => {
+    const newAction = {
+      id: actionIdCounter.current++,
+      action,
+      description,
+      timestamp: getCurrentTimestamp(),
+    };
     
+    setActionHistory(prev => {
+      const updated = [newAction, ...prev];
+      return updated.slice(0, 10);
+    });
+  };
+
+  const handleMachineToggle = (checked) => {
     setMachineOn(checked);
 
-    // Play appropriate audio based on power state
     if (checked) {
       playSound("power-on.mp3", settings.soundEnabled, settings.volume);
       addAction(ACTION_TYPES.MACHINE_POWER_ON, "Machine turned on via remote interface");
     } else {
       playSound("power-off.mp3", settings.soundEnabled, settings.volume);
       addAction(ACTION_TYPES.MACHINE_POWER_OFF, "Machine turned off via remote interface");
-    }
-
-    // When machine control is toggled to "off", water production and automatic controls should both automatically toggle to "off"
-    if (!checked) {
-      setWaterProductionOn(false);
-      setAutoSwitchEnabled(false);
-      // Add cascade actions with a small delay to ensure they appear after the main action
-      setTimeout(() => {
-        addAction(ACTION_TYPES.WATER_PRODUCTION_OFF, "Cascaded off - machine power off");
-        addAction(ACTION_TYPES.AUTO_SWITCH_OFF, "Cascaded off - machine power off");
-      }, 50);
+      
+      if (waterProductionOn) {
+        setWaterProductionOn(false);
+        scheduleCascadeAction(
+          ACTION_TYPES.WATER_PRODUCTION_OFF,
+          "Cascaded off - machine power off"
+        );
+      }
+      if (autoSwitchEnabled) {
+        setAutoSwitchEnabled(false);
+        scheduleCascadeAction(
+          ACTION_TYPES.AUTO_SWITCH_OFF,
+          "Cascaded off - machine power off"
+        );
+      }
     }
   };
 
   const handleWaterProductionToggle = (checked) => {
-    showDebug(`🔄 Water toggle: ${checked ? 'ON' : 'OFF'}`);
-    
     setWaterProductionOn(checked);
 
-    // Play appropriate audio based on water state
     if (checked) {
       playSound("water-on.mp3", settings.soundEnabled, settings.volume);
       addAction(ACTION_TYPES.WATER_PRODUCTION_ON, "Water production enabled via remote interface");
@@ -293,18 +287,16 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
       addAction(ACTION_TYPES.WATER_PRODUCTION_OFF, "Water production disabled via remote interface");
     }
 
-    // When machine control is toggled to "on" and water production is switched to "off", automatic control should automatically toggle to "off"
-    if (machineOn && !checked) {
+    if (machineOn && !checked && autoSwitchEnabled) {
       setAutoSwitchEnabled(false);
-      setTimeout(() => {
-        addAction(ACTION_TYPES.AUTO_SWITCH_OFF, "Cascaded off - water production off");
-      }, 50);
+      scheduleCascadeAction(
+        ACTION_TYPES.AUTO_SWITCH_OFF,
+        "Cascaded off - water production off"
+      );
     }
   };
 
   const handleAutoSwitchToggle = (checked) => {
-    showDebug(`🔄 Auto toggle: ${checked ? 'ON' : 'OFF'}`);
-    
     setAutoSwitchEnabled(checked);
     playSound("cool-tones.mp3", settings.soundEnabled, settings.volume);
     
@@ -325,14 +317,11 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
     const newVideoFeedState = !videoFeedActive;
     setVideoFeedActive(newVideoFeedState);
 
-    // Play video-on.mp3 when stopping the video feed, video-off.mp3 when starting
     if (newVideoFeedState) {
-      // Starting video feed - play video-off.mp3
-      playSound("video-off.mp3", settings.soundEnabled, settings.volume);
+      playSound("video-on.mp3", settings.soundEnabled, settings.volume);
       addAction(ACTION_TYPES.VIDEO_FEED_START, "Live video feed started");
     } else {
-      // Stopping video feed - play video-on.mp3
-      playSound("video-on.mp3", settings.soundEnabled, settings.volume);
+      playSound("video-off.mp3", settings.soundEnabled, settings.volume);
       addAction(ACTION_TYPES.VIDEO_FEED_STOP, "Live video feed stopped");
     }
   };
@@ -342,18 +331,13 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
       return;
     }
     
-    // Set refreshing state to trigger animation
     setIsRefreshing(true);
-    
-    // Record the action immediately
     addAction(ACTION_TYPES.REFRESH_FEED, "Video feed refreshed");
     
-    // Clear any existing timeout
     if (refreshTimeoutRef.current) {
       clearTimeout(refreshTimeoutRef.current);
     }
     
-    // Simulate refresh with a timeout (like fetching a new frame)
     refreshTimeoutRef.current = setTimeout(() => {
       if (isMountedRef.current) {
         setIsRefreshing(false);
@@ -363,14 +347,12 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
   };
 
   const toggleFullscreen = async () => {
-    // Guard for SSR safety
     if (typeof document === "undefined") {
       return;
     }
 
     try {
       if (!isFullscreen) {
-        // Enter fullscreen
         if (videoContainerRef) {
           if (videoContainerRef.requestFullscreen) {
             await videoContainerRef.requestFullscreen();
@@ -381,7 +363,6 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
           }
         }
       } else {
-        // Exit fullscreen
         if (document.exitFullscreen) {
           await document.exitFullscreen();
         } else if (document.webkitExitFullscreen) {
@@ -396,16 +377,10 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
   };
 
   const availableCameras = [
-    { id: "cam1", name: "Main Unit Camera", position: "" },
-    { id: "cam2", name: "Alternate Cam 1", position: "" },
-    { id: "cam3", name: "Alternate Cam 2", position: "" },
+    { id: "cam1", name: "Main Unit Camera" },
+    { id: "cam2", name: "Alternate Cam 1" },
+    { id: "cam3", name: "Alternate Cam 2" },
   ];
-
-  // Helper to debug when buttons are clicked
-  const handleContinueClick = (handler, ...args) => {
-    showDebug(`🔘 Continue button clicked!`);
-    handler(...args);
-  };
 
   return (
     <div
@@ -432,7 +407,6 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
             </p>
           </div>
 
-          {/* Status row placed neatly below the heading */}
           <div className="flex items-center space-x-4 mt-4">
             <ConnectionPill isConnected={isConnected} />
             <div className="flex items-center space-x-2">
@@ -454,22 +428,7 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
           </div>
         </div>
 
-        {/* Debug Message Banner - Mobile Friendly */}
-        {debugMessage && (
-          <div className={`mb-4 p-3 border rounded-lg text-sm font-medium animate-pulse ${
-            debugMessage.includes('✅') 
-              ? 'bg-green-100 dark:bg-green-900/30 border-green-400 dark:border-green-700 text-green-800 dark:text-green-200'
-              : debugMessage.includes('🔄')
-              ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-400 dark:border-blue-700 text-blue-800 dark:text-blue-200'
-              : debugMessage.includes('🔘')
-              ? 'bg-yellow-100 dark:bg-yellow-900/30 border-yellow-400 dark:border-yellow-700 text-yellow-800 dark:text-yellow-200'
-              : 'bg-red-100 dark:bg-red-900/30 border-red-400 dark:border-red-700 text-red-800 dark:text-red-200'
-          }`}>
-            {debugMessage}
-          </div>
-        )}
-
-        {/* Connection Warning */}
+        {/* Connection Warning - currently unreachable until isConnected can become false */}
         {!isConnected && (
           <Card className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 mb-6">
             <CardContent className="p-4">
@@ -514,10 +473,10 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
                 {hasControlPermission ? (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <div className="cursor-pointer" onClick={() => showDebug('👆 Switch clicked - dialog opening')}>
+                      <div className="cursor-pointer">
                         <Switch
                           checked={machineOn}
-                          onCheckedChange={() => {}} // This triggers the dialog via the AlertDialogTrigger
+                          onCheckedChange={() => {}}
                           disabled={!isConnected}
                           aria-label="Machine Power"
                         />
@@ -538,7 +497,6 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
                           onClick={() => {
-                            showDebug('🔘 Machine Continue clicked!');
                             handleMachineToggle(!machineOn);
                           }}
                         >
@@ -597,10 +555,10 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
                   {hasControlPermission ? (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <div className="cursor-pointer" onClick={() => showDebug('👆 Water switch clicked - dialog opening')}>
+                        <div className="cursor-pointer">
                           <Switch
                             checked={waterProductionOn}
-                            onCheckedChange={() => {}} // This triggers the dialog via the AlertDialogTrigger
+                            onCheckedChange={() => {}}
                             disabled={!isConnected || !machineOn}
                             aria-label="Water Production"
                           />
@@ -621,7 +579,6 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
                           <AlertDialogAction
                             onClick={() => {
-                              showDebug('🔘 Water Continue clicked!');
                               handleWaterProductionToggle(!waterProductionOn);
                             }}
                           >
@@ -649,7 +606,7 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
                     </span>
                   </div>
                   <p className="text-xs text-gray-600 dark:text-gray-400">
-                    Current water level: {unit?.water_level} L
+                    Current water level: {unit?.water_level !== undefined ? `${unit.water_level} L` : "N/A"}
                   </p>
                 </div>
               </CardContent>
@@ -682,10 +639,10 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
                 {hasControlPermission ? (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <div className="cursor-pointer" onClick={() => showDebug('👆 Auto switch clicked - dialog opening')}>
+                      <div className="cursor-pointer">
                         <Switch
                           checked={autoSwitchEnabled}
-                          onCheckedChange={() => {}} // This triggers the dialog via the AlertDialogTrigger
+                          onCheckedChange={() => {}}
                           disabled={!isConnected || !machineOn}
                           aria-label="Auto Switch"
                         />
@@ -707,7 +664,6 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
                           onClick={() => {
-                            showDebug('🔘 Auto Continue clicked!');
                             handleAutoSwitchToggle(!autoSwitchEnabled);
                           }}
                         >
@@ -731,7 +687,7 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
                       Current Level
                     </p>
                     <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                      {unit?.water_level} L
+                      {unit?.water_level !== undefined ? `${unit.water_level} L` : "N/A"}
                     </p>
                   </div>
                   <div className="text-center p-3 bg-blue-50 dark:bg-gray-800 rounded-lg">
@@ -833,7 +789,6 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
                 {videoFeedActive && isConnected ? (
                   <div className="text-center">
                     {isRefreshing ? (
-                      // Loading state during refresh
                       <>
                         <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-500 border-t-transparent mx-auto mb-3" />
                         <p className="text-white dark:text-purple-400 font-medium">
@@ -844,7 +799,6 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
                         </p>
                       </>
                     ) : (
-                      // Normal active feed
                       <>
                         <div className="animate-pulse">
                           <Camera className="h-12 w-12 text-white dark:text-purple-400 mx-auto mb-2" />
@@ -852,22 +806,10 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
                             Live Feed Active
                           </p>
                           <p className="text-sm text-white dark:text-gray-400 mt-1">
-                            {
-                              availableCameras.find(
-                                (cam) => cam.id === selectedCamera,
-                              )?.name
-                            }
+                            {availableCameras.find(
+                              (cam) => cam.id === selectedCamera
+                            )?.name || selectedCamera}
                           </p>
-                          {availableCameras.find((cam) => cam.id === selectedCamera)
-                            ?.position && (
-                            <p className="text-xs text-gray-200 dark:text-gray-500 mt-1">
-                              {
-                                availableCameras.find(
-                                  (cam) => cam.id === selectedCamera,
-                                )?.position
-                              }
-                            </p>
-                          )}
                         </div>
                         <button
                           type="button"
@@ -954,7 +896,7 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
           </CardContent>
         </Card>
 
-        {/* Control History - Now dynamic */}
+        {/* Control History */}
         <Card className="bg-white dark:bg-gray-900 mt-6">
           <CardHeader>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
