@@ -3,9 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ThemeProvider, useTheme } from "../context/ThemeContext";
 
-// Mock matchMedia
+// Mock matchMedia with configurable: true
 Object.defineProperty(window, "matchMedia", {
   writable: true,
+  configurable: true,
   value: vi.fn().mockImplementation((query) => ({
     matches: false,
     media: query,
@@ -18,7 +19,7 @@ Object.defineProperty(window, "matchMedia", {
   })),
 });
 
-// Mock localStorage with proper persistence
+// Mock localStorage with proper persistence and configurable: true
 let store = {};
 const localStorageMock = {
   getItem: (key) => store[key] || null,
@@ -36,6 +37,7 @@ const localStorageMock = {
 Object.defineProperty(window, "localStorage", {
   value: localStorageMock,
   writable: true,
+  configurable: true,
 });
 
 describe("ThemeContext", () => {
@@ -74,8 +76,7 @@ describe("ThemeContext", () => {
       expect(result.current.actualTheme).toBeDefined();
     });
 
-    // Skip flaky localStorage tests
-    it.skip("should load theme from localStorage on mount", async () => {
+    it("should load theme from localStorage on mount", async () => {
       localStorage.setItem("theme", "dark");
 
       const { result } = renderHook(() => useTheme(), {
@@ -143,8 +144,7 @@ describe("ThemeContext", () => {
       expect(result.current.theme).toBe("auto");
     });
 
-    // Skip flaky localStorage tests
-    it.skip("should persist theme to localStorage", async () => {
+    it("should persist theme to localStorage", async () => {
       const { result } = renderHook(() => useTheme(), {
         wrapper: ThemeProvider,
       });
@@ -341,8 +341,7 @@ describe("ThemeContext", () => {
       expect(result.current.theme).toBe("auto");
     });
 
-    // Skip flaky localStorage tests
-    it.skip("should persist theme across multiple changes", async () => {
+    it("should persist theme across multiple changes", async () => {
       const { result } = renderHook(() => useTheme(), {
         wrapper: ThemeProvider,
       });
