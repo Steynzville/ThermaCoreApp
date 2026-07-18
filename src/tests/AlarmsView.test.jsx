@@ -13,7 +13,7 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import AlarmsView from "@/components/AlarmsView";
+import AlarmsView, { getAlarmColor, getAlarmIcon } from "@/components/AlarmsView";
 
 // Mock navigate
 const mockNavigate = vi.fn();
@@ -214,10 +214,6 @@ describe("AlarmsView", () => {
       expect(alarms.length).toBeGreaterThan(0);
     });
 
-    // The role-based filtering test has been removed because it was flaky
-    // and depended on test environment setup that wasn't reliable.
-    // Role-based filtering is still covered by other tests in this suite.
-
     it("should show all units for admin", () => {
       render(
         <TestWrapper>
@@ -228,9 +224,23 @@ describe("AlarmsView", () => {
       // Admin should see both Unit 003 and Unit 014
       const unit003 = screen.getAllByText(/ThermaCore Unit 003/i);
       expect(unit003.length).toBeGreaterThan(0);
-      
+
       const unit014 = screen.getAllByText(/ThermaCore Unit 014/i);
       expect(unit014.length).toBeGreaterThan(0);
+    });
+
+    it("should show all alarms for a role that isn't 'user'", () => {
+      // userRole is neither "user" nor "admin" -> falls through to the
+      // `allAlarms` branch of the ternary (else-branch coverage distinct
+      // from the "admin" case, since the condition only checks === "user").
+      render(
+        <TestWrapper>
+          <AlarmsView userRole="supervisor" />
+        </TestWrapper>,
+      );
+
+      const alarms = screen.getAllByText(/NH3 LEAK DETECTED/i);
+      expect(alarms.length).toBeGreaterThan(0);
     });
   });
 
@@ -312,6 +322,66 @@ describe("AlarmsView", () => {
         );
       });
     });
+
+    it("should not navigate when the device name has no 'Unit N' pattern", async () => {
+      // Covers the `if (unitMatch)` false branch in handleAlarmClick.
+      const alarms = [
+        {
+          id: 101,
+          type: "critical",
+          title: "NH3 LEAK DETECTED",
+          message: "Critical alarm on an unrecognized device.",
+          device: "Auxiliary Sensor Array",
+          timestamp: "2025-09-09 16:00",
+          acknowledged: false,
+        },
+      ];
+
+      render(
+        <TestWrapper>
+          <AlarmsView userRole="admin" alarms={alarms} />
+        </TestWrapper>,
+      );
+
+      const card = screen
+        .getByText(/Auxiliary Sensor Array - NH3 LEAK DETECTED/i)
+        .closest("[class*='border-l-4']");
+      fireEvent.click(card);
+
+      // Give any (incorrect) async navigation a chance to fire.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(mockNavigate).not.toHaveBeenCalled();
+    });
+
+    it("should not navigate when the matched unit does not exist in unit data", async () => {
+      // Covers the `if (unitData)` false branch in handleAlarmClick -
+      // the device name matches "Unit N" but no unit with that ID exists.
+      const alarms = [
+        {
+          id: 102,
+          type: "critical",
+          title: "NH3 LEAK DETECTED",
+          message: "Critical alarm on a nonexistent unit.",
+          device: "ThermaCore Unit 999",
+          timestamp: "2025-09-09 16:05",
+          acknowledged: false,
+        },
+      ];
+
+      render(
+        <TestWrapper>
+          <AlarmsView userRole="admin" alarms={alarms} />
+        </TestWrapper>,
+      );
+
+      const card = screen
+        .getByText(/ThermaCore Unit 999 - NH3 LEAK DETECTED/i)
+        .closest("[class*='border-l-4']");
+      fireEvent.click(card);
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(mockNavigate).not.toHaveBeenCalled();
+    });
   });
 
   describe("Alarm Icon Display", () => {
@@ -340,6 +410,99 @@ describe("AlarmsView", () => {
     });
   });
 
+  describe("getAlarmIcon", () => {
+    it("returns the siren icon for critical alarms", () => {
+      const { container } = render(getAlarmIcon("critical"));
+      expect(container.querySelector("svg")).toBeTruthy();
+    });
+
+    it("returns the alert-triangle icon for warning alarms", () => {
+      const { container } = render(getAlarmIcon("warning"));
+      expect(container.querySelector(".text-yellow-500")).toBeTruthy();
+    });
+
+    it("returns the info icon for info alarms", () => {
+      const { container } = render(getAlarmIcon("info"));
+      expect(container.querySelector(".text-blue-500")).toBeTruthy();
+    });
+
+    it("returns the check-circle icon for success alarms", () => {
+      const { container } = render(getAlarmIcon("success"));
+      expect(container.querySelector(".text-green-500")).toBeTruthy();
+    });
+
+    it("returns the default gray icon for an unrecognized type", () => {
+      const { container } = render(getAlarmIcon("unknown-type"));
+      expect(container.querySelector(".text-gray-500")).toBeTruthy();
+    });
+  });
+
+  describe("getAlarmColor", () => {
+    it("returns red styling for critical alarms", () => {
+      expect(getAlarmColor("critical")).toContain("border-l-red-500");
+    });
+
+    it("returns yellow styling for warning alarms", () => {
+      expect(getAlarmColor("warning")).toContain("border-l-yellow-500");
+    });
+
+    it("returns blue styling for info alarms", () => {
+      expect(getAlarmColor("info")).toContain("border-l-blue-500");
+    });
+
+    it("returns green styling for success alarms", () => {
+      expect(getAlarmColor("success")).toContain("border-l-green-500");
+    });
+
+    it("returns gray styling for an unrecognized type", () => {
+      expect(getAlarmColor("unknown-type")).toContain("border-l-gray-500");
+    });
+  });
+
+  describe("Non-critical alarm rendering", () => {
+    it("renders warning, info, and success alarms with correct styling in context", () => {
+      const alarms = [
+        {
+          id: 201,
+          type: "warning",
+          title: "HIGH PRESSURE",
+          message: "Pressure approaching upper threshold.",
+          device: "ThermaCore Unit 003",
+          timestamp: "2025-09-09 16:10",
+          acknowledged: false,
+        },
+        {
+          id: 202,
+          type: "info",
+          title: "MAINTENANCE DUE",
+          message: "Scheduled maintenance window approaching.",
+          device: "ThermaCore Unit 003",
+          timestamp: "2025-09-09 16:11",
+          acknowledged: false,
+        },
+        {
+          id: 203,
+          type: "success",
+          title: "SYSTEM RESTORED",
+          message: "System returned to normal operation.",
+          device: "ThermaCore Unit 003",
+          timestamp: "2025-09-09 16:12",
+          acknowledged: false,
+        },
+      ];
+
+      const { container } = render(
+        <TestWrapper>
+          <AlarmsView userRole="admin" alarms={alarms} />
+        </TestWrapper>,
+      );
+
+      expect(container.querySelector(".border-l-yellow-500")).toBeTruthy();
+      expect(container.querySelector(".border-l-blue-500")).toBeTruthy();
+      expect(container.querySelector(".border-l-green-500")).toBeTruthy();
+    });
+  });
+
   describe("Acknowledgment Status", () => {
     it("should indicate unacknowledged alarms", () => {
       render(
@@ -361,6 +524,50 @@ describe("AlarmsView", () => {
 
       // Visual indicators should be present
       expect(container).toBeTruthy();
+    });
+
+    it("should show the Acknowledged badge for acknowledged alarms", () => {
+      const alarms = [
+        {
+          id: 301,
+          type: "critical",
+          title: "NH3 LEAK DETECTED",
+          message: "Critical alarm that has been acknowledged.",
+          device: "ThermaCore Unit 003",
+          timestamp: "2025-09-09 16:20",
+          acknowledged: true,
+        },
+      ];
+
+      render(
+        <TestWrapper>
+          <AlarmsView userRole="admin" alarms={alarms} />
+        </TestWrapper>,
+      );
+
+      expect(screen.getByText(/Acknowledged/i)).toBeInTheDocument();
+    });
+
+    it("should not show the Acknowledged badge for unacknowledged alarms", () => {
+      const alarms = [
+        {
+          id: 302,
+          type: "critical",
+          title: "NH3 LEAK DETECTED",
+          message: "Critical alarm that has not been acknowledged.",
+          device: "ThermaCore Unit 003",
+          timestamp: "2025-09-09 16:21",
+          acknowledged: false,
+        },
+      ];
+
+      render(
+        <TestWrapper>
+          <AlarmsView userRole="admin" alarms={alarms} />
+        </TestWrapper>,
+      );
+
+      expect(screen.queryByText(/Acknowledged/i)).not.toBeInTheDocument();
     });
   });
 
@@ -408,6 +615,45 @@ describe("AlarmsView", () => {
       );
 
       expect(screen).toBeTruthy();
+    });
+
+    it("should render the empty state when the alarm list is empty", () => {
+      // Covers the `alarms.length === 0` true branch.
+      render(
+        <TestWrapper>
+          <AlarmsView userRole="admin" alarms={[]} />
+        </TestWrapper>,
+      );
+
+      expect(screen.getByText(/No alarms found/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/There are no alarms matching your current filter/i),
+      ).toBeInTheDocument();
+    });
+
+    it("should render the empty state when a user-role filter matches nothing", () => {
+      // userRole "user" filters to ThermaCore Unit 003 only; supplying
+      // alarms exclusively for other devices drives the filtered list to
+      // empty, covering the same branch via the filtering path.
+      const alarms = [
+        {
+          id: 401,
+          type: "critical",
+          title: "NH3 LEAK DETECTED",
+          message: "Critical alarm on a different unit.",
+          device: "ThermaCore Unit 014",
+          timestamp: "2025-09-09 16:30",
+          acknowledged: false,
+        },
+      ];
+
+      render(
+        <TestWrapper>
+          <AlarmsView userRole="user" alarms={alarms} />
+        </TestWrapper>,
+      );
+
+      expect(screen.getByText(/No alarms found/i)).toBeInTheDocument();
     });
   });
 
