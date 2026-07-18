@@ -1,25 +1,24 @@
-// src/tests/context/UnitContext.test.jsx
+// src/context/UnitContext.test.jsx
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, act } from "@testing-library/react";
-import { waitFor } from "@testing-library/react";
+import { renderHook, act, waitFor } from "@testing-library/react";
 
 import {
   getAllUnits,
   updateUnitGPS as serviceUpdateUnitGPS,
   updateUnitLocation as serviceUpdateUnitLocation,
   updateUnitName as serviceUpdateUnitName,
-} from "../../services/unitService";
+} from "../services/unitService";
 
 // Mock the service layer only
-vi.mock("../../services/unitService", () => ({
+vi.mock("../services/unitService", () => ({
   getAllUnits: vi.fn(),
   updateUnitName: vi.fn(),
   updateUnitLocation: vi.fn(),
   updateUnitGPS: vi.fn(),
 }));
 
-import { UnitProvider, useUnits } from "../../context/UnitContext";
+import { UnitProvider, useUnits } from "./UnitContext";
 
 const baseUnits = [
   {
@@ -78,6 +77,7 @@ describe("UnitContext", () => {
     it("should start loading then load units on mount", async () => {
       const { result } = renderHook(() => useUnits(), { wrapper });
       
+      // Should be loading initially
       expect(result.current.loading).toBe(true);
       expect(result.current.units).toHaveLength(0);
 
