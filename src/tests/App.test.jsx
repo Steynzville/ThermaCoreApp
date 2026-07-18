@@ -300,7 +300,7 @@ const reloadMock = vi.fn();
 
 beforeAll(() => {
   vi.useRealTimers();
-  
+
   Object.defineProperty(window, "AudioContext", {
     writable: true,
     configurable: true,
@@ -370,6 +370,17 @@ afterEach(() => {
 
 const setAuth = (overrides = {}) => {
   Object.assign(authState, overrides);
+};
+
+// ============================================================
+// Helper to capture the real listener registered by AppContent's
+// error-boundary effect, bypassing jsdom's dispatchEvent machinery
+// entirely. Returns the captured handler for the given event type.
+// ============================================================
+
+const captureWindowListener = (addEventListenerSpy, eventType) => {
+  const call = addEventListenerSpy.mock.calls.find(([type]) => type === eventType);
+  return call ? call[1] : undefined;
 };
 
 // ============================================================
@@ -486,7 +497,7 @@ describe("App", () => {
     await waitFor(() => {
       expect(screen.getByTestId("login-error")).toBeInTheDocument();
     }, { timeout: 3000 });
-    
+
     const errorElement = screen.getByTestId("login-error");
     expect(errorElement).toHaveTextContent(errorMessage);
   });
@@ -662,38 +673,51 @@ describe("App", () => {
     expect(screen.queryByText(/network or processing error/i)).not.toBeInTheDocument();
   });
 
-  // ============ ERROR BOUNDARY TESTS - FIXED WITH act() ============
+  // ============ ERROR BOUNDARY TESTS ============
+  // FIXED: dispatchEvent() was not reliably reaching the listeners
+  // registered by AppContent's useEffect in this environment (even when
+  // wrapped in act()). Instead, we spy on window.addEventListener to
+  // capture the real handler function AppContent registers, and invoke
+  // it directly. This bypasses jsdom's event dispatch machinery entirely,
+  // so it can't be affected by propagation quirks, other listeners, or
+  // event-construction differences across environments.
 
   it("shows the error boundary UI when a window error event fires", async () => {
     setAuth();
+    const addEventListenerSpy = vi.spyOn(window, "addEventListener");
+
     render(<App />);
     await flushNavigation();
     await screen.findByRole("heading", { name: /login/i });
 
-    const errorEvent = new ErrorEvent("error", { message: "Test error" });
-    
-    // FIXED: Wrap dispatchEvent in act() to ensure React flushes the state update
+    const handleError = captureWindowListener(addEventListenerSpy, "error");
+    expect(handleError).toBeDefined();
+
     await act(async () => {
-      window.dispatchEvent(errorEvent);
+      handleError({ message: "Test error" });
     });
 
     await waitFor(() => {
       expect(screen.getByText(/something went wrong/i)).toBeInTheDocument();
     });
+
+    addEventListenerSpy.mockRestore();
   });
 
   it("reloads the app when the reload button is clicked in the error state", async () => {
     const user = userEvent.setup();
     setAuth();
+    const addEventListenerSpy = vi.spyOn(window, "addEventListener");
+
     render(<App />);
     await flushNavigation();
     await screen.findByRole("heading", { name: /login/i });
 
-    const errorEvent = new ErrorEvent("error", { message: "Test error" });
-    
-    // FIXED: Wrap dispatchEvent in act() to ensure React flushes the state update
+    const handleError = captureWindowListener(addEventListenerSpy, "error");
+    expect(handleError).toBeDefined();
+
     await act(async () => {
-      window.dispatchEvent(errorEvent);
+      handleError({ message: "Test error" });
     });
 
     const reloadButton = await screen.findByRole("button", {
@@ -702,19 +726,26 @@ describe("App", () => {
     await user.click(reloadButton);
 
     expect(reloadMock).toHaveBeenCalled();
+
+    addEventListenerSpy.mockRestore();
   });
 
   it("shows the error boundary UI when an unhandled promise rejection fires", async () => {
     setAuth();
+    const addEventListenerSpy = vi.spyOn(window, "addEventListener");
+
     render(<App />);
     await flushNavigation();
     await screen.findByRole("heading", { name: /login/i });
 
-    const rejectionEvent = new Event("unhandledrejection");
-    
-    // FIXED: Wrap dispatchEvent in act() to ensure React flushes the state update
+    const handleUnhandledRejection = captureWindowListener(
+      addEventListenerSpy,
+      "unhandledrejection"
+    );
+    expect(handleUnhandledRejection).toBeDefined();
+
     await act(async () => {
-      window.dispatchEvent(rejectionEvent);
+      handleUnhandledRejection({});
     });
 
     await waitFor(() => {
@@ -722,5 +753,7 @@ describe("App", () => {
         screen.getByText(/network or processing error occurred/i)
       ).toBeInTheDocument();
     });
+
+    addEventListenerSpy.mockRestore();
   });
 });
