@@ -59,7 +59,6 @@ const MultiTimeframeTrendChart = ({
 }) => {
   const [selectedTimeframe, setSelectedTimeframe] = useState(defaultTimeframe);
   const [selectedChartType, setSelectedChartType] = useState(defaultChartType);
-  // ✅ FIX: selectedMetrics is derived from metrics; no dead state
   const selectedMetrics = useMemo(() => metrics.map((m) => m.dataKey), [metrics]);
   const [isDark, setIsDark] = useState(false);
 
@@ -136,7 +135,6 @@ const MultiTimeframeTrendChart = ({
       if (values.length > 0) {
         const firstValue = values[0];
         const lastValue = values[values.length - 1];
-        // ✅ FIX: Guard against division by zero for trend calculation
         const trend = values.length > 1 && firstValue !== 0
           ? ((lastValue - firstValue) / firstValue) * 100
           : 0;
@@ -157,7 +155,6 @@ const MultiTimeframeTrendChart = ({
     if (onExport) {
       onExport(formattedData, statistics);
     } else {
-      // Default CSV export
       const csv = convertToCSV(formattedData);
       downloadCSV(csv, `trend-data-${selectedTimeframe}.csv`);
     }
@@ -175,7 +172,6 @@ const MultiTimeframeTrendChart = ({
       [
         row.timestamp,
         row.time,
-        // ✅ FIX: Use `??` to preserve legitimate zero values
         ...metrics.map((m) => row[m.dataKey] ?? ""),
       ].join(","),
     );
