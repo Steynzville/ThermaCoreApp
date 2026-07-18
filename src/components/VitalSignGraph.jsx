@@ -18,7 +18,61 @@ import {
   SelectValue,
 } from "./ui/select";
 
-const generateMockData = (timeframe) => {
+// Helper to format X-axis labels based on timeframe
+export const formatXAxisLabel = (timestamp, timeframe) => {
+  // FIXED: guard against null/undefined before hitting the Date constructor,
+  // since new Date(null) coerces to epoch 0 and passes isNaN() unexpectedly.
+  if (timestamp === null || timestamp === undefined) {
+    return "";
+  }
+
+  const date = new Date(timestamp);
+
+  // Check for invalid date (covers non-numeric/non-date strings, NaN, etc.)
+  if (isNaN(date.getTime())) {
+    return "";
+  }
+
+  switch (timeframe) {
+    case "day":
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    case "month":
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    case "year":
+    case "3year":
+    case "5year":
+    case "10year":
+    case "alltime":
+      return date.toLocaleDateString([], { month: 'short', year: 'numeric' });
+    default:
+      return date.toLocaleString();
+  }
+};
+
+// Get tick interval based on timeframe to avoid label crowding
+export const getTickInterval = (timeframe) => {
+  switch (timeframe) {
+    case "day":
+      return 2; // Every 2 hours
+    case "month":
+      return 3; // Every 3 days
+    case "year":
+      return 1; // Every month
+    case "3year":
+      return 2; // Every 2 months
+    case "5year":
+      return 3; // Every 3 months
+    case "10year":
+      return 6; // Every 6 months
+    case "alltime":
+      return 10; // Every 10 data points
+    default:
+      return 2;
+  }
+};
+
+// EXPORTED: So tests can directly verify the switch behavior without UI interaction
+export const generateMockData = (timeframe) => {
   const data = [];
   let points = 0;
   let interval = 0;
@@ -53,6 +107,8 @@ const generateMockData = (timeframe) => {
       interval = 60 * 24 * 60 * 60 * 1000; // 2 months (approx)
       break;
     default:
+      // Surface unexpected timeframes instead of silently falling back
+      console.warn(`VitalSignGraph: Unknown timeframe "${timeframe}", falling back to "day"`);
       points = 24;
       interval = 60 * 60 * 1000;
   }
@@ -61,7 +117,12 @@ const generateMockData = (timeframe) => {
   for (let i = 0; i < points; i++) {
     const timestamp = now - (points - 1 - i) * interval;
     data.push({
-      time: new Date(timestamp).toLocaleString(),
+      // Store the raw epoch timestamp (number), not a pre-formatted locale
+      // string. Formatting happens at render time via formatXAxisLabel /
+      // the tooltip's labelFormatter, so there's no lossy format-then-reparse
+      // round trip (which previously broke under non-US locales / engines
+      // whose Date constructor can't reliably parse toLocaleString() output).
+      time: timestamp,
       power: parseFloat((Math.random() * 5 + 1).toFixed(2)),
       tempIn: parseFloat((Math.random() * 20 + 15).toFixed(2)),
       tempOut: parseFloat((Math.random() * 20 + 20).toFixed(2)),
@@ -118,10 +179,22 @@ const VitalSignGraph = ({ title, dataKey, color }) => {
                 stroke="#e0e0e0"
                 className="dark:stroke-gray-700"
               />
+              {/*
+                NOTE: this axis is left as the default "category" type (no
+                `type="number"` prop), matching how `interval` and
+                `tickFormatter` are designed to work against evenly-spaced
+                categorical ticks. A `domain` prop was previously added here
+                but Recharts only honors `domain` on a "number"-type axis, so
+                it was a silent no-op — removed rather than left as dead,
+                misleading config.
+              */}
               <XAxis
                 dataKey="time"
                 stroke="#888888"
                 className="dark:stroke-gray-400"
+                tickFormatter={(value) => formatXAxisLabel(value, timeframe)}
+                interval={getTickInterval(timeframe)}
+                tick={{ fontSize: 12 }}
               />
               <YAxis stroke="#888888" className="dark:stroke-gray-400" />
               <Tooltip
@@ -131,6 +204,7 @@ const VitalSignGraph = ({ title, dataKey, color }) => {
                 }}
                 labelStyle={{ color: "var(--text-color)" }}
                 itemStyle={{ color: "var(--text-color)" }}
+                labelFormatter={(value) => new Date(value).toLocaleString()}
               />
               <Line
                 type="monotone"
