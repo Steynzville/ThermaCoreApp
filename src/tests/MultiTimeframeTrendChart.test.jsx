@@ -11,6 +11,7 @@
  * - Interactive controls
  * - Multiple metrics rendering
  * - Accessibility
+ * - CSV escaping for fields with commas/quotes
  */
 
 import { fireEvent, render, screen, cleanup, waitFor } from "@testing-library/react";
@@ -209,10 +210,13 @@ describe("MultiTimeframeTrendChart", () => {
 
   let mockAnchor;
   let createElementSpy;
+  let originalBlob;
 
   beforeEach(() => {
     vi.clearAllMocks();
     chartSpy.mockClear();
+    
+    originalBlob = global.Blob;
     
     window.Image = vi.fn().mockImplementation(() => ({
       src: '',
@@ -245,6 +249,7 @@ describe("MultiTimeframeTrendChart", () => {
       createElementSpy.mockRestore();
     }
     document.documentElement.classList.remove("dark");
+    global.Blob = originalBlob;
   });
 
   describe("Basic Rendering", () => {
@@ -530,6 +535,33 @@ describe("MultiTimeframeTrendChart", () => {
       expect(exportButton).toBeInTheDocument();
       
       expect(() => fireEvent.click(exportButton)).not.toThrow();
+    });
+
+    // ✅ NEW: CSV escaping test
+    it("should escape CSV fields containing commas", () => {
+      const blobSpy = vi.fn();
+      const OriginalBlob = global.Blob;
+      global.Blob = vi.fn().mockImplementation((parts, opts) => {
+        blobSpy(parts[0]);
+        return new OriginalBlob(parts, opts);
+      });
+
+      render(
+        <MultiTimeframeTrendChart
+          data={mockData}
+          metrics={mockMetrics}
+          defaultTimeframe="7d"
+        />,
+      );
+
+      const exportButton = screen.getByText(/export/i).closest("button");
+      fireEvent.click(exportButton);
+
+      const csvContent = blobSpy.mock.calls[0][0];
+      // 7d formatting produces "Jan 1, 03 AM"-style strings containing a comma
+      expect(csvContent).toMatch(/"[^"]*,[^"]*"/);
+
+      global.Blob = OriginalBlob;
     });
   });
 
