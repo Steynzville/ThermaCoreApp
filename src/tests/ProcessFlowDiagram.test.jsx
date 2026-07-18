@@ -57,7 +57,7 @@ describe("ProcessFlowDiagram", () => {
     c2: { flowRate: 8.3 },
   };
 
-  // ✅ FIXED: Helper to get the pan/zoom container div — select structurally,
+  // Helper to get the pan/zoom container div — select structurally,
   // not via style text-matching (jsdom/cssstyle can silently drop unrecognized
   // properties like touch-action from the serialized style attribute)
   const getSvgContainer = (container) => {
@@ -184,7 +184,6 @@ describe("ProcessFlowDiagram", () => {
     });
   });
 
-  // ✅ FIXED: Corrected "undefined status" test
   describe("Status Colors - Complete Coverage", () => {
     const statusColorMap = [
       { status: "running", color: "#22c55e" },
@@ -210,7 +209,6 @@ describe("ProcessFlowDiagram", () => {
       });
     });
 
-    // ✅ FIXED: No status → defaults to "idle" before getStatusColor runs
     it("should default to idle color when node has no status", () => {
       const { container } = render(
         <ProcessFlowDiagram
@@ -616,7 +614,7 @@ describe("ProcessFlowDiagram", () => {
     });
   });
 
-  // ✅ FIXED: All mouse interaction tests now use the correct getSvgContainer
+  // ✅ FIXED: All mouse interaction tests now use fireEvent on window
   describe("Mouse Interactions", () => {
     it("should handle mouse drag for panning when zoomed", () => {
       const { container } = render(
@@ -642,20 +640,12 @@ describe("ProcessFlowDiagram", () => {
       // After mouse down, cursor should be grabbing
       expect(svgContainer.style.cursor).toBe("grabbing");
 
-      const mouseMoveEvent = new MouseEvent('mousemove', {
-        clientX: 150,
-        clientY: 150,
-        bubbles: true,
-      });
       act(() => {
-        window.dispatchEvent(mouseMoveEvent);
+        fireEvent.mouseMove(window, { clientX: 150, clientY: 150 });
       });
 
-      const mouseUpEvent = new MouseEvent('mouseup', {
-        bubbles: true,
-      });
       act(() => {
-        window.dispatchEvent(mouseUpEvent);
+        fireEvent.mouseUp(window);
       });
 
       // After mouse up, cursor should return to grab (still zoomed in)
@@ -683,20 +673,12 @@ describe("ProcessFlowDiagram", () => {
       // Cursor should remain default (no panning)
       expect(svgContainer.style.cursor).toBe("default");
 
-      const mouseMoveEvent = new MouseEvent('mousemove', {
-        clientX: 150,
-        clientY: 150,
-        bubbles: true,
-      });
       act(() => {
-        window.dispatchEvent(mouseMoveEvent);
+        fireEvent.mouseMove(window, { clientX: 150, clientY: 150 });
       });
 
-      const mouseUpEvent = new MouseEvent('mouseup', {
-        bubbles: true,
-      });
       act(() => {
-        window.dispatchEvent(mouseUpEvent);
+        fireEvent.mouseUp(window);
       });
 
       expect(svgContainer.style.cursor).toBe("default");
@@ -915,7 +897,6 @@ describe("ProcessFlowDiagram", () => {
     });
   });
 
-  // ✅ FIXED: Container cursor tests now use correct getSvgContainer
   describe("Container Styles", () => {
     it("should have grab cursor when zoomed in", () => {
       const { container } = render(
