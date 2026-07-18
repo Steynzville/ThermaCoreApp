@@ -227,35 +227,31 @@ describe("UnitContext", () => {
         expect(result.current.loading).toBe(false);
       });
 
-      // No re-throw, so no need for .rejects
       await act(async () => {
         await result.current.updateUnitName("TC001", "New Name");
       });
 
-      // Error state should be set
       expect(result.current.error).toBe(errorMessage);
-      
-      // Service was called
       expect(serviceUpdateUnitName).toHaveBeenCalledWith("TC001", "New Name");
-      
-      // Unit name should NOT be updated because the service failed
       expect(result.current.getUnit("TC001").name).toBe("ThermaCore Unit 001");
     });
 
+    // FIXED: Clear error from a failed update, not from failed initial load
     it("should clear previous error on success", async () => {
-      // First, set an error state
-      getAllUnits.mockRejectedValueOnce(new Error("Initial error"));
-      
       const { result } = renderHook(() => useUnits(), { wrapper });
-      
+
       await waitFor(() => {
-        expect(result.current.error).toBe("Initial error");
+        expect(result.current.loading).toBe(false);
       });
 
-      // Reset getAllUnits for the update
-      getAllUnits.mockResolvedValue(baseUnits);
+      // Cause an error via a failed update (units are already loaded normally)
+      serviceUpdateUnitName.mockRejectedValueOnce(new Error("Update failed"));
+      await act(async () => {
+        await result.current.updateUnitName("TC001", "Bad Name");
+      });
+      expect(result.current.error).toBe("Update failed");
 
-      // Successful update should clear error
+      // Now a successful update should clear the error
       await act(async () => {
         await result.current.updateUnitName("TC001", "Updated Name");
       });
@@ -303,20 +299,20 @@ describe("UnitContext", () => {
       expect(result.current.getUnit("TC001").location).toBe("Site Alpha");
     });
 
+    // FIXED: Clear error from a failed update, not from failed initial load
     it("should clear previous error on success", async () => {
-      // First, set an error state
-      getAllUnits.mockRejectedValueOnce(new Error("Initial error"));
-      
       const { result } = renderHook(() => useUnits(), { wrapper });
-      
+
       await waitFor(() => {
-        expect(result.current.error).toBe("Initial error");
+        expect(result.current.loading).toBe(false);
       });
 
-      // Reset getAllUnits for the update
-      getAllUnits.mockResolvedValue(baseUnits);
+      serviceUpdateUnitLocation.mockRejectedValueOnce(new Error("Update failed"));
+      await act(async () => {
+        await result.current.updateUnitLocation("TC001", "Bad Site");
+      });
+      expect(result.current.error).toBe("Update failed");
 
-      // Successful update should clear error
       await act(async () => {
         await result.current.updateUnitLocation("TC001", "New Site");
       });
@@ -364,20 +360,20 @@ describe("UnitContext", () => {
       expect(result.current.getUnit("TC001").gpsCoordinates).toBe("34.0522,-118.2437");
     });
 
+    // FIXED: Clear error from a failed update, not from failed initial load
     it("should clear previous error on success", async () => {
-      // First, set an error state
-      getAllUnits.mockRejectedValueOnce(new Error("Initial error"));
-      
       const { result } = renderHook(() => useUnits(), { wrapper });
-      
+
       await waitFor(() => {
-        expect(result.current.error).toBe("Initial error");
+        expect(result.current.loading).toBe(false);
       });
 
-      // Reset getAllUnits for the update
-      getAllUnits.mockResolvedValue(baseUnits);
+      serviceUpdateUnitGPS.mockRejectedValueOnce(new Error("Update failed"));
+      await act(async () => {
+        await result.current.updateUnitGPS("TC001", "0,0");
+      });
+      expect(result.current.error).toBe("Update failed");
 
-      // Successful update should clear error
       await act(async () => {
         await result.current.updateUnitGPS("TC001", "12.3456,78.9012");
       });
