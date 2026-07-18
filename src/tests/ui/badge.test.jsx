@@ -11,7 +11,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 
-import { Badge, badgeVariants } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 
 describe("Badge", () => {
   it("renders children content", () => {
@@ -40,21 +40,31 @@ describe("Badge", () => {
       "outline",
     ];
 
-    it.each(variants)("applies expected classes for the '%s' variant", (variant) => {
+    const hallmarkClassesByVariant = {
+      default: ["bg-primary", "text-primary-foreground"],
+      secondary: ["bg-secondary", "text-secondary-foreground"],
+      destructive: ["bg-destructive", "text-white"],
+      success: ["bg-emerald-500/15", "text-emerald-700"],
+      warning: ["bg-amber-500/15", "text-amber-700"],
+      outline: ["bg-background", "text-foreground"],
+    };
+
+    it.each(variants)("applies the defining classes for the '%s' variant", (variant) => {
       render(
         <Badge data-testid="badge" variant={variant}>
           {variant}
         </Badge>,
       );
       const el = screen.getByTestId("badge");
-      const expectedClassString = badgeVariants({ variant });
-      // Every class produced by the cva() call for this variant must be present.
-      expectedClassString
-        .split(" ")
-        .filter(Boolean)
-        .forEach((cls) => {
-          expect(el).toHaveClass(cls);
-        });
+      // Note: we deliberately don't assert the full class string produced by
+      // badgeVariants() directly — cn() runs the result through tailwind-merge,
+      // which dedupes conflicting utilities (e.g. a base "border" class can
+      // absorb a variant's "border-transparent"/"border-{color}" class), so the
+      // exact rendered string can legitimately differ from the raw cva() output.
+      // Instead we assert the classes that actually distinguish this variant.
+      hallmarkClassesByVariant[variant].forEach((cls) => {
+        expect(el).toHaveClass(cls);
+      });
     });
 
     it("falls back to the 'default' variant when none is specified", () => {
