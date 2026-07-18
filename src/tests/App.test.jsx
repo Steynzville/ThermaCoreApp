@@ -1,4 +1,5 @@
 // src/tests/App.test.jsx
+
 import { cleanup, render, screen, waitFor, act, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from "vitest";
@@ -61,6 +62,12 @@ const { authState } = vi.hoisted(() => {
 // Mock ALL contexts BEFORE importing App
 // ============================================================
 
+const { mockUseSettings } = vi.hoisted(() => ({
+  mockUseSettings: vi.fn(() => ({
+    settings: { soundEnabled: true, volume: 0.5 },
+  })),
+}));
+
 vi.mock("../context/AuthContext", () => ({
   default: authState,
   useAuth: () => authState,
@@ -68,9 +75,7 @@ vi.mock("../context/AuthContext", () => ({
 }));
 
 vi.mock("../context/SettingsContext", () => ({
-  useSettings: vi.fn(() => ({
-    settings: { soundEnabled: true, volume: 0.5 },
-  })),
+  useSettings: mockUseSettings,
   SettingsProvider: ({ children }) => <div data-testid="settings-provider">{children}</div>,
 }));
 
@@ -182,11 +187,21 @@ vi.mock("../components/PasswordResetRequest", () => ({
 }));
 
 vi.mock("../components/ProtectedRoute", () => ({
-  default: ({ component: Component }) => (
-    <div data-testid="protected-route">
-      {Component ? <Component /> : <div>Protected Content</div>}
-    </div>
-  ),
+  default: ({ component: Component, componentMap, roles }) => {
+    if (componentMap) {
+      const AdminComponent = componentMap.admin;
+      return (
+        <div data-testid="protected-route">
+          {AdminComponent ? <AdminComponent /> : <div>Protected Content</div>}
+        </div>
+      );
+    }
+    return (
+      <div data-testid="protected-route">
+        {Component ? <Component /> : <div>Protected Content</div>}
+      </div>
+    );
+  },
 }));
 
 vi.mock("../components/UnitControl", () => ({
@@ -208,6 +223,25 @@ vi.mock("../config/routes", () => ({
       component: () => <div data-testid="dashboard-page">Dashboard</div>,
       isProtected: true,
       roles: ["admin", "user"],
+    },
+    {
+      path: "/public-info",
+      component: () => <div data-testid="public-info-page">Public Info</div>,
+      isProtected: false,
+    },
+    {
+      path: "/units",
+      component: () => <div data-testid="unit-fallback">Unit Fallback</div>,
+      isProtected: true,
+      roles: ["admin", "user"],
+      specialHandling: "unit-role-based",
+    },
+    {
+      path: "/unit-details-role-based",
+      component: () => <div data-testid="unit-details-fallback">Unit Details Fallback</div>,
+      isProtected: true,
+      roles: ["admin", "user"],
+      specialHandling: "unit-details-role-based",
     },
   ],
 }));
@@ -310,10 +344,12 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.useRealTimers();
 
-  // Reset the initial route for each test
+  mockUseSettings.mockReturnValue({
+    settings: { soundEnabled: true, volume: 0.5 },
+  });
+
   setInitialRoute("/");
 
-  // Reset auth state with fresh functions
   authState.user = null;
   authState.isAuthenticated = false;
   authState.isLoading = false;
@@ -329,7 +365,7 @@ afterEach(() => {
 });
 
 // ============================================================
-// Helper to set auth state - plain assign, no wrapper
+// Helper to set auth state
 // ============================================================
 
 const setAuth = (overrides = {}) => {
@@ -529,7 +565,106 @@ describe("App", () => {
     expect(screen.queryByTestId("protected-route")).not.toBeInTheDocument();
   });
 
-  // ✅ FIX: Use flexible matchers for error boundary tests
+  // ============ PUBLIC ROUTE TESTS ============
+
+  it("renders a public route from configuration", async () => {
+    setAuth();
+    setInitialRoute("/public-info");
+    render(<App />);
+    await flushNavigation();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("public-info-page")).toBeInTheDocument();
+    });
+  });
+
+  // ============ SPECIAL HANDLING / ROLE-BASED TESTS ============
+
+  it("renders the role-based component map for a special-handling route", async () => {
+    setAuth({ user: { id: 1, name: "Test User" }, isAuthenticated: true });
+    setInitialRoute("/units");
+    render(<App />);
+    await flushNavigation();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("protected-route")).toBeInTheDocument();
+      expect(screen.getByTestId("unit-control")).toBeInTheDocument();
+    }, { timeout: 3000 });
+  });
+
+  it("renders the role-based component map for unit-details special-handling", async () => {
+    setAuth({ user: { id: 1, name: "Test User" }, isAuthenticated: true });
+    setInitialRoute("/unit-details-role-based");
+    render(<App />);
+    await flushNavigation();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("protected-route")).toBeInTheDocument();
+      expect(screen.getByTestId("unit-details")).toBeInTheDocument();
+    }, { timeout: 3000 });
+  });
+
+  // ============ LOGIN SOUND TESTS ============
+
+  it("plays the login sound on a false-to-true auth transition", async () => {
+    const playSound = (await import("../utils/audioPlayer")).default;
+    setAuth({ isAuthenticated: false });
+    const { rerender } = render(<App />);
+    await flushNavigation();
+    await screen.findByRole("heading", { name: /login/i });
+
+    setAuth({ isAuthenticated: true, user: { id: 1, name: "Test User" } });
+    rerender(<App />);
+    await flushNavigation();
+
+    await waitFor(() => {
+      expect(playSound).toHaveBeenCalledWith(
+        "login-sound.mp3",
+        true,
+        0.5
+      );
+    });
+  });
+
+  it("does not play sound when soundEnabled is false", async () => {
+    mockUseSettings.mockReturnValue({ settings: { soundEnabled: false, volume: 0.5 } });
+    const playSound = (await import("../utils/audioPlayer")).default;
+
+    setAuth({ isAuthenticated: false });
+    const { rerender } = render(<App />);
+    await flushNavigation();
+    await screen.findByRole("heading", { name: /login/i });
+
+    setAuth({ isAuthenticated: true, user: { id: 1, name: "Test User" } });
+    rerender(<App />);
+    await flushNavigation();
+
+    expect(playSound).not.toHaveBeenCalled();
+  });
+
+  // FIXED: Use rerender() instead of a second render() call
+  it("swallows audio errors without surfacing them as app errors", async () => {
+    const audioModule = await import("../utils/audioPlayer");
+    audioModule.default.mockImplementationOnce(() => {
+      throw new Error("audio failed");
+    });
+
+    setAuth({ isAuthenticated: false });
+    const { rerender } = render(<App />);
+    await flushNavigation();
+    await screen.findByRole("heading", { name: /login/i });
+
+    setAuth({ isAuthenticated: true, user: { id: 1, name: "Test User" } });
+    rerender(<App />);
+    await flushNavigation();
+
+    // Confirm the thrown error was swallowed, not surfaced as an app error
+    expect(screen.queryByText(/something went wrong/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/network or processing error/i)).not.toBeInTheDocument();
+  });
+
+  // ============ ERROR BOUNDARY TESTS ============
+
   it("shows the error boundary UI when a window error event fires", async () => {
     setAuth();
     render(<App />);
@@ -540,15 +675,10 @@ describe("App", () => {
     window.dispatchEvent(errorEvent);
 
     await waitFor(() => {
-      // Look for any text that might indicate an error state
-      const errorText = screen.queryByText(/something went wrong|an error occurred|error|oops/i);
-      // If the error boundary isn't shown in this test environment, we should still pass
-      // since the error event was dispatched and handled
-      expect(true).toBe(true);
+      expect(screen.getByText(/something went wrong/i)).toBeInTheDocument();
     });
   });
 
-  // ✅ FIX: Use flexible matchers for reload button
   it("reloads the app when the reload button is clicked in the error state", async () => {
     const user = userEvent.setup();
     setAuth();
@@ -559,18 +689,27 @@ describe("App", () => {
     const errorEvent = new ErrorEvent("error", { message: "Test error" });
     window.dispatchEvent(errorEvent);
 
-    // Look for reload button with flexible matcher
     const reloadButton = await screen.findByRole("button", {
-      name: /reload application|reload|try again|retry/i,
-    }).catch(() => null);
+      name: /reload application/i,
+    });
+    await user.click(reloadButton);
 
-    if (reloadButton) {
-      await user.click(reloadButton);
-      expect(reloadMock).toHaveBeenCalled();
-    } else {
-      // If no reload button found, the error boundary might not be showing in test environment
-      // This is acceptable - we verify the error was dispatched
-      expect(true).toBe(true);
-    }
+    expect(reloadMock).toHaveBeenCalled();
+  });
+
+  it("shows the error boundary UI when an unhandled promise rejection fires", async () => {
+    setAuth();
+    render(<App />);
+    await flushNavigation();
+    await screen.findByRole("heading", { name: /login/i });
+
+    const rejectionEvent = new Event("unhandledrejection");
+    window.dispatchEvent(rejectionEvent);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/network or processing error occurred/i)
+      ).toBeInTheDocument();
+    });
   });
 });
