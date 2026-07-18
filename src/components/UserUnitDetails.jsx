@@ -21,7 +21,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
@@ -40,13 +40,17 @@ const UserUnitDetails = ({ className }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const rawUnit = location.state?.unit;
-  const unit = rawUnit
-    ? {
-        ...rawUnit,
-        batteryLife: rawUnit.batteryLife || 85,
-        tankCapacity: rawUnit.tankCapacity || 800,
-      }
-    : null;
+  
+  // Memoize the unit object to prevent unnecessary re-renders
+  const unit = useMemo(() => {
+    if (!rawUnit) return null;
+    return {
+      ...rawUnit,
+      batteryLife: rawUnit.batteryLife ?? 85,
+      tankCapacity: rawUnit.tankCapacity ?? 800,
+    };
+  }, [rawUnit]);
+
   const initialTab = searchParams.get("tab") || "overview";
   const [activeTab, setActiveTab] = useState(initialTab);
   const [isEditingName, setIsEditingName] = useState(false);
@@ -61,21 +65,31 @@ const UserUnitDetails = ({ className }) => {
   // Real-time data hooks for live values
   const { metrics } = useRealtimeMetrics({ useMockData: true });
 
-  // FIX: Use useMemo instead of useState + useEffect to avoid infinite loop
+  // ✅ FIXED: Use `??` instead of `||` to handle numeric 0 correctly
+  // ✅ FIXED: Use `??` for all fallback values to preserve legitimate 0 readings
   const liveUnit = useMemo(() => {
     if (!unit) return {};
 
-    const tempBase = parseFloat(metrics?.temperature?.current) || 70;
-    const pressureBase = parseFloat(metrics?.pressure?.current) || 100;
+    const rawTemp = parseFloat(metrics?.temperature?.current);
+    const tempBase = Number.isNaN(rawTemp) ? 70 : rawTemp;
+    
+    const rawPressure = parseFloat(metrics?.pressure?.current);
+    const pressureBase = Number.isNaN(rawPressure) ? 100 : rawPressure;
+    
+    // ✅ FIX: Use ?? instead of || to preserve numeric 0
     const flowInBase = parseFloat(
-      metrics?.flow_rate_inlet?.current ||
-        metrics?.flowRateInlet?.current ||
-        45.5,
+      metrics?.flow_rate_inlet?.current ??
+        metrics?.flowRateInlet?.current ??
+        (unit.flowRate !== undefined && unit.flowRate !== null
+          ? unit.flowRate
+          : 45.5),
     );
     const flowOutBase = parseFloat(
-      metrics?.flow_rate_outlet?.current ||
-        metrics?.flowRateOutlet?.current ||
-        42.1,
+      metrics?.flow_rate_outlet?.current ??
+        metrics?.flowRateOutlet?.current ??
+        (unit.flowRate !== undefined && unit.flowRate !== null
+          ? unit.flowRate * 0.95
+          : 42.1),
     );
 
     const idOffset = (unit.id?.toString() || "").charCodeAt(0) || 0;
@@ -111,10 +125,17 @@ const UserUnitDetails = ({ className }) => {
     };
   }, [metrics, unit, isOffline]);
 
+  // ✅ Helper to safely format pressure, consistent with temperature display
+  const formatPressure = (value) => {
+    if (value === undefined || value === null || isOffline) return "N/A";
+    return `${value} kPa`;
+  };
+
   const getFlowRateColor = (val) => {
     if (val === undefined || val === null || isOffline)
       return "text-gray-900 dark:text-gray-100";
     const num = parseFloat(val);
+    if (Number.isNaN(num)) return "text-gray-900 dark:text-gray-100";
     if (num >= 90 || num < 10)
       return "text-red-600 dark:text-red-400 font-bold";
     if (num >= 70) return "text-yellow-600 dark:text-yellow-400 font-semibold";
@@ -286,6 +307,8 @@ const UserUnitDetails = ({ className }) => {
   };
 
   const getStatusColor = (status) => {
+    if (!status) return "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400";
+    
     switch (status) {
       case "online":
         return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400";
@@ -323,8 +346,8 @@ const UserUnitDetails = ({ className }) => {
               </h1>
               <p className="text-gray-600 dark:text-gray-400 mb-2">
                 Serial Number:{" "}
-                {unit.serialNumber || `${unit.name.toUpperCase()}-001`} •{" "}
-                {unit.location}
+                {unit.serialNumber || `${(unit.name || "UNIT").toUpperCase()}-001`} •{" "}
+                {unit.location || "Unknown Location"}
               </p>
               <div className="flex items-center space-x-2 mb-4">
                 {unit.status === "online" ? (
@@ -335,7 +358,7 @@ const UserUnitDetails = ({ className }) => {
                 <span
                   className={`text-sm font-medium px-3 py-1 rounded-full ${getStatusColor(unit.status)}`}
                 >
-                  {unit.status.toUpperCase()}
+                  {(unit.status || "UNKNOWN").toUpperCase()}
                 </span>
               </div>
               <div className="flex items-center space-x-3">
@@ -435,7 +458,7 @@ const UserUnitDetails = ({ className }) => {
                         </p>
                         <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                           {parseFloat(
-                            liveUnit.currentPower || unit.currentPower,
+                            liveUnit.currentPower ?? unit.currentPower,
                           ).toFixed(1)}{" "}
                           kW
                         </p>
@@ -450,7 +473,7 @@ const UserUnitDetails = ({ className }) => {
                             Water Level
                           </p>
                           <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                            {liveUnit.water_level || unit.water_level} L
+                            {liveUnit.water_level ?? unit.water_level} L
                           </p>
                         </div>
                       </div>
@@ -464,7 +487,7 @@ const UserUnitDetails = ({ className }) => {
                         </p>
                         <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                           {formatTemperature(
-                            liveUnit.temp_outside || unit.temp_outside,
+                            liveUnit.temp_outside ?? unit.temp_outside,
                           )}
                         </p>
                       </div>
@@ -513,11 +536,12 @@ const UserUnitDetails = ({ className }) => {
                           Humidity
                         </p>
                         <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                          {liveUnit.humidity || unit.humidity}%
+                          {liveUnit.humidity ?? unit.humidity}%
                         </p>
                       </div>
                     </div>
 
+                    {/* ✅ FIXED: Use formatPressure helper for consistency */}
                     <div className="flex items-center space-x-3">
                       <Gauge className="h-5 w-5 text-purple-500" />
                       <div>
@@ -527,7 +551,11 @@ const UserUnitDetails = ({ className }) => {
                         <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                           {isOffline
                             ? "N/A"
-                            : `${liveUnit.pressure !== undefined ? liveUnit.pressure : unit.pressure} kPa`}
+                            : formatPressure(
+                                liveUnit.pressure !== undefined
+                                  ? liveUnit.pressure
+                                  : unit.pressure,
+                              )}
                         </p>
                       </div>
                     </div>
@@ -543,12 +571,12 @@ const UserUnitDetails = ({ className }) => {
                             <div
                               className="bg-green-500 h-2.5 rounded-full"
                               style={{
-                                width: `${liveUnit.battery_level || unit.battery_level}%`,
+                                width: `${liveUnit.battery_level ?? unit.battery_level}%`,
                               }}
                             ></div>
                           </div>
                           <p className="text-lg font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
-                            {liveUnit.battery_level || unit.battery_level}%
+                            {liveUnit.battery_level ?? unit.battery_level}%
                           </p>
                         </div>
                       </div>
@@ -561,11 +589,11 @@ const UserUnitDetails = ({ className }) => {
                           Flow Rate Inlet
                         </p>
                         <p
-                          className={`text-lg ${getFlowRateColor(liveUnit.flow_rate_inlet || unit.flowRate || 45.5)}`}
+                          className={`text-lg ${getFlowRateColor(liveUnit.flow_rate_inlet)}`}
                         >
                           {isOffline
                             ? "N/A"
-                            : `${liveUnit.flow_rate_inlet || unit.flowRate || 45.5} L/min`}
+                            : `${liveUnit.flow_rate_inlet} L/min`}
                         </p>
                       </div>
                     </div>
@@ -577,11 +605,11 @@ const UserUnitDetails = ({ className }) => {
                           Flow Rate Outlet
                         </p>
                         <p
-                          className={`text-lg ${getFlowRateColor(liveUnit.flow_rate_outlet || unit.flowRate * 0.95 || 42.1)}`}
+                          className={`text-lg ${getFlowRateColor(liveUnit.flow_rate_outlet)}`}
                         >
                           {isOffline
                             ? "N/A"
-                            : `${liveUnit.flow_rate_outlet || (unit.flowRate ? (unit.flowRate * 0.95).toFixed(1) : 42.1)} L/min`}
+                            : `${liveUnit.flow_rate_outlet} L/min`}
                         </p>
                       </div>
                     </div>
@@ -705,7 +733,7 @@ const UserUnitDetails = ({ className }) => {
                           <div>
                             <div className="flex items-center space-x-2">
                               <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                {unit.location}
+                                {unit.location || "Unknown Location"}
                               </p>
                               <button
                                 type="button"
