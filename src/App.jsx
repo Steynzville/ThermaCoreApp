@@ -1,3 +1,5 @@
+// src/App.jsx
+
 import "./App.css";
 
 import React, { useEffect, useRef, useState } from "react";
@@ -14,7 +16,6 @@ import ForgotPassword from "./components/ForgotPassword";
 import LoginScreen from "./components/LoginScreen";
 import PasswordResetRequest from "./components/PasswordResetRequest";
 import ProtectedRoute from "./components/ProtectedRoute";
-// Removed static imports for UnitControl, UnitDetails, UserUnitDetails
 import ThemeToggle from "./components/ThemeToggle";
 import routes from "./config/routes";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -36,6 +37,18 @@ const ScrollToTop = () => {
   }, [pathname]);
 
   return null;
+};
+
+// FIXED: Hoisted outside AppContent to prevent recreating lazy components on every render
+const roleBasedComponents = {
+  "unit-role-based": {
+    admin: React.lazy(() => import("./components/UnitControl")),
+    user: React.lazy(() => import("./components/UserUnitDetails")),
+  },
+  "unit-details-role-based": {
+    admin: React.lazy(() => import("./components/UnitDetails")),
+    user: React.lazy(() => import("./components/UserUnitDetails")),
+  },
 };
 
 const AppContent = () => {
@@ -135,17 +148,6 @@ const AppContent = () => {
       </div>
     );
   }
-
-  const roleBasedComponents = {
-    "unit-role-based": {
-      admin: React.lazy(() => import("./components/UnitControl")),
-      user: React.lazy(() => import("./components/UserUnitDetails")),
-    },
-    "unit-details-role-based": {
-      admin: React.lazy(() => import("./components/UnitDetails")),
-      user: React.lazy(() => import("./components/UserUnitDetails")),
-    },
-  };
 
   return (
     <div className="min-h-screen bg-background text-foreground relative">
