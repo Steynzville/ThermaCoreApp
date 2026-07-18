@@ -389,7 +389,6 @@ describe("ProcessFlowDiagram", () => {
       }
     });
 
-    // ✅ FIXED: SVG attributes are case-sensitive — use lowercase 'tabindex'
     it("should have proper ARIA attributes on nodes", () => {
       const { container } = render(
         <ProcessFlowDiagram nodes={mockNodes} />
@@ -614,9 +613,9 @@ describe("ProcessFlowDiagram", () => {
     });
   });
 
-  // ✅ FIXED: All mouse interaction tests now use fireEvent on window
+  // ✅ FIXED: All mouse interaction tests now use fireEvent on window + waitFor
   describe("Mouse Interactions", () => {
-    it("should handle mouse drag for panning when zoomed", () => {
+    it("should handle mouse drag for panning when zoomed", async () => {
       const { container } = render(
         <ProcessFlowDiagram nodes={mockNodes} connections={mockConnections} />
       );
@@ -648,11 +647,13 @@ describe("ProcessFlowDiagram", () => {
         fireEvent.mouseUp(window);
       });
 
-      // After mouse up, cursor should return to grab (still zoomed in)
-      expect(svgContainer.style.cursor).toBe("grab");
+      // ✅ FIXED: Use waitFor to handle async state updates from window-level listeners
+      await waitFor(() => {
+        expect(svgContainer.style.cursor).toBe("grab");
+      });
     });
 
-    it("should not pan when zoom is 1", () => {
+    it("should not pan when zoom is 1", async () => {
       const { container } = render(
         <ProcessFlowDiagram nodes={mockNodes} connections={mockConnections} />
       );
@@ -681,7 +682,10 @@ describe("ProcessFlowDiagram", () => {
         fireEvent.mouseUp(window);
       });
 
-      expect(svgContainer.style.cursor).toBe("default");
+      // ✅ FIXED: Use waitFor for consistency
+      await waitFor(() => {
+        expect(svgContainer.style.cursor).toBe("default");
+      });
     });
 
     it("should handle mouse down without crashing", () => {
