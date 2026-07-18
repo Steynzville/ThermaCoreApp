@@ -174,9 +174,10 @@ describe("NavigationMenu", () => {
     expect(classes).toContain("inline-flex");
   });
 
-  // ✅ FIXED: Use data-slot attribute instead of data-testid
-  it("renders the indicator element when force-mounted", async () => {
-    const { container } = render(
+  // ✅ FIXED: Test the indicator by triggering hover state instead of forceMount
+  it("renders the indicator element when a trigger is active", async () => {
+    const user = userEvent.setup();
+    render(
       <NavigationMenu viewport={false}>
         <NavigationMenuList>
           <NavigationMenuItem>
@@ -189,17 +190,22 @@ describe("NavigationMenu", () => {
               </NavigationMenuLink>
             </NavigationMenuContent>
           </NavigationMenuItem>
-          <NavigationMenuIndicator forceMount data-testid="indicator" />
+          <NavigationMenuIndicator data-testid="indicator" />
         </NavigationMenuList>
       </NavigationMenu>,
     );
 
-    // ✅ FIXED: Look for the element by data-slot attribute instead
-    const indicator = await screen.findByTestId("indicator");
-    expect(indicator).toBeInTheDocument();
+    // Click the trigger to open it (this should also activate the indicator)
+    await user.click(screen.getByTestId("trigger"));
+
+    // The indicator should appear when the trigger is active/open
+    // Wait for it to appear in the DOM
+    await screen.findByTestId("indicator");
+
+    expect(screen.getByTestId("indicator")).toBeInTheDocument();
     
     // Also verify the data-slot attribute is present
-    const slotIndicator = container.querySelector(
+    const slotIndicator = document.querySelector(
       '[data-slot="navigation-menu-indicator"]'
     );
     expect(slotIndicator).toBeInTheDocument();
