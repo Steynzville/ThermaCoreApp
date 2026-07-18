@@ -59,9 +59,8 @@ const MultiTimeframeTrendChart = ({
 }) => {
   const [selectedTimeframe, setSelectedTimeframe] = useState(defaultTimeframe);
   const [selectedChartType, setSelectedChartType] = useState(defaultChartType);
-  const [selectedMetrics, _setSelectedMetrics] = useState(
-    metrics.map((m) => m.dataKey),
-  );
+  // ✅ FIX: selectedMetrics is derived from metrics; no dead state
+  const selectedMetrics = useMemo(() => metrics.map((m) => m.dataKey), [metrics]);
   const [isDark, setIsDark] = useState(false);
 
   // Detect dark mode for tooltip styling
@@ -117,10 +116,6 @@ const MultiTimeframeTrendChart = ({
   const formattedData = useMemo(() => {
     if (!data || data.length === 0) return [];
 
-    const _timeframeConfig = TIMEFRAME_OPTIONS.find(
-      (t) => t.value === selectedTimeframe,
-    );
-
     return data.map((point) => ({
       ...point,
       time: formatTimeByTimeframe(point.timestamp, selectedTimeframe),
@@ -139,15 +134,19 @@ const MultiTimeframeTrendChart = ({
         .filter((v) => !Number.isNaN(v));
 
       if (values.length > 0) {
+        const firstValue = values[0];
+        const lastValue = values[values.length - 1];
+        // ✅ FIX: Guard against division by zero for trend calculation
+        const trend = values.length > 1 && firstValue !== 0
+          ? ((lastValue - firstValue) / firstValue) * 100
+          : 0;
+
         stats[metric.dataKey] = {
           min: Math.min(...values),
           max: Math.max(...values),
           avg: values.reduce((a, b) => a + b, 0) / values.length,
-          current: values[values.length - 1],
-          trend:
-            values.length > 1
-              ? ((values[values.length - 1] - values[0]) / values[0]) * 100
-              : 0,
+          current: lastValue,
+          trend,
         };
       }
     });
@@ -176,7 +175,8 @@ const MultiTimeframeTrendChart = ({
       [
         row.timestamp,
         row.time,
-        ...metrics.map((m) => row[m.dataKey] || ""),
+        // ✅ FIX: Use `??` to preserve legitimate zero values
+        ...metrics.map((m) => row[m.dataKey] ?? ""),
       ].join(","),
     );
 
