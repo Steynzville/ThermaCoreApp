@@ -23,89 +23,64 @@ vi.mock("@/lib/utils", () => ({
   cn: (...inputs) => inputs.filter(Boolean).join(" "),
 }));
 
-// ✅ FIXED: Select mock with proper option values for the hidden native select
-vi.mock("@radix-ui/react-select", () => {
-  // Define Item as a shared function reference so collectItemValues can identify it
-  const Item = ({ children, value, ...props }) => (
+// Select mock using input instead of select to avoid option-matching issues
+vi.mock("@radix-ui/react-select", () => ({
+  Root: ({ children, value, defaultValue, onValueChange, ...props }) => (
+    <div data-testid="select-root" data-value={value ?? defaultValue} {...props}>
+      {children}
+      <input
+        data-testid="select-native"
+        aria-hidden="true"
+        value={value ?? defaultValue ?? ""}
+        onChange={(e) => onValueChange?.(e.target.value)}
+        style={{ position: "absolute", opacity: 0, pointerEvents: "none" }}
+        readOnly
+      />
+    </div>
+  ),
+  Trigger: ({ children, ...props }) => (
+    <button data-testid="select-trigger" {...props}>
+      {children}
+    </button>
+  ),
+  Icon: ({ children, ...props }) => (
+    <span data-testid="select-icon" {...props}>{children || "▼"}</span>
+  ),
+  Viewport: ({ children, ...props }) => (
+    <div data-testid="select-viewport" {...props}>{children}</div>
+  ),
+  ScrollUpButton: ({ children, ...props }) => (
+    <div data-testid="select-scroll-up" {...props}>{children || "▲"}</div>
+  ),
+  ScrollDownButton: ({ children, ...props }) => (
+    <div data-testid="select-scroll-down" {...props}>{children || "▼"}</div>
+  ),
+  Content: ({ children, ...props }) => (
+    <div data-testid="select-content" {...props}>{children}</div>
+  ),
+  Item: ({ children, value, ...props }) => (
     <option data-testid="select-item" value={value} {...props}>
       {children}
     </option>
-  );
-
-  // Walk the children tree to find Item elements and collect their values
-  const collectItemValues = (node, acc = []) => {
-    if (!React.isValidElement(node)) return acc;
-    if (node.type === Item) {
-      acc.push(node.props.value);
-      return acc;
-    }
-    React.Children.forEach(node.props?.children, (child) =>
-      collectItemValues(child, acc),
-    );
-    return acc;
-  };
-
-  const Root = ({ children, value, defaultValue, onValueChange, ...props }) => {
-    const optionValues = collectItemValues(children);
-    return (
-      <div data-testid="select-root" data-value={value ?? defaultValue} {...props}>
-        {children}
-        <select
-          data-testid="select-native"
-          value={value ?? defaultValue}
-          onChange={(e) => onValueChange?.(e.target.value)}
-          style={{ position: "absolute", opacity: 0, pointerEvents: "none" }}
-        >
-          {optionValues.map((v) => (
-            <option key={v} value={v} />
-          ))}
-        </select>
-      </div>
-    );
-  };
-
-  return {
-    Root,
-    Item,
-    Trigger: ({ children, ...props }) => (
-      <button data-testid="select-trigger" {...props}>
-        {children}
-      </button>
-    ),
-    Icon: ({ children, ...props }) => (
-      <span data-testid="select-icon" {...props}>{children || "▼"}</span>
-    ),
-    Viewport: ({ children, ...props }) => (
-      <div data-testid="select-viewport" {...props}>{children}</div>
-    ),
-    ScrollUpButton: ({ children, ...props }) => (
-      <div data-testid="select-scroll-up" {...props}>{children || "▲"}</div>
-    ),
-    ScrollDownButton: ({ children, ...props }) => (
-      <div data-testid="select-scroll-down" {...props}>{children || "▼"}</div>
-    ),
-    Content: ({ children, ...props }) => (
-      <div data-testid="select-content" {...props}>{children}</div>
-    ),
-    ItemIndicator: ({ children, ...props }) => (
-      <span data-testid="select-item-indicator" {...props}>{children || "✓"}</span>
-    ),
-    ItemText: ({ children, ...props }) => (
-      <span data-testid="select-item-text" {...props}>{children}</span>
-    ),
-    Value: ({ children, placeholder, ...props }) => (
-      <span data-testid="select-value" {...props}>{children || placeholder}</span>
-    ),
-    Portal: ({ children }) => <>{children}</>,
-    Group: ({ children, ...props }) => (
-      <div data-testid="select-group" {...props}>{children}</div>
-    ),
-    Label: ({ children, ...props }) => (
-      <div data-testid="select-label" {...props}>{children}</div>
-    ),
-    Separator: ({ ...props }) => <hr data-testid="select-separator" {...props} />,
-  };
-});
+  ),
+  ItemIndicator: ({ children, ...props }) => (
+    <span data-testid="select-item-indicator" {...props}>{children || "✓"}</span>
+  ),
+  ItemText: ({ children, ...props }) => (
+    <span data-testid="select-item-text" {...props}>{children}</span>
+  ),
+  Value: ({ children, placeholder, ...props }) => (
+    <span data-testid="select-value" {...props}>{children || placeholder}</span>
+  ),
+  Portal: ({ children }) => <>{children}</>,
+  Group: ({ children, ...props }) => (
+    <div data-testid="select-group" {...props}>{children}</div>
+  ),
+  Label: ({ children, ...props }) => (
+    <div data-testid="select-label" {...props}>{children}</div>
+  ),
+  Separator: ({ ...props }) => <hr data-testid="select-separator" {...props} />,
+}));
 
 // Mock Recharts components - simplified to avoid circular dependencies
 const chartSpy = vi.fn();
@@ -160,7 +135,6 @@ vi.mock("recharts", () => ({
     <div data-testid="x-axis" data-key={dataKey} data-angle={angle} data-textanchor={textAnchor} data-height={height} />
   ),
   YAxis: () => <div data-testid="y-axis" />,
-  // ✅ FIXED: Tooltip captures contentStyle for dark mode testing
   Tooltip: ({ content, contentStyle }) => (
     <div data-testid="tooltip" data-content-style={JSON.stringify(contentStyle)}>
       {content || "Tooltip Content"}
@@ -620,7 +594,6 @@ describe("MultiTimeframeTrendChart", () => {
     });
   });
 
-  // ✅ FIXED: Dark mode tests actually assert tooltip styling
   describe("Dark Mode Detection", () => {
     afterEach(() => {
       document.documentElement.classList.remove("dark");
