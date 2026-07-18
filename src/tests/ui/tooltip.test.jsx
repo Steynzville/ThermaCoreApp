@@ -7,15 +7,18 @@
  * The Tooltip wrapper here sets delayDuration=0 by default, so hover/focus
  * activation doesn't require waiting on Radix's open-delay timers.
  *
- * Query strategy: Radix's accessible tooltip text lives in a visually-hidden
- * node used for screen readers, separate from the visible popper content
- * that carries our `data-slot="tooltip-content"` / className / styling.
- * `getByRole("tooltip")` resolves to that hidden accessible node (not ours),
- * which is why structural/style assertions here query
- * `[data-slot="tooltip-content"]` directly instead of by role or text.
+ * Query strategy: Radix keeps the tooltip's accessible text in a
+ * visually-hidden node for screen readers, SEPARATE from the visible popper
+ * content that carries our `data-slot="tooltip-content"` / className /
+ * styling. That means ANY text-based query (getByText/findByText/
+ * queryByText) against the tooltip's text is ambiguous — it matches both
+ * nodes — regardless of whether it's used as the main assertion or just as
+ * a "wait for it to appear" step. So this file avoids text queries
+ * entirely: waiting for and asserting against `[data-slot="tooltip-content"]`
+ * directly via `waitFor`.
  */
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
 
@@ -30,6 +33,19 @@ const TOOLTIP_TEXT = "Pressure Transmitter 101 — 42.3 PSI";
 
 function getVisibleContent(container) {
   return container.querySelector('[data-slot="tooltip-content"]');
+}
+
+async function waitForVisibleContent(container) {
+  await waitFor(() => {
+    expect(getVisibleContent(container)).not.toBeNull();
+  });
+  return getVisibleContent(container);
+}
+
+async function waitForNoVisibleContent(container) {
+  await waitFor(() => {
+    expect(getVisibleContent(container)).toBeNull();
+  });
 }
 
 function BasicTooltip({ tooltipProps } = {}) {
@@ -53,8 +69,8 @@ describe("Tooltip", () => {
 
     await user.hover(screen.getByTestId("trigger"));
 
-    await screen.findByText(TOOLTIP_TEXT, { exact: false });
-    expect(getVisibleContent(container)).toHaveTextContent(TOOLTIP_TEXT);
+    const content = await waitForVisibleContent(container);
+    expect(content).toHaveTextContent(TOOLTIP_TEXT);
   });
 
   it("hides the tooltip content when the pointer moves away", async () => {
@@ -70,11 +86,11 @@ describe("Tooltip", () => {
     );
 
     await user.hover(screen.getByTestId("trigger"));
-    await screen.findByText(TOOLTIP_TEXT, { exact: false });
+    await waitForVisibleContent(container);
 
     await user.unhover(screen.getByTestId("trigger"));
 
-    expect(getVisibleContent(container)).not.toBeInTheDocument();
+    await waitForNoVisibleContent(container);
   });
 
   it("shows the tooltip content on keyboard focus (accessibility)", async () => {
@@ -84,8 +100,8 @@ describe("Tooltip", () => {
     await user.tab();
     expect(screen.getByTestId("trigger")).toHaveFocus();
 
-    await screen.findByText(TOOLTIP_TEXT, { exact: false });
-    expect(getVisibleContent(container)).toHaveTextContent(TOOLTIP_TEXT);
+    const content = await waitForVisibleContent(container);
+    expect(content).toHaveTextContent(TOOLTIP_TEXT);
   });
 
   it("hides the tooltip content on blur", async () => {
@@ -98,10 +114,10 @@ describe("Tooltip", () => {
     );
 
     await user.tab();
-    await screen.findByText(TOOLTIP_TEXT, { exact: false });
+    await waitForVisibleContent(container);
 
     await user.tab();
-    expect(getVisibleContent(container)).not.toBeInTheDocument();
+    await waitForNoVisibleContent(container);
   });
 
   it("renders the visible content with the expected data-slot attribute", async () => {
@@ -109,12 +125,9 @@ describe("Tooltip", () => {
     const { container } = render(<BasicTooltip />);
 
     await user.hover(screen.getByTestId("trigger"));
-    await screen.findByText(TOOLTIP_TEXT, { exact: false });
+    const content = await waitForVisibleContent(container);
 
-    expect(getVisibleContent(container)).toHaveAttribute(
-      "data-slot",
-      "tooltip-content",
-    );
+    expect(content).toHaveAttribute("data-slot", "tooltip-content");
   });
 
   it("renders an arrow element inside the visible tooltip content", async () => {
@@ -122,9 +135,8 @@ describe("Tooltip", () => {
     const { container } = render(<BasicTooltip />);
 
     await user.hover(screen.getByTestId("trigger"));
-    await screen.findByText(TOOLTIP_TEXT, { exact: false });
+    const content = await waitForVisibleContent(container);
 
-    const content = getVisibleContent(container);
     expect(content.querySelector("svg, [class*='arrow']")).not.toBeNull();
   });
 
@@ -140,9 +152,8 @@ describe("Tooltip", () => {
     );
 
     await user.hover(screen.getByTestId("trigger"));
-    await screen.findByText("Flow Transmitter 204", { exact: false });
+    const content = await waitForVisibleContent(container);
 
-    const content = getVisibleContent(container);
     expect(content).toHaveTextContent("Flow Transmitter 204");
     expect(content).toHaveClass("scada-tag-tooltip");
   });
@@ -163,16 +174,14 @@ describe("Tooltip", () => {
     );
 
     await user.hover(screen.getByTestId("trigger-1"));
-    await screen.findByText("Pressure Transmitter 101", { exact: false });
-    expect(getVisibleContent(container)).toHaveTextContent(
-      "Pressure Transmitter 101",
-    );
+    let content = await waitForVisibleContent(container);
+    expect(content).toHaveTextContent("Pressure Transmitter 101");
 
     await user.unhover(screen.getByTestId("trigger-1"));
+    await waitForNoVisibleContent(container);
+
     await user.hover(screen.getByTestId("trigger-2"));
-    await screen.findByText("Flow Transmitter 204", { exact: false });
-    expect(getVisibleContent(container)).toHaveTextContent(
-      "Flow Transmitter 204",
-    );
+    content = await waitForVisibleContent(container);
+    expect(content).toHaveTextContent("Flow Transmitter 204");
   });
 });
