@@ -5,14 +5,7 @@
  * and real-time status indicators for industrial processes.
  */
 
-import {
-  Activity,
-  AlertTriangle,
-  CheckCircle,
-  Minus,
-  Plus,
-  XCircle,
-} from "lucide-react";
+import { Activity, Minus, Plus } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
@@ -214,25 +207,6 @@ const ProcessFlowDiagram = ({
     }
   };
 
-  const _getStatusIcon = (status) => {
-    switch (status) {
-      case "online":
-      case "running":
-      case "normal":
-        return <CheckCircle className="h-4 w-4" />;
-      case "warning":
-        return <AlertTriangle className="h-4 w-4" />;
-      case "error":
-      case "critical":
-      case "offline":
-        return <XCircle className="h-4 w-4" />;
-      case "idle":
-        return <Activity className="h-4 w-4" />;
-      default:
-        return <Activity className="h-4 w-4" />;
-    }
-  };
-
   const renderConnection = (connection, index) => {
     const fromNode = positionedNodes.find((n) => n.id === connection.from);
     const toNode = positionedNodes.find((n) => n.id === connection.to);
@@ -251,9 +225,10 @@ const ProcessFlowDiagram = ({
     const dy = y2 - y1;
     const offset = 30;
 
-    // Perpendicular offset for curved path
-    const cpX = midX - (dy / Math.sqrt(dx * dx + dy * dy)) * offset;
-    const cpY = midY + (dx / Math.sqrt(dx * dx + dy * dy)) * offset;
+    // ✅ FIXED: Guard against division by zero when nodes overlap
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const cpX = distance === 0 ? midX : midX - (dy / distance) * offset;
+    const cpY = distance === 0 ? midY : midY + (dx / distance) * offset;
 
     const flowRate = liveData[connection.id]?.flowRate || 0;
     const isActive = flowRate > 0;
