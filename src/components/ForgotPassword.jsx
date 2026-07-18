@@ -16,14 +16,16 @@ const ForgotPassword = () => {
     setError("");
     setMessage("");
 
-    if (!email.trim()) {
+    const trimmedEmail = email.trim();
+
+    if (!trimmedEmail) {
       setError("Please enter your email address");
       return;
     }
 
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!emailRegex.test(trimmedEmail)) {
       setError("Please enter a valid email address");
       return;
     }
@@ -31,7 +33,7 @@ const ForgotPassword = () => {
     setIsSubmitting(true);
 
     try {
-      const result = await requestPasswordReset(email);
+      const result = await requestPasswordReset(trimmedEmail);
 
       if (result.success) {
         setMessage(result.message);
