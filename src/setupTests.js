@@ -1,4 +1,3 @@
-// src/setupTests.js
 import "@testing-library/jest-dom";
 import { vi, beforeAll, beforeEach, afterEach, afterAll } from "vitest";
 import React from "react";
@@ -8,7 +7,7 @@ import { cleanup } from "@testing-library/react";
 // DEBUG MODE: Set to true to see ALL warnings
 // Usage: VITEST_DEBUG=true pnpm vitest run
 // ============================================================
-const SHOW_ALL_WARNINGS = process.env.VITEST_DEBUG === 'true' || false;
+const SHOW_ALL_WARNINGS = process.env.VITEST_DEBUG === 'true';
 
 // ✅ FIX: Tell React it's running in a test environment
 // This suppresses "not configured to support act(...)" warnings
@@ -17,48 +16,67 @@ global.IS_REACT_ACT_ENVIRONMENT = true;
 // ============================================================
 // SAFE CONSOLE FILTERING - Only suppresses warnings, NOT errors
 // ============================================================
+
 const originalConsoleError = console.error;
+const originalConsoleWarn = console.warn;
+const originalConsoleLog = console.log;
+
+// Known React warnings that are safe to suppress
+const warningPatterns = [
+  // Act warnings
+  'An update to %s inside a test was not wrapped in act',
+  'not wrapped in act',
+  'was not wrapped in act',
+  'When testing, code that causes React state updates should be wrapped into act',
+  'The current testing environment is not configured to support act',
+  'Warning: An update to',
+  'Warning: Cannot update a component',
+
+  // React DOM warnings
+  'React does not recognize the',
+  'In HTML, <',
+  'You provided a `value` prop',
+  'The tag <text> is unrecognized',
+  'Panel defaultSize prop recommended',
+  '`value` prop on `input` should not be null',
+
+  // DOM nesting warnings
+  'cannot be a child of',
+  'cannot be a descendant of',
+  'select cannot contain',
+  'option cannot contain',
+
+  // Auth service warnings (expected with test tokens)
+  'isTokenValid: could not decode token',
+  'isTokenValid: could not decode token or no exp claim',
+
+  // Audio/Media warnings
+  'The AudioContext is not allowed to start',
+  'The AudioContext was not allowed to start',
+
+  // Radix UI warnings
+  'A props object containing a "key" prop is being spread into JSX',
+];
+
+// Check if a message is a known warning that should be suppressed
+const isKnownWarning = (message) => {
+  return warningPatterns.some(pattern => 
+    typeof message === 'string' && message.includes(pattern)
+  );
+};
+
+// Override console.error
 console.error = (...args) => {
   const message = args[0]?.toString?.() || '';
   
-  // ✅ Only suppress WARNINGS, not errors
-  const warningPatterns = [
-    // React act warnings (these are warnings, not errors)
-    'An update to %s inside a test was not wrapped in act',
-    'not wrapped in act',
-    'was not wrapped in act',
-    'When testing, code that causes React state updates should be wrapped into act',
-    
-    // React DOM warnings (harmless in tests)
-    'React does not recognize the',
-    'In HTML, <',
-    'You provided a `value` prop',
-    'The tag <text> is unrecognized',
-    'Panel defaultSize prop recommended',
-    '`value` prop on `input` should not be null',
-    'The current testing environment is not configured to support act',
-    
-    // DOM nesting warnings
-    'cannot be a child of',
-    'cannot be a descendant of',
-    'select cannot contain',
-    'option cannot contain',
-    
-    // Auth service warnings (expected with test tokens)
-    'isTokenValid: could not decode token',
-    'isTokenValid: could not decode token or no exp claim',
-    
-    // Audio/Media warnings
-    'The AudioContext is not allowed to start',
-    'The AudioContext was not allowed to start',
-  ];
+  // ✅ In DEBUG mode, show EVERYTHING (including warnings)
+  if (SHOW_ALL_WARNINGS) {
+    originalConsoleError(...args);
+    return;
+  }
 
-  // ✅ Check if it's a warning (contains "Warning:" or matches warning patterns)
-  const isWarning = message.includes('Warning:') || 
-                    warningPatterns.some(pattern => message.includes(pattern));
-
-  // ✅ Only suppress if it's clearly a warning and NOT in debug mode
-  if (!SHOW_ALL_WARNINGS && isWarning) {
+  // ✅ Only suppress known warnings
+  if (isKnownWarning(message)) {
     return;
   }
 
@@ -66,63 +84,41 @@ console.error = (...args) => {
   originalConsoleError(...args);
 };
 
-const originalConsoleWarn = console.warn;
+// Override console.warn
 console.warn = (...args) => {
   const message = args[0]?.toString?.() || '';
-  
-  // ✅ Only suppress known harmless warnings
-  const harmlessWarnings = [
-    'React does not recognize the',
-    'The tag <text> is unrecognized',
-    'Panel defaultSize prop recommended',
-    '`value` prop on `input` should not be null',
-    'You provided a `value` prop',
-    
-    // Auth service warnings (expected with test tokens)
-    'isTokenValid: could not decode token',
-    'isTokenValid: could not decode token or no exp claim',
-  ];
 
-  if (!SHOW_ALL_WARNINGS && harmlessWarnings.some(pattern => message.includes(pattern))) {
+  // ✅ In DEBUG mode, show EVERYTHING
+  if (SHOW_ALL_WARNINGS) {
+    originalConsoleWarn(...args);
     return;
   }
 
-  // ✅ Pass through other warnings
+  // ✅ Only suppress known warnings
+  if (isKnownWarning(message)) {
+    return;
+  }
+
+  // ✅ Pass through everything else
   originalConsoleWarn(...args);
 };
 
-// ============================================================
-// SUPPRESS STDOUT WARNINGS (Vitest captures these as stderr)
-// ============================================================
-const originalConsoleLog = console.log;
+// Override console.log (some warnings come through log)
 console.log = (...args) => {
   const message = args[0]?.toString?.() || '';
-  
-  // ✅ Same warning patterns for stdout/stderr
-  const stdoutPatterns = [
-    'isTokenValid: could not decode token',
-    'isTokenValid: could not decode token or no exp claim',
-    'An update to %s inside a test was not wrapped in act',
-    'not wrapped in act',
-    'was not wrapped in act',
-    'When testing, code that causes React state updates should be wrapped into act',
-    'React does not recognize the',
-    'In HTML, <',
-    'You provided a `value` prop',
-    'The tag <text> is unrecognized',
-    'Panel defaultSize prop recommended',
-    '`value` prop on `input` should not be null',
-    'cannot be a child of',
-    'cannot be a descendant of',
-    'select cannot contain',
-    'option cannot contain',
-    'The AudioContext is not allowed to start',
-  ];
 
-  if (!SHOW_ALL_WARNINGS && stdoutPatterns.some(pattern => message.includes(pattern))) {
+  // ✅ In DEBUG mode, show EVERYTHING
+  if (SHOW_ALL_WARNINGS) {
+    originalConsoleLog(...args);
     return;
   }
 
+  // ✅ Only suppress known warnings
+  if (isKnownWarning(message)) {
+    return;
+  }
+
+  // ✅ Pass through everything else
   originalConsoleLog(...args);
 };
 
@@ -139,8 +135,6 @@ vi.useRealTimers();
 // Clean up DOM after each test to prevent memory leaks and test pollution
 afterEach(() => {
   cleanup();
-  // REMOVED: document.body.innerHTML = ''; // This was causing issues with async continuations
-  
   // Reset any global state
   vi.clearAllMocks();
   vi.resetAllMocks();
@@ -219,6 +213,21 @@ if (!window.getComputedStyle || typeof window.getComputedStyle !== 'function') {
   });
 }
 
+// Wrap getComputedStyle to provide full properties for Vaul/Radix
+const realGetComputedStyle = window.getComputedStyle;
+Object.defineProperty(window, 'getComputedStyle', {
+  value: (el, pseudo) => {
+    const style = realGetComputedStyle(el, pseudo);
+    return {
+      ...style,
+      getPropertyValue: (prop) => style.getPropertyValue(prop) || '',
+      transform: style.transform || 'none',
+      webkitTransform: style.webkitTransform || 'none',
+      mozTransform: style.mozTransform || 'none',
+    };
+  },
+});
+
 /**
  * -----------------------------
  * STORAGE MOCKS (FIXED)
@@ -253,10 +262,6 @@ if (!window.sessionStorage) {
     configurable: true,
   });
 }
-
-// Reset storage before each test (but ONLY if needed)
-// We'll handle this per test file instead
-// DO NOT auto-clear here - let tests manage their own storage state
 
 /**
  * -----------------------------
@@ -434,6 +439,44 @@ if (!window.DOMRect) {
   };
 }
 
+// Mock Element.prototype methods for Radix UI components
+if (!Element.prototype.hasOwnProperty('scrollIntoView')) {
+  Element.prototype.scrollIntoView = vi.fn();
+}
+
+// Mock setPointerCapture for Vaul Drawer
+window.HTMLElement.prototype.hasPointerCapture = vi.fn();
+window.HTMLElement.prototype.setPointerCapture = vi.fn();
+window.HTMLElement.prototype.releasePointerCapture = vi.fn();
+window.HTMLElement.prototype.scrollIntoView = vi.fn();
+
+// getClientRects for dropdown measurements
+window.Element.prototype.getClientRects = vi.fn(() => ({
+  item: () => ({
+    width: 0,
+    height: 0,
+    top: 0,
+    left: 0,
+    bottom: 0,
+    right: 0,
+    x: 0,
+    y: 0,
+  }),
+  length: 1,
+  [Symbol.iterator]: function* () {
+    yield {
+      width: 0,
+      height: 0,
+      top: 0,
+      left: 0,
+      bottom: 0,
+      right: 0,
+      x: 0,
+      y: 0,
+    };
+  },
+}));
+
 /**
  * -----------------------------
  * AUDIO CONTEXT MOCK
@@ -608,20 +651,26 @@ vi.mock("framer-motion", () => ({
   },
 }));
 
-/**
- * -----------------------------
- * GLOBAL STABILITY
- * -----------------------------
- */
+// IMPORTANT: Export a helper to reset storage for tests that need it
+// This is NOT automatically called - tests must call it if they need clean storage
+export const resetStorage = () => {
+  window.localStorage.clear();
+  window.sessionStorage.clear();
+};
 
+// ============================================================
+// ✅ FIXED: Console spies are now DEBUG-aware
+// ============================================================
 // Store console spies at module level
 let consoleErrorSpy = null;
 let consoleWarnSpy = null;
 
 beforeAll(() => {
-  // Create spies that persist for the entire test run
-  consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-  consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+  // ✅ Only silence if NOT in DEBUG mode
+  if (!SHOW_ALL_WARNINGS) {
+    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+  }
 });
 
 // Restore console mocks after all tests
@@ -635,10 +684,3 @@ afterAll(() => {
     consoleWarnSpy = null;
   }
 });
-
-// IMPORTANT: Export a helper to reset storage for tests that need it
-// This is NOT automatically called - tests must call it if they need clean storage
-export const resetStorage = () => {
-  window.localStorage.clear();
-  window.sessionStorage.clear();
-};
