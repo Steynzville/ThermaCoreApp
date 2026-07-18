@@ -5,7 +5,11 @@
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import VitalSignGraph from "../components/VitalSignGraph";
+import VitalSignGraph, {
+  generateMockData,
+  formatXAxisLabel,
+  getTickInterval
+} from "../components/VitalSignGraph";
 import { ThemeProvider } from "../context/ThemeContext";
 import { SettingsProvider } from "../context/SettingsContext";
 
@@ -38,23 +42,27 @@ vi.mock("recharts", () => {
         className={className}
       />
     ),
-    XAxis: ({ dataKey, stroke, className }) => (
+    XAxis: ({ dataKey, stroke, className, tickFormatter, interval, tick }) => (
       <div
         data-testid="x-axis"
         data-key={dataKey}
         data-stroke={stroke}
         className={className}
+        data-tick-formatter={typeof tickFormatter === 'function' ? 'function' : 'none'}
+        data-interval={interval}
+        data-tick-font-size={tick?.fontSize}
       />
     ),
     YAxis: ({ stroke, className }) => (
       <div data-testid="y-axis" data-stroke={stroke} className={className} />
     ),
-    Tooltip: ({ contentStyle, labelStyle, itemStyle }) => (
+    Tooltip: ({ contentStyle, labelStyle, itemStyle, labelFormatter }) => (
       <div
         data-testid="tooltip"
         data-content-style={JSON.stringify(contentStyle)}
         data-label-style={JSON.stringify(labelStyle)}
         data-item-style={JSON.stringify(itemStyle)}
+        data-label-formatter={typeof labelFormatter === 'function' ? 'function' : 'none'}
       />
     ),
     Line: ({ type, dataKey, stroke, activeDot }) => (
@@ -169,13 +177,19 @@ describe("VitalSignGraph", () => {
   });
 
   describe("Timeframe Selection", () => {
-    it("should render timeframe selector", () => {
+    it("should render timeframe selector with all options", () => {
       render(<VitalSignGraph {...defaultProps} />, { wrapper: TestWrapper });
       const select = screen.getByTestId("timeframe-select");
       expect(select).toBeTruthy();
+
+      // Check all select items are rendered
       expect(screen.getByTestId("select-item-day")).toBeTruthy();
       expect(screen.getByTestId("select-item-month")).toBeTruthy();
       expect(screen.getByTestId("select-item-year")).toBeTruthy();
+      expect(screen.getByTestId("select-item-3year")).toBeTruthy();
+      expect(screen.getByTestId("select-item-5year")).toBeTruthy();
+      expect(screen.getByTestId("select-item-10year")).toBeTruthy();
+      expect(screen.getByTestId("select-item-alltime")).toBeTruthy();
     });
 
     it("should generate correct number of data points for default day view", () => {
@@ -187,13 +201,31 @@ describe("VitalSignGraph", () => {
     it("should accept timeframe configuration", async () => {
       render(<VitalSignGraph {...defaultProps} />, { wrapper: TestWrapper });
       const select = screen.getByTestId("timeframe-select");
-      
+
       await act(async () => {
         fireEvent.change(select, { target: { value: "month" } });
       });
-      
+
       const chart = screen.getByTestId("line-chart");
       expect(chart.getAttribute("data-points")).toBe("30");
+    });
+
+    it.each([
+      ["year", "12"],
+      ["3year", "36"],
+      ["5year", "60"],
+      ["10year", "120"],
+      ["alltime", "200"],
+    ])("should show %s data points for %s timeframe", async (timeframe, expected) => {
+      render(<VitalSignGraph {...defaultProps} />, { wrapper: TestWrapper });
+      const select = screen.getByTestId("timeframe-select");
+
+      await act(async () => {
+        fireEvent.change(select, { target: { value: timeframe } });
+      });
+
+      const chart = screen.getByTestId("line-chart");
+      expect(chart.getAttribute("data-points")).toBe(expected);
     });
   });
 
@@ -211,6 +243,14 @@ describe("VitalSignGraph", () => {
       expect(xAxis.getAttribute("data-key")).toBe("time");
     });
 
+    it("should render XAxis with tick formatter and interval", () => {
+      render(<VitalSignGraph {...defaultProps} />, { wrapper: TestWrapper });
+      const xAxis = screen.getByTestId("x-axis");
+      expect(xAxis.getAttribute("data-tick-formatter")).toBe("function");
+      expect(xAxis.getAttribute("data-interval")).toBe("2");
+      expect(xAxis.getAttribute("data-tick-font-size")).toBe("12");
+    });
+
     it("should render Line with monotone type", () => {
       render(<VitalSignGraph {...defaultProps} />, { wrapper: TestWrapper });
       const line = screen.getByTestId("line");
@@ -223,6 +263,12 @@ describe("VitalSignGraph", () => {
       const contentStyle = JSON.parse(tooltip.getAttribute("data-content-style"));
       expect(contentStyle.backgroundColor).toBe("var(--card-background)");
       expect(contentStyle.borderColor).toBe("var(--border-color)");
+    });
+
+    it("should render Tooltip with label formatter", () => {
+      render(<VitalSignGraph {...defaultProps} />, { wrapper: TestWrapper });
+      const tooltip = screen.getByTestId("tooltip");
+      expect(tooltip.getAttribute("data-label-formatter")).toBe("function");
     });
   });
 
@@ -278,7 +324,7 @@ describe("VitalSignGraph", () => {
     it("should rerender efficiently when props change", () => {
       const { rerender } = render(<VitalSignGraph {...defaultProps} />, { wrapper: TestWrapper });
       expect(screen.getByText("Power Consumption")).toBeTruthy();
-      
+
       rerender(<VitalSignGraph {...defaultProps} title="Updated Consumption" />);
       expect(screen.getByText("Updated Consumption")).toBeTruthy();
     });
@@ -352,5 +398,229 @@ describe("VitalSignGraph", () => {
       const line = screen.getByTestId("line");
       expect(line.getAttribute("data-stroke")).toBe("#333");
     });
+  });
+});
+
+// ============================================================
+// generateMockData Unit Tests - Covers ALL switch branches
+// ============================================================
+
+describe("generateMockData", () => {
+  it("should generate 24 points for day", () => {
+    const data = generateMockData("day");
+    expect(data).toHaveLength(24);
+  });
+
+  it("should generate 30 points for month", () => {
+    const data = generateMockData("month");
+    expect(data).toHaveLength(30);
+  });
+
+  it("should generate 12 points for year", () => {
+    const data = generateMockData("year");
+    expect(data).toHaveLength(12);
+  });
+
+  it("should generate 36 points for 3year", () => {
+    const data = generateMockData("3year");
+    expect(data).toHaveLength(36);
+  });
+
+  it("should generate 60 points for 5year", () => {
+    const data = generateMockData("5year");
+    expect(data).toHaveLength(60);
+  });
+
+  it("should generate 120 points for 10year", () => {
+    const data = generateMockData("10year");
+    expect(data).toHaveLength(120);
+  });
+
+  it("should generate 200 points for alltime", () => {
+    const data = generateMockData("alltime");
+    expect(data).toHaveLength(200);
+  });
+
+  it("should fall back to day view (24 points) for an unrecognized timeframe", () => {
+    const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const data = generateMockData("bogus");
+    expect(data).toHaveLength(24);
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Unknown timeframe "bogus"')
+    );
+
+    consoleWarnSpy.mockRestore();
+  });
+
+  it("should generate points with all expected fields", () => {
+    const data = generateMockData("day");
+    data.forEach((point) => {
+      expect(point).toHaveProperty("time");
+      expect(point).toHaveProperty("power");
+      expect(point).toHaveProperty("tempIn");
+      expect(point).toHaveProperty("tempOut");
+      expect(point).toHaveProperty("pressure");
+      expect(point).toHaveProperty("waterLevel");
+    });
+  });
+
+  it("should generate data with values in expected ranges", () => {
+    const data = generateMockData("day");
+    data.forEach((point) => {
+      expect(point.power).toBeGreaterThanOrEqual(1);
+      expect(point.power).toBeLessThanOrEqual(6);
+      expect(point.tempIn).toBeGreaterThanOrEqual(15);
+      expect(point.tempIn).toBeLessThanOrEqual(35);
+      expect(point.tempOut).toBeGreaterThanOrEqual(20);
+      expect(point.tempOut).toBeLessThanOrEqual(40);
+      expect(point.pressure).toBeGreaterThanOrEqual(10);
+      expect(point.pressure).toBeLessThanOrEqual(15);
+      expect(point.waterLevel).toBeGreaterThanOrEqual(50);
+      expect(point.waterLevel).toBeLessThanOrEqual(100);
+    });
+  });
+
+  it("should generate timestamps as numbers (not formatted strings)", () => {
+    const data = generateMockData("day");
+    data.forEach((point) => {
+      expect(typeof point.time).toBe("number");
+      expect(point.time).toBeGreaterThan(0);
+    });
+  });
+
+  it("should generate timestamps in chronological order", () => {
+    const data = generateMockData("day");
+    for (let i = 1; i < data.length; i++) {
+      expect(data[i].time).toBeGreaterThan(data[i - 1].time);
+    }
+  });
+
+  it("should generate different data on subsequent calls", () => {
+    const data1 = generateMockData("day");
+    const data2 = generateMockData("day");
+
+    // Check if any value differs across the entire array. Comparing the
+    // whole array (rather than a single field on point 0) keeps this
+    // deterministic in practice -- the odds of every field on every point
+    // colliding between two independent runs are effectively zero, unlike
+    // checking a single value pair.
+    const allSame = data1.every((point, index) => {
+      return point.power === data2[index].power &&
+             point.tempIn === data2[index].tempIn &&
+             point.tempOut === data2[index].tempOut &&
+             point.pressure === data2[index].pressure &&
+             point.waterLevel === data2[index].waterLevel;
+    });
+
+    expect(allSame).toBe(false);
+  });
+});
+
+// ============================================================
+// formatXAxisLabel Tests
+// ============================================================
+
+describe("formatXAxisLabel", () => {
+  const baseTimestamp = new Date("2026-07-19T15:30:00.000Z").getTime();
+
+  it("should format as time for day timeframe", () => {
+    const result = formatXAxisLabel(baseTimestamp, "day");
+    // Should contain hour and minute
+    expect(result).toMatch(/\d{1,2}:\d{2}/);
+  });
+
+  it("should format as month/day for month timeframe", () => {
+    const result = formatXAxisLabel(baseTimestamp, "month");
+    // Should contain month abbreviation and day
+    expect(result).toMatch(/[A-Za-z]{3}\s+\d{1,2}/);
+  });
+
+  it("should format as month/year for year timeframe", () => {
+    const result = formatXAxisLabel(baseTimestamp, "year");
+    // Should contain month abbreviation and year
+    expect(result).toMatch(/[A-Za-z]{3}\s+\d{4}/);
+  });
+
+  it("should format as month/year for 3year timeframe", () => {
+    const result = formatXAxisLabel(baseTimestamp, "3year");
+    expect(result).toMatch(/[A-Za-z]{3}\s+\d{4}/);
+  });
+
+  it("should format as month/year for 5year timeframe", () => {
+    const result = formatXAxisLabel(baseTimestamp, "5year");
+    expect(result).toMatch(/[A-Za-z]{3}\s+\d{4}/);
+  });
+
+  it("should format as month/year for 10year timeframe", () => {
+    const result = formatXAxisLabel(baseTimestamp, "10year");
+    expect(result).toMatch(/[A-Za-z]{3}\s+\d{4}/);
+  });
+
+  it("should format as month/year for alltime timeframe", () => {
+    const result = formatXAxisLabel(baseTimestamp, "alltime");
+    expect(result).toMatch(/[A-Za-z]{3}\s+\d{4}/);
+  });
+
+  it("should return full locale string for unknown timeframe", () => {
+    const result = formatXAxisLabel(baseTimestamp, "bogus");
+    // Should contain some date info
+    expect(result).toContain("2026");
+  });
+
+  it("should handle a non-date string gracefully", () => {
+    const result = formatXAxisLabel("not a timestamp", "day");
+    expect(result).toBe("");
+  });
+
+  it("should handle null timestamp gracefully", () => {
+    // FIXED: new Date(null) coerces to epoch 0, a *valid* date, so this only
+    // returns "" because of the explicit null/undefined guard in
+    // formatXAxisLabel -- not because of the isNaN(getTime()) check.
+    const result = formatXAxisLabel(null, "day");
+    expect(result).toBe("");
+  });
+
+  it("should handle undefined timestamp gracefully", () => {
+    const result = formatXAxisLabel(undefined, "day");
+    expect(result).toBe("");
+  });
+});
+
+// ============================================================
+// getTickInterval Tests
+// ============================================================
+
+describe("getTickInterval", () => {
+  it("should return 2 for day timeframe", () => {
+    expect(getTickInterval("day")).toBe(2);
+  });
+
+  it("should return 3 for month timeframe", () => {
+    expect(getTickInterval("month")).toBe(3);
+  });
+
+  it("should return 1 for year timeframe", () => {
+    expect(getTickInterval("year")).toBe(1);
+  });
+
+  it("should return 2 for 3year timeframe", () => {
+    expect(getTickInterval("3year")).toBe(2);
+  });
+
+  it("should return 3 for 5year timeframe", () => {
+    expect(getTickInterval("5year")).toBe(3);
+  });
+
+  it("should return 6 for 10year timeframe", () => {
+    expect(getTickInterval("10year")).toBe(6);
+  });
+
+  it("should return 10 for alltime timeframe", () => {
+    expect(getTickInterval("alltime")).toBe(10);
+  });
+
+  it("should return 2 for unknown timeframe", () => {
+    expect(getTickInterval("bogus")).toBe(2);
   });
 });
