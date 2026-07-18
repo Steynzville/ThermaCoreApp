@@ -117,9 +117,11 @@ vi.mock("../../components/ui/separator", () => ({
   Separator: (props) => <hr data-testid="separator" {...props} />,
 }));
 
-// Mock Skeleton
+// Spread all props through to support data-sidebar attribute
 vi.mock("../../components/ui/skeleton", () => ({
-  Skeleton: ({ className }) => <div data-testid="skeleton" className={className} />,
+  Skeleton: ({ className, ...props }) => (
+    <div data-testid="skeleton" className={className} {...props} />
+  ),
 }));
 
 // Mock lucide-react
@@ -145,7 +147,7 @@ const TestConsumer = () => {
 beforeEach(() => {
   mockIsMobile = false;
   clearCookie("sidebar_state");
-  clearCookie("theme");
+  clearCookie("theme"); // Clean up theme cookie for test isolation
   vi.clearAllMocks();
 });
 
@@ -421,7 +423,6 @@ describe("SidebarProvider", () => {
     expect(screen.getByTestId("open")).toHaveTextContent("false");
   });
 
-  // NEW: Tests the ;\s* branch of the regex by placing another cookie first
   it("should restore state from cookie when other cookies precede it", () => {
     document.cookie = "theme=dark; path=/";
     document.cookie = "sidebar_state=true; path=/";
@@ -432,13 +433,10 @@ describe("SidebarProvider", () => {
       </SidebarProvider>
     );
 
-    // Cookie says expanded, defaultOpen says collapsed
-    // If cookie is correctly parsed, state should be expanded
     expect(screen.getByTestId("state")).toHaveTextContent("expanded");
     expect(screen.getByTestId("open")).toHaveTextContent("true");
   });
 
-  // NEW: Tests cookie with preceding cookies and false value
   it("should restore false state from cookie when other cookies precede it", () => {
     document.cookie = "theme=dark; path=/";
     document.cookie = "sidebar_state=false; path=/";
@@ -449,8 +447,6 @@ describe("SidebarProvider", () => {
       </SidebarProvider>
     );
 
-    // Cookie says collapsed, defaultOpen says expanded
-    // If cookie is correctly parsed, state should be collapsed
     expect(screen.getByTestId("state")).toHaveTextContent("collapsed");
     expect(screen.getByTestId("open")).toHaveTextContent("false");
   });
@@ -613,7 +609,7 @@ describe("Sidebar", () => {
 
   it("should render with collapsible='offcanvas'", () => {
     const { container } = render(
-      <SidebarProvider>
+      <SidebarProvider defaultOpen={false}>
         <Sidebar collapsible="offcanvas">
           <div>Offcanvas Sidebar</div>
         </Sidebar>
@@ -648,8 +644,8 @@ describe("Sidebar", () => {
       </SidebarProvider>
     );
 
-    const sidebar = container.querySelector('[data-slot="sidebar"]');
-    expect(sidebar).toHaveClass("custom-class");
+    const sidebarContainer = container.querySelector('[data-slot="sidebar-container"]');
+    expect(sidebarContainer).toHaveClass("custom-class");
   });
 
   it("should render sheet header for mobile with accessibility labels", () => {
@@ -1550,7 +1546,8 @@ describe("SidebarMenuSkeleton", () => {
       </SidebarProvider>
     );
 
-    expect(container.querySelector('[data-sidebar="menu-skeleton-icon"]')).toBeInTheDocument();
+    const icon = container.querySelector('[data-sidebar="menu-skeleton-icon"]');
+    expect(icon).toBeInTheDocument();
   });
 
   it("should apply className prop", () => {
