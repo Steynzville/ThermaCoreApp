@@ -125,7 +125,7 @@ const UserUnitDetails = ({ className }) => {
     };
   }, [metrics, unit, isOffline]);
 
-  // ✅ Helper to safely format pressure, consistent with temperature display
+  // Helper to safely format pressure, consistent with temperature display
   const formatPressure = (value) => {
     if (value === undefined || value === null || isOffline) return "N/A";
     return `${value} kPa`;
@@ -541,7 +541,6 @@ const UserUnitDetails = ({ className }) => {
                       </div>
                     </div>
 
-                    {/* ✅ FIXED: Use formatPressure helper for consistency */}
                     <div className="flex items-center space-x-3">
                       <Gauge className="h-5 w-5 text-purple-500" />
                       <div>
