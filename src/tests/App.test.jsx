@@ -642,7 +642,6 @@ describe("App", () => {
     expect(playSound).not.toHaveBeenCalled();
   });
 
-  // FIXED: Use rerender() instead of a second render() call
   it("swallows audio errors without surfacing them as app errors", async () => {
     const audioModule = await import("../utils/audioPlayer");
     audioModule.default.mockImplementationOnce(() => {
@@ -663,7 +662,7 @@ describe("App", () => {
     expect(screen.queryByText(/network or processing error/i)).not.toBeInTheDocument();
   });
 
-  // ============ ERROR BOUNDARY TESTS ============
+  // ============ ERROR BOUNDARY TESTS - FIXED WITH act() ============
 
   it("shows the error boundary UI when a window error event fires", async () => {
     setAuth();
@@ -672,7 +671,11 @@ describe("App", () => {
     await screen.findByRole("heading", { name: /login/i });
 
     const errorEvent = new ErrorEvent("error", { message: "Test error" });
-    window.dispatchEvent(errorEvent);
+    
+    // FIXED: Wrap dispatchEvent in act() to ensure React flushes the state update
+    await act(async () => {
+      window.dispatchEvent(errorEvent);
+    });
 
     await waitFor(() => {
       expect(screen.getByText(/something went wrong/i)).toBeInTheDocument();
@@ -687,7 +690,11 @@ describe("App", () => {
     await screen.findByRole("heading", { name: /login/i });
 
     const errorEvent = new ErrorEvent("error", { message: "Test error" });
-    window.dispatchEvent(errorEvent);
+    
+    // FIXED: Wrap dispatchEvent in act() to ensure React flushes the state update
+    await act(async () => {
+      window.dispatchEvent(errorEvent);
+    });
 
     const reloadButton = await screen.findByRole("button", {
       name: /reload application/i,
@@ -704,7 +711,11 @@ describe("App", () => {
     await screen.findByRole("heading", { name: /login/i });
 
     const rejectionEvent = new Event("unhandledrejection");
-    window.dispatchEvent(rejectionEvent);
+    
+    // FIXED: Wrap dispatchEvent in act() to ensure React flushes the state update
+    await act(async () => {
+      window.dispatchEvent(rejectionEvent);
+    });
 
     await waitFor(() => {
       expect(
