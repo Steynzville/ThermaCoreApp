@@ -86,7 +86,6 @@ const mockUnit = {
 };
 
 describe("UnitVitals Component", () => {
-  // ✅ FIX: Wrap render in act() to handle async effects
   const renderComponent = (unit = mockUnit) => {
     let result;
     act(() => {
@@ -247,21 +246,82 @@ describe("UnitVitals Component", () => {
       // value is hidden as N/A while offline
       expect(screen.getAllByText("N/A").length).toBeGreaterThan(0);
     });
+
+    it("falls back to green-range default (45.5) when flowRate is undefined", () => {
+      renderComponent({ ...mockUnit, flowRate: undefined });
+      const el = screen.getByText("45.5 L/min");
+      expect(el.className).toMatch(/text-green-600/);
+    });
+
+    it("falls back to green-range default (45.5) when flowRate is null", () => {
+      renderComponent({ ...mockUnit, flowRate: null });
+      const el = screen.getByText("45.5 L/min");
+      expect(el.className).toMatch(/text-green-600/);
+    });
+
+    it("returns gray styling when flowRate is not a number", () => {
+      renderComponent({ ...mockUnit, flowRate: "abc" });
+      const el = screen.getByText("abc L/min");
+      expect(el.className).toMatch(/text-gray-900/);
+    });
+  });
+
+  describe("getFlowRateColor — non-numeric value", () => {
+    it("applies default gray styling when the flow rate isn't a parseable number", () => {
+      renderComponent({ ...mockUnit, flowRate: "not-a-number" });
+      const el = screen.getByText("not-a-number L/min");
+      expect(el.className).toMatch(/text-gray-900/);
+    });
+  });
+
+  describe("flowRateOutlet fallback", () => {
+    it("falls back to 42.1 when unit.flowRate is undefined and no live outlet exists", () => {
+      renderComponent({ ...mockUnit, flowRate: undefined });
+      expect(screen.getByText("42.1 L/min")).toBeInTheDocument();
+    });
+
+    it("falls back to 42.1 when unit.flowRate is null", () => {
+      renderComponent({ ...mockUnit, flowRate: null });
+      expect(screen.getByText("42.1 L/min")).toBeInTheDocument();
+    });
+  });
+
+  describe("flow rate fallback logic", () => {
+    it("uses unit.flowRate when liveUnit.flow_rate_inlet is undefined", () => {
+      renderComponent({ ...mockUnit, flowRate: 50 });
+      const elements = screen.getAllByText(/50 L\/min/);
+      expect(elements.length).toBeGreaterThan(0);
+    });
+
+    it("uses fallback 45.5 when both liveUnit and unit flowRate are undefined", () => {
+      renderComponent({ ...mockUnit, flowRate: undefined });
+      const elements = screen.getAllByText(/45.5 L\/min/);
+      expect(elements.length).toBeGreaterThan(0);
+    });
+
+    it("calculates outlet flow rate from unit.flowRate when liveUnit value is missing", () => {
+      renderComponent({ ...mockUnit, flowRate: 50 });
+      const outletElements = screen.getAllByText(/47.5 L\/min/);
+      expect(outletElements.length).toBeGreaterThan(0);
+    });
+
+    it("uses fallback 42.1 when both liveUnit and unit flowRate are undefined for outlet", () => {
+      renderComponent({ ...mockUnit, flowRate: undefined });
+      const elements = screen.getAllByText(/42.1 L\/min/);
+      expect(elements.length).toBeGreaterThan(0);
+    });
   });
 
   describe("machine name inline edit", () => {
-    // ✅ FIX: Wrap interactions in act()
     it("enters edit mode and shows input with current value", () => {
       renderComponent();
       const editButtons = screen.getAllByRole("button");
-      // First edit icon button belongs to Machine Name
       act(() => {
         fireEvent.click(editButtons[0]);
       });
       expect(screen.getByDisplayValue("Test Unit")).toBeInTheDocument();
     });
 
-    // ✅ FIX: Wrap interactions in act()
     it("saves the new name and exits edit mode", async () => {
       const updateUnitName = vi.fn().mockResolvedValue({ success: true });
       useUnits.mockReturnValue({
@@ -292,7 +352,6 @@ describe("UnitVitals Component", () => {
       });
     });
 
-    // ✅ FIX: Wrap interactions in act()
     it("reverts to original name when save fails", async () => {
       const updateUnitName = vi.fn().mockRejectedValue(new Error("network"));
       useUnits.mockReturnValue({
@@ -318,14 +377,11 @@ describe("UnitVitals Component", () => {
       await waitFor(() => {
         expect(updateUnitName).toHaveBeenCalled();
       });
-      // Still in edit mode (component only exits edit mode on success),
-      // but the field value has been reset back to the original.
       await waitFor(() => {
         expect(screen.getByDisplayValue("Test Unit")).toBeInTheDocument();
       });
     });
 
-    // ✅ FIX: Wrap interactions in act()
     it("cancels name edit and restores original value", () => {
       renderComponent();
       act(() => {
@@ -344,10 +400,36 @@ describe("UnitVitals Component", () => {
       expect(screen.getByText("Test Unit")).toBeInTheDocument();
       expect(screen.queryByText("Discard Me")).not.toBeInTheDocument();
     });
+
+    it("resets to empty string if unit.name is undefined on save error", async () => {
+      const updateUnitName = vi.fn().mockRejectedValue(new Error("network"));
+      useUnits.mockReturnValue({
+        updateUnitName,
+        updateUnitLocation: vi.fn().mockResolvedValue({}),
+        updateUnitGPS: vi.fn().mockResolvedValue({}),
+      });
+      renderComponent({ ...mockUnit, name: undefined });
+
+      act(() => {
+        fireEvent.click(screen.getAllByRole("button")[0]);
+      });
+      const input = screen.getByDisplayValue("");
+      act(() => {
+        fireEvent.change(input, { target: { value: "Bad Name" } });
+      });
+
+      const saveButton = input.parentElement.querySelectorAll("button")[0];
+      act(() => {
+        fireEvent.click(saveButton);
+      });
+
+      await waitFor(() => {
+        expect(screen.getByDisplayValue("")).toBeInTheDocument();
+      });
+    });
   });
 
   describe("location inline edit", () => {
-    // ✅ FIX: Wrap interactions in act()
     it("enters edit mode for location", () => {
       renderComponent();
       const editButtons = screen.getAllByRole("button");
@@ -357,7 +439,6 @@ describe("UnitVitals Component", () => {
       expect(screen.getByDisplayValue("Test Location")).toBeInTheDocument();
     });
 
-    // ✅ FIX: Wrap interactions in act()
     it("saves the new location and exits edit mode", async () => {
       const updateUnitLocation = vi.fn().mockResolvedValue({ success: true });
       useUnits.mockReturnValue({
@@ -385,7 +466,6 @@ describe("UnitVitals Component", () => {
       });
     });
 
-    // ✅ FIX: Wrap interactions in act()
     it("reverts to original location when save fails", async () => {
       const updateUnitLocation = vi
         .fn()
@@ -421,12 +501,9 @@ describe("UnitVitals Component", () => {
       expect(screen.getByText(/GPS: Not set/)).toBeInTheDocument();
     });
 
-    // ✅ FIX: Wrap interactions in act()
     it("does not seed the edit field with a fake coordinate default", () => {
       renderComponent({ ...mockUnit, gpsCoordinates: undefined });
-      // Find and click the GPS edit icon (last edit icon in the location block)
       const editButtons = screen.getAllByRole("button");
-      // Buttons order: [name edit, location edit, gps edit, gps open-maps]
       act(() => {
         fireEvent.click(editButtons[2]);
       });
@@ -434,7 +511,6 @@ describe("UnitVitals Component", () => {
       expect(gpsInput.value).toBe("");
     });
 
-    // ✅ FIX: Wrap interactions in act()
     it("saves new GPS coordinates", async () => {
       const updateUnitGPS = vi.fn().mockResolvedValue({ success: true });
       useUnits.mockReturnValue({
@@ -463,7 +539,6 @@ describe("UnitVitals Component", () => {
       });
     });
 
-    // ✅ FIX: Wrap interactions in act()
     it("cancels GPS edit and restores original coordinates", () => {
       renderComponent();
       const editButtons = screen.getAllByRole("button");
@@ -498,12 +573,10 @@ describe("UnitVitals Component", () => {
       openSpy.mockRestore();
     });
 
-    // ✅ FIX: Wrap interactions in act()
     it("opens maps with the unit location when confirmed", () => {
       confirmSpy.mockReturnValue(true);
       renderComponent();
       const editButtons = screen.getAllByRole("button");
-      // Open Maps (Navigation icon) is the last button in the GPS row
       act(() => {
         fireEvent.click(editButtons[editButtons.length - 1]);
       });
@@ -514,7 +587,6 @@ describe("UnitVitals Component", () => {
       );
     });
 
-    // ✅ FIX: Wrap interactions in act()
     it("does not open maps when the confirm dialog is declined", () => {
       confirmSpy.mockReturnValue(false);
       renderComponent();
@@ -526,7 +598,6 @@ describe("UnitVitals Component", () => {
       expect(openSpy).not.toHaveBeenCalled();
     });
 
-    // ✅ FIX: Wrap interactions in act()
     it("falls back to 'Current Location' when unit has no location", () => {
       confirmSpy.mockReturnValue(true);
       renderComponent({ ...mockUnit, location: "" });
@@ -540,10 +611,37 @@ describe("UnitVitals Component", () => {
         "_blank",
       );
     });
+
+    it("uses 'Current Location' when unit location is null", () => {
+      confirmSpy.mockReturnValue(true);
+      renderComponent({ ...mockUnit, location: null });
+      const editButtons = screen.getAllByRole("button");
+      act(() => {
+        fireEvent.click(editButtons[editButtons.length - 1]);
+      });
+
+      expect(openSpy).toHaveBeenCalledWith(
+        expect.stringContaining(encodeURIComponent("Current Location")),
+        "_blank",
+      );
+    });
+
+    it("uses 'Current Location' when unit location is undefined", () => {
+      confirmSpy.mockReturnValue(true);
+      renderComponent({ ...mockUnit, location: undefined });
+      const editButtons = screen.getAllByRole("button");
+      act(() => {
+        fireEvent.click(editButtons[editButtons.length - 1]);
+      });
+
+      expect(openSpy).toHaveBeenCalledWith(
+        expect.stringContaining(encodeURIComponent("Current Location")),
+        "_blank",
+      );
+    });
   });
 
   describe("live metrics integration", () => {
-    // ✅ FIX: Wrap mock update in act()
     it("recomputes temp/pressure/flow values when metrics stream in", () => {
       act(() => {
         useRealtimeMetrics.mockReturnValue({
@@ -563,7 +661,6 @@ describe("UnitVitals Component", () => {
       expect(container).toBeTruthy();
     });
 
-    // ✅ FIX: Wrap mock update in act()
     it("does not recompute live values while offline even if metrics stream in", () => {
       act(() => {
         useRealtimeMetrics.mockReturnValue({
@@ -579,6 +676,286 @@ describe("UnitVitals Component", () => {
       });
       renderComponent({ ...mockUnit, status: "offline" });
       expect(screen.getAllByText("N/A").length).toBeGreaterThan(0);
+    });
+
+    describe("metrics effect — flow rate key fallbacks", () => {
+      it("uses camelCase flowRateInlet/flowRateOutlet when snake_case keys are absent", () => {
+        act(() => {
+          useRealtimeMetrics.mockReturnValue({
+            metrics: {
+              temperature: { current: "80" },
+              pressure: { current: "110" },
+              flowRateInlet: { current: "60" },
+              flowRateOutlet: { current: "35" },
+            },
+            loading: false,
+            error: null,
+            connectionStatus: "connected",
+            isConnected: true,
+          });
+        });
+        const { container } = renderComponent();
+        expect(container).toBeTruthy();
+      });
+    });
+
+    describe("metrics effect — prev-value-undefined branches", () => {
+      const unitMissingDerived = {
+        ...mockUnit,
+        temp_in: undefined,
+        temp_out: undefined,
+        pressure: undefined,
+      };
+
+      it("leaves temp_in/temp_out/pressure as undefined when they weren't present beforehand", () => {
+        act(() => {
+          useRealtimeMetrics.mockReturnValue({
+            metrics: {
+              temperature: { current: "80" },
+              pressure: { current: "110" },
+              flow_rate_inlet: { current: "50" },
+              flow_rate_outlet: { current: "40" },
+            },
+            loading: false,
+            error: null,
+            connectionStatus: "connected",
+            isConnected: true,
+          });
+        });
+        const { container } = renderComponent(unitMissingDerived);
+        expect(container).toBeTruthy();
+      });
+
+      it("computes an idOffset of 0 when unit.id is undefined", () => {
+        act(() => {
+          useRealtimeMetrics.mockReturnValue({
+            metrics: {
+              temperature: { current: "80" },
+              pressure: { current: "110" },
+              flow_rate_inlet: { current: "50" },
+              flow_rate_outlet: { current: "40" },
+            },
+            loading: false,
+            error: null,
+            connectionStatus: "connected",
+            isConnected: true,
+          });
+        });
+        const { container } = renderComponent({ ...mockUnit, id: undefined });
+        expect(container).toBeTruthy();
+      });
+    });
+
+    it("keeps temp_in undefined (and renders it as such) when it wasn't present beforehand", () => {
+      const unitWithoutTempIn = { ...mockUnit, temp_in: undefined };
+      act(() => {
+        useRealtimeMetrics.mockReturnValue({
+          metrics: {
+            temperature: { current: "80" },
+            pressure: { current: "100" },
+            flow_rate_inlet: { current: "45" },
+            flow_rate_outlet: { current: "40" },
+          },
+          loading: false,
+          error: null,
+          connectionStatus: "connected",
+          isConnected: true,
+        });
+      });
+      renderComponent(unitWithoutTempIn);
+      expect(screen.getByText("undefined°F")).toBeInTheDocument();
+    });
+
+    it("keeps pressure undefined (and renders it as such) when it wasn't present beforehand", () => {
+      const unitWithoutPressure = { ...mockUnit, pressure: undefined };
+      act(() => {
+        useRealtimeMetrics.mockReturnValue({
+          metrics: {
+            temperature: { current: "80" },
+            pressure: { current: "100" },
+            flow_rate_inlet: { current: "45" },
+            flow_rate_outlet: { current: "40" },
+          },
+          loading: false,
+          error: null,
+          connectionStatus: "connected",
+          isConnected: true,
+        });
+      });
+      renderComponent(unitWithoutPressure);
+      expect(screen.getByText("undefined kPa")).toBeInTheDocument();
+    });
+
+    describe("numeric 0 metric handling (regression guard)", () => {
+      it("uses 0 (not 70) as the temperature base when metrics.temperature.current is numeric 0", () => {
+        act(() => {
+          useRealtimeMetrics.mockReturnValue({
+            metrics: {
+              temperature: { current: 0 },
+              pressure: { current: "100" },
+              flow_rate_inlet: { current: "45" },
+              flow_rate_outlet: { current: "40" },
+            },
+            loading: false,
+            error: null,
+            connectionStatus: "connected",
+            isConnected: true,
+          });
+        });
+        renderComponent();
+        // id: 1 → "1".charCodeAt(0) = 49 → 49 % 5 = 4
+        // tempBase=0 → temp_in = 0*0.4 + 4 = 4.0
+        // If the || bug were present, tempBase would be 70 → 28.0 + 4 = 32.0
+        expect(screen.getByText("4°F")).toBeInTheDocument();
+      });
+
+      it("uses 0 (not 100) as the pressure base when metrics.pressure.current is numeric 0", () => {
+        act(() => {
+          useRealtimeMetrics.mockReturnValue({
+            metrics: {
+              temperature: { current: "80" },
+              pressure: { current: 0 },
+              flow_rate_inlet: { current: "45" },
+              flow_rate_outlet: { current: "40" },
+            },
+            loading: false,
+            error: null,
+            connectionStatus: "connected",
+            isConnected: true,
+          });
+        });
+        renderComponent();
+        // id: 1 → 49 % 20 = 9
+        // pressureBase=0 → pressure = 0*1.5 + 9 = 9.0
+        // If the || bug were present, pressureBase would be 100 → 150 + 9 = 159.0
+        expect(screen.getByText("9 kPa")).toBeInTheDocument();
+      });
+
+      it("uses 0 (not 45.5) as the flow inlet base when metrics.flow_rate_inlet.current is numeric 0", () => {
+        act(() => {
+          useRealtimeMetrics.mockReturnValue({
+            metrics: {
+              temperature: { current: "80" },
+              pressure: { current: "100" },
+              flow_rate_inlet: { current: 0 },
+              flow_rate_outlet: { current: "40" },
+            },
+            loading: false,
+            error: null,
+            connectionStatus: "connected",
+            isConnected: true,
+          });
+        });
+        renderComponent();
+        // id: 1 → 49 % 5 = 4
+        // flowInBase=0 → flow_rate_inlet = 0 + 4 - 2.5 = 1.5
+        // If the || bug were present, flowInBase would be 45.5 → 45.5 + 4 - 2.5 = 47.0
+        expect(screen.getByText("1.5 L/min")).toBeInTheDocument();
+      });
+
+      it("uses 0 (not 42.1) as the flow outlet base when metrics.flow_rate_outlet.current is numeric 0", () => {
+        act(() => {
+          useRealtimeMetrics.mockReturnValue({
+            metrics: {
+              temperature: { current: "80" },
+              pressure: { current: "100" },
+              flow_rate_inlet: { current: "45" },
+              flow_rate_outlet: { current: 0 },
+            },
+            loading: false,
+            error: null,
+            connectionStatus: "connected",
+            isConnected: true,
+          });
+        });
+        renderComponent();
+        // id: 1 → 49 % 3 = 1
+        // flowOutBase=0 → flow_rate_outlet = 0 + 1 - 1.5 = -0.5
+        // If the || bug were present, flowOutBase would be 42.1 → 42.1 + 1 - 1.5 = 41.6
+        expect(screen.getByText("-0.5 L/min")).toBeInTheDocument();
+      });
+
+      it("uses 0 (not 45.5) as the flow inlet base when metrics.flowRateInlet.current (camelCase) is numeric 0", () => {
+        act(() => {
+          useRealtimeMetrics.mockReturnValue({
+            metrics: {
+              temperature: { current: "80" },
+              pressure: { current: "100" },
+              flowRateInlet: { current: 0 },
+              flowRateOutlet: { current: "40" },
+            },
+            loading: false,
+            error: null,
+            connectionStatus: "connected",
+            isConnected: true,
+          });
+        });
+        renderComponent();
+        // id: 1 → 49 % 5 = 4
+        // flowInBase=0 → flow_rate_inlet = 0 + 4 - 2.5 = 1.5
+        expect(screen.getByText("1.5 L/min")).toBeInTheDocument();
+      });
+
+      it("uses 0 (not 42.1) as the flow outlet base when metrics.flowRateOutlet.current (camelCase) is numeric 0", () => {
+        act(() => {
+          useRealtimeMetrics.mockReturnValue({
+            metrics: {
+              temperature: { current: "80" },
+              pressure: { current: "100" },
+              flowRateInlet: { current: "45" },
+              flowRateOutlet: { current: 0 },
+            },
+            loading: false,
+            error: null,
+            connectionStatus: "connected",
+            isConnected: true,
+          });
+        });
+        renderComponent();
+        // id: 1 → 49 % 3 = 1
+        // flowOutBase=0 → flow_rate_outlet = 0 + 1 - 1.5 = -0.5
+        expect(screen.getByText("-0.5 L/min")).toBeInTheDocument();
+      });
+
+      it("falls back to 70 when temperature.current is missing (undefined)", () => {
+        act(() => {
+          useRealtimeMetrics.mockReturnValue({
+            metrics: {
+              pressure: { current: "100" },
+              flow_rate_inlet: { current: "45" },
+              flow_rate_outlet: { current: "40" },
+            },
+            loading: false,
+            error: null,
+            connectionStatus: "connected",
+            isConnected: true,
+          });
+        });
+        renderComponent();
+        // id: 1 → 49 % 5 = 4
+        // tempBase=70 → temp_in = 70*0.4 + 4 = 28.0 + 4 = 32.0
+        expect(screen.getByText("32°F")).toBeInTheDocument();
+      });
+
+      it("falls back to 100 when pressure.current is missing (undefined)", () => {
+        act(() => {
+          useRealtimeMetrics.mockReturnValue({
+            metrics: {
+              temperature: { current: "80" },
+              flow_rate_inlet: { current: "45" },
+              flow_rate_outlet: { current: "40" },
+            },
+            loading: false,
+            error: null,
+            connectionStatus: "connected",
+            isConnected: true,
+          });
+        });
+        renderComponent();
+        // id: 1 → 49 % 20 = 9
+        // pressureBase=100 → pressure = 100*1.5 + 9 = 150 + 9 = 159.0
+        expect(screen.getByText("159 kPa")).toBeInTheDocument();
+      });
     });
   });
 });
