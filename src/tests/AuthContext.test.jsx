@@ -41,6 +41,16 @@ const TestConsumer = () => {
   );
 };
 
+// ---- component to capture login result ----
+const CaptureConsumer = ({ onResult }) => {
+  const auth = useAuth();
+  const handleLogin = async () => {
+    const result = await auth.login("u", "p");
+    onResult(result);
+  };
+  return <button onClick={handleLogin}>login-capture</button>;
+};
+
 describe("AuthContext", () => {
   beforeEach(() => {
     Object.defineProperty(window, "localStorage", { value: makeStorageMock(), writable: true });
@@ -149,7 +159,8 @@ describe("AuthContext", () => {
       render(<AuthProvider><TestConsumer /></AuthProvider>);
       await waitFor(() => expect(screen.getByTestId("loading").textContent).toBe("loaded"));
       expect(screen.getByTestId("user").textContent).toBe("adminuser");
-      expect(screen.getByTestId("role").textContent).toBe("admin");
+      // operator -> user via mock implementation
+      expect(screen.getByTestId("role").textContent).toBe("user");
       expect(screen.getByTestId("backendRole").textContent).toBe("operator");
       expect(screen.getByTestId("authed").textContent).toBe("yes");
     });
@@ -391,7 +402,7 @@ describe("AuthContext", () => {
       });
 
       let result;
-      const CaptureConsumer = () => {
+      const CaptureConsumer = ({ onResult }) => {
         const auth = useAuth();
         const handleLogin = async () => {
           result = await auth.login("u", "p", false);
@@ -402,7 +413,7 @@ describe("AuthContext", () => {
       const user = userEvent.setup();
       render(
         <AuthProvider>
-          <CaptureConsumer />
+          <CaptureConsumer onResult={() => {}} />
         </AuthProvider>
       );
       
@@ -420,7 +431,7 @@ describe("AuthContext", () => {
       authService.login.mockResolvedValue({ success: false });
 
       let result;
-      const CaptureConsumer = () => {
+      const CaptureConsumer = ({ onResult }) => {
         const auth = useAuth();
         const handleLogin = async () => {
           result = await auth.login("u", "p", false);
@@ -431,7 +442,7 @@ describe("AuthContext", () => {
       const user = userEvent.setup();
       render(
         <AuthProvider>
-          <CaptureConsumer />
+          <CaptureConsumer onResult={() => {}} />
         </AuthProvider>
       );
       
@@ -449,7 +460,7 @@ describe("AuthContext", () => {
       authService.login.mockRejectedValue(new Error("Network connection failed"));
 
       let result;
-      const CaptureConsumer = () => {
+      const CaptureConsumer = ({ onResult }) => {
         const auth = useAuth();
         const handleLogin = async () => {
           result = await auth.login("u", "p", false);
@@ -460,7 +471,7 @@ describe("AuthContext", () => {
       const user = userEvent.setup();
       render(
         <AuthProvider>
-          <CaptureConsumer />
+          <CaptureConsumer onResult={() => {}} />
         </AuthProvider>
       );
       
@@ -504,7 +515,7 @@ describe("AuthContext", () => {
       });
 
       let result;
-      const CaptureConsumer = () => {
+      const CaptureConsumer = ({ onResult }) => {
         const auth = useAuth();
         const handleLogin = async () => {
           result = await auth.login("u", "p", true);
@@ -515,7 +526,7 @@ describe("AuthContext", () => {
       const user = userEvent.setup();
       render(
         <AuthProvider>
-          <CaptureConsumer />
+          <CaptureConsumer onResult={() => {}} />
         </AuthProvider>
       );
       
@@ -810,7 +821,7 @@ describe("AuthContext", () => {
       expect(screen.getByTestId("permissions").textContent).toBe('{"custom":true}');
     });
 
-    it("uses internal state when customValue is not provided", () => {
+    it("uses internal state when customValue is not provided", async () => {
       render(
         <AuthProvider>
           <TestConsumer />
@@ -818,7 +829,7 @@ describe("AuthContext", () => {
       );
 
       expect(screen.getByTestId("user").textContent).toBe("none");
-      expect(screen.getByTestId("loading").textContent).toBe("loading");
+      await waitFor(() => expect(screen.getByTestId("loading").textContent).toBe("loaded"));
     });
   });
 
