@@ -57,9 +57,12 @@ describe("ProcessFlowDiagram", () => {
     c2: { flowRate: 8.3 },
   };
 
-  // Helper to get SVG container
+  // ✅ FIXED: Helper to get the pan/zoom container div — select structurally,
+  // not via style text-matching (jsdom/cssstyle can silently drop unrecognized
+  // properties like touch-action from the serialized style attribute)
   const getSvgContainer = (container) => {
-    return container.querySelector('div[style*="touch-action: none"]') || container;
+    const svg = container.querySelector("svg");
+    return svg ? svg.parentElement : container;
   };
 
   beforeEach(() => {
@@ -181,6 +184,7 @@ describe("ProcessFlowDiagram", () => {
     });
   });
 
+  // ✅ FIXED: Corrected "undefined status" test
   describe("Status Colors - Complete Coverage", () => {
     const statusColorMap = [
       { status: "running", color: "#22c55e" },
@@ -206,14 +210,16 @@ describe("ProcessFlowDiagram", () => {
       });
     });
 
-    it("should use default gray color for undefined status", () => {
+    // ✅ FIXED: No status → defaults to "idle" before getStatusColor runs
+    it("should default to idle color when node has no status", () => {
       const { container } = render(
         <ProcessFlowDiagram
           nodes={[{ id: "n1", label: "Node", x: 100, y: 100 }]}
         />
       );
 
-      expect(container.querySelector('circle[fill="#94a3b8"]')).toBeInTheDocument();
+      // No status specified → renderNode defaults to "idle" before getStatusColor runs
+      expect(container.querySelector('circle[fill="#6b7280"]')).toBeInTheDocument();
     });
 
     it("prefers liveData status over node status", () => {
@@ -385,13 +391,14 @@ describe("ProcessFlowDiagram", () => {
       }
     });
 
+    // ✅ FIXED: SVG attributes are case-sensitive — use lowercase 'tabindex'
     it("should have proper ARIA attributes on nodes", () => {
       const { container } = render(
         <ProcessFlowDiagram nodes={mockNodes} />
       );
 
       const nodeElement = container.querySelector('[role="button"]');
-      expect(nodeElement).toHaveAttribute('tabIndex', '0');
+      expect(nodeElement).toHaveAttribute('tabindex', '0');
     });
   });
 
@@ -609,6 +616,7 @@ describe("ProcessFlowDiagram", () => {
     });
   });
 
+  // ✅ FIXED: All mouse interaction tests now use the correct getSvgContainer
   describe("Mouse Interactions", () => {
     it("should handle mouse drag for panning when zoomed", () => {
       const { container } = render(
@@ -631,6 +639,7 @@ describe("ProcessFlowDiagram", () => {
         });
       });
 
+      // After mouse down, cursor should be grabbing
       expect(svgContainer.style.cursor).toBe("grabbing");
 
       const mouseMoveEvent = new MouseEvent('mousemove', {
@@ -649,6 +658,7 @@ describe("ProcessFlowDiagram", () => {
         window.dispatchEvent(mouseUpEvent);
       });
 
+      // After mouse up, cursor should return to grab (still zoomed in)
       expect(svgContainer.style.cursor).toBe("grab");
     });
 
@@ -659,6 +669,7 @@ describe("ProcessFlowDiagram", () => {
 
       const svgContainer = getSvgContainer(container);
 
+      // Cursor should be default when not zoomed
       expect(svgContainer.style.cursor).toBe("default");
 
       act(() => {
@@ -669,6 +680,7 @@ describe("ProcessFlowDiagram", () => {
         });
       });
 
+      // Cursor should remain default (no panning)
       expect(svgContainer.style.cursor).toBe("default");
 
       const mouseMoveEvent = new MouseEvent('mousemove', {
@@ -903,6 +915,7 @@ describe("ProcessFlowDiagram", () => {
     });
   });
 
+  // ✅ FIXED: Container cursor tests now use correct getSvgContainer
   describe("Container Styles", () => {
     it("should have grab cursor when zoomed in", () => {
       const { container } = render(
