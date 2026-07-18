@@ -1,6 +1,6 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import SideNavigation from "../components/SideNavigation";
 
@@ -39,8 +39,34 @@ const renderSideNavigation = () => {
 };
 
 describe("SideNavigation", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+
+    // Re-establish known defaults every test so leftover mockReturnValue
+    // overrides from a previous test can never leak into this one.
+    const { useAuth } = await import("../context/AuthContext");
+    useAuth.mockReturnValue({
+      userRole: "admin",
+      permissions: { canViewAnalytics: true, canViewProtocols: true },
+      logout: vi.fn(),
+    });
+
+    const { useSettings } = await import("../context/SettingsContext");
+    useSettings.mockReturnValue({
+      settings: { soundEnabled: true, volume: 0.5 },
+    });
+
+    const { useSidebar } = await import("../context/SidebarContext");
+    useSidebar.mockReturnValue({
+      isCollapsed: false,
+      setIsCollapsed: vi.fn(),
+    });
+  });
+
+  // Unmount every rendered tree after each test so text/queries from one
+  // test can never bleed into assertions in the next test.
+  afterEach(() => {
+    cleanup();
   });
 
   describe("Rendering", () => {
@@ -60,33 +86,17 @@ describe("SideNavigation", () => {
 
       renderSideNavigation();
 
-      const dashboardElements = screen.getAllByText("Dashboard");
-      expect(dashboardElements.length).toBeGreaterThan(0);
-      
-      const unitsElements = screen.getAllByText("Units Overview");
-      expect(unitsElements.length).toBeGreaterThan(0);
-      
-      const alertsElements = screen.getAllByText("Alerts");
-      expect(alertsElements.length).toBeGreaterThan(0);
-      
-      const alarmsElements = screen.getAllByText("Alarms!");
-      expect(alarmsElements.length).toBeGreaterThan(0);
-      
-      const historyElements = screen.getAllByText("History");
-      expect(historyElements.length).toBeGreaterThan(0);
-      
-      const reportsElements = screen.getAllByText("Reports");
-      expect(reportsElements.length).toBeGreaterThan(0);
-      
-      const settingsElements = screen.getAllByText("Settings");
-      expect(settingsElements.length).toBeGreaterThan(0);
-      
-      const adminElements = screen.getAllByText("Admin Panel");
-      expect(adminElements.length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Dashboard").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Units Overview").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Alerts").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Alarms!").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("History").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Reports").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Settings").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Admin Panel").length).toBeGreaterThan(0);
     });
 
-    // Skipping flaky tests due to multiple renders in test environment
-    it.skip("should show 'My Units' label for regular users", async () => {
+    it("should show 'My Units' label for regular users", async () => {
       const { useAuth } = await import("../context/AuthContext");
       useAuth.mockReturnValue({
         userRole: "user",
@@ -96,14 +106,11 @@ describe("SideNavigation", () => {
 
       renderSideNavigation();
 
-      const myUnitsElements = screen.getAllByText("My Units");
-      expect(myUnitsElements.length).toBeGreaterThan(0);
-      
-      const unitsElements = screen.queryAllByText("Units Overview");
-      expect(unitsElements.length).toBe(0);
+      expect(screen.getAllByText("My Units").length).toBeGreaterThan(0);
+      expect(screen.queryAllByText("Units Overview").length).toBe(0);
     });
 
-    it.skip("should hide admin-only items for regular users", async () => {
+    it("should hide admin-only items for regular users", async () => {
       const { useAuth } = await import("../context/AuthContext");
       useAuth.mockReturnValue({
         userRole: "user",
@@ -113,24 +120,15 @@ describe("SideNavigation", () => {
 
       renderSideNavigation();
 
-      const adminElements = screen.queryAllByText("Admin Panel");
-      expect(adminElements.length).toBe(0);
-      
-      const salesElements = screen.queryAllByText("Sales");
-      expect(salesElements.length).toBe(0);
-      
-      const healthElements = screen.queryAllByText("System Health");
-      expect(healthElements.length).toBe(0);
+      expect(screen.queryAllByText("Admin Panel").length).toBe(0);
+      expect(screen.queryAllByText("Sales").length).toBe(0);
+      expect(screen.queryAllByText("System Health").length).toBe(0);
     });
 
     it("should show badges for alerts and alarms", () => {
       renderSideNavigation();
-
-      const alertsElements = screen.getAllByText("Alerts");
-      expect(alertsElements.length).toBeGreaterThan(0);
-      
-      const alarmsElements = screen.getAllByText("Alarms!");
-      expect(alarmsElements.length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Alerts").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Alarms!").length).toBeGreaterThan(0);
     });
   });
 
@@ -144,12 +142,10 @@ describe("SideNavigation", () => {
       });
 
       renderSideNavigation();
-
-      const scadaElements = screen.getAllByText("SCADA");
-      expect(scadaElements.length).toBeGreaterThan(0);
+      expect(screen.getAllByText("SCADA").length).toBeGreaterThan(0);
     });
 
-    it.skip("should hide analytics menu for users without permission", async () => {
+    it("should hide analytics menu for users without permission", async () => {
       const { useAuth } = await import("../context/AuthContext");
       useAuth.mockReturnValue({
         userRole: "user",
@@ -158,9 +154,7 @@ describe("SideNavigation", () => {
       });
 
       renderSideNavigation();
-
-      const scadaElements = screen.queryAllByText("SCADA");
-      expect(scadaElements.length).toBe(0);
+      expect(screen.queryAllByText("SCADA").length).toBe(0);
     });
 
     it("should show protocol manager for users with permission", async () => {
@@ -172,28 +166,23 @@ describe("SideNavigation", () => {
       });
 
       renderSideNavigation();
-
-      const protocolElements = screen.getAllByText("Protocol Manager");
-      expect(protocolElements.length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Protocol Manager").length).toBeGreaterThan(0);
     });
   });
 
   describe("Collapsed State", () => {
     it("should hide labels when collapsed", async () => {
       const { useSidebar } = await import("../context/SidebarContext");
-      const { container } = render(
-        <BrowserRouter>
-          <SideNavigation />
-        </BrowserRouter>,
-      );
-
       useSidebar.mockReturnValue({
         isCollapsed: true,
         setIsCollapsed: vi.fn(),
       });
 
+      const { container } = renderSideNavigation();
+
       const icons = container.querySelectorAll("svg");
       expect(icons.length).toBeGreaterThan(0);
+      expect(screen.queryAllByText("Dashboard").length).toBe(0);
     });
 
     it("should show labels when expanded", async () => {
@@ -205,20 +194,15 @@ describe("SideNavigation", () => {
 
       renderSideNavigation();
 
-      const dashboardElements = screen.getAllByText("Dashboard");
-      expect(dashboardElements.length).toBeGreaterThan(0);
-      
-      const alertsElements = screen.getAllByText("Alerts");
-      expect(alertsElements.length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Dashboard").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Alerts").length).toBeGreaterThan(0);
     });
   });
 
   describe("Navigation", () => {
     it("should render navigation buttons", () => {
       const { container } = renderSideNavigation();
-
-      const buttons = container.querySelectorAll("button");
-      expect(buttons.length).toBeGreaterThan(0);
+      expect(container.querySelectorAll("button").length).toBeGreaterThan(0);
     });
 
     it("should navigate on item click", () => {
@@ -235,7 +219,7 @@ describe("SideNavigation", () => {
   });
 
   describe("Logout", () => {
-    it.skip("should call logout when logout button is clicked", async () => {
+    it("should call logout when logout button is clicked", async () => {
       const mockLogout = vi.fn();
       const { useAuth } = await import("../context/AuthContext");
       useAuth.mockReturnValue({
@@ -286,16 +270,8 @@ describe("SideNavigation", () => {
 
   describe("Mobile Navigation", () => {
     it("should render mobile toggle button", () => {
-      renderSideNavigation();
-
-      const { container } = render(
-        <BrowserRouter>
-          <SideNavigation />
-        </BrowserRouter>,
-      );
-
-      const buttons = container.querySelectorAll("button");
-      expect(buttons.length).toBeGreaterThan(0);
+      const { container } = renderSideNavigation();
+      expect(container.querySelectorAll("button").length).toBeGreaterThan(0);
     });
 
     it("should toggle mobile menu", () => {
@@ -325,8 +301,7 @@ describe("SideNavigation", () => {
       renderSideNavigation();
 
       const unitsElements = screen.getAllByText("Units Overview");
-      const unitsButton = unitsElements[0].closest("button");
-      expect(unitsButton).toBeInTheDocument();
+      expect(unitsElements[0].closest("button")).toBeInTheDocument();
     });
 
     it("should show limited unit count for regular user", async () => {
@@ -340,26 +315,21 @@ describe("SideNavigation", () => {
       renderSideNavigation();
 
       const myUnitsElements = screen.getAllByText("My Units");
-      const unitsButton = myUnitsElements[0].closest("button");
-      expect(unitsButton).toBeInTheDocument();
+      expect(myUnitsElements[0].closest("button")).toBeInTheDocument();
     });
   });
 
   describe("Accessibility", () => {
     it("should have proper button types", () => {
       const { container } = renderSideNavigation();
-
-      const buttons = container.querySelectorAll("button");
-      buttons.forEach((button) => {
+      container.querySelectorAll("button").forEach((button) => {
         expect(button).toHaveAttribute("type");
       });
     });
 
     it("should render navigation items as buttons for keyboard accessibility", () => {
       renderSideNavigation();
-
-      const dashboardElements = screen.getAllByText("Dashboard");
-      const dashboardButton = dashboardElements[0].closest("button");
+      const dashboardButton = screen.getAllByText("Dashboard")[0].closest("button");
       expect(dashboardButton).toBeInTheDocument();
       expect(dashboardButton?.tagName).toBe("BUTTON");
     });
