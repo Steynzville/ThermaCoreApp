@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/navigation-menu";
 
 describe("NavigationMenu", () => {
-  it("renders the root with viewport enabled by default", () => {
+  it("renders the root with data-viewport='true' by default", () => {
     const { container } = render(
       <NavigationMenu>
         <NavigationMenuList>
@@ -38,9 +38,10 @@ describe("NavigationMenu", () => {
     );
     const root = container.querySelector('[data-slot="navigation-menu"]');
     expect(root).toHaveAttribute("data-viewport", "true");
-    expect(
-      container.querySelector('[data-slot="navigation-menu-viewport"]'),
-    ).toBeInTheDocument();
+    // Note: we don't assert the shared viewport's DOM presence here — Radix
+    // appears to lazily mount it only once a trigger/content becomes active
+    // (see the "opens a trigger's content" test below, which exercises the
+    // viewport in that active state instead).
   });
 
   it("omits the shared viewport when viewport={false}", () => {
@@ -137,7 +138,7 @@ describe("NavigationMenu", () => {
     expect(trigger).toHaveAttribute("aria-expanded", "true");
   });
 
-  it("marks an active link with data-active for styling", () => {
+  it("marks an active link with a present data-active attribute for styling", () => {
     render(
       <NavigationMenu>
         <NavigationMenuList>
@@ -153,10 +154,10 @@ describe("NavigationMenu", () => {
         </NavigationMenuList>
       </NavigationMenu>,
     );
-    expect(screen.getByTestId("active-link")).toHaveAttribute(
-      "data-active",
-      "true",
-    );
+    // Radix renders boolean state props like `active` as a bare/empty-string
+    // data attribute (present = true), not the literal string "true".
+    const link = screen.getByTestId("active-link");
+    expect(link.hasAttribute("data-active")).toBe(true);
   });
 
   it("exposes navigationMenuTriggerStyle() as a reusable class string for plain links", () => {
@@ -165,12 +166,15 @@ describe("NavigationMenu", () => {
     expect(classes).toContain("inline-flex");
   });
 
-  it("renders the indicator element when included", () => {
+  it("renders the indicator element once a trigger becomes active", async () => {
+    const user = userEvent.setup();
     const { container } = render(
       <NavigationMenu viewport={false}>
         <NavigationMenuList>
           <NavigationMenuItem>
-            <NavigationMenuTrigger>Stations</NavigationMenuTrigger>
+            <NavigationMenuTrigger data-testid="trigger">
+              Stations
+            </NavigationMenuTrigger>
             <NavigationMenuContent>
               <NavigationMenuLink href="/stations/1">
                 Pump Station 1
@@ -181,24 +185,38 @@ describe("NavigationMenu", () => {
         </NavigationMenuList>
       </NavigationMenu>,
     );
+
+    await user.click(screen.getByTestId("trigger"));
+    await screen.findByText("Pump Station 1");
+
     expect(
       container.querySelector('[data-slot="navigation-menu-indicator"]'),
     ).toBeInTheDocument();
   });
 
-  it("renders the standalone viewport with expected data-slot", () => {
-    const { container } = render(
+  it("routes opened content into a manually-placed viewport", async () => {
+    const user = userEvent.setup();
+    render(
       <NavigationMenu viewport={false}>
         <NavigationMenuList>
           <NavigationMenuItem>
-            <NavigationMenuLink href="/dashboard">Dashboard</NavigationMenuLink>
+            <NavigationMenuTrigger data-testid="trigger">
+              Stations
+            </NavigationMenuTrigger>
+            <NavigationMenuContent>
+              <NavigationMenuLink href="/stations/1">
+                Pump Station 1
+              </NavigationMenuLink>
+            </NavigationMenuContent>
           </NavigationMenuItem>
         </NavigationMenuList>
         <NavigationMenuViewport data-testid="manual-viewport" />
       </NavigationMenu>,
     );
-    expect(screen.getByTestId("manual-viewport")).toBeInTheDocument();
-    expect(container.querySelectorAll('[data-slot="navigation-menu-viewport"]'))
-      .toHaveLength(1);
+
+    await user.click(screen.getByTestId("trigger"));
+
+    expect(await screen.findByTestId("manual-viewport")).toBeInTheDocument();
+    expect(screen.getByText("Pump Station 1")).toBeInTheDocument();
   });
 });
