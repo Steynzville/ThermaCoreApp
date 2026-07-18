@@ -421,6 +421,7 @@ describe("UserUnitDetails", () => {
         if (saveButton) await user.click(saveButton);
 
         expect(mockUpdateUnitName).toHaveBeenCalled();
+        // ✅ FIXED: Check input display value instead of text outside
         await waitFor(() => {
           expect(screen.getByDisplayValue("Unit Alpha")).toBeInTheDocument();
         });
@@ -446,6 +447,7 @@ describe("UserUnitDetails", () => {
         if (saveButton) await user.click(saveButton);
 
         expect(mockUpdateUnitLocation).toHaveBeenCalled();
+        // ✅ FIXED: Check input display value instead of text outside
         await waitFor(() => {
           expect(screen.getByDisplayValue("Site A")).toBeInTheDocument();
         });
@@ -655,18 +657,15 @@ describe("UserUnitDetails", () => {
     it("shows N/A (not 'undefined kPa') for pressure when pressure is missing while online", () => {
       const unitNoPressure = { ...baseUnit, pressure: undefined };
       renderWithUnit({}, unitNoPressure);
-      // Should show N/A for pressure, not "undefined kPa"
       expect(screen.queryByText(/undefined kPa/)).not.toBeInTheDocument();
-      // Should show N/A somewhere (temp in/out will also show N/A)
       expect(screen.getAllByText("N/A").length).toBeGreaterThan(0);
     });
 
-    // ✅ FIXED: Drive pressure through metrics, not unit.pressure
     it("shows the pressure value derived from metrics.pressure.current", () => {
       useRealtimeMetrics.mockReturnValue({
         metrics: { pressure: { current: 50 } },
       });
-      renderWithUnit({ pressure: 101.3 }); // just needs to be defined, not a specific value
+      renderWithUnit({ pressure: 101.3 });
       // pressureBase: 50, idOffset ("1" -> 49) % 20 = 9
       // pressure: 50 * 1.5 + 9 = 84
       expect(screen.getByText("84 kPa")).toBeInTheDocument();
@@ -706,9 +705,9 @@ describe("UserUnitDetails", () => {
       renderWithUnit();
       // id "1" -> idOffset 49
       // inlet: 60 + (49%5) - 2.5 = 61.5
-      // outlet: 50 + (49%3) - 1.5 = 49.6
+      // ✅ FIXED: outlet: 50 + (49%3) - 1.5 = 49.5
       expect(screen.getByText("61.5 L/min")).toBeInTheDocument();
-      expect(screen.getByText("49.6 L/min")).toBeInTheDocument();
+      expect(screen.getByText("49.5 L/min")).toBeInTheDocument();
     });
 
     it("applies the red/bold class when flow rate is >= 90", () => {
@@ -802,8 +801,9 @@ describe("UserUnitDetails", () => {
         if (saveButton) await user.click(saveButton);
 
         expect(mockUpdateUnitName).toHaveBeenCalled();
+        // ✅ FIXED: Check input display value
         await waitFor(() => {
-          expect(screen.getByText("Unit Alpha")).toBeInTheDocument();
+          expect(screen.getByDisplayValue("Unit Alpha")).toBeInTheDocument();
         });
       }
     });
@@ -826,8 +826,9 @@ describe("UserUnitDetails", () => {
         if (saveButton) await user.click(saveButton);
 
         expect(mockUpdateUnitLocation).toHaveBeenCalled();
+        // ✅ FIXED: Check input display value
         await waitFor(() => {
-          expect(screen.getByText("Site A")).toBeInTheDocument();
+          expect(screen.getByDisplayValue("Site A")).toBeInTheDocument();
         });
       }
     });
@@ -864,7 +865,6 @@ describe("UserUnitDetails", () => {
       const user = userEvent.setup();
       await user.click(screen.getByRole("button", { name: "Alerts" }));
       
-      // The mocked UnitAlertsTab renders all branches
       expect(screen.getByTestId("color-critical")).toBeInTheDocument();
       expect(screen.getByTestId("color-warning")).toBeInTheDocument();
       expect(screen.getByTestId("color-info")).toBeInTheDocument();
