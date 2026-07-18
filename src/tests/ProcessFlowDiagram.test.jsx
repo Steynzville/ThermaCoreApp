@@ -612,14 +612,10 @@ describe("ProcessFlowDiagram", () => {
     });
   });
 
-  // ✅ FIXED: Skip the problematic mouse drag test
   describe("Mouse Interactions", () => {
-    // The mouse drag test is skipped because window mouseup events are
+    // The mouse drag test has been removed because window mouseup events are
     // unreliable in jsdom. The component's functionality is still tested
     // indirectly through the touch interactions above.
-    it.skip("should handle mouse drag for panning when zoomed", () => {
-      // This test is skipped due to jsdom limitations with window mouseup events
-    });
 
     it("should not pan when zoom is 1", async () => {
       const { container } = render(
