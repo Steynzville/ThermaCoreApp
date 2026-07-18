@@ -1,3 +1,5 @@
+// src/tests/RemoteControl.test.jsx
+
 import {
   describe,
   it,
@@ -6,7 +8,7 @@ import {
   beforeEach,
   afterEach,
 } from "vitest";
-import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import RemoteControl from "../components/RemoteControl";
 import { AuthProvider } from "../context/AuthContext";
@@ -96,7 +98,7 @@ const mockNavigate = vi.fn();
 
 // Create a mock location that can be controlled per test
 let mockLocationState = { unit: null };
-let mockUnit = {
+const mockUnit = {
   id: "TC001",
   name: "Test Unit",
   status: "online",
@@ -142,10 +144,10 @@ vi.mock("../context/SettingsContext", async () => {
   };
 });
 
-// Test wrapper with all providers - now accepts settings as a prop
-const TestWrapper = ({ 
-  children, 
-  unit = mockUnit, 
+// Test wrapper with all providers
+const TestWrapper = ({
+  children,
+  unit = mockUnit,
   role = "admin",
   settings = { soundEnabled: true, volume: 0.5 }
 }) => {
@@ -175,23 +177,30 @@ const TestWrapper = ({
 };
 
 describe("RemoteControl Component", () => {
+  let originalExitFullscreen;
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockNavigate.mockClear();
     mockLocationState = { unit: mockUnit };
-    // Reset permissions mock to default
     canControlUnits.mockReturnValue(true);
-    // Reset timers
     vi.useFakeTimers();
+
+    originalExitFullscreen = document.exitFullscreen;
   });
 
   afterEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
+
+    if (originalExitFullscreen) {
+      document.exitFullscreen = originalExitFullscreen;
+    } else {
+      delete document.exitFullscreen;
+    }
   });
 
   describe("Component Rendering", () => {
-    // ✅ FIX: Wrap render in act() to handle async effects
     it("should render remote control page for valid unit", () => {
       act(() => {
         render(
@@ -205,10 +214,9 @@ describe("RemoteControl Component", () => {
       expect(headingElements.length).toBeGreaterThan(0);
     });
 
-    // ✅ FIX: Wrap render in act() to handle async effects
     it("should show 'Unit Not Found' when no unit is provided", () => {
       mockLocationState = { unit: null };
-      
+
       act(() => {
         render(
           <TestWrapper unit={null}>
@@ -221,7 +229,6 @@ describe("RemoteControl Component", () => {
       expect(headingElements.length).toBeGreaterThan(0);
     });
 
-    // ✅ FIX: Wrap render in act() to handle async effects
     it("should display connection status as Connected", () => {
       act(() => {
         render(
@@ -235,7 +242,6 @@ describe("RemoteControl Component", () => {
       expect(elements.length).toBeGreaterThan(0);
     });
 
-    // ✅ FIX: Wrap render in act() to handle async effects
     it("should display unit status badge", () => {
       act(() => {
         render(
@@ -248,10 +254,30 @@ describe("RemoteControl Component", () => {
       const elements = screen.getAllByText(/ONLINE/i);
       expect(elements.length).toBeGreaterThan(0);
     });
+
+    it("should sync state when unit prop changes", () => {
+      const initialUnit = { ...mockUnit, status: "offline", waterProductionOn: false };
+      const updatedUnit = { ...mockUnit, status: "online", waterProductionOn: true };
+      
+      const { rerender } = render(
+        <TestWrapper unit={initialUnit}>
+          <RemoteControl unit={initialUnit} />
+        </TestWrapper>,
+      );
+
+      expect(screen.getByText(/OFFLINE/i)).toBeInTheDocument();
+      
+      rerender(
+        <TestWrapper unit={updatedUnit}>
+          <RemoteControl unit={updatedUnit} />
+        </TestWrapper>,
+      );
+
+      expect(screen.getByText(/ONLINE/i)).toBeInTheDocument();
+    });
   });
 
   describe("Permission Checks - Admin Role", () => {
-    // ✅ FIX: Wrap render in act() to handle async effects
     it("should allow admin to toggle machine power with cascade effect", () => {
       const unitWithAutoOn = { ...mockUnit, autoSwitchEnabled: true };
       act(() => {
@@ -268,9 +294,8 @@ describe("RemoteControl Component", () => {
       expect(switches[2]).toHaveAttribute("data-checked", "true");
 
       const actionButtons = screen.getAllByTestId("alert-dialog-action");
-      fireEvent.click(actionButtons[0]); // confirm turning OFF machine power
+      fireEvent.click(actionButtons[0]);
 
-      // ✅ FIX: Advance timers for cascade effects (setTimeout 50ms in component)
       act(() => {
         vi.advanceTimersByTime(100);
       });
@@ -280,13 +305,12 @@ describe("RemoteControl Component", () => {
 
       const switchesAfter = screen.getAllByTestId("switch");
       expect(switchesAfter[0]).toHaveAttribute("data-checked", "false");
-      expect(switchesAfter[1]).toHaveAttribute("data-checked", "false"); // cascaded off
-      expect(switchesAfter[2]).toHaveAttribute("data-checked", "false"); // cascaded off
-      expect(switchesAfter[1]).toBeDisabled(); // disabled once machine is off
+      expect(switchesAfter[1]).toHaveAttribute("data-checked", "false");
+      expect(switchesAfter[2]).toHaveAttribute("data-checked", "false");
+      expect(switchesAfter[1]).toBeDisabled();
       expect(switchesAfter[2]).toBeDisabled();
     });
 
-    // ✅ FIX: Wrap render in act() to handle async effects
     it("should allow admin to toggle water production", () => {
       act(() => {
         render(
@@ -298,20 +322,18 @@ describe("RemoteControl Component", () => {
 
       const switches = screen.getAllByTestId("switch");
       expect(switches.length).toBeGreaterThan(1);
-      
+
       const actionButtons = screen.getAllByTestId("alert-dialog-action");
-      fireEvent.click(actionButtons[1]); // Water production toggle
-      
-      // ✅ FIX: Advance timers for cascade effects
+      fireEvent.click(actionButtons[1]);
+
       act(() => {
         vi.advanceTimersByTime(100);
       });
-      
+
       expect(playSound).toHaveBeenCalledWith("water-off.mp3", true, 0.5);
       expect(switches[1]).toHaveAttribute("data-checked", "false");
     });
 
-    // ✅ FIX: Wrap render in act() to handle async effects
     it("should allow admin to toggle auto switch", () => {
       const unitWithAutoOff = { ...mockUnit, autoSwitchEnabled: false };
       act(() => {
@@ -324,17 +346,16 @@ describe("RemoteControl Component", () => {
 
       const switches = screen.getAllByTestId("switch");
       expect(switches.length).toBeGreaterThan(2);
-      
+
       const actionButtons = screen.getAllByTestId("alert-dialog-action");
-      fireEvent.click(actionButtons[2]); // Auto switch toggle
-      
+      fireEvent.click(actionButtons[2]);
+
       expect(playSound).toHaveBeenCalledWith("cool-tones.mp3", true, 0.5);
       expect(switches[2]).toHaveAttribute("data-checked", "true");
     });
   });
 
   describe("Cascading Toggle Rules", () => {
-    // ✅ FIX: Wrap render in act() to handle async effects
     it("should turn off auto switch when water production is turned off while machine stays on", () => {
       const unitWithAutoOn = { ...mockUnit, autoSwitchEnabled: true };
       act(() => {
@@ -346,9 +367,8 @@ describe("RemoteControl Component", () => {
       });
 
       const actionButtons = screen.getAllByTestId("alert-dialog-action");
-      fireEvent.click(actionButtons[1]); // confirm turning OFF water production
+      fireEvent.click(actionButtons[1]);
 
-      // ✅ FIX: Advance timers for cascade effects
       act(() => {
         vi.advanceTimersByTime(100);
       });
@@ -356,11 +376,10 @@ describe("RemoteControl Component", () => {
       expect(playSound).toHaveBeenCalledWith("water-off.mp3", true, 0.5);
       const switches = screen.getAllByTestId("switch");
       expect(switches[1]).toHaveAttribute("data-checked", "false");
-      expect(switches[2]).toHaveAttribute("data-checked", "false"); // auto cascaded off
-      expect(switches[0]).toHaveAttribute("data-checked", "true"); // machine untouched
+      expect(switches[2]).toHaveAttribute("data-checked", "false");
+      expect(switches[0]).toHaveAttribute("data-checked", "true");
     });
 
-    // ✅ FIX: Wrap render in act() to handle async effects
     it("should keep water production and auto switch disabled when machine is turned off and then on again", () => {
       const unitWithAllOn = { ...mockUnit, autoSwitchEnabled: true };
       act(() => {
@@ -371,32 +390,28 @@ describe("RemoteControl Component", () => {
         );
       });
 
-      // Turn machine off
       const actionButtons = screen.getAllByTestId("alert-dialog-action");
       fireEvent.click(actionButtons[0]);
-      
-      // ✅ FIX: Advance timers for cascade effects
+
       act(() => {
         vi.advanceTimersByTime(100);
       });
-      
+
       let switches = screen.getAllByTestId("switch");
       expect(switches[0]).toHaveAttribute("data-checked", "false");
       expect(switches[1]).toHaveAttribute("data-checked", "false");
       expect(switches[2]).toHaveAttribute("data-checked", "false");
 
-      // Turn machine back on
-      fireEvent.click(actionButtons[0]); // Click machine toggle again
-      
+      fireEvent.click(actionButtons[0]);
+
       switches = screen.getAllByTestId("switch");
       expect(switches[0]).toHaveAttribute("data-checked", "true");
-      expect(switches[1]).toHaveAttribute("data-checked", "false"); // Still off
-      expect(switches[2]).toHaveAttribute("data-checked", "false"); // Still off
+      expect(switches[1]).toHaveAttribute("data-checked", "false");
+      expect(switches[2]).toHaveAttribute("data-checked", "false");
     });
   });
 
   describe("Permission Checks - No Control Permission", () => {
-    // ✅ FIX: Wrap render in act() to handle async effects
     it("should disable all switches and hide confirm dialogs when user lacks control permission", () => {
       canControlUnits.mockReturnValue(false);
 
@@ -415,7 +430,6 @@ describe("RemoteControl Component", () => {
   });
 
   describe("Water Generation Not Supported", () => {
-    // ✅ FIX: Wrap render in act() to handle async effects
     it("should hide water production and auto switch cards when unit has no water generation", () => {
       const noWaterUnit = { ...mockUnit, watergeneration: false };
 
@@ -434,7 +448,6 @@ describe("RemoteControl Component", () => {
   });
 
   describe("Operator Role", () => {
-    // ✅ FIX: Wrap render in act() to handle async effects
     it("should allow operator to toggle machine power", () => {
       act(() => {
         render(
@@ -446,19 +459,17 @@ describe("RemoteControl Component", () => {
 
       const switches = screen.getAllByTestId("switch");
       expect(switches.length).toBeGreaterThan(0);
-      
+
       const actionButtons = screen.getAllByTestId("alert-dialog-action");
       fireEvent.click(actionButtons[0]);
-      
-      // ✅ FIX: Advance timers for cascade effects
+
       act(() => {
         vi.advanceTimersByTime(100);
       });
-      
+
       expect(playSound).toHaveBeenCalledWith("power-off.mp3", true, 0.5);
     });
 
-    // ✅ FIX: Wrap render in act() to handle async effects
     it("should allow operator to toggle water production", () => {
       act(() => {
         render(
@@ -470,19 +481,17 @@ describe("RemoteControl Component", () => {
 
       const switches = screen.getAllByTestId("switch");
       expect(switches.length).toBeGreaterThan(1);
-      
+
       const actionButtons = screen.getAllByTestId("alert-dialog-action");
       fireEvent.click(actionButtons[1]);
-      
-      // ✅ FIX: Advance timers for cascade effects
+
       act(() => {
         vi.advanceTimersByTime(100);
       });
-      
+
       expect(playSound).toHaveBeenCalledWith("water-off.mp3", true, 0.5);
     });
 
-    // ✅ FIX: Wrap render in act() to handle async effects
     it("should allow operator to toggle auto switch", () => {
       const unitWithAutoOff = { ...mockUnit, autoSwitchEnabled: false };
       act(() => {
@@ -495,7 +504,7 @@ describe("RemoteControl Component", () => {
 
       const switches = screen.getAllByTestId("switch");
       expect(switches.length).toBeGreaterThan(2);
-      
+
       const actionButtons = screen.getAllByTestId("alert-dialog-action");
       fireEvent.click(actionButtons[2]);
       expect(playSound).toHaveBeenCalledWith("cool-tones.mp3", true, 0.5);
@@ -503,7 +512,6 @@ describe("RemoteControl Component", () => {
   });
 
   describe("Video Feed Controls", () => {
-    // ✅ FIX: Wrap render in act() to handle async effects
     it("should toggle video feed on and off", () => {
       act(() => {
         render(
@@ -514,15 +522,15 @@ describe("RemoteControl Component", () => {
       });
 
       const buttons = screen.getAllByRole("button");
-      const videoButton = buttons.find(btn => 
+      const videoButton = buttons.find(btn =>
         btn.textContent?.includes("Start Feed") || btn.textContent?.includes("Stop Feed")
       );
-      
+
       if (videoButton) {
         fireEvent.click(videoButton);
         let activeElements = screen.getAllByText(/Live Feed Active/i);
         expect(activeElements.length).toBeGreaterThan(0);
-        
+
         fireEvent.click(videoButton);
         const inactiveElements = screen.getAllByText(/Video Feed Inactive/i);
         expect(inactiveElements.length).toBeGreaterThan(0);
@@ -531,7 +539,6 @@ describe("RemoteControl Component", () => {
       }
     });
 
-    // ✅ FIX: Wrap render in act() to handle async effects
     it("should allow viewer to view video feed (read-only access)", () => {
       act(() => {
         render(
@@ -542,10 +549,10 @@ describe("RemoteControl Component", () => {
       });
 
       const buttons = screen.getAllByRole("button");
-      const videoButton = buttons.find(btn => 
+      const videoButton = buttons.find(btn =>
         btn.textContent?.includes("Start Feed") || btn.textContent?.includes("Stop Feed")
       );
-      
+
       if (videoButton) {
         fireEvent.click(videoButton);
         const activeElements = screen.getAllByText(/Live Feed Active/i);
@@ -555,7 +562,6 @@ describe("RemoteControl Component", () => {
       }
     });
 
-    // ✅ FIX: Wrap render in act() to handle async effects
     it("should show refresh button when video feed is active", () => {
       act(() => {
         render(
@@ -565,23 +571,20 @@ describe("RemoteControl Component", () => {
         );
       });
 
-      // Start video feed
       const buttons = screen.getAllByRole("button");
-      const videoButton = buttons.find(btn => 
+      const videoButton = buttons.find(btn =>
         btn.textContent?.includes("Start Feed")
       );
-      
+
       if (videoButton) {
         fireEvent.click(videoButton);
-        
-        // Refresh button should appear
+
         const refreshButtons = screen.getAllByTestId("button-refresh-feed");
         expect(refreshButtons.length).toBeGreaterThan(0);
       }
     });
 
-    // ✅ FIX: Already has act() wrapping, just ensure it's consistent
-    it("should trigger refresh animation when refresh button is clicked", async () => {
+    it("should trigger refresh animation when refresh button is clicked", () => {
       act(() => {
         render(
           <TestWrapper>
@@ -590,30 +593,25 @@ describe("RemoteControl Component", () => {
         );
       });
 
-      // Start video feed first
       const buttons = screen.getAllByRole("button");
-      const videoButton = buttons.find(btn => 
+      const videoButton = buttons.find(btn =>
         btn.textContent?.includes("Start Feed")
       );
-      
+
       if (videoButton) {
         fireEvent.click(videoButton);
-        
-        // Find and click refresh button
+
         const refreshButton = screen.getByTestId("button-refresh-feed");
         expect(refreshButton).toBeInTheDocument();
-        
+
         fireEvent.click(refreshButton);
-        
-        // Should show refreshing state
+
         expect(screen.getByText(/Refreshing feed.../i)).toBeInTheDocument();
-        
-        // Fast-forward timers
+
         act(() => {
           vi.advanceTimersByTime(800);
         });
-        
-        // Should return to normal state
+
         expect(screen.getByText(/Live Feed Active/i)).toBeInTheDocument();
       }
     });
@@ -627,14 +625,35 @@ describe("RemoteControl Component", () => {
         );
       });
 
-      // Refresh button should not be visible when feed is inactive
       const refreshButtons = screen.queryAllByTestId("button-refresh-feed");
       expect(refreshButtons.length).toBe(0);
+    });
+
+    it("should play correct sounds for video feed toggle", () => {
+      act(() => {
+        render(
+          <TestWrapper>
+            <RemoteControl unit={mockUnit} />
+          </TestWrapper>,
+        );
+      });
+
+      const buttons = screen.getAllByRole("button");
+      const videoButton = buttons.find(btn =>
+        btn.textContent?.includes("Start Feed")
+      );
+
+      if (videoButton) {
+        fireEvent.click(videoButton);
+        expect(playSound).toHaveBeenCalledWith("video-on.mp3", true, 0.5);
+        
+        fireEvent.click(videoButton);
+        expect(playSound).toHaveBeenCalledWith("video-off.mp3", true, 0.5);
+      }
     });
   });
 
   describe("Camera Selection", () => {
-    // ✅ FIX: Wrap render in act() to handle async effects
     it("should show camera selection dropdown", () => {
       act(() => {
         render(
@@ -646,12 +665,11 @@ describe("RemoteControl Component", () => {
 
       const select = screen.getByTestId("select-camera");
       expect(select).toBeInTheDocument();
-      
+
       const options = select.querySelectorAll("option");
       expect(options.length).toBeGreaterThan(0);
     });
 
-    // ✅ FIX: Wrap render in act() to handle async effects
     it("should handle camera selection change", () => {
       act(() => {
         render(
@@ -668,7 +686,6 @@ describe("RemoteControl Component", () => {
   });
 
   describe("Fullscreen Toggle", () => {
-    // ✅ FIX: Wrap render in act() to handle async effects
     it("should have fullscreen toggle button", () => {
       act(() => {
         render(
@@ -684,10 +701,9 @@ describe("RemoteControl Component", () => {
   });
 
   describe("Unit Not Found - Navigation", () => {
-    // ✅ FIX: Wrap render in act() to handle async effects
     it("should navigate back when no unit is provided", () => {
       mockLocationState = { unit: null };
-      
+
       act(() => {
         render(
           <TestWrapper unit={null}>
@@ -698,14 +714,13 @@ describe("RemoteControl Component", () => {
 
       const backButton = screen.getByRole("button", { name: /Back to Unit Details/i });
       expect(backButton).toBeInTheDocument();
-      
+
       fireEvent.click(backButton);
       expect(mockNavigate).toHaveBeenCalledWith(-1);
     });
   });
 
   describe("Back Navigation", () => {
-    // ✅ FIX: Wrap render in act() to handle async effects
     it("should navigate back when back button is clicked", () => {
       act(() => {
         render(
@@ -722,7 +737,6 @@ describe("RemoteControl Component", () => {
   });
 
   describe("Audio Feedback", () => {
-    // ✅ FIX: Wrap render in act() to handle async effects
     it("should play sound when machine is turned on", () => {
       const unitOff = { ...mockUnit, status: "offline" };
       act(() => {
@@ -735,26 +749,23 @@ describe("RemoteControl Component", () => {
 
       const switches = screen.getAllByTestId("switch");
       expect(switches[0]).toHaveAttribute("data-checked", "false");
-      
-      // Turn machine on
+
       const actionButtons = screen.getAllByTestId("alert-dialog-action");
       fireEvent.click(actionButtons[0]);
-      
-      // ✅ FIX: Advance timers for cascade effects
+
       act(() => {
         vi.advanceTimersByTime(100);
       });
-      
+
       expect(playSound).toHaveBeenCalledWith("power-on.mp3", true, 0.5);
       expect(screen.getByText(/Status: Running/i)).toBeInTheDocument();
     });
 
-    // ✅ FIX: Wrap render in act() to handle async effects
     it("should respect sound settings when playing audio", () => {
       act(() => {
         render(
-          <TestWrapper 
-            role="admin" 
+          <TestWrapper
+            role="admin"
             settings={{ soundEnabled: false, volume: 0.3 }}
           >
             <RemoteControl unit={mockUnit} />
@@ -764,18 +775,16 @@ describe("RemoteControl Component", () => {
 
       const actionButtons = screen.getAllByTestId("alert-dialog-action");
       fireEvent.click(actionButtons[0]);
-      
-      // ✅ FIX: Advance timers for cascade effects
+
       act(() => {
         vi.advanceTimersByTime(100);
       });
-      
+
       expect(playSound).toHaveBeenCalledWith("power-off.mp3", false, 0.3);
     });
   });
 
   describe("Action History Tracking", () => {
-    // ✅ FIX: Wrap render in act() to handle async effects
     it("should record machine power toggle in action history", () => {
       act(() => {
         render(
@@ -785,25 +794,20 @@ describe("RemoteControl Component", () => {
         );
       });
 
-      // Find and click the switch to open dialog
       const switches = screen.getAllByTestId("switch");
       fireEvent.click(switches[0]);
-      
-      // Click the confirm button in the dialog
+
       const actionButtons = screen.getAllByTestId("alert-dialog-action");
       fireEvent.click(actionButtons[0]);
-      
-      // ✅ FIX: Advance timers for cascade effects
+
       act(() => {
         vi.advanceTimersByTime(100);
       });
-      
-      // Check that action appears in history
+
       expect(screen.getByText("Machine powered off")).toBeInTheDocument();
       expect(screen.getByText("Machine turned off via remote interface")).toBeInTheDocument();
     });
 
-    // ✅ FIX: Wrap render in act() to handle async effects
     it("should record water production toggle in action history", () => {
       act(() => {
         render(
@@ -813,24 +817,20 @@ describe("RemoteControl Component", () => {
         );
       });
 
-      // Find and click the switch to open dialog
       const switches = screen.getAllByTestId("switch");
       fireEvent.click(switches[1]);
-      
-      // Click the confirm button in the dialog
+
       const actionButtons = screen.getAllByTestId("alert-dialog-action");
       fireEvent.click(actionButtons[1]);
-      
-      // ✅ FIX: Advance timers for cascade effects
+
       act(() => {
         vi.advanceTimersByTime(100);
       });
-      
+
       expect(screen.getByText("Water production disabled")).toBeInTheDocument();
       expect(screen.getByText("Water production disabled via remote interface")).toBeInTheDocument();
     });
 
-    // ✅ FIX: Wrap render in act() to handle async effects
     it("should record auto switch toggle in action history", () => {
       const unitWithAutoOff = { ...mockUnit, autoSwitchEnabled: false };
       act(() => {
@@ -841,25 +841,22 @@ describe("RemoteControl Component", () => {
         );
       });
 
-      // Find and click the switch to open dialog
       const switches = screen.getAllByTestId("switch");
       fireEvent.click(switches[2]);
-      
-      // Click the confirm button in the dialog
+
       const actionButtons = screen.getAllByTestId("alert-dialog-action");
       fireEvent.click(actionButtons[2]);
-      
+
       const autoSwitchTexts = screen.getAllByText("Auto switch enabled");
       expect(autoSwitchTexts.length).toBe(2);
-      expect(autoSwitchTexts[0]).toBeInTheDocument(); // Title
-      expect(autoSwitchTexts[1]).toBeInTheDocument(); // Description
-      
+      expect(autoSwitchTexts[0]).toBeInTheDocument();
+      expect(autoSwitchTexts[1]).toBeInTheDocument();
+
       const descriptionTexts = screen.getAllByText("Auto switch enabled via remote interface");
       expect(descriptionTexts.length).toBe(1);
       expect(descriptionTexts[0]).toBeInTheDocument();
     });
 
-    // ✅ FIX: Wrap render in act() to handle async effects
     it("should record camera change in action history", () => {
       act(() => {
         render(
@@ -871,12 +868,11 @@ describe("RemoteControl Component", () => {
 
       const select = screen.getByTestId("select-camera");
       fireEvent.change(select, { target: { value: "cam2" } });
-      
+
       expect(screen.getByText("Camera changed")).toBeInTheDocument();
       expect(screen.getByText("Switched to Alternate Cam 1")).toBeInTheDocument();
     });
 
-    // ✅ FIX: Wrap render in act() to handle async effects
     it("should record video feed toggle in action history", () => {
       act(() => {
         render(
@@ -887,22 +883,21 @@ describe("RemoteControl Component", () => {
       });
 
       const buttons = screen.getAllByRole("button");
-      const videoButton = buttons.find(btn => 
+      const videoButton = buttons.find(btn =>
         btn.textContent?.includes("Start Feed")
       );
-      
+
       if (videoButton) {
         fireEvent.click(videoButton);
         expect(screen.getByText("Video feed started")).toBeInTheDocument();
         expect(screen.getByText("Live video feed started")).toBeInTheDocument();
-        
+
         fireEvent.click(videoButton);
         expect(screen.getByText("Video feed stopped")).toBeInTheDocument();
         expect(screen.getByText("Live video feed stopped")).toBeInTheDocument();
       }
     });
 
-    // ✅ FIX: Wrap render in act() to handle async effects
     it("should record refresh action in history when refresh button is clicked", () => {
       act(() => {
         render(
@@ -912,33 +907,28 @@ describe("RemoteControl Component", () => {
         );
       });
 
-      // Start video feed first
       const buttons = screen.getAllByRole("button");
-      const videoButton = buttons.find(btn => 
+      const videoButton = buttons.find(btn =>
         btn.textContent?.includes("Start Feed")
       );
-      
+
       if (videoButton) {
         fireEvent.click(videoButton);
-        
-        // Click refresh
+
         const refreshButton = screen.getByTestId("button-refresh-feed");
         fireEvent.click(refreshButton);
-        
-        // Use getAllByText since there are two elements with this text
+
         const refreshTexts = screen.getAllByText("Video feed refreshed");
         expect(refreshTexts.length).toBe(2);
-        expect(refreshTexts[0]).toBeInTheDocument(); // Title
-        expect(refreshTexts[1]).toBeInTheDocument(); // Description
-        
-        // Fast-forward timers to complete animation
+        expect(refreshTexts[0]).toBeInTheDocument();
+        expect(refreshTexts[1]).toBeInTheDocument();
+
         act(() => {
           vi.advanceTimersByTime(800);
         });
       }
     });
 
-    // ✅ FIX: Already has act() for timer advancement
     it("should show action count in history header", () => {
       act(() => {
         render(
@@ -948,32 +938,25 @@ describe("RemoteControl Component", () => {
         );
       });
 
-      // Get the current action count from the header
       const headerText = screen.getByText(/Last \d+ actions recorded/i);
       const initialCount = parseInt(headerText.textContent.match(/\d+/)[0]);
-      // Should start with 3 hardcoded actions
       expect(initialCount).toBe(3);
-      
-      // Click the switch to open dialog
+
       const switches = screen.getAllByTestId("switch");
       fireEvent.click(switches[0]);
-      
-      // Click the confirm button
+
       const actionButtons = screen.getAllByTestId("alert-dialog-action");
       fireEvent.click(actionButtons[0]);
-      
-      // FIX: Since the cascade actions happen with setTimeout(50), we need to advance timers
+
       act(() => {
         vi.advanceTimersByTime(100);
       });
-      
-      // The count should now be 6 (1 power off + 2 cascades: water off + auto off)
+
       const updatedHeader = screen.getByText(/Last \d+ actions recorded/i);
       const updatedCount = parseInt(updatedHeader.textContent.match(/\d+/)[0]);
-      expect(updatedCount).toBe(6);
+      expect(updatedCount).toBe(5);
     });
 
-    // ✅ FIX: Already has act() for timer advancement
     it("should keep only last 10 actions in history", () => {
       act(() => {
         render(
@@ -985,23 +968,19 @@ describe("RemoteControl Component", () => {
 
       const switches = screen.getAllByTestId("switch");
       const actionButtons = screen.getAllByTestId("alert-dialog-action");
-      
-      // Add 10 more actions (total 13)
+
       for (let i = 0; i < 10; i++) {
         fireEvent.click(switches[0]);
         fireEvent.click(actionButtons[0]);
-        // FIX: Advance timers for cascade actions
         act(() => {
           vi.advanceTimersByTime(100);
         });
       }
-      
-      // Should only show 10 most recent
+
       const headerText = screen.getByText(/Last \d+ actions recorded/i);
       expect(headerText.textContent).toMatch(/Last 10 actions recorded/);
     });
 
-    // ✅ FIX: Already has act() for timer advancement
     it("should handle many cascades in history without exceeding limit", () => {
       act(() => {
         render(
@@ -1013,24 +992,19 @@ describe("RemoteControl Component", () => {
 
       const switches = screen.getAllByTestId("switch");
       const actionButtons = screen.getAllByTestId("alert-dialog-action");
-      
-      // Trigger 3 machine toggles (each adds up to 3 actions = 9 total)
+
       for (let i = 0; i < 3; i++) {
         fireEvent.click(switches[0]);
         fireEvent.click(actionButtons[0]);
-        // FIX: Advance timers for cascade actions
         act(() => {
           vi.advanceTimersByTime(100);
         });
       }
-      
-      // Should show 9 actions (3 initial + 9 new = 12, capped at 10)
+
       const headerText = screen.getByText(/Last \d+ actions recorded/i);
-      // FIX: Expect 10 (capped) or 9 (if some cascades didn't complete)
-      // The test was expecting 10 but getting 8 because timers weren't advancing
       const count = parseInt(headerText.textContent.match(/\d+/)[0]);
+      expect(count).toBe(7);
       expect(count).toBeLessThanOrEqual(10);
-      expect(count).toBeGreaterThanOrEqual(8);
     });
 
     it("should show initial hardcoded actions correctly", () => {
@@ -1046,11 +1020,81 @@ describe("RemoteControl Component", () => {
       expect(screen.getByText("Machine powered on")).toBeInTheDocument();
       expect(screen.getByText("Auto switch enabled")).toBeInTheDocument();
     });
+
+    it("should not log cascade actions when auto switch was already off", () => {
+      act(() => {
+        render(
+          <TestWrapper role="admin">
+            <RemoteControl unit={mockUnit} />
+          </TestWrapper>,
+        );
+      });
+
+      const actionButtons = screen.getAllByTestId("alert-dialog-action");
+      fireEvent.click(actionButtons[0]);
+
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
+
+      const autoSwitchTexts = screen.queryAllByText("Auto switch disabled");
+      expect(autoSwitchTexts.length).toBe(0);
+    });
+
+    it("should log cascade action when water production was on before machine turned off", () => {
+      const unitWithWaterOn = { ...mockUnit, waterProductionOn: true };
+      act(() => {
+        render(
+          <TestWrapper role="admin">
+            <RemoteControl unit={unitWithWaterOn} />
+          </TestWrapper>,
+        );
+      });
+
+      const switches = screen.getAllByTestId("switch");
+      expect(switches[1]).toHaveAttribute("data-checked", "true");
+
+      const actionButtons = screen.getAllByTestId("alert-dialog-action");
+      fireEvent.click(actionButtons[0]);
+
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
+
+      const waterTexts = screen.getAllByText("Water production disabled");
+      expect(waterTexts.length).toBeGreaterThan(0);
+    });
+
+    it("should not log cascade action when water production was already off before machine turned off", () => {
+      const unitWithWaterOff = { ...mockUnit, waterProductionOn: false };
+      act(() => {
+        render(
+          <TestWrapper role="admin">
+            <RemoteControl unit={unitWithWaterOff} />
+          </TestWrapper>,
+        );
+      });
+
+      const switches = screen.getAllByTestId("switch");
+      expect(switches[1]).toHaveAttribute("data-checked", "false");
+
+      const actionButtons = screen.getAllByTestId("alert-dialog-action");
+      fireEvent.click(actionButtons[0]);
+
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
+
+      const waterTexts = screen.queryAllByText("Water production disabled");
+      expect(waterTexts.length).toBe(0);
+    });
   });
 
   describe("Disabled Controls When Disconnected", () => {
-    // ✅ FIX: Wrap render in act() to handle async effects
-    it("should show connection lost warning and disable controls", () => {
+    // Note: isConnected is currently hardcoded to true in the component
+    // Real disconnect detection would need to be wired from WebSocket/API
+    // TODO: Add tests for disconnected state once isConnected can become false
+    it("should show connected status", () => {
       act(() => {
         render(
           <TestWrapper>
@@ -1059,17 +1103,13 @@ describe("RemoteControl Component", () => {
         );
       });
 
-      // FIX: Since isConnected is always true in the test environment,
-      // we can't reliably test the disconnected state without mocking
-      // Just check that the Connected status is displayed
       const connectedElements = screen.getAllByText(/Connected/i);
       expect(connectedElements.length).toBeGreaterThan(0);
     });
   });
 
   describe("Fullscreen and Video Edge Cases", () => {
-    // ✅ FIX: Wrap render in act() to handle async effects
-    it("should handle fullscreen toggle", async () => {
+    it("should handle fullscreen toggle", () => {
       act(() => {
         render(
           <TestWrapper>
@@ -1078,9 +1118,8 @@ describe("RemoteControl Component", () => {
         );
       });
 
-      // Start feed to show video area
       const buttons = screen.getAllByRole("button");
-      const videoButton = buttons.find(btn => 
+      const videoButton = buttons.find(btn =>
         btn.textContent?.includes("Start Feed")
       );
       if (videoButton) fireEvent.click(videoButton);
@@ -1088,11 +1127,9 @@ describe("RemoteControl Component", () => {
       const fullscreenButton = screen.getByTitle(/Enter Fullscreen/i);
       fireEvent.click(fullscreenButton);
 
-      // In test env, requestFullscreen mocked/absent, covers handler + ref
       expect(fullscreenButton).toBeInTheDocument();
     });
 
-    // ✅ FIX: Wrap render in act() to handle async effects
     it("should not allow refresh when video feed is inactive", () => {
       act(() => {
         render(
@@ -1108,7 +1145,6 @@ describe("RemoteControl Component", () => {
   });
 
   describe("No Water Generation and Role Edges", () => {
-    // ✅ FIX: Wrap render in act() to handle async effects
     it("should handle operator role with water gen false", () => {
       const noWaterUnit = { ...mockUnit, watergeneration: false, autoSwitchEnabled: false };
       act(() => {
@@ -1120,10 +1156,9 @@ describe("RemoteControl Component", () => {
       });
 
       expect(screen.queryByText(/Water Production Control/i)).not.toBeInTheDocument();
-      expect(screen.getAllByTestId("switch")).toHaveLength(1); // Only machine
+      expect(screen.getAllByTestId("switch")).toHaveLength(1);
     });
 
-    // ✅ FIX: Wrap render in act() to handle async effects
     it("should handle viewer role video feed only", () => {
       act(() => {
         render(
@@ -1133,8 +1168,7 @@ describe("RemoteControl Component", () => {
         );
       });
 
-      // Viewer can still view feed
-      const videoButton = screen.getAllByRole("button").find(btn => 
+      const videoButton = screen.getAllByRole("button").find(btn =>
         btn.textContent?.includes("Start Feed")
       );
       if (videoButton) {
@@ -1144,39 +1178,72 @@ describe("RemoteControl Component", () => {
     });
   });
 
-  describe("Action History Edge Cases", () => {
-    // ✅ FIX: Already has act() for timer advancement
-    it("should handle many cascades in history without exceeding limit", () => {
+  // ============================================================
+  // ADDITIONAL BRANCH COVERAGE
+  // ============================================================
+
+  describe("Additional Branch Coverage", () => {
+    it("should turn ON water production directly (not via cascade)", () => {
+      const unitWaterOff = { ...mockUnit, waterProductionOn: false };
       act(() => {
         render(
           <TestWrapper role="admin">
-            <RemoteControl unit={mockUnit} />
+            <RemoteControl unit={unitWaterOff} />
           </TestWrapper>,
         );
       });
 
       const switches = screen.getAllByTestId("switch");
+      expect(switches[1]).toHaveAttribute("data-checked", "false");
+
       const actionButtons = screen.getAllByTestId("alert-dialog-action");
-      
-      // Trigger 3 machine toggles (each adds up to 3 actions = 9 total)
-      for (let i = 0; i < 3; i++) {
-        fireEvent.click(switches[0]);
-        fireEvent.click(actionButtons[0]);
-        // FIX: Advance timers for cascade actions
-        act(() => {
-          vi.advanceTimersByTime(100);
-        });
-      }
-      
-      // Should show 9 actions (3 initial + 9 new = 12, capped at 10)
-      const headerText = screen.getByText(/Last \d+ actions recorded/i);
-      const count = parseInt(headerText.textContent.match(/\d+/)[0]);
-      // FIX: Less strict assertion - count should be between 8 and 10
-      expect(count).toBeLessThanOrEqual(10);
-      expect(count).toBeGreaterThanOrEqual(8);
+      fireEvent.click(actionButtons[1]);
+
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
+
+      expect(playSound).toHaveBeenCalledWith("water-on.mp3", true, 0.5);
+      expect(screen.getByText("Water production enabled")).toBeInTheDocument();
     });
 
-    it("should show initial hardcoded actions correctly", () => {
+    it("should turn OFF auto switch directly (not via cascade)", () => {
+      const unitAutoOn = { ...mockUnit, autoSwitchEnabled: true };
+      act(() => {
+        render(
+          <TestWrapper role="admin">
+            <RemoteControl unit={unitAutoOn} />
+          </TestWrapper>,
+        );
+      });
+
+      const switches = screen.getAllByTestId("switch");
+      expect(switches[2]).toHaveAttribute("data-checked", "true");
+
+      const actionButtons = screen.getAllByTestId("alert-dialog-action");
+      fireEvent.click(actionButtons[2]);
+
+      expect(playSound).toHaveBeenCalledWith("cool-tones.mp3", true, 0.5);
+      expect(screen.getAllByText("Auto switch disabled").length).toBeGreaterThan(0);
+    });
+
+    it("should default autoSwitchEnabled to false when the unit omits it", () => {
+      const unitNoAuto = { ...mockUnit };
+      delete unitNoAuto.autoSwitchEnabled;
+
+      act(() => {
+        render(
+          <TestWrapper role="admin">
+            <RemoteControl unit={unitNoAuto} />
+          </TestWrapper>,
+        );
+      });
+
+      const switches = screen.getAllByTestId("switch");
+      expect(switches[2]).toHaveAttribute("data-checked", "false");
+    });
+
+    it("should fall back to the raw camera id when the selected camera isn't found", () => {
       act(() => {
         render(
           <TestWrapper role="admin">
@@ -1185,9 +1252,115 @@ describe("RemoteControl Component", () => {
         );
       });
 
-      expect(screen.getByText("Water production enabled")).toBeInTheDocument();
-      expect(screen.getByText("Machine powered on")).toBeInTheDocument();
-      expect(screen.getByText("Auto switch enabled")).toBeInTheDocument();
+      const select = screen.getByTestId("select-camera");
+      fireEvent.change(select, { target: { value: "unknown-cam" } });
+
+      expect(screen.getByText("Switched to unknown-cam")).toBeInTheDocument();
+    });
+
+    it("should not throw when the refresh timeout resolves after unmount", () => {
+      const { unmount } = render(
+        <TestWrapper>
+          <RemoteControl unit={mockUnit} />
+        </TestWrapper>,
+      );
+
+      const videoButton = screen
+        .getAllByRole("button")
+        .find((btn) => btn.textContent?.includes("Start Feed"));
+      fireEvent.click(videoButton);
+
+      const refreshButton = screen.getByTestId("button-refresh-feed");
+      fireEvent.click(refreshButton);
+
+      unmount();
+
+      expect(() => {
+        act(() => {
+          vi.advanceTimersByTime(800);
+        });
+      }).not.toThrow();
+    });
+
+    it("should switch to the Exit Fullscreen icon when entering fullscreen", () => {
+      act(() => {
+        render(
+          <TestWrapper>
+            <RemoteControl unit={mockUnit} />
+          </TestWrapper>,
+        );
+      });
+
+      expect(screen.getByTitle(/Enter Fullscreen/i)).toBeInTheDocument();
+
+      Object.defineProperty(document, "fullscreenElement", {
+        value: document.createElement("div"),
+        configurable: true,
+      });
+      act(() => {
+        document.dispatchEvent(new Event("fullscreenchange"));
+      });
+
+      expect(screen.getByTitle(/Exit Fullscreen/i)).toBeInTheDocument();
+
+      Object.defineProperty(document, "fullscreenElement", {
+        value: null,
+        configurable: true,
+      });
+    });
+
+    it("should call document.exitFullscreen when exiting fullscreen mode", async () => {
+      document.exitFullscreen = vi.fn().mockResolvedValue();
+
+      act(() => {
+        render(
+          <TestWrapper>
+            <RemoteControl unit={mockUnit} />
+          </TestWrapper>,
+        );
+      });
+
+      Object.defineProperty(document, "fullscreenElement", {
+        value: document.createElement("div"),
+        configurable: true,
+      });
+      act(() => {
+        document.dispatchEvent(new Event("fullscreenchange"));
+      });
+
+      const exitButton = screen.getByTitle(/Exit Fullscreen/i);
+      await act(async () => {
+        fireEvent.click(exitButton);
+      });
+
+      expect(document.exitFullscreen).toHaveBeenCalled();
+
+      Object.defineProperty(document, "fullscreenElement", {
+        value: null,
+        configurable: true,
+      });
+    });
+
+    it("should silently catch the error when entering fullscreen fails", async () => {
+      act(() => {
+        render(
+          <TestWrapper>
+            <RemoteControl unit={mockUnit} />
+          </TestWrapper>,
+        );
+      });
+
+      const videoContainer = document.querySelector(".aspect-video");
+      videoContainer.requestFullscreen = vi
+        .fn()
+        .mockRejectedValue(new Error("denied"));
+
+      const enterButton = screen.getByTitle(/Enter Fullscreen/i);
+      await act(async () => {
+        fireEvent.click(enterButton);
+      });
+
+      expect(enterButton).toBeInTheDocument();
     });
   });
 });
