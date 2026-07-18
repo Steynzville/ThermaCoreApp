@@ -50,19 +50,26 @@ const UnitVitals = ({ unit }) => {
     setLiveUnit(unit);
   }, [unit]);
 
+  // ✅ FIXED: Use `??` instead of `||` to handle numeric 0 correctly
   useEffect(() => {
     if (metrics && !isOffline) {
       setLiveUnit((prev) => {
-        const tempBase = parseFloat(metrics.temperature?.current) || 70;
-        const pressureBase = parseFloat(metrics.pressure?.current) || 100;
+        // ✅ FIX: Use Number.isNaN check instead of || to preserve numeric 0
+        const rawTemp = parseFloat(metrics.temperature?.current);
+        const tempBase = Number.isNaN(rawTemp) ? 70 : rawTemp;
+        
+        const rawPressure = parseFloat(metrics.pressure?.current);
+        const pressureBase = Number.isNaN(rawPressure) ? 100 : rawPressure;
+        
+        // ✅ FIX: Use ?? instead of || to preserve numeric 0
         const flowInBase = parseFloat(
-          metrics.flow_rate_inlet?.current ||
-            metrics.flowRateInlet?.current ||
+          metrics.flow_rate_inlet?.current ??
+            metrics.flowRateInlet?.current ??
             45.5,
         );
         const flowOutBase = parseFloat(
-          metrics.flow_rate_outlet?.current ||
-            metrics.flowRateOutlet?.current ||
+          metrics.flow_rate_outlet?.current ??
+            metrics.flowRateOutlet?.current ??
             42.1,
         );
 
