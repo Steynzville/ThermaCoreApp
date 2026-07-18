@@ -58,8 +58,7 @@ describe("IndustrialGauge", () => {
       expect(unitLabels.length).toBeGreaterThan(0);
     });
 
-    // Skipping this test as it's flaky due to multiple components rendering in test environment
-    it.skip("should hide value when showValue is false", () => {
+    it("should hide value when showValue is false", () => {
       render(
         <IndustrialGauge
           title="Temperature"
