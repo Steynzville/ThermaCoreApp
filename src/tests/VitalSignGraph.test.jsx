@@ -272,6 +272,38 @@ describe("VitalSignGraph", () => {
     });
   });
 
+  describe("XAxis formatting across timeframes", () => {
+    // RESTORED: integration coverage verifying getTickInterval(timeframe) is
+    // actually wired into the rendered XAxis as the user changes the
+    // selector -- not just that getTickInterval() returns the right value
+    // in isolation.
+    it("should apply the day interval by default", () => {
+      render(<VitalSignGraph {...defaultProps} />, { wrapper: TestWrapper });
+      const xAxis = screen.getByTestId("x-axis");
+      expect(xAxis.getAttribute("data-interval")).toBe("2");
+    });
+
+    it.each([
+      ["month", "3"],
+      ["year", "1"],
+      ["3year", "2"],
+      ["5year", "3"],
+      ["10year", "6"],
+      ["alltime", "10"],
+    ])("should apply the %s interval when switched via the selector", async (timeframe, expectedInterval) => {
+      render(<VitalSignGraph {...defaultProps} />, { wrapper: TestWrapper });
+      const select = screen.getByTestId("timeframe-select");
+
+      await act(async () => {
+        fireEvent.change(select, { target: { value: timeframe } });
+      });
+
+      const xAxis = screen.getByTestId("x-axis");
+      expect(xAxis.getAttribute("data-interval")).toBe(expectedInterval);
+    });
+  });
+
+
   describe("Dark Mode Support", () => {
     it("should render with dark mode classes", () => {
       render(<VitalSignGraph {...defaultProps} />, { wrapper: TestWrapper });
