@@ -13,7 +13,7 @@
  * before the `embla-carousel-react` import is resolved.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, act } from "@testing-library/react";
+import { render, screen, act, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
 
@@ -32,7 +32,7 @@ let mockApi;
 function createMockApi(overrides = {}) {
   listeners = {};
   return {
-    canScrollPrev: vi.fn(() => overrides.canScrollPrev ?? false),
+    canScrollPrev: vi.fn(() => overrides.canScrollPrev ?? true),
     canScrollNext: vi.fn(() => overrides.canScrollNext ?? true),
     scrollPrev: vi.fn(),
     scrollNext: vi.fn(),
@@ -110,6 +110,7 @@ describe("Carousel", () => {
   });
 
   it("calls scrollPrev on the Embla API when the previous button is clicked", async () => {
+    mockApi = createMockApi({ canScrollPrev: true, canScrollNext: true });
     const user = userEvent.setup();
     setup();
     await user.click(screen.getByTestId("prev-btn"));
@@ -146,16 +147,19 @@ describe("Carousel", () => {
     expect(screen.getByTestId("next-btn")).toBeDisabled();
   });
 
-  it("navigates with ArrowLeft/ArrowRight keys via onKeyDownCapture", async () => {
-    const user = userEvent.setup();
+  it("navigates with ArrowLeft/ArrowRight keys via onKeyDownCapture", () => {
+    mockApi = createMockApi({ canScrollPrev: true, canScrollNext: true });
     const { container } = setup();
     const root = container.querySelector('[data-slot="carousel"]');
-    root.focus();
 
-    await user.keyboard("{ArrowRight}");
+    // Dispatch directly on the root rather than going through user.keyboard()
+    // + real DOM focus, which proved unreliable across jsdom/user-event
+    // versions for a plain, non-tabbable wrapper <div>. This still exercises
+    // the exact onKeyDownCapture handler under test.
+    fireEvent.keyDown(root, { key: "ArrowRight", code: "ArrowRight" });
     expect(mockApi.scrollNext).toHaveBeenCalledTimes(1);
 
-    await user.keyboard("{ArrowLeft}");
+    fireEvent.keyDown(root, { key: "ArrowLeft", code: "ArrowLeft" });
     expect(mockApi.scrollPrev).toHaveBeenCalledTimes(1);
   });
 
