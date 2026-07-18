@@ -8,10 +8,19 @@
  * These tests build a small real form using useForm() to exercise the
  * Form/FormField/FormItem/FormLabel/FormControl/FormDescription/FormMessage
  * wiring the way a consuming component actually would.
+ *
+ * Submission note: we trigger validation with `fireEvent.submit(formEl)`
+ * rather than clicking the submit button. Some jsdom/user-event version
+ * combinations don't implement `HTMLFormElement.requestSubmit()`, which a
+ * button click relies on to fire the form's `submit` event — when that's
+ * missing, clicking "Save" silently does nothing and every
+ * validation-dependent assertion times out. Dispatching the submit event
+ * directly sidesteps that gap and is what actually matters here: that
+ * `form.handleSubmit(onSubmit)` runs and wires up FormMessage correctly.
  */
 import { describe, it, expect, vi } from "vitest";
 import { useForm } from "react-hook-form";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
 
@@ -59,6 +68,10 @@ function SetpointForm({ onSubmit = () => {}, defaultValues } = {}) {
   );
 }
 
+function submitForm(container) {
+  fireEvent.submit(container.querySelector("form"));
+}
+
 describe("Form", () => {
   it("renders the label, input, and description", () => {
     render(<SetpointForm />);
@@ -94,20 +107,18 @@ describe("Form", () => {
   });
 
   it("shows a validation error message after submitting an empty required field", async () => {
-    const user = userEvent.setup();
     const onSubmit = () => {};
-    render(<SetpointForm onSubmit={onSubmit} />);
+    const { container } = render(<SetpointForm onSubmit={onSubmit} />);
 
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    submitForm(container);
 
     expect(await screen.findByText("Setpoint is required")).toBeInTheDocument();
   });
 
   it("marks the label and input as errored (data-error / aria-invalid) after a failed validation", async () => {
-    const user = userEvent.setup();
-    render(<SetpointForm />);
+    const { container } = render(<SetpointForm />);
 
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    submitForm(container);
     await screen.findByText("Setpoint is required");
 
     const input = screen.getByRole("spinbutton");
@@ -118,10 +129,9 @@ describe("Form", () => {
   });
 
   it("includes both description and message ids in aria-describedby once an error exists", async () => {
-    const user = userEvent.setup();
-    render(<SetpointForm />);
+    const { container } = render(<SetpointForm />);
 
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    submitForm(container);
     await screen.findByText("Setpoint is required");
 
     const input = screen.getByRole("spinbutton");
@@ -131,34 +141,39 @@ describe("Form", () => {
 
   it("clears the error message once the field is corrected and resubmitted", async () => {
     const user = userEvent.setup();
-    render(<SetpointForm />);
+    const { container } = render(<SetpointForm />);
 
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    submitForm(container);
     await screen.findByText("Setpoint is required");
 
     await user.type(screen.getByRole("spinbutton"), "42");
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    submitForm(container);
 
+    // Give react-hook-form's re-validation a tick to clear the error.
+    await new Promise((resolve) => setTimeout(resolve, 0));
     expect(screen.queryByText("Setpoint is required")).not.toBeInTheDocument();
   });
 
   it("calls onSubmit with the field values when validation passes", async () => {
     let submitted = null;
     const user = userEvent.setup();
-    render(<SetpointForm onSubmit={(values) => (submitted = values)} />);
+    const { container } = render(
+      <SetpointForm onSubmit={(values) => (submitted = values)} />,
+    );
 
     await user.type(screen.getByRole("spinbutton"), "55");
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    submitForm(container);
 
+    await new Promise((resolve) => setTimeout(resolve, 0));
     expect(submitted).toEqual({ setpoint: "55" });
   });
 
   it("shows a max-value validation message when the rule is violated", async () => {
     const user = userEvent.setup();
-    render(<SetpointForm />);
+    const { container } = render(<SetpointForm />);
 
     await user.type(screen.getByRole("spinbutton"), "150");
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    submitForm(container);
 
     expect(
       await screen.findByText("Setpoint cannot exceed 100 PSI"),
