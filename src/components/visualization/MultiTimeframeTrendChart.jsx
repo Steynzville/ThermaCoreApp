@@ -151,6 +151,15 @@ const MultiTimeframeTrendChart = ({
     return stats;
   }, [formattedData, metrics]);
 
+  // ✅ CSV field escaping to handle commas, quotes, and newlines
+  const escapeCsvField = (val) => {
+    const str = String(val ?? "");
+    if (/[",\n\r]/.test(str)) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
   const handleExport = () => {
     if (onExport) {
       onExport(formattedData, statistics);
@@ -170,9 +179,9 @@ const MultiTimeframeTrendChart = ({
     ].join(",");
     const rows = data.map((row) =>
       [
-        row.timestamp,
-        row.time,
-        ...metrics.map((m) => row[m.dataKey] ?? ""),
+        escapeCsvField(row.timestamp),
+        escapeCsvField(row.time),
+        ...metrics.map((m) => escapeCsvField(row[m.dataKey] ?? "")),
       ].join(","),
     );
 
