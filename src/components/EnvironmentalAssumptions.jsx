@@ -75,7 +75,8 @@ const EnvironmentalAssumptions = ({
                 className={error ? "border-red-500" : ""}
                 min="0"
                 step="0.01"
-                aria-invalid={!!error}
+                // FIXED: Use undefined instead of false so React omits the attribute
+                aria-invalid={error ? true : undefined}
                 aria-describedby={error ? "dieselPrice-error" : undefined}
               />
               {error && (
