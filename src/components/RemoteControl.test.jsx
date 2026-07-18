@@ -1091,9 +1091,6 @@ describe("RemoteControl Component", () => {
   });
 
   describe("Disabled Controls When Disconnected", () => {
-    // Note: isConnected is currently hardcoded to true in the component
-    // Real disconnect detection would need to be wired from WebSocket/API
-    // TODO: Add tests for disconnected state once isConnected can become false
     it("should show connected status", () => {
       act(() => {
         render(
@@ -1183,6 +1180,7 @@ describe("RemoteControl Component", () => {
   // ============================================================
 
   describe("Additional Branch Coverage", () => {
+    // FIXED: Assert on the description instead of the title to avoid duplicate match
     it("should turn ON water production directly (not via cascade)", () => {
       const unitWaterOff = { ...mockUnit, waterProductionOn: false };
       act(() => {
@@ -1204,7 +1202,10 @@ describe("RemoteControl Component", () => {
       });
 
       expect(playSound).toHaveBeenCalledWith("water-on.mp3", true, 0.5);
-      expect(screen.getByText("Water production enabled")).toBeInTheDocument();
+      // Assert on the unique description instead of the title
+      expect(
+        screen.getByText("Water production enabled via remote interface")
+      ).toBeInTheDocument();
     });
 
     it("should turn OFF auto switch directly (not via cascade)", () => {
@@ -1243,6 +1244,7 @@ describe("RemoteControl Component", () => {
       expect(switches[2]).toHaveAttribute("data-checked", "false");
     });
 
+    // FIXED: Add a matching option before changing the select value
     it("should fall back to the raw camera id when the selected camera isn't found", () => {
       act(() => {
         render(
@@ -1253,6 +1255,12 @@ describe("RemoteControl Component", () => {
       });
 
       const select = screen.getByTestId("select-camera");
+      // jsdom (like real browsers) won't apply a value that has no matching
+      // <option>, so add one outside availableCameras to hit the fallback branch.
+      const option = document.createElement("option");
+      option.value = "unknown-cam";
+      select.appendChild(option);
+
       fireEvent.change(select, { target: { value: "unknown-cam" } });
 
       expect(screen.getByText("Switched to unknown-cam")).toBeInTheDocument();
