@@ -232,8 +232,7 @@ describe("UnitDetails", () => {
     await screen.findByTestId('remote-control');
   });
 
-  // SKIP: This test is flaky - the Manage Remotely tab sometimes doesn't render the remote-control component
-  it.skip("should handle Manage Remotely tab", async () => {
+  it("should handle Manage Remotely tab", async () => {
     renderUnitDetails();
     
     // Wait for unit to load
@@ -243,7 +242,7 @@ describe("UnitDetails", () => {
     const manageTabs = screen.getAllByText("Manage Remotely");
     fireEvent.click(manageTabs[0]);
 
-    // Manage Remotely tab should render content - it shows RemoteControl component
+    // Manage Remotely tab should render the RemoteControl component
     await screen.findByTestId('remote-control');
   });
 
