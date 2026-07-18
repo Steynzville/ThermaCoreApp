@@ -1,17 +1,17 @@
-// src/tests/components/ROIAssumptions.test.jsx
+// src/tests/ROIAssumptions.test.jsx
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import ROIAssumptions from "../../components/ROIAssumptions";
-import { useAuth } from "../../context/AuthContext";
+import ROIAssumptions from "../components/ROIAssumptions";
+import { useAuth } from "../context/AuthContext";
 
 // Mock the AuthContext
-vi.mock("../../context/AuthContext", () => ({
+vi.mock("../context/AuthContext", () => ({
   useAuth: vi.fn(),
 }));
 
-// Mock lucide-react icons with aria-hidden support
+// Mock lucide-react icons
 vi.mock("lucide-react", () => ({
   Save: ({ className, "aria-hidden": ariaHidden }) => (
     <svg 
