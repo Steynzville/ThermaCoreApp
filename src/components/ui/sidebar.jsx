@@ -59,7 +59,7 @@ function SidebarProvider({
   const [_open, _setOpen] = React.useState(defaultOpen);
   const open = openProp ?? _open;
 
-  // FIXED: Use functional update for state, side effects outside
+  // Use functional update for state, side effects outside
   const setOpen = React.useCallback(
     (value) => {
       // Compute the new state
@@ -79,7 +79,7 @@ function SidebarProvider({
 
   // Read cookie on mount to restore state
   React.useEffect(() => {
-    // FIXED: Match the actual "; " separator format with \s*
+    // Use boundary-safe regex with (^|;) prefix
     const cookieMatch = document.cookie.match(new RegExp(`(^|;\\s*)${SIDEBAR_COOKIE_NAME}=([^;]+)`));
     if (cookieMatch) {
       const cookieValue = cookieMatch[2] === "true";
@@ -125,6 +125,7 @@ function SidebarProvider({
   // This makes it easier to style the sidebar with Tailwind classes.
   const state = open ? "expanded" : "collapsed";
 
+  // FIXED: Added setOpenMobile to dependency array
   const contextValue = React.useMemo(
     () => ({
       state,
@@ -135,7 +136,7 @@ function SidebarProvider({
       setOpenMobile,
       toggleSidebar,
     }),
-    [state, open, setOpen, isMobile, openMobile, toggleSidebar],
+    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar],
   );
 
   return (
