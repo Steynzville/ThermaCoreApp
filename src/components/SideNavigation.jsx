@@ -234,6 +234,14 @@ const EnhancedSideNavigation = () => {
     navigate("/login");
   };
 
+  // ✅ Hide sidebar on admin landing page
+  const isAdminLanding = location.pathname === "/admin";
+
+  // Don't render sidebar at all on admin landing page
+  if (isAdminLanding) {
+    return null;
+  }
+
   return (
     <>
       <button
@@ -324,7 +332,6 @@ const EnhancedSideNavigation = () => {
         >
           <nav className="space-y-1">
             {filteredNavItems.map((item) => (
-              // ✅ FIX: Removed inline logout blocks - only render nav items here
               <NavItem
                 key={item.id}
                 item={item}
@@ -336,7 +343,6 @@ const EnhancedSideNavigation = () => {
           </nav>
         </div>
 
-        {/* ✅ FIX: Footer always renders with user info + logout button */}
         <div className="border-t border-gray-200 dark:border-gray-700 p-4">
           {!isCollapsed && (
             <div className="flex items-center space-x-3 mb-3">
