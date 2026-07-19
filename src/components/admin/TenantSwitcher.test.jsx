@@ -4,6 +4,35 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import React from "react";
 import TenantSwitcher from "./TenantSwitcher";
 
+// ============================================================
+// ✅ FIX: Reliable in-memory sessionStorage mock
+// jsdom's native implementation can silently no-op in some
+// environments/origins, causing sessionStorage.getItem to
+// return undefined instead of the stored value.
+// ============================================================
+const sessionStorageMock = (() => {
+  let store = {};
+  return {
+    getItem: (key) => (key in store ? store[key] : null),
+    setItem: (key, value) => {
+      store[key] = String(value);
+    },
+    removeItem: (key) => {
+      delete store[key];
+    },
+    clear: () => {
+      store = {};
+    },
+  };
+})();
+
+// ✅ Added configurable: true to prevent TypeError in some jsdom setups
+Object.defineProperty(window, "sessionStorage", {
+  value: sessionStorageMock,
+  writable: true,
+  configurable: true,
+});
+
 // Mock lucide-react icons
 vi.mock("lucide-react", () => ({
   Building2: () => <span data-testid="building-icon">Building2</span>,
@@ -99,6 +128,7 @@ vi.mock("@/components/ui/button", () => ({
 describe("TenantSwitcher", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // ✅ sessionStorage.clear() now clears the in-memory mock
     sessionStorage.clear();
     // Reset to default state
     mockTenantState = {
@@ -191,6 +221,7 @@ describe("TenantSwitcher", () => {
     expect(items[2]).toHaveTextContent("Tenant Two");
   });
 
+  // ✅ FIX: Use testid for checkmark assertions instead of text content
   it("should show checkmark next to 'All Tenants' when no tenant is selected", async () => {
     const user = userEvent.setup();
     render(<TenantSwitcher />);
@@ -200,9 +231,12 @@ describe("TenantSwitcher", () => {
 
     const items = screen.getAllByTestId("dropdown-item");
     expect(items[0]).toHaveTextContent("All Tenants");
-    expect(items[0].textContent).toContain("Check");
+    // ✅ Use getByTestId instead of text content
+    const checkIcon = items[0].querySelector('[data-testid="check-icon"]');
+    expect(checkIcon).toBeInTheDocument();
   });
 
+  // ✅ FIX: Use testid for checkmark assertions instead of text content
   it("should show checkmark next to the currently selected tenant", async () => {
     mockTenantState.currentTenant = { id: "tenant-1", name: "Tenant One" };
     
@@ -213,10 +247,18 @@ describe("TenantSwitcher", () => {
     await user.click(trigger);
 
     const items = screen.getAllByTestId("dropdown-item");
-    expect(items[0].textContent).not.toContain("Check");
-    expect(items[1].textContent).toContain("Tenant One");
-    expect(items[1].textContent).toContain("Check");
-    expect(items[2].textContent).not.toContain("Check");
+    
+    // All Tenants should NOT have checkmark
+    const allTenantsCheck = items[0].querySelector('[data-testid="check-icon"]');
+    expect(allTenantsCheck).not.toBeInTheDocument();
+    
+    // Tenant One should have checkmark
+    const tenantOneCheck = items[1].querySelector('[data-testid="check-icon"]');
+    expect(tenantOneCheck).toBeInTheDocument();
+    
+    // Tenant Two should NOT have checkmark
+    const tenantTwoCheck = items[2].querySelector('[data-testid="check-icon"]');
+    expect(tenantTwoCheck).not.toBeInTheDocument();
   });
 
   it("should display message when no available tenants are listed", async () => {
@@ -252,7 +294,6 @@ describe("TenantSwitcher", () => {
     expect(mockSwitchTenant).not.toHaveBeenCalled();
   });
 
-  // ✅ UPDATED: Also verifies sessionStorage is set
   it("should call switchTenant with null when 'All Tenants' is clicked", async () => {
     const user = userEvent.setup();
     render(<TenantSwitcher />);
@@ -267,7 +308,6 @@ describe("TenantSwitcher", () => {
     expect(sessionStorage.getItem("tenant_selected")).toBe("true");
   });
 
-  // ✅ UPDATED: Also verifies sessionStorage is set
   it("should call switchTenant with tenant id when a tenant is clicked", async () => {
     const user = userEvent.setup();
     render(<TenantSwitcher />);
@@ -282,7 +322,6 @@ describe("TenantSwitcher", () => {
     expect(sessionStorage.getItem("tenant_selected")).toBe("true");
   });
 
-  // ✅ UPDATED: Also verifies sessionStorage is set on each switch
   it("should handle multiple tenant switches in sequence", async () => {
     const user = userEvent.setup();
     render(<TenantSwitcher />);
