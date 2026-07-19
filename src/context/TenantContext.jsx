@@ -9,7 +9,7 @@ const TenantContext = createContext();
 // Shared constant for API base URL fallback
 const API_BASE_URL_FALLBACK = "https://thermacoreapp.onrender.com";
 
-// ✅ NEW: Generate mock tenants from units data for demo purposes
+// Generate mock tenants from units data for demo purposes
 const generateMockTenants = () => {
   const tenantMap = new Map();
   units.forEach((unit) => {
@@ -45,6 +45,9 @@ export const TenantProvider = ({ children }) => {
   // Check if user is admin
   const isAdmin = backendRole === "admin";
 
+  // Track loading state for available tenants separately
+  const [isLoadingTenants, setIsLoadingTenants] = useState(false);
+
   // Load current tenant on component mount
   useEffect(() => {
     const loadCurrentTenant = async () => {
@@ -62,10 +65,16 @@ export const TenantProvider = ({ children }) => {
           `${import.meta.env.VITE_API_BASE_URL || API_BASE_URL_FALLBACK}/api/v1/tenants/current`,
         );
 
-        if (response.data) {
+        // Handle response.success properly
+        if (response?.success === false) {
+          setError(response.error || "Failed to load current tenant");
+        } else if (response.data) {
           setCurrentTenant(response.data);
         } else if (response.message) {
           // Admin user with cross-tenant access
+          setCurrentTenant(null);
+        } else {
+          // No data, no message, no error - fallback
           setCurrentTenant(null);
         }
       } catch (err) {
@@ -82,42 +91,60 @@ export const TenantProvider = ({ children }) => {
   useEffect(() => {
     const loadAvailableTenants = async () => {
       if (!isAdmin) {
+        // Reset availableTenants when isAdmin becomes false
+        setAvailableTenants([]);
+        setIsLoadingTenants(false);
         return;
       }
 
       try {
+        setIsLoadingTenants(true);
+
         const response = await apiGetJson(
           `${import.meta.env.VITE_API_BASE_URL || API_BASE_URL_FALLBACK}/api/v1/tenants?active_only=true`,
         );
 
-        if (response.data && response.data.length > 0) {
+        if (response?.success === false) {
+          // API returned an error - fallback to mock tenants for demo
+          const mockTenants = generateMockTenants();
+          setAvailableTenants(mockTenants);
+        } else if (response.data && response.data.length > 0) {
           setAvailableTenants(response.data);
         } else {
-          // ✅ NEW: No tenants from API - use mock tenants for demo
+          // No tenants from API - use mock tenants for demo
           const mockTenants = generateMockTenants();
           setAvailableTenants(mockTenants);
         }
       } catch (_err) {
-        // ✅ NEW: API error - use mock tenants for demo
+        // API error - use mock tenants for demo
         const mockTenants = generateMockTenants();
         setAvailableTenants(mockTenants);
+      } finally {
+        setIsLoadingTenants(false);
       }
     };
 
-    if (isAdmin) {
-      loadAvailableTenants();
-    }
+    loadAvailableTenants();
   }, [isAdmin]);
 
-  // Switch tenant (admin only)
+  // Switch tenant - no-op on invalid tenant ID
   const switchTenant = (tenantId) => {
     if (!isAdmin) {
       return;
     }
 
-    // Find the tenant in available tenants
+    // If tenantId is null, that means "All Tenants" is selected
+    if (tenantId === null) {
+      setCurrentTenant(null);
+      return;
+    }
+
+    // Only switch if tenant exists in available tenants
     const tenant = availableTenants.find((t) => t.id === tenantId);
-    setCurrentTenant(tenant || null);
+    if (tenant) {
+      setCurrentTenant(tenant);
+    }
+    // If tenant not found, do nothing (no-op)
   };
 
   // Get tenant ID for API calls
@@ -131,7 +158,8 @@ export const TenantProvider = ({ children }) => {
   const value = {
     currentTenant,
     availableTenants,
-    isLoading,
+    isLoading: isLoading || isLoadingTenants,
+    isLoadingTenants,
     error,
     isAdmin,
     switchTenant,
