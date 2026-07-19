@@ -6,6 +6,34 @@ import Dashboard from "./Dashboard";
 import { AuthProvider } from "../context/AuthContext";
 import { ThemeProvider } from "../context/ThemeContext";
 
+// ============================================================
+// ✅ FIX: Reliable in-memory sessionStorage mock
+// jsdom's native implementation can silently no-op in some
+// environments/origins, causing sessionStorage.getItem to
+// return undefined instead of the stored value.
+// ============================================================
+const sessionStorageMock = (() => {
+  let store = {};
+  return {
+    getItem: (key) => (key in store ? store[key] : null),
+    setItem: (key, value) => {
+      store[key] = String(value);
+    },
+    removeItem: (key) => {
+      delete store[key];
+    },
+    clear: () => {
+      store = {};
+    },
+  };
+})();
+
+Object.defineProperty(window, "sessionStorage", {
+  value: sessionStorageMock,
+  writable: true,
+  configurable: true,
+});
+
 // Mock react-router-dom
 const mockNavigate = vi.fn();
 vi.mock("react-router-dom", () => ({
@@ -141,6 +169,9 @@ const TestWrapper = ({ children, userRole = "admin" }) => {
 };
 
 describe("Dashboard", () => {
+  // ✅ Track current role for localStorage mock
+  let currentMockRole = "admin";
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
@@ -158,13 +189,16 @@ describe("Dashboard", () => {
 
     // ✅ Set tenant_selected flag for admin tests
     sessionStorage.setItem("tenant_selected", "true");
+    currentMockRole = "admin";
 
-    Storage.prototype.getItem = vi.fn((key) => {
+    // ✅ Only mock localStorage — don't touch Storage.prototype
+    // so sessionStorage's real get/set behavior is preserved.
+    window.localStorage.getItem = vi.fn((key) => {
       if (key === "thermacore_user") {
         return JSON.stringify({ id: 1, username: "testuser" });
       }
-      if (key === "thermacore_role") return "admin";
-      if (key === "thermacore_backend_role") return "admin";
+      if (key === "thermacore_role") return currentMockRole;
+      if (key === "thermacore_backend_role") return currentMockRole;
       if (key === "thermacore_token") return "mock-jwt-token";
       return null;
     });
@@ -174,9 +208,19 @@ describe("Dashboard", () => {
     vi.useRealTimers();
     vi.clearAllMocks();
     sessionStorage.clear();
+    // ✅ Reset localStorage mock
+    window.localStorage.getItem = vi.fn();
+    // ✅ Reset mockTenantValue properties to avoid test leakage
+    mockTenantValue.isAdmin = true;
+    mockTenantValue.currentTenant = { id: "1", name: "Tenant One" };
   });
 
   const renderComponent = (userRole = "admin") => {
+    // ✅ Update the role for localStorage mock
+    currentMockRole = userRole;
+    // ✅ Update isAdmin in TenantContext mock
+    mockTenantValue.isAdmin = userRole === "admin";
+
     let result;
     act(() => {
       result = render(
@@ -201,7 +245,6 @@ describe("Dashboard", () => {
       expect(descriptions.length).toBeGreaterThan(0);
     });
 
-    // ✅ NEW: Test "All Tenants" description
     it("should render dashboard description for admin with All Tenants", () => {
       mockTenantValue.currentTenant = null;
       renderComponent("admin");
@@ -303,7 +346,9 @@ describe("Dashboard", () => {
 
   describe("Edge Cases", () => {
     it("should handle undefined user role", () => {
-      Storage.prototype.getItem = vi.fn(() => null);
+      // ✅ Override localStorage mock to return null for all keys
+      window.localStorage.getItem = vi.fn(() => null);
+      // ✅ Use a different role that won't trigger admin redirect
       renderComponent(null);
       expect(screen.getAllByText("Dashboard Overview").length).toBeGreaterThan(0);
     });
@@ -340,7 +385,6 @@ describe("Dashboard", () => {
   });
 
   describe("Admin Tenant Behavior", () => {
-    // ✅ UPDATED: Uses sessionStorage to check if selection was made
     it("should redirect admin to /admin if no tenant selected", () => {
       sessionStorage.removeItem("tenant_selected");
       mockTenantValue.currentTenant = null;
