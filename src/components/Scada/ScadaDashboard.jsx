@@ -27,8 +27,25 @@ import "../../styles/theme.css";
 
 // Constants
 const DEFAULT_SUBTAB = "trends";
+const DEFAULT_MAIN_TAB = "visualization";
 
-// Error Boundary Component
+// Sub-tab configuration for maintainability
+const SUB_TAB_CONFIGS = {
+  trends: {
+    id: "trends",
+    label: "Trends",
+    icon: TrendingUp,
+    dashboardTab: "trends", // Maps to ComprehensiveVisualizationDashboard's defaultTab
+  },
+  processflow: {
+    id: "processflow",
+    label: "Process Flow",
+    icon: GitBranch,
+    dashboardTab: "process", // Maps to ComprehensiveVisualizationDashboard's defaultTab
+  },
+};
+
+// Error Boundary Component with proper logging
 class ScadaErrorBoundary extends Component {
   constructor(props) {
     super(props);
@@ -39,8 +56,10 @@ class ScadaErrorBoundary extends Component {
     return { hasError: true, error };
   }
 
-  componentDidCatch(_error, _errorInfo) {
-    // Error is already captured in state for display
+  componentDidCatch(error, errorInfo) {
+    // Log errors properly for debugging
+    console.error("SCADA Dashboard Error:", error);
+    console.error("Error Info:", errorInfo);
   }
 
   render() {
@@ -80,29 +99,33 @@ const ScadaDashboard = ({ className = "" }) => {
   const tabParam = searchParams.get("tab");
   const subTabParam = searchParams.get("subtab");
 
-  const [activeTab, setActiveTab] = useState(tabParam || "visualization");
+  const [activeTab, setActiveTab] = useState(tabParam || DEFAULT_MAIN_TAB);
   const [activeSubTab, setActiveSubTab] = useState(
     subTabParam || DEFAULT_SUBTAB,
   );
 
   // Sync tab state with URL parameter on mount and when URL changes
   useEffect(() => {
-    if (tabParam) {
+    // Only update if URL params differ from current state to avoid re-renders
+    if (tabParam && tabParam !== activeTab) {
       setActiveTab(tabParam);
     }
-    if (subTabParam) {
+    if (subTabParam && subTabParam !== activeSubTab) {
       setActiveSubTab(subTabParam);
     }
-  }, [tabParam, subTabParam]);
+  }, [tabParam, subTabParam, activeTab, activeSubTab]);
 
   // Handle main tab change - update both state and URL
   const handleTabChange = (newTab) => {
     setActiveTab(newTab);
-    // Reset sub-tab to default when switching to visualization
+    
+    // Reset sub-tab to default when switching TO visualization
     if (newTab === "visualization") {
-      setSearchParams({ tab: newTab, subtab: activeSubTab }, { replace: true });
+      setActiveSubTab(DEFAULT_SUBTAB);
+      setSearchParams({ tab: newTab, subtab: DEFAULT_SUBTAB }, { replace: true });
     } else {
-      setSearchParams({ tab: newTab }, { replace: true });
+      // Keep subtab in URL for bookmarks when leaving visualization
+      setSearchParams({ tab: newTab, subtab: activeSubTab }, { replace: true });
     }
   };
 
@@ -168,49 +191,59 @@ const ScadaDashboard = ({ className = "" }) => {
             <TabsContent value="visualization" className="scada-tab-content">
               <div className="scada-sub-nav">
                 <div className="scada-sub-nav-title">Visualization Options</div>
-                <div className="scada-sub-tabs-list">
-                  <button
-                    type="button"
-                    onClick={() => handleSubTabChange("trends")}
-                    className={`scada-sub-tab-trigger ${activeSubTab === "trends" ? "active" : ""}`}
-                    data-state={
-                      activeSubTab === "trends" ? "active" : "inactive"
-                    }
-                  >
-                    <TrendingUp className="scada-sub-tab-icon" />
-                    <span>Trends</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSubTabChange("processflow")}
-                    className={`scada-sub-tab-trigger ${activeSubTab === "processflow" ? "active" : ""}`}
-                    data-state={
-                      activeSubTab === "processflow" ? "active" : "inactive"
-                    }
-                  >
-                    <GitBranch className="scada-sub-tab-icon" />
-                    <span>Process Flow</span>
-                  </button>
+                <div 
+                  className="scada-sub-tabs-list" 
+                  role="tablist"
+                  aria-label="Visualization sub-tabs"
+                >
+                  {Object.values(SUB_TAB_CONFIGS).map((config) => {
+                    const Icon = config.icon;
+                    const isActive = activeSubTab === config.id;
+                    
+                    return (
+                      <button
+                        key={config.id}
+                        type="button"
+                        onClick={() => handleSubTabChange(config.id)}
+                        role="tab"
+                        aria-selected={isActive}
+                        aria-controls={`subtab-${config.id}`}
+                        id={`tab-${config.id}`}
+                        className={`scada-sub-tab-trigger ${isActive ? "active" : ""}`}
+                        data-state={isActive ? "active" : "inactive"}
+                      >
+                        <Icon className="scada-sub-tab-icon" />
+                        <span>{config.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* Sub-tab Content */}
-              {activeSubTab === "trends" && (
-                <div className="animate-fadeIn">
-                  <ComprehensiveVisualizationDashboard
-                    embedded={true}
-                    defaultTab="trends"
-                  />
-                </div>
-              )}
-              {activeSubTab === "processflow" && (
-                <div className="animate-fadeIn">
-                  <ComprehensiveVisualizationDashboard
-                    embedded={true}
-                    defaultTab="process"
-                  />
-                </div>
-              )}
+              {/* Render all sub-tab panels using the config */}
+              {Object.values(SUB_TAB_CONFIGS).map((config) => {
+                const isActive = activeSubTab === config.id;
+                const panelId = `subtab-${config.id}`;
+                const labelledBy = `tab-${config.id}`;
+                
+                return (
+                  <div
+                    key={config.id}
+                    role="tabpanel"
+                    id={panelId}
+                    aria-labelledby={labelledBy}
+                    className="animate-fadeIn"
+                    hidden={!isActive}
+                  >
+                    {isActive && (
+                      <ComprehensiveVisualizationDashboard
+                        embedded={true}
+                        defaultTab={config.dashboardTab}
+                      />
+                    )}
+                  </div>
+                );
+              })}
             </TabsContent>
 
             {/* Alerts Tab */}
