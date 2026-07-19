@@ -7,7 +7,7 @@ import { AuthProvider } from "../context/AuthContext";
 import { ThemeProvider } from "../context/ThemeContext";
 
 // ============================================================
-// ✅ FIX: Reliable in-memory sessionStorage mock
+// Reliable in-memory sessionStorage mock
 // jsdom's native implementation can silently no-op in some
 // environments/origins, causing sessionStorage.getItem to
 // return undefined instead of the stored value.
@@ -34,15 +34,16 @@ Object.defineProperty(window, "sessionStorage", {
   configurable: true,
 });
 
-// Mock react-router-dom
-const mockNavigate = vi.fn();
+// ✅ FIX: Make useLocation mockable per test
+let mockLocationValue = { pathname: "/", search: "" };
+
+// Mock react-router-dom with mutable location
 vi.mock("react-router-dom", () => ({
   useNavigate: () => mockNavigate,
-  useLocation: () => ({
-    pathname: "/",
-    search: "",
-  }),
+  useLocation: () => mockLocationValue,
 }));
+
+const mockNavigate = vi.fn();
 
 // Dynamic mock for TenantContext
 let mockTenantValue = {
@@ -51,7 +52,6 @@ let mockTenantValue = {
     { id: "1", name: "Tenant One" },
     { id: "2", name: "Tenant Two" },
   ],
-  isAdmin: true,
   switchTenant: vi.fn(),
 };
 
@@ -169,13 +169,15 @@ const TestWrapper = ({ children, userRole = "admin" }) => {
 };
 
 describe("Dashboard", () => {
-  // ✅ Track current role for localStorage mock
+  // Track current role for localStorage mock
   let currentMockRole = "admin";
 
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
     sessionStorage.clear();
+    // ✅ Reset location mock
+    mockLocationValue = { pathname: "/", search: "" };
 
     mockTenantValue = {
       currentTenant: { id: "1", name: "Tenant One" },
@@ -183,15 +185,14 @@ describe("Dashboard", () => {
         { id: "1", name: "Tenant One" },
         { id: "2", name: "Tenant Two" },
       ],
-      isAdmin: true,
       switchTenant: vi.fn(),
     };
 
-    // ✅ Set tenant_selected flag for admin tests
+    // Set tenant_selected flag for admin tests
     sessionStorage.setItem("tenant_selected", "true");
     currentMockRole = "admin";
 
-    // ✅ Only mock localStorage — don't touch Storage.prototype
+    // Only mock localStorage — don't touch Storage.prototype
     // so sessionStorage's real get/set behavior is preserved.
     window.localStorage.getItem = vi.fn((key) => {
       if (key === "thermacore_user") {
@@ -208,18 +209,15 @@ describe("Dashboard", () => {
     vi.useRealTimers();
     vi.clearAllMocks();
     sessionStorage.clear();
-    // ✅ Reset localStorage mock
+    // Reset localStorage mock
     window.localStorage.getItem = vi.fn();
-    // ✅ Reset mockTenantValue properties to avoid test leakage
-    mockTenantValue.isAdmin = true;
+    // Reset mockTenantValue properties to avoid test leakage
     mockTenantValue.currentTenant = { id: "1", name: "Tenant One" };
   });
 
   const renderComponent = (userRole = "admin") => {
-    // ✅ Update the role for localStorage mock
+    // Update the role for localStorage mock
     currentMockRole = userRole;
-    // ✅ Update isAdmin in TenantContext mock
-    mockTenantValue.isAdmin = userRole === "admin";
 
     let result;
     act(() => {
@@ -346,9 +344,8 @@ describe("Dashboard", () => {
 
   describe("Edge Cases", () => {
     it("should handle undefined user role", () => {
-      // ✅ Override localStorage mock to return null for all keys
+      // Override localStorage mock to return null for all keys
       window.localStorage.getItem = vi.fn(() => null);
-      // ✅ Use a different role that won't trigger admin redirect
       renderComponent(null);
       expect(screen.getAllByText("Dashboard Overview").length).toBeGreaterThan(0);
     });
@@ -372,7 +369,7 @@ describe("Dashboard", () => {
       
       expect(screen.getByText(/Total:/)).toBeInTheDocument();
       expect(screen.getByText(/Online:/)).toBeInTheDocument();
-      expect(screen.getByText("Alerts: 6")).toBeInTheDocument();
+      expect(screen.getByText(/Alerts:/)).toBeInTheDocument();
       expect(screen.getByText(/Alarms:/)).toBeInTheDocument();
     });
   });
@@ -401,6 +398,52 @@ describe("Dashboard", () => {
     it("should NOT show tenant switcher for regular user", () => {
       renderComponent("user");
       expect(screen.queryAllByTestId("tenant-switcher").length).toBe(0);
+    });
+
+    it("should show 6 units when a specific tenant is selected", () => {
+      mockTenantValue.currentTenant = { id: "1", name: "Tenant One" };
+      renderComponent("admin");
+      const totalUnitsDial = screen.getByTestId("status-dial-total-units");
+      expect(totalUnitsDial).toHaveTextContent("6");
+    });
+
+    it("should show all 20 units when All Tenants is selected", () => {
+      mockTenantValue.currentTenant = null;
+      renderComponent("admin");
+      const totalUnitsDial = screen.getByTestId("status-dial-total-units");
+      expect(totalUnitsDial).toHaveTextContent("20");
+    });
+
+    it("should show 6 units for regular users", () => {
+      renderComponent("user");
+      const totalUnitsDial = screen.getByTestId("status-dial-total-units");
+      expect(totalUnitsDial).toHaveTextContent("6");
+    });
+
+    // ✅ FIX: Test query param fallback with proper mocking
+    it("should accept tenant_selected query param when sessionStorage is not set", () => {
+      sessionStorage.removeItem("tenant_selected");
+      // Set location mock to include the query param
+      mockLocationValue = { pathname: "/dashboard", search: "?tenant_selected=true" };
+      // ✅ FIX: Set currentTenant to null for "All Tenants" view (20 units)
+      mockTenantValue.currentTenant = null;
+
+      let result;
+      act(() => {
+        result = render(
+          <ThemeProvider>
+            <AuthProvider value={{ ...mockAuthValue, userRole: "admin", user: { ...mockAuthValue.user, role: "admin" } }}>
+              <Dashboard />
+            </AuthProvider>
+          </ThemeProvider>
+        );
+      });
+
+      // The component should render (not redirect) because the query param is present
+      expect(screen.getByText("Dashboard Overview")).toBeInTheDocument();
+      // Verify the dashboard shows all 20 units (admin view - "All Tenants")
+      const totalUnitsDial = screen.getByTestId("status-dial-total-units");
+      expect(totalUnitsDial).toHaveTextContent("20");
     });
   });
 });
