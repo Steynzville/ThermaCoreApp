@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, act } from "@testing-library/react";
+import { fireEvent, render, screen, act } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
 
 import Dashboard from "../components/Dashboard";
@@ -82,10 +82,12 @@ vi.mock("../components/Dashboard/QuickActionCard", () => ({
 }));
 
 vi.mock("../components/Dashboard/UnitSummary", () => ({
-  default: ({ totalUnits, onlineCount }) => (
+  default: ({ totalUnits, onlineCount, alertCount, alarmCount }) => (
     <div data-testid="unit-summary">
       <span>Total: {totalUnits}</span>
       <span>Online: {onlineCount}</span>
+      <span>Alerts: {alertCount}</span>
+      <span>Alarms: {alarmCount}</span>
     </div>
   ),
 }));
@@ -115,7 +117,6 @@ vi.mock("../components/ui/HighTechToggle", () => ({
   ),
 }));
 
-// ✅ FIX: Proper AuthProvider mock
 const mockAuthValue = {
   user: { id: 1, username: "testuser", role: "admin" },
   userRole: "admin",
@@ -124,7 +125,6 @@ const mockAuthValue = {
   logout: vi.fn(),
 };
 
-// ✅ FIX: Test wrapper with proper provider structure
 const TestWrapper = ({ children, userRole = "admin" }) => {
   const authValue = {
     ...mockAuthValue,
@@ -170,7 +170,6 @@ describe("Dashboard", () => {
     vi.clearAllMocks();
   });
 
-  // ✅ FIX: Wrap render in act()
   const renderComponent = (userRole = "admin") => {
     let result;
     act(() => {
@@ -190,11 +189,15 @@ describe("Dashboard", () => {
       expect(titles.length).toBeGreaterThan(0);
     });
 
-    it("should render dashboard description", () => {
-      renderComponent();
-      const descriptions = screen.getAllByText(
-        "Monitor your ThermaCore units in real-time",
-      );
+    it("should render dashboard description for admin user", () => {
+      renderComponent("admin");
+      const descriptions = screen.getAllByText("Managing: Tenant One");
+      expect(descriptions.length).toBeGreaterThan(0);
+    });
+
+    it("should render dashboard description for regular user", () => {
+      renderComponent("user");
+      const descriptions = screen.getAllByText(/Welcome back/);
       expect(descriptions.length).toBeGreaterThan(0);
     });
 
@@ -226,7 +229,6 @@ describe("Dashboard", () => {
       expect(screen.getAllByTestId("status-dial-alarms").length).toBeGreaterThan(0);
     });
 
-    // ✅ FIX: Wrap interaction in act()
     it("should navigate when Total Units dial is clicked", () => {
       renderComponent();
       act(() => {
@@ -235,7 +237,6 @@ describe("Dashboard", () => {
       expect(mockNavigate).toHaveBeenCalledWith("/grid-view?status=all");
     });
 
-    // ✅ FIX: Wrap interaction in act()
     it("should navigate when Online dial is clicked", () => {
       renderComponent();
       act(() => {
@@ -248,16 +249,12 @@ describe("Dashboard", () => {
   describe("Quick Actions - Admin Only", () => {
     it("should not render quick actions for regular users", () => {
       const { container } = renderComponent("user");
-
-      // Search within the container for quick action testids
       const quickActionElements = container.querySelectorAll('[data-testid^="quick-action-"]');
       expect(quickActionElements.length).toBe(0);
     });
 
     it("should render quick actions for admin users", () => {
       const { container } = renderComponent("admin");
-
-      // Search within the container for quick action testids
       const quickActionElements = container.querySelectorAll('[data-testid^="quick-action-"]');
       expect(quickActionElements.length).toBeGreaterThan(0);
     });
@@ -269,7 +266,6 @@ describe("Dashboard", () => {
       expect(screen.queryAllByTestId("performance-dashboard").length).toBe(0);
     });
 
-    // ✅ FIX: Wrap interactions in act()
     it("should handle rapid toggle clicks", () => {
       renderComponent();
       const toggle = screen.getAllByTestId("view-toggle")[0];
@@ -299,7 +295,6 @@ describe("Dashboard", () => {
       expect(screen.getAllByText("Dashboard Overview").length).toBeGreaterThan(0);
     });
 
-    // ✅ FIX: Wrap interactions in act()
     it("should handle multiple quick action clicks", () => {
       renderComponent("admin");
       const btn = screen.getAllByTestId("quick-action-sales-analytics")[0];
@@ -310,6 +305,19 @@ describe("Dashboard", () => {
       });
 
       expect(mockNavigate).toHaveBeenCalledTimes(2);
+    });
+
+    it("should render UnitSummary with correct alert and alarm counts", () => {
+      const { container } = renderComponent("admin");
+      const unitSummary = container.querySelector('[data-testid="unit-summary"]');
+      expect(unitSummary).toBeInTheDocument();
+      
+      // Verify all counts are rendered with their labels
+      expect(screen.getByText(/Total:/)).toBeInTheDocument();
+      expect(screen.getByText(/Online:/)).toBeInTheDocument();
+      // ✅ Assert the exact hardcoded value
+      expect(screen.getByText("Alerts: 6")).toBeInTheDocument();
+      expect(screen.getByText(/Alarms:/)).toBeInTheDocument();
     });
   });
 
@@ -334,7 +342,6 @@ describe("Dashboard", () => {
     });
 
     it("should NOT show tenant switcher for regular user", () => {
-      mockTenantValue.isAdmin = false;
       renderComponent("user");
       expect(screen.queryAllByTestId("tenant-switcher").length).toBe(0);
     });
