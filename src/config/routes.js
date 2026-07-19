@@ -8,8 +8,6 @@ const SettingsView = lazy(() => import("../components/SettingsView"));
 const AlertsView = lazy(() => import("../components/AlertsView"));
 const AlarmsView = lazy(() => import("../components/AlarmsView"));
 const GridView = lazy(() => import("../components/GridView"));
-// ❌ REMOVED: _UnitControl, _UnitDetails, _UserUnitDetails - never used directly
-// These are imported directly in App.jsx's roleBasedComponents map
 const RemoteControl = lazy(() => import("../components/RemoteControl"));
 const UnitPerformance = lazy(() => import("../components/UnitPerformance"));
 const ViewAnalytics = lazy(() => import("../components/ViewAnalytics"));
@@ -105,28 +103,29 @@ const routes = [
     specialHandling: "unit-role-based",
   },
   // Admin-only routes
+  // NOTE: isAdminRoute is documentation only - ProtectedRoute handles role checking
   {
     path: "/admin",
     component: AdminLanding,
     isProtected: true,
     roles: ["admin"],
-    isAdminRoute: true,
+    isAdminRoute: true, // Documentation: admin-only route
   },
   {
     path: "/admin/users",
     component: AdminPanel,
     isProtected: true,
     roles: ["admin"],
-    isAdminRoute: true,
+    isAdminRoute: true, // Documentation: admin-only route
   },
   {
     path: "/analytics",
     component: ViewAnalytics,
     isProtected: true,
     roles: ["admin"],
-    isAdminRoute: true,
+    isAdminRoute: true, // Documentation: admin-only route
   },
-  // ✅ NOTE: routes with roles: [] are intentionally open to ALL authenticated users
+  // NOTE: routes with roles: [] are intentionally open to ALL authenticated users
   // (operators, viewers, admins). These are read-only/telemetry views that do not
   // expose write/control actions. Any write actions inside these components must
   // be separately gated with role checks.
@@ -159,7 +158,7 @@ const routes = [
     component: SystemHealth,
     isProtected: true,
     roles: ["admin"],
-    isAdminRoute: true,
+    isAdminRoute: true, // Documentation: admin-only route
   },
   {
     path: "/synchronize-units",
