@@ -30,21 +30,12 @@ const Dashboard = ({ className }) => {
   const { currentTenant, isAdmin } = useTenant();
   const [currentView, setCurrentView] = useState("operator"); // "operator" or "performance"
 
+  // ✅ FIX: Use consistent admin check across the component
+  // Use the same predicate everywhere to avoid inconsistencies
+  const adminCheck = userRole === "admin" || user?.role === "admin";
+
   // If admin has no tenant selected, redirect to admin landing
   useEffect(() => {
-    // isAdmin is from TenantContext, userRole from AuthContext
-    const adminCheck = userRole === "admin" || user?.role === "admin";
-    // Only redirect if admin and no tenant selected (null means "All Tenants" is selected, which is valid)
-    // We need a way to know if the user has explicitly selected "All Tenants" vs. no selection yet
-    // Since currentTenant is null for both "All Tenants" and no selection,
-    // we need to use a different indicator - we'll use a flag in TenantContext or localStorage
-    // For now, we'll check if availableTenants is populated (admin logged in)
-    // and if currentTenant is null, we treat it as "All Tenants" selected
-    // The admin landing page ensures selection before navigating here
-    // So if we're on dashboard and admin with no tenant, redirect to admin
-    // But if "All Tenants" is selected, currentTenant is null and we should NOT redirect
-    // We'll use a session flag to track if admin has made a selection
-    
     // Check sessionStorage for tenant selection flag
     const hasSelectedTenant = sessionStorage.getItem("tenant_selected") === "true";
     
@@ -52,17 +43,20 @@ const Dashboard = ({ className }) => {
       // If no selection has been made yet, redirect to admin landing
       navigate("/admin", { replace: true });
     }
-  }, [userRole, user, currentTenant, navigate]);
+    // ✅ FIX: Remove currentTenant from deps - not read in effect body
+  }, [adminCheck, navigate]);
 
   // Show loading or nothing while redirecting
-  if (userRole === "admin" && sessionStorage.getItem("tenant_selected") !== "true") {
+  // ✅ FIX: Use consistent adminCheck
+  if (adminCheck && sessionStorage.getItem("tenant_selected") !== "true") {
     return null;
   }
 
   // Filter units based on selected tenant
   let filteredUnits = units;
   
-  // If admin and a specific tenant is selected (not "All Tenants")
+  // ✅ FIX: Use isAdmin from TenantContext for tenant filtering
+  // (isAdmin is already the correct value from context)
   if (isAdmin && currentTenant) {
     // Filter units by client name matching the selected tenant
     filteredUnits = units.filter((unit) => unit.client?.name === currentTenant.name);
@@ -303,6 +297,7 @@ const Dashboard = ({ className }) => {
         </div>
 
         {/* Quick Actions - Only show for Admin */}
+        {/* ✅ FIX: Use isAdmin from TenantContext */}
         {isAdmin && (
           <div className="mb-8">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
