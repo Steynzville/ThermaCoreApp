@@ -1,6 +1,13 @@
 import { ChevronRight } from "lucide-react";
 import { useState } from "react";
 
+// Color mapping for icon variants - hoisted outside component for performance
+const COLOR_MAP = {
+  blue: "bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400",
+  purple: "bg-purple-50 text-purple-600 dark:bg-purple-950 dark:text-purple-400",
+  green: "bg-green-50 text-green-600 dark:bg-green-950 dark:text-green-400",
+};
+
 // Quick Action Card
 const QuickActionCard = ({
   icon: Icon,
@@ -10,6 +17,9 @@ const QuickActionCard = ({
   color = "blue",
 }) => {
   const [isHovered, setIsHovered] = useState(false);
+
+  // NOTE: Unrecognized colors fall back to blue theme (intentional default)
+  const iconColorClasses = COLOR_MAP[color] || COLOR_MAP.blue;
 
   return (
     <button
@@ -26,9 +36,7 @@ const QuickActionCard = ({
       <div
         className={`
         p-3 rounded-lg w-fit mb-4 transition-transform duration-300
-        ${color === "blue" ? "bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400" : ""}
-        ${color === "purple" ? "bg-purple-50 text-purple-600 dark:bg-purple-950 dark:text-purple-400" : ""}
-        ${color === "green" ? "bg-green-50 text-green-600 dark:bg-green-950 dark:text-green-400" : ""}
+        ${iconColorClasses}
         ${isHovered ? "scale-110" : ""}
       `}
       >
