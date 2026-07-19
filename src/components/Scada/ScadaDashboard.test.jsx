@@ -302,18 +302,47 @@ describe("ScadaDashboard", () => {
     expect(processFlowTab).toHaveAttribute("id", "tab-processflow");
   });
 
+  // ✅ FIXED: Hidden panels queried by id, not by accessible name
   it("should have proper tabpanel accessibility attributes", () => {
-    renderWithRouter(<ScadaDashboard />);
+    const { container } = renderWithRouter(<ScadaDashboard />);
     
-    // The accessible name comes from the referenced element's text content ("Trends", "Process Flow")
+    // Visible panel can be found by accessible name
     const trendsPanel = screen.getByRole("tabpanel", { name: "Trends" });
     expect(trendsPanel).toHaveAttribute("aria-labelledby", "tab-trends");
     expect(trendsPanel).not.toHaveAttribute("hidden");
     
-    // For hidden panels, we need to use `hidden: true` to find them in the accessibility tree
-    const processPanel = screen.getByRole("tabpanel", { name: "Process Flow", hidden: true });
+    // Hidden panels cannot be found by accessible name (accname spec limitation)
+    // Query by id instead
+    const processPanel = container.querySelector("#subtab-processflow");
     expect(processPanel).toHaveAttribute("aria-labelledby", "tab-processflow");
     expect(processPanel).toHaveAttribute("hidden");
+  });
+
+  // ✅ FIXED: Hidden panels queried by id, not by accessible name
+  it("should render all sub-tab panels in the DOM but only show the active one", async () => {
+    const user = userEvent.setup();
+    const { container } = renderWithRouter(<ScadaDashboard />);
+    
+    // Visible panel - accessible by role + name
+    const trendsPanel = screen.getByRole("tabpanel", { name: "Trends" });
+    expect(trendsPanel).toBeInTheDocument();
+    expect(trendsPanel).not.toHaveAttribute("hidden");
+    
+    // Hidden panel - query by id instead of accessible name
+    const processPanel = container.querySelector("#subtab-processflow");
+    expect(processPanel).toBeInTheDocument();
+    expect(processPanel).toHaveAttribute("hidden");
+    
+    // Switch to Process Flow using userEvent
+    const processFlowButton = screen.getByRole("tab", { name: "Process Flow" });
+    await user.click(processFlowButton);
+    
+    // Now Process Flow should be visible and Trends hidden
+    const processPanelNowVisible = screen.getByRole("tabpanel", { name: "Process Flow" });
+    expect(processPanelNowVisible).not.toHaveAttribute("hidden");
+    
+    const trendsPanelNowHidden = container.querySelector("#subtab-trends");
+    expect(trendsPanelNowHidden).toHaveAttribute("hidden");
   });
 
   it("should pass correct dashboardTab value to ComprehensiveVisualizationDashboard", async () => {
@@ -327,29 +356,5 @@ describe("ScadaDashboard", () => {
     const processFlowButton = screen.getByRole("tab", { name: "Process Flow" });
     await user.click(processFlowButton);
     expect(screen.getByText(/Tab: process/)).toBeInTheDocument();
-  });
-
-  it("should render all sub-tab panels in the DOM but only show the active one", async () => {
-    const user = userEvent.setup();
-    renderWithRouter(<ScadaDashboard />);
-    
-    // Both panels should exist in the DOM
-    const trendsPanel = screen.getByRole("tabpanel", { name: "Trends" });
-    expect(trendsPanel).toBeInTheDocument();
-    
-    const processPanel = screen.getByRole("tabpanel", { name: "Process Flow", hidden: true });
-    expect(processPanel).toBeInTheDocument();
-    
-    // Only Trends should be visible (not hidden)
-    expect(trendsPanel).not.toHaveAttribute("hidden");
-    expect(processPanel).toHaveAttribute("hidden");
-    
-    // Switch to Process Flow using userEvent
-    const processFlowButton = screen.getByRole("tab", { name: "Process Flow" });
-    await user.click(processFlowButton);
-    
-    // Now Process Flow should be visible and Trends hidden
-    expect(screen.getByRole("tabpanel", { name: "Process Flow" })).not.toHaveAttribute("hidden");
-    expect(screen.getByRole("tabpanel", { name: "Trends", hidden: true })).toHaveAttribute("hidden");
   });
 });
