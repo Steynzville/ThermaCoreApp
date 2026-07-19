@@ -169,16 +169,19 @@ describe("QuickActionCard", () => {
       expect(iconWrapper.className).toContain("scale-110");
     });
 
+    // ✅ FIXED: SVG elements use getAttribute("class"), not .className
     it("should apply translate-x-1 to chevron on hover", async () => {
       const user = userEvent.setup();
       const { container } = render(<QuickActionCard {...defaultProps} />);
       const button = getCardButton();
       const chevron = container.querySelector(".h-4.w-4.text-gray-400.mt-2");
       
-      expect(chevron.className).not.toContain("translate-x-1");
+      // SVGElement.className is SVGAnimatedString, not a plain string
+      // Use getAttribute("class") instead
+      expect(chevron.getAttribute("class")).not.toContain("translate-x-1");
       
       await user.hover(button);
-      expect(chevron.className).toContain("translate-x-1");
+      expect(chevron.getAttribute("class")).toContain("translate-x-1");
     });
 
     it("should have CSS hover classes in static className", () => {
