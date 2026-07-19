@@ -6,8 +6,8 @@ import { useEffect, useMemo, useState } from "react";
 const EnhancedStatusDial = ({
   icon: Icon,
   title,
-  count,
-  percentage,
+  count = 0,
+  percentage = 0,
   color,
   onClick,
   clickable = true,
