@@ -144,6 +144,7 @@ describe("Dashboard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
+    sessionStorage.clear();
 
     mockTenantValue = {
       currentTenant: { id: "1", name: "Tenant One" },
@@ -154,6 +155,9 @@ describe("Dashboard", () => {
       isAdmin: true,
       switchTenant: vi.fn(),
     };
+
+    // ✅ Set tenant_selected flag for admin tests
+    sessionStorage.setItem("tenant_selected", "true");
 
     Storage.prototype.getItem = vi.fn((key) => {
       if (key === "thermacore_user") {
@@ -169,6 +173,7 @@ describe("Dashboard", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.clearAllMocks();
+    sessionStorage.clear();
   });
 
   const renderComponent = (userRole = "admin") => {
@@ -190,10 +195,17 @@ describe("Dashboard", () => {
       expect(titles.length).toBeGreaterThan(0);
     });
 
-    it("should render dashboard description for admin user", () => {
+    it("should render dashboard description for admin user with tenant", () => {
       renderComponent("admin");
       const descriptions = screen.getAllByText("Managing: Tenant One");
       expect(descriptions.length).toBeGreaterThan(0);
+    });
+
+    // ✅ NEW: Test "All Tenants" description
+    it("should render dashboard description for admin with All Tenants", () => {
+      mockTenantValue.currentTenant = null;
+      renderComponent("admin");
+      expect(screen.getByText("Managing: All Tenants")).toBeInTheDocument();
     });
 
     it("should render dashboard description for regular user", () => {
@@ -328,7 +340,9 @@ describe("Dashboard", () => {
   });
 
   describe("Admin Tenant Behavior", () => {
+    // ✅ UPDATED: Uses sessionStorage to check if selection was made
     it("should redirect admin to /admin if no tenant selected", () => {
+      sessionStorage.removeItem("tenant_selected");
       mockTenantValue.currentTenant = null;
       renderComponent("admin");
       expect(mockNavigate).toHaveBeenCalledWith("/admin", { replace: true });
@@ -337,7 +351,7 @@ describe("Dashboard", () => {
     it("should show tenant switcher for admin with tenant selected", () => {
       renderComponent("admin");
       expect(screen.getAllByTestId("tenant-switcher").length).toBeGreaterThan(0);
-      expect(screen.getAllByText("Managing: Tenant One").length).toBeGreaterThan(0);
+      expect(screen.getByText("Managing: Tenant One")).toBeInTheDocument();
     });
 
     it("should NOT show tenant switcher for regular user", () => {
