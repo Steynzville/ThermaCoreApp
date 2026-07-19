@@ -1,29 +1,37 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTenant } from "../context/TenantContext";
 import { useAuth } from "../context/AuthContext";
 import TenantSwitcher from "../components/admin/TenantSwitcher";
+import { Button } from "../components/ui/button";
 
 /**
- * Admin Landing Page
+ * Admin Landing Page (Tenant Switcher)
  *
  * First page admins see after login. Features:
  * - Welcome message with username
  * - Tenant switcher dropdown
- * - Redirects to dashboard when tenant is selected
+ * - "Go to Dashboard" button
+ * - Redirects to dashboard when tenant is selected and button is clicked
  * - Look and feel matches login page
  */
 const AdminLanding = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { currentTenant } = useTenant();
+  const [tenantSelected, setTenantSelected] = useState(false);
 
-  // Redirect to dashboard when tenant is selected
+  // Update tenantSelected state when currentTenant changes
   useEffect(() => {
-    if (currentTenant) {
-      navigate("/dashboard", { replace: true });
-    }
-  }, [currentTenant, navigate]);
+    // If currentTenant is null, that means "All Tenants" is selected
+    // But we need to know if the user has explicitly made a selection
+    // We'll track this via the TenantSwitcher component's selection
+  }, [currentTenant]);
+
+  const handleGoToDashboard = () => {
+    // currentTenant can be null (All Tenants) or a specific tenant
+    navigate("/dashboard", { replace: true });
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-950 dark:to-indigo-950 flex items-center justify-center p-4">
@@ -61,8 +69,16 @@ const AdminLanding = () => {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Select Tenant
               </label>
-              <TenantSwitcher />
+              <TenantSwitcher showGoButton={false} />
             </div>
+
+            <Button
+              onClick={handleGoToDashboard}
+              className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={false}
+            >
+              Go to Dashboard
+            </Button>
 
             <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-4">
               You can switch tenants at any time from the dashboard header.
