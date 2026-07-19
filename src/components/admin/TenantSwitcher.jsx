@@ -32,8 +32,8 @@ export default function TenantSwitcher() {
 
   const handleTenantSwitch = (tenantId) => {
     switchTenant(tenantId);
-    // Optionally trigger a page reload to refresh data
-    // window.location.reload();
+    // Note: Page reload may be needed to refresh data after tenant switch
+    // Uncomment if data refresh is required: window.location.reload();
   };
 
   return (
@@ -54,13 +54,13 @@ export default function TenantSwitcher() {
         <DropdownMenuLabel>Switch Tenant</DropdownMenuLabel>
         <DropdownMenuSeparator />
 
-        {/* All Tenants option */}
+        {/* All Tenants option - added truncate for consistency */}
         <DropdownMenuItem
           onClick={() => handleTenantSwitch(null)}
           className="cursor-pointer"
         >
           <div className="flex items-center justify-between w-full">
-            <span>All Tenants</span>
+            <span className="truncate">All Tenants</span>
             {!currentTenant && <Check className="h-4 w-4" />}
           </div>
         </DropdownMenuItem>
