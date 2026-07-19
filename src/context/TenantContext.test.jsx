@@ -7,6 +7,7 @@
  * - Tenant switching (admin only)
  * - Error handling
  * - API integration
+ * - Mock tenant generation
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -14,6 +15,7 @@ import { renderHook, act, waitFor, cleanup } from "@testing-library/react";
 import React from "react";
 import { TenantProvider, useTenant } from "../context/TenantContext";
 import { apiGetJson } from "../utils/apiFetch";
+import { units } from "../data/mockUnits";
 
 // Mock AuthContext
 const mockUser = { id: 1, username: "testuser", email: "test@example.com" };
@@ -297,6 +299,82 @@ describe("TenantContext", () => {
 
       expect(result.current.availableTenants).toEqual([]);
       expect(result.current.currentTenant).toBeDefined();
+    });
+
+    // ✅ NEW: Test mock tenant generation when API returns empty
+    it("should generate mock tenants from units when API returns empty data", async () => {
+      mockBackendRole = "admin";
+      vi.mocked(useAuth).mockReturnValue({
+        user: mockUser,
+        backendRole: "admin",
+      });
+      
+      // API returns empty data
+      vi.mocked(apiGetJson)
+        .mockResolvedValueOnce({
+          success: true,
+          data: { id: "tenant-1", name: "Test Tenant" },
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          data: [], // Empty tenants array
+        });
+
+      const { result } = renderHook(() => useTenant(), {
+        wrapper: TenantProvider,
+      });
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      // Should have mock tenants from units
+      const uniqueClients = new Set();
+      units.forEach(unit => {
+        if (unit.client?.name) {
+          uniqueClients.add(unit.client.name);
+        }
+      });
+      
+      expect(result.current.availableTenants).toHaveLength(uniqueClients.size);
+      expect(result.current.availableTenants[0]).toHaveProperty('id');
+      expect(result.current.availableTenants[0]).toHaveProperty('name');
+      expect(result.current.availableTenants[0]).toHaveProperty('unitCount');
+    });
+
+    // ✅ NEW: Test mock tenant generation when API fails
+    it("should generate mock tenants from units when API fails", async () => {
+      mockBackendRole = "admin";
+      vi.mocked(useAuth).mockReturnValue({
+        user: mockUser,
+        backendRole: "admin",
+      });
+      
+      // First call for current tenant succeeds, second call for tenants fails
+      vi.mocked(apiGetJson)
+        .mockResolvedValueOnce({
+          success: true,
+          data: { id: "tenant-1", name: "Test Tenant" },
+        })
+        .mockRejectedValueOnce(new Error("Network error"));
+
+      const { result } = renderHook(() => useTenant(), {
+        wrapper: TenantProvider,
+      });
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      // Should have mock tenants from units
+      const uniqueClients = new Set();
+      units.forEach(unit => {
+        if (unit.client?.name) {
+          uniqueClients.add(unit.client.name);
+        }
+      });
+      
+      expect(result.current.availableTenants).toHaveLength(uniqueClients.size);
     });
   });
 
