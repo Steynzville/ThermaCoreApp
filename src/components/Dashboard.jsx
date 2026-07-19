@@ -9,11 +9,13 @@ import {
   Wrench,
   Zap,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
+import { useTenant } from "../context/TenantContext";
 import { units } from "../data/mockUnits";
+import TenantSwitcher from "./admin/TenantSwitcher";
 import EnhancedStatusDial from "./Dashboard/EnhancedStatusDial";
 import QuickActionCard from "./Dashboard/QuickActionCard";
 import UnitSummary from "./Dashboard/UnitSummary";
@@ -24,9 +26,24 @@ import HighTechToggle from "./ui/HighTechToggle";
 // Enhanced Dashboard Component
 const Dashboard = ({ className }) => {
   const navigate = useNavigate();
-  const { userRole } = useAuth();
+  const { user, userRole } = useAuth();
+  const { currentTenant } = useTenant();
   const [_searchQuery, _setSearchQuery] = useState("");
   const [currentView, setCurrentView] = useState("operator"); // "operator" or "performance"
+
+  const isAdmin = userRole === "admin" || user?.role === "admin";
+
+  // If admin has no tenant selected, redirect to admin landing
+  useEffect(() => {
+    if (isAdmin && !currentTenant) {
+      navigate("/admin", { replace: true });
+    }
+  }, [isAdmin, currentTenant, navigate]);
+
+  // Show loading or nothing while redirecting
+  if (isAdmin && !currentTenant) {
+    return null;
+  }
 
   // Filter units based on user role - User role only sees first 5 units
   const filteredUnits = userRole === "user" ? units.slice(0, 6) : units;
@@ -96,15 +113,22 @@ const Dashboard = ({ className }) => {
 
           {/* Performance Dashboard Content */}
           <div className="mb-6 lg:mb-8">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 lg:mb-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 lg:mb-6 gap-4">
               <div>
                 <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
                   Performance Dashboard
                 </h1>
                 <p className="text-sm lg:text-base text-gray-600 dark:text-gray-400">
-                  Monitor power generation, efficiency, and environmental impact
+                  {isAdmin
+                    ? `Managing: ${currentTenant?.name || "All Tenants"}`
+                    : "Monitor power generation, efficiency, and environmental impact"}
                 </p>
               </div>
+              {isAdmin && (
+                <div className="mt-4 md:mt-0">
+                  <TenantSwitcher />
+                </div>
+              )}
             </div>
 
             {/* Breadcrumb */}
@@ -142,16 +166,21 @@ const Dashboard = ({ className }) => {
 
         {/* Enhanced Header - Optimized for laptop screens */}
         <div className="mb-6 lg:mb-8">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 lg:mb-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 lg:mb-6 gap-4">
             <div>
               <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
                 Dashboard Overview
               </h1>
               <p className="text-sm lg:text-base text-gray-600 dark:text-gray-400">
-                Monitor your ThermaCore units in real-time
+                {isAdmin
+                  ? `Managing: ${currentTenant?.name || "All Tenants"}`
+                  : `Welcome back, ${user?.firstName || user?.name || "User"}`}
               </p>
             </div>
-            <NotificationBell className="mt-4 md:mt-0" />
+            <div className="flex items-center gap-4 mt-4 md:mt-0">
+              {isAdmin && <TenantSwitcher />}
+              <NotificationBell />
+            </div>
           </div>
 
           {/* Breadcrumb */}
