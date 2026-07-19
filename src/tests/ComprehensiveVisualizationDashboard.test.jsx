@@ -18,7 +18,9 @@
  *       the queryByText(...).toBeNull() assertions may need adjustment.
  */
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
+// ✅ FIX: Import userEvent for realistic click simulations
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ComprehensiveVisualizationDashboard from "../components/visualization/ComprehensiveVisualizationDashboard";
 import { AuthProvider } from "../context/AuthContext";
@@ -167,19 +169,25 @@ describe("ComprehensiveVisualizationDashboard Component", () => {
       unmount();
     });
 
-    it("switches from overview to gauges tab on trigger click", () => {
+    // ✅ FIXED: Using userEvent for Radix Tabs interaction
+    it("switches from overview to gauges tab on trigger click", async () => {
+      const user = userEvent.setup();
       renderComponent();
-      fireEvent.click(screen.getByText("Gauges"));
+      await user.click(screen.getByText("Gauges"));
       expect(screen.getByText(/All System Gauges/)).toBeTruthy();
     });
 
-    it("switches from overview to process tab on trigger click", () => {
+    // ✅ FIXED: Using userEvent for Radix Tabs interaction
+    it("switches from overview to process tab on trigger click", async () => {
+      const user = userEvent.setup();
       renderComponent();
-      fireEvent.click(screen.getByText("Process Flow"));
+      await user.click(screen.getByText("Process Flow"));
       expect(screen.getByText(/Complete Process Flow/)).toBeTruthy();
     });
 
-    it("switches overview -> gauges -> trends via sequential clicks", () => {
+    // ✅ FIXED: Using userEvent for Radix Tabs interaction
+    it("switches overview -> gauges -> trends via sequential clicks", async () => {
+      const user = userEvent.setup();
       // TabsList only renders when defaultTab is "overview" (intentional design)
       renderComponent();
       
@@ -187,24 +195,26 @@ describe("ComprehensiveVisualizationDashboard Component", () => {
       expect(screen.getByText(/Recent Trends \(24h\)/)).toBeTruthy();
       
       // Switch to gauges
-      fireEvent.click(screen.getByText("Gauges"));
+      await user.click(screen.getByText("Gauges"));
       expect(screen.getByText(/All System Gauges/)).toBeTruthy();
       
       // Switch to trends (tab list still visible because we started from overview)
-      fireEvent.click(screen.getByText("Trends"));
+      await user.click(screen.getByText("Trends"));
       expect(screen.getByText(/Temperature & Pressure Analysis/)).toBeTruthy();
     });
 
-    it("switches overview -> trends -> process via sequential clicks", () => {
+    // ✅ FIXED: Using userEvent for Radix Tabs interaction
+    it("switches overview -> trends -> process via sequential clicks", async () => {
+      const user = userEvent.setup();
       // TabsList only renders when defaultTab is "overview" (intentional design)
       renderComponent();
       
       // Switch to trends
-      fireEvent.click(screen.getByText("Trends"));
+      await user.click(screen.getByText("Trends"));
       expect(screen.getByText(/Temperature & Pressure Analysis/)).toBeTruthy();
       
       // Switch to process
-      fireEvent.click(screen.getByText("Process Flow"));
+      await user.click(screen.getByText("Process Flow"));
       expect(screen.getByText(/Complete Process Flow/)).toBeTruthy();
     });
 
