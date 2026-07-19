@@ -4,8 +4,6 @@ import { BrowserRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 // ✅ Updated import for co-located test file
 import AdminLanding from "./AdminLanding";
-import { TenantProvider } from "../context/TenantContext";
-import { AuthProvider } from "../context/AuthContext";
 
 const mockNavigate = vi.fn();
 vi.mock("react-router-dom", async () => {
@@ -21,11 +19,10 @@ vi.mock("../components/admin/TenantSwitcher", () => ({
 }));
 
 vi.mock("../components/ui/button", () => ({
-  Button: ({ children, onClick, disabled, className }) => (
+  Button: ({ children, onClick, className }) => (
     <button
       data-testid="go-to-dashboard-button"
       onClick={onClick}
-      disabled={disabled}
       className={className}
     >
       {children}
@@ -33,16 +30,9 @@ vi.mock("../components/ui/button", () => ({
   ),
 }));
 
-const mockUseTenant = vi.fn();
-vi.mock("../context/TenantContext", () => ({
-  useTenant: () => mockUseTenant(),
-  TenantProvider: ({ children }) => <div>{children}</div>,
-}));
-
 const mockUseAuth = vi.fn();
 vi.mock("../context/AuthContext", () => ({
   useAuth: () => mockUseAuth(),
-  AuthProvider: ({ children }) => <div>{children}</div>,
 }));
 
 describe("AdminLanding", () => {
@@ -53,21 +43,12 @@ describe("AdminLanding", () => {
       user: { name: "Admin User", firstName: "Admin", role: "admin" },
       isLoading: false,
     });
-    mockUseTenant.mockReturnValue({
-      currentTenant: null,
-      availableTenants: [
-        { id: "1", name: "Tenant One" },
-        { id: "2", name: "Tenant Two" },
-      ],
-    });
   });
 
   const renderWithRouter = (ui) => {
     return render(
       <BrowserRouter>
-        <AuthProvider>
-          <TenantProvider>{ui}</TenantProvider>
-        </AuthProvider>
+        {ui}
       </BrowserRouter>
     );
   };
@@ -98,14 +79,12 @@ describe("AdminLanding", () => {
     expect(screen.getByTestId("tenant-switcher")).toBeInTheDocument();
   });
 
-  // ✅ UPDATED: No longer auto-redirects - uses "Go to Dashboard" button
   it("should render Go to Dashboard button", () => {
     renderWithRouter(<AdminLanding />);
     expect(screen.getByTestId("go-to-dashboard-button")).toBeInTheDocument();
     expect(screen.getByText("Go to Dashboard")).toBeInTheDocument();
   });
 
-  // ✅ NEW: Test that clicking the button navigates
   it("should navigate to dashboard when Go to Dashboard button is clicked", () => {
     renderWithRouter(<AdminLanding />);
     const button = screen.getByTestId("go-to-dashboard-button");
@@ -113,15 +92,11 @@ describe("AdminLanding", () => {
     expect(mockNavigate).toHaveBeenCalledWith("/dashboard", { replace: true });
   });
 
-  // ✅ UPDATED: No longer auto-redirects when tenant is selected
-  it("should NOT auto-redirect when tenant is selected (requires button click)", () => {
-    mockUseTenant.mockReturnValue({
-      currentTenant: { id: "1", name: "Tenant One" },
-      availableTenants: [{ id: "1", name: "Tenant One" }],
-    });
+  it("should set tenant_selected flag when Go to Dashboard is clicked", () => {
     renderWithRouter(<AdminLanding />);
-    // Should NOT auto-redirect
-    expect(mockNavigate).not.toHaveBeenCalled();
+    const button = screen.getByTestId("go-to-dashboard-button");
+    fireEvent.click(button);
+    expect(sessionStorage.getItem("tenant_selected")).toBe("true");
   });
 
   it("should fall back to 'Admin' when no user object is provided", () => {
@@ -133,15 +108,27 @@ describe("AdminLanding", () => {
     expect(screen.getByText(/Welcome back, Admin!/)).toBeInTheDocument();
   });
 
-  it("should not redirect when currentTenant is null", () => {
-    mockUseTenant.mockReturnValue({
-      currentTenant: null,
-      availableTenants: [
-        { id: "1", name: "Tenant One" },
-        { id: "2", name: "Tenant Two" },
-      ],
-    });
+  it("should have Go to Dashboard button always enabled for demo", () => {
     renderWithRouter(<AdminLanding />);
-    expect(mockNavigate).not.toHaveBeenCalled();
+    const button = screen.getByTestId("go-to-dashboard-button");
+    expect(button).not.toBeDisabled();
+  });
+
+  it("should handle sessionStorage errors gracefully with query param fallback", () => {
+    // Mock sessionStorage.setItem to throw
+    const originalSetItem = sessionStorage.setItem;
+    sessionStorage.setItem = vi.fn(() => {
+      throw new Error("Storage error");
+    });
+
+    renderWithRouter(<AdminLanding />);
+    const button = screen.getByTestId("go-to-dashboard-button");
+    fireEvent.click(button);
+
+    // Should navigate with query param fallback
+    expect(mockNavigate).toHaveBeenCalledWith("/dashboard?tenant_selected=true", { replace: true });
+
+    // Restore
+    sessionStorage.setItem = originalSetItem;
   });
 });
