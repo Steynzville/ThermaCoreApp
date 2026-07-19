@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 // ✅ Updated import for co-located test file
@@ -20,6 +20,19 @@ vi.mock("../components/admin/TenantSwitcher", () => ({
   default: () => <div data-testid="tenant-switcher">Tenant Switcher</div>,
 }));
 
+vi.mock("../components/ui/button", () => ({
+  Button: ({ children, onClick, disabled, className }) => (
+    <button
+      data-testid="go-to-dashboard-button"
+      onClick={onClick}
+      disabled={disabled}
+      className={className}
+    >
+      {children}
+    </button>
+  ),
+}));
+
 const mockUseTenant = vi.fn();
 vi.mock("../context/TenantContext", () => ({
   useTenant: () => mockUseTenant(),
@@ -35,6 +48,7 @@ vi.mock("../context/AuthContext", () => ({
 describe("AdminLanding", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    sessionStorage.clear();
     mockUseAuth.mockReturnValue({
       user: { name: "Admin User", firstName: "Admin", role: "admin" },
       isLoading: false,
@@ -84,13 +98,30 @@ describe("AdminLanding", () => {
     expect(screen.getByTestId("tenant-switcher")).toBeInTheDocument();
   });
 
-  it("should redirect to dashboard when tenant is selected", () => {
+  // ✅ UPDATED: No longer auto-redirects - uses "Go to Dashboard" button
+  it("should render Go to Dashboard button", () => {
+    renderWithRouter(<AdminLanding />);
+    expect(screen.getByTestId("go-to-dashboard-button")).toBeInTheDocument();
+    expect(screen.getByText("Go to Dashboard")).toBeInTheDocument();
+  });
+
+  // ✅ NEW: Test that clicking the button navigates
+  it("should navigate to dashboard when Go to Dashboard button is clicked", () => {
+    renderWithRouter(<AdminLanding />);
+    const button = screen.getByTestId("go-to-dashboard-button");
+    fireEvent.click(button);
+    expect(mockNavigate).toHaveBeenCalledWith("/dashboard", { replace: true });
+  });
+
+  // ✅ UPDATED: No longer auto-redirects when tenant is selected
+  it("should NOT auto-redirect when tenant is selected (requires button click)", () => {
     mockUseTenant.mockReturnValue({
       currentTenant: { id: "1", name: "Tenant One" },
       availableTenants: [{ id: "1", name: "Tenant One" }],
     });
     renderWithRouter(<AdminLanding />);
-    expect(mockNavigate).toHaveBeenCalledWith("/dashboard", { replace: true });
+    // Should NOT auto-redirect
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   it("should fall back to 'Admin' when no user object is provided", () => {
