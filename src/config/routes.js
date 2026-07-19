@@ -8,9 +8,8 @@ const SettingsView = lazy(() => import("../components/SettingsView"));
 const AlertsView = lazy(() => import("../components/AlertsView"));
 const AlarmsView = lazy(() => import("../components/AlarmsView"));
 const GridView = lazy(() => import("../components/GridView"));
-const _UnitControl = lazy(() => import("../components/UnitControl"));
-const _UnitDetails = lazy(() => import("../components/UnitDetails"));
-const _UserUnitDetails = lazy(() => import("../components/UserUnitDetails"));
+// ❌ REMOVED: _UnitControl, _UnitDetails, _UserUnitDetails - never used directly
+// These are imported directly in App.jsx's roleBasedComponents map
 const RemoteControl = lazy(() => import("../components/RemoteControl"));
 const UnitPerformance = lazy(() => import("../components/UnitPerformance"));
 const ViewAnalytics = lazy(() => import("../components/ViewAnalytics"));
@@ -36,7 +35,7 @@ const RealtimeScadaDashboard = lazy(
 const ScadaMainPage = lazy(() => import("../components/ScadaMainPage"));
 
 const routes = [
-  // Public registration route
+  // Public registration route - no authentication required
   {
     path: "/register",
     component: UserRegistrationForm,
@@ -127,29 +126,33 @@ const routes = [
     roles: ["admin"],
     isAdminRoute: true,
   },
+  // ✅ NOTE: routes with roles: [] are intentionally open to ALL authenticated users
+  // (operators, viewers, admins). These are read-only/telemetry views that do not
+  // expose write/control actions. Any write actions inside these components must
+  // be separately gated with role checks.
   {
     path: "/advanced-analytics",
     component: AdvancedAnalyticsDashboard,
     isProtected: true,
-    roles: [],
+    roles: [], // Open to all authenticated users (read-only view)
   },
   {
     path: "/scada-dashboard",
     component: ScadaMainPage,
     isProtected: true,
-    roles: [],
+    roles: [], // Open to all authenticated users (read-only view)
   },
   {
     path: "/realtime-scada",
     component: RealtimeScadaDashboard,
     isProtected: true,
-    roles: [],
+    roles: [], // Open to all authenticated users (read-only view)
   },
   {
     path: "/protocol-manager",
     component: MultiProtocolManager,
     isProtected: true,
-    roles: [],
+    roles: [], // Open to all authenticated users (read-only view)
   },
   {
     path: "/system-health",
