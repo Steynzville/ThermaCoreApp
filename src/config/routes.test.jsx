@@ -85,9 +85,6 @@ vi.mock("../components/ScadaMainPage", () => ({
   default: () => <div data-testid="scada-main-page">SCADA Main</div>,
 }));
 
-// ❌ REMOVED: UnitDetails, UserUnitDetails, UnitControl mocks - never used
-// These routes use specialHandling and render generic special-* divs
-
 // Wrapper with Suspense for lazy components
 const renderRoute = (path) => {
   return render(
@@ -236,8 +233,6 @@ describe("Routes Configuration", () => {
   });
 
   it("should have correct number of routes", () => {
-    // Only count routes with actual components or special handling
-    // (routes with component: null and no specialHandling are skipped)
     const validRoutes = routes.filter(r => r.component || r.specialHandling);
     expect(validRoutes.length).toBe(23);
   });
@@ -275,11 +270,21 @@ describe("Routes Configuration", () => {
     expect(registerRoute.roles).toEqual([]);
   });
 
-  it("should have routes with empty roles array", () => {
+  it("should have routes with empty roles array (open to all authenticated users)", () => {
     const emptyRolesRoutes = routes.filter((r) => r.roles.length === 0 && r.path !== "/register");
     expect(emptyRolesRoutes.length).toBeGreaterThan(0);
     emptyRolesRoutes.forEach((route) => {
       expect(route.isProtected).toBe(true);
+      expect(["/advanced-analytics", "/scada-dashboard", "/realtime-scada", "/protocol-manager"]).toContain(route.path);
+    });
+  });
+
+  // Ensure isAdminRoute documentation matches actual roles
+  it("should have isAdminRoute match roles for admin-only routes", () => {
+    const adminOnlyRoutes = routes.filter(r => r.isAdminRoute === true);
+    expect(adminOnlyRoutes.length).toBeGreaterThan(0);
+    adminOnlyRoutes.forEach((route) => {
+      expect(route.roles).toEqual(["admin"]);
     });
   });
 
