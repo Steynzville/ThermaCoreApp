@@ -16,7 +16,6 @@ import ForgotPassword from "./components/ForgotPassword";
 import LoginScreen from "./components/LoginScreen";
 import PasswordResetRequest from "./components/PasswordResetRequest";
 import ProtectedRoute from "./components/ProtectedRoute";
-import AdminRoute from "./components/admin/AdminRoute";
 import ThemeToggle from "./components/ThemeToggle";
 import routes from "./config/routes";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -51,8 +50,6 @@ const roleBasedComponents = {
     user: React.lazy(() => import("./components/UserUnitDetails")),
   },
 };
-
-// ✅ FIX #1: Removed dead AdminLandingLazy - no longer needed after duplicate route removal
 
 const AppContent = () => {
   const { isAuthenticated, isLoading, isLoggingOut } = useAuth();
@@ -100,10 +97,8 @@ const AppContent = () => {
     previousIsAuthenticatedRef.current = isAuthenticated;
 
     if (justLoggedIn && settings.soundEnabled) {
-      // ✅ FIX #3: Handle async playSound errors properly
       try {
         const soundPromise = playSound("login-sound.mp3", settings.soundEnabled, settings.volume);
-        // If playSound returns a promise, catch errors
         if (soundPromise && typeof soundPromise.catch === 'function') {
           soundPromise.catch(() => {
             // Silently ignore sound playback errors
@@ -113,9 +108,6 @@ const AppContent = () => {
         // Silently ignore synchronous sound errors
       }
     }
-    // Intentionally NOT depending on settings.soundEnabled/settings.volume:
-    // we only want to react to actual login transitions, and read the
-    // latest settings values at that moment via closure.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, isLoading]);
 
@@ -207,9 +199,6 @@ const AppContent = () => {
                 ? roleBasedComponents[route.specialHandling]
                 : null;
 
-              // Wrap admin routes with AdminRoute
-              const isAdminRoute = route.isAdminRoute || false;
-
               const routeElement = (
                 <React.Suspense
                   fallback={
@@ -233,7 +222,7 @@ const AppContent = () => {
                 <Route
                   key={`${route.path}-${index}`}
                   path={route.path}
-                  element={isAdminRoute ? <AdminRoute>{routeElement}</AdminRoute> : routeElement}
+                  element={routeElement}
                 />
               );
             })}
