@@ -1,5 +1,3 @@
-// src/tests/App.test.jsx
-
 import { cleanup, render, screen, waitFor, act, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from "vitest";
@@ -89,9 +87,10 @@ vi.mock("../context/SidebarContext", () => ({
   useSidebar: vi.fn(() => ({ isOpen: true, toggleSidebar: vi.fn() })),
 }));
 
+// ✅ FIX: TenantContext mock now exposes currentTenant (matches real context)
 vi.mock("../context/TenantContext", () => ({
   TenantProvider: ({ children }) => <div data-testid="tenant-provider">{children}</div>,
-  useTenant: vi.fn(() => ({ tenant: null, setTenant: vi.fn() })),
+  useTenant: vi.fn(() => ({ currentTenant: null, availableTenants: [], switchTenant: vi.fn() })),
 }));
 
 vi.mock("../context/UnitContext", () => ({
@@ -186,22 +185,51 @@ vi.mock("../components/PasswordResetRequest", () => ({
   default: () => <div data-testid="reset-password-page">Reset Password</div>,
 }));
 
+// ✅ FIX #4: ProtectedRoute mock with correct roles: [] semantics
 vi.mock("../components/ProtectedRoute", () => ({
   default: ({ component: Component, componentMap, roles }) => {
+    // Use the role from authState to determine which component to render
+    const userRole = authState.user?.role || "user";
+    
     if (componentMap) {
-      const AdminComponent = componentMap.admin;
+      // ✅ FIX #4: roles: [] means "open to all authenticated users"
+      const hasAccess = !roles || roles.length === 0 || roles.includes(userRole);
+      
+      if (!hasAccess) {
+        return <div data-testid="protected-route">Access Denied</div>;
+      }
+      
+      // Render the appropriate component based on role
+      const RoleComponent = userRole === "admin" ? componentMap.admin : componentMap.user;
       return (
         <div data-testid="protected-route">
-          {AdminComponent ? <AdminComponent /> : <div>Protected Content</div>}
+          {RoleComponent ? <RoleComponent /> : <div>Protected Content</div>}
         </div>
       );
     }
+    
+    // ✅ FIX #4: roles: [] means "open to all authenticated users"
+    const hasAccess = !roles || roles.length === 0 || roles.includes(userRole);
+    
+    if (!hasAccess) {
+      return <div data-testid="protected-route">Access Denied</div>;
+    }
+    
     return (
       <div data-testid="protected-route">
         {Component ? <Component /> : <div>Protected Content</div>}
       </div>
     );
   },
+}));
+
+// ✅ FIX #2: Mock AdminRoute so it can be controlled in tests
+const { mockAdminRouteBehavior } = vi.hoisted(() => ({
+  mockAdminRouteBehavior: vi.fn(({ children }) => children),
+}));
+
+vi.mock("../components/admin/AdminRoute", () => ({
+  default: ({ children }) => mockAdminRouteBehavior({ children }),
 }));
 
 vi.mock("../components/UnitControl", () => ({
@@ -216,6 +244,7 @@ vi.mock("../components/UnitDetails", () => ({
   default: () => <div data-testid="unit-details">Unit Details</div>,
 }));
 
+// ✅ FIX #1: Include /admin route in mocked routes for duplicate detection tests
 vi.mock("../config/routes", () => ({
   default: [
     {
@@ -230,6 +259,13 @@ vi.mock("../config/routes", () => ({
       isProtected: false,
     },
     {
+      path: "/admin",
+      component: () => <div data-testid="admin-page">Admin</div>,
+      isProtected: true,
+      roles: ["admin"],
+      isAdminRoute: true,
+    },
+    {
       path: "/units",
       component: () => <div data-testid="unit-fallback">Unit Fallback</div>,
       isProtected: true,
@@ -242,6 +278,13 @@ vi.mock("../config/routes", () => ({
       isProtected: true,
       roles: ["admin", "user"],
       specialHandling: "unit-details-role-based",
+    },
+    // ✅ NEW: Open route for testing roles: [] semantics
+    {
+      path: "/open-route",
+      component: () => <div data-testid="open-route-page">Open Route</div>,
+      isProtected: true,
+      roles: [], // Open to all authenticated users
     },
   ],
 }));
@@ -347,6 +390,9 @@ beforeEach(() => {
   mockUseSettings.mockReturnValue({
     settings: { soundEnabled: true, volume: 0.5 },
   });
+
+  // Reset AdminRoute mock to default (render children)
+  mockAdminRouteBehavior.mockImplementation(({ children }) => children);
 
   setInitialRoute("/");
 
@@ -555,7 +601,7 @@ describe("App", () => {
   });
 
   it("renders a protected route when authenticated", async () => {
-    setAuth({ user: { id: 1, name: "Test User" }, isAuthenticated: true });
+    setAuth({ user: { id: 1, name: "Test User", role: "user" }, isAuthenticated: true });
     setInitialRoute("/dashboard");
     render(<App />);
     await flushNavigation();
@@ -563,6 +609,31 @@ describe("App", () => {
     await waitFor(() => {
       expect(screen.getByTestId("protected-route")).toBeInTheDocument();
       expect(screen.getByTestId("dashboard-page")).toBeInTheDocument();
+    }, { timeout: 3000 });
+  });
+
+  it("renders admin route when authenticated as admin", async () => {
+    setAuth({ user: { id: 1, name: "Admin User", role: "admin" }, isAuthenticated: true });
+    setInitialRoute("/admin");
+    render(<App />);
+    await flushNavigation();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("protected-route")).toBeInTheDocument();
+      expect(screen.getByTestId("admin-page")).toBeInTheDocument();
+    }, { timeout: 3000 });
+  });
+
+  // ✅ NEW: Test roles: [] open route works for any authenticated user
+  it("renders an open route (roles: []) for any authenticated user", async () => {
+    setAuth({ user: { id: 1, name: "Regular User", role: "user" }, isAuthenticated: true });
+    setInitialRoute("/open-route");
+    render(<App />);
+    await flushNavigation();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("protected-route")).toBeInTheDocument();
+      expect(screen.getByTestId("open-route-page")).toBeInTheDocument();
     }, { timeout: 3000 });
   });
 
@@ -591,8 +662,8 @@ describe("App", () => {
 
   // ============ SPECIAL HANDLING / ROLE-BASED TESTS ============
 
-  it("renders the role-based component map for a special-handling route", async () => {
-    setAuth({ user: { id: 1, name: "Test User" }, isAuthenticated: true });
+  it("renders the admin role-based component for a special-handling route when user is admin", async () => {
+    setAuth({ user: { id: 1, name: "Admin User", role: "admin" }, isAuthenticated: true });
     setInitialRoute("/units");
     render(<App />);
     await flushNavigation();
@@ -603,8 +674,20 @@ describe("App", () => {
     }, { timeout: 3000 });
   });
 
+  it("renders the user role-based component for a special-handling route when user is regular user", async () => {
+    setAuth({ user: { id: 1, name: "Regular User", role: "user" }, isAuthenticated: true });
+    setInitialRoute("/units");
+    render(<App />);
+    await flushNavigation();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("protected-route")).toBeInTheDocument();
+      expect(screen.getByTestId("user-unit-details")).toBeInTheDocument();
+    }, { timeout: 3000 });
+  });
+
   it("renders the role-based component map for unit-details special-handling", async () => {
-    setAuth({ user: { id: 1, name: "Test User" }, isAuthenticated: true });
+    setAuth({ user: { id: 1, name: "Admin User", role: "admin" }, isAuthenticated: true });
     setInitialRoute("/unit-details-role-based");
     render(<App />);
     await flushNavigation();
@@ -612,6 +695,32 @@ describe("App", () => {
     await waitFor(() => {
       expect(screen.getByTestId("protected-route")).toBeInTheDocument();
       expect(screen.getByTestId("unit-details")).toBeInTheDocument();
+    }, { timeout: 3000 });
+  });
+
+  it("renders user unit details for regular user on unit-details route", async () => {
+    setAuth({ user: { id: 1, name: "Regular User", role: "user" }, isAuthenticated: true });
+    setInitialRoute("/unit-details-role-based");
+    render(<App />);
+    await flushNavigation();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("protected-route")).toBeInTheDocument();
+      expect(screen.getByTestId("user-unit-details")).toBeInTheDocument();
+    }, { timeout: 3000 });
+  });
+
+  // ✅ FIX #4: Access denied for role mismatch
+  it("shows access denied when user role doesn't match route roles", async () => {
+    // AdminRoute mock still returns children, so ProtectedRoute handles the check
+    setAuth({ user: { id: 1, name: "Regular User", role: "user" }, isAuthenticated: true });
+    setInitialRoute("/admin");
+    render(<App />);
+    await flushNavigation();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("protected-route")).toBeInTheDocument();
+      expect(screen.getByText("Access Denied")).toBeInTheDocument();
     }, { timeout: 3000 });
   });
 
@@ -674,13 +783,6 @@ describe("App", () => {
   });
 
   // ============ ERROR BOUNDARY TESTS ============
-  // FIXED: dispatchEvent() was not reliably reaching the listeners
-  // registered by AppContent's useEffect in this environment (even when
-  // wrapped in act()). Instead, we spy on window.addEventListener to
-  // capture the real handler function AppContent registers, and invoke
-  // it directly. This bypasses jsdom's event dispatch machinery entirely,
-  // so it can't be affected by propagation quirks, other listeners, or
-  // event-construction differences across environments.
 
   it("shows the error boundary UI when a window error event fires", async () => {
     setAuth();
