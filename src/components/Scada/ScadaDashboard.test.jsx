@@ -41,10 +41,6 @@ vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual("react-router-dom");
   return {
     ...actual,
-    // Use the REAL useSearchParams so it correctly reflects MemoryRouter's
-    // initialEntries / in-memory history (window.location.search does NOT
-    // get updated by MemoryRouter, which was causing the URL-param tests to fail).
-    // We still wrap setSearchParams so tests can assert on calls to it.
     useSearchParams: () => {
       const [searchParams, setSearchParams] = actual.useSearchParams();
       const wrappedSetSearchParams = (...args) => {
@@ -94,8 +90,8 @@ describe("ScadaDashboard", () => {
     renderWithRouter(<ScadaDashboard />);
 
     expect(screen.getByText("Visualization Options")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Trends" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Process Flow" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Trends" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Process Flow" })).toBeInTheDocument();
   });
 
   it("should display Trends as default sub-tab", () => {
@@ -142,13 +138,13 @@ describe("ScadaDashboard", () => {
     expect(screen.getByText(/Tab: trends/)).toBeInTheDocument();
 
     // Click Process Flow
-    const processFlowButton = screen.getByRole("button", { name: "Process Flow" });
+    const processFlowButton = screen.getByRole("tab", { name: "Process Flow" });
     await user.click(processFlowButton);
 
     expect(screen.getByText(/Tab: process/)).toBeInTheDocument();
 
     // Click Trends back
-    const trendsButton = screen.getByRole("button", { name: "Trends" });
+    const trendsButton = screen.getByRole("tab", { name: "Trends" });
     await user.click(trendsButton);
 
     expect(screen.getByText(/Tab: trends/)).toBeInTheDocument();
@@ -162,7 +158,7 @@ describe("ScadaDashboard", () => {
     await user.click(alertsTab);
 
     expect(mockSetSearchParams).toHaveBeenCalledWith(
-      { tab: "alerts" },
+      { tab: "alerts", subtab: "trends" },
       { replace: true }
     );
   });
@@ -171,11 +167,35 @@ describe("ScadaDashboard", () => {
     const user = userEvent.setup();
     renderWithRouter(<ScadaDashboard />);
 
-    const processFlowButton = screen.getByRole("button", { name: "Process Flow" });
+    const processFlowButton = screen.getByRole("tab", { name: "Process Flow" });
     await user.click(processFlowButton);
 
     expect(mockSetSearchParams).toHaveBeenCalledWith(
       { tab: "visualization", subtab: "processflow" },
+      { replace: true }
+    );
+  });
+
+  it("should reset sub-tab to Trends when switching back to Visualization", async () => {
+    const user = userEvent.setup();
+    renderWithRouter(<ScadaDashboard />);
+
+    // Go to Process Flow sub-tab
+    const processFlowButton = screen.getByRole("tab", { name: "Process Flow" });
+    await user.click(processFlowButton);
+    expect(screen.getByText(/Tab: process/)).toBeInTheDocument();
+
+    // Switch to Analytics
+    const analyticsTab = screen.getByRole("tab", { name: /analytics/i });
+    await user.click(analyticsTab);
+    expect(screen.getByTestId("mock-analytics-dashboard")).toBeInTheDocument();
+
+    // Switch back to Visualization - should reset to Trends (DEFAULT_SUBTAB)
+    const visualizationTab = screen.getByRole("tab", { name: /visualization/i });
+    await user.click(visualizationTab);
+    expect(screen.getByText(/Tab: trends/)).toBeInTheDocument();
+    expect(mockSetSearchParams).toHaveBeenCalledWith(
+      { tab: "visualization", subtab: "trends" },
       { replace: true }
     );
   });
@@ -207,41 +227,23 @@ describe("ScadaDashboard", () => {
     consoleErrorSpy.mockRestore();
   });
 
-  it("should maintain sub-tab state when switching between main tabs", async () => {
-    const user = userEvent.setup();
-    renderWithRouter(<ScadaDashboard />);
-
-    // Go to Process Flow sub-tab
-    const processFlowButton = screen.getByRole("button", { name: "Process Flow" });
-    await user.click(processFlowButton);
-    expect(screen.getByText(/Tab: process/)).toBeInTheDocument();
-
-    // Switch to Analytics
-    const analyticsTab = screen.getByRole("tab", { name: /analytics/i });
-    await user.click(analyticsTab);
-    expect(screen.getByTestId("mock-analytics-dashboard")).toBeInTheDocument();
-
-    // Switch back to Visualization - should remember Process Flow
-    const visualizationTab = screen.getByRole("tab", { name: /visualization/i });
-    await user.click(visualizationTab);
-    expect(screen.getByText(/Tab: process/)).toBeInTheDocument();
-  });
-
   it("should render both visualization sub-tab icons", () => {
     renderWithRouter(<ScadaDashboard />);
 
-    expect(screen.getByRole("button", { name: "Trends" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Process Flow" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Trends" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Process Flow" })).toBeInTheDocument();
   });
 
   it("should display active state on visualization sub-tabs", () => {
     renderWithRouter(<ScadaDashboard />);
 
-    const trendsButton = screen.getByRole("button", { name: "Trends" });
+    const trendsButton = screen.getByRole("tab", { name: "Trends" });
     expect(trendsButton).toHaveAttribute("data-state", "active");
+    expect(trendsButton).toHaveAttribute("aria-selected", "true");
 
-    const processFlowButton = screen.getByRole("button", { name: "Process Flow" });
+    const processFlowButton = screen.getByRole("tab", { name: "Process Flow" });
     expect(processFlowButton).toHaveAttribute("data-state", "inactive");
+    expect(processFlowButton).toHaveAttribute("aria-selected", "false");
   });
 
   it("should handle tab switching with userEvent", async () => {
@@ -257,20 +259,18 @@ describe("ScadaDashboard", () => {
   it("should default to 'trends' sub-tab when no URL params provided", () => {
     renderWithRouter(<ScadaDashboard />);
 
-    const trendsButton = screen.getByRole("button", { name: "Trends" });
+    const trendsButton = screen.getByRole("tab", { name: "Trends" });
     expect(trendsButton).toHaveAttribute("data-state", "active");
     
     expect(screen.getByText(/Tab: trends/)).toBeInTheDocument();
   });
 
   it("should use URL params for initial tab state", () => {
-    // Use a full URL with search params in the initial entry
     renderWithRouter(
       <ScadaDashboard />,
       ["/?tab=alerts"]
     );
 
-    // After the component mounts, it should show the alerts tab
     expect(screen.getByTestId("mock-alerts-dashboard")).toBeInTheDocument();
   });
 
@@ -280,9 +280,76 @@ describe("ScadaDashboard", () => {
       ["/?tab=visualization&subtab=processflow"]
     );
 
-    // Should show Process Flow sub-tab
     expect(screen.getByText(/Tab: process/)).toBeInTheDocument();
-    const processFlowButton = screen.getByRole("button", { name: "Process Flow" });
+    const processFlowButton = screen.getByRole("tab", { name: "Process Flow" });
     expect(processFlowButton).toHaveAttribute("data-state", "active");
+  });
+
+  it("should have proper accessibility attributes on sub-tabs", () => {
+    renderWithRouter(<ScadaDashboard />);
+    
+    const subTabList = screen.getByRole("tablist", { name: "Visualization sub-tabs" });
+    expect(subTabList).toBeInTheDocument();
+    
+    const trendsTab = screen.getByRole("tab", { name: "Trends" });
+    expect(trendsTab).toHaveAttribute("aria-selected", "true");
+    expect(trendsTab).toHaveAttribute("aria-controls", "subtab-trends");
+    expect(trendsTab).toHaveAttribute("id", "tab-trends");
+    
+    const processFlowTab = screen.getByRole("tab", { name: "Process Flow" });
+    expect(processFlowTab).toHaveAttribute("aria-selected", "false");
+    expect(processFlowTab).toHaveAttribute("aria-controls", "subtab-processflow");
+    expect(processFlowTab).toHaveAttribute("id", "tab-processflow");
+  });
+
+  it("should have proper tabpanel accessibility attributes", () => {
+    renderWithRouter(<ScadaDashboard />);
+    
+    // The accessible name comes from the referenced element's text content ("Trends", "Process Flow")
+    const trendsPanel = screen.getByRole("tabpanel", { name: "Trends" });
+    expect(trendsPanel).toHaveAttribute("aria-labelledby", "tab-trends");
+    expect(trendsPanel).not.toHaveAttribute("hidden");
+    
+    // For hidden panels, we need to use `hidden: true` to find them in the accessibility tree
+    const processPanel = screen.getByRole("tabpanel", { name: "Process Flow", hidden: true });
+    expect(processPanel).toHaveAttribute("aria-labelledby", "tab-processflow");
+    expect(processPanel).toHaveAttribute("hidden");
+  });
+
+  it("should pass correct dashboardTab value to ComprehensiveVisualizationDashboard", async () => {
+    const user = userEvent.setup();
+    renderWithRouter(<ScadaDashboard />);
+    
+    // Trends uses dashboardTab "trends"
+    expect(screen.getByText(/Tab: trends/)).toBeInTheDocument();
+    
+    // Click Process Flow - uses dashboardTab "process"
+    const processFlowButton = screen.getByRole("tab", { name: "Process Flow" });
+    await user.click(processFlowButton);
+    expect(screen.getByText(/Tab: process/)).toBeInTheDocument();
+  });
+
+  it("should render all sub-tab panels in the DOM but only show the active one", async () => {
+    const user = userEvent.setup();
+    renderWithRouter(<ScadaDashboard />);
+    
+    // Both panels should exist in the DOM
+    const trendsPanel = screen.getByRole("tabpanel", { name: "Trends" });
+    expect(trendsPanel).toBeInTheDocument();
+    
+    const processPanel = screen.getByRole("tabpanel", { name: "Process Flow", hidden: true });
+    expect(processPanel).toBeInTheDocument();
+    
+    // Only Trends should be visible (not hidden)
+    expect(trendsPanel).not.toHaveAttribute("hidden");
+    expect(processPanel).toHaveAttribute("hidden");
+    
+    // Switch to Process Flow using userEvent
+    const processFlowButton = screen.getByRole("tab", { name: "Process Flow" });
+    await user.click(processFlowButton);
+    
+    // Now Process Flow should be visible and Trends hidden
+    expect(screen.getByRole("tabpanel", { name: "Process Flow" })).not.toHaveAttribute("hidden");
+    expect(screen.getByRole("tabpanel", { name: "Trends", hidden: true })).toHaveAttribute("hidden");
   });
 });
