@@ -2,6 +2,7 @@ import { lazy } from "react";
 
 const Dashboard = lazy(() => import("../components/Dashboard"));
 const HistoryView = lazy(() => import("../components/HistoryView"));
+const AdminLanding = lazy(() => import("../pages/AdminLanding"));
 const AdminPanel = lazy(() => import("../components/AdminPanel"));
 const SettingsView = lazy(() => import("../components/SettingsView"));
 const AlertsView = lazy(() => import("../components/AlertsView"));
@@ -107,15 +108,24 @@ const routes = [
   // Admin-only routes
   {
     path: "/admin",
+    component: AdminLanding,
+    isProtected: true,
+    roles: ["admin"],
+    isAdminRoute: true,
+  },
+  {
+    path: "/admin/users",
     component: AdminPanel,
     isProtected: true,
     roles: ["admin"],
+    isAdminRoute: true,
   },
   {
     path: "/analytics",
     component: ViewAnalytics,
     isProtected: true,
     roles: ["admin"],
+    isAdminRoute: true,
   },
   {
     path: "/advanced-analytics",
@@ -146,6 +156,7 @@ const routes = [
     component: SystemHealth,
     isProtected: true,
     roles: ["admin"],
+    isAdminRoute: true,
   },
   {
     path: "/synchronize-units",
