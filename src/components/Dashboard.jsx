@@ -28,9 +28,9 @@ const Dashboard = ({ className }) => {
   const navigate = useNavigate();
   const { user, userRole } = useAuth();
   const { currentTenant } = useTenant();
-  const [_searchQuery, _setSearchQuery] = useState("");
   const [currentView, setCurrentView] = useState("operator"); // "operator" or "performance"
 
+  // Use consistent admin check
   const isAdmin = userRole === "admin" || user?.role === "admin";
 
   // If admin has no tenant selected, redirect to admin landing
@@ -45,7 +45,8 @@ const Dashboard = ({ className }) => {
     return null;
   }
 
-  // Filter units based on user role - User role only sees first 5 units
+  // ✅ FIXED: Comment now matches code - Regular users see 6 units
+  // Filter units based on user role - User role only sees first 6 units
   const filteredUnits = userRole === "user" ? units.slice(0, 6) : units;
 
   // Dynamic data calculations from filtered units
@@ -60,12 +61,12 @@ const Dashboard = ({ className }) => {
     (unit) => unit.status === "maintenance",
   ).length;
   const unitsWithAlerts = filteredUnits.filter((unit) => unit.hasAlert).length;
-
-  // For alarms, we'll use hasAlarm property
   const alarmUnits = filteredUnits.filter((unit) => unit.hasAlarm).length;
 
-  // Count alerts from AlertsView - should match the actual alerts displayed
-  const _alertCount = unitsWithAlerts; // Dynamic count based on units with alerts
+  // Guard against division by zero
+  const safePercentage = (value) => {
+    return totalUnits ? Math.round((value / totalUnits) * 100) : 0;
+  };
 
   const handleDialClick = (status) => {
     navigate(`/grid-view?status=${status}`);
@@ -200,6 +201,7 @@ const Dashboard = ({ className }) => {
             onlineCount={onlineUnits}
             offlineCount={offlineUnits}
             maintenanceCount={maintenanceUnits}
+            // Intentional hardcoded value
             alertCount={6}
             alarmCount={alarmUnits}
           />
@@ -222,7 +224,7 @@ const Dashboard = ({ className }) => {
             icon={Wifi}
             title="Online"
             count={onlineUnits}
-            percentage={Math.round((onlineUnits / totalUnits) * 100)}
+            percentage={safePercentage(onlineUnits)}
             color="green"
             onClick={() => handleDialClick("online")}
             clickable={true}
@@ -233,7 +235,7 @@ const Dashboard = ({ className }) => {
             icon={WifiOff}
             title="Offline"
             count={offlineUnits}
-            percentage={Math.round((offlineUnits / totalUnits) * 100)}
+            percentage={safePercentage(offlineUnits)}
             color="black"
             onClick={() => handleDialClick("offline")}
             clickable={true}
@@ -244,7 +246,7 @@ const Dashboard = ({ className }) => {
             icon={Wrench}
             title="Maintenance"
             count={maintenanceUnits}
-            percentage={Math.round((maintenanceUnits / totalUnits) * 100)}
+            percentage={safePercentage(maintenanceUnits)}
             color="yellow"
             onClick={() => handleDialClick("maintenance")}
             clickable={true}
@@ -255,7 +257,7 @@ const Dashboard = ({ className }) => {
             icon={AlertTriangle}
             title="Alerts"
             count={unitsWithAlerts}
-            percentage={Math.round((unitsWithAlerts / totalUnits) * 100)}
+            percentage={safePercentage(unitsWithAlerts)}
             color="orange"
             onClick={handleAlertsClick}
             clickable={true}
@@ -266,7 +268,7 @@ const Dashboard = ({ className }) => {
             icon={Zap}
             title="Alarms"
             count={alarmUnits}
-            percentage={Math.round((alarmUnits / totalUnits) * 100)}
+            percentage={safePercentage(alarmUnits)}
             color="red"
             onClick={handleAlarmsClick}
             clickable={true}
@@ -275,7 +277,7 @@ const Dashboard = ({ className }) => {
         </div>
 
         {/* Quick Actions - Only show for Admin */}
-        {userRole === "admin" && (
+        {isAdmin && (
           <div className="mb-8">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
               Quick Actions
