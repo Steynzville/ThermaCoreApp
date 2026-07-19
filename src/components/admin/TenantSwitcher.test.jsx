@@ -99,6 +99,7 @@ vi.mock("@/components/ui/button", () => ({
 describe("TenantSwitcher", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    sessionStorage.clear();
     // Reset to default state
     mockTenantState = {
       currentTenant: null,
@@ -251,6 +252,7 @@ describe("TenantSwitcher", () => {
     expect(mockSwitchTenant).not.toHaveBeenCalled();
   });
 
+  // ✅ UPDATED: Also verifies sessionStorage is set
   it("should call switchTenant with null when 'All Tenants' is clicked", async () => {
     const user = userEvent.setup();
     render(<TenantSwitcher />);
@@ -262,8 +264,10 @@ describe("TenantSwitcher", () => {
     await user.click(items[0]);
 
     expect(mockSwitchTenant).toHaveBeenCalledWith(null);
+    expect(sessionStorage.getItem("tenant_selected")).toBe("true");
   });
 
+  // ✅ UPDATED: Also verifies sessionStorage is set
   it("should call switchTenant with tenant id when a tenant is clicked", async () => {
     const user = userEvent.setup();
     render(<TenantSwitcher />);
@@ -275,8 +279,10 @@ describe("TenantSwitcher", () => {
     await user.click(items[2]);
 
     expect(mockSwitchTenant).toHaveBeenCalledWith("tenant-2");
+    expect(sessionStorage.getItem("tenant_selected")).toBe("true");
   });
 
+  // ✅ UPDATED: Also verifies sessionStorage is set on each switch
   it("should handle multiple tenant switches in sequence", async () => {
     const user = userEvent.setup();
     render(<TenantSwitcher />);
@@ -288,12 +294,19 @@ describe("TenantSwitcher", () => {
 
     await user.click(items[1]);
     expect(mockSwitchTenant).toHaveBeenCalledWith("tenant-1");
+    expect(sessionStorage.getItem("tenant_selected")).toBe("true");
+
+    sessionStorage.clear();
 
     await user.click(items[2]);
     expect(mockSwitchTenant).toHaveBeenCalledWith("tenant-2");
+    expect(sessionStorage.getItem("tenant_selected")).toBe("true");
+
+    sessionStorage.clear();
 
     await user.click(items[0]);
     expect(mockSwitchTenant).toHaveBeenCalledWith(null);
+    expect(sessionStorage.getItem("tenant_selected")).toBe("true");
   });
 
   it("should have correct button classes", () => {
