@@ -2,14 +2,22 @@ import { TrendingUp } from "lucide-react";
 
 import { units } from "../../data/mockUnits";
 
-// System Health Summary
-const SystemHealthSummary = () => {
-  const totalUnits = units.length;
-  const onlineUnits = units.filter((unit) => unit.status === "online").length;
-  const offlineUnits = units.filter((unit) => unit.status === "offline").length;
-  const unitsWithAlerts = units.filter((unit) => unit.hasAlert).length;
+// Pure function for calculating health metrics - exported for testing
+export const calculateHealthMetrics = (unitsData) => {
+  const totalUnits = unitsData.length;
+  const onlineUnits = unitsData.filter((unit) => unit.status === "online").length;
+  const offlineUnits = unitsData.filter((unit) => unit.status === "offline").length;
+  const unitsWithAlerts = unitsData.filter((unit) => unit.hasAlert).length;
+  const healthScore = totalUnits > 0 
+    ? Math.round((onlineUnits / totalUnits) * 100) 
+    : 0;
+  
+  return { totalUnits, onlineUnits, offlineUnits, unitsWithAlerts, healthScore };
+};
 
-  const healthScore = Math.round((onlineUnits / totalUnits) * 100);
+// System Health Summary Component
+const SystemHealthSummary = () => {
+  const metrics = calculateHealthMetrics(units);
 
   return (
     <div className="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950 dark:to-indigo-900 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
@@ -24,7 +32,7 @@ const SystemHealthSummary = () => {
         </div>
         <div className="text-right">
           <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
-            {healthScore}%
+            {metrics.healthScore}%
           </div>
           <div className="text-sm text-green-600 dark:text-green-400 flex items-center">
             <TrendingUp className="h-3 w-3 mr-1" />
@@ -36,18 +44,20 @@ const SystemHealthSummary = () => {
       <div className="grid grid-cols-3 gap-4 mt-4">
         <div className="text-center">
           <div className="text-xl font-bold text-gray-900 dark:text-gray-100">
-            {onlineUnits}
+            {metrics.onlineUnits}
           </div>
           <div className="text-xs text-gray-600 dark:text-gray-400">Online</div>
         </div>
         <div className="text-center">
           <div className="text-xl font-bold text-yellow-600">
-            {unitsWithAlerts}
+            {metrics.unitsWithAlerts}
           </div>
           <div className="text-xs text-gray-600 dark:text-gray-400">Alerts</div>
         </div>
         <div className="text-center">
-          <div className="text-xl font-bold text-red-600">{offlineUnits}</div>
+          <div className="text-xl font-bold text-red-600">
+            {metrics.offlineUnits}
+          </div>
           <div className="text-xs text-gray-600 dark:text-gray-400">
             Offline
           </div>
