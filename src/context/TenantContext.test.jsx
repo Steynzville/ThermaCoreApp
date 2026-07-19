@@ -57,7 +57,8 @@ describe("TenantContext", () => {
 
   afterEach(() => {
     cleanup();
-    vi.resetModules();
+    // vi.resetModules() doesn't re-run static imports or vi.mock factories
+    // and can be removed without changing behavior.
   });
 
   describe("useTenant Hook", () => {
@@ -110,10 +111,16 @@ describe("TenantContext", () => {
         backendRole: "admin",
       });
       
-      vi.mocked(apiGetJson).mockResolvedValueOnce({
-        success: true,
-        message: "Admin cross-tenant access",
-      });
+      // Mock both calls - current tenant response and available tenants
+      vi.mocked(apiGetJson)
+        .mockResolvedValueOnce({
+          success: true,
+          message: "Admin cross-tenant access",
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          data: [],
+        });
 
       const { result } = renderHook(() => useTenant(), {
         wrapper: TenantProvider,
@@ -174,10 +181,15 @@ describe("TenantContext", () => {
         backendRole: "admin",
       });
       
-      vi.mocked(apiGetJson).mockResolvedValueOnce({
-        success: true,
-        data: { id: "tenant-1", name: "Test Tenant" },
-      });
+      vi.mocked(apiGetJson)
+        .mockResolvedValueOnce({
+          success: true,
+          data: { id: "tenant-1", name: "Test Tenant" },
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          data: [],
+        });
 
       const { result } = renderHook(() => useTenant(), {
         wrapper: TenantProvider,
@@ -297,11 +309,17 @@ describe("TenantContext", () => {
         expect(result.current.isLoading).toBe(false);
       });
 
-      expect(result.current.availableTenants).toEqual([]);
+      // On API failure, the provider falls back to mock tenants
+      // generated from unit data rather than leaving the list empty.
+      await waitFor(() => {
+        expect(result.current.availableTenants.length).toBeGreaterThan(0);
+      });
+      expect(result.current.availableTenants[0]).toHaveProperty("id");
+      expect(result.current.availableTenants[0]).toHaveProperty("name");
+      expect(result.current.availableTenants[0]).toHaveProperty("unitCount");
       expect(result.current.currentTenant).toBeDefined();
     });
 
-    // ✅ NEW: Test mock tenant generation when API returns empty
     it("should generate mock tenants from units when API returns empty data", async () => {
       mockBackendRole = "admin";
       vi.mocked(useAuth).mockReturnValue({
@@ -342,7 +360,6 @@ describe("TenantContext", () => {
       expect(result.current.availableTenants[0]).toHaveProperty('unitCount');
     });
 
-    // ✅ NEW: Test mock tenant generation when API fails
     it("should generate mock tenants from units when API fails", async () => {
       mockBackendRole = "admin";
       vi.mocked(useAuth).mockReturnValue({
@@ -416,6 +433,43 @@ describe("TenantContext", () => {
       expect(result.current.currentTenant).toEqual({ id: "tenant-2", name: "Tenant B" });
     });
 
+    it("should allow admin to switch to 'All Tenants' (null)", async () => {
+      mockBackendRole = "admin";
+      vi.mocked(useAuth).mockReturnValue({
+        user: mockUser,
+        backendRole: "admin",
+      });
+      
+      const tenants = [
+        { id: "tenant-1", name: "Tenant A" },
+        { id: "tenant-2", name: "Tenant B" },
+      ];
+
+      vi.mocked(apiGetJson)
+        .mockResolvedValueOnce({
+          success: true,
+          data: { id: "tenant-1", name: "Tenant A" },
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          data: tenants,
+        });
+
+      const { result } = renderHook(() => useTenant(), {
+        wrapper: TenantProvider,
+      });
+
+      await waitFor(() => {
+        expect(result.current.availableTenants).toHaveLength(2);
+      });
+
+      act(() => {
+        result.current.switchTenant(null);
+      });
+
+      expect(result.current.currentTenant).toBeNull();
+    });
+
     it("should not allow non-admin to switch tenant", async () => {
       mockBackendRole = "user";
       vi.mocked(useAuth).mockReturnValue({
@@ -475,11 +529,19 @@ describe("TenantContext", () => {
         expect(result.current.availableTenants).toHaveLength(2);
       });
 
+      // Set current tenant to tenant-1 first
+      act(() => {
+        result.current.switchTenant("tenant-1");
+      });
+      expect(result.current.currentTenant).toEqual({ id: "tenant-1", name: "Tenant A" });
+
+      // Try switching to non-existent tenant - should do nothing
       act(() => {
         result.current.switchTenant("tenant-999");
       });
 
-      expect(result.current.currentTenant).toBeNull();
+      // Current tenant should remain tenant-1 (no-op)
+      expect(result.current.currentTenant).toEqual({ id: "tenant-1", name: "Tenant A" });
     });
   });
 
@@ -514,10 +576,15 @@ describe("TenantContext", () => {
         backendRole: "admin",
       });
       
-      vi.mocked(apiGetJson).mockResolvedValueOnce({
-        success: true,
-        message: "Admin cross-tenant access",
-      });
+      vi.mocked(apiGetJson)
+        .mockResolvedValueOnce({
+          success: true,
+          message: "Admin cross-tenant access",
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          data: [],
+        });
 
       const { result } = renderHook(() => useTenant(), {
         wrapper: TenantProvider,
@@ -626,22 +693,24 @@ describe("TenantContext", () => {
       const originalEnv = import.meta.env.VITE_API_BASE_URL;
       vi.stubEnv("VITE_API_BASE_URL", undefined);
 
-      vi.mocked(apiGetJson).mockResolvedValueOnce({
-        success: true,
-        data: { id: "tenant-1", name: "Test Tenant" },
-      });
+      try {
+        vi.mocked(apiGetJson).mockResolvedValueOnce({
+          success: true,
+          data: { id: "tenant-1", name: "Test Tenant" },
+        });
 
-      renderHook(() => useTenant(), {
-        wrapper: TenantProvider,
-      });
+        renderHook(() => useTenant(), {
+          wrapper: TenantProvider,
+        });
 
-      await waitFor(() => {
-        expect(apiGetJson).toHaveBeenCalledWith(
-          expect.stringContaining("https://thermacoreapp.onrender.com/api/v1/tenants/current")
-        );
-      });
-
-      vi.stubEnv("VITE_API_BASE_URL", originalEnv);
+        await waitFor(() => {
+          expect(apiGetJson).toHaveBeenCalledWith(
+            expect.stringContaining("https://thermacoreapp.onrender.com/api/v1/tenants/current")
+          );
+        });
+      } finally {
+        vi.stubEnv("VITE_API_BASE_URL", originalEnv);
+      }
     });
   });
 
