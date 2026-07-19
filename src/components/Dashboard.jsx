@@ -10,7 +10,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
 import { useTenant } from "../context/TenantContext";
@@ -26,44 +26,57 @@ import HighTechToggle from "./ui/HighTechToggle";
 // Enhanced Dashboard Component
 const Dashboard = ({ className }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, userRole } = useAuth();
-  const { currentTenant, isAdmin } = useTenant();
+  // ✅ FIX: Only destructure currentTenant - isAdmin comes from AuthContext
+  const { currentTenant } = useTenant();
   const [currentView, setCurrentView] = useState("operator"); // "operator" or "performance"
 
-  // ✅ FIX: Use consistent admin check across the component
-  // Use the same predicate everywhere to avoid inconsistencies
-  const adminCheck = userRole === "admin" || user?.role === "admin";
+  // Single source of truth for admin status - derived from AuthContext
+  const isAdminUser = userRole === "admin" || user?.role === "admin";
+
+  // Check if admin has made a selection (sessionStorage or query param fallback)
+  const hasSelectedTenant = () => {
+    // Check sessionStorage first
+    if (sessionStorage.getItem("tenant_selected") === "true") {
+      return true;
+    }
+    // Fallback: check URL query param
+    // NOTE: This is a convenience fallback for when sessionStorage is blocked.
+    // It is not a security mechanism - it's purely to allow entry when storage fails.
+    const params = new URLSearchParams(location.search);
+    return params.get("tenant_selected") === "true";
+  };
 
   // If admin has no tenant selected, redirect to admin landing
   useEffect(() => {
-    // Check sessionStorage for tenant selection flag
-    const hasSelectedTenant = sessionStorage.getItem("tenant_selected") === "true";
-    
-    if (adminCheck && !hasSelectedTenant) {
-      // If no selection has been made yet, redirect to admin landing
+    if (isAdminUser && !hasSelectedTenant()) {
       navigate("/admin", { replace: true });
     }
-    // ✅ FIX: Remove currentTenant from deps - not read in effect body
-  }, [adminCheck, navigate]);
+    // ✅ FIX: Use location.search instead of entire location object
+    // to avoid unnecessary re-renders
+  }, [isAdminUser, navigate, location.search]);
 
   // Show loading or nothing while redirecting
-  // ✅ FIX: Use consistent adminCheck
-  if (adminCheck && sessionStorage.getItem("tenant_selected") !== "true") {
+  if (isAdminUser && !hasSelectedTenant()) {
     return null;
   }
 
   // Filter units based on selected tenant
   let filteredUnits = units;
-  
-  // ✅ FIX: Use isAdmin from TenantContext for tenant filtering
-  // (isAdmin is already the correct value from context)
-  if (isAdmin && currentTenant) {
-    // Filter units by client name matching the selected tenant
-    filteredUnits = units.filter((unit) => unit.client?.name === currentTenant.name);
+
+  // BEHAVIOR:
+  // - "All Tenants" (currentTenant === null) → show all 20 units (admin view)
+  // - Specific Tenant (currentTenant has value) → show 6 units (user view)
+  // - Regular user (userRole === "user") → show 6 units (user view)
+  if (isAdminUser && currentTenant) {
+    // Specific tenant selected → show 6 demo units (user view)
+    filteredUnits = units.slice(0, 6);
   } else if (userRole === "user") {
-    // Regular users see first 6 units
+    // Regular users see 6 units
     filteredUnits = units.slice(0, 6);
   }
+  // If isAdminUser && !currentTenant → "All Tenants" → all units (no filtering)
 
   // Dynamic data calculations from filtered units
   const totalUnits = filteredUnits.length;
@@ -136,14 +149,14 @@ const Dashboard = ({ className }) => {
                   Performance Dashboard
                 </h1>
                 <p className="text-sm lg:text-base text-gray-600 dark:text-gray-400">
-                  {isAdmin && currentTenant
+                  {isAdminUser && currentTenant
                     ? `Managing: ${currentTenant.name}`
-                    : isAdmin && !currentTenant
+                    : isAdminUser && !currentTenant
                     ? "Managing: All Tenants"
                     : "Monitor power generation, efficiency, and environmental impact"}
                 </p>
               </div>
-              {isAdmin && (
+              {isAdminUser && (
                 <div className="mt-4 md:mt-0">
                   <TenantSwitcher />
                 </div>
@@ -191,15 +204,15 @@ const Dashboard = ({ className }) => {
                 Dashboard Overview
               </h1>
               <p className="text-sm lg:text-base text-gray-600 dark:text-gray-400">
-                {isAdmin && currentTenant
+                {isAdminUser && currentTenant
                   ? `Managing: ${currentTenant.name}`
-                  : isAdmin && !currentTenant
+                  : isAdminUser && !currentTenant
                   ? "Managing: All Tenants"
                   : `Welcome back, ${user?.firstName || user?.name || "User"}`}
               </p>
             </div>
             <div className="flex items-center gap-4 mt-4 md:mt-0">
-              {isAdmin && <TenantSwitcher />}
+              {isAdminUser && <TenantSwitcher />}
               <NotificationBell />
             </div>
           </div>
@@ -221,8 +234,7 @@ const Dashboard = ({ className }) => {
             onlineCount={onlineUnits}
             offlineCount={offlineUnits}
             maintenanceCount={maintenanceUnits}
-            // Intentional hardcoded value
-            alertCount={6}
+            alertCount={unitsWithAlerts}
             alarmCount={alarmUnits}
           />
         </div>
@@ -297,8 +309,7 @@ const Dashboard = ({ className }) => {
         </div>
 
         {/* Quick Actions - Only show for Admin */}
-        {/* ✅ FIX: Use isAdmin from TenantContext */}
-        {isAdmin && (
+        {isAdminUser && (
           <div className="mb-8">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
               Quick Actions
