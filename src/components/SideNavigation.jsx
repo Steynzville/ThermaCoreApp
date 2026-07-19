@@ -197,9 +197,17 @@ const EnhancedSideNavigation = () => {
     },
     {
       id: "admin",
-      label: "Admin Panel",
+      label: "Tenant Switcher",
       icon: Shield,
       href: "/admin",
+      badge: null,
+      roles: ["admin"],
+    },
+    {
+      id: "admin-users",
+      label: "User Management",
+      icon: User,
+      href: "/admin/users",
       badge: null,
       roles: ["admin"],
     },
