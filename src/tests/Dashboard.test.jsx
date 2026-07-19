@@ -15,6 +15,25 @@ vi.mock("react-router-dom", () => ({
   }),
 }));
 
+// Dynamic mock for TenantContext
+let mockTenantValue = {
+  currentTenant: { id: "1", name: "Tenant One" },
+  availableTenants: [
+    { id: "1", name: "Tenant One" },
+    { id: "2", name: "Tenant Two" },
+  ],
+  isAdmin: true,
+  switchTenant: vi.fn(),
+};
+
+vi.mock("../context/TenantContext", () => ({
+  useTenant: () => mockTenantValue,
+}));
+
+vi.mock("../components/admin/TenantSwitcher", () => ({
+  default: () => <div data-testid="tenant-switcher">Tenant Switcher</div>,
+}));
+
 // Mock framer-motion to avoid animation issues
 vi.mock("framer-motion", () => ({
   motion: {
@@ -124,6 +143,16 @@ describe("Dashboard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
+
+    mockTenantValue = {
+      currentTenant: { id: "1", name: "Tenant One" },
+      availableTenants: [
+        { id: "1", name: "Tenant One" },
+        { id: "2", name: "Tenant Two" },
+      ],
+      isAdmin: true,
+      switchTenant: vi.fn(),
+    };
 
     Storage.prototype.getItem = vi.fn((key) => {
       if (key === "thermacore_user") {
@@ -288,6 +317,26 @@ describe("Dashboard", () => {
     it("should render main heading", () => {
       renderComponent();
       expect(screen.getAllByText("Dashboard Overview")[0].tagName).toBe("H1");
+    });
+  });
+
+  describe("Admin Tenant Behavior", () => {
+    it("should redirect admin to /admin if no tenant selected", () => {
+      mockTenantValue.currentTenant = null;
+      renderComponent("admin");
+      expect(mockNavigate).toHaveBeenCalledWith("/admin", { replace: true });
+    });
+
+    it("should show tenant switcher for admin with tenant selected", () => {
+      renderComponent("admin");
+      expect(screen.getAllByTestId("tenant-switcher").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Managing: Tenant One").length).toBeGreaterThan(0);
+    });
+
+    it("should NOT show tenant switcher for regular user", () => {
+      mockTenantValue.isAdmin = false;
+      renderComponent("user");
+      expect(screen.queryAllByTestId("tenant-switcher").length).toBe(0);
     });
   });
 });
