@@ -16,6 +16,7 @@ import ForgotPassword from "./components/ForgotPassword";
 import LoginScreen from "./components/LoginScreen";
 import PasswordResetRequest from "./components/PasswordResetRequest";
 import ProtectedRoute from "./components/ProtectedRoute";
+import AdminRoute from "./components/admin/AdminRoute";
 import ThemeToggle from "./components/ThemeToggle";
 import routes from "./config/routes";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -189,6 +190,30 @@ const AppContent = () => {
             />
           ))}
 
+        {/* Admin Route - Admin Landing Page */}
+        <Route
+          path="/admin"
+          element={
+            <React.Suspense
+              fallback={
+                <div className="min-h-screen bg-blue-50 dark:bg-gray-950 flex items-center justify-center">
+                  <div className="text-center">
+                    <Spinner size="lg" className="mx-auto mb-4" />
+                    <p className="text-gray-600 dark:text-gray-400">Loading Admin...</p>
+                  </div>
+                </div>
+              }
+            >
+              <AdminRoute>
+                <ProtectedRoute
+                  component={React.lazy(() => import("./pages/AdminLanding"))}
+                  roles={["admin"]}
+                />
+              </AdminRoute>
+            </React.Suspense>
+          }
+        />
+
         {/* Protected Routes from configuration */}
         {isAuthenticated &&
           routes
@@ -198,30 +223,33 @@ const AppContent = () => {
                 ? roleBasedComponents[route.specialHandling]
                 : null;
 
+              // Wrap admin routes with AdminRoute
+              const isAdminRoute = route.isAdminRoute || false;
+
+              const routeElement = (
+                <React.Suspense
+                  fallback={
+                    <div className="min-h-screen bg-blue-50 dark:bg-gray-950 flex items-center justify-center">
+                      <div className="text-center">
+                        <Spinner size="lg" className="mx-auto mb-4" />
+                        <p className="text-gray-600 dark:text-gray-400">Loading page...</p>
+                      </div>
+                    </div>
+                  }
+                >
+                  <ProtectedRoute
+                    component={route.component}
+                    componentMap={componentMap}
+                    roles={route.roles}
+                  />
+                </React.Suspense>
+              );
+
               return (
                 <Route
                   key={`${route.path}-${index}`}
                   path={route.path}
-                  element={
-                    <React.Suspense
-                      fallback={
-                        <div className="min-h-screen bg-blue-50 dark:bg-gray-950 flex items-center justify-center">
-                          <div className="text-center">
-                            <Spinner size="lg" className="mx-auto mb-4" />
-                            <p className="text-gray-600 dark:text-gray-400">
-                              Loading page...
-                            </p>
-                          </div>
-                        </div>
-                      }
-                    >
-                      <ProtectedRoute
-                        component={route.component}
-                        componentMap={componentMap}
-                        roles={route.roles}
-                      />
-                    </React.Suspense>
-                  }
+                  element={isAdminRoute ? <AdminRoute>{routeElement}</AdminRoute> : routeElement}
                 />
               );
             })}
