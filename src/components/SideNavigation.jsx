@@ -324,87 +324,53 @@ const EnhancedSideNavigation = () => {
         >
           <nav className="space-y-1">
             {filteredNavItems.map((item) => (
-              <div key={item.id}>
-                <NavItem
-                  item={item}
-                  isCollapsed={isCollapsed}
-                  isActive={location.pathname === item.href}
-                  onClick={handleNavClick}
-                />
-                {item.id === "admin" && userRole === "admin" && (
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="flex items-center w-full p-3 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors mt-1 mb-2"
-                  >
-                    <LogOut
-                      className={`h-5 w-5 ${isCollapsed ? "mx-auto" : "mr-3"} flex-shrink-0`}
-                    />
-                    {!isCollapsed && (
-                      <span className="font-medium">Logout</span>
-                    )}
-                  </button>
-                )}
-                {item.id === "settings" && userRole === "user" && (
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="flex items-center w-full p-3 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors mt-1 mb-2"
-                  >
-                    <LogOut
-                      className={`h-5 w-5 ${isCollapsed ? "mx-auto" : "mr-3"} flex-shrink-0`}
-                    />
-                    {!isCollapsed && (
-                      <span className="font-medium">Logout</span>
-                    )}
-                  </button>
-                )}
-              </div>
+              // ✅ FIX: Removed inline logout blocks - only render nav items here
+              <NavItem
+                key={item.id}
+                item={item}
+                isCollapsed={isCollapsed}
+                isActive={location.pathname === item.href}
+                onClick={handleNavClick}
+              />
             ))}
           </nav>
         </div>
 
-        {!(
-          (userRole === "admin" &&
-            filteredNavItems.some((item) => item.id === "admin")) ||
-          (userRole === "user" &&
-            filteredNavItems.some((item) => item.id === "settings"))
-        ) && (
-          <div className="border-t border-gray-200 dark:border-gray-700 p-4">
-            {!isCollapsed && (
-              <div className="flex items-center space-x-3 mb-3">
-                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                  <User className="h-4 w-4 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                    System {userRole === "admin" ? "Admin" : "User"}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                    {userRole === "admin"
-                      ? "admin@thermacore.com"
-                      : "user@thermacore.com"}
-                  </p>
-                </div>
+        {/* ✅ FIX: Footer always renders with user info + logout button */}
+        <div className="border-t border-gray-200 dark:border-gray-700 p-4">
+          {!isCollapsed && (
+            <div className="flex items-center space-x-3 mb-3">
+              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                <User className="h-4 w-4 text-white" />
               </div>
-            )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                  {userRole === "admin" ? "System Admin" : "System User"}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                  {userRole === "admin"
+                    ? "admin@thermacore.com"
+                    : "user@thermacore.com"}
+                </p>
+              </div>
+            </div>
+          )}
 
-            <button
-              type="button"
-              onClick={handleLogout}
-              className={`
-                flex items-center w-full p-2 rounded-lg text-red-600 dark:text-red-400 
-                hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors
-                ${isCollapsed ? "justify-center" : "space-x-2"}
-              `}
-            >
-              <LogOut className="h-4 w-4" />
-              {!isCollapsed && (
-                <span className="text-sm font-medium">Logout</span>
-              )}
-            </button>
-          </div>
-        )}
+          <button
+            type="button"
+            onClick={handleLogout}
+            className={`
+              flex items-center w-full p-2 rounded-lg text-red-600 dark:text-red-400 
+              hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors
+              ${isCollapsed ? "justify-center" : "space-x-2"}
+            `}
+          >
+            <LogOut className="h-4 w-4" />
+            {!isCollapsed && (
+              <span className="text-sm font-medium">Logout</span>
+            )}
+          </button>
+        </div>
       </aside>
     </>
   );
