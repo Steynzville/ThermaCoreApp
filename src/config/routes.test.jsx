@@ -13,6 +13,10 @@ vi.mock("../components/HistoryView", () => ({
   default: () => <div data-testid="history-page">History</div>,
 }));
 
+vi.mock("../pages/AdminLanding", () => ({
+  default: () => <div data-testid="admin-landing-page">Admin Landing</div>,
+}));
+
 vi.mock("../components/AdminPanel", () => ({
   default: () => <div data-testid="admin-page">Admin Panel</div>,
 }));
@@ -81,17 +85,8 @@ vi.mock("../components/ScadaMainPage", () => ({
   default: () => <div data-testid="scada-main-page">SCADA Main</div>,
 }));
 
-vi.mock("../components/UnitDetails", () => ({
-  default: () => <div data-testid="unit-details-page">Unit Details</div>,
-}));
-
-vi.mock("../components/UserUnitDetails", () => ({
-  default: () => <div data-testid="user-unit-details-page">User Unit Details</div>,
-}));
-
-vi.mock("../components/UnitControl", () => ({
-  default: () => <div data-testid="unit-control-page">Unit Control</div>,
-}));
+// ❌ REMOVED: UnitDetails, UserUnitDetails, UnitControl mocks - never used
+// These routes use specialHandling and render generic special-* divs
 
 // Wrapper with Suspense for lazy components
 const renderRoute = (path) => {
@@ -175,8 +170,13 @@ describe("Routes Configuration", () => {
     expect(await screen.findByTestId("documents-page")).toBeInTheDocument();
   });
 
-  it("should render admin panel for /admin", async () => {
+  it("should render admin landing for /admin", async () => {
     renderRoute("/admin");
+    expect(await screen.findByTestId("admin-landing-page")).toBeInTheDocument();
+  });
+
+  it("should render admin panel for /admin/users", async () => {
+    renderRoute("/admin/users");
     expect(await screen.findByTestId("admin-page")).toBeInTheDocument();
   });
 
@@ -239,7 +239,7 @@ describe("Routes Configuration", () => {
     // Only count routes with actual components or special handling
     // (routes with component: null and no specialHandling are skipped)
     const validRoutes = routes.filter(r => r.component || r.specialHandling);
-    expect(validRoutes.length).toBe(22);
+    expect(validRoutes.length).toBe(23);
   });
 
   it("should have correct route structure", () => {
