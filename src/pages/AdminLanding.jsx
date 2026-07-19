@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useTenant } from "../context/TenantContext";
+// ✅ REMOVED: useTenant - no longer needed (TenantSwitcher handles selection)
 import { useAuth } from "../context/AuthContext";
 import TenantSwitcher from "../components/admin/TenantSwitcher";
 import { Button } from "../components/ui/button";
@@ -12,25 +11,40 @@ import { Button } from "../components/ui/button";
  * - Welcome message with username
  * - Tenant switcher dropdown
  * - "Go to Dashboard" button
- * - Redirects to dashboard when tenant is selected and button is clicked
+ * - Navigates to dashboard when button is clicked
+ * - Sets session flag so Dashboard knows admin has made a selection
  * - Look and feel matches login page
+ *
+ * BEHAVIOR:
+ * - "All Tenants" → Dashboard shows all 20 units (admin view)
+ * - Specific Tenant → Dashboard shows 6 units (user view)
+ *
+ * NOTE: The tenant selection is handled entirely by TenantSwitcher,
+ * which updates TenantContext. AdminLanding just provides the UI
+ * and the navigation button.
  */
 const AdminLanding = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { currentTenant } = useTenant();
-  const [tenantSelected, setTenantSelected] = useState(false);
-
-  // Update tenantSelected state when currentTenant changes
-  useEffect(() => {
-    // If currentTenant is null, that means "All Tenants" is selected
-    // But we need to know if the user has explicitly made a selection
-    // We'll track this via the TenantSwitcher component's selection
-  }, [currentTenant]);
 
   const handleGoToDashboard = () => {
-    // currentTenant can be null (All Tenants) or a specific tenant
-    navigate("/dashboard", { replace: true });
+    // Set session flag so Dashboard knows admin has made a selection
+    // This prevents the Dashboard from redirecting back to /admin
+    let flagSet = false;
+    try {
+      sessionStorage.setItem("tenant_selected", "true");
+      flagSet = true;
+    } catch (_error) {
+      // Fallback: use a query param if sessionStorage is unavailable
+      // This ensures the user can still proceed to the dashboard
+      // even when storage is blocked.
+    }
+    
+    // If sessionStorage failed, use query param as backup
+    // NOTE: This is a convenience fallback, not a security mechanism.
+    // The param is checked by Dashboard to allow entry when storage is blocked.
+    const targetPath = flagSet ? "/dashboard" : "/dashboard?tenant_selected=true";
+    navigate(targetPath, { replace: true });
   };
 
   return (
@@ -69,13 +83,12 @@ const AdminLanding = () => {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Select Tenant
               </label>
-              <TenantSwitcher showGoButton={false} />
+              <TenantSwitcher />
             </div>
 
             <Button
               onClick={handleGoToDashboard}
-              className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={false}
+              className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
             >
               Go to Dashboard
             </Button>
