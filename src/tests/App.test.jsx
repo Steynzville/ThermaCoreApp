@@ -87,7 +87,6 @@ vi.mock("../context/SidebarContext", () => ({
   useSidebar: vi.fn(() => ({ isOpen: true, toggleSidebar: vi.fn() })),
 }));
 
-// ✅ FIX: TenantContext mock now exposes currentTenant (matches real context)
 vi.mock("../context/TenantContext", () => ({
   TenantProvider: ({ children }) => <div data-testid="tenant-provider">{children}</div>,
   useTenant: vi.fn(() => ({ currentTenant: null, availableTenants: [], switchTenant: vi.fn() })),
@@ -185,21 +184,18 @@ vi.mock("../components/PasswordResetRequest", () => ({
   default: () => <div data-testid="reset-password-page">Reset Password</div>,
 }));
 
-// ✅ FIX #4: ProtectedRoute mock with correct roles: [] semantics
 vi.mock("../components/ProtectedRoute", () => ({
   default: ({ component: Component, componentMap, roles }) => {
     // Use the role from authState to determine which component to render
     const userRole = authState.user?.role || "user";
     
     if (componentMap) {
-      // ✅ FIX #4: roles: [] means "open to all authenticated users"
       const hasAccess = !roles || roles.length === 0 || roles.includes(userRole);
       
       if (!hasAccess) {
         return <div data-testid="protected-route">Access Denied</div>;
       }
       
-      // Render the appropriate component based on role
       const RoleComponent = userRole === "admin" ? componentMap.admin : componentMap.user;
       return (
         <div data-testid="protected-route">
@@ -208,7 +204,6 @@ vi.mock("../components/ProtectedRoute", () => ({
       );
     }
     
-    // ✅ FIX #4: roles: [] means "open to all authenticated users"
     const hasAccess = !roles || roles.length === 0 || roles.includes(userRole);
     
     if (!hasAccess) {
@@ -223,15 +218,6 @@ vi.mock("../components/ProtectedRoute", () => ({
   },
 }));
 
-// ✅ FIX #2: Mock AdminRoute so it can be controlled in tests
-const { mockAdminRouteBehavior } = vi.hoisted(() => ({
-  mockAdminRouteBehavior: vi.fn(({ children }) => children),
-}));
-
-vi.mock("../components/admin/AdminRoute", () => ({
-  default: ({ children }) => mockAdminRouteBehavior({ children }),
-}));
-
 vi.mock("../components/UnitControl", () => ({
   default: () => <div data-testid="unit-control">Unit Control</div>,
 }));
@@ -244,7 +230,6 @@ vi.mock("../components/UnitDetails", () => ({
   default: () => <div data-testid="unit-details">Unit Details</div>,
 }));
 
-// ✅ FIX #1: Include /admin route in mocked routes for duplicate detection tests
 vi.mock("../config/routes", () => ({
   default: [
     {
@@ -263,7 +248,6 @@ vi.mock("../config/routes", () => ({
       component: () => <div data-testid="admin-page">Admin</div>,
       isProtected: true,
       roles: ["admin"],
-      isAdminRoute: true,
     },
     {
       path: "/units",
@@ -279,7 +263,6 @@ vi.mock("../config/routes", () => ({
       roles: ["admin", "user"],
       specialHandling: "unit-details-role-based",
     },
-    // ✅ NEW: Open route for testing roles: [] semantics
     {
       path: "/open-route",
       component: () => <div data-testid="open-route-page">Open Route</div>,
@@ -390,9 +373,6 @@ beforeEach(() => {
   mockUseSettings.mockReturnValue({
     settings: { soundEnabled: true, volume: 0.5 },
   });
-
-  // Reset AdminRoute mock to default (render children)
-  mockAdminRouteBehavior.mockImplementation(({ children }) => children);
 
   setInitialRoute("/");
 
@@ -624,7 +604,6 @@ describe("App", () => {
     }, { timeout: 3000 });
   });
 
-  // ✅ NEW: Test roles: [] open route works for any authenticated user
   it("renders an open route (roles: []) for any authenticated user", async () => {
     setAuth({ user: { id: 1, name: "Regular User", role: "user" }, isAuthenticated: true });
     setInitialRoute("/open-route");
@@ -710,9 +689,8 @@ describe("App", () => {
     }, { timeout: 3000 });
   });
 
-  // ✅ FIX #4: Access denied for role mismatch
+  // ProtectedRoute enforces role check directly now that AdminRoute is removed
   it("shows access denied when user role doesn't match route roles", async () => {
-    // AdminRoute mock still returns children, so ProtectedRoute handles the check
     setAuth({ user: { id: 1, name: "Regular User", role: "user" }, isAuthenticated: true });
     setInitialRoute("/admin");
     render(<App />);
