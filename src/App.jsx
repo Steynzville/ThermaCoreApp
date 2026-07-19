@@ -52,6 +52,8 @@ const roleBasedComponents = {
   },
 };
 
+// ✅ FIX #1: Removed dead AdminLandingLazy - no longer needed after duplicate route removal
+
 const AppContent = () => {
   const { isAuthenticated, isLoading, isLoggingOut } = useAuth();
   const { settings } = useSettings();
@@ -98,11 +100,17 @@ const AppContent = () => {
     previousIsAuthenticatedRef.current = isAuthenticated;
 
     if (justLoggedIn && settings.soundEnabled) {
+      // ✅ FIX #3: Handle async playSound errors properly
       try {
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        playSound("login-sound.mp3", settings.soundEnabled, settings.volume);
+        const soundPromise = playSound("login-sound.mp3", settings.soundEnabled, settings.volume);
+        // If playSound returns a promise, catch errors
+        if (soundPromise && typeof soundPromise.catch === 'function') {
+          soundPromise.catch(() => {
+            // Silently ignore sound playback errors
+          });
+        }
       } catch (_error) {
-        // Don't set app error for sound issues
+        // Silently ignore synchronous sound errors
       }
     }
     // Intentionally NOT depending on settings.soundEnabled/settings.volume:
@@ -189,30 +197,6 @@ const AppContent = () => {
               }
             />
           ))}
-
-        {/* Admin Route - Admin Landing Page */}
-        <Route
-          path="/admin"
-          element={
-            <React.Suspense
-              fallback={
-                <div className="min-h-screen bg-blue-50 dark:bg-gray-950 flex items-center justify-center">
-                  <div className="text-center">
-                    <Spinner size="lg" className="mx-auto mb-4" />
-                    <p className="text-gray-600 dark:text-gray-400">Loading Admin...</p>
-                  </div>
-                </div>
-              }
-            >
-              <AdminRoute>
-                <ProtectedRoute
-                  component={React.lazy(() => import("./pages/AdminLanding"))}
-                  roles={["admin"]}
-                />
-              </AdminRoute>
-            </React.Suspense>
-          }
-        />
 
         {/* Protected Routes from configuration */}
         {isAuthenticated &&
