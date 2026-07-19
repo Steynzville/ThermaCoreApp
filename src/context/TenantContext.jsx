@@ -2,15 +2,33 @@ import { createContext, useContext, useEffect, useState } from "react";
 
 import { apiGetJson } from "../utils/apiFetch";
 import { useAuth } from "./AuthContext";
+import { units } from "../data/mockUnits";
 
 const TenantContext = createContext();
 
 // Shared constant for API base URL fallback
 const API_BASE_URL_FALLBACK = "https://thermacoreapp.onrender.com";
 
+// ✅ NEW: Generate mock tenants from units data for demo purposes
+const generateMockTenants = () => {
+  const tenantMap = new Map();
+  units.forEach((unit) => {
+    if (unit.client && unit.client.name) {
+      const clientName = unit.client.name;
+      if (!tenantMap.has(clientName)) {
+        tenantMap.set(clientName, {
+          id: `tenant-${clientName.replace(/\s+/g, "-").toLowerCase()}`,
+          name: clientName,
+          unitCount: units.filter((u) => u.client?.name === clientName).length,
+        });
+      }
+    }
+  });
+  return Array.from(tenantMap.values());
+};
+
 export const useTenant = () => {
   const context = useContext(TenantContext);
-  // FIXED: Always throw when used outside provider - no test detection
   if (!context) {
     throw new Error("useTenant must be used within a TenantProvider");
   }
@@ -72,10 +90,18 @@ export const TenantProvider = ({ children }) => {
           `${import.meta.env.VITE_API_BASE_URL || API_BASE_URL_FALLBACK}/api/v1/tenants?active_only=true`,
         );
 
-        if (response.data) {
+        if (response.data && response.data.length > 0) {
           setAvailableTenants(response.data);
+        } else {
+          // ✅ NEW: No tenants from API - use mock tenants for demo
+          const mockTenants = generateMockTenants();
+          setAvailableTenants(mockTenants);
         }
-      } catch (_err) {}
+      } catch (_err) {
+        // ✅ NEW: API error - use mock tenants for demo
+        const mockTenants = generateMockTenants();
+        setAvailableTenants(mockTenants);
+      }
     };
 
     if (isAdmin) {
