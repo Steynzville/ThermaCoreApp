@@ -19,7 +19,7 @@ import { useTenant } from "../../context/TenantContext";
  * Behavior: Clicking a tenant selects it (green tick) and closes the dropdown.
  * The "Go to Dashboard" button on the Admin Landing page handles navigation.
  */
-export default function TenantSwitcher({ showGoButton = false }) {
+export default function TenantSwitcher() {
   const { currentTenant, availableTenants, isAdmin, isLoading, switchTenant } =
     useTenant();
 
@@ -36,12 +36,18 @@ export default function TenantSwitcher({ showGoButton = false }) {
   const handleTenantSelect = (tenantId) => {
     // Switch tenant (this updates currentTenant in context)
     switchTenant(tenantId);
+    
     // Set flag that user has made a selection
-    sessionStorage.setItem("tenant_selected", "true");
+    // ✅ Wrap in try/catch to handle storage errors in Safari private browsing, etc.
+    try {
+      sessionStorage.setItem("tenant_selected", "true");
+    } catch (_error) {
+      // Non-critical — ignore storage failures (e.g., Safari private browsing)
+    }
   };
 
-  // Check if "All Tenants" is selected (currentTenant === null)
-  const isAllTenantsSelected = currentTenant === null;
+  // ✅ Check both null and undefined to handle context initialization states
+  const isAllTenantsSelected = !currentTenant;
 
   return (
     <DropdownMenu>
