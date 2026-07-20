@@ -154,6 +154,15 @@ npx biome lint --write ./src
 · Imports: Use named imports exclusively; destructuring imports is forbidden on global types.
 · UseEffect Dependencies: Avoid infinite re-render loops. Never update states directly within the component body. Include only primitives in useEffect dependency arrays.
 
+5.3 Admin & Multitenancy Architecture
+
+The application implements a strict multitenant security model:
+· Tenant Selection: Admin users must choose an active tenant on the Admin Landing Page (`/admin`) upon logging in. The chosen tenant is stored in the `TenantContext`.
+· Route Guards: Admin-only routes are protected by `ProtectedRoute` with `roles: ["admin"]` configured in `routes.js`. The `ProtectedRoute` component handles role checking using normalized roles from `getFrontendRole()`, ensuring consistent authorization across the application.
+· Global Switcher: Once selected, the current active tenant is displayed and can be dynamically switched using the `TenantSwitcher` component located in the global Dashboard header.
+· Sidebar Navigation: Admin users see a "Tenant Switcher" link (with Shield icon) to return to the Admin Landing page and a "User Management" link for user administration.
+· Documentation: Routes with `isAdminRoute: true` are documented as admin-only, with `roles: ["admin"]` ensuring enforcement.
+
 ---
 
 6. Contribution Workflow
