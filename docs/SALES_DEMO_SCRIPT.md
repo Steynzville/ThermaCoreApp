@@ -22,8 +22,15 @@ This script is engineered for sales engineers and account executives demonstrati
 ## 2. Walkthrough Flow (Step-by-Step Demo)
 
 ```
- [1. Main Dashboard] ──► [2. Asset Detail] ──► [3. Remote Control] ──► [4. Analytics]
+ [0. Admin Landing] ──► [1. Main Dashboard] ──► [2. Asset Detail] ──► [3. Remote Control] ──► [4. Analytics]
 ```
+
+### Step 0: Admin Landing Page & Tenant Switching (Enterprise Multi-Tenancy)
+* **What to show**: The `/admin` landing page that administrators arrive on post-login, prompting them to select a tenant from a dropdown menu.
+* **Talking Point**:
+  > "Before we even see a dashboard, let's look at our enterprise-grade security and tenancy. Administrative users are greeted by our **Admin Landing Page** at `/admin`. This is a deliberate security barrier requiring them to select an active customer fleet or tenant before accessing any sensitive telemetry.
+  >
+  > Once a tenant is chosen and we are inside, we can also use the **Tenant Switcher** dropdown directly in the dashboard header to switch between different clients in real time. This single-pane-of-glass approach allows service providers to manage infinite tenant fleets securely and efficiently."
 
 ### Step 1: Main Dashboard (The Visual First-Impression)
 * **What to show**: The Navy & Gold live dashboard layout. Point out the active unit metrics, thermal output values, and water generation volumes.
@@ -59,3 +66,4 @@ This script is engineered for sales engineers and account executives demonstrati
 | **"Our physical assets are located in areas with poor internet connection. What if we lose connectivity?"** | "We have built this platform with offline reliability in mind. If an edge gateway loses connection, it continues to log telemetry locally. Once internet connectivity is restored, the gateway automatically synchronizes the data, populating the historical timeline without loss." |
 | **"Is a web-native control system secure from cyber attacks?"** | "We prioritize security at every level. The platform implements a zero-trust model utilizing dual-token JWT authentication, mutual TLS (mTLS) for edge communications, and strict role-based access controls. High-risk operations require multi-operator approvals, satisfying NERC CIP and IEC 62443 criteria." |
 | **"Why should we pay a software subscription fee on top of the physical hardware purchase?"** | "The software subscription is the key to maximizing your hardware investment. It powers predictive diagnostics that reduce unplanned maintenance down-events by 34.2%. By continually tuning your thermodynamic loops, it pays for itself through increased efficiency." |
+| **"How do we know your software is reliable and won't crash in production?"** | "ThermaCore SCADA is backed by rigorous automated testing. We maintain high enterprise-grade test suites, with a **Total Frontend Test Coverage of 91.78%** (Vitest) and a **Total Backend Test Coverage of 82.91%** (Pytest), ensuring that code modifications are fully validated and stable before release." |
