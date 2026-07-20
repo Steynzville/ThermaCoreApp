@@ -21,6 +21,7 @@ Unlike traditional hardware-only manufacturers, ThermaCore leverages an integrat
 * **The Complete Ecosystem**: Competitors sell basic, disconnected hardware that requires manual on-site checkups. ThermaCore provides a complete cyber-physical loop, providing live monitoring, smart remote overrides, and predictive maintenance out of the box.
 * **Exceptional Asset Economics**: Integrated thermodynamic calculations compute Coefficient of Performance (COP) and transfer rates in real time, driving an average **+18.4% efficiency lift** and reducing unplanned maintenance down-events by **34.2%**.
 * **Demonstration & Commercial Ready**: Fully functional code integrates with physical gateways and is ready for customer demonstrations alongside our physical prototype units today.
+* **Multi-Tenant Administration**: Built with an isolated multi-tenant architecture. Administrators manage multiple fleets via a secure `/admin` Landing Page and a real-time Tenant Switcher in the dashboard, driving down operational overhead for multi-tenant service providers.
 
 ---
 
@@ -31,8 +32,8 @@ Unlike traditional hardware-only manufacturers, ThermaCore leverages an integrat
 ├──────────────────────────────────────┼────────────────────────────────────────┤
 │ Build & Verification Status          │ 🟢 SUCCESS / COMPILING                 │
 │ Automated Testing Assertions         │ 3,700+ Passing (377 FE / 3,323+ BE)    │
-│ Frontend Test Coverage (Vitest)      │ 🟢 97.34% Stmts | 89.57% Br | 98.21% Fn │
-│ Backend Test Coverage (Pytest)       │ 🟢 ~90% Overall                        │
+│ Frontend Test Coverage (Vitest)      │ 🟢 91.78% Total Coverage               │
+│ Backend Test Coverage (Pytest)       │ 🟢 82.91% Total Coverage               │
 │ Telemetry Ingestion Latency          │ < 120ms (Edge sensor to web UI)        │
 │ Remote Override Command Latency      │ < 180ms (Operator click to client mTLS)│
 │ Database Analytics Query Speed       │ < 95ms (95th-percentile for 30d trends)│
