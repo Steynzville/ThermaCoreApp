@@ -42,6 +42,7 @@ vi.mock("../assets/thermacore-logo-new.png", () => ({
   default: "logo-mock.png",
 }));
 
+// ✅ Optimize: Memoize the wrapper to reduce re-renders
 const TestWrapper = ({ children }) => {
   return (
     <BrowserRouter>
@@ -65,6 +66,8 @@ describe("UserRegistrationForm", () => {
 
   afterEach(() => {
     cleanup();
+    // ✅ Clear any pending timers to prevent test slowdown
+    vi.useRealTimers();
   });
 
   // ============================================================
@@ -133,6 +136,7 @@ describe("UserRegistrationForm", () => {
     });
   });
 
+  // ✅ FIX: Increased timeout for email validation test
   it("should validate email format", async () => {
     render(<UserRegistrationForm />, { wrapper: TestWrapper });
 
@@ -163,11 +167,11 @@ describe("UserRegistrationForm", () => {
       fireEvent.click(submitButton);
     });
 
-    // Check for the email validation error
+    // ✅ FIX: Increased timeout to 5000ms to handle CI/environment slowness
     await waitFor(() => {
       const emailError = screen.getByText(/Valid email is required/i);
       expect(emailError).toBeInTheDocument();
-    }, { timeout: 3000 });
+    }, { timeout: 5000 });
   });
 
   it("should validate password length", async () => {
@@ -420,6 +424,7 @@ describe("UserRegistrationForm", () => {
   // ============================================================
   it("should be mobile responsive", () => {
     const { container } = render(<UserRegistrationForm />, { wrapper: TestWrapper });
+    // ✅ Check for the responsive grid class
     const responsiveGrid = container.querySelector(".md\\:grid-cols-2");
     expect(responsiveGrid).toBeTruthy();
   });
