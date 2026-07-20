@@ -1,12 +1,11 @@
-import { CheckCircle, Eye, EyeOff, UserPlus } from "lucide-react";
+import { CheckCircle, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import thermaCoreLogo from "../assets/thermacore-logo-new.png";
 import { selfRegister } from "../services/authService";
-import { Button } from "./ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import styles from "./LoginScreen.module.css";
 import {
   Dialog,
   DialogContent,
@@ -15,8 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "./ui/dialog";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
+import { Button } from "./ui/button";
 
 const UserRegistrationForm = () => {
   const navigate = useNavigate();
@@ -39,7 +37,6 @@ const UserRegistrationForm = () => {
   const validateForm = () => {
     const newErrors = {};
 
-    // Required fields - with trimming
     const trimmedUsername = formData.username.trim();
     if (!trimmedUsername || trimmedUsername.length < 3) {
       newErrors.username = "Username must be at least 3 characters";
@@ -69,7 +66,6 @@ const UserRegistrationForm = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear error for this field when user starts typing using functional update
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
@@ -130,252 +126,248 @@ const UserRegistrationForm = () => {
     navigate("/login");
   };
 
-  const handleModalOpenChange = (open) => {
-    if (!open) {
-      setShowConfirmationModal(false);
-      navigate("/login");
-    } else {
-      setShowConfirmationModal(open);
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
-      <Card className="w-full max-w-2xl shadow-2xl">
-        <CardHeader className="text-center space-y-4 pb-6">
-          <div className="flex justify-center mb-4">
-            <img
-              src={thermaCoreLogo}
-              alt="ThermaCore Logo"
-              className="h-16 w-auto"
-            />
-          </div>
-          <CardTitle className="text-3xl font-bold text-[#2563eb] dark:text-[#2563eb]">
-            Create Your Account
-          </CardTitle>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Register for ThermaCore - Your account will be reviewed by an
-            administrator
+    <div className={styles.pageWrapper}>
+      <div className={styles.loginContainer}>
+        <div className={styles.logoContainer}>
+          <img
+            src={thermaCoreLogo}
+            alt="ThermaCore Logo"
+            className={styles.logo}
+          />
+        </div>
+        <div className={styles.titleContainer}>
+          <h1 className={styles.title}>Create Your Account</h1>
+          <p className={styles.companySubtitle}>
+            Register for ThermaCore - Your account will be reviewed by an administrator
           </p>
-        </CardHeader>
+        </div>
 
-        <CardContent>
-          {/* ✅ FIX: Added noValidate to prevent browser native validation from blocking submit */}
-          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-            {/* Account Credentials Section */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
-                Account Credentials
-              </h3>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Account Credentials Section */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+              Account Credentials
+            </h3>
 
-              <div className="space-y-2">
-                <Label htmlFor="username">
-                  Username <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="username"
-                  name="username"
-                  type="text"
-                  value={formData.username}
-                  onChange={handleChange}
-                  placeholder="Enter username"
-                  className={errors.username ? "border-red-500" : ""}
-                />
-                {errors.username && (
-                  <p className="text-red-500 text-sm">{errors.username}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email">
-                  Email <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="your.email@company.com"
-                  className={errors.email ? "border-red-500" : ""}
-                />
-                {errors.email && (
-                  <p className="text-red-500 text-sm">{errors.email}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password">
-                  Password <span className="text-red-500">*</span>
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    value={formData.password}
-                    onChange={handleChange}
-                    placeholder="Minimum 6 characters"
-                    className={errors.password ? "border-red-500" : ""}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                    aria-label={
-                      showPassword ? "Hide password" : "Show password"
-                    }
-                  >
-                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                  </button>
-                </div>
-                {errors.password && (
-                  <p className="text-red-500 text-sm">{errors.password}</p>
-                )}
-              </div>
+            <div className={styles.formGroup}>
+              <label htmlFor="username" className={styles.formLabel}>
+                Username <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="username"
+                name="username"
+                type="text"
+                placeholder="Enter username"
+                value={formData.username}
+                onChange={handleChange}
+                className={`${styles.formInput} ${errors.username ? styles.inputError : ""}`}
+                required
+              />
+              {errors.username && (
+                <div className={styles.passwordError}>{errors.username}</div>
+              )}
             </div>
 
-            {/* Personal Information Section */}
-            <div className="space-y-4 pt-4 border-t">
-              <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
-                Personal Information
-              </h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">
-                    First Name <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="firstName"
-                    name="firstName"
-                    type="text"
-                    value={formData.firstName}
-                    onChange={handleChange}
-                    placeholder="John"
-                    className={errors.firstName ? "border-red-500" : ""}
-                  />
-                  {errors.firstName && (
-                    <p className="text-red-500 text-sm">{errors.firstName}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">
-                    Last Name <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="lastName"
-                    name="lastName"
-                    type="text"
-                    value={formData.lastName}
-                    onChange={handleChange}
-                    placeholder="Doe"
-                    className={errors.lastName ? "border-red-500" : ""}
-                  />
-                  {errors.lastName && (
-                    <p className="text-red-500 text-sm">{errors.lastName}</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="phoneNumber">Phone Number</Label>
-                <Input
-                  id="phoneNumber"
-                  name="phoneNumber"
-                  type="tel"
-                  value={formData.phoneNumber}
-                  onChange={handleChange}
-                  placeholder="+1 (555) 123-4567"
-                />
-              </div>
+            <div className={styles.formGroup}>
+              <label htmlFor="email" className={styles.formLabel}>
+                Email <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="your.email@company.com"
+                value={formData.email}
+                onChange={handleChange}
+                className={`${styles.formInput} ${errors.email ? styles.inputError : ""}`}
+                required
+              />
+              {errors.email && (
+                <div className={styles.passwordError}>{errors.email}</div>
+              )}
             </div>
 
-            {/* Company Information Section */}
-            <div className="space-y-4 pt-4 border-t">
-              <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
-                Company Information
-              </h3>
-
-              <div className="space-y-2">
-                <Label htmlFor="company">Company</Label>
-                <Input
-                  id="company"
-                  name="company"
-                  type="text"
-                  value={formData.company}
+            <div className={styles.formGroup}>
+              <label htmlFor="password" className={styles.formLabel}>
+                Password <span className="text-red-500">*</span>
+              </label>
+              <div className={styles.passwordInputContainer}>
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Minimum 6 characters"
+                  value={formData.password}
                   onChange={handleChange}
-                  placeholder="Company Name"
+                  className={`${styles.formInput} ${errors.password ? styles.inputError : ""}`}
+                  required
                 />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="department">Department</Label>
-                  <Input
-                    id="department"
-                    name="department"
-                    type="text"
-                    value={formData.department}
-                    onChange={handleChange}
-                    placeholder="Engineering"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="position">Position</Label>
-                  <Input
-                    id="position"
-                    name="position"
-                    type="text"
-                    value={formData.position}
-                    onChange={handleChange}
-                    placeholder="Operations Manager"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Submit Button */}
-            <div className="pt-6 space-y-4">
-              <Button
-                type="submit"
-                className="w-full"
-                size="lg"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Creating Account...
-                  </span>
-                ) : (
-                  <span className="flex items-center justify-center gap-2">
-                    <UserPlus size={20} />
-                    Create Account
-                  </span>
-                )}
-              </Button>
-
-              <div className="text-center">
                 <button
                   type="button"
-                  onClick={() => navigate("/login")}
-                  className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className={styles.passwordToggleButton}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                 >
-                  Already have an account? Sign in
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
+              {errors.password && (
+                <div className={styles.passwordError}>{errors.password}</div>
+              )}
             </div>
-          </form>
-        </CardContent>
-      </Card>
+          </div>
+
+          {/* Personal Information Section */}
+          <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+              Personal Information
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className={styles.formGroup}>
+                <label htmlFor="firstName" className={styles.formLabel}>
+                  First Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="firstName"
+                  name="firstName"
+                  type="text"
+                  placeholder="John"
+                  value={formData.firstName}
+                  onChange={handleChange}
+                  className={`${styles.formInput} ${errors.firstName ? styles.inputError : ""}`}
+                  required
+                />
+                {errors.firstName && (
+                  <div className={styles.passwordError}>{errors.firstName}</div>
+                )}
+              </div>
+
+              <div className={styles.formGroup}>
+                <label htmlFor="lastName" className={styles.formLabel}>
+                  Last Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="lastName"
+                  name="lastName"
+                  type="text"
+                  placeholder="Doe"
+                  value={formData.lastName}
+                  onChange={handleChange}
+                  className={`${styles.formInput} ${errors.lastName ? styles.inputError : ""}`}
+                  required
+                />
+                {errors.lastName && (
+                  <div className={styles.passwordError}>{errors.lastName}</div>
+                )}
+              </div>
+            </div>
+
+            <div className={styles.formGroup}>
+              <label htmlFor="phoneNumber" className={styles.formLabel}>
+                Phone Number
+              </label>
+              <input
+                id="phoneNumber"
+                name="phoneNumber"
+                type="tel"
+                placeholder="+1 (555) 123-4567"
+                value={formData.phoneNumber}
+                onChange={handleChange}
+                className={styles.formInput}
+              />
+            </div>
+          </div>
+
+          {/* Company Information Section */}
+          <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+              Company Information
+            </h3>
+
+            <div className={styles.formGroup}>
+              <label htmlFor="company" className={styles.formLabel}>
+                Company
+              </label>
+              <input
+                id="company"
+                name="company"
+                type="text"
+                placeholder="Company Name"
+                value={formData.company}
+                onChange={handleChange}
+                className={styles.formInput}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className={styles.formGroup}>
+                <label htmlFor="department" className={styles.formLabel}>
+                  Department
+                </label>
+                <input
+                  id="department"
+                  name="department"
+                  type="text"
+                  placeholder="Engineering"
+                  value={formData.department}
+                  onChange={handleChange}
+                  className={styles.formInput}
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label htmlFor="position" className={styles.formLabel}>
+                  Position
+                </label>
+                <input
+                  id="position"
+                  name="position"
+                  type="text"
+                  placeholder="Operations Manager"
+                  value={formData.position}
+                  onChange={handleChange}
+                  className={styles.formInput}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-4">
+            <button
+              type="submit"
+              className={`${styles.btnSignin} ${styles.btnSigninLight}`}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Creating Account..." : "Create Account"}
+            </button>
+
+            <div className="text-center mt-4">
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                Already have an account?{" "}
+              </span>
+              <button
+                type="button"
+                onClick={() => navigate("/login")}
+                className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+              >
+                Sign In
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
 
       {/* Confirmation Modal */}
       <Dialog
         open={showConfirmationModal}
-        onOpenChange={handleModalOpenChange}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowConfirmationModal(false);
+            navigate("/login");
+          }
+        }}
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -387,7 +379,6 @@ const UserRegistrationForm = () => {
             <DialogTitle className="text-center text-2xl">
               Thank You for Your Application!
             </DialogTitle>
-            {/* ✅ FIX: Use asChild to prevent <p> containing <div> warning */}
             <DialogDescription asChild>
               <div className="text-center pt-4">
                 <div className="space-y-3">
