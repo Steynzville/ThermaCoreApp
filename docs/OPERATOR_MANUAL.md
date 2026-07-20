@@ -7,7 +7,7 @@ This user guide provides instructions for navigating and managing ThermaCore mod
 
 ## 1. System Navigation Overview
 
-The ThermaCore SCADA interface features a responsive, high-contrast Navy & Gold display. The sidebar contains 5 main navigation areas:
+The ThermaCore SCADA interface features a responsive, high-contrast Navy & Gold display. The sidebar contains 6 main navigation areas:
 
 ```
 ┌────────────────────────────────────────────────────────┐
@@ -17,7 +17,8 @@ The ThermaCore SCADA interface features a responsive, high-contrast Navy & Gold 
 │  [▤] Asset Grid          - Unit list & status details │
 │  [⚙] Remote Controls     - Critical override commands │
 │  [📈] Performance & COP   - Historical trends & ROI    │
-│  [🔒] System Admin Panel  - Approvals & audit logs     │
+│  [🔒] Tenant Switcher     - Select active client scope │
+│  [👥] User Management     - Approvals & audit logs     │
 └────────────────────────────────────────────────────────┘
 ```
 
@@ -81,7 +82,8 @@ Alarms are classified dynamically according to threat severities:
 ## 6. Enterprise Admin & Permission Panel
 
 Administrators possess master fleet supervisory privileges:
-* **New User Approvals**: All self-registered users are assigned read-only "Viewer" status by default. Admins must explicitly authorize and promote new users.
+* **Admin Panel Landing Page (Post-Login)**: Upon successful authentication, administrator accounts are redirected to the `/admin` landing page where they must choose an active tenant context before accessing any scoped metrics.
+* **New User Approvals**: All self-registered users are assigned read-only "Viewer" status by default. Admins must explicitly authorize and promote new users from the User Management dashboard.
 * **Audit Trail Reviews**: Accesses a real-time event list tracking system activities, containing:
   * Tracing IDs and IP Addresses
   * Action names (e.g., `User Elevated`, `Emergency Command Sent`)
@@ -104,3 +106,21 @@ For on-site engineers, the **Engineering View** displays a live Process Flow Dia
 * **Dynamic Pipe Overlays**: Overlays animate color and speed representing liquid fluid flow velocities.
 * **Interactive Sensor Hubs**: Hovering over pipe junctions opens high-resolution tooltips detailing real-time fluid properties and sensor health diagnostics.
 * **Protocol Indicators**: Live protocol lights confirm the health of the physical ingest path (`MQTT`, `OPC-UA`, `Modbus-TCP`, `DNP3`).
+
+---
+
+## 9. Multi-Tenant Administration & Context Selection
+
+ThermaCore SCADA supports fully isolated multi-tenant operations to enable service providers to manage multiple customer fleets from a single system:
+
+### 9.1 Post-Login Tenant Landing
+* Administrative accounts land on the central **Tenant Landing** page immediately after login.
+* The landing page provides a greeting and requires selecting an active tenant before navigating to the live dashboard.
+* This is a deliberate barrier to ensure all subsequent actions are safely isolated to the correct customer account.
+
+### 9.2 Real-Time Tenant Switching
+* While viewing the main dashboard, administrators can switch their focused tenant at any time using the **Tenant Switcher** dropdown in the dashboard header.
+* Selecting a new tenant automatically updates the header title, loaded telemetry, unit list, and associated metrics instantly without needing a full system logout/login.
+
+### 9.3 Navigating to Tenant Switcher Page
+* Click the **Tenant Switcher** menu item in the left sidebar to return to the selection landing page at any time.
