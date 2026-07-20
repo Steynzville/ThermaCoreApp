@@ -323,18 +323,39 @@
   font-weight: bold;
 }
 
+/* ✅ FIX: Updated Forgot Password Link - Matching Register Link Style */
 .forgotPasswordLink {
-  color: #a0aec0;
-  text-decoration: underline;
   background: none;
   border: none;
-  padding: 0;
+  color: #2563eb;
+  font-weight: 600;
   cursor: pointer;
+  text-decoration: none;
+  padding: 0;
   font-size: 14px;
+  transition: all 0.2s ease;
 }
 
 .forgotPasswordLink:hover {
-  opacity: 0.8;
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+.forgotPasswordLink:active {
+  color: #1e40af;
+}
+
+/* Dark mode for forgot password link */
+:global(.dark) .forgotPasswordLink {
+  color: #60a5fa;
+}
+
+:global(.dark) .forgotPasswordLink:hover {
+  color: #93c5fd;
+}
+
+:global(.dark) .forgotPasswordLink:active {
+  color: #bfdbfe;
 }
 
 /* === BUTTONS === */
