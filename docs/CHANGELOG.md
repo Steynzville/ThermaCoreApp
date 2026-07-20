@@ -5,6 +5,21 @@ This document tracks all changes, security updates, and performance optimization
 
 ---
 
+## [v2.7.0] - July 2026
+
+### 🚀 New Features & Enhancements
+* **Admin Tenant Switcher Integration**: Implemented a comprehensive multi-tenant management interface for administrative users.
+  * **Admin Landing Page**: Added a dedicated tenant selection portal for administrator accounts, facilitating immediate redirection upon authentication. Administrators now land on `/admin` where they must select a tenant before accessing any tenant-specific data.
+  * **Global Tenant Switcher Header**: Integrated a live dropdown tenant selector directly inside the main Dashboard header, allowing seamless context-switching for administrator roles without requiring a full logout/login cycle.
+  * **Enhanced Sidebar Navigation**: Upgraded navigation rails with a Return-to-Tenant-Switcher link (labeled "Tenant Switcher" with Shield icon) and a separate User Management view for administrator accounts.
+  * **Role-Based Access Control**: Admin-only routes are now protected via `ProtectedRoute` with `roles: ["admin"]` configured in `routes.js`, ensuring consistent role normalization across the application.
+
+### 📊 Testing & Quality Assurance
+* **Test Coverage Maintenance**: Updated test suites for `App`, `Dashboard`, `SideNavigation`, `AdminLanding`, and `routes` to cover the new tenant switching functionality.
+* **Route Configuration Validation**: Added structural tests ensuring `isAdminRoute` documentation matches actual `roles` configuration for all admin-only routes.
+
+---
+
 ## [v2.6.0] - June 2026
 
 ### 📊 Testing & Quality Assurance Milestones
