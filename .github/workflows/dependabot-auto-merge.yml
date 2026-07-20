@@ -6,7 +6,7 @@ permissions:
 on:
   pull_request:
     branches:
-      - Demo-App
+      - main
 
 jobs:
   dependabot-auto-merge:
