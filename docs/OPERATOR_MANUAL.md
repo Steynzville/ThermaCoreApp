@@ -10,6 +10,7 @@ This user guide provides instructions for navigating and managing ThermaCore mod
 The ThermaCore SCADA interface features a responsive, high-contrast Navy & Gold display. The sidebar contains 6 main navigation areas:
 
 ```
+
 ┌────────────────────────────────────────────────────────┐
 │  ThermaCore Navigation Sidebar                         │
 ├────────────────────────────────────────────────────────┤
@@ -20,7 +21,10 @@ The ThermaCore SCADA interface features a responsive, high-contrast Navy & Gold 
 │  [🔒] Tenant Switcher     - Select active client scope │
 │  [👥] User Management     - Approvals & audit logs     │
 └────────────────────────────────────────────────────────┘
+
 ```
+
+**Note**: The **Tenant Switcher** and **User Management** links are only visible to users with Administrator privileges. Regular Operators and Viewers do not see these navigation items.
 
 ---
 
@@ -50,12 +54,15 @@ To view specific modular generator nodes, navigate to the **Asset Grid**:
 
 ThermaCore SCADA enables secure, bidirectionally authenticated remote control over the physical generator loops.
 
+REMOTE SHUTDOWN EXECUTION FLOW
+
 ```
-                  REMOTE SHUTDOWN EXECUTION FLOW
+
 ┌───────────────────────┐      ┌───────────────────────┐      ┌───────────────────────┐
 │ Operator clicks       │ ───► │ Enter 2FA Override   │ ───► │ Cryptographic command │
 │ "Emergency Shutdown"  │      │ Authentication Code   │      │ signed & sent to edge │
 └───────────────────────┘      └───────────────────────┘      └───────────────────────┘
+
 ```
 
 ### Safety Operational Protocols
@@ -82,7 +89,7 @@ Alarms are classified dynamically according to threat severities:
 ## 6. Enterprise Admin & Permission Panel
 
 Administrators possess master fleet supervisory privileges:
-* **Admin Panel Landing Page (Post-Login)**: Upon successful authentication, administrator accounts are redirected to the `/admin` landing page where they must choose an active tenant context before accessing any scoped metrics.
+* **Admin Landing Page (Post-Login)**: Upon successful authentication, administrator accounts are redirected to the `/admin` landing page where they must choose an active tenant context before accessing any scoped metrics.
 * **New User Approvals**: All self-registered users are assigned read-only "Viewer" status by default. Admins must explicitly authorize and promote new users from the User Management dashboard.
 * **Audit Trail Reviews**: Accesses a real-time event list tracking system activities, containing:
   * Tracing IDs and IP Addresses
@@ -111,16 +118,56 @@ For on-site engineers, the **Engineering View** displays a live Process Flow Dia
 
 ## 9. Multi-Tenant Administration & Context Selection
 
-ThermaCore SCADA supports fully isolated multi-tenant operations to enable service providers to manage multiple customer fleets from a single system:
+ThermaCore SCADA supports fully isolated multi-tenant operations to enable service providers to manage multiple customer fleets from a single system.
 
-### 9.1 Post-Login Tenant Landing
-* Administrative accounts land on the central **Tenant Landing** page immediately after login.
-* The landing page provides a greeting and requires selecting an active tenant before navigating to the live dashboard.
-* This is a deliberate barrier to ensure all subsequent actions are safely isolated to the correct customer account.
+### 9.1 Admin Landing Page (`/admin`)
+
+Administrative accounts land on the dedicated **Admin Landing** page at `/admin` immediately after login. This page:
+* Displays a welcome message and the ThermaCore logo
+* Lists all available tenants in a dropdown selector
+* Includes a "Go to Dashboard" button that activates once a tenant is selected
+* Provides an **"All Tenants"** option to view aggregated data across all fleets
+
+This is a deliberate security barrier to ensure all subsequent actions are safely isolated to the correct customer account. The selected tenant context is stored in `sessionStorage` and persists throughout the active session.
 
 ### 9.2 Real-Time Tenant Switching
-* While viewing the main dashboard, administrators can switch their focused tenant at any time using the **Tenant Switcher** dropdown in the dashboard header.
-* Selecting a new tenant automatically updates the header title, loaded telemetry, unit list, and associated metrics instantly without needing a full system logout/login.
 
-### 9.3 Navigating to Tenant Switcher Page
-* Click the **Tenant Switcher** menu item in the left sidebar to return to the selection landing page at any time.
+While viewing the main dashboard, administrators can switch their focused tenant at any time using the **Tenant Switcher** dropdown located in the dashboard header:
+* The dropdown displays all available tenants plus the **"All Tenants"** option
+* Selecting a new tenant updates the dashboard view instantly
+* Unit lists, telemetry data, and metrics automatically refresh to reflect the selected tenant's scope
+* No full system logout or login is required — switching happens seamlessly
+
+**Tenant View Behavior:**
+| Selection | Behavior |
+| :--- | :--- |
+| **Specific Tenant** | Shows only units belonging to that tenant (typically 6 units per tenant) |
+| **"All Tenants"** | Shows all units across every tenant (all 20 units in the fleet) |
+
+### 9.3 Returning to Admin Landing
+
+Administrators can return to the tenant selection page at any time by:
+* Clicking the **Tenant Switcher** menu item (Shield icon) in the left sidebar
+* The navigation redirects to `/admin` where a new tenant can be selected
+
+### 9.4 Tenant Context Persistence
+
+The active tenant selection is preserved using `sessionStorage`:
+* The `tenant_selected` flag persists throughout the active browser session
+* Refreshing the page maintains the current tenant context
+* **Cleared automatically**:
+  - When the user logs out
+  - When a new login occurs (ensures admins always see the landing page on fresh login)
+  - When the browser tab is closed
+
+### 9.5 Non-Admin User Experience
+
+Regular Operators and Viewers (non-admin users):
+* Do not see the Tenant Switcher in the dashboard header
+* Do not have access to the `/admin` landing page
+* Are always scoped to their assigned single tenant
+* Cannot switch tenants or view "All Tenants" data
+
+---
+
+*End of Operator Manual*
