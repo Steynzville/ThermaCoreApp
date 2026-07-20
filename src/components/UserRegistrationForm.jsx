@@ -1,6 +1,6 @@
 import { CheckCircle, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } "react-router-dom";
 import { toast } from "sonner";
 
 import thermaCoreLogo from "../assets/thermacore-logo-new.png";
@@ -66,6 +66,7 @@ const UserRegistrationForm = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    // Clear error for this field when user starts typing
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
@@ -75,7 +76,7 @@ const UserRegistrationForm = () => {
     e.preventDefault();
 
     if (!validateForm()) {
-      toast.error("Please fix the errors in the form");
+      // ✅ Validation errors are displayed inline - no toast needed
       return;
     }
 
@@ -143,214 +144,187 @@ const UserRegistrationForm = () => {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit}>
           {/* Account Credentials Section */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-              Account Credentials
-            </h3>
+          <div className={styles.formGroup}>
+            <label htmlFor="username" className={styles.formLabel}>
+              Username <span className="text-red-500">*</span>
+            </label>
+            <input
+              id="username"
+              name="username"
+              type="text"
+              placeholder="Enter username"
+              value={formData.username}
+              onChange={handleChange}
+              className={`${styles.formInput} ${errors.username ? styles.inputError : ""}`}
+            />
+            {errors.username && (
+              <div className={styles.passwordError}>{errors.username}</div>
+            )}
+          </div>
 
-            <div className={styles.formGroup}>
-              <label htmlFor="username" className={styles.formLabel}>
-                Username <span className="text-red-500">*</span>
-              </label>
+          <div className={styles.formGroup}>
+            <label htmlFor="email" className={styles.formLabel}>
+              Email <span className="text-red-500">*</span>
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              placeholder="your.email@company.com"
+              value={formData.email}
+              onChange={handleChange}
+              className={`${styles.formInput} ${errors.email ? styles.inputError : ""}`}
+            />
+            {errors.email && (
+              <div className={styles.passwordError}>{errors.email}</div>
+            )}
+          </div>
+
+          <div className={styles.formGroup}>
+            <label htmlFor="password" className={styles.formLabel}>
+              Password <span className="text-red-500">*</span>
+            </label>
+            <div className={styles.passwordInputContainer}>
               <input
-                id="username"
-                name="username"
-                type="text"
-                placeholder="Enter username"
-                value={formData.username}
+                id="password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="Minimum 6 characters"
+                value={formData.password}
                 onChange={handleChange}
-                className={`${styles.formInput} ${errors.username ? styles.inputError : ""}`}
-                required
+                className={`${styles.formInput} ${errors.password ? styles.inputError : ""}`}
               />
-              {errors.username && (
-                <div className={styles.passwordError}>{errors.username}</div>
-              )}
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className={styles.passwordToggleButton}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
             </div>
-
-            <div className={styles.formGroup}>
-              <label htmlFor="email" className={styles.formLabel}>
-                Email <span className="text-red-500">*</span>
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="your.email@company.com"
-                value={formData.email}
-                onChange={handleChange}
-                className={`${styles.formInput} ${errors.email ? styles.inputError : ""}`}
-                required
-              />
-              {errors.email && (
-                <div className={styles.passwordError}>{errors.email}</div>
-              )}
-            </div>
-
-            <div className={styles.formGroup}>
-              <label htmlFor="password" className={styles.formLabel}>
-                Password <span className="text-red-500">*</span>
-              </label>
-              <div className={styles.passwordInputContainer}>
-                <input
-                  id="password"
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Minimum 6 characters"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className={`${styles.formInput} ${errors.password ? styles.inputError : ""}`}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className={styles.passwordToggleButton}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              </div>
-              {errors.password && (
-                <div className={styles.passwordError}>{errors.password}</div>
-              )}
-            </div>
+            {errors.password && (
+              <div className={styles.passwordError}>{errors.password}</div>
+            )}
           </div>
 
           {/* Personal Information Section */}
-          <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-              Personal Information
-            </h3>
+          <div className={styles.formGroup}>
+            <label htmlFor="firstName" className={styles.formLabel}>
+              First Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              id="firstName"
+              name="firstName"
+              type="text"
+              placeholder="John"
+              value={formData.firstName}
+              onChange={handleChange}
+              className={`${styles.formInput} ${errors.firstName ? styles.inputError : ""}`}
+            />
+            {errors.firstName && (
+              <div className={styles.passwordError}>{errors.firstName}</div>
+            )}
+          </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className={styles.formGroup}>
-                <label htmlFor="firstName" className={styles.formLabel}>
-                  First Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="firstName"
-                  name="firstName"
-                  type="text"
-                  placeholder="John"
-                  value={formData.firstName}
-                  onChange={handleChange}
-                  className={`${styles.formInput} ${errors.firstName ? styles.inputError : ""}`}
-                  required
-                />
-                {errors.firstName && (
-                  <div className={styles.passwordError}>{errors.firstName}</div>
-                )}
-              </div>
+          <div className={styles.formGroup}>
+            <label htmlFor="lastName" className={styles.formLabel}>
+              Last Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              id="lastName"
+              name="lastName"
+              type="text"
+              placeholder="Doe"
+              value={formData.lastName}
+              onChange={handleChange}
+              className={`${styles.formInput} ${errors.lastName ? styles.inputError : ""}`}
+            />
+            {errors.lastName && (
+              <div className={styles.passwordError}>{errors.lastName}</div>
+            )}
+          </div>
 
-              <div className={styles.formGroup}>
-                <label htmlFor="lastName" className={styles.formLabel}>
-                  Last Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="lastName"
-                  name="lastName"
-                  type="text"
-                  placeholder="Doe"
-                  value={formData.lastName}
-                  onChange={handleChange}
-                  className={`${styles.formInput} ${errors.lastName ? styles.inputError : ""}`}
-                  required
-                />
-                {errors.lastName && (
-                  <div className={styles.passwordError}>{errors.lastName}</div>
-                )}
-              </div>
-            </div>
-
-            <div className={styles.formGroup}>
-              <label htmlFor="phoneNumber" className={styles.formLabel}>
-                Phone Number
-              </label>
-              <input
-                id="phoneNumber"
-                name="phoneNumber"
-                type="tel"
-                placeholder="+1 (555) 123-4567"
-                value={formData.phoneNumber}
-                onChange={handleChange}
-                className={styles.formInput}
-              />
-            </div>
+          <div className={styles.formGroup}>
+            <label htmlFor="phoneNumber" className={styles.formLabel}>
+              Phone Number
+            </label>
+            <input
+              id="phoneNumber"
+              name="phoneNumber"
+              type="tel"
+              placeholder="+1 (555) 123-4567"
+              value={formData.phoneNumber}
+              onChange={handleChange}
+              className={styles.formInput}
+            />
           </div>
 
           {/* Company Information Section */}
-          <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-              Company Information
-            </h3>
-
-            <div className={styles.formGroup}>
-              <label htmlFor="company" className={styles.formLabel}>
-                Company
-              </label>
-              <input
-                id="company"
-                name="company"
-                type="text"
-                placeholder="Company Name"
-                value={formData.company}
-                onChange={handleChange}
-                className={styles.formInput}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className={styles.formGroup}>
-                <label htmlFor="department" className={styles.formLabel}>
-                  Department
-                </label>
-                <input
-                  id="department"
-                  name="department"
-                  type="text"
-                  placeholder="Engineering"
-                  value={formData.department}
-                  onChange={handleChange}
-                  className={styles.formInput}
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label htmlFor="position" className={styles.formLabel}>
-                  Position
-                </label>
-                <input
-                  id="position"
-                  name="position"
-                  type="text"
-                  placeholder="Operations Manager"
-                  value={formData.position}
-                  onChange={handleChange}
-                  className={styles.formInput}
-                />
-              </div>
-            </div>
+          <div className={styles.formGroup}>
+            <label htmlFor="company" className={styles.formLabel}>
+              Company
+            </label>
+            <input
+              id="company"
+              name="company"
+              type="text"
+              placeholder="Company Name"
+              value={formData.company}
+              onChange={handleChange}
+              className={styles.formInput}
+            />
           </div>
 
-          <div className="pt-4">
+          <div className={styles.formGroup}>
+            <label htmlFor="department" className={styles.formLabel}>
+              Department
+            </label>
+            <input
+              id="department"
+              name="department"
+              type="text"
+              placeholder="Engineering"
+              value={formData.department}
+              onChange={handleChange}
+              className={styles.formInput}
+            />
+          </div>
+
+          <div className={styles.formGroup}>
+            <label htmlFor="position" className={styles.formLabel}>
+              Position
+            </label>
+            <input
+              id="position"
+              name="position"
+              type="text"
+              placeholder="Operations Manager"
+              value={formData.position}
+              onChange={handleChange}
+              className={styles.formInput}
+            />
+          </div>
+
+          <div className="mt-6">
             <button
               type="submit"
-              className={`${styles.btnSignin} ${styles.btnSigninLight}`}
+              className={styles.btnSignin}
               disabled={isSubmitting}
             >
               {isSubmitting ? "Creating Account..." : "Create Account"}
             </button>
 
-            <div className="text-center mt-4">
-              <span className="text-sm text-gray-600 dark:text-gray-400">
-                Already have an account?{" "}
+            <div className={styles.registerLinkContainer}>
+              <span className={styles.registerText}>
+                Already have an account?
               </span>
               <button
                 type="button"
                 onClick={() => navigate("/login")}
-                className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+                className={styles.registerLink}
               >
                 Sign In
               </button>
