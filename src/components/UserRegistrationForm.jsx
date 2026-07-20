@@ -1,6 +1,6 @@
 import { CheckCircle, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } "react-router-dom";
+import { useNavigate } from "react-router-dom";  // ✅ Fixed: added "from"
 import { toast } from "sonner";
 
 import thermaCoreLogo from "../assets/thermacore-logo-new.png";
@@ -66,7 +66,6 @@ const UserRegistrationForm = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear error for this field when user starts typing
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
