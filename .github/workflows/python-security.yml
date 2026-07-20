@@ -1,4 +1,5 @@
 name: Python Security & Code Quality
+
 permissions:
   contents: read
   pull-requests: write
@@ -8,9 +9,11 @@ on:
   push:
     branches:
       - main
+      - Demo-App
   pull_request:
     branches:
       - main
+      - Demo-App
   schedule:
     - cron: '0 2 * * 1'
 
@@ -20,31 +23,37 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
+
       - name: Install dependencies
         run: |
           pip install ruff bandit
           cd backend && pip install -r requirements.txt
+
       - name: Run Ruff Linting
         run: |
           echo "🔍 Running Ruff linter..."
           ruff check . --output-format=github
         working-directory: backend
         continue-on-error: true
+
       - name: Run Ruff Format Check
         run: |
           echo "🎨 Checking code formatting..."
           ruff format --check .
         working-directory: backend
         continue-on-error: true
+
       - name: Run Bandit Security Scan
         run: |
           echo "🛡️ Running Bandit security scan..."
           bandit -r . -f json -o bandit_report.json -c .bandit || true
         working-directory: backend
+
       - name: Process and Upload Security Results
         if: always()
         run: |
@@ -172,12 +181,14 @@ jobs:
               sys.exit(1)
           EOF
         working-directory: backend
+
       - name: Upload Security Scan to GitHub
         if: always()
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: backend/bandit_sarif.json
         continue-on-error: true
+
       - name: Upload Bandit Report
         uses: actions/upload-artifact@v4
         if: always()
