@@ -91,7 +91,33 @@ To prevent `404 Not Found` errors when refreshing routes on the React Router sin
 
 ---
 
-## 5. Local Docker Deployment (Development and Validation)
+## 5. Multi-Tenant Deployment Considerations
+
+ThermaCore SCADA supports multi-tenant operations where multiple organizations can be managed from a single deployment.
+
+### 5.1 Tenant Isolation
+
+* Each tenant's data is isolated at the database level via `tenant_id` foreign keys
+* Admin users have access to all tenants via the Tenant Switcher
+* Regular users only see their assigned tenant's data
+
+### 5.2 Admin Access Configuration
+
+* Admin users are identified by the `admin` role in the database
+* The Tenant Switcher is only visible to admin users
+* Admin Landing page (`/admin`) is the first page admin users see after login
+
+### 5.3 Tenant Switcher Environment Variables
+
+No additional environment variables are required for the Tenant Switcher functionality. It relies on:
+
+* `TenantContext` for tenant state management
+* `AuthContext` for user role information
+* `routes.js` configuration for admin route protection
+
+---
+
+## 6. Local Docker Deployment (Development and Validation)
 
 To simulate the entire container environment locally prior to production deployment, use Docker:
 
@@ -108,7 +134,7 @@ docker run -p 3000:3000 \
 
 ---
 
-## 6. Post-Deployment Verification Steps
+## 7. Post-Deployment Verification Steps
 
 Once deployment has completed successfully, execute these validation checks:
 
@@ -117,3 +143,9 @@ Once deployment has completed successfully, execute these validation checks:
 * [ ] **CORS Check**: Open browser DevTools. Navigate to the Console tab and verify that there are no cross-origin policy block notices.
 * [ ] **API Loop Check**: Confirm you can successfully register a user and that the registration writes successfully to the database.
 * [ ] **WebSocket Connectivity**: Verify the status indicator displays `🟢 ONLINE` (indicating the persistent Socket.io channel is connected).
+* [ ] **Admin Tenant Switcher**: Log in as an admin user and verify:
+  * Redirect to `/admin` landing page
+  * Tenant Switcher dropdown displays all available tenants
+  * Selecting a tenant redirects to dashboard with scoped data
+  * Tenant Switcher appears in dashboard header
+  * Sidebar shows "Tenant Switcher" and "User Management" links
