@@ -70,6 +70,17 @@ If the SCADA interface displays an outage, follow this triaging order:
   1. Confirm the SMTP credentials are set in the environment variables (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`).
   2. Verify that port 587 (TLS) or 465 (SSL) is open in the security group rules of the hosting VPC.
 
+### 3.3 Admin Landing Page Redirection & Tenant Context Failures
+* **Symptom**: Admin logins succeed, but the administrator cannot access any dashboards or encounters infinite redirection back to `/admin` or tenant selection errors.
+* **Root Causes**:
+  * The user role is not properly registered as `"admin"` in the DB, causing `getFrontendRole()` to mismatch role configurations in `routes.js`.
+  * No active tenant context was selected, or the selected `tenant_id` does not match valid options in `TenantContext`.
+* **Resolution Steps**:
+  1. Confirm that the user's role is set to `'admin'` in the database.
+  2. Check that the `/admin` landing page renders properly and lists valid tenants.
+  3. Ensure local storage or memory context is populated with the selected tenant ID.
+  4. Verify that the `ProtectedRoute` allows access if `roles: ["admin"]` is specified in `routes.js`.
+
 ---
 
 ## 4. Edge Gateways, MQTT, & OPC-UA Connections
@@ -119,6 +130,16 @@ If the SCADA interface displays an outage, follow this triaging order:
   docker ps -a
   docker logs --tail 100 <container-id>
   docker inspect --format='{{json .State.Health}}' <container-id>
+  ```
+
+### 6.2 Local Verification & Regression Checking
+Before promoting any troubleshooting patch or hotfix to production, developers must execute automated regression tests to verify overall code health and structural integrity:
+* **Frontend Verification (Vitest)**: Ensure the frontend test suite compiles cleanly and maintains our minimum **91.78% Total Coverage** gate.
+* **Backend Verification (Pytest)**: Ensure all API endpoints and integration tests pass, maintaining our **82.91% Total Coverage** baseline.
+* **Formatting & Linting compliance**: Run Biome formatter and linter to resolve warnings before staging commits:
+  ```bash
+  npx biome format --write ./src
+  npx biome lint --write ./src
   ```
 
 ---
