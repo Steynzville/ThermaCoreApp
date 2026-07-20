@@ -50,6 +50,7 @@ When a security incident is identified, the response team executes this 4-phase 
 * **Adversary IP Isolation**: Instantly block malicious IPs on Render/Netlify and our gateway firewalls.
 * **Force Session Re-Authentication**: Rotate the `JWT_SECRET_KEY` in Render. This immediately invalidates every active user session and forces complete re-authentication.
 * **Hard OT Loop Isolation**: If a physical generator's telemetry shows malicious override attempts (Level 1), the on-site operator must manually shift the unit to **Local/Manual Mode** via the physical toggle. This completely overrides incoming digital web SCADA signals.
+* **Tenant Context Isolation**: If a single customer environment is compromised, use the multi-tenant isolation architecture to restrict or revoke access to that specific `tenant_id` without affecting other tenant fleets. Administrative roles will be forced back to the `/admin` Landing Page to re-verify secure credentials and context selection.
 
 ### Phase 3: Eradication and Mitigation
 * Review logs to locate the entry vector (e.g., an unpatched dependency or compromised operator credentials).
@@ -59,6 +60,7 @@ When a security incident is identified, the response team executes this 4-phase 
 * Confirm database and container file system integrity.
 * Restore verified, clean configurations from backups if file systems were compromised.
 * Transition generators from manual mode back to web-supervised mode.
+* **Regression and Integrity Testing**: Before re-opening the production portal, run the full automated test suite to verify code integrity. Ensure the production build achieves our verified baseline test coverage limits (**91.78% Frontend Coverage** under Vitest and **82.91% Backend Coverage** under Pytest) to guarantee no security regressions or syntax errors were introduced during emergency patch deployments.
 
 ---
 
