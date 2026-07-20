@@ -154,10 +154,11 @@ The operational strength of the ThermaCore SCADA platform is validated across 10
   * `Info` (standard physical state alterations)
 * **Operator Handshake**: Requires operators to actively "acknowledge" and input notes on alarms, establishing an immutable regulatory compliance history.
 
-### 4.5 Enterprise Admin Panel
+### 4.5 Enterprise Admin Panel & Multi-Tenant Management
 * **Fleet Control**: Serves as the master dashboard for system operators and administrators.
 * **Pending Approvals Manager**: Restricts newly registered users to restricted "Viewer" privileges until verified, manually authorized, and elevated by a system Administrator.
 * **Audit Logs Viewer**: Streams real-time operational event records, containing complete tracing IDs, origin IPs, and precise timestamps.
+* **Multi-Tenant Administration**: Administrators managing multiple clients or facilities can seamlessly switch between tenants using the **Tenant Switcher** dropdown in the dashboard header. A dedicated Admin Landing page provides centralized tenant selection, while the "All Tenants" view offers aggregated cross-tenant analytics. This eliminates the need for separate instances and significantly reduces operational overhead for fleet operators.
 
 ### 4.6 Asset Grid & Search View
 * **Dynamic Fleet Navigation**: A high-density grid showing real-time status cards of all registered generators globally. Features high-performance client-side search, fuzzy filtering, and paginated dynamic loading.
