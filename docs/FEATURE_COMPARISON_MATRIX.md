@@ -14,6 +14,7 @@ This document provides a side-by-side strategic and technical comparison showing
 | **3. Security & Cyber Hardening** | **Extremely Vulnerable**<br>• Unencrypted, exposed serial or plain TCP connections on physical asset ports. | **Bolted-On / Legacy Defenses**<br>• Rely on perimeter firewalls.<br>• Workstations often run shared, high-privilege logins. | **Built-In Zero-Trust Security**<br>• Dual-token JWT session security.<br>• mTLS edge client certificates.<br>• Strict granular RBAC (Viewer, Operator, Admin). | **OT/IT Compliance Standard**<br>Pre-aligned with strict **IEC 62443** and **NERC CIP** guidelines from day one, minimizing municipal and corporate liability. |
 | **4. Operational Mobility** | **None**<br>• Local physical readings only. | **Workstation-Bound**<br>• Requires fat desktop clients and dedicated control room terminals. | **Web-Native & Responsive**<br>• Lightweight React 19 portal accessible from secure phones, rugged plant tablets, or desktops. | **Actionable Field Intelligence**<br>Field engineers manage alarms, loop status diagrams, and remote overrides anywhere, on any modern browser. |
 | **5. Performance & Maintenance** | **Reactive**<br>• Maintenance happens after physical hardware failures, causing extensive downtime. | **Basic Threshold Alarms**<br>• Pre-configured, static alarm bounds with no thermal thermodynamic performance insights. | **Proactive & Optimized**<br>• Continuous Thermodynamic COP evaluations yield average **+18.4% efficiency gains**.<br>• Reduces downtime by **34.2%**. | **Predictive Diagnostics**<br>Early thermodynamic trend anomalies flag equipment fatigue *before* physical damage occurs, optimizing maintenance cycles. |
+| **6. Multi-Tenant Management** | **None**<br>• Single-tenant only. Cannot manage multiple clients/facilities from one interface. | **Limited**<br>• Typically requires separate instances per client or site. | **Native Multi-Tenant Architecture**<br>• One login to manage all tenants.<br>• Tenant Switcher for seamless tenant switching.<br>• "All Tenants" aggregated view.<br>• Admin Landing page for tenant selection. | **Enterprise Scalability**<br>Single admin interface for all tenants. No additional instances needed for new clients. |
 
 ---
 
@@ -34,6 +35,10 @@ Cyber threats to physical infrastructure (energy grids, water treatment) have ri
 #### 4. Advanced Performance Analytics & COP Gains
 Most legacy SCADA applications are mere "indicator panels" that show current levels but do not analyze thermodynamic states.
 * **The ThermaCore Advantage**: ThermaCore SCADA performs complex thermodynamic calculation sweeps in the background. By continually evaluating heat transfer rates, pump coefficients of performance (COP), and system temperature loops, it guides operators on how to balance valves and flow rates, unlocking an average **+18.4% efficiency lift** on pilot assets.
+
+#### 5. Enterprise-Scale Multi-Tenant Management
+Service providers and fleet operators face significant operational overhead managing separate instances for each client or facility. Legacy SCADA systems require separate deployments per tenant.
+* **The ThermaCore Advantage**: Built from the ground up as a multi-tenant platform, ThermaCore enables administrators to manage all clients and facilities from a single login. The Tenant Switcher provides seamless context-switching between tenants, while the "All Tenants" view offers aggregated cross-tenant analytics. This eliminates the need for separate instances, reduces operational overhead, and provides a unified view of the entire fleet.
 
 ---
 
