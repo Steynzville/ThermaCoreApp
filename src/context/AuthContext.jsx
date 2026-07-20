@@ -127,6 +127,9 @@ export const AuthProvider = ({ children, value: customValue }) => {
           };
         }
 
+        // ✅ Clear any previous tenant selection on fresh login
+        sessionStorage.removeItem("tenant_selected");
+
         // Now set state after successful storage operations
         setUser(userData);
         setUserRole(userFrontendRole);
@@ -176,6 +179,9 @@ export const AuthProvider = ({ children, value: customValue }) => {
     sessionStorage.removeItem("thermacore_role");
     sessionStorage.removeItem("thermacore_backend_role");
     sessionStorage.removeItem("thermacore_token");
+    
+    // ✅ Clear tenant selection on logout
+    sessionStorage.removeItem("tenant_selected");
     
     setIsLoggingOut(false);
   };
