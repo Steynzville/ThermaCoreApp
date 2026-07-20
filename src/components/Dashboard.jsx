@@ -28,7 +28,6 @@ const Dashboard = ({ className }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, userRole } = useAuth();
-  // ✅ FIX: Only destructure currentTenant - isAdmin comes from AuthContext
   const { currentTenant } = useTenant();
   const [currentView, setCurrentView] = useState("operator"); // "operator" or "performance"
 
@@ -37,13 +36,9 @@ const Dashboard = ({ className }) => {
 
   // Check if admin has made a selection (sessionStorage or query param fallback)
   const hasSelectedTenant = () => {
-    // Check sessionStorage first
     if (sessionStorage.getItem("tenant_selected") === "true") {
       return true;
     }
-    // Fallback: check URL query param
-    // NOTE: This is a convenience fallback for when sessionStorage is blocked.
-    // It is not a security mechanism - it's purely to allow entry when storage fails.
     const params = new URLSearchParams(location.search);
     return params.get("tenant_selected") === "true";
   };
@@ -53,8 +48,6 @@ const Dashboard = ({ className }) => {
     if (isAdminUser && !hasSelectedTenant()) {
       navigate("/admin", { replace: true });
     }
-    // ✅ FIX: Use location.search instead of entire location object
-    // to avoid unnecessary re-renders
   }, [isAdminUser, navigate, location.search]);
 
   // Show loading or nothing while redirecting
@@ -65,18 +58,11 @@ const Dashboard = ({ className }) => {
   // Filter units based on selected tenant
   let filteredUnits = units;
 
-  // BEHAVIOR:
-  // - "All Tenants" (currentTenant === null) → show all 20 units (admin view)
-  // - Specific Tenant (currentTenant has value) → show 6 units (user view)
-  // - Regular user (userRole === "user") → show 6 units (user view)
   if (isAdminUser && currentTenant) {
-    // Specific tenant selected → show 6 demo units (user view)
     filteredUnits = units.slice(0, 6);
   } else if (userRole === "user") {
-    // Regular users see 6 units
     filteredUnits = units.slice(0, 6);
   }
-  // If isAdminUser && !currentTenant → "All Tenants" → all units (no filtering)
 
   // Dynamic data calculations from filtered units
   const totalUnits = filteredUnits.length;
@@ -132,7 +118,6 @@ const Dashboard = ({ className }) => {
         className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-3 lg:p-4 xl:p-6 ${className}`}
       >
         <div className="max-w-7xl mx-auto">
-          {/* Toggle above header */}
           <div className="mb-6">
             <HighTechToggle
               isPerformance={currentView === "performance"}
@@ -141,7 +126,6 @@ const Dashboard = ({ className }) => {
             />
           </div>
 
-          {/* Performance Dashboard Content */}
           <div className="mb-6 lg:mb-8">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 lg:mb-6 gap-4">
               <div>
@@ -163,7 +147,6 @@ const Dashboard = ({ className }) => {
               )}
             </div>
 
-            {/* Breadcrumb */}
             <nav className="text-sm text-gray-600 dark:text-gray-400">
               <span className="hover:text-gray-900 dark:hover:text-gray-100 cursor-pointer">
                 Home
@@ -175,7 +158,6 @@ const Dashboard = ({ className }) => {
             </nav>
           </div>
 
-          {/* Include the rest of PerformanceDashboard content without the header */}
           <PerformanceDashboard className="" hideHeader={true} />
         </div>
       </div>
@@ -198,6 +180,7 @@ const Dashboard = ({ className }) => {
 
         {/* Enhanced Header - Optimized for laptop screens */}
         <div className="mb-6 lg:mb-8">
+          {/* Main header row with title and tenant switcher */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 lg:mb-6 gap-4">
             <div>
               <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
@@ -213,18 +196,20 @@ const Dashboard = ({ className }) => {
             </div>
             <div className="flex items-center gap-4 mt-4 md:mt-0">
               {isAdminUser && <TenantSwitcher />}
-              <NotificationBell />
             </div>
           </div>
 
-          {/* Breadcrumb */}
-          <nav className="text-sm text-gray-600 dark:text-gray-400">
-            <span className="hover:text-gray-900 dark:hover:text-gray-100 cursor-pointer">
-              Home
-            </span>
-            <span className="mx-2">/</span>
-            <span className="text-gray-900 dark:text-gray-100">Dashboard</span>
-          </nav>
+          {/* ✅ NotificationBell - placed in its own row with proper positioning */}
+          <div className="flex justify-between items-center">
+            <nav className="text-sm text-gray-600 dark:text-gray-400">
+              <span className="hover:text-gray-900 dark:hover:text-gray-100 cursor-pointer">
+                Home
+              </span>
+              <span className="mx-2">/</span>
+              <span className="text-gray-900 dark:text-gray-100">Dashboard</span>
+            </nav>
+            <NotificationBell />
+          </div>
         </div>
 
         {/* Mobile Unit Summary - Only visible on small screens */}
