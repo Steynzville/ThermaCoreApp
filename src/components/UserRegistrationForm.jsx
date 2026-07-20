@@ -75,7 +75,6 @@ const UserRegistrationForm = () => {
     e.preventDefault();
 
     if (!validateForm()) {
-      // ✅ FIX: Show toast for validation errors (tests expect this)
       toast.error("Please fix the errors in the form");
       return;
     }
@@ -144,7 +143,8 @@ const UserRegistrationForm = () => {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit}>
+        {/* ✅ FIX: Added noValidate to prevent browser native validation from blocking submit */}
+        <form onSubmit={handleSubmit} noValidate>
           {/* Account Credentials Section */}
           <div className={styles.formGroup}>
             <label htmlFor="username" className={styles.formLabel}>
@@ -321,7 +321,6 @@ const UserRegistrationForm = () => {
               {isSubmitting ? "Creating Account..." : "Create Account"}
             </button>
 
-            {/* ✅ FIX: Merge sign-in text into one element */}
             <div className={styles.registerLinkContainer}>
               <button
                 type="button"
