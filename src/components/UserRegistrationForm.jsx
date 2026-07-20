@@ -1,6 +1,6 @@
 import { CheckCircle, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";  // ✅ Fixed: added "from"
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import thermaCoreLogo from "../assets/thermacore-logo-new.png";
@@ -75,7 +75,8 @@ const UserRegistrationForm = () => {
     e.preventDefault();
 
     if (!validateForm()) {
-      // ✅ Validation errors are displayed inline - no toast needed
+      // ✅ FIX: Show toast for validation errors (tests expect this)
+      toast.error("Please fix the errors in the form");
       return;
     }
 
@@ -209,41 +210,43 @@ const UserRegistrationForm = () => {
             )}
           </div>
 
-          {/* Personal Information Section */}
-          <div className={styles.formGroup}>
-            <label htmlFor="firstName" className={styles.formLabel}>
-              First Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              id="firstName"
-              name="firstName"
-              type="text"
-              placeholder="John"
-              value={formData.firstName}
-              onChange={handleChange}
-              className={`${styles.formInput} ${errors.firstName ? styles.inputError : ""}`}
-            />
-            {errors.firstName && (
-              <div className={styles.passwordError}>{errors.firstName}</div>
-            )}
-          </div>
+          {/* Personal Information Section with responsive grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className={styles.formGroup}>
+              <label htmlFor="firstName" className={styles.formLabel}>
+                First Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="firstName"
+                name="firstName"
+                type="text"
+                placeholder="John"
+                value={formData.firstName}
+                onChange={handleChange}
+                className={`${styles.formInput} ${errors.firstName ? styles.inputError : ""}`}
+              />
+              {errors.firstName && (
+                <div className={styles.passwordError}>{errors.firstName}</div>
+              )}
+            </div>
 
-          <div className={styles.formGroup}>
-            <label htmlFor="lastName" className={styles.formLabel}>
-              Last Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              id="lastName"
-              name="lastName"
-              type="text"
-              placeholder="Doe"
-              value={formData.lastName}
-              onChange={handleChange}
-              className={`${styles.formInput} ${errors.lastName ? styles.inputError : ""}`}
-            />
-            {errors.lastName && (
-              <div className={styles.passwordError}>{errors.lastName}</div>
-            )}
+            <div className={styles.formGroup}>
+              <label htmlFor="lastName" className={styles.formLabel}>
+                Last Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="lastName"
+                name="lastName"
+                type="text"
+                placeholder="Doe"
+                value={formData.lastName}
+                onChange={handleChange}
+                className={`${styles.formInput} ${errors.lastName ? styles.inputError : ""}`}
+              />
+              {errors.lastName && (
+                <div className={styles.passwordError}>{errors.lastName}</div>
+              )}
+            </div>
           </div>
 
           <div className={styles.formGroup}>
@@ -277,34 +280,36 @@ const UserRegistrationForm = () => {
             />
           </div>
 
-          <div className={styles.formGroup}>
-            <label htmlFor="department" className={styles.formLabel}>
-              Department
-            </label>
-            <input
-              id="department"
-              name="department"
-              type="text"
-              placeholder="Engineering"
-              value={formData.department}
-              onChange={handleChange}
-              className={styles.formInput}
-            />
-          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className={styles.formGroup}>
+              <label htmlFor="department" className={styles.formLabel}>
+                Department
+              </label>
+              <input
+                id="department"
+                name="department"
+                type="text"
+                placeholder="Engineering"
+                value={formData.department}
+                onChange={handleChange}
+                className={styles.formInput}
+              />
+            </div>
 
-          <div className={styles.formGroup}>
-            <label htmlFor="position" className={styles.formLabel}>
-              Position
-            </label>
-            <input
-              id="position"
-              name="position"
-              type="text"
-              placeholder="Operations Manager"
-              value={formData.position}
-              onChange={handleChange}
-              className={styles.formInput}
-            />
+            <div className={styles.formGroup}>
+              <label htmlFor="position" className={styles.formLabel}>
+                Position
+              </label>
+              <input
+                id="position"
+                name="position"
+                type="text"
+                placeholder="Operations Manager"
+                value={formData.position}
+                onChange={handleChange}
+                className={styles.formInput}
+              />
+            </div>
           </div>
 
           <div className="mt-6">
@@ -316,16 +321,14 @@ const UserRegistrationForm = () => {
               {isSubmitting ? "Creating Account..." : "Create Account"}
             </button>
 
+            {/* ✅ FIX: Merge sign-in text into one element */}
             <div className={styles.registerLinkContainer}>
-              <span className={styles.registerText}>
-                Already have an account?
-              </span>
               <button
                 type="button"
                 onClick={() => navigate("/login")}
                 className={styles.registerLink}
               >
-                Sign In
+                Already have an account? Sign in
               </button>
             </div>
           </div>
