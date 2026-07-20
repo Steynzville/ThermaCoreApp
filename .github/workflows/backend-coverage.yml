@@ -8,9 +8,11 @@ on:
   push:
     branches:
       - main
+      - Demo-App
   pull_request:
     branches:
       - main
+      - Demo-App
 
 env:
   SECRET_KEY: dummy-test-secret-key-123-for-github-actions
