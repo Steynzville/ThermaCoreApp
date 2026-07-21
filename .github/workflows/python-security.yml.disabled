@@ -1,7 +1,7 @@
 name: Python Security & Code Quality
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
   security-events: write
 
@@ -23,6 +23,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -49,6 +52,23 @@ jobs:
           echo "📊 Remaining issues after auto-fix:"
           ruff check . --output-format=github || echo "✅ No remaining issues or continuing..."
         continue-on-error: true
+
+      - name: Commit Ruff fixes
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/Demo-App')
+        run: |
+          cd backend
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+          
+          # Check if there are changes
+          if git diff --quiet; then
+            echo "✅ No changes to commit"
+          else
+            git add .
+            git commit -m "🤖 Apply Ruff auto-fixes [skip ci]" || echo "No changes to commit"
+            git push origin ${{ github.ref_name }} || echo "⚠️ Could not push changes"
+            echo "✅ Fixes applied and pushed!"
+          fi
 
       - name: Run Ruff Linting (after fix)
         run: |
