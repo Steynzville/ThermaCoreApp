@@ -97,7 +97,9 @@ class TestSecureLoggingIntegration:
     def test_domain_exception_includes_error_class(self, app):
         """Test that domain exception handler includes error class in logs."""
         with app.app_context():
-            from app.exceptions import ThermaCoreError  # Changed from ThermaCoreException
+            from app.exceptions import (
+                ThermaCoreError,  # Changed from ThermaCoreException
+            )
 
             exception = ThermaCoreError(  # Changed from ThermaCoreException
                 error_type="database_error",
@@ -119,11 +121,15 @@ class TestSecureLoggingIntegration:
                 log_message = call_args[0][0] if call_args[0] else ""
 
                 # Should contain error class name
-                assert "ThermaCoreError" in log_message  # Changed from ThermaCoreException
+                assert (
+                    "ThermaCoreError" in log_message
+                )  # Changed from ThermaCoreException
 
                 # Check extra data includes error_class
                 if "extra" in call_args[1]:
-                    assert call_args[1]["extra"]["error_class"] == "ThermaCoreError"  # Changed from ThermaCoreException
+                    assert (
+                        call_args[1]["extra"]["error_class"] == "ThermaCoreError"
+                    )  # Changed from ThermaCoreException
 
     def test_error_handler_provides_debug_context(self, app):
         """Test that error handler provides sufficient debug context."""
