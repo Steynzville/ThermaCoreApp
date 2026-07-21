@@ -160,8 +160,7 @@ class TestProductionScenarios:
         """Test that production config has correct defaults based on environment."""
         import config
 
-        # Test case 1: True production (PRODUCTION=true)
-        # Mock _is_true_production to return True for production scenario
+        # --- Test case 1: True production (PRODUCTION=true) ---
         with patch.dict(
             os.environ,
             {
@@ -179,12 +178,15 @@ class TestProductionScenarios:
             },
             clear=False,
         ):
+            # RELOAD FIRST: ensure config module reads fresh env vars
+            importlib.reload(config)
+
+            # THEN PATCH: apply mock to the newly reloaded class
             with patch.object(
                 config.ProductionConfig,
                 '_is_true_production',
                 return_value=True
             ):
-                importlib.reload(config)
                 ProductionConfig = config.ProductionConfig
                 config_obj = ProductionConfig()
 
@@ -195,7 +197,7 @@ class TestProductionScenarios:
                 assert config_obj.SERVICE_MQTT_ENABLED is True
                 assert config_obj.SERVICE_MQTT_REQUIRED is True
 
-        # Test case 2: Non-production (PRODUCTION=false)
+        # --- Test case 2: Non-production (PRODUCTION=false) ---
         with patch.dict(
             os.environ,
             {
@@ -213,12 +215,15 @@ class TestProductionScenarios:
             },
             clear=False,
         ):
+            # RELOAD FIRST: ensure config module reads fresh env vars
+            importlib.reload(config)
+
+            # THEN PATCH: apply mock to the newly reloaded class
             with patch.object(
                 config.ProductionConfig,
                 '_is_true_production',
                 return_value=False
             ):
-                importlib.reload(config)
                 ProductionConfig = config.ProductionConfig
                 config_obj = ProductionConfig()
 
