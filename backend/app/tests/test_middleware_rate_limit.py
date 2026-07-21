@@ -246,10 +246,8 @@ class TestGetRateLimiter:
         with app.app_context():
             app.config["REDIS_URL"] = "redis://localhost:6379/0"
             fake_redis = MagicMock()
-            with patch(
-                "app.middleware.rate_limit.redis.from_url",
-                return_value=fake_redis,
-            ):
+            # FIXED: Use patch.object on the imported module
+            with patch.object(rate_limit_module.redis, "from_url", return_value=fake_redis):
                 limiter = get_rate_limiter()
                 assert limiter.redis_client is fake_redis
 
@@ -259,10 +257,8 @@ class TestGetRateLimiter:
             app.config["REDIS_URL"] = "redis://localhost:6379/0"
             fake_redis = MagicMock()
             fake_redis.ping.side_effect = Exception("connection refused")
-            with patch(
-                "app.middleware.rate_limit.redis.from_url",
-                return_value=fake_redis,
-            ):
+            # FIXED: Use patch.object on the imported module
+            with patch.object(rate_limit_module.redis, "from_url", return_value=fake_redis):
                 limiter = get_rate_limiter()
                 assert limiter.redis_client is None
 
@@ -278,10 +274,8 @@ class TestGetRateLimiter:
         """Test get_rate_limiter handles general exceptions gracefully."""
         with app.app_context():
             app.config["REDIS_URL"] = "redis://localhost:6379/0"
-            with patch(
-                "app.middleware.rate_limit.redis.from_url",
-                side_effect=Exception("Unexpected error"),
-            ):
+            # FIXED: Use patch.object on the imported module
+            with patch.object(rate_limit_module.redis, "from_url", side_effect=Exception("Unexpected error")):
                 limiter = get_rate_limiter()
                 # Should fall back to memory-based rate limiting
                 assert limiter.redis_client is None
@@ -412,7 +406,8 @@ class TestRateLimitDecorator:
                 "flask_jwt_extended.get_jwt_identity",
                 return_value=0,  # Valid integer 0
             ):
-                with patch("app.middleware.rate_limit.get_rate_limiter") as mock_get:
+                # FIXED: Use patch.object on the imported module
+                with patch.object(rate_limit_module, "get_rate_limiter") as mock_get:
                     mock_limiter = MagicMock()
                     mock_limiter.is_allowed.return_value = (True, {
                         "limit": 5,
@@ -526,7 +521,8 @@ class TestRateLimitDecorator:
 
         app.config["RATE_LIMIT_ENABLED"] = True
         with app.test_request_context("/"):
-            with patch("app.middleware.rate_limit.get_rate_limiter") as mock_get:
+            # FIXED: Use patch.object on the imported module
+            with patch.object(rate_limit_module, "get_rate_limiter") as mock_get:
                 mock_limiter = MagicMock()
                 mock_limiter.is_allowed.return_value = (True, {
                     "limit": 5,
