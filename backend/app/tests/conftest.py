@@ -203,15 +203,15 @@ def reset_service_manager():
     for name in list(service_manager._services.keys()):
         service = service_manager._services[name]
         saved_services[name] = {
-            'enabled': service.enabled,
-            'required': service.required,
+            "enabled": service.enabled,
+            "required": service.required,
         }
-        if hasattr(service, 'instance'):
-            saved_services[name]['instance'] = service.instance
-        if hasattr(service, 'error'):
-            saved_services[name]['error'] = service.error
-        if hasattr(service, 'status'):
-            saved_services[name]['status'] = service.status
+        if hasattr(service, "instance"):
+            saved_services[name]["instance"] = service.instance
+        if hasattr(service, "error"):
+            saved_services[name]["error"] = service.error
+        if hasattr(service, "status"):
+            saved_services[name]["status"] = service.status
 
     yield
 
@@ -222,40 +222,50 @@ def reset_service_manager():
     for name, data in saved_services.items():
         service_manager.register_service(
             name,
-            ServiceType.REQUIRED if data.get('required') else ServiceType.OPTIONAL,
-            enabled=data.get('enabled', True),
+            ServiceType.REQUIRED if data.get("required") else ServiceType.OPTIONAL,
+            enabled=data.get("enabled", True),
         )
-        if 'instance' in data and data['instance']:
-            service_manager.set_service_instance(name, data['instance'])
-        if 'error' in data and data['error']:
-            service_manager.set_service_error(name, data['error'])
+        if data.get("instance"):
+            service_manager.set_service_instance(name, data["instance"])
+        if data.get("error"):
+            service_manager.set_service_error(name, data["error"])
 
 
 @pytest.fixture
 def isolated_config():
     """Isolate config module reloads to prevent cross-test pollution."""
     import config
-    import importlib
 
     # Store original environment values that config uses
     original_env = {
         key: os.environ.get(key)
         for key in [
-            "FLASK_ENV", "APP_ENV", "PRODUCTION", "CI",
-            "SECRET_KEY", "DATABASE_URL", "JWT_SECRET_KEY",
-            "MQTT_CA_CERTS", "MQTT_CERT_FILE", "MQTT_KEY_FILE",
-            "OPCUA_CERT_FILE", "OPCUA_PRIVATE_KEY_FILE", "OPCUA_TRUST_CERT_FILE",
-            "SERVICE_OPCUA_ENABLED", "SERVICE_OPCUA_REQUIRED",
-            "SERVICE_MQTT_ENABLED", "SERVICE_MQTT_REQUIRED"
+            "FLASK_ENV",
+            "APP_ENV",
+            "PRODUCTION",
+            "CI",
+            "SECRET_KEY",
+            "DATABASE_URL",
+            "JWT_SECRET_KEY",
+            "MQTT_CA_CERTS",
+            "MQTT_CERT_FILE",
+            "MQTT_KEY_FILE",
+            "OPCUA_CERT_FILE",
+            "OPCUA_PRIVATE_KEY_FILE",
+            "OPCUA_TRUST_CERT_FILE",
+            "SERVICE_OPCUA_ENABLED",
+            "SERVICE_OPCUA_REQUIRED",
+            "SERVICE_MQTT_ENABLED",
+            "SERVICE_MQTT_REQUIRED",
         ]
     }
 
     # Store original config class references
     original_classes = {
-        'Config': config.Config,
-        'DevelopmentConfig': config.DevelopmentConfig,
-        'ProductionConfig': config.ProductionConfig,
-        'TestingConfig': config.TestingConfig,
+        "Config": config.Config,
+        "DevelopmentConfig": config.DevelopmentConfig,
+        "ProductionConfig": config.ProductionConfig,
+        "TestingConfig": config.TestingConfig,
     }
 
     yield
@@ -442,6 +452,7 @@ def viewer_token(app, db_session):
 
 # ---- Tenant test fixtures ----
 
+
 @pytest.fixture
 def auth_headers(admin_token):
     """Admin JWT headers (has admin_panel permission)."""
@@ -465,7 +476,7 @@ def seed_tenant(db_session):
     tenant = Tenant(
         name=f"Acme Corp {suffix}",
         slug=f"acme-corp-{suffix}",
-        is_active=True
+        is_active=True,
     )
     db_session.add(tenant)
     db_session.commit()
@@ -483,7 +494,7 @@ def seed_inactive_tenant(db_session):
     tenant = Tenant(
         name=f"Old Co {suffix}",
         slug=f"old-co-{suffix}",
-        is_active=False
+        is_active=False,
     )
     db_session.add(tenant)
     db_session.commit()
@@ -581,12 +592,12 @@ def tenant_scoped_headers(db_session, seed_tenant):
 @pytest.fixture
 def no_tenant_headers(db_session):
     """JWT for a non-admin user with no tenant assigned."""
+    # Create a unique user per test to avoid sharing state
+    import time
+
     from flask_jwt_extended import create_access_token
 
     from app.models import Role, RoleEnum, User
-
-    # Create a unique user per test to avoid sharing state
-    import time
 
     unique_suffix = int(time.time() * 1000000)
 
@@ -658,4 +669,4 @@ def test_data(db_session):
     db_session.add(sensor)
     db_session.flush()
 
-    yield {"unit": unit, "sensor": sensor}
+    return {"unit": unit, "sensor": sensor}
