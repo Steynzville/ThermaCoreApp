@@ -1,6 +1,7 @@
 """Comprehensive tests for rate limiting middleware."""
 
 import time
+import threading
 from unittest.mock import MagicMock, patch
 
 from flask import jsonify
@@ -133,7 +134,12 @@ class TestRateLimiterRedisBackend:
 
         assert allowed is False
         assert info["remaining"] == 0
+        # zrem should be called with a string containing the timestamp and UUID
         redis_client.zrem.assert_called_once()
+        # The member should be a string (timestamp:UUID format)
+        call_args = redis_client.zrem.call_args[0]
+        assert isinstance(call_args[0], str)
+        assert ":" in call_args[0]  # timestamp:uuid format
 
     def test_redis_error_falls_back_to_allowed(self):
         """Test Redis errors fall back to allowing the request."""
@@ -171,6 +177,50 @@ class TestRateLimiterRedisBackend:
         # The exception is caught in is_allowed, which returns True with fallback
         assert allowed is True
         assert info["fallback"] is True
+
+    def test_redis_rate_limit_with_concurrent_timestamps(self):
+        """Test that requests at the same timestamp don't collide.
+        
+        Uses unique members (UUID) even when timestamps are identical.
+        """
+        redis_client = MagicMock()
+        
+        # Simulate two requests at the same timestamp
+        fixed_time = 1234567890.0
+        limiter = RateLimiter(redis_client=redis_client)
+        
+        # Mock pipeline to return zcard results
+        pipe = MagicMock()
+        # First request: zcard returns 0 (no existing requests)
+        # Second request: zcard returns 1 (first request counted)
+        pipe.execute.side_effect = [
+            [None, 0, None, None],  # First call: no existing
+            [None, 1, None, None],  # Second call: one existing
+        ]
+        redis_client.pipeline.return_value = pipe
+        
+        # First request - should be allowed
+        allowed1, _ = limiter._check_redis_rate_limit(
+            "test", 5, 60, fixed_time
+        )
+        assert allowed1 is True
+        
+        # Second request at same timestamp - should be allowed
+        allowed2, _ = limiter._check_redis_rate_limit(
+            "test", 5, 60, fixed_time
+        )
+        assert allowed2 is True
+        
+        # Verify unique members were used (different UUIDs)
+        # The zadd calls should have different member strings
+        zadd_calls = [call for call in pipe.zadd.call_args_list]
+        assert len(zadd_calls) == 2
+        
+        # Extract the member from the dict in each call
+        # call_args = (key, {member: score})
+        member1 = list(zadd_calls[0][0][1].keys())[0]
+        member2 = list(zadd_calls[1][0][1].keys())[0]
+        assert member1 != member2
 
 
 class TestGetRateLimiter:
@@ -235,6 +285,25 @@ class TestGetRateLimiter:
                 limiter = get_rate_limiter()
                 # Should fall back to memory-based rate limiting
                 assert limiter.redis_client is None
+
+    def test_get_rate_limiter_thread_safe(self, app):
+        """Test that get_rate_limiter is thread-safe."""
+        results = []
+        
+        def get_limiter():
+            # Push app context inside each thread
+            with app.app_context():
+                results.append(get_rate_limiter())
+        
+        threads = [threading.Thread(target=get_limiter) for _ in range(10)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+        
+        # All threads should get the same instance
+        first = results[0]
+        assert all(r is first for r in results)
 
 
 class TestRateLimitDecorator:
@@ -326,6 +395,39 @@ class TestRateLimitDecorator:
             ):
                 response = endpoint()
                 assert response.status_code == 200
+
+    def test_per_user_with_identity_zero(self, app):
+        """Test per-user rate limiting when JWT identity is 0.
+        
+        Identity 0 is a valid user ID and should be treated as user-based,
+        not fall back to IP-based limiting.
+        """
+        @rate_limit(limit=5, per="user")
+        def endpoint():
+            return jsonify({"ok": True})
+
+        app.config["RATE_LIMIT_ENABLED"] = True
+        with app.test_request_context("/"):
+            with patch(
+                "flask_jwt_extended.get_jwt_identity",
+                return_value=0,  # Valid integer 0
+            ):
+                with patch("app.middleware.rate_limit.get_rate_limiter") as mock_get:
+                    mock_limiter = MagicMock()
+                    mock_limiter.is_allowed.return_value = (True, {
+                        "limit": 5,
+                        "remaining": 4,
+                        "reset_time": int(time.time() + 60),
+                        "window_seconds": 60
+                    })
+                    mock_get.return_value = mock_limiter
+                    
+                    response = endpoint()
+                    assert response.status_code == 200
+                    
+                    # Should use user-based identifier, not IP fallback
+                    call_args = mock_limiter.is_allowed.call_args[0]
+                    assert call_args[0] == "user:0"
 
     def test_per_endpoint_builds_identifier_from_endpoint_name(self, app):
         """Test that per-endpoint builds identifier from endpoint name."""
