@@ -10,7 +10,7 @@ class TestErrorRecovery:
     def test_security_aware_error_handler_database_error(self):
         """Test database errors are securely caught and returned as generic messages without exposing details."""
         db_exception = Exception(
-            "psycopg2.OperationalError: connection to server at '10.0.0.1', port 5432 failed"
+            "psycopg2.OperationalError: connection to server at '10.0.0.1', port 5432 failed",
         )
 
         # Test generic message mapping

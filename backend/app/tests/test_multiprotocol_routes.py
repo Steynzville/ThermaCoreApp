@@ -30,7 +30,8 @@ def test_get_protocols_status_success(client, admin_token):
 
     with (
         patch(
-            "app.routes.multiprotocol.collect_protocol_status", return_value=mock_status
+            "app.routes.multiprotocol.collect_protocol_status",
+            return_value=mock_status,
         ),
         patch(
             "app.routes.multiprotocol.get_protocols_list",
@@ -76,17 +77,21 @@ def test_modbus_devices_not_available(client, admin_token):
         assert response.status_code == 503
 
         response2 = client.post(
-            "/api/v1/protocols/modbus/devices", headers=headers, json={}
+            "/api/v1/protocols/modbus/devices",
+            headers=headers,
+            json={},
         )
         assert response2.status_code == 503
 
         response3 = client.post(
-            "/api/v1/protocols/modbus/devices/dev1/connect", headers=headers
+            "/api/v1/protocols/modbus/devices/dev1/connect",
+            headers=headers,
         )
         assert response3.status_code == 503
 
         response4 = client.get(
-            "/api/v1/protocols/modbus/devices/dev1/data", headers=headers
+            "/api/v1/protocols/modbus/devices/dev1/data",
+            headers=headers,
         )
         assert response4.status_code == 503
 
@@ -97,7 +102,7 @@ def test_modbus_devices_success_scenarios(client, admin_token):
 
     mock_modbus = MagicMock()
     mock_modbus.get_device_status.return_value = {
-        "devices": {"dev1": {"connected": True}}
+        "devices": {"dev1": {"connected": True}},
     }
     mock_modbus.add_device.return_value = True
     mock_modbus.connect_device.return_value = True
@@ -139,7 +144,8 @@ def test_modbus_devices_success_scenarios(client, admin_token):
         # 3. Connect device - Success
         mock_modbus.connect_device.return_value = True
         res_conn = client.post(
-            "/api/v1/protocols/modbus/devices/new_dev/connect", headers=headers
+            "/api/v1/protocols/modbus/devices/new_dev/connect",
+            headers=headers,
         )
         assert res_conn.status_code == 200
         assert "Connected to" in res_conn.get_json()["message"]
@@ -147,13 +153,15 @@ def test_modbus_devices_success_scenarios(client, admin_token):
         # Connect device - Fail
         mock_modbus.connect_device.return_value = False
         res_conn_fail = client.post(
-            "/api/v1/protocols/modbus/devices/new_dev/connect", headers=headers
+            "/api/v1/protocols/modbus/devices/new_dev/connect",
+            headers=headers,
         )
         assert res_conn_fail.status_code == 500
 
         # 4. Read device data
         res_read = client.get(
-            "/api/v1/protocols/modbus/devices/new_dev/data", headers=headers
+            "/api/v1/protocols/modbus/devices/new_dev/data",
+            headers=headers,
         )
         assert res_read.status_code == 200
         assert "data" in res_read.get_json()
@@ -170,55 +178,66 @@ def test_dnp3_devices_not_available(client, admin_token):
         )
         assert (
             client.post(
-                "/api/v1/protocols/dnp3/devices", headers=headers, json={}
+                "/api/v1/protocols/dnp3/devices",
+                headers=headers,
+                json={},
             ).status_code
             == 503
         )
         assert (
             client.post(
-                "/api/v1/protocols/dnp3/devices/dev1/connect", headers=headers
+                "/api/v1/protocols/dnp3/devices/dev1/connect",
+                headers=headers,
             ).status_code
             == 503
         )
         assert (
             client.get(
-                "/api/v1/protocols/dnp3/devices/dev1/data", headers=headers
+                "/api/v1/protocols/dnp3/devices/dev1/data",
+                headers=headers,
             ).status_code
             == 503
         )
         assert (
             client.post(
-                "/api/v1/protocols/dnp3/devices/dev1/integrity-poll", headers=headers
+                "/api/v1/protocols/dnp3/devices/dev1/integrity-poll",
+                headers=headers,
             ).status_code
             == 503
         )
         assert (
             client.get(
-                "/api/v1/protocols/dnp3/performance/metrics", headers=headers
+                "/api/v1/protocols/dnp3/performance/metrics",
+                headers=headers,
             ).status_code
             == 503
         )
         assert (
             client.get(
-                "/api/v1/protocols/dnp3/performance/summary", headers=headers
+                "/api/v1/protocols/dnp3/performance/summary",
+                headers=headers,
             ).status_code
             == 503
         )
         assert (
             client.get(
-                "/api/v1/protocols/dnp3/devices/dev1/performance", headers=headers
+                "/api/v1/protocols/dnp3/devices/dev1/performance",
+                headers=headers,
             ).status_code
             == 503
         )
         assert (
             client.post(
-                "/api/v1/protocols/dnp3/performance/config", headers=headers, json={}
+                "/api/v1/protocols/dnp3/performance/config",
+                headers=headers,
+                json={},
             ).status_code
             == 503
         )
         assert (
             client.delete(
-                "/api/v1/protocols/dnp3/performance/metrics", headers=headers
+                "/api/v1/protocols/dnp3/performance/metrics",
+                headers=headers,
             ).status_code
             == 503
         )
@@ -230,7 +249,7 @@ def test_dnp3_devices_success_scenarios(client, admin_token):
 
     mock_dnp3 = MagicMock()
     mock_dnp3.get_device_status.return_value = {
-        "devices": {"dev1": {"connected": True}}
+        "devices": {"dev1": {"connected": True}},
     }
     mock_dnp3.add_device.return_value = True
     mock_dnp3.connect_device.return_value = True
@@ -288,14 +307,16 @@ def test_dnp3_devices_success_scenarios(client, admin_token):
         mock_dnp3.connect_device.return_value = True
         assert (
             client.post(
-                "/api/v1/protocols/dnp3/devices/dev1/connect", headers=headers
+                "/api/v1/protocols/dnp3/devices/dev1/connect",
+                headers=headers,
             ).status_code
             == 200
         )
         mock_dnp3.connect_device.return_value = False
         assert (
             client.post(
-                "/api/v1/protocols/dnp3/devices/dev1/connect", headers=headers
+                "/api/v1/protocols/dnp3/devices/dev1/connect",
+                headers=headers,
             ).status_code
             == 500
         )
@@ -303,7 +324,8 @@ def test_dnp3_devices_success_scenarios(client, admin_token):
         # Read
         assert (
             client.get(
-                "/api/v1/protocols/dnp3/devices/dev1/data", headers=headers
+                "/api/v1/protocols/dnp3/devices/dev1/data",
+                headers=headers,
             ).status_code
             == 200
         )
@@ -312,14 +334,16 @@ def test_dnp3_devices_success_scenarios(client, admin_token):
         mock_dnp3.perform_integrity_poll.return_value = True
         assert (
             client.post(
-                "/api/v1/protocols/dnp3/devices/dev1/integrity-poll", headers=headers
+                "/api/v1/protocols/dnp3/devices/dev1/integrity-poll",
+                headers=headers,
             ).status_code
             == 200
         )
         mock_dnp3.perform_integrity_poll.return_value = False
         assert (
             client.post(
-                "/api/v1/protocols/dnp3/devices/dev1/integrity-poll", headers=headers
+                "/api/v1/protocols/dnp3/devices/dev1/integrity-poll",
+                headers=headers,
             ).status_code
             == 500
         )
@@ -327,29 +351,33 @@ def test_dnp3_devices_success_scenarios(client, admin_token):
         # Performance endpoints
         assert (
             client.get(
-                "/api/v1/protocols/dnp3/performance/metrics", headers=headers
+                "/api/v1/protocols/dnp3/performance/metrics",
+                headers=headers,
             ).status_code
             == 200
         )
         assert (
             client.get(
-                "/api/v1/protocols/dnp3/performance/summary", headers=headers
+                "/api/v1/protocols/dnp3/performance/summary",
+                headers=headers,
             ).status_code
             == 200
         )
         assert (
             client.get(
-                "/api/v1/protocols/dnp3/devices/dev1/performance", headers=headers
+                "/api/v1/protocols/dnp3/devices/dev1/performance",
+                headers=headers,
             ).status_code
             == 200
         )
 
         mock_dnp3.get_device_performance_stats.return_value = {
-            "error": "Device not found"
+            "error": "Device not found",
         }
         assert (
             client.get(
-                "/api/v1/protocols/dnp3/devices/dev1/performance", headers=headers
+                "/api/v1/protocols/dnp3/devices/dev1/performance",
+                headers=headers,
             ).status_code
             == 404
         )
@@ -357,7 +385,8 @@ def test_dnp3_devices_success_scenarios(client, admin_token):
         # Clear metrics
         assert (
             client.delete(
-                "/api/v1/protocols/dnp3/performance/metrics", headers=headers
+                "/api/v1/protocols/dnp3/performance/metrics",
+                headers=headers,
             ).status_code
             == 200
         )
@@ -404,7 +433,7 @@ def test_unified_devices_status(client, admin_token):
 
     mock_modbus = MagicMock()
     mock_modbus.get_device_status.return_value = {
-        "devices": {"m1": {"connected": True}, "m2": {"connected": False}}
+        "devices": {"m1": {"connected": True}, "m2": {"connected": False}},
     }
 
     mock_dnp3 = MagicMock()
@@ -459,7 +488,9 @@ def test_convert_protocol_data(client, admin_token):
         },
     }
     res_m2d = client.post(
-        "/api/v1/protocols/convert/data", headers=headers, json=payload_m2d
+        "/api/v1/protocols/convert/data",
+        headers=headers,
+        json=payload_m2d,
     )
     assert res_m2d.status_code == 200
     converted = res_m2d.get_json()["converted_data"]
@@ -476,7 +507,9 @@ def test_convert_protocol_data(client, admin_token):
         },
     }
     res_d2m = client.post(
-        "/api/v1/protocols/convert/data", headers=headers, json=payload_d2m
+        "/api/v1/protocols/convert/data",
+        headers=headers,
+        json=payload_d2m,
     )
     assert res_d2m.status_code == 200
     converted2 = res_d2m.get_json()["converted_data"]
@@ -491,7 +524,9 @@ def test_convert_protocol_data(client, admin_token):
         "data": {"any": "thing"},
     }
     res_same = client.post(
-        "/api/v1/protocols/convert/data", headers=headers, json=payload_same
+        "/api/v1/protocols/convert/data",
+        headers=headers,
+        json=payload_same,
     )
     assert res_same.status_code == 200
     assert res_same.get_json()["converted_data"] == {"any": "thing"}
@@ -503,7 +538,9 @@ def test_convert_protocol_data(client, admin_token):
         "data": {"any": "thing"},
     }
     res_bad = client.post(
-        "/api/v1/protocols/convert/data", headers=headers, json=payload_bad
+        "/api/v1/protocols/convert/data",
+        headers=headers,
+        json=payload_bad,
     )
     assert res_bad.status_code == 400
     assert "not supported" in res_bad.get_json()["error"]

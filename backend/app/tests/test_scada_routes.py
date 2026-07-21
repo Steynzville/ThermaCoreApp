@@ -111,7 +111,9 @@ def test_scada_alerts_rules(client, admin_token):
             "message": "Too hot!",
         }
         response = client.post(
-            "/api/v1/scada/alerts/rules", json=rule_payload, headers=headers
+            "/api/v1/scada/alerts/rules",
+            json=rule_payload,
+            headers=headers,
         )
         assert response.status_code == 201
         assert response.get_json()["status"] in ["rule_created", "rule_added"]
@@ -145,7 +147,8 @@ def test_opcua_endpoints(client, admin_token):
         # Browse success
         mock_opcua.browse_server_nodes.return_value = [{"node_id": "ns=1;s=temp"}]
         response = client.get(
-            "/api/v1/scada/opcua/browse?node_id=root", headers=headers
+            "/api/v1/scada/opcua/browse?node_id=root",
+            headers=headers,
         )
         assert response.status_code in [200, 503]
         if response.status_code == 200:
@@ -162,7 +165,9 @@ def test_opcua_endpoints(client, admin_token):
         # Read success
         mock_opcua.read_node_value.return_value = {"value": 22.4}
         response = client.post(
-            "/api/v1/scada/opcua/read", json={"node_id": "ns=1;s=temp"}, headers=headers
+            "/api/v1/scada/opcua/read",
+            json={"node_id": "ns=1;s=temp"},
+            headers=headers,
         )
         assert response.status_code in [200, 503]
         if response.status_code == 200:
@@ -197,7 +202,8 @@ def test_simulator_inject_and_control(client, admin_token):
         assert response.status_code == 200
         assert response.get_json()["status"] == "scenario_injected"
         mock_sim.inject_test_scenario.assert_called_with(
-            scenario_type="high_temperature", unit_id="U1"
+            scenario_type="high_temperature",
+            unit_id="U1",
         )
 
 
@@ -227,6 +233,7 @@ def test_devices_status_monitoring(client, admin_token):
 
         # History
         response = client.get(
-            "/api/v1/scada/devices/status/history?limit=24", headers=headers
+            "/api/v1/scada/devices/status/history?limit=24",
+            headers=headers,
         )
         assert response.status_code == 200

@@ -71,7 +71,9 @@ def test_check_alert_rules():
 
     # 1. High temperature (greater_than 85.0 critical)
     alerts_temp_high = processor._check_alert_rules(
-        "UNIT001", "temperature", {"value": 86.5}
+        "UNIT001",
+        "temperature",
+        {"value": 86.5},
     )
     assert len(alerts_temp_high) == 1
     assert alerts_temp_high[0]["type"] == "critical"
@@ -79,7 +81,9 @@ def test_check_alert_rules():
 
     # 2. Low temperature (less_than -10.0 warning)
     alerts_temp_low = processor._check_alert_rules(
-        "UNIT001", "temperature", {"value": -11.0}
+        "UNIT001",
+        "temperature",
+        {"value": -11.0},
     )
     assert len(alerts_temp_low) == 1
     assert alerts_temp_low[0]["type"] == "warning"
@@ -92,7 +96,11 @@ def test_check_alert_rules():
 
     # 4. Custom rule: equals
     processor.add_alert_rule(
-        "status", "equals", 0.0, severity="critical", message="Status is 0"
+        "status",
+        "equals",
+        0.0,
+        severity="critical",
+        message="Status is 0",
     )
     alerts_equals = processor._check_alert_rules("UNIT001", "status", {"value": 0.0})
     assert len(alerts_equals) == 1
@@ -112,7 +120,9 @@ def test_process_sensor_data_broadcasts_and_handlers():
     with patch("app.services.realtime_processor.websocket_service") as mock_ws:
         # Trigger critical alert + normal broadcast
         processor.process_sensor_data(
-            "UNIT002", "temperature", {"value": 95.0, "quality": "GOOD"}
+            "UNIT002",
+            "temperature",
+            {"value": 95.0, "quality": "GOOD"},
         )
 
         # Should broadcast critical high temp alert

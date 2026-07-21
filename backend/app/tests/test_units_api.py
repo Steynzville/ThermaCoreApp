@@ -75,7 +75,9 @@ class TestUnitsAPI:
 
         # Attempt to create duplicate should return 409
         response_dup = client.post(
-            "/api/v1/units", json=new_unit_payload, headers=headers
+            "/api/v1/units",
+            json=new_unit_payload,
+            headers=headers,
         )
         assert response_dup.status_code == 409
 
@@ -120,7 +122,9 @@ class TestUnitsAPI:
         }
 
         response = client.put(
-            "/api/v1/units/TEST001", json=update_payload, headers=headers
+            "/api/v1/units/TEST001",
+            json=update_payload,
+            headers=headers,
         )
         assert response.status_code == 200
         data = json.loads(response.data)

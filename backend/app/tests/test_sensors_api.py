@@ -36,7 +36,9 @@ class TestSensorsAPI:
         }
 
         response = client.post(
-            "/api/v1/units/TEST001/sensors", json=payload, headers=headers
+            "/api/v1/units/TEST001/sensors",
+            json=payload,
+            headers=headers,
         )
         assert response.status_code == 201
         data = json.loads(response.data)
@@ -45,7 +47,8 @@ class TestSensorsAPI:
 
         # Cleanup
         sensor = Sensor.query.filter_by(
-            unit_id="TEST001", name="Flow Rate Sensor"
+            unit_id="TEST001",
+            name="Flow Rate Sensor",
         ).first()
         if sensor:
             db_session.delete(sensor)
@@ -67,7 +70,9 @@ class TestSensorsAPI:
         }
 
         response = client.post(
-            "/api/v1/units/NONEXISTENT/sensors", json=payload, headers=headers
+            "/api/v1/units/NONEXISTENT/sensors",
+            json=payload,
+            headers=headers,
         )
         assert response.status_code == 404
 
@@ -85,7 +90,9 @@ class TestSensorsAPI:
         }
 
         response = client.post(
-            "/api/v1/units/TEST001/sensors", json=payload, headers=headers
+            "/api/v1/units/TEST001/sensors",
+            json=payload,
+            headers=headers,
         )
         assert response.status_code == 400
         data = json.loads(response.data)
@@ -119,7 +126,8 @@ class TestSensorsAPI:
         try:
             # Get readings for the past 2 hours
             response = client.get(
-                "/api/v1/units/TEST001/readings?hours=2", headers=headers
+                "/api/v1/units/TEST001/readings?hours=2",
+                headers=headers,
             )
             assert response.status_code == 200
             data = json.loads(response.data)

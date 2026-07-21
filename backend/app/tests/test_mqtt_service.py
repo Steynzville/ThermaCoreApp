@@ -301,7 +301,9 @@ class TestMQTTClient:
             # Test publishing string
             client.publish("test/topic", "test-payload")
             mock_client_instance.publish.assert_called_with(
-                "test/topic", "test-payload", 0
+                "test/topic",
+                "test-payload",
+                0,
             )
 
     def test_on_message_malformed_payload(self):

@@ -64,7 +64,8 @@ def test_get_unit_trends_not_found(client, admin_token):
     with patch("app.models.Unit.query") as mock_unit_query:
         mock_unit_query.get.return_value = None
         response = client.get(
-            "/api/v1/analytics/trends/NON_EXIST_UNIT", headers=headers
+            "/api/v1/analytics/trends/NON_EXIST_UNIT",
+            headers=headers,
         )
         assert response.status_code == 404
         assert "Unit not found" in response.get_json()["error"]
@@ -147,7 +148,8 @@ def test_get_units_performance(client, admin_token):
         mock_query.return_value.outerjoin.return_value.outerjoin.return_value.group_by.return_value.all.return_value = mock_records
 
         response = client.get(
-            "/api/v1/analytics/performance/units?hours=24", headers=headers
+            "/api/v1/analytics/performance/units?hours=24",
+            headers=headers,
         )
         assert response.status_code == 200
         data = response.get_json()
@@ -169,7 +171,8 @@ def test_get_alert_patterns_empty(client, admin_token):
         mock_query.return_value.join.return_value.filter.return_value.group_by.return_value.all.return_value = []
 
         response = client.get(
-            "/api/v1/analytics/alerts/patterns?days=30", headers=headers
+            "/api/v1/analytics/alerts/patterns?days=30",
+            headers=headers,
         )
         assert response.status_code == 200
         data = response.get_json()
@@ -201,7 +204,8 @@ def test_get_alert_patterns_success(client, admin_token):
         mock_query.return_value.join.return_value.filter.return_value.group_by.return_value.all.return_value = mock_records
 
         response = client.get(
-            "/api/v1/analytics/alerts/patterns?days=10", headers=headers
+            "/api/v1/analytics/alerts/patterns?days=10",
+            headers=headers,
         )
         assert response.status_code == 200
         data = response.get_json()

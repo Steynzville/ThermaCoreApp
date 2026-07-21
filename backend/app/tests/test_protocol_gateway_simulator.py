@@ -99,7 +99,8 @@ def test_generate_sensor_value_variations():
     # Test that trend can be changed
     # Force trend change roll (< 0.1)
     with patch(
-        "random.SystemRandom.random", side_effect=[0.05, 0.99, 0.99, 0.99, 0.99]
+        "random.SystemRandom.random",
+        side_effect=[0.05, 0.99, 0.99, 0.99, 0.99],
     ):
         initial_trend = sim.unit_states["UNIT001"]["trend_direction"]["temperature"]
         sim.generate_sensor_value("UNIT001", "temperature")
@@ -148,7 +149,8 @@ def test_simulate_unit_status_change(mock_mqtt_client):
     # Transition from warning to offline
     sim.unit_states["UNIT001"]["status"] = "warning"
     with patch(
-        "random.SystemRandom.random", side_effect=[0.0001, 0.8]
+        "random.SystemRandom.random",
+        side_effect=[0.0001, 0.8],
     ):  # Trigger change + choose offline
         sim.simulate_unit_status_change("UNIT001")
         assert sim.unit_states["UNIT001"]["status"] == "offline"

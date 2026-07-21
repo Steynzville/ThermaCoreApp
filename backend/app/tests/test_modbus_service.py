@@ -126,7 +126,11 @@ class TestModbusService:
 
         # Write float32 value (123.45)
         success = service.write_register(
-            "DEV1", "holding_register", 100, 123.45, "float32"
+            "DEV1",
+            "holding_register",
+            100,
+            123.45,
+            "float32",
         )
         assert success is True
 
@@ -170,7 +174,7 @@ class TestModbusService:
 
         # Mock parity failure (raises custom ValueError/ConnectionError or Exception)
         mock_client.read_holding_registers.side_effect = Exception(
-            "Modbus parity error"
+            "Modbus parity error",
         )
         res = service.read_device_data("DEV_ERR")
         assert res["success"] is True
@@ -189,7 +193,7 @@ class TestModbusService:
         mock_client = Mock()
         # Raise parity/timeout exception on write
         mock_client.write_single_coil.side_effect = TimeoutError(
-            "Write operation timeout"
+            "Write operation timeout",
         )
         service._clients["DEV_ERR_W"] = mock_client
 
@@ -199,7 +203,7 @@ class TestModbusService:
 
         # Write with parity exception
         mock_client.write_single_coil.side_effect = Exception(
-            "Parity validation failed"
+            "Parity validation failed",
         )
         success = service.write_register("DEV_ERR_W", "coil", 100, True)
         assert success is False

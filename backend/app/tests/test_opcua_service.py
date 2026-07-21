@@ -25,10 +25,10 @@ def mock_crypto():
 
         # Configure standard non-expired certificate
         certificate_mock.not_valid_after_utc = datetime.now(timezone.utc) + timedelta(
-            days=365
+            days=365,
         )
         certificate_mock.not_valid_before_utc = datetime.now(timezone.utc) - timedelta(
-            days=5
+            days=5,
         )
 
         yield mock_pem, mock_der, certificate_mock
@@ -68,7 +68,13 @@ def test_normalize_certificate_datetime():
     # Naive datetime
     dt_naive = datetime(2026, 6, 1, 12, 0, 0)
     assert client._normalize_certificate_datetime(dt_naive) == datetime(
-        2026, 6, 1, 12, 0, 0, tzinfo=timezone.utc
+        2026,
+        6,
+        1,
+        12,
+        0,
+        0,
+        tzinfo=timezone.utc,
     )
 
     # Valid string
@@ -277,7 +283,11 @@ def test_read_node_value():
 
         # Read with scaling
         client.add_node_mapping(
-            "ns=2;s=Temp", "UNIT001", "temperature", scale_factor=2.0, offset=5.0
+            "ns=2;s=Temp",
+            "UNIT001",
+            "temperature",
+            scale_factor=2.0,
+            offset=5.0,
         )
         res_scaled = client.read_node_value("ns=2;s=Temp")
         assert res_scaled["value"] == 45.0  # (20 * 2.0) + 5.0

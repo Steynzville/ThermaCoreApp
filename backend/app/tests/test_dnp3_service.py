@@ -61,7 +61,9 @@ def test_dnp3_cached_reading():
 
     # Test expired reading
     cached_expired = DNP3CachedReading(
-        reading=reading, cached_at=utc_now() - timedelta(seconds=5), cache_ttl=2.0
+        reading=reading,
+        cached_at=utc_now() - timedelta(seconds=5),
+        cache_ttl=2.0,
     )
     assert cached_expired.is_expired() is True
 
@@ -171,21 +173,30 @@ def test_dnp3_service_read_write_data(app):
     # Binary output success
     assert (
         service.write_data_point(
-            device_id, index=10, data_type="binary_output", value=True
+            device_id,
+            index=10,
+            data_type="binary_output",
+            value=True,
         )
         is True
     )
     # Analog output success
     assert (
         service.write_data_point(
-            device_id, index=11, data_type="analog_output", value=45.6
+            device_id,
+            index=11,
+            data_type="analog_output",
+            value=45.6,
         )
         is True
     )
     # Invalid data type write fails
     assert (
         service.write_data_point(
-            device_id, index=12, data_type="invalid_type", value=100
+            device_id,
+            index=12,
+            data_type="invalid_type",
+            value=100,
         )
         is False
     )
@@ -249,7 +260,8 @@ def test_dnp3_service_errors_and_failures(app):
     service_no_master.add_device("DEV004", 1, 13, "127.0.0.1")
     service_no_master._devices["DEV004"].is_connected = True
     service_no_master.add_data_point_config(
-        "DEV004", [{"index": 0, "data_type": "binary_input"}]
+        "DEV004",
+        [{"index": 0, "data_type": "binary_input"}],
     )
     res_no_master = service_no_master.read_device_data("DEV004")
     assert res_no_master["success"] is False

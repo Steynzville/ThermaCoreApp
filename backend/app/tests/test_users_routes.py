@@ -88,14 +88,18 @@ def test_update_user_scenarios(client, admin_token):
 
         # 2. Validation error (invalid fields)
         response = client.put(
-            "/api/v1/users/2", json={"email": "not-an-email"}, headers=headers
+            "/api/v1/users/2",
+            json={"email": "not-an-email"},
+            headers=headers,
         )
         assert response.status_code == 400
 
         # 3. Modify own role (Forbidden/Forbidden 403)
         with patch("app.routes.users.get_current_user_id", return_value=(2, True)):
             response = client.put(
-                "/api/v1/users/2", json={"role_id": 1}, headers=headers
+                "/api/v1/users/2",
+                json={"role_id": 1},
+                headers=headers,
             )
             assert response.status_code == 403
 
@@ -104,7 +108,9 @@ def test_update_user_scenarios(client, admin_token):
         mock_orig.__str__ = lambda x: "username"
         mock_commit.side_effect = IntegrityError("statement", "params", mock_orig)
         response = client.put(
-            "/api/v1/users/2", json={"first_name": "DupUser"}, headers=headers
+            "/api/v1/users/2",
+            json={"first_name": "DupUser"},
+            headers=headers,
         )
         assert response.status_code == 409
         assert "Username already exists" in response.get_json()["error"]
@@ -114,7 +120,9 @@ def test_update_user_scenarios(client, admin_token):
         mock_orig_email.__str__ = lambda x: "email"
         mock_commit.side_effect = IntegrityError("statement", "params", mock_orig_email)
         response = client.put(
-            "/api/v1/users/2", json={"first_name": "DupEmail"}, headers=headers
+            "/api/v1/users/2",
+            json={"first_name": "DupEmail"},
+            headers=headers,
         )
         assert response.status_code == 409
         assert "Email already exists" in response.get_json()["error"]

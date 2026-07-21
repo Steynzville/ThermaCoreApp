@@ -60,7 +60,8 @@ def test_delete_deactivate_invalid_token_and_stats(client, admin_token):
     with patch("app.routes.users.get_current_user_id", return_value=(None, False)):
         delete_response = client.delete("/api/v1/users/2", headers=headers)
         deactivate_response = client.patch(
-            "/api/v1/users/2/deactivate", headers=headers
+            "/api/v1/users/2/deactivate",
+            headers=headers,
         )
 
     assert delete_response.status_code == 401

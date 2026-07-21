@@ -84,14 +84,22 @@ def test_initialize_critical_services():
     with patch("app.service_init.safe_service_init") as mock_safe_init:
         # Scenario 1: Do not skip external
         _initialize_critical_services(
-            mock_app, mock_logger, mock_data_storage, mock_mqtt, False
+            mock_app,
+            mock_logger,
+            mock_data_storage,
+            mock_mqtt,
+            False,
         )
         assert mock_safe_init.call_count == 2
 
         # Scenario 2: Skip external
         mock_safe_init.reset_mock()
         _initialize_critical_services(
-            mock_app, mock_logger, mock_data_storage, mock_mqtt, True
+            mock_app,
+            mock_logger,
+            mock_data_storage,
+            mock_mqtt,
+            True,
         )
         assert mock_safe_init.call_count == 1  # Only storage
 
@@ -107,7 +115,12 @@ def test_initialize_opcua_clients_success():
 
     with patch("app.service_init.safe_service_init") as mock_safe_init:
         _initialize_opcua_clients(
-            mock_app, mock_logger, mock_secure, mock_standard, mock_storage, False
+            mock_app,
+            mock_logger,
+            mock_secure,
+            mock_standard,
+            mock_storage,
+            False,
         )
         assert mock_app.secure_opcua_client == mock_secure
         assert mock_app.opcua_client == mock_secure
@@ -127,7 +140,12 @@ def test_initialize_opcua_clients_fallback():
         mock_safe_init.side_effect = [Exception("Secure failed"), None]
 
         _initialize_opcua_clients(
-            mock_app, mock_logger, mock_secure, mock_standard, mock_storage, False
+            mock_app,
+            mock_logger,
+            mock_secure,
+            mock_standard,
+            mock_storage,
+            False,
         )
         assert mock_app.opcua_client == mock_standard
 
@@ -149,7 +167,12 @@ def test_initialize_opcua_clients_all_fail():
         ]
 
         _initialize_opcua_clients(
-            mock_app, mock_logger, mock_secure, mock_standard, mock_storage, False
+            mock_app,
+            mock_logger,
+            mock_secure,
+            mock_standard,
+            mock_storage,
+            False,
         )
         assert mock_app.opcua_client is None
 

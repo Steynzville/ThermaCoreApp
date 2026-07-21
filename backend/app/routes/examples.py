@@ -20,7 +20,8 @@ class ExampleRequestSchema(Schema):
     email = fields.Email(required=True)
     age = fields.Int(validate=validate.Range(min=1, max=150))
     tags = fields.List(
-        fields.Str(), load_default=[]
+        fields.Str(),
+        load_default=[],
     )  # FIXED: Changed 'missing' to 'load_default'
 
 

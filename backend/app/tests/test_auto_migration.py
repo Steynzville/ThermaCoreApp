@@ -403,7 +403,8 @@ class TestAutoMigration:
         """Test table_exists handles exceptions."""
         mock_engine = MagicMock()
         with patch(
-            "app.utils.auto_migration.inspect", side_effect=Exception("DB Interruption")
+            "app.utils.auto_migration.inspect",
+            side_effect=Exception("DB Interruption"),
         ):
             assert table_exists(mock_engine, "tenants") is False
 
@@ -411,7 +412,8 @@ class TestAutoMigration:
         """Test add_tenants_table handles exceptions."""
         mock_engine = MagicMock()
         with patch(
-            "app.utils.auto_migration.table_exists", side_effect=Exception("Table lock")
+            "app.utils.auto_migration.table_exists",
+            side_effect=Exception("Table lock"),
         ):
             assert add_tenants_table(mock_engine) is False
 

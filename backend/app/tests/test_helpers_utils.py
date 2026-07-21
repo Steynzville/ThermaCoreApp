@@ -103,14 +103,16 @@ def test_validate_json_request_decorator(app):
 
     # Case 2: Empty JSON body
     with app.test_request_context(
-        headers={"Content-Type": "application/json"}, data=""
+        headers={"Content-Type": "application/json"},
+        data="",
     ):
         with pytest.raises(Exception):
             dummy_route()
 
     # Case 3: Valid JSON body
     with app.test_request_context(
-        headers={"Content-Type": "application/json"}, json={"key": "val"}
+        headers={"Content-Type": "application/json"},
+        json={"key": "val"},
     ):
         assert dummy_route() == "Success"
 
@@ -214,7 +216,8 @@ def test_calculate_unit_efficiency(app, db_session):
         # We need power and level readings
         unit_id = "TEST001"
         sensor_power = Sensor.query.filter_by(
-            unit_id=unit_id, sensor_type="power"
+            unit_id=unit_id,
+            sensor_type="power",
         ).first()
         if not sensor_power:
             sensor_power = Sensor(
@@ -226,7 +229,8 @@ def test_calculate_unit_efficiency(app, db_session):
             db.session.add(sensor_power)
 
         sensor_level = Sensor.query.filter_by(
-            unit_id=unit_id, sensor_type="level"
+            unit_id=unit_id,
+            sensor_type="level",
         ).first()
         if not sensor_level:
             sensor_level = Sensor(
@@ -241,13 +245,19 @@ def test_calculate_unit_efficiency(app, db_session):
         # Seed power and water level readings
         now = datetime.now(timezone.utc)
         reading_power = SensorReading(
-            sensor_id=sensor_power.id, value=50.0, timestamp=now
+            sensor_id=sensor_power.id,
+            value=50.0,
+            timestamp=now,
         )
         reading_level1 = SensorReading(
-            sensor_id=sensor_level.id, value=100.0, timestamp=now - timedelta(hours=2)
+            sensor_id=sensor_level.id,
+            value=100.0,
+            timestamp=now - timedelta(hours=2),
         )
         reading_level2 = SensorReading(
-            sensor_id=sensor_level.id, value=200.0, timestamp=now
+            sensor_id=sensor_level.id,
+            value=200.0,
+            timestamp=now,
         )
 
         db.session.add_all([reading_power, reading_level1, reading_level2])
@@ -287,7 +297,7 @@ def test_generate_health_score(app, db_session):
         unit.has_alarm = True  # -20
         unit.battery_level = 10  # -15
         unit.last_maintenance = datetime.now(timezone.utc) - timedelta(
-            days=120
+            days=120,
         )  # overdue maintenance -10
         db.session.commit()
 
@@ -305,7 +315,7 @@ def test_generate_health_score(app, db_session):
         unit.has_alert = True  # -10
         unit.battery_level = 30  # -5
         unit.last_maintenance = datetime.utcnow() - timedelta(
-            days=70
+            days=70,
         )  # naive datetime, due soon -5
         db.session.commit()
 

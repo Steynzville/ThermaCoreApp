@@ -16,7 +16,8 @@ def seed_historical_data(app):
 
         # Ensure TEST001 has a temperature sensor
         sensor1 = Sensor.query.filter_by(
-            unit_id="TEST001", sensor_type="temperature"
+            unit_id="TEST001",
+            sensor_type="temperature",
         ).first()
         if not sensor1:
             sensor1 = Sensor(
@@ -48,7 +49,8 @@ def seed_historical_data(app):
             db.session.commit()
 
         sensor2 = Sensor.query.filter_by(
-            unit_id="TEST002", sensor_type="temperature"
+            unit_id="TEST002",
+            sensor_type="temperature",
         ).first()
         if not sensor2:
             sensor2 = Sensor(
@@ -138,7 +140,8 @@ def test_get_historical_data_not_found(client, admin_token):
     """Test get historical data for a non-existent unit."""
     headers = {"Authorization": f"Bearer {admin_token}"}
     response = client.get(
-        "/api/v1/historical/data/NONEXIST?aggregation=raw", headers=headers
+        "/api/v1/historical/data/NONEXIST?aggregation=raw",
+        headers=headers,
     )
     assert response.status_code == 404
 

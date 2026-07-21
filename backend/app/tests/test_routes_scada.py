@@ -38,10 +38,12 @@ def test_simulator_start_stop_and_status_branches(client, admin_token):
 
     # unavailable branches
     assert client.get(
-        "/api/v1/scada/simulator/status", headers=headers
+        "/api/v1/scada/simulator/status",
+        headers=headers,
     ).status_code in (500, 503)
     assert client.post(
-        "/api/v1/scada/simulator/start", headers=headers
+        "/api/v1/scada/simulator/start",
+        headers=headers,
     ).status_code in (500, 503)
     assert client.post("/api/v1/scada/simulator/stop", headers=headers).status_code in (
         500,

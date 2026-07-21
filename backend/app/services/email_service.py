@@ -12,7 +12,7 @@ try:
 except ImportError:
     SENDGRID_AVAILABLE = False
     logging.getLogger(__name__).warning(
-        "SendGrid not installed. Run: pip install sendgrid"
+        "SendGrid not installed. Run: pip install sendgrid",
     )
 
 logger = logging.getLogger(__name__)

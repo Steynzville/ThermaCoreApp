@@ -17,7 +17,7 @@ def test_read_node_value_and_processing_failure_paths(app):
 
         client.add_node_mapping("ns=2;s=Temp", "TEST001", "temperature")
         client.read_node_value = MagicMock(
-            return_value={"value": 1, "quality": "GOOD", "timestamp": "x"}
+            return_value={"value": 1, "quality": "GOOD", "timestamp": "x"},
         )
         assert client.process_and_store_node_data("ns=2;s=Temp") is False
 

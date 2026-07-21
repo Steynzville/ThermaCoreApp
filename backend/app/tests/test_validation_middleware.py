@@ -70,7 +70,9 @@ def test_request_validator_json_content_type(app):
         assert data["error"]["code"] == "INVALID_CONTENT_TYPE"
 
     with app.test_request_context(
-        method="POST", headers={"Content-Type": "application/json"}, json={}
+        method="POST",
+        headers={"Content-Type": "application/json"},
+        json={},
     ):
         assert RequestValidator.validate_json_content_type() is None
 
@@ -92,7 +94,9 @@ def test_request_validator_json_body(app):
 
     # Invalid malformed json
     with app.test_request_context(
-        method="POST", headers={"Content-Type": "application/json"}, data='{"name": '
+        method="POST",
+        headers={"Content-Type": "application/json"},
+        data='{"name": ',
     ):
         res = RequestValidator.validate_json_body()
         assert res is not None
@@ -130,7 +134,11 @@ def test_webargs_error_handler(app):
         g.request_id = "test-req-id"
         with pytest.raises(Exception):
             handle_webargs_error(
-                FakeError(), None, None, error_status_code=422, error_headers=None
+                FakeError(),
+                None,
+                None,
+                error_status_code=422,
+                error_headers=None,
             )
 
 

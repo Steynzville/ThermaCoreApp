@@ -195,7 +195,8 @@ def test_analyze_unit_anomalies(app, db_session):
 
     # Create multiple sensors for unit
     sensor_temp = Sensor.query.filter_by(
-        unit_id=unit_id, sensor_type="temperature"
+        unit_id=unit_id,
+        sensor_type="temperature",
     ).first()
 
     # Seed historical readings for sensor_temp to have sufficient data
