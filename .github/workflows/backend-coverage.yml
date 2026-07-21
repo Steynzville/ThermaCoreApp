@@ -70,7 +70,7 @@ jobs:
       - name: Remove Old Coverage Files
         run: |
           echo "🧹 Cleaning up old coverage files to avoid confusion..."
-          rm -f backend/coverage.json backend/.coverage
+          rm -f backend/coverage.json backend/.coverage backend/coverage.xml
           rm -rf backend/htmlcov/
           echo "✅ Old coverage files removed"
 
@@ -115,7 +115,12 @@ jobs:
         id: tests
         run: |
           echo "🧪 Running backend tests with coverage..."
-          docker-compose -f docker-compose.ci.yml run --rm backend python -m pytest -v --tb=short \
+          
+          # Run tests with volume mount to persist coverage files
+          # Mount $(pwd)/backend to /app so coverage files are written to host
+          docker-compose -f docker-compose.ci.yml run --rm \
+            -v $(pwd)/backend:/app \
+            backend python -m pytest -v --tb=short \
             --cov=app \
             --cov-report=json \
             --cov-report=html \
@@ -126,7 +131,16 @@ jobs:
             --cov-branch \
             --cov-config=.coveragerc 2>&1 | tee coverage_output.txt
           
-          echo "📁 Coverage file generated at: $(date -r backend/coverage.json 2>/dev/null || echo 'N/A')"
+          # Verify coverage files were created
+          echo "📁 Checking for coverage files..."
+          ls -la backend/ | grep -E "(coverage|\.coverage|htmlcov)" || echo "⚠️ No coverage files found"
+          
+          if [ -f backend/coverage.json ]; then
+            echo "✅ coverage.json found!"
+            echo "📁 coverage.json timestamp: $(date -r backend/coverage.json)"
+          else
+            echo "⚠️ coverage.json not found - files may not have been written correctly"
+          fi
 
       - name: Extract Coverage from Output
         id: coverage
@@ -228,6 +242,10 @@ jobs:
             echo "📁 Coverage file details:"
             echo "   Size: $FILE_SIZE"
             echo "   Modified: $FILE_DATE"
+          else
+            echo ""
+            echo "⚠️ No coverage.json file found on the host!"
+            echo "   Check that the volume mount is working correctly."
           fi
 
       - name: Upload Full Coverage Report
@@ -241,6 +259,7 @@ jobs:
             backend/htmlcov/
             backend/.coverage
           retention-days: 30
+          if-no-files-found: warn
 
       - name: Stop Services
         if: always()
