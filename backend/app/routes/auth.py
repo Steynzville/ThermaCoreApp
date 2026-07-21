@@ -724,7 +724,8 @@ def change_password(data):
 
     except Exception as e:
         current_app.logger.exception(
-            "Error changing password", extra={"event": "password_change_error"}
+            "Error changing password",
+            extra={"event": "password_change_error"},
         )
         db.session.rollback()
         return SecurityAwareErrorHandler.handle_service_error(
@@ -957,7 +958,8 @@ def reset_password(data):
 
     except Exception as e:
         current_app.logger.exception(
-            "Error resetting password", extra={"event": "password_reset_error"}
+            "Error resetting password",
+            extra={"event": "password_reset_error"},
         )
         db.session.rollback()
         return SecurityAwareErrorHandler.handle_service_error(
