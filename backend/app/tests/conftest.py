@@ -1,5 +1,6 @@
 """Test configuration for ThermaCore SCADA API tests."""
 
+import importlib
 import logging
 import os
 import traceback
@@ -192,6 +193,84 @@ def db_session(app):
             db.session.close()
 
 
+@pytest.fixture
+def reset_service_manager():
+    """Reset service_manager state before and after test."""
+    from app.utils.service_manager import service_manager
+
+    # Save current state
+    saved_services = {}
+    for name in list(service_manager._services.keys()):
+        service = service_manager._services[name]
+        saved_services[name] = {
+            'enabled': service.enabled,
+            'required': service.required,
+        }
+        if hasattr(service, 'instance'):
+            saved_services[name]['instance'] = service.instance
+        if hasattr(service, 'error'):
+            saved_services[name]['error'] = service.error
+        if hasattr(service, 'status'):
+            saved_services[name]['status'] = service.status
+
+    yield
+
+    # Clear all services
+    service_manager._services.clear()
+
+    # Restore saved state
+    for name, data in saved_services.items():
+        service_manager.register_service(
+            name,
+            ServiceType.REQUIRED if data.get('required') else ServiceType.OPTIONAL,
+            enabled=data.get('enabled', True),
+        )
+        if 'instance' in data and data['instance']:
+            service_manager.set_service_instance(name, data['instance'])
+        if 'error' in data and data['error']:
+            service_manager.set_service_error(name, data['error'])
+
+
+@pytest.fixture
+def isolated_config():
+    """Isolate config module reloads to prevent cross-test pollution."""
+    import config
+    import importlib
+
+    # Store original environment values that config uses
+    original_env = {
+        key: os.environ.get(key)
+        for key in [
+            "FLASK_ENV", "APP_ENV", "PRODUCTION", "CI",
+            "SECRET_KEY", "DATABASE_URL", "JWT_SECRET_KEY",
+            "MQTT_CA_CERTS", "MQTT_CERT_FILE", "MQTT_KEY_FILE",
+            "OPCUA_CERT_FILE", "OPCUA_PRIVATE_KEY_FILE", "OPCUA_TRUST_CERT_FILE",
+            "SERVICE_OPCUA_ENABLED", "SERVICE_OPCUA_REQUIRED",
+            "SERVICE_MQTT_ENABLED", "SERVICE_MQTT_REQUIRED"
+        ]
+    }
+
+    # Store original config class references
+    original_classes = {
+        'Config': config.Config,
+        'DevelopmentConfig': config.DevelopmentConfig,
+        'ProductionConfig': config.ProductionConfig,
+        'TestingConfig': config.TestingConfig,
+    }
+
+    yield
+
+    # Restore original environment
+    for key, value in original_env.items():
+        if value is None:
+            os.environ.pop(key, None)
+        else:
+            os.environ[key] = value
+
+    # Reload config to restore original state
+    importlib.reload(config)
+
+
 def _create_test_data():
     """Create test data for tests."""
     from datetime import datetime
@@ -320,12 +399,12 @@ def admin_user():
 
 
 @pytest.fixture
-def admin_token(app):
-    """Create an admin JWT token for testing."""
+def admin_token(app, db_session):
+    """Create an admin JWT token for testing using db_session."""
     from flask_jwt_extended import create_access_token
 
     with app.app_context():
-        admin_user = User.query.filter_by(username="admin").first()
+        admin_user = db_session.query(User).filter_by(username="admin").first()
         if not admin_user:
             raise ValueError("Admin user not found in test database")
 
@@ -341,12 +420,12 @@ def admin_token(app):
 
 
 @pytest.fixture
-def viewer_token(app):
-    """Create a viewer JWT token for testing."""
+def viewer_token(app, db_session):
+    """Create a viewer JWT token for testing using db_session."""
     from flask_jwt_extended import create_access_token
 
     with app.app_context():
-        viewer_user = User.query.filter_by(username="viewer").first()
+        viewer_user = db_session.query(User).filter_by(username="viewer").first()
         if not viewer_user:
             raise ValueError("Viewer user not found in test database")
 
@@ -362,7 +441,6 @@ def viewer_token(app):
 
 
 # ---- Tenant test fixtures ----
-
 
 @pytest.fixture
 def auth_headers(admin_token):
@@ -387,7 +465,7 @@ def seed_tenant(db_session):
     tenant = Tenant(
         name=f"Acme Corp {suffix}",
         slug=f"acme-corp-{suffix}",
-        is_active=True,
+        is_active=True
     )
     db_session.add(tenant)
     db_session.commit()
@@ -405,7 +483,7 @@ def seed_inactive_tenant(db_session):
     tenant = Tenant(
         name=f"Old Co {suffix}",
         slug=f"old-co-{suffix}",
-        is_active=False,
+        is_active=False
     )
     db_session.add(tenant)
     db_session.commit()
@@ -471,11 +549,11 @@ def tenant_scoped_headers(db_session, seed_tenant):
     from app.models import Role, RoleEnum, User
 
     # Look for a user specifically tied to this seed_tenant
-    user = User.query.filter_by(tenant_id=seed_tenant.id).first()
+    user = db_session.query(User).filter_by(tenant_id=seed_tenant.id).first()
     if not user:
-        role = Role.query.filter_by(name=RoleEnum.VIEWER).first()
+        role = db_session.query(Role).filter_by(name=RoleEnum.VIEWER).first()
         if not role:
-            role = Role.query.first()
+            role = db_session.query(Role).first()
         # Create a user scoped to this specific tenant
         user = User(
             username=f"tenant_scoped_{seed_tenant.id}",
@@ -503,18 +581,18 @@ def tenant_scoped_headers(db_session, seed_tenant):
 @pytest.fixture
 def no_tenant_headers(db_session):
     """JWT for a non-admin user with no tenant assigned."""
-    # Create a unique user per test to avoid sharing state
-    import time
-
     from flask_jwt_extended import create_access_token
 
     from app.models import Role, RoleEnum, User
 
+    # Create a unique user per test to avoid sharing state
+    import time
+
     unique_suffix = int(time.time() * 1000000)
 
-    role = Role.query.filter_by(name=RoleEnum.VIEWER).first()
+    role = db_session.query(Role).filter_by(name=RoleEnum.VIEWER).first()
     if not role:
-        role = Role.query.first()
+        role = db_session.query(Role).first()
 
     user = User(
         username=f"no_tenant_user_{unique_suffix}",
@@ -545,3 +623,39 @@ def admin_no_tenant_headers(admin_token):
     # This fixture deliberately uses the admin token which has tenant_id=None
     # Explicitly set to make the intent clear, even though it's the same as auth_headers
     return {"Authorization": f"Bearer {admin_token}"}
+
+
+@pytest.fixture(scope="function")
+def test_data(db_session):
+    """Create test data within a transaction that rolls back after test."""
+    from datetime import datetime
+
+    from app.models import HealthStatusEnum, UnitStatusEnum
+
+    # Create test unit
+    unit = Unit(
+        id="TEST001",
+        name="Test Unit 001",
+        serial_number="TEST001-2024-001",
+        install_date=datetime(2024, 1, 15),
+        location="Test Site",
+        status=UnitStatusEnum.ONLINE,
+        health_status=HealthStatusEnum.OPTIMAL,
+        water_generation=True,
+    )
+    db_session.add(unit)
+    db_session.flush()
+
+    # Create test sensor
+    sensor = Sensor(
+        unit_id="TEST001",
+        name="Test Temperature Sensor",
+        sensor_type="temperature",
+        unit_of_measurement="°C",
+        min_value=-10.0,
+        max_value=50.0,
+    )
+    db_session.add(sensor)
+    db_session.flush()
+
+    yield {"unit": unit, "sensor": sensor}
