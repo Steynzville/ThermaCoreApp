@@ -175,6 +175,8 @@ class TestProductionScenarios:
                 "OPCUA_TRUST_CERT_FILE": "/path/to/trust.crt",
                 "PRODUCTION": "true",
                 "CI": "true",
+                "CORS_ORIGINS": "https://thermacoreapp.com,https://app.thermacoreapp.com",
+                "WEBSOCKET_CORS_ORIGINS": "https://thermacoreapp.com,https://app.thermacoreapp.com",
             },
             clear=False,
         ):
@@ -212,6 +214,8 @@ class TestProductionScenarios:
                 "OPCUA_TRUST_CERT_FILE": "/path/to/trust.crt",
                 "PRODUCTION": "false",
                 "CI": "true",
+                "CORS_ORIGINS": "http://localhost:3000",
+                "WEBSOCKET_CORS_ORIGINS": "http://localhost:3000",
             },
             clear=False,
         ):
