@@ -1,10 +1,12 @@
 """Integration tests to verify SCADA endpoint security improvements."""
 
+import os
 from unittest.mock import patch
 
 import pytest
 
 from app import create_app
+from config import Config, ProductionConfig
 
 
 class TestScadaSecurityIntegration:
@@ -36,11 +38,6 @@ class TestScadaSecurityIntegration:
 
     def test_websocket_cors_restriction(self, app):
         """Test that WebSocket CORS is properly restricted in production."""
-        import os
-        from unittest.mock import patch
-
-        from config import ProductionConfig
-
         # Set required environment variables for ProductionConfig instantiation
         with patch.dict(
             os.environ,
@@ -70,11 +67,6 @@ class TestScadaSecurityIntegration:
 
     def test_tls_enforcement_config(self):
         """Test that TLS enforcement is configured for production."""
-        import os
-        from unittest.mock import patch
-
-        from config import ProductionConfig
-
         # Set required environment variables for ProductionConfig instantiation
         with patch.dict(
             os.environ,
@@ -101,11 +93,6 @@ class TestScadaSecurityIntegration:
 
     def test_development_vs_production_security_configs(self):
         """Test that production has more restrictive security than development."""
-        import os
-        from unittest.mock import patch
-
-        from config import Config, ProductionConfig
-
         # Development allows broader WebSocket CORS
         dev_origins = Config.WEBSOCKET_CORS_ORIGINS
 
