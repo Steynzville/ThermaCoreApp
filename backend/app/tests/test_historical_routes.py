@@ -1,6 +1,6 @@
 """Tests for historical data analysis routes."""
 
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 

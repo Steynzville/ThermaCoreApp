@@ -1,6 +1,6 @@
 """Tests for OPC UA service."""
 
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest

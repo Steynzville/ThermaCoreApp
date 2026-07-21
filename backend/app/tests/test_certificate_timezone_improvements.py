@@ -1,6 +1,6 @@
 """Tests for improved certificate timezone handling in OPC UA service."""
 
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock, patch
 
 import pytest

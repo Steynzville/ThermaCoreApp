@@ -1,7 +1,7 @@
 """Integration tests for Phase 2 SCADA data ingestion pipeline."""
 
 import json
-from datetime import datetime, timezone, timezone
+from datetime import datetime, timezone
 from unittest.mock import patch
 
 import pytest
@@ -33,7 +33,7 @@ class TestSCADAIntegration:
         """Test complete pipeline from MQTT message to database storage."""
         with app.app_context():
             # Create test unit
-            from datetime import date, timezone
+            from datetime import timezone
 
             from app.models import UnitStatusEnum
 

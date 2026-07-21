@@ -1,7 +1,7 @@
 """Integration tests for protocol simulation and adapter interaction as part of PR4."""
 
 import time
-from datetime import datetime, timezone
+from datetime import datetime
 from unittest.mock import Mock, patch
 
 import pytest
@@ -249,7 +249,7 @@ class TestProtocolSimulationIntegration:
         """Test complete pipeline from protocol adapters through registry to status reporting."""
         with app.app_context():
             # Set up test units in database
-            from datetime import date, timezone
+            from datetime import timezone
 
             unit = Unit(
                 id="UNIT001",

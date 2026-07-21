@@ -1,6 +1,6 @@
 """Tests for Machine Learning Anomaly Detection Service."""
 
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 
 from app.models import Sensor, SensorReading, Unit, db
 from app.services.anomaly_detection import (

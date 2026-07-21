@@ -159,7 +159,8 @@ class TestCertificateGeneration:
                 "%b %d %H:%M:%S %Y %Z",
             ).replace(tzinfo=timezone.utc)
             not_after_dt = datetime.strptime(
-                not_after.strip(), "%b %d %H:%M:%S %Y %Z"
+                not_after.strip(),
+                "%b %d %H:%M:%S %Y %Z",
             ).replace(tzinfo=timezone.utc)
 
             diff = not_after_dt - not_before_dt
