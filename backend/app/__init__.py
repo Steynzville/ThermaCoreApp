@@ -161,10 +161,10 @@ def _initialize_critical_service(
     except (ValueError, RuntimeError, ConnectionError, OSError, ImportError) as e:
         # Security validation errors, connection issues, or configuration errors
         if isinstance(e, ValueError):
-            logger.exception(f"{service_name} configuration error: {e}")
+            logger.exception(f"{service_name} configuration error")
         else:
             logger.exception(
-                f"{service_name} security validation failed: {e}",
+                f"{service_name} security validation failed",
             )
 
         # For backwards compatibility, also use environment detection error handling
@@ -184,7 +184,7 @@ def _initialize_critical_service(
         return should_continue
 
     except Exception as e:
-        logger.exception(f"Failed to initialize {service_name}: {e}")
+        logger.exception(f"Failed to initialize {service_name}")
 
         # For backwards compatibility, also use environment detection error handling
         from app.utils.environment import handle_environment_detection_error
@@ -313,9 +313,7 @@ def create_app(config_name=None):
         """Serve static files from the React build."""
         # Skip API routes - let them be handled by the blueprints
         if (
-            path.startswith("api/")
-            or path.startswith("auth/")
-            or path.startswith("health")
+            path.startswith(("api/", "auth/", "health"))
         ):
             return None
 

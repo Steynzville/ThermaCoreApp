@@ -49,7 +49,7 @@ HTTP_STATUS_TO_EXCEPTION_NAME = {
 }
 
 
-class SyntheticHTTPException(Exception):
+class SyntheticHTTPError(Exception):
     """Exception-like object for tracking HTTP errors in metrics.
 
     Used when HTTPExceptions are converted to responses by Flask
@@ -451,7 +451,7 @@ def setup_metrics_middleware(app):
                 error_msg = f"{response.status_code} {exc_class_name.replace('_', ' ')}"
 
                 # Create synthetic exception for consistent error tracking
-                synthetic_exc = SyntheticHTTPException(
+                synthetic_exc = SyntheticHTTPError(
                     error_msg,
                     response.status_code,
                     exc_class_name,

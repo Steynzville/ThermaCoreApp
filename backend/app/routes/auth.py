@@ -1144,6 +1144,3 @@ def emergency_admin():
 # ============================================================
 # DEBUG: Print statements to confirm module loads
 # ============================================================
-print("=" * 60, flush=True)
-print("✅ Auth blueprint module loaded successfully", flush=True)
-print("=" * 60, flush=True)

@@ -228,7 +228,7 @@ class TestProtocolSimulationIntegration:
 
             # Generate test data multiple times to simulate heartbeat
             data_points = []
-            for i in range(3):
+            for _i in range(3):
                 data = simulator.generate_sensor_value("UNIT001", "temperature")
                 data_points.append(data)
                 time.sleep(0.1)  # Small delay

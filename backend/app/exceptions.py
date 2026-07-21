@@ -16,7 +16,7 @@ The exception hierarchy is designed to support:
 from typing import Any
 
 
-class ThermaCoreException(Exception):
+class ThermaCoreError(Exception):
     """Base exception for all ThermaCore domain exceptions.
 
     This base class provides common functionality for all domain exceptions,
@@ -48,7 +48,7 @@ class ThermaCoreException(Exception):
 # Authentication and Authorization Exceptions
 
 
-class AuthenticationException(ThermaCoreException):
+class AuthenticationException(ThermaCoreError):
     """Base class for authentication-related exceptions."""
 
     def __init__(self, message: str = "Authentication failed", **kwargs):
@@ -79,7 +79,7 @@ class TokenExpiredException(AuthenticationException):
         super().__init__("Authentication token has expired", **kwargs)
 
 
-class AuthorizationException(ThermaCoreException):
+class AuthorizationException(ThermaCoreError):
     """Base class for authorization-related exceptions."""
 
     def __init__(self, message: str = "Access denied", **kwargs):
@@ -104,7 +104,7 @@ class InsufficientPermissionsException(AuthorizationException):
 # Resource Management Exceptions
 
 
-class ResourceException(ThermaCoreException):
+class ResourceException(ThermaCoreError):
     """Base class for resource-related exceptions."""
 
 
@@ -153,7 +153,7 @@ class UserNotFoundException(ResourceNotFoundException):
 # Data Validation Exceptions
 
 
-class ValidationException(ThermaCoreException):
+class ValidationException(ThermaCoreError):
     """Base class for data validation exceptions."""
 
     def __init__(self, message: str, field: str | None = None, **kwargs):
@@ -198,7 +198,7 @@ class SensorReadingValidationException(ValidationException):
 # Protocol Communication Exceptions
 
 
-class ProtocolException(ThermaCoreException):
+class ProtocolException(ThermaCoreError):
     """Base class for protocol communication exceptions."""
 
     def __init__(self, protocol: str, message: str, **kwargs):
@@ -265,7 +265,7 @@ class DNP3Exception(ProtocolException):
 # Service Availability Exceptions
 
 
-class ServiceException(ThermaCoreException):
+class ServiceException(ThermaCoreError):
     """Base class for service availability exceptions."""
 
     def __init__(self, service_name: str, message: str, **kwargs):
@@ -287,7 +287,7 @@ class ServiceUnavailableException(ServiceException):
         super().__init__(service_name, message, **kwargs)
 
 
-class DatabaseException(ThermaCoreException):
+class DatabaseException(ThermaCoreError):
     """Base class for database-related exceptions."""
 
     def __init__(self, message: str, **kwargs):
@@ -318,7 +318,7 @@ class DatabaseIntegrityException(DatabaseException):
 # Configuration and System Exceptions
 
 
-class ConfigurationException(ThermaCoreException):
+class ConfigurationException(ThermaCoreError):
     """Raised for configuration-related errors."""
 
     def __init__(self, message: str, config_key: str | None = None, **kwargs):
@@ -340,7 +340,7 @@ class MissingConfigurationException(ConfigurationException):
         super().__init__(message, config_key=config_key, **kwargs)
 
 
-class TimeoutException(ThermaCoreException):
+class TimeoutException(ThermaCoreError):
     """Raised when an operation times out."""
 
     def __init__(self, operation: str, timeout_seconds: float, **kwargs):
@@ -354,7 +354,7 @@ class TimeoutException(ThermaCoreException):
 # Unit and Sensor Specific Exceptions
 
 
-class UnitException(ThermaCoreException):
+class UnitException(ThermaCoreError):
     """Base class for unit-related exceptions."""
 
     def __init__(self, unit_id: str, message: str, **kwargs):
@@ -390,7 +390,7 @@ class UnitMaintenanceException(UnitException):
         )
 
 
-class SensorException(ThermaCoreException):
+class SensorException(ThermaCoreError):
     """Base class for sensor-related exceptions."""
 
     def __init__(self, sensor_id: str, message: str, **kwargs):

@@ -46,10 +46,8 @@ def test_sanitize_nested_and_dos_protection():
     sanitized_deep = sanitize(deep_dict, max_depth=5)
     # Somewhere deep, it should become the safe placeholder
     curr_san = sanitized_deep
-    found_placeholder = False
     for _ in range(12):
         if curr_san == "[deeply nested structure]":
-            found_placeholder = True
             break
         if "nested" in curr_san:
             curr_san = curr_san["nested"]

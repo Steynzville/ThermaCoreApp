@@ -50,7 +50,7 @@ def test_statistical_anomaly_detector_z_score():
     assert is_anom is False
 
     # Anomaly value
-    is_anom, score, stats = detector.detect_z_score_anomalies(values, 15.0)
+    is_anom, score, _stats = detector.detect_z_score_anomalies(values, 15.0)
     assert is_anom is True
     assert score > 2.0
 
@@ -79,7 +79,7 @@ def test_statistical_anomaly_detector_iqr():
     assert score > 0.0
 
     # Zero IQR
-    is_anom, score, stats = detector.detect_iqr_anomalies([1.0, 1.0, 1.0, 1.0], 5.0)
+    is_anom, score, _stats = detector.detect_iqr_anomalies([1.0, 1.0, 1.0, 1.0], 5.0)
     assert is_anom is True
 
 
@@ -101,7 +101,7 @@ def test_moving_average_anomaly_detector():
     assert is_anom is False
 
     # Anomaly
-    is_anom, score, stats = detector.detect_anomalies(values, 15.0)
+    is_anom, _score, _stats = detector.detect_anomalies(values, 15.0)
     assert is_anom is True
 
 

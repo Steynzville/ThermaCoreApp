@@ -154,7 +154,7 @@ def initialize_swagger(app: Any) -> None:
             Swagger(app, template=swagger_template)
         except Exception as e:
             logger = logging.getLogger(__name__)
-            logger.exception(f"Swagger initialization failed: {e}")
+            logger.exception("Swagger initialization failed")
     except ImportError:
         pass
 
@@ -164,7 +164,8 @@ def import_models() -> None:
 
     This is intentional to ensure SQLAlchemy models are loaded.
     """
-    try:
+    import contextlib
+    with contextlib.suppress(ImportError):
         from app.models import (  # noqa: PLC0415, F401 - Intentional lazy loading for SQLAlchemy
             Permission,
             Role,
@@ -173,8 +174,6 @@ def import_models() -> None:
             Unit,
             User,
         )
-    except ImportError:
-        pass  # Models may not be importable without full dependencies
 
 
 def run_auto_migrations(app: Any) -> None:
@@ -194,4 +193,4 @@ def run_auto_migrations(app: Any) -> None:
         run_migrations(app)
     except Exception as e:
         migration_logger = logging.getLogger(__name__)
-        migration_logger.exception(f"Auto-migration failed (non-critical): {e}")
+        migration_logger.exception("Auto-migration failed (non-critical)")

@@ -84,7 +84,7 @@ class TestTimezoneAwareMaintenance:
         # Fix the current time for deterministic tests
         fixed_now = datetime(2024, 4, 15, 10, 0, 0, tzinfo=timezone.utc)
         mock_datetime.now.return_value = fixed_now
-        mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
+        mock_datetime.side_effect = datetime
 
         with app.app_context():
             # Create mock unit with timezone-aware datetime - 100 days before fixed_now
@@ -195,7 +195,7 @@ class TestTimezoneAwareMaintenance:
         # Fix datetime for consistent testing
         fixed_now = datetime(2024, 4, 15, 10, 0, 0, tzinfo=timezone.utc)
         mock_datetime.now.return_value = fixed_now
-        mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
+        mock_datetime.side_effect = datetime
 
         with app.app_context():
             mock_unit = Mock()

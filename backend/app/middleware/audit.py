@@ -472,8 +472,8 @@ def audit_operation(
 def setup_audit_middleware(app):
     """Set up audit logging middleware for the Flask app."""
     # Define endpoints/paths to exclude from audit logging
-    EXCLUDED_ENDPOINTS = ["health", "metrics", "docs", "swagger", "swaggerui"]
-    EXCLUDED_PATHS = [
+    excluded_endpoints = ["health", "metrics", "docs", "swagger", "swaggerui"]
+    excluded_paths = [
         "/health",
         "/metrics",
         "/docs",
@@ -487,8 +487,8 @@ def setup_audit_middleware(app):
         """Log API access for auditing."""
         if request.endpoint and not request.endpoint.startswith("static"):
             # Use explicit path and endpoint checks for exclusion
-            if request.endpoint in EXCLUDED_ENDPOINTS or any(
-                request.path.startswith(p) for p in EXCLUDED_PATHS
+            if request.endpoint in excluded_endpoints or any(
+                request.path.startswith(p) for p in excluded_paths
             ):
                 return
 

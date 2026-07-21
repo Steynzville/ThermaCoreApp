@@ -98,7 +98,7 @@ def test_validate_json_request_decorator(app):
 
     # Case 1: Not JSON
     with app.test_request_context(headers={"Content-Type": "text/html"}):
-        res, status_code = dummy_route()
+        _res, status_code = dummy_route()
         assert status_code == 400
 
     # Case 2: Empty JSON body

@@ -11,7 +11,7 @@ def test_get_users_list(client, admin_token):
 
     # Mock paginate and query
     with (
-        patch("app.models.User.query") as mock_user_query,
+        patch("app.models.User.query"),
         patch("app.routes.users.tenant_filter") as mock_tenant_filter,
     ):
         mock_pagination = MagicMock()

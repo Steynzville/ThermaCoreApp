@@ -480,14 +480,14 @@ class OPCUAClient:
                         logger.exception(
                             f"Failed to load OPC UA certificates: {cert_error}",
                         )
-                        raise cert_error
+                        raise
 
                 except Exception as security_error:
                     logger.exception(
                         f"Failed to configure OPC UA security: {security_error}",
                     )
                     # Always fail fast for security configuration errors (not just production)
-                    raise security_error
+                    raise
 
             elif is_prod:
                 logger.error(

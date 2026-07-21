@@ -216,14 +216,14 @@ class AnomalyDetectionService:
                 )
             )
 
-            iqr_anomaly, iqr_score, iqr_stats = (
+            iqr_anomaly, iqr_score, _iqr_stats = (
                 self._statistical_detector.detect_iqr_anomalies(
                     historical_values,
                     value,
                 )
             )
 
-            ma_anomaly, ma_score, ma_stats = (
+            ma_anomaly, ma_score, _ma_stats = (
                 self._moving_average_detector.detect_anomalies(historical_values, value)
             )
 

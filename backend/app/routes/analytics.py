@@ -249,8 +249,8 @@ def get_unit_trends(args, unit_id):
             )
 
         # Calculate statistics for each sensor type
-        for sensor_key in trends:
-            values = [d["value"] for d in trends[sensor_key]["data"]]
+        for sensor_key, sensor_data in trends.items():
+            values = [d["value"] for d in sensor_data["data"]]
             if values:
                 trends[sensor_key]["statistics"] = {
                     "min": min(values),

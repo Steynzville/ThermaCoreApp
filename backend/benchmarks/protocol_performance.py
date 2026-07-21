@@ -17,6 +17,7 @@ Benchmark Targets:
 import json
 import logging
 import statistics
+import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -59,7 +60,7 @@ class ProtocolPerformanceBenchmark:
 
         times: list[float] = []
 
-        for i in range(iterations):
+        for _i in range(iterations):
             start = time.perf_counter()
             func()
             end = time.perf_counter()
@@ -387,4 +388,4 @@ def main():
 
 
 if __name__ == "__main__":
-    exit(main())
+    sys.exit(main())

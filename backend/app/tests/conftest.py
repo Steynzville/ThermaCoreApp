@@ -162,13 +162,13 @@ def app():
         yield app
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def client(app):
     """Create test client."""
     return app.test_client()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def db_session(app):
     """Create database session for tests with proper transaction isolation.
 
@@ -261,12 +261,6 @@ def isolated_config():
     }
 
     # Store original config class references
-    original_classes = {
-        "Config": config.Config,
-        "DevelopmentConfig": config.DevelopmentConfig,
-        "ProductionConfig": config.ProductionConfig,
-        "TestingConfig": config.TestingConfig,
-    }
 
     yield
 
@@ -636,7 +630,7 @@ def admin_no_tenant_headers(admin_token):
     return {"Authorization": f"Bearer {admin_token}"}
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def test_data(db_session):
     """Create test data within a transaction that rolls back after test."""
     from datetime import datetime

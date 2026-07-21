@@ -38,7 +38,7 @@ def test_permission_required_decorator(app):
     # Scenario 1: JWT token invalid or get_current_user_id fails
     with app.test_request_context():
         with (
-            patch("app.middleware.authorization.verify_jwt_in_request") as mock_verify,
+            patch("app.middleware.authorization.verify_jwt_in_request"),
             patch(
                 "app.middleware.authorization.get_current_user_id",
                 return_value=(None, False),
@@ -179,12 +179,12 @@ def test_role_required_decorator(app):
     # Scenario 1: JWT token invalid or get_current_user_id fails
     with app.test_request_context():
         with (
-            patch("app.middleware.authorization.verify_jwt_in_request") as mock_verify,
+            patch("app.middleware.authorization.verify_jwt_in_request"),
             patch(
                 "app.middleware.authorization.get_current_user_id",
                 return_value=(None, False),
             ),
-            patch("app.middleware.authorization.audit_permission_check") as mock_audit,
+            patch("app.middleware.authorization.audit_permission_check"),
         ):
             res = dummy_endpoint()
             assert res[1] == 401

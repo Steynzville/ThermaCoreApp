@@ -236,7 +236,7 @@ class TestTenantIsolation:
 
     def test_ensure_tenant_isolation_admin(self, app, tenants):
         """Test admin can access any tenant's objects."""
-        tenant1_id, tenant2_id = tenants
+        tenant1_id, _tenant2_id = tenants
 
         with app.app_context():
             from datetime import datetime
@@ -260,7 +260,7 @@ class TestTenantIsolation:
 
     def test_ensure_tenant_isolation_own_tenant(self, app, tenants):
         """Test user can access their own tenant's objects."""
-        tenant1_id, tenant2_id = tenants
+        tenant1_id, _tenant2_id = tenants
 
         with app.app_context():
             from datetime import datetime
@@ -315,7 +315,7 @@ class TestSetTenantForNewObject:
 
     def test_set_tenant_for_new_object(self, app, tenants):
         """Test setting tenant for new object."""
-        tenant1_id, tenant2_id = tenants
+        tenant1_id, _tenant2_id = tenants
 
         with app.app_context():
             from datetime import datetime
@@ -341,7 +341,7 @@ class TestSetTenantForNewObject:
 
     def test_set_tenant_preserves_existing(self, app, tenants):
         """Test that existing tenant_id is preserved."""
-        tenant1_id, tenant2_id = tenants
+        _tenant1_id, tenant2_id = tenants
 
         with app.app_context():
             from datetime import datetime

@@ -22,7 +22,7 @@ class TestSecureLoggingIntegration:
             error = Exception("Database error: password=secret123")
 
             with patch("app.utils.error_handler.logger") as mock_logger:
-                response, status_code = SecurityAwareErrorHandler.handle_service_error(
+                _response, _status_code = SecurityAwareErrorHandler.handle_service_error(
                     error,
                     "database_error",
                     "Test operation",
@@ -45,7 +45,7 @@ class TestSecureLoggingIntegration:
             error = ValueError("Invalid input value")
 
             with patch("app.utils.error_handler.logger") as mock_logger:
-                response, status_code = SecurityAwareErrorHandler.handle_service_error(
+                _response, _status_code = SecurityAwareErrorHandler.handle_service_error(
                     error,
                     "validation_error",
                     "Input validation",
@@ -72,7 +72,7 @@ class TestSecureLoggingIntegration:
             error = Exception("API call failed with token=abc123xyz")
 
             with patch("app.utils.error_handler.logger") as mock_logger:
-                response, status_code = SecurityAwareErrorHandler.handle_service_error(
+                _response, _status_code = SecurityAwareErrorHandler.handle_service_error(
                     error,
                     "internal_error",
                     "API call",
@@ -101,7 +101,7 @@ class TestSecureLoggingIntegration:
             )
 
             with patch("app.utils.error_handler.logger") as mock_logger:
-                response, status_code = (
+                _response, _status_code = (
                     SecurityAwareErrorHandler.handle_thermacore_exception(exception)
                 )
 
@@ -125,7 +125,7 @@ class TestSecureLoggingIntegration:
             error = RuntimeError("Unexpected runtime error")
 
             with patch("app.utils.error_handler.logger") as mock_logger:
-                response, status_code = SecurityAwareErrorHandler.handle_service_error(
+                _response, _status_code = SecurityAwareErrorHandler.handle_service_error(
                     error,
                     "internal_error",
                     "background_task",
@@ -154,7 +154,7 @@ class TestSecureLoggingIntegration:
             )
 
             with patch("app.utils.error_handler.logger"):
-                response, status_code = SecurityAwareErrorHandler.handle_service_error(
+                response, _status_code = SecurityAwareErrorHandler.handle_service_error(
                     error,
                     "authentication_error",
                     "login",
@@ -177,7 +177,7 @@ class TestSecureLoggingIntegration:
             )
 
             with patch("app.utils.error_handler.logger") as mock_logger:
-                response, status_code = SecurityAwareErrorHandler.handle_service_error(
+                _response, _status_code = SecurityAwareErrorHandler.handle_service_error(
                     error,
                     "authentication_error",
                     "user_login",

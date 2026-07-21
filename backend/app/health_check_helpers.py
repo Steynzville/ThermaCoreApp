@@ -410,7 +410,7 @@ def create_detailed_health_check_endpoint(app: Any) -> Any:
         from flask import jsonify
 
         # Get detailed service status
-        services, is_degraded, critical_services_down = check_all_services(app)
+        services, _is_degraded, _critical_services_down = check_all_services(app)
 
         # Simplify service status for detailed endpoint using helper function
         services_status = {

@@ -24,7 +24,7 @@ def validate_registry() -> None:
     protocol_names: set[str] = set()
     duplicates: list[str] = []
 
-    for name, attr in REGISTRY:
+    for name, _attr in REGISTRY:
         if name in protocol_names:
             duplicates.append(name)
         else:

@@ -113,7 +113,7 @@ def test_load_trust_certificate_file_not_found(mock_crypto):
 
 def test_load_trust_certificate_expired(mock_crypto):
     """Test loading expired certificate throws ValueError."""
-    mock_pem, mock_der, cert_mock = mock_crypto
+    _mock_pem, _mock_der, cert_mock = mock_crypto
     # Setup expired certificate dates
     cert_mock.not_valid_after_utc = datetime.now(timezone.utc) - timedelta(days=1)
     cert_mock.not_valid_before_utc = datetime.now(timezone.utc) - timedelta(days=5)
@@ -132,7 +132,7 @@ def test_load_trust_certificate_expired(mock_crypto):
 
 def test_load_trust_certificate_not_yet_valid(mock_crypto):
     """Test loading not yet valid certificate throws ValueError."""
-    mock_pem, mock_der, cert_mock = mock_crypto
+    _mock_pem, _mock_der, cert_mock = mock_crypto
     # Setup not yet valid dates
     cert_mock.not_valid_after_utc = datetime.now(timezone.utc) + timedelta(days=5)
     cert_mock.not_valid_before_utc = datetime.now(timezone.utc) + timedelta(days=1)
@@ -151,7 +151,7 @@ def test_load_trust_certificate_not_yet_valid(mock_crypto):
 
 def test_load_trust_certificate_success(mock_crypto):
     """Test loading valid trust certificate."""
-    mock_pem, mock_der, cert_mock = mock_crypto
+    _mock_pem, _mock_der, _cert_mock = mock_crypto
     client = OPCUAClient()
     client.trust_cert_file = "valid.pem"
     client.client = MagicMock()
@@ -170,7 +170,7 @@ def test_init_app_scenarios(app):
     # Force opcua_available = True for testing
     with (
         patch.object(opcua_service, "opcua_available", True),
-        patch.object(opcua_service, "Client") as mock_client,
+        patch.object(opcua_service, "Client"),
     ):
         client = OPCUAClient()
 

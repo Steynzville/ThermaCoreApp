@@ -86,7 +86,7 @@ class TestRateLimiter:
         limiter = RateLimiter()
 
         # Make requests up to limit
-        for i in range(5):
+        for _i in range(5):
             is_allowed, info = limiter.is_allowed("test_user_block", 5, 60)
             assert is_allowed
 

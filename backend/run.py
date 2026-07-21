@@ -286,7 +286,7 @@ def create_admin():
 
 if __name__ == "__main__":
     # Get port from environment or use default
-    port = int(os.environ.get("PORT", 10000))
+    port = int(os.environ.get("PORT", "10000"))
 
     # Run the Flask app
     # In production, use Gunicorn instead of Flask's built-in server

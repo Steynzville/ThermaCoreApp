@@ -101,9 +101,9 @@ class TestErrorRecovery:
             try:
                 result = database_query()
                 break
-            except Exception as e:
+            except Exception:
                 if i == max_attempts - 1:
-                    raise e
+                    raise
 
         assert attempts == 3
         assert result == "query_success"

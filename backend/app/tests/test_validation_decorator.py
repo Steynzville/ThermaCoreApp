@@ -74,7 +74,8 @@ class TestValidationDecorator:
         assert "error" in data
         # Accept either error message format
         error_msg = data["error"].lower()
-        assert "json" in error_msg and ("invalid" in error_msg or "valid" in error_msg)
+        assert "json" in error_msg
+        assert ("invalid" in error_msg or "valid" in error_msg)
 
     def test_malformed_json_request(self, client):
         """Test that malformed JSON is rejected."""

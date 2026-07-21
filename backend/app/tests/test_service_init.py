@@ -113,7 +113,7 @@ def test_initialize_opcua_clients_success():
     mock_standard = MagicMock()
     mock_storage = MagicMock()
 
-    with patch("app.service_init.safe_service_init") as mock_safe_init:
+    with patch("app.service_init.safe_service_init"):
         _initialize_opcua_clients(
             mock_app,
             mock_logger,
