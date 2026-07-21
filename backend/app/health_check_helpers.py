@@ -148,7 +148,7 @@ def check_mqtt_service(app: Any, services: dict[str, Any]) -> tuple[bool, bool]:
                 return True, False
         except Exception as e:
             if not hasattr(app, "mqtt_error_logged"):
-                app.logger.exception(f"Error getting MQTT status: {e}")
+                app.logger.exception("Error getting MQTT status")
                 app.mqtt_error_logged = True
             services["mqtt"] = {
                 "status": "error",
@@ -212,7 +212,7 @@ def check_opcua_service(app: Any, services: dict[str, Any]) -> tuple[bool, bool]
         tuple: (is_degraded, is_critical)
     """
     # In test environment, don't mark as critical if not initialized
-    is_testing = app.config.get("TESTING", False)
+    is_testing = app.config.get("TESTING")
 
     if hasattr(app, "opcua_client") and app.opcua_client is not None:
         try:
@@ -225,7 +225,7 @@ def check_opcua_service(app: Any, services: dict[str, Any]) -> tuple[bool, bool]
                 return True, False
         except Exception as e:
             if not hasattr(app, "opcua_error_logged"):
-                app.logger.exception(f"Error getting OPC UA status: {e}")
+                app.logger.exception("Error getting OPC UA status")
                 app.opcua_error_logged = True
             services["opcua"] = {
                 "status": "error",
@@ -386,7 +386,7 @@ def _get_service_status(
 
     # Handle database service (different structure)
     if service_name == "database":
-        return "connected" if service_status.get("available", False) else "error"
+        return "connected" if service_status.get("available") else "error"
 
     # Handle other services with standard structure
     if isinstance(service_status, dict) and service_status.get("status") == "error":

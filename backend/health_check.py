@@ -127,7 +127,7 @@ def main():
             return 0
 
     except Exception as e:
-        logger.exception(f"❌ FATAL ERROR: {e}")
+        logger.exception("❌ FATAL ERROR")
         return 1
 
 

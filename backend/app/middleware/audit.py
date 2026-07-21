@@ -285,7 +285,7 @@ class AuditLogger:
 
         except Exception as e:
             # Audit logging must never fail the main operation
-            logger.exception(f"Failed to log audit event: {e}")
+            logger.exception("Failed to log audit event")
 
     @staticmethod
     def log_authentication_event(

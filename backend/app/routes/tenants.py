@@ -410,7 +410,7 @@ def delete_tenant(tenant_id):
     except Exception as e:
         # Catch any unexpected errors
         db.session.rollback()
-        logger.exception("Unexpected error deleting tenant: %s", e)
+        logger.exception("Unexpected error deleting tenant: %s")
         return (
             jsonify(
                 {

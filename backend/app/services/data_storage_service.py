@@ -150,11 +150,11 @@ class DataStorageService:
 
         except IntegrityError as e:
             db.session.rollback()
-            logger.exception(f"Database integrity error storing sensor data: {e}")
+            logger.exception("Database integrity error storing sensor data")
             return False
         except Exception as e:
             db.session.rollback()
-            logger.exception(f"Error storing sensor data: {e}")
+            logger.exception("Error storing sensor data")
             return False
 
     def find_or_create_sensor(self, unit_id: str, sensor_type: str) -> Sensor | None:

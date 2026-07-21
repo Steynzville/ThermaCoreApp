@@ -134,7 +134,7 @@ def collect_protocol_status() -> list[dict]:
                         status_obj.update_availability_level()
 
             except Exception as exc:  # Defensive: capture per-adapter failure
-                logger.exception(f"Failed to get status for protocol '{name}': {exc!s}")
+                logger.exception("Failed to get status for protocol '{name}'")
                 status_obj = ProtocolStatus(
                     name=name,
                     available=False,

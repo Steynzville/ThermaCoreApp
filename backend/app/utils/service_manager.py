@@ -317,7 +317,7 @@ def initialize_service(
     except Exception as e:
         # Record error
         service_manager.set_service_error(manager_name, e)
-        logger.exception(f"Failed to initialize {service_name}: {e}")
+        logger.exception("Failed to initialize {service_name}")
 
         # Determine if we should raise based on production status and service type
         from app.utils.environment import (  # noqa: PLC0415 - Avoid circular import

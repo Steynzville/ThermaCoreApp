@@ -149,15 +149,13 @@ def validate_user_role(user: Any) -> tuple[Any, int] | None:
         if not role_name:
             raise ValidationError("Role name is empty")
     except AttributeError as attr_error:
-        current_app.logger.exception(
-            f"User {user.username} role object is malformed: {attr_error}",
+        current_app.logger.exception("User {user.username} role object is malformed",
             extra={
                 "event": "malformed_role",
                 "username": user.username,
                 "user_id": user.id,
                 "role_id": user.role_id,
-            },
-        )
+            },)
         return SecurityAwareErrorHandler.handle_service_error(
             Exception("User role configuration is invalid"),
             "configuration_error",
@@ -165,10 +163,8 @@ def validate_user_role(user: Any) -> tuple[Any, int] | None:
             500,
         )
     except Exception as role_error:
-        current_app.logger.exception(
-            f"Unexpected error validating role for user {user.username}: {role_error}",
-            extra={"event": "role_validation_error", "username": user.username},
-        )
+        current_app.logger.exception("Unexpected error validating role for user {user.username}",
+            extra={"event": "role_validation_error", "username": user.username},)
         return SecurityAwareErrorHandler.handle_service_error(
             role_error,
             "configuration_error",

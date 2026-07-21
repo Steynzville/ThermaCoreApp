@@ -253,7 +253,7 @@ class MockDNP3Master:
             return True
 
         except Exception as e:
-            logger.exception(f"Failed to add DNP3 outstation {outstation_address}: {e}")
+            logger.exception("Failed to add DNP3 outstation {outstation_address}")
             return False
 
     @dnp3_performance_monitor("connect_outstation")
@@ -612,7 +612,7 @@ class DNP3Service:
             return True
 
         except Exception as e:
-            logger.exception(f"Failed to add DNP3 device {device_id}: {e}")
+            logger.exception("Failed to add DNP3 device {device_id}")
             return False
 
     def remove_device(self, device_id: str) -> bool:
@@ -637,7 +637,7 @@ class DNP3Service:
             return True
 
         except Exception as e:
-            logger.exception(f"Failed to remove DNP3 device {device_id}: {e}")
+            logger.exception("Failed to remove DNP3 device {device_id}")
             return False
 
     @dnp3_performance_monitor("connect_device")
@@ -674,7 +674,7 @@ class DNP3Service:
             return success
 
         except Exception as e:
-            logger.exception(f"Failed to connect to DNP3 device {device_id}: {e}")
+            logger.exception("Failed to connect to DNP3 device {device_id}")
             return False
 
     @dnp3_performance_monitor("disconnect_device")
@@ -704,7 +704,7 @@ class DNP3Service:
             return True
 
         except Exception as e:
-            logger.exception(f"Failed to disconnect from DNP3 device {device_id}: {e}")
+            logger.exception("Failed to disconnect from DNP3 device {device_id}")
             return False
 
     def add_data_point_config(
@@ -742,8 +742,7 @@ class DNP3Service:
             return True
 
         except Exception as e:
-            logger.exception(
-                f"Failed to add data point config for device {device_id}: {e}",
+            logger.exception("Failed to add data point config for device {device_id}: {e}",
             )
             return False
 
@@ -762,7 +761,7 @@ class DNP3Service:
                 raise ConnectionError(f"Device {device_id} not connected")
 
             if device_id not in self._data_point_configs:
-                raise ValueError(f"No data point configuration for device {device_id}")
+                raise ValueError(f"No data point configuration for device")
 
             if not self._master:
                 raise ConfigurationError("DNP3 master not initialized")
@@ -1027,7 +1026,7 @@ class DNP3Service:
             }
 
         except Exception as e:
-            logger.exception(f"Failed to read device data for {device_id}: {e}")
+            logger.exception("Failed to read device data for {device_id}")
             return {
                 "device_id": device_id,
                 "timestamp": utc_now().isoformat(),
@@ -1078,7 +1077,7 @@ class DNP3Service:
             return success
 
         except Exception as e:
-            logger.exception(f"Failed to write data point on device {device_id}: {e}")
+            logger.exception("Failed to write data point on device {device_id}")
             return False
 
     def perform_integrity_poll(self, device_id: str) -> bool:
@@ -1365,7 +1364,7 @@ class DNP3Service:
         is_testing = (
             hasattr(self, "_app")
             and self._app
-            and self._app.config.get("TESTING", False)
+            and self._app.config.get("TESTING")
         ) or os.getenv("TESTING", "false").lower() == "true"
         is_demo_mode = (
             os.getenv("FLASK_ENV", "production") != "production"

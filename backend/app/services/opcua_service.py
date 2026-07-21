@@ -225,7 +225,7 @@ class OPCUAClient:
                 not_valid_after = getattr(
                     certificate,
                     "not_valid_after_utc",
-                    getattr(certificate, "not_valid_after", None),
+                    getattr(certificate, "not_valid_after"),
                 )
                 if not_valid_after is None:
                     raise AttributeError("Certificate has no not_valid_after attribute")
@@ -248,10 +248,9 @@ class OPCUAClient:
                 )
 
             except AttributeError as e:
-                logger.exception(
-                    f"Certificate validation failed: unsupported certificate format - {e}",
+                logger.exception("Certificate validation failed: unsupported certificate format - {e}",
                 )
-                raise ValueError(f"Certificate format not supported: {e}") from e
+                raise ValueError(f"Certificate format not supported") from e
 
             if not_valid_after_utc < now:
                 logger.error(
@@ -354,7 +353,7 @@ class OPCUAClient:
                 is_prod = is_production_environment(app)
             except ValueError as e:
                 # Environment detection failed - this indicates a dangerous configuration
-                logger.exception(f"Environment detection failed: {e}")
+                logger.exception("Environment detection failed")
                 raise ValueError(
                     f"OPC UA service cannot initialize due to environment configuration error: {e}",
                 ) from e
@@ -477,8 +476,7 @@ class OPCUAClient:
 
                     except Exception as cert_error:
                         # Handle certificate-specific errors separately from general security errors
-                        logger.exception(
-                            f"Failed to load OPC UA certificates: {cert_error}",
+                        logger.exception("Failed to load OPC UA certificates: {cert_error}",
                         )
                         raise
 
@@ -508,7 +506,7 @@ class OPCUAClient:
 
             logger.info(f"OPC UA client initialized for server: {self.server_url}")
         except Exception as e:
-            logger.exception(f"Failed to initialize OPC UA client: {e}")
+            logger.exception(f"Failed to initialize OPC UA client")
             raise
 
     def connect(self) -> bool:
@@ -546,7 +544,7 @@ class OPCUAClient:
                 self.client.disconnect()
                 self.connected = False
             except Exception as e:
-                logger.exception(f"Error disconnecting from OPC UA server: {e}")
+                logger.exception("Error disconnecting from OPC UA server")
 
     def add_node_mapping(
         self,
@@ -622,7 +620,7 @@ class OPCUAClient:
             return True
 
         except Exception as e:
-            logger.exception(f"Failed to subscribe to node {node_id}: {e}")
+            logger.exception("Failed to subscribe to node {node_id}")
             return False
 
     def read_node_value(self, node_id: str) -> dict[str, Any] | None:
@@ -675,7 +673,7 @@ class OPCUAClient:
             }
 
         except Exception as e:
-            logger.exception(f"Failed to read node {node_id}: {e}")
+            logger.exception("Failed to read node {node_id}")
             return None
 
     def read_all_subscribed_nodes(self) -> dict[str, dict[str, Any]]:
@@ -760,7 +758,7 @@ class OPCUAClient:
                 return success
 
         except Exception as e:
-            logger.exception(f"Failed to process OPC UA data: {e}")
+            logger.exception("Failed to process OPC UA data")
             return False
 
     def poll_subscribed_nodes(self):
@@ -790,7 +788,7 @@ class OPCUAClient:
             try:
                 self.process_and_store_node_data(node_id)
             except Exception as e:
-                logger.exception(f"Error polling node {node_id}: {e}")
+                logger.exception("Error polling node {node_id}")
 
     def browse_server_nodes(self, root_node_id: str = "i=85") -> list[dict[str, Any]]:
         """Browse OPC UA server nodes starting from root.
@@ -836,13 +834,13 @@ class OPCUAClient:
                     nodes.append(node_info)
 
                 except Exception as e:
-                    logger.exception(f"Error reading node info: {e}")
+                    logger.exception("Error reading node info")
                     continue
 
             return nodes
 
         except Exception as e:
-            logger.exception(f"Failed to browse server nodes: {e}")
+            logger.exception("Failed to browse server nodes")
             return []
 
     def get_status(self) -> dict[str, Any]:

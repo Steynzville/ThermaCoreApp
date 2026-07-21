@@ -263,7 +263,7 @@ class AnomalyDetectionService:
             return result
 
         except Exception as e:
-            logger.exception(f"Error analyzing sensor reading: {e}")
+            logger.exception("Error analyzing sensor reading")
             # Return safe default
             return AnomalyResult(
                 sensor_id=sensor_id,
@@ -373,7 +373,7 @@ class AnomalyDetectionService:
             }
 
         except Exception as e:
-            logger.exception(f"Error analyzing unit anomalies: {e}")
+            logger.exception("Error analyzing unit anomalies")
             return {
                 "unit_id": unit_id,
                 "error": str(e),

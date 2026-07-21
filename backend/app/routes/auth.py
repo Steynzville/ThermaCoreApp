@@ -723,10 +723,8 @@ def change_password(data):
         )
 
     except Exception as e:
-        current_app.logger.exception(
-            f"Error changing password: {e}",
-            extra={"event": "password_change_error"},
-        )
+        current_app.logger.exception("Error changing password",
+            extra={"event": "password_change_error"},)
         db.session.rollback()
         return SecurityAwareErrorHandler.handle_service_error(
             e,
@@ -836,10 +834,8 @@ def forgot_password(data):
         )
 
     except Exception as e:
-        current_app.logger.exception(
-            f"Error processing password reset request: {e}",
-            extra={"event": "password_reset_request_error"},
-        )
+        current_app.logger.exception("Error processing password reset request",
+            extra={"event": "password_reset_request_error"},)
         db.session.rollback()
         return SecurityAwareErrorHandler.handle_service_error(
             e,
@@ -957,10 +953,8 @@ def reset_password(data):
         )
 
     except Exception as e:
-        current_app.logger.exception(
-            f"Error resetting password: {e}",
-            extra={"event": "password_reset_error"},
-        )
+        current_app.logger.exception("Error resetting password",
+            extra={"event": "password_reset_error"},)
         db.session.rollback()
         return SecurityAwareErrorHandler.handle_service_error(
             e,
@@ -1129,10 +1123,8 @@ def emergency_admin():
 
     except Exception as e:
         logger = logging.getLogger(__name__)
-        logger.exception(
-            f"Error in emergency admin endpoint: {e}",
-            extra={"event": "emergency_admin_error"},
-        )
+        logger.exception("Error in emergency admin endpoint",
+            extra={"event": "emergency_admin_error"},)
         return SecurityAwareErrorHandler.handle_service_error(
             e,
             "internal_error",

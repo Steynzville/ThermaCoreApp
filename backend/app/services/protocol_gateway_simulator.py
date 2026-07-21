@@ -113,7 +113,7 @@ class ProtocolGatewaySimulator:
             return self.connected
 
         except Exception as e:
-            logger.exception(f"Failed to connect to MQTT broker: {e}")
+            logger.exception("Failed to connect to MQTT broker")
             return False
 
     def _on_mqtt_connect(self, _client, _userdata, _flags, rc):
@@ -227,7 +227,7 @@ class ProtocolGatewaySimulator:
                 logger.error(f"Failed to publish data to {topic}")
 
         except Exception as e:
-            logger.exception(f"Error publishing sensor data: {e}")
+            logger.exception("Error publishing sensor data")
 
     def simulate_unit_status_change(self, unit_id: str):
         """Occasionally simulate unit status changes.
@@ -279,7 +279,7 @@ class ProtocolGatewaySimulator:
                 time.sleep(5)  # Generate data every 5 seconds
 
             except Exception as e:
-                logger.exception(f"Error in simulation loop: {e}")
+                logger.exception("Error in simulation loop")
                 time.sleep(1)
 
         logger.info("Protocol gateway simulation loop stopped")

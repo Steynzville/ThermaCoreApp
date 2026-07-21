@@ -782,7 +782,7 @@ def approve_user(user_id):
     except Exception as e:
         db.session.rollback()
         # Log the error internally but don't expose stack trace to user
-        current_app.logger.exception(f"Failed to approve user {user_id}: {e!s}")
+        current_app.logger.exception("Failed to approve user {user_id}")
         return jsonify({"error": "Failed to approve user"}), 500
 
 
@@ -871,5 +871,5 @@ def reject_user(user_id):
     except Exception as e:
         db.session.rollback()
         # Log the error internally but don't expose stack trace to user
-        current_app.logger.exception(f"Failed to reject user {user_id}: {e!s}")
+        current_app.logger.exception("Failed to reject user {user_id}")
         return jsonify({"error": "Failed to reject user"}), 500

@@ -81,7 +81,7 @@ def initialize_all_services(app: Any, logger: logging.Logger) -> None:
             )
             logger.info("Protocol simulator initialized successfully")
         except Exception as e:
-            logger.exception(f"Protocol simulator initialization failed: {e}")
+            logger.exception("Protocol simulator initialization failed")
             protocol_simulator = None
 
         # Store references in app for easy access
@@ -141,7 +141,7 @@ def _initialize_critical_services(
     if skip_external:
         logger.info("Skipping MQTT client initialization (external services disabled)")
     else:
-        mqtt_required = app.config.get("SERVICE_MQTT_REQUIRED", True)
+        mqtt_required = app.config.get("SERVICE_MQTT_REQUIRED")
         safe_service_init(
             mqtt_client,
             "MQTT client",
