@@ -1,14 +1,22 @@
 """Rate limiting middleware for ThermaCore SCADA API."""
 
+import logging
 import time
 import uuid
 from collections.abc import Callable
 from datetime import datetime, timezone
 from functools import wraps
+from threading import Lock
 from typing import ClassVar
 
 import redis
 from flask import current_app, g, jsonify, request
+
+logger = logging.getLogger(__name__)
+
+# Global rate limiter instance with thread-safe lock
+_rate_limiter = None
+_rate_limiter_lock = Lock()
 
 
 class RateLimiter:
@@ -58,7 +66,6 @@ class RateLimiter:
 
         """
         current_time = time.time()
-        current_time - window_seconds
 
         try:
             if self.redis_client:
@@ -74,8 +81,12 @@ class RateLimiter:
                 window_seconds,
                 current_time,
             )
-        except Exception:
-            # Fallback to allowing request if rate limiting fails
+        except Exception as e:
+            # Log the error but fallback to allowing request
+            logger.error(
+                f"Rate limiter error for {identifier}: {e}",
+                exc_info=True,
+            )
             return True, {
                 "limit": limit,
                 "remaining": limit - 1,
@@ -99,7 +110,10 @@ class RateLimiter:
         window_start = current_time - window_seconds
         pipe.zremrangebyscore(key, 0, window_start)
         pipe.zcard(key)
-        pipe.zadd(key, {str(current_time): current_time})
+
+        # Use unique member to avoid collision when requests land at same timestamp
+        unique_member = f"{current_time}:{uuid.uuid4()}"
+        pipe.zadd(key, {unique_member: current_time})
         pipe.expire(key, window_seconds + 1)
 
         results = pipe.execute()
@@ -111,7 +125,7 @@ class RateLimiter:
 
         if not is_allowed:
             # Remove the request we added since it's not allowed
-            self.redis_client.zrem(key, str(current_time))
+            self.redis_client.zrem(key, unique_member)
 
         return is_allowed, {
             "limit": limit,
@@ -163,26 +177,25 @@ class RateLimiter:
         }
 
 
-# Global rate limiter instance
-_rate_limiter = None
-
-
 def get_rate_limiter() -> RateLimiter:
-    """Get or create rate limiter instance."""
+    """Get or create rate limiter instance with thread-safe locking."""
     global _rate_limiter
     if _rate_limiter is None:
-        try:
-            # Try to initialize Redis client
-            redis_url = current_app.config.get("REDIS_URL")
-            if redis_url:
-                redis_client = redis.from_url(redis_url, decode_responses=True)
-                redis_client.ping()  # Test connection
-                _rate_limiter = RateLimiter(redis_client)
-            else:
-                _rate_limiter = RateLimiter()
-        except Exception:
-            # Fallback to memory-based rate limiting
-            _rate_limiter = RateLimiter()
+        with _rate_limiter_lock:
+            # Double-check after acquiring lock
+            if _rate_limiter is None:
+                try:
+                    # Try to initialize Redis client
+                    redis_url = current_app.config.get("REDIS_URL")
+                    if redis_url:
+                        redis_client = redis.from_url(redis_url, decode_responses=True)
+                        redis_client.ping()  # Test connection
+                        _rate_limiter = RateLimiter(redis_client)
+                    else:
+                        _rate_limiter = RateLimiter()
+                except Exception:
+                    # Fallback to memory-based rate limiting
+                    _rate_limiter = RateLimiter()
 
     return _rate_limiter
 
@@ -221,9 +234,11 @@ def rate_limit(
 
                 try:
                     identity = get_jwt_identity()
-                    identifier = (
-                        f"user:{identity}" if identity else f"ip:{request.remote_addr}"
-                    )
+                    # Check for None explicitly; identity could be 0 or empty string
+                    if identity is not None:
+                        identifier = f"user:{identity}"
+                    else:
+                        identifier = f"ip:{request.remote_addr or 'unknown'}"
                 except Exception:
                     identifier = f"ip:{request.remote_addr or 'unknown'}"
             elif per == "endpoint":
