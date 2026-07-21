@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from webargs.flaskparser import use_args
 
 from app import db
-from app.exceptions import ValidationException
+from app.exceptions import ValidationError
 from app.middleware.audit import AuditEventType, AuditLogger
 from app.middleware.authorization import permission_required
 from app.middleware.rate_limit import auth_rate_limit, standard_rate_limit
@@ -321,7 +321,7 @@ def login(data):
             # Pre-validate configuration
             if "JWT_ACCESS_TOKEN_EXPIRES" not in current_app.config:
                 current_app.logger.error("JWT_ACCESS_TOKEN_EXPIRES not configured")
-                raise ValidationException("JWT configuration incomplete")
+                raise ValidationError("JWT configuration incomplete")
 
             token_schema = TokenSchema()
 
@@ -344,7 +344,7 @@ def login(data):
             if not serialized_data.get("access_token") or not serialized_data.get(
                 "user",
             ):
-                raise ValidationException("Serialization produced incomplete data")
+                raise ValidationError("Serialization produced incomplete data")
 
             current_app.logger.info(
                 f"Login successful for user {user.username}",
@@ -361,7 +361,7 @@ def login(data):
                 "Login successful",
                 200,
             )
-        except (ValueError, ValidationException) as val_error:
+        except (ValueError, ValidationError) as val_error:
             current_app.logger.exception(
                 "Validation error during serialization",
                 extra={
@@ -527,7 +527,7 @@ def refresh():
             )
 
             if not access_token:
-                raise ValidationException("Token generation returned empty token")
+                raise ValidationError("Token generation returned empty token")
 
         except Exception as token_error:
             current_app.logger.exception(

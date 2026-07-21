@@ -48,7 +48,7 @@ class ThermaCoreError(Exception):
 # Authentication and Authorization Exceptions
 
 
-class AuthenticationException(ThermaCoreError):
+class AuthenticationError(ThermaCoreError):
     """Base class for authentication-related exceptions."""
 
     def __init__(self, message: str = "Authentication failed", **kwargs):
@@ -60,7 +60,7 @@ class AuthenticationException(ThermaCoreError):
         )
 
 
-class InvalidCredentialsException(AuthenticationException):
+class InvalidCredentialsError(AuthenticationError):
     """Raised when user provides invalid credentials."""
 
     def __init__(self, username: str | None = None, **kwargs):
@@ -72,14 +72,14 @@ class InvalidCredentialsException(AuthenticationException):
         super().__init__(message, **kwargs)
 
 
-class TokenExpiredException(AuthenticationException):
+class TokenExpiredError(AuthenticationError):
     """Raised when JWT token has expired."""
 
     def __init__(self, **kwargs):
         super().__init__("Authentication token has expired", **kwargs)
 
 
-class AuthorizationException(ThermaCoreError):
+class AuthorizationError(ThermaCoreError):
     """Base class for authorization-related exceptions."""
 
     def __init__(self, message: str = "Access denied", **kwargs):
@@ -91,7 +91,7 @@ class AuthorizationException(ThermaCoreError):
         )
 
 
-class InsufficientPermissionsException(AuthorizationException):
+class InsufficientPermissionsError(AuthorizationError):
     """Raised when user lacks required permissions."""
 
     def __init__(self, required_permission: str, **kwargs):
@@ -104,11 +104,11 @@ class InsufficientPermissionsException(AuthorizationException):
 # Resource Management Exceptions
 
 
-class ResourceException(ThermaCoreError):
+class ResourceError(ThermaCoreError):
     """Base class for resource-related exceptions."""
 
 
-class ResourceNotFoundException(ResourceException):
+class ResourceNotFoundError(ResourceError):
     """Raised when a requested resource is not found."""
 
     def __init__(self, resource_type: str, resource_id: str | None = None, **kwargs):
@@ -129,21 +129,21 @@ class ResourceNotFoundException(ResourceException):
         )
 
 
-class UnitNotFoundException(ResourceNotFoundException):
+class UnitNotFoundError(ResourceNotFoundError):
     """Raised when a unit is not found."""
 
     def __init__(self, unit_id: str, **kwargs):
         super().__init__("Unit", unit_id, **kwargs)
 
 
-class SensorNotFoundException(ResourceNotFoundException):
+class SensorNotFoundError(ResourceNotFoundError):
     """Raised when a sensor is not found."""
 
     def __init__(self, sensor_id: str, **kwargs):
         super().__init__("Sensor", sensor_id, **kwargs)
 
 
-class UserNotFoundException(ResourceNotFoundException):
+class UserNotFoundError(ResourceNotFoundError):
     """Raised when a user is not found."""
 
     def __init__(self, username: str, **kwargs):
@@ -153,7 +153,7 @@ class UserNotFoundException(ResourceNotFoundException):
 # Data Validation Exceptions
 
 
-class ValidationException(ThermaCoreError):
+class ValidationError(ThermaCoreError):
     """Base class for data validation exceptions."""
 
     def __init__(self, message: str, field: str | None = None, **kwargs):
@@ -167,7 +167,7 @@ class ValidationException(ThermaCoreError):
             self.details.update({"field": field})
 
 
-class InvalidDataException(ValidationException):
+class InvalidDataError(ValidationError):
     """Raised when provided data fails validation."""
 
     def __init__(
@@ -186,7 +186,7 @@ class InvalidDataException(ValidationException):
         self.details.update({"field": field, "value": str(value), "reason": reason})
 
 
-class SensorReadingValidationException(ValidationException):
+class SensorReadingValidationError(ValidationError):
     """Raised when sensor reading data is invalid."""
 
     def __init__(self, sensor_id: str, value: float, reason: str, **kwargs):
@@ -198,7 +198,7 @@ class SensorReadingValidationException(ValidationException):
 # Protocol Communication Exceptions
 
 
-class ProtocolException(ThermaCoreError):
+class ProtocolError(ThermaCoreError):
     """Base class for protocol communication exceptions."""
 
     def __init__(self, protocol: str, message: str, **kwargs):
@@ -212,14 +212,14 @@ class ProtocolException(ThermaCoreError):
         self.details.update({"protocol": protocol})
 
 
-class MQTTException(ProtocolException):
+class MQTTError(ProtocolError):
     """Raised for MQTT protocol errors."""
 
     def __init__(self, message: str, **kwargs):
         super().__init__("MQTT", message, **kwargs)
 
 
-class MQTTConnectionException(MQTTException):
+class MQTTConnectionError(MQTTError):
     """Raised when MQTT connection fails."""
 
     def __init__(self, broker_host: str, broker_port: int, **kwargs):
@@ -231,14 +231,14 @@ class MQTTConnectionException(MQTTException):
         super().__init__(message, **kwargs)
 
 
-class OPCUAException(ProtocolException):
+class OPCUAError(ProtocolError):
     """Raised for OPC UA protocol errors."""
 
     def __init__(self, message: str, **kwargs):
         super().__init__("OPC UA", message, **kwargs)
 
 
-class OPCUAConnectionException(OPCUAException):
+class OPCUAConnectionError(OPCUAError):
     """Raised when OPC UA connection fails."""
 
     def __init__(self, server_url: str, **kwargs):
@@ -248,14 +248,14 @@ class OPCUAConnectionException(OPCUAException):
         super().__init__(message, **kwargs)
 
 
-class ModbusException(ProtocolException):
+class ModbusError(ProtocolError):
     """Raised for Modbus protocol errors."""
 
     def __init__(self, message: str, **kwargs):
         super().__init__("Modbus", message, **kwargs)
 
 
-class DNP3Exception(ProtocolException):
+class DNP3Error(ProtocolError):
     """Raised for DNP3 protocol errors."""
 
     def __init__(self, message: str, **kwargs):
@@ -265,7 +265,7 @@ class DNP3Exception(ProtocolException):
 # Service Availability Exceptions
 
 
-class ServiceException(ThermaCoreError):
+class ServiceError(ThermaCoreError):
     """Base class for service availability exceptions."""
 
     def __init__(self, service_name: str, message: str, **kwargs):
@@ -279,7 +279,7 @@ class ServiceException(ThermaCoreError):
         self.details.update({"service_name": service_name})
 
 
-class ServiceUnavailableException(ServiceException):
+class ServiceUnavailableError(ServiceError):
     """Raised when a required service is unavailable."""
 
     def __init__(self, service_name: str, **kwargs):
@@ -287,7 +287,7 @@ class ServiceUnavailableException(ServiceException):
         super().__init__(service_name, message, **kwargs)
 
 
-class DatabaseException(ThermaCoreError):
+class DatabaseError(ThermaCoreError):
     """Base class for database-related exceptions."""
 
     def __init__(self, message: str, **kwargs):
@@ -299,14 +299,14 @@ class DatabaseException(ThermaCoreError):
         )
 
 
-class DatabaseConnectionException(DatabaseException):
+class DatabaseConnectionError(DatabaseError):
     """Raised when database connection fails."""
 
     def __init__(self, **kwargs):
         super().__init__("Database connection failed", **kwargs)
 
 
-class DatabaseIntegrityException(DatabaseException):
+class DatabaseIntegrityError(DatabaseError):
     """Raised when database integrity constraints are violated."""
 
     def __init__(self, constraint: str, **kwargs):
@@ -318,7 +318,7 @@ class DatabaseIntegrityException(DatabaseException):
 # Configuration and System Exceptions
 
 
-class ConfigurationException(ThermaCoreError):
+class ConfigurationError(ThermaCoreError):
     """Raised for configuration-related errors."""
 
     def __init__(self, message: str, config_key: str | None = None, **kwargs):
@@ -332,7 +332,7 @@ class ConfigurationException(ThermaCoreError):
             self.details.update({"config_key": config_key})
 
 
-class MissingConfigurationException(ConfigurationException):
+class MissingConfigurationError(ConfigurationError):
     """Raised when required configuration is missing."""
 
     def __init__(self, config_key: str, **kwargs):
@@ -340,7 +340,7 @@ class MissingConfigurationException(ConfigurationException):
         super().__init__(message, config_key=config_key, **kwargs)
 
 
-class TimeoutException(ThermaCoreError):
+class TimeoutError(ThermaCoreError):
     """Raised when an operation times out."""
 
     def __init__(self, operation: str, timeout_seconds: float, **kwargs):
@@ -354,7 +354,7 @@ class TimeoutException(ThermaCoreError):
 # Unit and Sensor Specific Exceptions
 
 
-class UnitException(ThermaCoreError):
+class UnitError(ThermaCoreError):
     """Base class for unit-related exceptions."""
 
     def __init__(self, unit_id: str, message: str, **kwargs):
@@ -362,7 +362,7 @@ class UnitException(ThermaCoreError):
         self.details.update({"unit_id": unit_id})
 
 
-class UnitOfflineException(UnitException):
+class UnitOfflineError(UnitError):
     """Raised when attempting to interact with an offline unit."""
 
     def __init__(self, unit_id: str, **kwargs):
@@ -376,7 +376,7 @@ class UnitOfflineException(UnitException):
         )
 
 
-class UnitMaintenanceException(UnitException):
+class UnitMaintenanceError(UnitError):
     """Raised when attempting to interact with a unit in maintenance mode."""
 
     def __init__(self, unit_id: str, **kwargs):
@@ -390,7 +390,7 @@ class UnitMaintenanceException(UnitException):
         )
 
 
-class SensorException(ThermaCoreError):
+class SensorError(ThermaCoreError):
     """Base class for sensor-related exceptions."""
 
     def __init__(self, sensor_id: str, message: str, **kwargs):
@@ -398,7 +398,7 @@ class SensorException(ThermaCoreError):
         self.details.update({"sensor_id": sensor_id})
 
 
-class SensorInactiveException(SensorException):
+class SensorInactiveError(SensorError):
     """Raised when attempting to read from an inactive sensor."""
 
     def __init__(self, sensor_id: str, **kwargs):
@@ -412,7 +412,7 @@ class SensorInactiveException(SensorException):
         )
 
 
-class SensorOutOfRangeException(SensorException):
+class SensorOutOfRangeError(SensorError):
     """Raised when sensor reading is outside acceptable range."""
 
     def __init__(

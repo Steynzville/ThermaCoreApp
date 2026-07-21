@@ -8,7 +8,7 @@ from flask import current_app, request
 from flask_jwt_extended import create_access_token, create_refresh_token
 
 from app import db
-from app.exceptions import ValidationException
+from app.exceptions import ValidationError
 from app.models import User
 from app.utils.error_handler import SecurityAwareErrorHandler
 
@@ -147,7 +147,7 @@ def validate_user_role(user: Any) -> tuple[Any, int] | None:
     try:
         role_name = user.role.name.value
         if not role_name:
-            raise ValidationException("Role name is empty")
+            raise ValidationError("Role name is empty")
     except AttributeError as attr_error:
         current_app.logger.exception(
             f"User {user.username} role object is malformed: {attr_error}",
@@ -227,9 +227,9 @@ def create_jwt_tokens(
     try:
         # Pre-validate user ID and role before token generation
         if not user.id:
-            raise ValidationException("User ID is None or empty")
+            raise ValidationError("User ID is None or empty")
         if not user.role or not user.role.name:
-            raise ValidationException("User role or role name is None")
+            raise ValidationError("User role or role name is None")
 
         user_id_str = str(user.id)
         role_value = user.role.name.value
@@ -268,11 +268,11 @@ def create_jwt_tokens(
         )
 
         if not access_token or not refresh_token:
-            raise ValidationException("Token generation returned empty token")
+            raise ValidationError("Token generation returned empty token")
 
         return access_token, refresh_token, None
 
-    except (ValueError, ValidationException, AttributeError) as error:
+    except (ValueError, ValidationError, AttributeError) as error:
         current_app.logger.exception(
             "Error during token generation",
             extra={

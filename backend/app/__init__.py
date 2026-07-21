@@ -9,7 +9,7 @@ from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 
-from app.exceptions import ConfigurationException
+from app.exceptions import ConfigurationError
 
 # Try to import optional extensions, but don't fail if they're not installed
 try:

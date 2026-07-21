@@ -5,11 +5,11 @@ from unittest.mock import Mock, patch
 import pytest
 
 from app.exceptions import (
-    DNP3Exception,
-    ModbusException,
-    MQTTException,
-    OPCUAException,
-    ServiceUnavailableException,
+    DNP3Error,
+    ModbusError,
+    MQTTError,
+    OPCUAError,
+    ServiceUnavailableError,
     ThermaCoreError,
 )
 from app.protocols.base import ProtocolStatus
@@ -200,24 +200,24 @@ class TestThermaCoreExceptions:
 
     def test_protocol_exceptions(self):
         """Test protocol-specific exceptions."""
-        mqtt_exc = MQTTException("MQTT connection failed")
+        mqtt_exc = MQTTError("MQTT connection failed")
         assert mqtt_exc.error_type == "connection_error"
         assert mqtt_exc.status_code == 503
         assert mqtt_exc.details["protocol"] == "MQTT"
 
-        opcua_exc = OPCUAException("OPC UA server unreachable")
+        opcua_exc = OPCUAError("OPC UA server unreachable")
         assert opcua_exc.error_type == "connection_error"
         assert opcua_exc.details["protocol"] == "OPC UA"
 
-        modbus_exc = ModbusException("Modbus device timeout")
+        modbus_exc = ModbusError("Modbus device timeout")
         assert modbus_exc.details["protocol"] == "Modbus"
 
-        dnp3_exc = DNP3Exception("DNP3 outstation offline")
+        dnp3_exc = DNP3Error("DNP3 outstation offline")
         assert dnp3_exc.details["protocol"] == "DNP3"
 
     def test_service_exception(self):
         """Test service unavailable exception."""
-        exc = ServiceUnavailableException("Test Service")
+        exc = ServiceUnavailableError("Test Service")
 
         assert "Test Service service is currently unavailable" in str(exc)
         assert exc.error_type == "service_unavailable"
@@ -234,17 +234,17 @@ class TestExceptionIntegration:
         from app.utils.error_handler import SecurityAwareErrorHandler
 
         # Test that our exception error types exist in the handler
-        mqtt_exc = MQTTException("Connection failed")
+        mqtt_exc = MQTTError("Connection failed")
         assert mqtt_exc.error_type in SecurityAwareErrorHandler.GENERIC_MESSAGES
 
-        service_exc = ServiceUnavailableException("Test")
+        service_exc = ServiceUnavailableError("Test")
         assert service_exc.error_type in SecurityAwareErrorHandler.GENERIC_MESSAGES
 
     def test_exception_with_error_handler(self):
         """Test exception used with SecurityAwareErrorHandler."""
         from app.utils.error_handler import SecurityAwareErrorHandler
 
-        exc = MQTTException(
+        exc = MQTTError(
             "Broker connection failed",
             details={"broker": "mqtt.example.com", "port": 1883},
         )

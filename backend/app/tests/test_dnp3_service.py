@@ -255,7 +255,7 @@ def test_dnp3_service_errors_and_failures(app):
         or "No data point configuration" in res_no_points["error"]
     )
 
-    # 4. Read when master not initialized (ConfigurationException)
+    # 4. Read when master not initialized (ConfigurationError)
     service_no_master = DNP3Service(app)
     service_no_master.add_device("DEV004", 1, 13, "127.0.0.1")
     service_no_master._devices["DEV004"].is_connected = True

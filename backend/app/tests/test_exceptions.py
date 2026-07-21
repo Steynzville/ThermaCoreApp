@@ -1,39 +1,39 @@
 """Tests for domain-specific exceptions."""
 
 from app.exceptions import (
-    AuthenticationException,
-    AuthorizationException,
-    ConfigurationException,
-    DatabaseConnectionException,
-    DatabaseException,
-    DatabaseIntegrityException,
-    DNP3Exception,
-    InsufficientPermissionsException,
-    InvalidCredentialsException,
-    InvalidDataException,
-    MissingConfigurationException,
-    ModbusException,
-    MQTTConnectionException,
-    MQTTException,
-    OPCUAConnectionException,
-    OPCUAException,
-    ResourceNotFoundException,
-    SensorException,
-    SensorInactiveException,
-    SensorNotFoundException,
-    SensorOutOfRangeException,
-    SensorReadingValidationException,
-    ServiceException,
-    ServiceUnavailableException,
+    AuthenticationError,
+    AuthorizationError,
+    ConfigurationError,
+    DatabaseConnectionError,
+    DatabaseError,
+    DatabaseIntegrityError,
+    DNP3Error,
+    InsufficientPermissionsError,
+    InvalidCredentialsError,
+    InvalidDataError,
+    MissingConfigurationError,
+    ModbusError,
+    MQTTConnectionError,
+    MQTTError,
+    OPCUAConnectionError,
+    OPCUAError,
+    ResourceNotFoundError,
+    SensorError,
+    SensorInactiveError,
+    SensorNotFoundError,
+    SensorOutOfRangeError,
+    SensorReadingValidationError,
+    ServiceError,
+    ServiceUnavailableError,
     ThermaCoreError,
-    TimeoutException,
-    TokenExpiredException,
-    UnitException,
-    UnitMaintenanceException,
-    UnitNotFoundException,
-    UnitOfflineException,
-    UserNotFoundException,
-    ValidationException,
+    TimeoutError,
+    TokenExpiredError,
+    UnitError,
+    UnitMaintenanceError,
+    UnitNotFoundError,
+    UnitOfflineError,
+    UserNotFoundError,
+    ValidationError,
 )
 
 
@@ -74,7 +74,7 @@ class TestAuthenticationExceptions:
 
     def test_authentication_exception(self):
         """Test basic authentication exception."""
-        exc = AuthenticationException()
+        exc = AuthenticationError()
 
         assert "Authentication failed" in str(exc)
         assert exc.error_type == "authentication_error"
@@ -82,21 +82,21 @@ class TestAuthenticationExceptions:
 
     def test_invalid_credentials_with_username(self):
         """Test invalid credentials exception with username."""
-        exc = InvalidCredentialsException(username="testuser")
+        exc = InvalidCredentialsError(username="testuser")
 
         assert "testuser" in str(exc)
         assert exc.status_code == 401
 
     def test_invalid_credentials_without_username(self):
         """Test invalid credentials exception without username."""
-        exc = InvalidCredentialsException()
+        exc = InvalidCredentialsError()
 
         assert "Invalid credentials" in str(exc)
         assert exc.status_code == 401
 
     def test_token_expired(self):
         """Test token expired exception."""
-        exc = TokenExpiredException()
+        exc = TokenExpiredError()
 
         assert "expired" in str(exc)
         assert exc.status_code == 401
@@ -107,7 +107,7 @@ class TestAuthorizationExceptions:
 
     def test_authorization_exception(self):
         """Test basic authorization exception."""
-        exc = AuthorizationException()
+        exc = AuthorizationError()
 
         assert "Access denied" in str(exc)
         assert exc.error_type == "permission_error"
@@ -115,7 +115,7 @@ class TestAuthorizationExceptions:
 
     def test_insufficient_permissions(self):
         """Test insufficient permissions exception."""
-        exc = InsufficientPermissionsException("read_units")
+        exc = InsufficientPermissionsError("read_units")
 
         assert "read_units" in str(exc)
         assert exc.status_code == 403
@@ -127,7 +127,7 @@ class TestResourceExceptions:
 
     def test_resource_not_found_with_id(self):
         """Test resource not found with ID."""
-        exc = ResourceNotFoundException("Unit", "unit-123")
+        exc = ResourceNotFoundError("Unit", "unit-123")
 
         assert "Unit" in str(exc)
         assert "unit-123" in str(exc)
@@ -137,14 +137,14 @@ class TestResourceExceptions:
 
     def test_resource_not_found_without_id(self):
         """Test resource not found without ID."""
-        exc = ResourceNotFoundException("Sensor")
+        exc = ResourceNotFoundError("Sensor")
 
         assert "Sensor" in str(exc)
         assert exc.status_code == 404
 
     def test_unit_not_found(self):
         """Test unit not found exception."""
-        exc = UnitNotFoundException("unit-456")
+        exc = UnitNotFoundError("unit-456")
 
         assert "Unit" in str(exc)
         assert "unit-456" in str(exc)
@@ -152,7 +152,7 @@ class TestResourceExceptions:
 
     def test_sensor_not_found(self):
         """Test sensor not found exception."""
-        exc = SensorNotFoundException("sensor-789")
+        exc = SensorNotFoundError("sensor-789")
 
         assert "Sensor" in str(exc)
         assert "sensor-789" in str(exc)
@@ -160,7 +160,7 @@ class TestResourceExceptions:
 
     def test_user_not_found(self):
         """Test user not found exception."""
-        exc = UserNotFoundException("john_doe")
+        exc = UserNotFoundError("john_doe")
 
         assert "User" in str(exc)
         assert "john_doe" in str(exc)
@@ -172,7 +172,7 @@ class TestValidationExceptions:
 
     def test_validation_exception(self):
         """Test basic validation exception."""
-        exc = ValidationException("Invalid input")
+        exc = ValidationError("Invalid input")
 
         assert "Invalid input" in str(exc)
         assert exc.error_type == "validation_error"
@@ -180,13 +180,13 @@ class TestValidationExceptions:
 
     def test_validation_exception_with_field(self):
         """Test validation exception with field."""
-        exc = ValidationException("Invalid input", field="email")
+        exc = ValidationError("Invalid input", field="email")
 
         assert exc.details["field"] == "email"
 
     def test_invalid_data_with_reason(self):
         """Test invalid data exception with reason."""
-        exc = InvalidDataException("temperature", value=999, reason="Value too high")
+        exc = InvalidDataError("temperature", value=999, reason="Value too high")
 
         assert "temperature" in str(exc)
         assert "Value too high" in str(exc)
@@ -195,14 +195,14 @@ class TestValidationExceptions:
 
     def test_invalid_data_without_reason(self):
         """Test invalid data exception without reason."""
-        exc = InvalidDataException("pressure", value=-1)
+        exc = InvalidDataError("pressure", value=-1)
 
         assert "pressure" in str(exc)
         assert exc.details["field"] == "pressure"
 
     def test_sensor_reading_validation(self):
         """Test sensor reading validation exception."""
-        exc = SensorReadingValidationException(
+        exc = SensorReadingValidationError(
             sensor_id="sensor-1",
             value=150.5,
             reason="Value exceeds maximum threshold",
@@ -219,7 +219,7 @@ class TestMQTTExceptions:
 
     def test_mqtt_exception(self):
         """Test basic MQTT exception."""
-        exc = MQTTException("Connection timeout")
+        exc = MQTTError("Connection timeout")
 
         assert "Connection timeout" in str(exc)
         assert exc.status_code == 503
@@ -227,7 +227,7 @@ class TestMQTTExceptions:
 
     def test_mqtt_connection_exception(self):
         """Test MQTT connection exception."""
-        exc = MQTTConnectionException(broker_host="localhost", broker_port=1883)
+        exc = MQTTConnectionError(broker_host="localhost", broker_port=1883)
 
         assert "localhost" in str(exc)
         assert "1883" in str(exc)
@@ -240,7 +240,7 @@ class TestOPCUAExceptions:
 
     def test_opcua_exception(self):
         """Test basic OPC UA exception."""
-        exc = OPCUAException("Invalid endpoint")
+        exc = OPCUAError("Invalid endpoint")
 
         assert "Invalid endpoint" in str(exc)
         assert exc.status_code == 503
@@ -248,7 +248,7 @@ class TestOPCUAExceptions:
 
     def test_opcua_connection_exception(self):
         """Test OPC UA connection exception."""
-        exc = OPCUAConnectionException(server_url="opc.tcp://localhost:4840")
+        exc = OPCUAConnectionError(server_url="opc.tcp://localhost:4840")
 
         assert "opc.tcp://localhost:4840" in str(exc)
         assert exc.details["server_url"] == "opc.tcp://localhost:4840"
@@ -259,7 +259,7 @@ class TestModbusExceptions:
 
     def test_modbus_exception(self):
         """Test basic Modbus exception."""
-        exc = ModbusException("Read timeout")
+        exc = ModbusError("Read timeout")
 
         assert "Read timeout" in str(exc)
         assert exc.status_code == 503
@@ -271,7 +271,7 @@ class TestDNP3Exceptions:
 
     def test_dnp3_exception(self):
         """Test basic DNP3 exception."""
-        exc = DNP3Exception("Communication error")
+        exc = DNP3Error("Communication error")
 
         assert "Communication error" in str(exc)
         assert exc.status_code == 503
@@ -283,7 +283,7 @@ class TestServiceExceptions:
 
     def test_service_exception(self):
         """Test basic service exception."""
-        exc = ServiceException("MQTT", "Service down")
+        exc = ServiceError("MQTT", "Service down")
 
         assert "Service down" in str(exc)
         assert exc.status_code == 503
@@ -291,7 +291,7 @@ class TestServiceExceptions:
 
     def test_service_unavailable(self):
         """Test service unavailable exception."""
-        exc = ServiceUnavailableException("Database")
+        exc = ServiceUnavailableError("Database")
 
         assert "Database" in str(exc)
         assert "unavailable" in str(exc)
@@ -303,7 +303,7 @@ class TestDatabaseExceptions:
 
     def test_database_exception(self):
         """Test basic database exception."""
-        exc = DatabaseException("Query failed")
+        exc = DatabaseError("Query failed")
 
         assert "Query failed" in str(exc)
         assert exc.error_type == "database_error"
@@ -311,14 +311,14 @@ class TestDatabaseExceptions:
 
     def test_database_connection_exception(self):
         """Test database connection exception."""
-        exc = DatabaseConnectionException()
+        exc = DatabaseConnectionError()
 
         assert "connection failed" in str(exc).lower()
         assert exc.status_code == 500
 
     def test_database_integrity_exception(self):
         """Test database integrity exception."""
-        exc = DatabaseIntegrityException("unique_constraint_violation")
+        exc = DatabaseIntegrityError("unique_constraint_violation")
 
         assert "unique_constraint_violation" in str(exc)
         assert exc.details["constraint"] == "unique_constraint_violation"
@@ -329,7 +329,7 @@ class TestConfigurationExceptions:
 
     def test_configuration_exception(self):
         """Test basic configuration exception."""
-        exc = ConfigurationException("Invalid config", config_key="api_key")
+        exc = ConfigurationError("Invalid config", config_key="api_key")
 
         assert "Invalid config" in str(exc)
         assert exc.error_type == "configuration_error"
@@ -337,7 +337,7 @@ class TestConfigurationExceptions:
 
     def test_missing_configuration_exception(self):
         """Test missing configuration exception."""
-        exc = MissingConfigurationException("SECRET_KEY")
+        exc = MissingConfigurationError("SECRET_KEY")
 
         assert "SECRET_KEY" in str(exc)
         assert "Missing" in str(exc)
@@ -349,7 +349,7 @@ class TestTimeoutException:
 
     def test_timeout_exception(self):
         """Test timeout exception."""
-        exc = TimeoutException("database_query", 30.0)
+        exc = TimeoutError("database_query", 30.0)
 
         assert "database_query" in str(exc)
         assert "30" in str(exc)
@@ -364,14 +364,14 @@ class TestUnitExceptions:
 
     def test_unit_exception(self):
         """Test basic unit exception."""
-        exc = UnitException("unit-123", "Unit error")
+        exc = UnitError("unit-123", "Unit error")
 
         assert "Unit error" in str(exc)
         assert exc.details["unit_id"] == "unit-123"
 
     def test_unit_offline_exception(self):
         """Test unit offline exception."""
-        exc = UnitOfflineException("unit-123")
+        exc = UnitOfflineError("unit-123")
 
         assert "unit-123" in str(exc)
         assert "offline" in str(exc).lower()
@@ -379,7 +379,7 @@ class TestUnitExceptions:
 
     def test_unit_maintenance_exception(self):
         """Test unit maintenance exception."""
-        exc = UnitMaintenanceException("unit-456")
+        exc = UnitMaintenanceError("unit-456")
 
         assert "unit-456" in str(exc)
         assert "maintenance" in str(exc).lower()
@@ -391,14 +391,14 @@ class TestSensorExceptions:
 
     def test_sensor_exception(self):
         """Test basic sensor exception."""
-        exc = SensorException("sensor-789", "Sensor error")
+        exc = SensorError("sensor-789", "Sensor error")
 
         assert "Sensor error" in str(exc)
         assert exc.details["sensor_id"] == "sensor-789"
 
     def test_sensor_inactive_exception(self):
         """Test sensor inactive exception."""
-        exc = SensorInactiveException("sensor-789")
+        exc = SensorInactiveError("sensor-789")
 
         assert "sensor-789" in str(exc)
         assert "inactive" in str(exc).lower()
@@ -406,7 +406,7 @@ class TestSensorExceptions:
 
     def test_sensor_out_of_range_exception(self):
         """Test sensor out of range exception."""
-        exc = SensorOutOfRangeException("sensor-101", 150.5, 0, 100)
+        exc = SensorOutOfRangeError("sensor-101", 150.5, 0, 100)
 
         assert "sensor-101" in str(exc)
         assert "150.5" in str(exc)

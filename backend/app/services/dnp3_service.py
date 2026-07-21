@@ -14,7 +14,7 @@ from typing import Any
 
 from cachetools import TTLCache
 
-from app.exceptions import ConfigurationException
+from app.exceptions import ConfigurationError
 from app.models import utc_now  # Use timezone-aware datetime
 
 logger = logging.getLogger(__name__)
@@ -765,7 +765,7 @@ class DNP3Service:
                 raise ValueError(f"No data point configuration for device {device_id}")
 
             if not self._master:
-                raise ConfigurationException("DNP3 master not initialized")
+                raise ConfigurationError("DNP3 master not initialized")
 
             data_points = self._data_point_configs[device_id]
             readings = []
@@ -1053,7 +1053,7 @@ class DNP3Service:
                 raise ConnectionError(f"Device {device_id} not connected")
 
             if not self._master:
-                raise ConfigurationException("DNP3 master not initialized")
+                raise ConfigurationError("DNP3 master not initialized")
 
             if data_type == DNP3DataType.BINARY_OUTPUT.value:
                 success = self._master.write_binary_output(
@@ -1092,7 +1092,7 @@ class DNP3Service:
                 raise ConnectionError(f"Device {device_id} not connected")
 
             if not self._master:
-                raise ConfigurationException("DNP3 master not initialized")
+                raise ConfigurationError("DNP3 master not initialized")
 
             success = self._master.perform_integrity_poll(device.outstation_address)
 
