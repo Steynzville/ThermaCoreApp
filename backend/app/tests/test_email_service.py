@@ -165,7 +165,4 @@ class TestSendPasswordResetEmail:
         # The html_content is passed as a kwarg
         html_content = kwargs.get("html_content", "")
         assert "abc-token" in html_content
-        assert (
-            "https://example.com/reset-password?token=abc-token"
-            in html_content
-        )
+        assert "https://example.com/reset-password?token=abc-token" in html_content

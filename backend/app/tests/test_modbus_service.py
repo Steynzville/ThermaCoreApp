@@ -412,7 +412,7 @@ class TestModbusService:
 
         service = ModbusService()
         assert service.get_device_status("MISSING") == {
-            "error": "Device MISSING not found"
+            "error": "Device MISSING not found",
         }
 
         device = ModbusDevice("DEV_S", 1, "127.0.0.1", 502, "tcp")
