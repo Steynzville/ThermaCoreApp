@@ -5,6 +5,7 @@ from datetime import timedelta
 from typing import ClassVar
 
 from dotenv import load_dotenv
+from sqlalchemy.pool import StaticPool
 
 # Load environment variables from .env file
 load_dotenv()
@@ -49,7 +50,7 @@ class Config:
     API_VERSION = os.environ.get("API_VERSION", "v1")
     API_PREFIX = os.environ.get("API_PREFIX", "/api/v1")
 
-    # CORS Configuration
+    # CORS Configuration - will be re-read in ProductionConfig for production validation
     CORS_ORIGINS = os.environ.get(
         "CORS_ORIGINS",
         "http://localhost:3000,http://localhost:5173,https://thermacoreapp.netlify.app",
@@ -237,26 +238,24 @@ class ProductionConfig(Config):
         if not self.SQLALCHEMY_DATABASE_URI:
             raise ValueError("DATABASE_URL must be set in environment variables")
 
-        # Override WebSocket CORS for production - restrict to trusted domains
-        # This should be set via environment variable in production
-        _prod_websocket_origins = os.environ.get("WEBSOCKET_CORS_ORIGINS")
-        if not _prod_websocket_origins:
-            # If not explicitly set, use a secure default (no wildcard)
-            self.WEBSOCKET_CORS_ORIGINS = [
-                "https://thermacoreapp.com",
-                "https://app.thermacoreapp.com",
-                "https://monitoring.thermacoreapp.com",
-            ]
-        else:
-            origins = [
-                origin.strip()
-                for origin in _prod_websocket_origins.split(",")
-                if origin.strip()
-            ]
+        # Only apply strict production validations in actual production
+        if self._is_true_production():
+            # Override WebSocket CORS for production - restrict to trusted domains
+            _prod_websocket_origins = os.environ.get("WEBSOCKET_CORS_ORIGINS")
+            if not _prod_websocket_origins:
+                # If not explicitly set, use a secure default (no wildcard)
+                self.WEBSOCKET_CORS_ORIGINS = [
+                    "https://thermacoreapp.com",
+                    "https://app.thermacoreapp.com",
+                    "https://monitoring.thermacoreapp.com",
+                ]
+            else:
+                origins = [
+                    origin.strip()
+                    for origin in _prod_websocket_origins.split(",")
+                    if origin.strip()
+                ]
 
-            # SMART CORS VALIDATION - Only in actual production
-            # In CI/test environments, allow configuration testing without strict enforcement
-            if self._is_true_production():
                 # Validate no wildcard in production
                 if "*" in origins:
                     raise ValueError(
@@ -270,88 +269,98 @@ class ProductionConfig(Config):
                             f"Production CORS origins must use HTTPS. Invalid origin: {origin}",
                         )
 
-            self.WEBSOCKET_CORS_ORIGINS = origins
+                self.WEBSOCKET_CORS_ORIGINS = origins
 
-        # Also validate regular CORS origins with the same smart approach
-        if self._is_true_production():
-            cors_origins = self.CORS_ORIGINS
+            # Re-read and validate regular CORS origins from environment
+            cors_origins_env = os.environ.get("CORS_ORIGINS")
+            if cors_origins_env:
+                cors_origins = [origin.strip() for origin in cors_origins_env.split(",") if origin.strip()]
+            else:
+                cors_origins = [
+                    "https://thermacoreapp.com",
+                    "https://app.thermacoreapp.com",
+                ]
+
+            # Validate no wildcard in production
             if "*" in cors_origins:
                 raise ValueError(
                     "Wildcard CORS origins ('*') are not allowed in production",
                 )
 
+            # Validate all origins use HTTPS in production
             for origin in cors_origins:
-                if origin.startswith("http://") and not origin.startswith("https://"):
+                if not origin.startswith("https://"):
                     raise ValueError(
                         f"Production CORS origins must use HTTPS. Invalid origin: {origin}",
                     )
 
-        # Enforce MQTT TLS in production if certificates are provided
-        if (
-            os.environ.get("MQTT_CA_CERTS")
-            and os.environ.get("MQTT_CERT_FILE")
-            and os.environ.get("MQTT_KEY_FILE")
-        ):
-            self.MQTT_USE_TLS = True
-        else:
-            raise ValueError(
-                "MQTT certificate paths must be set in environment variables for production",
-            )
+            self.CORS_ORIGINS = cors_origins
 
-        # Re-read MQTT configuration from environment to pick up test values
-        # Use centralized helper method to avoid duplication
-        mqtt_config = self._read_mqtt_config()
-        self.MQTT_BROKER_HOST = mqtt_config["MQTT_BROKER_HOST"]
-        self.MQTT_BROKER_PORT = mqtt_config["MQTT_BROKER_PORT"]
-        self.MQTT_USERNAME = mqtt_config["MQTT_USERNAME"]
-        self.MQTT_PASSWORD = mqtt_config["MQTT_PASSWORD"]
-
-        # Enforce OPC UA security in production
-        # Override to use at least Basic256Sha256 if not explicitly configured
-        if (
-            not os.environ.get("OPCUA_SECURITY_POLICY")
-            or os.environ.get("OPCUA_SECURITY_POLICY") == "None"
-        ):
-            self.OPCUA_SECURITY_POLICY = "Basic256Sha256"
-        else:
-            self.OPCUA_SECURITY_POLICY = os.environ.get("OPCUA_SECURITY_POLICY")
-
-        if (
-            not os.environ.get("OPCUA_SECURITY_MODE")
-            or os.environ.get("OPCUA_SECURITY_MODE") == "None"
-        ):
-            self.OPCUA_SECURITY_MODE = "SignAndEncrypt"
-        else:
-            self.OPCUA_SECURITY_MODE = os.environ.get("OPCUA_SECURITY_MODE")
-
-        # Ensure certificate paths are correctly set if security is enabled
-        if self.OPCUA_SECURITY_POLICY != "None" and self.OPCUA_SECURITY_MODE != "None":
-            if not (
-                os.environ.get("OPCUA_CERT_FILE")
-                and os.environ.get("OPCUA_PRIVATE_KEY_FILE")
-                and os.environ.get("OPCUA_TRUST_CERT_FILE")
+            # Enforce MQTT TLS in production if certificates are provided
+            if (
+                os.environ.get("MQTT_CA_CERTS")
+                and os.environ.get("MQTT_CERT_FILE")
+                and os.environ.get("MQTT_KEY_FILE")
             ):
+                self.MQTT_USE_TLS = True
+            else:
                 raise ValueError(
-                    "OPC UA certificate paths must be set in environment variables when security is enabled",
+                    "MQTT certificate paths must be set in environment variables for production",
                 )
 
-        # Service Management for Production
-        # Make OPC-UA optional in production by default (can be overridden with env vars)
-        # This prevents OPC-UA security/connection issues from crashing the entire backend
-        self.SERVICE_OPCUA_ENABLED = (
-            os.environ.get("SERVICE_OPCUA_ENABLED", "true").lower() == "true"
-        )
-        self.SERVICE_OPCUA_REQUIRED = (
-            os.environ.get("SERVICE_OPCUA_REQUIRED", "false").lower() == "true"
-        )
+            # Re-read MQTT configuration from environment
+            mqtt_config = self._read_mqtt_config()
+            self.MQTT_BROKER_HOST = mqtt_config["MQTT_BROKER_HOST"]
+            self.MQTT_BROKER_PORT = mqtt_config["MQTT_BROKER_PORT"]
+            self.MQTT_USERNAME = mqtt_config["MQTT_USERNAME"]
+            self.MQTT_PASSWORD = mqtt_config["MQTT_PASSWORD"]
 
-        # MQTT remains required in production by default
-        self.SERVICE_MQTT_ENABLED = (
-            os.environ.get("SERVICE_MQTT_ENABLED", "true").lower() == "true"
-        )
-        self.SERVICE_MQTT_REQUIRED = (
-            os.environ.get("SERVICE_MQTT_REQUIRED", "true").lower() == "true"
-        )
+            # Enforce OPC UA security in production
+            # Override to use at least Basic256Sha256 if not explicitly configured
+            if (
+                not os.environ.get("OPCUA_SECURITY_POLICY")
+                or os.environ.get("OPCUA_SECURITY_POLICY") == "None"
+            ):
+                self.OPCUA_SECURITY_POLICY = "Basic256Sha256"
+            else:
+                self.OPCUA_SECURITY_POLICY = os.environ.get("OPCUA_SECURITY_POLICY")
+
+            if (
+                not os.environ.get("OPCUA_SECURITY_MODE")
+                or os.environ.get("OPCUA_SECURITY_MODE") == "None"
+            ):
+                self.OPCUA_SECURITY_MODE = "SignAndEncrypt"
+            else:
+                self.OPCUA_SECURITY_MODE = os.environ.get("OPCUA_SECURITY_MODE")
+
+            # Ensure certificate paths are correctly set if security is enabled
+            if self.OPCUA_SECURITY_POLICY != "None" and self.OPCUA_SECURITY_MODE != "None":
+                if not (
+                    os.environ.get("OPCUA_CERT_FILE")
+                    and os.environ.get("OPCUA_PRIVATE_KEY_FILE")
+                    and os.environ.get("OPCUA_TRUST_CERT_FILE")
+                ):
+                    raise ValueError(
+                        "OPC UA certificate paths must be set in environment variables when security is enabled",
+                    )
+
+            # Service Management for Production
+            # Make OPC-UA optional in production by default (can be overridden with env vars)
+            # This prevents OPC-UA security/connection issues from crashing the entire backend
+            self.SERVICE_OPCUA_ENABLED = (
+                os.environ.get("SERVICE_OPCUA_ENABLED", "true").lower() == "true"
+            )
+            self.SERVICE_OPCUA_REQUIRED = (
+                os.environ.get("SERVICE_OPCUA_REQUIRED", "false").lower() == "true"
+            )
+
+            # MQTT remains required in production by default
+            self.SERVICE_MQTT_ENABLED = (
+                os.environ.get("SERVICE_MQTT_ENABLED", "true").lower() == "true"
+            )
+            self.SERVICE_MQTT_REQUIRED = (
+                os.environ.get("SERVICE_MQTT_REQUIRED", "true").lower() == "true"
+            )
 
     def _is_true_production(self):
         """Detect if this is ACTUAL production deployment.
@@ -397,14 +406,22 @@ class TestingConfig(Config):
         os.environ.get("USE_POSTGRES_TESTS", "false").lower() == "true"
     )
 
-    SQLALCHEMY_DATABASE_URI = (
-        _postgres_test_url if _use_postgres_tests else "sqlite:///:memory:"
-    )  # SQLite fallback for environments without PostgreSQL
-
-    # SQLite doesn't support pool settings, only use them for PostgreSQL
-    SQLALCHEMY_ENGINE_OPTIONS = (
-        {"pool_size": 5, "pool_pre_ping": True} if _use_postgres_tests else {}
-    )
+    # For SQLite in-memory, use StaticPool so all sessions share the same connection
+    # This is critical for SAVEPOINT-based test isolation to work across session boundaries
+    if _use_postgres_tests:
+        SQLALCHEMY_DATABASE_URI = _postgres_test_url
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            "pool_size": 5,
+            "pool_pre_ping": True,
+        }
+    else:
+        SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
+        # StaticPool ensures all sessions share the same connection
+        # check_same_thread=False is required for SQLite multi-threading
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            "poolclass": StaticPool,  # Use actual class, not string
+            "connect_args": {"check_same_thread": False},
+        }
 
     # Disable rate limiting in tests
     RATE_LIMIT_ENABLED = False
