@@ -1,5 +1,6 @@
 """Input validation middleware for ThermaCore SCADA API."""
 
+import json
 import uuid
 from collections.abc import Callable
 from datetime import datetime, timezone
@@ -100,17 +101,68 @@ class RequestValidator:
     def validate_json_body():
         """Validate that request body contains valid JSON."""
         if request.method in ["POST", "PUT", "PATCH"]:
-            try:
-                # Force JSON parsing to catch malformed JSON early
-                if request.data and not request.json:
+            # Check if there's content to parse
+            if not request.data:
+                return (
+                    jsonify(
+                        {
+                            "success": False,
+                            "error": {
+                                "code": "EMPTY_REQUEST_BODY",
+                                "message": "Request body cannot be empty",
+                            },
+                            "request_id": getattr(
+                                g,
+                                "request_id",
+                                str(uuid.uuid4()),
+                            ),
+                            "timestamp": datetime.now(timezone.utc).isoformat()
+                            + "Z",
+                        },
+                    ),
+                    400,
+                )
+
+            # Parse JSON manually to distinguish between:
+            # 1. Malformed JSON (syntax error)
+            # 2. Valid JSON that is literally `null` (which is technically valid
+            #    but may be semantically meaningless for many endpoints)
+            #
+            # We use `get_json(silent=True)` for the parse, then check the raw
+            # data to distinguish empty from null vs malformed.
+            data = request.get_json(silent=True)
+
+            # If get_json returned None, it's either malformed JSON or the
+            # body was the literal value `null`. Check the raw data to
+            # distinguish these cases.
+            if data is None:
+                # Decode strictly and catch UnicodeDecodeError explicitly, rather than
+                # risking it propagating to a 500. Non-UTF-8 input falls through to
+                # raw="", which is treated as malformed JSON below. This ensures
+                # all malformed input (bad JSON syntax, bad encoding, or both)
+                # returns a 4xx client error rather than a 500.
+                try:
+                    raw = request.data.decode("utf-8").strip()
+                except UnicodeDecodeError:
+                    # Non-UTF-8 input that can't be decoded - treat as malformed JSON
+                    raw = ""
+
+                # For the literal null case, we need to decide: should this
+                # be treated as invalid for this API, or should it be accepted?
+                # For most REST APIs, a bare `null` body is meaningless for
+                # POST/PUT/PATCH endpoints. We treat it as invalid with a
+                # clear error message.
+                if raw == "null":
                     return (
                         jsonify(
                             {
                                 "success": False,
                                 "error": {
-                                    "code": "INVALID_JSON",
-                                    "message": "Request body must contain valid JSON",
-                                    "details": {"error": "Malformed JSON syntax"},
+                                    "code": "INVALID_JSON_NULL",
+                                    "message": "Request body cannot be null",
+                                    "details": {
+                                        "error": "Bare null value is not allowed as request body"
+                                    },
                                 },
                                 "request_id": getattr(
                                     g,
@@ -123,7 +175,32 @@ class RequestValidator:
                         ),
                         400,
                     )
-            except Exception:
+
+                # Whitespace-only body (e.g., "   ") - semantically empty
+                if not raw:
+                    return (
+                        jsonify(
+                            {
+                                "success": False,
+                                "error": {
+                                    "code": "EMPTY_REQUEST_BODY",
+                                    "message": "Request body cannot be empty",
+                                },
+                                "request_id": getattr(
+                                    g,
+                                    "request_id",
+                                    str(uuid.uuid4()),
+                                ),
+                                "timestamp": datetime.now(timezone.utc).isoformat()
+                                + "Z",
+                            },
+                        ),
+                        400,
+                    )
+
+                # Malformed JSON - most common case (includes non-UTF-8 input,
+                # as UnicodeDecodeError would have set raw="" and dropped through
+                # to this branch)
                 return (
                     jsonify(
                         {
@@ -131,14 +208,22 @@ class RequestValidator:
                             "error": {
                                 "code": "INVALID_JSON",
                                 "message": "Request body must contain valid JSON",
-                                "details": {"error": "JSON parsing failed"},
+                                "details": {
+                                    "error": "Malformed JSON syntax - failed to parse"
+                                },
                             },
-                            "request_id": getattr(g, "request_id", str(uuid.uuid4())),
-                            "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
+                            "request_id": getattr(
+                                g,
+                                "request_id",
+                                str(uuid.uuid4()),
+                            ),
+                            "timestamp": datetime.now(timezone.utc).isoformat()
+                            + "Z",
                         },
                     ),
                     400,
                 )
+
         return None
 
     @staticmethod
