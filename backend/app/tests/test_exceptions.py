@@ -25,7 +25,7 @@ from app.exceptions import (
     SensorReadingValidationException,
     ServiceException,
     ServiceUnavailableException,
-    ThermaCoreException,
+    ThermaCoreError,
     TimeoutException,
     TokenExpiredException,
     UnitException,
@@ -42,7 +42,7 @@ class TestThermaCoreException:
 
     def test_initialization(self):
         """Test basic exception initialization."""
-        exc = ThermaCoreException("Test error")
+        exc = ThermaCoreError("Test error")
 
         assert str(exc) == "Test error"
         assert exc.error_type == "internal_error"
@@ -50,7 +50,7 @@ class TestThermaCoreException:
 
     def test_initialization_with_context(self):
         """Test exception initialization with context."""
-        exc = ThermaCoreException(
+        exc = ThermaCoreError(
             "Test error",
             error_type="custom_error",
             status_code=400,
@@ -64,7 +64,7 @@ class TestThermaCoreException:
     def test_initialization_with_details(self):
         """Test exception initialization with details."""
         details = {"key": "value", "code": 123}
-        exc = ThermaCoreException("Test error", details=details)
+        exc = ThermaCoreError("Test error", details=details)
 
         assert exc.details == details
 
