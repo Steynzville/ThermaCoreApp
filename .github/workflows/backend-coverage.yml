@@ -67,6 +67,13 @@ jobs:
             sed -i 's/locust==2.35.0/locust==2.20.1/' requirements.txt
           fi
 
+      - name: Remove Old Coverage Files
+        run: |
+          echo "🧹 Cleaning up old coverage files to avoid confusion..."
+          rm -f backend/coverage.json backend/.coverage
+          rm -rf backend/htmlcov/
+          echo "✅ Old coverage files removed"
+
       - name: Create CI Docker Compose
         run: |
           docker-compose config > docker-compose.ci.yml
@@ -118,20 +125,78 @@ jobs:
             --cov-fail-under=60 \
             --cov-branch \
             --cov-config=.coveragerc 2>&1 | tee coverage_output.txt
+          
+          echo "📁 Coverage file generated at: $(date -r backend/coverage.json 2>/dev/null || echo 'N/A')"
 
       - name: Extract Coverage from Output
         id: coverage
         if: always()
         run: |
           echo "📊 Extracting coverage from test output..."
-          # Extract the coverage percentage from the pytest output
-          COVERAGE=$(grep -oP 'Total coverage: \K[0-9.]+' coverage_output.txt || echo "0")
-          # Fallback: try to extract from coverage.json if grep fails
-          if [ "$COVERAGE" = "0" ] && [ -f backend/coverage.json ]; then
-            COVERAGE=$(cat backend/coverage.json | python3 -c "import sys, json; print(json.load(sys.stdin)['totals']['percent_covered'])" 2>/dev/null || echo "0")
+          
+          # PRIMARY: Extract from pytest output (most reliable)
+          COVERAGE=$(grep -oP 'Total coverage: \K[0-9.]+' coverage_output.txt | tail -1 || echo "")
+          
+          # SECONDARY: If pytest output extraction failed, try the freshly generated coverage.json
+          if [ -z "$COVERAGE" ] && [ -f backend/coverage.json ]; then
+            echo "📁 Reading coverage from backend/coverage.json..."
+            
+            # Check if the file is from today (within the last 5 minutes)
+            FILE_MTIME=$(stat -c %Y backend/coverage.json 2>/dev/null || echo "0")
+            NOW=$(date +%s)
+            AGE=$((NOW - FILE_MTIME))
+            
+            # Only read the file if it's less than 5 minutes old (fresh from this run)
+            if [ $AGE -lt 300 ]; then
+              COVERAGE=$(cat backend/coverage.json | python3 -c "
+          import sys, json
+          try:
+              data = json.load(sys.stdin)
+              # Use the current run's coverage data
+              if 'totals' in data and 'percent_covered' in data['totals']:
+                  print(data['totals']['percent_covered'])
+              else:
+                  print('')
+          except Exception as e:
+              print('')
+          " 2>/dev/null || echo "")
+              echo "📁 coverage.json is fresh (age: ${AGE}s)"
+            else
+              echo "⚠️ coverage.json is from $(date -r backend/coverage.json) - ignoring stale file (age: ${AGE}s)"
+            fi
           fi
+          
+          # TERTIARY: If still no coverage, extract from the coverage summary in the output
+          if [ -z "$COVERAGE" ]; then
+            echo "🔍 Attempting to extract coverage from pytest summary..."
+            COVERAGE=$(grep -oP 'TOTAL\s+\d+\s+\d+\s+\d+\s+\K[0-9.]+' coverage_output.txt | tail -1 || echo "")
+          fi
+          
+          # FINAL FALLBACK: Use a safe default
+          if [ -z "$COVERAGE" ]; then
+            echo "⚠️ Could not extract coverage from any source, using 0"
+            COVERAGE="0"
+          fi
+          
+          # Store the coverage value for later steps
           echo "COVERAGE=$COVERAGE" >> $GITHUB_ENV
+          echo "COVERAGE_PERCENT=$COVERAGE%" >> $GITHUB_ENV
           echo "Total coverage extracted: $COVERAGE%"
+          
+          # Show the timestamp of the coverage file for debugging
+          if [ -f backend/coverage.json ]; then
+            FILE_DATE=$(date -r backend/coverage.json '+%Y-%m-%d %H:%M:%S')
+            echo "📁 coverage.json timestamp: $FILE_DATE"
+            # Verify it's from today
+            FILE_DATE_SHORT=$(date -r backend/coverage.json +%Y-%m-%d)
+            TODAY=$(date +%Y-%m-%d)
+            if [ "$FILE_DATE_SHORT" != "$TODAY" ]; then
+              echo "⚠️ WARNING: coverage.json is from $FILE_DATE_SHORT, not today ($TODAY)!"
+              echo "⚠️ This suggests the old committed file was used instead of the fresh one."
+            else
+              echo "✅ coverage.json is from today ($FILE_DATE_SHORT)"
+            fi
+          fi
 
       - name: Display Coverage Summary
         if: always()
@@ -141,6 +206,7 @@ jobs:
           echo "═══════════════════════════════════════════════════════════"
           echo ""
           echo "  📈 Total Coverage: ${{ env.COVERAGE }}%"
+          echo "  📁 Generated at:   $(date '+%Y-%m-%d %H:%M:%S')"
           echo ""
           if (( $(echo "${{ env.COVERAGE }} >= 80" | bc -l) )); then
             echo "  🟢 EXCELLENT! Coverage is above 80%"
@@ -153,6 +219,16 @@ jobs:
           fi
           echo ""
           echo "═══════════════════════════════════════════════════════════"
+          
+          # Show coverage file info for debugging
+          if [ -f backend/coverage.json ]; then
+            FILE_SIZE=$(du -h backend/coverage.json | cut -f1)
+            FILE_DATE=$(date -r backend/coverage.json '+%Y-%m-%d %H:%M:%S')
+            echo ""
+            echo "📁 Coverage file details:"
+            echo "   Size: $FILE_SIZE"
+            echo "   Modified: $FILE_DATE"
+          fi
 
       - name: Upload Full Coverage Report
         if: always()
