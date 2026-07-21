@@ -1,3 +1,5 @@
+"""Email service for sending notifications via SendGrid."""
+
 import logging
 
 from flask import current_app
@@ -9,6 +11,9 @@ try:
 
     SENDGRID_AVAILABLE = True
 except ImportError:
+    # Define attributes even when import fails so patch.object() works in tests
+    SendGridAPIClient = None
+    Mail = None
     SENDGRID_AVAILABLE = False
     logging.getLogger(__name__).warning(
         "SendGrid not installed. Run: pip install sendgrid",
@@ -18,7 +23,15 @@ logger = logging.getLogger(__name__)
 
 
 def send_password_reset_email(email, token):
-    """Send a password reset email using SendGrid API."""
+    """Send a password reset email using SendGrid API.
+
+    Args:
+        email: Recipient email address
+        token: Password reset token
+
+    Returns:
+        tuple[bool, str | None]: (success, error_message)
+    """
     # Log minimal info - email is PII, token is sensitive
     logger.info("Password reset email requested")
 
