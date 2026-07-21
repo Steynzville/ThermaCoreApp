@@ -19,7 +19,9 @@ class ExampleRequestSchema(Schema):
     name = fields.Str(required=True, validate=validate.Length(min=1, max=100))
     email = fields.Email(required=True)
     age = fields.Int(validate=validate.Range(min=1, max=150))
-    tags = fields.List(fields.Str(), load_default=[])  # FIXED: Changed 'missing' to 'load_default'
+    tags = fields.List(
+        fields.Str(), load_default=[]
+    )  # FIXED: Changed 'missing' to 'load_default'
 
 
 # Create blueprint

@@ -1,43 +1,48 @@
 """Tests for OPC UA service."""
 
-import sys
-from datetime import datetime, timezone, timedelta
-from unittest.mock import MagicMock, patch, mock_open
+from datetime import datetime, timedelta, timezone
+from unittest.mock import MagicMock, mock_open, patch
+
 import pytest
 
-from app.utils.environment import is_production_environment
 # Since opcua library might not be installed, we will mock the imports
 # and test the logic of OPCUAClient class.
-
 # Mock the import of opcua if it doesn't exist
-import app.services.opcua_service as opcua_service
+from app.services import opcua_service
 from app.services.opcua_service import OPCUAClient
 
 
 @pytest.fixture
 def mock_crypto():
     """Mock cryptography module classes."""
-    with patch("cryptography.x509.load_pem_x509_certificate") as mock_pem, \
-         patch("cryptography.x509.load_der_x509_certificate") as mock_der:
-        
+    with (
+        patch("cryptography.x509.load_pem_x509_certificate") as mock_pem,
+        patch("cryptography.x509.load_der_x509_certificate") as mock_der,
+    ):
         certificate_mock = MagicMock()
         mock_pem.return_value = certificate_mock
         mock_der.return_value = certificate_mock
-        
+
         # Configure standard non-expired certificate
-        certificate_mock.not_valid_after_utc = datetime.now(timezone.utc) + timedelta(days=365)
-        certificate_mock.not_valid_before_utc = datetime.now(timezone.utc) - timedelta(days=5)
-        
+        certificate_mock.not_valid_after_utc = datetime.now(timezone.utc) + timedelta(
+            days=365
+        )
+        certificate_mock.not_valid_before_utc = datetime.now(timezone.utc) - timedelta(
+            days=5
+        )
+
         yield mock_pem, mock_der, certificate_mock
 
 
 def test_validate_security_policy():
     """Test validating OPC UA security policy requirements."""
     client = OPCUAClient()
-    
+
     # Valid policy
     assert client._validate_security_policy("None") is True
-    assert client._validate_security_policy("Basic256Sha256", require_strong=True) is True
+    assert (
+        client._validate_security_policy("Basic256Sha256", require_strong=True) is True
+    )
 
     # Invalid policy
     with pytest.raises(ValueError, match="Invalid OPC UA security policy"):
@@ -62,10 +67,14 @@ def test_normalize_certificate_datetime():
 
     # Naive datetime
     dt_naive = datetime(2026, 6, 1, 12, 0, 0)
-    assert client._normalize_certificate_datetime(dt_naive) == datetime(2026, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
+    assert client._normalize_certificate_datetime(dt_naive) == datetime(
+        2026, 6, 1, 12, 0, 0, tzinfo=timezone.utc
+    )
 
     # Valid string
-    assert client._normalize_certificate_datetime("2026-06-01T12:00:00+00:00") == dt_aware
+    assert (
+        client._normalize_certificate_datetime("2026-06-01T12:00:00+00:00") == dt_aware
+    )
 
     # Naive string
     assert client._normalize_certificate_datetime("2026-06-01 12:00:00") == dt_aware
@@ -107,9 +116,10 @@ def test_load_trust_certificate_expired(mock_crypto):
     client.trust_cert_file = "expired.pem"
     client.client = MagicMock()
 
-    with patch("os.path.exists", return_value=True), \
-         patch("builtins.open", mock_open(read_data=b"mock-data")):
-        
+    with (
+        patch("os.path.exists", return_value=True),
+        patch("builtins.open", mock_open(read_data=b"mock-data")),
+    ):
         with pytest.raises(ValueError, match="certificate has expired"):
             client._load_trust_certificate(is_prod=False)
 
@@ -125,9 +135,10 @@ def test_load_trust_certificate_not_yet_valid(mock_crypto):
     client.trust_cert_file = "not_valid_yet.pem"
     client.client = MagicMock()
 
-    with patch("os.path.exists", return_value=True), \
-         patch("builtins.open", mock_open(read_data=b"mock-data")):
-        
+    with (
+        patch("os.path.exists", return_value=True),
+        patch("builtins.open", mock_open(read_data=b"mock-data")),
+    ):
         with pytest.raises(ValueError, match="is not yet valid"):
             client._load_trust_certificate(is_prod=False)
 
@@ -139,9 +150,10 @@ def test_load_trust_certificate_success(mock_crypto):
     client.trust_cert_file = "valid.pem"
     client.client = MagicMock()
 
-    with patch("os.path.exists", return_value=True), \
-         patch("builtins.open", mock_open(read_data=b"mock-data")):
-        
+    with (
+        patch("os.path.exists", return_value=True),
+        patch("builtins.open", mock_open(read_data=b"mock-data")),
+    ):
         # Load successfully (returns None, triggers client load_server_certificate)
         client._load_trust_certificate(is_prod=False)
         assert client.client.load_server_certificate.called
@@ -150,17 +162,18 @@ def test_load_trust_certificate_success(mock_crypto):
 def test_init_app_scenarios(app):
     """Test OPCUAClient initialization with app configurations in different environments."""
     # Force opcua_available = True for testing
-    with patch.object(opcua_service, "opcua_available", True), \
-         patch.object(opcua_service, "Client") as mock_client:
-        
+    with (
+        patch.object(opcua_service, "opcua_available", True),
+        patch.object(opcua_service, "Client") as mock_client,
+    ):
         client = OPCUAClient()
-        
+
         # Case 1: Insecure configuration in production (should fail or log error & skip)
         app.config["ENV"] = "production"
         app.config["OPCUA_SERVER_URL"] = "opc.tcp://prod-host:4840"
         app.config["OPCUA_USERNAME"] = ""  # No auth in production
         app.config["OPCUA_SECURITY_POLICY"] = "None"
-        
+
         client.init_app(app)
         assert client.connected is False
 
@@ -205,7 +218,7 @@ def test_connect_and_disconnect():
 def test_add_node_mapping_validations():
     """Test add_node_mapping parameter validations."""
     client = OPCUAClient()
-    
+
     # Success mapping
     client.add_node_mapping("ns=2;s=Temp", "UNIT001", "temperature")
     assert "ns=2;s=Temp" in client._node_mappings
@@ -224,16 +237,18 @@ def test_subscribe_to_node():
     with patch.object(opcua_service, "opcua_available", True):
         client = OPCUAClient()
         client.client = MagicMock()
-        
+
         # When disconnected
         client.connected = False
-        assert client.subscribe_to_node("ns=2;s=Temp", "UNIT001", "temperature") is False
+        assert (
+            client.subscribe_to_node("ns=2;s=Temp", "UNIT001", "temperature") is False
+        )
 
         # When connected
         client.connected = True
         node_mock = MagicMock()
         client.client.get_node.return_value = node_mock
-        
+
         assert client.subscribe_to_node("ns=2;s=Temp", "UNIT001", "temperature") is True
         assert "ns=2;s=Temp" in client._subscribed_nodes
 
@@ -248,7 +263,7 @@ def test_read_node_value():
         # Mock node get_data_value
         node_mock = MagicMock()
         client.client.get_node.return_value = node_mock
-        
+
         data_value_mock = MagicMock()
         data_value_mock.Value.Value = 20.0
         data_value_mock.StatusCode.is_good.return_value = True
@@ -261,7 +276,9 @@ def test_read_node_value():
         assert res["quality"] == "GOOD"
 
         # Read with scaling
-        client.add_node_mapping("ns=2;s=Temp", "UNIT001", "temperature", scale_factor=2.0, offset=5.0)
+        client.add_node_mapping(
+            "ns=2;s=Temp", "UNIT001", "temperature", scale_factor=2.0, offset=5.0
+        )
         res_scaled = client.read_node_value("ns=2;s=Temp")
         assert res_scaled["value"] == 45.0  # (20 * 2.0) + 5.0
 
@@ -270,7 +287,7 @@ def test_read_node_value():
         large_data_value.Value.Value = "x" * (client.MAX_DATA_SIZE + 100)
         large_data_value.StatusCode.is_good.return_value = True
         node_mock.get_data_value.return_value = large_data_value
-        
+
         assert client.read_node_value("ns=2;s=Temp") is None
 
 
@@ -308,12 +325,12 @@ def test_poll_subscribed_nodes_rate_limiting():
         client = OPCUAClient()
         client.connected = True
         client._subscribed_nodes = {"ns=2;s=Temp": MagicMock()}
-        
+
         with patch.object(client, "process_and_store_node_data") as mock_process:
             # First poll allowed
             client.poll_subscribed_nodes()
             assert mock_process.called
-            
+
             # Second poll immediately blocked by rate limiting
             mock_process.reset_mock()
             client.poll_subscribed_nodes()
@@ -322,9 +339,10 @@ def test_poll_subscribed_nodes_rate_limiting():
 
 def test_browse_server_nodes():
     """Test browsing nodes on server."""
-    with patch.object(opcua_service, "opcua_available", True), \
-         patch.object(opcua_service, "ua") as mock_ua:
-        
+    with (
+        patch.object(opcua_service, "opcua_available", True),
+        patch.object(opcua_service, "ua") as mock_ua,
+    ):
         mock_ua.NodeClass.Variable = "Variable"
         client = OPCUAClient()
         client.connected = True

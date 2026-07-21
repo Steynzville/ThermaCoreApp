@@ -22,10 +22,14 @@ def test_permission_required_missing_role_configuration_returns_500(app):
     with app.test_request_context("/"):
         mocked_query = MagicMock()
         mocked_query.get.return_value = bad_user
-        with patch("app.middleware.authorization.verify_jwt_in_request"), patch(
-            "app.middleware.authorization.get_current_user_id",
-            return_value=(10, True),
-        ), patch("app.middleware.authorization.User.query", mocked_query):
+        with (
+            patch("app.middleware.authorization.verify_jwt_in_request"),
+            patch(
+                "app.middleware.authorization.get_current_user_id",
+                return_value=(10, True),
+            ),
+            patch("app.middleware.authorization.User.query", mocked_query),
+        ):
             response = endpoint()
 
     assert response[1] == 500
@@ -46,10 +50,14 @@ def test_role_required_missing_role_configuration_returns_500(app):
     with app.test_request_context("/"):
         mocked_query = MagicMock()
         mocked_query.get.return_value = bad_user
-        with patch("app.middleware.authorization.verify_jwt_in_request"), patch(
-            "app.middleware.authorization.get_current_user_id",
-            return_value=(10, True),
-        ), patch("app.middleware.authorization.User.query", mocked_query):
+        with (
+            patch("app.middleware.authorization.verify_jwt_in_request"),
+            patch(
+                "app.middleware.authorization.get_current_user_id",
+                return_value=(10, True),
+            ),
+            patch("app.middleware.authorization.User.query", mocked_query),
+        ):
             response = endpoint()
 
     assert response[1] == 500

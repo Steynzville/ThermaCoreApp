@@ -1,9 +1,10 @@
 """Tests for historical data analysis routes."""
 
 from datetime import datetime, timedelta
+
 import pytest
-from flask import json
-from app.models import Unit, Sensor, SensorReading, db
+
+from app.models import Sensor, SensorReading, Unit, db
 
 
 @pytest.fixture
@@ -12,9 +13,11 @@ def seed_historical_data(app):
     with app.app_context():
         # Clean any existing readings or duplicate units first
         SensorReading.query.delete()
-        
+
         # Ensure TEST001 has a temperature sensor
-        sensor1 = Sensor.query.filter_by(unit_id="TEST001", sensor_type="temperature").first()
+        sensor1 = Sensor.query.filter_by(
+            unit_id="TEST001", sensor_type="temperature"
+        ).first()
         if not sensor1:
             sensor1 = Sensor(
                 unit_id="TEST001",
@@ -44,7 +47,9 @@ def seed_historical_data(app):
             db.session.add(unit2)
             db.session.commit()
 
-        sensor2 = Sensor.query.filter_by(unit_id="TEST002", sensor_type="temperature").first()
+        sensor2 = Sensor.query.filter_by(
+            unit_id="TEST002", sensor_type="temperature"
+        ).first()
         if not sensor2:
             sensor2 = Sensor(
                 unit_id="TEST002",
@@ -100,7 +105,7 @@ def test_get_historical_data_raw(client, admin_token, seed_historical_data):
 def test_get_historical_data_aggregated(client, admin_token, seed_historical_data):
     """Test get historical data with hourly, daily, and weekly aggregation."""
     headers = {"Authorization": f"Bearer {admin_token}"}
-    
+
     # Hourly
     res_hourly = client.get(
         "/api/v1/historical/data/TEST001?aggregation=hourly&sensor_types=temperature",
@@ -132,7 +137,9 @@ def test_get_historical_data_aggregated(client, admin_token, seed_historical_dat
 def test_get_historical_data_not_found(client, admin_token):
     """Test get historical data for a non-existent unit."""
     headers = {"Authorization": f"Bearer {admin_token}"}
-    response = client.get("/api/v1/historical/data/NONEXIST?aggregation=raw", headers=headers)
+    response = client.get(
+        "/api/v1/historical/data/NONEXIST?aggregation=raw", headers=headers
+    )
     assert response.status_code == 404
 
 
@@ -192,7 +199,10 @@ def test_export_historical_csv(client, admin_token, seed_historical_data):
     )
     assert response.status_code == 200
     assert response.mimetype == "text/csv"
-    assert "attachment; filename=unit_TEST001_historical_data.csv" in response.headers["Content-Disposition"]
+    assert (
+        "attachment; filename=unit_TEST001_historical_data.csv"
+        in response.headers["Content-Disposition"]
+    )
     csv_data = response.data.decode("utf-8")
     assert "timestamp,sensor_type,sensor_name,unit,value" in csv_data
 
@@ -236,7 +246,7 @@ def test_get_historical_statistics_empty(client, admin_token):
     # Clean readings first
     SensorReading.query.delete()
     db.session.commit()
-    
+
     response = client.get(
         "/api/v1/historical/statistics/TEST001?days=30",
         headers=headers,

@@ -2,7 +2,6 @@
 
 from datetime import datetime, timezone
 from unittest.mock import Mock, patch
-import pytest
 
 from app.services.websocket_service import WebSocketService
 

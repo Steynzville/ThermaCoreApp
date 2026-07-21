@@ -2,7 +2,7 @@
 
 import json
 from datetime import datetime
-import pytest
+
 from app.models import Unit
 
 
@@ -12,7 +12,7 @@ class TestUnitsAPI:
     def test_get_units_paginated_and_filtered(self, client, admin_token):
         """Test getting units list with pagination and status filters."""
         headers = {"Authorization": f"Bearer {admin_token}"}
-        
+
         # Test success list and default pagination
         response = client.get("/api/v1/units", headers=headers)
         assert response.status_code == 200
@@ -32,7 +32,7 @@ class TestUnitsAPI:
     def test_get_unit_by_id(self, client, admin_token):
         """Test fetching a specific unit by its ID."""
         headers = {"Authorization": f"Bearer {admin_token}"}
-        
+
         response = client.get("/api/v1/units/TEST001", headers=headers)
         assert response.status_code == 200
         data = json.loads(response.data)
@@ -42,7 +42,7 @@ class TestUnitsAPI:
     def test_get_unit_not_found(self, client, admin_token):
         """Test fetching a non-existent unit returns 404."""
         headers = {"Authorization": f"Bearer {admin_token}"}
-        
+
         response = client.get("/api/v1/units/NONEXISTENT", headers=headers)
         assert response.status_code == 404
 
@@ -50,9 +50,9 @@ class TestUnitsAPI:
         """Test creating a unit, and verify duplicate conflicts return 409."""
         headers = {
             "Authorization": f"Bearer {admin_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
-        
+
         unique_suffix = datetime.utcnow().strftime("%H%M%S%f")
         unit_id = f"UNIT{unique_suffix[-6:]}"
         new_unit_payload = {
@@ -74,7 +74,9 @@ class TestUnitsAPI:
         assert data["id"] == unit_id
 
         # Attempt to create duplicate should return 409
-        response_dup = client.post("/api/v1/units", json=new_unit_payload, headers=headers)
+        response_dup = client.post(
+            "/api/v1/units", json=new_unit_payload, headers=headers
+        )
         assert response_dup.status_code == 409
 
         # Cleanup
@@ -87,9 +89,9 @@ class TestUnitsAPI:
         """Test creating a unit with invalid values (out-of-range temp_outside)."""
         headers = {
             "Authorization": f"Bearer {admin_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
-        
+
         invalid_payload = {
             "id": "UNIT_INVALID",
             "name": "Invalid Unit",
@@ -97,7 +99,7 @@ class TestUnitsAPI:
             "install_date": "2024-02-01T12:00:00Z",
             "temp_outside": 120.0,  # Max allowed is 70.0
             "humidity": 50.0,
-            "battery_level": 90.0
+            "battery_level": 90.0,
         }
 
         response = client.post("/api/v1/units", json=invalid_payload, headers=headers)
@@ -109,15 +111,17 @@ class TestUnitsAPI:
         """Test updating fields on an existing unit."""
         headers = {
             "Authorization": f"Bearer {admin_token}",
-            "Content-Type": "application/json"
-        }
-        
-        update_payload = {
-            "name": "Updated Test Unit Name",
-            "location": "Munich"
+            "Content-Type": "application/json",
         }
 
-        response = client.put("/api/v1/units/TEST001", json=update_payload, headers=headers)
+        update_payload = {
+            "name": "Updated Test Unit Name",
+            "location": "Munich",
+        }
+
+        response = client.put(
+            "/api/v1/units/TEST001", json=update_payload, headers=headers
+        )
         assert response.status_code == 200
         data = json.loads(response.data)
         assert data["name"] == "Updated Test Unit Name"
@@ -137,7 +141,7 @@ class TestUnitsAPI:
             name="Delete Unit",
             serial_number="SN-DEL-001",
             status="offline",
-            health_status="optimal"
+            health_status="optimal",
         )
         db_session.add(temp_unit)
         db_session.commit()

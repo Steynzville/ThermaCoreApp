@@ -1,15 +1,14 @@
 """Tests for input validation middleware."""
 
 import pytest
-from flask import Flask, jsonify, request, g
-from werkzeug.exceptions import UnprocessableEntity
+from flask import g, jsonify
 
 from app.middleware.validation import (
-    sanitize,
     RequestValidator,
     handle_webargs_error,
-    validate_query_params,
+    sanitize,
     validate_path_params,
+    validate_query_params,
 )
 
 
@@ -70,7 +69,9 @@ def test_request_validator_json_content_type(app):
         assert data["success"] is False
         assert data["error"]["code"] == "INVALID_CONTENT_TYPE"
 
-    with app.test_request_context(method="POST", headers={"Content-Type": "application/json"}, json={}):
+    with app.test_request_context(
+        method="POST", headers={"Content-Type": "application/json"}, json={}
+    ):
         assert RequestValidator.validate_json_content_type() is None
 
     # GET requests should be ignored
@@ -81,12 +82,18 @@ def test_request_validator_json_content_type(app):
 def test_request_validator_json_body(app):
     """Test RequestValidator.validate_json_body."""
     # Valid json body
-    with app.test_request_context(method="POST", headers={"Content-Type": "application/json"}, data='{"name": "test"}'):
+    with app.test_request_context(
+        method="POST",
+        headers={"Content-Type": "application/json"},
+        data='{"name": "test"}',
+    ):
         # In a real context request.json parses properly
         assert RequestValidator.validate_json_body() is None
 
     # Invalid malformed json
-    with app.test_request_context(method="POST", headers={"Content-Type": "application/json"}, data='{"name": '):
+    with app.test_request_context(
+        method="POST", headers={"Content-Type": "application/json"}, data='{"name": '
+    ):
         res = RequestValidator.validate_json_body()
         assert res is not None
         response, code = res
@@ -114,6 +121,7 @@ def test_request_validator_size(app):
 
 def test_webargs_error_handler(app):
     """Test handle_webargs_error custom exception mapper."""
+
     class FakeError:
         messages = {"field_a": ["Missing data."]}
         location = "json"
@@ -121,11 +129,14 @@ def test_webargs_error_handler(app):
     with app.test_request_context():
         g.request_id = "test-req-id"
         with pytest.raises(Exception):
-            handle_webargs_error(FakeError(), None, None, error_status_code=422, error_headers=None)
+            handle_webargs_error(
+                FakeError(), None, None, error_status_code=422, error_headers=None
+            )
 
 
 def test_validate_query_params_decorator(app):
     """Test validate_query_params decorator."""
+
     @validate_query_params(
         page=lambda x: int(x) > 0,
         per_page=lambda x: 1 <= int(x) <= 100,
@@ -161,6 +172,7 @@ def test_validate_query_params_decorator(app):
 
 def test_validate_path_params_decorator(app):
     """Test validate_path_params decorator."""
+
     @validate_path_params(
         unit_id=lambda x: len(x) > 0 and x.isalnum(),
     )

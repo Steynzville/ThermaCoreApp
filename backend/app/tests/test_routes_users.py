@@ -1,6 +1,7 @@
 """Additional coverage tests for user routes."""
 
 from unittest.mock import MagicMock, patch
+
 from sqlalchemy.exc import IntegrityError
 
 
@@ -15,9 +16,12 @@ def test_update_user_invalid_token_and_missing_role(client, admin_token):
         )
     assert invalid_token_response.status_code == 401
 
-    with patch("app.routes.users.get_current_user_id", return_value=(1, True)), patch(
-        "app.models.Role.query.get",
-        return_value=None,
+    with (
+        patch("app.routes.users.get_current_user_id", return_value=(1, True)),
+        patch(
+            "app.models.Role.query.get",
+            return_value=None,
+        ),
     ):
         response = client.put(
             "/api/v1/users/2",
@@ -33,9 +37,12 @@ def test_update_user_integrityerror_fallback_message(client, admin_token):
     generic_orig = MagicMock()
     generic_orig.__str__ = lambda *_: "other_constraint"
 
-    with patch("app.routes.users.get_current_user_id", return_value=(1, True)), patch(
-        "app.models.db.session.commit",
-        side_effect=IntegrityError("stmt", "params", generic_orig),
+    with (
+        patch("app.routes.users.get_current_user_id", return_value=(1, True)),
+        patch(
+            "app.models.db.session.commit",
+            side_effect=IntegrityError("stmt", "params", generic_orig),
+        ),
     ):
         response = client.put(
             "/api/v1/users/2",
@@ -52,7 +59,9 @@ def test_delete_deactivate_invalid_token_and_stats(client, admin_token):
 
     with patch("app.routes.users.get_current_user_id", return_value=(None, False)):
         delete_response = client.delete("/api/v1/users/2", headers=headers)
-        deactivate_response = client.patch("/api/v1/users/2/deactivate", headers=headers)
+        deactivate_response = client.patch(
+            "/api/v1/users/2/deactivate", headers=headers
+        )
 
     assert delete_response.status_code == 401
     assert deactivate_response.status_code == 401

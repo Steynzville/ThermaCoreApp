@@ -1,24 +1,24 @@
 """Tests for utility helper functions."""
 
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
-import pytest
-from flask import Flask
 
-from app.models import RoleEnum, Unit, Sensor, SensorReading, db
+import pytest
+
+from app.models import RoleEnum, Sensor, SensorReading, Unit, db
 from app.utils.helpers import (
+    build_search_filter,
+    calculate_time_range,
+    calculate_unit_efficiency,
+    format_timestamp,
+    generate_health_score,
     get_current_user_id,
+    get_recent_sensor_readings,
     get_role_permissions,
     paginate_query,
-    validate_json_request,
-    format_timestamp,
     parse_timestamp,
-    calculate_time_range,
-    build_search_filter,
+    validate_json_request,
     validate_unit_readings,
-    get_recent_sensor_readings,
-    calculate_unit_efficiency,
-    generate_health_score,
 )
 
 
@@ -91,6 +91,7 @@ def test_paginate_query(app):
 
 def test_validate_json_request_decorator(app):
     """Test the JSON validation decorator handles content-types properly."""
+
     @validate_json_request()
     def dummy_route():
         return "Success"
@@ -101,12 +102,16 @@ def test_validate_json_request_decorator(app):
         assert status_code == 400
 
     # Case 2: Empty JSON body
-    with app.test_request_context(headers={"Content-Type": "application/json"}, data=""):
+    with app.test_request_context(
+        headers={"Content-Type": "application/json"}, data=""
+    ):
         with pytest.raises(Exception):
             dummy_route()
 
     # Case 3: Valid JSON body
-    with app.test_request_context(headers={"Content-Type": "application/json"}, json={"key": "val"}):
+    with app.test_request_context(
+        headers={"Content-Type": "application/json"}, json={"key": "val"}
+    ):
         assert dummy_route() == "Success"
 
 
@@ -151,6 +156,7 @@ def test_calculate_time_range():
 
 def test_build_search_filter():
     """Test building SQLAlchemy search filters."""
+
     class FakeModel:
         name = Unit.name
         location = Unit.location
@@ -207,23 +213,43 @@ def test_calculate_unit_efficiency(app, db_session):
         # Valid Unit TEST001 with mock data
         # We need power and level readings
         unit_id = "TEST001"
-        sensor_power = Sensor.query.filter_by(unit_id=unit_id, sensor_type="power").first()
+        sensor_power = Sensor.query.filter_by(
+            unit_id=unit_id, sensor_type="power"
+        ).first()
         if not sensor_power:
-            sensor_power = Sensor(unit_id=unit_id, name="Power", sensor_type="power", unit_of_measurement="kW")
+            sensor_power = Sensor(
+                unit_id=unit_id,
+                name="Power",
+                sensor_type="power",
+                unit_of_measurement="kW",
+            )
             db.session.add(sensor_power)
-        
-        sensor_level = Sensor.query.filter_by(unit_id=unit_id, sensor_type="level").first()
+
+        sensor_level = Sensor.query.filter_by(
+            unit_id=unit_id, sensor_type="level"
+        ).first()
         if not sensor_level:
-            sensor_level = Sensor(unit_id=unit_id, name="Level", sensor_type="level", unit_of_measurement="L")
+            sensor_level = Sensor(
+                unit_id=unit_id,
+                name="Level",
+                sensor_type="level",
+                unit_of_measurement="L",
+            )
             db.session.add(sensor_level)
         db.session.commit()
 
         # Seed power and water level readings
         now = datetime.now(timezone.utc)
-        reading_power = SensorReading(sensor_id=sensor_power.id, value=50.0, timestamp=now)
-        reading_level1 = SensorReading(sensor_id=sensor_level.id, value=100.0, timestamp=now - timedelta(hours=2))
-        reading_level2 = SensorReading(sensor_id=sensor_level.id, value=200.0, timestamp=now)
-        
+        reading_power = SensorReading(
+            sensor_id=sensor_power.id, value=50.0, timestamp=now
+        )
+        reading_level1 = SensorReading(
+            sensor_id=sensor_level.id, value=100.0, timestamp=now - timedelta(hours=2)
+        )
+        reading_level2 = SensorReading(
+            sensor_id=sensor_level.id, value=200.0, timestamp=now
+        )
+
         db.session.add_all([reading_power, reading_level1, reading_level2])
         db.session.commit()
 
@@ -241,7 +267,7 @@ def test_generate_health_score(app, db_session):
         assert generate_health_score("NONEXIST") == {}
 
         unit = Unit.query.get("TEST001")
-        
+
         # Scenario 1: Perfect Health
         unit.status = "online"
         unit.health_status = "optimal"
@@ -260,7 +286,9 @@ def test_generate_health_score(app, db_session):
         unit.health_status = "critical"  # -40
         unit.has_alarm = True  # -20
         unit.battery_level = 10  # -15
-        unit.last_maintenance = datetime.now(timezone.utc) - timedelta(days=120)  # overdue maintenance -10
+        unit.last_maintenance = datetime.now(timezone.utc) - timedelta(
+            days=120
+        )  # overdue maintenance -10
         db.session.commit()
 
         health = generate_health_score(unit.id)
@@ -276,7 +304,9 @@ def test_generate_health_score(app, db_session):
         unit.has_alarm = False
         unit.has_alert = True  # -10
         unit.battery_level = 30  # -5
-        unit.last_maintenance = datetime.utcnow() - timedelta(days=70)  # naive datetime, due soon -5
+        unit.last_maintenance = datetime.utcnow() - timedelta(
+            days=70
+        )  # naive datetime, due soon -5
         db.session.commit()
 
         health = generate_health_score(unit.id)
@@ -287,7 +317,7 @@ def test_generate_health_score(app, db_session):
         assert "Maintenance due soon" in health["factors"]
 
         # Scenario 4: Error status, has alert, battery level 30
-        unit.status = "error" # -30
+        unit.status = "error"  # -30
         db.session.commit()
         health = generate_health_score(unit.id)
         assert health["score"] <= scenario3_score

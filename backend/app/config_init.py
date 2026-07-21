@@ -86,14 +86,17 @@ def configure_cors(app: Any) -> None:
         from flask_cors import CORS  # noqa: PLC0415 - Optional dependency
 
         # Get CORS origins from config with a sensible default
-        cors_origins = app.config.get("CORS_ORIGINS", [
-            'https://thermacoreapp.netlify.app',
-            'https://*.netlify.app',
-            'https://thermacoreapp.onrender.com',
-            'http://localhost:3000',
-            'http://localhost:5173',
-            'http://localhost:5000'
-        ])
+        cors_origins = app.config.get(
+            "CORS_ORIGINS",
+            [
+                "https://thermacoreapp.netlify.app",
+                "https://*.netlify.app",
+                "https://thermacoreapp.onrender.com",
+                "http://localhost:3000",
+                "http://localhost:5173",
+                "http://localhost:5000",
+            ],
+        )
 
         CORS(
             app,

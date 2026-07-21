@@ -1,11 +1,12 @@
 """Tests for MQTT client service."""
 
 import json
-from datetime import datetime, timezone
 import os
 import sys
 import tempfile
+from datetime import datetime
 from unittest.mock import Mock, patch
+
 import pytest
 
 from app.services.mqtt_service import MQTTClient
@@ -296,23 +297,25 @@ class TestMQTTClient:
             mock_publish_result = Mock()
             mock_publish_result.rc = 0
             mock_client_instance.publish.return_value = mock_publish_result
-            
+
             # Test publishing string
             client.publish("test/topic", "test-payload")
-            mock_client_instance.publish.assert_called_with("test/topic", "test-payload", 0)
+            mock_client_instance.publish.assert_called_with(
+                "test/topic", "test-payload", 0
+            )
 
     def test_on_message_malformed_payload(self):
         """Test on_message handles malformed/corrupted payloads gracefully."""
         client = MQTTClient()
         client.connected = True
-        
+
         # Mock parsing to return None
         client._parse_scada_message = Mock(return_value=None)
-        
+
         mock_msg = Mock()
         mock_msg.topic = "scada/UNIT001/temperature"
         mock_msg.payload = b"invalid-bytes\xff\xfe"
-        
+
         # Invoking message callback should not raise exception
         try:
             client._on_message(None, None, mock_msg)
@@ -336,9 +339,9 @@ class TestMQTTClient:
             mock_client_instance = Mock()
             mock_mqtt_client.return_value = mock_client_instance
             client = MQTTClient(mock_app)
-            
+
             # Reconnect mock
             client.connect = Mock()
             client._on_disconnect(None, None, 1)  # rc != 0 (unexpected disconnect)
-            
+
             assert client.connected is False

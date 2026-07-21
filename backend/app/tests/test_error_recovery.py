@@ -1,10 +1,7 @@
 """Tests for error recovery, including network timeouts, database retries, and graceful degradation."""
 
-from unittest.mock import Mock, patch
-import pytest
-from app.exceptions import ThermaCoreException
 from app.utils.error_handler import SecurityAwareErrorHandler
-from app.utils.status_utils import is_recovering, calculate_health_score, determine_availability_level
+from app.utils.status_utils import calculate_health_score, is_recovering
 
 
 class TestErrorRecovery:
@@ -12,21 +9,26 @@ class TestErrorRecovery:
 
     def test_security_aware_error_handler_database_error(self):
         """Test database errors are securely caught and returned as generic messages without exposing details."""
-        db_exception = Exception("psycopg2.OperationalError: connection to server at '10.0.0.1', port 5432 failed")
-        
+        db_exception = Exception(
+            "psycopg2.OperationalError: connection to server at '10.0.0.1', port 5432 failed"
+        )
+
         # Test generic message mapping
         response, status_code = SecurityAwareErrorHandler.handle_service_error(
             db_exception,
             "database_error",
             "Unit Query",
-            500
+            500,
         )
-        
+
         assert status_code == 500
         assert response.json["success"] is False
         assert "OperationalError" not in response.json["error"]["message"]
         assert "10.0.0.1" not in response.json["error"]["message"]
-        assert response.json["error"]["message"] == SecurityAwareErrorHandler.GENERIC_MESSAGES["database_error"]
+        assert (
+            response.json["error"]["message"]
+            == SecurityAwareErrorHandler.GENERIC_MESSAGES["database_error"]
+        )
 
     def test_security_aware_error_handler_timeout_error(self):
         """Test timeout errors are securely caught and mapped to a generic message."""
@@ -35,12 +37,15 @@ class TestErrorRecovery:
             timeout_exception,
             "timeout_error",
             "Modbus Register Poll",
-            504
+            504,
         )
-        
+
         assert status_code == 504
         assert response.json["success"] is False
-        assert response.json["error"]["message"] == SecurityAwareErrorHandler.GENERIC_MESSAGES["timeout_error"]
+        assert (
+            response.json["error"]["message"]
+            == SecurityAwareErrorHandler.GENERIC_MESSAGES["timeout_error"]
+        )
 
     def test_protocol_is_recovering(self):
         """Test checking if a protocol is in recovery state based on status and retry counts."""

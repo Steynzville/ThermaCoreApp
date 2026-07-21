@@ -31,6 +31,8 @@ def test_trends_with_sensor_filter_and_exception(client, admin_token):
 def test_alert_patterns_exception_path(client, admin_token):
     headers = {"Authorization": f"Bearer {admin_token}"}
     with patch("app.routes.analytics.db.session.query", side_effect=Exception("boom")):
-        response = client.get("/api/v1/analytics/alerts/patterns?days=7", headers=headers)
+        response = client.get(
+            "/api/v1/analytics/alerts/patterns?days=7", headers=headers
+        )
 
     assert response.status_code == 500

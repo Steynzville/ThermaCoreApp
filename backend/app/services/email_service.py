@@ -1,15 +1,19 @@
 # backend/app/services/email_service.py
 import logging
+
 from flask import current_app
 
 # Try to import sendgrid
 try:
     from sendgrid import SendGridAPIClient
     from sendgrid.helpers.mail import Mail
+
     SENDGRID_AVAILABLE = True
 except ImportError:
     SENDGRID_AVAILABLE = False
-    logging.getLogger(__name__).warning("SendGrid not installed. Run: pip install sendgrid")
+    logging.getLogger(__name__).warning(
+        "SendGrid not installed. Run: pip install sendgrid"
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -17,15 +21,15 @@ logger = logging.getLogger(__name__)
 def send_password_reset_email(email, token):
     """Send a password reset email using SendGrid API."""
     logger.info(f"=== EMAIL SERVICE CALLED for {email} ===")
-    
+
     if not SENDGRID_AVAILABLE:
         logger.error("SendGrid library not installed. Run: pip install sendgrid")
         return False, "SendGrid library not installed"
 
     try:
-        api_key = current_app.config.get('SENDGRID_API_KEY')
-        from_email = current_app.config.get('EMAIL_FROM', 'steyn.enslin@gmail.com')
-        frontend_url = current_app.config.get('FRONTEND_URL')
+        api_key = current_app.config.get("SENDGRID_API_KEY")
+        from_email = current_app.config.get("EMAIL_FROM", "steyn.enslin@gmail.com")
+        frontend_url = current_app.config.get("FRONTEND_URL")
 
         if not api_key:
             logger.error("SENDGRID_API_KEY not configured")
@@ -52,7 +56,7 @@ def send_password_reset_email(email, token):
                 <p>Best regards,<br>ThermaCore Team</p>
             </body>
             </html>
-            """
+            """,
         )
 
         sg = SendGridAPIClient(api_key)

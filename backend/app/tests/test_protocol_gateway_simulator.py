@@ -1,9 +1,9 @@
 """Tests for Protocol Gateway Simulator."""
 
-import json
 from unittest.mock import MagicMock, patch
-import pytest
+
 import paho.mqtt.client as mqtt
+import pytest
 
 from app.services.protocol_gateway_simulator import ProtocolGatewaySimulator
 
@@ -52,7 +52,7 @@ def test_connect_mqtt_failure(mock_mqtt_client):
     """Test MQTT connection failure due to exception."""
     sim = ProtocolGatewaySimulator()
     mock_mqtt_client.connect.side_effect = Exception("Connection refused")
-    
+
     res = sim.connect_mqtt()
     assert res is False
     assert sim.connected is False
@@ -65,7 +65,9 @@ def test_mqtt_callbacks():
     assert sim.connected is True
 
     sim._on_mqtt_connect(None, None, None, 1)  # error code
-    assert sim.connected is True  # Wait, callbacks don't set to False unless disconnected is called
+    assert (
+        sim.connected is True
+    )  # Wait, callbacks don't set to False unless disconnected is called
 
     sim._on_mqtt_disconnect(None, None, 0)
     assert sim.connected is False
@@ -86,7 +88,7 @@ def test_disconnect_mqtt(mock_mqtt_client):
 def test_generate_sensor_value_variations():
     """Test generating sensor values including bounds and anomaly rolls."""
     sim = ProtocolGatewaySimulator()
-    
+
     # Force anomaly roll to always produce anomaly/uncertain quality
     with patch("random.SystemRandom.random", return_value=0.01):
         val = sim.generate_sensor_value("UNIT001", "temperature")
@@ -96,7 +98,9 @@ def test_generate_sensor_value_variations():
 
     # Test that trend can be changed
     # Force trend change roll (< 0.1)
-    with patch("random.SystemRandom.random", side_effect=[0.05, 0.99, 0.99, 0.99, 0.99]):
+    with patch(
+        "random.SystemRandom.random", side_effect=[0.05, 0.99, 0.99, 0.99, 0.99]
+    ):
         initial_trend = sim.unit_states["UNIT001"]["trend_direction"]["temperature"]
         sim.generate_sensor_value("UNIT001", "temperature")
         new_trend = sim.unit_states["UNIT001"]["trend_direction"]["temperature"]
@@ -107,7 +111,7 @@ def test_publish_sensor_data(mock_mqtt_client):
     """Test publishing sensor data when connected and disconnected."""
     sim = ProtocolGatewaySimulator()
     sim.client = mock_mqtt_client
-    
+
     # Case 1: Disconnected
     sim.connected = False
     sim.publish_sensor_data("UNIT001", "temperature")
@@ -122,7 +126,7 @@ def test_publish_sensor_data(mock_mqtt_client):
     mock_publish_result = MagicMock()
     mock_publish_result.rc = mqtt.MQTT_ERR_CONN_LOST
     mock_mqtt_client.publish.return_value = mock_publish_result
-    
+
     # Should handle failure gracefully without raising exception
     sim.publish_sensor_data("UNIT001", "temperature")
 
@@ -135,7 +139,7 @@ def test_simulate_unit_status_change(mock_mqtt_client):
 
     # Transition from online to warning/maintenance
     sim.unit_states["UNIT001"]["status"] = "online"
-    with patch("random.SystemRandom.random", return_value=0.0001): # Trigger change
+    with patch("random.SystemRandom.random", return_value=0.0001):  # Trigger change
         with patch("random.SystemRandom.choice", return_value="warning"):
             sim.simulate_unit_status_change("UNIT001")
             assert sim.unit_states["UNIT001"]["status"] == "warning"
@@ -143,13 +147,15 @@ def test_simulate_unit_status_change(mock_mqtt_client):
 
     # Transition from warning to offline
     sim.unit_states["UNIT001"]["status"] = "warning"
-    with patch("random.SystemRandom.random", side_effect=[0.0001, 0.8]): # Trigger change + choose offline
+    with patch(
+        "random.SystemRandom.random", side_effect=[0.0001, 0.8]
+    ):  # Trigger change + choose offline
         sim.simulate_unit_status_change("UNIT001")
         assert sim.unit_states["UNIT001"]["status"] == "offline"
 
     # Transition from offline to online
     sim.unit_states["UNIT001"]["status"] = "offline"
-    with patch("random.SystemRandom.random", return_value=0.0001): # Trigger change
+    with patch("random.SystemRandom.random", return_value=0.0001):  # Trigger change
         sim.simulate_unit_status_change("UNIT001")
         assert sim.unit_states["UNIT001"]["status"] == "online"
 
@@ -157,18 +163,18 @@ def test_simulate_unit_status_change(mock_mqtt_client):
 def test_simulation_loop_control(mock_mqtt_client):
     """Test starting, running, and stopping the simulation."""
     sim = ProtocolGatewaySimulator()
-    
+
     # Start fails if not connected
     assert sim.start_simulation() is False
 
     # Start succeeds when connected
     sim.client = mock_mqtt_client
     sim.connected = True
-    
+
     # Let's run a single cycle of the simulation loop
     def stop_immediately(*args):
         sim.running = False
-        
+
     with patch("time.sleep", side_effect=stop_immediately):
         res = sim.start_simulation()
         assert res is True
@@ -185,10 +191,10 @@ def test_inject_test_scenarios(mock_mqtt_client):
     # High temperature
     sim.inject_test_scenario("high_temperature", "UNIT001")
     assert mock_mqtt_client.publish.called
-    
+
     # Sensor failure
     sim.inject_test_scenario("sensor_failure", "UNIT001")
-    
+
     # Unit offline
     sim.inject_test_scenario("unit_offline", "UNIT001")
     assert sim.unit_states["UNIT001"]["status"] == "offline"
@@ -200,7 +206,7 @@ def test_inject_test_scenarios(mock_mqtt_client):
 def test_get_status():
     """Test getting simulator status reports."""
     sim = ProtocolGatewaySimulator()
-    
+
     # Case 1: client is None
     status1 = sim.get_status()
     assert status1["status"] == "not_initialized"

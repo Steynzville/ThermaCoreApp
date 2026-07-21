@@ -154,7 +154,9 @@ def init_database_on_startup():
                             app.logger.warning(
                                 "⚠️  IMPORTANT: No DEFAULT_ADMIN_PASSWORD set!",
                             )
-                            app.logger.warning("Generated random password - check environment variable DEFAULT_ADMIN_PASSWORD")
+                            app.logger.warning(
+                                "Generated random password - check environment variable DEFAULT_ADMIN_PASSWORD"
+                            )
                             app.logger.warning(
                                 "SAVE THIS PASSWORD - It will not be shown again!",
                             )
@@ -285,7 +287,7 @@ def create_admin():
 if __name__ == "__main__":
     # Get port from environment or use default
     port = int(os.environ.get("PORT", 10000))
-    
+
     # Run the Flask app
     # In production, use Gunicorn instead of Flask's built-in server
     app.run(host="0.0.0.0", port=port, debug=False)

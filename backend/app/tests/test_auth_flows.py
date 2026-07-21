@@ -1,10 +1,10 @@
 """Critical tests for authentication flows including login, refresh, JWT validation, lockout, and timeout."""
 
 import json
-from unittest.mock import patch, Mock
-import pytest
+
+from flask_jwt_extended import create_refresh_token
+
 from app.models import User
-from flask_jwt_extended import create_refresh_token, create_access_token
 
 
 class TestAuthFlows:
@@ -42,7 +42,10 @@ class TestAuthFlows:
             json={"username": "admin"},
             headers={"Content-Type": "application/json"},
         )
-        assert response.status_code in [400, 422]  # webargs/custom schemas return 400 or 422
+        assert response.status_code in [
+            400,
+            422,
+        ]  # webargs/custom schemas return 400 or 422
 
     def test_token_refresh_flow(self, client, app):
         """Test token refresh lifecycle using refresh token."""
@@ -52,9 +55,13 @@ class TestAuthFlows:
 
         response = client.post(
             "/api/v1/auth/refresh",
-            headers={"Authorization": f"Bearer {refresh_token}"}
+            headers={"Authorization": f"Bearer {refresh_token}"},
         )
-        assert response.status_code in [200, 401, 422]  # depending on refresh configuration/blacklist
+        assert response.status_code in [
+            200,
+            401,
+            422,
+        ]  # depending on refresh configuration/blacklist
         if response.status_code == 200:
             data = json.loads(response.data)
             assert data["success"] is True
@@ -76,7 +83,7 @@ class TestAuthFlows:
         token = json.loads(login_res.data)["data"]["access_token"]
         response = client.get(
             "/api/v1/units",
-            headers={"Authorization": f"Bearer {token}"}
+            headers={"Authorization": f"Bearer {token}"},
         )
         assert response.status_code == 200
 
@@ -103,6 +110,7 @@ class TestAuthFlows:
     def test_session_timeout_validation(self, app):
         """Verify token expiration and lifetime settings are in security bounds."""
         from datetime import timedelta
+
         token_expiry = app.config.get("JWT_ACCESS_TOKEN_EXPIRES")
         assert token_expiry is not None
         assert token_expiry > timedelta(0)

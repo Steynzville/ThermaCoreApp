@@ -49,7 +49,9 @@ def test_dnp3_performance_config_and_metrics_branches(client, admin_token):
 
     # unavailable service
     assert (
-        client.get("/api/v1/protocols/dnp3/performance/metrics", headers=headers).status_code
+        client.get(
+            "/api/v1/protocols/dnp3/performance/metrics", headers=headers
+        ).status_code
         == 503
     )
 

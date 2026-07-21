@@ -2,9 +2,10 @@
 
 import struct
 from unittest.mock import Mock, patch
+
 import pytest
 
-from app.services.modbus_service import ModbusClient, ModbusRegister, ModbusDevice
+from app.services.modbus_service import ModbusClient, ModbusDevice, ModbusRegister
 
 
 class TestModbusService:
@@ -25,6 +26,7 @@ class TestModbusService:
     def test_process_register_value_conversions(self, mock_logger):
         """Test parsing of different Modbus register types with scaling and offsets."""
         from app.services.modbus_service import ModbusService
+
         service = ModbusService()
 
         # 1. Test uint16 conversion with scale and offset
@@ -33,7 +35,7 @@ class TestModbusService:
             raw_values=[100],
             data_type="uint16",
             scale_factor=2.5,
-            offset=-10.0
+            offset=-10.0,
         )
         assert val_uint16 == (100 * 2.5) - 10.0
 
@@ -42,7 +44,7 @@ class TestModbusService:
             raw_values=[65530],  # -6 signed
             data_type="int16",
             scale_factor=1.0,
-            offset=0.0
+            offset=0.0,
         )
         assert val_int16 == -6
 
@@ -51,7 +53,7 @@ class TestModbusService:
             raw_values=[1, 0],  # (1 << 16) | 0 = 65536
             data_type="uint32",
             scale_factor=1.0,
-            offset=0.0
+            offset=0.0,
         )
         assert val_uint32 == 65536
 
@@ -63,7 +65,7 @@ class TestModbusService:
             raw_values=[high_word, low_word],
             data_type="int32",
             scale_factor=1.0,
-            offset=0.0
+            offset=0.0,
         )
         assert val_int32 == -6
 
@@ -78,13 +80,14 @@ class TestModbusService:
             raw_values=[high_w, low_w],
             data_type="float32",
             scale_factor=1.0,
-            offset=0.0
+            offset=0.0,
         )
         assert pytest.approx(val_float32, rel=1e-5) == 123.45
 
     def test_process_register_value_malformed(self):
         """Test processing malformed or incomplete register arrays gracefully falls back."""
         from app.services.modbus_service import ModbusService
+
         service = ModbusService()
 
         # float32 expects at least 2 registers; if 1 is passed, it falls back to single register/100
@@ -92,7 +95,7 @@ class TestModbusService:
             raw_values=[450],
             data_type="float32",
             scale_factor=1.0,
-            offset=0.0
+            offset=0.0,
         )
         assert val_fallback == 4.5
 
@@ -101,13 +104,14 @@ class TestModbusService:
             raw_values=[],
             data_type="uint16",
             scale_factor=1.0,
-            offset=0.0
+            offset=0.0,
         )
         assert val_empty == 0.0
 
     def test_write_register_float32(self):
         """Test write holding register with float32 conversion (splitting into high/low words)."""
         from app.services.modbus_service import ModbusService
+
         service = ModbusService()
 
         # Register device
@@ -121,9 +125,11 @@ class TestModbusService:
         service._clients["DEV1"] = mock_client
 
         # Write float32 value (123.45)
-        success = service.write_register("DEV1", "holding_register", 100, 123.45, "float32")
+        success = service.write_register(
+            "DEV1", "holding_register", 100, 123.45, "float32"
+        )
         assert success is True
-        
+
         # Verify write_multiple_registers was called with high/low words
         mock_client.write_multiple_registers.assert_called_once()
         args = mock_client.write_multiple_registers.call_args[0]
@@ -133,6 +139,7 @@ class TestModbusService:
     def test_modbus_read_device_errors_and_timeouts(self):
         """Test read_device_data with register errors, parity failures, and timeouts."""
         from app.services.modbus_service import ModbusService
+
         service = ModbusService()
 
         # Config device & registers
@@ -148,19 +155,23 @@ class TestModbusService:
         # Mock first call as successful, second call raises TimeoutError / exception
         mock_client.read_holding_registers.side_effect = [
             [50],  # normal reading
-            TimeoutError("Modbus response timeout")  # timeout error
+            TimeoutError("Modbus response timeout"),  # timeout error
         ]
         service._clients["DEV_ERR"] = mock_client
 
         # Execute read
         res = service.read_device_data("DEV_ERR")
-        assert res["success"] is True  # still True because of partial success / graceful loop bypass
+        assert (
+            res["success"] is True
+        )  # still True because of partial success / graceful loop bypass
         assert "temp_100" in res["readings"]
         assert res["readings"]["temp_100"]["processed_value"] == 50.0
         assert "press_101" not in res["readings"]
 
         # Mock parity failure (raises custom ValueError/ConnectionError or Exception)
-        mock_client.read_holding_registers.side_effect = Exception("Modbus parity error")
+        mock_client.read_holding_registers.side_effect = Exception(
+            "Modbus parity error"
+        )
         res = service.read_device_data("DEV_ERR")
         assert res["success"] is True
         assert len(res["readings"]) == 0  # all failed but caught gracefully
@@ -168,6 +179,7 @@ class TestModbusService:
     def test_modbus_write_register_errors(self):
         """Test write_register with connection errors, parity failures, and timeouts."""
         from app.services.modbus_service import ModbusService
+
         service = ModbusService()
 
         device = ModbusDevice("DEV_ERR_W", 1, "127.0.0.1", 502, "tcp")
@@ -176,7 +188,9 @@ class TestModbusService:
 
         mock_client = Mock()
         # Raise parity/timeout exception on write
-        mock_client.write_single_coil.side_effect = TimeoutError("Write operation timeout")
+        mock_client.write_single_coil.side_effect = TimeoutError(
+            "Write operation timeout"
+        )
         service._clients["DEV_ERR_W"] = mock_client
 
         # Write should fail gracefully and return False, not crash
@@ -184,6 +198,8 @@ class TestModbusService:
         assert success is False
 
         # Write with parity exception
-        mock_client.write_single_coil.side_effect = Exception("Parity validation failed")
+        mock_client.write_single_coil.side_effect = Exception(
+            "Parity validation failed"
+        )
         success = service.write_register("DEV_ERR_W", "coil", 100, True)
         assert success is False

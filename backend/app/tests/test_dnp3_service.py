@@ -1,19 +1,17 @@
 """Tests for DNP3 service and protocol gateway simulation."""
 
-from datetime import datetime, timezone, timedelta
+from datetime import timedelta
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import MagicMock, patch
 
 from app.models import utc_now
-from app.exceptions import ConfigurationException
 from app.services.dnp3_service import (
-    DNP3DataType,
-    DNP3Quality,
-    DNP3DataPoint,
-    DNP3Device,
-    DNP3Reading,
     DNP3CachedReading,
+    DNP3DataType,
     DNP3PerformanceMetrics,
+    DNP3Quality,
+    DNP3Reading,
     DNP3Service,
     MockDNP3Master,
 )
@@ -22,12 +20,12 @@ from app.services.dnp3_service import (
 def test_dnp3_performance_metrics():
     """Test performance metrics and statistics tracking."""
     metrics = DNP3PerformanceMetrics()
-    
+
     # Record success operation
     metrics.record_operation("read", duration=0.1, success=True, data_points=10)
     # Record fail operation
     metrics.record_operation("read", duration=0.2, success=False, data_points=0)
-    
+
     stats = metrics.get_operation_stats("read")
     assert stats["count"] == 2
     assert stats["errors"] == 1
@@ -56,20 +54,22 @@ def test_dnp3_cached_reading():
         sensor_type="temperature",
         description="Temp Index 1",
     )
-    
+
     # Test non-expired reading
     cached = DNP3CachedReading(reading=reading, cached_at=utc_now(), cache_ttl=2.0)
     assert cached.is_expired() is False
 
     # Test expired reading
-    cached_expired = DNP3CachedReading(reading=reading, cached_at=utc_now() - timedelta(seconds=5), cache_ttl=2.0)
+    cached_expired = DNP3CachedReading(
+        reading=reading, cached_at=utc_now() - timedelta(seconds=5), cache_ttl=2.0
+    )
     assert cached_expired.is_expired() is True
 
 
 def test_mock_dnp3_master_connection_and_read_write():
     """Test MockDNP3Master operations including connect/disconnect/reads/writes."""
     master = MockDNP3Master(master_address=1)
-    
+
     # Setup outstation
     assert master.add_outstation(10, "127.0.0.1", 20000) is True
     # Outstation connect fails if not configured
@@ -99,20 +99,23 @@ def test_dnp3_service_device_management(app):
     """Test adding, removing, connecting, and disconnecting DNP3 devices."""
     service = DNP3Service(app)
     service.init_master(master_address=1)
-    
+
     device_id = "DEV001"
     # Connect fails for unconfigured device
     assert service.connect_device(device_id) is False
 
     # Add device config
-    assert service.add_device(
-        device_id=device_id,
-        master_address=1,
-        outstation_address=10,
-        host="127.0.0.1",
-        port=20000,
-    ) is True
-    
+    assert (
+        service.add_device(
+            device_id=device_id,
+            master_address=1,
+            outstation_address=10,
+            host="127.0.0.1",
+            port=20000,
+        )
+        is True
+    )
+
     assert device_id in service._devices
 
     # Connect configured device
@@ -141,19 +144,51 @@ def test_dnp3_service_read_write_data(app):
 
     # Configure data points
     points = [
-        {"index": 0, "data_type": "binary_input", "sensor_type": "status", "description": "Status"},
-        {"index": 1, "data_type": "analog_input", "sensor_type": "temperature", "scale_factor": 1.5, "offset": 2.0, "description": "Temp"},
-        {"index": 2, "data_type": "counter", "sensor_type": "water_level", "description": "Level"},
+        {
+            "index": 0,
+            "data_type": "binary_input",
+            "sensor_type": "status",
+            "description": "Status",
+        },
+        {
+            "index": 1,
+            "data_type": "analog_input",
+            "sensor_type": "temperature",
+            "scale_factor": 1.5,
+            "offset": 2.0,
+            "description": "Temp",
+        },
+        {
+            "index": 2,
+            "data_type": "counter",
+            "sensor_type": "water_level",
+            "description": "Level",
+        },
     ]
     assert service.add_data_point_config(device_id, points) is True
 
     # Test write_data_point
     # Binary output success
-    assert service.write_data_point(device_id, index=10, data_type="binary_output", value=True) is True
+    assert (
+        service.write_data_point(
+            device_id, index=10, data_type="binary_output", value=True
+        )
+        is True
+    )
     # Analog output success
-    assert service.write_data_point(device_id, index=11, data_type="analog_output", value=45.6) is True
+    assert (
+        service.write_data_point(
+            device_id, index=11, data_type="analog_output", value=45.6
+        )
+        is True
+    )
     # Invalid data type write fails
-    assert service.write_data_point(device_id, index=12, data_type="invalid_type", value=100) is False
+    assert (
+        service.write_data_point(
+            device_id, index=12, data_type="invalid_type", value=100
+        )
+        is False
+    )
 
     # Test reading device data (bulk mode enabled)
     service._enable_bulk_operations = True
@@ -175,7 +210,11 @@ def test_dnp3_service_read_write_data(app):
     # Populate cache
     service.read_device_data(device_id)
     # Second read should hit cache
-    with patch.object(service._master, "read_binary_inputs", side_effect=Exception("Should not call master")):
+    with patch.object(
+        service._master,
+        "read_binary_inputs",
+        side_effect=Exception("Should not call master"),
+    ):
         res_cached = service.read_device_data(device_id)
         assert res_cached["success"] is True
 
@@ -183,7 +222,7 @@ def test_dnp3_service_read_write_data(app):
 def test_dnp3_service_errors_and_failures(app):
     """Test error handling in DNP3 service under various failure conditions."""
     service = DNP3Service(app)
-    
+
     # 1. Read unconfigured device
     res_unconfigured = service.read_device_data("GHOST_DEV")
     assert res_unconfigured["success"] is False
@@ -200,13 +239,18 @@ def test_dnp3_service_errors_and_failures(app):
     service.connect_device("DEV003")
     res_no_points = service.read_device_data("DEV003")
     assert res_no_points["success"] is False
-    assert "not connected" in res_no_points["error"] or "No data point configuration" in res_no_points["error"]
+    assert (
+        "not connected" in res_no_points["error"]
+        or "No data point configuration" in res_no_points["error"]
+    )
 
     # 4. Read when master not initialized (ConfigurationException)
     service_no_master = DNP3Service(app)
     service_no_master.add_device("DEV004", 1, 13, "127.0.0.1")
     service_no_master._devices["DEV004"].is_connected = True
-    service_no_master.add_data_point_config("DEV004", [{"index": 0, "data_type": "binary_input"}])
+    service_no_master.add_data_point_config(
+        "DEV004", [{"index": 0, "data_type": "binary_input"}]
+    )
     res_no_master = service_no_master.read_device_data("DEV004")
     assert res_no_master["success"] is False
     assert "master not initialized" in res_no_master["error"]

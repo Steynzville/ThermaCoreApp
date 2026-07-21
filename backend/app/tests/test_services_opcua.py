@@ -2,7 +2,7 @@
 
 from unittest.mock import MagicMock, patch
 
-import app.services.opcua_service as opcua_service
+from app.services import opcua_service
 from app.services.opcua_service import OPCUAClient
 
 
@@ -16,15 +16,20 @@ def test_read_node_value_and_processing_failure_paths(app):
         assert client.read_node_value("ns=2;s=Bad") is None
 
         client.add_node_mapping("ns=2;s=Temp", "TEST001", "temperature")
-        client.read_node_value = MagicMock(return_value={"value": 1, "quality": "GOOD", "timestamp": "x"})
+        client.read_node_value = MagicMock(
+            return_value={"value": 1, "quality": "GOOD", "timestamp": "x"}
+        )
         assert client.process_and_store_node_data("ns=2;s=Temp") is False
 
 
 def test_poll_and_browse_limits_and_errors():
-    with patch.object(opcua_service, "opcua_available", True), patch.object(
-        opcua_service,
-        "ua",
-    ) as mock_ua:
+    with (
+        patch.object(opcua_service, "opcua_available", True),
+        patch.object(
+            opcua_service,
+            "ua",
+        ) as mock_ua,
+    ):
         mock_ua.NodeClass.Variable = "Variable"
 
         client = OPCUAClient()
@@ -32,7 +37,9 @@ def test_poll_and_browse_limits_and_errors():
         client.client = MagicMock()
 
         # Rate-limit and max-node limiting branches
-        client._subscribed_nodes = {f"n{i}": MagicMock() for i in range(client.MAX_NODES_PER_POLL + 1)}
+        client._subscribed_nodes = {
+            f"n{i}": MagicMock() for i in range(client.MAX_NODES_PER_POLL + 1)
+        }
         with patch.object(client, "process_and_store_node_data") as process:
             client.poll_subscribed_nodes()
             assert process.called

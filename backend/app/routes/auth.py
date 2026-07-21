@@ -820,12 +820,12 @@ def forgot_password(data):
             if not success:
                 current_app.logger.error(
                     f"Failed to send reset email to {email}: {error}",
-                    extra={"event": "password_reset_email_failed"}
+                    extra={"event": "password_reset_email_failed"},
                 )
             else:
                 current_app.logger.info(
                     f"Password reset email sent to {email}",
-                    extra={"event": "password_reset_email_sent"}
+                    extra={"event": "password_reset_email_sent"},
                 )
 
         # Always return success to prevent email enumeration

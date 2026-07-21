@@ -1,7 +1,8 @@
 """Tests for auto-migration functionality."""
 
-from sqlalchemy import inspect
 from unittest.mock import MagicMock, patch
+
+from sqlalchemy import inspect
 
 from app.utils.auto_migration import (
     _validate_sql_identifier,
@@ -343,14 +344,20 @@ class TestAutoMigration:
     def test_column_exists_exception(self):
         """Test that column_exists handles exceptions gracefully and returns False."""
         mock_engine = MagicMock()
-        with patch("app.utils.auto_migration.inspect", side_effect=Exception("Connection Timeout")):
+        with patch(
+            "app.utils.auto_migration.inspect",
+            side_effect=Exception("Connection Timeout"),
+        ):
             assert column_exists(mock_engine, "users", "any") is False
 
     def test_add_password_reset_columns_exception(self):
         """Test that add_password_reset_columns handles DB interruptions / exceptions gracefully."""
         mock_engine = MagicMock()
         # Make column_exists raise an Exception to simulate connection interruption
-        with patch("app.utils.auto_migration.column_exists", side_effect=Exception("Database lock error")):
+        with patch(
+            "app.utils.auto_migration.column_exists",
+            side_effect=Exception("Database lock error"),
+        ):
             assert add_password_reset_columns(mock_engine) is False
 
     def test_add_permissions_column_sqlite(self):
@@ -362,6 +369,7 @@ class TestAutoMigration:
 
         with patch("app.utils.auto_migration.column_exists", return_value=False):
             from app.utils.auto_migration import add_permissions_column
+
             assert add_permissions_column(mock_engine) is True
             # Should have executed SQLite compatible SQL
             mock_conn.execute.assert_called()
@@ -369,34 +377,48 @@ class TestAutoMigration:
     def test_add_permissions_column_exception(self):
         """Test add_permissions_column exceptions handling."""
         mock_engine = MagicMock()
-        with patch("app.utils.auto_migration.column_exists", side_effect=Exception("Schema lock")):
+        with patch(
+            "app.utils.auto_migration.column_exists",
+            side_effect=Exception("Schema lock"),
+        ):
             from app.utils.auto_migration import add_permissions_column
+
             assert add_permissions_column(mock_engine) is False
 
     def test_add_user_approval_columns_sqlite(self):
         """Test add_user_approval_columns sqlite path and exception."""
         mock_engine = MagicMock()
         mock_engine.dialect.name = "sqlite"
-        
-        with patch("app.utils.auto_migration.column_exists", return_value=False), \
-             patch("app.utils.auto_migration.table_exists", return_value=True):
+
+        with (
+            patch("app.utils.auto_migration.column_exists", return_value=False),
+            patch("app.utils.auto_migration.table_exists", return_value=True),
+        ):
             from app.utils.auto_migration import add_user_approval_columns
+
             # Will execute SQLite queries
             assert add_user_approval_columns(mock_engine) is True
 
     def test_table_exists_exception(self):
         """Test table_exists handles exceptions."""
         mock_engine = MagicMock()
-        with patch("app.utils.auto_migration.inspect", side_effect=Exception("DB Interruption")):
+        with patch(
+            "app.utils.auto_migration.inspect", side_effect=Exception("DB Interruption")
+        ):
             assert table_exists(mock_engine, "tenants") is False
 
     def test_add_tenants_table_exception(self):
         """Test add_tenants_table handles exceptions."""
         mock_engine = MagicMock()
-        with patch("app.utils.auto_migration.table_exists", side_effect=Exception("Table lock")):
+        with patch(
+            "app.utils.auto_migration.table_exists", side_effect=Exception("Table lock")
+        ):
             assert add_tenants_table(mock_engine) is False
 
     def test_run_auto_migrations_exception(self, app):
         """Test run_auto_migrations handles exceptions gracefully."""
-        with patch("app.utils.auto_migration.add_password_reset_columns", side_effect=Exception("Migration crash")):
+        with patch(
+            "app.utils.auto_migration.add_password_reset_columns",
+            side_effect=Exception("Migration crash"),
+        ):
             assert run_auto_migrations(app) is False
