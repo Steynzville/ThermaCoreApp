@@ -1,7 +1,7 @@
 """Tests for timestamp consistency and registration field validation."""
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.models import Sensor, Unit, User
 from app.tests.timestamp_helpers import (
@@ -186,7 +186,7 @@ class TestTimestampConsistency:
             id="TIMESTAMP_TEST",
             name="Timestamp Test Unit",
             serial_number="TIMESTAMP-2024-001",
-            install_date=datetime(2024, 1, 15),
+            install_date=datetime(2024, 1, 15, tzinfo=timezone.utc),
             status=UnitStatusEnum.ONLINE,
             health_status=HealthStatusEnum.OPTIMAL,
         )

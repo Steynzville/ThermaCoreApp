@@ -1,6 +1,6 @@
 """Test SQL query improvements for boolean aggregations."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app import db
 from app.models import HealthStatusEnum, Unit, UnitStatusEnum
@@ -17,7 +17,7 @@ class TestSQLQueryImprovements:
                 id="TEST_BOOL_001",
                 name="Test Unit Bool 1",
                 serial_number="BOOL-001",
-                install_date=datetime.utcnow(),
+                install_date=datetime.now(timezone.utc),
                 status=UnitStatusEnum.ONLINE,
                 health_status=HealthStatusEnum.OPTIMAL,
                 has_alert=True,
@@ -28,7 +28,7 @@ class TestSQLQueryImprovements:
                 id="TEST_BOOL_002",
                 name="Test Unit Bool 2",
                 serial_number="BOOL-002",
-                install_date=datetime.utcnow(),
+                install_date=datetime.now(timezone.utc),
                 status=UnitStatusEnum.OFFLINE,
                 health_status=HealthStatusEnum.WARNING,
                 has_alert=False,

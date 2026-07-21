@@ -159,20 +159,20 @@ class TestTenantFilter:
 
         with app.app_context():
             # Create units in different tenants
-            from datetime import datetime
+            from datetime import datetime, timezone
 
             unit1 = Unit(
                 id="TC001",
                 name="Unit 1",
                 serial_number="SN001",
-                install_date=datetime.utcnow(),
+                install_date=datetime.now(timezone.utc),
                 tenant_id=tenant1_id,
             )
             unit2 = Unit(
                 id="TC002",
                 name="Unit 2",
                 serial_number="SN002",
-                install_date=datetime.utcnow(),
+                install_date=datetime.now(timezone.utc),
                 tenant_id=tenant2_id,
             )
             db.session.add_all([unit1, unit2])
@@ -197,20 +197,20 @@ class TestTenantFilter:
 
         with app.app_context():
             # Create units in different tenants
-            from datetime import datetime
+            from datetime import datetime, timezone
 
             unit1 = Unit(
                 id="TC001",
                 name="Unit 1",
                 serial_number="SN001",
-                install_date=datetime.utcnow(),
+                install_date=datetime.now(timezone.utc),
                 tenant_id=tenant1_id,
             )
             unit2 = Unit(
                 id="TC002",
                 name="Unit 2",
                 serial_number="SN002",
-                install_date=datetime.utcnow(),
+                install_date=datetime.now(timezone.utc),
                 tenant_id=tenant2_id,
             )
             db.session.add_all([unit1, unit2])
@@ -239,13 +239,13 @@ class TestTenantIsolation:
         tenant1_id, _tenant2_id = tenants
 
         with app.app_context():
-            from datetime import datetime
+            from datetime import datetime, timezone
 
             unit = Unit(
                 id="TC001",
                 name="Unit 1",
                 serial_number="SN001",
-                install_date=datetime.utcnow(),
+                install_date=datetime.now(timezone.utc),
                 tenant_id=tenant1_id,
             )
             db.session.add(unit)
@@ -263,13 +263,13 @@ class TestTenantIsolation:
         tenant1_id, _tenant2_id = tenants
 
         with app.app_context():
-            from datetime import datetime
+            from datetime import datetime, timezone
 
             unit = Unit(
                 id="TC001",
                 name="Unit 1",
                 serial_number="SN001",
-                install_date=datetime.utcnow(),
+                install_date=datetime.now(timezone.utc),
                 tenant_id=tenant1_id,
             )
             db.session.add(unit)
@@ -288,13 +288,13 @@ class TestTenantIsolation:
         tenant1_id, tenant2_id = tenants
 
         with app.app_context():
-            from datetime import datetime
+            from datetime import datetime, timezone
 
             unit = Unit(
                 id="TC001",
                 name="Unit 1",
                 serial_number="SN001",
-                install_date=datetime.utcnow(),
+                install_date=datetime.now(timezone.utc),
                 tenant_id=tenant1_id,
             )
             db.session.add(unit)
@@ -318,7 +318,7 @@ class TestSetTenantForNewObject:
         tenant1_id, _tenant2_id = tenants
 
         with app.app_context():
-            from datetime import datetime
+            from datetime import datetime, timezone
 
             with app.test_request_context():
                 # Set as non-admin with tenant 1
@@ -330,7 +330,7 @@ class TestSetTenantForNewObject:
                     id="TC001",
                     name="Unit 1",
                     serial_number="SN001",
-                    install_date=datetime.utcnow(),
+                    install_date=datetime.now(timezone.utc),
                 )
 
                 # Set tenant automatically
@@ -344,7 +344,7 @@ class TestSetTenantForNewObject:
         _tenant1_id, tenant2_id = tenants
 
         with app.app_context():
-            from datetime import datetime
+            from datetime import datetime, timezone
 
             with app.test_request_context():
                 # Set as admin
@@ -356,7 +356,7 @@ class TestSetTenantForNewObject:
                     id="TC001",
                     name="Unit 1",
                     serial_number="SN001",
-                    install_date=datetime.utcnow(),
+                    install_date=datetime.now(timezone.utc),
                     tenant_id=tenant2_id,
                 )
 

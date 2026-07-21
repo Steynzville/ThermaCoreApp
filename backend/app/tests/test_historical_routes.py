@@ -1,6 +1,6 @@
 """Tests for historical data analysis routes."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 
 import pytest
 
@@ -65,7 +65,7 @@ def seed_historical_data(app):
             db.session.commit()
 
         # Add several days of readings for both sensors
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         for i in range(10):
             timestamp = now - timedelta(hours=i * 6)
             # Sensor 1

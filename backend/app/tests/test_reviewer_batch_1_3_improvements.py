@@ -96,8 +96,8 @@ class TestOPCUACertificateLoading:
             .issuer_name(issuer)
             .public_key(private_key.public_key())
             .serial_number(x509.random_serial_number())
-            .not_valid_before(datetime.datetime.utcnow())
-            .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=365))
+            .not_valid_before(datetime.datetime.now(timezone.utc))
+            .not_valid_after(datetime.datetime.now(timezone.utc) + datetime.timedelta(days=365))
             .add_extension(
                 x509.SubjectAlternativeName(
                     [
@@ -141,8 +141,8 @@ class TestOPCUACertificateLoading:
             .issuer_name(issuer)
             .public_key(private_key.public_key())
             .serial_number(x509.random_serial_number())
-            .not_valid_before(datetime.datetime.utcnow() - datetime.timedelta(days=2))
-            .not_valid_after(datetime.datetime.utcnow() - datetime.timedelta(days=1))
+            .not_valid_before(datetime.datetime.now(timezone.utc) - datetime.timedelta(days=2))
+            .not_valid_after(datetime.datetime.now(timezone.utc) - datetime.timedelta(days=1))
             .sign(private_key, hashes.SHA256())
         )
 

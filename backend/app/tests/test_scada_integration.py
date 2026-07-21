@@ -1,7 +1,7 @@
 """Integration tests for Phase 2 SCADA data ingestion pipeline."""
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timezone
 from unittest.mock import patch
 
 import pytest
@@ -33,7 +33,7 @@ class TestSCADAIntegration:
         """Test complete pipeline from MQTT message to database storage."""
         with app.app_context():
             # Create test unit
-            from datetime import date
+            from datetime import date, timezone
 
             from app.models import UnitStatusEnum
 
@@ -41,7 +41,7 @@ class TestSCADAIntegration:
                 id="UNIT001",
                 name="Test Unit 1",
                 serial_number="SN001",  # Required field
-                install_date=date.today(),  # Required field
+                install_date=datetime.now(timezone.utc).date(),  # Required field
                 location="Test Location",
                 status=UnitStatusEnum.ONLINE,  # Use enum value
             )

@@ -1,6 +1,6 @@
 """Tests for Machine Learning Anomaly Detection Service."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 
 from app.models import Sensor, SensorReading, Unit, db
 from app.services.anomaly_detection import (
@@ -152,7 +152,7 @@ def test_analyze_sensor_reading_ensemble(app, db_session):
     db.session.commit()
 
     # Seed 12 historical normal readings
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     for i in range(12):
         reading = SensorReading(
             sensor_id=sensor.id,
@@ -200,7 +200,7 @@ def test_analyze_unit_anomalies(app, db_session):
     ).first()
 
     # Seed historical readings for sensor_temp to have sufficient data
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     for i in range(15):
         reading = SensorReading(
             sensor_id=sensor_temp.id,

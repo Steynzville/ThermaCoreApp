@@ -132,7 +132,7 @@ class TestCertificateGeneration:
 
             # Check certificate validity period
             import subprocess
-            from datetime import datetime
+            from datetime import datetime, timezone
 
             output = subprocess.check_output(
                 ["openssl", "x509", "-in", cert_file, "-noout", "-dates"],
@@ -157,8 +157,10 @@ class TestCertificateGeneration:
             not_before_dt = datetime.strptime(
                 not_before.strip(),
                 "%b %d %H:%M:%S %Y %Z",
-            )
-            not_after_dt = datetime.strptime(not_after.strip(), "%b %d %H:%M:%S %Y %Z")
+            ).replace(tzinfo=timezone.utc)
+            not_after_dt = datetime.strptime(
+                not_after.strip(), "%b %d %H:%M:%S %Y %Z"
+            ).replace(tzinfo=timezone.utc)
 
             diff = not_after_dt - not_before_dt
             # Allow for some variance (364-366 days)

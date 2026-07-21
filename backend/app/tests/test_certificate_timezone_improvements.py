@@ -1,6 +1,6 @@
 """Tests for improved certificate timezone handling in OPC UA service."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone, timedelta
 from unittest.mock import Mock, patch
 
 import pytest
@@ -40,7 +40,7 @@ class TestCertificateTimezoneHandling:
         opcua_client = OPCUAClient()
 
         # Test naive datetime (should be treated as UTC)
-        naive_dt = datetime(2024, 12, 25, 10, 30, 0)
+        naive_dt = datetime(2024, 12, 25, 10, 30, 0)  # noqa: DTZ001
         result = opcua_client._normalize_certificate_datetime(naive_dt)
 
         expected_utc = datetime(2024, 12, 25, 10, 30, 0, tzinfo=timezone.utc)

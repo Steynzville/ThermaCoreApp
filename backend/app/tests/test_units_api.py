@@ -1,7 +1,7 @@
 """Tests for Unit API endpoints including GET, POST, PUT, DELETE, pagination, filtering, and error cases."""
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.models import Unit
 
@@ -53,7 +53,7 @@ class TestUnitsAPI:
             "Content-Type": "application/json",
         }
 
-        unique_suffix = datetime.utcnow().strftime("%H%M%S%f")
+        unique_suffix = datetime.now(timezone.utc).strftime("%H%M%S%f")
         unit_id = f"UNIT{unique_suffix[-6:]}"
         new_unit_payload = {
             "id": unit_id,

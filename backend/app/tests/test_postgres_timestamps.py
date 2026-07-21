@@ -10,7 +10,7 @@ To run these tests:
     python -m pytest app/tests/test_postgres_timestamps.py
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 from werkzeug.security import generate_password_hash
@@ -79,7 +79,7 @@ class TestPostgreSQLTimestampTriggers:
                 id="PG_TEST_001",
                 name="PostgreSQL Test Unit",
                 serial_number="PG-TEST-001",
-                install_date=datetime.utcnow(),
+                install_date=datetime.now(timezone.utc),
                 location="PostgreSQL Test Location",
             )
             db.session.add(unit)
@@ -107,7 +107,7 @@ class TestPostgreSQLTimestampTriggers:
                 id="PG_SENSOR_UNIT_001",
                 name="PostgreSQL Sensor Unit",
                 serial_number="PG-SENSOR-001",
-                install_date=datetime.utcnow(),
+                install_date=datetime.now(timezone.utc),
                 location="PostgreSQL Sensor Location",
             )
             db.session.add(unit)

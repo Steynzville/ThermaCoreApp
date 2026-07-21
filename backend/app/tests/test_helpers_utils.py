@@ -1,6 +1,6 @@
 """Tests for utility helper functions."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -314,7 +314,7 @@ def test_generate_health_score(app, db_session):
         unit.has_alarm = False
         unit.has_alert = True  # -10
         unit.battery_level = 30  # -5
-        unit.last_maintenance = datetime.utcnow() - timedelta(
+        unit.last_maintenance = datetime.now(timezone.utc) - timedelta(
             days=70,
         )  # naive datetime, due soon -5
         db.session.commit()

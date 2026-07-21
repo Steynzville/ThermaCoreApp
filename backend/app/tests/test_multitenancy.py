@@ -153,7 +153,7 @@ class TestMultiTenancyUnitModel:
     def test_unit_with_tenant(self, app):
         """Test creating a unit with a tenant."""
         with app.app_context():
-            from datetime import datetime
+            from datetime import datetime, timezone
 
             # Create tenant
             tenant = Tenant(name="Company B", slug="company-b")
@@ -165,7 +165,7 @@ class TestMultiTenancyUnitModel:
                 id="TC001",
                 name="Test Unit",
                 serial_number="SN001",
-                install_date=datetime.utcnow(),
+                install_date=datetime.now(timezone.utc),
                 tenant_id=tenant.id,
             )
             db.session.add(unit)
@@ -177,13 +177,13 @@ class TestMultiTenancyUnitModel:
     def test_unit_without_tenant(self, app):
         """Test creating a unit without a tenant (for backward compatibility)."""
         with app.app_context():
-            from datetime import datetime
+            from datetime import datetime, timezone
 
             unit = Unit(
                 id="TC002",
                 name="Test Unit 2",
                 serial_number="SN002",
-                install_date=datetime.utcnow(),
+                install_date=datetime.now(timezone.utc),
                 tenant_id=None,
             )
             db.session.add(unit)
@@ -241,7 +241,7 @@ class TestTenantIsolation:
     def test_units_in_different_tenants(self, app):
         """Test that units in different tenants are isolated."""
         with app.app_context():
-            from datetime import datetime
+            from datetime import datetime, timezone
 
             # Create two tenants
             tenant1 = Tenant(name="Company X", slug="company-x")
@@ -254,7 +254,7 @@ class TestTenantIsolation:
                 id="TX001",
                 name="Unit X",
                 serial_number="SNX001",
-                install_date=datetime.utcnow(),
+                install_date=datetime.now(timezone.utc),
                 tenant_id=tenant1.id,
             )
 
@@ -262,7 +262,7 @@ class TestTenantIsolation:
                 id="TY001",
                 name="Unit Y",
                 serial_number="SNY001",
-                install_date=datetime.utcnow(),
+                install_date=datetime.now(timezone.utc),
                 tenant_id=tenant2.id,
             )
 

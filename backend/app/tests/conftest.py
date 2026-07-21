@@ -277,7 +277,7 @@ def isolated_config():
 
 def _create_test_data():
     """Create test data for tests."""
-    from datetime import datetime
+    from datetime import datetime, timezone
 
     from app.models import HealthStatusEnum, PermissionEnum, RoleEnum, UnitStatusEnum
 
@@ -362,7 +362,7 @@ def _create_test_data():
         id="TEST001",
         name="Test Unit 001",
         serial_number="TEST001-2024-001",
-        install_date=datetime(2024, 1, 15),
+        install_date=datetime(2024, 1, 15, tzinfo=timezone.utc),
         location="Test Site",
         status=UnitStatusEnum.ONLINE,
         health_status=HealthStatusEnum.OPTIMAL,
@@ -526,7 +526,7 @@ def seed_user(db_session, seed_tenant):
 def seed_unit(db_session, seed_tenant):
     """Create a test unit associated with seed_tenant, unique id per test."""
     import uuid
-    from datetime import datetime
+    from datetime import datetime, timezone
 
     from app.models import HealthStatusEnum, Unit, UnitStatusEnum
 
@@ -535,7 +535,7 @@ def seed_unit(db_session, seed_tenant):
         id=f"TENANTUNIT_{suffix}",
         name=f"Tenant Test Unit {suffix}",
         serial_number=f"TENANTUNIT-{suffix}-2024",
-        install_date=datetime(2024, 1, 1),
+        install_date=datetime(2024, 1, 1, tzinfo=timezone.utc),
         location="Tenant Site",
         status=UnitStatusEnum.ONLINE,
         health_status=HealthStatusEnum.OPTIMAL,
@@ -633,7 +633,7 @@ def admin_no_tenant_headers(admin_token):
 @pytest.fixture
 def test_data(db_session):
     """Create test data within a transaction that rolls back after test."""
-    from datetime import datetime
+    from datetime import datetime, timezone
 
     from app.models import HealthStatusEnum, UnitStatusEnum
 
@@ -642,7 +642,7 @@ def test_data(db_session):
         id="TEST001",
         name="Test Unit 001",
         serial_number="TEST001-2024-001",
-        install_date=datetime(2024, 1, 15),
+        install_date=datetime(2024, 1, 15, tzinfo=timezone.utc),
         location="Test Site",
         status=UnitStatusEnum.ONLINE,
         health_status=HealthStatusEnum.OPTIMAL,

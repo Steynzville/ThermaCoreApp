@@ -1,6 +1,6 @@
 """Tests for security hardening and validation improvements."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import Mock, patch
 
 import pytest
@@ -22,7 +22,7 @@ class TestSecurityHardeningImprovements:
             "unit_id": "test_unit",
             "sensor_type": "temperature",
             "value": float("nan"),
-            "timestamp": datetime.now(),
+            "timestamp": datetime.now(timezone.utc),
         }
         result = service.store_sensor_data(nan_data)
         assert result is False
@@ -32,7 +32,7 @@ class TestSecurityHardeningImprovements:
             "unit_id": "test_unit",
             "sensor_type": "temperature",
             "value": float("inf"),
-            "timestamp": datetime.now(),
+            "timestamp": datetime.now(timezone.utc),
         }
         result = service.store_sensor_data(inf_data)
         assert result is False
@@ -42,7 +42,7 @@ class TestSecurityHardeningImprovements:
             "unit_id": "test_unit",
             "sensor_type": "temperature",
             "value": float("-inf"),
-            "timestamp": datetime.now(),
+            "timestamp": datetime.now(timezone.utc),
         }
         result = service.store_sensor_data(neg_inf_data)
         assert result is False
@@ -56,7 +56,7 @@ class TestSecurityHardeningImprovements:
             "unit_id": "  test_unit  ",
             "sensor_type": "  temperature  ",
             "value": 25.5,
-            "timestamp": datetime.now(),
+            "timestamp": datetime.now(timezone.utc),
         }
 
         # Store original values
@@ -85,7 +85,7 @@ class TestSecurityHardeningImprovements:
             "unit_id": "   ",  # Only whitespace
             "sensor_type": "temperature",
             "value": 25.5,
-            "timestamp": datetime.now(),
+            "timestamp": datetime.now(timezone.utc),
         }
         result = service.store_sensor_data(empty_unit_data)
         assert result is False
@@ -95,7 +95,7 @@ class TestSecurityHardeningImprovements:
             "unit_id": "test_unit",
             "sensor_type": "   ",  # Only whitespace
             "value": 25.5,
-            "timestamp": datetime.now(),
+            "timestamp": datetime.now(timezone.utc),
         }
         result = service.store_sensor_data(empty_sensor_data)
         assert result is False
@@ -224,7 +224,7 @@ class TestSecurityHardeningImprovements:
             "unit_id": "test_unit",
             "sensor_type": "temperature",
             "value": 25.5,
-            "timestamp": datetime.now(),
+            "timestamp": datetime.now(timezone.utc),
         }
 
         # Should not attempt storage and should log error
@@ -254,7 +254,7 @@ class TestSecurityHardeningImprovements:
             "unit_id": 123,  # Invalid type - should be string
             "sensor_type": "temperature",
             "value": 25.5,
-            "timestamp": datetime.now(),
+            "timestamp": datetime.now(timezone.utc),
         }
 
         with patch("app.services.data_storage_service.logger") as mock_logger:
@@ -306,7 +306,7 @@ class TestSecurityHardeningImprovements:
             "unit_id": "test_unit",
             "sensor_type": "temperature",
             "value": None,  # Null value
-            "timestamp": datetime.now(),
+            "timestamp": datetime.now(timezone.utc),
         }
         result = service.store_sensor_data(null_data)
         assert result is False

@@ -1,7 +1,7 @@
 """Tests for DNP3 performance optimizations and measurements."""
 
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 import pytest
@@ -200,7 +200,7 @@ class TestDNP3ServiceOptimizations:
         service = DNP3Service()
 
         # Mock time progression
-        start_time = datetime(2024, 1, 1, 12, 0, 0)
+        start_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
         mock_utc_now.return_value = start_time
 
         # Initialize last cleanup time

@@ -1,6 +1,6 @@
 """Tests for OPC UA service."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone, timedelta
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
@@ -66,7 +66,7 @@ def test_normalize_certificate_datetime():
     assert client._normalize_certificate_datetime(dt_aware) == dt_aware
 
     # Naive datetime
-    dt_naive = datetime(2026, 6, 1, 12, 0, 0)
+    dt_naive = datetime(2026, 6, 1, 12, 0, 0)  # noqa: DTZ001
     assert client._normalize_certificate_datetime(dt_naive) == datetime(
         2026,
         6,

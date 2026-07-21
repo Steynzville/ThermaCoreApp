@@ -1,6 +1,6 @@
 """Tests for advanced analytics routes."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -192,9 +192,9 @@ def test_get_alert_patterns_success(client, admin_token):
             self.date = date
             self.sensor_type = sensor_type
 
-    from datetime import date
+    from datetime import date, timezone
 
-    now_date = date.today()
+    now_date = datetime.now(timezone.utc).date()
     mock_records = [
         MockAlertRecord(5, now_date, "temperature"),
         MockAlertRecord(3, now_date, "pressure"),

@@ -1,6 +1,6 @@
 """Tests for the new timestamp and enum validation improvements."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 from marshmallow import ValidationError
@@ -120,7 +120,7 @@ class TestTimestampUpdates:
                 id="TEST_UPDATE_001",
                 name="Test Update Unit",
                 serial_number="TEST-UPDATE-001",
-                install_date=datetime.utcnow(),
+                install_date=datetime.now(timezone.utc),
                 location="Test Location",
             )
             db.session.add(unit)
@@ -151,7 +151,7 @@ class TestTimestampUpdates:
                 id="TEST_SENSOR_UNIT_001",
                 name="Test Sensor Unit",
                 serial_number="TEST-SENSOR-001",
-                install_date=datetime.utcnow(),
+                install_date=datetime.now(timezone.utc),
             )
             db.session.add(unit)
             db.session.commit()

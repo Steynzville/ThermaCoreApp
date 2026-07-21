@@ -1,7 +1,7 @@
 """Unit tests for units API functionality."""
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.models import Unit
 
@@ -113,7 +113,7 @@ class TestUnitsAPI:
     def test_create_unit_success(self, client):
         """Test creating new unit."""
         token = self.get_auth_token(client)
-        unique_suffix = datetime.utcnow().strftime("%H%M%S%f")
+        unique_suffix = datetime.now(timezone.utc).strftime("%H%M%S%f")
         unit_id = f"TEST{unique_suffix[-6:]}"
 
         unit_data = {
@@ -243,7 +243,7 @@ class TestUnitsAPI:
             id="DELETE_ME",
             name="Unit to Delete",
             serial_number="DELETE-2024-001",
-            install_date=datetime.utcnow(),
+            install_date=datetime.now(timezone.utc),
         )
         db_session.add(test_unit)
         db_session.commit()
