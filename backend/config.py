@@ -280,10 +280,7 @@ class ProductionConfig(Config):
             self.OPCUA_SECURITY_MODE = os.environ.get("OPCUA_SECURITY_MODE")
 
         # Ensure certificate paths are correctly set if security is enabled
-        if (
-            self.OPCUA_SECURITY_POLICY != "None"
-            and self.OPCUA_SECURITY_MODE != "None"
-        ):
+        if self.OPCUA_SECURITY_POLICY != "None" and self.OPCUA_SECURITY_MODE != "None":
             if not (
                 os.environ.get("OPCUA_CERT_FILE")
                 and os.environ.get("OPCUA_PRIVATE_KEY_FILE")
