@@ -1,12 +1,19 @@
 """Comprehensive tests for rate limiting middleware."""
 
+import importlib
 import time
 import threading
 from unittest.mock import MagicMock, patch
 
 from flask import jsonify
 
-import app.middleware.rate_limit as rate_limit_module
+# CRITICAL FIX: Use importlib to bypass app/middleware/__init__.py shadowing.
+# The __init__.py re-exports the rate_limit decorator function under the same
+# name as the submodule, so `import app.middleware.rate_limit as rate_limit_module`
+# resolves to the function via attribute-chain lookup. importlib.import_module
+# checks sys.modules directly and returns the real module object.
+rate_limit_module = importlib.import_module("app.middleware.rate_limit")
+
 from app.middleware.rate_limit import (
     RateLimiter,
     RateLimitConfig,
@@ -246,7 +253,6 @@ class TestGetRateLimiter:
         with app.app_context():
             app.config["REDIS_URL"] = "redis://localhost:6379/0"
             fake_redis = MagicMock()
-            # FIXED: Use patch.object on the imported module
             with patch.object(rate_limit_module.redis, "from_url", return_value=fake_redis):
                 limiter = get_rate_limiter()
                 assert limiter.redis_client is fake_redis
@@ -257,7 +263,6 @@ class TestGetRateLimiter:
             app.config["REDIS_URL"] = "redis://localhost:6379/0"
             fake_redis = MagicMock()
             fake_redis.ping.side_effect = Exception("connection refused")
-            # FIXED: Use patch.object on the imported module
             with patch.object(rate_limit_module.redis, "from_url", return_value=fake_redis):
                 limiter = get_rate_limiter()
                 assert limiter.redis_client is None
@@ -274,7 +279,6 @@ class TestGetRateLimiter:
         """Test get_rate_limiter handles general exceptions gracefully."""
         with app.app_context():
             app.config["REDIS_URL"] = "redis://localhost:6379/0"
-            # FIXED: Use patch.object on the imported module
             with patch.object(rate_limit_module.redis, "from_url", side_effect=Exception("Unexpected error")):
                 limiter = get_rate_limiter()
                 # Should fall back to memory-based rate limiting
@@ -406,7 +410,6 @@ class TestRateLimitDecorator:
                 "flask_jwt_extended.get_jwt_identity",
                 return_value=0,  # Valid integer 0
             ):
-                # FIXED: Use patch.object on the imported module
                 with patch.object(rate_limit_module, "get_rate_limiter") as mock_get:
                     mock_limiter = MagicMock()
                     mock_limiter.is_allowed.return_value = (True, {
@@ -521,7 +524,6 @@ class TestRateLimitDecorator:
 
         app.config["RATE_LIMIT_ENABLED"] = True
         with app.test_request_context("/"):
-            # FIXED: Use patch.object on the imported module
             with patch.object(rate_limit_module, "get_rate_limiter") as mock_get:
                 mock_limiter = MagicMock()
                 mock_limiter.is_allowed.return_value = (True, {
