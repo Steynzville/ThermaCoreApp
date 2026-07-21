@@ -10,7 +10,7 @@ from app.exceptions import (
     MQTTException,
     OPCUAException,
     ServiceUnavailableException,
-    ThermaCoreException,
+    ThermaCoreError,
 )
 from app.protocols.base import ProtocolStatus
 from app.protocols.registry import _fallback, collect_protocol_status
@@ -184,7 +184,7 @@ class TestThermaCoreExceptions:
 
     def test_base_exception(self):
         """Test base ThermaCore exception."""
-        exc = ThermaCoreException(
+        exc = ThermaCoreError(
             "Test error",
             error_type="validation_error",
             status_code=400,
