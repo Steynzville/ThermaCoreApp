@@ -131,7 +131,7 @@ def get_tenants():
     # Parse query parameters
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
-    
+
     # Validate pagination parameters
     if page < 1:
         return jsonify({"error": "Page must be at least 1"}), 400
@@ -298,7 +298,7 @@ def update_tenant(tenant_id):
     # Validate request data
     schema = TenantUpdateSchema()
     is_put = request.method == "PUT"
-    
+
     try:
         # For PUT, schema.required=True fields will be enforced by marshmallow
         # For PATCH, allow partial updates
@@ -401,7 +401,7 @@ def delete_tenant(tenant_id):
             jsonify(
                 {
                     "error": "Cannot delete tenant due to existing related data. "
-                    "Please check for audit logs, settings, or other associations."
+                    "Please check for audit logs, settings, or other associations.",
                 },
             ),
             409,
@@ -415,8 +415,8 @@ def delete_tenant(tenant_id):
             jsonify(
                 {
                     "error": "An unexpected error occurred while deleting the tenant. "
-                    "Please check logs for details."
-                }
+                    "Please check logs for details.",
+                },
             ),
             500,
         )
@@ -508,7 +508,7 @@ def switch_tenant():
             {
                 "message": "Switched to cross-tenant access mode. "
                 "All subsequent requests will operate across all tenants.",
-            }
+            },
         )
 
     # Verify the tenant exists
@@ -522,8 +522,8 @@ def switch_tenant():
             jsonify(
                 {
                     "error": f"Tenant '{tenant.name}' is not active. "
-                    "Cannot switch to an inactive tenant."
-                }
+                    "Cannot switch to an inactive tenant.",
+                },
             ),
             400,
         )
@@ -534,5 +534,5 @@ def switch_tenant():
         {
             "message": f"Switched to tenant: {tenant.name} (id: {tenant_id}). "
             "Include ?tenant_id=<id> in your subsequent requests.",
-        }
+        },
     )

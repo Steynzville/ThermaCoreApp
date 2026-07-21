@@ -269,7 +269,11 @@ class TestModbusService:
         assert service.connect_device("MISSING") is False
 
         service._devices["DEV_NOCLIENT"] = ModbusDevice(
-            "DEV_NOCLIENT", 1, "127.0.0.1", 502, "tcp",
+            "DEV_NOCLIENT",
+            1,
+            "127.0.0.1",
+            502,
+            "tcp",
         )
         assert service.connect_device("DEV_NOCLIENT") is False
 
@@ -377,7 +381,10 @@ class TestModbusService:
         mock_client = Mock(write_single_register=Mock(return_value=True))
         service._clients["DEV_W"] = mock_client
 
-        assert service.write_register("DEV_W", "holding_register", 10, 42, "uint16") is True
+        assert (
+            service.write_register("DEV_W", "holding_register", 10, 42, "uint16")
+            is True
+        )
         mock_client.write_single_register.assert_called_once_with(10, 42, 1)
 
     def test_write_register_unknown_type_and_guard_clauses(self):
@@ -389,7 +396,9 @@ class TestModbusService:
 
         device = ModbusDevice("DEV_NC2", 1, "127.0.0.1", 502, "tcp")
         service._devices["DEV_NC2"] = device
-        assert service.write_register("DEV_NC2", "coil", 1, True) is False  # not connected
+        assert (
+            service.write_register("DEV_NC2", "coil", 1, True) is False
+        )  # not connected
 
         device.is_connected = True
         service._clients["DEV_NC2"] = Mock()
@@ -402,7 +411,9 @@ class TestModbusService:
         from app.services.modbus_service import ModbusDevice, ModbusService
 
         service = ModbusService()
-        assert service.get_device_status("MISSING") == {"error": "Device MISSING not found"}
+        assert service.get_device_status("MISSING") == {
+            "error": "Device MISSING not found"
+        }
 
         device = ModbusDevice("DEV_S", 1, "127.0.0.1", 502, "tcp")
         service._devices["DEV_S"] = device

@@ -21,7 +21,10 @@ class TestCreateTenantErrors:
 
     def test_create_tenant_duplicate_slug(self, client, auth_headers, db_session):
         """Test that duplicate tenant slug returns conflict error."""
-        with patch("app.routes.tenants.db.session.commit", side_effect=IntegrityError("", "", "")):
+        with patch(
+            "app.routes.tenants.db.session.commit",
+            side_effect=IntegrityError("", "", ""),
+        ):
             resp = client.post(
                 "/tenants",
                 json={"name": "Acme", "slug": "acme"},
@@ -54,7 +57,10 @@ class TestUpdateTenantErrors:
 
     def test_update_tenant_duplicate_slug(self, client, auth_headers, seed_tenant):
         """Test that duplicate slug on update returns conflict error."""
-        with patch("app.routes.tenants.db.session.commit", side_effect=IntegrityError("", "", "")):
+        with patch(
+            "app.routes.tenants.db.session.commit",
+            side_effect=IntegrityError("", "", ""),
+        ):
             resp = client.patch(
                 f"/tenants/{seed_tenant.id}",
                 json={"slug": "taken-slug"},
@@ -62,7 +68,9 @@ class TestUpdateTenantErrors:
             )
         assert resp.status_code == 409
 
-    def test_update_tenant_put_requires_all_fields(self, client, auth_headers, seed_tenant):
+    def test_update_tenant_put_requires_all_fields(
+        self, client, auth_headers, seed_tenant
+    ):
         """Test that PUT requires all required fields."""
         # Missing 'slug' field
         resp = client.put(
@@ -73,7 +81,9 @@ class TestUpdateTenantErrors:
         assert resp.status_code == 400
         assert "Validation error" in resp.get_json()["error"]
 
-    def test_update_tenant_put_full_replacement(self, client, auth_headers, seed_tenant):
+    def test_update_tenant_put_full_replacement(
+        self, client, auth_headers, seed_tenant
+    ):
         """Test that PUT performs full replacement with all required fields."""
         resp = client.put(
             f"/tenants/{seed_tenant.id}",
@@ -89,7 +99,9 @@ class TestUpdateTenantErrors:
         assert data["name"] == "New Name"
         assert data["slug"] == "new-slug"
 
-    def test_update_tenant_patch_allows_partial(self, client, auth_headers, seed_tenant):
+    def test_update_tenant_patch_allows_partial(
+        self, client, auth_headers, seed_tenant
+    ):
         """Test that PATCH allows partial updates."""
         resp = client.patch(
             f"/tenants/{seed_tenant.id}",
@@ -103,13 +115,17 @@ class TestUpdateTenantErrors:
 class TestDeleteTenantErrors:
     """Test cases for tenant deletion error paths."""
 
-    def test_delete_tenant_blocked_by_users(self, client, auth_headers, seed_tenant, seed_user):
+    def test_delete_tenant_blocked_by_users(
+        self, client, auth_headers, seed_tenant, seed_user
+    ):
         """Test that tenant with associated users cannot be deleted."""
         resp = client.delete(f"/tenants/{seed_tenant.id}", headers=auth_headers)
         assert resp.status_code == 409
         assert "associated users" in resp.get_json()["error"]
 
-    def test_delete_tenant_blocked_by_units(self, client, auth_headers, seed_tenant, seed_unit):
+    def test_delete_tenant_blocked_by_units(
+        self, client, auth_headers, seed_tenant, seed_unit
+    ):
         """Test that tenant with associated units cannot be deleted."""
         resp = client.delete(f"/tenants/{seed_tenant.id}", headers=auth_headers)
         assert resp.status_code == 409
@@ -122,14 +138,20 @@ class TestDeleteTenantErrors:
 
     def test_delete_tenant_integrity_error(self, client, auth_headers, seed_tenant):
         """Test that integrity error on delete returns 409."""
-        with patch("app.routes.tenants.db.session.commit", side_effect=IntegrityError("", "", "")):
+        with patch(
+            "app.routes.tenants.db.session.commit",
+            side_effect=IntegrityError("", "", ""),
+        ):
             resp = client.delete(f"/tenants/{seed_tenant.id}", headers=auth_headers)
         assert resp.status_code == 409
         assert "existing related data" in resp.get_json()["error"]
 
     def test_delete_tenant_generic_failure(self, client, auth_headers, seed_tenant):
         """Test that generic database failure returns 500."""
-        with patch("app.routes.tenants.db.session.commit", side_effect=Exception("Unexpected error")):
+        with patch(
+            "app.routes.tenants.db.session.commit",
+            side_effect=Exception("Unexpected error"),
+        ):
             resp = client.delete(f"/tenants/{seed_tenant.id}", headers=auth_headers)
         assert resp.status_code == 500
         assert "unexpected error" in resp.get_json()["error"].lower()
@@ -143,7 +165,9 @@ class TestDeleteTenantErrors:
 class TestCurrentTenant:
     """Test cases for current tenant endpoint."""
 
-    def test_get_current_tenant_admin_cross_tenant(self, client, admin_no_tenant_headers):
+    def test_get_current_tenant_admin_cross_tenant(
+        self, client, admin_no_tenant_headers
+    ):
         """Test admin with cross-tenant access returns null tenant."""
         resp = client.get("/tenants/current", headers=admin_no_tenant_headers)
         assert resp.status_code == 200
@@ -156,7 +180,9 @@ class TestCurrentTenant:
         resp = client.get("/tenants/current", headers=no_tenant_headers)
         assert resp.status_code == 404
 
-    def test_get_current_tenant_success(self, client, tenant_scoped_headers, seed_tenant):
+    def test_get_current_tenant_success(
+        self, client, tenant_scoped_headers, seed_tenant
+    ):
         """Test successful retrieval of current tenant."""
         resp = client.get("/tenants/current", headers=tenant_scoped_headers)
         assert resp.status_code == 200
@@ -197,7 +223,9 @@ class TestSwitchTenant:
         assert resp.status_code == 404
         assert "not found" in resp.get_json()["error"]
 
-    def test_switch_tenant_to_inactive(self, client, auth_headers, seed_inactive_tenant):
+    def test_switch_tenant_to_inactive(
+        self, client, auth_headers, seed_inactive_tenant
+    ):
         """Test switching to inactive tenant returns 400."""
         resp = client.post(
             "/tenants/switch",
@@ -230,7 +258,9 @@ class TestSwitchTenant:
 class TestListAndGetTenant:
     """Test cases for listing and retrieving tenants."""
 
-    def test_get_tenants_active_only_filter(self, client, auth_headers, seed_tenant, seed_inactive_tenant):
+    def test_get_tenants_active_only_filter(
+        self, client, auth_headers, seed_tenant, seed_inactive_tenant
+    ):
         """Test that active_only filter returns only active tenants."""
         resp = client.get("/tenants?active_only=true", headers=auth_headers)
         assert resp.status_code == 200
@@ -264,7 +294,9 @@ class TestListAndGetTenant:
         assert resp.status_code == 400
         assert "Per page must be between 1 and 100" in resp.get_json()["error"]
 
-    def test_get_tenant_includes_stats(self, client, auth_headers, seed_tenant, seed_user, seed_unit):
+    def test_get_tenant_includes_stats(
+        self, client, auth_headers, seed_tenant, seed_user, seed_unit
+    ):
         """Test that tenant details include user and unit counts."""
         resp = client.get(f"/tenants/{seed_tenant.id}", headers=auth_headers)
         assert resp.status_code == 200

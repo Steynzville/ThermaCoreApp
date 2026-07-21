@@ -274,7 +274,11 @@ class ProductionConfig(Config):
             # Re-read and validate regular CORS origins from environment
             cors_origins_env = os.environ.get("CORS_ORIGINS")
             if cors_origins_env:
-                cors_origins = [origin.strip() for origin in cors_origins_env.split(",") if origin.strip()]
+                cors_origins = [
+                    origin.strip()
+                    for origin in cors_origins_env.split(",")
+                    if origin.strip()
+                ]
             else:
                 cors_origins = [
                     "https://thermacoreapp.com",
@@ -334,7 +338,10 @@ class ProductionConfig(Config):
                 self.OPCUA_SECURITY_MODE = os.environ.get("OPCUA_SECURITY_MODE")
 
             # Ensure certificate paths are correctly set if security is enabled
-            if self.OPCUA_SECURITY_POLICY != "None" and self.OPCUA_SECURITY_MODE != "None":
+            if (
+                self.OPCUA_SECURITY_POLICY != "None"
+                and self.OPCUA_SECURITY_MODE != "None"
+            ):
                 if not (
                     os.environ.get("OPCUA_CERT_FILE")
                     and os.environ.get("OPCUA_PRIVATE_KEY_FILE")

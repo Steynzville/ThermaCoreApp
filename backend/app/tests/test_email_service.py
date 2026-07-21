@@ -24,7 +24,8 @@ class TestSendPasswordResetEmail:
         """Test returns error when SendGrid library is not available."""
         with patch.object(email_service, "SENDGRID_AVAILABLE", False):
             success, error = email_service.send_password_reset_email(
-                "user@example.com", "tok123"
+                "user@example.com",
+                "tok123",
             )
 
         assert success is False
@@ -36,7 +37,8 @@ class TestSendPasswordResetEmail:
 
         with patch.object(email_service, "SENDGRID_AVAILABLE", True):
             success, error = email_service.send_password_reset_email(
-                "user@example.com", "tok123"
+                "user@example.com",
+                "tok123",
             )
 
         assert success is False
@@ -48,7 +50,8 @@ class TestSendPasswordResetEmail:
 
         with patch.object(email_service, "SENDGRID_AVAILABLE", True):
             success, error = email_service.send_password_reset_email(
-                "user@example.com", "tok123"
+                "user@example.com",
+                "tok123",
             )
 
         assert success is False
@@ -60,7 +63,8 @@ class TestSendPasswordResetEmail:
 
         with patch.object(email_service, "SENDGRID_AVAILABLE", True):
             success, error = email_service.send_password_reset_email(
-                "user@example.com", "tok123"
+                "user@example.com",
+                "tok123",
             )
 
         assert success is False
@@ -72,11 +76,18 @@ class TestSendPasswordResetEmail:
         mock_sg_instance = MagicMock()
         mock_sg_instance.send.return_value = mock_response
 
-        with patch.object(email_service, "SENDGRID_AVAILABLE", True), patch.object(
-            email_service, "SendGridAPIClient", return_value=mock_sg_instance
-        ) as mock_client, patch.object(email_service, "Mail") as mock_mail:
+        with (
+            patch.object(email_service, "SENDGRID_AVAILABLE", True),
+            patch.object(
+                email_service,
+                "SendGridAPIClient",
+                return_value=mock_sg_instance,
+            ) as mock_client,
+            patch.object(email_service, "Mail") as mock_mail,
+        ):
             success, error = email_service.send_password_reset_email(
-                "user@example.com", "tok123"
+                "user@example.com",
+                "tok123",
             )
 
         assert success is True
@@ -91,11 +102,18 @@ class TestSendPasswordResetEmail:
         mock_sg_instance = MagicMock()
         mock_sg_instance.send.return_value = mock_response
 
-        with patch.object(email_service, "SENDGRID_AVAILABLE", True), patch.object(
-            email_service, "SendGridAPIClient", return_value=mock_sg_instance
-        ), patch.object(email_service, "Mail"):
+        with (
+            patch.object(email_service, "SENDGRID_AVAILABLE", True),
+            patch.object(
+                email_service,
+                "SendGridAPIClient",
+                return_value=mock_sg_instance,
+            ),
+            patch.object(email_service, "Mail"),
+        ):
             success, error = email_service.send_password_reset_email(
-                "user@example.com", "tok123"
+                "user@example.com",
+                "tok123",
             )
 
         assert success is False
@@ -106,11 +124,18 @@ class TestSendPasswordResetEmail:
         mock_sg_instance = MagicMock()
         mock_sg_instance.send.side_effect = Exception("connection failed")
 
-        with patch.object(email_service, "SENDGRID_AVAILABLE", True), patch.object(
-            email_service, "SendGridAPIClient", return_value=mock_sg_instance
-        ), patch.object(email_service, "Mail"):
+        with (
+            patch.object(email_service, "SENDGRID_AVAILABLE", True),
+            patch.object(
+                email_service,
+                "SendGridAPIClient",
+                return_value=mock_sg_instance,
+            ),
+            patch.object(email_service, "Mail"),
+        ):
             success, error = email_service.send_password_reset_email(
-                "user@example.com", "tok123"
+                "user@example.com",
+                "tok123",
             )
 
         assert success is False
@@ -122,9 +147,15 @@ class TestSendPasswordResetEmail:
         mock_sg_instance = MagicMock()
         mock_sg_instance.send.return_value = mock_response
 
-        with patch.object(email_service, "SENDGRID_AVAILABLE", True), patch.object(
-            email_service, "SendGridAPIClient", return_value=mock_sg_instance
-        ), patch.object(email_service, "Mail") as mock_mail:
+        with (
+            patch.object(email_service, "SENDGRID_AVAILABLE", True),
+            patch.object(
+                email_service,
+                "SendGridAPIClient",
+                return_value=mock_sg_instance,
+            ),
+            patch.object(email_service, "Mail") as mock_mail,
+        ):
             email_service.send_password_reset_email("user@example.com", "abc-token")
 
         _, kwargs = mock_mail.call_args
