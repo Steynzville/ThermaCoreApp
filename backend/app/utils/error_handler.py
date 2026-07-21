@@ -41,9 +41,9 @@ class SecurityAwareErrorHandler:
 
         """
         # Import here to avoid circular imports
-        from app.exceptions import ThermaCoreException
+        from app.exceptions import ThermaCoreError
 
-        if not isinstance(exception, ThermaCoreException):
+        if not isinstance(exception, ThermaCoreError):
             # Fallback for non-domain exceptions
             return SecurityAwareErrorHandler.handle_service_error(
                 exception,
@@ -503,9 +503,9 @@ class SecurityAwareErrorHandler:
         def handle_exception(e):
             """Global exception handler for all uncaught exceptions."""
             # Import domain exception to check type
-            from app.exceptions import ThermaCoreException
+            from app.exceptions import ThermaCoreError
 
-            if isinstance(e, ThermaCoreException):
+            if isinstance(e, ThermaCoreError):
                 # Handle domain exceptions with proper correlation
                 return SecurityAwareErrorHandler.handle_thermacore_exception(e)
             # Handle generic exceptions
