@@ -1,4 +1,3 @@
-# backend/app/services/email_service.py
 import logging
 
 from flask import current_app
@@ -20,7 +19,8 @@ logger = logging.getLogger(__name__)
 
 def send_password_reset_email(email, token):
     """Send a password reset email using SendGrid API."""
-    logger.info(f"=== EMAIL SERVICE CALLED for {email} ===")
+    # Log minimal info - email is PII, token is sensitive
+    logger.info("Password reset email requested")
 
     if not SENDGRID_AVAILABLE:
         logger.error("SendGrid library not installed. Run: pip install sendgrid")
@@ -28,15 +28,23 @@ def send_password_reset_email(email, token):
 
     try:
         api_key = current_app.config.get("SENDGRID_API_KEY")
-        from_email = current_app.config.get("EMAIL_FROM", "steyn.enslin@gmail.com")
+        from_email = current_app.config.get("EMAIL_FROM")
         frontend_url = current_app.config.get("FRONTEND_URL")
 
         if not api_key:
             logger.error("SENDGRID_API_KEY not configured")
             return False, "SENDGRID_API_KEY not configured"
 
+        if not from_email:
+            logger.error("EMAIL_FROM not configured")
+            return False, "EMAIL_FROM not configured"
+
+        if not frontend_url:
+            logger.error("FRONTEND_URL not configured")
+            return False, "FRONTEND_URL not configured"
+
         reset_link = f"{frontend_url}/reset-password?token={token}"
-        logger.info(f"Reset link: {reset_link}")
+        logger.info("Reset link generated")
 
         message = Mail(
             from_email=from_email,
@@ -63,12 +71,16 @@ def send_password_reset_email(email, token):
         response = sg.send(message)
 
         if response.status_code in [200, 202]:
-            logger.info(f"✅ Password reset email sent to {email}")
+            logger.info("Password reset email sent successfully")
             return True, None
         else:
-            logger.error(f"❌ SendGrid error: {response.status_code} - {response.body}")
+            logger.error(
+                "SendGrid error: %s - %s",
+                response.status_code,
+                response.body,
+            )
             return False, f"SendGrid error: {response.status_code}"
 
     except Exception as e:
-        logger.error(f"❌ Failed to send email: {e}")
+        logger.exception("Failed to send password reset email")
         return False, str(e)
