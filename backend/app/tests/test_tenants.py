@@ -72,7 +72,10 @@ class TestUpdateTenantErrors:
         assert resp.status_code == 409
 
     def test_update_tenant_put_requires_all_fields(
-        self, client, auth_headers, seed_tenant
+        self,
+        client,
+        auth_headers,
+        seed_tenant,
     ):
         """Test that PUT requires all required fields."""
         # Missing 'slug' field
@@ -85,7 +88,10 @@ class TestUpdateTenantErrors:
         assert "Validation error" in resp.get_json()["error"]
 
     def test_update_tenant_put_full_replacement(
-        self, client, auth_headers, seed_tenant
+        self,
+        client,
+        auth_headers,
+        seed_tenant,
     ):
         """Test that PUT performs full replacement with all required fields."""
         resp = client.put(
@@ -103,7 +109,10 @@ class TestUpdateTenantErrors:
         assert data["slug"] == "new-slug"
 
     def test_update_tenant_patch_allows_partial(
-        self, client, auth_headers, seed_tenant
+        self,
+        client,
+        auth_headers,
+        seed_tenant,
     ):
         """Test that PATCH allows partial updates."""
         resp = client.patch(
@@ -119,7 +128,11 @@ class TestDeleteTenantErrors:
     """Test cases for tenant deletion error paths."""
 
     def test_delete_tenant_blocked_by_users(
-        self, client, auth_headers, seed_tenant, seed_user
+        self,
+        client,
+        auth_headers,
+        seed_tenant,
+        seed_user,
     ):
         """Test that tenant with associated users cannot be deleted."""
         resp = client.delete(
@@ -130,7 +143,11 @@ class TestDeleteTenantErrors:
         assert "associated users" in resp.get_json()["error"]
 
     def test_delete_tenant_blocked_by_units(
-        self, client, auth_headers, seed_tenant, seed_unit
+        self,
+        client,
+        auth_headers,
+        seed_tenant,
+        seed_unit,
     ):
         """Test that tenant with associated units cannot be deleted."""
         resp = client.delete(
@@ -187,7 +204,9 @@ class TestCurrentTenant:
     """Test cases for current tenant endpoint."""
 
     def test_get_current_tenant_admin_cross_tenant(
-        self, client, admin_no_tenant_headers
+        self,
+        client,
+        admin_no_tenant_headers,
     ):
         """Test admin with cross-tenant access returns null tenant."""
         resp = client.get(
@@ -208,7 +227,10 @@ class TestCurrentTenant:
         assert resp.status_code == 404
 
     def test_get_current_tenant_success(
-        self, client, tenant_scoped_headers, seed_tenant
+        self,
+        client,
+        tenant_scoped_headers,
+        seed_tenant,
     ):
         """Test successful retrieval of current tenant."""
         resp = client.get(
@@ -254,7 +276,10 @@ class TestSwitchTenant:
         assert "not found" in resp.get_json()["error"]
 
     def test_switch_tenant_to_inactive(
-        self, client, auth_headers, seed_inactive_tenant
+        self,
+        client,
+        auth_headers,
+        seed_inactive_tenant,
     ):
         """Test switching to inactive tenant returns 400."""
         resp = client.post(
@@ -289,7 +314,11 @@ class TestListAndGetTenant:
     """Test cases for listing and retrieving tenants."""
 
     def test_get_tenants_active_only_filter(
-        self, client, auth_headers, seed_tenant, seed_inactive_tenant
+        self,
+        client,
+        auth_headers,
+        seed_tenant,
+        seed_inactive_tenant,
     ):
         """Test that active_only filter returns only active tenants."""
         resp = client.get(
@@ -340,7 +369,12 @@ class TestListAndGetTenant:
         assert "Per page must be between 1 and 100" in resp.get_json()["error"]
 
     def test_get_tenant_includes_stats(
-        self, client, auth_headers, seed_tenant, seed_user, seed_unit
+        self,
+        client,
+        auth_headers,
+        seed_tenant,
+        seed_user,
+        seed_unit,
     ):
         """Test that tenant details include user and unit counts."""
         resp = client.get(

@@ -184,8 +184,8 @@ class TestProductionScenarios:
             # THEN PATCH: apply mock to the newly reloaded class
             with patch.object(
                 config.ProductionConfig,
-                '_is_true_production',
-                return_value=True
+                "_is_true_production",
+                return_value=True,
             ):
                 ProductionConfig = config.ProductionConfig
                 config_obj = ProductionConfig()
@@ -221,8 +221,8 @@ class TestProductionScenarios:
             # THEN PATCH: apply mock to the newly reloaded class
             with patch.object(
                 config.ProductionConfig,
-                '_is_true_production',
-                return_value=False
+                "_is_true_production",
+                return_value=False,
             ):
                 ProductionConfig = config.ProductionConfig
                 config_obj = ProductionConfig()

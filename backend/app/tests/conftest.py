@@ -363,6 +363,7 @@ def viewer_token(app):
 
 # ---- Tenant test fixtures ----
 
+
 @pytest.fixture
 def auth_headers(admin_token):
     """Admin JWT headers (has admin_panel permission)."""
@@ -386,7 +387,7 @@ def seed_tenant(db_session):
     tenant = Tenant(
         name=f"Acme Corp {suffix}",
         slug=f"acme-corp-{suffix}",
-        is_active=True
+        is_active=True,
     )
     db_session.add(tenant)
     db_session.commit()
@@ -404,7 +405,7 @@ def seed_inactive_tenant(db_session):
     tenant = Tenant(
         name=f"Old Co {suffix}",
         slug=f"old-co-{suffix}",
-        is_active=False
+        is_active=False,
     )
     db_session.add(tenant)
     db_session.commit()
@@ -502,12 +503,12 @@ def tenant_scoped_headers(db_session, seed_tenant):
 @pytest.fixture
 def no_tenant_headers(db_session):
     """JWT for a non-admin user with no tenant assigned."""
+    # Create a unique user per test to avoid sharing state
+    import time
+
     from flask_jwt_extended import create_access_token
 
     from app.models import Role, RoleEnum, User
-
-    # Create a unique user per test to avoid sharing state
-    import time
 
     unique_suffix = int(time.time() * 1000000)
 
