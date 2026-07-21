@@ -156,10 +156,10 @@ class TestProductionScenarios:
         assert health == "degraded"
 
     def test_production_config_values(self):
-        """Test that production config has correct defaults."""
+        """Test that production config has correct defaults based on environment."""
         from config import ProductionConfig
 
-        # Mock environment to avoid actual validation
+        # Test case 1: True production (PRODUCTION=true)
         with patch.dict(
             os.environ,
             {
@@ -172,19 +172,44 @@ class TestProductionScenarios:
                 "OPCUA_CERT_FILE": "/path/to/opcua.crt",
                 "OPCUA_PRIVATE_KEY_FILE": "/path/to/opcua.key",
                 "OPCUA_TRUST_CERT_FILE": "/path/to/trust.crt",
+                "PRODUCTION": "true",  # True production
                 "CI": "true",  # Bypass strict production checks
             },
             clear=False,
         ):
             config = ProductionConfig()
+            # In true production, OPC-UA is optional
+            assert config.SERVICE_OPCUA_ENABLED is True
+            assert config.SERVICE_OPCUA_REQUIRED is False
+            # MQTT is always required in production
+            assert config.SERVICE_MQTT_ENABLED is True
+            assert config.SERVICE_MQTT_REQUIRED is True
 
-        # Verify OPC-UA is optional in production
-        assert config.SERVICE_OPCUA_ENABLED is True
-        assert config.SERVICE_OPCUA_REQUIRED is False
-
-        # Verify MQTT is required in production
-        assert config.SERVICE_MQTT_ENABLED is True
-        assert config.SERVICE_MQTT_REQUIRED is True
+        # Test case 2: Non-production (PRODUCTION=false)
+        with patch.dict(
+            os.environ,
+            {
+                "SECRET_KEY": "test-secret",
+                "DATABASE_URL": "postgresql://test",
+                "JWT_SECRET_KEY": "test-jwt",
+                "MQTT_CA_CERTS": "/path/to/ca.crt",
+                "MQTT_CERT_FILE": "/path/to/cert.crt",
+                "MQTT_KEY_FILE": "/path/to/key.pem",
+                "OPCUA_CERT_FILE": "/path/to/opcua.crt",
+                "OPCUA_PRIVATE_KEY_FILE": "/path/to/opcua.key",
+                "OPCUA_TRUST_CERT_FILE": "/path/to/trust.crt",
+                "PRODUCTION": "false",  # Not production
+                "CI": "true",
+            },
+            clear=False,
+        ):
+            config = ProductionConfig()
+            # In non-production, OPC-UA is required (for testing)
+            assert config.SERVICE_OPCUA_ENABLED is True
+            assert config.SERVICE_OPCUA_REQUIRED is True
+            # MQTT is still required
+            assert config.SERVICE_MQTT_ENABLED is True
+            assert config.SERVICE_MQTT_REQUIRED is True
 
 
 class TestServiceManagerHealthReporting:
