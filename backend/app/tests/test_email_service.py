@@ -158,9 +158,14 @@ class TestSendPasswordResetEmail:
         ):
             email_service.send_password_reset_email("user@example.com", "abc-token")
 
-        _, kwargs = mock_mail.call_args
-        assert "abc-token" in kwargs["html_content"]
+        # Get the call arguments - Mail is called with positional args and kwargs
+        call_args = mock_mail.call_args
+        kwargs = call_args.kwargs if call_args.kwargs else {}
+
+        # The html_content is passed as a kwarg
+        html_content = kwargs.get("html_content", "")
+        assert "abc-token" in html_content
         assert (
             "https://example.com/reset-password?token=abc-token"
-            in kwargs["html_content"]
+            in html_content
         )
