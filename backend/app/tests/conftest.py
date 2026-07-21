@@ -5,7 +5,7 @@ import os
 import traceback
 
 import pytest
-from sqlalchemy import inspect, text
+from sqlalchemy import event, inspect, text
 
 from app import create_app, db
 from app.models import Permission, Role, Sensor, SensorReading, Unit, User  # noqa: F401
@@ -85,6 +85,7 @@ def _init_database():
             "units",
             "sensors",
             "sensor_readings",
+            "tenants",
         ]
         missing_tables = [t for t in expected_tables if t not in tables]
 
@@ -125,12 +126,24 @@ def _init_database():
         raise
 
 
+# SQLAlchemy event listener to restart savepoint after nested transaction ends
+# This must be registered before any sessions are created
+@event.listens_for(db.session, "after_transaction_end")
+def restart_savepoint(session, transaction):
+    """Restart savepoint after a nested transaction ends to maintain isolation.
+
+    This is the standard SQLAlchemy recipe for test isolation with nested transactions.
+    When a nested transaction (SAVEPOINT) is committed or rolled back, this listener
+    automatically begins a new savepoint, ensuring isolation is maintained across
+    multiple commits within a single test.
+    """
+    if transaction.nested and not transaction._parent.nested:
+        session.begin_nested()
+
+
 @pytest.fixture(scope="session")
 def app():
     """Create application for the tests."""
-    # Use in-memory SQLite database for test isolation (already set in TestingConfig)
-    # No need to override - TestingConfig uses 'sqlite:///:memory:' by default
-
     app = create_app("testing")
     app.config["TESTING"] = True
     app.config["WTF_CSRF_ENABLED"] = False
@@ -156,9 +169,21 @@ def client(app):
 
 @pytest.fixture(scope="function")
 def db_session(app):
-    """Create database session for tests."""
+    """Create database session for tests with proper transaction isolation.
+
+    This fixture uses nested transactions (SAVEPOINT) to ensure that all database
+    operations within a test are isolated and rolled back after the test completes.
+    The event listener restarts the savepoint after each nested transaction ends,
+    ensuring isolation is maintained across multiple commits within a single test.
+
+    Note: This relies on TestingConfig using SQLite with StaticPool so all sessions
+    share the same connection and SAVEPOINTs work across session boundaries.
+    """
     with app.app_context():
+        # Start a nested transaction (SAVEPOINT)
+        db.session.begin_nested()
         yield db.session
+        # Rollback the entire transaction to clean up
         db.session.rollback()
 
 
@@ -213,6 +238,7 @@ def _create_test_data():
         last_name="User",
         role_id=admin_role.id,
         is_active=True,
+        tenant_id=None,  # Explicitly set to None for cross-tenant access
     )
     admin_user.set_password("admin123")
 
@@ -223,6 +249,7 @@ def _create_test_data():
         last_name="User",
         role_id=operator_role.id,
         is_active=True,
+        tenant_id=None,  # Explicitly set to None for cross-tenant access
     )
     operator_user.set_password("operator123")
 
@@ -233,6 +260,7 @@ def _create_test_data():
         last_name="User",
         role_id=viewer_role.id,
         is_active=True,
+        tenant_id=None,  # Explicitly set to None for cross-tenant access
     )
     viewer_user.set_password("viewer123")
 
@@ -256,6 +284,7 @@ def _create_test_data():
         temp_outside=25.0,
         humidity=60.0,
         battery_level=80.0,
+        tenant_id=None,  # Explicitly set to None for cross-tenant access
     )
 
     db.session.add(test_unit)
@@ -325,3 +354,188 @@ def viewer_token(app):
             },
         )
         return token
+
+
+# ---- Tenant test fixtures ----
+
+@pytest.fixture
+def auth_headers(admin_token):
+    """Admin JWT headers (has admin_panel permission)."""
+    return {"Authorization": f"Bearer {admin_token}"}
+
+
+@pytest.fixture
+def non_admin_headers(viewer_token):
+    """Viewer JWT headers (lacks admin_panel permission)."""
+    return {"Authorization": f"Bearer {viewer_token}"}
+
+
+@pytest.fixture
+def seed_tenant(db_session):
+    """Create a test tenant with unique slug per test."""
+    import uuid
+
+    from app.models import Tenant
+
+    suffix = uuid.uuid4().hex[:8]
+    tenant = Tenant(
+        name=f"Acme Corp {suffix}",
+        slug=f"acme-corp-{suffix}",
+        is_active=True
+    )
+    db_session.add(tenant)
+    db_session.commit()
+    return tenant
+
+
+@pytest.fixture
+def seed_inactive_tenant(db_session):
+    """Create an inactive test tenant with unique slug per test."""
+    import uuid
+
+    from app.models import Tenant
+
+    suffix = uuid.uuid4().hex[:8]
+    tenant = Tenant(
+        name=f"Old Co {suffix}",
+        slug=f"old-co-{suffix}",
+        is_active=False
+    )
+    db_session.add(tenant)
+    db_session.commit()
+    return tenant
+
+
+@pytest.fixture
+def seed_user(db_session, seed_tenant):
+    """Create a test user associated with seed_tenant, unique per test."""
+    import uuid
+
+    from app.models import Role, RoleEnum, User
+
+    suffix = uuid.uuid4().hex[:8]
+    role = Role.query.filter_by(name=RoleEnum.VIEWER).first()
+    if not role:
+        role = Role.query.first()
+
+    user = User(
+        username=f"tenant_user_{suffix}",
+        email=f"tenant_user_{suffix}@test.com",
+        first_name="Tenant",
+        last_name="User",
+        role_id=role.id,
+        tenant_id=seed_tenant.id,
+        is_active=True,
+    )
+    user.set_password("password123")
+    db_session.add(user)
+    db_session.commit()
+    return user
+
+
+@pytest.fixture
+def seed_unit(db_session, seed_tenant):
+    """Create a test unit associated with seed_tenant, unique id per test."""
+    import uuid
+    from datetime import datetime
+
+    from app.models import HealthStatusEnum, Unit, UnitStatusEnum
+
+    suffix = uuid.uuid4().hex[:8].upper()
+    unit = Unit(
+        id=f"TENANTUNIT_{suffix}",
+        name=f"Tenant Test Unit {suffix}",
+        serial_number=f"TENANTUNIT-{suffix}-2024",
+        install_date=datetime(2024, 1, 1),
+        location="Tenant Site",
+        status=UnitStatusEnum.ONLINE,
+        health_status=HealthStatusEnum.OPTIMAL,
+        tenant_id=seed_tenant.id,
+    )
+    db_session.add(unit)
+    db_session.commit()
+    return unit
+
+
+@pytest.fixture
+def tenant_scoped_headers(db_session, seed_tenant):
+    """JWT for a user scoped to seed_tenant specifically."""
+    from flask_jwt_extended import create_access_token
+
+    from app.models import Role, RoleEnum, User
+
+    # Look for a user specifically tied to this seed_tenant
+    user = User.query.filter_by(tenant_id=seed_tenant.id).first()
+    if not user:
+        role = Role.query.filter_by(name=RoleEnum.VIEWER).first()
+        if not role:
+            role = Role.query.first()
+        # Create a user scoped to this specific tenant
+        user = User(
+            username=f"tenant_scoped_{seed_tenant.id}",
+            email=f"tenant_scoped_{seed_tenant.id}@test.com",
+            first_name="Tenant",
+            last_name="Scoped",
+            role_id=role.id,
+            tenant_id=seed_tenant.id,
+            is_active=True,
+        )
+        user.set_password("password123")
+        db_session.add(user)
+        db_session.commit()
+
+    token = create_access_token(
+        identity=str(user.id),
+        additional_claims={
+            "role": user.role.name.value if user.role else "viewer",
+            "permissions": user.permissions or [],
+        },
+    )
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def no_tenant_headers(db_session):
+    """JWT for a non-admin user with no tenant assigned."""
+    from flask_jwt_extended import create_access_token
+
+    from app.models import Role, RoleEnum, User
+
+    # Create a unique user per test to avoid sharing state
+    import time
+
+    unique_suffix = int(time.time() * 1000000)
+
+    role = Role.query.filter_by(name=RoleEnum.VIEWER).first()
+    if not role:
+        role = Role.query.first()
+
+    user = User(
+        username=f"no_tenant_user_{unique_suffix}",
+        email=f"no_tenant_{unique_suffix}@test.com",
+        first_name="No",
+        last_name="Tenant",
+        role_id=role.id,
+        tenant_id=None,
+        is_active=True,
+    )
+    user.set_password("password123")
+    db_session.add(user)
+    db_session.commit()
+
+    token = create_access_token(
+        identity=str(user.id),
+        additional_claims={
+            "role": user.role.name.value if user.role else "viewer",
+            "permissions": user.permissions or [],
+        },
+    )
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def admin_no_tenant_headers(admin_token):
+    """Admin JWT with cross-tenant access (no specific tenant_id)."""
+    # This fixture deliberately uses the admin token which has tenant_id=None
+    # Explicitly set to make the intent clear, even though it's the same as auth_headers
+    return {"Authorization": f"Bearer {admin_token}"}
