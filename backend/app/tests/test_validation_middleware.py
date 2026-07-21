@@ -1,8 +1,8 @@
 """Tests for input validation middleware."""
 
 import pytest
-from werkzeug.exceptions import HTTPException
 from flask import g, jsonify
+from werkzeug.exceptions import HTTPException
 
 from app.middleware.validation import (
     RequestValidator,
