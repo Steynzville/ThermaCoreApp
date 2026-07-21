@@ -1,6 +1,7 @@
 """Tests for input validation middleware."""
 
 import pytest
+from werkzeug.exceptions import HTTPException
 from flask import g, jsonify
 
 from app.middleware.validation import (
@@ -130,7 +131,7 @@ def test_webargs_error_handler(app):
 
     with app.test_request_context():
         g.request_id = "test-req-id"
-        with pytest.raises(Exception):
+        with pytest.raises(HTTPException):
             handle_webargs_error(
                 FakeError(),
                 None,

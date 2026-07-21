@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
+from werkzeug.exceptions import BadRequest
 
 from app.models import RoleEnum, Sensor, SensorReading, Unit, db
 from app.utils.helpers import (
@@ -106,7 +107,7 @@ def test_validate_json_request_decorator(app):
         headers={"Content-Type": "application/json"},
         data="",
     ):
-        with pytest.raises(Exception):
+        with pytest.raises(BadRequest):
             dummy_route()
 
     # Case 3: Valid JSON body

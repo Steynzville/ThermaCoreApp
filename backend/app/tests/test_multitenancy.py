@@ -3,6 +3,7 @@
 import os
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 from app import create_app, db
 from app.models import Role, Tenant, Unit, User
@@ -75,7 +76,7 @@ class TestTenantModel:
             db.session.commit()
 
             db.session.add(tenant2)
-            with pytest.raises(Exception):  # IntegrityError
+            with pytest.raises(IntegrityError):
                 db.session.commit()
 
     def test_tenant_relationships(self, app):
