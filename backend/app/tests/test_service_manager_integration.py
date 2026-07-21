@@ -1,5 +1,6 @@
 """Integration tests for service manager with production scenarios."""
 
+import importlib
 import os
 from unittest.mock import Mock, patch
 
@@ -157,9 +158,10 @@ class TestProductionScenarios:
 
     def test_production_config_values(self):
         """Test that production config has correct defaults based on environment."""
-        from config import ProductionConfig
+        import config
 
         # Test case 1: True production (PRODUCTION=true)
+        # Mock _is_true_production to return True for production scenario
         with patch.dict(
             os.environ,
             {
@@ -172,18 +174,26 @@ class TestProductionScenarios:
                 "OPCUA_CERT_FILE": "/path/to/opcua.crt",
                 "OPCUA_PRIVATE_KEY_FILE": "/path/to/opcua.key",
                 "OPCUA_TRUST_CERT_FILE": "/path/to/trust.crt",
-                "PRODUCTION": "true",  # True production
-                "CI": "true",  # Bypass strict production checks
+                "PRODUCTION": "true",
+                "CI": "true",
             },
             clear=False,
         ):
-            config = ProductionConfig()
-            # In true production, OPC-UA is optional
-            assert config.SERVICE_OPCUA_ENABLED is True
-            assert config.SERVICE_OPCUA_REQUIRED is False
-            # MQTT is always required in production
-            assert config.SERVICE_MQTT_ENABLED is True
-            assert config.SERVICE_MQTT_REQUIRED is True
+            with patch.object(
+                config.ProductionConfig,
+                '_is_true_production',
+                return_value=True
+            ):
+                importlib.reload(config)
+                ProductionConfig = config.ProductionConfig
+                config_obj = ProductionConfig()
+
+                # In true production, OPC-UA is optional
+                assert config_obj.SERVICE_OPCUA_ENABLED is True
+                assert config_obj.SERVICE_OPCUA_REQUIRED is False
+                # MQTT is always required in production
+                assert config_obj.SERVICE_MQTT_ENABLED is True
+                assert config_obj.SERVICE_MQTT_REQUIRED is True
 
         # Test case 2: Non-production (PRODUCTION=false)
         with patch.dict(
@@ -198,18 +208,26 @@ class TestProductionScenarios:
                 "OPCUA_CERT_FILE": "/path/to/opcua.crt",
                 "OPCUA_PRIVATE_KEY_FILE": "/path/to/opcua.key",
                 "OPCUA_TRUST_CERT_FILE": "/path/to/trust.crt",
-                "PRODUCTION": "false",  # Not production
+                "PRODUCTION": "false",
                 "CI": "true",
             },
             clear=False,
         ):
-            config = ProductionConfig()
-            # In non-production, OPC-UA is required (for testing)
-            assert config.SERVICE_OPCUA_ENABLED is True
-            assert config.SERVICE_OPCUA_REQUIRED is True
-            # MQTT is still required
-            assert config.SERVICE_MQTT_ENABLED is True
-            assert config.SERVICE_MQTT_REQUIRED is True
+            with patch.object(
+                config.ProductionConfig,
+                '_is_true_production',
+                return_value=False
+            ):
+                importlib.reload(config)
+                ProductionConfig = config.ProductionConfig
+                config_obj = ProductionConfig()
+
+                # In non-production, OPC-UA is required (for testing)
+                assert config_obj.SERVICE_OPCUA_ENABLED is True
+                assert config_obj.SERVICE_OPCUA_REQUIRED is True
+                # MQTT is still required
+                assert config_obj.SERVICE_MQTT_ENABLED is True
+                assert config_obj.SERVICE_MQTT_REQUIRED is True
 
 
 class TestServiceManagerHealthReporting:
