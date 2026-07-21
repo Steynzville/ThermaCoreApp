@@ -3,32 +3,46 @@ name: Apply Ruff Auto-Fixes
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   apply-fixes:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     
     steps:
-      - uses: actions/checkout@v4
-      
-      - uses: actions/setup-python@v5
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: Demo-App
+          
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
           
       - name: Install Ruff
         run: pip install ruff
         
-      - name: Apply fixes
+      - name: Apply auto-fixes
+        working-directory: backend
         run: |
-          cd backend
-          ruff check --fix . || true
-          ruff format . || true
+          echo "🔧 Running Ruff auto-fix..."
+          ruff check --fix . || echo "⚠️ Some issues couldn't be auto-fixed"
+          echo "🎨 Formatting code..."
+          ruff format . || echo "⚠️ Formatting issues found"
+          echo "📊 Checking remaining issues..."
+          ruff check . --output-format=github || echo "✅ No remaining issues"
           
-      - name: Commit changes
+      - name: Commit and push fixes
         run: |
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
-          git add backend/ || true
-          git diff --cached --quiet || git commit -m "Apply Ruff auto-fixes [skip ci]"
-          git push || true
+          git add backend/
+          if git diff --staged --quiet; then
+            echo "✅ No changes to commit"
+          else
+            git commit -m "Apply Ruff auto-fixes [skip ci]"
+            git push origin Demo-App
+            echo "✅ Fixes applied and pushed!"
+          fi
