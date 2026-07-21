@@ -93,10 +93,10 @@ class RealTimeDataProcessor:
             for handler in self._data_handlers:
                 try:
                     handler(unit_id, sensor_type, processed_data)
-                except Exception as e:
+                except Exception:
                     logger.exception("Error in custom data handler")
 
-        except Exception as e:
+        except Exception:
             logger.exception("Error processing sensor data")
 
     def _validate_and_transform_data(self, data: dict[str, Any]) -> dict[str, Any]:

@@ -41,7 +41,8 @@ def safe_service_init(
         logger.info(f"{service_name} initialized successfully")
         return True
     except Exception as e:
-        logger.exception("Failed to initialize {service_name}: {e}",
+        logger.exception(
+            "Failed to initialize {service_name}: {e}",
         )
         if required:
             raise RuntimeError(
@@ -85,10 +86,10 @@ def safe_blueprint_register(
         app.register_blueprint(blueprint, url_prefix=prefix)
         logger.info(f"Registered {route_name} routes")
         return True, False
-    except ImportError as e:
+    except ImportError:
         logger.exception(f"Failed to import {route_name} routes")
         return False, True
-    except Exception as e:
+    except Exception:
         logger.exception("Failed to register {route_name} routes")
         return False, False
 

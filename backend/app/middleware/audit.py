@@ -283,7 +283,7 @@ class AuditLogger:
             else:
                 logger.info(audit_message, extra={"audit": audit_record})
 
-        except Exception as e:
+        except Exception:
             # Audit logging must never fail the main operation
             logger.exception("Failed to log audit event")
 

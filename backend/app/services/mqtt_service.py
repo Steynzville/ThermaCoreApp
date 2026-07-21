@@ -86,7 +86,7 @@ class MQTTClient:
             # Create MQTT client
             self.client = mqtt.Client(client_id=self.client_id)
             logger.info(f"MQTT client created with ID: {self.client_id}")
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to configure MQTT client")
             raise
 
@@ -108,7 +108,7 @@ class MQTTClient:
                 )
             else:
                 cert_files_exist = False
-        except Exception as e:
+        except Exception:
             logger.exception("Error validating MQTT certificates")
             cert_files_exist = False
 
@@ -160,7 +160,7 @@ class MQTTClient:
             elif is_production_environment(app):
                 logger.warning("MQTT TLS not enabled in production - security reduced")
                 # Continue without TLS - prioritize availability
-        except Exception as e:
+        except Exception:
             logger.exception("Error configuring MQTT TLS")
             if is_production_environment(app):
                 logger.warning("Continuing without TLS due to configuration error")
@@ -176,7 +176,7 @@ class MQTTClient:
                     "MQTT running without authentication in production - security reduced",
                 )
                 # Continue without authentication
-        except Exception as e:
+        except Exception:
             logger.exception("Error configuring MQTT authentication")
             if is_production_environment(app):
                 raise
@@ -187,7 +187,7 @@ class MQTTClient:
             self.client.on_disconnect = self._on_disconnect
             self.client.on_message = self._on_message
             logger.info("MQTT callbacks configured successfully")
-        except Exception as e:
+        except Exception:
             logger.exception("Error configuring MQTT callbacks")
             raise
 
@@ -207,7 +207,7 @@ class MQTTClient:
                 f"MQTT default topics configured: {len(self.default_topics)} topics",
             )
             logger.info("MQTT service initialization completed successfully")
-        except Exception as e:
+        except Exception:
             logger.exception("Error configuring MQTT topics")
             raise
 
@@ -267,7 +267,7 @@ class MQTTClient:
                 with self._app.app_context():
                     self._store_sensor_data(parsed_data)
 
-        except Exception as e:
+        except Exception:
             logger.exception("Error processing MQTT message")
 
     def subscribe_topic(self, topic: str, qos: int = 0):
@@ -287,7 +287,7 @@ class MQTTClient:
                 )  # Set automatically handles duplicates
             else:
                 logger.error(f"Failed to subscribe to topic {topic}")
-        except Exception as e:
+        except Exception:
             logger.exception("Error subscribing to topic {topic}")
 
     def _parse_scada_message(
@@ -371,7 +371,7 @@ class MQTTClient:
                 "quality": quality,
             }
 
-        except Exception as e:
+        except Exception:
             logger.exception("Error parsing SCADA message")
             return None
 
@@ -413,7 +413,7 @@ class MQTTClient:
                     f"Failed to store sensor data: {data['unit_id']}/{data['sensor_type']}",
                 )
 
-        except Exception as e:
+        except Exception:
             logger.exception("Unexpected error in data storage")
 
     def publish_message(self, topic: str, payload: str, qos: int = 0):
@@ -436,7 +436,7 @@ class MQTTClient:
                 return True
             logger.error(f"Failed to publish message to topic '{topic}'")
             return False
-        except Exception as e:
+        except Exception:
             logger.exception("Error publishing message")
             return False
 

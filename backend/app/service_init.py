@@ -80,7 +80,7 @@ def initialize_all_services(app: Any, logger: logging.Logger) -> None:
                 mqtt_broker_port=app.config.get("MQTT_BROKER_PORT", 1883),
             )
             logger.info("Protocol simulator initialized successfully")
-        except Exception as e:
+        except Exception:
             logger.exception("Protocol simulator initialization failed")
             protocol_simulator = None
 

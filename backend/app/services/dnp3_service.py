@@ -252,7 +252,7 @@ class MockDNP3Master:
             logger.info(f"Added DNP3 outstation {outstation_address} at {host}:{port}")
             return True
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to add DNP3 outstation {outstation_address}")
             return False
 
@@ -611,7 +611,7 @@ class DNP3Service:
             )
             return True
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to add DNP3 device {device_id}")
             return False
 
@@ -636,7 +636,7 @@ class DNP3Service:
             logger.info(f"Removed DNP3 device: {device_id}")
             return True
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to remove DNP3 device {device_id}")
             return False
 
@@ -673,7 +673,7 @@ class DNP3Service:
 
             return success
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to connect to DNP3 device {device_id}")
             return False
 
@@ -703,7 +703,7 @@ class DNP3Service:
             logger.info(f"Disconnected from DNP3 device: {device_id}")
             return True
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to disconnect from DNP3 device {device_id}")
             return False
 
@@ -741,8 +741,9 @@ class DNP3Service:
             )
             return True
 
-        except Exception as e:
-            logger.exception("Failed to add data point config for device {device_id}: {e}",
+        except Exception:
+            logger.exception(
+                "Failed to add data point config for device {device_id}: {e}",
             )
             return False
 
@@ -761,7 +762,7 @@ class DNP3Service:
                 raise ConnectionError(f"Device {device_id} not connected")
 
             if device_id not in self._data_point_configs:
-                raise ValueError(f"No data point configuration for device")
+                raise ValueError("No data point configuration for device")
 
             if not self._master:
                 raise ConfigurationError("DNP3 master not initialized")
@@ -1076,7 +1077,7 @@ class DNP3Service:
 
             return success
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to write data point on device {device_id}")
             return False
 
@@ -1362,9 +1363,7 @@ class DNP3Service:
         # Detect if running in production/development/testing environment
         # Demo mode is enabled in non-production environments (development/testing) or when explicitly set
         is_testing = (
-            hasattr(self, "_app")
-            and self._app
-            and self._app.config.get("TESTING")
+            hasattr(self, "_app") and self._app and self._app.config.get("TESTING")
         ) or os.getenv("TESTING", "false").lower() == "true"
         is_demo_mode = (
             os.getenv("FLASK_ENV", "production") != "production"

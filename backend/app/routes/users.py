@@ -779,7 +779,7 @@ def approve_user(user_id):
             200,
         )
 
-    except Exception as e:
+    except Exception:
         db.session.rollback()
         # Log the error internally but don't expose stack trace to user
         current_app.logger.exception("Failed to approve user {user_id}")
@@ -868,7 +868,7 @@ def reject_user(user_id):
             200,
         )
 
-    except Exception as e:
+    except Exception:
         db.session.rollback()
         # Log the error internally but don't expose stack trace to user
         current_app.logger.exception("Failed to reject user {user_id}")

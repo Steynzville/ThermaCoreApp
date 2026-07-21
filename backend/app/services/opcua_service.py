@@ -225,7 +225,7 @@ class OPCUAClient:
                 not_valid_after = getattr(
                     certificate,
                     "not_valid_after_utc",
-                    getattr(certificate, "not_valid_after"),
+                    certificate.not_valid_after,
                 )
                 if not_valid_after is None:
                     raise AttributeError("Certificate has no not_valid_after attribute")
@@ -248,9 +248,10 @@ class OPCUAClient:
                 )
 
             except AttributeError as e:
-                logger.exception("Certificate validation failed: unsupported certificate format - {e}",
+                logger.exception(
+                    "Certificate validation failed: unsupported certificate format - {e}",
                 )
-                raise ValueError(f"Certificate format not supported") from e
+                raise ValueError("Certificate format not supported") from e
 
             if not_valid_after_utc < now:
                 logger.error(
@@ -474,9 +475,10 @@ class OPCUAClient:
                                 f"OPC UA security configured for development: {self.security_policy}, {self.security_mode}{cert_info}{trust_info}",
                             )
 
-                    except Exception as cert_error:
+                    except Exception:
                         # Handle certificate-specific errors separately from general security errors
-                        logger.exception("Failed to load OPC UA certificates: {cert_error}",
+                        logger.exception(
+                            "Failed to load OPC UA certificates: {cert_error}",
                         )
                         raise
 
@@ -505,8 +507,8 @@ class OPCUAClient:
                 )
 
             logger.info(f"OPC UA client initialized for server: {self.server_url}")
-        except Exception as e:
-            logger.exception(f"Failed to initialize OPC UA client")
+        except Exception:
+            logger.exception("Failed to initialize OPC UA client")
             raise
 
     def connect(self) -> bool:
@@ -543,7 +545,7 @@ class OPCUAClient:
                 logger.info("Disconnecting from OPC UA server")
                 self.client.disconnect()
                 self.connected = False
-            except Exception as e:
+            except Exception:
                 logger.exception("Error disconnecting from OPC UA server")
 
     def add_node_mapping(
@@ -619,7 +621,7 @@ class OPCUAClient:
             logger.info(f"Subscribed to OPC UA node: {node_id}")
             return True
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to subscribe to node {node_id}")
             return False
 
@@ -672,7 +674,7 @@ class OPCUAClient:
                 "status_code": str(status_code),
             }
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to read node {node_id}")
             return None
 
@@ -757,7 +759,7 @@ class OPCUAClient:
 
                 return success
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to process OPC UA data")
             return False
 
@@ -787,7 +789,7 @@ class OPCUAClient:
         for node_id in node_ids:
             try:
                 self.process_and_store_node_data(node_id)
-            except Exception as e:
+            except Exception:
                 logger.exception("Error polling node {node_id}")
 
     def browse_server_nodes(self, root_node_id: str = "i=85") -> list[dict[str, Any]]:
@@ -833,13 +835,13 @@ class OPCUAClient:
 
                     nodes.append(node_info)
 
-                except Exception as e:
+                except Exception:
                     logger.exception("Error reading node info")
                     continue
 
             return nodes
 
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to browse server nodes")
             return []
 

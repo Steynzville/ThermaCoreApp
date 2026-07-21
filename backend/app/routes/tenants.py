@@ -407,7 +407,7 @@ def delete_tenant(tenant_id):
             409,
         )
 
-    except Exception as e:
+    except Exception:
         # Catch any unexpected errors
         db.session.rollback()
         logger.exception("Unexpected error deleting tenant: %s")

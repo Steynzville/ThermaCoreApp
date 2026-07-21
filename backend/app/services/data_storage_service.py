@@ -148,11 +148,11 @@ class DataStorageService:
             )
             return True
 
-        except IntegrityError as e:
+        except IntegrityError:
             db.session.rollback()
             logger.exception("Database integrity error storing sensor data")
             return False
-        except Exception as e:
+        except Exception:
             db.session.rollback()
             logger.exception("Error storing sensor data")
             return False

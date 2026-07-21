@@ -30,7 +30,7 @@ def column_exists(engine, table_name, column_name):
         inspector = inspect(engine)
         columns = [col["name"] for col in inspector.get_columns(table_name)]
         return column_name in columns
-    except Exception as e:
+    except Exception:
         logger.exception("Error checking if column exists")
         return False
 
@@ -111,7 +111,7 @@ def add_password_reset_columns(engine):
                     logger.info("✓ Index 'idx_users_reset_token' created successfully")
                 else:
                     logger.info("✓ Index 'idx_users_reset_token' already exists")
-        except Exception as idx_error:
+        except Exception:
             # Index creation is not critical - log warning but continue
             logger.exception("Could not create/verify index")
 
@@ -122,7 +122,7 @@ def add_password_reset_columns(engine):
 
         return True
 
-    except Exception as e:
+    except Exception:
         logger.exception("Error during auto-migration")
         return False
 
@@ -172,7 +172,7 @@ def add_permissions_column(engine):
 
         return True
 
-    except Exception as e:
+    except Exception:
         logger.exception("Error adding permissions column")
         return False
 
@@ -234,7 +234,7 @@ def update_emergency_admin_permissions(engine):
 
         return True
 
-    except Exception as e:
+    except Exception:
         logger.exception("Error updating emergency admin permissions")
         return False
 
@@ -427,7 +427,7 @@ def add_user_approval_columns(engine):
                         ),
                     )
                     logger.info("✓ Index 'idx_users_approved_by' created/verified")
-        except Exception as idx_error:
+        except Exception:
             # Index creation is not critical - log warning but continue
             logger.exception("Could not create/verify indexes")
 
@@ -442,7 +442,7 @@ def add_user_approval_columns(engine):
 
         return True
 
-    except Exception as e:
+    except Exception:
         logger.exception("Error during user approval columns migration")
         return False
 
@@ -571,9 +571,10 @@ def add_user_profile_fields(engine):
                         logger.info(f"✓ Index '{index_name}' created successfully")
                     else:
                         logger.info(f"✓ Index '{index_name}' already exists")
-            except Exception as idx_error:
+            except Exception:
                 # Index creation is not critical - log warning but continue
-                logger.exception("Could not create/verify index '{index_name}': {idx_error}",
+                logger.exception(
+                    "Could not create/verify index '{index_name}': {idx_error}",
                 )
 
         if columns_added:
@@ -587,8 +588,8 @@ def add_user_profile_fields(engine):
 
         return True
 
-    except Exception as e:
-        logger.exception(f"Error adding user profile fields")
+    except Exception:
+        logger.exception("Error adding user profile fields")
         return False
 
 
@@ -606,7 +607,7 @@ def table_exists(engine, table_name):
     try:
         inspector = inspect(engine)
         return table_name in inspector.get_table_names()
-    except Exception as e:
+    except Exception:
         logger.exception("Error checking if table exists")
         return False
 
@@ -726,7 +727,7 @@ def add_tenants_table(engine):
         logger.info("✓ Tenants table created successfully")
         return True
 
-    except Exception as e:
+    except Exception:
         logger.exception("Error creating tenants table")
         return False
 
@@ -795,7 +796,7 @@ def add_tenant_id_to_users(engine):
         logger.info("✓ Column 'tenant_id' added to users table successfully")
         return True
 
-    except Exception as e:
+    except Exception:
         logger.exception("Error adding tenant_id to users table")
         return False
 
@@ -864,7 +865,7 @@ def add_tenant_id_to_units(engine):
         logger.info("✓ Column 'tenant_id' added to units table successfully")
         return True
 
-    except Exception as e:
+    except Exception:
         logger.exception("Error adding tenant_id to units table")
         return False
 
@@ -909,7 +910,7 @@ def add_multi_tenancy_support(engine):
 
         return success
 
-    except Exception as e:
+    except Exception:
         logger.exception("Error during multi-tenancy migration")
         return False
 
@@ -971,7 +972,7 @@ def run_auto_migrations(app):
 
         return success
 
-    except Exception as e:
+    except Exception:
         logger.exception("Error running auto-migrations")
         # Don't crash the app if migrations fail - just log the error
         return False

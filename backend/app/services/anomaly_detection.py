@@ -262,7 +262,7 @@ class AnomalyDetectionService:
 
             return result
 
-        except Exception as e:
+        except Exception:
             logger.exception("Error analyzing sensor reading")
             # Return safe default
             return AnomalyResult(

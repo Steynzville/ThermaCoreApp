@@ -94,7 +94,7 @@ def setup_tenant_context():
             g.tenant_id = user.tenant_id
             logger.debug(f"User {user_id} restricted to tenant {user.tenant_id}")
 
-    except Exception as e:
+    except Exception:
         logger.exception("Error setting up tenant context")
         # Don't fail the request, just log the error
 
