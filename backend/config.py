@@ -280,7 +280,10 @@ class ProductionConfig(Config):
             self.OPCUA_SECURITY_MODE = os.environ.get("OPCUA_SECURITY_MODE")
 
         # Ensure certificate paths are correctly set if security is enabled
-        if self.OPCUA_SECURITY_POLICY != "None" and self.OPCUA_SECURITY_MODE != "None":
+        if (
+            self.OPCUA_SECURITY_POLICY != "None"
+            and self.OPCUA_SECURITY_MODE != "None"
+        ):
             if not (
                 os.environ.get("OPCUA_CERT_FILE")
                 and os.environ.get("OPCUA_PRIVATE_KEY_FILE")
@@ -390,9 +393,16 @@ class ProductionConfig(Config):
         if self.TESTING:
             return False
 
-        # Only true production if environment indicators agree
-        flask_env = os.environ.get("FLASK_ENV")
-        app_env = os.environ.get("APP_ENV")
+        # Check PRODUCTION env var first (explicit override)
+        production_env = os.environ.get("PRODUCTION", "").lower()
+        if production_env == "true":
+            return True
+        elif production_env == "false":
+            return False
+
+        # Fall back to Flask/App env for backward compatibility
+        flask_env = os.environ.get("FLASK_ENV", "")
+        app_env = os.environ.get("APP_ENV", "")
 
         # Require explicit production environment settings
         return flask_env == "production" and app_env == "production"
