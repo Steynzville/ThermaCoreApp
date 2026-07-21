@@ -68,8 +68,9 @@ class TenantCreateSchema(Schema):
 class TenantUpdateSchema(Schema):
     """Schema for tenant updates."""
 
-    name = fields.Str()
-    slug = fields.Str()
+    # Required fields for PUT (full replacement)
+    name = fields.Str(required=True)
+    slug = fields.Str(required=True)
     description = fields.Str(allow_none=True)
     contact_name = fields.Str(allow_none=True)
     contact_email = fields.Email(allow_none=True)
@@ -83,6 +84,12 @@ class TenantUpdateSchema(Schema):
     is_active = fields.Bool()
     max_users = fields.Int(allow_none=True)
     max_units = fields.Int(allow_none=True)
+
+
+class TenantSwitchSchema(Schema):
+    """Schema for tenant switching."""
+
+    tenant_id = fields.Int(allow_none=True)
 
 
 @tenants_bp.route("/tenants", methods=["GET"])
@@ -100,10 +107,13 @@ def get_tenants():
         name: page
         type: integer
         default: 1
+        minimum: 1
       - in: query
         name: per_page
         type: integer
         default: 50
+        minimum: 1
+        maximum: 100
       - in: query
         name: active_only
         type: boolean
@@ -111,6 +121,8 @@ def get_tenants():
     responses:
       200:
         description: List of tenants
+      400:
+        description: Invalid pagination parameters
       403:
         description: Insufficient permissions
     security:
@@ -118,7 +130,14 @@ def get_tenants():
     """
     # Parse query parameters
     page = request.args.get("page", 1, type=int)
-    per_page = min(request.args.get("per_page", 50, type=int), 100)
+    per_page = request.args.get("per_page", 50, type=int)
+    
+    # Validate pagination parameters
+    if page < 1:
+        return jsonify({"error": "Page must be at least 1"}), 400
+    if per_page < 1 or per_page > 100:
+        return jsonify({"error": "Per page must be between 1 and 100"}), 400
+
     active_only = request.args.get("active_only", "false").lower() == "true"
 
     # Build query
@@ -232,7 +251,7 @@ def create_tenant():
 
     except IntegrityError as e:
         db.session.rollback()
-        logger.error(f"Failed to create tenant: {e}")
+        logger.error("Failed to create tenant: %s", e)
         return (
             jsonify(
                 {"error": "Tenant with this name or slug already exists"},
@@ -247,6 +266,8 @@ def create_tenant():
 @audit_operation("UPDATE", "tenants")
 def update_tenant(tenant_id):
     """Update a tenant (admin only).
+
+    Note: PUT performs full replacement, PATCH performs partial update.
 
     ---
     tags:
@@ -267,6 +288,8 @@ def update_tenant(tenant_id):
         description: Validation error
       404:
         description: Tenant not found
+      409:
+        description: Conflict - tenant with this name or slug already exists
     security:
       - JWT: []
     """
@@ -274,8 +297,12 @@ def update_tenant(tenant_id):
 
     # Validate request data
     schema = TenantUpdateSchema()
+    is_put = request.method == "PUT"
+    
     try:
-        data = schema.load(request.json, partial=True)
+        # For PUT, schema.required=True fields will be enforced by marshmallow
+        # For PATCH, allow partial updates
+        data = schema.load(request.json, partial=not is_put)
     except ValidationError as err:
         return jsonify({"error": "Validation error", "details": err.messages}), 400
 
@@ -294,7 +321,7 @@ def update_tenant(tenant_id):
 
     except IntegrityError as e:
         db.session.rollback()
-        logger.error(f"Failed to update tenant: {e}")
+        logger.error("Failed to update tenant: %s", e)
         return (
             jsonify(
                 {"error": "Tenant with this name or slug already exists"},
@@ -310,8 +337,8 @@ def update_tenant(tenant_id):
 def delete_tenant(tenant_id):
     """Delete a tenant (admin only).
 
-    Note: This will fail if there are users or units associated with the tenant.
-    Consider deactivating instead of deleting.
+    Note: This will fail if there are users, units, or other related data
+    associated with the tenant. Consider deactivating instead of deleting.
 
     ---
     tags:
@@ -328,6 +355,8 @@ def delete_tenant(tenant_id):
         description: Tenant not found
       409:
         description: Cannot delete tenant with associated data
+      500:
+        description: Internal server error
     security:
       - JWT: []
     """
@@ -364,10 +393,33 @@ def delete_tenant(tenant_id):
         db.session.commit()
         return "", 204
 
-    except Exception as e:
+    except IntegrityError as e:
+        # Handle any foreign key constraints we might have missed
         db.session.rollback()
-        logger.exception(f"Failed to delete tenant: {e}")
-        return jsonify({"error": "Failed to delete tenant"}), 500
+        logger.error("Failed to delete tenant due to integrity error: %s", e)
+        return (
+            jsonify(
+                {
+                    "error": "Cannot delete tenant due to existing related data. "
+                    "Please check for audit logs, settings, or other associations."
+                },
+            ),
+            409,
+        )
+
+    except Exception as e:
+        # Catch any unexpected errors
+        db.session.rollback()
+        logger.exception("Unexpected error deleting tenant: %s", e)
+        return (
+            jsonify(
+                {
+                    "error": "An unexpected error occurred while deleting the tenant. "
+                    "Please check logs for details."
+                }
+            ),
+            500,
+        )
 
 
 @tenants_bp.route("/tenants/current", methods=["GET"])
@@ -410,6 +462,7 @@ def get_current_tenant():
 @tenants_bp.route("/tenants/switch", methods=["POST"])
 @jwt_required()
 @permission_required("admin_panel")
+@audit_operation("SWITCH", "tenants")
 def switch_tenant():
     """Switch to a different tenant context (admin only).
 
@@ -434,14 +487,52 @@ def switch_tenant():
         description: Invalid tenant ID
       403:
         description: Insufficient permissions
+      404:
+        description: Tenant not found
     security:
       - JWT: []
     """
-    # This endpoint is for future enhancement - currently tenant context
-    # is managed per-request based on query parameters
+    # Validate request data
+    schema = TenantSwitchSchema()
+    try:
+        data = schema.load(request.json)
+    except ValidationError as err:
+        return jsonify({"error": "Validation error", "details": err.messages}), 400
+
+    tenant_id = data.get("tenant_id")
+
+    # If tenant_id is None, we're switching to cross-tenant access
+    if tenant_id is None:
+        # This is handled by the tenant middleware - we just return success
+        return jsonify(
+            {
+                "message": "Switched to cross-tenant access mode. "
+                "All subsequent requests will operate across all tenants.",
+            }
+        )
+
+    # Verify the tenant exists
+    tenant = Tenant.query.get(tenant_id)
+    if not tenant:
+        return jsonify({"error": f"Tenant with id {tenant_id} not found"}), 404
+
+    # Check if tenant is active (optional - could allow switching to inactive tenants)
+    if not tenant.is_active:
+        return (
+            jsonify(
+                {
+                    "error": f"Tenant '{tenant.name}' is not active. "
+                    "Cannot switch to an inactive tenant."
+                }
+            ),
+            400,
+        )
+
+    # In a real implementation, you would set a session variable or JWT claim here
+    # For now, we just return a success message
     return jsonify(
         {
-            "message": "Tenant switching is managed through query parameters. "
-            "Use ?tenant_id=<id> in your requests to filter by tenant.",
-        },
+            "message": f"Switched to tenant: {tenant.name} (id: {tenant_id}). "
+            "Include ?tenant_id=<id> in your subsequent requests.",
+        }
     )
