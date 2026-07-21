@@ -152,7 +152,7 @@ def initialize_swagger(app: Any) -> None:
         }
         try:
             Swagger(app, template=swagger_template)
-        except Exception as e:
+        except Exception:
             logger = logging.getLogger(__name__)
             logger.exception("Swagger initialization failed")
     except ImportError:
@@ -165,6 +165,7 @@ def import_models() -> None:
     This is intentional to ensure SQLAlchemy models are loaded.
     """
     import contextlib
+
     with contextlib.suppress(ImportError):
         from app.models import (  # noqa: PLC0415, F401 - Intentional lazy loading for SQLAlchemy
             Permission,
@@ -191,6 +192,6 @@ def run_auto_migrations(app: Any) -> None:
         migration_logger = logging.getLogger(__name__)
         migration_logger.info("Running auto-migrations for database schema...")
         run_migrations(app)
-    except Exception as e:
+    except Exception:
         migration_logger = logging.getLogger(__name__)
         migration_logger.exception("Auto-migration failed (non-critical)")

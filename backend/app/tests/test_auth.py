@@ -934,7 +934,9 @@ class TestSecurityEnhancements:
             # Migration hasn't run - log warning but don't fail the test
             import warnings
 
-            warnings.warn("Database migration for reset_token fields not applied", stacklevel=2)
+            warnings.warn(
+                "Database migration for reset_token fields not applied", stacklevel=2
+            )
 
         # The important part is that the API returned success
         # Check message in the nested data structure

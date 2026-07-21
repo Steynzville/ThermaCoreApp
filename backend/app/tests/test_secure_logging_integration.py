@@ -22,11 +22,13 @@ class TestSecureLoggingIntegration:
             error = Exception("Database error: password=secret123")
 
             with patch("app.utils.error_handler.logger") as mock_logger:
-                _response, _status_code = SecurityAwareErrorHandler.handle_service_error(
-                    error,
-                    "database_error",
-                    "Test operation",
-                    500,
+                _response, _status_code = (
+                    SecurityAwareErrorHandler.handle_service_error(
+                        error,
+                        "database_error",
+                        "Test operation",
+                        500,
+                    )
                 )
 
                 # Verify logger was called
@@ -45,11 +47,13 @@ class TestSecureLoggingIntegration:
             error = ValueError("Invalid input value")
 
             with patch("app.utils.error_handler.logger") as mock_logger:
-                _response, _status_code = SecurityAwareErrorHandler.handle_service_error(
-                    error,
-                    "validation_error",
-                    "Input validation",
-                    400,
+                _response, _status_code = (
+                    SecurityAwareErrorHandler.handle_service_error(
+                        error,
+                        "validation_error",
+                        "Input validation",
+                        400,
+                    )
                 )
 
                 # Verify logger was called
@@ -72,11 +76,13 @@ class TestSecureLoggingIntegration:
             error = Exception("API call failed with token=abc123xyz")
 
             with patch("app.utils.error_handler.logger") as mock_logger:
-                _response, _status_code = SecurityAwareErrorHandler.handle_service_error(
-                    error,
-                    "internal_error",
-                    "API call",
-                    500,
+                _response, _status_code = (
+                    SecurityAwareErrorHandler.handle_service_error(
+                        error,
+                        "internal_error",
+                        "API call",
+                        500,
+                    )
                 )
 
                 # Should be logged as error (internal_error)
@@ -125,11 +131,13 @@ class TestSecureLoggingIntegration:
             error = RuntimeError("Unexpected runtime error")
 
             with patch("app.utils.error_handler.logger") as mock_logger:
-                _response, _status_code = SecurityAwareErrorHandler.handle_service_error(
-                    error,
-                    "internal_error",
-                    "background_task",
-                    500,
+                _response, _status_code = (
+                    SecurityAwareErrorHandler.handle_service_error(
+                        error,
+                        "internal_error",
+                        "background_task",
+                        500,
+                    )
                 )
 
                 assert mock_logger.error.called
@@ -177,11 +185,13 @@ class TestSecureLoggingIntegration:
             )
 
             with patch("app.utils.error_handler.logger") as mock_logger:
-                _response, _status_code = SecurityAwareErrorHandler.handle_service_error(
-                    error,
-                    "authentication_error",
-                    "user_login",
-                    401,
+                _response, _status_code = (
+                    SecurityAwareErrorHandler.handle_service_error(
+                        error,
+                        "authentication_error",
+                        "user_login",
+                        401,
+                    )
                 )
 
                 assert mock_logger.warning.called

@@ -312,9 +312,7 @@ def create_app(config_name=None):
     def serve_static(path):
         """Serve static files from the React build."""
         # Skip API routes - let them be handled by the blueprints
-        if (
-            path.startswith(("api/", "auth/", "health"))
-        ):
+        if path.startswith(("api/", "auth/", "health")):
             return None
 
         # Check if the file exists in the dist folder
