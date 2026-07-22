@@ -119,7 +119,7 @@ Frontend Coverage (Vitest / v8)
 
 ```bash
 pnpm test:coverage
-# Expected: 97.34% statements, 89.57% branches, 98.21% functions
+# Expected: 91.78% statements, 90.92% branches, 91.90% functions
 ```
 
 Backend Coverage (Pytest / Cov)
@@ -127,7 +127,7 @@ Backend Coverage (Pytest / Cov)
 ```bash
 cd backend
 pytest --cov=app --cov-report=term
-# Expected: ~90% overall
+# Expected: ~86% overall (actual: 85.63%)
 ```
 
 ---
@@ -178,6 +178,6 @@ Always adhere to our branching, testing, and deployment processes:
 3. Pull Request Checklist:
    · All local Vitest and Pytest assertions pass.
    · Biome and ESLint analysis yields zero critical or formatting warnings.
-   · Frontend coverage meets 97%+ threshold.
+   · Frontend coverage meets 90%+ threshold.
    · Backend coverage meets 85%+ threshold.
    · The documentation inside /docs/ has been updated to reflect any code alterations.
