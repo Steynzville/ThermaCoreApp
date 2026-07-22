@@ -27,26 +27,94 @@ def _init_database():
 
     try:
         if use_postgres:
-            logger.info(
-                "Using PostgreSQL migration script for schema initialization...",
-            )
-            # Use PostgreSQL migration script for PostgreSQL tests
-            schema_path = os.path.join(
+            migrations_dir = os.path.join(
                 os.path.dirname(__file__),
-                "../../migrations/001_initial_schema.sql",
+                "../../migrations",
             )
-            logger.info(f"Schema file path: {schema_path}")
 
-            if not os.path.exists(schema_path):
-                raise FileNotFoundError(f"Schema file not found: {schema_path}")
+            # Apply migrations in dependency order
+            # SKIP 002_seed_data.sql - _create_test_data() handles seeding
+            # SKIP 007_add_user_profile_fields.sql - 008 is a superset
+            sql_migration_files = [
+                "001_initial_schema.sql",
+                "003_update_rbac_security.sql",
+                "004_fix_null_roles.sql",
+                "005_add_password_reset_fields.sql",
+                "006_add_emergency_admin_permissions.sql",  # Postgres version (has DO $$)
+                "008_add_user_profile_fields_comprehensive.sql",
+                "009_add_user_approval_columns.sql",
+            ]
 
-            with open(schema_path) as f:
-                schema_sql = f.read()
+            for fname in sql_migration_files:
+                path = os.path.join(migrations_dir, fname)
+                if not os.path.exists(path):
+                    logger.warning(f"Migration file not found: {path}, skipping")
+                    continue
+                with open(path) as f:
+                    sql = f.read()
+                logger.info(f"Applying migration: {fname}")
+                db.session.execute(text(sql))
 
-            logger.info(f"Schema SQL loaded ({len(schema_sql)} characters)")
-            db.session.execute(text(schema_sql))
+            # Apply multi-tenancy DDL manually (add_multi_tenancy.py uses SQLite syntax)
+            logger.info("Applying multi-tenancy DDL...")
+            db.session.execute(
+                text(
+                    """
+                    CREATE TABLE IF NOT EXISTS tenants (
+                        id SERIAL PRIMARY KEY,
+                        name VARCHAR(255) NOT NULL UNIQUE,
+                        slug VARCHAR(100) NOT NULL UNIQUE,
+                        description TEXT,
+                        contact_name VARCHAR(200),
+                        contact_email VARCHAR(120),
+                        contact_phone VARCHAR(50),
+                        address_line1 VARCHAR(255),
+                        address_line2 VARCHAR(255),
+                        city VARCHAR(100),
+                        state VARCHAR(100),
+                        postal_code VARCHAR(20),
+                        country VARCHAR(100),
+                        is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                        max_users INTEGER,
+                        max_units INTEGER,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                    """,
+                ),
+            )
+            db.session.execute(
+                text("CREATE INDEX IF NOT EXISTS idx_tenants_name ON tenants(name)"),
+            )
+            db.session.execute(
+                text("CREATE INDEX IF NOT EXISTS idx_tenants_slug ON tenants(slug)"),
+            )
+            db.session.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS idx_tenants_is_active ON tenants(is_active)",
+                ),
+            )
+            db.session.execute(
+                text(
+                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS tenant_id "
+                    "INTEGER REFERENCES tenants(id)",
+                ),
+            )
+            db.session.execute(
+                text("CREATE INDEX IF NOT EXISTS idx_users_tenant_id ON users(tenant_id)"),
+            )
+            db.session.execute(
+                text(
+                    "ALTER TABLE units ADD COLUMN IF NOT EXISTS tenant_id "
+                    "INTEGER REFERENCES tenants(id)",
+                ),
+            )
+            db.session.execute(
+                text("CREATE INDEX IF NOT EXISTS idx_units_tenant_id ON units(tenant_id)"),
+            )
+
             db.session.commit()
-            logger.info("✓ PostgreSQL schema executed successfully")
+            logger.info("✓ PostgreSQL schema and migrations applied successfully")
 
         else:
             # For SQLite tests, use SQLAlchemy's create_all() which properly handles
@@ -101,6 +169,12 @@ def _init_database():
         logger.info(f"{'=' * 70}\n")
 
     except Exception as e:
+        # Rollback any failed transaction so debug queries can run
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+
         logger.info(f"\n{'=' * 70}")
         logger.info("✗ ERROR: Database initialization failed!")
         logger.info(f"{'=' * 70}")
