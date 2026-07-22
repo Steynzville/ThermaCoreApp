@@ -292,29 +292,26 @@ Content-Security-Policy:
   font-src 'self' https://fonts.gstatic.com;
   frame-ancestors 'none';
 ```
-· No Unsafe Eval: Prevents the use of dynamic code execution (e.g., eval()) across the front-end runtime.
-· Frame Ancestors Control: Restricts frame embedding to completely block clickjacking and UI redressing attacks.
+* **No Unsafe Eval**: Prevents the use of dynamic code execution (e.g., `eval()`) across the front-end runtime.
+* **Frame Ancestors Control**: Restricts frame embedding to completely block clickjacking and UI redressing attacks.
 
-7.3 Principle of Least Privilege Containerization
+### 7.3 Principle of Least Privilege Containerization
+* **Non-Root Container Runtimes**: The production Docker environment is structured to prevent root execution. A dedicated, non-privileged system user (`thermacore`) is registered inside the container.
+* **Directory Lockdowns**: All application directories, source scripts, and static build outputs are owned by the system administrator with read-only permissions for the execution user. The runtime user is strictly barred from modifying system binaries or writing to root directories.
 
-· Non-Root Container Runtimes: The production Docker environment is structured to prevent root execution. A dedicated, non-privileged system user (thermacore) is registered inside the container.
-· Directory Lockdowns: All application directories, source scripts, and static build outputs are owned by the system administrator with read-only permissions for the execution user. The runtime user is strictly barred from modifying system binaries or writing to root directories.
-
-7.4 Comprehensive Test Coverage Milestones
-
+### 7.4 Comprehensive Test Coverage Milestones
 Our commitment to software quality and operational reliability is backed by a rigorous, zero-regression test suite. The platform has achieved elite coverage benchmarks across both frontend and backend architectures:
-
-· Total Automated Tests: 5,504 passing tests (comprising 4,180 frontend unit/integration tests and 1,324 backend tests).
-· Frontend Test Coverage (Vitest / v8):
-  · Statements: 91.78%
-  · Branches: 90.92%
-  · Functions: 91.90%
-· Backend Test Coverage (Pytest / Cov):
-  · Overall Coverage: 85.63%
+* **Total Automated Tests**: **5,504 passing tests** (comprising 4,180 frontend unit/integration tests and 1,324 backend tests).
+* **Frontend Test Coverage (Vitest / v8)**:
+  * **Statements**: **91.78%**
+  * **Branches**: **90.92%**
+  * **Functions**: **91.90%**
+* **Backend Test Coverage (Pytest / Cov)**:
+  * **Overall Coverage**: **85.63%**
 
 ---
 
-8. Deployment & Infrastructure Topology
+## 8. Deployment & Infrastructure Topology
 
 ThermaCore SCADA is deployed across a secure, multi-cloud enterprise topology, separating static presentation assets from physical database systems.
 
@@ -335,67 +332,55 @@ ThermaCore SCADA is deployed across a secure, multi-cloud enterprise topology, s
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-8.1 Container Orchestration (Dockerfile)
-
+### 8.1 Container Orchestration (`Dockerfile`)
 The platform leverages an optimized, multi-stage Docker build process:
+1. **Build Stage**: Compiles and bundles React assets via Vite, utilizing parallel minification to strip console logs and debug symbols.
+2. **Production Stage**: Copies only the production assets into a slimmed Node/Alpine environment, keeping the production container size below 120MB to optimize performance and deployment speed.
 
-1. Build Stage: Compiles and bundles React assets via Vite, utilizing parallel minification to strip console logs and debug symbols.
-2. Production Stage: Copies only the production assets into a slimmed Node/Alpine environment, keeping the production container size below 120MB to optimize performance and deployment speed.
-
-8.2 Zero-Downtime CI/CD Pipeline
-
-· GitHub Integration: Pushing to the main branch triggers an automated build. If any unit tests (Vitest/Pytest) or security scans fail, the pipeline halts immediately, keeping the live environment untouched.
-· Rolling Deployments: Render executes health checks on the new container before shifting live traffic, maintaining continuous availability for active plant operators.
+### 8.2 Zero-Downtime CI/CD Pipeline
+* **GitHub Integration**: Pushing to the `main` branch triggers an automated build. If any unit tests (Vitest/Pytest) or security scans fail, the pipeline halts immediately, keeping the live environment untouched.
+* **Rolling Deployments**: Render executes health checks on the new container before shifting live traffic, maintaining continuous availability for active plant operators.
 
 ---
 
-9. Engineering Roadmap & Milestones
+## 9. Engineering Roadmap & Milestones
 
 Our developmental milestones align with scaling operations to support thousands of active physical utility installations globally:
 
-```
-                            DEVELOPMENT ROADMAP
-  Q3 2026                 Q4 2026                 Q1 2027
-  ┌───────────────────────┐  ┌───────────────────────┐  ┌──────────────────────┐
-  │ Anomaly AI Engine     │  │ Offline-First PWA     │  │ EMQX Enterprise      │
-  │ (Gemini API Integration) │  │ (Local IndexedDB)     │  │ (Hardware HSM)       │
-  └───────────────────────┘  └───────────────────────┘  └──────────────────────┘
-```
+                          DEVELOPMENT ROADMAP
+Q3 2026                 Q4 2026                 Q1 2027
+┌───────────────────────┐  ┌───────────────────────┐  ┌──────────────────────┐
+│ Anomaly AI Engine     │  │ Offline-First PWA     │  │ EMQX Enterprise      │
+│ (Gemini API Integration) │  │ (Local IndexedDB)     │  │ (Hardware HSM)       │
+└───────────────────────┘  └───────────────────────┘  └──────────────────────┘
 
-9.1 Q3 2026: AI-Driven Thermodynamic Anomaly Prediction
+### 9.1 Q3 2026: AI-Driven Thermodynamic Anomaly Prediction
+* Integrate Google Gemini models via the server-side `@google/genai` SDK.
+* Develop automated model prompt engineering to scan 30-day time-series telemetry blocks for subtle thermal gradient drifts, predicting and flagging hardware fatigue prior to physical failure.
 
-· Integrate Google Gemini models via the server-side @google/genai SDK.
-· Develop automated model prompt engineering to scan 30-day time-series telemetry blocks for subtle thermal gradient drifts, predicting and flagging hardware fatigue prior to physical failure.
+### 9.2 Q4 2026: Offline-First PWA & Edge Syncing
+* Implement full service-worker caching to ensure field engineers retain full SCADA diagnostic capabilities in remote locations with poor network coverage.
+* Store operator action histories inside secure client-side IndexedDB databases, auto-syncing payloads and audit trails with the backend server upon reconnect.
 
-9.2 Q4 2026: Offline-First PWA & Edge Syncing
-
-· Implement full service-worker caching to ensure field engineers retain full SCADA diagnostic capabilities in remote locations with poor network coverage.
-· Store operator action histories inside secure client-side IndexedDB databases, auto-syncing payloads and audit trails with the backend server upon reconnect.
-
-9.3 Q1 2027: Enterprise EMQX Mutual TLS Broker
-
-· Transition pilot telemetry pathways into an enterprise-managed EMQX MQTT broker cluster.
-· Enforce hardware-locked security modules (HSM) on edge gateways to achieve absolute end-to-end cryptographic confidentiality.
+### 9.3 Q1 2027: Enterprise EMQX Mutual TLS Broker
+* Transition pilot telemetry pathways into an enterprise-managed EMQX MQTT broker cluster.
+* Enforce hardware-locked security modules (HSM) on edge gateways to achieve absolute end-to-end cryptographic confidentiality.
 
 ---
 
-10. Appendices
+## 10. Appendices
 
-Appendix A: Technology Stack Inventory
+### Appendix A: Technology Stack Inventory
+* **Core Frontend**: React (v19.2.0), Vite (v6.4.1), React Router (v7.9.4), Recharts (v2.15.4), Framer Motion (v12.23.24), Tailwind CSS (v4.1.14), Lucide React.
+* **Core Backend**: Python (v3.9+), Flask (v2.3+), SQLAlchemy, PyJWT (v2.8+), Socket.io (v4.7+).
+* **Databases & Tooling**: Serverless Neon PostgreSQL (v15+), TimescaleDB (Time-series optimization).
+* **Verification & Linting**: Vitest (v3.2.4) for React testing, Pytest for backend testing, Biome (v2.5.1) for static analysis.
 
-· Core Frontend: React (v19.2.0), Vite (v6.4.1), React Router (v7.9.4), Recharts (v2.15.4), Framer Motion (v12.23.24), Tailwind CSS (v4.1.14), Lucide React.
-· Core Backend: Python (v3.9+), Flask (v2.3+), SQLAlchemy, PyJWT (v2.8+), Socket.io (v4.7+).
-· Databases & Tooling: Serverless Neon PostgreSQL (v15+), TimescaleDB (Time-series optimization).
-· Verification & Linting: Vitest (v3.2.4) for React testing, Pytest for backend testing, Biome (v2.5.1) for static analysis.
-
-Appendix B: Operational Performance SLA
-
-· Supervisory Telemetry Latency: < 120ms from an edge sensor recording a temperature spike to the visual warning flashing on an operator's dashboard.
-· Remote Action execution: < 180ms from an administrator clicking "Emergency Stop" on a web interface to the edge gateway dispatching the encrypted OPC-UA command payload.
-· Analytics Rendering Speeds: 95th-percentile response time for 30-day historical time-series aggregation queries is < 95ms.
+### Appendix B: Operational Performance SLA
+* **Supervisory Telemetry Latency**: < 120ms from an edge sensor recording a temperature spike to the visual warning flashing on an operator's dashboard.
+* **Remote Action execution**: < 180ms from an administrator clicking "Emergency Stop" on a web interface to the edge gateway dispatching the encrypted OPC-UA command payload.
+* **Analytics Rendering Speeds**: 95th-percentile response time for 30-day historical time-series aggregation queries is < 95ms.
 
 ---
 
-End of Document. Confidential material prepared solely for ThermaCore Renewable Technologies partners and authorized funding boards.
-
-```
+*End of Document. Confidential material prepared solely for ThermaCore Renewable Technologies partners and authorized funding boards.*
