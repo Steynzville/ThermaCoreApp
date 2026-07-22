@@ -33,6 +33,7 @@ However, hardware alone is only half the equation. Traditional decentralized ass
 **ThermaCore SCADA** is our proprietary, web-native, enterprise-grade control and supervisory ecosystem integrated directly into every modular unit we deploy. It provides real-time thermodynamic modeling, remote edge control, predictive maintenance diagnostics, and high-performance alarm coordination via a secure web portal accessible from any modern browser.
 
 ```
+
 ┌────────────────────────────────────────────────────────────────────────┐
 │                        THE THERMACORE ADVANTAGE                        │
 │                                                                        │
@@ -42,6 +43,7 @@ However, hardware alone is only half the equation. Traditional decentralized ass
 │   ✖ Unpredictable maintenance downtime      ✔ Pre-emptive, Telemetry-Driven Diagnostics │
 │   ✖ One-time, transactional sales loops     ✔ Dual Revenue (CapEx + Recurring SaaS Sub)│
 └────────────────────────────────────────────────────────────────────────┘
+
 ```
 
 ### 1.2 Strategic Accomplishments
@@ -55,14 +57,17 @@ However, hardware alone is only half the equation. Traditional decentralized ass
 
 Rather than relying on low-margin hardware-only transactions, ThermaCore employs a highly lucrative **Dual Revenue Model** that combines traditional industrial sales with high-margin recurring software revenues.
 
+THERMACORE DUAL-STREAM REVENUE ENGINE
+
 ```
-                  THERMACORE DUAL-STREAM REVENUE ENGINE
+
 ┌─────────────────────────────────────────┐     ┌─────────────────────────────────────────┐
 │     CAPEX STREAM: GENERATOR SALES       │  +  │    OPEX STREAM: MONITORING SUBSCRIPTION │
 │  • High-performance physical assets     │     │  • Live SCADA dashboard & controls access│
 │  • Power and clean water generation     │     │  • Automated thermodynamic optimization  │
 │  • Installed edge gateways (OPC-UA/MQTT)│     │  • Predictive maintenance alerts (SaaS) │
 └─────────────────────────────────────────┘     └─────────────────────────────────────────┘
+
 ```
 
 ### 2.1 Hardware Asset Sales (CapEx Stream)
@@ -84,24 +89,26 @@ While competitors provide basic, disconnected hardware, ThermaCore offers a comp
 The ThermaCore SCADA platform utilizes a modern, robust, and highly resilient decoupled multi-tier architecture to serve as a digital twin for our physical generator fleet.
 
 ```
+
 ┌────────────────────────────────────────────────────────────────────────┐
 │                        PRESENTATION LAYER (UI)                         │
 │             React 19 SPA (Vite + Framer Motion + Recharts)             │
 │            Served securely and globally with responsive views          │
 └───────────────────────────────────┬────────────────────────────────────┘
-                                    │ HTTPS (REST API) & WSS (WebSockets)
-                                    ▼
+│ HTTPS (REST API) & WSS (WebSockets)
+▼
 ┌────────────────────────────────────────────────────────────────────────┐
 │                     APPLICATION CONTROL LAYER (API)                    │
 │                 Python 3.9+ Flask Framework (WSGI App)                 │
 │                 Encapsulated in Multi-Stage Containers                 │
 └───────────────────────────────────┬────────────────────────────────────┘
-                                    │ TLS Connection Pool (SQLAlchemy)
-                                    ▼
+│ TLS Connection Pool (SQLAlchemy)
+▼
 ┌────────────────────────────────────────────────────────────────────────┐
 │                     TIME-SERIES PERSISTENCE LAYER                      │
 │             PostgreSQL + TimescaleDB Serverless Hyper-tables            │
 └────────────────────────────────────────────────────────────────────────┘
+
 ```
 
 ### 3.1 Frontend Presentation Tier (React 19)
@@ -126,6 +133,7 @@ The ThermaCore SCADA platform utilizes a modern, robust, and highly resilient de
 The operational strength of the ThermaCore SCADA platform is validated across 10 functional pillars:
 
 ```
+
 ┌────────────────────────────────────────────────────────────────────────┐
 │                        10 OPERATIONAL PILLARS                          │
 │                                                                        │
@@ -133,6 +141,7 @@ The operational strength of the ThermaCore SCADA platform is validated across 10
 │  [5] RBAC Admin Panel [6] Asset Grid     [7] Analytics     [8] SocketIO │
 │  [9] SCADA Dash      [10] Fail-Safe Redirection                        │
 └────────────────────────────────────────────────────────────────────────┘
+
 ```
 
 ### 4.1 Session & Multi-Layer Authentication
@@ -158,7 +167,7 @@ The operational strength of the ThermaCore SCADA platform is validated across 10
 * **Fleet Control**: Serves as the master dashboard for system operators and administrators.
 * **Pending Approvals Manager**: Restricts newly registered users to restricted "Viewer" privileges until verified, manually authorized, and elevated by a system Administrator.
 * **Audit Logs Viewer**: Streams real-time operational event records, containing complete tracing IDs, origin IPs, and precise timestamps.
-* **Multi-Tenant Administration**: Administrators managing multiple clients or facilities can seamlessly switch between tenants using the **Tenant Switcher** dropdown in the dashboard header. A dedicated Admin Landing page provides centralized tenant selection, while the "All Tenants" view offers aggregated cross-tenant analytics. This eliminates the need for separate instances and significantly reduces operational overhead for fleet operators.
+* **Multi-tenant Administration**: Administrators managing multiple clients or facilities can seamlessly switch between tenants using the **Tenant Switcher** dropdown in the dashboard header. A dedicated Admin Landing page provides centralized tenant selection, while the "All Tenants" view offers aggregated cross-tenant analytics. This eliminates the need for separate instances and significantly reduces operational overhead for fleet operators.
 
 ### 4.6 Asset Grid & Search View
 * **Dynamic Fleet Navigation**: A high-density grid showing real-time status cards of all registered generators globally. Features high-performance client-side search, fuzzy filtering, and paginated dynamic loading.
@@ -186,6 +195,7 @@ The operational strength of the ThermaCore SCADA platform is validated across 10
 ThermaCore supports multiple legacy and modern industrial ingestion layers to bridge physical edge devices with the cloud.
 
 ```
+
 ┌────────────────────────────────────────────────────────────────────────┐
 │                          INGESTION INVENTORY                           │
 │                                                                        │
@@ -196,6 +206,7 @@ ThermaCore supports multiple legacy and modern industrial ingestion layers to br
 │   Modbus-TCP   Legacy Heat Exchangers & Valves    Encapsulated Gateways│
 │   DNP3         Power Substation Synchronizations  Secure Authentication│
 └────────────────────────────────────────────────────────────────────────┘
+
 ```
 
 ### 5.1 OPC-UA (Open Platform Communications Unified Architecture)
@@ -216,8 +227,10 @@ ThermaCore supports multiple legacy and modern industrial ingestion layers to br
 
 ThermaCore SCADA is built around a rigorous, zero-trust military-grade security model designed to safeguard critical utility assets from sophisticated cyber threats.
 
+ZERO-TRUST PHYSICAL SECURITY LAYERS
+
 ```
-                  ZERO-TRUST PHYSICAL SECURITY LAYERS
+
 ┌────────────────────────────────────────────────────────────────────────┐
 │ LAYER 1: CLIENT ACCESS -> HttpOnly JWT Cookies & Strict CSRF Guard     │
 ├────────────────────────────────────────────────────────────────────────┤
@@ -227,6 +240,7 @@ ThermaCore SCADA is built around a rigorous, zero-trust military-grade security 
 ├────────────────────────────────────────────────────────────────────────┤
 │ LAYER 4: PHYSICAL EXECUTION -> Cryptographically Signed Overrides      │
 └────────────────────────────────────────────────────────────────────────┘
+
 ```
 
 ### 6.1 Defense-in-Depth Cryptography
@@ -250,12 +264,15 @@ ThermaCore SCADA defines clear operational boundaries across three specialized t
 
 The reliability and safety of ThermaCore SCADA are continuously verified through an automated, execute-first development lifecycle.
 
+AUTOMATED CI/CD FLOW
+
 ```
-                          AUTOMATED CI/CD FLOW
+
 ┌──────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
 │  Developer   │ ──► │  Biome/Lint  │ ──► │ Vitest/Unit  │ ──► │ Production   │
-│ Code Commit  │     │ Static Scan  │     │ 3,700+ Tests │     │ Deployment   │
+│ Code Commit  │     │ Static Scan  │     │ 5,504+ Tests │     │ Deployment   │
 └──────────────┘     └──────────────┘     └──────────────┘     └──────────────┘
+
 ```
 
 ### 7.1 Integrated Security Scanning Tools
@@ -275,26 +292,29 @@ Content-Security-Policy:
   font-src 'self' https://fonts.gstatic.com;
   frame-ancestors 'none';
 ```
-* **No Unsafe Eval**: Prevents the use of dynamic code execution (e.g., `eval()`) across the front-end runtime.
-* **Frame Ancestors Control**: Restricts frame embedding to completely block clickjacking and UI redressing attacks.
+· No Unsafe Eval: Prevents the use of dynamic code execution (e.g., eval()) across the front-end runtime.
+· Frame Ancestors Control: Restricts frame embedding to completely block clickjacking and UI redressing attacks.
 
-### 7.3 Principle of Least Privilege Containerization
-* **Non-Root Container Runtimes**: The production Docker environment is structured to prevent root execution. A dedicated, non-privileged system user (`thermacore`) is registered inside the container.
-* **Directory Lockdowns**: All application directories, source scripts, and static build outputs are owned by the system administrator with read-only permissions for the execution user. The runtime user is strictly barred from modifying system binaries or writing to root directories.
+7.3 Principle of Least Privilege Containerization
 
-### 7.4 Comprehensive Test Coverage Milestones
+· Non-Root Container Runtimes: The production Docker environment is structured to prevent root execution. A dedicated, non-privileged system user (thermacore) is registered inside the container.
+· Directory Lockdowns: All application directories, source scripts, and static build outputs are owned by the system administrator with read-only permissions for the execution user. The runtime user is strictly barred from modifying system binaries or writing to root directories.
+
+7.4 Comprehensive Test Coverage Milestones
+
 Our commitment to software quality and operational reliability is backed by a rigorous, zero-regression test suite. The platform has achieved elite coverage benchmarks across both frontend and backend architectures:
-* **Total Automated Tests**: **3,700+ passing tests** (comprising 377 frontend unit/integration tests and 3,323+ backend tests).
-* **Frontend Test Coverage (Vitest / v8)**:
-  * **Statements**: **97.34%**
-  * **Branches**: **89.57%**
-  * **Functions**: **98.21%**
-* **Backend Test Coverage (Pytest / Cov)**:
-  * **Overall Coverage**: **~90%**
+
+· Total Automated Tests: 5,504 passing tests (comprising 4,180 frontend unit/integration tests and 1,324 backend tests).
+· Frontend Test Coverage (Vitest / v8):
+  · Statements: 91.78%
+  · Branches: 90.92%
+  · Functions: 91.90%
+· Backend Test Coverage (Pytest / Cov):
+  · Overall Coverage: 85.63%
 
 ---
 
-## 8. Deployment & Infrastructure Topology
+8. Deployment & Infrastructure Topology
 
 ThermaCore SCADA is deployed across a secure, multi-cloud enterprise topology, separating static presentation assets from physical database systems.
 
@@ -315,18 +335,21 @@ ThermaCore SCADA is deployed across a secure, multi-cloud enterprise topology, s
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 8.1 Container Orchestration (`Dockerfile`)
-The platform leverages an optimized, multi-stage Docker build process:
-1. **Build Stage**: Compiles and bundles React assets via Vite, utilizing parallel minification to strip console logs and debug symbols.
-2. **Production Stage**: Copies only the production assets into a slimmed Node/Alpine environment, keeping the production container size below 120MB to optimize performance and deployment speed.
+8.1 Container Orchestration (Dockerfile)
 
-### 8.2 Zero-Downtime CI/CD Pipeline
-* **GitHub Integration**: Pushing to the `main` branch triggers an automated build. If any unit tests (Vitest/Pytest) or security scans fail, the pipeline halts immediately, keeping the live environment untouched.
-* **Rolling Deployments**: Render executes health checks on the new container before shifting live traffic, maintaining continuous availability for active plant operators.
+The platform leverages an optimized, multi-stage Docker build process:
+
+1. Build Stage: Compiles and bundles React assets via Vite, utilizing parallel minification to strip console logs and debug symbols.
+2. Production Stage: Copies only the production assets into a slimmed Node/Alpine environment, keeping the production container size below 120MB to optimize performance and deployment speed.
+
+8.2 Zero-Downtime CI/CD Pipeline
+
+· GitHub Integration: Pushing to the main branch triggers an automated build. If any unit tests (Vitest/Pytest) or security scans fail, the pipeline halts immediately, keeping the live environment untouched.
+· Rolling Deployments: Render executes health checks on the new container before shifting live traffic, maintaining continuous availability for active plant operators.
 
 ---
 
-## 9. Engineering Roadmap & Milestones
+9. Engineering Roadmap & Milestones
 
 Our developmental milestones align with scaling operations to support thousands of active physical utility installations globally:
 
@@ -339,33 +362,40 @@ Our developmental milestones align with scaling operations to support thousands 
   └───────────────────────┘  └───────────────────────┘  └──────────────────────┘
 ```
 
-### 9.1 Q3 2026: AI-Driven Thermodynamic Anomaly Prediction
-* Integrate Google Gemini models via the server-side `@google/genai` SDK.
-* Develop automated model prompt engineering to scan 30-day time-series telemetry blocks for subtle thermal gradient drifts, predicting and flagging hardware fatigue prior to physical failure.
+9.1 Q3 2026: AI-Driven Thermodynamic Anomaly Prediction
 
-### 9.2 Q4 2026: Offline-First PWA & Edge Syncing
-* Implement full service-worker caching to ensure field engineers retain full SCADA diagnostic capabilities in remote locations with poor network coverage.
-* Store operator action histories inside secure client-side IndexedDB databases, auto-syncing payloads and audit trails with the backend server upon reconnect.
+· Integrate Google Gemini models via the server-side @google/genai SDK.
+· Develop automated model prompt engineering to scan 30-day time-series telemetry blocks for subtle thermal gradient drifts, predicting and flagging hardware fatigue prior to physical failure.
 
-### 9.3 Q1 2027: Enterprise EMQX Mutual TLS Broker
-* Transition pilot telemetry pathways into an enterprise-managed EMQX MQTT broker cluster.
-* Enforce hardware-locked security modules (HSM) on edge gateways to achieve absolute end-to-end cryptographic confidentiality.
+9.2 Q4 2026: Offline-First PWA & Edge Syncing
 
----
+· Implement full service-worker caching to ensure field engineers retain full SCADA diagnostic capabilities in remote locations with poor network coverage.
+· Store operator action histories inside secure client-side IndexedDB databases, auto-syncing payloads and audit trails with the backend server upon reconnect.
 
-## 10. Appendices
+9.3 Q1 2027: Enterprise EMQX Mutual TLS Broker
 
-### Appendix A: Technology Stack Inventory
-* **Core Frontend**: React (v19.2.0), Vite (v6.4.1), React Router (v7.9.4), Recharts (v2.15.4), Framer Motion (v12.23.24), Tailwind CSS (v4.1.14), Lucide React.
-* **Core Backend**: Python (v3.9+), Flask (v2.3+), SQLAlchemy, PyJWT (v2.8+), Socket.io (v4.7+).
-* **Databases & Tooling**: Serverless Neon PostgreSQL (v15+), TimescaleDB (Time-series optimization).
-* **Verification & Linting**: Vitest (v3.2.4) for React testing, Pytest for backend testing, Biome (v2.5.1) for static analysis.
-
-### Appendix B: Operational Performance SLA
-* **Supervisory Telemetry Latency**: < 120ms from an edge sensor recording a temperature spike to the visual warning flashing on an operator's dashboard.
-* **Remote Action execution**: < 180ms from an administrator clicking "Emergency Stop" on a web interface to the edge gateway dispatching the encrypted OPC-UA command payload.
-* **Analytics Rendering Speeds**: 95th-percentile response time for 30-day historical time-series aggregation queries is < 95ms.
+· Transition pilot telemetry pathways into an enterprise-managed EMQX MQTT broker cluster.
+· Enforce hardware-locked security modules (HSM) on edge gateways to achieve absolute end-to-end cryptographic confidentiality.
 
 ---
 
-*End of Document. Confidential material prepared solely for ThermaCore Renewable Technologies partners and authorized funding boards.*
+10. Appendices
+
+Appendix A: Technology Stack Inventory
+
+· Core Frontend: React (v19.2.0), Vite (v6.4.1), React Router (v7.9.4), Recharts (v2.15.4), Framer Motion (v12.23.24), Tailwind CSS (v4.1.14), Lucide React.
+· Core Backend: Python (v3.9+), Flask (v2.3+), SQLAlchemy, PyJWT (v2.8+), Socket.io (v4.7+).
+· Databases & Tooling: Serverless Neon PostgreSQL (v15+), TimescaleDB (Time-series optimization).
+· Verification & Linting: Vitest (v3.2.4) for React testing, Pytest for backend testing, Biome (v2.5.1) for static analysis.
+
+Appendix B: Operational Performance SLA
+
+· Supervisory Telemetry Latency: < 120ms from an edge sensor recording a temperature spike to the visual warning flashing on an operator's dashboard.
+· Remote Action execution: < 180ms from an administrator clicking "Emergency Stop" on a web interface to the edge gateway dispatching the encrypted OPC-UA command payload.
+· Analytics Rendering Speeds: 95th-percentile response time for 30-day historical time-series aggregation queries is < 95ms.
+
+---
+
+End of Document. Confidential material prepared solely for ThermaCore Renewable Technologies partners and authorized funding boards.
+
+```
