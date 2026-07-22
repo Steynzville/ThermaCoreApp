@@ -260,7 +260,9 @@ class TestGetRateLimiter:
             app.config["REDIS_URL"] = "redis://localhost:6379/0"
             fake_redis = MagicMock()
             with patch.object(
-                rate_limit_module.redis, "from_url", return_value=fake_redis
+                rate_limit_module.redis,
+                "from_url",
+                return_value=fake_redis,
             ):
                 limiter = get_rate_limiter()
                 assert limiter.redis_client is fake_redis
@@ -272,7 +274,9 @@ class TestGetRateLimiter:
             fake_redis = MagicMock()
             fake_redis.ping.side_effect = Exception("connection refused")
             with patch.object(
-                rate_limit_module.redis, "from_url", return_value=fake_redis
+                rate_limit_module.redis,
+                "from_url",
+                return_value=fake_redis,
             ):
                 limiter = get_rate_limiter()
                 assert limiter.redis_client is None

@@ -28,7 +28,10 @@ class TestTimestampConsistency:
     """Test timestamp handling consistency across environments."""
 
     def test_user_registration_sets_all_expected_fields(
-        self, client, db_session, admin_token
+        self,
+        client,
+        db_session,
+        admin_token,
     ):
         """Test registration endpoint properly sets first_name, last_name, and timestamps."""
         # Get admin role for new user
@@ -85,7 +88,10 @@ class TestTimestampConsistency:
         )
 
     def test_user_registration_without_optional_fields(
-        self, client, db_session, admin_token
+        self,
+        client,
+        db_session,
+        admin_token,
     ):
         """Test registration works correctly when optional fields are not provided."""
         # Get admin role for new user
