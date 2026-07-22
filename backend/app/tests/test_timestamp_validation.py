@@ -24,22 +24,35 @@ def unwrap_response(response):
     return data
 
 
+def get_auth_token(client, username="admin", password="admin123"):
+    """Helper to get auth token."""
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"username": username, "password": password},
+        headers={"Content-Type": "application/json"},
+    )
+
+    if response.status_code == 200:
+        data = json.loads(response.data)
+        # Handle both wrapped and unwrapped responses
+        if "data" in data and "access_token" in data["data"]:
+            return data["data"]["access_token"]
+        if "access_token" in data:
+            return data["access_token"]
+    return None
+
+
 class TestTimestampConsistency:
     """Test timestamp handling consistency across environments."""
 
     def test_user_registration_sets_all_expected_fields(self, client, db_session):
         """Test registration endpoint properly sets first_name, last_name, and timestamps."""
-        # Get auth token
-        response = client.post(
-            "/api/v1/auth/login",
-            json={"username": "admin", "password": "admin123"},
-            headers={"Content-Type": "application/json"},
-        )
-        token = unwrap_response(response)["access_token"]
+        # Get auth token using helper function
+        token = get_auth_token(client)
+        assert token is not None
 
         # Get admin role for new user
         import time
-
         from app.models import Role, RoleEnum
 
         admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
@@ -92,17 +105,12 @@ class TestTimestampConsistency:
 
     def test_user_registration_without_optional_fields(self, client, db_session):
         """Test registration works correctly when optional fields are not provided."""
-        # Get auth token
-        response = client.post(
-            "/api/v1/auth/login",
-            json={"username": "admin", "password": "admin123"},
-            headers={"Content-Type": "application/json"},
-        )
-        token = unwrap_response(response)["access_token"]
+        # Get auth token using helper function
+        token = get_auth_token(client)
+        assert token is not None
 
         # Get admin role for new user
         import time
-
         from app.models import Role, RoleEnum
 
         admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
@@ -146,7 +154,6 @@ class TestTimestampConsistency:
         """Test that updated_at timestamps work correctly in SQLite test environment."""
         # Create a test user - use unique email to avoid conflicts
         import time
-
         from app.models import Role, RoleEnum
 
         admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
@@ -199,7 +206,7 @@ class TestTimestampConsistency:
 
         # Simulate an update
         unit.name = "Updated Timestamp Test Unit"
-        simulate_db_trigger_update(unit)  # Simulate what PostgreSQL trigger would do
+        simulate_db_trigger_update(unit)
         db_session.commit()
 
         # Verify timestamp was updated
@@ -230,7 +237,7 @@ class TestTimestampConsistency:
 
         # Simulate an update
         sensor.name = "Updated Timestamp Test Sensor"
-        simulate_db_trigger_update(sensor)  # Simulate what PostgreSQL trigger would do
+        simulate_db_trigger_update(sensor)
         db_session.commit()
 
         # Verify timestamp was updated
