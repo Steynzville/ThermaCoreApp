@@ -24,33 +24,11 @@ def unwrap_response(response):
     return data
 
 
-def get_auth_token(client, username="admin", password="admin123"):
-    """Helper to get auth token."""
-    response = client.post(
-        "/api/v1/auth/login",
-        json={"username": username, "password": password},
-        headers={"Content-Type": "application/json"},
-    )
-
-    if response.status_code == 200:
-        data = json.loads(response.data)
-        # Handle both wrapped and unwrapped responses
-        if "data" in data and "access_token" in data["data"]:
-            return data["data"]["access_token"]
-        if "access_token" in data:
-            return data["access_token"]
-    return None
-
-
 class TestTimestampConsistency:
     """Test timestamp handling consistency across environments."""
 
-    def test_user_registration_sets_all_expected_fields(self, client, db_session):
+    def test_user_registration_sets_all_expected_fields(self, client, db_session, admin_token):
         """Test registration endpoint properly sets first_name, last_name, and timestamps."""
-        # Get auth token using helper function
-        token = get_auth_token(client)
-        assert token is not None
-
         # Get admin role for new user
         import time
         from app.models import Role, RoleEnum
@@ -72,7 +50,7 @@ class TestTimestampConsistency:
             "/api/v1/auth/register",
             json=user_data,
             headers={
-                "Authorization": f"Bearer {token}",
+                "Authorization": f"Bearer {admin_token}",
                 "Content-Type": "application/json",
             },
         )
@@ -103,12 +81,8 @@ class TestTimestampConsistency:
             f"Created and updated timestamps should be close, diff: {time_diff} seconds"
         )
 
-    def test_user_registration_without_optional_fields(self, client, db_session):
+    def test_user_registration_without_optional_fields(self, client, db_session, admin_token):
         """Test registration works correctly when optional fields are not provided."""
-        # Get auth token using helper function
-        token = get_auth_token(client)
-        assert token is not None
-
         # Get admin role for new user
         import time
         from app.models import Role, RoleEnum
@@ -128,7 +102,7 @@ class TestTimestampConsistency:
             "/api/v1/auth/register",
             json=user_data,
             headers={
-                "Authorization": f"Bearer {token}",
+                "Authorization": f"Bearer {admin_token}",
                 "Content-Type": "application/json",
             },
         )
