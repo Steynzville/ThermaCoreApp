@@ -38,9 +38,12 @@ Unlike traditional hardware-only manufacturers, ThermaCore leverages an integrat
 │ Metric                               │ Operational Baseline & Status          │
 ├──────────────────────────────────────┼────────────────────────────────────────┤
 │ Build & Verification Status          │ 🟢 SUCCESS / COMPILING                 │
-│ Automated Testing Assertions         │ 3,700+ Passing (377 FE / 3,323+ BE)    │
+│ Automated Testing Assertions         │ 5,504 Passing (4,180 FE / 1,324 BE)    │
 │ Frontend Test Coverage (Vitest)      │ 🟢 91.78% Total Coverage               │
-│ Backend Test Coverage (Pytest)       │ 🟢 82.91% Total Coverage               │
+│   - Statements                       │    91.78%                              │
+│   - Branches                         │    90.92%                              │
+│   - Functions                        │    91.90%                              │
+│ Backend Test Coverage (Pytest)       │ 🟢 85.63% Total Coverage               │
 │ Telemetry Ingestion Latency          │ < 120ms (Edge sensor to web UI)        │
 │ Remote Override Command Latency      │ < 180ms (Operator click to client mTLS)│
 │ Database Analytics Query Speed       │ < 95ms (95th-percentile for 30d trends)│
@@ -70,7 +73,7 @@ Engineered to meet the highest international security standards (**IEC 62443** a
 | **Scalability** | Multi-tenant architecture enables rapid scaling to thousands of customers without proportional increases in infrastructure or operational costs. |
 | **Security Compliance** | Built to IEC 62443 and NERC CIP standards, reducing regulatory risk and accelerating enterprise sales cycles. |
 | **Demonstrated Performance** | Proven efficiency gains (+18.4%) and downtime reduction (34.2%) validated with pilot customers. |
-| **Market Readiness** | Fully completed, tested, and sales-ready platform with 3,700+ automated tests ensuring production-grade reliability. |
+| **Market Readiness** | Fully completed, tested, and sales-ready platform with 5,504 automated tests ensuring production-grade reliability. |
 
 ---
 
