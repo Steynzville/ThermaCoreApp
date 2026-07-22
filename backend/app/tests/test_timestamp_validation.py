@@ -27,10 +27,13 @@ def unwrap_response(response):
 class TestTimestampConsistency:
     """Test timestamp handling consistency across environments."""
 
-    def test_user_registration_sets_all_expected_fields(self, client, db_session, admin_token):
+    def test_user_registration_sets_all_expected_fields(
+        self, client, db_session, admin_token
+    ):
         """Test registration endpoint properly sets first_name, last_name, and timestamps."""
         # Get admin role for new user
         import time
+
         from app.models import Role, RoleEnum
 
         admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
@@ -81,10 +84,13 @@ class TestTimestampConsistency:
             f"Created and updated timestamps should be close, diff: {time_diff} seconds"
         )
 
-    def test_user_registration_without_optional_fields(self, client, db_session, admin_token):
+    def test_user_registration_without_optional_fields(
+        self, client, db_session, admin_token
+    ):
         """Test registration works correctly when optional fields are not provided."""
         # Get admin role for new user
         import time
+
         from app.models import Role, RoleEnum
 
         admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
@@ -128,6 +134,7 @@ class TestTimestampConsistency:
         """Test that updated_at timestamps work correctly in SQLite test environment."""
         # Create a test user - use unique email to avoid conflicts
         import time
+
         from app.models import Role, RoleEnum
 
         admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()

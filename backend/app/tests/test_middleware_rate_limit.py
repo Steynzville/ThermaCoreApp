@@ -1,8 +1,8 @@
 """Comprehensive tests for rate limiting middleware."""
 
 import importlib
-import time
 import threading
+import time
 from unittest.mock import MagicMock, patch
 
 from flask import jsonify
@@ -15,8 +15,8 @@ from flask import jsonify
 rate_limit_module = importlib.import_module("app.middleware.rate_limit")
 
 from app.middleware.rate_limit import (
-    RateLimiter,
     RateLimitConfig,
+    RateLimiter,
     auth_rate_limit,
     get_rate_limiter,
     rate_limit,
@@ -107,7 +107,7 @@ class TestRateLimiterRedisBackend:
     @staticmethod
     def _make_pipeline_mock(zcard_result):
         """Create a mock Redis pipeline with specified zcard result.
-        
+
         The order must match the source:
         1. zremrangebyscore (result ignored)
         2. zcard (used for current_count)
@@ -187,15 +187,15 @@ class TestRateLimiterRedisBackend:
 
     def test_redis_rate_limit_with_concurrent_timestamps(self):
         """Test that requests at the same timestamp don't collide.
-        
+
         Uses unique members (UUID) even when timestamps are identical.
         """
         redis_client = MagicMock()
-        
+
         # Simulate two requests at the same timestamp
         fixed_time = 1234567890.0
         limiter = RateLimiter(redis_client=redis_client)
-        
+
         # Mock pipeline to return zcard results
         pipe = MagicMock()
         # First request: zcard returns 0 (no existing requests)
@@ -205,24 +205,30 @@ class TestRateLimiterRedisBackend:
             [None, 1, None, None],  # Second call: one existing
         ]
         redis_client.pipeline.return_value = pipe
-        
+
         # First request - should be allowed
         allowed1, _ = limiter._check_redis_rate_limit(
-            "test", 5, 60, fixed_time
+            "test",
+            5,
+            60,
+            fixed_time,
         )
         assert allowed1 is True
-        
+
         # Second request at same timestamp - should be allowed
         allowed2, _ = limiter._check_redis_rate_limit(
-            "test", 5, 60, fixed_time
+            "test",
+            5,
+            60,
+            fixed_time,
         )
         assert allowed2 is True
-        
+
         # Verify unique members were used (different UUIDs)
         # The zadd calls should have different member strings
         zadd_calls = [call for call in pipe.zadd.call_args_list]
         assert len(zadd_calls) == 2
-        
+
         # Extract the member from the dict in each call
         # call_args = (key, {member: score})
         member1 = list(zadd_calls[0][0][1].keys())[0]
@@ -253,7 +259,9 @@ class TestGetRateLimiter:
         with app.app_context():
             app.config["REDIS_URL"] = "redis://localhost:6379/0"
             fake_redis = MagicMock()
-            with patch.object(rate_limit_module.redis, "from_url", return_value=fake_redis):
+            with patch.object(
+                rate_limit_module.redis, "from_url", return_value=fake_redis
+            ):
                 limiter = get_rate_limiter()
                 assert limiter.redis_client is fake_redis
 
@@ -263,7 +271,9 @@ class TestGetRateLimiter:
             app.config["REDIS_URL"] = "redis://localhost:6379/0"
             fake_redis = MagicMock()
             fake_redis.ping.side_effect = Exception("connection refused")
-            with patch.object(rate_limit_module.redis, "from_url", return_value=fake_redis):
+            with patch.object(
+                rate_limit_module.redis, "from_url", return_value=fake_redis
+            ):
                 limiter = get_rate_limiter()
                 assert limiter.redis_client is None
 
@@ -279,7 +289,11 @@ class TestGetRateLimiter:
         """Test get_rate_limiter handles general exceptions gracefully."""
         with app.app_context():
             app.config["REDIS_URL"] = "redis://localhost:6379/0"
-            with patch.object(rate_limit_module.redis, "from_url", side_effect=Exception("Unexpected error")):
+            with patch.object(
+                rate_limit_module.redis,
+                "from_url",
+                side_effect=Exception("Unexpected error"),
+            ):
                 limiter = get_rate_limiter()
                 # Should fall back to memory-based rate limiting
                 assert limiter.redis_client is None
@@ -287,18 +301,18 @@ class TestGetRateLimiter:
     def test_get_rate_limiter_thread_safe(self, app):
         """Test that get_rate_limiter is thread-safe."""
         results = []
-        
+
         def get_limiter():
             # Push app context inside each thread
             with app.app_context():
                 results.append(get_rate_limiter())
-        
+
         threads = [threading.Thread(target=get_limiter) for _ in range(10)]
         for t in threads:
             t.start()
         for t in threads:
             t.join()
-        
+
         # All threads should get the same instance
         first = results[0]
         assert all(r is first for r in results)
@@ -317,6 +331,7 @@ class TestRateLimitDecorator:
 
     def test_disabled_rate_limiting_skips_check(self, app):
         """Test that rate limiting is skipped when disabled."""
+
         @rate_limit(limit=1, per="ip")
         def endpoint():
             return jsonify({"ok": True})
@@ -349,6 +364,7 @@ class TestRateLimitDecorator:
 
     def test_per_user_uses_jwt_identity(self, app):
         """Test that per-user rate limiting uses JWT identity."""
+
         @rate_limit(limit=5, per="user")
         def endpoint():
             return jsonify({"ok": True})
@@ -365,6 +381,7 @@ class TestRateLimitDecorator:
 
     def test_per_user_falls_back_to_ip_when_jwt_missing(self, app):
         """Test per-user falls back to IP when JWT identity is missing."""
+
         @rate_limit(limit=5, per="user")
         def endpoint():
             return jsonify({"ok": True})
@@ -381,6 +398,7 @@ class TestRateLimitDecorator:
 
     def test_per_user_with_jwt_identity_none(self, app):
         """Test per-user rate limiting when JWT identity is None."""
+
         @rate_limit(limit=5, per="user")
         def endpoint():
             return jsonify({"ok": True})
@@ -396,10 +414,11 @@ class TestRateLimitDecorator:
 
     def test_per_user_with_identity_zero(self, app):
         """Test per-user rate limiting when JWT identity is 0.
-        
+
         Identity 0 is a valid user ID and should be treated as user-based,
         not fall back to IP-based limiting.
         """
+
         @rate_limit(limit=5, per="user")
         def endpoint():
             return jsonify({"ok": True})
@@ -412,23 +431,27 @@ class TestRateLimitDecorator:
             ):
                 with patch.object(rate_limit_module, "get_rate_limiter") as mock_get:
                     mock_limiter = MagicMock()
-                    mock_limiter.is_allowed.return_value = (True, {
-                        "limit": 5,
-                        "remaining": 4,
-                        "reset_time": int(time.time() + 60),
-                        "window_seconds": 60
-                    })
+                    mock_limiter.is_allowed.return_value = (
+                        True,
+                        {
+                            "limit": 5,
+                            "remaining": 4,
+                            "reset_time": int(time.time() + 60),
+                            "window_seconds": 60,
+                        },
+                    )
                     mock_get.return_value = mock_limiter
-                    
+
                     response = endpoint()
                     assert response.status_code == 200
-                    
+
                     # Should use user-based identifier, not IP fallback
                     call_args = mock_limiter.is_allowed.call_args[0]
                     assert call_args[0] == "user:0"
 
     def test_per_endpoint_builds_identifier_from_endpoint_name(self, app):
         """Test that per-endpoint builds identifier from endpoint name."""
+
         @rate_limit(limit=5, per="endpoint")
         def endpoint():
             return jsonify({"ok": True})
@@ -441,6 +464,7 @@ class TestRateLimitDecorator:
 
     def test_custom_per_value_builds_identifier(self, app):
         """Test that custom per value builds identifier correctly."""
+
         @rate_limit(limit=5, per="tenant")
         def endpoint():
             return jsonify({"ok": True})
@@ -453,6 +477,7 @@ class TestRateLimitDecorator:
 
     def test_returns_429_with_headers_when_limit_exceeded(self, app):
         """Test that 429 is returned with proper headers when limit exceeded."""
+
         @rate_limit(limit=1, per="ip")
         def endpoint():
             return jsonify({"ok": True})
@@ -470,6 +495,7 @@ class TestRateLimitDecorator:
 
     def test_adds_rate_limit_headers_to_tuple_response(self, app):
         """Test that rate limit headers are added to tuple responses."""
+
         @rate_limit(limit=5, per="ip")
         def endpoint():
             return jsonify({"ok": True}), 201
@@ -486,6 +512,7 @@ class TestRateLimitDecorator:
 
     def test_adds_rate_limit_headers_to_plain_response(self, app):
         """Test that rate limit headers are added to plain responses."""
+
         @rate_limit(limit=5, per="ip")
         def endpoint():
             return jsonify({"ok": True})
@@ -498,6 +525,7 @@ class TestRateLimitDecorator:
 
     def test_fallback_header_set_when_rate_limiter_falls_back(self, app):
         """Test that fallback header is set when memory fallback is used."""
+
         @rate_limit(limit=5, per="ip")
         def endpoint():
             return jsonify({"ok": True})
@@ -514,10 +542,11 @@ class TestRateLimitDecorator:
 
     def test_rate_limit_decorator_mocks_limiter_response(self, app):
         """Test that mocked limiter response flows through decorator correctly.
-        
+
         This tests the decorator's handling of the rate limiter response,
         not the IP extraction branch (which is covered by integration tests).
         """
+
         @rate_limit(limit=5, per="ip")
         def endpoint():
             return jsonify({"ok": True})
@@ -526,12 +555,15 @@ class TestRateLimitDecorator:
         with app.test_request_context("/"):
             with patch.object(rate_limit_module, "get_rate_limiter") as mock_get:
                 mock_limiter = MagicMock()
-                mock_limiter.is_allowed.return_value = (True, {
-                    "limit": 5,
-                    "remaining": 4,
-                    "reset_time": int(time.time() + 60),
-                    "window_seconds": 60
-                })
+                mock_limiter.is_allowed.return_value = (
+                    True,
+                    {
+                        "limit": 5,
+                        "remaining": 4,
+                        "reset_time": int(time.time() + 60),
+                        "window_seconds": 60,
+                    },
+                )
                 mock_get.return_value = mock_limiter
 
                 response = endpoint()
@@ -583,6 +615,7 @@ class TestConvenienceDecorators:
 
     def test_standard_rate_limit_applies_config(self, app):
         """Test that standard_rate_limit applies the STANDARD config."""
+
         @standard_rate_limit
         def endpoint():
             return jsonify({"ok": True})
@@ -597,6 +630,7 @@ class TestConvenienceDecorators:
 
     def test_auth_rate_limit_applies_config(self, app):
         """Test that auth_rate_limit applies the AUTH_ENDPOINT config."""
+
         @auth_rate_limit
         def endpoint():
             return jsonify({"ok": True})
@@ -611,6 +645,7 @@ class TestConvenienceDecorators:
 
     def test_user_rate_limit_applies_config(self, app):
         """Test that user_rate_limit applies the FREE_TIER config."""
+
         @user_rate_limit
         def endpoint():
             return jsonify({"ok": True})
@@ -660,7 +695,7 @@ class TestRateLimiterCleanupMemoryCache:
 
     def test_cleanup_with_mixed_expired_and_non_expired_timestamps(self):
         """Test cleanup behavior with mixed timestamps in a single list.
-        
+
         _cleanup_memory_cache checks only the max (newest) timestamp in each list.
         If the newest timestamp is expired, the entire key is removed.
         If the newest timestamp is fresh, the entire key is kept.
@@ -670,9 +705,9 @@ class TestRateLimiterCleanupMemoryCache:
         limiter._in_memory_cache = {
             "mixed": [
                 current_time - 120,  # expired
-                current_time - 30,   # not expired
-                current_time,        # not expired
-            ]
+                current_time - 30,  # not expired
+                current_time,  # not expired
+            ],
         }
 
         limiter._cleanup_memory_cache()
@@ -682,7 +717,7 @@ class TestRateLimiterCleanupMemoryCache:
 
     def test_cleanup_with_all_expired_timestamps(self):
         """Test cleanup removes a key when all timestamps are expired.
-        
+
         This tests the branch where max(requests) is expired, triggering removal.
         """
         limiter = RateLimiter(redis_client=None)
@@ -690,8 +725,8 @@ class TestRateLimiterCleanupMemoryCache:
         limiter._in_memory_cache = {
             "all_stale": [
                 current_time - 120,  # expired
-                current_time - 90,   # expired
-            ]
+                current_time - 90,  # expired
+            ],
         }
 
         limiter._cleanup_memory_cache()
@@ -737,6 +772,6 @@ class TestIntegrationWithEndpoints:
             response = client.post(
                 "/api/v1/auth/login",
                 json={"username": "nonexistent", "password": "wrong"},
-                headers={"Content-Type": "application/json"}
+                headers={"Content-Type": "application/json"},
             )
             assert response.status_code in [401, 429]

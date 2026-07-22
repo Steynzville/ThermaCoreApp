@@ -87,7 +87,9 @@ class TestUserCreationWithPermissions:
         """Generate a unique suffix for test usernames to avoid conflicts."""
         return str(int(time.time() * 1000))[-6:]
 
-    def test_register_admin_user_gets_read_users_permission(self, client, db_session, admin_token):
+    def test_register_admin_user_gets_read_users_permission(
+        self, client, db_session, admin_token
+    ):
         """Test that newly registered admin users get read_users permission."""
         # Get admin role ID
         admin_role = Role.query.filter_by(name="admin").first()
@@ -130,7 +132,9 @@ class TestUserCreationWithPermissions:
         assert "delete_users" in permissions
         assert "admin_panel" in permissions
 
-    def test_register_operator_user_gets_correct_permissions(self, client, db_session, admin_token):
+    def test_register_operator_user_gets_correct_permissions(
+        self, client, db_session, admin_token
+    ):
         """Test that newly registered operator users get correct permissions."""
         # Get operator role ID
         operator_role = Role.query.filter_by(name="operator").first()
@@ -175,7 +179,9 @@ class TestUserCreationWithPermissions:
         assert "write_users" not in permissions
         assert "delete_users" not in permissions
 
-    def test_register_viewer_user_gets_correct_permissions(self, client, db_session, admin_token):
+    def test_register_viewer_user_gets_correct_permissions(
+        self, client, db_session, admin_token
+    ):
         """Test that newly registered viewer users get correct permissions."""
         # Get viewer role ID
         viewer_role = Role.query.filter_by(name="viewer").first()

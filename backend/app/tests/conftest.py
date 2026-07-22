@@ -101,7 +101,9 @@ def _init_database():
                 ),
             )
             db.session.execute(
-                text("CREATE INDEX IF NOT EXISTS idx_users_tenant_id ON users(tenant_id)"),
+                text(
+                    "CREATE INDEX IF NOT EXISTS idx_users_tenant_id ON users(tenant_id)"
+                ),
             )
             db.session.execute(
                 text(
@@ -110,7 +112,9 @@ def _init_database():
                 ),
             )
             db.session.execute(
-                text("CREATE INDEX IF NOT EXISTS idx_units_tenant_id ON units(tenant_id)"),
+                text(
+                    "CREATE INDEX IF NOT EXISTS idx_units_tenant_id ON units(tenant_id)"
+                ),
             )
 
             db.session.commit()

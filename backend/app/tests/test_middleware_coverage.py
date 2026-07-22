@@ -177,9 +177,9 @@ class TestValidationMiddleware:
         data = {
             "level1": {
                 "level2": {
-                    "level3": "value\nwith\tcontrol\rchars"
-                }
-            }
+                    "level3": "value\nwith\tcontrol\rchars",
+                },
+            },
         }
 
         result = sanitize(data, depth=0, max_depth=10)
@@ -194,7 +194,7 @@ class TestValidationMiddleware:
         assert "\n" not in value
         assert "\t" not in value
         assert "\r" not in value
-        assert "valuewithcontrolchars" == "".join(value.split())
+        assert "".join(value.split()) == "valuewithcontrolchars"
 
     def test_sanitize_exceeds_max_depth_returns_truncated_or_placeholder(self):
         """Test sanitize function when max depth is exceeded."""
@@ -205,12 +205,12 @@ class TestValidationMiddleware:
                     "l3": {
                         "l4": {
                             "l5": {
-                                "l6": "value"
-                            }
-                        }
-                    }
-                }
-            }
+                                "l6": "value",
+                            },
+                        },
+                    },
+                },
+            },
         }
 
         result = sanitize(data, depth=0, max_depth=3)
@@ -233,7 +233,6 @@ class TestValidationMiddleware:
             l2 = l1["l2"]
             # Either we hit a placeholder or the structure stops at max_depth
             # Both are valid outcomes depending on implementation
-            pass
 
     def test_sanitize_unicode_separators(self):
         """Test sanitize function with Unicode line/paragraph separators."""

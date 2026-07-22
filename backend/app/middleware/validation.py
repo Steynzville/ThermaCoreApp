@@ -1,6 +1,5 @@
 """Input validation middleware for ThermaCore SCADA API."""
 
-import json
 import uuid
 from collections.abc import Callable
 from datetime import datetime, timezone
@@ -116,8 +115,7 @@ class RequestValidator:
                                 "request_id",
                                 str(uuid.uuid4()),
                             ),
-                            "timestamp": datetime.now(timezone.utc).isoformat()
-                            + "Z",
+                            "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
                         },
                     ),
                     400,
@@ -161,7 +159,7 @@ class RequestValidator:
                                     "code": "INVALID_JSON_NULL",
                                     "message": "Request body cannot be null",
                                     "details": {
-                                        "error": "Bare null value is not allowed as request body"
+                                        "error": "Bare null value is not allowed as request body",
                                     },
                                 },
                                 "request_id": getattr(
@@ -209,7 +207,7 @@ class RequestValidator:
                                 "code": "INVALID_JSON",
                                 "message": "Request body must contain valid JSON",
                                 "details": {
-                                    "error": "Malformed JSON syntax - failed to parse"
+                                    "error": "Malformed JSON syntax - failed to parse",
                                 },
                             },
                             "request_id": getattr(
@@ -217,8 +215,7 @@ class RequestValidator:
                                 "request_id",
                                 str(uuid.uuid4()),
                             ),
-                            "timestamp": datetime.now(timezone.utc).isoformat()
-                            + "Z",
+                            "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
                         },
                     ),
                     400,
