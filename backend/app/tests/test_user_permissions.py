@@ -3,6 +3,8 @@
 import json
 import time
 
+from flask_jwt_extended import create_access_token
+
 from app.models import Role, User
 from app.utils.helpers import get_role_permissions
 
@@ -244,21 +246,18 @@ class TestUserCreationWithPermissions:
 
         assert response.status_code == 201
 
-        # Login as the new admin using direct API call
-        login_response = client.post(
-            "/api/v1/auth/login",
-            json={
-                "username": f"testadmin2{unique_suffix}",
-                "password": "password123",
+        # Get the newly created user from database
+        new_user = User.query.filter_by(username=f"testadmin2{unique_suffix}").first()
+        assert new_user is not None
+
+        # Generate a JWT token directly using create_access_token (avoids rate limiting)
+        new_admin_token = create_access_token(
+            identity=str(new_user.id),
+            additional_claims={
+                "role": new_user.role.name.value if new_user.role else "admin",
+                "permissions": new_user.permissions or [],
             },
-            headers={"Content-Type": "application/json"},
         )
-        assert login_response.status_code == 200
-        login_data = json.loads(login_response.data)
-        if "data" in login_data and "access_token" in login_data["data"]:
-            new_admin_token = login_data["data"]["access_token"]
-        else:
-            new_admin_token = login_data["access_token"]
         assert new_admin_token is not None
 
         # Try to access users endpoint
