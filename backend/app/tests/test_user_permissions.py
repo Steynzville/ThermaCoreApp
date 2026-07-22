@@ -7,6 +7,24 @@ from app.models import Role, User
 from app.utils.helpers import get_role_permissions
 
 
+def get_auth_token(client, username="admin", password="admin123"):
+    """Helper method to get auth token."""
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"username": username, "password": password},
+        headers={"Content-Type": "application/json"},
+    )
+
+    if response.status_code == 200:
+        data = json.loads(response.data)
+        # Handle both wrapped and unwrapped responses
+        if "data" in data and "access_token" in data["data"]:
+            return data["data"]["access_token"]
+        if "access_token" in data:
+            return data["access_token"]
+    return None
+
+
 class TestRolePermissions:
     """Test role-based permission assignment."""
 
@@ -85,27 +103,10 @@ class TestUserCreationWithPermissions:
         """Generate a unique suffix for test usernames to avoid conflicts."""
         return str(int(time.time() * 1000))[-6:]
 
-    def get_auth_token(self, client, username="admin", password="admin123"):
-        """Helper method to get auth token."""
-        response = client.post(
-            "/api/v1/auth/login",
-            json={"username": username, "password": password},
-            headers={"Content-Type": "application/json"},
-        )
-
-        if response.status_code == 200:
-            data = json.loads(response.data)
-            # Handle both wrapped and unwrapped responses
-            if "data" in data and "access_token" in data["data"]:
-                return data["data"]["access_token"]
-            if "access_token" in data:
-                return data["access_token"]
-        return None
-
     def test_register_admin_user_gets_read_users_permission(self, client, db_session):
         """Test that newly registered admin users get read_users permission."""
-        # Get admin token
-        token = self.get_auth_token(client)
+        # Get admin token using helper function
+        token = get_auth_token(client)
         assert token is not None
 
         # Get admin role ID
@@ -151,8 +152,8 @@ class TestUserCreationWithPermissions:
 
     def test_register_operator_user_gets_correct_permissions(self, client, db_session):
         """Test that newly registered operator users get correct permissions."""
-        # Get admin token
-        token = self.get_auth_token(client)
+        # Get admin token using helper function
+        token = get_auth_token(client)
         assert token is not None
 
         # Get operator role ID
@@ -200,8 +201,8 @@ class TestUserCreationWithPermissions:
 
     def test_register_viewer_user_gets_correct_permissions(self, client, db_session):
         """Test that newly registered viewer users get correct permissions."""
-        # Get admin token
-        token = self.get_auth_token(client)
+        # Get admin token using helper function
+        token = get_auth_token(client)
         assert token is not None
 
         # Get viewer role ID
@@ -250,7 +251,7 @@ class TestUserCreationWithPermissions:
     def test_new_admin_can_access_users_endpoint(self, client, db_session):
         """Test that newly created admin can access the users endpoint."""
         # Get admin token to create new user
-        admin_token = self.get_auth_token(client)
+        admin_token = get_auth_token(client)
         assert admin_token is not None
 
         # Get admin role ID
@@ -278,7 +279,7 @@ class TestUserCreationWithPermissions:
         assert response.status_code == 201
 
         # Login as the new admin
-        new_admin_token = self.get_auth_token(
+        new_admin_token = get_auth_token(
             client,
             f"testadmin2{unique_suffix}",
             "password123",
