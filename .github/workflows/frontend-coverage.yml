@@ -64,12 +64,12 @@ jobs:
           echo "📊 Running frontend coverage..."
           
           # ✅ Run vitest - removed testNamePattern to run ALL tests
+          # ✅ Removed --testTimeout CLI flag - now uses vitest.config.js value
           pnpm vitest run \
             --pool=forks \
             --poolOptions.forks.singleFork=true \
             --poolOptions.forks.maxForks=2 \
             --reporter=default \
-            --testTimeout=60000 \
             --logHeapUsage \
             --coverage \
             --coverage.reporter=text \
