@@ -257,11 +257,15 @@ describe("Routes Configuration", () => {
     });
 
     const strictAdminOnlyRoutes = routes.filter(
-      (r) => r.path === "/analytics" || r.path === "/system-health"
+      (r) => r.path === "/analytics" || r.path === "/system-health" || r.path === "/protocol-manager"
     );
     strictAdminOnlyRoutes.forEach((route) => {
       expect(route.roles).toContain("admin");
       expect(route.roles).not.toContain("client_admin");
+      // Protocol Manager should be admin only (no user/operator/viewer)
+      if (route.path === "/protocol-manager") {
+        expect(route.roles).toEqual(["admin"]);
+      }
     });
   });
 
@@ -300,6 +304,10 @@ describe("Routes Configuration", () => {
         expect(route.roles).toContain("client_admin");
       } else {
         expect(route.roles).not.toContain("client_admin");
+        // Protocol Manager should be admin only (no other roles)
+        if (route.path === "/protocol-manager") {
+          expect(route.roles).toEqual(["admin"]);
+        }
       }
     });
   });
@@ -316,12 +324,11 @@ describe("Routes Configuration", () => {
     });
   });
 
-  // Protocol Manager should exclude client_admin
-  it("should restrict protocol-manager from client_admin", () => {
+  // Protocol Manager should be admin only
+  it("should restrict protocol-manager to admin only", () => {
     const route = routes.find((r) => r.path === "/protocol-manager");
     expect(route).toBeDefined();
-    expect(route.roles).toContain("admin");
-    expect(route.roles).not.toContain("client_admin");
+    expect(route.roles).toEqual(["admin"]);
   });
 
   it("should have lazy loaded components", () => {
