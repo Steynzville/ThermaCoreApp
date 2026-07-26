@@ -38,7 +38,7 @@ def ensure_role_name_column_length():
                 SELECT data_type, character_maximum_length 
                 FROM information_schema.columns 
                 WHERE table_name = 'roles' AND column_name = 'name'
-            """)
+            """),
             )
             row = result.fetchone()
 
@@ -47,7 +47,7 @@ def ensure_role_name_column_length():
                 max_length = row[1] if len(row) > 1 else None
 
                 app.logger.info(
-                    f"Current column type: {data_type}, max length: {max_length}"
+                    f"Current column type: {data_type}, max length: {max_length}",
                 )
 
                 # If it's VARCHAR with length < 50, extend it
@@ -57,12 +57,12 @@ def ensure_role_name_column_length():
                     and max_length < 50
                 ):
                     app.logger.warning(
-                        f"Column is VARCHAR({max_length}) - extending to VARCHAR(50)..."
+                        f"Column is VARCHAR({max_length}) - extending to VARCHAR(50)...",
                     )
                     db.session.execute(
                         text(
                             "ALTER TABLE roles ALTER COLUMN name TYPE VARCHAR(50)",
-                        )
+                        ),
                     )
                     db.session.commit()
                     app.logger.info("✅ Extended roles.name column to VARCHAR(50)")
@@ -71,11 +71,11 @@ def ensure_role_name_column_length():
                     app.logger.info("✅ roles.name is TEXT (no length limit)")
                 else:
                     app.logger.info(
-                        f"✅ roles.name is {data_type} with length {max_length} - sufficient"
+                        f"✅ roles.name is {data_type} with length {max_length} - sufficient",
                     )
             else:
                 app.logger.warning(
-                    "Could not determine roles.name column type - skipping check"
+                    "Could not determine roles.name column type - skipping check",
                 )
 
         except Exception as e:
@@ -85,11 +85,11 @@ def ensure_role_name_column_length():
                 db.session.execute(
                     text(
                         "ALTER TABLE roles ALTER COLUMN name TYPE VARCHAR(50)",
-                    )
+                    ),
                 )
                 db.session.commit()
                 app.logger.info(
-                    "✅ Extended roles.name column to VARCHAR(50) (direct attempt)"
+                    "✅ Extended roles.name column to VARCHAR(50) (direct attempt)",
                 )
             except Exception as e2:
                 app.logger.warning(f"Direct alter also failed: {e2}")
