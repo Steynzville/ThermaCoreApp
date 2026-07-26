@@ -820,7 +820,7 @@ def batch_activate():
     """
     from app.utils.user_batch_manager import UserBatchManager
 
-    data = request.json
+    data = request.get_json(silent=True) or {}
     if not data or "user_ids" not in data:
         return jsonify({"error": "user_ids required"}), 400
 
@@ -880,7 +880,7 @@ def batch_deactivate():
     """
     from app.utils.user_batch_manager import UserBatchManager
 
-    data = request.json
+    data = request.get_json(silent=True) or {}
     if not data or "user_ids" not in data:
         return jsonify({"error": "user_ids required"}), 400
 
