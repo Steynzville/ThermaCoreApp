@@ -246,11 +246,17 @@ describe("Routes Configuration", () => {
     });
   });
 
-  it("should have admin-only routes with correct roles", () => {
-    const adminRoutes = routes.filter((r) => r.roles.includes("admin") && !r.roles.includes("user"));
+  it("should have admin-only routes with correct roles (admin + client_admin)", () => {
+    const adminRoutes = routes.filter((r) => 
+      r.roles.includes("admin") && 
+      !r.roles.includes("user") &&
+      !r.isPublic
+    );
     expect(adminRoutes.length).toBeGreaterThan(0);
     adminRoutes.forEach((route) => {
-      expect(route.roles).toEqual(["admin"]);
+      // Admin-only routes should include both admin and client_admin
+      expect(route.roles).toContain("admin");
+      expect(route.roles).toContain("client_admin");
     });
   });
 
@@ -279,12 +285,37 @@ describe("Routes Configuration", () => {
     });
   });
 
-  // Ensure isAdminRoute documentation matches actual roles
+  // isAdminRoute should match roles for admin-only routes
   it("should have isAdminRoute match roles for admin-only routes", () => {
     const adminOnlyRoutes = routes.filter(r => r.isAdminRoute === true);
     expect(adminOnlyRoutes.length).toBeGreaterThan(0);
     adminOnlyRoutes.forEach((route) => {
-      expect(route.roles).toEqual(["admin"]);
+      // Admin routes should include both admin and client_admin
+      expect(route.roles).toEqual(["admin", "client_admin"]);
+    });
+  });
+
+  // Client Admin specific test
+  it("should allow client_admin access to admin routes", () => {
+    const adminRoutes = routes.filter((r) => 
+      r.path === "/admin" || 
+      r.path === "/admin/users" ||
+      r.path === "/analytics"
+    );
+    adminRoutes.forEach((route) => {
+      expect(route.roles).toContain("client_admin");
+    });
+  });
+
+  // Client Admin should NOT have access to user-only routes
+  it("should not include client_admin in user-only routes", () => {
+    const userOnlyRoutes = routes.filter((r) => 
+      r.roles.includes("user") && 
+      !r.roles.includes("admin") &&
+      !r.isPublic
+    );
+    userOnlyRoutes.forEach((route) => {
+      expect(route.roles).not.toContain("client_admin");
     });
   });
 
