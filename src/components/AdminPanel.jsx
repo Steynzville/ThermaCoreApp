@@ -858,9 +858,9 @@ const AdminPanel = ({ className }) => {
           </div>
         )}
 
-        {/* Create User Modal - FIXED SCROLLING */}
+        {/* Create User Modal - FIXED SCROLLING with modal-overlay class */}
         {createUserModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="modal-overlay bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white dark:bg-gray-900 rounded-lg w-full max-w-md max-h-[90dvh] flex flex-col">
               {/* Header - fixed */}
               <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
@@ -1145,9 +1145,9 @@ const AdminPanel = ({ className }) => {
           </div>
         )}
 
-        {/* Edit User Modal - FIXED SCROLLING */}
+        {/* Edit User Modal - FIXED SCROLLING with modal-overlay class */}
         {editingUser && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="modal-overlay bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white dark:bg-gray-900 rounded-lg w-full max-w-md max-h-[90dvh] flex flex-col">
               <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -1330,9 +1330,9 @@ const AdminPanel = ({ className }) => {
           </div>
         )}
 
-        {/* Password Reset Modal - FIXED SCROLLING */}
+        {/* Password Reset Modal - FIXED SCROLLING with modal-overlay class */}
         {passwordResetModal && selectedUserForReset && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="modal-overlay bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div
               className="bg-white dark:bg-gray-900 rounded-lg w-full max-w-md max-h-[90dvh] flex flex-col"
               data-testid="password-reset-modal"
