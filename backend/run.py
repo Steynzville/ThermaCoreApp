@@ -125,7 +125,9 @@ def init_database_on_startup():
                 ]
 
                 # Client Admin role - always ensure correct permissions
-                client_admin_role = Role.query.filter_by(name=RoleEnum.CLIENT_ADMIN).first()
+                client_admin_role = Role.query.filter_by(
+                    name=RoleEnum.CLIENT_ADMIN
+                ).first()
                 if not client_admin_role:
                     client_admin_role = Role(
                         name=RoleEnum.CLIENT_ADMIN,
@@ -134,7 +136,9 @@ def init_database_on_startup():
                     db.session.add(client_admin_role)
                     app.logger.info("Created client_admin role")
                 else:
-                    app.logger.info("Updating client_admin role permissions (self-healing)")
+                    app.logger.info(
+                        "Updating client_admin role permissions (self-healing)"
+                    )
 
                 client_admin_role.permissions = [
                     permissions_map[PermissionEnum.READ_UNITS],
