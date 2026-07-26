@@ -858,214 +858,269 @@ const AdminPanel = ({ className }) => {
           </div>
         )}
 
-        {/* Create User Modal - ULTRA COMPACT for mobile */}
+        {/* Create User Modal - FIXED SCROLLING */}
         {createUserModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 p-1 sm:p-4">
-            <div className="bg-white dark:bg-gray-900 rounded-t-lg sm:rounded-lg w-full max-w-md max-h-[95vh] flex flex-col">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-900 rounded-lg w-full max-w-md max-h-[90dvh] flex flex-col">
               {/* Header - fixed */}
-              <div className="p-3 pb-1 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   Create New User
                 </h3>
               </div>
-              
-              {/* Scrollable content - COMPACT form */}
-              <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
-                <div className="grid grid-cols-1 gap-1.5">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
-                      Username <span className="text-red-500">*</span>
-                    </label>
+
+              {/* Scrollable body */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                <div>
+                  <label
+                    htmlFor="newUserUsername"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >
+                    Username <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="newUserUsername"
+                    type="text"
+                    value={newUserFormData.username}
+                    onChange={(e) =>
+                      setNewUserFormData({
+                        ...newUserFormData,
+                        username: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    placeholder="Enter username"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="newUserEmail"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >
+                    Email <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="newUserEmail"
+                    type="email"
+                    value={newUserFormData.email}
+                    onChange={(e) =>
+                      setNewUserFormData({
+                        ...newUserFormData,
+                        email: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    placeholder="Enter email"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="newUserPassword"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >
+                    Password <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
                     <input
-                      type="text"
-                      value={newUserFormData.username}
+                      id="newUserPassword"
+                      type={showCreatePassword ? "text" : "password"}
+                      value={newUserFormData.password}
                       onChange={(e) =>
                         setNewUserFormData({
                           ...newUserFormData,
-                          username: e.target.value,
+                          password: e.target.value,
                         })
                       }
-                      className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                      placeholder="Enter username"
+                      className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                      placeholder="Enter password (min 6 characters)"
                     />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
-                      Email <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="email"
-                      value={newUserFormData.email}
-                      onChange={(e) =>
-                        setNewUserFormData({
-                          ...newUserFormData,
-                          email: e.target.value,
-                        })
-                      }
-                      className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                      placeholder="Enter email"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
-                      Password <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showCreatePassword ? "text" : "password"}
-                        value={newUserFormData.password}
-                        onChange={(e) =>
-                          setNewUserFormData({
-                            ...newUserFormData,
-                            password: e.target.value,
-                          })
-                        }
-                        className="w-full px-3 py-1.5 pr-8 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                        placeholder="Min 6 chars"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowCreatePassword(!showCreatePassword)}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500"
-                      >
-                        {showCreatePassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">First Name</label>
-                      <input
-                        type="text"
-                        value={newUserFormData.firstName}
-                        onChange={(e) =>
-                          setNewUserFormData({
-                            ...newUserFormData,
-                            firstName: e.target.value,
-                          })
-                        }
-                        className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                        placeholder="First"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Last Name</label>
-                      <input
-                        type="text"
-                        value={newUserFormData.lastName}
-                        onChange={(e) =>
-                          setNewUserFormData({
-                            ...newUserFormData,
-                            lastName: e.target.value,
-                          })
-                        }
-                        className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                        placeholder="Last"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Phone</label>
-                    <input
-                      type="tel"
-                      value={newUserFormData.phoneNumber}
-                      onChange={(e) =>
-                        setNewUserFormData({
-                          ...newUserFormData,
-                          phoneNumber: e.target.value,
-                        })
-                      }
-                      className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                      placeholder="Phone number"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Company</label>
-                    <input
-                      type="text"
-                      value={newUserFormData.company}
-                      onChange={(e) =>
-                        setNewUserFormData({
-                          ...newUserFormData,
-                          company: e.target.value,
-                        })
-                      }
-                      className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                      placeholder="Company name"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Department</label>
-                      <input
-                        type="text"
-                        value={newUserFormData.department}
-                        onChange={(e) =>
-                          setNewUserFormData({
-                            ...newUserFormData,
-                            department: e.target.value,
-                          })
-                        }
-                        className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                        placeholder="Dept"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Position</label>
-                      <input
-                        type="text"
-                        value={newUserFormData.position}
-                        onChange={(e) =>
-                          setNewUserFormData({
-                            ...newUserFormData,
-                            position: e.target.value,
-                          })
-                        }
-                        className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                        placeholder="Position"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
-                      Role <span className="text-red-500">*</span>
-                    </label>
-                    {rolesLoadError ? (
-                      <div className="w-full px-3 py-1.5 text-sm border border-red-300 rounded-md bg-red-50 text-red-600">
-                        Unable to load roles
-                      </div>
-                    ) : (
-                      <select
-                        value={newUserFormData.roleId}
-                        onChange={(e) =>
-                          setNewUserFormData({
-                            ...newUserFormData,
-                            roleId: e.target.value,
-                          })
-                        }
-                        className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                        disabled={availableRoles.length === 0}
-                      >
-                        <option value="">Select a role</option>
-                        {availableRoles.map((role) => (
-                          <option key={role.id} value={role.id}>
-                            {formatRoleLabel(role.name)}
-                          </option>
-                        ))}
-                      </select>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => setShowCreatePassword(!showCreatePassword)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                    >
+                      {showCreatePassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
                   </div>
                 </div>
+                <div>
+                  <label
+                    htmlFor="firstName"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >
+                    First Name
+                  </label>
+                  <input
+                    id="firstName"
+                    type="text"
+                    value={newUserFormData.firstName}
+                    onChange={(e) =>
+                      setNewUserFormData({
+                        ...newUserFormData,
+                        firstName: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    placeholder="Enter first name"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="lastName"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >
+                    Last Name
+                  </label>
+                  <input
+                    id="lastName"
+                    type="text"
+                    value={newUserFormData.lastName}
+                    onChange={(e) =>
+                      setNewUserFormData({
+                        ...newUserFormData,
+                        lastName: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    placeholder="Enter last name"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="phoneNumber"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >
+                    Phone Number
+                  </label>
+                  <input
+                    id="phoneNumber"
+                    type="tel"
+                    value={newUserFormData.phoneNumber}
+                    onChange={(e) =>
+                      setNewUserFormData({
+                        ...newUserFormData,
+                        phoneNumber: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    placeholder="Enter phone number"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="company"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >
+                    Company
+                  </label>
+                  <input
+                    id="company"
+                    type="text"
+                    value={newUserFormData.company}
+                    onChange={(e) =>
+                      setNewUserFormData({
+                        ...newUserFormData,
+                        company: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    placeholder="Enter company name"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="department"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >
+                    Department
+                  </label>
+                  <input
+                    id="department"
+                    type="text"
+                    value={newUserFormData.department}
+                    onChange={(e) =>
+                      setNewUserFormData({
+                        ...newUserFormData,
+                        department: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    placeholder="Enter department"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="position"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >
+                    Position
+                  </label>
+                  <input
+                    id="position"
+                    type="text"
+                    value={newUserFormData.position}
+                    onChange={(e) =>
+                      setNewUserFormData({
+                        ...newUserFormData,
+                        position: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    placeholder="Enter position"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="user-role-select"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >
+                    Role <span className="text-red-500">*</span>
+                  </label>
+                  {rolesLoadError ? (
+                    <div className="w-full px-3 py-2 border border-red-300 dark:border-red-600 rounded-md bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400">
+                      Unable to load roles. Please refresh the page.
+                    </div>
+                  ) : (
+                    <select
+                      id="user-role-select"
+                      value={newUserFormData.roleId}
+                      onChange={(e) =>
+                        setNewUserFormData({
+                          ...newUserFormData,
+                          roleId: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                      disabled={availableRoles.length === 0}
+                    >
+                      <option value="">
+                        {availableRoles.length === 0
+                          ? "Loading roles..."
+                          : "Select a role"}
+                      </option>
+                      {availableRoles.map((role) => (
+                        <option key={role.id} value={role.id}>
+                          {formatRoleLabel(role.name)}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+                <div className="h-1" />
               </div>
-              
-              {/* Buttons - fixed at bottom */}
-              <div className="p-3 pt-2 border-t border-gray-200 dark:border-gray-700 flex-shrink-0 bg-white dark:bg-gray-900 rounded-b-lg">
-                <div className="flex justify-end space-x-2">
+
+              {/* Footer - fixed */}
+              <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0 bg-white dark:bg-gray-900 rounded-b-lg">
+                <div className="flex justify-end space-x-3">
                   <button
                     type="button"
                     onClick={() => setCreateUserModal(false)}
                     disabled={isCreatingUser}
-                    className="px-4 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800"
+                    className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-50"
                   >
                     Cancel
                   </button>
@@ -1077,10 +1132,10 @@ const AdminPanel = ({ className }) => {
                       rolesLoadError ||
                       availableRoles.length === 0
                     }
-                    className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center space-x-1"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
                   >
                     {isCreatingUser && (
-                      <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     )}
                     <span>{isCreatingUser ? "Creating..." : "Create User"}</span>
                   </button>
@@ -1090,132 +1145,174 @@ const AdminPanel = ({ className }) => {
           </div>
         )}
 
-        {/* Edit User Modal */}
+        {/* Edit User Modal - FIXED SCROLLING */}
         {editingUser && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 p-1 sm:p-4">
-            <div className="bg-white dark:bg-gray-900 rounded-t-lg sm:rounded-lg w-full max-w-md max-h-[95vh] flex flex-col">
-              {/* Header - fixed */}
-              <div className="p-3 pb-1 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-900 rounded-lg w-full max-w-md max-h-[90dvh] flex flex-col">
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   Edit User
                 </h3>
               </div>
-              
-              {/* Scrollable content - COMPACT form */}
-              <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
-                <div className="grid grid-cols-1 gap-1.5">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Username</label>
-                    <input
-                      type="text"
-                      value={editingUser.username}
-                      onChange={(e) =>
-                        setEditingUser({ ...editingUser, username: e.target.value })
-                      }
-                      className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">First Name</label>
-                    <input
-                      type="text"
-                      value={editingUser.firstName}
-                      onChange={(e) =>
-                        setEditingUser({ ...editingUser, firstName: e.target.value })
-                      }
-                      className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Last Name</label>
-                    <input
-                      type="text"
-                      value={editingUser.lastName}
-                      onChange={(e) =>
-                        setEditingUser({ ...editingUser, lastName: e.target.value })
-                      }
-                      className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Email</label>
-                    <input
-                      type="email"
-                      value={editingUser.email}
-                      onChange={(e) =>
-                        setEditingUser({ ...editingUser, email: e.target.value })
-                      }
-                      className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Company</label>
-                    <input
-                      type="text"
-                      value={editingUser.companyRaw}
-                      onChange={(e) =>
-                        setEditingUser({ ...editingUser, companyRaw: e.target.value })
-                      }
-                      className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Phone</label>
-                    <input
-                      type="tel"
-                      value={editingUser.phoneRaw}
-                      onChange={(e) =>
-                        setEditingUser({ ...editingUser, phoneRaw: e.target.value })
-                      }
-                      className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Role</label>
-                    {rolesLoadError ? (
-                      <div className="w-full px-3 py-1.5 text-sm border border-red-300 rounded-md bg-red-50 text-red-600">
-                        Unable to load roles
-                      </div>
-                    ) : (
-                      <select
-                        value={editingUser.roleId}
-                        onChange={(e) =>
-                          setEditingUser({ ...editingUser, roleId: e.target.value })
-                        }
-                        className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                        disabled={availableRoles.length === 0}
-                      >
-                        {availableRoles.map((role) => (
-                          <option key={role.id} value={role.id}>
-                            {formatRoleLabel(role.name)}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">Status</label>
-                    <select
-                      value={editingUser.isActive ? "true" : "false"}
-                      onChange={(e) =>
-                        setEditingUser({ ...editingUser, isActive: e.target.value === "true" })
-                      }
-                      className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    >
-                      <option value="true">Active</option>
-                      <option value="false">Inactive</option>
-                    </select>
-                  </div>
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                <div>
+                  <label
+                    htmlFor="editUsername"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >
+                    Username
+                  </label>
+                  <input
+                    id="editUsername"
+                    type="text"
+                    value={editingUser.username}
+                    onChange={(e) =>
+                      setEditingUser({ ...editingUser, username: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                  />
                 </div>
+                <div>
+                  <label
+                    htmlFor="editFirstName"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >
+                    First Name
+                  </label>
+                  <input
+                    id="editFirstName"
+                    type="text"
+                    value={editingUser.firstName}
+                    onChange={(e) =>
+                      setEditingUser({ ...editingUser, firstName: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="editLastName"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >
+                    Last Name
+                  </label>
+                  <input
+                    id="editLastName"
+                    type="text"
+                    value={editingUser.lastName}
+                    onChange={(e) =>
+                      setEditingUser({ ...editingUser, lastName: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="editEmail"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >
+                    Email
+                  </label>
+                  <input
+                    id="editEmail"
+                    type="email"
+                    value={editingUser.email}
+                    onChange={(e) =>
+                      setEditingUser({ ...editingUser, email: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="editCompany"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >
+                    Company
+                  </label>
+                  <input
+                    id="editCompany"
+                    type="text"
+                    value={editingUser.companyRaw}
+                    onChange={(e) =>
+                      setEditingUser({ ...editingUser, companyRaw: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="editPhone"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >
+                    Phone
+                  </label>
+                  <input
+                    id="editPhone"
+                    type="tel"
+                    value={editingUser.phoneRaw}
+                    onChange={(e) =>
+                      setEditingUser({ ...editingUser, phoneRaw: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="editRole"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >
+                    Role
+                  </label>
+                  {rolesLoadError ? (
+                    <div className="w-full px-3 py-2 border border-red-300 dark:border-red-600 rounded-md bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400">
+                      Unable to load roles. Please refresh the page.
+                    </div>
+                  ) : (
+                    <select
+                      id="editRole"
+                      value={editingUser.roleId}
+                      onChange={(e) =>
+                        setEditingUser({ ...editingUser, roleId: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                      disabled={availableRoles.length === 0}
+                    >
+                      {availableRoles.map((role) => (
+                        <option key={role.id} value={role.id}>
+                          {formatRoleLabel(role.name)}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+                <div>
+                  <label
+                    htmlFor="editStatus"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >
+                    Status
+                  </label>
+                  <select
+                    id="editStatus"
+                    value={editingUser.isActive ? "true" : "false"}
+                    onChange={(e) =>
+                      setEditingUser({ ...editingUser, isActive: e.target.value === "true" })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                  >
+                    <option value="true">Active</option>
+                    <option value="false">Inactive</option>
+                  </select>
+                </div>
+                <div className="h-1" />
               </div>
-              
-              {/* Buttons - fixed at bottom */}
-              <div className="p-3 pt-2 border-t border-gray-200 dark:border-gray-700 flex-shrink-0 bg-white dark:bg-gray-900 rounded-b-lg">
-                <div className="flex justify-end space-x-2">
+              <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0 bg-white dark:bg-gray-900 rounded-b-lg">
+                <div className="flex justify-end space-x-3">
                   <button
                     type="button"
                     onClick={() => setEditingUser(null)}
-                    className="px-4 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800"
+                    className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
                   >
                     Cancel
                   </button>
@@ -1223,7 +1320,7 @@ const AdminPanel = ({ className }) => {
                     type="button"
                     onClick={() => handleSaveUser(editingUser)}
                     disabled={rolesLoadError || availableRoles.length === 0}
-                    className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Save
                   </button>
@@ -1233,31 +1330,35 @@ const AdminPanel = ({ className }) => {
           </div>
         )}
 
-        {/* Password Reset Modal */}
+        {/* Password Reset Modal - FIXED SCROLLING */}
         {passwordResetModal && selectedUserForReset && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 p-1 sm:p-4">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div
-              className="bg-white dark:bg-gray-900 rounded-t-lg sm:rounded-lg w-full max-w-md max-h-[95vh] flex flex-col"
+              className="bg-white dark:bg-gray-900 rounded-lg w-full max-w-md max-h-[90dvh] flex flex-col"
               data-testid="password-reset-modal"
             >
-              {/* Header - fixed */}
-              <div className="p-3 pb-1 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   Reset Password
                 </h3>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  Resetting for: <span className="font-medium">{selectedUserForReset.name}</span>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Resetting password for:{" "}
+                  <span className="font-medium text-gray-900 dark:text-gray-100">
+                    {selectedUserForReset.name}
+                  </span>
                 </p>
               </div>
-              
-              {/* Scrollable content */}
-              <div className="flex-1 overflow-y-auto p-3 space-y-3">
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">
+                  <label
+                    htmlFor="resetNewPassword"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >
                     New Password
                   </label>
                   <div className="relative">
                     <input
+                      id="resetNewPassword"
                       type={showNewPassword ? "text" : "password"}
                       value={passwordFormData.newPassword}
                       onChange={(e) => {
@@ -1271,25 +1372,33 @@ const AdminPanel = ({ className }) => {
                           passwordFormData.confirmPassword,
                         );
                       }}
-                      className="w-full px-3 py-1.5 pr-8 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                      className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                       placeholder="Enter new password"
                     />
                     <button
                       type="button"
                       onClick={() => setShowNewPassword(!showNewPassword)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                     >
-                      {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showNewPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
                     </button>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">
+                  <label
+                    htmlFor="resetConfirmPassword"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >
                     Confirm Password
                   </label>
                   <div className="relative">
                     <input
+                      id="resetConfirmPassword"
                       type={showConfirmPassword ? "text" : "password"}
                       value={passwordFormData.confirmPassword}
                       onChange={(e) => {
@@ -1303,46 +1412,69 @@ const AdminPanel = ({ className }) => {
                           newConfirmPassword,
                         );
                       }}
-                      className="w-full px-3 py-1.5 pr-8 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                      className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                       placeholder="Confirm new password"
                     />
                     <button
                       type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500"
+                      onClick={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                     >
-                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
                     </button>
                   </div>
                 </div>
 
                 {validation.apiError && (
-                  <div className="p-2 bg-red-50 rounded-md" data-testid="password-error">
-                    <p className="text-xs text-red-600">{validation.apiError}</p>
+                  <div
+                    className="p-3 bg-red-50 dark:bg-red-900/20 rounded-md"
+                    data-testid="password-error"
+                    role="alert"
+                  >
+                    <p className="text-xs text-red-600 dark:text-red-400">
+                      {validation.apiError}
+                    </p>
                   </div>
                 )}
 
                 {shouldShowLengthError() && (
-                  <div className="p-2 bg-yellow-50 rounded-md">
-                    <p className="text-xs text-yellow-800">Password must be at least 6 characters long</p>
+                  <div
+                    className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-md"
+                    role="alert"
+                    aria-live="polite"
+                  >
+                    <p className="text-xs text-yellow-800 dark:text-yellow-300">
+                      Password must be at least 6 characters long
+                    </p>
                   </div>
                 )}
 
                 {shouldShowMismatchError() && (
-                  <div className="p-2 bg-yellow-50 rounded-md">
-                    <p className="text-xs text-yellow-800">Passwords do not match</p>
+                  <div
+                    className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-md"
+                    role="alert"
+                    aria-live="polite"
+                  >
+                    <p className="text-xs text-yellow-800 dark:text-yellow-300">
+                      Passwords do not match
+                    </p>
                   </div>
                 )}
+                <div className="h-1" />
               </div>
-              
-              {/* Buttons - fixed at bottom */}
-              <div className="p-3 pt-2 border-t border-gray-200 dark:border-gray-700 flex-shrink-0 bg-white dark:bg-gray-900 rounded-b-lg">
-                <div className="flex justify-end space-x-2">
+              <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0 bg-white dark:bg-gray-900 rounded-b-lg">
+                <div className="flex justify-end space-x-3">
                   <button
                     type="button"
                     onClick={closePasswordResetModal}
                     disabled={validation.isSubmitting}
-                    className="px-4 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800"
+                    className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-50"
                   >
                     Cancel
                   </button>
@@ -1354,18 +1486,22 @@ const AdminPanel = ({ className }) => {
                       !validation.passwordsMatch ||
                       validation.isSubmitting
                     }
-                    className={`px-4 py-1.5 text-sm rounded-lg flex items-center space-x-1 ${
+                    className={`px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 ${
                       validation.isValidLength &&
                       validation.passwordsMatch &&
                       !validation.isSubmitting
-                        ? "bg-blue-600 text-white hover:bg-blue-700"
-                        : "bg-gray-400 text-gray-200 cursor-not-allowed"
+                        ? "bg-blue-600 text-white hover:bg-blue-700 active"
+                        : "bg-gray-400 text-gray-200"
                     }`}
                   >
                     {validation.isSubmitting && (
-                      <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     )}
-                    <span>{validation.isSubmitting ? "Resetting..." : "Reset Password"}</span>
+                    <span>
+                      {validation.isSubmitting
+                        ? "Resetting..."
+                        : "Reset Password"}
+                    </span>
                   </button>
                 </div>
               </div>
