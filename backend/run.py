@@ -124,6 +124,27 @@ def init_database_on_startup():
                     permissions_map[PermissionEnum.READ_USERS],
                 ]
 
+                # Client Admin role - always ensure correct permissions
+                client_admin_role = Role.query.filter_by(name=RoleEnum.CLIENT_ADMIN).first()
+                if not client_admin_role:
+                    client_admin_role = Role(
+                        name=RoleEnum.CLIENT_ADMIN,
+                        description="Client Admin - Full administration for client tenants and users",
+                    )
+                    db.session.add(client_admin_role)
+                    app.logger.info("Created client_admin role")
+                else:
+                    app.logger.info("Updating client_admin role permissions (self-healing)")
+
+                client_admin_role.permissions = [
+                    permissions_map[PermissionEnum.READ_UNITS],
+                    permissions_map[PermissionEnum.WRITE_UNITS],
+                    permissions_map[PermissionEnum.READ_USERS],
+                    permissions_map[PermissionEnum.WRITE_USERS],
+                    permissions_map[PermissionEnum.ADMIN_PANEL],
+                    permissions_map[PermissionEnum.REMOTE_CONTROL],
+                ]
+
                 # Commit atomic transaction for permissions and roles
                 db.session.commit()
                 app.logger.info("✓ All roles seeded with self-healing permissions")
