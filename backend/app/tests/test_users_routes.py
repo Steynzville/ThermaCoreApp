@@ -33,6 +33,7 @@ def test_get_user_by_id(client, admin_token):
         mock_user.id = 123
         mock_user.client_id = None
         mock_user.role = None
+        mock_user.is_active = True
         mock_query.get_or_404.return_value = mock_user
 
         response = client.get("/api/v1/users/123", headers=headers)
@@ -60,6 +61,7 @@ def test_update_user_scenarios(client, admin_token):
         mock_user.id = 2  # user being edited is ID 2 (not current user 1)
         mock_user.client_id = None
         mock_user.role = None
+        mock_user.is_active = True
         mock_user_query.get_or_404.return_value = mock_user
 
         mock_role = MagicMock()
@@ -135,6 +137,7 @@ def test_delete_and_status_endpoints(client, admin_token):
         mock_user.id = 5
         mock_user.client_id = None
         mock_user.role = None
+        mock_user.is_active = True
         mock_user_query.get_or_404.return_value = mock_user
 
         # Deactivate
@@ -168,6 +171,7 @@ def test_batch_activation_endpoints(client, admin_token):
         mock_user = MagicMock()
         mock_user.client_id = None
         mock_user.role = None
+        mock_user.is_active = True
         mock_user_query.filter.return_value.all.return_value = [mock_user]
 
         # Batch activate
@@ -201,6 +205,7 @@ def test_approve_reject_workflow(client, admin_token):
         mock_user.registration_status = "pending"
         mock_user.client_id = None
         mock_user.role = None
+        mock_user.is_active = True
         mock_user_query.get.return_value = mock_user
 
         # Approve
@@ -839,23 +844,24 @@ def test_approve_reject_nonexistent_user(client, admin_token):
 
 def test_get_users_filter_active_false(client, admin_token, db_session):
     """Test that ?active=false correctly filters to inactive users."""
-    from app.models import User
+    from app.models import Role, User
 
-    # Ensure there is an inactive user
-    inactive_user = User.query.filter(User.is_active.is_(False)).first()
-    if not inactive_user:
-        from app.models import Role
-
+    # Always create or ensure the specific test user exists
+    existing = User.query.filter_by(username="inactive_test_filter").first()
+    if not existing:
         viewer = Role.query.filter_by(name="viewer").first()
-        inactive_user = User(
+        existing = User(
             username="inactive_test_filter",
             email="inactive_test_filter@test.com",
             role_id=viewer.id,
             is_active=False,
             registration_status="approved",
         )
-        inactive_user.set_password("password123")
-        db_session.add(inactive_user)
+        existing.set_password("password123")
+        db_session.add(existing)
+        db_session.commit()
+    elif existing.is_active:
+        existing.is_active = False
         db_session.commit()
 
     response = client.get(
@@ -864,5 +870,4 @@ def test_get_users_filter_active_false(client, admin_token, db_session):
     )
     assert response.status_code == 200
     data = response.get_json()
-    # The inactive user should be in the results
     assert any(u["username"] == "inactive_test_filter" for u in data["data"])
