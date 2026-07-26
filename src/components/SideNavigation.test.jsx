@@ -179,7 +179,19 @@ describe("SideNavigation", () => {
       expect(screen.queryAllByText("SCADA").length).toBe(0);
     });
 
-    it("should show protocol manager for users with permission", async () => {
+    it("should show protocol manager for admin users with permission", async () => {
+      const { useAuth } = await import("../context/AuthContext");
+      useAuth.mockReturnValue({
+        userRole: "admin",
+        permissions: { canViewProtocols: true },
+        logout: vi.fn(),
+      });
+
+      renderSideNavigation();
+      expect(screen.getAllByText("Protocol Manager").length).toBeGreaterThan(0);
+    });
+
+    it("should hide protocol manager for non-admin users even with permission", async () => {
       const { useAuth } = await import("../context/AuthContext");
       useAuth.mockReturnValue({
         userRole: "user",
@@ -188,7 +200,7 @@ describe("SideNavigation", () => {
       });
 
       renderSideNavigation();
-      expect(screen.getAllByText("Protocol Manager").length).toBeGreaterThan(0);
+      expect(screen.queryAllByText("Protocol Manager").length).toBe(0);
     });
   });
 
