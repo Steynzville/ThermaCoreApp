@@ -164,7 +164,7 @@ def get_user(user_id):
     ):
         if not current_user.client_id or user.client_id != current_user.client_id:
             return jsonify(
-                {"error": "User not found"}
+                {"error": "User not found"},
             ), 404  # 404, not 403 — don't reveal existence
 
     user_schema = UserSchema()
@@ -518,11 +518,11 @@ def get_users_stats():
                     "admin_users": 0,
                     "operator_users": 0,
                     "viewer_users": 0,
-                }
+                },
             ), 200
         # Filter all counts by client_id
         total_users = User.query.filter(
-            User.client_id == current_user.client_id
+            User.client_id == current_user.client_id,
         ).count()
         active_users = User.query.filter(
             User.client_id == current_user.client_id,
@@ -596,7 +596,7 @@ def get_users_stats():
             "admin_users": admin_users,
             "operator_users": operator_users,
             "viewer_users": viewer_users,
-        }
+        },
     ), 200
 
 
@@ -783,7 +783,7 @@ def get_company_stats():
                     }
                     for s in stats
                 ],
-            }
+            },
         ), 200
 
     stats = UserBatchManager.get_company_statistics()
