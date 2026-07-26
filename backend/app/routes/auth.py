@@ -19,7 +19,12 @@ from app.middleware.request_id import track_request_id
 from app.models import Role, User
 from app.utils.company_identifier import CompanyIdentifier
 from app.utils.error_handler import SecurityAwareErrorHandler
-from app.utils.helpers import get_current_user_id, get_role_permissions
+from app.utils.helpers import (
+    CLIENT_ADMIN_ASSIGNABLE_ROLES,
+    get_current_user as get_current_user_obj,
+    get_current_user_id,
+    get_role_permissions,
+)
 from app.utils.schemas import (
     ForgotPasswordSchema,
     LoginSchema,
@@ -83,6 +88,37 @@ def register(data):
             400,
         )
 
+    # --- Client-scoping for client_admin creators ---
+    current_user = get_current_user_obj()
+    if current_user and current_user.role and current_user.role.name.value == "client_admin":
+        if not current_user.client_id:
+            return SecurityAwareErrorHandler.handle_service_error(
+                Exception("Client admin has no client assigned"),
+                "authorization_error",
+                "Client assignment",
+                403,
+            )
+        # --- Client Admin role restriction ---
+        if role.name.value not in CLIENT_ADMIN_ASSIGNABLE_ROLES:
+            return SecurityAwareErrorHandler.handle_service_error(
+                Exception("Cannot assign this role"),
+                "authorization_error",
+                "Role assignment",
+                403,
+            )
+        # --- end role restriction ---
+        requested_client_id = data.get("client_id")
+        if requested_client_id is not None and requested_client_id != current_user.client_id:
+            return SecurityAwareErrorHandler.handle_service_error(
+                Exception("Cannot assign users to a different client"),
+                "authorization_error",
+                "Client assignment",
+                403,
+            )
+        # Force the new user onto the client_admin's own client regardless of payload
+        data["client_id"] = current_user.client_id
+    # --- end client-scoping ---
+
     # Get permissions for this role
     role_permissions = get_role_permissions(role.name.value)
 
@@ -106,6 +142,7 @@ def register(data):
         department=data.get("department"),
         position=data.get("position"),
         role_id=data["role_id"],
+        client_id=data.get("client_id"),
         permissions=role_permissions,  # Set permissions based on role
     )
     user.set_password(data["password"])
@@ -604,7 +641,7 @@ def refresh():
 
 @auth_bp.route("/auth/me", methods=["GET"])
 @jwt_required()
-def get_current_user():
+def get_me():
     """Get current authenticated user information.
     ---
     tags:
@@ -1144,3 +1181,6 @@ def emergency_admin():
 # ============================================================
 # DEBUG: Print statements to confirm module loads
 # ============================================================
+print("=" * 60, flush=True)
+print("✅ Auth blueprint module loaded successfully", flush=True)
+print("=" * 60, flush=True)
