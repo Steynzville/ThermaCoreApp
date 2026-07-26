@@ -3,7 +3,7 @@
  * Handles all user-related API calls for the admin panel
  */
 
-import { apiDelete, apiGet } from "../utils/apiFetch";
+import { apiDelete, apiGet, apiPut } from "../utils/apiFetch";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "https://thermacoreapp.onrender.com";
@@ -50,6 +50,23 @@ export const getAllUsers = async (options = {}) => {
  */
 export const deleteUser = async (userId) => {
   const response = await apiDelete(`${API_BASE_URL}/api/v1/users/${userId}`, {
+    showToastOnError: true,
+    retries: 1,
+    retryDelay: 1000,
+  });
+
+  return response;
+};
+
+/**
+ * Update an existing user by ID
+ * @param {number} userId - The ID of the user to update
+ * @param {Object} updates - Fields to update (username, email, first_name, last_name,
+ *   phone_number, company, department, position, role_id, is_active)
+ * @returns {Promise<Response>} Response from the API
+ */
+export const updateUser = async (userId, updates) => {
+  const response = await apiPut(`${API_BASE_URL}/api/v1/users/${userId}`, updates, {
     showToastOnError: true,
     retries: 1,
     retryDelay: 1000,
