@@ -4,50 +4,37 @@ import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
-
+  plugins: [
+    react(),
+    tailwindcss(),
+  ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
   },
-
   server: {
-    host: '0.0.0.0',
-    port: 10000,
+    host: "0.0.0.0",
+    port: 5173,
     allowedHosts: [
-      'thermacoreapp.onrender.com',
-      '.onrender.com',
-      'localhost',
-      '127.0.0.1'
-    ]
+      "thermacoreapp.onrender.com",
+    ],
   },
-
   preview: {
-    host: '0.0.0.0',
-    port: 10000,
-    strictPort: true,
+    host: "0.0.0.0",
+    port: 5173,
     allowedHosts: [
-      'thermacoreapp.onrender.com',
-      '.onrender.com',
-      'localhost',
-      '127.0.0.1'
-    ]
+      "thermacoreapp.onrender.com",
+    ],
   },
-
   test: {
     globals: true,
     environment: "jsdom",
-
     setupFiles: "./src/setupTests.js",
-
-    testTimeout: 60000,
-
-    // IMPORTANT: keep minimal — avoid destabilizing JSDOM
+    testTimeout: 10000, // <-- ONLY THIS VALUE CHANGED (was 60000)
     isolate: true,
     clearMocks: true,
     restoreMocks: true,
-
     pool: "forks",
     poolOptions: {
       forks: {
@@ -55,7 +42,6 @@ export default defineConfig({
         maxForks: 1,
       },
     },
-
     coverage: {
       provider: "v8",
       reporter: ["text", "json-summary"],
