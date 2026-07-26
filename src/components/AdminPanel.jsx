@@ -16,7 +16,7 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { useAuth } from "../context/AuthContext";
-import { deleteUser, getAllUsers } from "../services/usersAPI";
+import { deleteUser, getAllUsers, updateUser } from "../services/usersAPI";
 import { apiGet, apiPost } from "../utils/apiFetch";
 import { formatRoleName, formatUserName } from "../utils/userUtils";
 import PageHeader from "./PageHeader";
@@ -24,12 +24,12 @@ import UserApprovalPanel from "./UserApprovalPanel";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader } from "./ui/card";
 
-const systemStats = [
-  { label: "Total Devices", value: "4", icon: Database },
-  { label: "Active Users", value: "2", icon: Users },
-  { label: "System Uptime", value: "99.9%", icon: Shield },
-  { label: "Data Points", value: "1.2M", icon: Settings },
-];
+// Shared role label formatter - converts "client_admin" to "Client Admin"
+const formatRoleLabel = (roleName) =>
+  roleName
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 
 const AdminPanel = ({ className }) => {
   const { user: currentUser } = useAuth();
@@ -38,6 +38,7 @@ const AdminPanel = ({ className }) => {
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [usersError, setUsersError] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
+  const [isTogglingSetting, setIsTogglingSetting] = useState(false);
   const [systemSettings, setSystemSettings] = useState({
     emailNotifications: true,
     autoBackup: true,
@@ -80,7 +81,17 @@ const AdminPanel = ({ className }) => {
     isValidLength: false,
     passwordsMatch: false,
     isSubmitting: false,
+    apiError: null,
   });
+
+  // Compute system stats from users data
+  const activeUsersCount = users.filter((u) => u.status === "Active").length;
+  const systemStats = [
+    { label: "Total Devices", value: "4", icon: Database },
+    { label: "Active Users", value: activeUsersCount.toString(), icon: Users },
+    { label: "System Uptime", value: "99.9%", icon: Shield },
+    { label: "Data Points", value: "1.2M", icon: Settings },
+  ];
 
   // Fetch users from backend
   const fetchUsers = useCallback(async () => {
@@ -93,6 +104,7 @@ const AdminPanel = ({ className }) => {
       // Map backend response to frontend format
       const mappedUsers = result.data.map((user) => ({
         id: user.id,
+        username: user.username,
         name: formatUserName(user),
         email: user.email,
         company: user.company || "N/A",
@@ -101,6 +113,15 @@ const AdminPanel = ({ className }) => {
         position: user.position || "N/A",
         role: formatRoleName(user.role),
         status: user.is_active ? "Active" : "Inactive",
+        // Raw values needed for editing/PUT
+        firstName: user.first_name || "",
+        lastName: user.last_name || "",
+        companyRaw: user.company || "",
+        phoneRaw: user.phone_number || "",
+        departmentRaw: user.department || "",
+        positionRaw: user.position || "",
+        roleId: user.role?.id ?? "",
+        isActive: user.is_active,
       }));
 
       setUsers(mappedUsers);
@@ -111,14 +132,6 @@ const AdminPanel = ({ className }) => {
       setIsLoadingUsers(false);
     }
   }, []);
-
-  // Fallback roles with proper format
-  const _fallbackRoles = [
-    { value: "admin", label: "Admin" },
-    { value: "client_admin", label: "Client Admin" },
-    { value: "operator", label: "Operator" },
-    { value: "viewer", label: "Viewer" },
-  ];
 
   // Fetch available roles from backend
   const fetchRoles = async () => {
@@ -199,6 +212,7 @@ const AdminPanel = ({ className }) => {
       department: "",
       position: "",
       roleId: "",
+      clientId: "",
     });
     setShowCreatePassword(false);
     setCreateUserModal(true);
@@ -294,13 +308,43 @@ const AdminPanel = ({ className }) => {
 
   const handleEditUser = (user) => {
     setEditingUser(user);
+    if (availableRoles.length === 0 || rolesLoadError) {
+      fetchRoles();
+    }
   };
 
-  const handleSaveUser = (updatedUser) => {
-    setUsers(
-      users.map((user) => (user.id === updatedUser.id ? updatedUser : user)),
-    );
-    setEditingUser(null);
+  const handleSaveUser = async (updatedUser) => {
+    if (rolesLoadError) {
+      toast.error(
+        "Unable to update user. Please refresh the page and try again.",
+      );
+      return;
+    }
+
+    const payload = {
+      username: updatedUser.username,
+      email: updatedUser.email,
+      first_name: updatedUser.firstName,
+      last_name: updatedUser.lastName,
+      phone_number: updatedUser.phoneRaw,
+      company: updatedUser.companyRaw,
+      department: updatedUser.departmentRaw,
+      position: updatedUser.positionRaw,
+      role_id: parseInt(updatedUser.roleId, 10),
+      is_active: updatedUser.isActive,
+    };
+
+    try {
+      await updateUser(updatedUser.id, payload);
+      toast.success("User updated successfully");
+      setEditingUser(null);
+      await fetchUsers();
+    } catch (error) {
+      toast.error(
+        error.message ||
+          "Failed to update user. Please check backend connection.",
+      );
+    }
   };
 
   const handleDeleteUser = async (userId) => {
@@ -316,11 +360,51 @@ const AdminPanel = ({ className }) => {
     }
   };
 
-  const handleToggleSetting = (setting) => {
+  const handleToggleSetting = async (setting) => {
+    // Prevent double-clicks while a request is in flight
+    if (isTogglingSetting) return;
+    setIsTogglingSetting(true);
+
+    const newValue = !systemSettings[setting];
+
+    // Optimistic update
     setSystemSettings((prev) => ({
       ...prev,
-      [setting]: !prev[setting],
+      [setting]: newValue,
     }));
+
+    try {
+      const API_BASE_URL =
+        import.meta.env.VITE_API_BASE_URL ||
+        "https://thermacoreapp.onrender.com";
+      const response = await apiPost(
+        `${API_BASE_URL}/api/v1/settings`,
+        { [setting]: newValue },
+        { showToastOnError: false, retries: 1, retryDelay: 1000 },
+      );
+
+      if (!response.ok) {
+        let errorMsg = "Failed to update setting";
+        try {
+          const errorData = await response.json();
+          errorMsg = errorData.error || errorData.message || errorMsg;
+        } catch (_e) {
+          // Fallback to default error message
+        }
+        throw new Error(errorMsg);
+      }
+
+      toast.success(`${setting} ${newValue ? "enabled" : "disabled"} successfully`);
+    } catch (error) {
+      // Rollback on error
+      setSystemSettings((prev) => ({
+        ...prev,
+        [setting]: !newValue,
+      }));
+      toast.error(error.message || `Failed to update ${setting}`);
+    } finally {
+      setIsTogglingSetting(false);
+    }
   };
 
   // Real-time validation function that updates on every keystroke
@@ -332,6 +416,7 @@ const AdminPanel = ({ className }) => {
       ...prev,
       isValidLength,
       passwordsMatch,
+      apiError: null, // Clear stale API error on any user input
     }));
   };
 
@@ -363,6 +448,7 @@ const AdminPanel = ({ className }) => {
       isValidLength: false,
       passwordsMatch: false,
       isSubmitting: false,
+      apiError: null,
     });
     setPasswordResetModal(true);
   };
@@ -377,6 +463,7 @@ const AdminPanel = ({ className }) => {
       isValidLength: false,
       passwordsMatch: false,
       isSubmitting: false,
+      apiError: null,
     });
   };
 
@@ -457,7 +544,7 @@ const AdminPanel = ({ className }) => {
     if (currentUser) {
       // Create a user object for self-password reset
       const selfUser = {
-        id: currentUser.id || 1, // Fallback to 1 if id not available
+        id: currentUser.id ?? 1, // only fall back when id is null/undefined
         name:
           currentUser.firstName && currentUser.lastName
             ? `${currentUser.firstName} ${currentUser.lastName}`
@@ -1011,8 +1098,7 @@ const AdminPanel = ({ className }) => {
                       </option>
                       {availableRoles.map((role) => (
                         <option key={role.id} value={role.id}>
-                          {role.name.charAt(0).toUpperCase() +
-                            role.name.slice(1)}
+                          {formatRoleLabel(role.name)}
                         </option>
                       ))}
                     </select>
@@ -1058,30 +1144,64 @@ const AdminPanel = ({ className }) => {
               <div className="space-y-4">
                 <div>
                   <label
-                    htmlFor="name"
+                    htmlFor="editUsername"
                     className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                   >
-                    Name
+                    Username
                   </label>
                   <input
-                    id="name"
+                    id="editUsername"
                     type="text"
-                    value={editingUser.name}
+                    value={editingUser.username}
                     onChange={(e) =>
-                      setEditingUser({ ...editingUser, name: e.target.value })
+                      setEditingUser({ ...editingUser, username: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   />
                 </div>
                 <div>
                   <label
-                    htmlFor="email"
+                    htmlFor="editFirstName"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >
+                    First Name
+                  </label>
+                  <input
+                    id="editFirstName"
+                    type="text"
+                    value={editingUser.firstName}
+                    onChange={(e) =>
+                      setEditingUser({ ...editingUser, firstName: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="editLastName"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >
+                    Last Name
+                  </label>
+                  <input
+                    id="editLastName"
+                    type="text"
+                    value={editingUser.lastName}
+                    onChange={(e) =>
+                      setEditingUser({ ...editingUser, lastName: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="editEmail"
                     className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                   >
                     Email
                   </label>
                   <input
-                    id="email"
+                    id="editEmail"
                     type="email"
                     value={editingUser.email}
                     onChange={(e) =>
@@ -1092,79 +1212,84 @@ const AdminPanel = ({ className }) => {
                 </div>
                 <div>
                   <label
-                    htmlFor="company"
+                    htmlFor="editCompany"
                     className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                   >
                     Company
                   </label>
                   <input
-                    id="company"
+                    id="editCompany"
                     type="text"
-                    value={editingUser.company}
+                    value={editingUser.companyRaw}
                     onChange={(e) =>
-                      setEditingUser({
-                        ...editingUser,
-                        company: e.target.value,
-                      })
+                      setEditingUser({ ...editingUser, companyRaw: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   />
                 </div>
                 <div>
                   <label
-                    htmlFor="phone"
+                    htmlFor="editPhone"
                     className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                   >
                     Phone
                   </label>
                   <input
-                    id="phone"
+                    id="editPhone"
                     type="tel"
-                    value={editingUser.phone}
+                    value={editingUser.phoneRaw}
                     onChange={(e) =>
-                      setEditingUser({ ...editingUser, phone: e.target.value })
+                      setEditingUser({ ...editingUser, phoneRaw: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   />
                 </div>
                 <div>
                   <label
-                    htmlFor="role"
+                    htmlFor="editRole"
                     className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                   >
                     Role
                   </label>
-                  <select
-                    id="role"
-                    value={editingUser.role}
-                    onChange={(e) =>
-                      setEditingUser({ ...editingUser, role: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                  >
-                    <option value="Admin">Admin</option>
-                    <option value="Client Admin">Client Admin</option>
-                    <option value="Operator">Operator</option>
-                    <option value="Viewer">Viewer</option>
-                  </select>
+                  {rolesLoadError ? (
+                    <div className="w-full px-3 py-2 border border-red-300 dark:border-red-600 rounded-md bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400">
+                      Unable to load roles. Please refresh the page.
+                    </div>
+                  ) : (
+                    <select
+                      id="editRole"
+                      value={editingUser.roleId}
+                      onChange={(e) =>
+                        setEditingUser({ ...editingUser, roleId: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                      disabled={availableRoles.length === 0}
+                    >
+                      {availableRoles.map((role) => (
+                        <option key={role.id} value={role.id}>
+                          {formatRoleLabel(role.name)}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
                 <div>
                   <label
-                    htmlFor="status"
+                    htmlFor="editStatus"
                     className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                   >
                     Status
                   </label>
                   <select
-                    id="status"
-                    value={editingUser.status}
+                    id="editStatus"
+                    value={editingUser.isActive ? "true" : "false"}
                     onChange={(e) =>
-                      setEditingUser({ ...editingUser, status: e.target.value })
+                      setEditingUser({ ...editingUser, isActive: e.target.value === "true" })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   >
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
+                    <option value="true">Active</option>
+                    <option value="false">Inactive</option>
                   </select>
                 </div>
               </div>
@@ -1179,7 +1304,8 @@ const AdminPanel = ({ className }) => {
                 <button
                   type="button"
                   onClick={() => handleSaveUser(editingUser)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  disabled={rolesLoadError || availableRoles.length === 0}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Save
                 </button>
@@ -1329,8 +1455,6 @@ const AdminPanel = ({ className }) => {
                     </p>
                   </div>
                 )}
-
-                {/* Static info banner removed as it was causing confusion - validation is now shown dynamically only */}
               </div>
               <div className="flex justify-end space-x-3 mt-6">
                 <button
@@ -1392,6 +1516,7 @@ const AdminPanel = ({ className }) => {
                   </div>
                   <Button
                     onClick={() => handleToggleSetting("emailNotifications")}
+                    disabled={isTogglingSetting}
                     className="ml-4"
                   >
                     {systemSettings.emailNotifications ? "Disable" : "Enable"}
@@ -1409,6 +1534,7 @@ const AdminPanel = ({ className }) => {
                   </div>
                   <Button
                     onClick={() => handleToggleSetting("autoBackup")}
+                    disabled={isTogglingSetting}
                     className="ml-4"
                   >
                     {systemSettings.autoBackup ? "Disable" : "Enable"}
@@ -1426,6 +1552,7 @@ const AdminPanel = ({ className }) => {
                   </div>
                   <Button
                     onClick={() => handleToggleSetting("maintenanceMode")}
+                    disabled={isTogglingSetting}
                     className="ml-4"
                   >
                     {systemSettings.maintenanceMode ? "Disable" : "Enable"}
