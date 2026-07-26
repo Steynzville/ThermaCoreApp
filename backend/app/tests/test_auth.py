@@ -1202,6 +1202,7 @@ class TestSecurityEnhancements:
 # SELF-REGISTER TESTS
 # ============================================================
 
+
 class TestSelfRegister:
     """Public self-registration flow."""
 
@@ -1225,6 +1226,7 @@ class TestSelfRegister:
         assert data["username"] == "selfregtest"
 
         from app.models import User
+
         user = User.query.filter_by(username="selfregtest").first()
         assert user.role.name.value == "viewer"
         assert user.permissions is None
@@ -1288,12 +1290,16 @@ class TestSelfRegister:
 # REGISTER CLIENT SCOPING TESTS
 # ============================================================
 
+
 class TestRegisterClientScoping:
     """Client-admin restrictions on the /auth/register endpoint."""
 
-    def test_client_admin_register_forces_own_client(self, client, client_admin_token, db_session):
+    def test_client_admin_register_forces_own_client(
+        self, client, client_admin_token, db_session
+    ):
         token, own_client_id = client_admin_token
         from app.models import Role
+
         viewer_role = Role.query.filter_by(name="viewer").first()
 
         response = client.post(
@@ -1312,9 +1318,12 @@ class TestRegisterClientScoping:
         assert error["code"] == "AUTHORIZATION_ERROR"
         assert error["details"]["context"] == "Client assignment"
 
-    def test_client_admin_register_defaults_to_own_client(self, client, client_admin_token, db_session):
+    def test_client_admin_register_defaults_to_own_client(
+        self, client, client_admin_token, db_session
+    ):
         token, own_client_id = client_admin_token
         from app.models import Role, User
+
         viewer_role = Role.query.filter_by(name="viewer").first()
 
         response = client.post(
@@ -1331,9 +1340,12 @@ class TestRegisterClientScoping:
         created = User.query.filter_by(username="defaultclientuser").first()
         assert created.client_id == own_client_id
 
-    def test_client_admin_register_disallowed_admin_role(self, client, client_admin_token, db_session):
+    def test_client_admin_register_disallowed_admin_role(
+        self, client, client_admin_token, db_session
+    ):
         token, _ = client_admin_token
         from app.models import Role
+
         admin_role = Role.query.filter_by(name="admin").first()
 
         response = client.post(
@@ -1351,9 +1363,12 @@ class TestRegisterClientScoping:
         assert error["code"] == "AUTHORIZATION_ERROR"
         assert error["details"]["context"] == "Role assignment"
 
-    def test_client_admin_register_allowed_viewer_role(self, client, client_admin_token, db_session):
+    def test_client_admin_register_allowed_viewer_role(
+        self, client, client_admin_token, db_session
+    ):
         token, _ = client_admin_token
         from app.models import Role
+
         viewer_role = Role.query.filter_by(name="viewer").first()
 
         response = client.post(
@@ -1368,9 +1383,12 @@ class TestRegisterClientScoping:
         )
         assert response.status_code == 201
 
-    def test_client_admin_register_allowed_operator_role(self, client, client_admin_token, db_session):
+    def test_client_admin_register_allowed_operator_role(
+        self, client, client_admin_token, db_session
+    ):
         token, _ = client_admin_token
         from app.models import Role
+
         operator_role = Role.query.filter_by(name="operator").first()
 
         response = client.post(
@@ -1385,8 +1403,11 @@ class TestRegisterClientScoping:
         )
         assert response.status_code == 201
 
-    def test_client_admin_register_no_client_assigned(self, client, client_admin_no_client_token, db_session):
+    def test_client_admin_register_no_client_assigned(
+        self, client, client_admin_no_client_token, db_session
+    ):
         from app.models import Role
+
         viewer_role = Role.query.filter_by(name="viewer").first()
 
         response = client.post(
@@ -1409,10 +1430,11 @@ class TestRegisterClientScoping:
 # EMERGENCY ADMIN TESTS
 # ============================================================
 
+
 def test_emergency_admin_creates_account(client, db_session):
     """Emergency admin endpoint creates an account via raw SQL."""
-    from app.models import User
     from app import db
+    from app.models import User
 
     # Ensure user is deleted before test
     User.query.filter_by(username="emergency_admin").delete()
@@ -1440,8 +1462,8 @@ def test_emergency_admin_creates_account(client, db_session):
 
 def test_emergency_admin_idempotent_update(client, db_session):
     """Calling it twice should update, not duplicate, the user."""
-    from app.models import User
     from app import db
+    from app.models import User
 
     # Ensure user is deleted before test
     User.query.filter_by(username="emergency_admin").delete()
