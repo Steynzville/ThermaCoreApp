@@ -3,7 +3,7 @@
 from flask import Blueprint, current_app, jsonify, request
 from flask_jwt_extended import jwt_required
 from marshmallow import ValidationError
-from sqlalchemy import or_, func, false
+from sqlalchemy import false, func, or_
 from sqlalchemy.exc import IntegrityError
 
 from app import db
@@ -12,7 +12,11 @@ from app.middleware.authorization import permission_required
 from app.middleware.rate_limit import rate_limit
 from app.middleware.tenant import tenant_filter
 from app.models import Role, User
-from app.utils.helpers import CLIENT_ADMIN_ASSIGNABLE_ROLES, get_current_user, get_current_user_id
+from app.utils.helpers import (
+    CLIENT_ADMIN_ASSIGNABLE_ROLES,
+    get_current_user,
+    get_current_user_id,
+)
 from app.utils.schemas import RoleSchema, UserSchema, UserUpdateSchema
 
 users_bp = Blueprint("users", __name__)
@@ -75,7 +79,11 @@ def get_users():
 
     # --- Client-scoping for client_admin viewers ---
     current_user = get_current_user()
-    if current_user and current_user.role and current_user.role.name.value == "client_admin":
+    if (
+        current_user
+        and current_user.role
+        and current_user.role.name.value == "client_admin"
+    ):
         if not current_user.client_id:
             # No client assigned — see nobody, not everybody.
             query = query.filter(false())
@@ -149,9 +157,15 @@ def get_user(user_id):
     user = User.query.get_or_404(user_id)
 
     current_user = get_current_user()
-    if current_user and current_user.role and current_user.role.name.value == "client_admin":
+    if (
+        current_user
+        and current_user.role
+        and current_user.role.name.value == "client_admin"
+    ):
         if not current_user.client_id or user.client_id != current_user.client_id:
-            return jsonify({"error": "User not found"}), 404  # 404, not 403 — don't reveal existence
+            return jsonify(
+                {"error": "User not found"}
+            ), 404  # 404, not 403 — don't reveal existence
 
     user_schema = UserSchema()
     return jsonify(user_schema.dump(user)), 200
@@ -203,7 +217,9 @@ def update_user(user_id):
 
     current_user = get_current_user()
     is_client_admin = bool(
-        current_user and current_user.role and current_user.role.name.value == "client_admin"
+        current_user
+        and current_user.role
+        and current_user.role.name.value == "client_admin",
     )
 
     # --- Client-scoping: client_admin can only touch users in their own client ---
@@ -308,7 +324,11 @@ def delete_user(user_id):
         return jsonify({"error": "Invalid token format"}), 401
 
     current_user = get_current_user()
-    if current_user and current_user.role and current_user.role.name.value == "client_admin":
+    if (
+        current_user
+        and current_user.role
+        and current_user.role.name.value == "client_admin"
+    ):
         if not current_user.client_id or user.client_id != current_user.client_id:
             return jsonify({"error": "User not found"}), 404
 
@@ -349,7 +369,11 @@ def activate_user(user_id):
     user = User.query.get_or_404(user_id)
 
     current_user = get_current_user()
-    if current_user and current_user.role and current_user.role.name.value == "client_admin":
+    if (
+        current_user
+        and current_user.role
+        and current_user.role.name.value == "client_admin"
+    ):
         if not current_user.client_id or user.client_id != current_user.client_id:
             return jsonify({"error": "User not found"}), 404
 
@@ -391,7 +415,11 @@ def deactivate_user(user_id):
     user = User.query.get_or_404(user_id)
 
     current_user = get_current_user()
-    if current_user and current_user.role and current_user.role.name.value == "client_admin":
+    if (
+        current_user
+        and current_user.role
+        and current_user.role.name.value == "client_admin"
+    ):
         if not current_user.client_id or user.client_id != current_user.client_id:
             return jsonify({"error": "User not found"}), 404
 
@@ -430,7 +458,11 @@ def get_clients():
     from app.models.client import Client
 
     current_user = get_current_user()
-    if current_user and current_user.role and current_user.role.name.value == "client_admin":
+    if (
+        current_user
+        and current_user.role
+        and current_user.role.name.value == "client_admin"
+    ):
         if not current_user.client_id:
             return jsonify([]), 200
         clients = Client.query.filter(Client.id == current_user.client_id).all()
@@ -471,28 +503,34 @@ def get_users_stats():
     """
     current_user = get_current_user()
     is_client_admin = bool(
-        current_user and current_user.role and current_user.role.name.value == "client_admin"
+        current_user
+        and current_user.role
+        and current_user.role.name.value == "client_admin",
     )
 
     if is_client_admin:
         if not current_user.client_id:
-            return jsonify({
-                "total_users": 0,
-                "active_users": 0,
-                "inactive_users": 0,
-                "admin_users": 0,
-                "operator_users": 0,
-                "viewer_users": 0,
-            }), 200
+            return jsonify(
+                {
+                    "total_users": 0,
+                    "active_users": 0,
+                    "inactive_users": 0,
+                    "admin_users": 0,
+                    "operator_users": 0,
+                    "viewer_users": 0,
+                }
+            ), 200
         # Filter all counts by client_id
-        total_users = User.query.filter(User.client_id == current_user.client_id).count()
+        total_users = User.query.filter(
+            User.client_id == current_user.client_id
+        ).count()
         active_users = User.query.filter(
             User.client_id == current_user.client_id,
-            User.is_active.is_(True)
+            User.is_active.is_(True),
         ).count()
         inactive_users = User.query.filter(
             User.client_id == current_user.client_id,
-            User.is_active.is_(False)
+            User.is_active.is_(False),
         ).count()
 
         # Role counts for client
@@ -500,18 +538,30 @@ def get_users_stats():
         operator_role = Role.query.filter(Role.name == "operator").first()
         viewer_role = Role.query.filter(Role.name == "viewer").first()
 
-        admin_users = User.query.filter(
-            User.client_id == current_user.client_id,
-            User.role_id == admin_role.id
-        ).count() if admin_role else 0
-        operator_users = User.query.filter(
-            User.client_id == current_user.client_id,
-            User.role_id == operator_role.id
-        ).count() if operator_role else 0
-        viewer_users = User.query.filter(
-            User.client_id == current_user.client_id,
-            User.role_id == viewer_role.id
-        ).count() if viewer_role else 0
+        admin_users = (
+            User.query.filter(
+                User.client_id == current_user.client_id,
+                User.role_id == admin_role.id,
+            ).count()
+            if admin_role
+            else 0
+        )
+        operator_users = (
+            User.query.filter(
+                User.client_id == current_user.client_id,
+                User.role_id == operator_role.id,
+            ).count()
+            if operator_role
+            else 0
+        )
+        viewer_users = (
+            User.query.filter(
+                User.client_id == current_user.client_id,
+                User.role_id == viewer_role.id,
+            ).count()
+            if viewer_role
+            else 0
+        )
     else:
         # System Admin: all users
         total_users = User.query.count()
@@ -522,18 +572,32 @@ def get_users_stats():
         operator_role = Role.query.filter(Role.name == "operator").first()
         viewer_role = Role.query.filter(Role.name == "viewer").first()
 
-        admin_users = User.query.filter(User.role_id == admin_role.id).count() if admin_role else 0
-        operator_users = User.query.filter(User.role_id == operator_role.id).count() if operator_role else 0
-        viewer_users = User.query.filter(User.role_id == viewer_role.id).count() if viewer_role else 0
+        admin_users = (
+            User.query.filter(User.role_id == admin_role.id).count()
+            if admin_role
+            else 0
+        )
+        operator_users = (
+            User.query.filter(User.role_id == operator_role.id).count()
+            if operator_role
+            else 0
+        )
+        viewer_users = (
+            User.query.filter(User.role_id == viewer_role.id).count()
+            if viewer_role
+            else 0
+        )
 
-    return jsonify({
-        "total_users": total_users,
-        "active_users": active_users,
-        "inactive_users": inactive_users,
-        "admin_users": admin_users,
-        "operator_users": operator_users,
-        "viewer_users": viewer_users,
-    }), 200
+    return jsonify(
+        {
+            "total_users": total_users,
+            "active_users": active_users,
+            "inactive_users": inactive_users,
+            "admin_users": admin_users,
+            "operator_users": operator_users,
+            "viewer_users": viewer_users,
+        }
+    ), 200
 
 
 @users_bp.route("/users/<int:user_id>/reset-password", methods=["POST"])
@@ -577,7 +641,11 @@ def reset_user_password(user_id):
     user = User.query.get_or_404(user_id)
 
     current_user = get_current_user()
-    if current_user and current_user.role and current_user.role.name.value == "client_admin":
+    if (
+        current_user
+        and current_user.role
+        and current_user.role.name.value == "client_admin"
+    ):
         if not current_user.client_id or user.client_id != current_user.client_id:
             return jsonify({"error": "User not found"}), 404
 
@@ -624,14 +692,23 @@ def get_companies():
     from app.utils.user_batch_manager import UserBatchManager
 
     current_user = get_current_user()
-    if current_user and current_user.role and current_user.role.name.value == "client_admin":
+    if (
+        current_user
+        and current_user.role
+        and current_user.role.name.value == "client_admin"
+    ):
         if not current_user.client_id:
             return jsonify({"companies": []}), 200
         # Get companies scoped to client
-        companies = User.query.filter(
-            User.client_id == current_user.client_id,
-            User.company.isnot(None)
-        ).with_entities(User.company).distinct().all()
+        companies = (
+            User.query.filter(
+                User.client_id == current_user.client_id,
+                User.company.isnot(None),
+            )
+            .with_entities(User.company)
+            .distinct()
+            .all()
+        )
         company_names = [c[0] for c in companies if c[0]]
         return jsonify({"companies": company_names}), 200
 
@@ -672,31 +749,42 @@ def get_company_stats():
     from app.utils.user_batch_manager import UserBatchManager
 
     current_user = get_current_user()
-    if current_user and current_user.role and current_user.role.name.value == "client_admin":
+    if (
+        current_user
+        and current_user.role
+        and current_user.role.name.value == "client_admin"
+    ):
         if not current_user.client_id:
             return jsonify({"stats": []}), 200
         # Get company stats scoped to client
-        stats = db.session.query(
-            User.company,
-            func.count(User.id).label("total_users"),
-            func.sum(User.is_active.cast(db.Integer)).label("active_users"),
-            func.sum((~User.is_active).cast(db.Integer)).label("inactive_users")
-        ).filter(
-            User.client_id == current_user.client_id,
-            User.company.isnot(None)
-        ).group_by(User.company).all()
+        stats = (
+            db.session.query(
+                User.company,
+                func.count(User.id).label("total_users"),
+                func.sum(User.is_active.cast(db.Integer)).label("active_users"),
+                func.sum((~User.is_active).cast(db.Integer)).label("inactive_users"),
+            )
+            .filter(
+                User.client_id == current_user.client_id,
+                User.company.isnot(None),
+            )
+            .group_by(User.company)
+            .all()
+        )
 
-        return jsonify({
-            "stats": [
-                {
-                    "company": s.company,
-                    "total_users": s.total_users,
-                    "active_users": s.active_users or 0,
-                    "inactive_users": s.inactive_users or 0,
-                }
-                for s in stats
-            ]
-        }), 200
+        return jsonify(
+            {
+                "stats": [
+                    {
+                        "company": s.company,
+                        "total_users": s.total_users,
+                        "active_users": s.active_users or 0,
+                        "inactive_users": s.inactive_users or 0,
+                    }
+                    for s in stats
+                ],
+            }
+        ), 200
 
     stats = UserBatchManager.get_company_statistics()
     return jsonify({"stats": stats}), 200
@@ -737,14 +825,22 @@ def batch_activate():
         return jsonify({"error": "user_ids required"}), 400
 
     current_user = get_current_user()
-    if current_user and current_user.role and current_user.role.name.value == "client_admin":
+    if (
+        current_user
+        and current_user.role
+        and current_user.role.name.value == "client_admin"
+    ):
         if not current_user.client_id:
             return jsonify({"error": "No client assigned"}), 403
         # Filter user_ids to only those belonging to the client_admin's client
-        allowed_user_ids = User.query.filter(
-            User.id.in_(data["user_ids"]),
-            User.client_id == current_user.client_id
-        ).with_entities(User.id).all()
+        allowed_user_ids = (
+            User.query.filter(
+                User.id.in_(data["user_ids"]),
+                User.client_id == current_user.client_id,
+            )
+            .with_entities(User.id)
+            .all()
+        )
         allowed_ids = [u[0] for u in allowed_user_ids]
         if not allowed_ids:
             return jsonify({"error": "No valid users found in your client"}), 403
@@ -789,14 +885,22 @@ def batch_deactivate():
         return jsonify({"error": "user_ids required"}), 400
 
     current_user = get_current_user()
-    if current_user and current_user.role and current_user.role.name.value == "client_admin":
+    if (
+        current_user
+        and current_user.role
+        and current_user.role.name.value == "client_admin"
+    ):
         if not current_user.client_id:
             return jsonify({"error": "No client assigned"}), 403
         # Filter user_ids to only those belonging to the client_admin's client
-        allowed_user_ids = User.query.filter(
-            User.id.in_(data["user_ids"]),
-            User.client_id == current_user.client_id
-        ).with_entities(User.id).all()
+        allowed_user_ids = (
+            User.query.filter(
+                User.id.in_(data["user_ids"]),
+                User.client_id == current_user.client_id,
+            )
+            .with_entities(User.id)
+            .all()
+        )
         allowed_ids = [u[0] for u in allowed_user_ids]
         if not allowed_ids:
             return jsonify({"error": "No valid users found in your client"}), 403
@@ -843,7 +947,11 @@ def get_pending_users():
 
     # --- Client-scoping for client_admin on pending users ---
     current_user = get_current_user()
-    if current_user and current_user.role and current_user.role.name.value == "client_admin":
+    if (
+        current_user
+        and current_user.role
+        and current_user.role.name.value == "client_admin"
+    ):
         if not current_user.client_id:
             query = query.filter(false())
         else:
@@ -910,7 +1018,11 @@ def approve_user(user_id):
         return jsonify({"error": "User not found"}), 404
 
     current_user = get_current_user()
-    if current_user and current_user.role and current_user.role.name.value == "client_admin":
+    if (
+        current_user
+        and current_user.role
+        and current_user.role.name.value == "client_admin"
+    ):
         if not current_user.client_id or user.client_id != current_user.client_id:
             return jsonify({"error": "User not found"}), 404
 
@@ -1005,7 +1117,11 @@ def reject_user(user_id):
         return jsonify({"error": "User not found"}), 404
 
     current_user = get_current_user()
-    if current_user and current_user.role and current_user.role.name.value == "client_admin":
+    if (
+        current_user
+        and current_user.role
+        and current_user.role.name.value == "client_admin"
+    ):
         if not current_user.client_id or user.client_id != current_user.client_id:
             return jsonify({"error": "User not found"}), 404
 
