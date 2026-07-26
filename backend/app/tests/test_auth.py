@@ -1,1500 +1,1199 @@
-"""Unit tests for authentication functionality."""
+"""Authentication routes for ThermaCore SCADA API."""
 
-import json
-import time
+import logging
+import secrets
+from datetime import datetime, timedelta, timezone
 
-import jwt
+from flask import Blueprint, current_app, jsonify, request
+from flask_jwt_extended import create_access_token, jwt_required
+from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
+from webargs.flaskparser import use_args
 
-from app.models import User
+from app import db
+from app.exceptions import ValidationError
+from app.middleware.audit import AuditEventType, AuditLogger
+from app.middleware.authorization import permission_required
+from app.middleware.rate_limit import auth_rate_limit, standard_rate_limit
+from app.middleware.request_id import track_request_id
+from app.models import Role, User
+from app.utils.company_identifier import CompanyIdentifier
+from app.utils.error_handler import SecurityAwareErrorHandler
+from app.utils.helpers import (
+    CLIENT_ADMIN_ASSIGNABLE_ROLES,
+    get_current_user as get_current_user_obj,
+    get_current_user_id,
+    get_role_permissions,
+)
+from app.utils.schemas import (
+    ForgotPasswordSchema,
+    LoginSchema,
+    PasswordChangeSchema,
+    PasswordResetSchema,
+    TokenSchema,
+    UserCreateSchema,
+    UserSchema,
+    UserSelfRegisterSchema,
+)
 
-# Test constants
-MAX_TEST_USERNAME_LENGTH = 1000  # Maximum username length for DoS protection testing
+auth_bp = Blueprint("auth", __name__)
 
 
-def unwrap_response(response):
-    """Helper to extract data from standardized API response envelope.
+# ============================================================
+# TEST ROUTE - To verify auth blueprint is working
+# ============================================================
+@auth_bp.route("/auth/ping", methods=["GET"])
+def ping():
+    """Simple ping endpoint to verify auth blueprint is working."""
+    return jsonify({"status": "ok", "message": "Auth blueprint is alive!"}), 200
 
-    The API wraps responses in: {'success': bool, 'data': {...}, 'message': str, ...}
-    This helper extracts the actual data payload.
+
+@auth_bp.route("/auth/register", methods=["POST"])
+@track_request_id
+@standard_rate_limit
+@jwt_required()
+@permission_required("write_users")
+@use_args(UserCreateSchema, location="json")
+def register(data):
+    """Register a new user.
+    ---
+    tags:
+      - Authentication
+    parameters:
+      - in: body
+        name: user_data
+        schema:
+          $ref: '#/definitions/UserCreateSchema'
+    responses:
+      201:
+        description: User created successfully
+        schema:
+          $ref: '#/definitions/UserSchema'
+      400:
+        description: Validation error
+      409:
+        description: User already exists
+      429:
+        description: Rate limit exceeded
+    security:
+      - JWT: []
     """
-    data = json.loads(response.data)
-    # If response has the standard envelope structure, return the inner data
-    if "data" in data and "success" in data:
-        return data["data"]
-    # Otherwise return as-is (for error responses)
-    return data
-
-
-class TestAuthentication:
-    """Test authentication endpoints."""
-
-    def test_login_success(self, client):
-        """Test successful login."""
-        response = client.post(
-            "/api/v1/auth/login",
-            json={"username": "admin", "password": "admin123"},
-            headers={"Content-Type": "application/json"},
+    # Check if role exists
+    role = Role.query.get(data["role_id"])
+    if not role:
+        return SecurityAwareErrorHandler.handle_service_error(
+            Exception("Role not found"),
+            "validation_error",
+            "Role validation",
+            400,
         )
 
-        assert response.status_code == 200
-        data = unwrap_response(response)
-
-        assert "access_token" in data
-        assert "refresh_token" in data
-        assert "user" in data
-        assert data["user"]["username"] == "admin"
-
-    def test_login_invalid_credentials(self, client):
-        """Test login with invalid credentials."""
-        response = client.post(
-            "/api/v1/auth/login",
-            json={"username": "admin", "password": "wrongpassword"},
-            headers={"Content-Type": "application/json"},
-        )
-
-        assert response.status_code == 401
-        data = unwrap_response(response)
-        assert "error" in data
-
-    def test_login_missing_fields(self, client):
-        """Test login with missing fields."""
-        response = client.post(
-            "/api/v1/auth/login",
-            json={"username": "admin"},
-            headers={"Content-Type": "application/json"},
-        )
-
-        # Webargs returns 422 for validation errors (Unprocessable Entity)
-        assert response.status_code == 422
-        data = unwrap_response(response)
-        # Check for validation error in any form (structured or simple)
-        data_str = str(data).lower()
-        assert "validation" in data_str or "field" in data_str or "required" in data_str
-
-    def test_login_inactive_user(self, client, db_session):
-        """Test login with inactive user."""
-        # Deactivate admin user
-        admin_user = User.query.filter_by(username="admin").first()
-        admin_user.is_active = False
-        db_session.commit()
-
-        response = client.post(
-            "/api/v1/auth/login",
-            json={"username": "admin", "password": "admin123"},
-            headers={"Content-Type": "application/json"},
-        )
-
-        assert response.status_code == 401
-
-        # Reactivate for other tests
-        admin_user.is_active = True
-        db_session.commit()
-
-    def get_auth_token(self, client, username="admin", password="admin123"):
-        """Helper method to get auth token."""
-        response = client.post(
-            "/api/v1/auth/login",
-            json={"username": username, "password": password},
-            headers={"Content-Type": "application/json"},
-        )
-
-        if response.status_code == 200:
-            data = unwrap_response(response)
-            return data["access_token"]
-        return None
-
-    def test_protected_endpoint_without_token(self, client):
-        """Test accessing protected endpoint without token."""
-        response = client.get("/api/v1/auth/me")
-        assert response.status_code == 401
-
-    def test_protected_endpoint_with_token(self, client):
-        """Test accessing protected endpoint with valid token."""
-        token = self.get_auth_token(client)
-
-        response = client.get(
-            "/api/v1/auth/me",
-            headers={"Authorization": f"Bearer {token}"},
-        )
-
-        assert response.status_code == 200
-        data = unwrap_response(response)
-        assert data["username"] == "admin"
-
-    def test_refresh_token(self, client):
-        """Test token refresh."""
-        # Get tokens
-        login_response = client.post(
-            "/api/v1/auth/login",
-            json={"username": "admin", "password": "admin123"},
-            headers={"Content-Type": "application/json"},
-        )
-
-        login_data = unwrap_response(login_response)
-        refresh_token = login_data["refresh_token"]
-
-        # Use refresh token
-        response = client.post(
-            "/api/v1/auth/refresh",
-            headers={"Authorization": f"Bearer {refresh_token}"},
-        )
-
-        assert response.status_code == 200
-        data = unwrap_response(response)
-        assert "access_token" in data
-
-    def test_change_password(self, client):
-        """Test password change."""
-        token = self.get_auth_token(client)
-        original_password = "admin123"
-        new_password = "newpassword123"
-
-        # Change password
-        response = client.post(
-            "/api/v1/auth/change-password",
-            json={"current_password": original_password, "new_password": new_password},
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json",
-            },
-        )
-
-        assert response.status_code == 200
-
-        try:
-            # Verify can login with new password
-            new_login = client.post(
-                "/api/v1/auth/login",
-                json={"username": "admin", "password": new_password},
-                headers={"Content-Type": "application/json"},
+    # --- Client-scoping for client_admin creators ---
+    current_user = get_current_user_obj()
+    if current_user and current_user.role and current_user.role.name.value == "client_admin":
+        if not current_user.client_id:
+            return SecurityAwareErrorHandler.handle_service_error(
+                Exception("Client admin has no client assigned"),
+                "authorization_error",
+                "Client assignment",
+                403,
             )
-
-            assert new_login.status_code == 200
-
-        finally:
-            # Always revert password for test isolation
-            new_token = (
-                unwrap_response(new_login)["access_token"]
-                if new_login.status_code == 200
-                else token
+        # --- Client Admin role restriction ---
+        if role.name.value not in CLIENT_ADMIN_ASSIGNABLE_ROLES:
+            return SecurityAwareErrorHandler.handle_service_error(
+                Exception("Cannot assign this role"),
+                "authorization_error",
+                "Role assignment",
+                403,
             )
-            client.post(
-                "/api/v1/auth/change-password",
-                json={
-                    "current_password": new_password,
-                    "new_password": original_password,
-                },
-                headers={
-                    "Authorization": f"Bearer {new_token}",
-                    "Content-Type": "application/json",
-                },
+        # --- end role restriction ---
+        requested_client_id = data.get("client_id")
+        if requested_client_id is not None and requested_client_id != current_user.client_id:
+            return SecurityAwareErrorHandler.handle_service_error(
+                Exception("Cannot assign users to a different client"),
+                "authorization_error",
+                "Client assignment",
+                403,
             )
+        # Force the new user onto the client_admin's own client regardless of payload
+        data["client_id"] = current_user.client_id
+    # --- end client-scoping ---
 
-    def test_change_password_wrong_current(self, client):
-        """Test password change with wrong current password."""
-        token = self.get_auth_token(client)
+    # Get permissions for this role
+    role_permissions = get_role_permissions(role.name.value)
 
-        response = client.post(
-            "/api/v1/auth/change-password",
-            json={
-                "current_password": "wrongpassword",
-                "new_password": "newpassword123",
-            },
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json",
-            },
+    # Generate company identifier if company is provided
+    company_identifier = None
+    if data.get("company"):
+        company_identifier = CompanyIdentifier.generate(
+            data["company"],
+            data["email"],
         )
 
-        assert response.status_code == 401
+    # Create new user
+    user = User(
+        username=data["username"],
+        email=data["email"],
+        first_name=data.get("first_name"),
+        last_name=data.get("last_name"),
+        phone_number=data.get("phone_number"),
+        company=data.get("company"),
+        company_identifier=company_identifier,
+        department=data.get("department"),
+        position=data.get("position"),
+        role_id=data["role_id"],
+        client_id=data.get("client_id"),
+        permissions=role_permissions,  # Set permissions based on role
+    )
+    user.set_password(data["password"])
 
-    def test_logout(self, client):
-        """Test logout endpoint."""
-        token = self.get_auth_token(client)
+    try:
+        db.session.add(user)
+        db.session.commit()
 
-        response = client.post(
-            "/api/v1/auth/logout",
-            headers={"Authorization": f"Bearer {token}"},
+        # Refresh to get database-generated timestamp
+        db.session.refresh(user)
+
+        user_schema = UserSchema()
+        return SecurityAwareErrorHandler.create_success_response(
+            user_schema.dump(user),
+            "User created successfully",
+            201,
         )
 
-        assert response.status_code == 200
-
-
-class TestTokenSecurity:
-    """Test JWT token security enhancements."""
-
-    def get_auth_token(self, client, username="admin", password="admin123"):
-        """Helper method to get auth token."""
-        response = client.post(
-            "/api/v1/auth/login",
-            json={"username": username, "password": password},
-            headers={"Content-Type": "application/json"},
-        )
-
-        if response.status_code == 200:
-            data = unwrap_response(response)
-            return data["access_token"]
-        return None
-
-    def test_token_contains_security_claims(self, client):
-        """Test that tokens include security claims like jti and role."""
-        # Get a token
-        response = client.post(
-            "/api/v1/auth/login",
-            json={"username": "admin", "password": "admin123"},
-            headers={"Content-Type": "application/json"},
-        )
-
-        assert response.status_code == 200
-        data = unwrap_response(response)
-        token = data["access_token"]
-
-        # Decode token without verification to inspect claims
-        decoded = jwt.decode(token, options={"verify_signature": False})
-
-        # Verify security claims are present
-        assert "jti" in decoded, "Token should include jti (JWT ID) claim"
-        assert "role" in decoded, "Token should include role claim"
-        assert "sub" in decoded, "Token should include sub (subject) claim"
-        assert "iat" in decoded, "Token should include iat (issued at) claim"
-        assert "exp" in decoded, "Token should include exp (expiration) claim"
-
-    def test_refresh_token_contains_jti(self, client):
-        """Test that refresh tokens include jti claim."""
-        # Get tokens
-        response = client.post(
-            "/api/v1/auth/login",
-            json={"username": "admin", "password": "admin123"},
-            headers={"Content-Type": "application/json"},
-        )
-
-        assert response.status_code == 200
-        data = unwrap_response(response)
-        refresh_token = data["refresh_token"]
-
-        # Decode token without verification to inspect claims
-        decoded = jwt.decode(refresh_token, options={"verify_signature": False})
-
-        # Verify jti claim is present in refresh token
-        assert "jti" in decoded, "Refresh token should include jti (JWT ID) claim"
-
-
-class TestErrorHandling:
-    """Test error handling improvements using SecurityAwareErrorHandler."""
-
-    def test_invalid_token_uses_security_aware_handler(self, client):
-        """Test that invalid token errors use SecurityAwareErrorHandler."""
-        response = client.get(
-            "/api/v1/auth/me",
-            headers={"Authorization": "Bearer invalid_token"},
-        )
-
-        # Should return 401 or 422 (JWT validation error)
-        assert response.status_code in [401, 422]
-        data = json.loads(response.data)
-
-        # SecurityAwareErrorHandler wraps errors in a specific format
-        # Check that error is properly structured
-        assert "error" in data or "msg" in data  # JWT errors may use 'msg'
-
-    def test_login_error_handling_structure(self, client):
-        """Test that login endpoint has proper error handling structure.
-
-        This test verifies that the login endpoint properly handles errors
-        and returns 401 for invalid credentials (not 500 for unhandled exceptions).
-        The actual error handling code added includes:
-        - Database connection error handling
-        - Missing user role error handling
-        - JWT token generation error handling
-        - Schema serialization error handling
-        """
-        # Test with invalid credentials - should return 401, not 500
-        response = client.post(
-            "/api/v1/auth/login",
-            json={"username": "nonexistent", "password": "wrongpass"},
-            headers={"Content-Type": "application/json"},
-        )
-
-        # Should return 401 with proper error message (not 500 unhandled exception)
-        assert response.status_code == 401
-        response_data = json.loads(response.data)
-
-        # Check for SecurityAwareErrorHandler response format
-        assert "error" in response_data
-        # Verify it's using the SecurityAwareErrorHandler format with proper structure
-        assert response_data["error"]["code"] in [
-            "AUTHENTICATION_ERROR",
-            "authentication_error",
-        ]
-
-    def test_me_endpoint_error_handling(self, client, db_session):
-        """Test /auth/me endpoint error handling with SecurityAwareErrorHandler."""
-        # First get a valid token
-        login_response = client.post(
-            "/api/v1/auth/login",
-            json={"username": "admin", "password": "admin123"},
-            headers={"Content-Type": "application/json"},
-        )
-
-        assert login_response.status_code == 200
-        data = unwrap_response(login_response)
-        token = data["access_token"]
-
-        # Deactivate the user
-        from app.models import User
-
-        admin_user = User.query.filter_by(username="admin").first()
-        admin_user.is_active = False
-        db_session.commit()
-
-        try:
-            # Try to access /me with token of inactive user
-            response = client.get(
-                "/api/v1/auth/me",
-                headers={"Authorization": f"Bearer {token}"},
-            )
-
-            # Should return 401 with SecurityAwareErrorHandler format
-            assert response.status_code == 401
-            response_data = json.loads(response.data)
-
-            # Check for SecurityAwareErrorHandler response format
-            assert "error" in response_data or "success" in response_data
-
-        finally:
-            # Reactivate user for other tests
-            admin_user.is_active = True
-            db_session.commit()
-
-    def test_refresh_endpoint_error_handling(self, client, db_session):
-        """Test /auth/refresh endpoint error handling with SecurityAwareErrorHandler."""
-        # First get a valid refresh token
-        login_response = client.post(
-            "/api/v1/auth/login",
-            json={"username": "admin", "password": "admin123"},
-            headers={"Content-Type": "application/json"},
-        )
-
-        assert login_response.status_code == 200
-        data = unwrap_response(login_response)
-        refresh_token = data["refresh_token"]
-
-        # Deactivate the user
-        from app.models import User
-
-        admin_user = User.query.filter_by(username="admin").first()
-        admin_user.is_active = False
-        db_session.commit()
-
-        try:
-            # Try to refresh with token of inactive user
-            response = client.post(
-                "/api/v1/auth/refresh",
-                headers={"Authorization": f"Bearer {refresh_token}"},
-            )
-
-            # Should return 401 with SecurityAwareErrorHandler format
-            assert response.status_code == 401
-            response_data = json.loads(response.data)
-
-            # Check for SecurityAwareErrorHandler response format
-            assert "error" in response_data or "success" in response_data
-
-        finally:
-            # Reactivate user for other tests
-            admin_user.is_active = True
-            db_session.commit()
-
-
-class TestEdgeCases:
-    """Test edge cases and error scenarios."""
-
-    def test_login_with_empty_username(self, client):
-        """Test login with empty username."""
-        response = client.post(
-            "/api/v1/auth/login",
-            json={"username": "", "password": "password"},
-            headers={"Content-Type": "application/json"},
-        )
-
-        # Should return 400 or 422 for validation error
-        assert response.status_code in [400, 422]
-
-    def test_login_with_empty_password(self, client):
-        """Test login with empty password."""
-        response = client.post(
-            "/api/v1/auth/login",
-            json={"username": "admin", "password": ""},
-            headers={"Content-Type": "application/json"},
-        )
-
-        # Should return 400 or 401 - empty password should fail
-        assert response.status_code in [400, 401]
-
-    def test_login_with_null_username(self, client):
-        """Test login with null username."""
-        response = client.post(
-            "/api/v1/auth/login",
-            json={"username": None, "password": "password"},
-            headers={"Content-Type": "application/json"},
-        )
-
-        # Should return 400 or 422 for validation error
-        assert response.status_code in [400, 422]
-
-    def test_login_with_very_long_username(self, client):
-        """Test login with extremely long username."""
-        long_username = "a" * MAX_TEST_USERNAME_LENGTH
-        response = client.post(
-            "/api/v1/auth/login",
-            json={"username": long_username, "password": "password"},
-            headers={"Content-Type": "application/json"},
-        )
-
-        # Should handle gracefully with 401 (user not found) or 400 (validation)
-        assert response.status_code in [400, 401, 422]
-
-    def test_login_with_special_characters(self, client):
-        """Test login with special characters in username."""
-        response = client.post(
-            "/api/v1/auth/login",
-            json={"username": "admin<script>alert(1)</script>", "password": "admin123"},
-            headers={"Content-Type": "application/json"},
-        )
-
-        # Should return 401 (not found) - user doesn't exist
-        assert response.status_code == 401
-
-    def test_refresh_with_invalid_token_format(self, client):
-        """Test refresh endpoint with malformed token."""
-        response = client.post(
-            "/api/v1/auth/refresh",
-            headers={"Authorization": "Bearer not.a.valid.token"},
-        )
-
-        # Should return 401 or 422 for invalid token
-        assert response.status_code in [401, 422]
-
-    def test_refresh_with_missing_token(self, client):
-        """Test refresh endpoint without token."""
-        response = client.post("/api/v1/auth/refresh")
-
-        # Should return 401 for missing token
-        assert response.status_code == 401
-
-
-class TestUserRegistration:
-    """Test user registration functionality."""
-
-    def get_auth_token(self, client, username="admin", password="admin123"):
-        """Helper method to get auth token."""
-        response = client.post(
-            "/api/v1/auth/login",
-            json={"username": username, "password": password},
-            headers={"Content-Type": "application/json"},
-        )
-
-        if response.status_code == 200:
-            data = unwrap_response(response)
-            return data["access_token"]
-        return None
-
-    def test_register_user_as_admin(self, client, db_session):
-        """Test user registration by admin."""
-        token = self.get_auth_token(client)
-
-        # Get admin role ID
-        from app.models import Role, RoleEnum, User
-
-        admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
-
-        # Verify user doesn't exist before registration
-        existing_user = User.query.filter_by(username="newuser").first()
-        assert existing_user is None, "User should not exist before registration"
-
-        response = client.post(
-            "/api/v1/auth/register",
-            json={
-                "username": "newuser",
-                "email": "newuser@test.com",
-                "password": "newpassword123",
-                "first_name": "New",
-                "last_name": "User",
-                "role_id": admin_role.id,
-            },
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json",
-            },
-        )
-
-        # Verify HTTP response
-        assert response.status_code == 201
-        data = unwrap_response(response)
-        assert data["username"] == "newuser"
-        assert data["email"] == "newuser@test.com"
-
-        # Verify user was actually created in the database with correct details
-        created_user = User.query.filter_by(username="newuser").first()
-        assert created_user is not None, (
-            "User should exist in database after registration"
-        )
-        assert created_user.username == "newuser", "Username should match"
-        assert created_user.email == "newuser@test.com", "Email should match"
-        assert created_user.first_name == "New", "First name should match"
-        assert created_user.last_name == "User", "Last name should match"
-        assert created_user.role_id == admin_role.id, "Role ID should match"
-        assert created_user.is_active is True, "User should be active by default"
-        assert created_user.password_hash is not None, "Password hash should be set"
-        assert created_user.created_at is not None, "Created timestamp should be set"
-        assert created_user.updated_at is not None, "Updated timestamp should be set"
-
-    def test_register_operator_user(self, client, db_session):
-        """Test creating a user with operator role."""
-        token = self.get_auth_token(client)
-
-        from app.models import Role, RoleEnum, User
-
-        operator_role = Role.query.filter_by(name=RoleEnum.OPERATOR).first()
-
-        # Use timestamp to ensure unique email/username across test runs
-        unique_id = int(time.time() * 1000)  # Milliseconds since epoch
-        username = f"operator_{unique_id}"
-        email = f"operator_{unique_id}@test.com"
-
-        response = client.post(
-            "/api/v1/auth/register",
-            json={
-                "username": username,
-                "email": email,
-                "password": "operatorpass123",
-                "first_name": "New",
-                "last_name": "Operator",
-                "role_id": operator_role.id,
-            },
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json",
-            },
-        )
-
-        assert response.status_code == 201
-        data = unwrap_response(response)
-        assert data["username"] == username
-        assert data["email"] == email
-
-        # Verify user was created with operator role
-        created_user = User.query.filter_by(username=username).first()
-        assert created_user is not None
-        assert created_user.role_id == operator_role.id
-        assert created_user.is_active is True
-
-    def test_register_viewer_user(self, client, db_session):
-        """Test creating a user with viewer role."""
-        token = self.get_auth_token(client)
-
-        from app.models import Role, RoleEnum, User
-
-        viewer_role = Role.query.filter_by(name=RoleEnum.VIEWER).first()
-
-        # Use timestamp to ensure unique email/username across test runs
-        unique_id = int(time.time() * 1000)  # Milliseconds since epoch
-        username = f"viewer_{unique_id}"
-        email = f"viewer_{unique_id}@test.com"
-
-        response = client.post(
-            "/api/v1/auth/register",
-            json={
-                "username": username,
-                "email": email,
-                "password": "viewerpass123",
-                "first_name": "New",
-                "last_name": "Viewer",
-                "role_id": viewer_role.id,
-            },
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json",
-            },
-        )
-
-        assert response.status_code == 201
-        data = unwrap_response(response)
-        assert data["username"] == username
-        assert data["email"] == email
-
-        # Verify user was created with viewer role
-        created_user = User.query.filter_by(username=username).first()
-        assert created_user is not None
-        assert created_user.role_id == viewer_role.id
-        assert created_user.is_active is True
-
-    def test_register_user_without_permission(self, client):
-        """Test user registration without proper permissions."""
-        # Try to register as viewer (no write_users permission)
-        token = self.get_auth_token(client, "viewer", "viewer123")
-
-        from app.models import Role, RoleEnum
-
-        viewer_role = Role.query.filter_by(name=RoleEnum.VIEWER).first()
-
-        response = client.post(
-            "/api/v1/auth/register",
-            json={
-                "username": "unauthorizeduser",
-                "email": "unauthorized@test.com",
-                "password": "password123",
-                "role_id": viewer_role.id,
-            },
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json",
-            },
-        )
-
-        assert response.status_code == 403
-
-    def test_register_duplicate_username(self, client):
-        """Test registration with duplicate username."""
-        token = self.get_auth_token(client)
-
-        from app.models import Role, RoleEnum
-
-        admin_role = Role.query.filter_by(name=RoleEnum.ADMIN).first()
-
-        response = client.post(
-            "/api/v1/auth/register",
-            json={
-                "username": "admin",  # Already exists
-                "email": "different@test.com",
-                "password": "password123",
-                "role_id": admin_role.id,
-            },
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json",
-            },
-        )
-
-        assert response.status_code == 409
-        data = unwrap_response(response)
-        # Check for "already exists" in either error or details.context
-        error_text = str(data).lower()
-        assert "already exists" in error_text or "duplicate" in error_text
-
-
-class TestSecurityEnhancements:
-    """Test security enhancements and attack prevention."""
-
-    def test_brute_force_protection(self, client):
-        """Test that rate limiting protects against brute force attacks."""
-        # Attempt multiple failed logins rapidly
-        failed_attempts = 0
-        rate_limited = False
-
-        for i in range(15):  # Try more than the rate limit
-            response = client.post(
-                "/api/v1/auth/login",
-                json={"username": "admin", "password": f"wrongpass{i}"},
-                headers={"Content-Type": "application/json"},
-            )
-
-            if response.status_code == 429:  # Rate limit exceeded
-                rate_limited = True
-                break
-            if response.status_code == 401:
-                failed_attempts += 1
-
-        # Either we should hit rate limit or all attempts should fail
-        assert rate_limited or failed_attempts == 15
-
-    def test_token_manipulation_detection(self, client):
-        """Test that manipulated tokens are rejected."""
-        # Get a valid token
-        response = client.post(
-            "/api/v1/auth/login",
-            json={"username": "admin", "password": "admin123"},
-            headers={"Content-Type": "application/json"},
-        )
-
-        assert response.status_code == 200
-        data = unwrap_response(response)
-        valid_token = data["access_token"]
-
-        # Manipulate the token by changing a character
-        manipulated_token = valid_token[:-5] + "XXXXX"
-
-        # Try to use manipulated token
-        response = client.get(
-            "/api/v1/auth/me",
-            headers={"Authorization": f"Bearer {manipulated_token}"},
-        )
-
-        # Should be rejected
-        assert response.status_code in [401, 422]
-
-    def test_expired_token_rejection(self, client, app):
-        """Test that expired tokens are properly rejected."""
-        # Create a token with very short expiration
-        from datetime import timedelta
-
-        from flask_jwt_extended import create_access_token
-
-        with app.app_context():
-            # Create token that expires immediately
-            expired_token = create_access_token(
-                identity="1",
-                expires_delta=timedelta(seconds=-1),  # Already expired
-            )
-
-        # Try to use expired token
-        response = client.get(
-            "/api/v1/auth/me",
-            headers={"Authorization": f"Bearer {expired_token}"},
-        )
-
-        # Should be rejected
-        assert response.status_code in [401, 422]
-
-    def test_sql_injection_in_login(self, client):
-        """Test that SQL injection attempts in login are safely handled."""
-        sql_injection_attempts = [
-            "admin' OR '1'='1",
-            "admin'--",
-            "admin' OR '1'='1'--",
-            "' OR 1=1--",
-            "admin'; DROP TABLE users--",
-        ]
-
-        for attempt in sql_injection_attempts:
-            response = client.post(
-                "/api/v1/auth/login",
-                json={"username": attempt, "password": "anypassword"},
-                headers={"Content-Type": "application/json"},
-            )
-
-            # Should return 401 (unauthorized), not 500 (server error)
-            assert response.status_code == 401
-
-    def test_xss_in_username(self, client):
-        """Test that XSS attempts in username are safely handled."""
-        xss_attempts = [
-            "<script>alert('XSS')</script>",
-            "<img src=x onerror=alert('XSS')>",
-            "javascript:alert('XSS')",
-        ]
-
-        for attempt in xss_attempts:
-            response = client.post(
-                "/api/v1/auth/login",
-                json={"username": attempt, "password": "anypassword"},
-                headers={"Content-Type": "application/json"},
-            )
-
-            # Should return 401 (unauthorized), not cause an error
-            assert response.status_code == 401
-
-    def test_password_change_requires_current_password(self, client):
-        """Test that password change requires valid current password."""
-        # Login first
-        response = client.post(
-            "/api/v1/auth/login",
-            json={"username": "admin", "password": "admin123"},
-            headers={"Content-Type": "application/json"},
-        )
-
-        assert response.status_code == 200
-        data = unwrap_response(response)
-        token = data["access_token"]
-
-        # Try to change password with wrong current password
-        response = client.post(
-            "/api/v1/auth/change-password",
-            json={
-                "current_password": "wrongpassword",
-                "new_password": "newpassword123",
-            },
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json",
-            },
-        )
-
-        # Should be rejected
-        assert response.status_code == 401
-
-    def test_token_reuse_after_password_change(self, client, db_session):
-        """Test that old tokens should ideally be invalidated after password change."""
-        # Login and get token
-        response = client.post(
-            "/api/v1/auth/login",
-            json={"username": "admin", "password": "admin123"},
-            headers={"Content-Type": "application/json"},
-        )
-
-        assert response.status_code == 200
-        data = unwrap_response(response)
-        old_token = data["access_token"]
-
-        # Change password
-        response = client.post(
-            "/api/v1/auth/change-password",
-            json={
-                "current_password": "admin123",
-                "new_password": "newpassword123",
-            },
-            headers={
-                "Authorization": f"Bearer {old_token}",
-                "Content-Type": "application/json",
-            },
-        )
-
-        assert response.status_code == 200
-
-        # Note: In current implementation, old token still works until it expires
-        # This is documented behavior - for production, implement token blacklist
-        # Try to use old token - it will still work in current implementation
-        response = client.get(
-            "/api/v1/auth/me",
-            headers={"Authorization": f"Bearer {old_token}"},
-        )
-
-        # Current behavior: token still works (not ideal for security)
-        # Future enhancement: implement token blacklist/revocation
-        assert response.status_code in [200, 401]
-
-        # Reset password for other tests
-        response = client.post(
-            "/api/v1/auth/login",
-            json={"username": "admin", "password": "newpassword123"},
-            headers={"Content-Type": "application/json"},
-        )
-
-        if response.status_code == 200:
-            data = unwrap_response(response)
-            new_token = data["access_token"]
-
-            client.post(
-                "/api/v1/auth/change-password",
-                json={
-                    "current_password": "newpassword123",
-                    "new_password": "admin123",
-                },
-                headers={
-                    "Authorization": f"Bearer {new_token}",
-                    "Content-Type": "application/json",
-                },
-            )
-
-    def test_missing_authorization_header(self, client):
-        """Test that protected endpoints require authorization header."""
-        response = client.get("/api/v1/auth/me")
-
-        # Should return 401 for missing authorization
-        assert response.status_code == 401
-
-    def test_malformed_authorization_header(self, client):
-        """Test that malformed authorization headers are rejected."""
-        malformed_headers = [
-            "InvalidFormat token",
-            "Bearer",
-            "Bearer ",
-            "token_without_bearer_prefix",
-        ]
-
-        for header in malformed_headers:
-            response = client.get(
-                "/api/v1/auth/me",
-                headers={"Authorization": header},
-            )
-
-            # Should return 401 or 422
-            assert response.status_code in [401, 422]
-
-    def test_forgot_password_valid_email(self, client, db_session):
-        """Test forgot password with valid email."""
-        response = client.post(
-            "/api/v1/auth/forgot-password",
-            json={"email": "admin@test.com"},
-            headers={"Content-Type": "application/json"},
-        )
-
-        assert response.status_code == 200
-        data = json.loads(response.data)
-        assert data["success"] is True
-
-        # Verify token was generated in database
-        user = User.query.filter_by(email="admin@test.com").first()
-
-        # Only check reset_token if the field exists (migration has run)
-        if hasattr(user, "reset_token"):
-            assert user.reset_token is not None
-            assert user.reset_token_expires is not None
+    except IntegrityError as e:
+        db.session.rollback()
+        if "username" in str(e.orig):
+            error_msg = "Username already exists"
+        elif "email" in str(e.orig):
+            error_msg = "Email already exists"
         else:
-            # Migration hasn't run - log warning but don't fail the test
-            import warnings
+            error_msg = "Database constraint violation"
 
-            warnings.warn(
-                "Database migration for reset_token fields not applied",
-                stacklevel=2,
+        return SecurityAwareErrorHandler.handle_service_error(
+            e,
+            "validation_error",
+            f"User creation: {error_msg}",
+            409,
+        )
+
+
+@auth_bp.route("/auth/self-register", methods=["POST"])
+@track_request_id
+@standard_rate_limit
+@use_args(UserSelfRegisterSchema, location="json")
+def self_register(data):
+    """Public self-registration endpoint for new users.
+    Creates users in 'pending' status awaiting admin approval.
+    ---
+    tags:
+      - Authentication
+    parameters:
+      - in: body
+        name: user_data
+        schema:
+          $ref: '#/definitions/UserSelfRegisterSchema'
+    responses:
+      201:
+        description: Registration request submitted successfully
+      400:
+        description: Validation error
+      409:
+        description: User already exists
+      429:
+        description: Rate limit exceeded
+    """
+    # Self-registered users always get viewer role
+    viewer_role = Role.query.filter_by(name="viewer").first()
+    if not viewer_role:
+        return SecurityAwareErrorHandler.handle_service_error(
+            Exception("Viewer role not found"),
+            "configuration_error",
+            "System configuration",
+            500,
+        )
+
+    # Generate company identifier if company is provided
+    company_identifier = None
+    if data.get("company"):
+        company_identifier = CompanyIdentifier.generate(
+            data["company"],
+            data["email"],
+        )
+
+    # Create new user in pending status
+    user = User(
+        username=data["username"],
+        email=data["email"],
+        first_name=data.get("first_name"),
+        last_name=data.get("last_name"),
+        phone_number=data.get("phone_number"),
+        company=data.get("company"),
+        company_identifier=company_identifier,
+        department=data.get("department"),
+        position=data.get("position"),
+        role_id=viewer_role.id,
+        registration_status="pending",  # Self-registered users start as pending
+        permissions=None,  # No permissions until approved
+    )
+    user.set_password(data["password"])
+
+    try:
+        db.session.add(user)
+        db.session.commit()
+
+        # Refresh to get database-generated timestamp
+        db.session.refresh(user)
+
+        return SecurityAwareErrorHandler.create_success_response(
+            {
+                "message": "Registration request submitted successfully. Your account is pending admin approval.",
+                "username": user.username,
+                "email": user.email,
+                "registration_status": "pending",
+            },
+            "Registration request submitted successfully",
+            201,
+        )
+
+    except IntegrityError as e:
+        db.session.rollback()
+        if "username" in str(e.orig):
+            error_msg = "Username already exists"
+        elif "email" in str(e.orig):
+            error_msg = "Email already exists"
+        else:
+            error_msg = "Database constraint violation"
+
+        return SecurityAwareErrorHandler.handle_service_error(
+            e,
+            "validation_error",
+            f"User registration: {error_msg}",
+            409,
+        )
+
+
+@auth_bp.route("/auth/login", methods=["POST"])
+@track_request_id
+@auth_rate_limit
+@use_args(LoginSchema, location="json")
+def login(data):
+    """Authenticate user and return JWT tokens.
+    ---
+    tags:
+      - Authentication
+    parameters:
+      - in: body
+        name: credentials
+        schema:
+          $ref: '#/definitions/LoginSchema'
+    responses:
+      200:
+        description: Login successful
+        schema:
+          $ref: '#/definitions/TokenSchema'
+      400:
+        description: Validation error
+      401:
+        description: Invalid credentials
+      429:
+        description: Rate limit exceeded
+    """
+    from app.routes.auth_helpers import (  # noqa: PLC0415 - Avoid circular import between auth modules
+        audit_successful_login,
+        check_user_can_login,
+        create_jwt_tokens,
+        fetch_user,
+        handle_invalid_credentials,
+        log_login_attempt,
+        update_last_login,
+        validate_login_credentials,
+        validate_user_role,
+    )
+
+    try:
+        # Log authentication attempt
+        log_login_attempt(data.get("username", "UNKNOWN"))
+
+        # Validate required fields
+        error = validate_login_credentials(data)
+        if error:
+            return error
+
+        # Fetch user from database
+        user, error = fetch_user(data["username"])
+        if error:
+            return error
+
+        # Verify password and user status
+        if not user or not user.check_password(data["password"]):
+            return handle_invalid_credentials(data.get("username", "unknown"))
+
+        # Check if user can login (active and approved)
+        error = check_user_can_login(user)
+        if error:
+            return error
+
+        # Validate user has proper role
+        error = validate_user_role(user)
+        if error:
+            return error
+
+        # Update last login timestamp
+        update_last_login(user)
+
+        # Get keep_me_signed_in parameter (defaults to False)
+        keep_me_signed_in = data.get("keep_me_signed_in", False)
+
+        # Create JWT tokens with appropriate expiry
+        access_token, refresh_token, error = create_jwt_tokens(user, keep_me_signed_in)
+        if error:
+            return error
+
+        # Audit successful login
+        audit_successful_login(user)
+
+        # Build and serialize response
+        try:
+            # Pre-validate configuration
+            if "JWT_ACCESS_TOKEN_EXPIRES" not in current_app.config:
+                current_app.logger.error("JWT_ACCESS_TOKEN_EXPIRES not configured")
+                raise ValidationError("JWT configuration incomplete")
+
+            token_schema = TokenSchema()
+
+            # Calculate expires_in based on keep_me_signed_in
+            if keep_me_signed_in:
+                expires_in_seconds = timedelta(days=30).total_seconds()
+            else:
+                expires_in_seconds = timedelta(hours=24).total_seconds()
+
+            response_data = {
+                "access_token": access_token,
+                "refresh_token": refresh_token,
+                "expires_in": expires_in_seconds,
+                "user": user,
+            }
+
+            serialized_data = token_schema.dump(response_data)
+
+            # Validate serialized data
+            if not serialized_data.get("access_token") or not serialized_data.get(
+                "user",
+            ):
+                raise ValidationError("Serialization produced incomplete data")
+
+            current_app.logger.info(
+                f"Login successful for user {user.username}",
+                extra={
+                    "event": "login_success",
+                    "username": user.username,
+                    "user_id": user.id,
+                    "role": user.role.name.value,
+                },
             )
 
-        # The important part is that the API returned success
-        # Check message in the nested data structure
-        assert "If the email exists" in data.get("data", {}).get("message", "")
+            return SecurityAwareErrorHandler.create_success_response(
+                serialized_data,
+                "Login successful",
+                200,
+            )
+        except (ValueError, ValidationError) as val_error:
+            current_app.logger.exception(
+                "Validation error during serialization",
+                extra={
+                    "event": "serialization_validation_error",
+                    "username": user.username,
+                },
+            )
+            return SecurityAwareErrorHandler.handle_service_error(
+                val_error,
+                "configuration_error",
+                "Response validation failed",
+                500,
+            )
+        except Exception as serialization_error:
+            current_app.logger.exception(
+                "Error serializing login response",
+                extra={
+                    "event": "serialization_failed",
+                    "username": user.username,
+                    "error_type": type(serialization_error).__name__,
+                },
+            )
+            return SecurityAwareErrorHandler.handle_service_error(
+                serialization_error,
+                "internal_error",
+                "Response serialization failed",
+                500,
+            )
 
-    def test_forgot_password_invalid_email(self, client):
-        """Test forgot password with invalid email (should still return success for security)."""
-        response = client.post(
-            "/api/v1/auth/forgot-password",
-            json={"email": "nonexistent@example.com"},
-            headers={"Content-Type": "application/json"},
+    except Exception as e:
+        # Catch-all for any unexpected errors
+        current_app.logger.exception(
+            "Unexpected error in login endpoint",
+            extra={
+                "event": "login_unexpected_error",
+                "username": data.get("username", "UNKNOWN") if data else "NO_DATA",
+                "error_type": type(e).__name__,
+                "error_message": str(e),
+                "ip_address": request.remote_addr,
+                "user_agent": request.headers.get("User-Agent", "UNKNOWN"),
+            },
         )
 
-        # Should return success to prevent email enumeration
-        assert response.status_code == 200
-        data = json.loads(response.data)
-        assert data["success"] is True
+        # Ensure database session is clean after error
+        try:
+            db.session.rollback()
+        except Exception:
+            current_app.logger.exception(
+                "Failed to rollback session after unexpected error",
+            )
 
-    def test_forgot_password_missing_email(self, client):
-        """Test forgot password with missing email."""
-        response = client.post(
-            "/api/v1/auth/forgot-password",
-            json={},
-            headers={"Content-Type": "application/json"},
+        return SecurityAwareErrorHandler.handle_service_error(
+            e,
+            "internal_error",
+            "Login processing",
+            500,
         )
 
-        # Should return validation error
-        assert response.status_code == 422
 
-    def test_reset_password_valid_token(self, client, db_session):
-        """Test password reset with valid token."""
-        import secrets
-        from datetime import datetime, timedelta, timezone
+@auth_bp.route("/auth/refresh", methods=["POST"])
+@jwt_required(refresh=True)
+def refresh():
+    """Refresh access token using refresh token.
+    ---
+    tags:
+      - Authentication
+    responses:
+      200:
+        description: Token refreshed successfully
+        schema:
+          type: object
+          properties:
+            access_token:
+              type: string
+            expires_in:
+              type: integer
+      401:
+        description: Invalid refresh token
+    security:
+      - JWT: []
+    """
+    try:
+        # Get and validate user ID from token
+        user_id, success = get_current_user_id()
+        if not success or user_id is None:
+            current_app.logger.warning(
+                "Token refresh failed: Invalid token format",
+                extra={"event": "refresh_invalid_token"},
+            )
+            return SecurityAwareErrorHandler.handle_service_error(
+                Exception("Invalid token format"),
+                "authentication_error",
+                "Token validation",
+                401,
+            )
 
-        # Generate reset token for admin user
-        user = User.query.filter_by(username="admin").first()
-        reset_token = secrets.token_urlsafe(32)
-        user.reset_token = reset_token
-        user.reset_token_expires = datetime.now(timezone.utc) + timedelta(hours=1)
-        db_session.commit()
+        # Query user with database error handling
+        try:
+            user = User.query.get(user_id)
+        except Exception as db_error:
+            current_app.logger.exception(
+                "Database error during refresh query",
+                extra={"event": "refresh_database_error", "user_id": user_id},
+            )
+            return SecurityAwareErrorHandler.handle_service_error(
+                db_error,
+                "database_error",
+                "Database query failed",
+                500,
+            )
+
+        # Validate user exists and is active
+        if not user:
+            current_app.logger.warning(
+                f"Token refresh failed: User not found (ID: {user_id})",
+                extra={"event": "refresh_user_not_found", "user_id": user_id},
+            )
+            return SecurityAwareErrorHandler.handle_service_error(
+                Exception("User not found"),
+                "authentication_error",
+                "User validation",
+                401,
+            )
+
+        if not user.is_active:
+            current_app.logger.warning(
+                f"Token refresh failed: User inactive (username: {user.username})",
+                extra={"event": "refresh_user_inactive", "username": user.username},
+            )
+            return SecurityAwareErrorHandler.handle_service_error(
+                Exception("User inactive"),
+                "authentication_error",
+                "User validation",
+                401,
+            )
+
+        # Verify role is properly configured
+        if not user.role or not user.role.name:
+            current_app.logger.error(
+                f"Token refresh failed: User {user.username} has invalid role configuration",
+                extra={
+                    "event": "refresh_invalid_role",
+                    "username": user.username,
+                    "role_id": user.role_id,
+                },
+            )
+            return SecurityAwareErrorHandler.handle_service_error(
+                Exception("User role configuration invalid"),
+                "configuration_error",
+                "Role validation",
+                500,
+            )
+
+        # Create new access token with security claims
+        try:
+            additional_claims = {
+                "jti": secrets.token_urlsafe(16),
+                "role": user.role.name.value,
+            }
+            access_token = create_access_token(
+                identity=str(user.id),
+                additional_claims=additional_claims,
+            )
+
+            if not access_token:
+                raise ValidationError("Token generation returned empty token")
+
+        except Exception as token_error:
+            current_app.logger.exception(
+                "Error creating refresh token",
+                extra={
+                    "event": "refresh_token_generation_failed",
+                    "username": user.username,
+                    "error_type": type(token_error).__name__,
+                },
+            )
+            return SecurityAwareErrorHandler.handle_service_error(
+                token_error,
+                "internal_error",
+                "Token generation failed",
+                500,
+            )
+
+        # Audit token refresh (non-critical)
+        try:
+            AuditLogger.log_authentication_event(
+                AuditEventType.TOKEN_REFRESH,
+                username=user.username,
+                outcome="success",
+                details={
+                    "user_id": user.id,
+                    "role": user.role.name.value,
+                    "ip_address": request.remote_addr,
+                },
+            )
+        except Exception as audit_error:
+            current_app.logger.warning(
+                f"Error auditing token refresh: {audit_error}",
+                extra={"event": "refresh_audit_error", "username": user.username},
+            )
+
+        current_app.logger.info(
+            f"Token refresh successful for user {user.username}",
+            extra={"event": "refresh_success", "username": user.username},
+        )
+
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "Token refreshed successfully",
+                    "data": {
+                        "access_token": access_token,
+                        "expires_in": current_app.config[
+                            "JWT_ACCESS_TOKEN_EXPIRES"
+                        ].total_seconds(),
+                    },
+                },
+            ),
+            200,
+        )
+
+    except Exception as e:
+        # Catch-all for unexpected errors
+        current_app.logger.exception(
+            "Unexpected error in refresh endpoint",
+            extra={
+                "event": "refresh_unexpected_error",
+                "error_type": type(e).__name__,
+                "error_message": str(e),
+            },
+        )
+        return SecurityAwareErrorHandler.handle_service_error(
+            e,
+            "internal_error",
+            "Token refresh processing",
+            500,
+        )
+
+
+@auth_bp.route("/auth/me", methods=["GET"])
+@jwt_required()
+def get_me():
+    """Get current authenticated user information.
+    ---
+    tags:
+      - Authentication
+    responses:
+      200:
+        description: Current user information
+        schema:
+          $ref: '#/definitions/UserSchema'
+      401:
+        description: Invalid token
+    security:
+      - JWT: []
+    """
+    user_id, success = get_current_user_id()
+    if not success or user_id is None:
+        return SecurityAwareErrorHandler.handle_service_error(
+            Exception("Invalid token format"),
+            "authentication_error",
+            "Token validation",
+            401,
+        )
+
+    user = User.query.get(user_id)
+
+    if not user or not user.is_active:
+        return SecurityAwareErrorHandler.handle_service_error(
+            Exception("User not found or inactive"),
+            "authentication_error",
+            "User validation",
+            401,
+        )
+
+    user_schema = UserSchema()
+    return jsonify(user_schema.dump(user)), 200
+
+
+@auth_bp.route("/auth/logout", methods=["POST"])
+@jwt_required()
+def logout():
+    """Logout user (client-side token invalidation).
+    ---
+    tags:
+      - Authentication
+    responses:
+      200:
+        description: Logout successful
+    security:
+      - JWT: []
+    """
+    # In a production environment, you would typically blacklist the token
+    # For now, we rely on client-side token removal
+    return jsonify({"message": "Logout successful"}), 200
+
+
+@auth_bp.route("/auth/change-password", methods=["POST"])
+@jwt_required()
+@use_args(PasswordChangeSchema, location="json")
+def change_password(data):
+    """Change user password.
+    ---
+    tags:
+      - Authentication
+    parameters:
+      - in: body
+        name: password_data
+        schema:
+          $ref: '#/definitions/PasswordChangeSchema'
+    responses:
+      200:
+        description: Password changed successfully
+      400:
+        description: Validation error
+      401:
+        description: Invalid current password
+      422:
+        description: Validation error
+    security:
+      - JWT: []
+    """
+    try:
+        user_id, success = get_current_user_id()
+        if not success or user_id is None:
+            return SecurityAwareErrorHandler.handle_service_error(
+                Exception("Invalid token format"),
+                "authentication_error",
+                "Token validation",
+                401,
+            )
+
+        user = User.query.get(user_id)
+
+        if not user or not user.is_active:
+            return SecurityAwareErrorHandler.handle_service_error(
+                Exception("User not found or inactive"),
+                "authentication_error",
+                "User validation",
+                401,
+            )
+
+        if not user.check_password(data["current_password"]):
+            return SecurityAwareErrorHandler.handle_service_error(
+                Exception("Invalid current password"),
+                "authentication_error",
+                "Password verification",
+                401,
+            )
+
+        user.set_password(data["new_password"])
+        db.session.commit()
+
+        return SecurityAwareErrorHandler.create_success_response(
+            {"message": "Password changed successfully"},
+            "Password changed successfully",
+            200,
+        )
+
+    except Exception as e:
+        current_app.logger.exception(
+            "Error changing password",
+            extra={"event": "password_change_error"},
+        )
+        db.session.rollback()
+        return SecurityAwareErrorHandler.handle_service_error(
+            e,
+            "internal_error",
+            "Password change",
+            500,
+        )
+
+
+@auth_bp.route("/auth/forgot-password", methods=["POST"])
+@track_request_id
+@auth_rate_limit
+@use_args(ForgotPasswordSchema, location="json")
+def forgot_password(data):
+    """Request password reset token.
+    ---
+    tags:
+      - Authentication
+    parameters:
+      - in: body
+        name: email_data
+        schema:
+          $ref: '#/definitions/ForgotPasswordSchema'
+    responses:
+      200:
+        description: Password reset email sent (or user not found - same response for security)
+      400:
+        description: Validation error
+      429:
+        description: Rate limit exceeded
+    """
+    try:
+        email = data.get("email")
+
+        current_app.logger.info(
+            f"Password reset requested for email: {email}",
+            extra={
+                "event": "password_reset_request",
+                "email": email,
+                "ip_address": request.remote_addr,
+            },
+        )
+
+        # Find user by email
+        user = User.query.filter_by(email=email).first()
+
+        # Always return success response to prevent email enumeration
+        if user and user.is_active:
+            # Generate secure token
+            from datetime import timedelta
+
+            reset_token = secrets.token_urlsafe(32)
+
+            # Ensure user object has both reset_token fields (for backward compatibility)
+            if not all(
+                hasattr(user, f) for f in ("reset_token", "reset_token_expires")
+            ):
+                current_app.logger.error(
+                    "User model missing reset_token fields. Run database migration.",
+                    extra={"event": "missing_reset_token_field"},
+                )
+                # Return success anyway to prevent email enumeration
+                return SecurityAwareErrorHandler.create_success_response(
+                    {
+                        "message": "If the email exists, a password reset link has been sent",
+                    },
+                    "Password reset email sent",
+                    200,
+                )
+
+            user.reset_token = reset_token
+            user.reset_token_expires = datetime.now(timezone.utc) + timedelta(hours=1)
+
+            db.session.commit()
+
+            current_app.logger.info(
+                f"Password reset token generated for user: {user.username}",
+                extra={
+                    "event": "password_reset_token_generated",
+                    "user_id": user.id,
+                    "username": user.username,
+                },
+            )
+
+            # ============================================================
+            # Send password reset email
+            # ============================================================
+            from app.services.email_service import send_password_reset_email
+
+            success, error = send_password_reset_email(email, reset_token)
+            if not success:
+                current_app.logger.error(
+                    f"Failed to send reset email to {email}: {error}",
+                    extra={"event": "password_reset_email_failed"},
+                )
+            else:
+                current_app.logger.info(
+                    f"Password reset email sent to {email}",
+                    extra={"event": "password_reset_email_sent"},
+                )
+
+        # Always return success to prevent email enumeration
+        return SecurityAwareErrorHandler.create_success_response(
+            {"message": "If the email exists, a password reset link has been sent"},
+            "Password reset email sent",
+            200,
+        )
+
+    except Exception as e:
+        current_app.logger.exception(
+            "Error processing password reset request",
+            extra={"event": "password_reset_request_error"},
+        )
+        db.session.rollback()
+        return SecurityAwareErrorHandler.handle_service_error(
+            e,
+            "internal_error",
+            "Password reset request",
+            500,
+        )
+
+
+@auth_bp.route("/auth/reset-password", methods=["POST"])
+@track_request_id
+@auth_rate_limit
+@use_args(PasswordResetSchema, location="json")
+def reset_password(data):
+    """Reset password using token.
+    ---
+    tags:
+      - Authentication
+    parameters:
+      - in: body
+        name: reset_data
+        schema:
+          $ref: '#/definitions/PasswordResetSchema'
+    responses:
+      200:
+        description: Password reset successfully
+      400:
+        description: Invalid or expired token
+      429:
+        description: Rate limit exceeded
+    """
+    try:
+        token = data.get("token")
+        new_password = data.get("new_password")
+
+        current_app.logger.info(
+            "Password reset attempt with token",
+            extra={
+                "event": "password_reset_attempt",
+                "ip_address": request.remote_addr,
+            },
+        )
+
+        # Defensive check for reset_token column existence
+        if not hasattr(User, "reset_token"):
+            return SecurityAwareErrorHandler.handle_service_error(
+                Exception("Invalid or expired reset token"),
+                "authentication_error",
+                "Password reset",
+                400,
+            )
+        # Find user with valid token
+        user = User.query.filter_by(reset_token=token).first()
+
+        if not user:
+            current_app.logger.warning(
+                "Password reset failed: Invalid token",
+                extra={"event": "password_reset_invalid_token"},
+            )
+            return SecurityAwareErrorHandler.handle_service_error(
+                Exception("Invalid or expired reset token"),
+                "authentication_error",
+                "Password reset",
+                400,
+            )
+
+        # Check if token is expired
+        # Handle timezone comparison - ensure both datetimes are timezone-aware
+        current_time = datetime.now(timezone.utc)
+
+        # If reset_token_expires is naive (no timezone), make it timezone-aware (UTC)
+        token_expires = user.reset_token_expires
+        if token_expires and token_expires.tzinfo is None:
+            token_expires = token_expires.replace(tzinfo=timezone.utc)
+
+        if not token_expires or token_expires < current_time:
+            current_app.logger.warning(
+                f"Password reset failed: Expired token for user {user.username}",
+                extra={
+                    "event": "password_reset_expired_token",
+                    "username": user.username,
+                },
+            )
+            # Clear expired token
+            user.reset_token = None
+            user.reset_token_expires = None
+            db.session.commit()
+
+            return SecurityAwareErrorHandler.handle_service_error(
+                Exception("Invalid or expired reset token"),
+                "authentication_error",
+                "Password reset",
+                400,
+            )
 
         # Reset password
-        response = client.post(
-            "/api/v1/auth/reset-password",
-            json={"token": reset_token, "new_password": "newpassword123"},
-            headers={"Content-Type": "application/json"},
-        )
-
-        assert response.status_code == 200
-        data = json.loads(response.data)
-        assert data["success"] is True
-
-        # Verify token was cleared
-        db_session.refresh(user)
-        assert user.reset_token is None
-        assert user.reset_token_expires is None
-
-        # Verify new password works
-        assert user.check_password("newpassword123") is True
-
-        # Reset password back to original for other tests
-        user.set_password("admin123")
-        db_session.commit()
-
-    def test_reset_password_invalid_token(self, client):
-        """Test password reset with invalid token."""
-        response = client.post(
-            "/api/v1/auth/reset-password",
-            json={"token": "invalid_token", "new_password": "newpassword123"},
-            headers={"Content-Type": "application/json"},
-        )
-
-        assert response.status_code == 400
-        data = json.loads(response.data)
-        assert data["success"] is False
-
-    def test_reset_password_expired_token(self, client, db_session):
-        """Test password reset with expired token."""
-        import secrets
-        from datetime import datetime, timedelta, timezone
-
-        # Generate expired reset token for admin user
-        user = User.query.filter_by(username="admin").first()
-        reset_token = secrets.token_urlsafe(32)
-        user.reset_token = reset_token
-        user.reset_token_expires = datetime.now(timezone.utc) - timedelta(
-            hours=1,
-        )  # Expired
-        db_session.commit()
-
-        # Try to reset password
-        response = client.post(
-            "/api/v1/auth/reset-password",
-            json={"token": reset_token, "new_password": "newpassword123"},
-            headers={"Content-Type": "application/json"},
-        )
-
-        assert response.status_code == 400
-        data = json.loads(response.data)
-        assert data["success"] is False
-
-        # Verify token was cleared
-        db_session.refresh(user)
-        assert user.reset_token is None
-        assert user.reset_token_expires is None
-
-    def test_reset_password_missing_fields(self, client):
-        """Test password reset with missing fields."""
-        response = client.post(
-            "/api/v1/auth/reset-password",
-            json={"token": "some_token"},
-            headers={"Content-Type": "application/json"},
-        )
-
-        # Should return validation error
-        assert response.status_code == 422
-
-    def test_login_with_keep_me_signed_in_true(self, client):
-        """Test login with keep_me_signed_in=True returns longer token expiry."""
-        response = client.post(
-            "/api/v1/auth/login",
-            json={
-                "username": "admin",
-                "password": "admin123",
-                "keep_me_signed_in": True,
-            },
-            headers={"Content-Type": "application/json"},
-        )
-
-        assert response.status_code == 200
-        data = unwrap_response(response)
-
-        assert "access_token" in data
-        assert "refresh_token" in data
-        assert "expires_in" in data
-
-        # With keep_me_signed_in=True, expires_in should be 30 days (in seconds)
-        # 30 days = 30 * 24 * 60 * 60 = 2,592,000 seconds
-        expected_expiry = 30 * 24 * 60 * 60
-        assert data["expires_in"] == expected_expiry
-
-        # Verify token is valid and has correct expiry
-        token = data["access_token"]
-        decoded = jwt.decode(
-            token,
-            options={"verify_signature": False},
-        )
-        assert "exp" in decoded
-        assert "iat" in decoded
-
-        # Token expiry should be approximately 30 days from now
-        token_lifetime = decoded["exp"] - decoded["iat"]
-        # Allow 5 second tolerance
-        assert abs(token_lifetime - expected_expiry) < 5
-
-    def test_login_with_keep_me_signed_in_false(self, client):
-        """Test login with keep_me_signed_in=False returns standard token expiry."""
-        response = client.post(
-            "/api/v1/auth/login",
-            json={
-                "username": "admin",
-                "password": "admin123",
-                "keep_me_signed_in": False,
-            },
-            headers={"Content-Type": "application/json"},
-        )
-
-        assert response.status_code == 200
-        data = unwrap_response(response)
-
-        assert "access_token" in data
-        assert "refresh_token" in data
-        assert "expires_in" in data
-
-        # With keep_me_signed_in=False, expires_in should be 24 hours (in seconds)
-        # 24 hours = 24 * 60 * 60 = 86,400 seconds
-        expected_expiry = 24 * 60 * 60
-        assert data["expires_in"] == expected_expiry
-
-        # Verify token is valid and has correct expiry
-        token = data["access_token"]
-        decoded = jwt.decode(
-            token,
-            options={"verify_signature": False},
-        )
-        assert "exp" in decoded
-        assert "iat" in decoded
-
-        # Token expiry should be approximately 24 hours from now
-        token_lifetime = decoded["exp"] - decoded["iat"]
-        # Allow 5 second tolerance
-        assert abs(token_lifetime - expected_expiry) < 5
-
-    def test_login_without_keep_me_signed_in_defaults_to_false(self, client):
-        """Test login without keep_me_signed_in parameter defaults to 24 hour expiry."""
-        response = client.post(
-            "/api/v1/auth/login",
-            json={"username": "admin", "password": "admin123"},
-            headers={"Content-Type": "application/json"},
-        )
-
-        assert response.status_code == 200
-        data = unwrap_response(response)
-
-        assert "access_token" in data
-        assert "expires_in" in data
-
-        # Default should be 24 hours
-        expected_expiry = 24 * 60 * 60
-        assert data["expires_in"] == expected_expiry
-
-    def test_keep_me_signed_in_token_validation(self, client):
-        """Test that tokens created with keep_me_signed_in are valid."""
-        # Login with keep_me_signed_in=True
-        response = client.post(
-            "/api/v1/auth/login",
-            json={
-                "username": "admin",
-                "password": "admin123",
-                "keep_me_signed_in": True,
-            },
-            headers={"Content-Type": "application/json"},
-        )
-
-        assert response.status_code == 200
-        data = unwrap_response(response)
-        token = data["access_token"]
-
-        # Use the token to access a protected endpoint
-        response = client.get(
-            "/api/v1/auth/me",
-            headers={"Authorization": f"Bearer {token}"},
-        )
-
-        assert response.status_code == 200
-        user_data = unwrap_response(response)
-        assert user_data["username"] == "admin"
-
-    def test_keep_me_signed_in_with_invalid_type(self, client):
-        """Test that keep_me_signed_in handles invalid types gracefully."""
-        # Test with string instead of boolean
-        response = client.post(
-            "/api/v1/auth/login",
-            json={
-                "username": "admin",
-                "password": "admin123",
-                "keep_me_signed_in": "true",  # String instead of boolean
-            },
-            headers={"Content-Type": "application/json"},
-        )
-
-        # Should either accept it (if schema coerces) or return validation error
-        assert response.status_code in [200, 422]
-
-        if response.status_code == 200:
-            # If accepted, verify it works correctly
-            data = unwrap_response(response)
-            assert "access_token" in data
-
-
-# ============================================================
-# SELF-REGISTER TESTS
-# ============================================================
-
-
-class TestSelfRegister:
-    """Public self-registration flow."""
-
-    def test_self_register_creates_pending_viewer(self, client, db_session):
-        response = client.post(
-            "/api/v1/auth/self-register",
-            json={
-                "username": "selfregtest",
-                "email": "selfregtest@test.com",
-                "password": "password123",
-                "first_name": "Self",
-                "last_name": "Register",
-                "company": "TestCorp",
-                "department": "Engineering",
-                "position": "Developer",
-            },
-        )
-        assert response.status_code == 201
-        data = response.get_json()["data"]
-        assert data["registration_status"] == "pending"
-        assert data["username"] == "selfregtest"
-
-        from app.models import User
-
-        user = User.query.filter_by(username="selfregtest").first()
-        assert user.role.name.value == "viewer"
-        assert user.permissions is None
-        assert user.registration_status == "pending"
-        assert user.first_name == "Self"
-        assert user.last_name == "Register"
-        assert user.company == "TestCorp"
-        assert user.department == "Engineering"
-        assert user.position == "Developer"
-
-    def test_self_register_duplicate_username(self, client, db_session):
-        response = client.post(
-            "/api/v1/auth/self-register",
-            json={
-                "username": "admin",
-                "email": "unique_self_register@test.com",
-                "password": "password123",
-            },
-        )
-        assert response.status_code == 409
-        error = response.get_json()["error"]
-        assert "Username already exists" in error["details"]["context"]
-
-    def test_self_register_duplicate_email(self, client, db_session):
-        response = client.post(
-            "/api/v1/auth/self-register",
-            json={
-                "username": "unique_username_self_register",
-                "email": "admin@test.com",
-                "password": "password123",
-            },
-        )
-        assert response.status_code == 409
-        error = response.get_json()["error"]
-        assert "Email already exists" in error["details"]["context"]
-
-    def test_self_register_missing_fields(self, client):
-        response = client.post(
-            "/api/v1/auth/self-register",
-            json={"username": "x"},
-        )
-        assert response.status_code == 422
-
-    def test_self_registered_user_cannot_login_until_approved(self, client, db_session):
-        client.post(
-            "/api/v1/auth/self-register",
-            json={
-                "username": "pendinglogin",
-                "email": "pendinglogin@test.com",
-                "password": "password123",
-            },
-        )
-        response = client.post(
-            "/api/v1/auth/login",
-            json={"username": "pendinglogin", "password": "password123"},
-        )
-        assert response.status_code == 401
-
-
-# ============================================================
-# REGISTER CLIENT SCOPING TESTS
-# ============================================================
-
-
-class TestRegisterClientScoping:
-    """Client-admin restrictions on the /auth/register endpoint."""
-
-    def test_client_admin_register_forces_own_client(
-        self,
-        client,
-        client_admin_token,
-        db_session,
-    ):
-        token, own_client_id = client_admin_token
-        from app.models import Role
-
-        viewer_role = Role.query.filter_by(name="viewer").first()
-
-        response = client.post(
-            "/api/v1/auth/register",
-            json={
-                "username": "forcedclientuser",
-                "email": "forcedclientuser@test.com",
-                "password": "password123",
-                "role_id": viewer_role.id,
-                "client_id": own_client_id + 999,
-            },
-            headers={"Authorization": f"Bearer {token}"},
-        )
-        assert response.status_code == 403
-        error = response.get_json()["error"]
-        assert error["code"] == "AUTHORIZATION_ERROR"
-        assert error["details"]["context"] == "Client assignment"
-
-    def test_client_admin_register_defaults_to_own_client(
-        self,
-        client,
-        client_admin_token,
-        db_session,
-    ):
-        token, own_client_id = client_admin_token
-        from app.models import Role, User
-
-        viewer_role = Role.query.filter_by(name="viewer").first()
-
-        response = client.post(
-            "/api/v1/auth/register",
-            json={
-                "username": "defaultclientuser",
-                "email": "defaultclientuser@test.com",
-                "password": "password123",
-                "role_id": viewer_role.id,
-            },
-            headers={"Authorization": f"Bearer {token}"},
-        )
-        assert response.status_code == 201
-        created = User.query.filter_by(username="defaultclientuser").first()
-        assert created.client_id == own_client_id
-
-    def test_client_admin_register_disallowed_admin_role(
-        self,
-        client,
-        client_admin_token,
-        db_session,
-    ):
-        token, _ = client_admin_token
-        from app.models import Role
-
-        admin_role = Role.query.filter_by(name="admin").first()
-
-        response = client.post(
-            "/api/v1/auth/register",
-            json={
-                "username": "shouldfailrole",
-                "email": "shouldfailrole@test.com",
-                "password": "password123",
-                "role_id": admin_role.id,
-            },
-            headers={"Authorization": f"Bearer {token}"},
-        )
-        assert response.status_code == 403
-        error = response.get_json()["error"]
-        assert error["code"] == "AUTHORIZATION_ERROR"
-        assert error["details"]["context"] == "Role assignment"
-
-    def test_client_admin_register_allowed_viewer_role(
-        self,
-        client,
-        client_admin_token,
-        db_session,
-    ):
-        token, _ = client_admin_token
-        from app.models import Role
-
-        viewer_role = Role.query.filter_by(name="viewer").first()
-
-        response = client.post(
-            "/api/v1/auth/register",
-            json={
-                "username": "allowedviewer",
-                "email": "allowedviewer@test.com",
-                "password": "password123",
-                "role_id": viewer_role.id,
-            },
-            headers={"Authorization": f"Bearer {token}"},
-        )
-        assert response.status_code == 201
-
-    def test_client_admin_register_allowed_operator_role(
-        self,
-        client,
-        client_admin_token,
-        db_session,
-    ):
-        token, _ = client_admin_token
-        from app.models import Role
-
-        operator_role = Role.query.filter_by(name="operator").first()
-
-        response = client.post(
-            "/api/v1/auth/register",
-            json={
-                "username": "allowedoperator",
-                "email": "allowedoperator@test.com",
-                "password": "password123",
-                "role_id": operator_role.id,
-            },
-            headers={"Authorization": f"Bearer {token}"},
-        )
-        assert response.status_code == 201
-
-    def test_client_admin_register_no_client_assigned(
-        self,
-        client,
-        client_admin_no_client_token,
-        db_session,
-    ):
-        from app.models import Role
-
-        viewer_role = Role.query.filter_by(name="viewer").first()
-
-        response = client.post(
-            "/api/v1/auth/register",
-            json={
-                "username": "orphanattempt",
-                "email": "orphanattempt@test.com",
-                "password": "password123",
-                "role_id": viewer_role.id,
-            },
-            headers={"Authorization": f"Bearer {client_admin_no_client_token}"},
-        )
-        assert response.status_code == 403
-        error = response.get_json()["error"]
-        assert error["code"] == "AUTHORIZATION_ERROR"
-        assert error["details"]["context"] == "Client assignment"
-
-
-# ============================================================
-# EMERGENCY ADMIN TESTS
-# ============================================================
-
-
-def test_emergency_admin_creates_account(client, db_session):
-    """Emergency admin endpoint creates an account via raw SQL."""
-    from app import db
-    from app.models import User
-
-    # Ensure user is deleted before test
-    User.query.filter_by(username="emergency_admin").delete()
-    db.session.commit()
-
-    try:
-        response = client.post("/api/v1/auth/emergency-admin")
-        assert response.status_code == 200
-        data = response.get_json()["data"]
-        assert data["username"] == "emergency_admin"
-        assert "EmergencyAdmin123!" in data["note"]
-
-        # Verify login works
-        login_response = client.post(
-            "/api/v1/auth/login",
-            json={"username": "emergency_admin", "password": "EmergencyAdmin123!"},
-        )
-        assert login_response.status_code == 200
-
-    finally:
-        # Clean up the emergency_admin user
-        User.query.filter_by(username="emergency_admin").delete()
+        user.set_password(new_password)
+        user.reset_token = None
+        user.reset_token_expires = None
         db.session.commit()
 
+        current_app.logger.info(
+            f"Password reset successful for user: {user.username}",
+            extra={
+                "event": "password_reset_success",
+                "user_id": user.id,
+                "username": user.username,
+            },
+        )
 
-def test_emergency_admin_idempotent_update(client, db_session):
-    """Calling it twice should update, not duplicate, the user."""
-    from app import db
-    from app.models import User
+        return SecurityAwareErrorHandler.create_success_response(
+            {"message": "Password reset successfully"},
+            "Password reset successfully",
+            200,
+        )
 
-    # Ensure user is deleted before test
-    User.query.filter_by(username="emergency_admin").delete()
-    db.session.commit()
+    except Exception as e:
+        current_app.logger.exception(
+            "Error resetting password",
+            extra={"event": "password_reset_error"},
+        )
+        db.session.rollback()
+        return SecurityAwareErrorHandler.handle_service_error(
+            e,
+            "internal_error",
+            "Password reset",
+            500,
+        )
 
+
+@auth_bp.route("/auth/emergency-admin", methods=["POST"])
+@track_request_id
+@jwt_required()
+@permission_required("admin_panel")
+def emergency_admin():
+    """Emergency admin account creation/update endpoint.
+
+    This endpoint uses raw SQL to create or update an emergency admin account,
+    avoiding ORM issues if password reset columns are missing. It's designed
+    to work on Render free plan without shell access.
+
+    Creates/updates user: emergency_admin / EmergencyAdmin123!
+
+    **SECURITY**: This endpoint requires authentication with admin_panel permission.
+    NOTE: Because it requires an existing admin_panel-holding session, this is
+    effectively an admin-only account-reset utility rather than a break-glass
+    recovery mechanism for a fully locked-out deployment. If true break-glass
+    recovery is needed, use a separate out-of-band mechanism (e.g. a CLI/shell
+    script gated by server-side secrets, not an HTTP route).
+    In production, consider additional controls like IP allowlisting or
+    environment-based enable/disable.
+
+    ---
+    tags:
+      - Authentication
+    responses:
+      200:
+        description: Emergency admin account created/updated successfully
+      500:
+        description: Server error
+    security:
+      - JWT: []
+    """
     try:
-        client.post("/api/v1/auth/emergency-admin")
-        client.post("/api/v1/auth/emergency-admin")
+        logger = logging.getLogger(__name__)
+        logger.info(
+            "Emergency admin endpoint called",
+            extra={
+                "event": "emergency_admin_request",
+                "ip_address": request.remote_addr,
+            },
+        )
 
-        matches = User.query.filter_by(username="emergency_admin").all()
-        assert len(matches) == 1
+        # Use raw SQL to avoid ORM column issues
+        # First, check if emergency admin user exists
+        with db.engine.begin() as conn:
+            # Get the admin role ID (typically 1, but let's query it to be safe)
+            result = conn.execute(
+                text(
+                    "SELECT id FROM roles WHERE name = 'admin' LIMIT 1",
+                ),
+            )
+            admin_role = result.fetchone()
 
-    finally:
-        # Clean up the emergency_admin user
-        User.query.filter_by(username="emergency_admin").delete()
-        db.session.commit()
+            if not admin_role:
+                logger.error("Admin role not found in database")
+                return SecurityAwareErrorHandler.handle_service_error(
+                    Exception("Admin role not configured"),
+                    "configuration_error",
+                    "Emergency admin setup",
+                    500,
+                )
+
+            admin_role_id = admin_role[0]
+
+            # Create password hash for EmergencyAdmin123!
+            import json  # noqa: PLC0415 - Standard library, conditional usage
+
+            from werkzeug.security import generate_password_hash
+
+            # Import centralized permissions constant from models
+            from app.models import EMERGENCY_ADMIN_PERMISSIONS
+
+            emergency_password_hash = generate_password_hash(
+                "EmergencyAdmin123!",
+                method="pbkdf2:sha256",
+            )
+
+            # Use centralized emergency admin permissions constant
+            # Ensures consistency across auth endpoint, auto-migration, and permission checks
+            emergency_permissions = json.dumps(EMERGENCY_ADMIN_PERMISSIONS)
+
+            # Check if emergency_admin user exists
+            result = conn.execute(
+                text(
+                    "SELECT id FROM users WHERE username = 'emergency_admin'",
+                ),
+            )
+            existing_user = result.fetchone()
+
+            if existing_user:
+                # Update existing user - grant comprehensive permissions
+                logger.info(
+                    "Updating existing emergency_admin user with full permissions",
+                )
+                conn.execute(
+                    text(
+                        """
+                    UPDATE users
+                    SET password_hash = :password_hash,
+                        email = :email,
+                        role_id = :role_id,
+                        is_active = :is_active,
+                        first_name = :first_name,
+                        last_name = :last_name,
+                        permissions = :permissions,
+                        registration_status = :registration_status,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE username = :username
+                    """,
+                    ),
+                    {
+                        "password_hash": emergency_password_hash,
+                        "email": "emergency@thermacore.local",
+                        "role_id": admin_role_id,
+                        "is_active": True,
+                        "first_name": "Emergency",
+                        "last_name": "Admin",
+                        "permissions": emergency_permissions,
+                        "registration_status": "approved",
+                        "username": "emergency_admin",
+                    },
+                )
+                logger.info(
+                    "✓ Emergency admin user updated successfully with comprehensive permissions",
+                )
+            else:
+                # Create new user - grant comprehensive permissions
+                logger.info("Creating new emergency_admin user with full permissions")
+                conn.execute(
+                    text(
+                        """
+                    INSERT INTO users (username, email, password_hash, role_id, is_active, first_name, last_name, permissions, registration_status, created_at, updated_at)
+                    VALUES (:username, :email, :password_hash, :role_id, :is_active, :first_name, :last_name, :permissions, :registration_status, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                    """,
+                    ),
+                    {
+                        "username": "emergency_admin",
+                        "email": "emergency@thermacore.local",
+                        "password_hash": emergency_password_hash,
+                        "role_id": admin_role_id,
+                        "is_active": True,
+                        "first_name": "Emergency",
+                        "last_name": "Admin",
+                        "permissions": emergency_permissions,
+                        "registration_status": "approved",
+                    },
+                )
+                logger.info(
+                    "✓ Emergency admin user created successfully with comprehensive permissions",
+                )
+
+        logger.info(
+            "Emergency admin account ready",
+            extra={
+                "event": "emergency_admin_success",
+                "username": "emergency_admin",
+            },
+        )
+
+        return SecurityAwareErrorHandler.create_success_response(
+            {
+                "message": "Emergency admin account created/updated successfully",
+                "username": "emergency_admin",
+                "note": "Use password: EmergencyAdmin123! to login. CHANGE THIS PASSWORD IMMEDIATELY after login.",
+            },
+            "Emergency admin ready",
+            200,
+        )
+
+    except Exception as e:
+        logger = logging.getLogger(__name__)
+        logger.exception(
+            "Error in emergency admin endpoint",
+            extra={"event": "emergency_admin_error"},
+        )
+        return SecurityAwareErrorHandler.handle_service_error(
+            e,
+            "internal_error",
+            "Emergency admin creation",
+            500,
+        )
+
+
+# ============================================================
+# DEBUG: Print statements to confirm module loads
+# ============================================================
+print("=" * 60, flush=True)
+print("✅ Auth blueprint module loaded successfully", flush=True)
+print("=" * 60, flush=True)
