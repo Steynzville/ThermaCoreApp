@@ -20,6 +20,7 @@ from sqlalchemy.orm import relationship, validates
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app import db
+from app.models.client import Client
 
 
 def utc_now():
@@ -59,6 +60,7 @@ class RoleEnum(PyEnum):
     """Role enumeration."""
 
     ADMIN = "admin"
+    CLIENT_ADMIN = "client_admin"
     OPERATOR = "operator"
     VIEWER = "viewer"
 
@@ -227,7 +229,11 @@ class Tenant(db.Model):
     created_at = Column(DateTime, default=utc_now)
     updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
 
+    # Foreign Keys
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=True, index=True)
+
     # Relationships
+    client = relationship("Client", backref="tenants")
     users = relationship("User", back_populates="tenant")
     units = relationship("Unit", back_populates="tenant")
 
@@ -288,10 +294,17 @@ class User(db.Model):
         nullable=True,
         index=True,
     )  # Nullable for backward compatibility
+    client_id = Column(
+        Integer,
+        ForeignKey("clients.id"),
+        nullable=True,
+        index=True,
+    )
 
     # Relationships
     role = relationship("Role", back_populates="users")
     tenant = relationship("Tenant", back_populates="users")
+    client = relationship("Client", backref="users")
 
     def __repr__(self):
         return f"<User {self.username}>"

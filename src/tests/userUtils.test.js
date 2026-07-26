@@ -89,6 +89,12 @@ describe("userUtils", () => {
       expect(formatRoleName("viewer")).toBe("Viewer");
     });
 
+    it("should format client_admin as Client Admin", () => {
+      expect(formatRoleName("client_admin")).toBe("Client Admin");
+      expect(formatRoleName("client admin")).toBe("Client Admin");
+      expect(formatRoleName({ name: "client_admin" })).toBe("Client Admin");
+    });
+
     it("should return default role when role is null or undefined", () => {
       expect(formatRoleName(null)).toBe("Viewer");
       expect(formatRoleName(undefined)).toBe("Viewer");

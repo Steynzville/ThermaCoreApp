@@ -43,11 +43,13 @@ The API uses standardized HTTP status codes paired with detailed error JSON enve
     "user": {
       "id": 12,
       "email": "operator@thermacore.com",
-      "role": "Operator",
+      "role": "operator",
+      "client_id": 1,
       "is_approved": true
     }
   }
   ```
+* **Supported Roles**: `admin` (System Admin), `client_admin` (Client Admin scoped by `client_id`), `operator`, `viewer`.
 * **Error Profiles**:
   * `401 Unauthorized` (`TC-101`): Invalid email or password.
   * `403 Forbidden` (`TC-103`): User account exists but has not been elevated/approved by an Admin yet.
@@ -190,6 +192,13 @@ The API uses standardized HTTP status codes paired with detailed error JSON enve
     }
   }
   ```
+
+### 6.3 Protocol Gateway Management (`/api/v1/protocols`)
+* **Access Control**: **System Admin Only** (Requires System Administrator authorization header; non-admin users receive `403 Forbidden`).
+* **Endpoints**:
+  * `GET /api/v1/protocols/status`: Retrieves real-time adapter connectivity and node counts across MQTT, OPC UA, Modbus TCP, and DNP3.
+  * `POST /api/v1/protocols/configure`: Modifies fieldbus connection parameters, polling intervals, or security certificates.
+  * `POST /api/v1/protocols/restart`: Triggers a graceful service restart for a specific protocol adapter.
 
 ---
 

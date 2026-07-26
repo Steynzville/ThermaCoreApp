@@ -22,6 +22,10 @@ describe("Permission Helper Functions", () => {
       expect(canControlUnits("admin")).toBe(true);
     });
 
+    it("should allow client_admin to control units", () => {
+      expect(canControlUnits("client_admin")).toBe(true);
+    });
+
     it("should allow operator to control units", () => {
       expect(canControlUnits("operator")).toBe(true);
     });
@@ -34,6 +38,10 @@ describe("Permission Helper Functions", () => {
   describe("canViewSales", () => {
     it("should allow admin to view sales", () => {
       expect(canViewSales("admin")).toBe(true);
+    });
+
+    it("should allow client_admin to view sales", () => {
+      expect(canViewSales("client_admin")).toBe(true);
     });
 
     it("should not allow operator to view sales", () => {
@@ -50,6 +58,10 @@ describe("Permission Helper Functions", () => {
       expect(canViewAllUnits("admin")).toBe(true);
     });
 
+    it("should allow client_admin to view all units", () => {
+      expect(canViewAllUnits("client_admin")).toBe(true);
+    });
+
     it("should not allow operator to view all units", () => {
       expect(canViewAllUnits("operator")).toBe(false);
     });
@@ -62,6 +74,10 @@ describe("Permission Helper Functions", () => {
   describe("canManageUnits", () => {
     it("should allow admin to manage units", () => {
       expect(canManageUnits("admin")).toBe(true);
+    });
+
+    it("should allow client_admin to manage units", () => {
+      expect(canManageUnits("client_admin")).toBe(true);
     });
 
     it("should not allow operator to manage units", () => {
@@ -78,6 +94,10 @@ describe("Permission Helper Functions", () => {
       expect(canManageUsers("admin")).toBe(true);
     });
 
+    it("should allow client_admin to manage users", () => {
+      expect(canManageUsers("client_admin")).toBe(true);
+    });
+
     it("should not allow operator to manage users", () => {
       expect(canManageUsers("operator")).toBe(false);
     });
@@ -92,6 +112,10 @@ describe("Permission Helper Functions", () => {
       expect(canAccessAdminPanel("admin")).toBe(true);
     });
 
+    it("should allow client_admin to access admin panel", () => {
+      expect(canAccessAdminPanel("client_admin")).toBe(true);
+    });
+
     it("should not allow operator to access admin panel", () => {
       expect(canAccessAdminPanel("operator")).toBe(false);
     });
@@ -104,6 +128,7 @@ describe("Permission Helper Functions", () => {
   describe("canViewUnits", () => {
     it("should allow all roles to view units", () => {
       expect(canViewUnits("admin")).toBe(true);
+      expect(canViewUnits("client_admin")).toBe(true);
       expect(canViewUnits("operator")).toBe(true);
       expect(canViewUnits("viewer")).toBe(true);
     });
@@ -112,6 +137,7 @@ describe("Permission Helper Functions", () => {
   describe("canViewUsers", () => {
     it("should allow all roles to view users", () => {
       expect(canViewUsers("admin")).toBe(true);
+      expect(canViewUsers("client_admin")).toBe(true);
       expect(canViewUsers("operator")).toBe(true);
       expect(canViewUsers("viewer")).toBe(true);
     });
@@ -126,6 +152,10 @@ describe("Permission Helper Functions", () => {
       expect(isViewerOnly("admin")).toBe(false);
     });
 
+    it("should return false for client_admin role", () => {
+      expect(isViewerOnly("client_admin")).toBe(false);
+    });
+
     it("should return false for operator role", () => {
       expect(isViewerOnly("operator")).toBe(false);
     });
@@ -134,22 +164,50 @@ describe("Permission Helper Functions", () => {
   describe("canViewAnalytics", () => {
     it("should allow all roles to view analytics", () => {
       expect(canViewAnalytics("admin")).toBe(true);
+      expect(canViewAnalytics("client_admin")).toBe(true);
       expect(canViewAnalytics("operator")).toBe(true);
       expect(canViewAnalytics("viewer")).toBe(true);
     });
   });
 
   describe("canViewProtocols", () => {
-    it("should allow all roles to view protocols", () => {
+    it("should allow admin to view protocols", () => {
       expect(canViewProtocols("admin")).toBe(true);
-      expect(canViewProtocols("operator")).toBe(true);
-      expect(canViewProtocols("viewer")).toBe(true);
+    });
+
+    it("should allow client_admin to view protocols", () => {
+      expect(canViewProtocols("client_admin")).toBe(true);
+    });
+
+    it("should not allow operator to view protocols", () => {
+      expect(canViewProtocols("operator")).toBe(false);
+    });
+
+    it("should not allow viewer to view protocols", () => {
+      expect(canViewProtocols("viewer")).toBe(false);
     });
   });
 
   describe("getPermissions", () => {
     it("should return all permissions for admin role", () => {
       const permissions = getPermissions("admin");
+      expect(permissions).toEqual({
+        canControlUnits: true,
+        canViewSales: true,
+        canViewAllUnits: true,
+        canManageUnits: true,
+        canManageUsers: true,
+        canAccessAdminPanel: true,
+        canViewUnits: true,
+        canViewUsers: true,
+        isViewerOnly: false,
+        canViewAnalytics: true,
+        canViewProtocols: true,
+      });
+    });
+
+    it("should return all permissions for client_admin role", () => {
+      const permissions = getPermissions("client_admin");
       expect(permissions).toEqual({
         canControlUnits: true,
         canViewSales: true,
@@ -178,7 +236,7 @@ describe("Permission Helper Functions", () => {
         canViewUsers: true,
         isViewerOnly: false,
         canViewAnalytics: true,
-        canViewProtocols: true,
+        canViewProtocols: false,
       });
     });
 
@@ -195,7 +253,7 @@ describe("Permission Helper Functions", () => {
         canViewUsers: true,
         isViewerOnly: true,
         canViewAnalytics: true,
-        canViewProtocols: true,
+        canViewProtocols: false,
       });
     });
   });
@@ -203,6 +261,10 @@ describe("Permission Helper Functions", () => {
   describe("getFrontendRole", () => {
     it("should map admin backend role to admin frontend role", () => {
       expect(getFrontendRole("admin")).toBe("admin");
+    });
+
+    it("should map client_admin backend role to client_admin frontend role", () => {
+      expect(getFrontendRole("client_admin")).toBe("client_admin");
     });
 
     it("should map operator backend role to user frontend role", () => {
@@ -217,6 +279,7 @@ describe("Permission Helper Functions", () => {
   describe("getRoleDisplayName", () => {
     it("should return correct display names for roles", () => {
       expect(getRoleDisplayName("admin")).toBe("Administrator");
+      expect(getRoleDisplayName("client_admin")).toBe("Client Admin");
       expect(getRoleDisplayName("operator")).toBe("Operator");
       expect(getRoleDisplayName("viewer")).toBe("Viewer");
     });

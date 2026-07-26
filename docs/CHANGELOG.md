@@ -5,6 +5,23 @@ This document tracks all changes, security updates, and performance optimization
 
 ---
 
+## [v2.8.0] - July 2026
+
+### 🚀 Client Admin Role & Multi-Tenant Scoping (Backend & Database)
+* **Client Admin Role (`CLIENT_ADMIN`)**: Added `CLIENT_ADMIN = "client_admin"` to `RoleEnum` with administrative scope across all tenants under a specific client organization.
+* **Client Model & Multi-Tenant Schema Expansion**:
+  * Created `Client` model (`backend/app/models/client.py`) with `clients` table (`id`, `name`, `created_at`, `updated_at`).
+  * Updated `Tenant` and `User` models in `backend/app/models/__init__.py` with foreign key `client_id` pointing to `clients.id`.
+* **Database Migration & Seeding (`auto_migration.py`)**:
+  * Added auto-migration functions (`create_clients_table`, `add_client_id_to_tenants`, `add_client_id_to_users`).
+  * Seeded initial client "ACME Energy", three facilities ("ACME Sydney", "ACME Melbourne", "ACME Brisbane"), and default Client Admin user (`clientadmin@thermacore.com` / `clientadmin123`).
+* **Middleware & API Scoping**:
+  * Updated `tenant.py` middleware to scope queries by `client_id` for Client Admin users while allowing System Admins full cross-tenant visibility.
+  * Updated `/auth/login` response payload and `build_login_response` to include `client_id` and `is_approved`.
+  * Updated `/tenants` routes to enforce client-based tenant filtering and validation.
+
+---
+
 ## [v2.7.0] - July 2026
 
 ### 🚀 New Features & Enhancements
@@ -13,6 +30,13 @@ This document tracks all changes, security updates, and performance optimization
   * **Global Tenant Switcher Header**: Integrated a live dropdown tenant selector directly inside the main Dashboard header, allowing seamless context-switching for administrator roles without requiring a full logout/login cycle.
   * **Enhanced Sidebar Navigation**: Upgraded navigation rails with a Return-to-Tenant-Switcher link (labeled "Tenant Switcher" with Shield icon) and a separate User Management view for administrator accounts.
   * **Role-Based Access Control**: Admin-only routes are now protected via `ProtectedRoute` with `roles: ["admin"]` configured in `routes.js`, ensuring consistent role normalization across the application.
+
+### 🛡️ Security & Hardening Updates
+* **Restricted Multi-Protocol Manager to System Admin Only**: Closed a security vulnerability where Viewers and Operators could view and modify the Multi-Protocol Manager.
+  * Added component route guard in `MultiProtocolManager.jsx` automatically redirecting non-admin users to `/dashboard`.
+  * Updated `canViewProtocols` permission in `permissions.js` to strictly return `true` only for `admin` backendRole.
+  * Updated `SideNavigation.jsx` to hide the Protocol Manager link from non-admin users.
+  * Updated permission and protocol manager test suites (`permissions.test.js` and `MultiProtocolManager.test.jsx`).
 
 ### 📊 Testing & Quality Assurance
 * **Test Coverage Maintenance**: Updated test suites for `App`, `Dashboard`, `SideNavigation`, `AdminLanding`, and `routes` to cover the new tenant switching functionality.

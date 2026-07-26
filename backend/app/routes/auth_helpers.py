@@ -364,8 +364,10 @@ def build_login_response(
             "email": user.email,
             "first_name": user.first_name,
             "last_name": user.last_name,
-            "role": user.role.name.value,
-            "company_id": user.company_id,
+            "role": user.role.name.value if user.role else "viewer",
+            "client_id": getattr(user, "client_id", None),
+            "is_approved": getattr(user, "is_active", True),
+            "company_id": getattr(user, "company_id", None),
         },
     }
 

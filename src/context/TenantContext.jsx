@@ -42,8 +42,10 @@ export const TenantProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Check if user is admin
+  // Check roles
   const isAdmin = backendRole === "admin";
+  const isClientAdmin = backendRole === "client_admin";
+  const canSwitchTenants = isAdmin || isClientAdmin;
 
   // Track loading state for available tenants separately
   const [isLoadingTenants, setIsLoadingTenants] = useState(false);
@@ -87,12 +89,24 @@ export const TenantProvider = ({ children }) => {
     loadCurrentTenant();
   }, [user]);
 
-  // Load available tenants for admin users
+  // Load available tenants based on user role
   useEffect(() => {
     const loadAvailableTenants = async () => {
-      if (!isAdmin) {
-        // Reset availableTenants when isAdmin becomes false
+      if (!user) {
         setAvailableTenants([]);
+        setIsLoadingTenants(false);
+        return;
+      }
+
+      if (!canSwitchTenants) {
+        // Non-admin (Operator / Viewer): set availableTenants to [currentTenant] or [user.tenant]
+        if (user.tenant) {
+          setAvailableTenants([user.tenant]);
+        } else if (currentTenant) {
+          setAvailableTenants([currentTenant]);
+        } else {
+          setAvailableTenants([]);
+        }
         setIsLoadingTenants(false);
         return;
       }
@@ -104,32 +118,49 @@ export const TenantProvider = ({ children }) => {
           `${import.meta.env.VITE_API_BASE_URL || API_BASE_URL_FALLBACK}/api/v1/tenants?active_only=true`,
         );
 
-        if (response?.success === false) {
-          // API returned an error - fallback to mock tenants for demo
-          const mockTenants = generateMockTenants();
-          setAvailableTenants(mockTenants);
-        } else if (response.data && response.data.length > 0) {
-          setAvailableTenants(response.data);
+        let loadedTenants = [];
+        if (response?.success !== false && response?.data && response.data.length > 0) {
+          loadedTenants = response.data;
         } else {
-          // No tenants from API - use mock tenants for demo
-          const mockTenants = generateMockTenants();
-          setAvailableTenants(mockTenants);
+          loadedTenants = generateMockTenants();
+        }
+
+        // Role-based filtering:
+        // System Admin: ALL tenants
+        // Client Admin: tenants matching user.client_id
+        if (isClientAdmin && user?.client_id) {
+          const userClientId = Number(user.client_id);
+          const filtered = loadedTenants.filter(
+            (t) => (t.client_id !== undefined && Number(t.client_id) === userClientId) ||
+                   (t.clientId !== undefined && Number(t.clientId) === userClientId)
+          );
+          setAvailableTenants(filtered.length > 0 ? filtered : loadedTenants);
+        } else {
+          setAvailableTenants(loadedTenants);
         }
       } catch (_err) {
         // API error - use mock tenants for demo
         const mockTenants = generateMockTenants();
-        setAvailableTenants(mockTenants);
+        if (isClientAdmin && user?.client_id) {
+          const userClientId = Number(user.client_id);
+          const filtered = mockTenants.filter(
+            (t) => Number(t.client_id) === userClientId || Number(t.clientId) === userClientId
+          );
+          setAvailableTenants(filtered.length > 0 ? filtered : mockTenants);
+        } else {
+          setAvailableTenants(mockTenants);
+        }
       } finally {
         setIsLoadingTenants(false);
       }
     };
 
     loadAvailableTenants();
-  }, [isAdmin]);
+  }, [user, backendRole, isAdmin, isClientAdmin, canSwitchTenants, currentTenant]);
 
   // Switch tenant - no-op on invalid tenant ID
   const switchTenant = (tenantId) => {
-    if (!isAdmin) {
+    if (!canSwitchTenants) {
       return;
     }
 
@@ -144,12 +175,11 @@ export const TenantProvider = ({ children }) => {
     if (tenant) {
       setCurrentTenant(tenant);
     }
-    // If tenant not found, do nothing (no-op)
   };
 
   // Get tenant ID for API calls
   const getTenantQueryParam = () => {
-    if (!isAdmin || !currentTenant) {
+    if (!canSwitchTenants || !currentTenant) {
       return "";
     }
     return `?tenant_id=${currentTenant.id}`;
@@ -162,6 +192,8 @@ export const TenantProvider = ({ children }) => {
     isLoadingTenants,
     error,
     isAdmin,
+    isClientAdmin,
+    canSwitchTenants,
     switchTenant,
     getTenantQueryParam,
   };

@@ -95,17 +95,21 @@ To prevent `404 Not Found` errors when refreshing routes on the React Router sin
 
 ThermaCore SCADA supports multi-tenant operations where multiple organizations can be managed from a single deployment.
 
-### 5.1 Tenant Isolation
+### 5.1 Multi-Tenant & Client Architecture Hierarchy
 
-* Each tenant's data is isolated at the database level via `tenant_id` foreign keys
-* Admin users have access to all tenants via the Tenant Switcher
-* Regular users only see their assigned tenant's data
+* **Clients & Facilities**:
+  * **Clients**: Representing top-level organizations (e.g., `ACME Energy`), linked to users and tenants via `client_id`.
+  * **Tenants**: Facilities under a client (e.g., `ACME Sydney`, `ACME Melbourne`, `ACME Brisbane`), linked to assets via `tenant_id`.
+* **Role Scoping**:
+  * **System Admin (`admin`)**: Cross-tenant visibility and management across all clients and facilities.
+  * **Client Admin (`client_admin`)**: Scoped to all facilities (`tenants`) matching their assigned `client_id`.
+  * **Operator / Viewer**: Restricted strictly to their specific facility (`tenant_id`).
 
 ### 5.2 Admin Access Configuration
 
-* Admin users are identified by the `admin` role in the database
-* The Tenant Switcher is only visible to admin users
-* Admin Landing page (`/admin`) is the first page admin users see after login
+* System Admin users are identified by the `admin` role and have access to the global Tenant Switcher.
+* Client Admin users (`client_admin`) have access to manage facilities and users within their organization (`client_id`).
+* Seeded default accounts include `clientadmin@thermacore.com` (Client Admin for ACME Energy).
 
 ### 5.3 Tenant Switcher Environment Variables
 

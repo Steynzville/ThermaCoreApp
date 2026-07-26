@@ -182,6 +182,7 @@ const EnhancedSideNavigation = () => {
       href: "/protocol-manager",
       badge: null,
       requiresPermission: "canViewProtocols",
+      roles: ["admin"],
     },
     {
       id: "analytics",
@@ -226,10 +227,13 @@ const EnhancedSideNavigation = () => {
   ];
 
   const filteredNavItems = navigationItems.filter((item) => {
-    if (item.requiresPermission) {
-      return permissions?.[item.requiresPermission] === true;
+    if (item.requiresPermission && permissions?.[item.requiresPermission] !== true) {
+      return false;
     }
-    return item.roles?.includes(userRole);
+    if (item.roles && !item.roles.includes(userRole)) {
+      return false;
+    }
+    return true;
   });
 
   const handleNavClick = (item) => {

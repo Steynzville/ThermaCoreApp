@@ -156,12 +156,15 @@ npx biome lint --write ./src
 
 5.3 Admin & Multitenancy Architecture
 
-The application implements a strict multitenant security model:
-· Tenant Selection: Admin users must choose an active tenant on the Admin Landing Page (`/admin`) upon logging in. The chosen tenant is stored in the `TenantContext`.
-· Route Guards: Admin-only routes are protected by `ProtectedRoute` with `roles: ["admin"]` configured in `routes.js`. The `ProtectedRoute` component handles role checking using normalized roles from `getFrontendRole()`, ensuring consistent authorization across the application.
-· Global Switcher: Once selected, the current active tenant is displayed and can be dynamically switched using the `TenantSwitcher` component located in the global Dashboard header.
-· Sidebar Navigation: Admin users see a "Tenant Switcher" link (with Shield icon) to return to the Admin Landing page and a "User Management" link for user administration.
-· Documentation: Routes with `isAdminRoute: true` are documented as admin-only, with `roles: ["admin"]` ensuring enforcement.
+The application implements a strict 4-tier Role-Based Access Control (RBAC) multitenant security model:
+· Role Hierarchy:
+  - `admin` (System Administrator): Global cross-tenant access. Can access all client records, facilities, and global configurations.
+  - `client_admin` (Client Administrator): Scoped to all facilities (`tenants`) belonging to their specific `client_id`. Can switch between client facilities and manage client-specific users.
+  - `operator` (Operator): Facility-scoped power user with control capabilities over assigned `tenant_id`.
+  - `viewer` (Viewer): Facility-scoped read-only telemetry access over assigned `tenant_id`.
+· Tenant Selection & Context: Admin users (`admin` and `client_admin`) select active facilities using `TenantContext`. System Admins see all facilities; Client Admins see only facilities matching their `client_id`.
+· Route Guards: Admin-only routes are protected by `ProtectedRoute` configured with `roles: ["admin", "client_admin"]` in `routes.js`. `ProtectedRoute` performs dual validation against both `frontendRole` and `normalizedRole`.
+· Middleware Enforcers: Backend Flask API uses `tenant_filter` middleware (`backend/app/middleware/tenant.py`) to enforce SQL query filtering automatically based on JWT claims (`role`, `client_id`, `tenant_id`).
 
 ---
 

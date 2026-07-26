@@ -24,7 +24,7 @@ The ThermaCore SCADA interface features a responsive, high-contrast Navy & Gold 
 
 ```
 
-**Note**: The **Tenant Switcher** and **User Management** links are only visible to users with Administrator privileges. Regular Operators and Viewers do not see these navigation items.
+**Note**: The **Tenant Switcher**, **User Management**, and **Protocol Manager** links are only visible to users with System Administrator privileges. Regular Operators and Viewers do not see or have access to these navigation items or the Multi-Protocol Manager interface.
 
 ---
 
@@ -88,13 +88,17 @@ Alarms are classified dynamically according to threat severities:
 
 ## 6. Enterprise Admin & Permission Panel
 
-Administrators possess master fleet supervisory privileges:
-* **Admin Landing Page (Post-Login)**: Upon successful authentication, administrator accounts are redirected to the `/admin` landing page where they must choose an active tenant context before accessing any scoped metrics.
-* **New User Approvals**: All self-registered users are assigned read-only "Viewer" status by default. Admins must explicitly authorize and promote new users from the User Management dashboard.
-* **Audit Trail Reviews**: Accesses a real-time event list tracking system activities, containing:
-  * Tracing IDs and IP Addresses
-  * Action names (e.g., `User Elevated`, `Emergency Command Sent`)
-  * Target asset IDs
+The platform supports a 4-tier Role-Based Access Control (RBAC) hierarchy:
+* **System Administrator (`admin`)**: Master fleet supervisory privileges with cross-tenant capability across all clients and facilities. Can manage system settings, all users, and global infrastructure.
+* **Client Administrator (`client_admin`)**: Client-level administrator with administrative access to all facilities and units belonging to their specific Client organization (`client_id`). Can switch between client facilities, manage client-specific users (operators, viewers), configure facility units, and execute remote commands.
+* **Operator (`operator`)**: Power user with remote control capabilities and unit status management restricted to assigned facilities.
+* **Viewer (`viewer`)**: Read-only telemetry access for assigned facilities.
+
+### Client Admin Capabilities
+* **Client Facility Switcher**: Client Admins can switch view context across all facilities (`tenants`) belonging to their Client organization.
+* **User Management**: Client Admins can invite, approve, and manage Operators and Viewers assigned to their client's facilities.
+* **Facility & Asset Administration**: Register and edit modular generator nodes and local PLCs within client facilities.
+* **Audit Trail Reviews**: Access audit logs filtered to events occurring within their client organization.
 
 ---
 

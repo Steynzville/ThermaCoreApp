@@ -79,20 +79,22 @@ render service scale web-api=1
 
 ThermaCore SCADA supports multi-tenant operations where each tenant's data must be isolated and recoverable independently.
 
-### 4.1 Tenant Data Isolation
+### 4.1 Tenant & Client Data Isolation
 
-* Each tenant's data is stored with a `tenant_id` foreign key in all relevant tables
-* Backups include all tenant data in a single database snapshot
-* Restoration preserves all tenant boundaries
+* Client organization records are stored in the `clients` table (`id`, `name`, `code`, `is_active`).
+* Facility records in `tenants` reference `client_id` foreign keys.
+* User records in `users` reference both `tenant_id` and `client_id` foreign keys.
+* Backups include all client, tenant, user, and telemetry data in a single consolidated database snapshot.
+* Restoration preserves all client and tenant relational boundaries intact.
 
-### 4.2 Tenant-Specific Recovery
+### 4.2 Client or Tenant-Specific Recovery
 
-In the event of data corruption affecting a single tenant:
+In the event of data corruption affecting a single client organization or facility:
 
-1. Identify the affected tenant ID
-2. Restore from the most recent backup to a staging environment
-3. Export only the data for the affected tenant
-4. Import the tenant data back into production
+1. Identify the affected client ID (`client_id`) or facility ID (`tenant_id`).
+2. Restore from the most recent backup to a staging environment.
+3. Export data filtered by the specific `client_id` or `tenant_id`.
+4. Import the client/tenant data back into production.
 
 ### 4.3 Admin Account Recovery
 

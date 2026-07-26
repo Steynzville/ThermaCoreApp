@@ -32,9 +32,15 @@ const ProtectedRoute = ({
 
   // Normalize userRole to frontend role for routing checks and component mapping
   const frontendRole = getFrontendRole(userRole);
+  const normalizedRole = userRole ? userRole.toLowerCase() : "";
 
   // Check if user has required role
-  if (roles.length > 0 && !roles.includes(frontendRole)) {
+  const hasAccess =
+    roles.length === 0 ||
+    roles.includes(frontendRole) ||
+    roles.includes(normalizedRole);
+
+  if (!hasAccess) {
     return <Navigate to="/dashboard" replace />;
   }
 

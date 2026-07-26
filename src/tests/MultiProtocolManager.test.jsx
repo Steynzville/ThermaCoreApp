@@ -148,6 +148,18 @@ vi.mock("../utils/apiFetch", () => ({
   apiGetJson: vi.fn(),
 }));
 
+// Mock AuthContext
+let mockAuthState = {
+  user: { role: "admin", username: "admin" },
+  userRole: "admin",
+  backendRole: "admin",
+  permissions: { canViewProtocols: true },
+};
+
+vi.mock("../context/AuthContext", () => ({
+  useAuth: () => mockAuthState,
+}));
+
 import { toast } from "sonner";
 import { apiGetJson } from "../utils/apiFetch";
 import MultiProtocolManager from "../components/MultiProtocolManager";
@@ -195,6 +207,46 @@ afterEach(() => {
 // ============================================================
 // Mock-mode rendering
 // ============================================================
+
+describe("MultiProtocolManager - Role-based access control", () => {
+  it("redirects non-admin users to /dashboard", () => {
+    mockAuthState = {
+      user: { role: "operator", backendRole: "operator" },
+      userRole: "user",
+      backendRole: "operator",
+      permissions: { canViewProtocols: false },
+    };
+
+    act(() => {
+      render(
+        <TestWrapper>
+          <MultiProtocolManager />
+        </TestWrapper>
+      );
+    });
+
+    expect(screen.queryByText(/Multi-Protocol Manager/i)).not.toBeInTheDocument();
+  });
+
+  it("allows admin users to view the component", () => {
+    mockAuthState = {
+      user: { role: "admin", backendRole: "admin" },
+      userRole: "admin",
+      backendRole: "admin",
+      permissions: { canViewProtocols: true },
+    };
+
+    act(() => {
+      render(
+        <TestWrapper>
+          <MultiProtocolManager />
+        </TestWrapper>
+      );
+    });
+
+    expect(screen.getByText(/Multi-Protocol Manager/i)).toBeInTheDocument();
+  });
+});
 
 describe("MultiProtocolManager - basic rendering (mock mode)", () => {
   it("should render without crashing", () => {

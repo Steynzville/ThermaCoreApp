@@ -57,8 +57,10 @@ const AdminPanel = ({ className }) => {
     department: "",
     position: "",
     roleId: "",
+    clientId: "",
   });
   const [availableRoles, setAvailableRoles] = useState([]);
+  const [clients, setClients] = useState([]);
   const [showCreatePassword, setShowCreatePassword] = useState(false);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [rolesLoadError, setRolesLoadError] = useState(false);
@@ -113,6 +115,7 @@ const AdminPanel = ({ className }) => {
   // Fallback roles with proper format
   const _fallbackRoles = [
     { value: "admin", label: "Admin" },
+    { value: "client_admin", label: "Client Admin" },
     { value: "operator", label: "Operator" },
     { value: "viewer", label: "Viewer" },
   ];
@@ -160,9 +163,27 @@ const AdminPanel = ({ className }) => {
     }
   };
 
-  // Fetch users on component mount
+  const fetchClients = async () => {
+    try {
+      const API_BASE_URL =
+        import.meta.env.VITE_API_BASE_URL ||
+        "https://thermacoreapp.onrender.com";
+      const response = await apiGet(`${API_BASE_URL}/api/v1/clients`, {
+        showToastOnError: false,
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setClients(Array.isArray(data) ? data : data.data || []);
+      }
+    } catch (_err) {
+      setClients([]);
+    }
+  };
+
+  // Fetch users and clients on component mount
   useEffect(() => {
     fetchUsers();
+    fetchClients();
   }, [fetchUsers]);
 
   const handleAddUser = () => {
@@ -1122,6 +1143,7 @@ const AdminPanel = ({ className }) => {
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   >
                     <option value="Admin">Admin</option>
+                    <option value="Client Admin">Client Admin</option>
                     <option value="Operator">Operator</option>
                     <option value="Viewer">Viewer</option>
                   </select>

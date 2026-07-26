@@ -47,13 +47,17 @@ When a security incident is identified, the response team executes this 4-phase 
 ### Phase 1: Identification & Triaging
 * Verify the alert validity. Check database audit logs for unauthorized user elevations or cryptographic command mismatches (`TC-303`).
 * Extract IP addresses, target user profiles, and active generator node serial numbers.
-* Identify affected tenant(s) by reviewing the `tenant_id` associated with compromised accounts or assets.
+* Identify affected client organization (`client_id`) and facility/tenants (`tenant_id`) associated with compromised accounts or assets.
 
 ### Phase 2: Containment and Isolation
 * **Adversary IP Isolation**: Instantly block malicious IPs on Render/Netlify and our gateway firewalls.
 * **Force Session Re-Authentication**: Rotate the `JWT_SECRET_KEY` in Render. This immediately invalidates every active user session and forces complete re-authentication.
+* **Client Admin Delegation & Compromise Response**:
+  1. If a **Client Admin** account is compromised, instantly deactivate the user record (`is_active = False`) and revoke all active JWT tokens for that `client_id`.
+  2. The System Admin can delegate temporary Client Admin credentials to a verified secondary contact within the client organization.
+  3. Client Admins can perform targeted containment within their own organization by disabling compromised local Operator or Viewer accounts without escalating to System Admins.
 * **Hard OT Loop Isolation**: If a physical generator's telemetry shows malicious override attempts (Level 1), the on-site operator must manually shift the unit to **Local/Manual Mode** via the physical toggle. This completely overrides incoming digital web SCADA signals.
-* **Tenant Context Isolation**: If a single customer environment is compromised, use the multi-tenant isolation architecture to restrict or revoke access to that specific `tenant_id` without affecting other tenant fleets:
+* **Tenant & Client Context Isolation**: If a single customer environment is compromised, use the multi-tenant isolation architecture to restrict or revoke access to that specific `client_id` or `tenant_id` without affecting other client fleets:
   1. **Revoke Tenant Access**: Immediately disable the compromised tenant's access at the database level by setting a `tenant_isolation_flag` or temporarily revoking the tenant's active status.
   2. **Force Admin Re-authentication**: All administrative users are automatically redirected to the `/admin` Landing Page upon their next action, requiring them to re-verify secure credentials and context selection before accessing any tenant data.
   3. **Tenant Switcher Restrictions**: Temporarily remove the compromised tenant from the Tenant Switcher dropdown to prevent accidental re-selection during the incident window.

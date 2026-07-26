@@ -25,12 +25,14 @@ This script is engineered for sales engineers and account executives demonstrati
  [0. Admin Landing] ──► [1. Main Dashboard] ──► [2. Asset Detail] ──► [3. Remote Control] ──► [4. Analytics]
 ```
 
-### Step 0: Admin Landing Page & Tenant Switching (Enterprise Multi-Tenancy)
-* **What to show**: The `/admin` landing page that administrators arrive on post-login, prompting them to select a tenant from a dropdown menu.
+### Step 0: Admin Landing Page & Tenant Switching (Enterprise Multi-Tenancy & Client Admins)
+* **What to show**: The `/admin` landing page that administrators arrive on post-login, prompting them to select a facility/tenant. Demonstrate logging in as a **Client Admin** (`client_admin`).
 * **Talking Point**:
-  > "Before we even see a dashboard, let's look at our enterprise-grade security and tenancy. Administrative users are greeted by our **Admin Landing Page** at `/admin`. This is a deliberate security barrier requiring them to select an active customer fleet or tenant before accessing any sensitive telemetry.
+  > "Before we even see a dashboard, let's look at our enterprise multi-tenancy and RBAC controls. The platform supports a 4-tier role hierarchy: System Admin, Client Admin, Operator, and Viewer.
   >
-  > Once a tenant is chosen and we are inside, we can also use the **Tenant Switcher** dropdown directly in the dashboard header to switch between different clients in real time. This single-pane-of-glass approach allows service providers to manage infinite tenant fleets securely and efficiently."
+  > When a **Client Admin** logs in—such as a facility manager for AquaPure Solutions—they are greeted by our **Admin Landing Page** at `/admin`. Client Admins see all facilities belonging specifically to their client company (`client_id`). They can switch between their company's regional facilities seamlessly, manage local operators and viewers, and configure facility assets without ever seeing or interfering with other client organizations on the network.
+  >
+  > System Admins, on the other hand, maintain master cross-client visibility across all customer fleets."
 
 ### Step 1: Main Dashboard (The Visual First-Impression)
 * **What to show**: The Navy & Gold live dashboard layout. Point out the active unit metrics, thermal output values, and water generation volumes.

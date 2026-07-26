@@ -36,5 +36,10 @@ export const formatUserName = (user) => {
  */
 export const formatRoleName = (role, defaultRole = "Viewer") => {
   const roleName = typeof role === "string" ? role : role?.name;
-  return roleName ? capitalize(roleName) : defaultRole;
+  if (!roleName) return defaultRole;
+  const normalized = roleName.toLowerCase();
+  if (normalized === "client_admin" || normalized === "client admin") {
+    return "Client Admin";
+  }
+  return capitalize(roleName);
 };

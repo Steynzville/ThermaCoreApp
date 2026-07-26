@@ -25,7 +25,7 @@ Unlike traditional hardware-only manufacturers, ThermaCore leverages an integrat
   - **Admin Landing Page (`/admin`)**: Dedicated tenant selection portal that administrators see immediately after authentication, ensuring deliberate context selection before accessing any sensitive data.
   - **Tenant Switcher**: Real-time dropdown in the dashboard header allowing administrators to seamlessly switch between tenant contexts without logging out or navigating away from the dashboard.
   - **"All Tenants" Aggregated View**: Provides cross-tenant analytics and fleet-wide visibility for administrators overseeing multiple customer deployments.
-  - **Role-Based Tenant Scoping**: Non-admin users (Operators and Viewers) are automatically restricted to their assigned single tenant, with no visibility into other customers' data.
+  - **Role-Based Tenant Scoping**: 4-tier RBAC architecture (`admin`, `client_admin`, `operator`, `viewer`). System Admins manage global fleets; Client Admins manage multi-facility client fleets (`client_id`); Operators and Viewers are restricted to their assigned facility (`tenant_id`).
   - **Tenant Context Persistence**: Active tenant selection is preserved via `sessionStorage`, maintaining context across page refreshes while automatically clearing on logout to ensure fresh context selection on each login.
   - **Operational Efficiency**: Eliminates the need for separate SCADA instances per customer, significantly reducing infrastructure costs and administrative overhead for multi-tenant service providers.
 

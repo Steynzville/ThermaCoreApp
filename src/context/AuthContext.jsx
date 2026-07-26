@@ -91,6 +91,7 @@ export const AuthProvider = ({ children, value: customValue }) => {
         const userPermissions = getPermissions(userBackendRole);
 
         const userData = {
+          id: result.user.id,
           username: result.user.username,
           role: userFrontendRole, // Store frontend role for backward compatibility
           backendRole: userBackendRole, // Store actual backend role
@@ -98,6 +99,9 @@ export const AuthProvider = ({ children, value: customValue }) => {
           firstName: result.user.firstName,
           lastName: result.user.lastName,
           tenantId: result.user.tenant_id, // Store tenant ID
+          client_id: result.user.client_id ?? result.user.clientId ?? null,
+          clientId: result.user.client_id ?? result.user.clientId ?? null,
+          is_approved: result.user.is_approved ?? result.user.is_active ?? true,
         };
 
         // Determine which storage to use based on keepMeSignedIn

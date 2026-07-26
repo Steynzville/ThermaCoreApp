@@ -361,24 +361,20 @@ def deactivate_user(user_id):
 @jwt_required()
 @permission_required("read_users")
 def get_roles():
-    """Get all available roles.
-    ---
-    tags:
-      - Users
-      - Roles
-    responses:
-      200:
-        description: List of roles
-        schema:
-          type: array
-          items:
-            $ref: '#/definitions/RoleSchema'
-    security:
-      - JWT: []
-    """
+    """Get all available roles."""
     roles = Role.query.all()
     roles_schema = RoleSchema(many=True)
     return jsonify(roles_schema.dump(roles)), 200
+
+
+@users_bp.route("/clients", methods=["GET"])
+@jwt_required()
+def get_clients():
+    """Get all clients."""
+    from app.models.client import Client
+
+    clients = Client.query.all()
+    return jsonify([{"id": c.id, "name": c.name} for c in clients]), 200
 
 
 @users_bp.route("/users/stats", methods=["GET"])

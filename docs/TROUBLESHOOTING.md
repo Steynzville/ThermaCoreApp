@@ -71,15 +71,17 @@ If the SCADA interface displays an outage, follow this triaging order:
   2. Verify that port 587 (TLS) or 465 (SSL) is open in the security group rules of the hosting VPC.
 
 ### 3.3 Admin Landing Page Redirection & Tenant Context Failures
-* **Symptom**: Admin logins succeed, but the administrator cannot access any dashboards or encounters infinite redirection back to `/admin` or tenant selection errors.
+* **Symptom**: Admin or Client Admin logins succeed, but the user cannot access dashboards, sees empty tenant dropdowns, or encounters redirection errors.
 * **Root Causes**:
-  * The user role is not properly registered as `"admin"` in the DB, causing `getFrontendRole()` to mismatch role configurations in `routes.js`.
-  * No active tenant context was selected, or the selected `tenant_id` does not match valid options in `TenantContext`.
+  * The user role is set to `client_admin` but no valid `client_id` is assigned to the user in the database.
+  * The selected `tenant_id` does not belong to the Client Admin's assigned `client_id`, triggering backend tenant filter rejections (`403 Forbidden`).
+  * `getFrontendRole()` is not returning `"admin"` or `"client_admin"`, causing `ProtectedRoute` checks in `routes.js` to block access.
 * **Resolution Steps**:
-  1. Confirm that the user's role is set to `'admin'` in the database.
-  2. Check that the `/admin` landing page renders properly and lists valid tenants.
-  3. Ensure local storage or memory context is populated with the selected tenant ID.
-  4. Verify that the `ProtectedRoute` allows access if `roles: ["admin"]` is specified in `routes.js`.
+  1. Confirm that the user's role is set to `'admin'` or `'client_admin'` in the database.
+  2. For `client_admin` users, verify that `client_id` is non-null and references an active row in the `clients` table.
+  3. Verify that the client organization has registered facilities/tenants in the `tenants` table with matching `client_id`.
+  4. Ensure `ProtectedRoute` permits access by checking that `roles` includes `"client_admin"` for admin routes in `routes.js`.
+  5. Check browser local/session storage to verify `selectedTenant` is correctly set and matches an authorized tenant.
 
 ---
 

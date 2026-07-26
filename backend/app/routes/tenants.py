@@ -14,6 +14,8 @@ from app.middleware.authorization import permission_required
 from app.middleware.tenant import (
     get_current_tenant_id,
     is_admin_with_cross_tenant_access,
+    tenant_filter,
+    validate_tenant_access,
 )
 from app.models import Tenant, Unit, User
 
@@ -41,6 +43,7 @@ class TenantSchema(Schema):
     is_active = fields.Bool()
     max_users = fields.Int(allow_none=True)
     max_units = fields.Int(allow_none=True)
+    client_id = fields.Int(allow_none=True)
     created_at = fields.DateTime(dump_only=True)
     updated_at = fields.DateTime(dump_only=True)
 
@@ -63,6 +66,7 @@ class TenantCreateSchema(Schema):
     is_active = fields.Bool(load_default=True)
     max_users = fields.Int(allow_none=True)
     max_units = fields.Int(allow_none=True)
+    client_id = fields.Int(allow_none=True)
 
 
 class TenantUpdateSchema(Schema):
@@ -84,6 +88,7 @@ class TenantUpdateSchema(Schema):
     is_active = fields.Bool()
     max_users = fields.Int(allow_none=True)
     max_units = fields.Int(allow_none=True)
+    client_id = fields.Int(allow_none=True)
 
 
 class TenantSwitchSchema(Schema):
@@ -143,6 +148,9 @@ def get_tenants():
     # Build query
     query = Tenant.query
 
+    # Apply tenant filtering based on role (system_admin vs client_admin)
+    query = tenant_filter(query, Tenant)
+
     # Filter active tenants if requested
     if active_only:
         query = query.filter(Tenant.is_active)
@@ -187,6 +195,9 @@ def get_tenant(tenant_id):
     security:
       - JWT: []
     """
+    if not validate_tenant_access(tenant_id):
+        return jsonify({"error": "Access denied"}), 403
+
     tenant = Tenant.query.get_or_404(tenant_id)
 
     # Get statistics

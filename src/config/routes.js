@@ -44,62 +44,62 @@ const routes = [
     path: "/dashboard",
     component: Dashboard,
     isProtected: true,
-    roles: ["admin", "user"],
+    roles: ["admin", "client_admin", "user", "operator", "viewer"],
   },
   {
     path: "/history",
     component: HistoryView,
     isProtected: true,
-    roles: ["admin", "user"],
+    roles: ["admin", "client_admin", "user", "operator", "viewer"],
   },
   {
     path: "/settings",
     component: SettingsView,
     isProtected: true,
-    roles: ["admin", "user"],
+    roles: ["admin", "client_admin", "user", "operator", "viewer"],
   },
   {
     path: "/alerts",
     component: AlertsView,
     isProtected: true,
-    roles: ["admin", "user"],
+    roles: ["admin", "client_admin", "user", "operator", "viewer"],
   },
   {
     path: "/remote-control",
     component: RemoteControl,
     isProtected: true,
-    roles: ["admin", "user"],
+    roles: ["admin", "client_admin", "user", "operator"],
   },
   {
     path: "/grid-view",
     component: GridView,
     isProtected: true,
-    roles: ["admin", "user"],
+    roles: ["admin", "client_admin", "user", "operator", "viewer"],
   },
   {
     path: "/alarms",
     component: AlarmsView,
     isProtected: true,
-    roles: ["admin", "user"],
+    roles: ["admin", "client_admin", "user", "operator"],
   },
   {
     path: "/reports",
     component: ReportsPage,
     isProtected: true,
-    roles: ["admin", "user"],
+    roles: ["admin", "client_admin", "user", "operator", "viewer"],
   },
   {
     path: "/documents",
     component: DocumentsPage,
     isProtected: true,
-    roles: ["admin", "user"],
+    roles: ["admin", "client_admin", "user", "operator", "viewer"],
   },
   // Units route with role-based component selection
   {
     path: "/units",
     component: null, // Will be handled specially in App.jsx
     isProtected: true,
-    roles: ["admin", "user"],
+    roles: ["admin", "client_admin", "user", "operator", "viewer"],
     specialHandling: "unit-role-based",
   },
   // Admin-only routes
@@ -108,15 +108,15 @@ const routes = [
     path: "/admin",
     component: AdminLanding,
     isProtected: true,
-    roles: ["admin"],
-    isAdminRoute: true, // Documentation: admin-only route
+    roles: ["admin", "client_admin"],
+    isAdminRoute: true, // Documentation: admin route
   },
   {
     path: "/admin/users",
     component: AdminPanel,
     isProtected: true,
-    roles: ["admin"],
-    isAdminRoute: true, // Documentation: admin-only route
+    roles: ["admin", "client_admin"],
+    isAdminRoute: true, // Documentation: admin route
   },
   {
     path: "/analytics",

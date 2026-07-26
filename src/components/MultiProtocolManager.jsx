@@ -10,7 +10,9 @@ import {
   Zap,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Navigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useAuth } from "../context/AuthContext";
 import DNP3MonitoringDashboard from "./protocol/DNP3MonitoringDashboard";
 import ModbusDeviceModal from "./protocol/ModbusDeviceModal";
 import MQTTManagementPanel from "./protocol/MQTTManagementPanel";
@@ -38,6 +40,18 @@ import {
 import { apiGetJson } from "../utils/apiFetch";
 
 const MultiProtocolManager = () => {
+  const { user, userRole, backendRole } = useAuth();
+  const isAdmin =
+    user?.role === "admin" ||
+    user?.role === "Administrator" ||
+    userRole === "admin" ||
+    backendRole === "admin" ||
+    user?.backendRole === "admin";
+
+  if (!isAdmin) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   const [protocolsStatus, setProtocolsStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);

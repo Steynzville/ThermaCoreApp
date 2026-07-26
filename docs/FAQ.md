@@ -45,12 +45,18 @@ Coefficient of Performance (COP) measures the thermodynamic efficiency of our ge
 * **Automated Sync**: The moment network connectivity is re-established, the gateway automatically uploads the stored log files, populating the historical timeline without telemetry gaps.
 * **Manual Override Safe**: If internet connectivity is interrupted during a critical event, on-site engineers can override the web SCADA system by flipping the generator's physical panel toggle to **Manual Mode** to execute safety controls locally.
 
+### Q7: Why can't I see the Multi-Protocol Manager as an Operator or Viewer?
+The Multi-Protocol Manager provides direct access to manage low-level industrial protocols (MQTT, OPC UA, Modbus TCP, DNP3) and edge gateway configurations. To maintain system security and prevent unauthorized fieldbus configuration changes, this module is strictly reserved for System Administrators. Operators and Viewers are restricted from viewing the sidebar link and will be automatically redirected to `/dashboard` if attempting direct route access.
+
 ---
 
 ## 4. Subscriptions & Billing
 
-### Q7: What are the software subscription tiers?
+### Q8: What are the software subscription tiers?
 We offer three software licensing packages tailored to different operation sizes:
 * **Standard Tier**: Includes real-time read-only dashboards, threshold alarms, and basic email support.
 * **Premium Tier**: Adds bidirectional remote overrides, cryptographically signed commands, custom historical reports, and 24/7 priority support.
 * **Enterprise Optimization Tier**: Unlocks advanced thermodynamic predictive maintenance diagnostics, automated loop tuning recommendations, and multi-tenant management for fleet operators.
+
+### Q9: What is the Client Admin role and how does multi-tenant scoping work?
+The Client Admin (`client_admin`) role allows enterprise client managers to administer all facilities and units belonging to their organization (`client_id`). Client Admins can switch between all facilities under their client scope, manage user roles (Operators and Viewers) within their organization, and configure local facility settings without seeing or affecting other client organizations on the ThermaCore platform.

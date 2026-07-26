@@ -248,10 +248,11 @@ ZERO-TRUST PHYSICAL SECURITY LAYERS
 * **Remote Override Authorization**: Adjustments to critical equipment configurations (e.g., initiating emergency coolant flows) require secondary verification codes. These actions generate immutable audit logs that record the operator's timestamp, digital signature, and origin IP.
 
 ### 6.2 Granular Role-Based Access Control (RBAC)
-ThermaCore SCADA defines clear operational boundaries across three specialized tiers:
+ThermaCore SCADA defines clear operational boundaries across four specialized tiers:
 1. **Viewer**: Read-only monitoring of physical metrics. Access is restricted to basic dashboards, status charts, and diagnostic layouts. Viewers are strictly prohibited from modifying configurations, adding units, or interacting with remote commands.
 2. **Operator**: Authorized to perform day-to-day control operations. Operators can acknowledge alerts, toggle secondary valves, and adjust thermal pump thresholds. Operators are restricted from modifying user permissions, creating accounts, or editing system parameters.
-3. **Admin**: Master fleet control. Authorized to register new hardware, approve user accounts, modify database configurations, view deep audit logs, and override critical system safety parameters.
+3. **Client Admin**: Enterprise multi-facility administration scoped to a specific client organization (`client_id`). Client Admins can switch between all facilities under their client organization, register and manage facility units, approve operators/viewers within their organization, and execute remote controls across their facility fleet.
+4. **System Admin**: Master fleet control across all clients and facilities. Authorized to register global hardware, manage client organizations and system admins, modify database configurations, view deep cross-client audit logs, and override critical system safety parameters.
 
 ### 6.3 Web Security Hardening & CSRF/XSS Mitigation
 * **CSRF Mitigation**: Mitigated on the API layer through short-lived JWT tokens coupled with secure, HttpOnly, and SameSite=Strict cookies.
