@@ -21,9 +21,11 @@ from app.utils.company_identifier import CompanyIdentifier
 from app.utils.error_handler import SecurityAwareErrorHandler
 from app.utils.helpers import (
     CLIENT_ADMIN_ASSIGNABLE_ROLES,
-    get_current_user as get_current_user_obj,
     get_current_user_id,
     get_role_permissions,
+)
+from app.utils.helpers import (
+    get_current_user as get_current_user_obj,
 )
 from app.utils.schemas import (
     ForgotPasswordSchema,
