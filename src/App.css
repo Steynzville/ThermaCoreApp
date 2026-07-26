@@ -526,29 +526,55 @@ body {
   max-width: 100vw;
 }
 
-/* Prevent any fixed positioned elements from causing overflow */
-[style*="position: fixed"],
-.fixed {
+/* ============================================================
+   FIX: Exclude modal overlays from generic fixed-position rules
+   ============================================================ */
+/* Prevent any fixed positioned elements from causing overflow,
+   EXCEPT for modal overlays which need full viewport coverage */
+[style*="position: fixed"]:not(.modal-overlay),
+.fixed:not(.modal-overlay) {
   max-width: calc(100vw - 2rem);
   max-height: calc(100vh - 2rem);
 }
 
-/* Mobile-specific viewport fixes */
+/* Mobile-specific viewport fixes - exclude modal overlays */
 @media (max-width: 768px) {
-  [style*="position: fixed"],
-  .fixed {
+  [style*="position: fixed"]:not(.modal-overlay),
+  .fixed:not(.modal-overlay) {
     max-width: calc(100vw - 1.5rem);
     max-height: calc(100vh - 1.5rem);
   }
 }
 
 @media (max-width: 480px) {
-  [style*="position: fixed"],
-  .fixed {
+  [style*="position: fixed"]:not(.modal-overlay),
+  .fixed:not(.modal-overlay) {
     max-width: calc(100vw - 1rem);
     max-height: calc(100vh - 1rem);
   }
 }
+
+/* Ensure modal overlays have full viewport coverage */
+.modal-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  max-height: 100dvh !important;
+  overflow: hidden !important;
+}
+
+/* Modal content cards should respect viewport but scroll internally */
+.modal-content {
+  max-height: 90dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+/* ============================================================ */
 
 /* Ensure touch-action is properly set for mobile */
 html {
