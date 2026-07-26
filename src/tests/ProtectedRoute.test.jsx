@@ -11,6 +11,19 @@ vi.mock("../components/SideNavigation", () => ({
 
 const DummyComponent = () => <div data-testid="protected-content">Protected Content</div>;
 
+// AuthContext is the default export from AuthContext
+// We need to mock it properly
+vi.mock("../context/AuthContext", () => ({
+  AuthContext: {
+    Provider: ({ children, value }) => {
+      // Render children with context value
+      return children;
+    },
+    Consumer: ({ children }) => children({}),
+  },
+  useAuth: vi.fn(),
+}));
+
 describe("ProtectedRoute", () => {
   it("renders content for client_admin role", () => {
     const authValue = {
