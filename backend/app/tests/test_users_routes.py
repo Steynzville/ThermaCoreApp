@@ -34,6 +34,7 @@ def test_get_user_by_id(client, admin_token):
         mock_user.client_id = None
         mock_user.role = None
         mock_user.is_active = True
+        mock_user.permissions = []
         mock_query.get_or_404.return_value = mock_user
 
         response = client.get("/api/v1/users/123", headers=headers)
@@ -62,6 +63,7 @@ def test_update_user_scenarios(client, admin_token):
         mock_user.client_id = None
         mock_user.role = None
         mock_user.is_active = True
+        mock_user.permissions = []
         mock_user_query.get_or_404.return_value = mock_user
 
         mock_role = MagicMock()
@@ -138,6 +140,7 @@ def test_delete_and_status_endpoints(client, admin_token):
         mock_user.client_id = None
         mock_user.role = None
         mock_user.is_active = True
+        mock_user.permissions = []
         mock_user_query.get_or_404.return_value = mock_user
 
         # Deactivate
@@ -172,6 +175,7 @@ def test_batch_activation_endpoints(client, admin_token):
         mock_user.client_id = None
         mock_user.role = None
         mock_user.is_active = True
+        mock_user.permissions = []
         mock_user_query.filter.return_value.all.return_value = [mock_user]
 
         # Batch activate
@@ -201,11 +205,20 @@ def test_approve_reject_workflow(client, admin_token):
         patch("app.models.User.query") as mock_user_query,
         patch("app.models.db.session.commit"),
     ):
+        # Create a properly configured role mock for the current user
+        mock_role_obj = MagicMock()
+        mock_role_obj.id = 1
+        mock_role_obj.name.value = "admin"
+        mock_role_obj.description = "Admin role"
+        mock_role_obj.created_at = None
+        mock_role_obj.permissions = []
+
         mock_user = MagicMock()
         mock_user.registration_status = "pending"
         mock_user.client_id = None
-        mock_user.role = None
+        mock_user.role = mock_role_obj
         mock_user.is_active = True
+        mock_user.permissions = []
         mock_user_query.get.return_value = mock_user
 
         # Approve
