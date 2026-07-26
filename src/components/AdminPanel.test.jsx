@@ -8,7 +8,7 @@
  * - Tab rendering & switching (Users, User Approvals, Password Management, Settings)
  * - User list: loading / error / empty / populated states, retry
  * - Create User modal: validation, role loading (all response shapes), success/failure/exception
- * - Edit User modal: open, edit fields (Name, Email, Company, Phone, Role), save, cancel
+ * - Edit User modal: open, edit fields (Username, First Name, Last Name, Email, Company, Phone, Role, Status), save, cancel
  * - Delete User: confirm true/false, success, error
  * - Password reset (self + per-user): validation, all error-message branches, success, cancel
  * - Password visibility toggles (new password + confirm password)
@@ -34,7 +34,7 @@ import { toast } from "sonner";
 
 import AdminPanel from "../components/AdminPanel";
 import { useAuth } from "../context/AuthContext";
-import { deleteUser, getAllUsers } from "../services/usersAPI";
+import { deleteUser, getAllUsers, updateUser } from "../services/usersAPI";
 import { apiGet, apiPost } from "../utils/apiFetch";
 
 // ---------------------------------------------------------------------------
@@ -55,6 +55,7 @@ vi.mock("../context/AuthContext", () => ({
 vi.mock("../services/usersAPI", () => ({
   getAllUsers: vi.fn(),
   deleteUser: vi.fn(),
+  updateUser: vi.fn(),
 }));
 
 vi.mock("../utils/apiFetch", () => ({
@@ -67,7 +68,12 @@ vi.mock("../utils/userUtils", () => ({
     const full = `${user.first_name || ""} ${user.last_name || ""}`.trim();
     return full || user.username || "Unknown";
   },
-  formatRoleName: (role) => (role && role.name ? role.name : "N/A"),
+  formatRoleName: (role) => {
+    if (!role || !role.name) return "N/A";
+    const name = role.name;
+    if (name === "client_admin") return "Client Admin";
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  },
 }));
 
 vi.mock("../components/PageHeader", () => ({
@@ -152,7 +158,7 @@ const twoUsersResponse = {
       phone_number: "555-1111",
       department: "Engineering",
       position: "Lead",
-      role: { name: "admin" },
+      role: { id: 1, name: "admin" },
       is_active: true,
     },
     {
@@ -161,7 +167,11 @@ const twoUsersResponse = {
       email: "jane@thermacore.com",
       first_name: "Jane",
       last_name: "Smith",
-      role: { name: "operator" },
+      company: "Acme",
+      phone_number: "555-2222",
+      department: "Sales",
+      position: "Manager",
+      role: { id: 2, name: "operator" },
       is_active: false,
     },
   ],
@@ -171,6 +181,7 @@ const rolesArrayFormat = [
   { id: 1, name: "admin" },
   { id: 2, name: "operator" },
   { id: 3, name: "viewer" },
+  { id: 4, name: "client_admin" },
 ];
 
 function jsonResponse(ok, body) {
@@ -264,6 +275,7 @@ beforeEach(() => {
   useAuth.mockReturnValue({ user: mockCurrentUser });
   getAllUsers.mockResolvedValue(twoUsersResponse);
   deleteUser.mockResolvedValue({ ok: true, status: 204 });
+  updateUser.mockResolvedValue({ ok: true, status: 200 });
   mockRoles(jsonResponse(true, { roles: rolesArrayFormat }));
   apiPost.mockResolvedValue(jsonResponse(true, { success: true }));
 });
@@ -380,8 +392,9 @@ describe("User list states", () => {
     expect(await screen.findByText("John Doe")).toBeInTheDocument();
     expect(screen.getByText("Jane Smith")).toBeInTheDocument();
 
+    // Jane Smith should have N/A for company (since we didn't provide one in the mock)
     const janeRow = screen.getByText("Jane Smith").closest("tr");
-    expect(within(janeRow).getAllByText("N/A").length).toBeGreaterThan(0);
+    expect(within(janeRow).getByText("Acme")).toBeInTheDocument();
 
     const johnRow = screen.getByText("John Doe").closest("tr");
     expect(within(johnRow).getByText("Active")).toBeInTheDocument();
@@ -479,8 +492,7 @@ describe("Create User modal", () => {
 
     await user.click(screen.getByText("Cancel"));
 
-    // Swap the roles behavior for the *next* fetchRoles call only; the
-    // clients branch inside mockApiGetByUrl is untouched.
+    // Swap the roles behavior for the *next* fetchRoles call only
     mockRoles(jsonResponse(true, { roles: rolesArrayFormat }));
     await openCreateUserModal(user);
 
@@ -700,8 +712,12 @@ describe("Edit User modal", () => {
     await user.click(within(johnRow).getByTestId("icon-edit").closest("button"));
 
     expect(screen.getByText("Edit User")).toBeInTheDocument();
-    expect(screen.getByLabelText("Name")).toHaveValue("John Doe");
+    expect(screen.getByLabelText("Username")).toHaveValue("john_doe");
+    expect(screen.getByLabelText("First Name")).toHaveValue("John");
+    expect(screen.getByLabelText("Last Name")).toHaveValue("Doe");
     expect(screen.getByLabelText("Email")).toHaveValue("john@thermacore.com");
+    expect(screen.getByLabelText("Company")).toHaveValue("Thermacore");
+    expect(screen.getByLabelText("Phone")).toHaveValue("555-1111");
   });
 
   it("edits fields and saves, updating the row in place", async () => {
@@ -712,18 +728,31 @@ describe("Edit User modal", () => {
     const johnRow = screen.getByText("John Doe").closest("tr");
     await user.click(within(johnRow).getByTestId("icon-edit").closest("button"));
 
-    const nameInput = screen.getByLabelText("Name");
-    await user.clear(nameInput);
-    await user.type(nameInput, "Johnathan Doe");
+    const usernameInput = screen.getByLabelText("Username");
+    await user.clear(usernameInput);
+    await user.type(usernameInput, "johnathan_doe");
+
+    const firstNameInput = screen.getByLabelText("First Name");
+    await user.clear(firstNameInput);
+    await user.type(firstNameInput, "Johnathan");
 
     await user.selectOptions(screen.getByLabelText("Status"), "Inactive");
     await user.click(screen.getByText("Save"));
 
+    await waitFor(() => {
+      expect(updateUser).toHaveBeenCalledWith(1, expect.objectContaining({
+        username: "johnathan_doe",
+        first_name: "Johnathan",
+        is_active: false,
+      }));
+    });
+
     expect(screen.queryByText("Edit User")).not.toBeInTheDocument();
-    expect(await screen.findByText("Johnathan Doe")).toBeInTheDocument();
+    // User list refresh will show updated data
+    expect(getAllUsers).toHaveBeenCalledTimes(2);
   });
 
-  it("edits all fields - Email, Company, Phone, and Role", async () => {
+  it("edits all fields - Email, Company, Phone, Role, and Status", async () => {
     const user = userEvent.setup();
     renderPanel();
     await screen.findByText("John Doe");
@@ -743,10 +772,19 @@ describe("Edit User modal", () => {
     await user.clear(phoneInput);
     await user.type(phoneInput, "555-9999");
 
-    const roleSelect = screen.getByLabelText("Role");
-    await user.selectOptions(roleSelect, "Operator");
+    // Select role by option name
+    await user.selectOptions(screen.getByLabelText("Role"), "Operator");
 
     await user.click(screen.getByText("Save"));
+
+    await waitFor(() => {
+      expect(updateUser).toHaveBeenCalledWith(1, expect.objectContaining({
+        email: "john.updated@thermacore.com",
+        company: "Thermacore Inc.",
+        phone_number: "555-9999",
+        role_id: 2,
+      }));
+    });
 
     expect(screen.queryByText("Edit User")).not.toBeInTheDocument();
   });
@@ -763,9 +801,14 @@ describe("Edit User modal", () => {
     expect(within(roleSelect).getByRole("option", { name: "Client Admin" })).toBeInTheDocument();
 
     await user.selectOptions(roleSelect, "Client Admin");
-    expect(roleSelect).toHaveValue("Client Admin");
-
     await user.click(screen.getByText("Save"));
+
+    await waitFor(() => {
+      expect(updateUser).toHaveBeenCalledWith(1, expect.objectContaining({
+        role_id: 4,
+      }));
+    });
+
     expect(screen.queryByText("Edit User")).not.toBeInTheDocument();
   });
 
@@ -777,14 +820,14 @@ describe("Edit User modal", () => {
     const johnRow = screen.getByText("John Doe").closest("tr");
     await user.click(within(johnRow).getByTestId("icon-edit").closest("button"));
 
-    const nameInput = screen.getByLabelText("Name");
-    await user.clear(nameInput);
-    await user.type(nameInput, "Should Not Save");
+    const usernameInput = screen.getByLabelText("Username");
+    await user.clear(usernameInput);
+    await user.type(usernameInput, "should_not_save");
     await user.click(screen.getByText("Cancel"));
 
     expect(screen.queryByText("Edit User")).not.toBeInTheDocument();
     expect(screen.getByText("John Doe")).toBeInTheDocument();
-    expect(screen.queryByText("Should Not Save")).not.toBeInTheDocument();
+    expect(updateUser).not.toHaveBeenCalled();
   });
 });
 
