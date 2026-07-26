@@ -522,6 +522,122 @@ def viewer_token(app, db_session):
         return token
 
 
+# ============================================================
+# CLIENT ADMIN FIXTURES (ADDED)
+# ============================================================
+
+
+@pytest.fixture
+def client_admin_token(app, db_session):
+    """JWT for a client_admin user scoped to a specific client."""
+    from flask_jwt_extended import create_access_token
+    from app.models import Client, Role, User
+
+    with app.app_context():
+        # Ensure client_admin role exists
+        client_admin_role = Role.query.filter_by(name="client_admin").first()
+        if not client_admin_role:
+            client_admin_role = Role(name="client_admin", description="Client Admin")
+            db_session.add(client_admin_role)
+            db_session.commit()
+
+        # Ensure a client exists
+        client_obj = Client.query.first()
+        if not client_obj:
+            client_obj = Client(name="TestClient")
+            db_session.add(client_obj)
+            db_session.commit()
+
+        # Remove existing test user if present
+        existing_user = User.query.filter_by(username="clientadmin_test").first()
+        if existing_user:
+            db_session.delete(existing_user)
+            db_session.commit()
+
+        # Create client_admin user
+        user = User(
+            username="clientadmin_test",
+            email="clientadmin_test@test.com",
+            role_id=client_admin_role.id,
+            client_id=client_obj.id,
+            is_active=True,
+            registration_status="approved",
+            permissions=[
+                "read_units",
+                "write_units",
+                "delete_units",
+                "read_users",
+                "write_users",
+                "admin_panel",
+                "remote_control",
+            ],
+        )
+        user.set_password("password123")
+        db_session.add(user)
+        db_session.commit()
+
+        token = create_access_token(
+            identity=str(user.id),
+            additional_claims={
+                "role": "client_admin",
+                "permissions": user.permissions or [],
+            },
+        )
+        return token, client_obj.id
+
+
+@pytest.fixture
+def client_admin_no_client_token(app, db_session):
+    """JWT for a client_admin user with NO client assigned."""
+    from flask_jwt_extended import create_access_token
+    from app.models import Role, User
+
+    with app.app_context():
+        # Ensure client_admin role exists
+        client_admin_role = Role.query.filter_by(name="client_admin").first()
+        if not client_admin_role:
+            client_admin_role = Role(name="client_admin", description="Client Admin")
+            db_session.add(client_admin_role)
+            db_session.commit()
+
+        # Remove existing test user if present
+        existing_user = User.query.filter_by(username="orphan_admin").first()
+        if existing_user:
+            db_session.delete(existing_user)
+            db_session.commit()
+
+        # Create client_admin user with no client
+        user = User(
+            username="orphan_admin",
+            email="orphan_admin@test.com",
+            role_id=client_admin_role.id,
+            client_id=None,
+            is_active=True,
+            registration_status="approved",
+            permissions=[
+                "read_units",
+                "write_units",
+                "delete_units",
+                "read_users",
+                "write_users",
+                "admin_panel",
+                "remote_control",
+            ],
+        )
+        user.set_password("password123")
+        db_session.add(user)
+        db_session.commit()
+
+        token = create_access_token(
+            identity=str(user.id),
+            additional_claims={
+                "role": "client_admin",
+                "permissions": user.permissions or [],
+            },
+        )
+        return token
+
+
 # ---- Tenant test fixtures ----
 
 
