@@ -250,25 +250,40 @@ def client(app):
 def db_session(app):
     """Create database session for tests with proper transaction isolation.
 
-    This fixture uses nested transactions (SAVEPOINT) to ensure that all database
-    operations within a test are isolated and rolled back after the test completes.
-    The event listener restarts the savepoint after each nested transaction ends,
-    ensuring isolation is maintained across multiple commits within a single test.
+    This fixture uses a connection-level transaction with SAVEPOINT support
+    to ensure that all database operations within a test are isolated and
+    rolled back after the test completes.
 
-    Note: This relies on TestingConfig using SQLite with StaticPool so all sessions
-    share the same connection and SAVEPOINTs work across session boundaries.
+    Unlike the previous SAVEPOINT-only approach, this binds the session to
+    a connection with an explicit outer transaction, so any commit() inside
+    the test will only commit within the outer transaction, which is then
+    rolled back at the end.
     """
     with app.app_context():
-        # Start a nested transaction (SAVEPOINT)
-        db.session.begin_nested()
+        # Get a connection and start a transaction
+        connection = db.engine.connect()
+        transaction = connection.begin()
+
+        # Bind the session to this connection
+        db.session.configure(bind=connection)
+
         yield db.session
-        # Rollback the entire transaction to clean up
+
+        # Rollback the transaction and close connection
         try:
-            if db.session.is_active:
-                db.session.rollback()
+            transaction.rollback()
         except Exception:
-            # If rollback fails (e.g., savepoint doesn't exist), close the session
-            db.session.close()
+            pass
+        try:
+            connection.close()
+        except Exception:
+            pass
+
+        # Restore default bind
+        try:
+            db.session.configure(bind=db.engine)
+        except Exception:
+            pass
 
 
 @pytest.fixture
@@ -536,7 +551,6 @@ def viewer_token(app, db_session):
 def client_admin_token(app, db_session):
     """JWT for a client_admin user scoped to a specific client."""
     from flask_jwt_extended import create_access_token
-
     from app.models import Client, Role, User
 
     with app.app_context():
@@ -597,7 +611,6 @@ def client_admin_token(app, db_session):
 def client_admin_no_client_token(app, db_session):
     """JWT for a client_admin user with NO client assigned."""
     from flask_jwt_extended import create_access_token
-
     from app.models import Role, User
 
     with app.app_context():
