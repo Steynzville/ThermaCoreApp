@@ -247,7 +247,9 @@ class TestClientAdminScoping:
             assert user.get("client_id") == own_client_id
 
     def test_get_users_no_client_assigned_returns_empty(
-        self, client, client_admin_no_client_token
+        self,
+        client,
+        client_admin_no_client_token,
     ):
         response = client.get(
             "/api/v1/users",
@@ -257,7 +259,10 @@ class TestClientAdminScoping:
         assert response.get_json()["total"] == 0
 
     def test_get_pending_users_scoped_to_client(
-        self, client, client_admin_token, db_session
+        self,
+        client,
+        client_admin_token,
+        db_session,
     ):
         token, own_client_id = client_admin_token
 
@@ -286,7 +291,9 @@ class TestClientAdminScoping:
         assert any(u["username"] == "pending_scoped" for u in data["data"])
 
     def test_get_pending_users_no_client_assigned_returns_empty(
-        self, client, client_admin_no_client_token
+        self,
+        client,
+        client_admin_no_client_token,
     ):
         response = client.get(
             "/api/v1/users/pending",
@@ -296,7 +303,11 @@ class TestClientAdminScoping:
         assert response.get_json()["total"] == 0
 
     def test_get_user_outside_client_returns_404(
-        self, client, client_admin_token, admin_token, db_session
+        self,
+        client,
+        client_admin_token,
+        admin_token,
+        db_session,
     ):
         token, own_client_id = client_admin_token
 
@@ -327,7 +338,10 @@ class TestClientAdminScoping:
         assert response.status_code == 404
 
     def test_update_user_outside_client_returns_404(
-        self, client, client_admin_token, db_session
+        self,
+        client,
+        client_admin_token,
+        db_session,
     ):
         token, own_client_id = client_admin_token
 
@@ -359,7 +373,10 @@ class TestClientAdminScoping:
         assert response.status_code == 404
 
     def test_client_admin_cannot_assign_admin_role(
-        self, client, client_admin_token, db_session
+        self,
+        client,
+        client_admin_token,
+        db_session,
     ):
         from app.models import Role, User
 
@@ -390,7 +407,10 @@ class TestClientAdminScoping:
         assert "Cannot assign this role" in response.get_json()["error"]
 
     def test_client_admin_can_assign_viewer_role(
-        self, client, client_admin_token, db_session
+        self,
+        client,
+        client_admin_token,
+        db_session,
     ):
         from app.models import Role, User
 
@@ -417,7 +437,10 @@ class TestClientAdminScoping:
         assert response.status_code == 200
 
     def test_client_admin_cannot_unassign_client(
-        self, client, client_admin_token, db_session
+        self,
+        client,
+        client_admin_token,
+        db_session,
     ):
         from app.models import Role, User
 
@@ -445,7 +468,10 @@ class TestClientAdminScoping:
         assert "Cannot unassign a user's client" in response.get_json()["error"]
 
     def test_client_admin_cannot_move_user_to_other_client(
-        self, client, client_admin_token, db_session
+        self,
+        client,
+        client_admin_token,
+        db_session,
     ):
         from app.models import Role, User
 
@@ -486,7 +512,9 @@ class TestClientAdminScoping:
         assert "No valid users found in your client" in response.get_json()["error"]
 
     def test_batch_activate_no_client_assigned(
-        self, client, client_admin_no_client_token
+        self,
+        client,
+        client_admin_no_client_token,
     ):
         response = client.post(
             "/api/v1/users/batch/activate",
@@ -497,7 +525,9 @@ class TestClientAdminScoping:
         assert "No client assigned" in response.get_json()["error"]
 
     def test_batch_deactivate_no_client_assigned(
-        self, client, client_admin_no_client_token
+        self,
+        client,
+        client_admin_no_client_token,
     ):
         response = client.post(
             "/api/v1/users/batch/deactivate",
@@ -539,7 +569,9 @@ class TestClientAdminScoping:
         assert "active_users" in data
 
     def test_users_stats_empty_when_no_client(
-        self, client, client_admin_no_client_token
+        self,
+        client,
+        client_admin_no_client_token,
     ):
         response = client.get(
             "/api/v1/users/stats",
@@ -577,7 +609,9 @@ class TestClientAdminScoping:
         assert "stats" in response.get_json()
 
     def test_company_stats_empty_when_no_client(
-        self, client, client_admin_no_client_token
+        self,
+        client,
+        client_admin_no_client_token,
     ):
         response = client.get(
             "/api/v1/users/companies/stats",
