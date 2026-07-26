@@ -246,17 +246,22 @@ describe("Routes Configuration", () => {
     });
   });
 
-  it("should have admin-only routes with correct roles (admin + client_admin)", () => {
-    const adminRoutes = routes.filter((r) => 
-      r.roles.includes("admin") && 
-      !r.roles.includes("user") &&
-      !r.isPublic
+  // Admin management routes should have both admin AND client_admin
+  it("should have client_admin access to admin management routes but not restricted system routes", () => {
+    const managementRoutes = routes.filter(
+      (r) => r.path === "/admin" || r.path === "/admin/users"
     );
-    expect(adminRoutes.length).toBeGreaterThan(0);
-    adminRoutes.forEach((route) => {
-      // Admin-only routes should include both admin and client_admin
+    managementRoutes.forEach((route) => {
       expect(route.roles).toContain("admin");
       expect(route.roles).toContain("client_admin");
+    });
+
+    const strictAdminOnlyRoutes = routes.filter(
+      (r) => r.path === "/analytics" || r.path === "/system-health"
+    );
+    strictAdminOnlyRoutes.forEach((route) => {
+      expect(route.roles).toContain("admin");
+      expect(route.roles).not.toContain("client_admin");
     });
   });
 
@@ -281,28 +286,21 @@ describe("Routes Configuration", () => {
     expect(emptyRolesRoutes.length).toBeGreaterThan(0);
     emptyRolesRoutes.forEach((route) => {
       expect(route.isProtected).toBe(true);
-      expect(["/advanced-analytics", "/scada-dashboard", "/realtime-scada", "/protocol-manager"]).toContain(route.path);
+      expect(["/advanced-analytics", "/scada-dashboard", "/realtime-scada"]).toContain(route.path);
     });
   });
 
-  // isAdminRoute should match roles for admin-only routes
-  it("should have isAdminRoute match roles for admin-only routes", () => {
-    const adminOnlyRoutes = routes.filter(r => r.isAdminRoute === true);
+  // isAdminRoute should be properly scoped - client_admin only on management routes
+  it("should have isAdminRoute routes properly scoped (client_admin only on management routes)", () => {
+    const adminOnlyRoutes = routes.filter((r) => r.isAdminRoute === true);
     expect(adminOnlyRoutes.length).toBeGreaterThan(0);
     adminOnlyRoutes.forEach((route) => {
-      // Admin routes should include both admin and client_admin
-      expect(route.roles).toEqual(["admin", "client_admin"]);
-    });
-  });
-
-  // Client Admin specific test - only for routes that should have client_admin
-  it("should allow client_admin access to admin routes", () => {
-    const adminRoutes = routes.filter((r) => 
-      r.path === "/admin" || 
-      r.path === "/admin/users"
-    );
-    adminRoutes.forEach((route) => {
-      expect(route.roles).toContain("client_admin");
+      expect(route.roles).toContain("admin");
+      if (route.path === "/admin" || route.path === "/admin/users") {
+        expect(route.roles).toContain("client_admin");
+      } else {
+        expect(route.roles).not.toContain("client_admin");
+      }
     });
   });
 
@@ -316,6 +314,14 @@ describe("Routes Configuration", () => {
     userOnlyRoutes.forEach((route) => {
       expect(route.roles).not.toContain("client_admin");
     });
+  });
+
+  // Protocol Manager should exclude client_admin
+  it("should restrict protocol-manager from client_admin", () => {
+    const route = routes.find((r) => r.path === "/protocol-manager");
+    expect(route).toBeDefined();
+    expect(route.roles).toContain("admin");
+    expect(route.roles).not.toContain("client_admin");
   });
 
   it("should have lazy loaded components", () => {
