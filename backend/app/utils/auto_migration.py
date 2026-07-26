@@ -1074,7 +1074,12 @@ def seed_client_admin_data(engine):
                             VALUES (:name, :slug, :desc, true, :client_id)
                             """,
                         ),
-                        {"name": name, "slug": slug, "desc": desc, "client_id": client_id},
+                        {
+                            "name": name,
+                            "slug": slug,
+                            "desc": desc,
+                            "client_id": client_id,
+                        },
                     )
                     t_res = conn.execute(
                         text("SELECT id FROM tenants WHERE slug = :slug"),
@@ -1082,7 +1087,9 @@ def seed_client_admin_data(engine):
                     ).fetchone()
                 else:
                     conn.execute(
-                        text("UPDATE tenants SET client_id = :client_id WHERE id = :id"),
+                        text(
+                            "UPDATE tenants SET client_id = :client_id WHERE id = :id"
+                        ),
                         {"client_id": client_id, "id": t_res[0]},
                     )
                 if not first_tenant_id and t_res:
@@ -1098,16 +1105,19 @@ def seed_client_admin_data(engine):
                 from werkzeug.security import generate_password_hash
 
                 password_hash = generate_password_hash(
-                    "clientadmin123", method="pbkdf2:sha256"
+                    "clientadmin123",
+                    method="pbkdf2:sha256",
                 )
-                client_admin_permissions = json.dumps([
-                    "read_units",
-                    "write_units",
-                    "read_users",
-                    "write_users",
-                    "admin_panel",
-                    "remote_control",
-                ])
+                client_admin_permissions = json.dumps(
+                    [
+                        "read_units",
+                        "write_units",
+                        "read_users",
+                        "write_users",
+                        "admin_panel",
+                        "remote_control",
+                    ]
+                )
                 conn.execute(
                     text(
                         """
