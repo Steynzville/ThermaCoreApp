@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useRef } from "react";
 
 import { apiGetJson } from "../utils/apiFetch";
 import { useAuth } from "./AuthContext";
@@ -41,6 +41,12 @@ export const TenantProvider = ({ children }) => {
   const [availableTenants, setAvailableTenants] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Use a ref to track currentTenant without triggering re-renders
+  const currentTenantRef = useRef(currentTenant);
+  useEffect(() => {
+    currentTenantRef.current = currentTenant;
+  }, [currentTenant]);
 
   // Check roles
   const isAdmin = backendRole === "admin";
@@ -90,6 +96,7 @@ export const TenantProvider = ({ children }) => {
   }, [user]);
 
   // Load available tenants based on user role
+  // Uses currentTenantRef to avoid re-fetching when currentTenant changes
   useEffect(() => {
     const loadAvailableTenants = async () => {
       if (!user) {
@@ -102,8 +109,8 @@ export const TenantProvider = ({ children }) => {
         // Non-admin (Operator / Viewer): set availableTenants to [currentTenant] or [user.tenant]
         if (user.tenant) {
           setAvailableTenants([user.tenant]);
-        } else if (currentTenant) {
-          setAvailableTenants([currentTenant]);
+        } else if (currentTenantRef.current) {
+          setAvailableTenants([currentTenantRef.current]);
         } else {
           setAvailableTenants([]);
         }
@@ -156,7 +163,7 @@ export const TenantProvider = ({ children }) => {
     };
 
     loadAvailableTenants();
-  }, [user, backendRole, isAdmin, isClientAdmin, canSwitchTenants, currentTenant]);
+  }, [user, backendRole, isAdmin, isClientAdmin, canSwitchTenants]);
 
   // Switch tenant - no-op on invalid tenant ID
   const switchTenant = (tenantId) => {
