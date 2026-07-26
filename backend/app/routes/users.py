@@ -1008,7 +1008,7 @@ def approve_user(user_id):
     security:
       - JWT: []
     """
-    from datetime import datetime, timezone  # noqa: PLC0415 - Conditional import
+    from datetime import datetime, timezone
 
     from app.utils.helpers import get_role_permissions
 
