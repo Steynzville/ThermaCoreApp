@@ -13,6 +13,17 @@
  * - Password reset (self + per-user): validation, all error-message branches, success, cancel
  * - Password visibility toggles (new password + confirm password)
  * - Settings tab: toggle each setting both directions
+ *
+ * Note on apiGet mocking: AdminPanel now fires TWO apiGet calls on mount
+ * (fetchUsers -> getAllUsers, which is separately mocked, and fetchClients ->
+ * apiGet("/api/v1/clients")), plus a THIRD apiGet call when the Create User
+ * modal opens (fetchRoles -> apiGet("/api/v1/roles")). Because both
+ * fetchClients and fetchRoles go through the same apiGet mock,
+ * mockResolvedValueOnce/mockRejectedValueOnce queue by call order, not by
+ * URL - so a value intended for the roles call can be silently consumed by
+ * the mount-time clients call instead. To avoid that, every test that needs
+ * to control the roles response uses mockRoles()/mockRolesRejected() below,
+ * which branch on the requested URL instead of call order.
  */
 
 import { render, screen, waitFor, within } from "@testing-library/react";
@@ -169,6 +180,35 @@ function jsonResponse(ok, body) {
   });
 }
 
+// Any apiGet call to /clients gets this benign response unless a test
+// overrides mockClientsResponse below. Kept separate from the roles mock so
+// that setting up a roles scenario never has to think about the clients call.
+function defaultClientsResponse() {
+  return jsonResponse(true, { data: [] });
+}
+
+// Route apiGet by URL so that mount-time fetchClients() and the Create User
+// modal's fetchRoles() never fight over a shared mockResolvedValueOnce queue.
+// `rolesFn` receives no args and must return a Promise (from jsonResponse or
+// Promise.reject) — a function (not a static value) so re-fetch tests can
+// swap the behavior of the *next* call without re-mocking the clients side.
+function mockApiGetByUrl(rolesFn) {
+  apiGet.mockImplementation((url) => {
+    if (url.includes("/clients")) {
+      return defaultClientsResponse();
+    }
+    return rolesFn();
+  });
+}
+
+function mockRoles(response) {
+  mockApiGetByUrl(() => response);
+}
+
+function mockRolesRejected(error) {
+  mockApiGetByUrl(() => Promise.reject(error));
+}
+
 function renderPanel() {
   return render(
     <BrowserRouter>
@@ -224,7 +264,7 @@ beforeEach(() => {
   useAuth.mockReturnValue({ user: mockCurrentUser });
   getAllUsers.mockResolvedValue(twoUsersResponse);
   deleteUser.mockResolvedValue({ ok: true, status: 204 });
-  apiGet.mockResolvedValue(jsonResponse(true, { roles: rolesArrayFormat }));
+  mockRoles(jsonResponse(true, { roles: rolesArrayFormat }));
   apiPost.mockResolvedValue(jsonResponse(true, { success: true }));
 });
 
@@ -356,7 +396,7 @@ describe("User list states", () => {
 describe("Create User modal", () => {
   it("opens the modal and fetches roles (array-wrapped format)", async () => {
     const user = userEvent.setup();
-    apiGet.mockResolvedValueOnce(jsonResponse(true, { roles: rolesArrayFormat }));
+    mockRoles(jsonResponse(true, { roles: rolesArrayFormat }));
 
     renderPanel();
     await waitFor(() => screen.getByText("User Management"));
@@ -366,12 +406,13 @@ describe("Create User modal", () => {
     await waitFor(() => {
       const roleSelect = screen.getByLabelText(/Role/i);
       expect(roleSelect).toBeInTheDocument();
+      expect(within(roleSelect).getByRole("option", { name: "Admin" })).toBeInTheDocument();
     });
   });
 
   it("fetches roles when response is a bare array", async () => {
     const user = userEvent.setup();
-    apiGet.mockResolvedValueOnce(jsonResponse(true, rolesArrayFormat));
+    mockRoles(jsonResponse(true, rolesArrayFormat));
 
     renderPanel();
     await waitFor(() => screen.getByText("User Management"));
@@ -379,13 +420,13 @@ describe("Create User modal", () => {
 
     await waitFor(() => {
       const roleSelect = screen.getByLabelText(/Role/i);
-      expect(roleSelect).toBeInTheDocument();
+      expect(within(roleSelect).getByRole("option", { name: "Operator" })).toBeInTheDocument();
     });
   });
 
   it("shows a roles error banner when the roles payload shape is invalid", async () => {
     const user = userEvent.setup();
-    apiGet.mockResolvedValueOnce(jsonResponse(true, { unexpected: "shape" }));
+    mockRoles(jsonResponse(true, { unexpected: "shape" }));
 
     renderPanel();
     await waitFor(() => screen.getByText("User Management"));
@@ -396,7 +437,7 @@ describe("Create User modal", () => {
 
   it("shows a roles error banner when the roles array is empty", async () => {
     const user = userEvent.setup();
-    apiGet.mockResolvedValueOnce(jsonResponse(true, { roles: [] }));
+    mockRoles(jsonResponse(true, { roles: [] }));
 
     renderPanel();
     await waitFor(() => screen.getByText("User Management"));
@@ -407,7 +448,7 @@ describe("Create User modal", () => {
 
   it("shows a roles error banner when the roles fetch response is not ok", async () => {
     const user = userEvent.setup();
-    apiGet.mockResolvedValueOnce(jsonResponse(false, {}));
+    mockRoles(jsonResponse(false, {}));
 
     renderPanel();
     await waitFor(() => screen.getByText("User Management"));
@@ -418,7 +459,7 @@ describe("Create User modal", () => {
 
   it("shows a roles error banner when the roles fetch throws", async () => {
     const user = userEvent.setup();
-    apiGet.mockRejectedValueOnce(new Error("boom"));
+    mockRolesRejected(new Error("boom"));
 
     renderPanel();
     await waitFor(() => screen.getByText("User Management"));
@@ -429,7 +470,7 @@ describe("Create User modal", () => {
 
   it("re-fetches roles on reopening the modal after a prior roles error", async () => {
     const user = userEvent.setup();
-    apiGet.mockResolvedValueOnce(jsonResponse(false, {}));
+    mockRoles(jsonResponse(false, {}));
 
     renderPanel();
     await waitFor(() => screen.getByText("User Management"));
@@ -438,12 +479,14 @@ describe("Create User modal", () => {
 
     await user.click(screen.getByText("Cancel"));
 
-    apiGet.mockResolvedValueOnce(jsonResponse(true, { roles: rolesArrayFormat }));
+    // Swap the roles behavior for the *next* fetchRoles call only; the
+    // clients branch inside mockApiGetByUrl is untouched.
+    mockRoles(jsonResponse(true, { roles: rolesArrayFormat }));
     await openCreateUserModal(user);
 
     await waitFor(() => {
       const roleSelect = screen.getByLabelText(/Role/i);
-      expect(roleSelect).toBeInTheDocument();
+      expect(within(roleSelect).getByRole("option", { name: "Admin" })).toBeInTheDocument();
     });
   });
 
@@ -586,7 +629,7 @@ describe("Create User modal", () => {
 
   it("blocks submission when roles failed to load even if fields are filled", async () => {
     const user = userEvent.setup();
-    apiGet.mockResolvedValueOnce(jsonResponse(false, {}));
+    mockRoles(jsonResponse(false, {}));
 
     renderPanel();
     await waitFor(() => screen.getByText("User Management"));
@@ -700,12 +743,29 @@ describe("Edit User modal", () => {
     await user.clear(phoneInput);
     await user.type(phoneInput, "555-9999");
 
-    // The role select uses capitalized option values (e.g., "Operator", not "operator")
     const roleSelect = screen.getByLabelText("Role");
     await user.selectOptions(roleSelect, "Operator");
 
     await user.click(screen.getByText("Save"));
 
+    expect(screen.queryByText("Edit User")).not.toBeInTheDocument();
+  });
+
+  it("supports selecting the Client Admin role", async () => {
+    const user = userEvent.setup();
+    renderPanel();
+    await screen.findByText("John Doe");
+
+    const johnRow = screen.getByText("John Doe").closest("tr");
+    await user.click(within(johnRow).getByTestId("icon-edit").closest("button"));
+
+    const roleSelect = screen.getByLabelText("Role");
+    expect(within(roleSelect).getByRole("option", { name: "Client Admin" })).toBeInTheDocument();
+
+    await user.selectOptions(roleSelect, "Client Admin");
+    expect(roleSelect).toHaveValue("Client Admin");
+
+    await user.click(screen.getByText("Save"));
     expect(screen.queryByText("Edit User")).not.toBeInTheDocument();
   });
 
@@ -918,7 +978,6 @@ describe("Password reset modal — validation & visibility", () => {
     const confirmPasswordInput = screen.getByPlaceholderText("Confirm new password");
     expect(confirmPasswordInput).toHaveAttribute("type", "password");
 
-    // Get all eye icons - use the last one for confirm password
     const eyeIcons = screen.getAllByTestId("eye-icon");
     await user.click(eyeIcons[eyeIcons.length - 1]);
     expect(confirmPasswordInput).toHaveAttribute("type", "text");
