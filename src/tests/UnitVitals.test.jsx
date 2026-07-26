@@ -13,7 +13,6 @@ import { SettingsProvider } from "../context/SettingsContext";
 import { useUnits, UnitProvider } from "../context/UnitContext";
 import { useRealtimeMetrics } from "../hooks/useRealtimeData";
 import { AuthProvider } from "../context/AuthContext";
-import { TenantProvider } from "../context/TenantContext";
 import { BrowserRouter } from "react-router-dom";
 
 // Mock the useRealtimeMetrics hook to prevent it from calling useTenant
@@ -92,13 +91,11 @@ describe("UnitVitals Component", () => {
       result = render(
         <BrowserRouter>
           <AuthProvider>
-            <TenantProvider>
-              <SettingsProvider>
-                <UnitProvider>
-                  <UnitVitals unit={unit} />
-                </UnitProvider>
-              </SettingsProvider>
-            </TenantProvider>
+            <SettingsProvider>
+              <UnitProvider>
+                <UnitVitals unit={unit} />
+              </UnitProvider>
+            </SettingsProvider>
           </AuthProvider>
         </BrowserRouter>,
       );
