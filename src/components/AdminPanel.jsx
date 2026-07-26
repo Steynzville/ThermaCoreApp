@@ -858,14 +858,14 @@ const AdminPanel = ({ className }) => {
           </div>
         )}
 
-        {/* Create User Modal - FIXED with proper scrolling on mobile */}
+        {/* Create User Modal - FIXED for mobile scrolling */}
         {createUserModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+            <div className="bg-white dark:bg-gray-900 rounded-lg p-4 sm:p-6 w-full max-w-md max-h-[95vh] overflow-y-auto">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 Create New User
               </h3>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div>
                   <label
                     htmlFor="newUserUsername"
@@ -883,7 +883,7 @@ const AdminPanel = ({ className }) => {
                         username: e.target.value,
                       })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
                     placeholder="Enter username"
                   />
                 </div>
@@ -904,7 +904,7 @@ const AdminPanel = ({ className }) => {
                         email: e.target.value,
                       })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
                     placeholder="Enter email"
                   />
                 </div>
@@ -926,7 +926,7 @@ const AdminPanel = ({ className }) => {
                           password: e.target.value,
                         })
                       }
-                      className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                      className="w-full px-3 py-1.5 pr-10 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
                       placeholder="Enter password (min 6 characters)"
                     />
                     <button
@@ -959,7 +959,7 @@ const AdminPanel = ({ className }) => {
                         firstName: e.target.value,
                       })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
                     placeholder="Enter first name"
                   />
                 </div>
@@ -980,7 +980,7 @@ const AdminPanel = ({ className }) => {
                         lastName: e.target.value,
                       })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
                     placeholder="Enter last name"
                   />
                 </div>
@@ -1001,7 +1001,7 @@ const AdminPanel = ({ className }) => {
                         phoneNumber: e.target.value,
                       })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
                     placeholder="Enter phone number"
                   />
                 </div>
@@ -1022,7 +1022,7 @@ const AdminPanel = ({ className }) => {
                         company: e.target.value,
                       })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
                     placeholder="Enter company name"
                   />
                 </div>
@@ -1043,7 +1043,7 @@ const AdminPanel = ({ className }) => {
                         department: e.target.value,
                       })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
                     placeholder="Enter department"
                   />
                 </div>
@@ -1064,11 +1064,11 @@ const AdminPanel = ({ className }) => {
                         position: e.target.value,
                       })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
                     placeholder="Enter position"
                   />
                 </div>
-                <div>
+                <div className="pb-1">
                   <label
                     htmlFor="user-role-select"
                     className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
@@ -1076,7 +1076,7 @@ const AdminPanel = ({ className }) => {
                     Role <span className="text-red-500">*</span>
                   </label>
                   {rolesLoadError ? (
-                    <div className="w-full px-3 py-2 border border-red-300 dark:border-red-600 rounded-md bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400">
+                    <div className="w-full px-3 py-1.5 border border-red-300 dark:border-red-600 rounded-md bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm">
                       Unable to load roles. Please refresh the page.
                     </div>
                   ) : (
@@ -1089,7 +1089,7 @@ const AdminPanel = ({ className }) => {
                           roleId: e.target.value,
                         })
                       }
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                      className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
                       disabled={availableRoles.length === 0}
                     >
                       <option value="">
@@ -1106,13 +1106,13 @@ const AdminPanel = ({ className }) => {
                   )}
                 </div>
               </div>
-              {/* Buttons - sticky at bottom with border */}
-              <div className="flex justify-end space-x-3 mt-6 pt-2 border-t border-gray-200 dark:border-gray-700 sticky bottom-0 bg-white dark:bg-gray-900 py-2">
+              {/* Buttons - fixed at bottom */}
+              <div className="flex justify-end space-x-3 mt-4 pt-3 border-t border-gray-200 dark:border-gray-700 sticky bottom-0 bg-white dark:bg-gray-900">
                 <button
                   type="button"
                   onClick={() => setCreateUserModal(false)}
                   disabled={isCreatingUser}
-                  className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-50"
+                  className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -1124,7 +1124,7 @@ const AdminPanel = ({ className }) => {
                     rolesLoadError ||
                     availableRoles.length === 0
                   }
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
                 >
                   {isCreatingUser && (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -1138,12 +1138,12 @@ const AdminPanel = ({ className }) => {
 
         {/* Edit User Modal */}
         {editingUser && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+            <div className="bg-white dark:bg-gray-900 rounded-lg p-4 sm:p-6 w-full max-w-md max-h-[95vh] overflow-y-auto">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 Edit User
               </h3>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div>
                   <label
                     htmlFor="editUsername"
@@ -1158,7 +1158,7 @@ const AdminPanel = ({ className }) => {
                     onChange={(e) =>
                       setEditingUser({ ...editingUser, username: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
                   />
                 </div>
                 <div>
@@ -1175,7 +1175,7 @@ const AdminPanel = ({ className }) => {
                     onChange={(e) =>
                       setEditingUser({ ...editingUser, firstName: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
                   />
                 </div>
                 <div>
@@ -1192,7 +1192,7 @@ const AdminPanel = ({ className }) => {
                     onChange={(e) =>
                       setEditingUser({ ...editingUser, lastName: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
                   />
                 </div>
                 <div>
@@ -1209,7 +1209,7 @@ const AdminPanel = ({ className }) => {
                     onChange={(e) =>
                       setEditingUser({ ...editingUser, email: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
                   />
                 </div>
                 <div>
@@ -1226,7 +1226,7 @@ const AdminPanel = ({ className }) => {
                     onChange={(e) =>
                       setEditingUser({ ...editingUser, companyRaw: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
                   />
                 </div>
                 <div>
@@ -1243,7 +1243,7 @@ const AdminPanel = ({ className }) => {
                     onChange={(e) =>
                       setEditingUser({ ...editingUser, phoneRaw: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
                   />
                 </div>
                 <div>
@@ -1254,7 +1254,7 @@ const AdminPanel = ({ className }) => {
                     Role
                   </label>
                   {rolesLoadError ? (
-                    <div className="w-full px-3 py-2 border border-red-300 dark:border-red-600 rounded-md bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400">
+                    <div className="w-full px-3 py-1.5 border border-red-300 dark:border-red-600 rounded-md bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm">
                       Unable to load roles. Please refresh the page.
                     </div>
                   ) : (
@@ -1264,7 +1264,7 @@ const AdminPanel = ({ className }) => {
                       onChange={(e) =>
                         setEditingUser({ ...editingUser, roleId: e.target.value })
                       }
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                      className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
                       disabled={availableRoles.length === 0}
                     >
                       {availableRoles.map((role) => (
@@ -1275,7 +1275,7 @@ const AdminPanel = ({ className }) => {
                     </select>
                   )}
                 </div>
-                <div>
+                <div className="pb-1">
                   <label
                     htmlFor="editStatus"
                     className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
@@ -1288,18 +1288,18 @@ const AdminPanel = ({ className }) => {
                     onChange={(e) =>
                       setEditingUser({ ...editingUser, isActive: e.target.value === "true" })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    className="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
                   >
                     <option value="true">Active</option>
                     <option value="false">Inactive</option>
                   </select>
                 </div>
               </div>
-              <div className="flex justify-end space-x-3 mt-6 pt-2 border-t border-gray-200 dark:border-gray-700 sticky bottom-0 bg-white dark:bg-gray-900 py-2">
+              <div className="flex justify-end space-x-3 mt-4 pt-3 border-t border-gray-200 dark:border-gray-700 sticky bottom-0 bg-white dark:bg-gray-900">
                 <button
                   type="button"
                   onClick={() => setEditingUser(null)}
-                  className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                  className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
                 >
                   Cancel
                 </button>
@@ -1307,7 +1307,7 @@ const AdminPanel = ({ className }) => {
                   type="button"
                   onClick={() => handleSaveUser(editingUser)}
                   disabled={rolesLoadError || availableRoles.length === 0}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Save
                 </button>
@@ -1318,9 +1318,9 @@ const AdminPanel = ({ className }) => {
 
         {/* Password Reset Modal */}
         {passwordResetModal && selectedUserForReset && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
             <div
-              className="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto"
+              className="bg-white dark:bg-gray-900 rounded-lg p-4 sm:p-6 w-full max-w-md max-h-[95vh] overflow-y-auto"
               data-testid="password-reset-modal"
             >
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
@@ -1357,7 +1357,7 @@ const AdminPanel = ({ className }) => {
                           passwordFormData.confirmPassword,
                         );
                       }}
-                      className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                      className="w-full px-3 py-1.5 pr-10 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
                       placeholder="Enter new password"
                     />
                     <button
@@ -1398,7 +1398,7 @@ const AdminPanel = ({ className }) => {
                           newConfirmPassword,
                         );
                       }}
-                      className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                      className="w-full px-3 py-1.5 pr-10 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
                       placeholder="Confirm new password"
                     />
                     <button
@@ -1458,12 +1458,12 @@ const AdminPanel = ({ className }) => {
                   </div>
                 )}
               </div>
-              <div className="flex justify-end space-x-3 mt-6 pt-2 border-t border-gray-200 dark:border-gray-700 sticky bottom-0 bg-white dark:bg-gray-900 py-2">
+              <div className="flex justify-end space-x-3 mt-4 pt-3 border-t border-gray-200 dark:border-gray-700 sticky bottom-0 bg-white dark:bg-gray-900">
                 <button
                   type="button"
                   onClick={closePasswordResetModal}
                   disabled={validation.isSubmitting}
-                  className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-50"
+                  className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -1475,7 +1475,7 @@ const AdminPanel = ({ className }) => {
                     !validation.passwordsMatch ||
                     validation.isSubmitting
                   }
-                  className={`px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 ${
+                  className={`px-4 py-2 text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 ${
                     validation.isValidLength &&
                     validation.passwordsMatch &&
                     !validation.isSubmitting
