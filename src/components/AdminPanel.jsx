@@ -176,7 +176,8 @@ const AdminPanel = ({ className }) => {
     }
   };
 
-  const fetchClients = async () => {
+  // Fetch clients from backend - memoized to prevent unnecessary re-renders
+  const fetchClients = useCallback(async () => {
     try {
       const API_BASE_URL =
         import.meta.env.VITE_API_BASE_URL ||
@@ -191,13 +192,13 @@ const AdminPanel = ({ className }) => {
     } catch (_err) {
       setClients([]);
     }
-  };
+  }, []);
 
   // Fetch users and clients on component mount
   useEffect(() => {
     fetchUsers();
     fetchClients();
-  }, [fetchUsers]);
+  }, [fetchUsers, fetchClients]);
 
   const handleAddUser = () => {
     // Open the create user modal
