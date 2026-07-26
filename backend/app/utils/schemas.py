@@ -147,9 +147,9 @@ class UserSchema(SQLAlchemyAutoSchema):
     password = fields.Str(load_only=True, validate=validate.Length(min=6))
     role = fields.Nested(RoleSchema, dump_only=True)
     client_id = fields.Int(dump_only=True, allow_none=True)
-    is_approved = fields.Method("get_is_approved")
+    is_active = fields.Method("get_is_active")
 
-    def get_is_approved(self, obj):
+    def get_is_active(self, obj):
         return getattr(obj, "is_active", True)
 
     # Override datetime fields with custom field
