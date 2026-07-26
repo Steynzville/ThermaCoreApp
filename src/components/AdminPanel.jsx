@@ -858,19 +858,25 @@ const AdminPanel = ({ className }) => {
           </div>
         )}
 
-        {/* Create User Modal - FIXED SCROLLING with modal-overlay class */}
+        {/* Create User Modal */}
         {createUserModal && (
-          <div className="modal-overlay bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-900 rounded-lg w-full max-w-md max-h-[90dvh] flex flex-col">
-              {/* Header - fixed */}
-              <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+          <div className="modal-overlay fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 sm:p-6 overflow-y-auto">
+            <div className="bg-white dark:bg-gray-900 rounded-xl p-6 w-full max-w-lg max-h-[90vh] flex flex-col my-auto shadow-2xl border border-gray-200 dark:border-gray-800">
+              <div className="flex items-center justify-between pb-3 mb-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   Create New User
                 </h3>
+                <button
+                  type="button"
+                  onClick={() => setCreateUserModal(false)}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-md transition-colors"
+                  aria-label="Close modal"
+                >
+                  ✕
+                </button>
               </div>
 
-              {/* Scrollable body */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              <div className="space-y-4 overflow-y-auto pr-2 flex-1">
                 <div>
                   <label
                     htmlFor="newUserUsername"
@@ -1110,51 +1116,56 @@ const AdminPanel = ({ className }) => {
                     </select>
                   )}
                 </div>
-                <div className="h-1" />
               </div>
 
-              {/* Footer - fixed */}
-              <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0 bg-white dark:bg-gray-900 rounded-b-lg">
-                <div className="flex justify-end space-x-3">
-                  <button
-                    type="button"
-                    onClick={() => setCreateUserModal(false)}
-                    disabled={isCreatingUser}
-                    className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleCreateUser}
-                    disabled={
-                      isCreatingUser ||
-                      rolesLoadError ||
-                      availableRoles.length === 0
-                    }
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-                  >
-                    {isCreatingUser && (
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    )}
-                    <span>{isCreatingUser ? "Creating..." : "Create User"}</span>
-                  </button>
-                </div>
+              <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-800 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setCreateUserModal(false)}
+                  disabled={isCreatingUser}
+                  className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCreateUser}
+                  disabled={
+                    isCreatingUser ||
+                    rolesLoadError ||
+                    availableRoles.length === 0
+                  }
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                >
+                  {isCreatingUser && (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  )}
+                  <span>{isCreatingUser ? "Creating..." : "Create User"}</span>
+                </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* Edit User Modal - FIXED SCROLLING with modal-overlay class */}
+        {/* Edit User Modal */}
         {editingUser && (
-          <div className="modal-overlay bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-900 rounded-lg w-full max-w-md max-h-[90dvh] flex flex-col">
-              <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+          <div className="modal-overlay fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 sm:p-6 overflow-y-auto">
+            <div className="bg-white dark:bg-gray-900 rounded-xl p-6 w-full max-w-lg max-h-[90vh] flex flex-col my-auto shadow-2xl border border-gray-200 dark:border-gray-800">
+              <div className="flex items-center justify-between pb-3 mb-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   Edit User
                 </h3>
+                <button
+                  type="button"
+                  onClick={() => setEditingUser(null)}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-md transition-colors"
+                  aria-label="Close modal"
+                >
+                  ✕
+                </button>
               </div>
-              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+
+              <div className="space-y-4 overflow-y-auto pr-2 flex-1">
                 <div>
                   <label
                     htmlFor="editUsername"
@@ -1305,50 +1316,59 @@ const AdminPanel = ({ className }) => {
                     <option value="false">Inactive</option>
                   </select>
                 </div>
-                <div className="h-1" />
               </div>
-              <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0 bg-white dark:bg-gray-900 rounded-b-lg">
-                <div className="flex justify-end space-x-3">
-                  <button
-                    type="button"
-                    onClick={() => setEditingUser(null)}
-                    className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSaveUser(editingUser)}
-                    disabled={rolesLoadError || availableRoles.length === 0}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Save
-                  </button>
-                </div>
+
+              <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-800 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setEditingUser(null)}
+                  className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSaveUser(editingUser)}
+                  disabled={rolesLoadError || availableRoles.length === 0}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Save
+                </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* Password Reset Modal - FIXED SCROLLING with modal-overlay class */}
+        {/* Password Reset Modal */}
         {passwordResetModal && selectedUserForReset && (
-          <div className="modal-overlay bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="modal-overlay fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 sm:p-6 overflow-y-auto">
             <div
-              className="bg-white dark:bg-gray-900 rounded-lg w-full max-w-md max-h-[90dvh] flex flex-col"
+              className="bg-white dark:bg-gray-900 rounded-xl p-6 w-full max-w-lg max-h-[90vh] flex flex-col my-auto shadow-2xl border border-gray-200 dark:border-gray-800"
               data-testid="password-reset-modal"
             >
-              <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  Reset Password
-                </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Resetting password for:{" "}
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                    {selectedUserForReset.name}
-                  </span>
-                </p>
+              <div className="flex items-center justify-between pb-3 mb-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    Reset Password
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Resetting password for:{" "}
+                    <span className="font-medium text-gray-900 dark:text-gray-100">
+                      {selectedUserForReset.name}
+                    </span>
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={closePasswordResetModal}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-md transition-colors"
+                  aria-label="Close modal"
+                >
+                  ✕
+                </button>
               </div>
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+
+              <div className="space-y-4 overflow-y-auto pr-2 flex-1">
                 <div>
                   <label
                     htmlFor="resetNewPassword"
@@ -1466,44 +1486,42 @@ const AdminPanel = ({ className }) => {
                     </p>
                   </div>
                 )}
-                <div className="h-1" />
               </div>
-              <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0 bg-white dark:bg-gray-900 rounded-b-lg">
-                <div className="flex justify-end space-x-3">
-                  <button
-                    type="button"
-                    onClick={closePasswordResetModal}
-                    disabled={validation.isSubmitting}
-                    className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handlePasswordReset}
-                    disabled={
-                      !validation.isValidLength ||
-                      !validation.passwordsMatch ||
-                      validation.isSubmitting
-                    }
-                    className={`px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 ${
-                      validation.isValidLength &&
-                      validation.passwordsMatch &&
-                      !validation.isSubmitting
-                        ? "bg-blue-600 text-white hover:bg-blue-700 active"
-                        : "bg-gray-400 text-gray-200"
-                    }`}
-                  >
-                    {validation.isSubmitting && (
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    )}
-                    <span>
-                      {validation.isSubmitting
-                        ? "Resetting..."
-                        : "Reset Password"}
-                    </span>
-                  </button>
-                </div>
+
+              <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-800 shrink-0">
+                <button
+                  type="button"
+                  onClick={closePasswordResetModal}
+                  disabled={validation.isSubmitting}
+                  className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePasswordReset}
+                  disabled={
+                    !validation.isValidLength ||
+                    !validation.passwordsMatch ||
+                    validation.isSubmitting
+                  }
+                  className={`px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 ${
+                    validation.isValidLength &&
+                    validation.passwordsMatch &&
+                    !validation.isSubmitting
+                      ? "bg-blue-600 text-white hover:bg-blue-700"
+                      : "bg-gray-400 text-gray-200"
+                  }`}
+                >
+                  {validation.isSubmitting && (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  )}
+                  <span>
+                    {validation.isSubmitting
+                      ? "Resetting..."
+                      : "Reset Password"}
+                  </span>
+                </button>
               </div>
             </div>
           </div>
