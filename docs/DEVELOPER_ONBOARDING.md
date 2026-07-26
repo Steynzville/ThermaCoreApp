@@ -163,7 +163,11 @@ The application implements a strict 4-tier Role-Based Access Control (RBAC) mult
   - `operator` (Operator): Facility-scoped power user with control capabilities over assigned `tenant_id`.
   - `viewer` (Viewer): Facility-scoped read-only telemetry access over assigned `tenant_id`.
 · Tenant Selection & Context: Admin users (`admin` and `client_admin`) select active facilities using `TenantContext`. System Admins see all facilities; Client Admins see only facilities matching their `client_id`.
-· Route Guards: Admin-only routes are protected by `ProtectedRoute` configured with `roles: ["admin", "client_admin"]` in `routes.js`. `ProtectedRoute` performs dual validation against both `frontendRole` and `normalizedRole`.
+· Route Guards: Route access is protected by `ProtectedRoute` using a per-route `roles` array configured in `routes.js` — this is **not** uniform across all admin-scoped routes:
+  - **Client management routes** (`/admin`, `/admin/users`): `roles: ["admin", "client_admin"]`. Client Admins manage users/facilities within their own `client_id`.
+  - **System-only routes** (`/analytics`, `/system-health`): `roles: ["admin"]`. Client Admin is explicitly excluded — these expose cross-client system internals outside a Client Admin's scope.
+  - **Protocol Manager** (`/protocol-manager`): `roles: ["admin"]`. Restricted to System Admin only — Client Admin, Operator, and Viewer are all excluded, consistent with the security hardening in v2.7.0.
+  `ProtectedRoute` performs dual validation against both `frontendRole` and `normalizedRole` regardless of which roles array applies.
 · Middleware Enforcers: Backend Flask API uses `tenant_filter` middleware (`backend/app/middleware/tenant.py`) to enforce SQL query filtering automatically based on JWT claims (`role`, `client_id`, `tenant_id`).
 
 ---
