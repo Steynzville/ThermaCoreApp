@@ -1088,7 +1088,7 @@ def seed_client_admin_data(engine):
                 else:
                     conn.execute(
                         text(
-                            "UPDATE tenants SET client_id = :client_id WHERE id = :id"
+                            "UPDATE tenants SET client_id = :client_id WHERE id = :id",
                         ),
                         {"client_id": client_id, "id": t_res[0]},
                     )
@@ -1116,7 +1116,7 @@ def seed_client_admin_data(engine):
                         "write_users",
                         "admin_panel",
                         "remote_control",
-                    ]
+                    ],
                 )
                 conn.execute(
                     text(
