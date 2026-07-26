@@ -24,53 +24,73 @@ logger = logging.getLogger(__name__)
 
 def ensure_role_name_column_length():
     """Ensure the roles.name column is long enough for 'client_admin' (13 chars).
-    
+
     This is a safety check that runs before seeding to prevent the
     "value too long for type character varying(8)" error.
     """
     with app.app_context():
         try:
             app.logger.info("Checking roles.name column length...")
-            
+
             # Check current column type
-            result = db.session.execute(text("""
+            result = db.session.execute(
+                text("""
                 SELECT data_type, character_maximum_length 
                 FROM information_schema.columns 
                 WHERE table_name = 'roles' AND column_name = 'name'
-            """))
+            """)
+            )
             row = result.fetchone()
-            
+
             if row:
                 data_type = row[0]
                 max_length = row[1] if len(row) > 1 else None
-                
-                app.logger.info(f"Current column type: {data_type}, max length: {max_length}")
-                
+
+                app.logger.info(
+                    f"Current column type: {data_type}, max length: {max_length}"
+                )
+
                 # If it's VARCHAR with length < 50, extend it
-                if data_type == 'character varying' and max_length is not None and max_length < 50:
-                    app.logger.warning(f"Column is VARCHAR({max_length}) - extending to VARCHAR(50)...")
-                    db.session.execute(text(
-                        "ALTER TABLE roles ALTER COLUMN name TYPE VARCHAR(50)"
-                    ))
+                if (
+                    data_type == "character varying"
+                    and max_length is not None
+                    and max_length < 50
+                ):
+                    app.logger.warning(
+                        f"Column is VARCHAR({max_length}) - extending to VARCHAR(50)..."
+                    )
+                    db.session.execute(
+                        text(
+                            "ALTER TABLE roles ALTER COLUMN name TYPE VARCHAR(50)",
+                        )
+                    )
                     db.session.commit()
                     app.logger.info("✅ Extended roles.name column to VARCHAR(50)")
                 elif max_length is None:
                     # TEXT type - no length limit
                     app.logger.info("✅ roles.name is TEXT (no length limit)")
                 else:
-                    app.logger.info(f"✅ roles.name is {data_type} with length {max_length} - sufficient")
+                    app.logger.info(
+                        f"✅ roles.name is {data_type} with length {max_length} - sufficient"
+                    )
             else:
-                app.logger.warning("Could not determine roles.name column type - skipping check")
-                
+                app.logger.warning(
+                    "Could not determine roles.name column type - skipping check"
+                )
+
         except Exception as e:
             app.logger.warning(f"Could not check/extend column: {e}")
             # Try a simpler approach - just attempt the alter
             try:
-                db.session.execute(text(
-                    "ALTER TABLE roles ALTER COLUMN name TYPE VARCHAR(50)"
-                ))
+                db.session.execute(
+                    text(
+                        "ALTER TABLE roles ALTER COLUMN name TYPE VARCHAR(50)",
+                    )
+                )
                 db.session.commit()
-                app.logger.info("✅ Extended roles.name column to VARCHAR(50) (direct attempt)")
+                app.logger.info(
+                    "✅ Extended roles.name column to VARCHAR(50) (direct attempt)"
+                )
             except Exception as e2:
                 app.logger.warning(f"Direct alter also failed: {e2}")
 
@@ -183,7 +203,7 @@ def init_database_on_startup():
                 # Client Admin role - always ensure correct permissions
                 app.logger.info("Checking client_admin role...")
                 client_admin_role = Role.query.filter_by(
-                    name=RoleEnum.CLIENT_ADMIN
+                    name=RoleEnum.CLIENT_ADMIN,
                 ).first()
                 if not client_admin_role:
                     client_admin_role = Role(
@@ -194,7 +214,7 @@ def init_database_on_startup():
                     app.logger.info("Created client_admin role")
                 else:
                     app.logger.info(
-                        "Updating client_admin role permissions (self-healing)"
+                        "Updating client_admin role permissions (self-healing)",
                     )
 
                 client_admin_role.permissions = [
