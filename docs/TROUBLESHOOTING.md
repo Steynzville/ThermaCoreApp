@@ -76,11 +76,12 @@ If the SCADA interface displays an outage, follow this triaging order:
   * The user role is set to `client_admin` but no valid `client_id` is assigned to the user in the database.
   * The selected `tenant_id` does not belong to the Client Admin's assigned `client_id`, triggering backend tenant filter rejections (`403 Forbidden`).
   * `getFrontendRole()` is not returning `"admin"` or `"client_admin"`, causing `ProtectedRoute` checks in `routes.js` to block access.
+  * The user is a Client Admin attempting to reach a system-only route (`/analytics`, `/system-health`, `/protocol-manager`) — these intentionally exclude `client_admin` and will correctly redirect even with a valid `client_id`. This is expected behavior, not a bug.
 * **Resolution Steps**:
   1. Confirm that the user's role is set to `'admin'` or `'client_admin'` in the database.
   2. For `client_admin` users, verify that `client_id` is non-null and references an active row in the `clients` table.
   3. Verify that the client organization has registered facilities/tenants in the `tenants` table with matching `client_id`.
-  4. Ensure `ProtectedRoute` permits access by checking that `roles` includes `"client_admin"` for admin routes in `routes.js`.
+  4. Ensure `ProtectedRoute` permits access by checking the target route's specific `roles` array in `routes.js` — note that `"client_admin"` is only present on `/admin` and `/admin/users`, and is deliberately absent from `/analytics`, `/system-health`, and `/protocol-manager`.
   5. Check browser local/session storage to verify `selectedTenant` is correctly set and matches an authorized tenant.
 
 ---
