@@ -228,7 +228,7 @@ describe("MultiProtocolManager - Role-based access control", () => {
     expect(screen.queryByText(/Multi-Protocol Manager/i)).not.toBeInTheDocument();
   });
 
-  it("allows admin users to view the component", () => {
+  it("allows admin users to view the component", async () => {
     mockAuthState = {
       user: { role: "admin", backendRole: "admin" },
       userRole: "admin",
@@ -244,7 +244,7 @@ describe("MultiProtocolManager - Role-based access control", () => {
       );
     });
 
-    expect(screen.getByText(/Multi-Protocol Manager/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Multi-Protocol Manager/i)).toBeInTheDocument();
   });
 });
 
