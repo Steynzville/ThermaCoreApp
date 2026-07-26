@@ -1,4 +1,4 @@
-"""Test roles endpoint to ensure all three roles are returned."""
+"""Test roles endpoint to ensure all four roles are returned."""
 
 
 class TestRolesEndpoint:
@@ -17,8 +17,8 @@ class TestRolesEndpoint:
             return data["data"]["access_token"]
         raise KeyError(f"'access_token' not found in login response: {data}")
 
-    def test_get_roles_returns_all_three_roles(self, client):
-        """Test that GET /api/v1/roles returns all three roles (admin, operator, viewer)."""
+    def test_get_roles_returns_all_four_roles(self, client):
+        """Test that GET /api/v1/roles returns all four roles (admin, operator, viewer, client_admin)."""
         # Get authentication token
         token = self.get_auth_token(client)
 
@@ -35,14 +35,14 @@ class TestRolesEndpoint:
         roles = response.get_json()
         assert isinstance(roles, list), "Response should be a list of roles"
 
-        # Assert we have exactly 3 roles
-        assert len(roles) == 3, f"Expected 3 roles, got {len(roles)}: {roles}"
+        # Assert we have exactly 4 roles
+        assert len(roles) == 4, f"Expected 4 roles, got {len(roles)}: {roles}"
 
         # Extract role names using set for comparison
         role_names = {role["name"] for role in roles}
-        expected_roles = {"admin", "operator", "viewer"}
+        expected_roles = {"admin", "operator", "viewer", "client_admin"}
 
-        # Assert all three expected roles are present
+        # Assert all four expected roles are present
         assert role_names == expected_roles, (
             f"Expected {expected_roles}, got {role_names}"
         )
@@ -143,4 +143,26 @@ class TestRolesEndpoint:
         expected_viewer_permissions = {"read_units", "read_users"}
         assert viewer_permissions == expected_viewer_permissions, (
             f"Viewer permissions mismatch. Expected: {expected_viewer_permissions}, got: {viewer_permissions}"
+        )
+
+        # Test client_admin role permissions
+        client_admin_role = roles_dict.get("client_admin")
+        assert client_admin_role is not None, "Client Admin role not found"
+        client_admin_permissions = {
+            perm["name"] for perm in client_admin_role["permissions"]
+        }
+        expected_client_admin_permissions = {
+            "read_units",
+            "write_units",
+            "delete_units",
+            "read_users",
+            "write_users",
+            "admin_panel",
+            "remote_control",
+        }
+        assert expected_client_admin_permissions.issubset(
+            client_admin_permissions,
+        ), (
+            f"Client Admin missing expected permissions: "
+            f"{expected_client_admin_permissions - client_admin_permissions}"
         )
