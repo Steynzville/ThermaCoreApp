@@ -21,11 +21,9 @@ from app.utils.company_identifier import CompanyIdentifier
 from app.utils.error_handler import SecurityAwareErrorHandler
 from app.utils.helpers import (
     CLIENT_ADMIN_ASSIGNABLE_ROLES,
+    get_current_user as get_current_user_obj,
     get_current_user_id,
     get_role_permissions,
-)
-from app.utils.helpers import (
-    get_current_user as get_current_user_obj,
 )
 from app.utils.schemas import (
     ForgotPasswordSchema,
@@ -92,11 +90,7 @@ def register(data):
 
     # --- Client-scoping for client_admin creators ---
     current_user = get_current_user_obj()
-    if (
-        current_user
-        and current_user.role
-        and current_user.role.name.value == "client_admin"
-    ):
+    if current_user and current_user.role and current_user.role.name.value == "client_admin":
         if not current_user.client_id:
             return SecurityAwareErrorHandler.handle_service_error(
                 Exception("Client admin has no client assigned"),
@@ -114,10 +108,7 @@ def register(data):
             )
         # --- end role restriction ---
         requested_client_id = data.get("client_id")
-        if (
-            requested_client_id is not None
-            and requested_client_id != current_user.client_id
-        ):
+        if requested_client_id is not None and requested_client_id != current_user.client_id:
             return SecurityAwareErrorHandler.handle_service_error(
                 Exception("Cannot assign users to a different client"),
                 "authorization_error",
@@ -1018,6 +1009,8 @@ def reset_password(data):
 
 @auth_bp.route("/auth/emergency-admin", methods=["POST"])
 @track_request_id
+@jwt_required()
+@permission_required("admin_panel")
 def emergency_admin():
     """Emergency admin account creation/update endpoint.
 
@@ -1027,6 +1020,15 @@ def emergency_admin():
 
     Creates/updates user: emergency_admin / EmergencyAdmin123!
 
+    **SECURITY**: This endpoint requires authentication with admin_panel permission.
+    NOTE: Because it requires an existing admin_panel-holding session, this is
+    effectively an admin-only account-reset utility rather than a break-glass
+    recovery mechanism for a fully locked-out deployment. If true break-glass
+    recovery is needed, use a separate out-of-band mechanism (e.g. a CLI/shell
+    script gated by server-side secrets, not an HTTP route).
+    In production, consider additional controls like IP allowlisting or
+    environment-based enable/disable.
+
     ---
     tags:
       - Authentication
@@ -1035,6 +1037,8 @@ def emergency_admin():
         description: Emergency admin account created/updated successfully
       500:
         description: Server error
+    security:
+      - JWT: []
     """
     try:
         logger = logging.getLogger(__name__)
