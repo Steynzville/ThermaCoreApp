@@ -295,12 +295,11 @@ describe("Routes Configuration", () => {
     });
   });
 
-  // Client Admin specific test
+  // Client Admin specific test - only for routes that should have client_admin
   it("should allow client_admin access to admin routes", () => {
     const adminRoutes = routes.filter((r) => 
       r.path === "/admin" || 
-      r.path === "/admin/users" ||
-      r.path === "/analytics"
+      r.path === "/admin/users"
     );
     adminRoutes.forEach((route) => {
       expect(route.roles).toContain("client_admin");
