@@ -1295,7 +1295,10 @@ class TestRegisterClientScoping:
     """Client-admin restrictions on the /auth/register endpoint."""
 
     def test_client_admin_register_forces_own_client(
-        self, client, client_admin_token, db_session
+        self,
+        client,
+        client_admin_token,
+        db_session,
     ):
         token, own_client_id = client_admin_token
         from app.models import Role
@@ -1319,7 +1322,10 @@ class TestRegisterClientScoping:
         assert error["details"]["context"] == "Client assignment"
 
     def test_client_admin_register_defaults_to_own_client(
-        self, client, client_admin_token, db_session
+        self,
+        client,
+        client_admin_token,
+        db_session,
     ):
         token, own_client_id = client_admin_token
         from app.models import Role, User
@@ -1341,7 +1347,10 @@ class TestRegisterClientScoping:
         assert created.client_id == own_client_id
 
     def test_client_admin_register_disallowed_admin_role(
-        self, client, client_admin_token, db_session
+        self,
+        client,
+        client_admin_token,
+        db_session,
     ):
         token, _ = client_admin_token
         from app.models import Role
@@ -1364,7 +1373,10 @@ class TestRegisterClientScoping:
         assert error["details"]["context"] == "Role assignment"
 
     def test_client_admin_register_allowed_viewer_role(
-        self, client, client_admin_token, db_session
+        self,
+        client,
+        client_admin_token,
+        db_session,
     ):
         token, _ = client_admin_token
         from app.models import Role
@@ -1384,7 +1396,10 @@ class TestRegisterClientScoping:
         assert response.status_code == 201
 
     def test_client_admin_register_allowed_operator_role(
-        self, client, client_admin_token, db_session
+        self,
+        client,
+        client_admin_token,
+        db_session,
     ):
         token, _ = client_admin_token
         from app.models import Role
@@ -1404,7 +1419,10 @@ class TestRegisterClientScoping:
         assert response.status_code == 201
 
     def test_client_admin_register_no_client_assigned(
-        self, client, client_admin_no_client_token, db_session
+        self,
+        client,
+        client_admin_no_client_token,
+        db_session,
     ):
         from app.models import Role
 
