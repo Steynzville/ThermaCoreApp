@@ -151,7 +151,8 @@ const routes = [
     path: "/protocol-manager",
     component: MultiProtocolManager,
     isProtected: true,
-    roles: ["admin", "user", "operator", "viewer"], // Excludes client_admin
+    roles: ["admin"], // System Admin only
+    isAdminRoute: true, // Documentation: admin-only route
   },
   {
     path: "/system-health",
