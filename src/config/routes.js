@@ -123,7 +123,7 @@ const routes = [
     component: ViewAnalytics,
     isProtected: true,
     roles: ["admin"],
-    isAdminRoute: true, // Documentation: admin-only route
+    isAdminRoute: true, // Documentation: admin-only route (client_admin excluded)
   },
   // NOTE: routes with roles: [] are intentionally open to ALL authenticated users
   // (operators, viewers, admins). These are read-only/telemetry views that do not
@@ -151,13 +151,13 @@ const routes = [
     path: "/protocol-manager",
     component: MultiProtocolManager,
     isProtected: true,
-    roles: [], // Open to all authenticated users (read-only view)
+    roles: ["admin", "user", "operator", "viewer"], // Excludes client_admin
   },
   {
     path: "/system-health",
     component: SystemHealth,
     isProtected: true,
-    roles: ["admin"],
+    roles: ["admin"], // System admin only - client_admin excluded
     isAdminRoute: true, // Documentation: admin-only route
   },
   {
