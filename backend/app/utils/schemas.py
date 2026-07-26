@@ -62,15 +62,15 @@ class DateTimeField(fields.DateTime):
                 # Return None instead of malformed string to prevent client-side errors
                 return None
 
-        # If value is not a string or datetime, try to handle gracefully
-        if not hasattr(value, "isoformat") and not hasattr(value, "strftime"):
-            logger.warning(
-                f"Invalid datetime value type '{type(value).__name__}' in field '{attr}': {value}",
-            )
-            return None
-
         # If it's already a datetime object, use the parent method directly
-        return super()._serialize(value, attr, obj, **kwargs)
+        if isinstance(value, datetime):
+            return super()._serialize(value, attr, obj, **kwargs)
+
+        # Anything else (including unconfigured mocks) isn't a valid datetime
+        logger.warning(
+            f"Invalid datetime value type '{type(value).__name__}' in field '{attr}': {value}",
+        )
+        return None
 
 
 class EnumField(fields.Field):
