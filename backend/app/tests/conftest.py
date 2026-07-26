@@ -383,6 +383,7 @@ def _create_test_data():
     admin_role = Role(name=RoleEnum.ADMIN, description="Administrator")
     operator_role = Role(name=RoleEnum.OPERATOR, description="Operator")
     viewer_role = Role(name=RoleEnum.VIEWER, description="Viewer")
+    client_admin_role = Role(name=RoleEnum.CLIENT_ADMIN, description="Client Admin")
 
     # Assign permissions to roles
     admin_role.permissions = permissions  # All permissions - ThermaCore staff only
@@ -390,10 +391,14 @@ def _create_test_data():
         permissions[0:1] + permissions[3:4] + permissions[7:8]
     )  # read units + read users + remote control
     viewer_role.permissions = permissions[0:1] + permissions[3:4]  # read only
+    client_admin_role.permissions = (
+        permissions[0:3] + permissions[3:5] + permissions[6:8]
+    )  # read/write/delete units, read/write users, admin_panel, remote_control
 
     db.session.add(admin_role)
     db.session.add(operator_role)
     db.session.add(viewer_role)
+    db.session.add(client_admin_role)
     db.session.commit()
 
     # Create test users
@@ -523,7 +528,7 @@ def viewer_token(app, db_session):
 
 
 # ============================================================
-# CLIENT ADMIN FIXTURES (ADDED)
+# CLIENT ADMIN FIXTURES
 # ============================================================
 
 
@@ -531,13 +536,13 @@ def viewer_token(app, db_session):
 def client_admin_token(app, db_session):
     """JWT for a client_admin user scoped to a specific client."""
     from flask_jwt_extended import create_access_token
-
     from app.models import Client, Role, User
 
     with app.app_context():
-        # Ensure client_admin role exists
+        # Role now exists from seed data - just look it up
         client_admin_role = Role.query.filter_by(name="client_admin").first()
         if not client_admin_role:
+            # Fallback - should not happen if seed runs
             client_admin_role = Role(name="client_admin", description="Client Admin")
             db_session.add(client_admin_role)
             db_session.commit()
@@ -591,13 +596,13 @@ def client_admin_token(app, db_session):
 def client_admin_no_client_token(app, db_session):
     """JWT for a client_admin user with NO client assigned."""
     from flask_jwt_extended import create_access_token
-
     from app.models import Role, User
 
     with app.app_context():
-        # Ensure client_admin role exists
+        # Role now exists from seed data - just look it up
         client_admin_role = Role.query.filter_by(name="client_admin").first()
         if not client_admin_role:
+            # Fallback - should not happen if seed runs
             client_admin_role = Role(name="client_admin", description="Client Admin")
             db_session.add(client_admin_role)
             db_session.commit()
