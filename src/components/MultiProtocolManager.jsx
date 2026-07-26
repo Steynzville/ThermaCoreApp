@@ -48,10 +48,9 @@ const MultiProtocolManager = () => {
     backendRole === "admin" ||
     user?.backendRole === "admin";
 
-  if (!isAdmin) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
+  // ============================================================
+  // ALL HOOKS DECLARED UNCONDITIONALLY BEFORE ANY EARLY RETURN
+  // ============================================================
   const [protocolsStatus, setProtocolsStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -374,6 +373,13 @@ const MultiProtocolManager = () => {
   const getBackoffSeconds = () => {
     return Math.round(Math.min(10 * 1.5 ** consecutiveErrors, 60));
   };
+
+  // ============================================================
+  // EARLY RETURN AFTER ALL HOOKS HAVE BEEN DECLARED
+  // ============================================================
+  if (!isAdmin) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   // Loading state
   if (loading) {
