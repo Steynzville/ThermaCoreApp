@@ -182,6 +182,7 @@ class UserCreateSchema(Schema):
     department = fields.Str(validate=validate.Length(max=100))
     position = fields.Str(validate=validate.Length(max=100))
     role_id = fields.Int(required=True)
+    client_id = fields.Int(allow_none=True)
 
 
 class UserSelfRegisterSchema(Schema):
@@ -212,6 +213,7 @@ class UserUpdateSchema(Schema):
     position = fields.Str(validate=validate.Length(max=100))
     role_id = fields.Int()
     is_active = fields.Bool()
+    client_id = fields.Int(allow_none=True)
 
 
 class LoginSchema(Schema):
