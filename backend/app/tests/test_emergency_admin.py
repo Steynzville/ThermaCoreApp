@@ -13,11 +13,29 @@ def unwrap_response(response):
     return data
 
 
+def get_admin_token(client):
+    """Helper to get an admin token with admin_panel permission."""
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"username": "admin", "password": "admin123"},
+        headers={"Content-Type": "application/json"},
+    )
+    assert response.status_code == 200
+    data = unwrap_response(response)
+    return data["access_token"]
+
+
 class TestEmergencyAdmin:
     """Test emergency admin endpoint."""
 
     def test_emergency_admin_creates_account(self, client, db_session):
         """Test emergency admin endpoint creates account when it doesn't exist."""
+        admin_token = get_admin_token(client)
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {admin_token}",
+        }
+
         # Delete emergency_admin if it exists
         existing_user = User.query.filter_by(username="emergency_admin").first()
         if existing_user:
@@ -27,7 +45,7 @@ class TestEmergencyAdmin:
         # Call emergency admin endpoint
         response = client.post(
             "/api/v1/auth/emergency-admin",
-            headers={"Content-Type": "application/json"},
+            headers=headers,
         )
 
         assert response.status_code == 200
@@ -48,10 +66,16 @@ class TestEmergencyAdmin:
 
     def test_emergency_admin_updates_existing_account(self, client, db_session):
         """Test emergency admin endpoint updates existing account."""
+        admin_token = get_admin_token(client)
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {admin_token}",
+        }
+
         # First call to create
         response1 = client.post(
             "/api/v1/auth/emergency-admin",
-            headers={"Content-Type": "application/json"},
+            headers=headers,
         )
         assert response1.status_code == 200
 
@@ -65,7 +89,7 @@ class TestEmergencyAdmin:
         # Second call to update
         response2 = client.post(
             "/api/v1/auth/emergency-admin",
-            headers={"Content-Type": "application/json"},
+            headers=headers,
         )
         assert response2.status_code == 200
 
@@ -77,10 +101,16 @@ class TestEmergencyAdmin:
 
     def test_emergency_admin_login(self, client, db_session):
         """Test that emergency admin account can login."""
+        admin_token = get_admin_token(client)
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {admin_token}",
+        }
+
         # Create emergency admin
         response = client.post(
             "/api/v1/auth/emergency-admin",
-            headers={"Content-Type": "application/json"},
+            headers=headers,
         )
         assert response.status_code == 200
 
@@ -99,10 +129,16 @@ class TestEmergencyAdmin:
 
     def test_emergency_admin_has_admin_permissions(self, client, db_session):
         """Test that emergency admin has admin role and permissions."""
+        admin_token = get_admin_token(client)
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {admin_token}",
+        }
+
         # Create emergency admin
         response = client.post(
             "/api/v1/auth/emergency-admin",
-            headers={"Content-Type": "application/json"},
+            headers=headers,
         )
         assert response.status_code == 200
 
@@ -135,11 +171,17 @@ class TestEmergencyAdmin:
 
     def test_emergency_admin_idempotent(self, client, db_session):
         """Test that calling emergency admin endpoint multiple times is safe."""
+        admin_token = get_admin_token(client)
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {admin_token}",
+        }
+
         # Call 3 times
         for _ in range(3):
             response = client.post(
                 "/api/v1/auth/emergency-admin",
-                headers={"Content-Type": "application/json"},
+                headers=headers,
             )
             assert response.status_code == 200
 
@@ -149,10 +191,16 @@ class TestEmergencyAdmin:
 
     def test_emergency_admin_password_reset(self, client, db_session):
         """Test that emergency admin password is always reset to the default."""
+        admin_token = get_admin_token(client)
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {admin_token}",
+        }
+
         # Create emergency admin
         response = client.post(
             "/api/v1/auth/emergency-admin",
-            headers={"Content-Type": "application/json"},
+            headers=headers,
         )
         assert response.status_code == 200
 
@@ -191,7 +239,7 @@ class TestEmergencyAdmin:
         # Call emergency admin endpoint again - should reset password
         response = client.post(
             "/api/v1/auth/emergency-admin",
-            headers={"Content-Type": "application/json"},
+            headers=headers,
         )
         assert response.status_code == 200
 
