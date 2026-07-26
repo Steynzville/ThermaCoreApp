@@ -67,13 +67,13 @@ def get_users():
     page = request.args.get("page", 1, type=int)
     per_page = min(request.args.get("per_page", 50, type=int), 100)
     role_name = request.args.get("role")
-    
+
     # Fix for active=false query param bug - handle string values properly
     active_param = request.args.get("active")
     active = None
     if active_param is not None:
         active = active_param.strip().lower() in ("true", "1", "yes")
-    
+
     search = request.args.get("search", "").strip()
     company = request.args.get("company", "").strip()
 
