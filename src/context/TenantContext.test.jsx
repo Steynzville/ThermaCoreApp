@@ -4,6 +4,7 @@
  * Multi-tenancy testing covering:
  * - Tenant loading for authenticated users
  * - Admin vs non-admin tenant access
+ * - Client Admin tenant filtering by client_id
  * - Tenant switching (admin only)
  * - Error handling
  * - API integration
@@ -13,7 +14,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act, waitFor, cleanup } from "@testing-library/react";
 import React from "react";
-import { TenantProvider, useTenant } from "../context/TenantContext";
 import { apiGetJson } from "../utils/apiFetch";
 import { units } from "../data/mockUnits";
 
@@ -36,6 +36,9 @@ vi.mock("../utils/apiFetch", () => ({
   apiGetJson: vi.fn(),
 }));
 
+// Import TenantContext after mocks are set up
+import { TenantProvider, useTenant } from "./TenantContext";
+
 // Mock import.meta.env
 vi.stubEnv("VITE_API_BASE_URL", "https://test-api.com");
 
@@ -57,8 +60,6 @@ describe("TenantContext", () => {
 
   afterEach(() => {
     cleanup();
-    // vi.resetModules() doesn't re-run static imports or vi.mock factories
-    // and can be removed without changing behavior.
   });
 
   describe("useTenant Hook", () => {
@@ -224,6 +225,35 @@ describe("TenantContext", () => {
 
       expect(result.current.isAdmin).toBe(false);
     });
+
+    it("should set isClientAdmin based on backendRole", async () => {
+      mockBackendRole = "client_admin";
+      vi.mocked(useAuth).mockReturnValue({
+        user: { ...mockUser, client_id: 1 },
+        backendRole: "client_admin",
+      });
+      
+      vi.mocked(apiGetJson)
+        .mockResolvedValueOnce({
+          success: true,
+          data: { id: "tenant-1", name: "Test Tenant", client_id: 1 },
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          data: [{ id: "tenant-1", name: "Test Tenant", client_id: 1 }],
+        });
+
+      const { result } = renderHook(() => useTenant(), {
+        wrapper: TenantProvider,
+      });
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      expect(result.current.isClientAdmin).toBe(true);
+      expect(result.current.canSwitchTenants).toBe(true);
+    });
   });
 
   describe("Available Tenants - Admin Only", () => {
@@ -259,6 +289,42 @@ describe("TenantContext", () => {
       });
 
       expect(result.current.availableTenants).toEqual(mockTenants);
+    });
+
+    it("should load available tenants filtered by client_id for Client Admin", async () => {
+      mockBackendRole = "client_admin";
+      vi.mocked(useAuth).mockReturnValue({
+        user: { ...mockUser, client_id: 1 },
+        backendRole: "client_admin",
+      });
+      
+      const mockTenants = [
+        { id: "tenant-1", name: "Facility Alpha", client_id: 1 },
+        { id: "tenant-2", name: "Facility Beta", client_id: 2 },
+        { id: "tenant-3", name: "Facility Gamma", client_id: 1 },
+      ];
+
+      vi.mocked(apiGetJson)
+        .mockResolvedValueOnce({
+          success: true,
+          data: { id: "tenant-1", name: "Facility Alpha", client_id: 1 },
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          data: mockTenants,
+        });
+
+      const { result } = renderHook(() => useTenant(), {
+        wrapper: TenantProvider,
+      });
+
+      await waitFor(() => {
+        expect(result.current.availableTenants).toHaveLength(2);
+      });
+
+      // Should only see tenants with client_id === 1
+      expect(result.current.availableTenants[0].id).toBe("tenant-1");
+      expect(result.current.availableTenants[1].id).toBe("tenant-3");
     });
 
     it("should not load available tenants for non-admin users", async () => {
@@ -431,6 +497,43 @@ describe("TenantContext", () => {
       });
 
       expect(result.current.currentTenant).toEqual({ id: "tenant-2", name: "Tenant B" });
+    });
+
+    it("should allow Client Admin to switch tenant", async () => {
+      mockBackendRole = "client_admin";
+      vi.mocked(useAuth).mockReturnValue({
+        user: { ...mockUser, client_id: 1 },
+        backendRole: "client_admin",
+      });
+      
+      const tenants = [
+        { id: "tenant-1", name: "Facility Alpha", client_id: 1 },
+        { id: "tenant-2", name: "Facility Beta", client_id: 1 },
+      ];
+
+      vi.mocked(apiGetJson)
+        .mockResolvedValueOnce({
+          success: true,
+          data: { id: "tenant-1", name: "Facility Alpha", client_id: 1 },
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          data: tenants,
+        });
+
+      const { result } = renderHook(() => useTenant(), {
+        wrapper: TenantProvider,
+      });
+
+      await waitFor(() => {
+        expect(result.current.availableTenants).toHaveLength(2);
+      });
+
+      act(() => {
+        result.current.switchTenant("tenant-2");
+      });
+
+      expect(result.current.currentTenant).toEqual({ id: "tenant-2", name: "Facility Beta", client_id: 1 });
     });
 
     it("should allow admin to switch to 'All Tenants' (null)", async () => {
@@ -803,6 +906,40 @@ describe("TenantContext", () => {
       });
 
       expect(result.current.currentTenant).toEqual({ id: "tenant-3", name: "Tenant C" });
+    });
+
+    it("should handle Client Admin with no client_id", async () => {
+      mockBackendRole = "client_admin";
+      vi.mocked(useAuth).mockReturnValue({
+        user: { ...mockUser, client_id: undefined },
+        backendRole: "client_admin",
+      });
+      
+      vi.mocked(apiGetJson)
+        .mockResolvedValueOnce({
+          success: true,
+          data: null,
+          message: "No client assigned",
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          data: [
+            { id: "tenant-1", name: "Facility Alpha", client_id: 1 },
+            { id: "tenant-2", name: "Facility Beta", client_id: 2 },
+          ],
+        });
+
+      const { result } = renderHook(() => useTenant(), {
+        wrapper: TenantProvider,
+      });
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      // Should still be able to switch tenants
+      expect(result.current.isClientAdmin).toBe(true);
+      expect(result.current.canSwitchTenants).toBe(true);
     });
   });
 });
