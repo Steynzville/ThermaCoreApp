@@ -858,10 +858,10 @@ const AdminPanel = ({ className }) => {
           </div>
         )}
 
-        {/* Create User Modal */}
+        {/* Create User Modal - FIXED with proper scrolling on mobile */}
         {createUserModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-md">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 Create New User
               </h3>
@@ -1106,7 +1106,8 @@ const AdminPanel = ({ className }) => {
                   )}
                 </div>
               </div>
-              <div className="flex justify-end space-x-3 mt-6">
+              {/* Buttons - sticky at bottom with border */}
+              <div className="flex justify-end space-x-3 mt-6 pt-2 border-t border-gray-200 dark:border-gray-700 sticky bottom-0 bg-white dark:bg-gray-900 py-2">
                 <button
                   type="button"
                   onClick={() => setCreateUserModal(false)}
@@ -1137,8 +1138,8 @@ const AdminPanel = ({ className }) => {
 
         {/* Edit User Modal */}
         {editingUser && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-md">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 Edit User
               </h3>
@@ -1294,7 +1295,7 @@ const AdminPanel = ({ className }) => {
                   </select>
                 </div>
               </div>
-              <div className="flex justify-end space-x-3 mt-6">
+              <div className="flex justify-end space-x-3 mt-6 pt-2 border-t border-gray-200 dark:border-gray-700 sticky bottom-0 bg-white dark:bg-gray-900 py-2">
                 <button
                   type="button"
                   onClick={() => setEditingUser(null)}
@@ -1317,9 +1318,9 @@ const AdminPanel = ({ className }) => {
 
         {/* Password Reset Modal */}
         {passwordResetModal && selectedUserForReset && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div
-              className="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-md"
+              className="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto"
               data-testid="password-reset-modal"
             >
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
@@ -1457,7 +1458,7 @@ const AdminPanel = ({ className }) => {
                   </div>
                 )}
               </div>
-              <div className="flex justify-end space-x-3 mt-6">
+              <div className="flex justify-end space-x-3 mt-6 pt-2 border-t border-gray-200 dark:border-gray-700 sticky bottom-0 bg-white dark:bg-gray-900 py-2">
                 <button
                   type="button"
                   onClick={closePasswordResetModal}
