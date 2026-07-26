@@ -536,6 +536,7 @@ def viewer_token(app, db_session):
 def client_admin_token(app, db_session):
     """JWT for a client_admin user scoped to a specific client."""
     from flask_jwt_extended import create_access_token
+
     from app.models import Client, Role, User
 
     with app.app_context():
@@ -596,6 +597,7 @@ def client_admin_token(app, db_session):
 def client_admin_no_client_token(app, db_session):
     """JWT for a client_admin user with NO client assigned."""
     from flask_jwt_extended import create_access_token
+
     from app.models import Role, User
 
     with app.app_context():
