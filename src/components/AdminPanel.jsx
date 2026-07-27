@@ -638,13 +638,14 @@ const AdminPanel = ({ className }) => {
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 User Management
               </h3>
+              {/* TEST MARKER - PINK BUTTON WITH TESTING 123 */}
               <button
                 type="button"
                 onClick={handleAddUser}
-                className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="flex items-center space-x-2 px-3 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-700 transition-colors"
               >
                 <Plus className="h-4 w-4" />
-                <span>Add User</span>
+                <span>TESTING 123</span>
               </button>
             </CardHeader>
             <CardContent>
@@ -858,13 +859,13 @@ const AdminPanel = ({ className }) => {
           </div>
         )}
 
-        {/* Create User Modal - WITH TEST MARKER */}
+        {/* Create User Modal */}
         {createUserModal && (
           <div className="modal-overlay fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 p-4 sm:p-6">
             <div className="bg-white dark:bg-gray-900 rounded-xl rounded-b-none sm:rounded-xl p-6 w-full max-w-lg max-h-[95vh] flex flex-col my-auto shadow-2xl border border-gray-200 dark:border-gray-800">
               <div className="flex items-center justify-between pb-3 mb-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
-                <h3 className="text-lg font-semibold text-red-500 bg-yellow-300 text-2xl px-4 py-2 rounded">
-                  🚨 TEST-MARKER-999 🚨
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  Create New User
                 </h3>
                 <button
                   type="button"
