@@ -1,4 +1,4 @@
-// DEPLOYMENT-FORCE-REBUILD-2026-07-27-21:30
+// DEPLOYMENT-FORCE-REBUILD-2026-07-27-21:45
 import {
   Database,
   Edit,
@@ -639,14 +639,14 @@ const AdminPanel = ({ className }) => {
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 User Management
               </h3>
-              {/* PINK BUTTON WITH FORCE REBUILD TEXT */}
+              {/* PINK BUTTON WITH NEW TEXT */}
               <button
                 type="button"
                 onClick={handleAddUser}
                 className="flex items-center space-x-2 px-3 py-2 bg-pink-500 text-white font-bold rounded-lg hover:bg-pink-700 transition-colors"
               >
                 <Plus className="h-4 w-4" />
-                <span>🚀 FORCE REBUILD 🚀</span>
+                <span>🔥 PINK BUTTON TEST 🔥</span>
               </button>
             </CardHeader>
             <CardContent>
