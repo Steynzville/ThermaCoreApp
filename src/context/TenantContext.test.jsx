@@ -9,6 +9,7 @@
  * - Error handling
  * - API integration
  * - Mock tenant generation
+ * - System Admin sees all tenants (merged mock + real)
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -133,6 +134,7 @@ describe("TenantContext", () => {
 
       expect(result.current.currentTenant).toBeNull();
       expect(result.current.isAdmin).toBe(true);
+      expect(result.current.canSwitchTenants).toBe(true);
     });
 
     it("should handle API errors gracefully", async () => {
@@ -201,6 +203,7 @@ describe("TenantContext", () => {
       });
 
       expect(result.current.isAdmin).toBe(true);
+      expect(result.current.canSwitchTenants).toBe(true);
     });
 
     it("should set isAdmin to false for non-admin users", async () => {
@@ -224,6 +227,7 @@ describe("TenantContext", () => {
       });
 
       expect(result.current.isAdmin).toBe(false);
+      expect(result.current.canSwitchTenants).toBe(false);
     });
 
     it("should set isClientAdmin based on backendRole", async () => {
@@ -256,28 +260,29 @@ describe("TenantContext", () => {
     });
   });
 
-  describe("Available Tenants - Admin Only", () => {
-    it("should load available tenants for admin users", async () => {
+  describe("Available Tenants - Admin and Client Admin", () => {
+    it("should load all available tenants merged with mock tenants for admin users", async () => {
       mockBackendRole = "admin";
       vi.mocked(useAuth).mockReturnValue({
         user: mockUser,
         backendRole: "admin",
       });
       
-      const mockTenants = [
-        { id: "tenant-1", name: "Tenant A" },
-        { id: "tenant-2", name: "Tenant B" },
-        { id: "tenant-3", name: "Tenant C" },
+      // Only 3 tenants from backend (ACME)
+      const backendTenants = [
+        { id: "tenant-1", name: "ACME Sydney", client_id: 1 },
+        { id: "tenant-2", name: "ACME Melbourne", client_id: 1 },
+        { id: "tenant-3", name: "ACME Brisbane", client_id: 1 },
       ];
 
       vi.mocked(apiGetJson)
         .mockResolvedValueOnce({
           success: true,
-          data: { id: "tenant-1", name: "Tenant A" },
+          data: { id: "tenant-1", name: "ACME Sydney" },
         })
         .mockResolvedValueOnce({
           success: true,
-          data: mockTenants,
+          data: backendTenants,
         });
 
       const { result } = renderHook(() => useTenant(), {
@@ -285,10 +290,33 @@ describe("TenantContext", () => {
       });
 
       await waitFor(() => {
-        expect(result.current.availableTenants).toHaveLength(3);
+        expect(result.current.isLoading).toBe(false);
       });
 
-      expect(result.current.availableTenants).toEqual(mockTenants);
+      // Should have all mock tenants + backend tenants (merged)
+      // Get all unique client names from units
+      const uniqueClients = new Set();
+      units.forEach(unit => {
+        if (unit.client?.name) {
+          uniqueClients.add(unit.client.name);
+        }
+      });
+      
+      // Available tenants should include ALL mock tenants (not just the 3 from backend)
+      // The merge should result in at least the number of unique clients from units
+      expect(result.current.availableTenants.length).toBeGreaterThanOrEqual(uniqueClients.size);
+      
+      // Should include the ACME tenants from backend
+      const tenantNames = result.current.availableTenants.map(t => t.name);
+      expect(tenantNames).toContain("ACME Sydney");
+      expect(tenantNames).toContain("ACME Melbourne");
+      expect(tenantNames).toContain("ACME Brisbane");
+      
+      // Should also include other mock tenants from units
+      const mockTenantNames = Array.from(uniqueClients);
+      mockTenantNames.forEach(name => {
+        expect(tenantNames).toContain(name);
+      });
     });
 
     it("should load available tenants filtered by client_id for Client Admin", async () => {
