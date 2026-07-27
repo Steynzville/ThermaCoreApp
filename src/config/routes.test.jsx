@@ -246,14 +246,23 @@ describe("Routes Configuration", () => {
     });
   });
 
-  // Admin management routes should have both admin AND client_admin
-  it("should have client_admin access to admin management routes but not restricted system routes", () => {
+  // Admin management route (/admin) should have both admin AND client_admin
+  it("should have client_admin access to admin landing route but not user management", () => {
     const managementRoutes = routes.filter(
-      (r) => r.path === "/admin" || r.path === "/admin/users"
+      (r) => r.path === "/admin"
     );
     managementRoutes.forEach((route) => {
       expect(route.roles).toContain("admin");
       expect(route.roles).toContain("client_admin");
+    });
+
+    // /admin/users is now system admin only
+    const userManagementRoute = routes.filter(
+      (r) => r.path === "/admin/users"
+    );
+    userManagementRoute.forEach((route) => {
+      expect(route.roles).toContain("admin");
+      expect(route.roles).not.toContain("client_admin");
     });
 
     const strictAdminOnlyRoutes = routes.filter(
@@ -294,13 +303,13 @@ describe("Routes Configuration", () => {
     });
   });
 
-  // isAdminRoute should be properly scoped - client_admin only on management routes
-  it("should have isAdminRoute routes properly scoped (client_admin only on management routes)", () => {
+  // isAdminRoute should be properly scoped - client_admin only on /admin
+  it("should have isAdminRoute routes properly scoped (client_admin only on /admin)", () => {
     const adminOnlyRoutes = routes.filter((r) => r.isAdminRoute === true);
     expect(adminOnlyRoutes.length).toBeGreaterThan(0);
     adminOnlyRoutes.forEach((route) => {
       expect(route.roles).toContain("admin");
-      if (route.path === "/admin" || route.path === "/admin/users") {
+      if (route.path === "/admin") {
         expect(route.roles).toContain("client_admin");
       } else {
         expect(route.roles).not.toContain("client_admin");
