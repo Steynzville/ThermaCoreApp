@@ -204,6 +204,58 @@ describe("SideNavigation", () => {
     });
   });
 
+  // ============================================================
+  // CLIENT ADMIN ROLE TESTS
+  // ============================================================
+  describe("Client Admin Role", () => {
+    beforeEach(async () => {
+      const { useAuth } = await import("../context/AuthContext");
+      useAuth.mockReturnValue({
+        userRole: "client_admin",
+        permissions: { canViewAnalytics: true },
+        logout: vi.fn(),
+      });
+    });
+
+    it("should show shared navigation items for client_admin", () => {
+      renderSideNavigation();
+
+      expect(screen.getAllByText("Dashboard").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Alerts").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Alarms!").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("History").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Reports").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Documents").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Settings").length).toBeGreaterThan(0);
+    });
+
+    it("should show 'My Units' label (not 'Units Overview') for client_admin", () => {
+      renderSideNavigation();
+
+      expect(screen.getAllByText("My Units").length).toBeGreaterThan(0);
+      expect(screen.queryAllByText("Units Overview").length).toBe(0);
+    });
+
+    it("should show User Management for client_admin", () => {
+      renderSideNavigation();
+      expect(screen.getAllByText("User Management").length).toBeGreaterThan(0);
+    });
+
+    it("should show SCADA for client_admin when permitted", () => {
+      renderSideNavigation();
+      expect(screen.getAllByText("SCADA").length).toBeGreaterThan(0);
+    });
+
+    it("should hide system-admin-only items for client_admin", () => {
+      renderSideNavigation();
+
+      expect(screen.queryAllByText("Tenant Switcher").length).toBe(0);
+      expect(screen.queryAllByText("Sales").length).toBe(0);
+      expect(screen.queryAllByText("System Health").length).toBe(0);
+      expect(screen.queryAllByText("Protocol Manager").length).toBe(0);
+    });
+  });
+
   describe("Collapsed State", () => {
     it("should hide labels when collapsed", async () => {
       const { useSidebar } = await import("../context/SidebarContext");
