@@ -133,9 +133,18 @@ export const TenantProvider = ({ children }) => {
         }
 
         // Role-based filtering:
-        // System Admin: ALL tenants
-        // Client Admin: tenants matching user.client_id
-        if (isClientAdmin && user?.client_id) {
+        // System Admin: ALL tenants — merge whatever the backend returns
+        // with the full mock tenant list, so admin always sees every demo
+        // client even when the backend only has partial seed data (e.g. ACME).
+        if (isAdmin) {
+          // Generate full mock tenant list from mockUnits.js
+          const mockTenants = generateMockTenants();
+          // Merge with backend data — use Map to deduplicate by name
+          const combined = new Map();
+          mockTenants.forEach((t) => combined.set(t.name, t));
+          loadedTenants.forEach((t) => combined.set(t.name, t)); // real data wins on conflicts
+          setAvailableTenants(Array.from(combined.values()));
+        } else if (isClientAdmin && user?.client_id) {
           const userClientId = Number(user.client_id);
           const filtered = loadedTenants.filter(
             (t) => (t.client_id !== undefined && Number(t.client_id) === userClientId) ||
@@ -154,6 +163,9 @@ export const TenantProvider = ({ children }) => {
             (t) => Number(t.client_id) === userClientId || Number(t.clientId) === userClientId
           );
           setAvailableTenants(filtered.length > 0 ? filtered : mockTenants);
+        } else if (isAdmin) {
+          // Admin gets all mock tenants on API error
+          setAvailableTenants(mockTenants);
         } else {
           setAvailableTenants(mockTenants);
         }
