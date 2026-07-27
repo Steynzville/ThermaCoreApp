@@ -45,7 +45,6 @@ const NavItem = ({ item, isCollapsed, isActive, onClick }) => {
         }
       `}
       onClick={() => onClick(item)}
-      // ✅ FIX: Add aria-label for accessibility when collapsed
       aria-label={isCollapsed ? item.label : undefined}
     >
       <Icon
@@ -76,10 +75,9 @@ const NavItem = ({ item, isCollapsed, isActive, onClick }) => {
   );
 };
 
-// ✅ FIX: Generate Gravatar URL from email
+// Generate Gravatar URL from email
 const getGravatarUrl = (email, size = 32) => {
   if (!email) return null;
-  // Simple hash function for demo - in production use crypto
   const hash = email.toLowerCase().trim().split('').reduce((acc, char) => {
     return acc + char.charCodeAt(0).toString(16);
   }, '');
@@ -115,7 +113,7 @@ const EnhancedSideNavigation = () => {
       icon: LayoutDashboard,
       href: "/dashboard",
       badge: null,
-      roles: ["admin", "user"],
+      roles: ["admin", "client_admin", "user", "operator", "viewer"],
     },
     {
       id: "grid-view",
@@ -123,7 +121,7 @@ const EnhancedSideNavigation = () => {
       icon: Grid3X3,
       href: "/grid-view",
       badge: totalUnits,
-      roles: ["admin", "user"],
+      roles: ["admin", "client_admin", "user", "operator", "viewer"],
     },
     {
       id: "alerts",
@@ -132,7 +130,7 @@ const EnhancedSideNavigation = () => {
       href: "/alerts",
       badge: totalAlerts,
       badgeColor: "orange",
-      roles: ["admin", "user"],
+      roles: ["admin", "client_admin", "user", "operator", "viewer"],
     },
     {
       id: "alarms",
@@ -141,7 +139,7 @@ const EnhancedSideNavigation = () => {
       href: "/alarms",
       badge: totalAlarms,
       badgeColor: "red",
-      roles: ["admin", "user"],
+      roles: ["admin", "client_admin", "user", "operator"],
     },
     {
       id: "history",
@@ -149,7 +147,7 @@ const EnhancedSideNavigation = () => {
       icon: History,
       href: "/history",
       badge: null,
-      roles: ["admin", "user"],
+      roles: ["admin", "client_admin", "user", "operator", "viewer"],
     },
     {
       id: "reports",
@@ -157,7 +155,7 @@ const EnhancedSideNavigation = () => {
       icon: Search,
       href: "/reports",
       badge: null,
-      roles: ["admin", "user"],
+      roles: ["admin", "client_admin", "user", "operator", "viewer"],
     },
     {
       id: "documents",
@@ -165,7 +163,7 @@ const EnhancedSideNavigation = () => {
       icon: FileText,
       href: "/documents",
       badge: null,
-      roles: ["admin", "user"],
+      roles: ["admin", "client_admin", "user", "operator", "viewer"],
     },
     {
       id: "scada-dashboard",
@@ -182,7 +180,7 @@ const EnhancedSideNavigation = () => {
       href: "/protocol-manager",
       badge: null,
       requiresPermission: "canViewProtocols",
-      roles: ["admin"],
+      roles: ["admin"], // System admin only - matches routes.js
     },
     {
       id: "analytics",
@@ -190,7 +188,7 @@ const EnhancedSideNavigation = () => {
       icon: BarChart3,
       href: "/analytics",
       badge: null,
-      roles: ["admin"],
+      roles: ["admin"], // System admin only - matches routes.js
     },
     {
       id: "system-health",
@@ -198,7 +196,7 @@ const EnhancedSideNavigation = () => {
       icon: Wifi,
       href: "/system-health",
       badge: null,
-      roles: ["admin"],
+      roles: ["admin"], // System admin only - matches routes.js
     },
     {
       id: "settings",
@@ -206,7 +204,7 @@ const EnhancedSideNavigation = () => {
       icon: Settings,
       href: "/settings",
       badge: null,
-      roles: ["admin", "user"],
+      roles: ["admin", "client_admin", "user", "operator", "viewer"],
     },
     {
       id: "admin",
@@ -214,7 +212,7 @@ const EnhancedSideNavigation = () => {
       icon: Shield,
       href: "/admin",
       badge: null,
-      roles: ["admin"],
+      roles: ["admin"], // client_admin excluded — they use the dashboard header dropdown instead
     },
     {
       id: "admin-users",
@@ -222,7 +220,7 @@ const EnhancedSideNavigation = () => {
       icon: User,
       href: "/admin/users",
       badge: null,
-      roles: ["admin"],
+      roles: ["admin", "client_admin"], // Matches routes.js - client_admin can access user management
     },
   ];
 
@@ -248,7 +246,6 @@ const EnhancedSideNavigation = () => {
     navigate("/login");
   };
 
-  // ✅ FIX: Generate avatar from user data
   const getUserDisplayName = () => {
     if (user?.firstName && user?.lastName) {
       return `${user.firstName} ${user.lastName}`;
@@ -272,7 +269,6 @@ const EnhancedSideNavigation = () => {
 
   const isAdminLanding = location.pathname === "/admin";
 
-  // Don't render sidebar on admin landing page
   if (isAdminLanding) {
     return null;
   }
