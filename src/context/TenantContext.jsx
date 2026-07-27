@@ -145,11 +145,13 @@ export const TenantProvider = ({ children }) => {
           loadedTenants.forEach((t) => combined.set(t.name, t)); // real data wins on conflicts
           setAvailableTenants(Array.from(combined.values()));
         } else if (isClientAdmin && user?.client_id) {
+          // Client Admin: ONLY tenants matching their client_id
           const userClientId = Number(user.client_id);
           const filtered = loadedTenants.filter(
             (t) => (t.client_id !== undefined && Number(t.client_id) === userClientId) ||
                    (t.clientId !== undefined && Number(t.clientId) === userClientId)
           );
+          // If filtered returns empty, use loadedTenants as fallback (but this should not happen with proper data)
           setAvailableTenants(filtered.length > 0 ? filtered : loadedTenants);
         } else {
           setAvailableTenants(loadedTenants);
@@ -157,15 +159,32 @@ export const TenantProvider = ({ children }) => {
       } catch (_err) {
         // API error - use mock tenants for demo
         const mockTenants = generateMockTenants();
-        if (isClientAdmin && user?.client_id) {
-          const userClientId = Number(user.client_id);
-          const filtered = mockTenants.filter(
-            (t) => Number(t.client_id) === userClientId || Number(t.clientId) === userClientId
-          );
-          setAvailableTenants(filtered.length > 0 ? filtered : mockTenants);
-        } else if (isAdmin) {
+        
+        if (isAdmin) {
           // Admin gets all mock tenants on API error
           setAvailableTenants(mockTenants);
+        } else if (isClientAdmin && user?.client_id) {
+          // Client Admin: filter mock tenants by client_id
+          const userClientId = Number(user.client_id);
+          // For mock tenants, we need to assign client_id based on the tenant name
+          // Since mock tenants come from units data, we need to map them
+          const filteredMockTenants = mockTenants.filter((tenant) => {
+            // Check if this tenant belongs to the user's client
+            // For ACME tenants, they have client_id: 1
+            // For other mock tenants, we need to determine their client_id
+            // In a real scenario, the API would return this data
+            // For the demo, we'll use the tenant name to determine client_id
+            const isAcmeTenant = tenant.name.startsWith("ACME");
+            // If user has client_id 1 (ACME), they should see ACME tenants
+            if (userClientId === 1 && isAcmeTenant) {
+              return true;
+            }
+            // For other clients, we need to map their tenants
+            // This is a simplified mapping for the demo
+            // In production, this data would come from the API
+            return false;
+          });
+          setAvailableTenants(filteredMockTenants.length > 0 ? filteredMockTenants : mockTenants);
         } else {
           setAvailableTenants(mockTenants);
         }
