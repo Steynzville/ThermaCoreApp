@@ -2,7 +2,7 @@ Copyright (c) 2026 ThermaCore Renewable Technologies Pty Ltd
 
 ACN: 677 232 450
 
-ALL RIGHTS RESERVED.
+ALL RIGHTS RESERVED
 
 This software and its entire source code are the exclusive property of 
 ThermaCore Renewable Technologies Pty Ltd (ACN 677 232 450).
