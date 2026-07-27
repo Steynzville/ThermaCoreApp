@@ -858,13 +858,13 @@ const AdminPanel = ({ className }) => {
           </div>
         )}
 
-        {/* Create User Modal */}
+        {/* Create User Modal - WITH TEST MARKER */}
         {createUserModal && (
-          <div className="modal-overlay fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 sm:p-6 overflow-y-auto">
-            <div className="bg-white dark:bg-gray-900 rounded-xl p-6 w-full max-w-lg max-h-[90vh] flex flex-col my-auto shadow-2xl border border-gray-200 dark:border-gray-800">
+          <div className="modal-overlay fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 p-4 sm:p-6">
+            <div className="bg-white dark:bg-gray-900 rounded-xl rounded-b-none sm:rounded-xl p-6 w-full max-w-lg max-h-[95vh] flex flex-col my-auto shadow-2xl border border-gray-200 dark:border-gray-800">
               <div className="flex items-center justify-between pb-3 mb-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  Create New User
+                <h3 className="text-lg font-semibold text-red-500 bg-yellow-300 text-2xl px-4 py-2 rounded">
+                  🚨 TEST-MARKER-999 🚨
                 </h3>
                 <button
                   type="button"
@@ -1118,7 +1118,7 @@ const AdminPanel = ({ className }) => {
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-800 shrink-0">
+              <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-800 shrink-0 bg-white dark:bg-gray-900">
                 <button
                   type="button"
                   onClick={() => setCreateUserModal(false)}
@@ -1149,8 +1149,8 @@ const AdminPanel = ({ className }) => {
 
         {/* Edit User Modal */}
         {editingUser && (
-          <div className="modal-overlay fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 sm:p-6 overflow-y-auto">
-            <div className="bg-white dark:bg-gray-900 rounded-xl p-6 w-full max-w-lg max-h-[90vh] flex flex-col my-auto shadow-2xl border border-gray-200 dark:border-gray-800">
+          <div className="modal-overlay fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 p-4 sm:p-6">
+            <div className="bg-white dark:bg-gray-900 rounded-xl rounded-b-none sm:rounded-xl p-6 w-full max-w-lg max-h-[95vh] flex flex-col my-auto shadow-2xl border border-gray-200 dark:border-gray-800">
               <div className="flex items-center justify-between pb-3 mb-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   Edit User
@@ -1318,7 +1318,7 @@ const AdminPanel = ({ className }) => {
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-800 shrink-0">
+              <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-800 shrink-0 bg-white dark:bg-gray-900">
                 <button
                   type="button"
                   onClick={() => setEditingUser(null)}
@@ -1341,9 +1341,9 @@ const AdminPanel = ({ className }) => {
 
         {/* Password Reset Modal */}
         {passwordResetModal && selectedUserForReset && (
-          <div className="modal-overlay fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 sm:p-6 overflow-y-auto">
+          <div className="modal-overlay fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 p-4 sm:p-6">
             <div
-              className="bg-white dark:bg-gray-900 rounded-xl p-6 w-full max-w-lg max-h-[90vh] flex flex-col my-auto shadow-2xl border border-gray-200 dark:border-gray-800"
+              className="bg-white dark:bg-gray-900 rounded-xl rounded-b-none sm:rounded-xl p-6 w-full max-w-lg max-h-[95vh] flex flex-col my-auto shadow-2xl border border-gray-200 dark:border-gray-800"
               data-testid="password-reset-modal"
             >
               <div className="flex items-center justify-between pb-3 mb-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
@@ -1488,7 +1488,7 @@ const AdminPanel = ({ className }) => {
                 )}
               </div>
 
-              <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-800 shrink-0">
+              <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-800 shrink-0 bg-white dark:bg-gray-900">
                 <button
                   type="button"
                   onClick={closePasswordResetModal}
