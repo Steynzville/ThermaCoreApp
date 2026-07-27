@@ -28,7 +28,7 @@ const Dashboard = ({ className }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, userRole } = useAuth();
-  const { currentTenant } = useTenant();
+  const { currentTenant, canSwitchTenants } = useTenant();
   const [currentView, setCurrentView] = useState("operator"); // "operator" or "performance"
 
   // Single source of truth for admin status - derived from AuthContext
@@ -43,15 +43,15 @@ const Dashboard = ({ className }) => {
     return params.get("tenant_selected") === "true";
   };
 
-  // If admin has no tenant selected, redirect to admin landing
+  // If user can switch tenants and hasn't selected one, redirect to admin landing
   useEffect(() => {
-    if (isAdminUser && !hasSelectedTenant()) {
+    if (canSwitchTenants && !hasSelectedTenant()) {
       navigate("/admin", { replace: true });
     }
-  }, [isAdminUser, navigate, location.search]);
+  }, [canSwitchTenants, navigate, location.search]);
 
   // Show loading or nothing while redirecting
-  if (isAdminUser && !hasSelectedTenant()) {
+  if (canSwitchTenants && !hasSelectedTenant()) {
     return null;
   }
 
@@ -133,14 +133,14 @@ const Dashboard = ({ className }) => {
                   Performance Dashboard
                 </h1>
                 <p className="text-sm lg:text-base text-gray-600 dark:text-gray-400">
-                  {isAdminUser && currentTenant
+                  {canSwitchTenants && currentTenant
                     ? `Managing: ${currentTenant.name}`
-                    : isAdminUser && !currentTenant
+                    : canSwitchTenants && !currentTenant
                     ? "Managing: All Tenants"
                     : "Monitor power generation, efficiency, and environmental impact"}
                 </p>
               </div>
-              {isAdminUser && (
+              {canSwitchTenants && (
                 <div className="mt-4 md:mt-0">
                   <TenantSwitcher />
                 </div>
@@ -187,15 +187,15 @@ const Dashboard = ({ className }) => {
                 Dashboard Overview
               </h1>
               <p className="text-sm lg:text-base text-gray-600 dark:text-gray-400">
-                {isAdminUser && currentTenant
+                {canSwitchTenants && currentTenant
                   ? `Managing: ${currentTenant.name}`
-                  : isAdminUser && !currentTenant
+                  : canSwitchTenants && !currentTenant
                   ? "Managing: All Tenants"
                   : `Welcome back, ${user?.firstName || user?.name || "User"}`}
               </p>
             </div>
             <div className="flex items-center gap-4 mt-4 md:mt-0">
-              {isAdminUser && <TenantSwitcher />}
+              {canSwitchTenants && <TenantSwitcher />}
             </div>
           </div>
 
