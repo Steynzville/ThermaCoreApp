@@ -236,11 +236,6 @@ describe("SideNavigation", () => {
       expect(screen.queryAllByText("Units Overview").length).toBe(0);
     });
 
-    it("should show User Management for client_admin", () => {
-      renderSideNavigation();
-      expect(screen.getAllByText("User Management").length).toBeGreaterThan(0);
-    });
-
     it("should show SCADA for client_admin when permitted", () => {
       renderSideNavigation();
       expect(screen.getAllByText("SCADA").length).toBeGreaterThan(0);
@@ -253,6 +248,7 @@ describe("SideNavigation", () => {
       expect(screen.queryAllByText("Sales").length).toBe(0);
       expect(screen.queryAllByText("System Health").length).toBe(0);
       expect(screen.queryAllByText("Protocol Manager").length).toBe(0);
+      expect(screen.queryAllByText("User Management").length).toBe(0);
     });
   });
 
