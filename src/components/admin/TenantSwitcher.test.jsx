@@ -48,7 +48,9 @@ let mockTenantState = {
     { id: "tenant-1", name: "Tenant One" },
     { id: "tenant-2", name: "Tenant Two" },
   ],
+  canSwitchTenants: true,
   isAdmin: true,
+  isClientAdmin: false,
   switchTenant: mockSwitchTenant,
   isLoading: false,
 };
@@ -137,20 +139,41 @@ describe("TenantSwitcher", () => {
         { id: "tenant-1", name: "Tenant One" },
         { id: "tenant-2", name: "Tenant Two" },
       ],
+      canSwitchTenants: true,
       isAdmin: true,
+      isClientAdmin: false,
       switchTenant: mockSwitchTenant,
       isLoading: false,
     };
   });
 
-  it("should return null if user is not an admin", () => {
-    mockTenantState.isAdmin = false;
+  it("should return null if user cannot switch tenants (operator/viewer)", () => {
+    mockTenantState.canSwitchTenants = false;
 
     const { container } = render(<TenantSwitcher />);
     expect(container.firstChild).toBeNull();
   });
 
+  it("should render for admin users", () => {
+    mockTenantState.canSwitchTenants = true;
+    mockTenantState.isAdmin = true;
+    mockTenantState.isClientAdmin = false;
+
+    render(<TenantSwitcher />);
+    expect(screen.getByTestId("dropdown-menu")).toBeInTheDocument();
+  });
+
+  it("should render for client_admin users", () => {
+    mockTenantState.canSwitchTenants = true;
+    mockTenantState.isAdmin = false;
+    mockTenantState.isClientAdmin = true;
+
+    render(<TenantSwitcher />);
+    expect(screen.getByTestId("dropdown-menu")).toBeInTheDocument();
+  });
+
   it("should return null if isLoading is true", () => {
+    mockTenantState.canSwitchTenants = true;
     mockTenantState.isLoading = true;
 
     const { container } = render(<TenantSwitcher />);
@@ -158,6 +181,7 @@ describe("TenantSwitcher", () => {
   });
 
   it("should render the dropdown with 'All Tenants' when no current tenant is selected", () => {
+    mockTenantState.canSwitchTenants = true;
     render(<TenantSwitcher />);
 
     expect(screen.getByTestId("dropdown-menu")).toBeInTheDocument();
@@ -168,6 +192,7 @@ describe("TenantSwitcher", () => {
   });
 
   it("should display the active tenant name when a tenant is selected", () => {
+    mockTenantState.canSwitchTenants = true;
     mockTenantState.currentTenant = { id: "tenant-1", name: "Tenant One" };
 
     render(<TenantSwitcher />);
@@ -177,6 +202,7 @@ describe("TenantSwitcher", () => {
   });
 
   it("should render dropdown content with 'Switch Tenant' label", () => {
+    mockTenantState.canSwitchTenants = true;
     render(<TenantSwitcher />);
 
     expect(screen.getByTestId("dropdown-content")).toBeInTheDocument();
@@ -185,6 +211,7 @@ describe("TenantSwitcher", () => {
   });
 
   it("should have dropdown content hidden initially", () => {
+    mockTenantState.canSwitchTenants = true;
     render(<TenantSwitcher />);
     
     const content = screen.getByTestId("dropdown-content");
@@ -193,6 +220,7 @@ describe("TenantSwitcher", () => {
   });
 
   it("should open dropdown when trigger is clicked", async () => {
+    mockTenantState.canSwitchTenants = true;
     const user = userEvent.setup();
     render(<TenantSwitcher />);
     
@@ -208,6 +236,7 @@ describe("TenantSwitcher", () => {
   });
 
   it("should display all available tenants as options", async () => {
+    mockTenantState.canSwitchTenants = true;
     const user = userEvent.setup();
     render(<TenantSwitcher />);
     
@@ -223,6 +252,7 @@ describe("TenantSwitcher", () => {
 
   // ✅ FIX: Use testid for checkmark assertions instead of text content
   it("should show checkmark next to 'All Tenants' when no tenant is selected", async () => {
+    mockTenantState.canSwitchTenants = true;
     const user = userEvent.setup();
     render(<TenantSwitcher />);
     
@@ -238,6 +268,7 @@ describe("TenantSwitcher", () => {
 
   // ✅ FIX: Use testid for checkmark assertions instead of text content
   it("should show checkmark next to the currently selected tenant", async () => {
+    mockTenantState.canSwitchTenants = true;
     mockTenantState.currentTenant = { id: "tenant-1", name: "Tenant One" };
     
     const user = userEvent.setup();
@@ -262,6 +293,7 @@ describe("TenantSwitcher", () => {
   });
 
   it("should display message when no available tenants are listed", async () => {
+    mockTenantState.canSwitchTenants = true;
     mockTenantState.availableTenants = [];
     
     const user = userEvent.setup();
@@ -276,6 +308,7 @@ describe("TenantSwitcher", () => {
   });
 
   it("should not call switchTenant when disabled item is clicked", async () => {
+    mockTenantState.canSwitchTenants = true;
     mockTenantState.availableTenants = [];
     
     const user = userEvent.setup();
@@ -295,6 +328,7 @@ describe("TenantSwitcher", () => {
   });
 
   it("should call switchTenant with null when 'All Tenants' is clicked", async () => {
+    mockTenantState.canSwitchTenants = true;
     const user = userEvent.setup();
     render(<TenantSwitcher />);
     
@@ -309,6 +343,7 @@ describe("TenantSwitcher", () => {
   });
 
   it("should call switchTenant with tenant id when a tenant is clicked", async () => {
+    mockTenantState.canSwitchTenants = true;
     const user = userEvent.setup();
     render(<TenantSwitcher />);
     
@@ -323,6 +358,7 @@ describe("TenantSwitcher", () => {
   });
 
   it("should handle multiple tenant switches in sequence", async () => {
+    mockTenantState.canSwitchTenants = true;
     const user = userEvent.setup();
     render(<TenantSwitcher />);
     
@@ -349,6 +385,7 @@ describe("TenantSwitcher", () => {
   });
 
   it("should have correct button classes", () => {
+    mockTenantState.canSwitchTenants = true;
     render(<TenantSwitcher />);
 
     const button = screen.getByTestId("button");
@@ -356,6 +393,7 @@ describe("TenantSwitcher", () => {
   });
 
   it("should have variant 'outline' on the button", () => {
+    mockTenantState.canSwitchTenants = true;
     render(<TenantSwitcher />);
 
     const button = screen.getByTestId("button");
@@ -363,6 +401,7 @@ describe("TenantSwitcher", () => {
   });
 
   it("should render the building icon in the button", () => {
+    mockTenantState.canSwitchTenants = true;
     render(<TenantSwitcher />);
 
     const button = screen.getByTestId("button");
@@ -370,6 +409,7 @@ describe("TenantSwitcher", () => {
   });
 
   it("should render chevron icon in the button", () => {
+    mockTenantState.canSwitchTenants = true;
     render(<TenantSwitcher />);
 
     const button = screen.getByTestId("button");
@@ -377,6 +417,7 @@ describe("TenantSwitcher", () => {
   });
 
   it("should have truncate class on 'All Tenants' text", async () => {
+    mockTenantState.canSwitchTenants = true;
     const user = userEvent.setup();
     render(<TenantSwitcher />);
     
@@ -390,6 +431,7 @@ describe("TenantSwitcher", () => {
   });
 
   it("should have truncate class on tenant names", async () => {
+    mockTenantState.canSwitchTenants = true;
     const user = userEvent.setup();
     render(<TenantSwitcher />);
     
