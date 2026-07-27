@@ -115,7 +115,7 @@ const routes = [
     path: "/admin/users",
     component: AdminPanel,
     isProtected: true,
-    roles: ["admin", "client_admin"],
+    roles: ["admin"], // client_admin excluded — this panel can create users, approve applications, and reset passwords
     isAdminRoute: true, // Documentation: admin route
   },
   {
