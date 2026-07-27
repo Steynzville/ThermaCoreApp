@@ -10,6 +10,7 @@
  * - API integration
  * - Mock tenant generation
  * - System Admin sees all tenants (merged mock + real)
+ * - Client Admin sees only filtered tenants (ACME)
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -50,6 +51,7 @@ describe("TenantContext", () => {
     // Reset mock user
     mockUser.id = 1;
     mockUser.username = "testuser";
+    mockUser.client_id = undefined;
     // Reset mock implementations
     vi.mocked(apiGetJson).mockReset();
     // Reset useAuth mock to default
@@ -319,27 +321,30 @@ describe("TenantContext", () => {
       });
     });
 
-    it("should load available tenants filtered by client_id for Client Admin", async () => {
+    it("should load available tenants filtered by client_id for Client Admin from API", async () => {
       mockBackendRole = "client_admin";
       vi.mocked(useAuth).mockReturnValue({
         user: { ...mockUser, client_id: 1 },
         backendRole: "client_admin",
       });
       
-      const mockTenants = [
-        { id: "tenant-1", name: "Facility Alpha", client_id: 1 },
-        { id: "tenant-2", name: "Facility Beta", client_id: 2 },
-        { id: "tenant-3", name: "Facility Gamma", client_id: 1 },
+      // All tenants from API (including others)
+      const allTenants = [
+        { id: "tenant-1", name: "ACME Sydney", client_id: 1 },
+        { id: "tenant-2", name: "ACME Melbourne", client_id: 1 },
+        { id: "tenant-3", name: "ACME Brisbane", client_id: 1 },
+        { id: "tenant-4", name: "Alpha Industries Ltd", client_id: 2 },
+        { id: "tenant-5", name: "Beta Corporation", client_id: 2 },
       ];
 
       vi.mocked(apiGetJson)
         .mockResolvedValueOnce({
           success: true,
-          data: { id: "tenant-1", name: "Facility Alpha", client_id: 1 },
+          data: { id: "tenant-1", name: "ACME Sydney", client_id: 1 },
         })
         .mockResolvedValueOnce({
           success: true,
-          data: mockTenants,
+          data: allTenants,
         });
 
       const { result } = renderHook(() => useTenant(), {
@@ -347,12 +352,58 @@ describe("TenantContext", () => {
       });
 
       await waitFor(() => {
-        expect(result.current.availableTenants).toHaveLength(2);
+        expect(result.current.isLoading).toBe(false);
       });
 
-      // Should only see tenants with client_id === 1
-      expect(result.current.availableTenants[0].id).toBe("tenant-1");
-      expect(result.current.availableTenants[1].id).toBe("tenant-3");
+      // Should only see ACME tenants (client_id === 1)
+      expect(result.current.availableTenants).toHaveLength(3);
+      const tenantNames = result.current.availableTenants.map(t => t.name);
+      expect(tenantNames).toContain("ACME Sydney");
+      expect(tenantNames).toContain("ACME Melbourne");
+      expect(tenantNames).toContain("ACME Brisbane");
+      expect(tenantNames).not.toContain("Alpha Industries Ltd");
+      expect(tenantNames).not.toContain("Beta Corporation");
+    });
+
+    it("should filter mock tenants by client_id for Client Admin when API fails", async () => {
+      mockBackendRole = "client_admin";
+      vi.mocked(useAuth).mockReturnValue({
+        user: { ...mockUser, client_id: 1 },
+        backendRole: "client_admin",
+      });
+      
+      // API fails
+      vi.mocked(apiGetJson)
+        .mockResolvedValueOnce({
+          success: true,
+          data: { id: "tenant-1", name: "ACME Sydney", client_id: 1 },
+        })
+        .mockRejectedValueOnce(new Error("Network error"));
+
+      const { result } = renderHook(() => useTenant(), {
+        wrapper: TenantProvider,
+      });
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      // Should only show ACME tenants from mock data
+      // Since the mock data doesn't have client_id, we rely on the fallback
+      // logic that assigns ACME tenants to client_id: 1
+      const tenantNames = result.current.availableTenants.map(t => t.name);
+      
+      // Should include ACME tenants
+      expect(tenantNames).toContain("ACME Sydney");
+      expect(tenantNames).toContain("ACME Melbourne");
+      expect(tenantNames).toContain("ACME Brisbane");
+      
+      // Should NOT include other mock tenants that aren't ACME
+      // (This depends on your fallback logic in the catch block)
+      // In the current implementation, we filter mock tenants by checking
+      // if they start with "ACME" for client_id: 1
+      const nonAcmeTenants = tenantNames.filter(name => !name.startsWith("ACME"));
+      expect(nonAcmeTenants).toHaveLength(0);
     });
 
     it("should not load available tenants for non-admin users", async () => {
@@ -454,7 +505,7 @@ describe("TenantContext", () => {
       expect(result.current.availableTenants[0]).toHaveProperty('unitCount');
     });
 
-    it("should generate mock tenants from units when API fails", async () => {
+    it("should generate mock tenants from units when API fails for admin", async () => {
       mockBackendRole = "admin";
       vi.mocked(useAuth).mockReturnValue({
         user: mockUser,
@@ -544,14 +595,15 @@ describe("TenantContext", () => {
       });
       
       const tenants = [
-        { id: "tenant-1", name: "Facility Alpha", client_id: 1 },
-        { id: "tenant-2", name: "Facility Beta", client_id: 1 },
+        { id: "tenant-1", name: "ACME Sydney", client_id: 1 },
+        { id: "tenant-2", name: "ACME Melbourne", client_id: 1 },
+        { id: "tenant-3", name: "ACME Brisbane", client_id: 1 },
       ];
 
       vi.mocked(apiGetJson)
         .mockResolvedValueOnce({
           success: true,
-          data: { id: "tenant-1", name: "Facility Alpha", client_id: 1 },
+          data: { id: "tenant-1", name: "ACME Sydney", client_id: 1 },
         })
         .mockResolvedValueOnce({
           success: true,
@@ -563,14 +615,14 @@ describe("TenantContext", () => {
       });
 
       await waitFor(() => {
-        expect(result.current.availableTenants).toHaveLength(2);
+        expect(result.current.availableTenants).toHaveLength(3);
       });
 
       act(() => {
         result.current.switchTenant("tenant-2");
       });
 
-      expect(result.current.currentTenant).toEqual({ id: "tenant-2", name: "Facility Beta", client_id: 1 });
+      expect(result.current.currentTenant).toEqual({ id: "tenant-2", name: "ACME Melbourne", client_id: 1 });
     });
 
     it("should allow admin to switch to 'All Tenants' (null)", async () => {
@@ -604,6 +656,44 @@ describe("TenantContext", () => {
       });
 
       expect(result.current.availableTenants.length).toBeGreaterThanOrEqual(2);
+
+      act(() => {
+        result.current.switchTenant(null);
+      });
+
+      expect(result.current.currentTenant).toBeNull();
+    });
+
+    it("should allow Client Admin to switch to 'All Tenants' (null)", async () => {
+      mockBackendRole = "client_admin";
+      vi.mocked(useAuth).mockReturnValue({
+        user: { ...mockUser, client_id: 1 },
+        backendRole: "client_admin",
+      });
+      
+      const tenants = [
+        { id: "tenant-1", name: "ACME Sydney", client_id: 1 },
+        { id: "tenant-2", name: "ACME Melbourne", client_id: 1 },
+        { id: "tenant-3", name: "ACME Brisbane", client_id: 1 },
+      ];
+
+      vi.mocked(apiGetJson)
+        .mockResolvedValueOnce({
+          success: true,
+          data: { id: "tenant-1", name: "ACME Sydney", client_id: 1 },
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          data: tenants,
+        });
+
+      const { result } = renderHook(() => useTenant(), {
+        wrapper: TenantProvider,
+      });
+
+      await waitFor(() => {
+        expect(result.current.availableTenants).toHaveLength(3);
+      });
 
       act(() => {
         result.current.switchTenant(null);
@@ -781,6 +871,46 @@ describe("TenantContext", () => {
       
       expect(result.current.currentTenant).toEqual({ id: "tenant-1", name: "Tenant A" });
       expect(result.current.getTenantQueryParam()).toBe("?tenant_id=tenant-1");
+    });
+
+    it("should return tenant query param for Client Admin with current tenant", async () => {
+      mockBackendRole = "client_admin";
+      vi.mocked(useAuth).mockReturnValue({
+        user: { ...mockUser, client_id: 1 },
+        backendRole: "client_admin",
+      });
+      
+      const tenants = [
+        { id: "tenant-1", name: "ACME Sydney", client_id: 1 },
+        { id: "tenant-2", name: "ACME Melbourne", client_id: 1 },
+        { id: "tenant-3", name: "ACME Brisbane", client_id: 1 },
+      ];
+
+      vi.mocked(apiGetJson)
+        .mockResolvedValueOnce({
+          success: true,
+          data: { id: "tenant-1", name: "ACME Sydney", client_id: 1 },
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          data: tenants,
+        });
+
+      const { result } = renderHook(() => useTenant(), {
+        wrapper: TenantProvider,
+      });
+
+      await waitFor(() => {
+        expect(result.current.availableTenants).toHaveLength(3);
+      });
+
+      // Switch to tenant-2 to ensure currentTenant is set
+      act(() => {
+        result.current.switchTenant("tenant-2");
+      });
+      
+      expect(result.current.currentTenant).toEqual({ id: "tenant-2", name: "ACME Melbourne", client_id: 1 });
+      expect(result.current.getTenantQueryParam()).toBe("?tenant_id=tenant-2");
     });
 
     it("should update query param after switching tenant", async () => {
@@ -997,8 +1127,8 @@ describe("TenantContext", () => {
         .mockResolvedValueOnce({
           success: true,
           data: [
-            { id: "tenant-1", name: "Facility Alpha", client_id: 1 },
-            { id: "tenant-2", name: "Facility Beta", client_id: 2 },
+            { id: "tenant-1", name: "ACME Sydney", client_id: 1 },
+            { id: "tenant-2", name: "ACME Melbourne", client_id: 1 },
           ],
         });
 
@@ -1013,6 +1143,70 @@ describe("TenantContext", () => {
       // Should still be able to switch tenants
       expect(result.current.isClientAdmin).toBe(true);
       expect(result.current.canSwitchTenants).toBe(true);
+    });
+
+    it("should handle Client Admin with client_id but no matching tenants", async () => {
+      mockBackendRole = "client_admin";
+      vi.mocked(useAuth).mockReturnValue({
+        user: { ...mockUser, client_id: 999 }, // Non-existent client_id
+        backendRole: "client_admin",
+      });
+      
+      vi.mocked(apiGetJson)
+        .mockResolvedValueOnce({
+          success: true,
+          data: null,
+          message: "No tenant found",
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          data: [
+            { id: "tenant-1", name: "ACME Sydney", client_id: 1 },
+            { id: "tenant-2", name: "ACME Melbourne", client_id: 1 },
+          ],
+        });
+
+      const { result } = renderHook(() => useTenant(), {
+        wrapper: TenantProvider,
+      });
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      // Should have empty available tenants
+      expect(result.current.availableTenants).toHaveLength(0);
+      expect(result.current.isClientAdmin).toBe(true);
+      expect(result.current.canSwitchTenants).toBe(true);
+    });
+
+    it("should handle Client Admin with client_id but API fails and no mock tenants match", async () => {
+      mockBackendRole = "client_admin";
+      vi.mocked(useAuth).mockReturnValue({
+        user: { ...mockUser, client_id: 999 }, // Non-existent client_id
+        backendRole: "client_admin",
+      });
+      
+      // API fails
+      vi.mocked(apiGetJson)
+        .mockResolvedValueOnce({
+          success: true,
+          data: null,
+          message: "No tenant found",
+        })
+        .mockRejectedValueOnce(new Error("Network error"));
+
+      const { result } = renderHook(() => useTenant(), {
+        wrapper: TenantProvider,
+      });
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      // Should fall back to all mock tenants (or filtered list)
+      // In our implementation, if no filtered tenants match, we return all mock tenants
+      expect(result.current.availableTenants.length).toBeGreaterThan(0);
     });
   });
 });
