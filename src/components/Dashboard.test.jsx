@@ -53,6 +53,9 @@ let mockTenantValue = {
     { id: "2", name: "Tenant Two" },
   ],
   switchTenant: vi.fn(),
+  canSwitchTenants: true,
+  isAdmin: true,
+  isClientAdmin: false,
 };
 
 vi.mock("../context/TenantContext", () => ({
@@ -186,6 +189,9 @@ describe("Dashboard", () => {
         { id: "2", name: "Tenant Two" },
       ],
       switchTenant: vi.fn(),
+      canSwitchTenants: true,
+      isAdmin: true,
+      isClientAdmin: false,
     };
 
     // Set tenant_selected flag for admin tests
@@ -213,6 +219,7 @@ describe("Dashboard", () => {
     window.localStorage.getItem = vi.fn();
     // Reset mockTenantValue properties to avoid test leakage
     mockTenantValue.currentTenant = { id: "1", name: "Tenant One" };
+    mockTenantValue.canSwitchTenants = true;
   });
 
   const renderComponent = (userRole = "admin") => {
@@ -250,6 +257,8 @@ describe("Dashboard", () => {
     });
 
     it("should render dashboard description for regular user", () => {
+      // Set canSwitchTenants to false for regular users
+      mockTenantValue.canSwitchTenants = false;
       renderComponent("user");
       const descriptions = screen.getAllByText(/Welcome back/);
       expect(descriptions.length).toBeGreaterThan(0);
@@ -302,6 +311,7 @@ describe("Dashboard", () => {
 
   describe("Quick Actions - Admin Only", () => {
     it("should not render quick actions for regular users", () => {
+      mockTenantValue.canSwitchTenants = false;
       const { container } = renderComponent("user");
       const quickActionElements = container.querySelectorAll('[data-testid^="quick-action-"]');
       expect(quickActionElements.length).toBe(0);
@@ -311,6 +321,15 @@ describe("Dashboard", () => {
       const { container } = renderComponent("admin");
       const quickActionElements = container.querySelectorAll('[data-testid^="quick-action-"]');
       expect(quickActionElements.length).toBeGreaterThan(0);
+    });
+
+    it("should not render quick actions for client_admin users", () => {
+      mockTenantValue.canSwitchTenants = true;
+      mockTenantValue.isAdmin = false;
+      mockTenantValue.isClientAdmin = true;
+      const { container } = renderComponent("client_admin");
+      const quickActionElements = container.querySelectorAll('[data-testid^="quick-action-"]');
+      expect(quickActionElements.length).toBe(0);
     });
   });
 
@@ -346,6 +365,7 @@ describe("Dashboard", () => {
     it("should handle undefined user role", () => {
       // Override localStorage mock to return null for all keys
       window.localStorage.getItem = vi.fn(() => null);
+      mockTenantValue.canSwitchTenants = false;
       renderComponent(null);
       expect(screen.getAllByText("Dashboard Overview").length).toBeGreaterThan(0);
     });
@@ -389,13 +409,43 @@ describe("Dashboard", () => {
       expect(mockNavigate).toHaveBeenCalledWith("/admin", { replace: true });
     });
 
+    it("should redirect client_admin to /admin if no tenant selected", () => {
+      sessionStorage.removeItem("tenant_selected");
+      mockTenantValue.currentTenant = null;
+      mockTenantValue.isAdmin = false;
+      mockTenantValue.isClientAdmin = true;
+      mockTenantValue.canSwitchTenants = true;
+      renderComponent("client_admin");
+      expect(mockNavigate).toHaveBeenCalledWith("/admin", { replace: true });
+    });
+
+    it("should NOT redirect regular user to /admin if no tenant selected", () => {
+      sessionStorage.removeItem("tenant_selected");
+      mockTenantValue.canSwitchTenants = false;
+      mockTenantValue.currentTenant = null;
+      renderComponent("user");
+      expect(mockNavigate).not.toHaveBeenCalled();
+      // Should still render dashboard
+      expect(screen.getAllByText("Dashboard Overview").length).toBeGreaterThan(0);
+    });
+
     it("should show tenant switcher for admin with tenant selected", () => {
       renderComponent("admin");
       expect(screen.getAllByTestId("tenant-switcher").length).toBeGreaterThan(0);
       expect(screen.getByText("Managing: Tenant One")).toBeInTheDocument();
     });
 
+    it("should show tenant switcher for client_admin with tenant selected", () => {
+      mockTenantValue.isAdmin = false;
+      mockTenantValue.isClientAdmin = true;
+      mockTenantValue.canSwitchTenants = true;
+      renderComponent("client_admin");
+      expect(screen.getAllByTestId("tenant-switcher").length).toBeGreaterThan(0);
+      expect(screen.getByText("Managing: Tenant One")).toBeInTheDocument();
+    });
+
     it("should NOT show tenant switcher for regular user", () => {
+      mockTenantValue.canSwitchTenants = false;
       renderComponent("user");
       expect(screen.queryAllByTestId("tenant-switcher").length).toBe(0);
     });
@@ -415,6 +465,7 @@ describe("Dashboard", () => {
     });
 
     it("should show 6 units for regular users", () => {
+      mockTenantValue.canSwitchTenants = false;
       renderComponent("user");
       const totalUnitsDial = screen.getByTestId("status-dial-total-units");
       expect(totalUnitsDial).toHaveTextContent("6");
