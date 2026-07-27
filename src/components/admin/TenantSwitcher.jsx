@@ -20,11 +20,11 @@ import { useTenant } from "../../context/TenantContext";
  * The "Go to Dashboard" button on the Admin Landing page handles navigation.
  */
 export default function TenantSwitcher() {
-  const { currentTenant, availableTenants, isAdmin, isLoading, switchTenant } =
+  const { currentTenant, availableTenants, canSwitchTenants, isLoading, switchTenant } =
     useTenant();
 
-  // Don't render for non-admin users
-  if (!isAdmin) {
+  // Don't render for users who can't switch tenants (operators/viewers)
+  if (!canSwitchTenants) {
     return null;
   }
 
