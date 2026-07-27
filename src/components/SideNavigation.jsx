@@ -220,7 +220,7 @@ const EnhancedSideNavigation = () => {
       icon: User,
       href: "/admin/users",
       badge: null,
-      roles: ["admin", "client_admin"], // Matches routes.js - client_admin can access user management
+      roles: ["admin"], // client_admin excluded — see routes.js
     },
   ];
 
