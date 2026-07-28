@@ -5,6 +5,34 @@ This document tracks all changes, security updates, and performance optimization
 
 ---
 
+## [v2.8.1] - July 2026
+
+### 🐛 Bug Fixes
+* **Client Admin Tenant Filtering**: Fixed critical issue where Client Admin users saw all tenants instead of only those belonging to their client organization.
+  * Enhanced `TenantContext` filtering logic to properly filter by `client_id` in both the `try` and `catch` blocks.
+  * Added fallback filtering for mock tenants when API is unavailable, ensuring Client Admin sees only ACME tenants even during network issues.
+  * Updated `TenantSwitcher` to use `canSwitchTenants` instead of `isAdmin` for role checking, allowing both `admin` and `client_admin` to access the switcher.
+  * Fixed `Dashboard` component to use `canSwitchTenants` for redirect logic and tenant switcher rendering.
+
+### 📝 Documentation
+* Updated API Reference (`API_REFERENCE.md`) with tenant filtering behavior documentation.
+* Added Client Admin tenant filtering troubleshooting section to `DEPLOYMENT_GUIDE.md`.
+* Added comprehensive troubleshooting section for Client Admin filtering issues in `TROUBLESHOOTING.md`.
+* Clarified Client Admin tenant filtering behavior in `OPERATOR_MANUAL.md`.
+* Documented filtering implementation in `DEVELOPER_ONBOARDING.md`.
+
+### 🔧 Backend Fixes
+* Added `fix_client_admin_migration.py` script to repair Client Admin user records.
+* Enhanced `seed_client_admin_data()` function to update existing Client Admin users with correct `client_id`.
+* Added validation queries for Client Admin tenant filtering diagnostics.
+
+### 🧪 Testing
+* Updated `TenantContext.test.jsx` to cover Client Admin filtering scenarios.
+* Added tests for Client Admin tenant filtering on API success and failure paths.
+* Added tests for Client Admin with no `client_id` and with non-existent `client_id`.
+
+---
+
 ## [v2.8.0] - July 2026
 
 ### 🚀 Client Admin Role & Multi-Tenant Scoping (Backend & Database)
