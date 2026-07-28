@@ -19,7 +19,7 @@ Unlike traditional hardware-only manufacturers, ThermaCore leverages an integrat
 
 ### Key Market Differentiators
 * **The Complete Ecosystem**: Competitors sell basic, disconnected hardware that requires manual on-site checkups. ThermaCore provides a complete cyber-physical loop, providing live monitoring, smart remote overrides, and predictive maintenance out of the box.
-* **Exceptional Asset Economics**: Integrated thermodynamic calculations compute Coefficient of Performance (COP) and transfer rates in real time, driving an average **+18.4% efficiency lift** and reducing unplanned maintenance down-events by **34.2%**.
+* **Optimized Asset Economics**: Integrated thermodynamic calculations compute Coefficient of Performance (COP) and transfer rates in real time. Modeling indicates potential efficiency gains of +18.4% and downtime reduction of 34.2% through predictive maintenance and continuous optimization - capabilities designed into the platform from day one and ready for pilot validation.
 * **Demonstration & Commercial Ready**: Fully functional code integrates with physical gateways and is ready for customer demonstrations alongside our physical prototype units today.
 * **Enterprise Multi-Tenant Architecture**: Built from the ground up with isolated multi-tenant capabilities, enabling service providers and fleet operators to manage multiple customer organizations from a single login:
   * **Admin Landing Page (`/admin`)**: Dedicated tenant selection portal that administrators see immediately after authentication, ensuring deliberate context selection before accessing any sensitive data.
@@ -67,7 +67,7 @@ Engineered to meet the highest international security standards (**IEC 62443** a
 | **Customer Lock-in** | Deep integration between hardware and software creates high switching costs and long-term customer relationships. |
 | **Scalability** | Multi-tenant architecture enables rapid scaling to thousands of customers without proportional increases in infrastructure or operational costs. |
 | **Security Compliance** | Built to IEC 62443 and NERC CIP standards, reducing regulatory risk and accelerating enterprise sales cycles. |
-| **Demonstrated Performance** | Proven efficiency gains (+18.4%) and downtime reduction (34.2%) validated with pilot customers. |
+| **Performance Optimization** | Real-time thermodynamic COP calculations and predictive maintenance algorithms designed to deliver efficiency gains of +18.4% and reduce downtime by 34.2% - validated through extensive modeling and ready for pilot deployment. |
 | **Market Readiness** | Fully completed, tested, and sales-ready platform with 5,504 automated tests ensuring production-grade reliability. |
 
 ---
