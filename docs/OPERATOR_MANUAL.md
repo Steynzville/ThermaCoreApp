@@ -10,7 +10,6 @@ This user guide provides instructions for navigating and managing ThermaCore mod
 The ThermaCore SCADA interface features a responsive, high-contrast Navy & Gold display. The sidebar contains 6 main navigation areas:
 
 ```
-
 ┌────────────────────────────────────────────────────────┐
 │  ThermaCore Navigation Sidebar                         │
 ├────────────────────────────────────────────────────────┤
@@ -21,7 +20,6 @@ The ThermaCore SCADA interface features a responsive, high-contrast Navy & Gold 
 │  [🔒] Tenant Switcher     - Select active client scope │
 │  [👥] User Management     - Approvals & audit logs     │
 └────────────────────────────────────────────────────────┘
-
 ```
 
 **Note**: The **Tenant Switcher**, **User Management**, and **Protocol Manager** links are only visible to users with System Administrator privileges. Regular Operators and Viewers do not see or have access to these navigation items or the Multi-Protocol Manager interface.
@@ -54,15 +52,13 @@ To view specific modular generator nodes, navigate to the **Asset Grid**:
 
 ThermaCore SCADA enables secure, bidirectionally authenticated remote control over the physical generator loops.
 
-REMOTE SHUTDOWN EXECUTION FLOW
+**REMOTE SHUTDOWN EXECUTION FLOW**
 
 ```
-
 ┌───────────────────────┐      ┌───────────────────────┐      ┌───────────────────────┐
-│ Operator clicks       │ ───► │ Enter 2FA Override   │ ───► │ Cryptographic command │
+│ Operator clicks       │ ───► │ Enter 2FA Override    │ ───► │ Cryptographic command │
 │ "Emergency Shutdown"  │      │ Authentication Code   │      │ signed & sent to edge │
 └───────────────────────┘      └───────────────────────┘      └───────────────────────┘
-
 ```
 
 ### Safety Operational Protocols
@@ -95,7 +91,8 @@ The platform supports a 4-tier Role-Based Access Control (RBAC) hierarchy:
 * **Viewer (`viewer`)**: Read-only telemetry access for assigned facilities.
 
 ### Client Admin Capabilities
-* **Client Facility Switcher**: Client Admins can switch view context across all facilities (`tenants`) belonging to their Client organization.
+* **Client Facility Switcher**: Client Admins can switch view context across all facilities (`tenants`) belonging to their Client organization. Only facilities matching the user's `client_id` are displayed.
+* **Tenant Filtering**: Client Admins automatically see only tenants that belong to their organization (`client_id`). The "All Tenants" option for Client Admins means "All tenants within my client organization" - not all tenants across the entire platform.
 * **User Management**: Client Admins can invite, approve, and manage Operators and Viewers assigned to their client's facilities.
 * **Facility & Asset Administration**: Register and edit modular generator nodes and local PLCs within client facilities.
 * **Audit Trail Reviews**: Access audit logs filtered to events occurring within their client organization.
@@ -143,6 +140,7 @@ While viewing the main dashboard, administrators can switch their focused tenant
 * No full system logout or login is required — switching happens seamlessly
 
 **Tenant View Behavior:**
+
 | Selection | Behavior |
 | :--- | :--- |
 | **Specific Tenant** | Shows only units belonging to that tenant (typically 6 units per tenant) |
@@ -160,9 +158,9 @@ The active tenant selection is preserved using `sessionStorage`:
 * The `tenant_selected` flag persists throughout the active browser session
 * Refreshing the page maintains the current tenant context
 * **Cleared automatically**:
-  - When the user logs out
-  - When a new login occurs (ensures admins always see the landing page on fresh login)
-  - When the browser tab is closed
+  * When the user logs out
+  * When a new login occurs (ensures admins always see the landing page on fresh login)
+  * When the browser tab is closed
 
 ### 9.5 Non-Admin User Experience
 
