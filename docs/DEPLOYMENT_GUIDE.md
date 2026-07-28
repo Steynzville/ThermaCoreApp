@@ -16,7 +16,6 @@ This document outlines the deployment configuration for the ThermaCore SCADA Pla
 > [!IMPORTANT]
 > Prior to deploying or initializing your environment, ensure you copy the `.env.example` template file to `.env` in the root directory and populate all required environment and credential variables.
 
-
 ---
 
 ## 2. Database Provisioning & Schema Migration
@@ -35,7 +34,9 @@ ThermaCore uses **Neon Serverless PostgreSQL** equipped with **TimescaleDB** ext
    ```
 
 ### 2.2 Migrations Execution
+
 On your deployment environment or local system, run the schema migration:
+
 ```bash
 # Run migration queries directly via Drizzle
 npx drizzle-kit push:pg
@@ -48,16 +49,17 @@ npx drizzle-kit push:pg
 The backend Flask application is encapsulated in a secure, non-root Docker container.
 
 ### 3.1 Render Web Service Settings
-1. Create a new **Web Service** on Render from your GitHub repository.
+
+1. Create a new Web Service on Render from your GitHub repository.
 2. Select **Docker** as the Runtime.
 3. Configure the following environment variables:
 
 | Environment Variable | Required Value | Purpose |
 | :--- | :--- | :--- |
 | `DATABASE_URL` | `postgres://...` | Secure connection string to database |
-| `JWT_SECRET_KEY` | `[Random cryptographic string]` | Used to sign JWT session structures |
-| `MQTT_BROKER_URL` | `[Broker address]` | Industrial MQTT endpoint url |
-| `MQTT_TLS_CERT` | `[Base64 Encoded Certificate]` | client certificate for mTLS broker |
+| `JWT_SECRET_KEY` | [Random cryptographic string] | Used to sign JWT session structures |
+| `MQTT_BROKER_URL` | [Broker address] | Industrial MQTT endpoint url |
+| `MQTT_TLS_CERT` | [Base64 Encoded Certificate] | client certificate for mTLS broker |
 | `NODE_ENV` | `production` | Sets execution state to production |
 | `PORT` | `3000` | Port required by reverse proxy |
 
@@ -68,10 +70,11 @@ The backend Flask application is encapsulated in a secure, non-root Docker conta
 The presentation tier is compiled into static assets via Vite and hosted on Netlify's globally distributed Edge network.
 
 ### 4.1 Netlify Build Configuration
+
 1. Link your GitHub repository in Netlify.
 2. Configure the following Build settings:
-   * **Build Command**: `pnpm run build`
-   * **Publish Directory**: `dist`
+   * Build Command: `pnpm run build`
+   * Publish Directory: `dist`
 3. Configure the following environment variables:
 
 | Environment Variable | Production Value | Purpose |
@@ -80,7 +83,9 @@ The presentation tier is compiled into static assets via Vite and hosted on Netl
 | `VITE_WS_URL` | `wss://your-backend.onrender.com` | Base path for Socket.io web sockets |
 
 ### 4.2 URL Routing Rewrite Guard (`netlify.toml`)
-To prevent `404 Not Found` errors when refreshing routes on the React Router single-page application (SPA), ensure a `netlify.toml` file exists in the project root with the following rewrite rules:
+
+To prevent 404 Not Found errors when refreshing routes on the React Router single-page application (SPA), ensure a `netlify.toml` file exists in the project root with the following rewrite rules:
+
 ```toml
 [[redirects]]
   from = "/*"
@@ -98,11 +103,11 @@ ThermaCore SCADA supports multi-tenant operations where multiple organizations c
 ### 5.1 Multi-Tenant & Client Architecture Hierarchy
 
 * **Clients & Facilities**:
-  * **Clients**: Representing top-level organizations (e.g., `ACME Energy`), linked to users and tenants via `client_id`.
-  * **Tenants**: Facilities under a client (e.g., `ACME Sydney`, `ACME Melbourne`, `ACME Brisbane`), linked to assets via `tenant_id`.
+  * **Clients**: Representing top-level organizations (e.g., ACME Energy), linked to users and tenants via `client_id`.
+  * **Tenants**: Facilities under a client (e.g., ACME Sydney, ACME Melbourne, ACME Brisbane), linked to assets via `tenant_id`.
 * **Role Scoping**:
-  * **System Admin (`admin`)**: Cross-tenant visibility and management across all clients and facilities.
-  * **Client Admin (`client_admin`)**: Scoped to all facilities (`tenants`) matching their assigned `client_id`.
+  * **System Admin** (`admin`): Cross-tenant visibility and management across all clients and facilities.
+  * **Client Admin** (`client_admin`): Scoped to all facilities (tenants) matching their assigned `client_id`.
   * **Operator / Viewer**: Restricted strictly to their specific facility (`tenant_id`).
 
 ### 5.2 Admin Access Configuration
@@ -118,6 +123,78 @@ No additional environment variables are required for the Tenant Switcher functio
 * `TenantContext` for tenant state management
 * `AuthContext` for user role information
 * `routes.js` configuration for admin route protection
+
+### 5.4 Client Admin Tenant Filtering
+
+The Client Admin role (`client_admin`) is automatically filtered to show ONLY tenants matching their assigned `client_id`. To ensure proper filtering:
+
+**Verify Client ID Assignment**
+
+Run this query to check Client Admin user assignments:
+
+```sql
+SELECT 
+  u.id, 
+  u.username, 
+  u.client_id, 
+  c.name as client_name,
+  r.name as role_name
+FROM users u
+LEFT JOIN clients c ON u.client_id = c.id
+LEFT JOIN roles r ON u.role_id = r.id
+WHERE r.name = 'client_admin';
+```
+
+**Verify Tenant Client Assignment**
+
+Run this query to check tenant-to-client relationships:
+
+```sql
+SELECT 
+  t.id, 
+  t.name, 
+  t.client_id, 
+  c.name as client_name,
+  COUNT(u.id) as unit_count
+FROM tenants t
+LEFT JOIN clients c ON t.client_id = c.id
+LEFT JOIN units u ON u.tenant_id = t.id
+GROUP BY t.id, t.name, t.client_id, c.name
+ORDER BY c.name, t.name;
+```
+
+**Troubleshooting: Client Admin Shows All Tenants**
+
+If a Client Admin user sees all tenants instead of only their organization's tenants:
+
+1. Verify `client_id` is set on the user record:
+   ```sql
+   SELECT id, username, client_id FROM users WHERE username = 'clientadmin';
+   ```
+2. Verify tenants have `client_id` matching the user's `client_id`:
+   ```sql
+   SELECT id, name, client_id FROM tenants WHERE client_id = 1;
+   ```
+3. Run the fix script if needed:
+   ```bash
+   python backend/migrations/fix_client_admin_migration.py
+   ```
+4. Clear browser storage and re-login to refresh the context.
+
+**Fix Script Location**
+
+The fix script is located at:
+
+```
+backend/migrations/fix_client_admin_migration.py
+```
+
+To run it:
+
+```bash
+cd /path/to/your-project-root
+python backend/migrations/fix_client_admin_migration.py
+```
 
 ---
 
@@ -142,14 +219,36 @@ docker run -p 3000:3000 \
 
 Once deployment has completed successfully, execute these validation checks:
 
-### Verification Checklist
-* [ ] **SSL Verification**: Open `https://your-frontend.netlify.app` and confirm the padlock icon is active (HTTPS).
-* [ ] **CORS Check**: Open browser DevTools. Navigate to the Console tab and verify that there are no cross-origin policy block notices.
-* [ ] **API Loop Check**: Confirm you can successfully register a user and that the registration writes successfully to the database.
-* [ ] **WebSocket Connectivity**: Verify the status indicator displays `🟢 ONLINE` (indicating the persistent Socket.io channel is connected).
-* [ ] **Admin Tenant Switcher**: Log in as an admin user and verify:
+**Verification Checklist**
+
+* **SSL Verification**: Open `https://your-frontend.netlify.app` and confirm the padlock icon is active (HTTPS).
+* **CORS Check**: Open browser DevTools. Navigate to the Console tab and verify that there are no cross-origin policy block notices.
+* **API Loop Check**: Confirm you can successfully register a user and that the registration writes successfully to the database.
+* **WebSocket Connectivity**: Verify the status indicator displays 🟢 ONLINE (indicating the persistent Socket.io channel is connected).
+* **Admin Tenant Switcher**: Log in as an admin user and verify:
   * Redirect to `/admin` landing page
   * Tenant Switcher dropdown displays all available tenants
   * Selecting a tenant redirects to dashboard with scoped data
   * Tenant Switcher appears in dashboard header
   * Sidebar shows "Tenant Switcher" and "User Management" links
+* **Client Admin Filtering**: Log in as a Client Admin and verify:
+  * Only tenants belonging to their `client_id` are displayed
+  * The Tenant Switcher shows ONLY their organization's tenants
+  * "All Tenants" means "All of MY tenants" (not all tenants globally)
+
+**Client Admin Verification Query**
+
+```sql
+-- Verify Client Admin sees correct tenants
+SELECT 
+  u.username,
+  u.client_id,
+  c.name as client_name,
+  COUNT(t.id) as tenant_count,
+  STRING_AGG(t.name, ', ') as tenant_names
+FROM users u
+LEFT JOIN clients c ON u.client_id = c.id
+LEFT JOIN tenants t ON t.client_id = c.id
+WHERE u.role_id = (SELECT id FROM roles WHERE name = 'client_admin')
+GROUP BY u.username, u.client_id, c.name;
+```
