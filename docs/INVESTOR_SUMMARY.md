@@ -4,7 +4,7 @@
 ---
 
 ### Executive Overview
-**ThermaCore** is a clean technology pioneer that designs, manufactures, and deploys high-efficiency, off-grid **Modular Power and Water Generators**. To provide unprecedented customer value and create a major moat, we have designed and built a proprietary, fully completed **Enterprise SCADA Platform**. 
+**ThermaCore** is a clean technology pioneer that designs, manufactures, and deploys high-efficiency, off-grid **Modular Power and Water Generators**. To provide unprecedented customer value and create a major moat, we have designed and built a proprietary, fully completed **Enterprise SCADA Platform**.
 
 This web-native digital-twin ecosystem allows clients to securely monitor, control, optimize, and perform predictive maintenance on their physical ThermaCore generator assets from any modern browser. The platform is fully completed, sales-ready, and is demonstrated in real-time alongside our physical hardware prototype.
 
@@ -22,35 +22,31 @@ Unlike traditional hardware-only manufacturers, ThermaCore leverages an integrat
 * **Exceptional Asset Economics**: Integrated thermodynamic calculations compute Coefficient of Performance (COP) and transfer rates in real time, driving an average **+18.4% efficiency lift** and reducing unplanned maintenance down-events by **34.2%**.
 * **Demonstration & Commercial Ready**: Fully functional code integrates with physical gateways and is ready for customer demonstrations alongside our physical prototype units today.
 * **Enterprise Multi-Tenant Architecture**: Built from the ground up with isolated multi-tenant capabilities, enabling service providers and fleet operators to manage multiple customer organizations from a single login:
-  - **Admin Landing Page (`/admin`)**: Dedicated tenant selection portal that administrators see immediately after authentication, ensuring deliberate context selection before accessing any sensitive data.
-  - **Tenant Switcher**: Real-time dropdown in the dashboard header allowing administrators to seamlessly switch between tenant contexts without logging out or navigating away from the dashboard.
-  - **"All Tenants" Aggregated View**: Provides cross-tenant analytics and fleet-wide visibility for administrators overseeing multiple customer deployments.
-  - **Role-Based Tenant Scoping**: 4-tier RBAC architecture (`admin`, `client_admin`, `operator`, `viewer`). System Admins manage global fleets; Client Admins manage multi-facility client fleets (`client_id`); Operators and Viewers are restricted to their assigned facility (`tenant_id`).
-  - **Tenant Context Persistence**: Active tenant selection is preserved via `sessionStorage`, maintaining context across page refreshes while automatically clearing on logout to ensure fresh context selection on each login.
-  - **Operational Efficiency**: Eliminates the need for separate SCADA instances per customer, significantly reducing infrastructure costs and administrative overhead for multi-tenant service providers.
+  * **Admin Landing Page (`/admin`)**: Dedicated tenant selection portal that administrators see immediately after authentication, ensuring deliberate context selection before accessing any sensitive data.
+  * **Tenant Switcher**: Real-time dropdown in the dashboard header allowing administrators to seamlessly switch between tenant contexts without logging out or navigating away from the dashboard.
+  * **"All Tenants" Aggregated View**: Provides cross-tenant analytics and fleet-wide visibility for administrators overseeing multiple customer deployments.
+  * **Role-Based Tenant Scoping**: 4-tier RBAC architecture (`admin`, `client_admin`, `operator`, `viewer`). System Admins manage global fleets; Client Admins manage multi-facility client fleets (`client_id`); Operators and Viewers are restricted to their assigned facility (`tenant_id`).
+  * **Tenant Data Isolation**: All database queries are automatically scoped to the active tenant context, preventing cross-tenant data leakage. Client Admin users are automatically filtered to see only tenants belonging to their client organization, enforcing tenant isolation at both the application and database layers.
+  * **Tenant Context Persistence**: Active tenant selection is preserved via `sessionStorage`, maintaining context across page refreshes while automatically clearing on logout to ensure fresh context selection on each login.
+  * **Operational Efficiency**: Eliminates the need for separate SCADA instances per customer, significantly reducing infrastructure costs and administrative overhead for multi-tenant service providers.
 
 ---
 
 ### Core Platform Metrics
-```
 
-┌──────────────────────────────────────┬────────────────────────────────────────┐
-│ Metric                               │ Operational Baseline & Status          │
-├──────────────────────────────────────┼────────────────────────────────────────┤
-│ Build & Verification Status          │ 🟢 SUCCESS / COMPILING                 │
-│ Automated Testing Assertions         │ 5,504 Passing (4,180 FE / 1,324 BE)    │
-│ Frontend Test Coverage (Vitest)      │ 🟢 91.78% Total Coverage               │
-│   - Statements                       │    91.78%                              │
-│   - Branches                         │    90.92%                              │
-│   - Functions                        │    91.90%                              │
-│ Backend Test Coverage (Pytest)       │ 🟢 85.63% Total Coverage               │
-│ Telemetry Ingestion Latency          │ < 120ms (Edge sensor to web UI)        │
-│ Remote Override Command Latency      │ < 180ms (Operator click to client mTLS)│
-│ Database Analytics Query Speed       │ < 95ms (95th-percentile for 30d trends)│
-│ Active Vulnerabilities Detected      │ 0 (Critical / High / Medium Severity)  │
-└──────────────────────────────────────┴────────────────────────────────────────┘
-
-```
+| Metric | Operational Baseline & Status |
+| :--- | :--- |
+| Build & Verification Status | 🟢 SUCCESS / COMPILING |
+| Automated Testing Assertions | 5,504 Passing (4,180 FE / 1,324 BE) |
+| Frontend Test Coverage (Vitest) | 🟢 91.78% Total Coverage |
+| &nbsp;&nbsp;- Statements | 91.78% |
+| &nbsp;&nbsp;- Branches | 90.92% |
+| &nbsp;&nbsp;- Functions | 91.90% |
+| Backend Test Coverage (Pytest) | 🟢 85.63% Total Coverage |
+| Telemetry Ingestion Latency | < 120ms (Edge sensor to web UI) |
+| Remote Override Command Latency | < 180ms (Operator click to client mTLS) |
+| Database Analytics Query Speed | < 95ms (95th-percentile for 30d trends) |
+| Active Vulnerabilities Detected | 0 (Critical / High / Medium Severity) |
 
 ---
 
@@ -60,7 +56,6 @@ Engineered to meet the highest international security standards (**IEC 62443** a
 * **Granular RBAC isolation**: Restricts user capabilities into defined administrative rings (Viewer, Operator, Admin), preventing unauthorized telemetry adjustments. Tenant scoping is enforced at both the application and database layers.
 * **mTLS & Command Verification**: Mutual TLS (mTLS) secures edge telemetry ingestion. Critical remote physical command triggers (e.g., initiating emergency shutdown) require multi-operator confirmation ("four-eyes principle") and are logged in immutable, cryptographically sealed audit logs.
 * **Principle of Least Privilege**: Runs all cloud container environments as non-root users and enforces a strict Content Security Policy (CSP) to block clickjacking, UI redressing, and code-injection attacks.
-* **Tenant Data Isolation**: All database queries are automatically scoped to the active tenant context, preventing cross-tenant data leakage. The multi-tenant architecture ensures that a security incident affecting one tenant can be isolated without impacting others.
 
 ---
 
