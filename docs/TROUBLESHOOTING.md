@@ -10,17 +10,13 @@ This guide outlines diagnostic procedures, error resolutions, and mitigation che
 If the SCADA interface displays an outage, follow this triaging order:
 
 ```
-                  Telemetry/Control Interruption
-                                │
-          ┌─────────────────────┴─────────────────────┐
-          ▼                                           ▼
- [ Web Portal Down? ]                      [ No Telemetry stream? ]
-          │                                           │
-  Check Render logs,                          Check physical Edge
- Netlify SSL, CDN, CORS                      Gateway, mTLS Certs,
-          │                                   and OPC-UA connection
-          ▼                                           ▼
-      [RESOLVED]                                  [RESOLVED]
+[ Web Portal Down? ]                      [ No Telemetry stream? ]
+│                                           │
+Check Render logs,                          Check physical Edge
+Netlify SSL, CDN, CORS                      Gateway, mTLS Certs,
+│                                            and OPC-UA connection
+▼                                           ▼
+[RESOLVED]                                  [RESOLVED]
 ```
 
 ---
@@ -84,11 +80,83 @@ If the SCADA interface displays an outage, follow this triaging order:
   4. Ensure `ProtectedRoute` permits access by checking the target route's specific `roles` array in `routes.js` — note that `"client_admin"` is only present on `/admin` and `/admin/users`, and is deliberately absent from `/analytics`, `/system-health`, and `/protocol-manager`.
   5. Check browser local/session storage to verify `selectedTenant` is correctly set and matches an authorized tenant.
 
+### 3.4 Client Admin Shows All Tenants (Not Filtered)
+
+**Symptom**: Client Admin users see all tenants in the Tenant Switcher instead of only their organization's tenants.
+
+**Root Causes**:
+1. User's `client_id` is NULL or not set in the database
+2. Tenants do not have `client_id` matching the user's `client_id`
+3. Frontend `TenantContext` is not properly applying the `client_id` filter
+4. The mock tenant fallback is not filtering by `client_id`
+
+**Diagnostic Queries**:
+```sql
+-- Check user's client_id
+SELECT id, username, email, client_id, role_id 
+FROM users 
+WHERE username = 'clientadmin' OR email = 'clientadmin@thermacore.com';
+
+-- Check all tenants and their client_id
+SELECT id, name, client_id FROM tenants ORDER BY client_id, name;
+
+-- Check clients table
+SELECT id, name FROM clients ORDER BY id;
+```
+
+**Resolution Steps**:
+
+1. Verify user has `client_id` set:
+   ```sql
+   SELECT id, username, client_id FROM users WHERE username = 'clientadmin';
+   ```
+2. Verify tenants have `client_id` set:
+   ```sql
+   SELECT id, name, client_id FROM tenants;
+   ```
+3. Run the fix script:
+   ```bash
+   cd /path/to/your-project-root
+   python backend/migrations/fix_client_admin_migration.py
+   ```
+4. Verify the fix worked:
+   ```sql
+   -- Check the clientadmin user after running the fix
+   SELECT 
+     u.id,
+     u.username,
+     u.email,
+     u.role_id,
+     r.name as role_name,
+     u.client_id,
+     c.name as client_name,
+     u.tenant_id,
+     t.name as tenant_name
+   FROM users u
+   LEFT JOIN roles r ON u.role_id = r.id
+   LEFT JOIN clients c ON u.client_id = c.id
+   LEFT JOIN tenants t ON u.tenant_id = t.id
+   WHERE u.username = 'clientadmin';
+   ```
+5. Clear browser storage and re-login:
+   * Clear localStorage and sessionStorage
+   * Log out and log back in as the Client Admin user
+   * Verify the Tenant Switcher now shows only the filtered tenants
+6. If the issue persists, check the frontend filtering:
+   * Open browser DevTools
+   * In the Console, check what `availableTenants` contains:
+   ```javascript
+   // This will show what tenants the frontend has loaded
+   const tenantContext = React.useContext(require('../context/TenantContext').TenantContext);
+   console.log('Available tenants:', tenantContext.availableTenants);
+   ```
+
 ---
 
 ## 4. Edge Gateways, MQTT, & OPC-UA Connections
 
 ### 4.1 mTLS Handshake Failures
+
 * **Symptom**: Edge devices fail to publish telemetry; the gateway reports certificate handshake rejections.
 * **Resolution Steps**:
   1. Run `scripts/check-security.js` to ensure certificates are valid and not expired.
@@ -99,6 +167,7 @@ If the SCADA interface displays an outage, follow this triaging order:
   3. Check the client log for the following cipher mismatch code: `SSL_ERROR_NO_CYPHER_OVERLAP`. Update the edge node to use the required cipher suite: `ECDHE-RSA-AES256-GCM-SHA384`.
 
 ### 4.2 OPC-UA Gateway Timeout
+
 * **Symptom**: Modular generator water/power metrics show empty values or state flags remain frozen.
 * **Resolution Steps**:
   1. Ping the physical PLC address from the Edge Gateway to confirm IP network visibility.
@@ -108,7 +177,8 @@ If the SCADA interface displays an outage, follow this triaging order:
 
 ## 5. Database Connection Failures (TimescaleDB / Neon)
 
-### 5.1 Pool Exhaustion (`Too many connections`)
+### 5.1 Pool Exhaustion (Too many connections)
+
 * **Symptom**: Application logs show database errors indicating connection pool exhaustion.
 * **Resolution Steps**:
   1. Verify the maximum connections threshold in Neon.
@@ -124,6 +194,7 @@ If the SCADA interface displays an outage, follow this triaging order:
 ## 6. Container & Deployment Health Checks
 
 ### 6.1 Diagnostic Log File Analysis
+
 * **Render Container Logs**: Check standard system logs via the Render dashboard command terminal:
   ```bash
   tail -n 200 /var/log/thermacore/app.log
@@ -136,9 +207,11 @@ If the SCADA interface displays an outage, follow this triaging order:
   ```
 
 ### 6.2 Local Verification & Regression Checking
+
 Before promoting any troubleshooting patch or hotfix to production, developers must execute automated regression tests to verify overall code health and structural integrity:
-* **Frontend Verification (Vitest)**: Ensure the frontend test suite compiles cleanly and maintains our minimum **91.78% Total Coverage** gate.
-* **Backend Verification (Pytest)**: Ensure all API endpoints and integration tests pass, maintaining our **82.91% Total Coverage** baseline.
+
+* **Frontend Verification (Vitest)**: Ensure the frontend test suite compiles cleanly and maintains our minimum 91.78% Total Coverage gate.
+* **Backend Verification (Pytest)**: Ensure all API endpoints and integration tests pass, maintaining our 82.91% Total Coverage baseline.
 * **Formatting & Linting compliance**: Run Biome formatter and linter to resolve warnings before staging commits:
   ```bash
   npx biome format --write ./src
@@ -151,9 +224,10 @@ Before promoting any troubleshooting patch or hotfix to production, developers m
 
 | Error Code | Class | Description | Corrective Action |
 | :--- | :--- | :--- | :--- |
-| **TC-101** | Auth | Ephemeral JWT expired or corrupt | Re-authenticate; clear local storage cookie caches. |
-| **TC-202** | Telemetry | WebSocket handshake failure | Verify CORS origins in `server.ts` and check client `.env`. |
-| **TC-303** | Command | Control signature invalid | Ensure the command payload has a valid timestamp and is cryptographically signed. |
-| **TC-404** | Ingestion | OPC-UA endpoint unreachable | Confirm physical PLC network routing and security certificates. |
-| **TC-505** | Database | TimescaleDB pool limit exceeded | Scale the Neon database connection pool and check for unreleased connections. |
-```
+| TC-101 | Auth | Ephemeral JWT expired or corrupt | Re-authenticate; clear local storage cookie caches. |
+| TC-202 | Telemetry | WebSocket handshake failure | Verify CORS origins in `server.ts` and check client `.env`. |
+| TC-303 | Command | Control signature invalid | Ensure the command payload has a valid timestamp and is cryptographically signed. |
+| TC-404 | Ingestion | OPC-UA endpoint unreachable | Confirm physical PLC network routing and security certificates. |
+| TC-505 | Database | TimescaleDB pool limit exceeded | Scale the Neon database connection pool and check for unreleased connections. |
+| TC-601 | Tenant | Client Admin `client_id` not set | Run `fix_client_admin_migration.py` to update user record. |
+| TC-602 | Tenant | Tenant `client_id` mismatch with user | Update tenant `client_id` to match user's `client_id`. |
