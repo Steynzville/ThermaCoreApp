@@ -26,14 +26,13 @@
 ## 1. Executive Summary
 
 ### 1.1 The Market Opportunity & The ThermaCore Solution
-The global transition to decentralized utility infrastructure has created high demand for off-grid and modular utility generation. ThermaCore addresses this by designing and manufacturing advanced, high-efficiency **Modular Power and Water Generators**. 
+The global transition to decentralized utility infrastructure has created high demand for off-grid and modular utility generation. ThermaCore addresses this by designing and manufacturing advanced, high-efficiency **Modular Power and Water Generators**.
 
 However, hardware alone is only half the equation. Traditional decentralized assets are notoriously difficult to monitor, maintain, and coordinate. Operators struggle with siloed legacy supervisory systems that require dedicated physical control rooms, expensive licensing fees, and lack secure remote over-the-air (OTA) control capabilities.
 
 **ThermaCore SCADA** is our proprietary, web-native, enterprise-grade control and supervisory ecosystem integrated directly into every modular unit we deploy. It provides real-time thermodynamic modeling, remote edge control, predictive maintenance diagnostics, and high-performance alarm coordination via a secure web portal accessible from any modern browser.
 
 ```
-
 ┌────────────────────────────────────────────────────────────────────────┐
 │                        THE THERMACORE ADVANTAGE                        │
 │                                                                        │
@@ -43,13 +42,13 @@ However, hardware alone is only half the equation. Traditional decentralized ass
 │   ✖ Unpredictable maintenance downtime      ✔ Pre-emptive, Telemetry-Driven Diagnostics │
 │   ✖ One-time, transactional sales loops     ✔ Dual Revenue (CapEx + Recurring SaaS Sub)│
 └────────────────────────────────────────────────────────────────────────┘
-
 ```
 
 ### 1.2 Strategic Accomplishments
 * **Enterprise SCADA Platform Completed**: We have successfully designed, built, and deployed a comprehensive monitoring and management platform that serves as a key value driver.
 * **Fully Sales & Demonstration Ready**: The platform is fully functional and operates live alongside our physical generator prototype, showing potential customers exactly how they will monitor and manage their deployed assets in real time.
-* **Dramatically Improved Plant Economics**: Integrated thermodynamic modeling evaluates operational metrics (such as the Coefficient of Performance [COP] and exchanger heat transfer rates) in real time, driving an average **+18.4% efficiency lift** and a **34.2% reduction in unplanned maintenance downtime**.
+* **Optimized Plant Economics**: Integrated thermodynamic modeling evaluates operational metrics (such as the Coefficient of Performance [COP] and exchanger heat transfer rates) in real time. Modeling indicates potential efficiency gains of +18.4% and downtime reduction of 34.2% through predictive maintenance and continuous optimization - capabilities ready for pilot validation with our first customers.
+* **Production-Grade Reliability**: Validated through 5,504 automated tests with 91.78% frontend coverage and 85.63% backend coverage, ensuring enterprise-grade stability from day one.
 
 ---
 
@@ -57,17 +56,15 @@ However, hardware alone is only half the equation. Traditional decentralized ass
 
 Rather than relying on low-margin hardware-only transactions, ThermaCore employs a highly lucrative **Dual Revenue Model** that combines traditional industrial sales with high-margin recurring software revenues.
 
-THERMACORE DUAL-STREAM REVENUE ENGINE
+**THERMACORE DUAL-STREAM REVENUE ENGINE**
 
 ```
-
 ┌─────────────────────────────────────────┐     ┌─────────────────────────────────────────┐
 │     CAPEX STREAM: GENERATOR SALES       │  +  │    OPEX STREAM: MONITORING SUBSCRIPTION │
 │  • High-performance physical assets     │     │  • Live SCADA dashboard & controls access│
 │  • Power and clean water generation     │     │  • Automated thermodynamic optimization  │
 │  • Installed edge gateways (OPC-UA/MQTT)│     │  • Predictive maintenance alerts (SaaS) │
 └─────────────────────────────────────────┘     └─────────────────────────────────────────┘
-
 ```
 
 ### 2.1 Hardware Asset Sales (CapEx Stream)
@@ -89,7 +86,6 @@ While competitors provide basic, disconnected hardware, ThermaCore offers a comp
 The ThermaCore SCADA platform utilizes a modern, robust, and highly resilient decoupled multi-tier architecture to serve as a digital twin for our physical generator fleet.
 
 ```
-
 ┌────────────────────────────────────────────────────────────────────────┐
 │                        PRESENTATION LAYER (UI)                         │
 │             React 19 SPA (Vite + Framer Motion + Recharts)             │
@@ -108,7 +104,6 @@ The ThermaCore SCADA platform utilizes a modern, robust, and highly resilient de
 │                     TIME-SERIES PERSISTENCE LAYER                      │
 │             PostgreSQL + TimescaleDB Serverless Hyper-tables            │
 └────────────────────────────────────────────────────────────────────────┘
-
 ```
 
 ### 3.1 Frontend Presentation Tier (React 19)
@@ -133,7 +128,6 @@ The ThermaCore SCADA platform utilizes a modern, robust, and highly resilient de
 The operational strength of the ThermaCore SCADA platform is validated across 10 functional pillars:
 
 ```
-
 ┌────────────────────────────────────────────────────────────────────────┐
 │                        10 OPERATIONAL PILLARS                          │
 │                                                                        │
@@ -141,7 +135,6 @@ The operational strength of the ThermaCore SCADA platform is validated across 10
 │  [5] RBAC Admin Panel [6] Asset Grid     [7] Analytics     [8] SocketIO │
 │  [9] SCADA Dash      [10] Fail-Safe Redirection                        │
 └────────────────────────────────────────────────────────────────────────┘
-
 ```
 
 ### 4.1 Session & Multi-Layer Authentication
@@ -195,7 +188,6 @@ The operational strength of the ThermaCore SCADA platform is validated across 10
 ThermaCore supports multiple legacy and modern industrial ingestion layers to bridge physical edge devices with the cloud.
 
 ```
-
 ┌────────────────────────────────────────────────────────────────────────┐
 │                          INGESTION INVENTORY                           │
 │                                                                        │
@@ -206,7 +198,6 @@ ThermaCore supports multiple legacy and modern industrial ingestion layers to br
 │   Modbus-TCP   Legacy Heat Exchangers & Valves    Encapsulated Gateways│
 │   DNP3         Power Substation Synchronizations  Secure Authentication│
 └────────────────────────────────────────────────────────────────────────┘
-
 ```
 
 ### 5.1 OPC-UA (Open Platform Communications Unified Architecture)
@@ -227,10 +218,9 @@ ThermaCore supports multiple legacy and modern industrial ingestion layers to br
 
 ThermaCore SCADA is built around a rigorous, zero-trust military-grade security model designed to safeguard critical utility assets from sophisticated cyber threats.
 
-ZERO-TRUST PHYSICAL SECURITY LAYERS
+**ZERO-TRUST PHYSICAL SECURITY LAYERS**
 
 ```
-
 ┌────────────────────────────────────────────────────────────────────────┐
 │ LAYER 1: CLIENT ACCESS -> HttpOnly JWT Cookies & Strict CSRF Guard     │
 ├────────────────────────────────────────────────────────────────────────┤
@@ -240,7 +230,6 @@ ZERO-TRUST PHYSICAL SECURITY LAYERS
 ├────────────────────────────────────────────────────────────────────────┤
 │ LAYER 4: PHYSICAL EXECUTION -> Cryptographically Signed Overrides      │
 └────────────────────────────────────────────────────────────────────────┘
-
 ```
 
 ### 6.1 Defense-in-Depth Cryptography
@@ -265,15 +254,13 @@ ThermaCore SCADA defines clear operational boundaries across four specialized ti
 
 The reliability and safety of ThermaCore SCADA are continuously verified through an automated, execute-first development lifecycle.
 
-AUTOMATED CI/CD FLOW
+**AUTOMATED CI/CD FLOW**
 
 ```
-
 ┌──────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
 │  Developer   │ ──► │  Biome/Lint  │ ──► │ Vitest/Unit  │ ──► │ Production   │
 │ Code Commit  │     │ Static Scan  │     │ 5,504+ Tests │     │ Deployment   │
 └──────────────┘     └──────────────┘     └──────────────┘     └──────────────┘
-
 ```
 
 ### 7.1 Integrated Security Scanning Tools
@@ -348,12 +335,15 @@ The platform leverages an optimized, multi-stage Docker build process:
 
 Our developmental milestones align with scaling operations to support thousands of active physical utility installations globally:
 
-                          DEVELOPMENT ROADMAP
+**DEVELOPMENT ROADMAP**
+
+```
 Q3 2026                 Q4 2026                 Q1 2027
 ┌───────────────────────┐  ┌───────────────────────┐  ┌──────────────────────┐
 │ Anomaly AI Engine     │  │ Offline-First PWA     │  │ EMQX Enterprise      │
 │ (Gemini API Integration) │  │ (Local IndexedDB)     │  │ (Hardware HSM)       │
 └───────────────────────┘  └───────────────────────┘  └──────────────────────┘
+```
 
 ### 9.1 Q3 2026: AI-Driven Thermodynamic Anomaly Prediction
 * Integrate Google Gemini models via the server-side `@google/genai` SDK.
