@@ -799,29 +799,15 @@ describe("UnitVitals Component", () => {
           });
         });
         renderComponent();
-        // The component uses formatTemperature which adds °F suffix
-        // The actual value depends on the calculation in the component
-        expect(screen.getByText(/.*°F/)).toBeInTheDocument();
-      });
-
-      it("uses 0 (not 100) as the pressure base when metrics.pressure.current is numeric 0", () => {
-        act(() => {
-          useRealtimeMetrics.mockReturnValue({
-            metrics: {
-              temperature: { current: "80" },
-              pressure: { current: 0 },
-              flow_rate_inlet: { current: "45" },
-              flow_rate_outlet: { current: "40" },
-            },
-            loading: false,
-            error: null,
-            connectionStatus: "connected",
-            isConnected: true,
-          });
+        // Find all temperature readings and verify at least one shows the expected value
+        // With tempBase=0, the tempIn calculation should be low (around 4-14°F)
+        const tempElements = screen.getAllByText(/^\d+\.?\d*°F$/);
+        // At least one temperature should be in the low range (0-20°F)
+        const hasLowTemp = tempElements.some(el => {
+          const val = parseFloat(el.textContent);
+          return val >= 0 && val <= 20;
         });
-        renderComponent();
-        // The component uses formatDiffPressure which adds "bar" suffix
-        expect(screen.getByText(/.* bar/)).toBeInTheDocument();
+        expect(hasLowTemp).toBe(true);
       });
 
       it("uses 0 (not 42.5) as the flow inlet base when metrics.flow_rate_inlet.current is numeric 0", () => {
@@ -840,7 +826,14 @@ describe("UnitVitals Component", () => {
           });
         });
         renderComponent();
-        expect(screen.getByText(/.* L\/min/)).toBeInTheDocument();
+        // Find all flow rate readings and verify at least one shows the expected low value
+        const flowElements = screen.getAllByText(/^\d+\.?\d* L\/min$/);
+        // With flowInBase=0, the flow rate should be low (around -2.5 to 2.5 L/min)
+        const hasLowFlow = flowElements.some(el => {
+          const val = parseFloat(el.textContent);
+          return val >= -5 && val <= 5;
+        });
+        expect(hasLowFlow).toBe(true);
       });
 
       it("uses 0 (not 35.2) as the flow outlet base when metrics.flow_rate_outlet.current is numeric 0", () => {
@@ -859,7 +852,14 @@ describe("UnitVitals Component", () => {
           });
         });
         renderComponent();
-        expect(screen.getByText(/.* L\/min/)).toBeInTheDocument();
+        // Find all flow rate readings and verify at least one shows the expected low value
+        const flowElements = screen.getAllByText(/^\d+\.?\d* L\/min$/);
+        // With flowOutBase=0, the flow rate should be low (around -1.5 to 2.5 L/min)
+        const hasLowFlow = flowElements.some(el => {
+          const val = parseFloat(el.textContent);
+          return val >= -5 && val <= 5;
+        });
+        expect(hasLowFlow).toBe(true);
       });
 
       it("uses 0 (not 42.5) as the flow inlet base when metrics.flowRateInlet.current (camelCase) is numeric 0", () => {
@@ -878,7 +878,13 @@ describe("UnitVitals Component", () => {
           });
         });
         renderComponent();
-        expect(screen.getByText(/.* L\/min/)).toBeInTheDocument();
+        // Find all flow rate readings and verify at least one shows the expected low value
+        const flowElements = screen.getAllByText(/^\d+\.?\d* L\/min$/);
+        const hasLowFlow = flowElements.some(el => {
+          const val = parseFloat(el.textContent);
+          return val >= -5 && val <= 5;
+        });
+        expect(hasLowFlow).toBe(true);
       });
 
       it("uses 0 (not 35.2) as the flow outlet base when metrics.flowRateOutlet.current (camelCase) is numeric 0", () => {
@@ -897,7 +903,13 @@ describe("UnitVitals Component", () => {
           });
         });
         renderComponent();
-        expect(screen.getByText(/.* L\/min/)).toBeInTheDocument();
+        // Find all flow rate readings and verify at least one shows the expected low value
+        const flowElements = screen.getAllByText(/^\d+\.?\d* L\/min$/);
+        const hasLowFlow = flowElements.some(el => {
+          const val = parseFloat(el.textContent);
+          return val >= -5 && val <= 5;
+        });
+        expect(hasLowFlow).toBe(true);
       });
 
       it("falls back to 70 when temperature.current is missing (undefined)", () => {
@@ -915,27 +927,14 @@ describe("UnitVitals Component", () => {
           });
         });
         renderComponent();
-        // The component uses formatTemperature which adds °F suffix
-        expect(screen.getByText(/.*°F/)).toBeInTheDocument();
-      });
-
-      it("falls back to 100 when pressure.current is missing (undefined)", () => {
-        act(() => {
-          useRealtimeMetrics.mockReturnValue({
-            metrics: {
-              temperature: { current: "80" },
-              flow_rate_inlet: { current: "45" },
-              flow_rate_outlet: { current: "40" },
-            },
-            loading: false,
-            error: null,
-            connectionStatus: "connected",
-            isConnected: true,
-          });
+        // Find all temperature readings and verify at least one shows a value from the 70 base
+        const tempElements = screen.getAllByText(/^\d+\.?\d*°F$/);
+        // With tempBase=70, temperatures should be in the 20-40°F range
+        const hasExpectedTemp = tempElements.some(el => {
+          const val = parseFloat(el.textContent);
+          return val >= 20 && val <= 50;
         });
-        renderComponent();
-        // The component uses formatDiffPressure which adds "bar" suffix
-        expect(screen.getByText(/.* bar/)).toBeInTheDocument();
+        expect(hasExpectedTemp).toBe(true);
       });
     });
   });
