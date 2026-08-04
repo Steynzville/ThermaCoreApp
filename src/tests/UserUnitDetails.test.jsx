@@ -242,7 +242,7 @@ describe("UserUnitDetails", () => {
     const user = userEvent.setup();
     renderWithUnit({ watergeneration: true });
     await user.click(screen.getByRole("button", { name: "History" }));
-    expect(screen.getByText("Water Level History")).toBeInTheDocument();
+    expect(screen.getByText("AWG Water Level History")).toBeInTheDocument();
   });
 
   it("switches to the Alerts tab and renders UnitAlertsTab with alert history", async () => {
@@ -632,8 +632,8 @@ describe("UserUnitDetails", () => {
       delete unitNoTemps.pressure;
       renderWithUnit({}, unitNoTemps);
       expect(screen.getByText("Temp In")).toBeInTheDocument();
-      expect(screen.getByText("Temp Out")).toBeInTheDocument();
-      expect(screen.getByText("Pressure")).toBeInTheDocument();
+      expect(screen.getByText("Temp Out - Chill")).toBeInTheDocument();
+      expect(screen.getByText("Differential Pressure")).toBeInTheDocument();
     });
   });
 
@@ -643,8 +643,8 @@ describe("UserUnitDetails", () => {
 
   describe("UserUnitDetails - water generation on Overview tab", () => {
     it("shows the Water Level stat on Overview when watergeneration is true", () => {
-      renderWithUnit({ watergeneration: true, water_level: 55 });
-      expect(screen.getByText("Water Level")).toBeInTheDocument();
+      renderWithUnit({ watergeneration: true, awgWaterLevel: 55 });
+      expect(screen.getByText("AWG Water Level")).toBeInTheDocument();
       expect(screen.getByText(/55 L/)).toBeInTheDocument();
     });
   });
@@ -715,7 +715,7 @@ describe("UserUnitDetails", () => {
         metrics: { flow_rate_inlet: { current: 95 } },
       });
       renderWithUnit();
-      const el = getFlowValueEl("Flow Rate Inlet");
+      const el = getFlowValueEl("Flow Rate Out - Chill");
       expect(el?.className).toMatch(/text-red-600/);
       expect(el?.className).toMatch(/font-bold/);
     });
@@ -725,7 +725,7 @@ describe("UserUnitDetails", () => {
         metrics: { flow_rate_inlet: { current: 5 } },
       });
       renderWithUnit();
-      const el = getFlowValueEl("Flow Rate Inlet");
+      const el = getFlowValueEl("Flow Rate Out - Chill");
       expect(el?.className).toMatch(/text-red-600/);
     });
 
@@ -734,7 +734,7 @@ describe("UserUnitDetails", () => {
         metrics: { flow_rate_inlet: { current: 76 } },
       });
       renderWithUnit();
-      const el = getFlowValueEl("Flow Rate Inlet");
+      const el = getFlowValueEl("Flow Rate Out - Chill");
       expect(el?.className).toMatch(/text-yellow-600/);
       expect(el?.className).toMatch(/font-semibold/);
     });
@@ -744,7 +744,7 @@ describe("UserUnitDetails", () => {
         metrics: { flow_rate_outlet: { current: 40 } },
       });
       renderWithUnit();
-      const el = getFlowValueEl("Flow Rate Outlet");
+      const el = getFlowValueEl("Flow Rate Out - Hot");
       expect(el?.className).toMatch(/text-green-600/);
     });
   });
@@ -762,7 +762,7 @@ describe("UserUnitDetails", () => {
         },
       });
       renderWithUnit();
-      expect(screen.getByText("Flow Rate Inlet")).toBeInTheDocument();
+      expect(screen.getByText("Flow Rate Out - Chill")).toBeInTheDocument();
     });
 
     it("uses metrics.temperature.current and metrics.pressure.current when provided", () => {
@@ -774,7 +774,7 @@ describe("UserUnitDetails", () => {
       });
       renderWithUnit();
       expect(screen.getByText("Temp In")).toBeInTheDocument();
-      expect(screen.getByText("Pressure")).toBeInTheDocument();
+      expect(screen.getByText("Differential Pressure")).toBeInTheDocument();
     });
   });
 

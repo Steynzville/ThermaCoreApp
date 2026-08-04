@@ -324,7 +324,7 @@ const UnitControl = ({ className }) => {
                   <Droplets className="h-5 w-5 text-blue-500" />
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Water Level
+                      AWG Water Level
                     </p>
                     <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                       {device.waterLevel}% ({device.waterLiters}L /{" "}
@@ -349,7 +349,7 @@ const UnitControl = ({ className }) => {
                   <Thermometer className="h-5 w-5 text-red-500" />
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Temp Out
+                      Temp Out - Chill
                     </p>
                     <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                       {systemPower ? formatTemperature(device.tempOut) : "--"}
@@ -361,7 +361,7 @@ const UnitControl = ({ className }) => {
                   <Gauge className="h-5 w-5 text-purple-500" />
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Pressure
+                      Differential Pressure
                     </p>
                     <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                       {systemPower ? `${device.pressure} bar` : 0}
@@ -373,7 +373,7 @@ const UnitControl = ({ className }) => {
                   <Droplets className="h-5 w-5 text-cyan-500 animate-pulse" />
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Flow Rate Inlet
+                      Flow Rate Out - Chill
                     </p>
                     <p
                       className={`text-lg ${getFlowRateColor(device.flowRateInlet)}`}
@@ -389,7 +389,7 @@ const UnitControl = ({ className }) => {
                   <Droplets className="h-5 w-5 text-blue-500 animate-pulse" />
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Flow Rate Outlet
+                      Flow Rate Out - Hot
                     </p>
                     <p
                       className={`text-lg ${getFlowRateColor(device.flowRateOutlet)}`}

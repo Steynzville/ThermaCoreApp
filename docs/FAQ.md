@@ -23,10 +23,16 @@ To safeguard critical energy infrastructure, all self-registered user accounts a
 ### Q3: How do I view historical thermodynamic metrics?
 1. Open the sidebar navigation and select **Performance & COP** (`📈`).
 2. Select your target asset node from the top-left dropdown menu.
-3. Choose your desired timeframe (`24h`, `7d`, `30d`, `1y`) and select the metric you wish to plot (e.g., *Heat Exchanger Temperature*, *Hydraulic Flow Rate*).
+3. Choose your desired timeframe (`24h`, `7d`, `30d`, `1y`) and select the metric you wish to plot (e.g., *Temp Out - Chill*, *Temp Out - Hot*, *Differential Pressure*, *Flow Rate Out - Chill*, *Flow Rate Out - Hot*, *AWG Water Level*, *Battery Voltage*).
 4. You can export historical data tables directly to CSV for external analysis.
 
-### Q4: What is Coefficient of Performance (COP) and why is it important?
+### Q4: What are the primary system safety thresholds and alarm rules?
+* **NH3 Leak Alarm (< 4 bar Differential Pressure)**: Triggers a critical red alarm warning of toxic ammonia refrigerant leakage.
+* **High Differential Pressure Auto-Shutdown (> 6 bar Differential Pressure)**: Automatically shuts down unit operations to protect compressors and piping.
+* **Low Battery Voltage (< 23V)**: Triggers a warning alert to preserve remote telemetry communication backup.
+* **High Battery Voltage (> 27V)**: Triggers a warning alert for battery overcharge protection.
+
+### Q5: What is Coefficient of Performance (COP) and why is it important?
 Coefficient of Performance (COP) measures the thermodynamic efficiency of our generator thermal loops. It calculates the ratio of useful heat transfer to the mechanical energy input. A higher COP indicates a highly optimized, low-cost operation.
 
 ---

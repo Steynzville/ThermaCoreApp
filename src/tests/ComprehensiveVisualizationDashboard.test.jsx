@@ -322,7 +322,7 @@ describe("ComprehensiveVisualizationDashboard Component", () => {
         metrics: { flow_rate_outlet: { current: "20.2" } },
       });
       const { unmount } = renderComponent({ defaultTab: "gauges" });
-      expect(screen.getByText(/Flow Rate Outlet: 20.2/)).toBeTruthy();
+      expect(screen.getByText(/Flow Rate Out - Hot: 20.2/)).toBeTruthy();
       unmount();
     });
 
@@ -331,7 +331,7 @@ describe("ComprehensiveVisualizationDashboard Component", () => {
         metrics: { flowRateOutlet: { current: "18.1" } },
       });
       const { unmount } = renderComponent({ defaultTab: "gauges" });
-      expect(screen.getByText(/Flow Rate Outlet: 18.1/)).toBeTruthy();
+      expect(screen.getByText(/Flow Rate Out - Hot: 18.1/)).toBeTruthy();
       unmount();
     });
 
@@ -340,8 +340,8 @@ describe("ComprehensiveVisualizationDashboard Component", () => {
       const { unmount } = renderComponent({ defaultTab: "gauges" });
       expect(screen.getByText(/Temperature Zone 1: 72.3/)).toBeTruthy();
       expect(screen.getByText(/Pressure Main Line: 105/)).toBeTruthy();
-      expect(screen.getByText(/Flow Rate Inlet: 45.5/)).toBeTruthy();
-      expect(screen.getByText(/Flow Rate Outlet: 42.1/)).toBeTruthy();
+      expect(screen.getByText(/Flow Rate Out - Chill: 45.5/)).toBeTruthy();
+      expect(screen.getByText(/Flow Rate Out - Hot: 42.1/)).toBeTruthy();
       unmount();
     });
 
@@ -366,7 +366,7 @@ describe("ComprehensiveVisualizationDashboard Component", () => {
         },
       });
       const { unmount } = renderComponent({ defaultTab: "gauges" });
-      expect(screen.getByText(/Flow Rate Inlet: 50.5/)).toBeTruthy();
+      expect(screen.getByText(/Flow Rate Out - Chill: 50.5/)).toBeTruthy();
       unmount();
     });
 
@@ -378,7 +378,7 @@ describe("ComprehensiveVisualizationDashboard Component", () => {
         },
       });
       const { unmount } = renderComponent({ defaultTab: "gauges" });
-      expect(screen.getByText(/Flow Rate Outlet: 42.1/)).toBeTruthy();
+      expect(screen.getByText(/Flow Rate Out - Hot: 42.1/)).toBeTruthy();
       unmount();
     });
   });

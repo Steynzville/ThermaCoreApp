@@ -141,19 +141,28 @@ The operational strength of the ThermaCore SCADA platform is validated across 10
 * **Session Integrity**: Operators access the system through a secure gateway. Upon verification, the backend issues an ephemeral JWT access token (15-minute lifespan) and an encrypted refresh token (7-day lifespan) stored inside an HTTP-only, secure, same-site cookie to mitigate Cross-Site Scripting (XSS).
 * **Defensive Lockouts**: Automatically tracks login attempts per user and IP address, triggering automated IP blocklists upon detecting potential brute-force vectors.
 
-### 4.2 Main Live Telemetry Dashboard
-* **Real-Time KPIs**: Renders plant-wide Key Performance Indicators (KPIs) in real time: active unit ratios, aggregated power output, clean water production rates, average efficiency curves, and critical system alarms.
+### 4.2 Main Live Telemetry Dashboard & Unit Monitoring
+* **Real-Time KPIs**: Renders plant-wide Key Performance Indicators (KPIs) and standardized unit telemetry vitals in real time:
+  * **AWG Water Level (%)**: Atmospheric water generation tank storage capacity.
+  * **Temp Out - Chill & Hot (°C)**: Thermal output loop temperatures for chilled and hot operational lines.
+  * **Differential Pressure (bar)**: Differential pressure monitoring across internal heat exchanger loops.
+  * **Flow Rate Out - Chill & Hot (L/min)**: Volumetric liquid mass flow rates across cooling and heating outputs.
+  * **Battery Voltage (V)**: DC power supply health for local telemetry backup and control PLCs.
 * **Operator Interface**: Fully responsive panels utilizing Framer Motion for smooth viewport transitions.
 
-### 4.3 Secure Remote Edge Control
-* **PhysicalCommand Override**: Empowers administrators and certified operators to send physical commands directly to modular generators (e.g., initiating emergency shutdown, adjusting mechanical valve apertures, throttling hydraulic pump velocities).
+### 4.3 Secure Remote Edge Control & Production Setpoints
+* **Physical Command Override**: Empowers administrators and certified operators to send physical commands directly to modular generators (e.g., initiating emergency shutdown, adjusting mechanical valve apertures, throttling hydraulic pump velocities).
+* **Thermal & AWG Production Setpoints**:
+  * **Power Production Setpoint (0–100%)**: Controls target thermal power output. Reducing to 0% triggers automated soft-shutdown.
+  * **AWG Water Production Setpoint (0–100%)**: Controls atmospheric water generation rates; 0% disables water production loop.
+  * **Operation Mode Presets**: Quick-select modes for **Balanced (50/50)**, **Power Priority (90/20)**, **AWG Water Priority (30/90)**, and Custom configurations.
 * **Cryptographic Signing**: Every control request undergoes a strict structural payload validation, requiring double-operator confirmation ("four-eyes principle") for safety-critical overrides.
 
 ### 4.4 Interactive Alarm Management
-* **Dynamic Classification**: Monitored sensor nodes trigger real-time alarms if telemetry breaches customized high/low safety thresholds. Alarms are classified dynamically:
-  * `Critical` (triggers automated local safety shutdowns)
-  * `Warning` (indicates abnormal pressure, temperature, or flow-rate trends)
-  * `Info` (standard physical state alterations)
+* **Dynamic Classification**: Monitored sensor nodes trigger real-time alarms if telemetry breaches customized safety thresholds:
+  * `Critical`: Triggers automated safety shutdowns or critical warnings (e.g., **NH3 Leak Detected** when Differential Pressure < 4 bar; **High Differential Pressure Auto-Shutdown** when Differential Pressure > 6 bar).
+  * `Warning`: Indicates abnormal electrical or system states (e.g., **Low Battery Voltage Alert** when < 23V; **High Battery Voltage Alert** when > 27V).
+  * `Info`: Standard physical state alterations or user operations.
 * **Operator Handshake**: Requires operators to actively "acknowledge" and input notes on alarms, establishing an immutable regulatory compliance history.
 
 ### 4.5 Enterprise Admin Panel & Multi-Tenant Management

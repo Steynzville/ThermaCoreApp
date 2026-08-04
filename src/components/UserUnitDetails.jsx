@@ -465,15 +465,15 @@ const UserUnitDetails = ({ className }) => {
                       </div>
                     </div>
 
-                    {liveUnit.watergeneration && (
+                    {(liveUnit.watergeneration || unit?.watergeneration) && (
                       <div className="flex items-center space-x-3">
                         <Droplets className="h-5 w-5 text-blue-500" />
                         <div>
                           <p className="text-sm text-gray-600 dark:text-gray-400">
-                            Water Level
+                            AWG Water Level
                           </p>
                           <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                            {liveUnit.water_level ?? unit.water_level} L
+                            {liveUnit.water_level ?? liveUnit.awgWaterLevel ?? unit.awgWaterLevel ?? unit.water_level} L
                           </p>
                         </div>
                       </div>
@@ -515,7 +515,7 @@ const UserUnitDetails = ({ className }) => {
                       <ThermometerSun className="h-5 w-5 text-orange-500" />
                       <div>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Temp Out
+                          Temp Out - Chill
                         </p>
                         <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                           {isOffline
@@ -545,7 +545,7 @@ const UserUnitDetails = ({ className }) => {
                       <Gauge className="h-5 w-5 text-purple-500" />
                       <div>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Pressure
+                          Differential Pressure
                         </p>
                         <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                           {isOffline
@@ -585,7 +585,7 @@ const UserUnitDetails = ({ className }) => {
                       <Droplets className="h-5 w-5 text-cyan-500 animate-pulse" />
                       <div>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Flow Rate Inlet
+                          Flow Rate Out - Chill
                         </p>
                         <p
                           className={`text-lg ${getFlowRateColor(liveUnit.flow_rate_inlet)}`}
@@ -601,7 +601,7 @@ const UserUnitDetails = ({ className }) => {
                       <Droplets className="h-5 w-5 text-blue-500 animate-pulse" />
                       <div>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Flow Rate Outlet
+                          Flow Rate Out - Hot
                         </p>
                         <p
                           className={`text-lg ${getFlowRateColor(liveUnit.flow_rate_outlet)}`}
@@ -774,13 +774,13 @@ const UserUnitDetails = ({ className }) => {
               color="#ffc658"
             />
             <VitalSignGraph
-              title="Pressure History"
+              title="Differential Pressure History"
               dataKey="pressure"
               color="#ff7300"
             />
-            {unit?.watergeneration && (
+            {(unit?.watergeneration || unit?.water_level !== undefined) && (
               <VitalSignGraph
-                title="Water Level History"
+                title="AWG Water Level History"
                 dataKey="waterLevel"
                 color="#0088FE"
               />

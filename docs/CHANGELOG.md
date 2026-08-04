@@ -5,6 +5,32 @@ This document tracks all changes, security updates, and performance optimization
 
 ---
 
+## [v2.9.0] - August 2026
+
+### 🎨 Metric Label Alignment & UI Consistency
+* **Domain Metric Standardization**: Standardized all UI metric labels across Unit Control (`UnitControl.jsx`), Unit Overview (`UnitOverviewTab.jsx`), Unit Vitals (`UnitVitals.jsx`), and Remote Control (`RemoteControl.jsx`):
+  * "Water Level" → **"AWG Water Level"**
+  * "Temp Out" → **"Temp Out - Chill"**
+  * "Pressure" / "Differential Pressure" → **"Differential Pressure"**
+  * "Flow Rate Inlet" → **"Flow Rate Out - Chill"**
+  * "Flow Rate Outlet" → **"Flow Rate Out - Hot"**
+* **Alarm Threshold Visualizers**: Added explicit threshold handling and UI indicators for:
+  * Critical **NH3 Leak Detected** alarm when Differential Pressure < 4 bar
+  * **High Differential Pressure Auto-Shutdown** alarm when Differential Pressure > 6 bar
+  * **Low Battery Voltage Alert** when Battery Voltage < 23V
+  * **High Battery Voltage Alert** when Battery Voltage > 27V
+* **Remote Control Setpoints & Operation Modes**:
+  * Dual setpoint slider controls for Power Production Setpoint (0–100%) and AWG Water Production Setpoint (0–100%)
+  * Quick-select operation mode presets: Balanced (50/50), Power Priority (90/20), AWG Water Priority (30/90), and Custom
+
+### 🧪 Testing
+* Updated `UnitControl.test.jsx`, `UnitOverviewTab.test.jsx`, `UnitVitals.test.jsx`, and `RemoteControl.test.jsx` with full test assertions for the updated metric labels, differential pressure alarm thresholds, battery voltage alerts, setpoint sliders, and operation modes.
+
+### 📝 Documentation
+* Updated `README.md`, `OPERATOR_MANUAL.md`, `API_REFERENCE.md`, and `FAQ.md` to document the standardized metric labels, safety alarm rules, setpoint controls, and operation modes.
+
+---
+
 ## [v2.8.1] - July 2026
 
 ### 🐛 Bug Fixes

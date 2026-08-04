@@ -40,10 +40,14 @@ The main landing page provides an immediate status summary of the generator flee
 
 To view specific modular generator nodes, navigate to the **Asset Grid**:
 * **Fuzzy Search & Filters**: Filter units by status (`Online`, `Warning`, `Critical Outage`, `Maintenance`), region, or ID.
-* **Real-Time Node Cards**: Display individual thermodynamic metrics:
-  * Heat Exchanger Temperatures ($T_{hot}$, $T_{cold}$)
-  * Mass flow rates ($\dot{m}$)
-  * Hydraulic pump status
+* **Real-Time Node Cards & Unit Vitals**: Display standardized thermodynamic and generator metrics:
+  * **AWG Water Level** (%) - Atmospheric Water Generation storage level
+  * **Temp Out - Chill** (°C) - Chilled loop output temperature
+  * **Temp Out - Hot** (°C) - Hot loop output temperature
+  * **Differential Pressure** (bar) - System differential pressure
+  * **Flow Rate Out - Chill** (L/min) - Chilled loop output flow rate
+  * **Flow Rate Out - Hot** (L/min) - Hot loop output flow rate
+  * **Battery Voltage** (V) - DC system battery storage voltage
 * **Adding/Editing Units**: Operators with Administrative clearance can register new units by entering the asset ID, serial number, location coordinates, and local PLC protocol.
 
 ---
@@ -61,18 +65,26 @@ ThermaCore SCADA enables secure, bidirectionally authenticated remote control ov
 └───────────────────────┘      └───────────────────────┘      └───────────────────────┘
 ```
 
-### Safety Operational Protocols
+### Safety Operational Protocols & Setpoint Controls
 1. **Critical Overrides**: Any override of physical safety loops (e.g., triggering emergency shutdown, adjusting coolant flow limits) must be verified through the control confirmation modal.
-2. **Four-Eyes Principle**: High-impact remote control operations require secondary administrator authorization codes before executing on physical PLC hardware.
-3. **Execution Feedback**: Once dispatched, the platform monitors telemetry for 5 seconds to confirm that the physical actuator has responded (indicated by a state change from `Active` to `Closed`).
+2. **Thermal & AWG Production Setpoints**: Operators and Admins can configure generator production balances using dual setpoint controls:
+   * **Power Production Setpoint (0–100%)**: Controls target thermal power output. Reducing to 0% initiates an automated soft shutdown.
+   * **AWG Water Production Setpoint (0–100%)**: Controls atmospheric water generation rates. Reducing to 0% disables water production loops.
+   * **Operation Modes**: Quick presets for **Balanced (50/50)**, **Power Priority (90/20)**, **AWG Water Priority (30/90)**, or **Custom**.
+3. **Four-Eyes Principle**: High-impact remote control operations require secondary administrator authorization codes before executing on physical PLC hardware.
+4. **Execution Feedback**: Once dispatched, the platform monitors telemetry for 5 seconds to confirm that the physical actuator has responded (indicated by a state change from `Active` to `Closed`).
 
 ---
 
 ## 5. Alerts & Alarm Handshake Management
 
 Alarms are classified dynamically according to threat severities:
-* **Critical (Red)**: Critical mechanical/electrical failures (e.g., pressure leaks, temperature thermal runaway). Action must be taken immediately.
-* **Warning (Yellow)**: Non-lethal thermodynamic deviations (e.g., flow rate dropping slightly).
+* **Critical (Red)**: Critical mechanical/electrical failures. Key automated safety thresholds include:
+  * **NH3 Leak Detected**: Triggered when **Differential Pressure < 4 bar** (indicates toxic ammonia coolant leak requiring immediate system isolation).
+  * **High Differential Pressure Auto-Shutdown**: Triggered when **Differential Pressure > 6 bar** (initiates automatic safety shutdown).
+* **Warning (Yellow)**: Non-lethal thermodynamic deviations or power storage alerts:
+  * **Low Battery Voltage Alert**: Triggered when **Battery Voltage < 23V**.
+  * **High Battery Voltage Alert**: Triggered when **Battery Voltage > 27V**.
 * **Info (Blue)**: Routine operational changes (e.g., user logged in, maintenance bypass engaged).
 
 ### Alarm Acknowledgment Handshake

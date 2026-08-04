@@ -930,8 +930,8 @@ describe("UnitVitals Component", () => {
         });
         renderComponent();
         // id: 1 → 49 % 5 = 4
-        // tempBase=70 → temp_in = 70*0.4 + 4 = 28.0 + 4 = 32.0
-        expect(screen.getByText("32°F")).toBeInTheDocument();
+        // tempBase=70 → tempIn = 70*0.3 + 10 + 4 = 21 + 10 + 4 = 35.0
+        expect(screen.getByText("35°F")).toBeInTheDocument();
       });
 
       it("falls back to 100 when pressure.current is missing (undefined)", () => {
@@ -949,9 +949,9 @@ describe("UnitVitals Component", () => {
           });
         });
         renderComponent();
-        // id: 1 → 49 % 20 = 9
-        // pressureBase=100 → pressure = 100*1.5 + 9 = 150 + 9 = 159.0
-        expect(screen.getByText("159 kPa")).toBeInTheDocument();
+        // id: 1 → 49 % 3 = 1
+        // pressureBase=100 → differentialPressure = (100/25) + 1 + 1 = 6 bar
+        expect(screen.getByText("6 bar")).toBeInTheDocument();
       });
     });
   });

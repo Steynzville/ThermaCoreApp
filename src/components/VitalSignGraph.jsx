@@ -124,10 +124,19 @@ export const generateMockData = (timeframe) => {
       // whose Date constructor can't reliably parse toLocaleString() output).
       time: timestamp,
       power: parseFloat((Math.random() * 5 + 1).toFixed(2)),
-      tempIn: parseFloat((Math.random() * 20 + 15).toFixed(2)),
+      ambientTemp: parseFloat((Math.random() * 15 + 20).toFixed(2)),
+      ambientHumidity: parseFloat((Math.random() * 40 + 40).toFixed(2)),
+      tempIn: parseFloat((Math.random() * 15 + 15).toFixed(2)),
+      tempOutChill: parseFloat((Math.random() * 10 + 10).toFixed(2)),
+      tempOutHot: parseFloat((Math.random() * 15 + 35).toFixed(2)),
       tempOut: parseFloat((Math.random() * 20 + 20).toFixed(2)),
+      differentialPressure: parseFloat((Math.random() * 3 + 2).toFixed(2)),
       pressure: parseFloat((Math.random() * 5 + 10).toFixed(2)),
+      awgWaterLevel: parseFloat((Math.random() * 50 + 50).toFixed(2)),
       waterLevel: parseFloat((Math.random() * 50 + 50).toFixed(2)),
+      batteryVoltage: parseFloat((Math.random() * 4 + 23).toFixed(2)),
+      flowRateOutChill: parseFloat((Math.random() * 40 + 30).toFixed(2)),
+      flowRateOutHot: parseFloat((Math.random() * 40 + 30).toFixed(2)),
     });
   }
   return data;

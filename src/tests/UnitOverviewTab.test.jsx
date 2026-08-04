@@ -5,6 +5,7 @@ import UnitOverviewTab from "../components/unit-details/UnitOverviewTab";
 // Mock lucide-react icons
 vi.mock("lucide-react", () => ({
   Zap: ({ className }) => <svg data-testid="zap-icon" className={className} />,
+  AlertTriangle: ({ className }) => <svg data-testid="alert-triangle-icon" className={className} />,
 }));
 
 // Mock UI components
@@ -75,12 +76,70 @@ describe("UnitOverviewTab", () => {
       expect(zapIcon).toHaveClass("animate-bounce");
     });
 
-    it("does not show alarm alert when unit does not have alarm", () => {
-      render(<UnitOverviewTab unit={mockUnitWithoutAlarm} />);
+    it("shows NH3 leak alarm when differential pressure is less than 4 bar", () => {
+      const unitLowPressure = {
+        id: "TC003",
+        name: "Unit 3",
+        hasAlarm: false,
+        differentialPressure: 3.2,
+      };
+      render(<UnitOverviewTab unit={unitLowPressure} />);
+
+      expect(screen.getByText("🚨 NH3 LEAK DETECTED 🚨")).toBeInTheDocument();
+      expect(screen.getByText(/Critical alarm: Toxic ammonia leak detected in system/)).toBeInTheDocument();
+    });
+
+    it("shows High Differential Pressure alarm when differential pressure exceeds 6 bar", () => {
+      const unitHighPressure = {
+        id: "TC004",
+        name: "Unit 4",
+        hasAlarm: false,
+        differentialPressure: 7.5,
+      };
+      render(<UnitOverviewTab unit={unitHighPressure} />);
+
+      expect(screen.getByText("🚨 HIGH DIFFERENTIAL PRESSURE - AUTO SHUTDOWN 🚨")).toBeInTheDocument();
+      expect(screen.getByText(/Differential pressure exceeds 6 bar \(7.5 bar\)/)).toBeInTheDocument();
+    });
+
+    it("shows Low Battery Voltage alert when battery voltage is below 23V", () => {
+      const unitLowBattery = {
+        id: "TC005",
+        name: "Unit 5",
+        hasAlarm: false,
+        batteryVoltage: 21.8,
+      };
+      render(<UnitOverviewTab unit={unitLowBattery} />);
+
+      expect(screen.getByText("⚠️ BATTERY VOLTAGE ALERT ⚠️")).toBeInTheDocument();
+      expect(screen.getByText(/Low Battery Voltage Alert: 21.8V \(Threshold < 23V\)/)).toBeInTheDocument();
+    });
+
+    it("shows High Battery Voltage alert when battery voltage is above 27V", () => {
+      const unitHighBattery = {
+        id: "TC006",
+        name: "Unit 6",
+        hasAlarm: false,
+        batteryVoltage: 28.4,
+      };
+      render(<UnitOverviewTab unit={unitHighBattery} />);
+
+      expect(screen.getByText("⚠️ BATTERY VOLTAGE ALERT ⚠️")).toBeInTheDocument();
+      expect(screen.getByText(/High Battery Voltage Alert: 28.4V \(Threshold > 27V\)/)).toBeInTheDocument();
+    });
+
+    it("does not show alarm alert when unit does not have alarm and metrics are within normal ranges", () => {
+      const unitNormal = {
+        ...mockUnitWithoutAlarm,
+        differentialPressure: 5.0,
+        batteryVoltage: 24.5,
+      };
+      render(<UnitOverviewTab unit={unitNormal} />);
       
       // Alarm card should not be present
       expect(screen.queryByText("🚨 NH3 LEAK DETECTED 🚨")).not.toBeInTheDocument();
-      expect(screen.queryByText(/Critical alarm: Toxic ammonia leak detected in system/)).not.toBeInTheDocument();
+      expect(screen.queryByText("🚨 HIGH DIFFERENTIAL PRESSURE - AUTO SHUTDOWN 🚨")).not.toBeInTheDocument();
+      expect(screen.queryByText("⚠️ BATTERY VOLTAGE ALERT ⚠️")).not.toBeInTheDocument();
       
       // Zap icon should not be present (only in alarm card)
       expect(screen.queryByTestId("zap-icon")).not.toBeInTheDocument();

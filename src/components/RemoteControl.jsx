@@ -10,6 +10,7 @@ import {
   Power,
   RotateCcw,
   Settings,
+  Sliders,
   Wifi,
   WifiOff,
 } from "lucide-react";
@@ -74,6 +75,8 @@ const ACTION_TYPES = {
   VIDEO_FEED_STOP: 'Video feed stopped',
   CAMERA_CHANGED: 'Camera changed',
   REFRESH_FEED: 'Video feed refreshed',
+  SETPOINT_CHANGED: 'Setpoint changed',
+  MODE_CHANGED: 'Operation mode changed',
 };
 
 const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
@@ -82,10 +85,8 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
   const { settings } = useSettings();
   const { backendRole } = useAuth();
 
-  // Check if user has permission to control units
   const hasControlPermission = canControlUnits(backendRole);
 
-  // Get unit from props (when used as tab) or from location state (when used as standalone page)
   const unit = propUnit || location.state?.unit;
 
   // Remote control states
@@ -96,7 +97,16 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
   const [autoSwitchEnabled, setAutoSwitchEnabled] = useState(
     Boolean(unit?.autoSwitchEnabled ?? false),
   );
-  // TODO: Wire real connection status from WebSocket or API
+  
+  // Power & AWG Setpoint states
+  const [powerSetpoint, setPowerSetpoint] = useState(
+    unit?.powerSetpoint !== undefined ? unit.powerSetpoint : (unit?.status === "online" ? 70 : 0)
+  );
+  const [awgSetpoint, setAwgSetpoint] = useState(
+    unit?.watergeneration ? (waterProductionOn ? 50 : 0) : 0
+  );
+  const [operationMode, setOperationMode] = useState("Balanced");
+
   const [isConnected, setIsConnected] = useState(true);
   const [selectedCamera, setSelectedCamera] = useState("cam1");
   const [videoFeedActive, setVideoFeedActive] = useState(false);
@@ -124,15 +134,11 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
     },
   ]);
 
-  // Use refs to track mounted state and timeouts
   const isMountedRef = useRef(true);
   const refreshTimeoutRef = useRef(null);
   const cascadeTimeoutRef = useRef([]);
   const actionIdCounter = useRef(4);
 
-  // Sync state when unit prop changes
-  // Note: This can clobber optimistic UI updates if parent polls rapidly.
-  // Consider using a debounced sync or comparing values before updating.
   useEffect(() => {
     if (unit) {
       setMachineOn(unit.status === "online");
@@ -142,10 +148,12 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
       setAutoSwitchEnabled(
         Boolean(unit.autoSwitchEnabled ?? false),
       );
+      if (unit.powerSetpoint !== undefined) {
+        setPowerSetpoint(unit.powerSetpoint);
+      }
     }
   }, [unit]);
 
-  // Listen for fullscreen changes
   useEffect(() => {
     if (typeof document === "undefined") {
       return;
@@ -188,7 +196,6 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
     };
   }, []);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
@@ -202,7 +209,6 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
     };
   }, []);
 
-  // Helper to safely add cascade actions with mount guard and cleanup
   const scheduleCascadeAction = (action, description, delay = 50) => {
     const timeoutId = setTimeout(() => {
       cascadeTimeoutRef.current = cascadeTimeoutRef.current.filter(id => id !== timeoutId);
@@ -234,7 +240,6 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
     );
   }
 
-  // Helper function to add action to history
   const addAction = (action, description = "Manual control via remote interface") => {
     const newAction = {
       id: actionIdCounter.current++,
@@ -253,14 +258,17 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
     setMachineOn(checked);
 
     if (checked) {
+      if (powerSetpoint === 0) setPowerSetpoint(70);
       playSound("power-on.mp3", settings.soundEnabled, settings.volume);
       addAction(ACTION_TYPES.MACHINE_POWER_ON, "Machine turned on via remote interface");
     } else {
+      setPowerSetpoint(0);
       playSound("power-off.mp3", settings.soundEnabled, settings.volume);
       addAction(ACTION_TYPES.MACHINE_POWER_OFF, "Machine turned off via remote interface");
       
       if (waterProductionOn) {
         setWaterProductionOn(false);
+        setAwgSetpoint(0);
         scheduleCascadeAction(
           ACTION_TYPES.WATER_PRODUCTION_OFF,
           "Cascaded off - machine power off"
@@ -278,11 +286,12 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
 
   const handleWaterProductionToggle = (checked) => {
     setWaterProductionOn(checked);
-
     if (checked) {
+      if (awgSetpoint === 0) setAwgSetpoint(50);
       playSound("water-on.mp3", settings.soundEnabled, settings.volume);
       addAction(ACTION_TYPES.WATER_PRODUCTION_ON, "Water production enabled via remote interface");
     } else {
+      setAwgSetpoint(0);
       playSound("water-off.mp3", settings.soundEnabled, settings.volume);
       addAction(ACTION_TYPES.WATER_PRODUCTION_OFF, "Water production disabled via remote interface");
     }
@@ -294,6 +303,79 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
         "Cascaded off - water production off"
       );
     }
+  };
+
+  const handlePowerSetpointChange = (val) => {
+    setPowerSetpoint(val);
+    if (val === 0 && machineOn) {
+      setMachineOn(false);
+      addAction(ACTION_TYPES.MACHINE_POWER_OFF, "Auto-shutdown triggered by 0% Power Setpoint");
+    } else if (val > 0 && !machineOn) {
+      setMachineOn(true);
+      addAction(ACTION_TYPES.MACHINE_POWER_ON, "Machine turned on by non-zero Power Setpoint");
+    } else {
+      addAction(ACTION_TYPES.SETPOINT_CHANGED, `Power setpoint set to ${val}%`);
+    }
+
+    checkOperationMode(val, awgSetpoint);
+  };
+
+  const handleAwgSetpointChange = (val) => {
+    setAwgSetpoint(val);
+    if (val === 0 && waterProductionOn) {
+      setWaterProductionOn(false);
+      addAction(ACTION_TYPES.WATER_PRODUCTION_OFF, "Water production disabled via 0% AWG Setpoint");
+    } else if (val > 0 && !waterProductionOn) {
+      setWaterProductionOn(true);
+      addAction(ACTION_TYPES.WATER_PRODUCTION_ON, "Water production enabled via AWG Setpoint");
+    } else {
+      addAction(ACTION_TYPES.SETPOINT_CHANGED, `AWG water setpoint set to ${val}%`);
+    }
+
+    checkOperationMode(powerSetpoint, val);
+  };
+
+  const checkOperationMode = (pVal, aVal) => {
+    if (pVal === 50 && aVal === 50) {
+      setOperationMode("Balanced");
+    } else if (pVal === 90 && aVal === 20) {
+      setOperationMode("Power Priority");
+    } else if (pVal === 30 && aVal === 90) {
+      setOperationMode("AWG Water Priority");
+    } else {
+      setOperationMode("Custom");
+    }
+  };
+
+  const handleModeSelect = (mode) => {
+    setOperationMode(mode);
+    let pVal = 70;
+    let aVal = 50;
+    if (mode === "Balanced") {
+      pVal = 50;
+      aVal = 50;
+    } else if (mode === "Power Priority") {
+      pVal = 90;
+      aVal = 20;
+    } else if (mode === "AWG Water Priority") {
+      pVal = 30;
+      aVal = 90;
+    }
+
+    setPowerSetpoint(pVal);
+    setAwgSetpoint(aVal);
+
+    if (pVal > 0 && !machineOn) {
+      setMachineOn(true);
+    }
+    if (aVal > 0 && !waterProductionOn && unit.watergeneration) {
+      setWaterProductionOn(true);
+    }
+
+    addAction(
+      ACTION_TYPES.MODE_CHANGED,
+      `Mode switched to ${mode} (Power: ${pVal}%, AWG: ${aVal}%)`
+    );
   };
 
   const handleAutoSwitchToggle = (checked) => {
@@ -372,7 +454,7 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
         }
       }
     } catch (_error) {
-      // Silent catch for fullscreen errors
+      // Silent catch
     }
   };
 
@@ -428,7 +510,7 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
           </div>
         </div>
 
-        {/* Connection Warning - currently unreachable until isConnected can become false */}
+        {/* Connection Warning */}
         {!isConnected && (
           <Card className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 mb-6">
             <CardContent className="p-4">
@@ -606,13 +688,128 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
                     </span>
                   </div>
                   <p className="text-xs text-gray-600 dark:text-gray-400">
-                    Current water level: {unit?.water_level !== undefined ? `${unit.water_level} L` : "N/A"}
+                    Current water level: {unit?.awgWaterLevel ?? unit?.water_level !== undefined ? `${unit.awgWaterLevel ?? unit.water_level} L` : "N/A"}
                   </p>
                 </div>
               </CardContent>
             </Card>
           )}
         </div>
+
+        {/* Thermal & AWG Production Setpoints */}
+        <Card className="bg-white dark:bg-gray-900 mt-6">
+          <CardHeader>
+            <div className="flex items-center space-x-3">
+              <Sliders className="h-5 w-5 text-indigo-500" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                Thermal &amp; AWG Production Setpoints
+              </h3>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Mode Selection */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                Operation Mode
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleModeSelect("Balanced")}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all ${
+                    operationMode === "Balanced"
+                      ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                      : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  }`}
+                >
+                  Balanced (50/50)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleModeSelect("Power Priority")}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all ${
+                    operationMode === "Power Priority"
+                      ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                      : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  }`}
+                >
+                  Power Priority (90/20)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleModeSelect("AWG Water Priority")}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all ${
+                    operationMode === "AWG Water Priority"
+                      ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                      : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  }`}
+                >
+                  AWG Water Priority (30/90)
+                </button>
+              </div>
+            </div>
+
+            {/* Power Production Setpoint Slider */}
+            <div className="space-y-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex justify-between items-center">
+                <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  Power Production Setpoint
+                </label>
+                <span className="text-base font-bold text-blue-600 dark:text-blue-400">
+                  {powerSetpoint}%
+                </span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value={powerSetpoint}
+                onChange={(e) => handlePowerSetpointChange(Number(e.target.value))}
+                disabled={!isConnected}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-blue-600"
+              />
+              <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 font-medium px-1">
+                <span>0%</span>
+                <span>25%</span>
+                <span>50%</span>
+                <span>75%</span>
+                <span>100%</span>
+              </div>
+            </div>
+
+            {/* AWG Water Production Setpoint Slider */}
+            {unit.watergeneration && (
+              <div className="space-y-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex justify-between items-center">
+                  <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    AWG Water Production Setpoint
+                  </label>
+                  <span className="text-base font-bold text-blue-600 dark:text-blue-400">
+                    {awgSetpoint}%
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={awgSetpoint}
+                  onChange={(e) => handleAwgSetpointChange(Number(e.target.value))}
+                  disabled={!isConnected || !machineOn}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-blue-600"
+                />
+                <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 font-medium px-1">
+                  <span>0%</span>
+                  <span>25%</span>
+                  <span>50%</span>
+                  <span>75%</span>
+                  <span>100%</span>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Automatic Control Settings */}
         {unit.watergeneration && (
@@ -687,7 +884,7 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
                       Current Level
                     </p>
                     <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                      {unit?.water_level !== undefined ? `${unit.water_level} L` : "N/A"}
+                      {unit?.awgWaterLevel ?? unit?.water_level !== undefined ? `${unit.awgWaterLevel ?? unit.water_level} L` : "N/A"}
                     </p>
                   </div>
                   <div className="text-center p-3 bg-blue-50 dark:bg-gray-800 rounded-lg">
@@ -699,9 +896,7 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
                     </p>
                   </div>
                   <div className="text-center p-3 bg-blue-50 dark:bg-gray-800 rounded-lg">
-                    <p
-                      className={`text-xs text-gray-600 dark:text-gray-400 mb-1`}
-                    >
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
                       Auto Status
                     </p>
                     <p
@@ -838,7 +1033,6 @@ const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
                   </div>
                 )}
 
-                {/* Fullscreen Toggle Button */}
                 <button
                   type="button"
                   onClick={toggleFullscreen}

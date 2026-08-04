@@ -21,9 +21,6 @@ import { useUnits } from "../../context/UnitContext";
 import { useRealtimeMetrics } from "../../hooks/useRealtimeData";
 import { Card, CardContent, CardHeader } from "../ui/card";
 
-// A single source of truth for "no GPS set yet" — avoids seeding the edit
-// field (and the saved value, if the user hits Save without noticing) with
-// a real-world New York coordinate.
 const GPS_PLACEHOLDER = "Not set";
 
 const UnitVitals = ({ unit }) => {
@@ -36,13 +33,11 @@ const UnitVitals = ({ unit }) => {
   const [editedLocation, setEditedLocation] = useState(unit.location || "");
   const [editedGPS, setEditedGPS] = useState(unit.gpsCoordinates || "");
 
-  // Check if unit is offline/switched off or in maintenance
   const isOffline =
     unit.status === "offline" ||
     unit.status === "decommissioned" ||
     unit.status === "maintenance";
 
-  // Real-time data hooks for live values
   const { metrics } = useRealtimeMetrics({ useMockData: true });
   const [liveUnit, setLiveUnit] = useState(unit);
 
@@ -50,18 +45,15 @@ const UnitVitals = ({ unit }) => {
     setLiveUnit(unit);
   }, [unit]);
 
-  // ✅ FIXED: Use `??` instead of `||` to handle numeric 0 correctly
   useEffect(() => {
     if (metrics && !isOffline) {
       setLiveUnit((prev) => {
-        // ✅ FIX: Use Number.isNaN check instead of || to preserve numeric 0
         const rawTemp = parseFloat(metrics.temperature?.current);
         const tempBase = Number.isNaN(rawTemp) ? 70 : rawTemp;
-        
+
         const rawPressure = parseFloat(metrics.pressure?.current);
         const pressureBase = Number.isNaN(rawPressure) ? 100 : rawPressure;
-        
-        // ✅ FIX: Use ?? instead of || to preserve numeric 0
+
         const flowInBase = parseFloat(
           metrics.flow_rate_inlet?.current ??
             metrics.flowRateInlet?.current ??
@@ -77,20 +69,26 @@ const UnitVitals = ({ unit }) => {
 
         return {
           ...prev,
-          temp_in:
-            prev.temp_in !== undefined
-              ? +(tempBase * 0.4 + (idOffset % 5)).toFixed(1)
+          tempIn:
+            prev.tempIn !== undefined || prev.temp_in !== undefined
+              ? +(tempBase * 0.3 + 10 + (idOffset % 5)).toFixed(1)
               : undefined,
-          temp_out:
-            prev.temp_out !== undefined
-              ? +(tempBase * 0.1 + (idOffset % 3)).toFixed(1)
+          tempOutChill:
+            prev.tempOutChill !== undefined || prev.temp_out !== undefined
+              ? +(tempBase * 0.15 + 5 + (idOffset % 4)).toFixed(1)
               : undefined,
-          pressure:
-            prev.pressure !== undefined
+          tempOutHot:
+            prev.tempOutHot !== undefined
+              ? +(tempBase * 0.2 + 30 + (idOffset % 6)).toFixed(1)
+              : undefined,
+          differentialPressure:
+            prev.differentialPressure !== undefined
+              ? +((pressureBase / 25) + 1 + (idOffset % 3)).toFixed(1)
+              : prev.pressure !== undefined
               ? +(pressureBase * 1.5 + (idOffset % 20)).toFixed(1)
               : undefined,
-          flow_rate_inlet: +(flowInBase + (idOffset % 5) - 2.5).toFixed(1),
-          flow_rate_outlet: +(flowOutBase + (idOffset % 3) - 1.5).toFixed(1),
+          flowRateOutChill: +(flowInBase + (idOffset % 5) - 2.5).toFixed(1),
+          flowRateOutHot: +(flowOutBase + (idOffset % 3) - 1.5).toFixed(1),
         };
       });
     }
@@ -107,23 +105,36 @@ const UnitVitals = ({ unit }) => {
     return "text-green-600 dark:text-green-400 font-medium";
   };
 
-  // Resolve inlet/outlet flow rate values once, using nullish coalescing so
-  // a legitimate reading of 0 isn't mistaken for "missing" and replaced by
-  // the mock defaults (the previous `||` / truthy checks did exactly that).
-  const flowRateInlet =
-    liveUnit.flow_rate_inlet ?? unit.flowRate ?? 45.5;
-  const flowRateOutlet =
+  // Values resolution
+  const ambientTemp = liveUnit.ambientTemp ?? unit.ambientTemp ?? liveUnit.temp_outside ?? unit.temp_outside;
+  const ambientHumidity = liveUnit.ambientHumidity ?? unit.ambientHumidity ?? liveUnit.humidity ?? unit.humidity;
+  const tempIn = liveUnit.tempIn ?? unit.tempIn ?? liveUnit.temp_in ?? unit.temp_in;
+  const tempOutChill = liveUnit.tempOutChill ?? unit.tempOutChill ?? liveUnit.temp_out ?? unit.temp_out;
+  const tempOutHot = liveUnit.tempOutHot ?? unit.tempOutHot;
+  const awgWaterLevel = liveUnit.awgWaterLevel ?? unit.awgWaterLevel ?? liveUnit.water_level ?? unit.water_level;
+  const diffPressure = liveUnit.differentialPressure ?? unit.differentialPressure ?? liveUnit.pressure ?? unit.pressure;
+  const batteryVal = liveUnit.batteryVoltage ?? unit.batteryVoltage ?? liveUnit.battery_level ?? unit.battery_level;
+
+  const flowRateOutChill =
+    liveUnit.flowRateOutChill ??
+    unit.flowRateOutChill ??
+    liveUnit.flow_rate_inlet ??
+    unit.flowRate ??
+    42.5;
+
+  const flowRateOutHot =
+    liveUnit.flowRateOutHot ??
+    unit.flowRateOutHot ??
     liveUnit.flow_rate_outlet ??
     (unit.flowRate !== undefined && unit.flowRate !== null
       ? +(unit.flowRate * 0.95).toFixed(1)
-      : 42.1);
+      : 35.2);
 
   const handleSaveName = async () => {
     try {
       await updateUnitName(unit.id, editedName);
       setIsEditingName(false);
     } catch (_error) {
-      // Reset to original value on error
       setEditedName(unit.name || "");
     }
   };
@@ -133,7 +144,6 @@ const UnitVitals = ({ unit }) => {
       await updateUnitLocation(unit.id, editedLocation);
       setIsEditingLocation(false);
     } catch (_error) {
-      // Reset to original value on error
       setEditedLocation(unit.location || "");
     }
   };
@@ -143,7 +153,6 @@ const UnitVitals = ({ unit }) => {
       await updateUnitGPS(unit.id, editedGPS);
       setIsEditingGPS(false);
     } catch (_error) {
-      // Reset to original value on error
       setEditedGPS(unit.gpsCoordinates || "");
     }
   };
@@ -165,12 +174,23 @@ const UnitVitals = ({ unit }) => {
 
   const handleOpenMaps = () => {
     if (window.confirm("Do you want to open Maps to select a GPS location?")) {
-      // This would open the user's default maps application
-      // On mobile devices, this typically opens the native Maps app
-      // On desktop, it opens the default web browser with maps
       const mapsUrl = `https://maps.google.com/maps?q=${encodeURIComponent(unit.location || "Current Location")}`;
       window.open(mapsUrl, "_blank");
     }
+  };
+
+  const formatDiffPressure = (val) => {
+    if (val === undefined || val === null) return "N/A";
+    const num = parseFloat(val);
+    if (Number.isNaN(num)) return "N/A";
+    return num <= 20 ? `${num} bar` : `${num} kPa`;
+  };
+
+  const formatBattery = (val) => {
+    if (val === undefined || val === null) return "N/A";
+    const num = parseFloat(val);
+    if (Number.isNaN(num)) return "N/A";
+    return num > 30 ? `${num}%` : `${num}V`;
   };
 
   return (
@@ -184,6 +204,7 @@ const UnitVitals = ({ unit }) => {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
+            {/* Power Output */}
             <div className="flex items-center space-x-3">
               <Power className="h-5 w-5 text-blue-500" />
               <div>
@@ -192,41 +213,55 @@ const UnitVitals = ({ unit }) => {
                 </p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   {parseFloat(
-                    liveUnit.currentPower ?? unit.currentPower,
+                    liveUnit.currentPower ?? unit.currentPower ?? 0,
                   ).toFixed(1)}{" "}
                   kW
                 </p>
               </div>
             </div>
 
+            {/* AWG Water Level */}
             {liveUnit.watergeneration && (
               <div className="flex items-center space-x-3">
                 <Droplets className="h-5 w-5 text-blue-500" />
                 <div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Water Level
+                    AWG Water Level
                   </p>
                   <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                    {liveUnit.water_level ?? unit.water_level} L
+                    {awgWaterLevel !== undefined ? `${awgWaterLevel} L` : "N/A"}
                   </p>
                 </div>
               </div>
             )}
 
+            {/* Ambient Temp */}
             <div className="flex items-center space-x-3">
               <Cloud className="h-5 w-5 text-gray-500" />
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Temp Outside
+                  Ambient Temp
                 </p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  {formatTemperature(
-                    liveUnit.temp_outside ?? unit.temp_outside,
-                  )}
+                  {ambientTemp !== undefined ? formatTemperature(ambientTemp) : "N/A"}
                 </p>
               </div>
             </div>
 
+            {/* Ambient Humidity */}
+            <div className="flex items-center space-x-3">
+              <Droplets className="h-5 w-5 text-cyan-500" />
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Ambient Humidity
+                </p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  {ambientHumidity !== undefined ? `${ambientHumidity}%` : "N/A"}
+                </p>
+              </div>
+            </div>
+
+            {/* Temp In */}
             <div className="flex items-center space-x-3">
               <ThermometerSnowflake className="h-5 w-5 text-orange-500" />
               <div>
@@ -234,103 +269,101 @@ const UnitVitals = ({ unit }) => {
                   Temp In
                 </p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  {isOffline
+                  {isOffline || tempIn === undefined
                     ? "N/A"
-                    : formatTemperature(
-                        liveUnit.temp_in !== undefined
-                          ? liveUnit.temp_in
-                          : unit.temp_in,
-                      )}
+                    : formatTemperature(tempIn)}
                 </p>
               </div>
             </div>
 
+            {/* Temp Out - Chill */}
             <div className="flex items-center space-x-3">
-              <ThermometerSun className="h-5 w-5 text-orange-500" />
+              <ThermometerSnowflake className="h-5 w-5 text-blue-500" />
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Temp Out
+                  Temp Out - Chill
                 </p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  {isOffline
+                  {isOffline || tempOutChill === undefined
                     ? "N/A"
-                    : formatTemperature(
-                        liveUnit.temp_out !== undefined
-                          ? liveUnit.temp_out
-                          : unit.temp_out,
-                      )}
+                    : formatTemperature(tempOutChill)}
                 </p>
               </div>
             </div>
 
+            {/* Temp Out - Hot */}
             <div className="flex items-center space-x-3">
-              <Droplets className="h-5 w-5 text-cyan-500" />
+              <ThermometerSun className="h-5 w-5 text-red-500" />
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Humidity
+                  Temp Out - Hot
                 </p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  {liveUnit.humidity ?? unit.humidity}%
+                  {isOffline || tempOutHot === undefined
+                    ? "N/A"
+                    : formatTemperature(tempOutHot)}
                 </p>
               </div>
             </div>
 
+            {/* Differential Pressure */}
             <div className="flex items-center space-x-3">
               <Gauge className="h-5 w-5 text-purple-500" />
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Pressure
+                  Differential Pressure
                 </p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  {isOffline
-                    ? "N/A"
-                    : `${liveUnit.pressure !== undefined ? liveUnit.pressure : unit.pressure} kPa`}
+                  {isOffline ? "N/A" : formatDiffPressure(diffPressure)}
                 </p>
               </div>
             </div>
 
+            {/* Battery */}
             <div className="flex items-center space-x-3">
               <BatteryCharging className="h-5 w-5 text-green-500" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Battery Level
+                  Battery
                 </p>
                 <div className="flex items-center space-x-2">
                   <div className="flex-1 max-w-24 bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
                     <div
                       className="bg-green-500 h-2.5 rounded-full"
                       style={{
-                        width: `${liveUnit.battery_level ?? unit.battery_level}%`,
+                        width: `${Math.min(100, Math.max(0, parseFloat(batteryVal) || 0))}%`,
                       }}
                     ></div>
                   </div>
                   <p className="text-lg font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
-                    {liveUnit.battery_level ?? unit.battery_level}%
+                    {formatBattery(batteryVal)}
                   </p>
                 </div>
               </div>
             </div>
 
+            {/* Flow Rate Out - Chill */}
             <div className="flex items-center space-x-3">
               <Droplets className="h-5 w-5 text-cyan-500 animate-pulse" />
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Flow Rate Inlet
+                  Flow Rate Out - Chill
                 </p>
-                <p className={`text-lg ${getFlowRateColor(flowRateInlet)}`}>
-                  {isOffline ? "N/A" : `${flowRateInlet} L/min`}
+                <p className={`text-lg ${getFlowRateColor(flowRateOutChill)}`}>
+                  {isOffline ? "N/A" : `${flowRateOutChill} L/min`}
                 </p>
               </div>
             </div>
 
+            {/* Flow Rate Out - Hot */}
             <div className="flex items-center space-x-3">
               <Droplets className="h-5 w-5 text-blue-500 animate-pulse" />
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Flow Rate Outlet
+                  Flow Rate Out - Hot
                 </p>
-                <p className={`text-lg ${getFlowRateColor(flowRateOutlet)}`}>
-                  {isOffline ? "N/A" : `${flowRateOutlet} L/min`}
+                <p className={`text-lg ${getFlowRateColor(flowRateOutHot)}`}>
+                  {isOffline ? "N/A" : `${flowRateOutHot} L/min`}
                 </p>
               </div>
             </div>

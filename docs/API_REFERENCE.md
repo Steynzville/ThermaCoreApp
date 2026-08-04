@@ -91,6 +91,17 @@ The API uses standardized HTTP status codes paired with detailed error JSON enve
       "serial_number": "SN-THERMA-00192",
       "location": "Sydney Grid Hub A",
       "status": "Online",
+      "ambientTemp": 25.4,
+      "ambientHumidity": 62.0,
+      "tempIn": 45.0,
+      "tempOutChill": 18.5,
+      "tempOutHot": 85.2,
+      "awgWaterLevel": 78.5,
+      "batteryVoltage": 25.4,
+      "differentialPressure": 5.2,
+      "flowRateOutChill": 42.5,
+      "flowRateOutHot": 38.0,
+      "powerSetpoint": 90,
       "thermo_stats": {
         "efficiency_cop": 4.12,
         "thermal_output_mw": 1.84,
@@ -108,8 +119,8 @@ The API uses standardized HTTP status codes paired with detailed error JSON enve
 * **Request Payload**:
   ```json
   {
-    "command": "EMERGENCY_SHUTDOWN",
-    "parameter": "immediate",
+    "command": "SET_POWER_SETPOINT",
+    "parameter": 90,
     "signature": "sha256_cryptographic_signed_seal"
   }
   ```
@@ -122,6 +133,34 @@ The API uses standardized HTTP status codes paired with detailed error JSON enve
     "timestamp": "2026-06-26T13:42:00Z"
   }
   ```
+
+### 3.3 Unit Data Model & Metric Schema
+
+The platform normalizes telemetry and state variables for all generator nodes using the unified Unit Data Model below:
+
+| Field | Type | Unit / Range | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | String | Unique Identifier | Unique unit ID (e.g., `"TC-101"`) |
+| `ambientTemp` | Number | °C (°F converted) | Ambient environmental temperature |
+| `ambientHumidity` | Number | % | Relative ambient humidity |
+| `tempIn` | Number | °C | System coolant inlet temperature |
+| `tempOutChill` | Number | °C | Chilled loop output temperature (*"Temp Out - Chill"*) |
+| `tempOutHot` | Number | °C | Hot loop output temperature (*"Temp Out - Hot"*) |
+| `awgWaterLevel` | Number | % (0–100%) | Atmospheric water generation tank storage level (*"AWG Water Level"*) |
+| `batteryVoltage` | Number | V (DC) | DC system battery storage voltage |
+| `differentialPressure` | Number | bar | Differential pressure across heat exchange loops (*"Differential Pressure"*) |
+| `flowRateOutChill` | Number | L/min | Output flow rate for chilled loop (*"Flow Rate Out - Chill"*) |
+| `flowRateOutHot` | Number | L/min | Output flow rate for hot loop (*"Flow Rate Out - Hot"*) |
+| `powerSetpoint` | Number | % (0–100%) | Power production target setpoint (*"Power Production Setpoint"*) |
+
+#### Safety Alarm Rules & Thresholds
+
+| Alarm Type | Trigger Condition | Severity | System Response |
+| :--- | :--- | :--- | :--- |
+| **NH3 Leak Detected** | `differentialPressure < 4.0 bar` | Critical (Red) | High-priority safety alert indicating toxic ammonia coolant leak; system isolation required. |
+| **High Differential Pressure** | `differentialPressure > 6.0 bar` | Critical (Red) | Automated safety shutdown initiated to prevent pipe or compressor damage. |
+| **Low Battery Voltage** | `batteryVoltage < 23.0 V` | Warning (Yellow) | Alert dispatched to prevent battery deep discharge and maintain telemetry gateway backup. |
+| **High Battery Voltage** | `batteryVoltage > 27.0 V` | Warning (Yellow) | Overcharge alert dispatched to prevent battery thermal stress. |
 
 ---
 
@@ -342,11 +381,13 @@ The ThermaCore SCADA platform leverages bidirectional, event-driven communicatio
     "unit_id": "TC-101",
     "timestamp": "2026-06-26T14:05:00Z",
     "readings": {
-      "temperature_hot": 82.4,
-      "temperature_cold": 24.1,
-      "mass_flow_rate": 12.8,
-      "pressure_psi": 45.2,
-      "water_flow_l_hr": 2400.00
+      "tempOutChill": 18.5,
+      "tempOutHot": 82.4,
+      "awgWaterLevel": 78.5,
+      "batteryVoltage": 25.4,
+      "differentialPressure": 5.2,
+      "flowRateOutChill": 42.5,
+      "flowRateOutHot": 38.0
     }
   }
   ```

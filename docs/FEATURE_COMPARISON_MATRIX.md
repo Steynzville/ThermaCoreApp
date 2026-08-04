@@ -32,11 +32,19 @@ In the industrial sector, connecting physical equipment to a supervisory network
 Cyber threats to physical infrastructure (energy grids, water treatment) have risen exponentially. Traditional systems rely on legacy configurations that are highly susceptible to spoofing and unauthorized overrides.
 * **The ThermaCore Advantage**: Secure development practices run through the entire physical-to-digital loop. Edge telemetry is encrypted via mutual TLS (mTLS), and any remote control action (such as adjusting coolant valves or running an emergency shutdown) is locked behind multi-operator verification checks, preventing rogue command injections.
 
-#### 4. Advanced Performance Analytics & COP Gains
-Most legacy SCADA applications are mere "indicator panels" that show current levels but do not analyze thermodynamic states.
-* **The ThermaCore Advantage**: ThermaCore SCADA performs complex thermodynamic calculation sweeps in the background. By continually evaluating heat transfer rates, pump coefficients of performance (COP), and system temperature loops, it guides operators on how to balance valves and flow rates. Modeling indicates the platform is designed to unlock an average **+18.4% efficiency lift** and **34.2% downtime reduction** - capabilities ready for pilot validation with our first customers.
+#### 4. Advanced Performance Analytics, Unit Vitals & COP Gains
+Most legacy SCADA applications are mere "indicator panels" that show current levels but do not analyze thermodynamic states or provide standardized unit telemetry.
+* **The ThermaCore Advantage**: ThermaCore SCADA displays standardized unit vitals across all nodes — including **AWG Water Level**, **Temp Out - Chill**, **Temp Out - Hot**, **Differential Pressure**, **Flow Rate Out - Chill**, **Flow Rate Out - Hot**, and **Battery Voltage**. It performs complex thermodynamic calculation sweeps in the background. By continually evaluating heat transfer rates, pump coefficients of performance (COP), and system temperature loops, it guides operators on how to balance valves and flow rates. Modeling indicates the platform is designed to unlock an average **+18.4% efficiency lift** and **34.2% downtime reduction** - capabilities ready for pilot validation with our first customers.
+* **Automated Safety Alarms**: Real-time rule enforcement triggers high-priority alerts for **NH3 Leak Detected** (< 4 bar Differential Pressure), **High Differential Pressure Auto-Shutdown** (> 6 bar Differential Pressure), and **Battery Voltage Alerts** (< 23V or > 27V).
 
-#### 5. Enterprise-Scale Multi-Tenant Management
+#### 5. Precision Remote Edge Control & Dual Production Setpoints
+Legacy control systems often rely on manual mechanical switches or crude binary on/off remote commands.
+* **The ThermaCore Advantage**: ThermaCore SCADA provides full-featured remote edge control, featuring dual production setpoint sliders:
+  * **Power Production Setpoint (0–100%)**: Dynamically throttles generator thermal power generation, initiating automated soft shutdown if set to 0%.
+  * **AWG Water Production Setpoint (0–100%)**: Regulates atmospheric water generation loops, completely disabling water production at 0%.
+  * **Preset Operation Modes**: Quick-select presets for **Balanced (50/50)**, **Power Priority (90/20)**, **AWG Water Priority (30/90)**, or Custom operational balances.
+
+#### 6. Enterprise-Scale Multi-Tenant Management
 Service providers and fleet operators face significant operational overhead managing separate instances for each client or facility. Legacy SCADA systems require separate deployments per tenant.
 * **The ThermaCore Advantage**: Built from the ground up as a multi-tenant platform, ThermaCore enables administrators to manage all clients and facilities from a single login. The Tenant Switcher provides seamless context-switching between tenants, while the "All Tenants" view offers aggregated cross-tenant analytics. This eliminates the need for separate instances, reduces operational overhead, and provides a unified view of the entire fleet.
 

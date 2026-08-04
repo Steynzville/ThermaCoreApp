@@ -198,7 +198,7 @@ const ComprehensiveVisualizationDashboard = ({
                   size={180}
                 />
                 <IndustrialGauge
-                  title="Pressure"
+                  title="Differential Pressure"
                   value={parseFloat(metrics?.pressure?.current || 105)}
                   min={0}
                   max={150}
@@ -297,7 +297,7 @@ const ComprehensiveVisualizationDashboard = ({
                   thresholds={{ low: 30, normal: 100, high: 130 }}
                 />
                 <IndustrialGauge
-                  title="Flow Rate Inlet"
+                  title="Flow Rate Out - Chill"
                   value={parseFloat(
                     metrics?.flow_rate_inlet?.current ||
                       metrics?.flowRateInlet?.current ||
@@ -309,7 +309,7 @@ const ComprehensiveVisualizationDashboard = ({
                   thresholds={{ low: 10, normal: 70, high: 90 }}
                 />
                 <IndustrialGauge
-                  title="Flow Rate Outlet"
+                  title="Flow Rate Out - Hot"
                   value={parseFloat(
                     metrics?.flow_rate_outlet?.current ||
                       metrics?.flowRateOutlet?.current ||
