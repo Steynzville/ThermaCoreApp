@@ -827,7 +827,8 @@ describe("UnitVitals Component", () => {
         });
         renderComponent();
         // Find all flow rate readings and verify at least one shows the expected low value
-        const flowElements = screen.getAllByText(/^\d+\.?\d* L\/min$/);
+        // Allow optional minus sign for negative values (e.g., -0.5 L/min)
+        const flowElements = screen.getAllByText(/^-?\d+\.?\d* L\/min$/);
         // With flowInBase=0, the flow rate should be low (around -2.5 to 2.5 L/min)
         const hasLowFlow = flowElements.some(el => {
           const val = parseFloat(el.textContent);
@@ -853,7 +854,8 @@ describe("UnitVitals Component", () => {
         });
         renderComponent();
         // Find all flow rate readings and verify at least one shows the expected low value
-        const flowElements = screen.getAllByText(/^\d+\.?\d* L\/min$/);
+        // Allow optional minus sign for negative values (e.g., -0.5 L/min)
+        const flowElements = screen.getAllByText(/^-?\d+\.?\d* L\/min$/);
         // With flowOutBase=0, the flow rate should be low (around -1.5 to 2.5 L/min)
         const hasLowFlow = flowElements.some(el => {
           const val = parseFloat(el.textContent);
@@ -879,7 +881,8 @@ describe("UnitVitals Component", () => {
         });
         renderComponent();
         // Find all flow rate readings and verify at least one shows the expected low value
-        const flowElements = screen.getAllByText(/^\d+\.?\d* L\/min$/);
+        // Allow optional minus sign for negative values (e.g., -0.5 L/min)
+        const flowElements = screen.getAllByText(/^-?\d+\.?\d* L\/min$/);
         const hasLowFlow = flowElements.some(el => {
           const val = parseFloat(el.textContent);
           return val >= -5 && val <= 5;
@@ -904,7 +907,8 @@ describe("UnitVitals Component", () => {
         });
         renderComponent();
         // Find all flow rate readings and verify at least one shows the expected low value
-        const flowElements = screen.getAllByText(/^\d+\.?\d* L\/min$/);
+        // Allow optional minus sign for negative values (e.g., -0.5 L/min)
+        const flowElements = screen.getAllByText(/^-?\d+\.?\d* L\/min$/);
         const hasLowFlow = flowElements.some(el => {
           const val = parseFloat(el.textContent);
           return val >= -5 && val <= 5;
