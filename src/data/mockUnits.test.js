@@ -71,16 +71,24 @@ describe("mockUnits", () => {
     it("should preserve all original fields", () => {
       const requiredFields = [
         "id",
+        "productLine",
         "watergeneration",
-        "temp_outside",
-        "humidity",
-        "temp_in",
-        "temp_out",
-        "water_level",
-        "battery_level",
-        "pressure",
+        "ambientTemp",
+        "ambientHumidity",
+        "tempIn",
+        "tempOutChill",
+        "tempOutHot",
+        "awgWaterLevel",
+        "batteryVoltage",
+        "differentialPressure",
+        "flowRateOutChill",
+        "flowRateOutHot",
+        "powerSetpoint",
         "name",
         "serialNumber",
+        "installDate",
+        "lastMaintenance",
+        "client",
         "location",
         "status",
         "hasAlert",
@@ -89,7 +97,6 @@ describe("mockUnits", () => {
         "currentPower",
         "parasiticLoad",
         "userLoad",
-        "productLine",
       ];
 
       units.forEach((unit) => {
@@ -145,16 +152,20 @@ describe("mockUnits", () => {
 
     it("should have numeric values for sensor readings", () => {
       units.forEach((unit) => {
-        expect(typeof unit.temp_outside).toBe("number");
-        expect(typeof unit.humidity).toBe("number");
-        expect(typeof unit.temp_in).toBe("number");
-        expect(typeof unit.temp_out).toBe("number");
-        expect(typeof unit.water_level).toBe("number");
-        expect(typeof unit.battery_level).toBe("number");
-        expect(typeof unit.pressure).toBe("number");
+        expect(typeof unit.ambientTemp).toBe("number");
+        expect(typeof unit.ambientHumidity).toBe("number");
+        expect(typeof unit.tempIn).toBe("number");
+        expect(typeof unit.tempOutChill).toBe("number");
+        expect(typeof unit.tempOutHot).toBe("number");
+        expect(typeof unit.awgWaterLevel).toBe("number");
+        expect(typeof unit.batteryVoltage).toBe("number");
+        expect(typeof unit.differentialPressure).toBe("number");
+        expect(typeof unit.flowRateOutChill).toBe("number");
+        expect(typeof unit.flowRateOutHot).toBe("number");
         expect(typeof unit.currentPower).toBe("number");
         expect(typeof unit.parasiticLoad).toBe("number");
         expect(typeof unit.userLoad).toBe("number");
+        expect(typeof unit.powerSetpoint).toBe("number");
       });
     });
   });
