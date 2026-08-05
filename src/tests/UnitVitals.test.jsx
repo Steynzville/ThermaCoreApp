@@ -77,10 +77,11 @@ const mockUnit = {
   tempOutChill: 70,
   tempOutHot: 82,
   awgWaterLevel: 150,
-  batteryVoltage: 12.5,
+  batteryVoltage: 24.5,
   differentialPressure: 2.5,
-  flowRateOutChill: 45.5,
-  flowRateOutHot: 35.2,
+  flowRateInlet: 45.5,
+  flowRateOutChill: 34.1,   // 75% of 45.5
+  flowRateOutHot: 11.4,     // 25% of 45.5
   powerSetpoint: 70,
   installDate: "2024-01-15",
   lastMaintenance: "2024-06-01",
@@ -156,7 +157,7 @@ describe("UnitVitals Component", () => {
 
     it("should display battery voltage", () => {
       renderComponent();
-      expect(screen.getByText("12.5V")).toBeInTheDocument();
+      expect(screen.getByText("24.5V")).toBeInTheDocument();
     });
 
     it("should display ambient humidity", () => {
@@ -166,11 +167,12 @@ describe("UnitVitals Component", () => {
   });
 
   describe("offline / maintenance states", () => {
-    it("should show N/A for temp in, temp out chill, temp out hot, differential pressure, flow in, flow out when offline", () => {
+    it("should show N/A for temp in, temp out chill, temp out hot, differential pressure, flow in, flow out chill, flow out hot, and battery when offline", () => {
       renderComponent({ ...mockUnit, status: "offline" });
       const naValues = screen.getAllByText("N/A");
-      // temp in, temp out chill, temp out hot, differential pressure, flow in, flow out
-      expect(naValues.length).toBe(6);
+      // temp in, temp out chill, temp out hot, differential pressure,
+      // flow rate inlet, flow rate out chill, flow rate out hot, battery
+      expect(naValues.length).toBe(8);
     });
 
     it("should show N/A when unit is in maintenance", () => {
@@ -189,6 +191,61 @@ describe("UnitVitals Component", () => {
     });
   });
 
+  describe("battery offline behavior", () => {
+    it("should show N/A for battery when unit is offline", () => {
+      renderComponent({ ...mockUnit, status: "offline", batteryVoltage: 24.5 });
+      const naElements = screen.getAllByText("N/A");
+      expect(naElements.length).toBe(8);
+      const bar = screen.getByTestId('battery-bar');
+      expect(bar).toHaveStyle('width: 0%');
+    });
+
+    it("should show battery value when unit is online", () => {
+      renderComponent({ ...mockUnit, status: "online", batteryVoltage: 24.5 });
+      expect(screen.getByText("24.5V")).toBeInTheDocument();
+      const bar = screen.getByTestId('battery-bar');
+      expect(bar).toHaveStyle('width: 41.67%');
+    });
+  });
+
+  describe("battery bar color thresholds", () => {
+    it("should show red battery bar when voltage is below 23V", () => {
+      renderComponent({ ...mockUnit, status: "online", batteryVoltage: 22.5 });
+      const bar = screen.getByTestId('battery-bar');
+      expect(bar).toHaveClass('bg-red-500');
+    });
+
+    it("should show red battery bar when voltage is above 27V", () => {
+      renderComponent({ ...mockUnit, status: "online", batteryVoltage: 27.5 });
+      const bar = screen.getByTestId('battery-bar');
+      expect(bar).toHaveClass('bg-red-500');
+    });
+
+    it("should show yellow battery bar when voltage is between 23-24V (warning low)", () => {
+      renderComponent({ ...mockUnit, status: "online", batteryVoltage: 23.5 });
+      const bar = screen.getByTestId('battery-bar');
+      expect(bar).toHaveClass('bg-yellow-500');
+    });
+
+    it("should show yellow battery bar when voltage is between 26-27V (warning high)", () => {
+      renderComponent({ ...mockUnit, status: "online", batteryVoltage: 26.5 });
+      const bar = screen.getByTestId('battery-bar');
+      expect(bar).toHaveClass('bg-yellow-500');
+    });
+
+    it("should show green battery bar when voltage is between 24-26V (normal)", () => {
+      renderComponent({ ...mockUnit, status: "online", batteryVoltage: 25.0 });
+      const bar = screen.getByTestId('battery-bar');
+      expect(bar).toHaveClass('bg-green-500');
+    });
+
+    it("should show gray battery bar when unit is offline", () => {
+      renderComponent({ ...mockUnit, status: "offline", batteryVoltage: 25.0 });
+      const bar = screen.getByTestId('battery-bar');
+      expect(bar).toHaveClass('bg-gray-400');
+    });
+  });
+
   describe("zero-value handling (regression: falsy fallback bug)", () => {
     it("renders a battery voltage of 0 as 0V, not the fallback", () => {
       renderComponent({ ...mockUnit, batteryVoltage: 0 });
@@ -201,9 +258,14 @@ describe("UnitVitals Component", () => {
     });
 
     it("renders a flowRate of 0 as 0 L/min instead of the mock defaults", () => {
-      renderComponent({ ...mockUnit, flowRateOutChill: 0, flowRateOutHot: 0 });
+      renderComponent({
+        ...mockUnit,
+        flowRateInlet: 0,
+        flowRateOutChill: 0,
+        flowRateOutHot: 0,
+      });
       const zeroReadings = screen.getAllByText("0 L/min");
-      expect(zeroReadings.length).toBe(2);
+      expect(zeroReadings.length).toBe(3);
     });
 
     it("renders a water level of 0 correctly", () => {
@@ -232,8 +294,8 @@ describe("UnitVitals Component", () => {
     });
 
     it("applies green styling for a normal flow rate", () => {
-      renderComponent({ ...mockUnit, flowRateOutChill: 45.5 });
-      const el = screen.getByText("45.5 L/min");
+      renderComponent({ ...mockUnit, flowRateOutChill: 34.1 });
+      const el = screen.getByText("34.1 L/min");
       expect(el.className).toMatch(/text-green-600/);
     });
 
@@ -242,15 +304,9 @@ describe("UnitVitals Component", () => {
       expect(screen.getAllByText("N/A").length).toBeGreaterThan(0);
     });
 
-    it("falls back to green-range default (42.5) when flowRateOutChill is undefined", () => {
+    it("uses fallback 34.1 (75% of flowRateInlet 45.5) when flowRateOutChill is undefined", () => {
       renderComponent({ ...mockUnit, flowRateOutChill: undefined });
-      const el = screen.getByText("42.5 L/min");
-      expect(el.className).toMatch(/text-green-600/);
-    });
-
-    it("falls back to green-range default (42.5) when flowRateOutChill is null", () => {
-      renderComponent({ ...mockUnit, flowRateOutChill: null });
-      const el = screen.getByText("42.5 L/min");
+      const el = screen.getByText("34.1 L/min");
       expect(el.className).toMatch(/text-green-600/);
     });
 
@@ -269,40 +325,34 @@ describe("UnitVitals Component", () => {
     });
   });
 
-  describe("flowRateOutHot fallback", () => {
-    it("falls back to 35.2 when unit.flowRateOutHot is undefined and no live outlet exists", () => {
-      renderComponent({ ...mockUnit, flowRateOutHot: undefined });
-      expect(screen.getByText("35.2 L/min")).toBeInTheDocument();
-    });
-
-    it("falls back to 35.2 when unit.flowRateOutHot is null", () => {
-      renderComponent({ ...mockUnit, flowRateOutHot: null });
-      expect(screen.getByText("35.2 L/min")).toBeInTheDocument();
-    });
-  });
-
   describe("flow rate fallback logic", () => {
-    it("uses unit.flowRateOutChill when liveUnit.flow_rate_inlet is undefined", () => {
-      renderComponent({ ...mockUnit, flowRateOutChill: 50 });
-      const elements = screen.getAllByText(/50 L\/min/);
-      expect(elements.length).toBeGreaterThan(0);
-    });
-
-    it("uses fallback 42.5 when both liveUnit and unit flowRateOutChill are undefined", () => {
-      renderComponent({ ...mockUnit, flowRateOutChill: undefined });
+    it("uses fallback 42.5 when flowRateInlet is undefined", () => {
+      renderComponent({ ...mockUnit, flowRateInlet: undefined });
       const elements = screen.getAllByText(/42.5 L\/min/);
       expect(elements.length).toBeGreaterThan(0);
     });
 
-    it("calculates outlet flow rate from unit.flowRateOutHot when liveUnit value is missing", () => {
-      renderComponent({ ...mockUnit, flowRateOutHot: 47.5 });
-      const outletElements = screen.getAllByText(/47.5 L\/min/);
-      expect(outletElements.length).toBeGreaterThan(0);
+    it("uses unit.flowRateInlet when liveUnit.flow_rate_inlet is undefined", () => {
+      renderComponent({ ...mockUnit, flowRateInlet: 50 });
+      const elements = screen.getAllByText(/50 L\/min/);
+      expect(elements.length).toBeGreaterThan(0);
     });
 
-    it("uses fallback 35.2 when both liveUnit and unit flowRateOutHot are undefined for outlet", () => {
+    it("calculates chill flow rate as 75% of inlet when liveUnit and unit values are missing", () => {
+      renderComponent({ ...mockUnit, flowRateInlet: 50, flowRateOutChill: undefined });
+      const elements = screen.getAllByText(/37.5 L\/min/); // 75% of 50
+      expect(elements.length).toBeGreaterThan(0);
+    });
+
+    it("calculates hot flow rate as 25% of inlet when liveUnit and unit values are missing", () => {
+      renderComponent({ ...mockUnit, flowRateInlet: 50, flowRateOutHot: undefined });
+      const elements = screen.getAllByText(/12.5 L\/min/); // 25% of 50
+      expect(elements.length).toBeGreaterThan(0);
+    });
+
+    it("uses fallback 11.4 (25% of flowRateInlet 45.5) when flowRateOutHot is undefined", () => {
       renderComponent({ ...mockUnit, flowRateOutHot: undefined });
-      const elements = screen.getAllByText(/35.2 L\/min/);
+      const elements = screen.getAllByText(/11.4 L\/min/);
       expect(elements.length).toBeGreaterThan(0);
     });
   });
@@ -799,10 +849,7 @@ describe("UnitVitals Component", () => {
           });
         });
         renderComponent();
-        // Find all temperature readings and verify at least one shows the expected value
-        // With tempBase=0, the tempIn calculation should be low (around 4-14°F)
         const tempElements = screen.getAllByText(/^\d+\.?\d*°F$/);
-        // At least one temperature should be in the low range (0-20°F)
         const hasLowTemp = tempElements.some(el => {
           const val = parseFloat(el.textContent);
           return val >= 0 && val <= 20;
@@ -826,10 +873,7 @@ describe("UnitVitals Component", () => {
           });
         });
         renderComponent();
-        // Find all flow rate readings and verify at least one shows the expected low value
-        // Allow optional minus sign for negative values (e.g., -0.5 L/min)
         const flowElements = screen.getAllByText(/^-?\d+\.?\d* L\/min$/);
-        // With flowInBase=0, the flow rate should be low (around -2.5 to 2.5 L/min)
         const hasLowFlow = flowElements.some(el => {
           const val = parseFloat(el.textContent);
           return val >= -5 && val <= 5;
@@ -853,10 +897,7 @@ describe("UnitVitals Component", () => {
           });
         });
         renderComponent();
-        // Find all flow rate readings and verify at least one shows the expected low value
-        // Allow optional minus sign for negative values (e.g., -0.5 L/min)
         const flowElements = screen.getAllByText(/^-?\d+\.?\d* L\/min$/);
-        // With flowOutBase=0, the flow rate should be low (around -1.5 to 2.5 L/min)
         const hasLowFlow = flowElements.some(el => {
           const val = parseFloat(el.textContent);
           return val >= -5 && val <= 5;
@@ -880,8 +921,6 @@ describe("UnitVitals Component", () => {
           });
         });
         renderComponent();
-        // Find all flow rate readings and verify at least one shows the expected low value
-        // Allow optional minus sign for negative values (e.g., -0.5 L/min)
         const flowElements = screen.getAllByText(/^-?\d+\.?\d* L\/min$/);
         const hasLowFlow = flowElements.some(el => {
           const val = parseFloat(el.textContent);
@@ -906,8 +945,6 @@ describe("UnitVitals Component", () => {
           });
         });
         renderComponent();
-        // Find all flow rate readings and verify at least one shows the expected low value
-        // Allow optional minus sign for negative values (e.g., -0.5 L/min)
         const flowElements = screen.getAllByText(/^-?\d+\.?\d* L\/min$/);
         const hasLowFlow = flowElements.some(el => {
           const val = parseFloat(el.textContent);
@@ -931,9 +968,7 @@ describe("UnitVitals Component", () => {
           });
         });
         renderComponent();
-        // Find all temperature readings and verify at least one shows a value from the 70 base
         const tempElements = screen.getAllByText(/^\d+\.?\d*°F$/);
-        // With tempBase=70, temperatures should be in the 20-40°F range
         const hasExpectedTemp = tempElements.some(el => {
           const val = parseFloat(el.textContent);
           return val >= 20 && val <= 50;
