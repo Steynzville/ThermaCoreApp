@@ -16,10 +16,10 @@ export const units = [
     awgWaterLevel: 364.0,
     batteryVoltage: 24.5,
     differentialPressure: 2.8,
-    flowRateInlet: 42.5,
-    flowRateOutChill: 31.9,   // 75% of 42.5
-    flowRateOutHot: 10.6,     // 25% of 42.5
-    powerSetpoint: 70,
+    flowRateInlet: 0.0,
+    flowRateOutChill: 0.0,
+    flowRateOutHot: 0.0,
+    powerSetpoint: 75,
     name: "ThermaCore Unit 001",
     serialNumber: "TC001-2024-001",
     installDate: "2024-01-15",
@@ -51,10 +51,10 @@ export const units = [
     awgWaterLevel: 129.4,
     batteryVoltage: 22.4,
     differentialPressure: 3.8,
-    flowRateInlet: 38.0,
-    flowRateOutChill: 28.5,   // 75% of 38.0
-    flowRateOutHot: 9.5,      // 25% of 38.0
-    powerSetpoint: 70,
+    flowRateInlet: 53.7,
+    flowRateOutChill: 40.3,
+    flowRateOutHot: 13.4,
+    powerSetpoint: 75,
     name: "ThermaCore Unit 002",
     serialNumber: "TC002-2024-002",
     installDate: "2024-01-22",
@@ -86,10 +86,10 @@ export const units = [
     awgWaterLevel: 265.2,
     batteryVoltage: 25.8,
     differentialPressure: 6.3,
-    flowRateInlet: 45.0,
-    flowRateOutChill: 33.8,   // 75% of 45.0
-    flowRateOutHot: 11.2,     // 25% of 45.0
-    powerSetpoint: 70,
+    flowRateInlet: 0.0,
+    flowRateOutChill: 0.0,
+    flowRateOutHot: 0.0,
+    powerSetpoint: 75,
     name: "ThermaCore Unit 003",
     serialNumber: "TC003-2024-003",
     installDate: "2024-02-02",
@@ -121,10 +121,10 @@ export const units = [
     awgWaterLevel: 711.0,
     batteryVoltage: 27.5,
     differentialPressure: 4.5,
-    flowRateInlet: 60.0,
-    flowRateOutChill: 45.0,   // 75% of 60.0
-    flowRateOutHot: 15.0,     // 25% of 60.0
-    powerSetpoint: 70,
+    flowRateInlet: 37.6,
+    flowRateOutChill: 28.2,
+    flowRateOutHot: 9.4,
+    powerSetpoint: 75,
     name: "ThermaCore Unit 004",
     serialNumber: "TC004-2024-004",
     installDate: "2024-09-07",
@@ -156,10 +156,10 @@ export const units = [
     awgWaterLevel: 792.6,
     batteryVoltage: 25.1,
     differentialPressure: 4.2,
-    flowRateInlet: 55.4,
-    flowRateOutChill: 41.6,   // 75% of 55.4
-    flowRateOutHot: 13.8,     // 25% of 55.4
-    powerSetpoint: 70,
+    flowRateInlet: 31.5,
+    flowRateOutChill: 23.6,
+    flowRateOutHot: 7.9,
+    powerSetpoint: 75,
     name: "ThermaCore Unit 005",
     serialNumber: "TC005-2024-005",
     installDate: "2024-03-11",
@@ -191,10 +191,10 @@ export const units = [
     awgWaterLevel: 264.6,
     batteryVoltage: 26.2,
     differentialPressure: 3.5,
-    flowRateInlet: 48.0,
-    flowRateOutChill: 36.0,   // 75% of 48.0
-    flowRateOutHot: 12.0,     // 25% of 48.0
-    powerSetpoint: 70,
+    flowRateInlet: 89.2,
+    flowRateOutChill: 66.9,
+    flowRateOutHot: 22.3,
+    powerSetpoint: 75,
     name: "ThermaCore Unit 006",
     serialNumber: "TC006-2024-006",
     installDate: "2024-01-08",
@@ -226,10 +226,10 @@ export const units = [
     awgWaterLevel: 393.1,
     batteryVoltage: 26.8,
     differentialPressure: 4.8,
-    flowRateInlet: 52.0,
-    flowRateOutChill: 39.0,   // 75% of 52.0
-    flowRateOutHot: 13.0,     // 25% of 52.0
-    powerSetpoint: 70,
+    flowRateInlet: 18.5,
+    flowRateOutChill: 13.9,
+    flowRateOutHot: 4.6,
+    powerSetpoint: 75,
     name: "ThermaCore Unit 007",
     serialNumber: "TC007-2024-007",
     installDate: "2024-02-14",
@@ -261,10 +261,10 @@ export const units = [
     awgWaterLevel: 781.6,
     batteryVoltage: 23.9,
     differentialPressure: 5.1,
-    flowRateInlet: 70.0,
-    flowRateOutChill: 52.5,   // 75% of 70.0
-    flowRateOutHot: 17.5,     // 25% of 70.0
-    powerSetpoint: 70,
+    flowRateInlet: 151.5,
+    flowRateOutChill: 113.6,
+    flowRateOutHot: 37.9,
+    powerSetpoint: 75,
     name: "ThermaCore Unit 008",
     serialNumber: "TC008-2024-008",
     installDate: "2024-03-01",
@@ -296,10 +296,10 @@ export const units = [
     awgWaterLevel: 702.2,
     batteryVoltage: 22.1,
     differentialPressure: 4.1,
-    flowRateInlet: 64.0,
-    flowRateOutChill: 48.0,   // 75% of 64.0
-    flowRateOutHot: 16.0,     // 25% of 64.0
-    powerSetpoint: 70,
+    flowRateInlet: 42.7,
+    flowRateOutChill: 32.0,
+    flowRateOutHot: 10.7,
+    powerSetpoint: 75,
     name: "ThermaCore Unit 009",
     serialNumber: "TC009-2024-009",
     installDate: "2024-01-10",
@@ -331,10 +331,10 @@ export const units = [
     awgWaterLevel: 186.9,
     batteryVoltage: 24.8,
     differentialPressure: 4.0,
-    flowRateInlet: 41.0,
-    flowRateOutChill: 30.8,   // 75% of 41.0
-    flowRateOutHot: 10.2,     // 25% of 41.0
-    powerSetpoint: 70,
+    flowRateInlet: 8.9,
+    flowRateOutChill: 6.7,
+    flowRateOutHot: 2.2,
+    powerSetpoint: 75,
     name: "ThermaCore Unit 010",
     serialNumber: "TC010-2024-010",
     installDate: "2024-02-28",
@@ -366,10 +366,10 @@ export const units = [
     awgWaterLevel: 219.4,
     batteryVoltage: 25.2,
     differentialPressure: 3.6,
-    flowRateInlet: 50.0,
-    flowRateOutChill: 37.5,   // 75% of 50.0
-    flowRateOutHot: 12.5,     // 25% of 50.0
-    powerSetpoint: 70,
+    flowRateInlet: 26.3,
+    flowRateOutChill: 19.7,
+    flowRateOutHot: 6.6,
+    powerSetpoint: 75,
     name: "ThermaCore Unit 011",
     serialNumber: "TC011-2024-011",
     installDate: "2024-04-15",
@@ -401,10 +401,10 @@ export const units = [
     awgWaterLevel: 630.6,
     batteryVoltage: 24.7,
     differentialPressure: 4.7,
-    flowRateInlet: 75.0,
-    flowRateOutChill: 56.3,   // 75% of 75.0
-    flowRateOutHot: 18.7,     // 25% of 75.0
-    powerSetpoint: 70,
+    flowRateInlet: 2.7,
+    flowRateOutChill: 2.0,
+    flowRateOutHot: 0.7,
+    powerSetpoint: 75,
     name: "ThermaCore Unit 012",
     serialNumber: "TC012-2024-012",
     installDate: "2024-05-10",
@@ -436,10 +436,10 @@ export const units = [
     awgWaterLevel: 537.6,
     batteryVoltage: 26.0,
     differentialPressure: 4.3,
-    flowRateInlet: 58.0,
-    flowRateOutChill: 43.5,   // 75% of 58.0
-    flowRateOutHot: 14.5,     // 25% of 58.0
-    powerSetpoint: 70,
+    flowRateInlet: 5.2,
+    flowRateOutChill: 3.9,
+    flowRateOutHot: 1.3,
+    powerSetpoint: 75,
     name: "ThermaCore Unit 013",
     serialNumber: "TC013-2024-013",
     installDate: "2024-06-01",
@@ -471,10 +471,10 @@ export const units = [
     awgWaterLevel: 647.6,
     batteryVoltage: 23.7,
     differentialPressure: 2.9,
-    flowRateInlet: 30.0,
-    flowRateOutChill: 22.5,   // 75% of 30.0
-    flowRateOutHot: 7.5,      // 25% of 30.0
-    powerSetpoint: 70,
+    flowRateInlet: 39.6,
+    flowRateOutChill: 29.7,
+    flowRateOutHot: 9.9,
+    powerSetpoint: 75,
     name: "ThermaCore Unit 014",
     serialNumber: "TC014-2024-014",
     installDate: "2024-03-18",
@@ -506,10 +506,10 @@ export const units = [
     awgWaterLevel: 143.3,
     batteryVoltage: 24.1,
     differentialPressure: 3.9,
-    flowRateInlet: 43.0,
-    flowRateOutChill: 32.3,   // 75% of 43.0
-    flowRateOutHot: 10.7,     // 25% of 43.0
-    powerSetpoint: 70,
+    flowRateInlet: 15.6,
+    flowRateOutChill: 11.7,
+    flowRateOutHot: 3.9,
+    powerSetpoint: 75,
     name: "ThermaCore Unit 015",
     serialNumber: "TC015-2024-015",
     installDate: "2024-04-20",
@@ -541,10 +541,10 @@ export const units = [
     awgWaterLevel: 338.8,
     batteryVoltage: 24.8,
     differentialPressure: 4.3,
-    flowRateInlet: 62.0,
-    flowRateOutChill: 46.5,   // 75% of 62.0
-    flowRateOutHot: 15.5,     // 25% of 62.0
-    powerSetpoint: 70,
+    flowRateInlet: 74.3,
+    flowRateOutChill: 55.7,
+    flowRateOutHot: 18.6,
+    powerSetpoint: 75,
     name: "ThermaCore Unit 016",
     serialNumber: "TC016-2024-016",
     installDate: "2024-01-25",
@@ -576,10 +576,10 @@ export const units = [
     awgWaterLevel: 73.7,
     batteryVoltage: 25.0,
     differentialPressure: 4.1,
-    flowRateInlet: 35.0,
-    flowRateOutChill: 26.3,   // 75% of 35.0
-    flowRateOutHot: 8.7,      // 25% of 35.0
-    powerSetpoint: 70,
+    flowRateInlet: 0.0,
+    flowRateOutChill: 0.0,
+    flowRateOutHot: 0.0,
+    powerSetpoint: 75,
     name: "ThermaCore Unit 017",
     serialNumber: "TC017-2024-017",
     installDate: "2024-02-18",
@@ -611,10 +611,10 @@ export const units = [
     awgWaterLevel: 582.8,
     batteryVoltage: 26.8,
     differentialPressure: 4.5,
-    flowRateInlet: 80.0,
-    flowRateOutChill: 60.0,   // 75% of 80.0
-    flowRateOutHot: 20.0,     // 25% of 80.0
-    powerSetpoint: 70,
+    flowRateInlet: 5.7,
+    flowRateOutChill: 4.3,
+    flowRateOutHot: 1.4,
+    powerSetpoint: 75,
     name: "ThermaCore Unit 018",
     serialNumber: "TC018-2024-018",
     installDate: "2024-03-25",
@@ -646,10 +646,10 @@ export const units = [
     awgWaterLevel: 558.4,
     batteryVoltage: 24.8,
     differentialPressure: 4.2,
-    flowRateInlet: 56.0,
-    flowRateOutChill: 42.0,   // 75% of 56.0
-    flowRateOutHot: 14.0,     // 25% of 56.0
-    powerSetpoint: 70,
+    flowRateInlet: 56.8,
+    flowRateOutChill: 42.6,
+    flowRateOutHot: 14.2,
+    powerSetpoint: 75,
     name: "ThermaCore Unit 019",
     serialNumber: "TC019-2024-019",
     installDate: "2024-04-05",
@@ -681,10 +681,10 @@ export const units = [
     awgWaterLevel: 683.9,
     batteryVoltage: 26.7,
     differentialPressure: 3.8,
-    flowRateInlet: 78.0,
-    flowRateOutChill: 58.5,   // 75% of 78.0
-    flowRateOutHot: 19.5,     // 25% of 78.0
-    powerSetpoint: 70,
+    flowRateInlet: 139.6,
+    flowRateOutChill: 104.7,
+    flowRateOutHot: 34.9,
+    powerSetpoint: 75,
     name: "ThermaCore Unit 020",
     serialNumber: "TC020-2024-020",
     installDate: "2024-05-12",
