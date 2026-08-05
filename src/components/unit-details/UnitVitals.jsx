@@ -87,6 +87,7 @@ const UnitVitals = ({ unit }) => {
               : prev.pressure !== undefined
               ? +(pressureBase * 1.5 + (idOffset % 20)).toFixed(1)
               : undefined,
+          flowRateInlet: +(flowInBase + (idOffset % 5) - 2.5).toFixed(1),
           flowRateOutChill: +(flowInBase + (idOffset % 5) - 2.5).toFixed(1),
           flowRateOutHot: +(flowOutBase + (idOffset % 3) - 1.5).toFixed(1),
         };
@@ -105,6 +106,21 @@ const UnitVitals = ({ unit }) => {
     return "text-green-600 dark:text-green-400 font-medium";
   };
 
+  // Get battery bar color based on voltage thresholds
+  const getBatteryBarColor = (val) => {
+    if (isOffline || val === undefined || val === null) return "bg-gray-400";
+    const num = parseFloat(val);
+    if (Number.isNaN(num)) return "bg-gray-400";
+    // Low voltage: < 23V → red
+    if (num < 23) return "bg-red-500";
+    // High voltage: > 27V → red
+    if (num > 27) return "bg-red-500";
+    // Warning: 23-24V or 26-27V → yellow
+    if (num < 24 || num > 26) return "bg-yellow-500";
+    // Normal: 24-26V → green
+    return "bg-green-500";
+  };
+
   // Values resolution
   const ambientTemp = liveUnit.ambientTemp ?? unit.ambientTemp ?? liveUnit.temp_outside ?? unit.temp_outside;
   const ambientHumidity = liveUnit.ambientHumidity ?? unit.ambientHumidity ?? liveUnit.humidity ?? unit.humidity;
@@ -113,22 +129,33 @@ const UnitVitals = ({ unit }) => {
   const tempOutHot = liveUnit.tempOutHot ?? unit.tempOutHot;
   const awgWaterLevel = liveUnit.awgWaterLevel ?? unit.awgWaterLevel ?? liveUnit.water_level ?? unit.water_level;
   const diffPressure = liveUnit.differentialPressure ?? unit.differentialPressure ?? liveUnit.pressure ?? unit.pressure;
-  const batteryVal = liveUnit.batteryVoltage ?? unit.batteryVoltage ?? liveUnit.battery_level ?? unit.battery_level;
+
+  // Battery: use nullish coalescing to handle both undefined and null
+  const batteryVal =
+    liveUnit.batteryVoltage ??
+    unit.batteryVoltage ??
+    liveUnit.battery_level ??
+    unit.battery_level;
+
+  // Flow rates: inlet, chill (75% of inlet), hot (25% of inlet)
+  const flowRateInlet =
+    liveUnit.flowRateInlet ??
+    unit.flowRateInlet ??
+    liveUnit.flow_rate_inlet ??
+    unit.flowRate ??
+    42.5;
 
   const flowRateOutChill =
     liveUnit.flowRateOutChill ??
     unit.flowRateOutChill ??
     liveUnit.flow_rate_inlet ??
-    unit.flowRate ??
-    42.5;
+    +(flowRateInlet * 0.75).toFixed(1);
 
   const flowRateOutHot =
     liveUnit.flowRateOutHot ??
     unit.flowRateOutHot ??
     liveUnit.flow_rate_outlet ??
-    (unit.flowRate !== undefined && unit.flowRate !== null
-      ? +(unit.flowRate * 0.95).toFixed(1)
-      : 35.2);
+    +(flowRateInlet * 0.25).toFixed(1);
 
   const handleSaveName = async () => {
     try {
@@ -186,12 +213,28 @@ const UnitVitals = ({ unit }) => {
     return num <= 20 ? `${num} bar` : `${num} kPa`;
   };
 
+  // Battery format: since we now use batteryVoltage explicitly, it's always voltage
   const formatBattery = (val) => {
     if (val === undefined || val === null) return "N/A";
     const num = parseFloat(val);
     if (Number.isNaN(num)) return "N/A";
-    return num > 30 ? `${num}%` : `${num}V`;
+    return `${num}V`;
   };
+
+  // Calculate battery percentage for progress bar (22V=0%, 28V=100% for 24V system)
+  const getBatteryPercentage = (val) => {
+    if (val === undefined || val === null || isOffline) return 0;
+    const num = parseFloat(val);
+    if (Number.isNaN(num)) return 0;
+    // Map 22V (0%) to 28V (100%) for 24V battery systems
+    // Normal operating range is 23-27V (16.7% to 83.3%)
+    const percentage = ((num - 22) / 6) * 100;
+    // Round to 2 decimal places to avoid floating-point noise in the DOM
+    return Math.round(Math.min(100, Math.max(0, percentage)) * 100) / 100;
+  };
+
+  const batteryPercent = getBatteryPercentage(batteryVal);
+  const batteryBarColor = getBatteryBarColor(batteryVal);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -329,22 +372,36 @@ const UnitVitals = ({ unit }) => {
                 <div className="flex items-center space-x-2">
                   <div className="flex-1 max-w-24 bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
                     <div
-                      className="bg-green-500 h-2.5 rounded-full"
+                      data-testid="battery-bar"
+                      className={`h-2.5 rounded-full transition-all duration-300 ${batteryBarColor}`}
                       style={{
-                        width: `${Math.min(100, Math.max(0, parseFloat(batteryVal) || 0))}%`,
+                        width: isOffline ? "0%" : `${batteryPercent}%`,
                       }}
                     ></div>
                   </div>
                   <p className="text-lg font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
-                    {formatBattery(batteryVal)}
+                    {isOffline ? "N/A" : formatBattery(batteryVal)}
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Flow Rate Out - Chill */}
+            {/* Flow Rate Inlet */}
             <div className="flex items-center space-x-3">
               <Droplets className="h-5 w-5 text-cyan-500 animate-pulse" />
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Flow Rate Inlet
+                </p>
+                <p className={`text-lg ${getFlowRateColor(flowRateInlet)}`}>
+                  {isOffline ? "N/A" : `${flowRateInlet} L/min`}
+                </p>
+              </div>
+            </div>
+
+            {/* Flow Rate Out - Chill */}
+            <div className="flex items-center space-x-3">
+              <Droplets className="h-5 w-5 text-blue-500 animate-pulse" />
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   Flow Rate Out - Chill
@@ -357,7 +414,7 @@ const UnitVitals = ({ unit }) => {
 
             {/* Flow Rate Out - Hot */}
             <div className="flex items-center space-x-3">
-              <Droplets className="h-5 w-5 text-blue-500 animate-pulse" />
+              <Droplets className="h-5 w-5 text-red-500 animate-pulse" />
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   Flow Rate Out - Hot
