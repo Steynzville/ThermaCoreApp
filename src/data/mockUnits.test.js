@@ -81,6 +81,7 @@ describe("mockUnits", () => {
         "awgWaterLevel",
         "batteryVoltage",
         "differentialPressure",
+        "flowRateInlet",
         "flowRateOutChill",
         "flowRateOutHot",
         "powerSetpoint",
@@ -160,6 +161,7 @@ describe("mockUnits", () => {
         expect(typeof unit.awgWaterLevel).toBe("number");
         expect(typeof unit.batteryVoltage).toBe("number");
         expect(typeof unit.differentialPressure).toBe("number");
+        expect(typeof unit.flowRateInlet).toBe("number");
         expect(typeof unit.flowRateOutChill).toBe("number");
         expect(typeof unit.flowRateOutHot).toBe("number");
         expect(typeof unit.currentPower).toBe("number");
