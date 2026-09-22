@@ -2,6 +2,7 @@
 
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
+
 from app import db
 from app.middleware.authorization import permission_required
 from app.middleware.tenant import tenant_filter
@@ -32,11 +33,12 @@ def _execute(unit_id, controls):
                 "unit_id": unit.id,
                 "power_on": snapshot.get("machinePower", unit.status.value == "online"),
                 "water_production_on": snapshot.get(
-                    "waterProductionOn", unit.water_generation
+                    "waterProductionOn",
+                    unit.water_generation,
                 ),
                 "water_generation": unit.water_generation,
                 "status": unit.status.value,
-            }
+            },
         )
     except ControlError as exc:
         db.session.rollback()
@@ -45,8 +47,8 @@ def _execute(unit_id, controls):
         db.session.rollback()
         return jsonify(
             {
-                "error": "Could not record device acknowledgement. Check device state before retrying."
-            }
+                "error": "Could not record device acknowledgement. Check device state before retrying.",
+            },
         ), 500
 
 
@@ -88,7 +90,7 @@ def get_remote_control_status(unit_id):
             "power_on": unit.status.value == "online",
             "controls": acknowledged_controls(unit.id),
             "last_updated": unit.updated_at.isoformat() if unit.updated_at else None,
-        }
+        },
     )
 
 
@@ -106,5 +108,5 @@ def get_remote_control_permissions():
                 name: user.has_permission(name)
                 for name in ("read_units", "write_units", "remote_control")
             },
-        }
+        },
     )

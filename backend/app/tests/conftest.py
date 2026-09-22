@@ -888,8 +888,10 @@ def test_data(db_session):
 def portfolio_data(app, db_session):
     """Two distinct clients/tenants, with actual ownership for isolation tests."""
     import uuid
+
     from flask_jwt_extended import create_access_token
-    from app.models import Client, Tenant, RoleEnum
+
+    from app.models import Client, RoleEnum, Tenant
 
     suffix = uuid.uuid4().hex[:8]
     clients = [Client(name=f"Portfolio client {i}-{suffix}") for i in range(2)]

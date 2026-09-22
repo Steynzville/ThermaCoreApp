@@ -502,7 +502,9 @@ class UnitCommand(db.Model):
         index=True,
     )
     user_id = Column(
-        Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+        Integer,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
     )
     controls = Column(JSON, nullable=False)
     created_at = Column(DateTime, default=utc_now, nullable=False, index=True)

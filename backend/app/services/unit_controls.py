@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 
 import requests
 from flask import current_app
+
 from app import db
 from app.models import UnitCommand, UnitStatusEnum
 
@@ -64,7 +65,7 @@ def execute_control(unit, controls, user_id):
         controls.get(k) for k in allowed - {"machinePower"}
     ):
         raise ControlError(
-            "Cannot enable production on an offline unit. Turn on machine power first."
+            "Cannot enable production on an offline unit. Turn on machine power first.",
         )
     if controls.get("waterSetpoint", 0) > 0 and not state["waterProductionOn"]:
         raise ControlError("Enable water production before setting its output.")
@@ -78,14 +79,15 @@ def execute_control(unit, controls, user_id):
     url = gateway.get("url", "")
     if urlparse(url).scheme != "https":
         raise ControlError(
-            "No HTTPS device control gateway configured for this unit.", 503
+            "No HTTPS device control gateway configured for this unit.",
+            503,
         )
     for key in ("powerSetpoint", "waterSetpoint"):
         if controls.get(key, 0) > 0:
             limit = gateway.get("limits", {}).get(key)
             if limit is None or controls[key] > limit:
                 raise ControlError(
-                    f"{key} exceeds the configured device limit or no limit is configured."
+                    f"{key} exceeds the configured device limit or no limit is configured.",
                 )
     command_id = str(uuid.uuid4())
     headers = {"Content-Type": "application/json", "Idempotency-Key": command_id}
@@ -113,10 +115,14 @@ def execute_control(unit, controls, user_id):
         or ack.get("controls") != controls
     ):
         raise ControlError(
-            "Device gateway did not acknowledge the requested controls.", 502
+            "Device gateway did not acknowledge the requested controls.",
+            502,
         )
     command = UnitCommand(
-        id=command_id, unit_id=unit.id, user_id=int(user_id), controls=controls
+        id=command_id,
+        unit_id=unit.id,
+        user_id=int(user_id),
+        controls=controls,
     )
     db.session.add(command)
     db.session.commit()

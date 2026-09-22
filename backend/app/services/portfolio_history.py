@@ -1,8 +1,8 @@
 """Integrate measured rates into UTC daily totals, without filling telemetry gaps."""
 
+import math
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
-import math
 
 from app.models import Sensor, SensorReading
 
@@ -123,7 +123,8 @@ def get_history(unit_ids, start, end, max_gap_seconds=900):
     if not unit_ids:
         return []
     sensors = Sensor.query.filter(
-        Sensor.unit_id.in_(unit_ids), Sensor.is_active.is_(True)
+        Sensor.unit_id.in_(unit_ids),
+        Sensor.is_active.is_(True),
     ).all()
     sensor_ids = [s.id for s in sensors if s.sensor_type.lower() in CHANNELS]
     if not sensor_ids:

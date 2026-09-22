@@ -2,9 +2,10 @@
 
 import json
 import uuid
-import pytest
-from unittest.mock import Mock
 from datetime import datetime, timezone
+from unittest.mock import Mock
+
+import pytest
 
 from app.models import Role, RoleEnum, Unit, UnitStatusEnum, User
 
@@ -189,7 +190,10 @@ class TestRemoteControlEndpoints:
         assert unit.status == UnitStatusEnum.OFFLINE
 
     def test_control_unit_power_turn_off(
-        self, client, db_session, acknowledged_gateway
+        self,
+        client,
+        db_session,
+        acknowledged_gateway,
     ):
         """Test turning unit power off."""
         token = self.get_auth_token(client)
@@ -293,7 +297,10 @@ class TestRemoteControlEndpoints:
         assert response.status_code == 404
 
     def test_control_water_production_success(
-        self, client, db_session, acknowledged_gateway
+        self,
+        client,
+        db_session,
+        acknowledged_gateway,
     ):
         """Test controlling water production successfully."""
         token = self.get_auth_token(client)

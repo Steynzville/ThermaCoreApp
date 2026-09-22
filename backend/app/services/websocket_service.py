@@ -3,9 +3,11 @@
 import logging
 from datetime import datetime, timezone
 from time import time
+
 from flask import request
 from flask_jwt_extended import decode_token
 from flask_socketio import SocketIO, emit, join_room, leave_room
+
 from app import db
 from app.models import Tenant, Unit, User
 
@@ -27,7 +29,8 @@ class WebSocketService:
             async_mode="threading",
             manage_session=False,
             cors_allowed_origins=app.config.get(
-                "WEBSOCKET_CORS_ORIGINS", app.config.get("CORS_ORIGINS", [])
+                "WEBSOCKET_CORS_ORIGINS",
+                app.config.get("CORS_ORIGINS", []),
             ),
             ping_timeout=app.config.get("WEBSOCKET_PING_TIMEOUT", 60),
             ping_interval=app.config.get("WEBSOCKET_PING_INTERVAL", 25),
@@ -210,7 +213,9 @@ class WebSocketService:
         unit_id = alert_data.get("unit_id")
         if unit_id:
             self._deliver(
-                "system_alert", unit_id, {**alert_data, "timestamp": self._timestamp()}
+                "system_alert",
+                unit_id,
+                {**alert_data, "timestamp": self._timestamp()},
             )
 
     def broadcast_device_status(self, device_id, status_data):
