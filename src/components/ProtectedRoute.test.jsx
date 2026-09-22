@@ -1,7 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import React from "react";
 import ProtectedRoute from "./ProtectedRoute";
 
 // Mock AuthContext
@@ -40,7 +39,11 @@ vi.mock("../utils/permissions", () => ({
 
 // Mock components for testing
 const MockComponent = ({ userRole, ...props }) => (
-  <div data-testid="mock-component" data-role={userRole} data-props={JSON.stringify(props)}>
+  <div
+    data-testid="mock-component"
+    data-role={userRole}
+    data-props={JSON.stringify(props)}
+  >
     Protected Content
   </div>
 );
@@ -68,12 +71,18 @@ const renderWithRouter = (ui, initialEntries = ["/"]) => {
   return render(
     <MemoryRouter initialEntries={initialEntries}>
       <Routes>
-        <Route path="/login" element={<div data-testid="login-page">Login Page</div>} />
-        <Route path="/dashboard" element={<div data-testid="dashboard-page">Dashboard</div>} />
+        <Route
+          path="/login"
+          element={<div data-testid="login-page">Login Page</div>}
+        />
+        <Route
+          path="/dashboard"
+          element={<div data-testid="dashboard-page">Dashboard</div>}
+        />
         <Route path="/protected" element={ui} />
         <Route path="/" element={ui} />
       </Routes>
-    </MemoryRouter>
+    </MemoryRouter>,
   );
 };
 
@@ -89,9 +98,7 @@ describe("ProtectedRoute", () => {
       isLoading: true,
     });
 
-    renderWithRouter(
-      <ProtectedRoute component={MockComponent} roles={[]} />
-    );
+    renderWithRouter(<ProtectedRoute component={MockComponent} roles={[]} />);
 
     expect(screen.getByTestId("spinner")).toBeInTheDocument();
     expect(screen.getByText("Loading...")).toBeInTheDocument();
@@ -106,9 +113,7 @@ describe("ProtectedRoute", () => {
       isLoading: false,
     });
 
-    renderWithRouter(
-      <ProtectedRoute component={MockComponent} roles={[]} />
-    );
+    renderWithRouter(<ProtectedRoute component={MockComponent} roles={[]} />);
 
     expect(screen.getByTestId("login-page")).toBeInTheDocument();
     expect(screen.queryByTestId("mock-component")).not.toBeInTheDocument();
@@ -122,13 +127,14 @@ describe("ProtectedRoute", () => {
       isLoading: false,
     });
 
-    renderWithRouter(
-      <ProtectedRoute component={MockComponent} roles={[]} />
-    );
+    renderWithRouter(<ProtectedRoute component={MockComponent} roles={[]} />);
 
     expect(screen.getByTestId("mock-component")).toBeInTheDocument();
     expect(screen.getByTestId("side-navigation")).toBeInTheDocument();
-    expect(screen.getByTestId("side-navigation")).toHaveAttribute("data-role", "admin");
+    expect(screen.getByTestId("side-navigation")).toHaveAttribute(
+      "data-role",
+      "admin",
+    );
     expect(screen.queryByTestId("login-page")).not.toBeInTheDocument();
   });
 
@@ -140,12 +146,12 @@ describe("ProtectedRoute", () => {
     });
 
     renderWithRouter(
-      <ProtectedRoute 
-        component={MockComponent} 
+      <ProtectedRoute
+        component={MockComponent}
         roles={[]}
         customProp="test-value"
         anotherProp={123}
-      />
+      />,
     );
 
     const component = screen.getByTestId("mock-component");
@@ -164,7 +170,7 @@ describe("ProtectedRoute", () => {
     });
 
     renderWithRouter(
-      <ProtectedRoute component={MockComponent} roles={["admin"]} />
+      <ProtectedRoute component={MockComponent} roles={["admin"]} />,
     );
 
     expect(screen.getByTestId("mock-component")).toBeInTheDocument();
@@ -179,7 +185,7 @@ describe("ProtectedRoute", () => {
     });
 
     renderWithRouter(
-      <ProtectedRoute component={MockComponent} roles={["admin"]} />
+      <ProtectedRoute component={MockComponent} roles={["admin"]} />,
     );
 
     expect(screen.getByTestId("dashboard-page")).toBeInTheDocument();
@@ -194,7 +200,10 @@ describe("ProtectedRoute", () => {
     });
 
     renderWithRouter(
-      <ProtectedRoute component={MockComponent} roles={["admin", "operator"]} />
+      <ProtectedRoute
+        component={MockComponent}
+        roles={["admin", "operator"]}
+      />,
     );
 
     expect(screen.getByTestId("mock-component")).toBeInTheDocument();
@@ -215,11 +224,11 @@ describe("ProtectedRoute", () => {
     };
 
     renderWithRouter(
-      <ProtectedRoute 
-        component={MockComponent} 
+      <ProtectedRoute
+        component={MockComponent}
         componentMap={componentMap}
         roles={["admin", "operator", "viewer"]}
-      />
+      />,
     );
 
     expect(screen.getByTestId("operator-component")).toBeInTheDocument();
@@ -241,11 +250,11 @@ describe("ProtectedRoute", () => {
     };
 
     renderWithRouter(
-      <ProtectedRoute 
-        component={MockComponent} 
+      <ProtectedRoute
+        component={MockComponent}
         componentMap={componentMap}
         roles={["admin", "operator", "viewer"]}
-      />
+      />,
     );
 
     expect(screen.getByTestId("admin-component")).toBeInTheDocument();
@@ -266,11 +275,11 @@ describe("ProtectedRoute", () => {
     };
 
     renderWithRouter(
-      <ProtectedRoute 
-        component={MockComponent} 
+      <ProtectedRoute
+        component={MockComponent}
         componentMap={componentMap}
         roles={["admin", "operator", "viewer"]}
-      />
+      />,
     );
 
     expect(screen.getByTestId("viewer-component")).toBeInTheDocument();
@@ -291,16 +300,19 @@ describe("ProtectedRoute", () => {
     };
 
     renderWithRouter(
-      <ProtectedRoute 
-        component={MockComponent} 
+      <ProtectedRoute
+        component={MockComponent}
         componentMap={componentMap}
         roles={[]}
-      />
+      />,
     );
 
     // Should fallback to the default MockComponent
     expect(screen.getByTestId("mock-component")).toBeInTheDocument();
-    expect(screen.getByTestId("mock-component")).toHaveAttribute("data-role", "unknown-role");
+    expect(screen.getByTestId("mock-component")).toHaveAttribute(
+      "data-role",
+      "unknown-role",
+    );
     expect(screen.queryByTestId("admin-component")).not.toBeInTheDocument();
     expect(screen.queryByTestId("operator-component")).not.toBeInTheDocument();
   });
@@ -314,14 +326,14 @@ describe("ProtectedRoute", () => {
 
     renderWithRouter(
       // @ts-ignore - intentionally testing missing props
-      <ProtectedRoute roles={[]} />
+      <ProtectedRoute roles={[]} />,
     );
 
     // Should redirect to dashboard
     expect(screen.getByTestId("dashboard-page")).toBeInTheDocument();
   });
 
-  it("should handle superadmin role correctly", () => {
+  it("rejects an unrecognized backend role", () => {
     mockUseAuth.mockReturnValue({
       isAuthenticated: true,
       userRole: "superadmin",
@@ -329,11 +341,11 @@ describe("ProtectedRoute", () => {
     });
 
     renderWithRouter(
-      <ProtectedRoute component={MockComponent} roles={["admin"]} />
+      <ProtectedRoute component={MockComponent} roles={["admin"]} />,
     );
 
     // superadmin should be treated as admin via getFrontendRole
-    expect(screen.getByTestId("mock-component")).toBeInTheDocument();
+    expect(screen.getByTestId("dashboard-page")).toBeInTheDocument();
   });
 
   it("should pass userRole to the rendered component", () => {
@@ -343,9 +355,7 @@ describe("ProtectedRoute", () => {
       isLoading: false,
     });
 
-    renderWithRouter(
-      <ProtectedRoute component={MockComponent} roles={[]} />
-    );
+    renderWithRouter(<ProtectedRoute component={MockComponent} roles={[]} />);
 
     const component = screen.getByTestId("mock-component");
     expect(component).toHaveAttribute("data-role", "operator");
@@ -358,10 +368,11 @@ describe("ProtectedRoute", () => {
       isLoading: false,
     });
 
-    renderWithRouter(
-      <ProtectedRoute component={MockComponent} roles={[]} />
-    );
+    renderWithRouter(<ProtectedRoute component={MockComponent} roles={[]} />);
 
-    expect(screen.getByTestId("side-navigation")).toHaveAttribute("data-role", "viewer");
+    expect(screen.getByTestId("side-navigation")).toHaveAttribute(
+      "data-role",
+      "viewer",
+    );
   });
 });

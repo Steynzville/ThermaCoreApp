@@ -11,7 +11,7 @@ const ProtectedRoute = ({
   roles = [],
   ...props
 }) => {
-  const { isAuthenticated, userRole, isLoading } = useAuth();
+  const { isAuthenticated, userRole, backendRole, isLoading } = useAuth();
 
   // Show loading spinner while checking authentication state
   if (isLoading) {
@@ -36,9 +36,7 @@ const ProtectedRoute = ({
 
   // Check if user has required role
   const hasAccess =
-    roles.length === 0 ||
-    roles.includes(frontendRole) ||
-    roles.includes(normalizedRole);
+    roles.length === 0 || roles.includes(backendRole || normalizedRole);
 
   if (!hasAccess) {
     return <Navigate to="/dashboard" replace />;

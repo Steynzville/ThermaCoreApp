@@ -97,10 +97,9 @@ const routes = [
   // Units route with role-based component selection
   {
     path: "/units",
-    component: null, // Will be handled specially in App.jsx
+    component: GridView,
     isProtected: true,
     roles: ["admin", "client_admin", "user", "operator", "viewer"],
-    specialHandling: "unit-role-based",
   },
   // Admin-only routes
   // NOTE: isAdminRoute is documentation only - ProtectedRoute handles role checking
@@ -165,28 +164,28 @@ const routes = [
     path: "/synchronize-units",
     component: SynchronizeUnitsOverview,
     isProtected: true,
-    roles: ["admin", "user"],
+    roles: ["admin", "client_admin", "operator", "viewer"],
   },
   // Dynamic routes that need special handling
   {
     path: "/unit/:id",
     component: null, // Will be handled specially in App.jsx
     isProtected: true,
-    roles: ["admin", "user"],
+    roles: ["admin", "client_admin", "operator", "viewer"],
     specialHandling: "unit-role-based",
   },
   {
     path: "/unit-details/:id",
     component: null, // Will be handled specially in App.jsx
     isProtected: true,
-    roles: ["admin", "user"],
+    roles: ["admin", "client_admin", "operator", "viewer"],
     specialHandling: "unit-details-role-based",
   },
   {
     path: "/unit-performance/:id",
     component: UnitPerformance,
     isProtected: true,
-    roles: ["admin", "user"],
+    roles: ["admin", "client_admin", "operator", "viewer"],
   },
 ];
 

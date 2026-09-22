@@ -1,67 +1,36 @@
+import { useUnits } from "../../context/UnitContext";
 import VitalSignGraph from "../VitalSignGraph";
-
-const UnitHistoryTab = ({ unit }) => {
+export default function UnitHistoryTab({ unit }) {
+  const { records, events } = useUnits();
+  const rows = records.filter((r) => r.unitId === unit.id);
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <VitalSignGraph
-        title="Ambient Temperature History"
-        dataKey="ambientTemp"
-        color="#3b82f6"
+        title="Recorded energy (kWh/day)"
+        dataKey="grossKWh"
+        color="#147D92"
+        data={rows}
       />
-      <VitalSignGraph
-        title="Ambient Humidity History"
-        dataKey="ambientHumidity"
-        color="#06b6d4"
-      />
-      <VitalSignGraph
-        title="Temperature In History"
-        dataKey="tempIn"
-        color="#82ca9d"
-      />
-      <VitalSignGraph
-        title="Temperature Out - Chill History"
-        dataKey="tempOutChill"
-        color="#60a5fa"
-      />
-      <VitalSignGraph
-        title="Temperature Out - Hot History"
-        dataKey="tempOutHot"
-        color="#f87171"
-      />
-      <VitalSignGraph
-        title="Power Output History"
-        dataKey="power"
-        color="#8884d8"
-      />
-      {unit?.watergeneration && (
+      {unit.watergeneration && (
         <VitalSignGraph
-          title="AWG Water Level History"
-          dataKey="awgWaterLevel"
-          color="#0088FE"
+          title="Recorded water (L/day)"
+          dataKey="waterLitres"
+          color="#06b6d4"
+          data={rows}
         />
       )}
-      <VitalSignGraph
-        title="Differential Pressure History"
-        dataKey="differentialPressure"
-        color="#ff7300"
-      />
-      <VitalSignGraph
-        title="Battery Voltage History"
-        dataKey="batteryVoltage"
-        color="#22c55e"
-      />
-      <VitalSignGraph
-        title="Flow Rate Out - Chill History"
-        dataKey="flowRateOutChill"
-        color="#0284c7"
-      />
-      <VitalSignGraph
-        title="Flow Rate Out - Hot History"
-        dataKey="flowRateOutHot"
-        color="#e11d48"
-      />
+      <h2 className="font-semibold">Recorded controls</h2>
+      {events
+        .filter((e) => e.unitId === unit.id)
+        .map((e) => (
+          <article key={e.id} className="border rounded p-4">
+            {e.description} · {new Date(e.timestamp).toLocaleString()}
+          </article>
+        ))}
+      <p className="text-sm text-muted-foreground">
+        Only available recorded history is shown. Instantaneous readings are on
+        the overview tab.
+      </p>
     </div>
   );
-};
-
-export default UnitHistoryTab;
+}

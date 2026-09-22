@@ -14,7 +14,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
 import { useTenant } from "../context/TenantContext";
-import { units } from "../data/mockUnits";
+import { useUnits } from "../context/UnitContext";
 import TenantSwitcher from "./admin/TenantSwitcher";
 import EnhancedStatusDial from "./Dashboard/EnhancedStatusDial";
 import QuickActionCard from "./Dashboard/QuickActionCard";
@@ -29,6 +29,7 @@ const Dashboard = ({ className }) => {
   const location = useLocation();
   const { user, userRole } = useAuth();
   const { currentTenant, canSwitchTenants } = useTenant();
+  const { units, loading, error } = useUnits();
   const [currentView, setCurrentView] = useState("operator"); // "operator" or "performance"
 
   // Single source of truth for admin status - derived from AuthContext
@@ -55,14 +56,19 @@ const Dashboard = ({ className }) => {
     return null;
   }
 
-  // Filter units based on selected tenant
-  let filteredUnits = units;
-
-  if (isAdminUser && currentTenant) {
-    filteredUnits = units.slice(0, 6);
-  } else if (userRole === "user") {
-    filteredUnits = units.slice(0, 6);
-  }
+  const filteredUnits = units;
+  if (loading)
+    return (
+      <p className="p-6" role="status">
+        Loading portfolio...
+      </p>
+    );
+  if (error)
+    return (
+      <p className="p-6" role="alert">
+        {error}
+      </p>
+    );
 
   // Dynamic data calculations from filtered units
   const totalUnits = filteredUnits.length;
@@ -136,8 +142,8 @@ const Dashboard = ({ className }) => {
                   {canSwitchTenants && currentTenant
                     ? `Managing: ${currentTenant.name}`
                     : canSwitchTenants && !currentTenant
-                    ? "Managing: All Tenants"
-                    : "Monitor power generation, efficiency, and environmental impact"}
+                      ? "Managing: All Tenants"
+                      : "Monitor power generation, efficiency, and environmental impact"}
                 </p>
               </div>
               {canSwitchTenants && (
@@ -190,8 +196,8 @@ const Dashboard = ({ className }) => {
                 {canSwitchTenants && currentTenant
                   ? `Managing: ${currentTenant.name}`
                   : canSwitchTenants && !currentTenant
-                  ? "Managing: All Tenants"
-                  : `Welcome back, ${user?.firstName || user?.name || "User"}`}
+                    ? "Managing: All Tenants"
+                    : `Welcome back, ${user?.firstName || user?.name || "User"}`}
               </p>
             </div>
             <div className="flex items-center gap-4 mt-4 md:mt-0">
@@ -206,7 +212,9 @@ const Dashboard = ({ className }) => {
                 Home
               </span>
               <span className="mx-2">/</span>
-              <span className="text-gray-900 dark:text-gray-100">Dashboard</span>
+              <span className="text-gray-900 dark:text-gray-100">
+                Dashboard
+              </span>
             </nav>
             <NotificationBell />
           </div>

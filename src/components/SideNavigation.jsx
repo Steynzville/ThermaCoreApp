@@ -19,13 +19,13 @@ import {
   Wifi,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
 import { useSettings } from "../context/SettingsContext";
 import { useSidebar } from "../context/SidebarContext";
-import { units as mockUnits } from "../data/mockUnits";
+import { useUnits } from "../context/UnitContext";
 import playSound from "../utils/audioPlayer";
 
 // NavItem component with accessibility labels
@@ -78,9 +78,13 @@ const NavItem = ({ item, isCollapsed, isActive, onClick }) => {
 // Generate Gravatar URL from email
 const getGravatarUrl = (email, size = 32) => {
   if (!email) return null;
-  const hash = email.toLowerCase().trim().split('').reduce((acc, char) => {
-    return acc + char.charCodeAt(0).toString(16);
-  }, '');
+  const hash = email
+    .toLowerCase()
+    .trim()
+    .split("")
+    .reduce((acc, char) => {
+      return acc + char.charCodeAt(0).toString(16);
+    }, "");
   return `https://www.gravatar.com/avatar/${hash}?s=${size}&d=identicon`;
 };
 
@@ -92,18 +96,9 @@ const EnhancedSideNavigation = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [units, setUnits] = useState([]);
-
-  useEffect(() => {
-    if (userRole === "admin") {
-      setUnits(mockUnits);
-    } else {
-      setUnits(mockUnits.slice(0, 6));
-    }
-  }, [userRole]);
-
+  const { units, alerts } = useUnits();
   const totalUnits = units.length;
-  const totalAlerts = 6;
+  const totalAlerts = alerts.filter((a) => !a.acknowledged).length;
   const totalAlarms = units.filter((unit) => unit.hasAlarm).length;
 
   const navigationItems = [
@@ -225,7 +220,10 @@ const EnhancedSideNavigation = () => {
   ];
 
   const filteredNavItems = navigationItems.filter((item) => {
-    if (item.requiresPermission && permissions?.[item.requiresPermission] !== true) {
+    if (
+      item.requiresPermission &&
+      permissions?.[item.requiresPermission] !== true
+    ) {
       return false;
     }
     if (item.roles && !item.roles.includes(userRole)) {
@@ -257,7 +255,9 @@ const EnhancedSideNavigation = () => {
 
   const getUserEmail = () => {
     if (user?.email) return user.email;
-    return userRole === "admin" ? "admin@thermacore.com.au" : "user@thermacore.com.au";
+    return userRole === "admin"
+      ? "admin@thermacore.com.au"
+      : "user@thermacore.com.au";
   };
 
   const getUserInitial = () => {

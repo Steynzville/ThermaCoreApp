@@ -10,25 +10,45 @@ vi.mock("framer-motion", () => ({
   motion: {
     div: ({ children, animate, ...props }) => {
       // Filter out motion-specific props that might cause warnings
-      const { whileHover, whileTap, initial, transition, ...rest } = props;
-      
+      const {
+        whileHover: _whileHover,
+        whileTap: _whileTap,
+        initial: _initial,
+        transition: _transition,
+        ...rest
+      } = props;
+
       // Forward animate.width as inline style for testing
       const style = {
         ...(rest.style || {}),
         ...(animate?.width ? { width: animate.width } : {}),
       };
-      
-      return <div {...rest} style={style}>{children}</div>;
+
+      return (
+        <div {...rest} style={style}>
+          {children}
+        </div>
+      );
     },
     span: ({ children, animate, ...props }) => {
-      const { whileHover, whileTap, initial, transition, ...rest } = props;
-      
+      const {
+        whileHover: _whileHover,
+        whileTap: _whileTap,
+        initial: _initial,
+        transition: _transition,
+        ...rest
+      } = props;
+
       const style = {
         ...(rest.style || {}),
         ...(animate?.width ? { width: animate.width } : {}),
       };
-      
-      return <span {...rest} style={style}>{children}</span>;
+
+      return (
+        <span {...rest} style={style}>
+          {children}
+        </span>
+      );
     },
   },
 }));
@@ -90,11 +110,11 @@ describe("EnhancedStatusDial", () => {
       expect(iconElement).toBeInTheDocument();
     });
 
-    it("should render with a dynamic timestamp when lastUpdated is not provided", () => {
+    it("should render with a current snapshot label when lastUpdated is not provided", () => {
       render(<EnhancedStatusDial {...defaultProps} />);
 
       // Should show something like "3m ago"
-      const timestampRegex = /^\d+m ago$/;
+      const timestampRegex = /^Current snapshot$/;
       const elements = screen.getAllByText(timestampRegex);
       expect(elements.length).toBeGreaterThan(0);
     });
@@ -205,7 +225,11 @@ describe("EnhancedStatusDial", () => {
     it("should call onClick when clicked and clickable is true", () => {
       const onClick = vi.fn();
       const { container } = render(
-        <EnhancedStatusDial {...defaultProps} onClick={onClick} clickable={true} />
+        <EnhancedStatusDial
+          {...defaultProps}
+          onClick={onClick}
+          clickable={true}
+        />,
       );
 
       const dialElement = container.querySelector('[role="button"]');
@@ -251,7 +275,7 @@ describe("EnhancedStatusDial", () => {
 
     it("should have button role when clickable is true", () => {
       const { container } = render(
-        <EnhancedStatusDial {...defaultProps} clickable={true} />
+        <EnhancedStatusDial {...defaultProps} clickable={true} />,
       );
 
       const elements = container.querySelectorAll('[role="button"]');
@@ -260,7 +284,7 @@ describe("EnhancedStatusDial", () => {
 
     it("should have presentation role when clickable is false", () => {
       const { container } = render(
-        <EnhancedStatusDial {...defaultProps} clickable={false} />
+        <EnhancedStatusDial {...defaultProps} clickable={false} />,
       );
 
       const elements = container.querySelectorAll('[role="presentation"]');
@@ -269,7 +293,7 @@ describe("EnhancedStatusDial", () => {
 
     it("should have proper aria-label when clickable", () => {
       const { container } = render(
-        <EnhancedStatusDial {...defaultProps} clickable={true} />
+        <EnhancedStatusDial {...defaultProps} clickable={true} />,
       );
 
       const dialElement = container.querySelector('[role="button"]');
@@ -281,7 +305,7 @@ describe("EnhancedStatusDial", () => {
 
     it("should have tabIndex 0 when clickable", () => {
       const { container } = render(
-        <EnhancedStatusDial {...defaultProps} clickable={true} />
+        <EnhancedStatusDial {...defaultProps} clickable={true} />,
       );
 
       const dialElement = container.querySelector('[role="button"]');
@@ -302,7 +326,11 @@ describe("EnhancedStatusDial", () => {
     it("should call onClick when Enter key is pressed and clickable", () => {
       const onClick = vi.fn();
       const { container } = render(
-        <EnhancedStatusDial {...defaultProps} onClick={onClick} clickable={true} />
+        <EnhancedStatusDial
+          {...defaultProps}
+          onClick={onClick}
+          clickable={true}
+        />,
       );
 
       const dialElement = container.querySelector('[role="button"]');
@@ -314,7 +342,11 @@ describe("EnhancedStatusDial", () => {
     it("should call onClick when Space key is pressed and clickable", () => {
       const onClick = vi.fn();
       const { container } = render(
-        <EnhancedStatusDial {...defaultProps} onClick={onClick} clickable={true} />
+        <EnhancedStatusDial
+          {...defaultProps}
+          onClick={onClick}
+          clickable={true}
+        />,
       );
 
       const dialElement = container.querySelector('[role="button"]');
@@ -326,7 +358,11 @@ describe("EnhancedStatusDial", () => {
     it("should not call onClick when other keys are pressed", () => {
       const onClick = vi.fn();
       const { container } = render(
-        <EnhancedStatusDial {...defaultProps} onClick={onClick} clickable={true} />
+        <EnhancedStatusDial
+          {...defaultProps}
+          onClick={onClick}
+          clickable={true}
+        />,
       );
 
       const dialElement = container.querySelector('[role="button"]');
@@ -375,7 +411,7 @@ describe("EnhancedStatusDial", () => {
       act(() => {
         vi.advanceTimersByTime(300);
       });
-      
+
       const percentageElements50 = screen.getAllByText("50%");
       expect(percentageElements50.length).toBeGreaterThan(0);
 
@@ -384,7 +420,7 @@ describe("EnhancedStatusDial", () => {
       act(() => {
         vi.advanceTimersByTime(300);
       });
-      
+
       const percentageElements80 = screen.getAllByText("80%");
       expect(percentageElements80.length).toBeGreaterThan(0);
     });
@@ -406,7 +442,7 @@ describe("EnhancedStatusDial", () => {
     it("should clamp percentage in progress bar animation", async () => {
       vi.useFakeTimers();
       const { container } = render(
-        <EnhancedStatusDial {...defaultProps} percentage={150} />
+        <EnhancedStatusDial {...defaultProps} percentage={150} />,
       );
 
       act(() => {
@@ -428,7 +464,7 @@ describe("EnhancedStatusDial", () => {
           count={5}
           icon={Zap}
           title="Alarms"
-        />
+        />,
       );
 
       const pulseElement = container.querySelector(".border-red-400");
@@ -443,7 +479,7 @@ describe("EnhancedStatusDial", () => {
           count={0}
           icon={Zap}
           title="Alarms"
-        />
+        />,
       );
 
       const pulseElement = container.querySelector(".border-red-400");
@@ -458,7 +494,7 @@ describe("EnhancedStatusDial", () => {
           count={5}
           icon={Wifi}
           title="Online"
-        />
+        />,
       );
 
       const pulseElement = container.querySelector(".border-red-400");
@@ -491,7 +527,7 @@ describe("EnhancedStatusDial", () => {
     it("should clamp percentage below 0 in both label and progress bar", () => {
       vi.useFakeTimers();
       const { container } = render(
-        <EnhancedStatusDial {...defaultProps} percentage={-10} />
+        <EnhancedStatusDial {...defaultProps} percentage={-10} />,
       );
 
       expect(screen.queryByText("-10%")).not.toBeInTheDocument();
@@ -509,7 +545,7 @@ describe("EnhancedStatusDial", () => {
     it("should clamp percentage above 100 in both label and progress bar", () => {
       vi.useFakeTimers();
       const { container } = render(
-        <EnhancedStatusDial {...defaultProps} percentage={150} />
+        <EnhancedStatusDial {...defaultProps} percentage={150} />,
       );
 
       expect(screen.queryByText("150%")).not.toBeInTheDocument();
@@ -558,7 +594,7 @@ describe("EnhancedStatusDial", () => {
   describe("Accessibility", () => {
     it("should be keyboard accessible when clickable", () => {
       const { container } = render(
-        <EnhancedStatusDial {...defaultProps} clickable={true} />
+        <EnhancedStatusDial {...defaultProps} clickable={true} />,
       );
 
       const dialElement = container.querySelector('[role="button"]');

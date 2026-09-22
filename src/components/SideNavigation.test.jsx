@@ -1,3 +1,6 @@
+vi.mock("../context/UnitContext", () => ({
+  useUnits: () => ({ units: [], alerts: [] }),
+}));
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -349,7 +352,9 @@ describe("SideNavigation", () => {
   describe("Mobile Navigation", () => {
     it("should render mobile toggle button", () => {
       const { container } = renderSideNavigation();
-      const mobileToggle = container.querySelector("button.fixed.bottom-4.left-4");
+      const mobileToggle = container.querySelector(
+        "button.fixed.bottom-4.left-4",
+      );
       expect(mobileToggle).toBeInTheDocument();
     });
 
@@ -419,7 +424,9 @@ describe("SideNavigation", () => {
 
     it("should render navigation items as buttons for keyboard accessibility", () => {
       renderSideNavigation();
-      const dashboardButton = screen.getAllByText("Dashboard")[0].closest("button");
+      const dashboardButton = screen
+        .getAllByText("Dashboard")[0]
+        .closest("button");
       expect(dashboardButton).toBeInTheDocument();
       expect(dashboardButton?.tagName).toBe("BUTTON");
     });

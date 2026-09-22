@@ -490,6 +490,35 @@ class Unit(db.Model):
         return f"<Unit {self.id}: {self.name}>"
 
 
+class UnitCommand(db.Model):
+    """Persist device-gateway acknowledgements without overwriting telemetry."""
+
+    __tablename__ = "unit_commands"
+    id = Column(String(36), primary_key=True)
+    unit_id = Column(
+        String(50),
+        ForeignKey("units.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    controls = Column(JSON, nullable=False)
+    created_at = Column(DateTime, default=utc_now, nullable=False, index=True)
+
+    def as_event(self, name=None):
+        return {
+            "id": self.id,
+            "unitId": self.unit_id,
+            "unitName": name or self.unit_id,
+            "timestamp": self.created_at.replace(tzinfo=timezone.utc).isoformat(),
+            "description": "Gateway acknowledged: "
+            + ", ".join(f"{key}={value}" for key, value in self.controls.items()),
+            "type": "control",
+        }
+
+
 class Sensor(db.Model):
     """Sensor model for unit sensors."""
 

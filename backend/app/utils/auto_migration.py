@@ -1246,6 +1246,11 @@ def run_auto_migrations(app):
         with app.app_context():
             engine = db.engine
 
+            # Additive, idempotent migration; never reassign tenant ownership.
+            from app.models import UnitCommand
+
+            UnitCommand.__table__.create(bind=engine, checkfirst=True)
+
             # Run user profile fields migration (must run before other migrations)
             user_profile_success = add_user_profile_fields(engine)
 

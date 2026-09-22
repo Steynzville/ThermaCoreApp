@@ -6,11 +6,17 @@
  * "Open Maps" confirm flow, and edge cases around missing/zero values.
  */
 
-import { fireEvent, render, screen, waitFor, act } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  act,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import UnitVitals from "../components/unit-details/UnitVitals";
 import { SettingsProvider } from "../context/SettingsContext";
-import { useUnits, UnitProvider } from "../context/UnitContext";
+import { useUnits } from "../context/UnitContext";
 import { useRealtimeMetrics } from "../hooks/useRealtimeData";
 import { AuthProvider } from "../context/AuthContext";
 import { BrowserRouter } from "react-router-dom";
@@ -44,6 +50,7 @@ vi.mock("../context/UnitContext", async () => {
   return {
     ...actual,
     useUnits: vi.fn(() => ({
+      isDemoMode: true,
       updateUnitName: vi.fn().mockResolvedValue({ success: true }),
       updateUnitLocation: vi.fn().mockResolvedValue({ success: true }),
       updateUnitGPS: vi.fn().mockResolvedValue({ success: true }),
@@ -60,6 +67,7 @@ vi.mock("../context/AuthContext", async () => {
       user: { id: 1, username: "testuser" },
       backendRole: "user",
       isAuthenticated: true,
+      permissions: { canManageUnits: true },
     })),
   };
 });
@@ -80,8 +88,8 @@ const mockUnit = {
   batteryVoltage: 24.5,
   differentialPressure: 2.5,
   flowRateInlet: 45.5,
-  flowRateOutChill: 34.1,   // 75% of 45.5
-  flowRateOutHot: 11.4,     // 25% of 45.5
+  flowRateOutChill: 34.1, // 75% of 45.5
+  flowRateOutHot: 11.4, // 25% of 45.5
   powerSetpoint: 70,
   installDate: "2024-01-15",
   lastMaintenance: "2024-06-01",
@@ -96,9 +104,9 @@ describe("UnitVitals Component", () => {
         <BrowserRouter>
           <AuthProvider>
             <SettingsProvider>
-              <UnitProvider>
+              <>
                 <UnitVitals unit={unit} />
-              </UnitProvider>
+              </>
             </SettingsProvider>
           </AuthProvider>
         </BrowserRouter>,
@@ -135,9 +143,7 @@ describe("UnitVitals Component", () => {
 
     it("should display GPS coordinates when present", () => {
       renderComponent();
-      expect(
-        screen.getByText(/40.7128° N, 74.0060° W/),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/40.7128° N, 74.0060° W/)).toBeInTheDocument();
     });
 
     it("should display current power output", () => {
@@ -196,53 +202,53 @@ describe("UnitVitals Component", () => {
       renderComponent({ ...mockUnit, status: "offline", batteryVoltage: 24.5 });
       const naElements = screen.getAllByText("N/A");
       expect(naElements.length).toBe(8);
-      const bar = screen.getByTestId('battery-bar');
-      expect(bar).toHaveStyle('width: 0%');
+      const bar = screen.getByTestId("battery-bar");
+      expect(bar).toHaveStyle("width: 0%");
     });
 
     it("should show battery value when unit is online", () => {
       renderComponent({ ...mockUnit, status: "online", batteryVoltage: 24.5 });
       expect(screen.getByText("24.5V")).toBeInTheDocument();
-      const bar = screen.getByTestId('battery-bar');
-      expect(bar).toHaveStyle('width: 41.67%');
+      const bar = screen.getByTestId("battery-bar");
+      expect(bar).toHaveStyle("width: 41.67%");
     });
   });
 
   describe("battery bar color thresholds", () => {
     it("should show red battery bar when voltage is below 23V", () => {
       renderComponent({ ...mockUnit, status: "online", batteryVoltage: 22.5 });
-      const bar = screen.getByTestId('battery-bar');
-      expect(bar).toHaveClass('bg-red-500');
+      const bar = screen.getByTestId("battery-bar");
+      expect(bar).toHaveClass("bg-red-500");
     });
 
     it("should show red battery bar when voltage is above 27V", () => {
       renderComponent({ ...mockUnit, status: "online", batteryVoltage: 27.5 });
-      const bar = screen.getByTestId('battery-bar');
-      expect(bar).toHaveClass('bg-red-500');
+      const bar = screen.getByTestId("battery-bar");
+      expect(bar).toHaveClass("bg-red-500");
     });
 
     it("should show yellow battery bar when voltage is between 23-24V (warning low)", () => {
       renderComponent({ ...mockUnit, status: "online", batteryVoltage: 23.5 });
-      const bar = screen.getByTestId('battery-bar');
-      expect(bar).toHaveClass('bg-yellow-500');
+      const bar = screen.getByTestId("battery-bar");
+      expect(bar).toHaveClass("bg-yellow-500");
     });
 
     it("should show yellow battery bar when voltage is between 26-27V (warning high)", () => {
       renderComponent({ ...mockUnit, status: "online", batteryVoltage: 26.5 });
-      const bar = screen.getByTestId('battery-bar');
-      expect(bar).toHaveClass('bg-yellow-500');
+      const bar = screen.getByTestId("battery-bar");
+      expect(bar).toHaveClass("bg-yellow-500");
     });
 
     it("should show green battery bar when voltage is between 24-26V (normal)", () => {
       renderComponent({ ...mockUnit, status: "online", batteryVoltage: 25.0 });
-      const bar = screen.getByTestId('battery-bar');
-      expect(bar).toHaveClass('bg-green-500');
+      const bar = screen.getByTestId("battery-bar");
+      expect(bar).toHaveClass("bg-green-500");
     });
 
     it("should show gray battery bar when unit is offline", () => {
       renderComponent({ ...mockUnit, status: "offline", batteryVoltage: 25.0 });
-      const bar = screen.getByTestId('battery-bar');
-      expect(bar).toHaveClass('bg-gray-400');
+      const bar = screen.getByTestId("battery-bar");
+      expect(bar).toHaveClass("bg-gray-400");
     });
   });
 
@@ -304,10 +310,10 @@ describe("UnitVitals Component", () => {
       expect(screen.getAllByText("N/A").length).toBeGreaterThan(0);
     });
 
-    it("uses fallback 34.1 (75% of flowRateInlet 45.5) when flowRateOutChill is undefined", () => {
+    it("does not invent a missing outlet flow", () => {
       renderComponent({ ...mockUnit, flowRateOutChill: undefined });
-      const el = screen.getByText("34.1 L/min");
-      expect(el.className).toMatch(/text-green-600/);
+      expect(screen.queryByText("34.1 L/min")).not.toBeInTheDocument();
+      expect(screen.getAllByText("N/A").length).toBeGreaterThan(0);
     });
 
     it("returns gray styling when flowRateOutChill is not a number", () => {
@@ -325,36 +331,15 @@ describe("UnitVitals Component", () => {
     });
   });
 
-  describe("flow rate fallback logic", () => {
-    it("uses fallback 42.5 when flowRateInlet is undefined", () => {
-      renderComponent({ ...mockUnit, flowRateInlet: undefined });
-      const elements = screen.getAllByText(/42.5 L\/min/);
-      expect(elements.length).toBeGreaterThan(0);
+  it("shows missing flow readings as unavailable", () => {
+    renderComponent({
+      ...mockUnit,
+      flowRateInlet: undefined,
+      flowRateOutChill: undefined,
+      flowRateOutHot: undefined,
     });
-
-    it("uses unit.flowRateInlet when liveUnit.flow_rate_inlet is undefined", () => {
-      renderComponent({ ...mockUnit, flowRateInlet: 50 });
-      const elements = screen.getAllByText(/50 L\/min/);
-      expect(elements.length).toBeGreaterThan(0);
-    });
-
-    it("calculates chill flow rate as 75% of inlet when liveUnit and unit values are missing", () => {
-      renderComponent({ ...mockUnit, flowRateInlet: 50, flowRateOutChill: undefined });
-      const elements = screen.getAllByText(/37.5 L\/min/); // 75% of 50
-      expect(elements.length).toBeGreaterThan(0);
-    });
-
-    it("calculates hot flow rate as 25% of inlet when liveUnit and unit values are missing", () => {
-      renderComponent({ ...mockUnit, flowRateInlet: 50, flowRateOutHot: undefined });
-      const elements = screen.getAllByText(/12.5 L\/min/); // 25% of 50
-      expect(elements.length).toBeGreaterThan(0);
-    });
-
-    it("uses fallback 11.4 (25% of flowRateInlet 45.5) when flowRateOutHot is undefined", () => {
-      renderComponent({ ...mockUnit, flowRateOutHot: undefined });
-      const elements = screen.getAllByText(/11.4 L\/min/);
-      expect(elements.length).toBeGreaterThan(0);
-    });
+    expect(screen.queryByText(/42.5 L\/min/)).not.toBeInTheDocument();
+    expect(screen.getAllByText("N/A").length).toBeGreaterThan(2);
   });
 
   describe("machine name inline edit", () => {
@@ -393,7 +378,9 @@ describe("UnitVitals Component", () => {
         expect(updateUnitName).toHaveBeenCalledWith(1, "Renamed Unit");
       });
       await waitFor(() => {
-        expect(screen.queryByDisplayValue("Renamed Unit")).not.toBeInTheDocument();
+        expect(
+          screen.queryByDisplayValue("Renamed Unit"),
+        ).not.toBeInTheDocument();
       });
     });
 
@@ -487,6 +474,7 @@ describe("UnitVitals Component", () => {
     it("saves the new location and exits edit mode", async () => {
       const updateUnitLocation = vi.fn().mockResolvedValue({ success: true });
       useUnits.mockReturnValue({
+        isDemoMode: true,
         updateUnitName: vi.fn().mockResolvedValue({}),
         updateUnitLocation,
         updateUnitGPS: vi.fn().mockResolvedValue({}),
@@ -516,6 +504,7 @@ describe("UnitVitals Component", () => {
         .fn()
         .mockRejectedValue(new Error("network"));
       useUnits.mockReturnValue({
+        isDemoMode: true,
         updateUnitName: vi.fn().mockResolvedValue({}),
         updateUnitLocation,
         updateUnitGPS: vi.fn().mockResolvedValue({}),
@@ -559,6 +548,7 @@ describe("UnitVitals Component", () => {
     it("saves new GPS coordinates", async () => {
       const updateUnitGPS = vi.fn().mockResolvedValue({ success: true });
       useUnits.mockReturnValue({
+        isDemoMode: true,
         updateUnitName: vi.fn().mockResolvedValue({}),
         updateUnitLocation: vi.fn().mockResolvedValue({}),
         updateUnitGPS,
@@ -571,7 +561,9 @@ describe("UnitVitals Component", () => {
       });
       const gpsInput = screen.getByPlaceholderText("Enter GPS coordinates");
       act(() => {
-        fireEvent.change(gpsInput, { target: { value: "51.5074° N, 0.1278° W" } });
+        fireEvent.change(gpsInput, {
+          target: { value: "51.5074° N, 0.1278° W" },
+        });
       });
 
       const saveButton = gpsInput.parentElement.querySelectorAll("button")[0];
@@ -686,295 +678,12 @@ describe("UnitVitals Component", () => {
     });
   });
 
-  describe("live metrics integration", () => {
-    it("recomputes temp/pressure/flow values when metrics stream in", () => {
-      act(() => {
-        useRealtimeMetrics.mockReturnValue({
-          metrics: {
-            temperature: { current: "80" },
-            pressure: { current: "110" },
-            flow_rate_inlet: { current: "50" },
-            flow_rate_outlet: { current: "40" },
-          },
-          loading: false,
-          error: null,
-          connectionStatus: "connected",
-          isConnected: true,
-        });
-      });
-      const { container } = renderComponent();
-      expect(container).toBeTruthy();
+  it("uses this unit's measurements rather than fleet-wide generated metrics", () => {
+    useRealtimeMetrics.mockReturnValue({
+      metrics: { temperature: { current: 999 } },
     });
-
-    it("does not recompute live values while offline even if metrics stream in", () => {
-      act(() => {
-        useRealtimeMetrics.mockReturnValue({
-          metrics: {
-            temperature: { current: "80" },
-            pressure: { current: "110" },
-          },
-          loading: false,
-          error: null,
-          connectionStatus: "connected",
-          isConnected: true,
-        });
-      });
-      renderComponent({ ...mockUnit, status: "offline" });
-      expect(screen.getAllByText("N/A").length).toBeGreaterThan(0);
-    });
-
-    describe("metrics effect — flow rate key fallbacks", () => {
-      it("uses camelCase flowRateInlet/flowRateOutlet when snake_case keys are absent", () => {
-        act(() => {
-          useRealtimeMetrics.mockReturnValue({
-            metrics: {
-              temperature: { current: "80" },
-              pressure: { current: "110" },
-              flowRateInlet: { current: "60" },
-              flowRateOutlet: { current: "35" },
-            },
-            loading: false,
-            error: null,
-            connectionStatus: "connected",
-            isConnected: true,
-          });
-        });
-        const { container } = renderComponent();
-        expect(container).toBeTruthy();
-      });
-    });
-
-    describe("metrics effect — prev-value-undefined branches", () => {
-      const unitMissingDerived = {
-        ...mockUnit,
-        tempIn: undefined,
-        tempOutChill: undefined,
-        tempOutHot: undefined,
-        differentialPressure: undefined,
-      };
-
-      it("leaves tempIn/tempOutChill/tempOutHot/differentialPressure as undefined when they weren't present beforehand", () => {
-        act(() => {
-          useRealtimeMetrics.mockReturnValue({
-            metrics: {
-              temperature: { current: "80" },
-              pressure: { current: "110" },
-              flow_rate_inlet: { current: "50" },
-              flow_rate_outlet: { current: "40" },
-            },
-            loading: false,
-            error: null,
-            connectionStatus: "connected",
-            isConnected: true,
-          });
-        });
-        const { container } = renderComponent(unitMissingDerived);
-        expect(container).toBeTruthy();
-      });
-
-      it("computes an idOffset of 0 when unit.id is undefined", () => {
-        act(() => {
-          useRealtimeMetrics.mockReturnValue({
-            metrics: {
-              temperature: { current: "80" },
-              pressure: { current: "110" },
-              flow_rate_inlet: { current: "50" },
-              flow_rate_outlet: { current: "40" },
-            },
-            loading: false,
-            error: null,
-            connectionStatus: "connected",
-            isConnected: true,
-          });
-        });
-        const { container } = renderComponent({ ...mockUnit, id: undefined });
-        expect(container).toBeTruthy();
-      });
-    });
-
-    it("keeps tempIn undefined (and renders it as N/A) when it wasn't present beforehand", () => {
-      const unitWithoutTempIn = { ...mockUnit, tempIn: undefined };
-      act(() => {
-        useRealtimeMetrics.mockReturnValue({
-          metrics: {
-            temperature: { current: "80" },
-            pressure: { current: "100" },
-            flow_rate_inlet: { current: "45" },
-            flow_rate_outlet: { current: "40" },
-          },
-          loading: false,
-          error: null,
-          connectionStatus: "connected",
-          isConnected: true,
-        });
-      });
-      renderComponent(unitWithoutTempIn);
-      expect(screen.getByText("N/A")).toBeInTheDocument();
-    });
-
-    it("keeps differentialPressure undefined (and renders it as N/A) when it wasn't present beforehand", () => {
-      const unitWithoutPressure = { ...mockUnit, differentialPressure: undefined };
-      act(() => {
-        useRealtimeMetrics.mockReturnValue({
-          metrics: {
-            temperature: { current: "80" },
-            pressure: { current: "100" },
-            flow_rate_inlet: { current: "45" },
-            flow_rate_outlet: { current: "40" },
-          },
-          loading: false,
-          error: null,
-          connectionStatus: "connected",
-          isConnected: true,
-        });
-      });
-      renderComponent(unitWithoutPressure);
-      expect(screen.getByText("N/A")).toBeInTheDocument();
-    });
-
-    describe("numeric 0 metric handling (regression guard)", () => {
-      it("uses 0 (not 70) as the temperature base when metrics.temperature.current is numeric 0", () => {
-        act(() => {
-          useRealtimeMetrics.mockReturnValue({
-            metrics: {
-              temperature: { current: 0 },
-              pressure: { current: "100" },
-              flow_rate_inlet: { current: "45" },
-              flow_rate_outlet: { current: "40" },
-            },
-            loading: false,
-            error: null,
-            connectionStatus: "connected",
-            isConnected: true,
-          });
-        });
-        renderComponent();
-        const tempElements = screen.getAllByText(/^\d+\.?\d*°F$/);
-        const hasLowTemp = tempElements.some(el => {
-          const val = parseFloat(el.textContent);
-          return val >= 0 && val <= 20;
-        });
-        expect(hasLowTemp).toBe(true);
-      });
-
-      it("uses 0 (not 42.5) as the flow inlet base when metrics.flow_rate_inlet.current is numeric 0", () => {
-        act(() => {
-          useRealtimeMetrics.mockReturnValue({
-            metrics: {
-              temperature: { current: "80" },
-              pressure: { current: "100" },
-              flow_rate_inlet: { current: 0 },
-              flow_rate_outlet: { current: "40" },
-            },
-            loading: false,
-            error: null,
-            connectionStatus: "connected",
-            isConnected: true,
-          });
-        });
-        renderComponent();
-        const flowElements = screen.getAllByText(/^-?\d+\.?\d* L\/min$/);
-        const hasLowFlow = flowElements.some(el => {
-          const val = parseFloat(el.textContent);
-          return val >= -5 && val <= 5;
-        });
-        expect(hasLowFlow).toBe(true);
-      });
-
-      it("uses 0 (not 35.2) as the flow outlet base when metrics.flow_rate_outlet.current is numeric 0", () => {
-        act(() => {
-          useRealtimeMetrics.mockReturnValue({
-            metrics: {
-              temperature: { current: "80" },
-              pressure: { current: "100" },
-              flow_rate_inlet: { current: "45" },
-              flow_rate_outlet: { current: 0 },
-            },
-            loading: false,
-            error: null,
-            connectionStatus: "connected",
-            isConnected: true,
-          });
-        });
-        renderComponent();
-        const flowElements = screen.getAllByText(/^-?\d+\.?\d* L\/min$/);
-        const hasLowFlow = flowElements.some(el => {
-          const val = parseFloat(el.textContent);
-          return val >= -5 && val <= 5;
-        });
-        expect(hasLowFlow).toBe(true);
-      });
-
-      it("uses 0 (not 42.5) as the flow inlet base when metrics.flowRateInlet.current (camelCase) is numeric 0", () => {
-        act(() => {
-          useRealtimeMetrics.mockReturnValue({
-            metrics: {
-              temperature: { current: "80" },
-              pressure: { current: "100" },
-              flowRateInlet: { current: 0 },
-              flowRateOutlet: { current: "40" },
-            },
-            loading: false,
-            error: null,
-            connectionStatus: "connected",
-            isConnected: true,
-          });
-        });
-        renderComponent();
-        const flowElements = screen.getAllByText(/^-?\d+\.?\d* L\/min$/);
-        const hasLowFlow = flowElements.some(el => {
-          const val = parseFloat(el.textContent);
-          return val >= -5 && val <= 5;
-        });
-        expect(hasLowFlow).toBe(true);
-      });
-
-      it("uses 0 (not 35.2) as the flow outlet base when metrics.flowRateOutlet.current (camelCase) is numeric 0", () => {
-        act(() => {
-          useRealtimeMetrics.mockReturnValue({
-            metrics: {
-              temperature: { current: "80" },
-              pressure: { current: "100" },
-              flowRateInlet: { current: "45" },
-              flowRateOutlet: { current: 0 },
-            },
-            loading: false,
-            error: null,
-            connectionStatus: "connected",
-            isConnected: true,
-          });
-        });
-        renderComponent();
-        const flowElements = screen.getAllByText(/^-?\d+\.?\d* L\/min$/);
-        const hasLowFlow = flowElements.some(el => {
-          const val = parseFloat(el.textContent);
-          return val >= -5 && val <= 5;
-        });
-        expect(hasLowFlow).toBe(true);
-      });
-
-      it("falls back to 70 when temperature.current is missing (undefined)", () => {
-        act(() => {
-          useRealtimeMetrics.mockReturnValue({
-            metrics: {
-              pressure: { current: "100" },
-              flow_rate_inlet: { current: "45" },
-              flow_rate_outlet: { current: "40" },
-            },
-            loading: false,
-            error: null,
-            connectionStatus: "connected",
-            isConnected: true,
-          });
-        });
-        renderComponent();
-        const tempElements = screen.getAllByText(/^\d+\.?\d*°F$/);
-        const hasExpectedTemp = tempElements.some(el => {
-          const val = parseFloat(el.textContent);
-          return val >= 20 && val <= 50;
-        });
-        expect(hasExpectedTemp).toBe(true);
-      });
-    });
+    renderComponent({ ...mockUnit, tempIn: 0 });
+    expect(screen.getAllByText("0°F").length).toBeGreaterThan(0);
+    expect(screen.queryByText("999°F")).not.toBeInTheDocument();
   });
 });

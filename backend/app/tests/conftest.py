@@ -289,7 +289,7 @@ def db_session(app):
 @pytest.fixture
 def reset_service_manager():
     """Reset service_manager state before and after test."""
-    from app.utils.service_manager import service_manager
+    from app.utils.service_manager import ServiceType, service_manager
 
     # Save current state
     saved_services = {}
@@ -882,3 +882,75 @@ def test_data(db_session):
     db_session.flush()
 
     return {"unit": unit, "sensor": sensor}
+
+
+@pytest.fixture
+def portfolio_data(app, db_session):
+    """Two distinct clients/tenants, with actual ownership for isolation tests."""
+    import uuid
+    from flask_jwt_extended import create_access_token
+    from app.models import Client, Tenant, RoleEnum
+
+    suffix = uuid.uuid4().hex[:8]
+    clients = [Client(name=f"Portfolio client {i}-{suffix}") for i in range(2)]
+    db_session.add_all(clients)
+    db_session.flush()
+    tenants = [
+        Tenant(
+            name=f"Portfolio site {i}-{suffix}",
+            slug=f"portfolio-{i}-{suffix}",
+            client_id=clients[i].id,
+        )
+        for i in range(2)
+    ]
+    db_session.add_all(tenants)
+    db_session.flush()
+    units = [
+        Unit(
+            id=f"PORT-{i}-{suffix}",
+            name=f"Portfolio unit {i}",
+            serial_number=f"PS-{i}-{suffix}",
+            tenant_id=tenants[i].id,
+            status="online",
+            current_power=10,
+            water_generation=True,
+        )
+        for i in range(2)
+    ]
+    db_session.add_all(units)
+    users, tokens = {}, {}
+    for role_name in ("admin", "client_admin", "operator", "viewer"):
+        role = Role.query.filter_by(name=RoleEnum(role_name)).first()
+        if not role:
+            role = Role(name=RoleEnum(role_name))
+            db_session.add(role)
+            db_session.flush()
+        role.permissions = (
+            Permission.query.all()
+            if role_name in ("admin", "client_admin")
+            else role.permissions
+        )
+        user = User(
+            username=f"{role_name}-{suffix}",
+            email=f"{role_name}-{suffix}@example.test",
+            role_id=role.id,
+            tenant_id=tenants[0].id,
+            client_id=clients[0].id,
+            is_active=True,
+        )
+        user.set_password("portfolio-test-password")
+        db_session.add(user)
+        db_session.flush()
+        users[role_name] = user
+        tokens[role_name] = create_access_token(identity=str(user.id))
+    db_session.commit()
+    return {
+        "units": units,
+        "tenants": tenants,
+        "clients": clients,
+        "users": users,
+        "tokens": tokens,
+        "headers": {
+            role: {"Authorization": f"Bearer {token}"} for role, token in tokens.items()
+        },
+    }

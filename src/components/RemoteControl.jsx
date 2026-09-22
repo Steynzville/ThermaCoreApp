@@ -1,1138 +1,190 @@
-import {
-  AlertTriangle,
-  ArrowLeft,
-  Camera,
-  CheckCircle,
-  Droplets,
-  Maximize,
-  Minimize,
-  Monitor,
-  Power,
-  RotateCcw,
-  Settings,
-  Sliders,
-  Wifi,
-  WifiOff,
-} from "lucide-react";
-import React, { useState, useEffect, useRef } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-
+import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { useSettings } from "../context/SettingsContext";
-import playSound from "../utils/audioPlayer";
-import { canControlUnits } from "../utils/permissions";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "./ui/alert-dialog";
-import { Card, CardContent, CardHeader } from "./ui/card";
-import { Switch } from "./ui/switch";
-
-// Connection status pill component
-const ConnectionPill = ({ isConnected }) =>
-  isConnected ? (
-    <div className="flex items-center space-x-2 text-green-600 dark:text-green-400">
-      <Wifi className="h-4 w-4" />
-      <span className="text-sm font-medium">Connected</span>
-    </div>
-  ) : (
-    <div className="flex items-center space-x-2 text-red-600 dark:text-red-400">
-      <WifiOff className="h-4 w-4" />
-      <span className="text-sm font-medium">Disconnected</span>
-    </div>
-  );
-
-// Helper function to format timestamp
-const getCurrentTimestamp = () => {
-  const now = new Date();
-  return now.toLocaleString('en-US', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false
-  });
-};
-
-// Action type definitions
-const ACTION_TYPES = {
-  MACHINE_POWER_ON: 'Machine powered on',
-  MACHINE_POWER_OFF: 'Machine powered off',
-  WATER_PRODUCTION_ON: 'Water production enabled',
-  WATER_PRODUCTION_OFF: 'Water production disabled',
-  AUTO_SWITCH_ON: 'Auto switch enabled',
-  AUTO_SWITCH_OFF: 'Auto switch disabled',
-  VIDEO_FEED_START: 'Video feed started',
-  VIDEO_FEED_STOP: 'Video feed stopped',
-  CAMERA_CHANGED: 'Camera changed',
-  REFRESH_FEED: 'Video feed refreshed',
-  SETPOINT_CHANGED: 'Setpoint changed',
-  MODE_CHANGED: 'Operation mode changed',
-};
-
-const RemoteControl = ({ className, unit: propUnit, details: _details }) => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { settings } = useSettings();
-  const { backendRole } = useAuth();
-
-  const hasControlPermission = canControlUnits(backendRole);
-
-  const unit = propUnit || location.state?.unit;
-
-  // Remote control states
-  const [machineOn, setMachineOn] = useState(unit?.status === "online");
-  const [waterProductionOn, setWaterProductionOn] = useState(
-    Boolean(unit?.watergeneration && unit?.waterProductionOn),
-  );
-  const [autoSwitchEnabled, setAutoSwitchEnabled] = useState(
-    Boolean(unit?.autoSwitchEnabled ?? false),
-  );
-  
-  // Power & AWG Setpoint states
-  const [powerSetpoint, setPowerSetpoint] = useState(
-    unit?.powerSetpoint !== undefined ? unit.powerSetpoint : (unit?.status === "online" ? 70 : 0)
-  );
-  const [awgSetpoint, setAwgSetpoint] = useState(
-    unit?.watergeneration ? (waterProductionOn ? 50 : 0) : 0
-  );
-  const [operationMode, setOperationMode] = useState("Balanced");
-
-  const [isConnected, setIsConnected] = useState(true);
-  const [selectedCamera, setSelectedCamera] = useState("cam1");
-  const [videoFeedActive, setVideoFeedActive] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [videoContainerRef, setVideoContainerRef] = useState(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [actionHistory, setActionHistory] = useState([
-    {
-      id: 1,
-      action: "Water production enabled",
-      description: "Manual control via remote interface",
-      timestamp: "2024-08-08 14:30:00",
-    },
-    {
-      id: 2,
-      action: "Machine powered on",
-      description: "Manual control via remote interface",
-      timestamp: "2024-08-08 14:25:00",
-    },
-    {
-      id: 3,
-      action: "Auto switch enabled",
-      description: "Automatic control configuration updated",
-      timestamp: "2024-08-08 09:15:00",
-    },
-  ]);
-
-  const isMountedRef = useRef(true);
-  const refreshTimeoutRef = useRef(null);
-  const cascadeTimeoutRef = useRef([]);
-  const actionIdCounter = useRef(4);
-
-  useEffect(() => {
-    if (unit) {
-      setMachineOn(unit.status === "online");
-      setWaterProductionOn(
-        Boolean(unit.watergeneration && unit.waterProductionOn),
-      );
-      setAutoSwitchEnabled(
-        Boolean(unit.autoSwitchEnabled ?? false),
-      );
-      if (unit.powerSetpoint !== undefined) {
-        setPowerSetpoint(unit.powerSetpoint);
-      }
-    }
-  }, [unit]);
-
-  useEffect(() => {
-    if (typeof document === "undefined") {
-      return;
-    }
-
-    const handleFullscreenChange = () => {
-      const isCurrentlyFullscreen = !!(
-        document.fullscreenElement ||
-        document.webkitFullscreenElement ||
-        document.msFullscreenElement
-      );
-      setIsFullscreen(isCurrentlyFullscreen);
-    };
-
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    if ("webkitFullscreenElement" in document) {
-      document.addEventListener(
-        "webkitfullscreenchange",
-        handleFullscreenChange,
-      );
-    }
-    if ("msFullscreenElement" in document) {
-      document.addEventListener("msfullscreenchange", handleFullscreenChange);
-    }
-
-    return () => {
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
-      if ("webkitFullscreenElement" in document) {
-        document.removeEventListener(
-          "webkitfullscreenchange",
-          handleFullscreenChange,
-        );
-      }
-      if ("msFullscreenElement" in document) {
-        document.removeEventListener(
-          "msfullscreenchange",
-          handleFullscreenChange,
-        );
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-      if (refreshTimeoutRef.current) {
-        clearTimeout(refreshTimeoutRef.current);
-      }
-      cascadeTimeoutRef.current.forEach((timeoutId) => {
-        clearTimeout(timeoutId);
-      });
-      cascadeTimeoutRef.current = [];
-    };
-  }, []);
-
-  const scheduleCascadeAction = (action, description, delay = 50) => {
-    const timeoutId = setTimeout(() => {
-      cascadeTimeoutRef.current = cascadeTimeoutRef.current.filter(id => id !== timeoutId);
-      
-      if (isMountedRef.current) {
-        addAction(action, description);
-      }
-    }, delay);
-    cascadeTimeoutRef.current.push(timeoutId);
-    return timeoutId;
-  };
-
-  if (!unit) {
-    return (
-      <div className="min-h-screen bg-blue-50 dark:bg-gray-950 p-6 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-            Unit Not Found
-          </h1>
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Back to Unit Details
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const addAction = (action, description = "Manual control via remote interface") => {
-    const newAction = {
-      id: actionIdCounter.current++,
-      action,
-      description,
-      timestamp: getCurrentTimestamp(),
-    };
-    
-    setActionHistory(prev => {
-      const updated = [newAction, ...prev];
-      return updated.slice(0, 10);
-    });
-  };
-
-  const handleMachineToggle = (checked) => {
-    setMachineOn(checked);
-
-    if (checked) {
-      if (powerSetpoint === 0) setPowerSetpoint(70);
-      playSound("power-on.mp3", settings.soundEnabled, settings.volume);
-      addAction(ACTION_TYPES.MACHINE_POWER_ON, "Machine turned on via remote interface");
-    } else {
-      setPowerSetpoint(0);
-      playSound("power-off.mp3", settings.soundEnabled, settings.volume);
-      addAction(ACTION_TYPES.MACHINE_POWER_OFF, "Machine turned off via remote interface");
-      
-      if (waterProductionOn) {
-        setWaterProductionOn(false);
-        setAwgSetpoint(0);
-        scheduleCascadeAction(
-          ACTION_TYPES.WATER_PRODUCTION_OFF,
-          "Cascaded off - machine power off"
-        );
-      }
-      if (autoSwitchEnabled) {
-        setAutoSwitchEnabled(false);
-        scheduleCascadeAction(
-          ACTION_TYPES.AUTO_SWITCH_OFF,
-          "Cascaded off - machine power off"
-        );
-      }
-    }
-  };
-
-  const handleWaterProductionToggle = (checked) => {
-    setWaterProductionOn(checked);
-    if (checked) {
-      if (awgSetpoint === 0) setAwgSetpoint(50);
-      playSound("water-on.mp3", settings.soundEnabled, settings.volume);
-      addAction(ACTION_TYPES.WATER_PRODUCTION_ON, "Water production enabled via remote interface");
-    } else {
-      setAwgSetpoint(0);
-      playSound("water-off.mp3", settings.soundEnabled, settings.volume);
-      addAction(ACTION_TYPES.WATER_PRODUCTION_OFF, "Water production disabled via remote interface");
-    }
-
-    if (machineOn && !checked && autoSwitchEnabled) {
-      setAutoSwitchEnabled(false);
-      scheduleCascadeAction(
-        ACTION_TYPES.AUTO_SWITCH_OFF,
-        "Cascaded off - water production off"
-      );
-    }
-  };
-
-  const handlePowerSetpointChange = (val) => {
-    setPowerSetpoint(val);
-    if (val === 0 && machineOn) {
-      setMachineOn(false);
-      addAction(ACTION_TYPES.MACHINE_POWER_OFF, "Auto-shutdown triggered by 0% Power Setpoint");
-    } else if (val > 0 && !machineOn) {
-      setMachineOn(true);
-      addAction(ACTION_TYPES.MACHINE_POWER_ON, "Machine turned on by non-zero Power Setpoint");
-    } else {
-      addAction(ACTION_TYPES.SETPOINT_CHANGED, `Power setpoint set to ${val}%`);
-    }
-
-    checkOperationMode(val, awgSetpoint);
-  };
-
-  const handleAwgSetpointChange = (val) => {
-    setAwgSetpoint(val);
-    if (val === 0 && waterProductionOn) {
-      setWaterProductionOn(false);
-      addAction(ACTION_TYPES.WATER_PRODUCTION_OFF, "Water production disabled via 0% AWG Setpoint");
-    } else if (val > 0 && !waterProductionOn) {
-      setWaterProductionOn(true);
-      addAction(ACTION_TYPES.WATER_PRODUCTION_ON, "Water production enabled via AWG Setpoint");
-    } else {
-      addAction(ACTION_TYPES.SETPOINT_CHANGED, `AWG water setpoint set to ${val}%`);
-    }
-
-    checkOperationMode(powerSetpoint, val);
-  };
-
-  const checkOperationMode = (pVal, aVal) => {
-    if (pVal === 50 && aVal === 50) {
-      setOperationMode("Balanced");
-    } else if (pVal === 90 && aVal === 20) {
-      setOperationMode("Power Priority");
-    } else if (pVal === 30 && aVal === 90) {
-      setOperationMode("AWG Water Priority");
-    } else {
-      setOperationMode("Custom");
-    }
-  };
-
-  const handleModeSelect = (mode) => {
-    setOperationMode(mode);
-    let pVal = 70;
-    let aVal = 50;
-    if (mode === "Balanced") {
-      pVal = 50;
-      aVal = 50;
-    } else if (mode === "Power Priority") {
-      pVal = 90;
-      aVal = 20;
-    } else if (mode === "AWG Water Priority") {
-      pVal = 30;
-      aVal = 90;
-    }
-
-    setPowerSetpoint(pVal);
-    setAwgSetpoint(aVal);
-
-    if (pVal > 0 && !machineOn) {
-      setMachineOn(true);
-    }
-    if (aVal > 0 && !waterProductionOn && unit.watergeneration) {
-      setWaterProductionOn(true);
-    }
-
-    addAction(
-      ACTION_TYPES.MODE_CHANGED,
-      `Mode switched to ${mode} (Power: ${pVal}%, AWG: ${aVal}%)`
-    );
-  };
-
-  const handleAutoSwitchToggle = (checked) => {
-    setAutoSwitchEnabled(checked);
-    playSound("cool-tones.mp3", settings.soundEnabled, settings.volume);
-    
-    if (checked) {
-      addAction(ACTION_TYPES.AUTO_SWITCH_ON, "Auto switch enabled via remote interface");
-    } else {
-      addAction(ACTION_TYPES.AUTO_SWITCH_OFF, "Auto switch disabled via remote interface");
-    }
-  };
-
-  const handleCameraChange = (cameraId) => {
-    const cameraName = availableCameras.find(cam => cam.id === cameraId)?.name || cameraId;
-    setSelectedCamera(cameraId);
-    addAction(ACTION_TYPES.CAMERA_CHANGED, `Switched to ${cameraName}`);
-  };
-
-  const toggleVideoFeed = () => {
-    const newVideoFeedState = !videoFeedActive;
-    setVideoFeedActive(newVideoFeedState);
-
-    if (newVideoFeedState) {
-      playSound("video-on.mp3", settings.soundEnabled, settings.volume);
-      addAction(ACTION_TYPES.VIDEO_FEED_START, "Live video feed started");
-    } else {
-      playSound("video-off.mp3", settings.soundEnabled, settings.volume);
-      addAction(ACTION_TYPES.VIDEO_FEED_STOP, "Live video feed stopped");
-    }
-  };
-
-  const handleRefreshFeed = () => {
-    if (!videoFeedActive || !isConnected || isRefreshing) {
-      return;
-    }
-    
-    setIsRefreshing(true);
-    addAction(ACTION_TYPES.REFRESH_FEED, "Video feed refreshed");
-    
-    if (refreshTimeoutRef.current) {
-      clearTimeout(refreshTimeoutRef.current);
-    }
-    
-    refreshTimeoutRef.current = setTimeout(() => {
-      if (isMountedRef.current) {
-        setIsRefreshing(false);
-        refreshTimeoutRef.current = null;
-      }
-    }, 800);
-  };
-
-  const toggleFullscreen = async () => {
-    if (typeof document === "undefined") {
-      return;
-    }
-
+import { useUnits } from "../context/UnitContext";
+import { Button } from "./ui/button";
+function Controls({ unit }) {
+  const { controlUnit, isDemoMode } = useUnits();
+  const { permissions } = useAuth();
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [power, setPower] = useState(unit.powerSetpoint ?? 0);
+  const [water, setWater] = useState(unit.waterSetpoint ?? 0);
+  const machinePower = unit.machinePower ?? unit.status === "online";
+  const submit = async (changes) => {
+    setPending(true);
+    setError("");
+    setMessage("");
     try {
-      if (!isFullscreen) {
-        if (videoContainerRef) {
-          if (videoContainerRef.requestFullscreen) {
-            await videoContainerRef.requestFullscreen();
-          } else if (videoContainerRef.webkitRequestFullscreen) {
-            await videoContainerRef.webkitRequestFullscreen();
-          } else if (videoContainerRef.msRequestFullscreen) {
-            await videoContainerRef.msRequestFullscreen();
-          }
-        }
-      } else {
-        if (document.exitFullscreen) {
-          await document.exitFullscreen();
-        } else if (document.webkitExitFullscreen) {
-          await document.webkitExitFullscreen();
-        } else if (document.msExitFullscreen) {
-          await document.msExitFullscreen();
-        }
-      }
-    } catch (_error) {
-      // Silent catch
+      await controlUnit(unit.id, changes);
+      setMessage(
+        isDemoMode
+          ? "Demo state updated across the portfolio."
+          : "Device gateway acknowledged the command. Telemetry updates separately.",
+      );
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setPending(false);
     }
   };
-
-  const availableCameras = [
-    { id: "cam1", name: "Main Unit Camera" },
-    { id: "cam2", name: "Alternate Cam 1" },
-    { id: "cam3", name: "Alternate Cam 2" },
-  ];
-
   return (
-    <div
-      className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-6 ${className}`}
-    >
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-6">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="flex items-center space-x-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 mb-4"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Back to Unit Details</span>
-          </button>
-
-          <div className="mb-2">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              Remote Control - {unit.name}
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              Unit ID: {unit.id} • {unit.location}
-            </p>
-          </div>
-
-          <div className="flex items-center space-x-4 mt-4">
-            <ConnectionPill isConnected={isConnected} />
-            <div className="flex items-center space-x-2">
-              {machineOn ? (
-                <CheckCircle className="h-6 w-6 text-green-500" />
-              ) : (
-                <AlertTriangle className="h-6 w-6 text-red-500" />
-              )}
-              <span
-                className={`text-sm font-medium px-3 py-1 rounded-full ${
-                  machineOn 
-                    ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400" 
-                    : "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"
-                }`}
-              >
-                {(machineOn ? "online" : "offline").toUpperCase()}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Connection Warning */}
-        {!isConnected && (
-          <Card className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 mb-6">
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-3">
-                <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
-                <div>
-                  <h3 className="text-sm font-medium text-red-800 dark:text-red-200">
-                    Connection Lost
-                  </h3>
-                  <p className="text-sm text-red-700 dark:text-red-300">
-                    Unable to communicate with the unit. Remote control
-                    functions are disabled.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Remote Control Panel */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Machine Control */}
-          <Card className="bg-white dark:bg-gray-900">
-            <CardHeader>
-              <div className="flex items-center space-x-3">
-                <Power className="h-5 w-5 text-blue-500" />
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  Machine Control
-                </h3>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    Machine Power
-                  </h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Turn the entire machine on or off
-                  </p>
-                </div>
-                {hasControlPermission ? (
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <div className="cursor-pointer">
-                        <Switch
-                          checked={machineOn}
-                          onCheckedChange={() => {}}
-                          disabled={!isConnected}
-                          aria-label="Machine Power"
-                        />
-                      </div>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>
-                          Are you absolutely sure?
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This action will {machineOn ? "turn off" : "turn on"}{" "}
-                          the machine power. This could have significant impact
-                          on unit operations.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => {
-                            handleMachineToggle(!machineOn);
-                          }}
-                        >
-                          Continue
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                ) : (
-                  <Switch
-                    checked={machineOn}
-                    disabled={true}
-                    aria-label="Machine Power"
-                  />
-                )}
-              </div>
-              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                <div className="flex items-center space-x-2 mb-2">
-                  <div
-                    className={`w-3 h-3 rounded-full ${machineOn ? "bg-green-500" : "bg-red-500"}`}
-                  />
-                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    Status: {machineOn ? "Running" : "Stopped"}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  {machineOn
-                    ? "Machine is currently operational and running normally."
-                    : "Machine is currently stopped and not operational."}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Water Production Control */}
+    <div className="space-y-5">
+      <h2 className="text-xl font-semibold">{unit.name}</h2>
+      <p>
+        {isDemoMode ? "Demonstration controls" : "Live device controls"} ·
+        Telemetry status: {unit.status}
+      </p>
+      {!permissions?.canControlUnits && (
+        <p>You have read-only access to this unit.</p>
+      )}
+      <fieldset
+        disabled={pending || !permissions?.canControlUnits}
+        className="space-y-4"
+      >
+        <div className="flex flex-wrap gap-3">
+          <Button onClick={() => submit({ machinePower: !machinePower })}>
+            {machinePower ? "Turn power off" : "Turn power on"}
+          </Button>
           {unit.watergeneration && (
-            <Card className="bg-white dark:bg-gray-900">
-              <CardHeader>
-                <div className="flex items-center space-x-3">
-                  <Droplets className="h-5 w-5 text-blue-500" />
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                    Water Production Control
-                  </h3>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      Water Production
-                    </h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Enable or disable water production
-                    </p>
-                  </div>
-                  {hasControlPermission ? (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <div className="cursor-pointer">
-                          <Switch
-                            checked={waterProductionOn}
-                            onCheckedChange={() => {}}
-                            disabled={!isConnected || !machineOn}
-                            aria-label="Water Production"
-                          />
-                        </div>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>
-                            Are you absolutely sure?
-                          </AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This action will{" "}
-                            {waterProductionOn ? "disable" : "enable"} water
-                            production. This could affect water levels.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => {
-                              handleWaterProductionToggle(!waterProductionOn);
-                            }}
-                          >
-                            Continue
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  ) : (
-                    <Switch
-                      checked={waterProductionOn}
-                      disabled={true}
-                      aria-label="Water Production"
-                    />
-                  )}
-                </div>
-                <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <div
-                      className={`w-3 h-3 rounded-full ${waterProductionOn && machineOn ? "bg-blue-500" : "bg-gray-400"}`}
-                    />
-                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      Status:{" "}
-                      {waterProductionOn && machineOn ? "Active" : "Inactive"}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                    Current water level: {unit?.awgWaterLevel ?? unit?.water_level !== undefined ? `${unit.awgWaterLevel ?? unit.water_level} L` : "N/A"}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            <Button
+              disabled={!machinePower}
+              variant="outline"
+              onClick={() =>
+                submit({ waterProductionOn: !unit.waterProductionOn })
+              }
+            >
+              {unit.waterProductionOn
+                ? "Stop water production"
+                : "Start water production"}
+            </Button>
+          )}
+          <Button
+            disabled={!machinePower}
+            variant="outline"
+            onClick={() =>
+              submit({ autoSwitchEnabled: !unit.autoSwitchEnabled })
+            }
+          >
+            {unit.autoSwitchEnabled
+              ? "Disable auto switch"
+              : "Enable auto switch"}
+          </Button>
+        </div>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              submit({ powerSetpoint: Number(power) });
+            }}
+            className="space-y-2"
+          >
+            <label>
+              Power setpoint (kW)
+              <input
+                aria-label="Power setpoint (kW)"
+                type="number"
+                min="0"
+                step="0.1"
+                required
+                value={power}
+                onChange={(e) => setPower(e.target.value)}
+                className="border rounded block p-2"
+              />
+            </label>
+            <Button type="submit" disabled={!machinePower}>
+              Apply power setpoint
+            </Button>
+          </form>
+          {unit.watergeneration && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                submit({ waterSetpoint: Number(water) });
+              }}
+              className="space-y-2"
+            >
+              <label>
+                Water setpoint (L/h)
+                <input
+                  aria-label="Water setpoint (L/h)"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  required
+                  value={water}
+                  onChange={(e) => setWater(e.target.value)}
+                  className="border rounded block p-2"
+                />
+              </label>
+              <Button
+                type="submit"
+                disabled={!machinePower || !unit.waterProductionOn}
+              >
+                Apply water setpoint
+              </Button>
+            </form>
           )}
         </div>
-
-        {/* Thermal & AWG Production Setpoints */}
-        <Card className="bg-white dark:bg-gray-900 mt-6">
-          <CardHeader>
-            <div className="flex items-center space-x-3">
-              <Sliders className="h-5 w-5 text-indigo-500" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                Thermal &amp; AWG Production Setpoints
-              </h3>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Mode Selection */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                Operation Mode
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <button
-                  type="button"
-                  onClick={() => handleModeSelect("Balanced")}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all ${
-                    operationMode === "Balanced"
-                      ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                      : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
-                  }`}
-                >
-                  Balanced (50/50)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleModeSelect("Power Priority")}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all ${
-                    operationMode === "Power Priority"
-                      ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                      : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
-                  }`}
-                >
-                  Power Priority (90/20)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleModeSelect("AWG Water Priority")}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all ${
-                    operationMode === "AWG Water Priority"
-                      ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                      : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
-                  }`}
-                >
-                  AWG Water Priority (30/90)
-                </button>
-              </div>
-            </div>
-
-            {/* Power Production Setpoint Slider */}
-            <div className="space-y-2 pt-4 border-t border-gray-200 dark:border-gray-700">
-              <div className="flex justify-between items-center">
-                <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  Power Production Setpoint
-                </label>
-                <span className="text-base font-bold text-blue-600 dark:text-blue-400">
-                  {powerSetpoint}%
-                </span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                step="1"
-                value={powerSetpoint}
-                onChange={(e) => handlePowerSetpointChange(Number(e.target.value))}
-                disabled={!isConnected}
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-blue-600"
-              />
-              <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 font-medium px-1">
-                <span>0%</span>
-                <span>25%</span>
-                <span>50%</span>
-                <span>75%</span>
-                <span>100%</span>
-              </div>
-            </div>
-
-            {/* AWG Water Production Setpoint Slider */}
-            {unit.watergeneration && (
-              <div className="space-y-2 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <div className="flex justify-between items-center">
-                  <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    AWG Water Production Setpoint
-                  </label>
-                  <span className="text-base font-bold text-blue-600 dark:text-blue-400">
-                    {awgSetpoint}%
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  step="1"
-                  value={awgSetpoint}
-                  onChange={(e) => handleAwgSetpointChange(Number(e.target.value))}
-                  disabled={!isConnected || !machineOn}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-blue-600"
-                />
-                <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 font-medium px-1">
-                  <span>0%</span>
-                  <span>25%</span>
-                  <span>50%</span>
-                  <span>75%</span>
-                  <span>100%</span>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Automatic Control Settings */}
-        {unit.watergeneration && (
-          <Card className="bg-white dark:bg-gray-900 mt-6">
-            <CardHeader>
-              <div className="flex items-center space-x-3">
-                <Settings className="h-5 w-5 text-purple-500" />
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  Automatic Control Settings
-                </h3>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    Auto Switch On (Water Level &lt; 75%)
-                  </h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Automatically turn on water production when tank level falls
-                    below 75%
-                  </p>
-                </div>
-                {hasControlPermission ? (
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <div className="cursor-pointer">
-                        <Switch
-                          checked={autoSwitchEnabled}
-                          onCheckedChange={() => {}}
-                          disabled={!isConnected || !machineOn}
-                          aria-label="Auto Switch"
-                        />
-                      </div>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>
-                          Are you absolutely sure?
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This action will{" "}
-                          {autoSwitchEnabled ? "disable" : "enable"} automatic
-                          control. This could affect water levels if not
-                          monitored.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => {
-                            handleAutoSwitchToggle(!autoSwitchEnabled);
-                          }}
-                        >
-                          Continue
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                ) : (
-                  <Switch
-                    checked={autoSwitchEnabled}
-                    disabled={true}
-                    aria-label="Auto Switch"
-                  />
-                )}
-              </div>
-              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="text-center p-3 bg-blue-50 dark:bg-gray-800 rounded-lg">
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                      Current Level
-                    </p>
-                    <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                      {unit?.awgWaterLevel ?? unit?.water_level !== undefined ? `${unit.awgWaterLevel ?? unit.water_level} L` : "N/A"}
-                    </p>
-                  </div>
-                  <div className="text-center p-3 bg-blue-50 dark:bg-gray-800 rounded-lg">
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                      Trigger Level
-                    </p>
-                    <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                      75%
-                    </p>
-                  </div>
-                  <div className="text-center p-3 bg-blue-50 dark:bg-gray-800 rounded-lg">
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                      Auto Status
-                    </p>
-                    <p
-                      className={`text-lg font-semibold ${autoSwitchEnabled ? "text-green-600 dark:text-green-400" : "text-gray-500"}`}
-                    >
-                      {autoSwitchEnabled ? "Enabled" : "Disabled"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Live Video Feed */}
-        <Card className="bg-white dark:bg-gray-900 mt-6">
-          <CardHeader>
-            <div className="flex items-center space-x-3">
-              <Camera className="h-5 w-5 text-purple-500" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                Live Video Feed
-              </h3>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex-1">
-                <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  Camera Selection
-                </h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Choose which camera to view
-                </p>
-              </div>
-              <select
-                value={selectedCamera}
-                onChange={(e) => handleCameraChange(e.target.value)}
-                className="w-full sm:w-auto min-w-0 sm:min-w-[200px] px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                disabled={!isConnected}
-                data-testid="select-camera"
-              >
-                {availableCameras.map((camera) => (
-                  <option key={camera.id} value={camera.id}>
-                    {camera.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-                <div className="flex-1">
-                  <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    Video Feed Status
-                  </h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {videoFeedActive
-                      ? "Live feed is active"
-                      : "Click to start live feed"}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={toggleVideoFeed}
-                  disabled={!isConnected}
-                  className={`w-full sm:w-auto px-4 py-2 rounded-lg transition-colors flex items-center justify-center space-x-2 ${
-                    videoFeedActive
-                      ? "bg-red-600 hover:bg-red-700 text-white"
-                      : "bg-green-600 hover:bg-green-700 text-white"
-                  } disabled:opacity-50 disabled:cursor-not-allowed`}
-                  data-testid="button-video-feed-toggle"
-                >
-                  <Monitor className="h-4 w-4" />
-                  <span>{videoFeedActive ? "Stop Feed" : "Start Feed"}</span>
-                </button>
-              </div>
-
-              {/* Video Feed Display Area */}
-              <div
-                ref={setVideoContainerRef}
-                className={`relative bg-gray-400 dark:bg-gray-800 rounded-lg aspect-video flex items-center justify-center border-2 border-dashed border-gray-400 dark:border-gray-600 overflow-hidden ${
-                  isFullscreen ? "bg-black" : ""
-                } ${isRefreshing ? "animate-pulse" : ""}`}
-              >
-                {videoFeedActive && isConnected ? (
-                  <div className="text-center">
-                    {isRefreshing ? (
-                      <>
-                        <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-500 border-t-transparent mx-auto mb-3" />
-                        <p className="text-white dark:text-purple-400 font-medium">
-                          Refreshing feed...
-                        </p>
-                        <p className="text-sm text-white dark:text-gray-400 mt-1">
-                          Fetching latest frame
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <div className="animate-pulse">
-                          <Camera className="h-12 w-12 text-white dark:text-purple-400 mx-auto mb-2" />
-                          <p className="text-white dark:text-purple-400 font-medium">
-                            Live Feed Active
-                          </p>
-                          <p className="text-sm text-white dark:text-gray-400 mt-1">
-                            {availableCameras.find(
-                              (cam) => cam.id === selectedCamera
-                            )?.name || selectedCamera}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={handleRefreshFeed}
-                          disabled={isRefreshing}
-                          className="mt-4 px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg transition-colors flex items-center space-x-1 mx-auto disabled:opacity-50 disabled:cursor-not-allowed"
-                          data-testid="button-refresh-feed"
-                        >
-                          <RotateCcw className={`h-3 w-3 ${isRefreshing ? "animate-spin" : ""}`} />
-                          <span>{isRefreshing ? "Refreshing..." : "Refresh"}</span>
-                        </button>
-                      </>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-center">
-                    <Camera className="h-12 w-12 text-gray-700 dark:text-gray-500 mx-auto mb-2" />
-                    <p className="text-gray-700 dark:text-gray-500 font-medium">
-                      {!isConnected ? "No Connection" : "Video Feed Inactive"}
-                    </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                      {!isConnected
-                        ? "Unable to connect to cameras"
-                        : "Click 'Start Feed' to begin"}
-                    </p>
-                  </div>
-                )}
-
-                <button
-                  type="button"
-                  onClick={toggleFullscreen}
-                  className="absolute top-3 right-3 p-2 bg-white/80 dark:bg-gray-800/80 hover:bg-white/90 dark:hover:bg-gray-700/90 text-gray-700 dark:text-gray-200 rounded-lg transition-all duration-200 backdrop-blur-sm shadow-md border border-gray-200/50 dark:border-gray-600/50"
-                  title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
-                >
-                  {isFullscreen ? (
-                    <Minimize className="h-4 w-4" />
-                  ) : (
-                    <Maximize className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
-
-              {/* Camera Info */}
-              <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="text-center p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                    Resolution
-                  </p>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                    1080p
-                  </p>
-                </div>
-                <div className="text-center p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                    Frame Rate
-                  </p>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                    30 FPS
-                  </p>
-                </div>
-                <div className="text-center p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                    Connection
-                  </p>
-                  <p
-                    className={`text-sm font-semibold ${isConnected ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
-                  >
-                    {isConnected ? "Connected" : "Offline"}
-                  </p>
-                </div>
-                <div className="text-center p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                    Status
-                  </p>
-                  <p
-                    className={`text-sm font-semibold ${videoFeedActive ? "text-purple-600 dark:text-purple-400" : "text-gray-500"}`}
-                  >
-                    {videoFeedActive ? "Active" : "Inactive"}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Control History */}
-        <Card className="bg-white dark:bg-gray-900 mt-6">
-          <CardHeader>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              Recent Control Actions
-            </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Last {actionHistory.length} actions recorded
-            </p>
-          </CardHeader>
-          <CardContent>
-            {actionHistory.length === 0 ? (
-              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                <p>No actions recorded yet</p>
-                <p className="text-sm mt-1">Actions will appear here when you use the controls above</p>
-              </div>
-            ) : (
-              <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
-                {actionHistory.map((item) => (
-                  <div 
-                    key={item.id} 
-                    className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                        {item.action}
-                      </p>
-                      <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
-                        {item.description}
-                      </p>
-                    </div>
-                    <span className="text-xs text-gray-500 dark:text-gray-400 ml-4 whitespace-nowrap">
-                      {item.timestamp}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      </fieldset>
+      {pending && <p role="status">Waiting for acknowledgement…</p>}
+      {error && (
+        <p role="alert" className="text-red-600">
+          {error}
+        </p>
+      )}
+      {message && <p role="status">{message}</p>}
+      {unit.cameraUrl ? (
+        <a
+          href={unit.cameraUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="underline"
+        >
+          Open configured camera feed
+        </a>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          No camera feed configured for this unit.
+        </p>
+      )}
     </div>
   );
-};
-
-export default RemoteControl;
+}
+export default function RemoteControl({ unit: suppliedUnit }) {
+  const { units, getUnit, loading, error } = useUnits();
+  const [id, setId] = useState("");
+  const unit = getUnit(suppliedUnit?.id ?? id);
+  return (
+    <div className="p-6 space-y-5">
+      {!suppliedUnit && (
+        <>
+          <h1 className="text-2xl font-bold">Remote Control</h1>
+          <label>
+            Select unit{" "}
+            <select
+              aria-label="Select unit"
+              value={unit?.id || ""}
+              onChange={(e) => setId(e.target.value)}
+              className="border rounded p-2"
+            >
+              <option value="">Choose a unit…</option>
+              {units.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </>
+      )}
+      {loading && <p role="status">Loading units…</p>}
+      {error && <p role="alert">{error}</p>}
+      {unit ? (
+        <Controls key={unit.id} unit={unit} />
+      ) : (
+        <p>Select a unit in your portfolio to view controls.</p>
+      )}
+    </div>
+  );
+}

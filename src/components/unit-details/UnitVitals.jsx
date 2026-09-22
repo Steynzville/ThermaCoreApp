@@ -14,18 +14,20 @@ import {
   Wrench,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { useSettings } from "../../context/SettingsContext";
 import { useUnits } from "../../context/UnitContext";
-import { useRealtimeMetrics } from "../../hooks/useRealtimeData";
+import { useAuth } from "../../context/AuthContext";
 import { Card, CardContent, CardHeader } from "../ui/card";
 
 const GPS_PLACEHOLDER = "Not set";
 
 const UnitVitals = ({ unit }) => {
+  const { permissions } = useAuth();
   const { formatTemperature } = useSettings();
-  const { updateUnitName, updateUnitLocation, updateUnitGPS } = useUnits();
+  const { updateUnitName, updateUnitLocation, updateUnitGPS, isDemoMode } =
+    useUnits();
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingLocation, setIsEditingLocation] = useState(false);
   const [isEditingGPS, setIsEditingGPS] = useState(false);
@@ -38,62 +40,7 @@ const UnitVitals = ({ unit }) => {
     unit.status === "decommissioned" ||
     unit.status === "maintenance";
 
-  const { metrics } = useRealtimeMetrics({ useMockData: true });
-  const [liveUnit, setLiveUnit] = useState(unit);
-
-  useEffect(() => {
-    setLiveUnit(unit);
-  }, [unit]);
-
-  useEffect(() => {
-    if (metrics && !isOffline) {
-      setLiveUnit((prev) => {
-        const rawTemp = parseFloat(metrics.temperature?.current);
-        const tempBase = Number.isNaN(rawTemp) ? 70 : rawTemp;
-
-        const rawPressure = parseFloat(metrics.pressure?.current);
-        const pressureBase = Number.isNaN(rawPressure) ? 100 : rawPressure;
-
-        const flowInBase = parseFloat(
-          metrics.flow_rate_inlet?.current ??
-            metrics.flowRateInlet?.current ??
-            45.5,
-        );
-        const flowOutBase = parseFloat(
-          metrics.flow_rate_outlet?.current ??
-            metrics.flowRateOutlet?.current ??
-            42.1,
-        );
-
-        const idOffset = (prev.id?.toString() || "").charCodeAt(0) || 0;
-
-        return {
-          ...prev,
-          tempIn:
-            prev.tempIn !== undefined || prev.temp_in !== undefined
-              ? +(tempBase * 0.3 + 10 + (idOffset % 5)).toFixed(1)
-              : undefined,
-          tempOutChill:
-            prev.tempOutChill !== undefined || prev.temp_out !== undefined
-              ? +(tempBase * 0.15 + 5 + (idOffset % 4)).toFixed(1)
-              : undefined,
-          tempOutHot:
-            prev.tempOutHot !== undefined
-              ? +(tempBase * 0.2 + 30 + (idOffset % 6)).toFixed(1)
-              : undefined,
-          differentialPressure:
-            prev.differentialPressure !== undefined
-              ? +((pressureBase / 25) + 1 + (idOffset % 3)).toFixed(1)
-              : prev.pressure !== undefined
-              ? +(pressureBase * 1.5 + (idOffset % 20)).toFixed(1)
-              : undefined,
-          flowRateInlet: +(flowInBase + (idOffset % 5) - 2.5).toFixed(1),
-          flowRateOutChill: +(flowInBase + (idOffset % 5) - 2.5).toFixed(1),
-          flowRateOutHot: +(flowOutBase + (idOffset % 3) - 1.5).toFixed(1),
-        };
-      });
-    }
-  }, [metrics, isOffline]);
+  const liveUnit = unit;
 
   const getFlowRateColor = (val) => {
     if (val === undefined || val === null || isOffline)
@@ -122,40 +69,57 @@ const UnitVitals = ({ unit }) => {
   };
 
   // Values resolution
-  const ambientTemp = liveUnit.ambientTemp ?? unit.ambientTemp ?? liveUnit.temp_outside ?? unit.temp_outside;
-  const ambientHumidity = liveUnit.ambientHumidity ?? unit.ambientHumidity ?? liveUnit.humidity ?? unit.humidity;
-  const tempIn = liveUnit.tempIn ?? unit.tempIn ?? liveUnit.temp_in ?? unit.temp_in;
-  const tempOutChill = liveUnit.tempOutChill ?? unit.tempOutChill ?? liveUnit.temp_out ?? unit.temp_out;
+  const ambientTemp =
+    liveUnit.ambientTemp ??
+    unit.ambientTemp ??
+    liveUnit.temp_outside ??
+    unit.temp_outside;
+  const ambientHumidity =
+    liveUnit.ambientHumidity ??
+    unit.ambientHumidity ??
+    liveUnit.humidity ??
+    unit.humidity;
+  const tempIn =
+    liveUnit.tempIn ?? unit.tempIn ?? liveUnit.temp_in ?? unit.temp_in;
+  const tempOutChill =
+    liveUnit.tempOutChill ??
+    unit.tempOutChill ??
+    liveUnit.temp_out ??
+    unit.temp_out;
   const tempOutHot = liveUnit.tempOutHot ?? unit.tempOutHot;
-  const awgWaterLevel = liveUnit.awgWaterLevel ?? unit.awgWaterLevel ?? liveUnit.water_level ?? unit.water_level;
-  const diffPressure = liveUnit.differentialPressure ?? unit.differentialPressure ?? liveUnit.pressure ?? unit.pressure;
+  const awgWaterLevel =
+    liveUnit.awgWaterLevel ??
+    unit.awgWaterLevel ??
+    liveUnit.water_level ??
+    unit.water_level;
+  const diffPressure =
+    liveUnit.differentialPressure ??
+    unit.differentialPressure ??
+    liveUnit.pressure ??
+    unit.pressure;
 
   // Battery: use nullish coalescing to handle both undefined and null
-  const batteryVal =
-    liveUnit.batteryVoltage ??
-    unit.batteryVoltage ??
-    liveUnit.battery_level ??
-    unit.battery_level;
+  const batteryVal = liveUnit.batteryVoltage ?? unit.batteryVoltage ?? null;
 
-  // Flow rates: inlet, chill (75% of inlet), hot (25% of inlet)
+  // Flow rates are separate measurements; missing channels stay unavailable.
   const flowRateInlet =
     liveUnit.flowRateInlet ??
     unit.flowRateInlet ??
     liveUnit.flow_rate_inlet ??
     unit.flowRate ??
-    42.5;
+    null;
 
   const flowRateOutChill =
     liveUnit.flowRateOutChill ??
     unit.flowRateOutChill ??
-    liveUnit.flow_rate_inlet ??
-    +(flowRateInlet * 0.75).toFixed(1);
+    liveUnit.flow_rate_out_chill ??
+    null;
 
   const flowRateOutHot =
     liveUnit.flowRateOutHot ??
     unit.flowRateOutHot ??
     liveUnit.flow_rate_outlet ??
-    +(flowRateInlet * 0.25).toFixed(1);
+    null;
 
   const handleSaveName = async () => {
     try {
@@ -210,7 +174,7 @@ const UnitVitals = ({ unit }) => {
     if (val === undefined || val === null) return "N/A";
     const num = parseFloat(val);
     if (Number.isNaN(num)) return "N/A";
-    return num <= 20 ? `${num} bar` : `${num} kPa`;
+    return `${num} bar`;
   };
 
   // Battery format: since we now use batteryVoltage explicitly, it's always voltage
@@ -272,7 +236,7 @@ const UnitVitals = ({ unit }) => {
                     AWG Water Level
                   </p>
                   <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                    {awgWaterLevel !== undefined ? `${awgWaterLevel} L` : "N/A"}
+                    {awgWaterLevel != null ? `${awgWaterLevel} L` : "N/A"}
                   </p>
                 </div>
               </div>
@@ -286,7 +250,7 @@ const UnitVitals = ({ unit }) => {
                   Ambient Temp
                 </p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  {ambientTemp !== undefined ? formatTemperature(ambientTemp) : "N/A"}
+                  {ambientTemp != null ? formatTemperature(ambientTemp) : "N/A"}
                 </p>
               </div>
             </div>
@@ -299,7 +263,7 @@ const UnitVitals = ({ unit }) => {
                   Ambient Humidity
                 </p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  {ambientHumidity !== undefined ? `${ambientHumidity}%` : "N/A"}
+                  {ambientHumidity != null ? `${ambientHumidity}%` : "N/A"}
                 </p>
               </div>
             </div>
@@ -312,7 +276,7 @@ const UnitVitals = ({ unit }) => {
                   Temp In
                 </p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  {isOffline || tempIn === undefined
+                  {isOffline || tempIn == null
                     ? "N/A"
                     : formatTemperature(tempIn)}
                 </p>
@@ -327,7 +291,7 @@ const UnitVitals = ({ unit }) => {
                   Temp Out - Chill
                 </p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  {isOffline || tempOutChill === undefined
+                  {isOffline || tempOutChill == null
                     ? "N/A"
                     : formatTemperature(tempOutChill)}
                 </p>
@@ -342,7 +306,7 @@ const UnitVitals = ({ unit }) => {
                   Temp Out - Hot
                 </p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  {isOffline || tempOutHot === undefined
+                  {isOffline || tempOutHot == null
                     ? "N/A"
                     : formatTemperature(tempOutHot)}
                 </p>
@@ -354,7 +318,7 @@ const UnitVitals = ({ unit }) => {
               <Gauge className="h-5 w-5 text-purple-500" />
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Differential Pressure
+                  Pressure
                 </p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   {isOffline ? "N/A" : formatDiffPressure(diffPressure)}
@@ -394,7 +358,9 @@ const UnitVitals = ({ unit }) => {
                   Flow Rate Inlet
                 </p>
                 <p className={`text-lg ${getFlowRateColor(flowRateInlet)}`}>
-                  {isOffline ? "N/A" : `${flowRateInlet} L/min`}
+                  {isOffline || flowRateInlet == null
+                    ? "N/A"
+                    : `${flowRateInlet} L/min`}
                 </p>
               </div>
             </div>
@@ -407,7 +373,9 @@ const UnitVitals = ({ unit }) => {
                   Flow Rate Out - Chill
                 </p>
                 <p className={`text-lg ${getFlowRateColor(flowRateOutChill)}`}>
-                  {isOffline ? "N/A" : `${flowRateOutChill} L/min`}
+                  {isOffline || flowRateOutChill == null
+                    ? "N/A"
+                    : `${flowRateOutChill} L/min`}
                 </p>
               </div>
             </div>
@@ -420,7 +388,9 @@ const UnitVitals = ({ unit }) => {
                   Flow Rate Out - Hot
                 </p>
                 <p className={`text-lg ${getFlowRateColor(flowRateOutHot)}`}>
-                  {isOffline ? "N/A" : `${flowRateOutHot} L/min`}
+                  {isOffline || flowRateOutHot == null
+                    ? "N/A"
+                    : `${flowRateOutHot} L/min`}
                 </p>
               </div>
             </div>
@@ -476,6 +446,7 @@ const UnitVitals = ({ unit }) => {
                     </p>
                     <button
                       type="button"
+                      disabled={!permissions?.canManageUnits}
                       onClick={() => setIsEditingName(true)}
                       className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                     >
@@ -548,6 +519,7 @@ const UnitVitals = ({ unit }) => {
                       </p>
                       <button
                         type="button"
+                        disabled={!permissions?.canManageUnits}
                         onClick={() => setIsEditingLocation(true)}
                         className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                       >
@@ -587,6 +559,9 @@ const UnitVitals = ({ unit }) => {
                           <button
                             type="button"
                             onClick={() => setIsEditingGPS(true)}
+                            disabled={
+                              !permissions?.canManageUnits || !isDemoMode
+                            }
                             className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                             title="Edit GPS coordinates"
                           >

@@ -22,6 +22,7 @@ describe("statusMonitor Service", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    global.fetch = vi.fn();
     time = 0;
     mockPerformanceNow.mockImplementation(() => {
       time += 100;
@@ -31,7 +32,10 @@ describe("statusMonitor Service", () => {
     global.fetch.mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => ({ status: "operational", database: { connected: true } }),
+      json: async () => ({
+        status: "operational",
+        database: { connected: true },
+      }),
     });
   });
 
@@ -42,7 +46,10 @@ describe("statusMonitor Service", () => {
     global.fetch.mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => ({ status: "operational", database: { connected: true } }),
+      json: async () => ({
+        status: "operational",
+        database: { connected: true },
+      }),
     });
   });
 

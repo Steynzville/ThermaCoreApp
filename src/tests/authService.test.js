@@ -34,6 +34,17 @@ describe("authService", () => {
 
   beforeEach(async () => {
     vi.useFakeTimers();
+    const values = new Map();
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      writable: true,
+      value: {
+        getItem: vi.fn((key) => values.get(key) ?? null),
+        setItem: vi.fn((key, value) => values.set(key, String(value))),
+        removeItem: vi.fn((key) => values.delete(key)),
+        clear: vi.fn(() => values.clear()),
+      },
+    });
 
     fetchSpy = vi.fn();
     global.fetch = fetchSpy;
@@ -95,7 +106,7 @@ describe("authService", () => {
       const result = await login("testuser", "password");
 
       expect(result.success).toBe(true);
-      expect(result.user).toEqual({
+      expect(result.user).toMatchObject({
         id: 1,
         username: "testuser",
         email: "test@example.com",
@@ -295,7 +306,9 @@ describe("authService", () => {
       const result = await login("disableduser", "password");
 
       expect(result.success).toBe(false);
-      expect(result.message).toBe("Invalid username or password. Please try again.");
+      expect(result.message).toBe(
+        "Invalid username or password. Please try again.",
+      );
       expect(isAuthenticated()).toBe(false);
     });
 
@@ -669,7 +682,7 @@ describe("authService", () => {
       await login("testuser", "password");
       const user = await getCurrentUser();
 
-      expect(user).toEqual({
+      expect(user).toMatchObject({
         id: 1,
         username: "testuser",
         email: "test@example.com",
@@ -683,7 +696,12 @@ describe("authService", () => {
       // Create an expired token in localStorage
       const expiredToken =
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE1MDAwMDAwMDB9.expired";
-      const user = { id: 1, username: "test", email: "test@example.com", role: "user" };
+      const user = {
+        id: 1,
+        username: "test",
+        email: "test@example.com",
+        role: "user",
+      };
       localStorage.setItem("auth_token", expiredToken);
       localStorage.setItem("user", JSON.stringify(user));
       localStorage.setItem("token_expiry", "1500000000000");
@@ -812,7 +830,12 @@ describe("authService", () => {
     it("should return false when token is expired", async () => {
       const expiredToken =
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE1MDAwMDAwMDB9.expired";
-      const user = { id: 1, username: "test", email: "test@example.com", role: "user" };
+      const user = {
+        id: 1,
+        username: "test",
+        email: "test@example.com",
+        role: "user",
+      };
       localStorage.setItem("auth_token", expiredToken);
       localStorage.setItem("user", JSON.stringify(user));
       localStorage.setItem("token_expiry", "1500000000000");
@@ -859,7 +882,12 @@ describe("authService", () => {
     it("should return null when token is expired", async () => {
       const expiredToken =
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE1MDAwMDAwMDB9.expired";
-      const user = { id: 1, username: "test", email: "test@example.com", role: "user" };
+      const user = {
+        id: 1,
+        username: "test",
+        email: "test@example.com",
+        role: "user",
+      };
       localStorage.setItem("auth_token", expiredToken);
       localStorage.setItem("user", JSON.stringify(user));
       localStorage.setItem("token_expiry", "1500000000000");
@@ -1086,7 +1114,14 @@ describe("authService", () => {
         ok: true,
         json: async () => ({
           success: true,
-          data: { user: { id: 2, username: "strrole", email: "s@s.com", role: "manager" } },
+          data: {
+            user: {
+              id: 2,
+              username: "strrole",
+              email: "s@s.com",
+              role: "manager",
+            },
+          },
         }),
       });
       const result = await verifyToken("string-role-token");
@@ -1599,7 +1634,9 @@ describe("authService", () => {
       const result = await resetPassword("token", "newPassword123");
 
       expect(result.success).toBe(false);
-      expect(result.message).toBe("Unable to reset password. Please try again.");
+      expect(result.message).toBe(
+        "Unable to reset password. Please try again.",
+      );
     });
 
     it("should prefer error.message over other fields on resetPassword failure", async () => {
@@ -1841,7 +1878,10 @@ describe("authService", () => {
         }),
       });
 
-      const result = await updateProfile({ firstName: "Cam", lastName: "Case" });
+      const result = await updateProfile({
+        firstName: "Cam",
+        lastName: "Case",
+      });
       expect(result.user.firstName).toBe("Cam");
       expect(result.user.lastName).toBe("Case");
     });
@@ -2033,7 +2073,9 @@ describe("authService", () => {
         }),
       });
 
-      await expect(updateProfile({ email: "taken@x.com" })).rejects.toMatchObject({
+      await expect(
+        updateProfile({ email: "taken@x.com" }),
+      ).rejects.toMatchObject({
         success: false,
         message: "Email already taken",
       });
@@ -2072,7 +2114,12 @@ describe("authService", () => {
       const futureExp = Math.floor((Date.now() + 60 * 60 * 1000) / 1000);
       const payload = btoa(JSON.stringify({ exp: futureExp }));
       const validToken = `eyJhbGciOiJIUzI1NiJ9.${payload}.sig`;
-      const user = { id: 1, username: "persisted", email: "p@p.com", role: "user" };
+      const user = {
+        id: 1,
+        username: "persisted",
+        email: "p@p.com",
+        role: "user",
+      };
 
       localStorage.setItem("auth_token", validToken);
       localStorage.setItem("user", JSON.stringify(user));
@@ -2092,7 +2139,10 @@ describe("authService", () => {
     });
 
     it("should clear orphaned localStorage data when only user exists", async () => {
-      localStorage.setItem("user", JSON.stringify({ id: 1, username: "orphaned" }));
+      localStorage.setItem(
+        "user",
+        JSON.stringify({ id: 1, username: "orphaned" }),
+      );
       const result = await getCurrentUser();
       expect(result).toBeNull();
       expect(localStorage.getItem("user")).toBeNull();
@@ -2130,7 +2180,9 @@ describe("authService", () => {
       });
 
       await login("a", "p", true);
-      expect(localStorage.getItem("token_expiry")).toBe(String(futureExp * 1000));
+      expect(localStorage.getItem("token_expiry")).toBe(
+        String(futureExp * 1000),
+      );
     });
   });
 

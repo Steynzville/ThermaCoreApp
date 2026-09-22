@@ -27,6 +27,7 @@ def register_all_blueprints(app: Any, logger: logging.Logger) -> tuple[int, int]
     blueprints = [
         ("app.routes.auth", "auth_bp", "auth"),
         ("app.routes.units", "units_bp", "units"),
+        ("app.routes.portfolio", "portfolio_bp", "portfolio"),
         ("app.routes.users", "users_bp", "users"),
         ("app.routes.tenants", "tenants_bp", "tenants"),
         ("app.routes.scada", "scada_bp", "scada"),

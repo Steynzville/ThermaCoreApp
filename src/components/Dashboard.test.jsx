@@ -1,3 +1,13 @@
+import { units as fixtureUnits } from "../data/mockUnits";
+vi.mock("../context/UnitContext", () => ({
+  useUnits: () => ({
+    units: fixtureUnits,
+    alerts: [],
+    records: [],
+    loading: false,
+    scopeKey: "test",
+  }),
+}));
 import { fireEvent, render, screen, act } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
 
@@ -231,7 +241,7 @@ describe("Dashboard", () => {
       result = render(
         <TestWrapper userRole={userRole}>
           <Dashboard />
-        </TestWrapper>
+        </TestWrapper>,
       );
     });
     return result;
@@ -272,7 +282,9 @@ describe("Dashboard", () => {
 
     it("should render notification bell", () => {
       renderComponent();
-      expect(screen.getAllByTestId("notification-bell").length).toBeGreaterThan(0);
+      expect(screen.getAllByTestId("notification-bell").length).toBeGreaterThan(
+        0,
+      );
     });
 
     it("should render view toggle", () => {
@@ -284,12 +296,24 @@ describe("Dashboard", () => {
   describe("Status Dials", () => {
     it("should render all 6 status dials", () => {
       renderComponent();
-      expect(screen.getAllByTestId("status-dial-total-units").length).toBeGreaterThan(0);
-      expect(screen.getAllByTestId("status-dial-online").length).toBeGreaterThan(0);
-      expect(screen.getAllByTestId("status-dial-offline").length).toBeGreaterThan(0);
-      expect(screen.getAllByTestId("status-dial-maintenance").length).toBeGreaterThan(0);
-      expect(screen.getAllByTestId("status-dial-alerts").length).toBeGreaterThan(0);
-      expect(screen.getAllByTestId("status-dial-alarms").length).toBeGreaterThan(0);
+      expect(
+        screen.getAllByTestId("status-dial-total-units").length,
+      ).toBeGreaterThan(0);
+      expect(
+        screen.getAllByTestId("status-dial-online").length,
+      ).toBeGreaterThan(0);
+      expect(
+        screen.getAllByTestId("status-dial-offline").length,
+      ).toBeGreaterThan(0);
+      expect(
+        screen.getAllByTestId("status-dial-maintenance").length,
+      ).toBeGreaterThan(0);
+      expect(
+        screen.getAllByTestId("status-dial-alerts").length,
+      ).toBeGreaterThan(0);
+      expect(
+        screen.getAllByTestId("status-dial-alarms").length,
+      ).toBeGreaterThan(0);
     });
 
     it("should navigate when Total Units dial is clicked", () => {
@@ -313,13 +337,17 @@ describe("Dashboard", () => {
     it("should not render quick actions for regular users", () => {
       mockTenantValue.canSwitchTenants = false;
       const { container } = renderComponent("user");
-      const quickActionElements = container.querySelectorAll('[data-testid^="quick-action-"]');
+      const quickActionElements = container.querySelectorAll(
+        '[data-testid^="quick-action-"]',
+      );
       expect(quickActionElements.length).toBe(0);
     });
 
     it("should render quick actions for admin users", () => {
       const { container } = renderComponent("admin");
-      const quickActionElements = container.querySelectorAll('[data-testid^="quick-action-"]');
+      const quickActionElements = container.querySelectorAll(
+        '[data-testid^="quick-action-"]',
+      );
       expect(quickActionElements.length).toBeGreaterThan(0);
     });
 
@@ -328,7 +356,9 @@ describe("Dashboard", () => {
       mockTenantValue.isAdmin = false;
       mockTenantValue.isClientAdmin = true;
       const { container } = renderComponent("client_admin");
-      const quickActionElements = container.querySelectorAll('[data-testid^="quick-action-"]');
+      const quickActionElements = container.querySelectorAll(
+        '[data-testid^="quick-action-"]',
+      );
       expect(quickActionElements.length).toBe(0);
     });
   });
@@ -367,7 +397,9 @@ describe("Dashboard", () => {
       window.localStorage.getItem = vi.fn(() => null);
       mockTenantValue.canSwitchTenants = false;
       renderComponent(null);
-      expect(screen.getAllByText("Dashboard Overview").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Dashboard Overview").length).toBeGreaterThan(
+        0,
+      );
     });
 
     it("should handle multiple quick action clicks", () => {
@@ -384,9 +416,11 @@ describe("Dashboard", () => {
 
     it("should render UnitSummary with correct alert and alarm counts", () => {
       const { container } = renderComponent("admin");
-      const unitSummary = container.querySelector('[data-testid="unit-summary"]');
+      const unitSummary = container.querySelector(
+        '[data-testid="unit-summary"]',
+      );
       expect(unitSummary).toBeInTheDocument();
-      
+
       expect(screen.getByText(/Total:/)).toBeInTheDocument();
       expect(screen.getByText(/Online:/)).toBeInTheDocument();
       expect(screen.getByText(/Alerts:/)).toBeInTheDocument();
@@ -426,12 +460,16 @@ describe("Dashboard", () => {
       renderComponent("user");
       expect(mockNavigate).not.toHaveBeenCalled();
       // Should still render dashboard
-      expect(screen.getAllByText("Dashboard Overview").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Dashboard Overview").length).toBeGreaterThan(
+        0,
+      );
     });
 
     it("should show tenant switcher for admin with tenant selected", () => {
       renderComponent("admin");
-      expect(screen.getAllByTestId("tenant-switcher").length).toBeGreaterThan(0);
+      expect(screen.getAllByTestId("tenant-switcher").length).toBeGreaterThan(
+        0,
+      );
       expect(screen.getByText("Managing: Tenant One")).toBeInTheDocument();
     });
 
@@ -440,7 +478,9 @@ describe("Dashboard", () => {
       mockTenantValue.isClientAdmin = true;
       mockTenantValue.canSwitchTenants = true;
       renderComponent("client_admin");
-      expect(screen.getAllByTestId("tenant-switcher").length).toBeGreaterThan(0);
+      expect(screen.getAllByTestId("tenant-switcher").length).toBeGreaterThan(
+        0,
+      );
       expect(screen.getByText("Managing: Tenant One")).toBeInTheDocument();
     });
 
@@ -450,11 +490,11 @@ describe("Dashboard", () => {
       expect(screen.queryAllByTestId("tenant-switcher").length).toBe(0);
     });
 
-    it("should show 6 units when a specific tenant is selected", () => {
+    it("renders exactly the units supplied by the scoped context", () => {
       mockTenantValue.currentTenant = { id: "1", name: "Tenant One" };
       renderComponent("admin");
       const totalUnitsDial = screen.getByTestId("status-dial-total-units");
-      expect(totalUnitsDial).toHaveTextContent("6");
+      expect(totalUnitsDial).toHaveTextContent("20");
     });
 
     it("should show all 20 units when All Tenants is selected", () => {
@@ -464,29 +504,38 @@ describe("Dashboard", () => {
       expect(totalUnitsDial).toHaveTextContent("20");
     });
 
-    it("should show 6 units for regular users", () => {
+    it("does not arbitrarily slice the scoped context for regular users", () => {
       mockTenantValue.canSwitchTenants = false;
       renderComponent("user");
       const totalUnitsDial = screen.getByTestId("status-dial-total-units");
-      expect(totalUnitsDial).toHaveTextContent("6");
+      expect(totalUnitsDial).toHaveTextContent("20");
     });
 
     // ✅ FIX: Test query param fallback with proper mocking
     it("should accept tenant_selected query param when sessionStorage is not set", () => {
       sessionStorage.removeItem("tenant_selected");
       // Set location mock to include the query param
-      mockLocationValue = { pathname: "/dashboard", search: "?tenant_selected=true" };
+      mockLocationValue = {
+        pathname: "/dashboard",
+        search: "?tenant_selected=true",
+      };
       // ✅ FIX: Set currentTenant to null for "All Tenants" view (20 units)
       mockTenantValue.currentTenant = null;
 
-      let result;
+      let _result;
       act(() => {
-        result = render(
+        _result = render(
           <ThemeProvider>
-            <AuthProvider value={{ ...mockAuthValue, userRole: "admin", user: { ...mockAuthValue.user, role: "admin" } }}>
+            <AuthProvider
+              value={{
+                ...mockAuthValue,
+                userRole: "admin",
+                user: { ...mockAuthValue.user, role: "admin" },
+              }}
+            >
               <Dashboard />
             </AuthProvider>
-          </ThemeProvider>
+          </ThemeProvider>,
         );
       });
 

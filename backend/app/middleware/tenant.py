@@ -12,7 +12,7 @@ from functools import wraps
 
 from flask import g, request
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
-from sqlalchemy import inspect
+from sqlalchemy import inspect, false
 
 from app.models import Tenant, User
 
@@ -135,6 +135,18 @@ def tenant_filter(query, model):
     Returns:
         Filtered query object
     """
+    selected = request.args.get("tenant_id")
+    if selected is not None:
+        try:
+            requested_tenant = int(selected)
+        except (TypeError, ValueError):
+            return query.filter(false())
+        if requested_tenant <= 0 or not validate_tenant_access(requested_tenant):
+            return query.filter(false())
+        column = Tenant.id if model == Tenant else getattr(model, "tenant_id", None)
+        if column is not None:
+            query = query.filter(column == requested_tenant)
+
     # 1. System Admin (cross-tenant access)
     if is_admin_with_cross_tenant_access():
         tenant_id = request.args.get("tenant_id", type=int)
@@ -215,7 +227,7 @@ def validate_tenant_access(tenant_id):
         return tenant is not None and tenant.client_id == client_id
 
     current_tenant = get_current_tenant_id()
-    return current_tenant == tenant_id
+    return current_tenant is not None and current_tenant == tenant_id
 
 
 def get_tenant_from_request():
@@ -263,7 +275,7 @@ def ensure_tenant_isolation(obj):
         return True
 
     current_tenant = get_current_tenant_id()
-    if obj.tenant_id != current_tenant:
+    if current_tenant is None or obj.tenant_id != current_tenant:
         raise ValueError(
             f"Access denied: Object belongs to tenant {obj.tenant_id}, "
             f"but current user is in tenant {current_tenant}",
