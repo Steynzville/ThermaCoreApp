@@ -1,7 +1,7 @@
 """Dedicated service for shared sensor data storage and processing logic."""
 
 import math
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy.exc import IntegrityError
@@ -113,6 +113,19 @@ class DataStorageService:
                 )
                 return False
 
+            timestamp = data["timestamp"]
+            if isinstance(timestamp, str):
+                try:
+                    timestamp = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                except ValueError:
+                    logger.error("Invalid sensor timestamp format")
+                    return False
+            data["timestamp"] = (
+                timestamp.replace(tzinfo=timezone.utc)
+                if timestamp.tzinfo is None
+                else timestamp.astimezone(timezone.utc)
+            )
+
             # Set default quality if not provided
             if "quality" not in data or not data["quality"]:
                 data["quality"] = "GOOD"
@@ -141,6 +154,7 @@ class DataStorageService:
             )
 
             db.session.add(reading)
+            self._update_current_reading(sensor, reading)
             db.session.commit()
 
             logger.debug(
@@ -156,6 +170,46 @@ class DataStorageService:
             db.session.rollback()
             logger.exception("Error storing sensor data")
             return False
+
+    def _update_current_reading(self, sensor, reading):
+        """Update the API snapshot from good, newest measurements in known units."""
+        if reading.quality != "GOOD":
+            return
+        latest = (
+            SensorReading.query.filter_by(sensor_id=sensor.id)
+            .order_by(SensorReading.timestamp.desc())
+            .first()
+        )
+
+        def as_utc(value):
+            return (
+                value.replace(tzinfo=timezone.utc)
+                if value.tzinfo is None
+                else value.astimezone(timezone.utc)
+            )
+
+        if latest and as_utc(latest.timestamp) > as_utc(reading.timestamp):
+            return
+        mapping = {
+            "power": ("current_power", {"kw": 1, "w": 0.001}),
+            "current_power": ("current_power", {"kw": 1, "w": 0.001}),
+            "parasitic_load": ("parasitic_load", {"kw": 1, "w": 0.001}),
+            "user_load": ("user_load", {"kw": 1, "w": 0.001}),
+            "temperature": ("temp_in", {"°c": 1}),
+            "temp_in": ("temp_in", {"°c": 1}),
+            "temp_out": ("temp_out", {"°c": 1}),
+            "temp_outside": ("temp_outside", {"°c": 1}),
+            "humidity": ("humidity", {"%": 1}),
+            "pressure": ("pressure", {"hpa": 1, "bar": 1000, "kpa": 10, "pa": 0.01}),
+            "water_level": ("water_level", {"l": 1}),
+            "battery_level": ("battery_level", {"%": 1}),
+        }
+        column, scales = mapping.get(sensor.sensor_type, (None, {}))
+        scale = scales.get((sensor.unit_of_measurement or "").lower())
+        if column and scale is not None:
+            unit = db.session.get(Unit, sensor.unit_id)
+            setattr(unit, column, reading.value * scale)
+            unit.updated_at = reading.timestamp
 
     def find_or_create_sensor(self, unit_id: str, sensor_type: str) -> Sensor | None:
         """Find existing sensor or create new one with race condition handling.
@@ -193,6 +247,17 @@ class DataStorageService:
                 "pressure": "bar",
                 "flow_rate": "L/min",
                 "power": "kW",
+                "current_power": "kW",
+                "parasitic_load": "kW",
+                "user_load": "kW",
+                "export_power": "kW",
+                "water_flow": "L/h",
+                "temp_in": "°C",
+                "temp_out": "°C",
+                "temp_outside": "°C",
+                "humidity": "%",
+                "water_level": "L",
+                "battery_level": "%",
                 "status": "status",
             }
 

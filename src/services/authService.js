@@ -23,10 +23,10 @@ const TOKEN_EXPIRY_BUFFER_MS = 5 * 60 * 1000;
  */
 const isTokenValid = (token) => {
   if (!token) return false;
-  
+
   try {
     // Try to decode JWT to check expiry
-    const parts = token.split('.');
+    const parts = token.split(".");
     if (parts.length === 3) {
       const payload = JSON.parse(atob(parts[1]));
       if (payload.exp) {
@@ -50,11 +50,11 @@ const isTokenValid = (token) => {
 const setAuthState = (user, token, keepMeSignedIn = false) => {
   currentUser = user;
   authToken = token;
-  
+
   // Store token expiry if we can decode it
   if (token) {
     try {
-      const parts = token.split('.');
+      const parts = token.split(".");
       if (parts.length === 3) {
         const payload = JSON.parse(atob(parts[1]));
         if (payload.exp) {
@@ -200,14 +200,20 @@ export const login = async (username, password, keepMeSignedIn = false) => {
       role: role,
       firstName: userData.first_name || userData.firstName || "",
       lastName: userData.last_name || userData.lastName || "",
+      tenant_id:
+        userData.tenant_id ?? userData.tenantId ?? userData.tenant?.id ?? null,
+      client_id: userData.client_id ?? userData.clientId ?? null,
+      tenant: userData.tenant ?? null,
+      is_approved: userData.is_approved ?? userData.is_active ?? false,
     };
 
     // Store auth state - try multiple token locations (4 levels of fallback)
-    const token = result.data?.access_token ||
-                  result.data?.token ||
-                  result.access_token ||
-                  result.token ||
-                  null;
+    const token =
+      result.data?.access_token ||
+      result.data?.token ||
+      result.access_token ||
+      result.token ||
+      null;
 
     setAuthState(user, token, keepMeSignedIn);
 
@@ -393,7 +399,10 @@ export const register = async (userData) => {
     // Handle failure with proper error shaping
     throw {
       success: false,
-      message: result?.error?.message || result?.message || "Registration failed. Please try again.",
+      message:
+        result?.error?.message ||
+        result?.message ||
+        "Registration failed. Please try again.",
     };
   } catch (error) {
     if (error?.success === false) {
@@ -423,7 +432,8 @@ export const selfRegister = async (userData) => {
 
     return {
       success: true,
-      message: response.message || "Registration submitted. Awaiting admin approval.",
+      message:
+        response.message || "Registration submitted. Awaiting admin approval.",
       data: response.data,
     };
   } catch (error) {
@@ -449,11 +459,14 @@ export const selfRegister = async (userData) => {
  */
 export const requestPasswordReset = async (email) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/auth/request-password-reset`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/v1/auth/request-password-reset`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      },
+    );
 
     const result = await response.json();
 
@@ -495,7 +508,8 @@ export const resetPassword = async (token, newPassword) => {
     const result = await response.json();
 
     if (response.ok && result.success) {
-      const message = result.data?.message || result.message || "Password reset successfully";
+      const message =
+        result.data?.message || result.message || "Password reset successfully";
 
       return {
         success: true,
@@ -574,8 +588,10 @@ export const updateProfile = async (profileData) => {
       // Merge role as well so server-side role changes are applied
       currentUser = {
         ...currentUser,
-        firstName: userData.first_name || userData.firstName || currentUser.firstName,
-        lastName: userData.last_name || userData.lastName || currentUser.lastName,
+        firstName:
+          userData.first_name || userData.firstName || currentUser.firstName,
+        lastName:
+          userData.last_name || userData.lastName || currentUser.lastName,
         email: userData.email || currentUser.email,
         role: userData.role?.name || userData.role || currentUser.role,
       };
@@ -596,7 +612,10 @@ export const updateProfile = async (profileData) => {
 
     throw {
       success: false,
-      message: result?.error?.message || result?.message || "Unable to update profile. Please try again.",
+      message:
+        result?.error?.message ||
+        result?.message ||
+        "Unable to update profile. Please try again.",
     };
   } catch (error) {
     if (error?.success === false) {

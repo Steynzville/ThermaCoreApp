@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { ChevronRight, Clock, TrendingDown, TrendingUp } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 // Enhanced Status Dial Component with animations
 const EnhancedStatusDial = ({
@@ -22,13 +22,7 @@ const EnhancedStatusDial = ({
   const clampedCount = Math.max(0, count);
 
   // Compute last updated timestamp
-  const computedLastUpdated = useMemo(() => {
-    if (lastUpdated) return lastUpdated;
-
-    // Generate a realistic timestamp based on current time
-    const minutesAgo = Math.floor(Math.random() * 10) + 1; // 1-10 minutes ago
-    return `${minutesAgo}m ago`;
-  }, [lastUpdated]);
+  const computedLastUpdated = lastUpdated || "Current snapshot";
 
   // Use clampedPercentage for animation
   useEffect(() => {
@@ -50,12 +44,16 @@ const EnhancedStatusDial = ({
   const getContainerClasses = () => {
     const colorClasses = {
       blue: "text-blue-600 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950 dark:border-blue-800",
-      green: "text-green-600 bg-green-50 border-green-200 dark:text-green-400 dark:bg-green-950 dark:border-green-800",
+      green:
+        "text-green-600 bg-green-50 border-green-200 dark:text-green-400 dark:bg-green-950 dark:border-green-800",
       red: "text-red-600 bg-red-50 border-red-200 dark:text-red-400 dark:bg-red-950 dark:border-red-800",
-      orange: "text-orange-600 bg-orange-50 border-orange-200 dark:text-orange-400 dark:bg-orange-950 dark:border-orange-800",
-      yellow: "text-yellow-600 bg-yellow-50 border-yellow-200 dark:text-yellow-400 dark:bg-yellow-950 dark:border-yellow-800",
+      orange:
+        "text-orange-600 bg-orange-50 border-orange-200 dark:text-orange-400 dark:bg-orange-950 dark:border-orange-800",
+      yellow:
+        "text-yellow-600 bg-yellow-50 border-yellow-200 dark:text-yellow-400 dark:bg-yellow-950 dark:border-yellow-800",
       // Changed bg-blue-50 to bg-gray-50 for black variant
-      black: "text-gray-600 bg-gray-50 border-gray-200 dark:text-gray-300 dark:bg-gray-900 dark:border-gray-700",
+      black:
+        "text-gray-600 bg-gray-50 border-gray-200 dark:text-gray-300 dark:bg-gray-900 dark:border-gray-700",
     };
 
     // NOTE: Unrecognized colors fall back to blue theme (intentional default)
@@ -72,8 +70,10 @@ const EnhancedStatusDial = ({
       blue: "text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-950",
       green: "text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-950",
       red: "text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-950",
-      orange: "text-orange-600 bg-orange-50 dark:text-orange-400 dark:bg-orange-950",
-      yellow: "text-yellow-600 bg-yellow-50 dark:text-yellow-400 dark:bg-yellow-950",
+      orange:
+        "text-orange-600 bg-orange-50 dark:text-orange-400 dark:bg-orange-950",
+      yellow:
+        "text-yellow-600 bg-yellow-50 dark:text-yellow-400 dark:bg-yellow-950",
       // Changed bg-blue-50 to bg-gray-50 for black variant
       black: "text-gray-600 bg-gray-50 dark:text-gray-300 dark:bg-gray-900",
     };
@@ -162,8 +162,12 @@ const EnhancedStatusDial = ({
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
             >
-              {trend > 0 && <TrendingUp className="h-3 w-3" aria-label="trending up" />}
-              {trend < 0 && <TrendingDown className="h-3 w-3" aria-label="trending down" />}
+              {trend > 0 && (
+                <TrendingUp className="h-3 w-3" aria-label="trending up" />
+              )}
+              {trend < 0 && (
+                <TrendingDown className="h-3 w-3" aria-label="trending down" />
+              )}
               {trend === 0 && <span className="h-3 w-3">—</span>}
               <span>{Math.abs(trend)}%</span>
             </motion.div>

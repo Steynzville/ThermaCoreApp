@@ -147,6 +147,7 @@ class UserSchema(SQLAlchemyAutoSchema):
     password = fields.Str(load_only=True, validate=validate.Length(min=6))
     role = fields.Nested(RoleSchema, dump_only=True)
     client_id = fields.Int(dump_only=True, allow_none=True)
+    tenant_id = fields.Int(dump_only=True, allow_none=True)
     is_active = fields.Method("get_is_active")
 
     def get_is_active(self, obj):
@@ -228,6 +229,13 @@ class LoginSchema(Schema):
 class UnitSchema(SQLAlchemyAutoSchema):
     """Unit serialization schema."""
 
+    controls = fields.Method("get_controls")
+
+    def get_controls(self, obj):
+        from app.services.unit_controls import acknowledged_controls
+
+        return acknowledged_controls(obj.id)
+
     class Meta:
         model = Unit
         load_instance = True
@@ -239,6 +247,15 @@ class UnitSchema(SQLAlchemyAutoSchema):
     install_date = DateTimeField(required=True)
     status = EnumField(UnitStatusEnum)
     health_status = EnumField(HealthStatusEnum)
+    tenant_id = fields.Int(dump_only=True, allow_none=True)
+    client_id = fields.Method("get_client_id")
+    tenant_name = fields.Method("get_tenant_name")
+
+    def get_client_id(self, obj):
+        return obj.tenant.client_id if obj.tenant else None
+
+    def get_tenant_name(self, obj):
+        return obj.tenant.name if obj.tenant else None
 
     # Override timestamp fields
     created_at = DateTimeField(dump_only=True)

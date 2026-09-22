@@ -1,5 +1,11 @@
+import { useUnits } from "../context/UnitContext";
 import { useState } from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import {
+  useLocation,
+  useNavigate,
+  useSearchParams,
+  useParams,
+} from "react-router-dom";
 
 import RemoteControl from "./RemoteControl";
 import UnitAlertsTab from "./unit-details/UnitAlertsTab";
@@ -11,49 +17,16 @@ import UnitStatusHeader from "./unit-details/UnitStatusHeader";
 import UnitTabNavigation from "./unit-details/UnitTabNavigation";
 
 const UnitDetails = ({ className }) => {
-  const location = useLocation();
+  const _location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const rawUnit = location.state?.unit;
-  const unit = rawUnit
-    ? {
-        ...rawUnit,
-        batteryLife: rawUnit.batteryLife || 85,
-        tankCapacity: rawUnit.tankCapacity || 800,
-      }
-    : null;
+  const { id } = useParams();
+  const { getUnit, loading } = useUnits();
+  const unit = getUnit(id);
   const initialTab = searchParams.get("tab") || "overview";
   const [activeTab, setActiveTab] = useState(initialTab);
 
-  const alertsHistory = [
-    {
-      id: 1,
-      timestamp: "2024-08-05 14:45",
-      type: "warning",
-      title: "Low Water Level",
-      message: "Water level dropped below 80%",
-      resolved: true,
-      resolvedAt: "2024-08-05 15:30",
-    },
-    {
-      id: 2,
-      timestamp: "2024-07-28 11:20",
-      type: "info",
-      title: "Maintenance Reminder",
-      message: "Scheduled maintenance due in 7 days",
-      resolved: true,
-      resolvedAt: "2024-08-06 09:30",
-    },
-    {
-      id: 3,
-      timestamp: "2024-07-15 08:15",
-      type: "critical",
-      title: "High Temperature Alert",
-      message: "Temperature exceeded safe operating limits",
-      resolved: true,
-      resolvedAt: "2024-07-15 09:45",
-    },
-  ];
+  const alertsHistory = unit?.alerts || [];
 
   const getAlertTypeColor = (type) => {
     switch (type) {
@@ -118,6 +91,12 @@ const UnitDetails = ({ className }) => {
     }
   };
 
+  if (loading)
+    return (
+      <p role="status" className="p-6">
+        Loading unit...
+      </p>
+    );
   if (!unit) {
     return (
       <div className="min-h-screen bg-blue-50 dark:bg-gray-950 p-6 flex items-center justify-center">
@@ -171,20 +150,7 @@ const UnitDetails = ({ className }) => {
         )}
 
         {activeTab === "remote-control" && unit && (
-          <RemoteControl
-            unit={{
-              ...unit,
-              waterProductionOn: unit.watergeneration,
-              autoSwitchEnabled: true,
-            }}
-            details={{
-              controls: {
-                machinePower: true,
-                waterProduction: true,
-                automaticControl: true,
-              },
-            }}
-          />
+          <RemoteControl unit={unit} />
         )}
       </div>
     </div>

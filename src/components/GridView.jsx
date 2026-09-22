@@ -97,16 +97,14 @@ const GridView = ({ className }) => {
       ...unit,
       serialNumber: unit.serialNumber || `TC-2024-${unit.id}`,
       powerOutput: unit.currentPower,
-      alerts: unit.hasAlert ? ["System alert detected"] : [],
-      currentAlert:
-        unit.hasAlert && alertsData[unit.id] ? alertsData[unit.id] : null,
-      // Use static dates instead of random generation
-      installDate: `2024-0${(parseInt(unit.id.slice(-1), 10) % 9) + 1}-15`,
-      lastMaintenance: `2024-0${(parseInt(unit.id.slice(-1), 10) % 9) + 2}-10`,
+      alerts: unit.alerts || [],
+      currentAlert: unit.alerts?.[0] || null,
+      installDate: unit.installDate,
+      lastMaintenance: unit.lastMaintenance,
     }));
 
     // Admins can see all units, others see limited units
-    return permissions?.canViewAllUnits ? mappedUnits : mappedUnits.slice(0, 6);
+    return mappedUnits;
   }, [contextUnits, permissions, alertsData]);
 
   useEffect(() => {

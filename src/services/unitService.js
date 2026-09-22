@@ -1,235 +1,165 @@
-// Unit Service Module
-// This service encapsulates all unit-related data operations
-// Currently uses mock data but designed to be easily swappable with actual API calls
+import { demoUnits, demoHistory } from "../data/demoPortfolio";
+import { isDemoMode } from "../config/runtime";
+import { apiGetJson, apiPostJson, apiFetch } from "../utils/apiFetch";
+import { getAuthToken } from "../utils/authToken";
+import { normalizeUnit, unitAlerts } from "../utils/portfolio";
 
-import { units as mockUnits } from "../data/mockUnits";
-import {
-  mockEventHistory,
-  mockRecentActions,
-  mockUnitDetails,
-} from "../mockData";
+let demoOverrides = new Map();
+let demoActions = [];
+export function resetDemoState() {
+  demoOverrides = new Map();
+  demoActions = [];
+}
+const snapshot = (u) =>
+  normalizeUnit({ ...u, ...demoOverrides.get(String(u.id)) });
 
-/**
- * Get all units
- * @returns {Array} Array of unit objects
- */
-export const getAllUnits = () => {
-  // In the future, this would be replaced with:
-  // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  // return fetch(`${API_BASE_URL}/units`).then(response => response.json());
-  return Promise.resolve(mockUnits);
-};
-
-/**
- * Get a specific unit by ID
- * @param {number|string} unitId - The unit ID
- * @returns {Object|null} Unit object or null if not found
- */
-export const getUnitById = (unitId) => {
-  // In the future, this would be replaced with:
-  // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  // return fetch(`${API_BASE_URL}/units/${unitId}`).then(response => response.json());
-  const unit = mockUnits.find((u) => u.id === unitId);
-  return Promise.resolve(unit || null);
-};
-
-/**
- * Get detailed information for a specific unit
- * @param {number|string} unitId - The unit ID
- * @returns {Object|null} Unit details object or null if not found
- */
-export const getUnitDetails = (unitId) => {
-  // In the future, this would be replaced with:
-  // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  // return fetch(`${API_BASE_URL}/units/${unitId}/details`).then(response => response.json());
-  const details = mockUnitDetails[unitId];
-  return Promise.resolve(details || null);
-};
-
-/**
- * Get alerts for a specific unit
- * @param {number|string} unitId - The unit ID
- * @returns {Array} Array of alert objects
- */
-export const getUnitAlerts = (unitId) => {
-  // In the future, this would be replaced with:
-  // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  // return fetch(`${API_BASE_URL}/units/${unitId}/alerts`).then(response => response.json());
-  const details = mockUnitDetails[unitId];
-  return Promise.resolve(details?.alerts || []);
-};
-
-/**
- * Get all alerts from all units
- * @returns {Array} Array of all alert objects
- */
-export const getAllAlerts = () => {
-  // In the future, this would be replaced with:
-  // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  // return fetch(`${API_BASE_URL}/alerts`).then(response => response.json());
-  const allAlerts = Object.values(mockUnitDetails).flatMap(
-    (details) => details.alerts || [],
+export async function getAllUnits() {
+  let remote = [];
+  if (getAuthToken()) {
+    try {
+      let page = 1,
+        more = true;
+      while (more) {
+        const response = await apiGetJson(
+          `/api/v1/units?per_page=100&page=${page++}`,
+        );
+        remote.push(...(response.data || []));
+        more = response.has_next === true;
+      }
+    } catch (error) {
+      if (!isDemoMode || /Unauthorized|permission/i.test(error.message))
+        throw error;
+    }
+  } else if (!isDemoMode) throw new Error("Sign in to load your portfolio.");
+  const map = new Map(
+    isDemoMode ? demoUnits.map((u) => [u.id, snapshot(u)]) : [],
   );
-  return Promise.resolve(allAlerts);
-};
+  for (const raw of remote) {
+    const base = isDemoMode
+      ? demoUnits.find((u) => u.id === String(raw.id))
+      : null;
+    // Server ownership, identity and readings win. Fixtures only fill demo-only fields.
+    const normalized = normalizeUnit(raw);
+    map.set(
+      normalized.id,
+      snapshot({
+        ...base,
+        ...normalized,
+        alerts: raw.alerts ?? unitAlerts([normalized]),
+        source: isDemoMode ? "demo" : "live",
+      }),
+    );
+  }
+  return [...map.values()];
+}
 
-/**
- * Search units by name or location
- * @param {string} query - Search query
- * @returns {Array} Array of matching unit objects
- */
-export const searchUnits = (query) => {
-  // In the future, this would be replaced with:
-  // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  // return fetch(`${API_BASE_URL}/units/search?q=${encodeURIComponent(query)}`).then(response => response.json());
-  if (!query) return Promise.resolve([]);
-
-  const filtered = mockUnits.filter(
-    (unit) =>
-      unit.name.toLowerCase().includes(query.toLowerCase()) ||
-      unit.location.toLowerCase().includes(query.toLowerCase()),
+export async function getPortfolioHistory(units, range = {}) {
+  if (isDemoMode) return demoHistory(units);
+  const result = await apiGetJson(
+    `/api/v1/portfolio/history?${new URLSearchParams(range)}`,
   );
-  return Promise.resolve(filtered);
-};
+  return result.data || [];
+}
 
-/**
- * Update unit control settings
- * @param {number|string} unitId - The unit ID
- * @param {Object} controls - Control settings object
- * @returns {Object} Updated unit details
- */
-export const updateUnitControls = (unitId, controls) => {
-  // In the future, this would be replaced with:
-  // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  // return fetch(`${API_BASE_URL}/units/${unitId}/controls`, {
-  //   method: 'PUT',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify(controls)
-  // }).then(response => response.json());
+export async function updateUnitFields(unit, changes) {
+  if (isDemoMode) {
+    demoOverrides.set(String(unit.id), {
+      ...demoOverrides.get(String(unit.id)),
+      ...changes,
+    });
+    return snapshot({ ...unit, ...changes });
+  }
+  const body = { ...changes };
+  const aliases = {
+    serialNumber: "serial_number",
+    lastMaintenance: "last_maintenance",
+  };
+  for (const [key, target] of Object.entries(aliases))
+    if (key in body) {
+      body[target] = body[key];
+      delete body[key];
+    }
+  const response = await apiFetch(
+    `/api/v1/units/${encodeURIComponent(unit.id)}`,
+    { method: "PUT", body: JSON.stringify(body) },
+  );
+  return normalizeUnit(await response.json());
+}
 
-  // For now, update the mock data
-  if (mockUnitDetails[unitId]) {
-    mockUnitDetails[unitId].controls = {
-      ...mockUnitDetails[unitId].controls,
-      ...controls,
+export async function controlUnit(unit, changes) {
+  if (isDemoMode) {
+    const updated = { ...unit, ...changes };
+    if (changes.machinePower !== undefined) {
+      updated.status = changes.machinePower ? "online" : "offline";
+      updated.currentPower = changes.machinePower
+        ? unit.demoNominalPower || unit.currentPower || 0
+        : 0;
+      if (!changes.machinePower) {
+        updated.waterProductionOn = false;
+        updated.autoSwitchEnabled = false;
+        updated.powerSetpoint = 0;
+      }
+    }
+    demoOverrides.set(String(unit.id), updated);
+    const action = {
+      id: `action-${Date.now()}`,
+      unitId: unit.id,
+      unitName: unit.name,
+      timestamp: new Date().toISOString(),
+      description: `Control updated: ${Object.keys(changes).join(", ")}`,
+      type: "control",
     };
+    demoActions = [action, ...demoActions];
+    return { unit: normalizeUnit(updated), action };
   }
-  return Promise.resolve(mockUnitDetails[unitId]);
-};
-
-/**
- * Get event history
- * @returns {Array} Array of event history objects
- */
-export const getEventHistory = () => {
-  // In the future, this would be replaced with:
-  // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  // return fetch(`${API_BASE_URL}/events/history`).then(response => response.json());
-  return Promise.resolve(mockEventHistory);
-};
-
-/**
- * Get recent control actions
- * @returns {Array} Array of recent action objects
- */
-export const getRecentActions = () => {
-  // In the future, this would be replaced with:
-  // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  // return fetch(`${API_BASE_URL}/actions/recent`).then(response => response.json());
-  return Promise.resolve(mockRecentActions);
-};
-
-/**
- * Get units with alarms (Critical status)
- * @returns {Array} Array of units with alarms
- */
-export const getUnitsWithAlarms = () => {
-  // In the future, this would be replaced with:
-  // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  // return fetch(`${API_BASE_URL}/units/alarms`).then(response => response.json());
-  const unitsWithAlarms = mockUnits.filter((unit) => unit.hasAlarm);
-  return Promise.resolve(unitsWithAlarms);
-};
-
-/**
- * Get units with alerts (Warning status)
- * @returns {Array} Array of units with alerts
- */
-export const getUnitsWithAlerts = () => {
-  // In the future, this would be replaced with:
-  // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  // return fetch(`${API_BASE_URL}/units/alerts`).then(response => response.json());
-  const unitsWithAlerts = mockUnits.filter(
-    (unit) => unit.alerts && unit.alerts.length > 0,
+  const response = await apiPostJson(
+    `/api/v1/remote-control/units/${encodeURIComponent(unit.id)}/controls`,
+    changes,
   );
-  return Promise.resolve(unitsWithAlerts);
+  return { unit: normalizeUnit(response.unit), action: response.action };
+}
+
+export const getUnitById = async (id) =>
+  (await getAllUnits()).find((u) => u.id === String(id)) || null;
+export const getUnitDetails = getUnitById;
+export const getUnitAlerts = async (id) =>
+  (await getUnitById(id))?.alerts || [];
+export const getAllAlerts = async () => unitAlerts(await getAllUnits());
+export const searchUnits = async (query) =>
+  query
+    ? (await getAllUnits()).filter((u) =>
+        `${u.name} ${u.location}`.toLowerCase().includes(query.toLowerCase()),
+      )
+    : [];
+export const getEventHistory = async () => [...demoActions];
+export const getRecentActions = getEventHistory;
+export const getUnitsWithAlarms = async () =>
+  (await getAllUnits()).filter((u) => u.hasAlarm);
+export const getUnitsWithAlerts = async () =>
+  (await getAllUnits()).filter((u) => u.hasAlert);
+export const updateUnitName = async (id, name) =>
+  updateUnitFields(await getUnitById(id), { name });
+export const updateUnitLocation = async (id, location) =>
+  updateUnitFields(await getUnitById(id), { location });
+export const updateUnitGPS = async (id, gpsCoordinates) => {
+  if (!isDemoMode)
+    throw new Error("GPS editing is not supported by this unit API.");
+  return updateUnitFields(await getUnitById(id), { gpsCoordinates });
 };
+export const updateUnitControls = async (id, controls) =>
+  controlUnit(await getUnitById(id), controls);
 
-/**
- * Update unit name
- * @param {number|string} unitId - The unit ID
- * @param {string} newName - The new unit name
- * @returns {Object} Updated unit object
- */
-export const updateUnitName = (unitId, newName) => {
-  // In the future, this would be replaced with:
-  // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  // return fetch(`${API_BASE_URL}/units/${unitId}/name`, {
-  //   method: 'PUT',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify({ name: newName })
-  // }).then(response => response.json());
-
-  // For now, update the mock data
-  const unit = mockUnits.find((u) => u.id === unitId);
-  if (unit) {
-    unit.name = newName;
+export async function getPortfolioEvents(range = {}) {
+  if (isDemoMode) return [...demoActions];
+  const events = [];
+  let page = 1,
+    more = true;
+  while (more) {
+    const result = await apiGetJson(
+      `/api/v1/portfolio/events?${new URLSearchParams({ ...range, page: page++ })}`,
+    );
+    events.push(...(result.data || []));
+    more = result.has_next === true;
   }
-  return Promise.resolve(unit);
-};
-
-/**
- * Update unit location
- * @param {number|string} unitId - The unit ID
- * @param {string} newLocation - The new unit location
- * @returns {Object} Updated unit object
- */
-export const updateUnitLocation = (unitId, newLocation) => {
-  // In the future, this would be replaced with:
-  // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  // return fetch(`${API_BASE_URL}/units/${unitId}/location`, {
-  //   method: 'PUT',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify({ location: newLocation })
-  // }).then(response => response.json());
-
-  // For now, update the mock data
-  const unit = mockUnits.find((u) => u.id === unitId);
-  if (unit) {
-    unit.location = newLocation;
-  }
-  return Promise.resolve(unit);
-};
-
-/**
- * Update unit GPS coordinates
- * @param {number|string} unitId - The unit ID
- * @param {string} newGPS - The new GPS coordinates
- * @returns {Object} Updated unit object
- */
-export const updateUnitGPS = (unitId, newGPS) => {
-  // In the future, this would be replaced with:
-  // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  // return fetch(`${API_BASE_URL}/units/${unitId}/gps`, {
-  //   method: 'PUT',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify({ gpsCoordinates: newGPS })
-  // }).then(response => response.json());
-
-  // For now, update the mock data
-  const unit = mockUnits.find((u) => u.id === unitId);
-  if (unit) {
-    unit.gpsCoordinates = newGPS;
-  }
-  return Promise.resolve(unit);
-};
+  return events;
+}

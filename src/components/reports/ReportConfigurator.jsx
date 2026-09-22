@@ -1,889 +1,255 @@
-import { format } from "date-fns";
+import { useEffect, useRef, useState } from "react";
+import { useUnits } from "../../context/UnitContext";
+import { useAnalytics } from "../../context/AnalyticsContext";
 import {
-  Activity,
-  AlertTriangle,
-  Building,
-  Calendar,
-  Clock,
-  DollarSign,
-  Download,
-  FileText,
-  Filter,
-  Pause,
-  Shield,
-  Users,
-  Wrench,
-} from "lucide-react";
-import { useState } from "react";
-
-import { useSettings } from "../../context/SettingsContext";
-import { cn } from "../../lib/utils";
-import playSound from "../../utils/audioPlayer";
+  createReport,
+  REPORT_FORMATS,
+  REPORT_SECTIONS,
+} from "../../utils/reportModel";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "../ui/alert-dialog";
+  getPortfolioHistory,
+  getPortfolioEvents,
+} from "../../services/unitService";
+import { dateKey } from "../../utils/portfolioAnalytics";
+import {
+  generateReportFile,
+  downloadReportFile,
+} from "../../services/reportExportService";
 import { Button } from "../ui/button";
-import { Calendar as CalendarComponent } from "../ui/calendar";
-import { Card, CardContent, CardHeader } from "../ui/card";
-import { Checkbox } from "../ui/checkbox";
-import { Label } from "../ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import PortfolioAssumptions from "../PortfolioAssumptions";
 
-// Map of allowed sections to their display labels, icons, and colors
-const SECTION_CONFIG = {
-  energyProduction: {
-    label: "Energy Production",
-    icon: Activity,
-    color: "text-blue-600",
-  },
-  waterProduction: {
-    label: "Water Production",
-    icon: Activity,
-    color: "text-cyan-600",
-  },
-  temperaturePressure: {
-    label: "Temperature & Pressure",
-    icon: Activity,
-    color: "text-orange-600",
-  },
-  alertsAlarms: {
-    label: "Alerts & Alarms",
-    icon: AlertTriangle,
-    color: "text-orange-600",
-  },
-  maintenance: {
-    label: "Maintenance",
-    icon: Wrench,
-    color: "text-gray-600",
-  },
-  performance: {
-    label: "Performance",
-    icon: Activity,
-    color: "text-green-600",
-  },
-  compliance: {
-    label: "Compliance",
-    icon: Shield,
-    color: "text-purple-600",
-  },
-  salesRevenue: {
-    label: "Sales and Revenue",
-    icon: DollarSign,
-    color: "text-green-600",
-  },
-};
-
-const ReportConfigurator = ({
-  allowedScopes = ["single", "multiple", "client", "master"],
-  allowedSections = [
-    "energyProduction",
-    "waterProduction",
-    "temperaturePressure",
-    "alertsAlarms",
-    "maintenance",
-    "performance",
-    "compliance",
-    "salesRevenue",
-  ],
-  availableReportTypes = [],
-  availableUnits = [],
-  dataProviders = {
-    units: [],
-    clients: [],
-    reportTypes: [],
-  },
-  onGenerate,
-  showScheduling = true,
-  showPauseScheduled = true,
-  className = "",
-}) => {
-  const { settings } = useSettings();
-  const [selectedReports, setSelectedReports] = useState([]);
-  const [reportConfig, setReportConfig] = useState({
-    reportTypes: [],
-    scope: "",
-    dateRange: {
-      startDate: "",
-      endDate: "",
-    },
-    selectedUnits: [],
-    selectedClients: [],
-    reportSections: Object.fromEntries(allowedSections.map((s) => [s, false])),
-  });
-
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [scheduledDate, setScheduledDate] = useState();
-  const [isSchedulePopoverOpen, setIsSchedulePopoverOpen] = useState(false);
-  const [scheduledReportMessage, setScheduledReportMessage] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
-
-  // Remove unused filteredReportTypes - it was dead code
-  // The cards render from availableReportTypes directly
-
-  // Filter report sections based on allowed sections
-  const filteredReportSections = Object.fromEntries(
-    Object.entries(reportConfig.reportSections).filter(([key]) =>
-      allowedSections.includes(key),
-    ),
-  );
-
-  const handleReportTypeChange = (reportTypeId) => {
-    const selectedType = availableReportTypes.find(
-      (type) => type.id === reportTypeId,
-    );
-    if (!selectedType) return;
-
-    const isCurrentlySelected = selectedReports.includes(reportTypeId);
-    let newSelectedReports;
-
-    if (isCurrentlySelected) {
-      newSelectedReports = selectedReports.filter((id) => id !== reportTypeId);
-    } else {
-      newSelectedReports = [...selectedReports, reportTypeId];
-    }
-
-    setSelectedReports(newSelectedReports);
-
-    const newSections = { ...reportConfig.reportSections };
-
-    // Reset all sections first
-    Object.keys(newSections).forEach((key) => {
-      newSections[key] = false;
-    });
-
-    // Enable sections for all selected report types
-    newSelectedReports.forEach((reportId) => {
-      const reportType = availableReportTypes.find(
-        (type) => type.id === reportId,
-      );
-      if (reportType) {
-        if (reportId === "all-sections") {
-          allowedSections.forEach((section) => {
-            newSections[section] = true;
-          });
-        } else {
-          reportType.sections.forEach((section) => {
-            if (allowedSections.includes(section)) {
-              newSections[section] = true;
-            }
-          });
-        }
-      }
-    });
-
-    setReportConfig((prev) => ({
-      ...prev,
-      reportTypes: newSelectedReports,
-      reportSections: newSections,
-    }));
-  };
-
-  const handleScopeChange = (scope) => {
-    setReportConfig((prev) => ({
-      ...prev,
-      scope,
-      selectedUnits: [],
-      selectedClients: [],
-    }));
-    // Clear any previous error when scope changes
-    setErrorMessage("");
-  };
-
-  const handleUnitSelection = (unitId, checked) => {
-    setReportConfig((prev) => ({
-      ...prev,
-      selectedUnits: checked
-        ? [...prev.selectedUnits, unitId]
-        : prev.selectedUnits.filter((id) => id !== unitId),
-    }));
-  };
-
-  const handleClientSelection = (clientId, checked) => {
-    // BUG FIX: Guard against undefined clients
-    if (!dataProviders.clients) return;
-    
-    setReportConfig((prev) => ({
-      ...prev,
-      selectedClients: checked
-        ? [...prev.selectedClients, clientId]
-        : prev.selectedClients.filter((id) => id !== clientId),
-    }));
-  };
-
-  const handleSelectAllSections = (checked) => {
-    const newSections = {};
-    allowedSections.forEach((key) => {
-      newSections[key] = checked;
-    });
-    Object.keys(reportConfig.reportSections).forEach((key) => {
-      if (!allowedSections.includes(key)) {
-        newSections[key] = false;
-      }
-    });
-
-    setReportConfig((prev) => ({
-      ...prev,
-      reportSections: newSections,
-      reportTypes: checked ? ["all-sections"] : [],
-    }));
-
-    setSelectedReports(checked ? ["all-sections"] : []);
-  };
-
-  const handleSectionToggle = (section, checked) => {
-    if (!allowedSections.includes(section)) return;
-
-    const newSections = {
-      ...reportConfig.reportSections,
-      [section]: checked,
+export default function ReportConfigurator() {
+  const portfolio = useUnits();
+  const { units, loading, error, scopeLabel } = portfolio;
+  const { assumptions, setAssumptions } = useAnalytics();
+  const [selectedIds, setSelectedIds] = useState(units.map((u) => u.id));
+  const today = dateKey();
+  const [from, setFrom] = useState(`${today.slice(0, 7)}-01`);
+  const [to, setTo] = useState(today);
+  const [format, setFormat] = useState("");
+  const [sections, setSections] = useState(Object.keys(REPORT_SECTIONS));
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const [failure, setFailure] = useState("");
+  const [editing, setEditing] = useState(null);
+  const [subsetCost, setSubsetCost] = useState(0);
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
     };
-
-    const selectedSectionKeys = Object.keys(newSections).filter(
-      (key) => newSections[key],
-    );
-
-    let matchingReportTypes = [];
-
-    if (selectedSectionKeys.length > 0) {
-      const exactMatches = availableReportTypes.filter(
-        (type) =>
-          type.sections.length === selectedSectionKeys.length &&
-          type.sections.every((section) =>
-            selectedSectionKeys.includes(section),
-          ) &&
-          type.id !== "all-sections",
-      );
-
-      const subsetMatches = availableReportTypes.filter(
-        (type) =>
-          type.sections.every((section) =>
-            selectedSectionKeys.includes(section),
-          ) && type.id !== "all-sections",
-      );
-
-      matchingReportTypes = [
-        ...exactMatches.map((t) => t.id),
-        ...subsetMatches.map((t) => t.id),
-      ];
-      matchingReportTypes = [...new Set(matchingReportTypes)];
-    }
-
-    setReportConfig((prev) => ({
-      ...prev,
-      reportSections: newSections,
-      reportTypes: matchingReportTypes,
-    }));
-
-    setSelectedReports(matchingReportTypes);
-  };
-
-  const handleGenerateReport = async () => {
-    playSound("sky.mp3", settings.soundEnabled, settings.volume);
-
-    setIsGenerating(true);
-    setErrorMessage("");
-
+  }, []);
+  const toggle = (list, key) =>
+    list.includes(key) ? list.filter((item) => item !== key) : [...list, key];
+  const subset = selectedIds.length !== units.length;
+  const generate = async (event) => {
+    event.preventDefault();
+    setFailure("");
+    setMessage("");
+    setBusy(true);
     try {
-      if (onGenerate) {
-        await onGenerate(reportConfig);
-      } else {
-        await new Promise((resolve) => setTimeout(resolve, 3000));
-        alert("Report generated successfully! Download will begin shortly.");
+      const reportAssumptions = subset
+        ? {
+            ...assumptions,
+            operatingCostMonthly: subsetCost,
+            initialInvestment: units
+              .filter((u) => selectedIds.includes(u.id))
+              .reduce((sum, u) => sum + (Number(u.capitalCost) || 0), 0),
+          }
+        : assumptions;
+      let history = { records: portfolio.records, events: portfolio.events };
+      if (!portfolio.isDemoMode) {
+        const [records, events] = await Promise.all([
+          getPortfolioHistory(units, { from, to }),
+          getPortfolioEvents({ from, to }),
+        ]);
+        history = { records, events };
       }
-    } catch (error) {
-      // BUG FIX: Don't re-throw from an onClick handler — it causes
-      // unhandled promise rejections. Show the error to the user and
-      // log it, but keep the UI stable.
-      const msg = error.message || "Failed to generate report";
-      setErrorMessage(msg);
-      alert(`Failed to generate report: ${msg}`);
-      console.error("Report generation failed:", error);
+      const report = createReport({
+        ...portfolio,
+        ...history,
+        assumptions: reportAssumptions,
+        selectedIds,
+        from,
+        to,
+        format,
+        sections,
+      });
+      const file = await generateReportFile(report);
+      if (!alive.current) return;
+      downloadReportFile(file);
+      setMessage(`Downloaded ${file.filename}`);
+    } catch (err) {
+      if (alive.current)
+        setFailure(
+          err.message || "Report generation failed. Please try again.",
+        );
     } finally {
-      setIsGenerating(false);
+      if (alive.current) setBusy(false);
     }
   };
-
-  const isConfigValid = () => {
-    const hasValidDateRange =
-      (reportConfig.dateRange.startDate && reportConfig.dateRange.endDate) ||
-      (!reportConfig.dateRange.startDate && !reportConfig.dateRange.endDate);
-
-    const hasSelectedSections = Object.values(reportConfig.reportSections).some(
-      Boolean,
-    );
-
-    const isScopeSelected = reportConfig.scope !== "";
-
-    const isUnitOrClientSelected =
-      reportConfig.scope === "master" ||
-      reportConfig.selectedUnits.length > 0 ||
-      reportConfig.selectedClients.length > 0;
-
-    return (
-      isScopeSelected &&
-      hasValidDateRange &&
-      hasSelectedSections &&
-      isUnitOrClientSelected
-    );
-  };
-
-  const getSectionIcon = (section) => {
-    return SECTION_CONFIG[section]?.icon || FileText;
-  };
-
-  const getSectionColor = (section) => {
-    return SECTION_CONFIG[section]?.color || "text-gray-600";
-  };
-
-  const getSectionLabel = (section) => {
-    return SECTION_CONFIG[section]?.label || section;
-  };
-
-  const isDateDisabled = (date) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return date < today;
-  };
-
   return (
-    <div className={`space-y-6 ${className}`}>
-      {errorMessage && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-800 dark:text-red-200">
-          {errorMessage}
-        </div>
-      )}
-
-      {availableReportTypes && availableReportTypes.length > 0 && (
-        <Card className="bg-white dark:bg-gray-900">
-          <CardHeader className="flex flex-row items-center space-x-2">
-            <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              Report Type
-            </h3>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {availableReportTypes.map((type) => {
-                const Icon = type.icon;
-                return (
-                  <button
-                    type="button"
-                    key={type.id}
-                    className={cn(
-                      "p-4 border-2 rounded-lg cursor-pointer transition-all text-left w-full",
-                      selectedReports.includes(type.id)
-                        ? "border-blue-500 bg-blue-50 dark:bg-blue-950 ring-2 ring-blue-500 shadow-lg"
-                        : "border-gray-200 dark:border-gray-700 hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800",
-                    )}
-                    onClick={() => {
-                      handleReportTypeChange(type.id);
-                    }}
-                  >
-                    <div className="flex items-start space-x-3">
-                      <Icon className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-1" />
-                      <div>
-                        <h4 className="font-medium text-gray-900 dark:text-gray-100">
-                          {type.name}
-                        </h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                          {type.description}
-                        </p>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Scope Selection */}
-      <Card className="bg-white dark:bg-gray-900">
-        <CardHeader className="flex flex-row items-center space-x-2">
-          <Filter className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            Report Scope
-          </h3>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {allowedScopes.includes("single") && (
-              <button
-                type="button"
-                className={`p-4 border-2 rounded-lg cursor-pointer transition-all text-left w-full ${
-                  reportConfig.scope === "single"
-                    ? "border-blue-500 bg-blue-50 dark:bg-blue-950"
-                    : "border-gray-200 dark:border-gray-700 hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-                }`}
-                onClick={() => handleScopeChange("single")}
-              >
-                <div className="flex items-center space-x-3">
-                  <Building className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                  <div>
-                    <h4 className="font-medium text-gray-900 dark:text-gray-100">
-                      Single Unit
-                    </h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Report for one specific unit
-                    </p>
-                  </div>
-                </div>
-              </button>
-            )}
-
-            {allowedScopes.includes("multiple") && (
-              <button
-                type="button"
-                className={`p-4 border-2 rounded-lg cursor-pointer transition-all text-left w-full ${
-                  reportConfig.scope === "multiple"
-                    ? "border-blue-500 bg-blue-50 dark:bg-blue-950"
-                    : "border-gray-200 dark:border-gray-700 hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-                }`}
-                onClick={() => handleScopeChange("multiple")}
-              >
-                <div className="flex items-center space-x-3">
-                  <Building className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                  <div>
-                    <h4 className="font-medium text-gray-900 dark:text-gray-100">
-                      Multiple Units
-                    </h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Report for selected units
-                    </p>
-                  </div>
-                </div>
-              </button>
-            )}
-
-            {allowedScopes.includes("client") && (
-              <button
-                type="button"
-                className={`p-4 border-2 rounded-lg cursor-pointer transition-all text-left w-full ${
-                  reportConfig.scope === "client"
-                    ? "border-blue-500 bg-blue-50 dark:bg-blue-950"
-                    : "border-gray-200 dark:border-gray-700 hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-                }`}
-                onClick={() => handleScopeChange("client")}
-              >
-                <div className="flex items-center space-x-3">
-                  <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                  <div>
-                    <h4 className="font-medium text-gray-900 dark:text-gray-100">
-                      Client Portfolio
-                    </h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Report for client&apos;s units
-                    </p>
-                  </div>
-                </div>
-              </button>
-            )}
-
-            {allowedScopes.includes("master") && (
-              <button
-                type="button"
-                className={`p-4 border-2 rounded-lg cursor-pointer transition-all text-left w-full ${
-                  reportConfig.scope === "master"
-                    ? "border-blue-500 bg-blue-50 dark:bg-blue-950"
-                    : "border-gray-200 dark:border-gray-700 hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-                }`}
-                onClick={() => handleScopeChange("master")}
-              >
-                <div className="flex items-center space-x-3">
-                  <Building className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                  <div>
-                    <h4 className="font-medium text-gray-900 dark:text-gray-100">
-                      All Units
-                    </h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Report for all units
-                    </p>
-                  </div>
-                </div>
-              </button>
-            )}
-          </div>
-
-          {/* Unit Selection */}
-          {(reportConfig.scope === "single" ||
-            reportConfig.scope === "multiple") &&
-            availableUnits &&
-            availableUnits.length > 0 && (
-              <div className="mt-4">
-                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
-                  Select Units
-                </Label>
-                <div className="max-h-48 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-                  {availableUnits.map((unit) => (
-                    <div
-                      key={unit.id}
-                      className="flex items-center space-x-3 py-2"
-                    >
-                      <input
-                        type={
-                          reportConfig.scope === "single" ? "radio" : "checkbox"
-                        }
-                        name={
-                          reportConfig.scope === "single"
-                            ? "selectedUnit"
-                            : undefined
-                        }
-                        checked={reportConfig.selectedUnits.includes(unit.id)}
-                        onChange={(e) => {
-                          if (reportConfig.scope === "single") {
-                            setReportConfig((prev) => ({
-                              ...prev,
-                              selectedUnits: e.target.checked ? [unit.id] : [],
-                            }));
-                          } else {
-                            handleUnitSelection(unit.id, e.target.checked);
-                          }
-                        }}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <div className="flex-1">
-                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                          {unit.name}
-                        </div>
-                        <div className="text-xs text-gray-600 dark:text-gray-400">
-                          {unit.client} • {unit.location}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-          {/* Client Selection - Guard against missing clients array */}
-          {reportConfig.scope === "client" && 
-           dataProviders.clients && 
-           dataProviders.clients.length > 0 && (
-            <div className="mt-4">
-              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
-                Select Clients
-              </Label>
-              <div className="max-h-48 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-                {dataProviders.clients.map((client) => (
-                  <div
-                    key={client.id}
-                    className="flex items-center space-x-3 py-2"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={reportConfig.selectedClients.includes(client.id)}
-                      onChange={(e) =>
-                        handleClientSelection(client.id, e.target.checked)
-                      }
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <div className="flex-1">
-                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {client.name}
-                      </div>
-                      <div className="text-xs text-gray-600 dark:text-gray-400">
-                        {client.units} unit(s)
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Date Range */}
-      <Card className="bg-white dark:bg-gray-900">
-        <CardHeader className="flex flex-row items-center space-x-2">
-          <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            Date Range
-          </h3>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
-                Start Date
-              </Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={`w-full justify-start text-left font-normal ${
-                      !reportConfig.dateRange.startDate &&
-                      "text-muted-foreground"
-                    }`}
-                  >
-                    <Calendar className="mr-2 h-4 w-4 text-gray-600 dark:text-white" />
-                    {reportConfig.dateRange.startDate ? (
-                      format(
-                        new Date(reportConfig.dateRange.startDate),
-                        "dd/MM/yyyy",
-                      )
-                    ) : (
-                      <span>Pick a date</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <CalendarComponent
-                    mode="single"
-                    selected={
-                      reportConfig.dateRange.startDate
-                        ? new Date(reportConfig.dateRange.startDate)
-                        : undefined
-                    }
-                    onSelect={(date) =>
-                      setReportConfig((prev) => ({
-                        ...prev,
-                        dateRange: {
-                          ...prev.dateRange,
-                          startDate: date ? format(date, "yyyy-MM-dd") : "",
-                        },
-                      }))
-                    }
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div>
-              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
-                End Date
-              </Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={`w-full justify-start text-left font-normal ${
-                      !reportConfig.dateRange.endDate && "text-muted-foreground"
-                    }`}
-                  >
-                    <Calendar className="mr-2 h-4 w-4 text-gray-600 dark:text-white" />
-                    {reportConfig.dateRange.endDate ? (
-                      format(
-                        new Date(reportConfig.dateRange.endDate),
-                        "dd/MM/yyyy",
-                      )
-                    ) : (
-                      <span>Pick a date</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <CalendarComponent
-                    mode="single"
-                    selected={
-                      reportConfig.dateRange.endDate
-                        ? new Date(reportConfig.dateRange.endDate)
-                        : undefined
-                    }
-                    onSelect={(date) =>
-                      setReportConfig((prev) => ({
-                        ...prev,
-                        dateRange: {
-                          ...prev.dateRange,
-                          endDate: date ? format(date, "yyyy-MM-dd") : "",
-                        },
-                      }))
-                    }
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-          <div className="mt-4">
-            <Button
-              variant="outline"
-              onClick={() =>
-                setReportConfig((prev) => ({
-                  ...prev,
-                  dateRange: { startDate: "", endDate: "" },
-                }))
-              }
-              className={`w-full ${
-                !reportConfig.dateRange.startDate &&
-                !reportConfig.dateRange.endDate
-                  ? "bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 border-blue-500"
-                  : "border-gray-200 dark:border-gray-700 hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-              }`}
-            >
-              All Time
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Report Sections */}
-      <Card className="bg-white dark:bg-gray-900">
-        <CardHeader>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            Report Sections
-          </h3>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-center space-x-3">
-            <Checkbox
-              id="selectAllSections"
-              checked={
-                Object.entries(filteredReportSections).length > 0 &&
-                Object.entries(filteredReportSections).every(
-                  ([_, enabled]) => enabled,
-                )
-              }
-              onCheckedChange={handleSelectAllSections}
-              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+    <form onSubmit={generate} className="space-y-6">
+      <p className="text-muted-foreground">
+        {scopeLabel} ·{" "}
+        {portfolio.isDemoMode ? "Demonstration data" : "Recorded telemetry"} ·
+        UTC dates
+      </p>
+      {loading && <p role="status">Loading portfolio…</p>}
+      {error && <p role="alert">{error}</p>}
+      <fieldset disabled={busy || loading || !!error} className="space-y-6">
+        <div className="grid sm:grid-cols-3 gap-4">
+          <label className="space-y-2">
+            Start date (UTC)
+            <input
+              aria-label="Start date (UTC)"
+              type="date"
+              value={from}
+              max={to}
+              onChange={(e) => setFrom(e.target.value)}
+              required
+              className="block border rounded p-2 w-full"
             />
-            <Label
-              htmlFor="selectAllSections"
-              className="text-sm font-medium text-gray-900 dark:text-gray-100"
+          </label>
+          <label className="space-y-2">
+            End date (UTC)
+            <input
+              aria-label="End date (UTC)"
+              type="date"
+              value={to}
+              min={from}
+              max={today}
+              onChange={(e) => setTo(e.target.value)}
+              required
+              className="block border rounded p-2 w-full"
+            />
+          </label>
+          <label className="space-y-2">
+            Report format
+            <select
+              aria-label="Report format"
+              value={format}
+              onChange={(e) => setFormat(e.target.value)}
+              required
+              className="block border rounded p-2 w-full"
             >
-              Select All Sections
-            </Label>
+              <option value="">Choose a format…</option>
+              {Object.entries(REPORT_FORMATS).map(([key, name]) => (
+                <option key={key} value={key}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div>
+          <div className="flex items-center gap-4 mb-3">
+            <h2 className="font-semibold">
+              Units ({selectedIds.length} selected)
+            </h2>
+            <button
+              type="button"
+              className="underline text-sm"
+              onClick={() => setSelectedIds(units.map((u) => u.id))}
+            >
+              Select all
+            </button>
+            <button
+              type="button"
+              className="underline text-sm"
+              onClick={() => setSelectedIds([])}
+            >
+              Clear
+            </button>
           </div>
-          {allowedSections.map((section) => {
-            const Icon = getSectionIcon(section);
-            const colorClass = getSectionColor(section);
-            const label = getSectionLabel(section);
-
-            return (
-              <div key={section} className="flex items-center space-x-3">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-64 overflow-auto border rounded p-3">
+            {units.map((u) => (
+              <label key={u.id} className="flex gap-2 items-center">
                 <input
                   type="checkbox"
-                  checked={reportConfig.reportSections[section] || false}
-                  onChange={(e) =>
-                    handleSectionToggle(section, e.target.checked)
-                  }
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  checked={selectedIds.includes(u.id)}
+                  onChange={() => setSelectedIds((list) => toggle(list, u.id))}
                 />
-                <div className="flex items-center space-x-2">
-                  <Icon className={`h-4 w-4 ${colorClass}`} />
-                  <span className="text-sm text-gray-900 dark:text-gray-100">
-                    {label}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </CardContent>
-      </Card>
-
-      {/* Report Actions */}
-      <Card className="bg-white dark:bg-gray-900">
-        <CardHeader>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            Actions
-          </h3>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Button
-            onClick={handleGenerateReport}
-            disabled={isGenerating || !isConfigValid()}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600"
-          >
-            {isGenerating ? (
-              <>
-                <Clock className="mr-2 h-4 w-4 animate-spin" />
-                Generating Report...
-              </>
-            ) : (
-              <>
-                <Download className="mr-2 h-4 w-4" />
-                Generate & Download Report
-              </>
-            )}
-          </Button>
-
-          {showScheduling && (
-            <Popover
-              open={isSchedulePopoverOpen}
-              onOpenChange={setIsSchedulePopoverOpen}
+                {u.name} ({u.id})
+              </label>
+            ))}
+            {!units.length && <p>No units assigned to this portfolio.</p>}
+          </div>
+        </div>
+        {subset && (
+          <label className="block">
+            Operating cost for selected units (AUD/month)
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              required
+              value={subsetCost}
+              onChange={(e) => setSubsetCost(e.target.value)}
+              className="block border rounded p-2"
+            />
+            <span className="text-sm text-muted-foreground">
+              Enter the cost for this subset. Portfolio-wide costs are not
+              automatically allocated.
+            </span>
+          </label>
+        )}
+        <div>
+          <h2 className="font-semibold mb-3">Include in report</h2>
+          <p className="text-sm mb-2">
+            Summary, assumptions and calculation notes are always included.
+          </p>
+          <div className="grid sm:grid-cols-2 gap-3">
+            {Object.entries(REPORT_SECTIONS).map(([key, label]) => (
+              <label key={key} className="flex gap-2">
+                <input
+                  type="checkbox"
+                  checked={sections.includes(key)}
+                  onChange={() => setSections((list) => toggle(list, key))}
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-4">
+          {["financial", "roi", "environmental"].map((section) => (
+            <button
+              type="button"
+              className="underline text-sm"
+              key={section}
+              onClick={() => setEditing(section)}
             >
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  disabled={isGenerating || !isConfigValid()}
-                  className="w-full border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
-                >
-                  <Calendar className="mr-2 h-4 w-4" />
-                  {scheduledDate
-                    ? format(scheduledDate, "PPP")
-                    : "Schedule Report"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <CalendarComponent
-                  mode="single"
-                  selected={scheduledDate}
-                  onSelect={(date) => {
-                    setScheduledDate(date);
-                    setIsSchedulePopoverOpen(false);
-                    setScheduledReportMessage(
-                      `Report scheduled for ${format(date, "PPP")}`,
-                    );
-                  }}
-                  disabled={isDateDisabled}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-          )}
-
-          {scheduledReportMessage && (
-            <div className="text-sm text-green-600 dark:text-green-400 text-center">
-              {scheduledReportMessage}
-            </div>
-          )}
-
-          {showPauseScheduled && (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  disabled={isGenerating}
-                  className="w-full border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
-                >
-                  <Pause className="mr-2 h-4 w-4" />
-                  Pause Scheduled Reports
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Confirm Pause</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to pause all scheduled reports? You
-                    can resume them later.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() =>
-                      alert("All scheduled reports have been paused.")
-                    }
-                  >
-                    Pause
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+              Edit {section} assumptions
+            </button>
+          ))}
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Uses the same calculations and assumptions as the analytics tab.
+          Missing readings and unrecorded maintenance are identified in the
+          report.
+        </p>
+        <Button type="submit" disabled={!units.length || busy}>
+          {busy ? "Creating report…" : "Generate and download report"}
+        </Button>
+      </fieldset>
+      {failure && (
+        <p role="alert" className="text-red-600">
+          {failure}
+        </p>
+      )}
+      {message && (
+        <p role="status" className="text-green-700">
+          {message}
+        </p>
+      )}
+      <PortfolioAssumptions
+        section={editing}
+        assumptions={assumptions}
+        onSave={setAssumptions}
+        onClose={() => setEditing(null)}
+      />
+    </form>
   );
-};
-
-export default ReportConfigurator;
+}

@@ -1,6 +1,10 @@
+import { apiGetJson } from "../utils/apiFetch";
+vi.mock("../utils/apiFetch", () => ({
+  apiGetJson: vi.fn().mockRejectedValue(new Error("No session")),
+}));
 /**
  * Tests for AuthContext
- * 
+ *
  * Authentication context testing covering:
  * - useAuth hook behavior
  * - Login functionality with localStorage/sessionStorage persistence
@@ -28,9 +32,15 @@ function makeStorageMock() {
   let store = {};
   return {
     getItem: (k) => (k in store ? store[k] : null),
-    setItem: (k, v) => { store[k] = String(v); },
-    removeItem: (k) => { delete store[k]; },
-    clear: () => { store = {}; },
+    setItem: (k, v) => {
+      store[k] = String(v);
+    },
+    removeItem: (k) => {
+      delete store[k];
+    },
+    clear: () => {
+      store = {};
+    },
   };
 }
 
@@ -45,7 +55,9 @@ const TestConsumer = () => {
       <div data-testid="loading">{auth.isLoading ? "loading" : "loaded"}</div>
       <div data-testid="authed">{auth.isAuthenticated ? "yes" : "no"}</div>
       <div data-testid="loggingout">{auth.isLoggingOut ? "yes" : "no"}</div>
-      <div data-testid="permissions">{auth.permissions ? JSON.stringify(auth.permissions) : "none"}</div>
+      <div data-testid="permissions">
+        {auth.permissions ? JSON.stringify(auth.permissions) : "none"}
+      </div>
       <button onClick={() => auth.login("u", "p", true)}>login-keep</button>
       <button onClick={() => auth.login("u", "p", false)}>login-session</button>
       <button onClick={() => auth.logout()}>logout</button>
@@ -54,7 +66,7 @@ const TestConsumer = () => {
 };
 
 // ---- component to capture login result ----
-const CaptureConsumer = ({ onResult }) => {
+const _CaptureConsumer = ({ onResult }) => {
   const auth = useAuth();
   const handleLogin = async () => {
     const result = await auth.login("u", "p");
@@ -65,13 +77,21 @@ const CaptureConsumer = ({ onResult }) => {
 
 describe("AuthContext", () => {
   beforeEach(() => {
-    Object.defineProperty(window, "localStorage", { value: makeStorageMock(), writable: true });
-    Object.defineProperty(window, "sessionStorage", { value: makeStorageMock(), writable: true });
+    Object.defineProperty(window, "localStorage", {
+      value: makeStorageMock(),
+      writable: true,
+    });
+    Object.defineProperty(window, "sessionStorage", {
+      value: makeStorageMock(),
+      writable: true,
+    });
     vi.clearAllMocks();
-    
+
     // Default mock implementations
-    permissions.getFrontendRole.mockImplementation((r) => (r === "admin" ? "admin" : "user"));
-    permissions.getPermissions.mockImplementation((r) => ({ 
+    permissions.getFrontendRole.mockImplementation((r) =>
+      r === "admin" ? "admin" : "user",
+    );
+    permissions.getPermissions.mockImplementation((r) => ({
       role: r,
       canEdit: r === "admin",
       canView: true,
@@ -83,10 +103,15 @@ describe("AuthContext", () => {
 
   describe("useAuth hook", () => {
     it("throws when useAuth is used outside AuthProvider", () => {
-      const Bare = () => { useAuth(); return null; };
+      const Bare = () => {
+        useAuth();
+        return null;
+      };
       // Suppress React's error boundary console noise
       const spy = vi.spyOn(console, "error").mockImplementation(() => {});
-      expect(() => render(<Bare />)).toThrow("useAuth must be used within an AuthProvider");
+      expect(() => render(<Bare />)).toThrow(
+        "useAuth must be used within an AuthProvider",
+      );
       spy.mockRestore();
     });
 
@@ -94,7 +119,7 @@ describe("AuthContext", () => {
       render(
         <AuthProvider>
           <TestConsumer />
-        </AuthProvider>
+        </AuthProvider>,
       );
       expect(screen.getByTestId("loading")).toBeInTheDocument();
     });
@@ -104,8 +129,14 @@ describe("AuthContext", () => {
 
   describe("Initialization", () => {
     it("initializes with no user when nothing is persisted", async () => {
-      render(<AuthProvider><TestConsumer /></AuthProvider>);
-      await waitFor(() => expect(screen.getByTestId("loading").textContent).toBe("loaded"));
+      render(
+        <AuthProvider>
+          <TestConsumer />
+        </AuthProvider>,
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId("loading").textContent).toBe("loaded"),
+      );
       expect(screen.getByTestId("user").textContent).toBe("none");
       expect(screen.getByTestId("authed").textContent).toBe("no");
       expect(screen.getByTestId("role").textContent).toBe("none");
@@ -113,13 +144,28 @@ describe("AuthContext", () => {
     });
 
     it("restores session from localStorage on mount", async () => {
-      localStorage.setItem("thermacore_user", JSON.stringify({ username: "localuser" }));
+      apiGetJson.mockResolvedValueOnce({
+        username: "localuser",
+        role: { name: "admin" },
+        tenant_id: 1,
+        client_id: 10,
+      });
+      localStorage.setItem(
+        "thermacore_user",
+        JSON.stringify({ username: "localuser" }),
+      );
       localStorage.setItem("thermacore_role", "admin");
       localStorage.setItem("thermacore_backend_role", "admin");
       localStorage.setItem("thermacore_token", "tok");
 
-      render(<AuthProvider><TestConsumer /></AuthProvider>);
-      await waitFor(() => expect(screen.getByTestId("loading").textContent).toBe("loaded"));
+      render(
+        <AuthProvider>
+          <TestConsumer />
+        </AuthProvider>,
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId("loading").textContent).toBe("loaded"),
+      );
       expect(screen.getByTestId("user").textContent).toBe("localuser");
       expect(screen.getByTestId("role").textContent).toBe("admin");
       expect(screen.getByTestId("backendRole").textContent).toBe("admin");
@@ -127,13 +173,28 @@ describe("AuthContext", () => {
     });
 
     it("falls back to sessionStorage when localStorage is empty", async () => {
-      sessionStorage.setItem("thermacore_user", JSON.stringify({ username: "sessuser" }));
+      apiGetJson.mockResolvedValueOnce({
+        username: "sessuser",
+        role: { name: "user" },
+        tenant_id: 1,
+        client_id: 10,
+      });
+      sessionStorage.setItem(
+        "thermacore_user",
+        JSON.stringify({ username: "sessuser" }),
+      );
       sessionStorage.setItem("thermacore_role", "user");
       sessionStorage.setItem("thermacore_token", "tok2");
       // No backend_role set -> exercises savedBackendRole || savedRole fallback
 
-      render(<AuthProvider><TestConsumer /></AuthProvider>);
-      await waitFor(() => expect(screen.getByTestId("loading").textContent).toBe("loaded"));
+      render(
+        <AuthProvider>
+          <TestConsumer />
+        </AuthProvider>,
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId("loading").textContent).toBe("loaded"),
+      );
       expect(screen.getByTestId("user").textContent).toBe("sessuser");
       expect(screen.getByTestId("role").textContent).toBe("user");
       expect(screen.getByTestId("backendRole").textContent).toBe("user"); // Falls back to savedRole
@@ -141,20 +202,38 @@ describe("AuthContext", () => {
     });
 
     it("falls back to sessionStorage when localStorage session is incomplete", async () => {
+      apiGetJson.mockResolvedValueOnce({
+        username: "fallbackuser",
+        role: { name: "admin" },
+        tenant_id: 1,
+        client_id: 10,
+      });
       // localStorage has user and role but NO token (incomplete session)
-      localStorage.setItem("thermacore_user", JSON.stringify({ username: "partial" }));
+      localStorage.setItem(
+        "thermacore_user",
+        JSON.stringify({ username: "partial" }),
+      );
       localStorage.setItem("thermacore_role", "admin");
       // No token in localStorage intentionally
 
       // sessionStorage has a complete valid session
-      sessionStorage.setItem("thermacore_user", JSON.stringify({ username: "fallbackuser" }));
+      sessionStorage.setItem(
+        "thermacore_user",
+        JSON.stringify({ username: "fallbackuser" }),
+      );
       sessionStorage.setItem("thermacore_role", "admin");
       sessionStorage.setItem("thermacore_backend_role", "admin");
       sessionStorage.setItem("thermacore_token", "sess-tok");
 
-      render(<AuthProvider><TestConsumer /></AuthProvider>);
-      await waitFor(() => expect(screen.getByTestId("loading").textContent).toBe("loaded"));
-      
+      render(
+        <AuthProvider>
+          <TestConsumer />
+        </AuthProvider>,
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId("loading").textContent).toBe("loaded"),
+      );
+
       // Should fall back to sessionStorage
       expect(screen.getByTestId("user").textContent).toBe("fallbackuser");
       expect(screen.getByTestId("role").textContent).toBe("admin");
@@ -163,13 +242,28 @@ describe("AuthContext", () => {
     });
 
     it("preserves backend role from localStorage on mount", async () => {
-      localStorage.setItem("thermacore_user", JSON.stringify({ username: "adminuser" }));
+      apiGetJson.mockResolvedValueOnce({
+        username: "adminuser",
+        role: { name: "operator" },
+        tenant_id: 1,
+        client_id: 10,
+      });
+      localStorage.setItem(
+        "thermacore_user",
+        JSON.stringify({ username: "adminuser" }),
+      );
       localStorage.setItem("thermacore_role", "admin");
       localStorage.setItem("thermacore_backend_role", "operator");
       localStorage.setItem("thermacore_token", "tok");
 
-      render(<AuthProvider><TestConsumer /></AuthProvider>);
-      await waitFor(() => expect(screen.getByTestId("loading").textContent).toBe("loaded"));
+      render(
+        <AuthProvider>
+          <TestConsumer />
+        </AuthProvider>,
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId("loading").textContent).toBe("loaded"),
+      );
       expect(screen.getByTestId("user").textContent).toBe("adminuser");
       // operator -> user via mock implementation
       expect(screen.getByTestId("role").textContent).toBe("user");
@@ -178,12 +272,21 @@ describe("AuthContext", () => {
     });
 
     it("handles missing token by not authenticating", async () => {
-      localStorage.setItem("thermacore_user", JSON.stringify({ username: "nouser" }));
+      localStorage.setItem(
+        "thermacore_user",
+        JSON.stringify({ username: "nouser" }),
+      );
       localStorage.setItem("thermacore_role", "admin");
       // Intentionally omit token
 
-      render(<AuthProvider><TestConsumer /></AuthProvider>);
-      await waitFor(() => expect(screen.getByTestId("loading").textContent).toBe("loaded"));
+      render(
+        <AuthProvider>
+          <TestConsumer />
+        </AuthProvider>,
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId("loading").textContent).toBe("loaded"),
+      );
       expect(screen.getByTestId("user").textContent).toBe("none");
       expect(screen.getByTestId("authed").textContent).toBe("no");
     });
@@ -193,8 +296,14 @@ describe("AuthContext", () => {
       localStorage.setItem("thermacore_role", "admin");
       // Intentionally omit user
 
-      render(<AuthProvider><TestConsumer /></AuthProvider>);
-      await waitFor(() => expect(screen.getByTestId("loading").textContent).toBe("loaded"));
+      render(
+        <AuthProvider>
+          <TestConsumer />
+        </AuthProvider>,
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId("loading").textContent).toBe("loaded"),
+      );
       expect(screen.getByTestId("user").textContent).toBe("none");
       expect(screen.getByTestId("authed").textContent).toBe("no");
     });
@@ -205,11 +314,17 @@ describe("AuthContext", () => {
       localStorage.setItem("thermacore_role", "admin");
 
       // Should not throw, just not authenticate
-      render(<AuthProvider><TestConsumer /></AuthProvider>);
-      await waitFor(() => expect(screen.getByTestId("loading").textContent).toBe("loaded"));
+      render(
+        <AuthProvider>
+          <TestConsumer />
+        </AuthProvider>,
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId("loading").textContent).toBe("loaded"),
+      );
       expect(screen.getByTestId("authed").textContent).toBe("no");
       expect(screen.getByTestId("user").textContent).toBe("none");
-      
+
       // Verify corrupt storage was cleared
       expect(localStorage.getItem("thermacore_user")).toBeNull();
       expect(localStorage.getItem("thermacore_token")).toBeNull();
@@ -222,8 +337,14 @@ describe("AuthContext", () => {
       localStorage.setItem("thermacore_token", "");
       localStorage.setItem("thermacore_role", "");
 
-      render(<AuthProvider><TestConsumer /></AuthProvider>);
-      await waitFor(() => expect(screen.getByTestId("loading").textContent).toBe("loaded"));
+      render(
+        <AuthProvider>
+          <TestConsumer />
+        </AuthProvider>,
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId("loading").textContent).toBe("loaded"),
+      );
       expect(screen.getByTestId("authed").textContent).toBe("no");
       expect(screen.getByTestId("user").textContent).toBe("none");
     });
@@ -233,8 +354,14 @@ describe("AuthContext", () => {
       localStorage.setItem("thermacore_token", "null");
       localStorage.setItem("thermacore_role", "null");
 
-      render(<AuthProvider><TestConsumer /></AuthProvider>);
-      await waitFor(() => expect(screen.getByTestId("loading").textContent).toBe("loaded"));
+      render(
+        <AuthProvider>
+          <TestConsumer />
+        </AuthProvider>,
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId("loading").textContent).toBe("loaded"),
+      );
       // Should handle null string gracefully - not authenticate
       expect(screen.getByTestId("authed").textContent).toBe("no");
     });
@@ -252,7 +379,7 @@ describe("AuthContext", () => {
           email: "u@x.com",
           firstName: "A",
           lastName: "B",
-          tenant_id: "t1"
+          tenant_id: "t1",
         },
         token: "tok-abc",
       };
@@ -267,8 +394,14 @@ describe("AuthContext", () => {
       });
 
       const user = userEvent.setup();
-      render(<AuthProvider><TestConsumer /></AuthProvider>);
-      await waitFor(() => expect(screen.getByTestId("loading").textContent).toBe("loaded"));
+      render(
+        <AuthProvider>
+          <TestConsumer />
+        </AuthProvider>,
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId("loading").textContent).toBe("loaded"),
+      );
 
       await user.click(screen.getByText("login-keep"));
 
@@ -296,7 +429,7 @@ describe("AuthContext", () => {
           email: "e@x.com",
           firstName: "F",
           lastName: "L",
-          tenant_id: "t2"
+          tenant_id: "t2",
         },
         token: "tok-xyz",
       };
@@ -311,8 +444,14 @@ describe("AuthContext", () => {
       });
 
       const user = userEvent.setup();
-      render(<AuthProvider><TestConsumer /></AuthProvider>);
-      await waitFor(() => expect(screen.getByTestId("loading").textContent).toBe("loaded"));
+      render(
+        <AuthProvider>
+          <TestConsumer />
+        </AuthProvider>,
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId("loading").textContent).toBe("loaded"),
+      );
 
       await user.click(screen.getByText("login-session"));
 
@@ -326,7 +465,9 @@ describe("AuthContext", () => {
       // Verify sessionStorage was used
       expect(sessionStorage.getItem("thermacore_token")).toBe("tok-xyz");
       expect(sessionStorage.getItem("thermacore_role")).toBe("user");
-      expect(sessionStorage.getItem("thermacore_backend_role")).toBe("operator");
+      expect(sessionStorage.getItem("thermacore_backend_role")).toBe(
+        "operator",
+      );
       expect(localStorage.getItem("thermacore_token")).toBeNull();
     });
 
@@ -343,7 +484,7 @@ describe("AuthContext", () => {
           email: "new@x.com",
           firstName: "New",
           lastName: "User",
-          tenant_id: "t3"
+          tenant_id: "t3",
         },
         token: "new-token",
       };
@@ -358,8 +499,14 @@ describe("AuthContext", () => {
       });
 
       const user = userEvent.setup();
-      render(<AuthProvider><TestConsumer /></AuthProvider>);
-      await waitFor(() => expect(screen.getByTestId("loading").textContent).toBe("loaded"));
+      render(
+        <AuthProvider>
+          <TestConsumer />
+        </AuthProvider>,
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId("loading").textContent).toBe("loaded"),
+      );
 
       // Login with keepMeSignedIn = true (should use localStorage, clear sessionStorage)
       await user.click(screen.getByText("login-keep"));
@@ -394,8 +541,14 @@ describe("AuthContext", () => {
       });
 
       const user = userEvent.setup();
-      render(<AuthProvider><TestConsumer /></AuthProvider>);
-      await waitFor(() => expect(screen.getByTestId("loading").textContent).toBe("loaded"));
+      render(
+        <AuthProvider>
+          <TestConsumer />
+        </AuthProvider>,
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId("loading").textContent).toBe("loaded"),
+      );
 
       await user.click(screen.getByText("login-keep"));
 
@@ -408,9 +561,9 @@ describe("AuthContext", () => {
     });
 
     it("returns server error message on failed login", async () => {
-      authService.login.mockResolvedValue({ 
-        success: false, 
-        message: "Account locked due to too many failed attempts" 
+      authService.login.mockResolvedValue({
+        success: false,
+        message: "Account locked due to too many failed attempts",
       });
 
       let result;
@@ -426,15 +579,15 @@ describe("AuthContext", () => {
       render(
         <AuthProvider>
           <CaptureConsumer onResult={() => {}} />
-        </AuthProvider>
+        </AuthProvider>,
       );
-      
+
       await user.click(screen.getByText("login-capture"));
 
       await waitFor(() => {
         expect(result).toEqual({
           success: false,
-          error: "Account locked due to too many failed attempts"
+          error: "Account locked due to too many failed attempts",
         });
       });
     });
@@ -455,21 +608,23 @@ describe("AuthContext", () => {
       render(
         <AuthProvider>
           <CaptureConsumer onResult={() => {}} />
-        </AuthProvider>
+        </AuthProvider>,
       );
-      
+
       await user.click(screen.getByText("login-capture"));
 
       await waitFor(() => {
         expect(result).toEqual({
           success: false,
-          error: "Invalid username or password. Please try again."
+          error: "Invalid username or password. Please try again.",
         });
       });
     });
 
     it("returns default error message when login throws", async () => {
-      authService.login.mockRejectedValue(new Error("Network connection failed"));
+      authService.login.mockRejectedValue(
+        new Error("Network connection failed"),
+      );
 
       let result;
       const CaptureConsumer = ({ onResult }) => {
@@ -484,15 +639,15 @@ describe("AuthContext", () => {
       render(
         <AuthProvider>
           <CaptureConsumer onResult={() => {}} />
-        </AuthProvider>
+        </AuthProvider>,
       );
-      
+
       await user.click(screen.getByText("login-capture"));
 
       await waitFor(() => {
         expect(result).toEqual({
           success: false,
-          error: "Invalid username or password. Please try again."
+          error: "Invalid username or password. Please try again.",
         });
       });
     });
@@ -506,7 +661,7 @@ describe("AuthContext", () => {
           email: "e@x.com",
           firstName: "F",
           lastName: "L",
-          tenant_id: "t4"
+          tenant_id: "t4",
         },
         token: "fail-token",
       };
@@ -539,21 +694,22 @@ describe("AuthContext", () => {
       render(
         <AuthProvider>
           <CaptureConsumer onResult={() => {}} />
-        </AuthProvider>
+        </AuthProvider>,
       );
-      
+
       await user.click(screen.getByText("login-capture"));
 
       await waitFor(() => {
         expect(result).toEqual({
           success: false,
-          error: "Unable to save session. Please check your browser storage settings."
+          error:
+            "Unable to save session. Please check your browser storage settings.",
         });
       });
 
       // User should remain unauthenticated
       expect(screen.queryByTestId("authed")).not.toBeInTheDocument();
-      
+
       // Restore original
       localStorage.setItem = originalSetItem;
     });
@@ -567,7 +723,7 @@ describe("AuthContext", () => {
           email: "e@x.com",
           firstName: "F",
           lastName: "L",
-          tenant_id: "t5"
+          tenant_id: "t5",
         },
         token: "role-token",
       };
@@ -582,8 +738,14 @@ describe("AuthContext", () => {
       });
 
       const user = userEvent.setup();
-      render(<AuthProvider><TestConsumer /></AuthProvider>);
-      await waitFor(() => expect(screen.getByTestId("loading").textContent).toBe("loaded"));
+      render(
+        <AuthProvider>
+          <TestConsumer />
+        </AuthProvider>,
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId("loading").textContent).toBe("loaded"),
+      );
 
       await user.click(screen.getByText("login-keep"));
 
@@ -612,7 +774,7 @@ describe("AuthContext", () => {
           email: "e@x.com",
           firstName: "F",
           lastName: "L",
-          tenant_id: "t6"
+          tenant_id: "t6",
         },
         token: "perm-token",
       };
@@ -622,33 +784,46 @@ describe("AuthContext", () => {
       permissions.getPermissions.mockReturnValue(mockPermissions);
 
       const user = userEvent.setup();
-      render(<AuthProvider><TestConsumer /></AuthProvider>);
-      await waitFor(() => expect(screen.getByTestId("loading").textContent).toBe("loaded"));
+      render(
+        <AuthProvider>
+          <TestConsumer />
+        </AuthProvider>,
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId("loading").textContent).toBe("loaded"),
+      );
 
       await user.click(screen.getByText("login-keep"));
 
       await waitFor(() => {
-        expect(JSON.parse(screen.getByTestId("permissions").textContent)).toEqual(mockPermissions);
+        expect(
+          JSON.parse(screen.getByTestId("permissions").textContent),
+        ).toEqual(mockPermissions);
       });
     });
 
     it("shows loading state during login", async () => {
       // Make login slow to test loading state
       authService.login.mockImplementation(
-        () => new Promise(resolve => 
-          setTimeout(() => resolve({
-            success: true,
-            user: {
-              username: "slowuser",
-              role: "admin",
-              email: "slow@x.com",
-              firstName: "Slow",
-              lastName: "User",
-              tenant_id: "t7"
-            },
-            token: "slow-token",
-          }), 100)
-        )
+        () =>
+          new Promise((resolve) =>
+            setTimeout(
+              () =>
+                resolve({
+                  success: true,
+                  user: {
+                    username: "slowuser",
+                    role: "admin",
+                    email: "slow@x.com",
+                    firstName: "Slow",
+                    lastName: "User",
+                    tenant_id: "t7",
+                  },
+                  token: "slow-token",
+                }),
+              100,
+            ),
+          ),
       );
 
       permissions.getFrontendRole.mockReturnValue("admin");
@@ -660,8 +835,14 @@ describe("AuthContext", () => {
       });
 
       const user = userEvent.setup();
-      render(<AuthProvider><TestConsumer /></AuthProvider>);
-      await waitFor(() => expect(screen.getByTestId("loading").textContent).toBe("loaded"));
+      render(
+        <AuthProvider>
+          <TestConsumer />
+        </AuthProvider>,
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId("loading").textContent).toBe("loaded"),
+      );
 
       // Start login
       await user.click(screen.getByText("login-keep"));
@@ -690,7 +871,7 @@ describe("AuthContext", () => {
           email: "e@x.com",
           firstName: "F",
           lastName: "L",
-          tenant_id: "t8"
+          tenant_id: "t8",
         },
         token: "logout-token",
       };
@@ -705,8 +886,14 @@ describe("AuthContext", () => {
       });
 
       const user = userEvent.setup();
-      render(<AuthProvider><TestConsumer /></AuthProvider>);
-      await waitFor(() => expect(screen.getByTestId("loading").textContent).toBe("loaded"));
+      render(
+        <AuthProvider>
+          <TestConsumer />
+        </AuthProvider>,
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId("loading").textContent).toBe("loaded"),
+      );
 
       // Login
       await user.click(screen.getByText("login-keep"));
@@ -748,7 +935,7 @@ describe("AuthContext", () => {
           email: "e@x.com",
           firstName: "F",
           lastName: "L",
-          tenant_id: "t9"
+          tenant_id: "t9",
         },
         token: "state-token",
       };
@@ -763,8 +950,14 @@ describe("AuthContext", () => {
       });
 
       const user = userEvent.setup();
-      render(<AuthProvider><TestConsumer /></AuthProvider>);
-      await waitFor(() => expect(screen.getByTestId("loading").textContent).toBe("loaded"));
+      render(
+        <AuthProvider>
+          <TestConsumer />
+        </AuthProvider>,
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId("loading").textContent).toBe("loaded"),
+      );
 
       // Login
       await user.click(screen.getByText("login-keep"));
@@ -774,7 +967,7 @@ describe("AuthContext", () => {
 
       // Use fireEvent (synchronous) to catch the intermediate state
       fireEvent.click(screen.getByText("logout"));
-      
+
       // isLoggingOut should be true immediately after the click
       // The setTimeout(0) hasn't run yet, so state is still true
       expect(screen.getByTestId("loggingout").textContent).toBe("yes");
@@ -788,8 +981,14 @@ describe("AuthContext", () => {
 
     it("handles logout when already logged out", async () => {
       const user = userEvent.setup();
-      render(<AuthProvider><TestConsumer /></AuthProvider>);
-      await waitFor(() => expect(screen.getByTestId("loading").textContent).toBe("loaded"));
+      render(
+        <AuthProvider>
+          <TestConsumer />
+        </AuthProvider>,
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId("loading").textContent).toBe("loaded"),
+      );
 
       // Should already be logged out
       expect(screen.getByTestId("authed").textContent).toBe("no");
@@ -822,7 +1021,7 @@ describe("AuthContext", () => {
       render(
         <AuthProvider value={customValue}>
           <TestConsumer />
-        </AuthProvider>
+        </AuthProvider>,
       );
 
       expect(screen.getByTestId("user").textContent).toBe("mocked");
@@ -830,18 +1029,22 @@ describe("AuthContext", () => {
       expect(screen.getByTestId("backendRole").textContent).toBe("admin");
       expect(screen.getByTestId("loading").textContent).toBe("loaded");
       expect(screen.getByTestId("authed").textContent).toBe("yes");
-      expect(screen.getByTestId("permissions").textContent).toBe('{"custom":true}');
+      expect(screen.getByTestId("permissions").textContent).toBe(
+        '{"custom":true}',
+      );
     });
 
     it("uses internal state when customValue is not provided", async () => {
       render(
         <AuthProvider>
           <TestConsumer />
-        </AuthProvider>
+        </AuthProvider>,
       );
 
       expect(screen.getByTestId("user").textContent).toBe("none");
-      await waitFor(() => expect(screen.getByTestId("loading").textContent).toBe("loaded"));
+      await waitFor(() =>
+        expect(screen.getByTestId("loading").textContent).toBe("loaded"),
+      );
     });
   });
 
@@ -857,7 +1060,7 @@ describe("AuthContext", () => {
           email: "e@x.com",
           firstName: "F",
           lastName: "L",
-          tenant_id: "t10"
+          tenant_id: "t10",
         },
         token: "admin-token",
       };
@@ -872,8 +1075,14 @@ describe("AuthContext", () => {
       });
 
       const user = userEvent.setup();
-      render(<AuthProvider><TestConsumer /></AuthProvider>);
-      await waitFor(() => expect(screen.getByTestId("loading").textContent).toBe("loaded"));
+      render(
+        <AuthProvider>
+          <TestConsumer />
+        </AuthProvider>,
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId("loading").textContent).toBe("loaded"),
+      );
 
       await user.click(screen.getByText("login-keep"));
 
@@ -892,7 +1101,7 @@ describe("AuthContext", () => {
           email: "e@x.com",
           firstName: "F",
           lastName: "L",
-          tenant_id: "t11"
+          tenant_id: "t11",
         },
         token: "operator-token",
       };
@@ -907,8 +1116,14 @@ describe("AuthContext", () => {
       });
 
       const user = userEvent.setup();
-      render(<AuthProvider><TestConsumer /></AuthProvider>);
-      await waitFor(() => expect(screen.getByTestId("loading").textContent).toBe("loaded"));
+      render(
+        <AuthProvider>
+          <TestConsumer />
+        </AuthProvider>,
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId("loading").textContent).toBe("loaded"),
+      );
 
       await user.click(screen.getByText("login-keep"));
 
@@ -927,7 +1142,7 @@ describe("AuthContext", () => {
           email: "e@x.com",
           firstName: "F",
           lastName: "L",
-          tenant_id: "t12"
+          tenant_id: "t12",
         },
         token: "viewer-token",
       };
@@ -942,8 +1157,14 @@ describe("AuthContext", () => {
       });
 
       const user = userEvent.setup();
-      render(<AuthProvider><TestConsumer /></AuthProvider>);
-      await waitFor(() => expect(screen.getByTestId("loading").textContent).toBe("loaded"));
+      render(
+        <AuthProvider>
+          <TestConsumer />
+        </AuthProvider>,
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId("loading").textContent).toBe("loaded"),
+      );
 
       await user.click(screen.getByText("login-keep"));
 

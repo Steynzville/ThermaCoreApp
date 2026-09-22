@@ -2,6 +2,8 @@
 
 import json
 import uuid
+import pytest
+from unittest.mock import Mock
 from datetime import datetime, timezone
 
 from app.models import Role, RoleEnum, Unit, UnitStatusEnum, User
@@ -19,6 +21,22 @@ def unwrap_response(response):
         return data["data"]
     # Otherwise return as-is (for error responses)
     return data
+
+
+@pytest.fixture
+def acknowledged_gateway(app, monkeypatch):
+    class Gateways(dict):
+        def get(self, key, default=None):
+            return {"url": "https://test-gateway.example/control"}
+
+    monkeypatch.setitem(app.config, "UNIT_CONTROL_GATEWAYS", Gateways())
+    monkeypatch.setattr(
+        "app.services.unit_controls.requests.post",
+        lambda *args, **kwargs: Mock(
+            raise_for_status=lambda: None,
+            json=lambda: {**kwargs["json"], "acknowledged": True},
+        ),
+    )
 
 
 class TestRemoteControlEndpoints:
@@ -132,7 +150,7 @@ class TestRemoteControlEndpoints:
 
         assert response.status_code == 401
 
-    def test_control_unit_power_success(self, client, db_session):
+    def test_control_unit_power_success(self, client, db_session, acknowledged_gateway):
         """Test controlling unit power successfully."""
         token = self.get_auth_token(client)
 
@@ -164,13 +182,15 @@ class TestRemoteControlEndpoints:
         data = json.loads(response.data)
         assert data["success"] is True
         assert data["power_on"] is True
-        assert data["status"] == "online"
+        assert data["status"] == "offline"
 
-        # Verify database was updated
+        # Telemetry remains measured; acknowledged controls are stored separately
         unit = Unit.query.get(unit_id)
-        assert unit.status == UnitStatusEnum.ONLINE
+        assert unit.status == UnitStatusEnum.OFFLINE
 
-    def test_control_unit_power_turn_off(self, client, db_session):
+    def test_control_unit_power_turn_off(
+        self, client, db_session, acknowledged_gateway
+    ):
         """Test turning unit power off."""
         token = self.get_auth_token(client)
 
@@ -202,13 +222,13 @@ class TestRemoteControlEndpoints:
         data = json.loads(response.data)
         assert data["success"] is True
         assert data["power_on"] is False
-        assert data["status"] == "offline"
-        assert data["water_generation"] is False
+        assert data["status"] == "online"
+        assert data["unit"]["waterProductionOn"] is False
 
-        # Verify database was updated
+        # Telemetry remains measured; acknowledged controls are stored separately
         unit = Unit.query.get(unit_id)
-        assert unit.status == UnitStatusEnum.OFFLINE
-        assert unit.water_generation is False
+        assert unit.status == UnitStatusEnum.ONLINE
+        assert unit.water_generation is True
 
     def test_control_unit_power_unauthorized(self, client, db_session):
         """Test controlling unit power without proper permissions."""
@@ -272,7 +292,9 @@ class TestRemoteControlEndpoints:
 
         assert response.status_code == 404
 
-    def test_control_water_production_success(self, client, db_session):
+    def test_control_water_production_success(
+        self, client, db_session, acknowledged_gateway
+    ):
         """Test controlling water production successfully."""
         token = self.get_auth_token(client)
 
@@ -305,9 +327,9 @@ class TestRemoteControlEndpoints:
         assert data["success"] is True
         assert data["water_production_on"] is True
 
-        # Verify database was updated
+        # Telemetry remains measured; acknowledged controls are stored separately
         unit = Unit.query.get(unit_id)
-        assert unit.water_generation is True
+        assert unit.water_generation is False
 
     def test_control_water_production_unit_offline(self, client, db_session):
         """Test controlling water production on offline unit."""

@@ -1,3 +1,4 @@
+vi.mock("../config/runtime", () => ({ apiUrl: (path) => path }));
 /**
  * apiFetch.test.js - Complete Test Coverage for API Fetch Utility
  */
@@ -433,7 +434,9 @@ describe("apiFetch - Core Functionality", () => {
         statusText: "Not Found",
       });
 
-      await expect(apiFetch("/api/test")).rejects.toThrow("HTTP 404: Not Found");
+      await expect(apiFetch("/api/test")).rejects.toThrow(
+        "HTTP 404: Not Found",
+      );
       expect(toast.error).toHaveBeenCalled();
     });
 
@@ -544,14 +547,15 @@ describe("apiFetch - Core Functionality", () => {
         statusText: "Unauthorized",
       });
 
-      await expect(
-        apiFetch("/api/test", {}, true, false),
-      ).rejects.toThrow();
+      await expect(apiFetch("/api/test", {}, true, false)).rejects.toThrow();
       expect(mockHistory.pushState).not.toHaveBeenCalled();
     });
 
     it("should handle AbortError from fetch abort", async () => {
-      const abortError = new DOMException("The operation was aborted.", "AbortError");
+      const abortError = new DOMException(
+        "The operation was aborted.",
+        "AbortError",
+      );
       mockFetch.mockRejectedValue(abortError);
 
       await expect(apiFetch("/api/test")).rejects.toThrow(
@@ -614,13 +618,11 @@ describe("apiFetch - Core Functionality", () => {
 
     it("should retry on network errors", async () => {
       const networkError = new TypeError("Failed to fetch");
-      mockFetch
-        .mockRejectedValueOnce(networkError)
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: async () => ({ success: true }),
-        });
+      mockFetch.mockRejectedValueOnce(networkError).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ success: true }),
+      });
 
       await apiFetch("/api/test", { retries: 1, retryDelay: 100 });
 
@@ -709,13 +711,11 @@ describe("apiFetch - Core Functionality", () => {
       const abortError = new Error("AbortError");
       abortError.name = "AbortError";
 
-      mockFetch
-        .mockRejectedValueOnce(abortError)
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: async () => ({ success: true }),
-        });
+      mockFetch.mockRejectedValueOnce(abortError).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ success: true }),
+      });
 
       await expect(
         apiFetch("/api/test", { retries: 1, retryDelay: 100, timeout: 5000 }),
@@ -1065,7 +1065,7 @@ describe("apiFetch - Core Functionality", () => {
       });
 
       await expect(
-        apiFetch("/api/test", { redirectOn401: false })
+        apiFetch("/api/test", { redirectOn401: false }),
       ).rejects.toThrow("Unauthorized");
 
       expect(mockHistory.pushState).not.toHaveBeenCalled();
@@ -1089,13 +1089,11 @@ describe("apiFetch - Core Functionality", () => {
 
     it("should use custom retryDelay from options", async () => {
       const networkError = new TypeError("Failed to fetch");
-      mockFetch
-        .mockRejectedValueOnce(networkError)
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: async () => ({}),
-        });
+      mockFetch.mockRejectedValueOnce(networkError).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({}),
+      });
 
       const startTime = Date.now();
       await apiFetch("/api/test", { retries: 1, retryDelay: 500 });
@@ -1138,13 +1136,11 @@ describe("apiFetch - Core Functionality", () => {
     networkErrorMessages.forEach((errorMsg) => {
       it(`should detect network error: "${errorMsg}"`, async () => {
         const networkError = new TypeError(errorMsg);
-        mockFetch
-          .mockRejectedValueOnce(networkError)
-          .mockResolvedValueOnce({
-            ok: true,
-            status: 200,
-            json: async () => ({}),
-          });
+        mockFetch.mockRejectedValueOnce(networkError).mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({}),
+        });
 
         await apiFetch("/api/test", { retries: 1, retryDelay: 100 });
         expect(mockFetch).toHaveBeenCalledTimes(2);
@@ -1166,21 +1162,27 @@ describe("apiFetch - Core Functionality", () => {
           json: async () => ({}),
         });
 
-      await apiFetch("/api/test", { retries: 1, retryDelay: 100, showToastOnError: false });
+      await apiFetch("/api/test", {
+        retries: 1,
+        retryDelay: 100,
+        showToastOnError: false,
+      });
       expect(toast.warning).not.toHaveBeenCalled();
     });
 
     it("should not show toast warning on network error when showToastOnError is false", async () => {
       const networkError = new TypeError("Failed to fetch");
-      mockFetch
-        .mockRejectedValueOnce(networkError)
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: async () => ({}),
-        });
+      mockFetch.mockRejectedValueOnce(networkError).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({}),
+      });
 
-      await apiFetch("/api/test", { retries: 1, retryDelay: 100, showToastOnError: false });
+      await apiFetch("/api/test", {
+        retries: 1,
+        retryDelay: 100,
+        showToastOnError: false,
+      });
       expect(toast.warning).not.toHaveBeenCalled();
     });
   });

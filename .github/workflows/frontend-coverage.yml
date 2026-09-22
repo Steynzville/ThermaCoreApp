@@ -63,14 +63,12 @@ jobs:
         run: |
           echo "📊 Running frontend coverage..."
           
-          # ✅ Run vitest - removed testNamePattern to run ALL tests
-          # ✅ Removed --testTimeout CLI flag - now uses vitest.config.js value
+          set -o pipefail
           pnpm vitest run \
             --pool=forks \
             --poolOptions.forks.singleFork=true \
             --poolOptions.forks.maxForks=2 \
             --reporter=default \
-            --logHeapUsage \
             --coverage \
             --coverage.reporter=text \
             --coverage.reporter=json-summary \
@@ -78,19 +76,8 @@ jobs:
             --coverage.reporter=lcov \
             --coverage.reporter=html \
             --coverage.reportsDirectory=coverage \
+            --coverage.thresholds.lines=60 \
             2>&1 | tee coverage_output.txt
-          
-          # ✅ Capture the exit code
-          EXIT_CODE=$?
-          echo "Vitest exited with code $EXIT_CODE"
-          
-          # ✅ Check if coverage was generated
-          if [ -f coverage/coverage-summary.json ]; then
-            echo "✅ Coverage generated - success"
-            exit 0
-          fi
-          
-          exit $EXIT_CODE
 
       - name: Extract Coverage from Output
         id: coverage

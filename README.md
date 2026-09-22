@@ -14,6 +14,8 @@ ThermaCore SCADA is an enterprise-grade, web-native supervisory control and data
 
 ---
 
+For Demo-App portfolio ownership, calculation formulas, report exports and live integration setup, see [Portfolio data and reporting](docs/PORTFOLIO_DATA_AND_REPORTING.md).
+
 ## 🚀 Quick Start
 
 ### Environment Configuration (.env)
@@ -35,7 +37,7 @@ CORS_ORIGINS=http://localhost:3000,http://localhost:5173,http://localhost:80
 
 # Frontend API Connections
 VITE_API_BASE_URL=http://localhost:5000
-VITE_WS_URL=ws://localhost:5000
+VITE_DATA_MODE=demo # use live for recorded API telemetry and device controls
 ```
 
 ### Local Development Setup
