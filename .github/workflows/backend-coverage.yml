@@ -114,6 +114,7 @@ jobs:
       - name: Run Backend Tests with Coverage
         id: tests
         run: |
+          set -o pipefail
           echo "🧪 Running backend tests with coverage..."
           
           # Run tests with volume mount to persist coverage files
