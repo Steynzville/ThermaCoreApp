@@ -42,7 +42,10 @@ def history():
         return jsonify(
             {"error": "Use a valid UTC date range of at most 366 days."},
         ), 400
-    units = tenant_filter(Unit.query, Unit).all()
+    query = tenant_filter(Unit.query, Unit)
+    if "unit_ids" in request.args:
+        query = query.filter(Unit.id.in_(request.args["unit_ids"].split(",")))
+    units = query.all()
     ids = [u.id for u in units]
     rows = get_history(
         ids,
@@ -64,7 +67,10 @@ def history():
 @jwt_required()
 @permission_required("read_units")
 def events():
-    units = tenant_filter(Unit.query, Unit).all()
+    query = tenant_filter(Unit.query, Unit)
+    if "unit_ids" in request.args:
+        query = query.filter(Unit.id.in_(request.args["unit_ids"].split(",")))
+    units = query.all()
     names = {u.id: u.name for u in units}
     query = UnitCommand.query.filter(UnitCommand.unit_id.in_(names))
     try:
@@ -92,3 +98,91 @@ def events():
             "has_next": result.has_next,
         },
     )
+
+
+@portfolio_bp.get("/units/<unit_id>/history")
+@jwt_required()
+@permission_required("read_units")
+def unit_history(unit_id):
+    from app.services.unit_history import daily_history
+
+    unit = tenant_filter(Unit.query, Unit).filter(Unit.id == unit_id).first()
+    if unit is None:
+        return jsonify({"error": "Unit not found"}), 404
+    now = datetime.now(timezone.utc)
+    try:
+        start = datetime.strptime(request.args["from"], "%Y-%m-%d").replace(
+            tzinfo=timezone.utc
+        )
+        end = datetime.strptime(request.args["to"], "%Y-%m-%d").replace(
+            tzinfo=timezone.utc
+        ) + timedelta(days=1)
+        if start >= end or end - start > timedelta(days=3660):
+            raise ValueError
+    except (KeyError, ValueError):
+        return jsonify(
+            {"error": "Choose valid UTC dates spanning at most ten years per query."}
+        ), 400
+    return jsonify(
+        {
+            "data": daily_history(unit.id, start, min(end, now)),
+            "aggregation": "daily mean",
+            "timezone": "UTC",
+        }
+    )
+
+
+@portfolio_bp.get("/units/<unit_id>/maintenance")
+@jwt_required()
+@permission_required("read_units")
+def list_maintenance(unit_id):
+    from app.models import MaintenanceSchedule
+
+    if tenant_filter(Unit.query, Unit).filter(Unit.id == unit_id).first() is None:
+        return jsonify({"error": "Unit not found"}), 404
+    records = (
+        MaintenanceSchedule.query.filter_by(unit_id=unit_id)
+        .order_by(MaintenanceSchedule.scheduled_at.desc())
+        .all()
+    )
+    return jsonify({"data": [record.as_dict() for record in records]})
+
+
+@portfolio_bp.post("/units/<unit_id>/maintenance")
+@jwt_required()
+@permission_required("remote_control")
+def schedule_maintenance(unit_id):
+    from app import db
+    from app.models import MaintenanceSchedule
+    from app.utils.helpers import get_current_user_id
+
+    if tenant_filter(Unit.query, Unit).filter(Unit.id == unit_id).first() is None:
+        return jsonify({"error": "Unit not found"}), 404
+    body = request.get_json(silent=True)
+    try:
+        if not isinstance(body, dict) or set(body) - {"scheduledAt", "description"}:
+            raise ValueError
+        description = body.get("description", "").strip()
+        scheduled = datetime.fromisoformat(body["scheduledAt"].replace("Z", "+00:00"))
+        if (
+            not 3 <= len(description) <= 2000
+            or scheduled.tzinfo is None
+            or scheduled <= datetime.now(timezone.utc)
+        ):
+            raise ValueError
+    except (ValueError, TypeError, KeyError, AttributeError):
+        return jsonify(
+            {
+                "error": "Provide a future date with timezone and a description of 3–2000 characters."
+            }
+        ), 400
+    user_id, _ = get_current_user_id()
+    record = MaintenanceSchedule(
+        unit_id=unit_id,
+        created_by=user_id,
+        scheduled_at=scheduled.astimezone(timezone.utc),
+        description=description,
+    )
+    db.session.add(record)
+    db.session.commit()
+    return jsonify(record.as_dict()), 201

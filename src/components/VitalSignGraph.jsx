@@ -8,25 +8,34 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-export default function VitalSignGraph({ title, dataKey, color, data = [] }) {
+export default function VitalSignGraph({
+  title,
+  dataKey,
+  color,
+  data = [],
+  units,
+  externallyRanged = false,
+}) {
   const [days, setDays] = useState(30);
-  const rows = data.slice(-days);
+  const rows = externallyRanged ? data : data.slice(-days);
   return (
     <section className="border rounded-lg p-4 space-y-3">
       <div className="flex justify-between">
         <h3 className="font-semibold">{title}</h3>
-        <label>
-          Period{" "}
-          <select
-            aria-label={`${title} period`}
-            value={days}
-            onChange={(e) => setDays(Number(e.target.value))}
-          >
-            <option value={7}>7 days</option>
-            <option value={30}>30 days</option>
-            <option value={90}>90 days</option>
-          </select>
-        </label>
+        {!externallyRanged && (
+          <label>
+            Period{" "}
+            <select
+              aria-label={`${title} period`}
+              value={days}
+              onChange={(e) => setDays(Number(e.target.value))}
+            >
+              <option value={7}>7 days</option>
+              <option value={30}>30 days</option>
+              <option value={90}>90 days</option>
+            </select>
+          </label>
+        )}
       </div>
       {rows.some((r) => r[dataKey] != null) ? (
         <div className="h-64">
@@ -34,7 +43,13 @@ export default function VitalSignGraph({ title, dataKey, color, data = [] }) {
             <LineChart data={rows}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" />
-              <YAxis />
+              <YAxis
+                label={
+                  units
+                    ? { value: units, angle: -90, position: "insideLeft" }
+                    : undefined
+                }
+              />
               <Tooltip />
               <Line
                 type="monotone"

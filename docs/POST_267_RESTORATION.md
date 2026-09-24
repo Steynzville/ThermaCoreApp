@@ -26,3 +26,12 @@ Checkpoint commits are published after each validated stage. This document track
 - Removed unused independent GridView condition fixtures. Demo control snapshots preserve local acknowledged simulation state without server controls overwriting it.
 - Corrected pressure contract: atmospheric pressure cannot substitute for machine differential pressure.
 - Validation: 37 targeted frontend tests, 18 backend tests and production build passed. New tests cover output quality/age, offline/inactive/capability distinctions and demo configurations.
+
+## Completed checkpoint 3: unit history, maintenance and exact-unit routing
+
+- Restored the eleven original machine-history graphs by reading pre-267 UnitHistoryTab; added useful heat, chilling and AWG rate graphs. Daily good-quality measurements, explicit units, UTC periods, 7/30 days, 1/5 years and custom dates (up to ten years per query). SQL aggregates per channel rather than returning unlimited raw readings. Ordinary readers retain access independently of SCADA.
+- Portfolio history supports selected unit IDs and frontend annual chunks for long ranges; demo history is deterministic for the requested dates.
+- Original red animated alarm and yellow warning card presentation restored, using shared descriptions. NH3 leaks require an explicit detector/event; differential pressure alone cannot prove ammonia leakage, and UI does not claim automatic hardware shutdown.
+- Schedule Maintenance creates a database record (operator control permission, ownership checked); demo mode explicitly persists locally per account/tenant/unit. Errors never show success.
+- Manage Remotely supplies an exact unit query parameter, resolved against the permitted portfolio. Foreign route state cannot grant access.
+- Validation: 12 frontend tests and 18 backend tests pass, including five-year history, all 14 graphs, maintenance persistence/errors/permissions and foreign-unit rejection. Production build passes.

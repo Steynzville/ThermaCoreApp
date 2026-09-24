@@ -69,17 +69,24 @@ export const demoUnits = fixtures.map((unit, i) =>
   }),
 );
 
-export function demoHistory(units, now = new Date()) {
+export function demoHistory(units, now = new Date(), range = {}) {
   const today = new Date(
     Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
   );
+  const start = range.from
+    ? new Date(`${range.from}T00:00:00Z`)
+    : new Date(+today - 89 * 86400000);
+  const end = range.to ? new Date(`${range.to}T00:00:00Z`) : today;
+  const days = Math.floor((end - start) / 86400000) + 1;
+  if (!Number.isFinite(days) || days < 1 || days > 3660)
+    throw new Error("Choose a history range of at most ten years.");
   return units.flatMap((unit) =>
-    Array.from({ length: 90 }, (_, index) => {
-      const day = new Date(today.getTime() - (89 - index) * 86400000);
+    Array.from({ length: days }, (_, index) => {
+      const day = new Date(+start + index * 86400000);
       if (unit.installDate && day < new Date(unit.installDate)) return null;
-      const hours = index === 89 ? Math.max(0, (now - today) / 3600000) : 24;
+      const hours = +day === +today ? Math.max(0, (now - today) / 3600000) : 24;
       const seed = [...unit.id].reduce((n, c) => n + c.charCodeAt(0), 0);
-      const uptime = 0.9 + ((seed + index) % 9) / 100;
+      const uptime = 0.9 + ((seed + Math.floor(+day / 86400000)) % 9) / 100;
       const gross =
         Math.max(0, Number(unit.demoNominalPower ?? unit.currentPower ?? 0)) *
         hours *
@@ -95,8 +102,10 @@ export function demoHistory(units, now = new Date()) {
         selfConsumedKWh: self,
         exportedKWh: gross - parasitic - self,
         waterLitres: unit.watergeneration
-          ? hours * (0.5 + (seed % 10) / 10) * uptime
+          ? hours * (unit.waterRate || 0) * uptime
           : 0,
+        heatKWh: hours * (unit.usefulHeat || 0) * uptime,
+        chillKWh: hours * (unit.usefulChill || 0) * uptime,
         observedHours: hours,
         operatingHours: hours * uptime,
         repairHours: 0,

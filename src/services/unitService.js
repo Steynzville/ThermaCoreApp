@@ -61,11 +61,43 @@ export async function getAllUnits() {
 }
 
 export async function getPortfolioHistory(units, range = {}) {
-  if (isDemoMode) return demoHistory(units);
-  const result = await apiGetJson(
-    `/api/v1/portfolio/history?${new URLSearchParams(range)}`,
-  );
-  return result.data || [];
+  if (isDemoMode) return demoHistory(units, new Date(), range);
+  if (!units.length) return [];
+  const params = { ...range, unit_ids: units.map((unit) => unit.id).join(",") };
+  if (!range.from || !range.to)
+    return (
+      (
+        await apiGetJson(
+          `/api/v1/portfolio/history?${new URLSearchParams(params)}`,
+        )
+      ).data || []
+    );
+  const start = new Date(`${range.from}T00:00:00Z`),
+    end = new Date(`${range.to}T00:00:00Z`);
+  if (
+    !Number.isFinite(+start) ||
+    !Number.isFinite(+end) ||
+    start > end ||
+    end - start > 3659 * 86400000
+  )
+    throw new Error("Choose valid history dates spanning at most ten years.");
+  const rows = [];
+  for (let cursor = +start; cursor <= +end; cursor += 365 * 86400000) {
+    const stop = Math.min(+end, cursor + 364 * 86400000);
+    const chunk = {
+      ...params,
+      from: new Date(cursor).toISOString().slice(0, 10),
+      to: new Date(stop).toISOString().slice(0, 10),
+    };
+    rows.push(
+      ...((
+        await apiGetJson(
+          `/api/v1/portfolio/history?${new URLSearchParams(chunk)}`,
+        )
+      ).data || []),
+    );
+  }
+  return rows;
 }
 
 export async function updateUnitFields(unit, changes) {

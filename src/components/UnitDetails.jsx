@@ -1,3 +1,4 @@
+import MaintenanceScheduler from "./unit-details/MaintenanceScheduler";
 import { useUnits } from "../context/UnitContext";
 import { useState } from "react";
 import {
@@ -17,7 +18,7 @@ import UnitStatusHeader from "./unit-details/UnitStatusHeader";
 import UnitTabNavigation from "./unit-details/UnitTabNavigation";
 
 const UnitDetails = ({ className }) => {
-  const _location = useLocation();
+  const [maintenanceOpen, setMaintenanceOpen] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { id } = useParams();
@@ -80,16 +81,7 @@ const UnitDetails = ({ className }) => {
     }
   };
 
-  const handleScheduleMaintenance = () => {
-    if (
-      window.confirm(
-        "Do you want to open your calendar to schedule maintenance?",
-      )
-    ) {
-      // This is a placeholder. In a real app, you might integrate with a calendar API.
-      alert("Opening calendar application (placeholder action).");
-    }
-  };
+  const handleScheduleMaintenance = () => setMaintenanceOpen(true);
 
   if (loading)
     return (
@@ -121,6 +113,13 @@ const UnitDetails = ({ className }) => {
       className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-6 ${className}`}
     >
       <div className="max-w-6xl mx-auto">
+        {maintenanceOpen && (
+          <MaintenanceScheduler
+            key={unit.id}
+            unit={unit}
+            onClose={() => setMaintenanceOpen(false)}
+          />
+        )}
         {/* Header */}
         <UnitStatusHeader unit={unit} getStatusColor={getStatusColor} />
 

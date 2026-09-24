@@ -1,3 +1,4 @@
+import { useLocation, useInRouterContext } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useUnits } from "../context/UnitContext";
@@ -151,13 +152,32 @@ function Controls({ unit }) {
     </div>
   );
 }
-export default function RemoteControl({ unit: suppliedUnit }) {
+function RoutedRemoteControl(props) {
+  const location = useLocation();
+  return (
+    <RemoteControlView
+      {...props}
+      requestedId={
+        new URLSearchParams(location.search).get("unit") ||
+        location.state?.unit?.id
+      }
+    />
+  );
+}
+export default function RemoteControl(props) {
+  return useInRouterContext() ? (
+    <RoutedRemoteControl {...props} />
+  ) : (
+    <RemoteControlView {...props} />
+  );
+}
+function RemoteControlView({ unit: suppliedUnit, requestedId }) {
   const { units, getUnit, loading, error } = useUnits();
   const [id, setId] = useState("");
-  const unit = getUnit(suppliedUnit?.id ?? id);
+  const unit = getUnit(suppliedUnit?.id ?? requestedId ?? id);
   return (
     <div className="p-6 space-y-5">
-      {!suppliedUnit && (
+      {!suppliedUnit && !requestedId && (
         <>
           <h1 className="text-2xl font-bold">Remote Control</h1>
           <label>

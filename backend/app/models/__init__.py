@@ -592,3 +592,26 @@ class SensorReading(db.Model):
 
     def __repr__(self):
         return f"<SensorReading {self.sensor_id} at {self.timestamp}: {self.value}>"
+
+
+class MaintenanceSchedule(db.Model):
+    """An authorized maintenance booking, distinct from a hardware command."""
+
+    __tablename__ = "maintenance_schedules"
+    id = Column(Integer, primary_key=True)
+    unit_id = Column(String(50), ForeignKey("units.id"), nullable=False, index=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    scheduled_at = Column(DateTime, nullable=False)
+    description = Column(String(2000), nullable=False)
+    status = Column(String(20), default="scheduled", nullable=False)
+    created_at = Column(DateTime, default=utc_now, nullable=False)
+
+    def as_dict(self):
+        return {
+            "id": self.id,
+            "unitId": self.unit_id,
+            "scheduledAt": self.scheduled_at.isoformat(),
+            "description": self.description,
+            "status": self.status,
+            "createdAt": self.created_at.isoformat(),
+        }
