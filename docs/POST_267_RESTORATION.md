@@ -17,3 +17,12 @@ Architecture retained from Demo-App `db9f3a2`: shared portfolio, identifier-base
 Four outputs and historical metrics; unit warning/NH3/history/maintenance; remote UI; reports UI/subset isolation; advanced premium SCADA; commercial Sales; real authentication/account settings; explicit demo/live separation including legacy protocol adapters; dependency/security checks; complete validation and Demo-App PR; then separate live-default main synchronization PR. No branch is to be merged automatically.
 
 Checkpoint commits are published after each validated stage. This document tracks completed work, not promises of completed functionality.
+
+## Completed checkpoint 2: first-class useful outputs
+
+- Four output channels include capability, measured rate, units, quality, timestamp, freshness and active state. Live state uses each channel's latest sensor record (15-minute freshness); installation or water-tank content alone never activates an output.
+- Electrical kW, useful heating/chilling kWth and AWG L/h are separate. Backend model/migration, serializer and ingestion contracts extended. Sensor channel names: current_power/power, useful_heat_kw, useful_chill_kw, water_flow.
+- Original green power and blue water artwork retained; labelled red heating and cyan snowflake chilling added. First five demo units demonstrate all outputs, including chilling without AWG.
+- Removed unused independent GridView condition fixtures. Demo control snapshots preserve local acknowledged simulation state without server controls overwriting it.
+- Corrected pressure contract: atmospheric pressure cannot substitute for machine differential pressure.
+- Validation: 37 targeted frontend tests, 18 backend tests and production build passed. New tests cover output quality/age, offline/inactive/capability distinctions and demo configurations.

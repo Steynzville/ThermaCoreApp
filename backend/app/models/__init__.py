@@ -415,6 +415,18 @@ class Unit(db.Model):
         ),
         default=HealthStatusEnum.OPTIMAL,
     )
+    supports_heat = Column(Boolean, default=False)
+    supports_chill = Column(Boolean, default=False)
+    supports_water = Column(Boolean, default=False)
+    useful_heat_kw = Column(Float)
+    useful_chill_kw = Column(Float)
+    water_rate_lph = Column(Float)
+    differential_pressure_bar = Column(Float)
+    temp_out_hot = Column(Float)
+    battery_voltage = Column(Float)
+    flow_rate_inlet = Column(Float)
+    flow_rate_out_chill = Column(Float)
+    flow_rate_out_hot = Column(Float)
     water_generation = Column(Boolean, default=False)
     has_alert = Column(Boolean, default=False)
     has_alarm = Column(Boolean, default=False)

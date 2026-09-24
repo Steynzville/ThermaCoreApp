@@ -1250,6 +1250,30 @@ def run_auto_migrations(app):
             from app.models import UnitCommand
 
             UnitCommand.__table__.create(bind=engine, checkfirst=True)
+            for column in (
+                "supports_heat",
+                "supports_chill",
+                "supports_water",
+                "useful_heat_kw",
+                "useful_chill_kw",
+                "water_rate_lph",
+                "differential_pressure_bar",
+                "temp_out_hot",
+                "battery_voltage",
+                "flow_rate_inlet",
+                "flow_rate_out_chill",
+                "flow_rate_out_hot",
+            ):
+                if not column_exists(engine, "units", column):
+                    definition = (
+                        "BOOLEAN DEFAULT FALSE"
+                        if column.startswith("supports_")
+                        else "FLOAT"
+                    )
+                    with engine.begin() as connection:
+                        connection.execute(
+                            text(f"ALTER TABLE units ADD COLUMN {column} {definition}")
+                        )
 
             # Run user profile fields migration (must run before other migrations)
             user_profile_success = add_user_profile_fields(engine)

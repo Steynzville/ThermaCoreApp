@@ -250,6 +250,12 @@ class UnitSchema(SQLAlchemyAutoSchema):
     tenant_id = fields.Int(dump_only=True, allow_none=True)
     client_id = fields.Method("get_client_id")
     tenant_name = fields.Method("get_tenant_name")
+    outputs = fields.Method("get_outputs")
+
+    def get_outputs(self, obj):
+        from app.services.unit_outputs import output_states
+
+        return output_states(obj)
 
     def get_client_id(self, obj):
         return obj.tenant.client_id if obj.tenant else None
@@ -295,6 +301,10 @@ class UnitCreateSchema(Schema):
     status = EnumField(UnitStatusEnum, load_default="offline")
     health_status = EnumField(HealthStatusEnum, load_default="warning")
 
+    supports_heat = fields.Bool()
+    supports_chill = fields.Bool()
+    supports_water = fields.Bool()
+
     # Client information
     client_name = fields.Str(validate=validate.Length(max=200))
     client_contact = fields.Str(validate=validate.Length(max=200))
@@ -313,6 +323,10 @@ class UnitUpdateSchema(Schema):
     has_alert = fields.Bool()
     has_alarm = fields.Bool()
     last_maintenance = DateTimeField()
+
+    supports_heat = fields.Bool()
+    supports_chill = fields.Bool()
+    supports_water = fields.Bool()
 
     # Client information
     client_name = fields.Str(validate=validate.Length(max=200))

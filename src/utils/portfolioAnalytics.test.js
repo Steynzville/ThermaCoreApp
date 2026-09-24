@@ -81,6 +81,7 @@ describe("Portfolio ownership", () => {
       tenant_name: "Site",
       status: "online",
       pressure: 1000,
+      differential_pressure_bar: 1,
       controls: { waterProductionOn: true, machinePower: false },
     });
     expect(u).toMatchObject({

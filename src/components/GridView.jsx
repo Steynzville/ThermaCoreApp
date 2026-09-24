@@ -5,10 +5,9 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useUnits } from "../context/UnitContext";
 import PageHeader from "./PageHeader";
-import PowerIcon3D from "./PowerIcon3D";
+import OutputIndicators from "./OutputIndicators";
 import SearchBar from "./SearchBar";
 import { Card, CardContent, CardHeader } from "./ui/card";
-import WaterIcon3D from "./WaterIcon3D";
 
 /**
  * Get the page title based on user role and status filter
@@ -36,59 +35,6 @@ const GridView = ({ className }) => {
 
   const [localUnits, setLocalUnits] = useState([]);
 
-  // Static alert data (moved outside useEffect to avoid recreation)
-  const alertsData = useMemo(
-    () => ({
-      TC001: {
-        type: "critical",
-        title: "Unit Offline",
-        message:
-          "ThermaCore Unit 001 has gone offline and requires immediate attention",
-        timestamp: "2025-09-09 14:45",
-        acknowledged: false,
-      },
-      TC002: {
-        type: "warning",
-        title: "Low Water Level",
-        message: "ThermaCore Unit 002 water level has dropped below 10%",
-        timestamp: "2025-09-09 14:15",
-        acknowledged: false,
-      },
-      TC003: {
-        type: "info",
-        title: "Maintenance Scheduled",
-        message:
-          "ThermaCore Unit 003 scheduled for routine maintenance tomorrow",
-        timestamp: "2025-09-09 13:30",
-        acknowledged: true,
-      },
-      TC004: {
-        type: "success",
-        title: "System Restored",
-        message:
-          "ThermaCore Unit 004 has been successfully restored to normal operation",
-        timestamp: "2025-09-09 12:00",
-        acknowledged: true,
-      },
-      TC005: {
-        type: "warning",
-        title: "Temperature Alert",
-        message:
-          "ThermaCore Unit 005 temperature has exceeded normal operating range",
-        timestamp: "2025-09-09 11:30",
-        acknowledged: false,
-      },
-      TC006: {
-        type: "critical",
-        title: "Pressure Drop",
-        message: "ThermaCore Unit 006 experiencing significant pressure drop",
-        timestamp: "2025-09-09 10:15",
-        acknowledged: false,
-      },
-    }),
-    [],
-  );
-
   // Memoized processed units to avoid expensive operations on every render
   const processedUnits = useMemo(() => {
     if (!contextUnits) return [];
@@ -105,7 +51,7 @@ const GridView = ({ className }) => {
 
     // Admins can see all units, others see limited units
     return mappedUnits;
-  }, [contextUnits, permissions, alertsData]);
+  }, [contextUnits]);
 
   useEffect(() => {
     setLocalUnits(processedUnits);
@@ -237,21 +183,7 @@ const GridView = ({ className }) => {
             >
               <CardHeader className="pb-3">
                 <div className="flex flex-col items-center">
-                  {/* Icons row - Power and Water side by side */}
-                  <div className="flex items-center space-x-3 mb-3">
-                    {/* Power Icon */}
-                    <PowerIcon3D power={unit.currentPower} />
-
-                    {/* Water Icon - only show if unit has water generation */}
-                    {unit.watergeneration && (
-                      <WaterIcon3D
-                        waterLevel={unit.water_level}
-                        greyedOut={
-                          unit.status !== "online" || !unit.watergeneration
-                        }
-                      />
-                    )}
-                  </div>
+                  <OutputIndicators unit={unit} />
 
                   {/* Unit name below icons */}
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 text-center mb-2">

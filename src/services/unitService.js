@@ -10,8 +10,15 @@ export function resetDemoState() {
   demoOverrides = new Map();
   demoActions = [];
 }
-const snapshot = (u) =>
-  normalizeUnit({ ...u, ...demoOverrides.get(String(u.id)) });
+const snapshot = (u) => {
+  if (!isDemoMode) return normalizeUnit(u);
+  const { controls, outputs, ...fields } = u;
+  return normalizeUnit({
+    ...fields,
+    ...demoOverrides.get(String(u.id)),
+    outputs: undefined,
+  });
+};
 
 export async function getAllUnits() {
   let remote = [];
@@ -24,7 +31,7 @@ export async function getAllUnits() {
           `/api/v1/units?per_page=100&page=${page++}`,
         );
         remote.push(...(response.data || []));
-        more = response.has_next === true;
+        more = response.has_next === true || page <= (response.pages || 0);
       }
     } catch (error) {
       if (!isDemoMode || /Unauthorized|permission/i.test(error.message))
@@ -110,7 +117,7 @@ export async function controlUnit(unit, changes) {
       type: "control",
     };
     demoActions = [action, ...demoActions];
-    return { unit: normalizeUnit(updated), action };
+    return { unit: snapshot(updated), action };
   }
   const response = await apiPostJson(
     `/api/v1/remote-control/units/${encodeURIComponent(unit.id)}/controls`,

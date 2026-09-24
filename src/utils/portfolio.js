@@ -1,3 +1,4 @@
+import { unitOutputs } from "./unitOutputs";
 // Ownership is based on identifiers, never a display name or array position.
 export const sameId = (a, b) =>
   a != null && b != null && String(a) === String(b);
@@ -33,6 +34,10 @@ export function normalizeUnit(raw) {
     raw[camel] ?? raw[snake] ?? fallback;
   return {
     ...raw,
+    outputs: unitOutputs(raw),
+    usefulHeat: value("usefulHeat", "useful_heat_kw"),
+    usefulChill: value("usefulChill", "useful_chill_kw"),
+    waterRate: value("waterRate", "water_rate_lph"),
     id: String(raw.id),
     tenantId: tenantIdOf(raw) ?? null,
     clientId: clientIdOf(raw) ?? null,
@@ -46,6 +51,7 @@ export function normalizeUnit(raw) {
     lastMaintenance: value("lastMaintenance", "last_maintenance"),
     healthStatus: value("healthStatus", "health_status", "Unknown"),
     watergeneration:
+      raw.outputs?.water?.capable ??
       raw.supports_water ??
       raw.watergeneration ??
       Boolean(
@@ -67,8 +73,7 @@ export function normalizeUnit(raw) {
     ambientTemp: value("ambientTemp", "temp_outside"),
     ambientHumidity: value("ambientHumidity", "humidity"),
     differentialPressure:
-      raw.differentialPressure ??
-      (raw.pressure == null ? null : Number(raw.pressure) / 1000),
+      raw.differentialPressure ?? raw.differential_pressure_bar ?? null,
     awgWaterLevel: value("awgWaterLevel", "water_level"),
     batteryLife: value("batteryLife", "battery_level"),
     client: {

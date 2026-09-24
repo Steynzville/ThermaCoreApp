@@ -15,6 +15,26 @@ export const demoTenants = fixtures.map((unit) => ({
 export const demoUnits = fixtures.map((unit, i) =>
   normalizeUnit({
     ...unit,
+    batteryVoltage:
+      unit.hasAlert && !unit.hasAlarm && unit.status === "online"
+        ? 21.8
+        : unit.batteryVoltage,
+    supports_heat: i % 3 === 0,
+    supports_chill: i % 3 === 1,
+    supports_water: i % 3 !== 1 && (unit.watergeneration || i === 3),
+    watergeneration: i % 3 !== 1 && (unit.watergeneration || i === 3),
+    usefulHeat: unit.status === "online" && i % 3 === 0 ? 4.5 + i : 0,
+    usefulChill: unit.status === "online" && i % 3 === 1 ? 2.5 + i : 0,
+    waterRate:
+      unit.status === "online" &&
+      i % 3 !== 1 &&
+      (unit.watergeneration || i === 3)
+        ? 1.9
+        : 0,
+    waterProductionOn:
+      unit.status === "online" &&
+      i % 3 !== 1 &&
+      (unit.watergeneration || i === 3),
     tenantId: demoTenants[i].id,
     clientId: demoTenants[i].client_id,
     tenantName: demoTenants[i].name,
@@ -31,9 +51,16 @@ export const demoUnits = fixtures.map((unit, i) =>
               type: unit.hasAlarm ? "critical" : "warning",
               severity: unit.hasAlarm ? "critical" : "warning",
               title: unit.hasAlarm
-                ? "Unit requires attention"
-                : "Unit condition warning",
-              message: `${unit.name}: ${unit.healthStatus.toLowerCase()} condition`,
+                ? "NH3 LEAK DETECTED"
+                : unit.status === "offline"
+                  ? "Unit Offline"
+                  : "Low Battery Voltage",
+              category: unit.hasAlarm ? "alarm" : "alert",
+              message: unit.hasAlarm
+                ? "Critical ammonia detector alarm: NH3 concentration exceeds the configured safety threshold. Immediate attention required."
+                : unit.status === "offline"
+                  ? "The unit is offline; no current telemetry is being received."
+                  : "Backup battery voltage is 21.8 V, below the configured 22 V minimum; inspect the battery and charging circuit.",
               timestamp: "2026-08-21T08:00:00Z",
               acknowledged: false,
             },
