@@ -1,74 +1,31 @@
-# ThermaCore Integrated SCADA: Sales & Demo Script
-## Pitch Deck, Live Software Walkthrough, and Objection-Handling Guide
+# Sales demonstration script
 
-This script is engineered for sales engineers and account executives demonstrating the ThermaCore SCADA Platform to utility operators, municipal boards, and industrial investors.
+## Prepare
 
----
+Use the Demo-App deployment with an approved demonstration account and appropriate tenant/SCADA permissions. Confirm the visible source is demo and explain that the portfolio, production and commercial records are fictional examples. Authentication remains real; configure external providers before demonstrating provider login. Do not connect a sales demonstration to physical controls accidentally.
 
-## 1. Scene Setting & Value Proposition (The Hook)
+## Walkthrough
 
-**Speaker Guidelines**: *Begin with the audience gathered in front of the physical generator prototype. Have the SCADA dashboard open on a large wall screen or portable rugged tablet.*
+1. **Portfolio and permissions:** select a permitted tenant, show the dashboard, then change tenant and observe Units/Analytics update together. Explain client administrators see only their client and viewers/operators their assigned tenant. Do not promise the global User Management screen to client administrators.
+2. **Four outputs:** show electrical power (green), useful heat (red), useful chilling and AWG water (blue). Compare fitted-but-inactive and actively producing units, including chilling without AWG. Explain that live icons require actual fresh GOOD measurements.
+3. **Conditions:** open an orange alert and a red alarm notification. Show the correct destination with unit/event context, meaningful cause and acknowledgement behavior. NH3 comes from detector evidence, not pressure alone.
+4. **Unit Details:** open ordinary History and longer/custom ranges, including thermal/water/electrical metrics. Schedule an explicitly local demo maintenance record. Use Manage Remotely to keep the exact unit selected.
+5. **Remote Management:** demonstrate simulated demo controls and their shared state. Explain that live actions instead require an authenticated configured gateway and matching acknowledgement; telemetry confirms actual effect separately. Do not claim two-person approval, emergency-stop certification or a real camera feed without commissioning.
+6. **Ordinary Analytics:** explain measured coverage versus financial assumptions. Change tariffs/cost assumptions and show the selected portfolio. Do not present illustrative ROI, emissions equivalents or missing-data forecasts as guaranteed outcomes.
+7. **Premium SCADA:** show its distinct Overview/Gauges/Trends/Process Flow, Alerts and Performance/Equipment Health/Energy/Predictive views. Explain entitlement enforcement and explicitly illustrative demo topology. Unsupported health/efficiency/lifetime claims remain unavailable.
+8. **Sales:** with system-admin access, show commercial records and product/monthly trends separately from operational Analytics. These demo records are not evidence of actual revenue.
+9. **Reports:** select one unit and Excel, Word or PDF. Download/open the real file and verify only that unit appears. Explain date-filtered history versus current snapshots and the open-page requirement for scheduled downloads.
+10. **Settings:** show saved account/profile/preferences and password-confirmed provider/passkey linking. Missing external configuration is reported honestly.
 
-> "Welcome, everyone. Today, we aren't just looking at a high-efficiency physical power and water generator. We are looking at a complete, integrated utility ecosystem. 
->
-> Traditional generators are shipped as isolated, unmonitored hardware. If a seal leaks, or if a compressor deviates from its design parameters, it goes unnoticed until the machine breaks down. 
->
-> At ThermaCore, we have solved this. Every modular generator we deploy ships with a pre-configured, secure edge gateway connected directly to our web-native SCADA platform. This creates a real-time digital twin of your physical asset.
->
-> Let me show you how this platform drives operational efficiency and generates passive, high-margin value."
+## Questions to answer accurately
 
----
+| Question | Answer |
+|---|---|
+| Does it work without hardware for a demo? | Yes, the explicit demo mode supplies deterministic examples while retaining authentication and tenant architecture. |
+| What is needed for live operation? | Recorded telemetry, ownership/sensors, secured broker/server, authenticated hardware gateway, provider/email credentials, camera/topology configuration as applicable. |
+| What if connectivity fails? | The UI shows missing/offline/error states. Edge buffering/replay must be implemented and commissioned by the gateway; this repository does not guarantee it. |
+| Are savings or uptime proven? | The code provides calculations and tests, not field evidence or guaranteed efficiency/downtime improvement. Validate any commercial claim separately. |
+| Is premium access implemented? | Yes, premium SCADA entitlement is enforced. Pricing, subscription billing and support promises are commercial arrangements, not inferred from UI flags. |
+| What security warning remains? | The optional OPC-UA dependency advisory is documented; deployments must address its exposure and track updates. |
 
-## 2. Walkthrough Flow (Step-by-Step Demo)
-
-```
- [0. Admin Landing] ──► [1. Main Dashboard] ──► [2. Asset Detail] ──► [3. Remote Control] ──► [4. Analytics]
-```
-
-### Step 0: Admin Landing Page & Tenant Switching (Enterprise Multi-Tenancy & Client Admins)
-* **What to show**: The `/admin` landing page that administrators arrive on post-login, prompting them to select a facility/tenant. Demonstrate logging in as a **Client Admin** (`client_admin`).
-* **Talking Point**:
-  > "Before we even see a dashboard, let's look at our enterprise multi-tenancy and RBAC controls. The platform supports a 4-tier role hierarchy: System Admin, Client Admin, Operator, and Viewer.
-  >
-  > When a **Client Admin** logs in—such as a facility manager for AquaPure Solutions—they are greeted by our **Admin Landing Page** at `/admin`. Client Admins see all facilities belonging specifically to their client company (`client_id`). They can switch between their company's regional facilities seamlessly, manage local operators and viewers, and configure facility assets without ever seeing or interfering with other client organizations on the network.
-  >
-  > System Admins, on the other hand, maintain master cross-client visibility across all customer fleets."
-
-### Step 1: Main Dashboard (The Visual First-Impression)
-* **What to show**: The Navy & Gold live dashboard layout. Point out the active unit metrics, thermal output values, and water generation volumes.
-* **Talking Point**:
-  > "As a fleet manager, this is your control center. You have immediate visibility over active generators worldwide. Notice the high-contrast design. This is built specifically for readability under physical factory floor lighting or direct sunlight in the field."
-
-### Step 2: The Asset Grid & Interactive SCADA View
-* **What to show**: Navigate to the **Asset Grid** and click on an active unit to show the detailed **Process Flow Diagram (PFD)**.
-* **Talking Point**:
-  > "Here is our digital twin. This live interactive schematic displays real-time fluid flow speeds and thermal loops. We don't just see numbers—we see physical thermodynamic structures operating live."
-
-### Step 3: Secure Remote Control (The "Wow" Factor)
-* **What to show**: Trigger a remote override (such as toggling an expansion valve setting). Fill out the operator override verification checks.
-* **Talking Point**:
-  > "If we need to adjust physical settings, we don't need to fly an engineer to the site. Authorized operators can dispatch secure command overrides instantly. To prevent unauthorized control, every critical action requires a secure authentication code and is logged inside our immutable audit ledger."
-
-### Step 4: Alerts and Alarms (Operational Reliability)
-* **What to show**: Trigger a mock threshold warning on screen. Let the alert flash, then show how to complete the operator acknowledgment form.
-* **Talking Point**:
-  > "When a thermal gradient or pressure reading drifts outside safety parameters, the system triggers sub-second alarm notifications. Operators are guided through a step-by-step resolution checklist and must log their action before resolving the alert, establishing a secure compliance history."
-
-### Step 5: Advanced Performance Analytics (The ROI Pitch)
-* **What to show**: Navigate to the **Performance & COP** page. Highlight the thermodynamic COP graphs, payback timelines, and carbon mitigation offsets.
-* **Talking Point**:
-  > "This is where we calculate your return on investment. The system continuously evaluates the thermal loop's mechanical efficiency (COP) and shows you how many tons of carbon you are saving daily. Our modeling indicates that real-time tuning optimizations can deliver efficiency gains of +18.4% and reduce downtime by 34.2% - and we're ready to validate these numbers with our first pilot customers.
-  >
-  > The platform is built for production-grade reliability from day one, validated through 5,504 automated tests with 91.78% frontend coverage and 85.63% backend coverage. This isn't a prototype - it's enterprise-ready software that's fully functional and ready for deployment alongside our physical generator units."
-
----
-
-## 3. Key Objections and Responses
-
-| Objection | Sales Response |
-| :--- | :--- |
-| **"Our physical assets are located in areas with poor internet connection. What if we lose connectivity?"** | "We have built this platform with offline reliability in mind. If an edge gateway loses connection, it continues to log telemetry locally. Once internet connectivity is restored, the gateway automatically synchronizes the data, populating the historical timeline without loss." |
-| **"Is a web-native control system secure from cyber attacks?"** | "We prioritize security at every level. The platform implements a zero-trust model utilizing dual-token JWT authentication, mutual TLS (mTLS) for edge communications, and strict role-based access controls. High-risk operations require multi-operator approvals, satisfying NERC CIP and IEC 62443 criteria." |
-| **"Why should we pay a software subscription fee on top of the physical hardware purchase?"** | "The software subscription is the key to maximizing your hardware investment. It's designed to power predictive diagnostics that can reduce unplanned maintenance down-events by 34.2%. By continually tuning your thermodynamic loops, it's built to pay for itself through increased efficiency." |
-| **"How do we know your software is reliable and won't crash in production?"** | "ThermaCore SCADA is backed by rigorous automated testing. We maintain enterprise-grade test suites with **5,504 passing tests** - 4,180 frontend unit/integration tests and 1,324 backend tests. Frontend coverage stands at **91.78%** (Vitest) and backend coverage at **85.63%** (Pytest), ensuring that code modifications are fully validated and stable before release. The platform is production-ready and has been engineered for reliability from day one." |
-| **"Have you proven these efficiency gains with real customers?"** | "We're in the pilot phase and actively seeking our first deployment partners. The platform's thermodynamic optimization algorithms are validated through extensive modeling, showing potential efficiency gains of +18.4% and downtime reduction of 34.2%. We're ready to demonstrate these capabilities with our physical prototype and our first commercial customers. The software is fully functional and sales-ready - we just need to put it in the field to validate the numbers." |
+Use fresh PR workflow results for test/coverage claims. Never reuse old 5,504-test or 91.78% coverage figures as current evidence. See [Testing](TESTING.md) and the [feature matrix](FEATURE_COMPARISON_MATRIX.md).

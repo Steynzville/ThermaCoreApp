@@ -1,55 +1,7 @@
-# Development Tools & Diagnostic Scripts
+# Historical development tools
 
-This directory contains development tools, diagnostic scripts, and historical documentation that are not needed for production deployment but are useful for development and troubleshooting.
+`diagnostic_scripts/` contains earlier diagnostic, demonstration and validation scripts. They are not the current CI suite, deployment provisioning process or evidence of live hardware capability. Some scripts use historical endpoints, fixtures, account assumptions or command-line credentials; inspect source before any use and restrict them to an isolated disposable environment. Do not point them at production by default.
 
-## Directory Structure
+Examples include `diagnose_api_endpoints.py`, `diagnose_auth_issue.py`, `demo_service_manager.py`, `validate_pr2.py` and standalone `test_*.py` scripts. Their filenames describe historical development work; they do not override current API/security contracts.
 
-### `diagnostic_scripts/`
-Contains diagnostic, demonstration, and troubleshooting scripts used during development:
-
-#### Diagnostic Scripts
-- **`diagnose_auth_issue.py`** - Comprehensive authentication diagnostics
-- **`diagnose_api_endpoints.py`** - API endpoint testing and diagnostics
-
-#### Demonstration Scripts
-- **`demonstrate_improvements.py`** - Demonstration of logging and exception handling improvements
-- **`demo_config_refactoring.py`** - Configuration refactoring demonstrations
-- **`demo_service_manager.py`** - Service manager demonstrations
-- **`pr2_demo.py`** - PR2 feature demonstrations
-
-#### Validation & Testing Scripts
-- **`validate_conftest_improvements.py`** - Test configuration validation
-- **`validate_dnp3_optimization.py`** - DNP3 optimization validation
-- **`validate_phase2_fix.py`** - Phase 2 fix validation
-- **`validate_pr2.py`** - PR2 validation
-- **`verify_changes.py`** - General change verification
-- **`test_*.py`** - Standalone test scripts for various components
-- **`run_complete_tests.py`** - Complete test suite runner
-
-These scripts can be run manually for troubleshooting but are not part of the production application.
-
-### `documentation/`
-Contains historical development and debugging documentation:
-
-- **DEBUG-related documentation** - Debugging guides and troubleshooting steps from development
-- **CONFTEST improvements** - Test configuration documentation
-
-## Usage
-
-### Running Diagnostic Scripts
-
-From the backend directory:
-
-```bash
-cd backend
-python ../dev_tools/diagnostic_scripts/diagnose_auth_issue.py
-python ../dev_tools/diagnostic_scripts/diagnose_api_endpoints.py [base_url] [username] [password]
-```
-
-### Documentation
-
-The documentation in this directory is kept for historical reference and may contain outdated information. Refer to the main project documentation for current information.
-
-## Note
-
-These files are excluded from production deployment and are maintained solely for development purposes.
+Use [Developer onboarding](../docs/DEVELOPER_ONBOARDING.md), [API reference](../docs/API_REFERENCE.md), [Testing](../docs/TESTING.md) and [Troubleshooting](../docs/TROUBLESHOOTING.md) for current procedures. The authoritative regression suites are Vitest under `src` and Pytest under `backend/app/tests`. Do not count these historical scripts as additional passing production tests without actually running and validating their contracts.

@@ -1,53 +1,25 @@
-# ThermaCore Integrated Ecosystem vs. Traditional Legacy hardware & SCADA
-## Comprehensive Feature Comparison Matrix & Competitive Analysis
+# Current capability matrix
 
-This document provides a side-by-side strategic and technical comparison showing how **ThermaCore's Integrated Ecosystem** (Modular Power & Water Generators + Web-Native SCADA) compares to traditional equipment suppliers and legacy third-party SCADA software products. It outlines the massive competitive advantages in Cost, Security, Operational Flexibility, and Business Model.
+This is a comparison of implemented product areas/modes, not an unsupported competitive benchmark. Hardware commissioning, credentials and commercial terms are external to repository code.
 
----
+| Capability | Shared application | Demo-App default | main default / dependency |
+|---|---|---|---|
+| Tenant portfolio | Actual account/client/tenant identifiers; backend checks | Fictional fixture ownership explicitly labelled | Authenticated persisted ownership; no fictional fallback |
+| Four outputs | Electrical power, useful heat, useful chill, AWG water; capability distinct from activity | Examples of different fitted/active outputs | Fresh GOOD measured channels required |
+| Dashboard/notifications | Shared counts; alert/alarm colors and contextual destinations | Demonstration conditions | Recorded current conditions/events |
+| Unit History | Machine/output graphs, daily long-range queries; no premium requirement | Deterministic requested-date history | Recorded GOOD samples, bounded queries |
+| Maintenance | Permission and unit scope | Account/tenant/unit-local demonstration persistence | Backend maintenance records |
+| Remote Management | Exact-unit routing and permission checks | Explicit simulated controls | HTTPS gateway authentication, configured limits/modes and exact ACK |
+| Ordinary Analytics | Scoped operating/financial calculations and assumptions | Estimated demonstration production | Metered coverage; unsupported values unavailable |
+| Premium SCADA | Separate views, protected routes/API entitlement | Illustrative topology and scoped demo metrics | Actual configured topology and bounded premium history |
+| Sales | Commercial records and product/monthly charts | Illustrative records derived from permitted demo units | Persisted sale records; system-admin screen |
+| Reports | Real XLSX/DOCX/PDF with exact selected-unit collections | Clearly labelled demo source | Real recorded data; no synthetic missing history |
+| Report scheduling | Persisted configuration, pause/resume | Own browser storage | Own backend records; execution still requires open Reports page |
+| Account settings | Persisted own profile/preferences/avatar | Real account API | Real account API |
+| Google/Apple/passkeys | Real authenticated integration | No fake authentication | Provider credentials, HTTPS and WebAuthn RP/origin |
+| Cameras | Configured media panels | No claim of real hardware feed | Authorized HTTPS browser-compatible stream |
+| Field protocols | Real MQTT/OPC-UA integration architecture | Optional explicit legacy simulators | Configure secure adapters; Modbus/DNP3 simulators are blocked |
 
-### Competitive Comparison Matrix
+Not established by this repository: two-operator command approval, autonomous safety shutdown, guaranteed offline edge buffering/replay, unattended email reports, validated equipment remaining-life models, regulatory certification, competitor inferiority, field efficiency gains or latency SLAs. SCADA trend extrapolation is advisory; physical safety and commissioned gateway behavior remain installation responsibilities.
 
-| Strategic Dimension | Traditional Equipment Suppliers (Hardware-Only) | Legacy Standalone SCADA (e.g., WinCC, Wonderware, Ignition) | ThermaCore Integrated Solution (Smart Generator + Web SCADA) | The ThermaCore Competitive Advantage |
-| :--- | :--- | :--- | :--- | :--- |
-| **1. Business Model & ROI** | **One-time transaction (CapEx)**<br>• Zero ongoing digital value-add.<br>• Unplanned downtime results in revenue losses. | **Software Licensing Only**<br>• Rigid per-tag or per-seat fees.<br>• Forced annual upgrades and support lock-ins. | **Dual-Stream Model (CapEx + OpEx)**<br>• One-time modular generator sale.<br>• Recurring SaaS software monitoring subscription. | **Compounding Recurring Revenues**<br>Guarantees recurring high-margin SaaS revenues per generator deployed while maximizing client ROI. |
-| **2. System Integration** | **Disconnected / Siloed**<br>• No built-in remote monitoring.<br>• Requires expensive, custom integration projects. | **Generic Middleware**<br>• Requires complex, custom driver mapping for every unique physical device. | **Turnkey Out-of-the-Box**<br>• Seamless, secure edge gateway pre-configured in every generator. • Native digital twin on shipping. | **Zero Integration Overhead**<br>Customers get immediate, real-time control and monitoring the moment the modular generator is physically installed. |
-| **3. Security & Cyber Hardening** | **Extremely Vulnerable**<br>• Unencrypted, exposed serial or plain TCP connections on physical asset ports. | **Bolted-On / Legacy Defenses**<br>• Rely on perimeter firewalls.<br>• Workstations often run shared, high-privilege logins. | **Built-In Zero-Trust Security**<br>• Dual-token JWT session security.<br>• mTLS edge client certificates.<br>• Strict granular RBAC (Viewer, Operator, Admin). | **OT/IT Compliance Standard**<br>Pre-aligned with strict **IEC 62443** and **NERC CIP** guidelines from day one, minimizing municipal and corporate liability. |
-| **4. Operational Mobility** | **None**<br>• Local physical readings only. | **Workstation-Bound**<br>• Requires fat desktop clients and dedicated control room terminals. | **Web-Native & Responsive**<br>• Lightweight React 19 portal accessible from secure phones, rugged plant tablets, or desktops. | **Actionable Field Intelligence**<br>Field engineers manage alarms, loop status diagrams, and remote overrides anywhere, on any modern browser. |
-| **5. Performance & Maintenance** | **Reactive**<br>• Maintenance happens after physical hardware failures, causing extensive downtime. | **Basic Threshold Alarms**<br>• Pre-configured, static alarm bounds with no thermal thermodynamic performance insights. | **Proactive & Optimized**<br>• Continuous Thermodynamic COP evaluations target average **+18.4% efficiency gains**.<br>• Designed to reduce downtime by **34.2%**.<br>• Ready for pilot validation with first customers. | **Predictive Diagnostics**<br>Early thermodynamic trend anomalies flag equipment fatigue *before* physical damage occurs, optimizing maintenance cycles. |
-| **6. Multi-Tenant Management** | **None**<br>• Single-tenant only. Cannot manage multiple clients/facilities from one interface. | **Limited**<br>• Typically requires separate instances per client or site. | **Native Multi-Tenant Architecture**<br>• One login to manage all tenants.<br>• Tenant Switcher for seamless tenant switching.<br>• "All Tenants" aggregated view.<br>• Admin Landing page for tenant selection. | **Enterprise Scalability**<br>Single admin interface for all tenants. No additional instances needed for new clients. |
-
----
-
-### Detailed Value Proposition Breakdown
-
-#### 1. Financial Disruption: The Dual Revenue Engine
-Traditional equipment manufacturers operate in a hyper-competitive, cyclical transactional market where margins compress over time. Standalone SCADA companies charge licensing fees that penalize scaling.
-* **The ThermaCore Advantage**: By bundling physical modular power/water generators with a mandatory or highly value-additive SaaS monitoring subscription, ThermaCore changes the relationship. Clients pay a predictable operating expense to ensure their multi-million dollar physical assets are operating at peak efficiency, generating consistent, high-margin ARR for ThermaCore.
-
-#### 2. Turnkey Digital-Twin Deployment
-In the industrial sector, connecting physical equipment to a supervisory network takes months of engineering, system integrator contracts, and driver debugging.
-* **The ThermaCore Advantage**: Our modular power and water units ship as fully enabled smart assets. The moment they are powered and connected to network backhauls, they immediately provision themselves in our secure web SCADA dashboard, creating a live digital twin with zero software configuration on-site.
-
-#### 3. Enterprise-Grade OT Security
-Cyber threats to physical infrastructure (energy grids, water treatment) have risen exponentially. Traditional systems rely on legacy configurations that are highly susceptible to spoofing and unauthorized overrides.
-* **The ThermaCore Advantage**: Secure development practices run through the entire physical-to-digital loop. Edge telemetry is encrypted via mutual TLS (mTLS), and any remote control action (such as adjusting coolant valves or running an emergency shutdown) is locked behind multi-operator verification checks, preventing rogue command injections.
-
-#### 4. Advanced Performance Analytics, Unit Vitals & COP Gains
-Most legacy SCADA applications are mere "indicator panels" that show current levels but do not analyze thermodynamic states or provide standardized unit telemetry.
-* **The ThermaCore Advantage**: ThermaCore SCADA displays standardized unit vitals across all nodes — including **AWG Water Level**, **Temp Out - Chill**, **Temp Out - Hot**, **Differential Pressure**, **Flow Rate Out - Chill**, **Flow Rate Out - Hot**, and **Battery Voltage**. It performs complex thermodynamic calculation sweeps in the background. By continually evaluating heat transfer rates, pump coefficients of performance (COP), and system temperature loops, it guides operators on how to balance valves and flow rates. Modeling indicates the platform is designed to unlock an average **+18.4% efficiency lift** and **34.2% downtime reduction** - capabilities ready for pilot validation with our first customers.
-* **Automated Safety Alarms**: Real-time rule enforcement triggers high-priority alerts for **NH3 Leak Detected** (< 4 bar Differential Pressure), **High Differential Pressure Auto-Shutdown** (> 6 bar Differential Pressure), and **Battery Voltage Alerts** (< 23V or > 27V).
-
-#### 5. Precision Remote Edge Control & Dual Production Setpoints
-Legacy control systems often rely on manual mechanical switches or crude binary on/off remote commands.
-* **The ThermaCore Advantage**: ThermaCore SCADA provides full-featured remote edge control, featuring dual production setpoint sliders:
-  * **Power Production Setpoint (0–100%)**: Dynamically throttles generator thermal power generation, initiating automated soft shutdown if set to 0%.
-  * **AWG Water Production Setpoint (0–100%)**: Regulates atmospheric water generation loops, completely disabling water production at 0%.
-  * **Preset Operation Modes**: Quick-select presets for **Balanced (50/50)**, **Power Priority (90/20)**, **AWG Water Priority (30/90)**, or Custom operational balances.
-
-#### 6. Enterprise-Scale Multi-Tenant Management
-Service providers and fleet operators face significant operational overhead managing separate instances for each client or facility. Legacy SCADA systems require separate deployments per tenant.
-* **The ThermaCore Advantage**: Built from the ground up as a multi-tenant platform, ThermaCore enables administrators to manage all clients and facilities from a single login. The Tenant Switcher provides seamless context-switching between tenants, while the "All Tenants" view offers aggregated cross-tenant analytics. This eliminates the need for separate instances, reduces operational overhead, and provides a unified view of the entire fleet.
-
----
-
-*This comparative analysis was compiled to assist investors, plant operators, and municipal partners in assessing the competitive position of ThermaCore's integrated hardware-software products. For source implementation details, please review `/docs/INVESTOR_DECK.md`.*
+See [Architecture](ARCHITECTURE_AND_INTEGRATIONS.md), [Operator manual](OPERATOR_MANUAL.md), [Deployment](DEPLOYMENT_GUIDE.md) and [Testing](TESTING.md).
