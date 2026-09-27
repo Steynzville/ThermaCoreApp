@@ -2,8 +2,8 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import IndustrialGauge from "../IndustrialGauge";
-import ProcessFlowDiagram from "../ProcessFlowDiagram";
 import MultiTimeframeTrendChart from "../MultiTimeframeTrendChart";
+import ProcessFlowDiagram from "../ProcessFlowDiagram";
 
 let canvas;
 beforeEach(() => {
@@ -181,7 +181,7 @@ describe("measured multi-timeframe trends", () => {
       }),
     );
   });
-  it("downloads CSV with escaped values and keeps empty history empty", () => {
+  it("downloads CSV with escaped values and keeps empty history empty", async () => {
     const create = vi.fn(() => "blob:trend"),
       revoke = vi.fn();
     vi.stubGlobal(
@@ -200,6 +200,14 @@ describe("measured multi-timeframe trends", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Export" }));
     expect(create).toHaveBeenCalledWith(expect.any(Blob));
+    const csv = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsText(create.mock.calls[0][0]);
+    });
+    expect(csv).toContain("timestamp,time,heat,water");
+    expect(csv).toContain('"quoted,""value""\nnext"');
     expect(click).toHaveBeenCalled();
     expect(revoke).toHaveBeenCalledWith("blob:trend");
     rerender(
