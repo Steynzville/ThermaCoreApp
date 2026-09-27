@@ -2,7 +2,7 @@
 
 ## Current documentation/test-quality review
 
-Normal operator/developer/API/deployment and commercial documentation has been audited against the merged application. Corrected obsolete provider, ownership, safety, report, coverage and deployment claims. Meaningful frontend behavior tests are being expanded without broadening coverage exclusions; see [Testing](TESTING.md) and review-commit workflow artifacts for the enforced gate and results.
+Normal operator/developer/API/deployment and commercial documentation has been audited against the merged application. Corrected obsolete provider, ownership, safety, report, coverage and deployment claims. Added 57 meaningful frontend behavior tests and raised the frontend line gate from 60% to 80% after both complete suites exceeded it, without broadening coverage exclusions; see [Testing](TESTING.md) and review-commit workflow artifacts for the enforced gate and results.
 
 ## Current architecture delivered by PR #267/#268/#269
 
