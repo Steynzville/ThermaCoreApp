@@ -177,9 +177,11 @@ def test_initialize_opcua_clients_all_fail():
         assert mock_app.opcua_client is None
 
 
-def test_initialize_optional_services():
-    """Test optional services initialization."""
+@pytest.mark.parametrize("demo, expected_calls", [(True, 5), (False, 3)])
+def test_initialize_optional_services(demo, expected_calls):
+    """Only explicitly enabled demonstrations initialize simulated drivers."""
     mock_app = MagicMock()
+    mock_app.config = {"DEMO_DATA_ENABLED": demo}
     mock_logger = MagicMock()
 
     with patch("app.service_init.safe_service_init") as mock_safe_init:
@@ -193,7 +195,7 @@ def test_initialize_optional_services():
             MagicMock(),
             MagicMock(),
         )
-        assert mock_safe_init.call_count == 5
+        assert mock_safe_init.call_count == expected_calls
 
 
 @patch("app.service_init.is_production_environment", return_value=True)

@@ -149,6 +149,12 @@ class UserSchema(SQLAlchemyAutoSchema):
     client_id = fields.Int(dump_only=True, allow_none=True)
     tenant_id = fields.Int(dump_only=True, allow_none=True)
     is_active = fields.Method("get_is_active")
+    premium_scada = fields.Method("get_premium_scada")
+
+    def get_premium_scada(self, obj):
+        from app.middleware.entitlements import has_scada
+
+        return has_scada(obj)
 
     def get_is_active(self, obj):
         return getattr(obj, "is_active", True)
@@ -250,6 +256,45 @@ class UnitSchema(SQLAlchemyAutoSchema):
     tenant_id = fields.Int(dump_only=True, allow_none=True)
     client_id = fields.Method("get_client_id")
     tenant_name = fields.Method("get_tenant_name")
+    alerts = fields.Method("get_conditions")
+    has_alert = fields.Method("get_has_alert")
+    has_alarm = fields.Method("get_has_alarm")
+
+    def get_conditions(self, obj):
+        from app.services.unit_conditions import active_conditions
+
+        return active_conditions(obj)
+
+    def get_has_alert(self, obj):
+        return any(row["category"] == "alert" for row in self.get_conditions(obj))
+
+    def get_has_alarm(self, obj):
+        return any(row["category"] == "alarm" for row in self.get_conditions(obj))
+
+    outputs = fields.Method("get_outputs")
+    controlCapabilities = fields.Method("get_control_capabilities")
+    cameras = fields.Method("get_cameras")
+    processDiagram = fields.Method("get_process_diagram")
+
+    def get_process_diagram(self, obj):
+        from app.services.process_diagrams import public_process_diagram
+
+        return public_process_diagram(obj.id)
+
+    def get_control_capabilities(self, obj):
+        from app.services.unit_controls import public_control_configuration
+
+        return public_control_configuration(obj.id)
+
+    def get_cameras(self, obj):
+        from app.services.unit_controls import public_cameras
+
+        return public_cameras(obj.id)
+
+    def get_outputs(self, obj):
+        from app.services.unit_outputs import output_states
+
+        return output_states(obj)
 
     def get_client_id(self, obj):
         return obj.tenant.client_id if obj.tenant else None
@@ -295,6 +340,10 @@ class UnitCreateSchema(Schema):
     status = EnumField(UnitStatusEnum, load_default="offline")
     health_status = EnumField(HealthStatusEnum, load_default="warning")
 
+    supports_heat = fields.Bool()
+    supports_chill = fields.Bool()
+    supports_water = fields.Bool()
+
     # Client information
     client_name = fields.Str(validate=validate.Length(max=200))
     client_contact = fields.Str(validate=validate.Length(max=200))
@@ -313,6 +362,10 @@ class UnitUpdateSchema(Schema):
     has_alert = fields.Bool()
     has_alarm = fields.Bool()
     last_maintenance = DateTimeField()
+
+    supports_heat = fields.Bool()
+    supports_chill = fields.Bool()
+    supports_water = fields.Bool()
 
     # Client information
     client_name = fields.Str(validate=validate.Length(max=200))

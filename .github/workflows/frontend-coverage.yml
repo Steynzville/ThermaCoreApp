@@ -31,7 +31,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10.4.1
+          version: 11.25.0
           run_install: false
 
       - name: Set up Node.js
@@ -55,6 +55,9 @@ jobs:
       - name: Install Frontend Dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install PDF text validation tool
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+
       - name: Run Tests
         id: tests
         env:
@@ -66,8 +69,7 @@ jobs:
           set -o pipefail
           pnpm vitest run \
             --pool=forks \
-            --poolOptions.forks.singleFork=true \
-            --poolOptions.forks.maxForks=2 \
+            --maxWorkers=1 \
             --reporter=default \
             --coverage \
             --coverage.reporter=text \

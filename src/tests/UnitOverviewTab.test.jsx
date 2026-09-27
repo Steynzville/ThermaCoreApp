@@ -20,7 +20,9 @@ vi.mock("../components/unit-details/UnitVitals", () => ({
 }));
 it("shows only this unit's recorded alerts without inferring leaks or shutdowns", () => {
   render(<UnitOverviewTab unit={{ id: "A", differentialPressure: 2 }} />);
-  expect(screen.getByText("Recorded warning")).toBeInTheDocument();
+  expect(
+    screen.getByRole("heading", { name: /Recorded warning/ }),
+  ).toBeInTheDocument();
   expect(screen.queryByText("Foreign warning")).not.toBeInTheDocument();
   expect(screen.queryByText(/LEAK DETECTED/)).not.toBeInTheDocument();
   expect(screen.queryByText(/AUTO SHUTDOWN/)).not.toBeInTheDocument();

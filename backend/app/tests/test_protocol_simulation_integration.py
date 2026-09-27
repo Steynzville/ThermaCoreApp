@@ -321,3 +321,8 @@ class TestProtocolSimulationIntegration:
                 # OPC UA might not have metrics in its current status format
                 # but should have basic info
                 assert "available" in opcua_status
+
+
+@pytest.fixture(autouse=True)
+def explicit_demo_driver_configuration(app, monkeypatch):
+    monkeypatch.setitem(app.config, "DEMO_DATA_ENABLED", True)

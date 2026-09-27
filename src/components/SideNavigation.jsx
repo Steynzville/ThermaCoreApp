@@ -1,3 +1,4 @@
+import { conditionCounts } from "../utils/conditions";
 import {
   Activity,
   AlertTriangle,
@@ -98,8 +99,7 @@ const EnhancedSideNavigation = () => {
 
   const { units, alerts } = useUnits();
   const totalUnits = units.length;
-  const totalAlerts = alerts.filter((a) => !a.acknowledged).length;
-  const totalAlarms = units.filter((unit) => unit.hasAlarm).length;
+  const { alerts: totalAlerts, alarms: totalAlarms } = conditionCounts(alerts);
 
   const navigationItems = [
     {
@@ -166,7 +166,7 @@ const EnhancedSideNavigation = () => {
       icon: Activity,
       href: "/scada-dashboard",
       badge: null,
-      requiresPermission: "canViewAnalytics",
+      requiresPermission: "canAccessScada",
     },
     {
       id: "protocol-manager",
@@ -245,6 +245,7 @@ const EnhancedSideNavigation = () => {
   };
 
   const getUserDisplayName = () => {
+    if (user?.displayName) return user.displayName;
     if (user?.firstName && user?.lastName) {
       return `${user.firstName} ${user.lastName}`;
     }
@@ -265,7 +266,8 @@ const EnhancedSideNavigation = () => {
     return name.charAt(0).toUpperCase();
   };
 
-  const avatarUrl = user?.email ? getGravatarUrl(user.email) : null;
+  const avatarUrl =
+    user?.avatarDataUrl || (user?.email ? getGravatarUrl(user.email) : null);
 
   const isAdminLanding = location.pathname === "/admin";
 

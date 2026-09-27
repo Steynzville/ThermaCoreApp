@@ -1,13 +1,10 @@
-import { defineConfig } from "vitest/config";
+import { defineConfig, coverageConfigDefaults } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 
 export default defineConfig({
-  plugins: [
-    react(),
-    tailwindcss(),
-  ],
+  plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -16,16 +13,12 @@ export default defineConfig({
   server: {
     host: "0.0.0.0",
     port: 5173,
-    allowedHosts: [
-      "thermacoreapp.onrender.com",
-    ],
+    allowedHosts: ["thermacoreapp.onrender.com"],
   },
   preview: {
     host: "0.0.0.0",
     port: 5173,
-    allowedHosts: [
-      "thermacoreapp.onrender.com",
-    ],
+    allowedHosts: ["thermacoreapp.onrender.com"],
   },
   test: {
     globals: true,
@@ -36,14 +29,11 @@ export default defineConfig({
     clearMocks: true,
     restoreMocks: true,
     pool: "forks",
-    poolOptions: {
-      forks: {
-        singleFork: true,
-        maxForks: 1,
-      },
-    },
+    maxWorkers: 1,
     coverage: {
       provider: "v8",
+      include: ["src/**/*.{js,jsx}"],
+      exclude: [...coverageConfigDefaults.exclude, "src/setupTests.js"],
       reporter: ["text", "json-summary"],
     },
   },

@@ -1,92 +1,93 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { it, expect, vi, beforeEach } from "vitest";
 import ReportConfigurator from "./ReportConfigurator";
-import {
-  generateReportFile,
-  downloadReportFile,
-} from "../../services/reportExportService";
-const { scope } = vi.hoisted(() => ({
-  scope: {
-    units: [{ id: "A", name: "Alpha", capitalCost: 100 }],
-    records: [],
-    events: [],
-    alerts: [],
-    loading: false,
-    scopeLabel: "Alpha Tenant",
-    scopeKey: "alpha",
-    isDemoMode: true,
-  },
+import { reportTypes } from "../../constants/reportSections";
+const { generate, sound } = vi.hoisted(() => ({
+  generate: vi.fn(),
+  sound: vi.fn(),
 }));
-vi.mock("../../context/UnitContext", () => ({ useUnits: () => scope }));
-vi.mock("../../context/AnalyticsContext", () => ({
-  useAnalytics: () => ({ assumptions: {}, setAssumptions: vi.fn() }),
+vi.mock("../../context/SettingsContext", () => ({
+  useSettings: () => ({ settings: { soundEnabled: true, volume: 0.5 } }),
 }));
-vi.mock("../../services/reportExportService", () => ({
-  generateReportFile: vi.fn(),
-  downloadReportFile: vi.fn(),
+vi.mock("../../utils/audioPlayer", () => ({
+  default: (...args) => sound(...args),
 }));
+const props = {
+  availableUnits: [
+    { id: "A", name: "Alpha", client: "Tenant A" },
+    { id: "B", name: "Beta", client: "Tenant B" },
+  ],
+  availableReportTypes: reportTypes,
+  allowedSections: ["vitalStatistics", "alertsAlarms"],
+  onGenerate: generate,
+  showScheduling: false,
+  showPauseScheduled: false,
+};
 beforeEach(() => {
   vi.clearAllMocks();
-  generateReportFile.mockResolvedValue({
-    filename: "report.pdf",
-    blob: new Blob(),
-  });
+  generate.mockResolvedValue();
 });
-it.each(["xlsx", "docx", "pdf"])(
-  "requires and passes the selected %s format",
-  async (format) => {
-    render(<ReportConfigurator />);
-    expect(screen.getByLabelText("Report format")).toHaveValue("");
-    fireEvent.change(screen.getByLabelText("Report format"), {
-      target: { value: format },
-    });
-    fireEvent.click(screen.getByText("Generate and download report"));
-    await waitFor(() => expect(downloadReportFile).toHaveBeenCalledOnce());
-    expect(generateReportFile.mock.calls[0][0]).toMatchObject({
-      format,
-      scopeLabel: "Alpha Tenant",
-      units: [{ id: "A" }],
-    });
-  },
-);
-it("reports generation errors and allows retry", async () => {
-  generateReportFile.mockRejectedValueOnce(new Error("Exporter failed"));
-  render(<ReportConfigurator />);
-  fireEvent.change(screen.getByLabelText("Report format"), {
-    target: { value: "pdf" },
-  });
-  fireEvent.click(screen.getByText("Generate and download report"));
+function configure(format) {
+  fireEvent.click(screen.getByText("All Sections Report"));
+  fireEvent.click(screen.getByText("Single Unit"));
+  fireEvent.click(screen.getByLabelText("Select Alpha"));
+  if (format) fireEvent.click(screen.getByRole("button", { name: format }));
+}
+it.each([
+  ["Excel", "xlsx"],
+  ["Word", "docx"],
+  ["PDF", "pdf"],
+])("requires and passes %s format and exact subset", async (label, format) => {
+  render(<ReportConfigurator {...props} />);
+  configure();
+  expect(
+    screen.getByText("Generate & Download Report").closest("button"),
+  ).toBeDisabled();
+  fireEvent.click(screen.getByRole("button", { name: label }));
+  fireEvent.click(screen.getByText("Generate & Download Report"));
+  await waitFor(() =>
+    expect(generate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        selectedUnits: ["A"],
+        scope: "single",
+        outputFormat: format,
+      }),
+    ),
+  );
+  await waitFor(() => expect(sound).toHaveBeenCalledWith("sky.mp3", true, 0.5));
+});
+it("shows exporter failure, does not play success sound, and allows retry", async () => {
+  generate.mockRejectedValueOnce(new Error("Exporter failed"));
+  render(<ReportConfigurator {...props} />);
+  configure("PDF");
+  fireEvent.click(screen.getByText("Generate & Download Report"));
   expect(await screen.findByRole("alert")).toHaveTextContent("Exporter failed");
-  expect(downloadReportFile).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByText("Generate and download report"));
-  await waitFor(() => expect(downloadReportFile).toHaveBeenCalledOnce());
+  expect(sound).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByText("Generate & Download Report"));
+  await waitFor(() => expect(sound).toHaveBeenCalledOnce());
 });
-it("cancels a delayed download after switching portfolio or logging out", async () => {
+it("does not play a success sound after leaving the report screen", async () => {
   let finish;
-  generateReportFile.mockImplementation(
+  generate.mockImplementation(
     () =>
-      new Promise((r) => {
-        finish = r;
+      new Promise((resolve) => {
+        finish = resolve;
       }),
   );
-  const { unmount } = render(<ReportConfigurator />);
-  fireEvent.change(screen.getByLabelText("Report format"), {
-    target: { value: "xlsx" },
-  });
-  fireEvent.click(screen.getByText("Generate and download report"));
-  await waitFor(() => expect(generateReportFile).toHaveBeenCalled());
+  const { unmount } = render(<ReportConfigurator {...props} />);
+  configure("PDF");
+  fireEvent.click(screen.getByText("Generate & Download Report"));
   unmount();
-  finish({ filename: "old.xlsx", blob: new Blob() });
+  finish();
   await Promise.resolve();
-  expect(downloadReportFile).not.toHaveBeenCalled();
+  expect(sound).not.toHaveBeenCalled();
 });
-it("rejects an empty unit selection", async () => {
-  render(<ReportConfigurator />);
-  fireEvent.click(screen.getByText("Clear"));
-  fireEvent.change(screen.getByLabelText("Report format"), {
-    target: { value: "pdf" },
-  });
-  fireEvent.click(screen.getByText("Generate and download report"));
-  expect(await screen.findByRole("alert")).toHaveTextContent("Select units");
-  expect(generateReportFile).not.toHaveBeenCalled();
+it("requires a unit selection", () => {
+  render(<ReportConfigurator {...props} />);
+  fireEvent.click(screen.getByText("All Sections Report"));
+  fireEvent.click(screen.getByText("Single Unit"));
+  fireEvent.click(screen.getByRole("button", { name: "PDF" }));
+  expect(
+    screen.getByText("Generate & Download Report").closest("button"),
+  ).toBeDisabled();
 });

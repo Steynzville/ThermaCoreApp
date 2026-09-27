@@ -106,17 +106,18 @@ it("alerts and notifications render the same scoped conditions", () => {
 it("shows gateway errors without claiming a successful control", async () => {
   data.controlUnit.mockRejectedValue(new Error("Gateway unavailable"));
   render(<RemoteControl unit={unit} />);
-  fireEvent.click(screen.getByText("Turn power off"));
+  fireEvent.click(screen.getByRole("switch", { name: "Machine Power" }));
+  fireEvent.click(screen.getByText("Continue"));
   expect(await screen.findByRole("alert")).toHaveTextContent(
     "Gateway unavailable",
   );
   expect(data.controlUnit).toHaveBeenCalledWith("A", { machinePower: false });
-  expect(screen.getByText("Turn power off")).toBeInTheDocument();
+  expect(screen.getByRole("switch", { name: "Machine Power" })).toBeChecked();
 });
 it("disables all controls for a viewer", () => {
   auth.permissions.canControlUnits = false;
   render(<RemoteControl unit={unit} />);
-  expect(screen.getByText("Turn power off")).toBeDisabled();
+  expect(screen.getByRole("switch", { name: "Machine Power" })).toBeDisabled();
   expect(screen.getByText("Apply power setpoint")).toBeDisabled();
 });
 it("does not accept foreign unit data smuggled in route state", () => {

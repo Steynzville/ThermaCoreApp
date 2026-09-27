@@ -9,6 +9,8 @@ from app.models import Sensor, SensorReading
 # These channel names/units are the ingestion contract. Unknown channels are not
 # treated as energy, and a second meter on the same channel is not double counted.
 CHANNELS = {
+    "useful_heat_kw": ("heatKWh", {"kw": 1, "w": 0.001}),
+    "useful_chill_kw": ("chillKWh", {"kw": 1, "w": 0.001}),
     "current_power": ("grossKWh", {"kw": 1, "w": 0.001}),
     "power": ("grossKWh", {"kw": 1, "w": 0.001}),
     "parasitic_load": ("parasiticKWh", {"kw": 1, "w": 0.001}),
@@ -89,6 +91,8 @@ def integrate_history(sensors, readings, start, end, max_gap_seconds=900):
                         "selfConsumedKWh": None,
                         "exportedKWh": None,
                         "waterLitres": None,
+                        "heatKWh": None,
+                        "chillKWh": None,
                         "observedHours": 0,
                         "operatingHours": 0,
                         "repairHours": None,

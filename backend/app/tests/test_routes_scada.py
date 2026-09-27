@@ -83,4 +83,14 @@ def test_device_status_dnp3_fallback_and_history_filter(client, admin_token):
         headers=headers,
     )
     assert history.status_code == 200
-    assert len(history.get_json()["history"]) == 1
+    assert history.get_json()["history"] == []
+    assert history.get_json()["total_records"] == 0
+
+
+# These adapter tests explicitly exercise the demonstration-only legacy drivers.
+import pytest as _demo_pytest
+
+
+@_demo_pytest.fixture(autouse=True)
+def explicit_demo_driver_configuration(app, monkeypatch):
+    monkeypatch.setitem(app.config, "DEMO_DATA_ENABLED", True)

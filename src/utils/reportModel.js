@@ -13,7 +13,11 @@ export const REPORT_SECTIONS = {
   units: "Unit inventory and current readings",
   daily: "Daily energy and water",
   alerts: "Current alerts and alarms",
-  events: "Recorded control history",
+  events: "Recorded event history",
+  history: "Historical machine metrics",
+  maintenance: "Maintenance records",
+  compliance: "Compliance status",
+  sales: "Commercial records",
 };
 export const ASSUMPTION_LABELS = {
   electricityCost: "Avoided grid cost (AUD/kWh)",
@@ -32,6 +36,9 @@ export function createReport({
   records,
   alerts = [],
   events = [],
+  histories = [],
+  maintenance = [],
+  sales = [],
   assumptions,
   scopeLabel,
   selectedIds,
@@ -56,7 +63,21 @@ export function createReport({
   )
     throw new Error("Select units from your current portfolio.");
   const selected = units.filter((u) => ids.has(String(u.id)));
-  const a = validateAssumptions(assumptions);
+  const a = validateAssumptions(
+    selected.length === units.length
+      ? assumptions
+      : {
+          ...assumptions,
+          initialInvestment: selected.reduce(
+            (sum, unit) => sum + (Number(unit.capitalCost) || 0),
+            0,
+          ),
+          operatingCostMonthly: selected.reduce(
+            (sum, unit) => sum + (Number(unit.operatingCostMonthly) || 0),
+            0,
+          ),
+        },
+  );
   const rows = records
     .filter((r) => ids.has(String(r.unitId)) && r.date >= from && r.date <= to)
     .sort(
@@ -83,10 +104,25 @@ export function createReport({
     records: rows,
     alerts: alerts.filter((item) => ids.has(String(item.unitId))),
     events: events.filter(inPeriod),
+    histories: histories.filter(
+      (row) =>
+        ids.has(String(row.unitId)) && row.date >= from && row.date <= to,
+    ),
+    maintenance: maintenance.filter(
+      (row) =>
+        ids.has(String(row.unitId)) &&
+        row.scheduledAt?.slice(0, 10) >= from &&
+        row.scheduledAt?.slice(0, 10) <= to,
+    ),
+    sales: sales.filter(
+      (row) =>
+        ids.has(String(row.unitId)) && row.date >= from && row.date <= to,
+    ),
     sections: sections.filter((s) => REPORT_SECTIONS[s]),
     assumptions: a,
     summary,
     notes: [
+      "Subset reports use only selected-unit capital and operating costs. Unconfigured costs are zero assumptions, not verified zero expenditure.",
       "Dates use UTC. Totals cover available readings in the selected period; missing telemetry is not zero production.",
       "Net benefit requires matching meter intervals and readings for every selected unit on each recorded day. Partial production totals are not a complete portfolio benefit.",
       "Current readings, inventory and current alerts are snapshots at generation time, outside the historical date filter.",
@@ -192,6 +228,8 @@ export function reportTables(report) {
           "Self (kWh)",
           "Export (kWh)",
           "Water (L)",
+          "Useful heat (kWhth)",
+          "Useful chilling (kWhth)",
           "Observed (h)",
         ],
         report.records.map((r) => [
@@ -201,6 +239,8 @@ export function reportTables(report) {
           r.selfConsumedKWh,
           r.exportedKWh,
           r.waterLitres,
+          r.heatKWh,
+          r.chillKWh,
           r.observedHours,
         ]),
       ),
@@ -228,6 +268,78 @@ export function reportTables(report) {
           r.description,
           r.timestamp,
         ]),
+      ),
+    );
+  if (report.sections.includes("history"))
+    tables.push(
+      table(
+        "Machine history",
+        [
+          "Date",
+          "Unit ID",
+          "Power kW",
+          "Heat kWth",
+          "Chill kWth",
+          "Water L/h",
+          "Ambient °C",
+          "Humidity %",
+          "Inlet °C",
+          "Chill °C",
+          "Hot °C",
+          "Pressure bar",
+          "Battery V",
+          "Chill flow L/min",
+          "Hot flow L/min",
+        ],
+        report.histories.map((r) => [
+          r.date,
+          r.unitId,
+          r.power,
+          r.usefulHeat,
+          r.usefulChill,
+          r.waterRate,
+          r.ambientTemp,
+          r.ambientHumidity,
+          r.tempIn,
+          r.tempOutChill,
+          r.tempOutHot,
+          r.differentialPressure,
+          r.batteryVoltage,
+          r.flowRateOutChill,
+          r.flowRateOutHot,
+        ]),
+      ),
+    );
+  if (report.sections.includes("maintenance"))
+    tables.push(
+      table(
+        "Maintenance records",
+        ["Unit ID", "Scheduled", "Description", "Status"],
+        report.maintenance.map((r) => [
+          r.unitId,
+          r.scheduledAt,
+          r.description,
+          r.status,
+        ]),
+      ),
+    );
+  if (report.sections.includes("compliance"))
+    tables.push(
+      table(
+        "Compliance",
+        ["Unit ID", "Evidence"],
+        report.units.map((unit) => [
+          unit.id,
+          "No verified certification record supplied; this report is not a compliance certificate.",
+        ]),
+      ),
+    );
+  if (report.sections.includes("sales"))
+    tables.push(
+      table(
+        "Commercial records",
+        ["Unit ID", "Date", "Revenue AUD"],
+        report.sales.map((r) => [r.unitId, r.date, r.revenue]),
       ),
     );
   tables.push(

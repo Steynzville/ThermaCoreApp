@@ -5,6 +5,8 @@ from datetime import datetime
 
 from flask import current_app
 
+from app.utils.data_mode import demo_enabled
+
 from .base import ProtocolStatus
 
 logger = logging.getLogger(__name__)
@@ -73,6 +75,8 @@ def collect_protocol_status() -> list[dict]:
         processed_names.add(name)
 
         adapter = getattr(current_app, attr, None)
+        if name in {"modbus", "dnp3", "simulator"} and not demo_enabled():
+            adapter = None
         if adapter and hasattr(adapter, "get_status"):
             try:
                 raw = adapter.get_status()

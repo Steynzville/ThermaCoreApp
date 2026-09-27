@@ -97,7 +97,8 @@ class TestRequestIDFilter:
         )
 
         # Filter should add request_id
-        result = request_filter.filter(record)
+        with patch("app.middleware.request_id.has_request_context", return_value=False):
+            result = request_filter.filter(record)
 
         assert result is True
         assert hasattr(record, "request_id")

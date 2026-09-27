@@ -415,6 +415,18 @@ class Unit(db.Model):
         ),
         default=HealthStatusEnum.OPTIMAL,
     )
+    supports_heat = Column(Boolean, default=False)
+    supports_chill = Column(Boolean, default=False)
+    supports_water = Column(Boolean, default=False)
+    useful_heat_kw = Column(Float)
+    useful_chill_kw = Column(Float)
+    water_rate_lph = Column(Float)
+    differential_pressure_bar = Column(Float)
+    temp_out_hot = Column(Float)
+    battery_voltage = Column(Float)
+    flow_rate_inlet = Column(Float)
+    flow_rate_out_chill = Column(Float)
+    flow_rate_out_hot = Column(Float)
     water_generation = Column(Boolean, default=False)
     has_alert = Column(Boolean, default=False)
     has_alarm = Column(Boolean, default=False)
@@ -580,3 +592,171 @@ class SensorReading(db.Model):
 
     def __repr__(self):
         return f"<SensorReading {self.sensor_id} at {self.timestamp}: {self.value}>"
+
+
+class MaintenanceSchedule(db.Model):
+    """An authorized maintenance booking, distinct from a hardware command."""
+
+    __tablename__ = "maintenance_schedules"
+    id = Column(Integer, primary_key=True)
+    unit_id = Column(String(50), ForeignKey("units.id"), nullable=False, index=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    scheduled_at = Column(DateTime, nullable=False)
+    description = Column(String(2000), nullable=False)
+    status = Column(String(20), default="scheduled", nullable=False)
+    created_at = Column(DateTime, default=utc_now, nullable=False)
+
+    def as_dict(self):
+        return {
+            "id": self.id,
+            "unitId": self.unit_id,
+            "scheduledAt": self.scheduled_at.isoformat(),
+            "description": self.description,
+            "status": self.status,
+            "createdAt": self.created_at.isoformat(),
+        }
+
+
+class ReportSchedule(db.Model):
+    __tablename__ = "report_schedules"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    scheduled_at = Column(DateTime, nullable=False)
+    config = Column(JSON, nullable=False)
+    status = Column(String(20), default="scheduled", nullable=False)
+    claimed_at = Column(DateTime)
+
+    def as_dict(self):
+        return {
+            "id": self.id,
+            "scheduledAt": self.scheduled_at.isoformat() + "Z",
+            "config": self.config,
+            "status": self.status,
+        }
+
+
+class SaleRecord(db.Model):
+    __tablename__ = "sale_records"
+    id = Column(Integer, primary_key=True)
+    unit_id = Column(String(50), ForeignKey("units.id"), nullable=False, index=True)
+    sale_date = Column(DateTime, nullable=False)
+    revenue_aud = Column(Float, nullable=False)
+    product_line = Column(String(100), nullable=False)
+    reference = Column(String(120), unique=True, nullable=False)
+
+    def as_dict(self):
+        return {
+            "id": self.id,
+            "unitId": self.unit_id,
+            "date": self.sale_date.date().isoformat(),
+            "revenue": self.revenue_aud,
+            "productLine": self.product_line,
+            "reference": self.reference,
+        }
+
+
+class AccountEntitlement(db.Model):
+    __tablename__ = "account_entitlements"
+    user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
+    premium_scada = Column(Boolean, default=False, nullable=False)
+
+
+class UnitCondition(db.Model):
+    """Recorded sensor threshold episodes; acknowledgement never clears the hazard."""
+
+    __tablename__ = "unit_conditions"
+    id = Column(Integer, primary_key=True)
+    unit_id = Column(String(50), ForeignKey("units.id"), nullable=False, index=True)
+    sensor_id = Column(Integer, ForeignKey("sensors.id"), nullable=False, index=True)
+    category = Column(String(10), nullable=False)
+    title = Column(String(200), nullable=False)
+    message = Column(Text, nullable=False)
+    value = Column(Float, nullable=False)
+    threshold = Column(Float, nullable=False)
+    opened_at = Column(DateTime, nullable=False, index=True)
+    updated_at = Column(DateTime, nullable=False)
+    resolved_at = Column(DateTime)
+    acknowledged_at = Column(DateTime)
+    acknowledged_by = Column(Integer, ForeignKey("users.id"))
+    notes = Column(Text)
+
+    def as_event(self, unit_name=None):
+        def stamp(value):
+            return value.replace(tzinfo=timezone.utc).isoformat() if value else None
+
+        return {
+            "id": f"condition-{self.id}",
+            "conditionId": self.id,
+            "unitId": self.unit_id,
+            "unitName": unit_name or self.unit_id,
+            "category": self.category,
+            "type": self.category,
+            "severity": "critical" if self.category == "alarm" else "warning",
+            "title": self.title,
+            "message": self.message,
+            "value": self.value,
+            "threshold": self.threshold,
+            "timestamp": stamp(self.opened_at),
+            "updatedAt": stamp(self.updated_at),
+            "resolved_at": stamp(self.resolved_at),
+            "status": "resolved"
+            if self.resolved_at
+            else "acknowledged"
+            if self.acknowledged_at
+            else "open",
+            "acknowledged": self.acknowledged_at is not None,
+            "acknowledgedBy": self.acknowledged_by,
+            "acknowledgedAt": stamp(self.acknowledged_at),
+            "notes": self.notes,
+        }
+
+
+class ExternalIdentity(db.Model):
+    __tablename__ = "external_identities"
+    provider = Column(String(20), primary_key=True)
+    subject = Column(String(255), primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+
+
+class OAuthTransaction(db.Model):
+    __tablename__ = "oauth_transactions"
+    state_hash = Column(String(64), primary_key=True)
+    provider = Column(String(20), nullable=False)
+    challenge = Column(String(64), nullable=False)
+    nonce = Column(String(128), nullable=False)
+    verifier = Column(String(128), nullable=False)
+    expires_at = Column(DateTime, nullable=False, index=True)
+    status = Column(String(20), nullable=False, default="pending")
+    link_user_id = Column(Integer, ForeignKey("users.id"))
+    subject = Column(String(255))
+    ticket_hash = Column(String(64), unique=True)
+
+
+class PasskeyCredential(db.Model):
+    __tablename__ = "passkey_credentials"
+    credential_id = Column(String(1400), primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    public_key = Column(Text, nullable=False)
+    user_handle = Column(String(128), nullable=False)
+    sign_count = Column(Integer, nullable=False, default=0)
+    name = Column(String(100), nullable=False, default="Passkey")
+    created_at = Column(DateTime, nullable=False, default=utc_now)
+
+
+class PasskeyChallenge(db.Model):
+    __tablename__ = "passkey_challenges"
+    id = Column(String(64), primary_key=True)
+    challenge = Column(String(128), nullable=False)
+    purpose = Column(String(20), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    user_handle = Column(String(128))
+    expires_at = Column(DateTime, nullable=False, index=True)
+    used = Column(Boolean, nullable=False, default=False)
+
+
+class AccountProfile(db.Model):
+    __tablename__ = "account_profiles"
+    user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
+    display_name = Column(String(100))
+    preferences = Column(JSON, nullable=False, default=dict)
+    avatar_png = Column(db.LargeBinary)

@@ -798,7 +798,7 @@ describe("AuthContext", () => {
       await waitFor(() => {
         expect(
           JSON.parse(screen.getByTestId("permissions").textContent),
-        ).toEqual(mockPermissions);
+        ).toEqual({ ...mockPermissions, canAccessScada: true });
       });
     });
 

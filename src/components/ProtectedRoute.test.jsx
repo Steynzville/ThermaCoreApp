@@ -376,3 +376,23 @@ describe("ProtectedRoute", () => {
     );
   });
 });
+
+describe("premium route boundary", () => {
+  it.each([
+    ["viewer", false, false],
+    ["operator", false, false],
+    ["viewer", true, true],
+    ["admin", false, true],
+  ])("%s entitlement %s access %s", (role, entitled, allowed) => {
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      userRole: role,
+      backendRole: role,
+      isLoading: false,
+      user: { premium_scada: entitled },
+    });
+    renderWithRouter(<ProtectedRoute component={MockComponent} premium />);
+    expect(screen.queryByTestId("mock-component") !== null).toBe(allowed);
+    expect(screen.queryByTestId("dashboard-page") !== null).toBe(!allowed);
+  });
+});

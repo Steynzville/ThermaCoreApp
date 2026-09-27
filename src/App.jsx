@@ -1,3 +1,4 @@
+import AccountPreferencesBridge from "./components/settings/AccountPreferencesBridge";
 import { reloadApplication } from "./utils/reloadApplication";
 // src/App.jsx
 
@@ -225,6 +226,7 @@ const AppContent = () => {
                     component={route.component}
                     componentMap={componentMap}
                     roles={route.roles}
+                    premium={route.premium}
                   />
                 </React.Suspense>
               );
@@ -250,6 +252,7 @@ const App = () => {
     <ThemeProvider>
       <SettingsProvider>
         <AuthProvider>
+          <AccountPreferencesBridge />
           <TenantProvider>
             <UnitProvider>
               <AnalyticsProvider>

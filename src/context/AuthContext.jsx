@@ -1,6 +1,12 @@
 // src/context/AuthContext.jsx
 
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 
 import { apiGetJson } from "../utils/apiFetch";
 import * as authService from "../services/authService";
@@ -103,6 +109,7 @@ export const AuthProvider = ({ children, value: customValue }) => {
 
         const userData = {
           id: result.user.id,
+          premium_scada: result.user.premium_scada === true,
           username: result.user.username,
           role: userFrontendRole, // Store frontend role for backward compatibility
           backendRole: userBackendRole, // Store actual backend role
@@ -202,11 +209,33 @@ export const AuthProvider = ({ children, value: customValue }) => {
     setIsLoggingOut(false);
   };
 
+  const updateAccountProfile = useCallback((profile) => {
+    setUser((current) =>
+      current
+        ? {
+            ...current,
+            username: profile.username,
+            firstName: profile.firstName,
+            lastName: profile.lastName,
+            displayName: profile.displayName,
+            avatarDataUrl: profile.avatarDataUrl,
+          }
+        : current,
+    );
+  }, []);
+
   const value = {
+    updateAccountProfile,
     user,
     userRole, // Frontend role (admin/user) for backward compatibility
     backendRole, // Backend role (admin/operator/viewer) for permission checks
-    permissions, // Permission object for granular access control
+    permissions: user
+      ? {
+          ...permissions,
+          canAccessScada:
+            backendRole === "admin" || user?.premium_scada === true,
+        }
+      : null, // Permission object for granular access control
     login,
     logout,
     isAuthenticated: !!user,

@@ -4,6 +4,7 @@ import logging
 from typing import Any
 
 from app.refactor_helpers import safe_service_init
+from app.utils.data_mode import demo_enabled
 from app.utils.environment import is_production_environment
 from app.utils.service_manager import should_skip_external_services
 
@@ -75,9 +76,13 @@ def initialize_all_services(app: Any, logger: logging.Logger) -> None:
 
         # Initialize protocol simulator (not critical)
         try:
-            protocol_simulator = ProtocolGatewaySimulator(
-                mqtt_broker_host=app.config.get("MQTT_BROKER_HOST", "localhost"),
-                mqtt_broker_port=app.config.get("MQTT_BROKER_PORT", 1883),
+            protocol_simulator = (
+                ProtocolGatewaySimulator(
+                    mqtt_broker_host=app.config.get("MQTT_BROKER_HOST", "localhost"),
+                    mqtt_broker_port=app.config.get("MQTT_BROKER_PORT", 1883),
+                )
+                if demo_enabled(app)
+                else None
             )
             logger.info("Protocol simulator initialized successfully")
         except Exception:
@@ -91,8 +96,8 @@ def initialize_all_services(app: Any, logger: logging.Logger) -> None:
         app.protocol_simulator = protocol_simulator
         app.data_storage_service = data_storage_service
         app.anomaly_detection_service = anomaly_detection_service
-        app.modbus_service = modbus_service
-        app.dnp3_service = dnp3_service
+        app.modbus_service = modbus_service if demo_enabled(app) else None
+        app.dnp3_service = dnp3_service if demo_enabled(app) else None
 
         logger.info("SCADA services initialization completed")
 
@@ -244,25 +249,26 @@ def _initialize_optional_services(
         anomaly_detection_service: Anomaly detection service instance
         data_storage_service: Data storage service instance
     """
-    # DNP3 service - does not need data_storage_service
-    safe_service_init(
-        dnp3_service,
-        "DNP3 service",
-        app,
-        logger,
-        "init_app",
-        required=False,
-    )
+    if demo_enabled(app):
+        # DNP3 service - does not need data_storage_service
+        safe_service_init(
+            dnp3_service,
+            "DNP3 service",
+            app,
+            logger,
+            "init_app",
+            required=False,
+        )
 
-    # Modbus service - does not need data_storage_service
-    safe_service_init(
-        modbus_service,
-        "Modbus service",
-        app,
-        logger,
-        "init_app",
-        required=False,
-    )
+        # Modbus service - does not need data_storage_service
+        safe_service_init(
+            modbus_service,
+            "Modbus service",
+            app,
+            logger,
+            "init_app",
+            required=False,
+        )
 
     # Realtime processor - does not need data_storage_service
     safe_service_init(

@@ -10,8 +10,15 @@ export function resetDemoState() {
   demoOverrides = new Map();
   demoActions = [];
 }
-const snapshot = (u) =>
-  normalizeUnit({ ...u, ...demoOverrides.get(String(u.id)) });
+const snapshot = (u) => {
+  if (!isDemoMode) return normalizeUnit(u);
+  const { controls, outputs, ...fields } = u;
+  return normalizeUnit({
+    ...fields,
+    ...demoOverrides.get(String(u.id)),
+    outputs: undefined,
+  });
+};
 
 export async function getAllUnits() {
   let remote = [];
@@ -24,7 +31,7 @@ export async function getAllUnits() {
           `/api/v1/units?per_page=100&page=${page++}`,
         );
         remote.push(...(response.data || []));
-        more = response.has_next === true;
+        more = response.has_next === true || page <= (response.pages || 0);
       }
     } catch (error) {
       if (!isDemoMode || /Unauthorized|permission/i.test(error.message))
@@ -54,11 +61,43 @@ export async function getAllUnits() {
 }
 
 export async function getPortfolioHistory(units, range = {}) {
-  if (isDemoMode) return demoHistory(units);
-  const result = await apiGetJson(
-    `/api/v1/portfolio/history?${new URLSearchParams(range)}`,
-  );
-  return result.data || [];
+  if (isDemoMode) return demoHistory(units, new Date(), range);
+  if (!units.length) return [];
+  const params = { ...range, unit_ids: units.map((unit) => unit.id).join(",") };
+  if (!range.from || !range.to)
+    return (
+      (
+        await apiGetJson(
+          `/api/v1/portfolio/history?${new URLSearchParams(params)}`,
+        )
+      ).data || []
+    );
+  const start = new Date(`${range.from}T00:00:00Z`),
+    end = new Date(`${range.to}T00:00:00Z`);
+  if (
+    !Number.isFinite(+start) ||
+    !Number.isFinite(+end) ||
+    start > end ||
+    end - start > 3659 * 86400000
+  )
+    throw new Error("Choose valid history dates spanning at most ten years.");
+  const rows = [];
+  for (let cursor = +start; cursor <= +end; cursor += 365 * 86400000) {
+    const stop = Math.min(+end, cursor + 364 * 86400000);
+    const chunk = {
+      ...params,
+      from: new Date(cursor).toISOString().slice(0, 10),
+      to: new Date(stop).toISOString().slice(0, 10),
+    };
+    rows.push(
+      ...((
+        await apiGetJson(
+          `/api/v1/portfolio/history?${new URLSearchParams(chunk)}`,
+        )
+      ).data || []),
+    );
+  }
+  return rows;
 }
 
 export async function updateUnitFields(unit, changes) {
@@ -100,6 +139,18 @@ export async function controlUnit(unit, changes) {
         updated.powerSetpoint = 0;
       }
     }
+    updated.usefulHeat =
+      updated.status === "online"
+        ? (unit.demoNominalHeat ?? unit.usefulHeat)
+        : 0;
+    updated.usefulChill =
+      updated.status === "online"
+        ? (unit.demoNominalChill ?? unit.usefulChill)
+        : 0;
+    updated.waterRate =
+      updated.status === "online" && updated.waterProductionOn
+        ? (unit.demoNominalWater ?? unit.waterRate)
+        : 0;
     demoOverrides.set(String(unit.id), updated);
     const action = {
       id: `action-${Date.now()}`,
@@ -110,7 +161,7 @@ export async function controlUnit(unit, changes) {
       type: "control",
     };
     demoActions = [action, ...demoActions];
-    return { unit: normalizeUnit(updated), action };
+    return { unit: snapshot(updated), action };
   }
   const response = await apiPostJson(
     `/api/v1/remote-control/units/${encodeURIComponent(unit.id)}/controls`,
@@ -152,14 +203,16 @@ export const updateUnitControls = async (id, controls) =>
 export async function getPortfolioEvents(range = {}) {
   if (isDemoMode) return [...demoActions];
   const events = [];
-  let page = 1,
-    more = true;
-  while (more) {
-    const result = await apiGetJson(
-      `/api/v1/portfolio/events?${new URLSearchParams({ ...range, page: page++ })}`,
-    );
-    events.push(...(result.data || []));
-    more = result.has_next === true;
+  for (const resource of ["events", "conditions"]) {
+    let page = 1,
+      more = true;
+    while (more) {
+      const result = await apiGetJson(
+        `/api/v1/portfolio/${resource}?${new URLSearchParams({ ...range, page: page++ })}`,
+      );
+      events.push(...(result.data || []));
+      more = result.has_next === true;
+    }
   }
-  return events;
+  return events.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 }

@@ -130,3 +130,12 @@ class TestScadaSecurityIntegration:
 
             # Production should be more restrictive than development
             assert len(prod_origins) <= len(dev_origins) or prod_origins != dev_origins
+
+
+# These adapter tests explicitly exercise the demonstration-only legacy drivers.
+import pytest as _demo_pytest
+
+
+@_demo_pytest.fixture(autouse=True)
+def explicit_demo_driver_configuration(app, monkeypatch):
+    monkeypatch.setitem(app.config, "DEMO_DATA_ENABLED", True)

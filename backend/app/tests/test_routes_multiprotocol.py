@@ -78,3 +78,12 @@ def test_dnp3_performance_config_and_metrics_branches(client, admin_token):
             headers=headers,
         )
         assert clear_error.status_code == 500
+
+
+# These adapter tests explicitly exercise the demonstration-only legacy drivers.
+import pytest as _demo_pytest
+
+
+@_demo_pytest.fixture(autouse=True)
+def explicit_demo_driver_configuration(app, monkeypatch):
+    monkeypatch.setitem(app.config, "DEMO_DATA_ENABLED", True)

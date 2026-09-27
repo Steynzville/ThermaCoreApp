@@ -38,7 +38,9 @@ const UnitStatusHeader = ({ unit, getStatusColor }) => {
           <div className="flex items-center space-x-3">
             <button
               type="button"
-              onClick={() => navigate("/remote-control", { state: { unit } })}
+              onClick={() =>
+                navigate(`/remote-control?unit=${encodeURIComponent(unit.id)}`)
+              }
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               data-testid="button-remote-control"
             >

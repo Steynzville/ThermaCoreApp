@@ -46,11 +46,7 @@ describe("AdminLanding", () => {
   });
 
   const renderWithRouter = (ui) => {
-    return render(
-      <BrowserRouter>
-        {ui}
-      </BrowserRouter>
-    );
+    return render(<BrowserRouter>{ui}</BrowserRouter>);
   };
 
   it("should render welcome message with user's first name", () => {
@@ -70,7 +66,7 @@ describe("AdminLanding", () => {
   it("should render tenant selection prompt", () => {
     renderWithRouter(<AdminLanding />);
     expect(
-      screen.getByText(/Select the tenant you'd like to explore/)
+      screen.getByText(/Select the tenant you'd like to explore/),
     ).toBeInTheDocument();
   });
 
@@ -116,19 +112,23 @@ describe("AdminLanding", () => {
 
   it("should handle sessionStorage errors gracefully with query param fallback", () => {
     // Mock sessionStorage.setItem to throw
-    const originalSetItem = sessionStorage.setItem;
-    sessionStorage.setItem = vi.fn(() => {
-      throw new Error("Storage error");
-    });
+    const setItemSpy = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(() => {
+        throw new Error("Storage error");
+      });
 
     renderWithRouter(<AdminLanding />);
     const button = screen.getByTestId("go-to-dashboard-button");
     fireEvent.click(button);
 
     // Should navigate with query param fallback
-    expect(mockNavigate).toHaveBeenCalledWith("/dashboard?tenant_selected=true", { replace: true });
+    expect(mockNavigate).toHaveBeenCalledWith(
+      "/dashboard?tenant_selected=true",
+      { replace: true },
+    );
 
     // Restore
-    sessionStorage.setItem = originalSetItem;
+    setItemSpy.mockRestore();
   });
 });

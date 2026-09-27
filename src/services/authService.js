@@ -203,6 +203,7 @@ export const login = async (username, password, keepMeSignedIn = false) => {
       tenant_id:
         userData.tenant_id ?? userData.tenantId ?? userData.tenant?.id ?? null,
       client_id: userData.client_id ?? userData.clientId ?? null,
+      premium_scada: userData.premium_scada === true,
       tenant: userData.tenant ?? null,
       is_approved: userData.is_approved ?? userData.is_active ?? false,
     };

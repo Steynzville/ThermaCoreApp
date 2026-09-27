@@ -42,6 +42,8 @@ def test_mqtt_connect_disconnect(client, admin_token):
 
     mock_mqtt = MagicMock()
 
+    mock_mqtt.connected = True
+
     # 1. Connect success
     with patch("flask.current_app.mqtt_client", mock_mqtt, create=True):
         response = client.post("/api/v1/scada/mqtt/connect", headers=headers)
@@ -237,3 +239,12 @@ def test_devices_status_monitoring(client, admin_token):
             headers=headers,
         )
         assert response.status_code == 200
+
+
+# These adapter tests explicitly exercise the demonstration-only legacy drivers.
+import pytest as _demo_pytest
+
+
+@_demo_pytest.fixture(autouse=True)
+def explicit_demo_driver_configuration(app, monkeypatch):
+    monkeypatch.setitem(app.config, "DEMO_DATA_ENABLED", True)

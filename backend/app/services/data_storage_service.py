@@ -175,6 +175,7 @@ class DataStorageService:
         """Update the API snapshot from good, newest measurements in known units."""
         if reading.quality != "GOOD":
             return
+        Sensor.query.filter_by(id=sensor.id).with_for_update().first()
         latest = (
             SensorReading.query.filter_by(sensor_id=sensor.id)
             .order_by(SensorReading.timestamp.desc())
@@ -190,7 +191,22 @@ class DataStorageService:
 
         if latest and as_utc(latest.timestamp) > as_utc(reading.timestamp):
             return
+        from app.services.unit_conditions import record_condition
+
+        record_condition(sensor, reading)
         mapping = {
+            "useful_heat_kw": ("useful_heat_kw", {"kw": 1, "w": 0.001}),
+            "useful_chill_kw": ("useful_chill_kw", {"kw": 1, "w": 0.001}),
+            "water_flow": ("water_rate_lph", {"l/h": 1, "l/min": 60}),
+            "differential_pressure_bar": (
+                "differential_pressure_bar",
+                {"bar": 1, "kpa": 0.01},
+            ),
+            "temp_out_hot": ("temp_out_hot", {"°c": 1}),
+            "battery_voltage": ("battery_voltage", {"v": 1}),
+            "flow_rate_inlet": ("flow_rate_inlet", {"l/min": 1}),
+            "flow_rate_out_chill": ("flow_rate_out_chill", {"l/min": 1}),
+            "flow_rate_out_hot": ("flow_rate_out_hot", {"l/min": 1}),
             "power": ("current_power", {"kw": 1, "w": 0.001}),
             "current_power": ("current_power", {"kw": 1, "w": 0.001}),
             "parasitic_load": ("parasitic_load", {"kw": 1, "w": 0.001}),
@@ -243,15 +259,25 @@ class DataStorageService:
             # Create new sensor
             sensor_name = f"{sensor_type.title()} Sensor"
             unit_mapping = {
+                "ammonia_ppm": "ppm",
+                "nh3_ppm": "ppm",
                 "temperature": "°C",
                 "pressure": "bar",
                 "flow_rate": "L/min",
                 "power": "kW",
                 "current_power": "kW",
+                "useful_heat_kw": "kW",
+                "useful_chill_kw": "kW",
+                "water_flow": "L/h",
+                "differential_pressure_bar": "bar",
+                "temp_out_hot": "°C",
+                "battery_voltage": "V",
+                "flow_rate_inlet": "L/min",
+                "flow_rate_out_chill": "L/min",
+                "flow_rate_out_hot": "L/min",
                 "parasitic_load": "kW",
                 "user_load": "kW",
                 "export_power": "kW",
-                "water_flow": "L/h",
                 "temp_in": "°C",
                 "temp_out": "°C",
                 "temp_outside": "°C",

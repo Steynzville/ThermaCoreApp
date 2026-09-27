@@ -1,81 +1,84 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
-import React from "react";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+const mocks = vi.hoisted(() => ({
+  get: vi.fn(),
+  put: vi.fn(),
+  fetch: vi.fn(),
+  update: vi.fn(),
+}));
+vi.mock("../../utils/apiFetch", () => ({
+  apiGetJson: mocks.get,
+  apiPutJson: mocks.put,
+  apiFetch: mocks.fetch,
+}));
+vi.mock("../../context/AuthContext", () => ({
+  useAuth: () => ({ updateAccountProfile: mocks.update }),
+}));
 import ProfileSettings from "./ProfileSettings";
-
-describe("ProfileSettings", () => {
-  it("should render profile settings card with form fields", () => {
-    render(<ProfileSettings />);
-
-    expect(screen.getByRole("heading", { name: "Profile" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Full Name")).toBeInTheDocument();
-    expect(screen.getByLabelText("Email")).toBeInTheDocument();
-
-    expect(screen.getByDisplayValue("John Doe")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("john@thermacore.com")).toBeInTheDocument();
+const profile = {
+  username: "viewer",
+  firstName: "Alex",
+  lastName: "Smith",
+  displayName: "Alex",
+  email: "alex@example.test",
+  avatarDataUrl: null,
+};
+describe("account profile", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.get.mockResolvedValue({ profile });
   });
-
-  it("should render the User icon", () => {
+  it("loads the actual profile and persists edits without sending authorization fields", async () => {
+    mocks.put.mockResolvedValue({
+      profile: { ...profile, displayName: "Operations" },
+    });
     render(<ProfileSettings />);
-    
-    // Check that the User icon is present (using SVG selector or testid)
-    const icon = document.querySelector("svg");
-    expect(icon).toBeInTheDocument();
-    expect(icon).toHaveClass("h-5", "w-5", "text-blue-600");
+    await screen.findByDisplayValue("viewer");
+    fireEvent.change(screen.getByLabelText("Display name"), {
+      target: { value: "Operations" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save profile" }));
+    await screen.findByText("Profile saved.");
+    expect(mocks.put).toHaveBeenCalledWith("/api/v1/account/settings", {
+      profile: {
+        username: "viewer",
+        firstName: "Alex",
+        lastName: "Smith",
+        displayName: "Operations",
+      },
+    });
+    expect(screen.getByLabelText("Email")).toHaveAttribute("readonly");
+    expect(mocks.update).toHaveBeenCalledWith({
+      ...profile,
+      displayName: "Operations",
+    });
   });
-
-  it("should render FormFieldGroup components with correct props", () => {
+  it("surfaces username validation errors without reporting success", async () => {
+    mocks.put.mockRejectedValue(new Error("Username is already in use"));
     render(<ProfileSettings />);
-    
-    // Full Name field
-    const nameInput = screen.getByLabelText("Full Name");
-    expect(nameInput).toHaveAttribute("type", "text");
-    expect(nameInput).toHaveValue("John Doe");
-    
-    // Email field
-    const emailInput = screen.getByLabelText("Email");
-    expect(emailInput).toHaveAttribute("type", "email");
-    expect(emailInput).toHaveValue("john@thermacore.com");
+    await screen.findByDisplayValue("viewer");
+    fireEvent.click(screen.getByRole("button", { name: "Save profile" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Username is already in use",
+    );
+    expect(screen.queryByText("Profile saved.")).not.toBeInTheDocument();
   });
-
-  it("should render with correct dark mode classes", () => {
+  it("uploads the selected file as multipart data and displays the server-normalized avatar", async () => {
+    mocks.fetch.mockResolvedValue({
+      json: async () => ({
+        profile: {
+          ...profile,
+          avatarDataUrl: "data:image/png;base64,aW1hZ2U=",
+        },
+      }),
+    });
     render(<ProfileSettings />);
-    
-    const card = document.querySelector(".bg-white.dark\\:bg-gray-900");
-    expect(card).toBeInTheDocument();
-    
-    const header = document.querySelector(".text-gray-900.dark\\:text-gray-100");
-    expect(header).toBeInTheDocument();
-  });
-
-  it("should render both fields with proper IDs", () => {
-    render(<ProfileSettings />);
-    
-    const nameInput = screen.getByLabelText("Full Name");
-    expect(nameInput).toHaveAttribute("id", "fullName");
-    
-    const emailInput = screen.getByLabelText("Email");
-    expect(emailInput).toHaveAttribute("id", "email");
-  });
-
-  it("should not have any interactive buttons", () => {
-    render(<ProfileSettings />);
-    
-    // No save/cancel buttons should exist
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
-  });
-
-  it("should render with correct card structure", () => {
-    render(<ProfileSettings />);
-    
-    // Card should have header and content
-    const card = document.querySelector(".bg-white.dark\\:bg-gray-900");
-    expect(card).toBeInTheDocument();
-    
-    const header = screen.getByRole("heading", { name: "Profile" });
-    expect(header).toBeInTheDocument();
-    
-    const fields = screen.getAllByRole("textbox");
-    expect(fields).toHaveLength(2);
+    await screen.findByDisplayValue("viewer");
+    const file = new File(["pixels"], "avatar.png", { type: "image/png" });
+    fireEvent.change(screen.getByLabelText(/Profile picture/), {
+      target: { files: [file] },
+    });
+    await screen.findByAltText("Your profile");
+    expect(mocks.fetch.mock.calls[0][1].body.get("avatar")).toBe(file);
   });
 });

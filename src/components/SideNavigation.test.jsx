@@ -12,7 +12,11 @@ import SideNavigation from "./SideNavigation";
 vi.mock("../context/AuthContext", () => ({
   useAuth: vi.fn(() => ({
     userRole: "admin",
-    permissions: { canViewAnalytics: true, canViewProtocols: true },
+    permissions: {
+      canViewAnalytics: true,
+      canAccessScada: true,
+      canViewProtocols: true,
+    },
     logout: vi.fn(),
   })),
 }));
@@ -61,7 +65,11 @@ describe("SideNavigation", () => {
     const { useAuth } = await import("../context/AuthContext");
     useAuth.mockReturnValue({
       userRole: "admin",
-      permissions: { canViewAnalytics: true, canViewProtocols: true },
+      permissions: {
+        canViewAnalytics: true,
+        canAccessScada: true,
+        canViewProtocols: true,
+      },
       logout: vi.fn(),
     });
 
@@ -94,7 +102,11 @@ describe("SideNavigation", () => {
       const { useAuth } = await import("../context/AuthContext");
       useAuth.mockReturnValue({
         userRole: "admin",
-        permissions: { canViewAnalytics: true, canViewProtocols: true },
+        permissions: {
+          canViewAnalytics: true,
+          canAccessScada: true,
+          canViewProtocols: true,
+        },
         logout: vi.fn(),
       });
 
@@ -162,7 +174,7 @@ describe("SideNavigation", () => {
       const { useAuth } = await import("../context/AuthContext");
       useAuth.mockReturnValue({
         userRole: "user",
-        permissions: { canViewAnalytics: true },
+        permissions: { canViewAnalytics: true, canAccessScada: true },
         logout: vi.fn(),
       });
 
@@ -174,7 +186,7 @@ describe("SideNavigation", () => {
       const { useAuth } = await import("../context/AuthContext");
       useAuth.mockReturnValue({
         userRole: "user",
-        permissions: { canViewAnalytics: false },
+        permissions: { canViewAnalytics: false, canAccessScada: false },
         logout: vi.fn(),
       });
 
@@ -215,7 +227,7 @@ describe("SideNavigation", () => {
       const { useAuth } = await import("../context/AuthContext");
       useAuth.mockReturnValue({
         userRole: "client_admin",
-        permissions: { canViewAnalytics: true },
+        permissions: { canViewAnalytics: true, canAccessScada: true },
         logout: vi.fn(),
       });
     });

@@ -7,9 +7,11 @@ missing columns and creates them via raw SQL when needed.
 
 import json
 import logging
+import os
 
 from sqlalchemy import inspect, text
 
+from app.utils.data_mode import demo_enabled
 from app.utils.user_permissions_fix import fix_user_permissions
 
 logger = logging.getLogger(__name__)
@@ -1024,6 +1026,14 @@ def seed_client_admin_data(engine):
     Returns:
         bool: True if seeding was successful, False on error
     """
+    if not demo_enabled():
+        return True
+    demo_password = os.getenv("DEMO_CLIENT_ADMIN_PASSWORD")
+    if not demo_password or len(demo_password) < 12:
+        logger.error(
+            "Demo seeding requires DEMO_CLIENT_ADMIN_PASSWORD of at least 12 characters",
+        )
+        return False
     try:
         with engine.begin() as conn:
             # 1. Create client_admin role if not exists
@@ -1095,7 +1105,7 @@ def seed_client_admin_data(engine):
                 if not first_tenant_id and t_res:
                     first_tenant_id = t_res[0]
 
-            # 4. Create Client Admin user: clientadmin@thermacore.com / clientadmin123 (client_id: 1)
+            # 4. Create the explicitly enabled demo client administrator.
             user_res = conn.execute(
                 text(
                     "SELECT id FROM users WHERE email = 'clientadmin@thermacore.com' OR username = 'client_admin' OR username = 'clientadmin'",
@@ -1105,7 +1115,7 @@ def seed_client_admin_data(engine):
                 from werkzeug.security import generate_password_hash
 
                 password_hash = generate_password_hash(
-                    "clientadmin123",
+                    demo_password,
                     method="pbkdf2:sha256",
                 )
                 client_admin_permissions = json.dumps(
@@ -1247,9 +1257,55 @@ def run_auto_migrations(app):
             engine = db.engine
 
             # Additive, idempotent migration; never reassign tenant ownership.
-            from app.models import UnitCommand
+            from app.models import (
+                AccountEntitlement,
+                AccountProfile,
+                ExternalIdentity,
+                MaintenanceSchedule,
+                OAuthTransaction,
+                PasskeyChallenge,
+                PasskeyCredential,
+                ReportSchedule,
+                SaleRecord,
+                UnitCommand,
+                UnitCondition,
+            )
 
+            AccountProfile.__table__.create(bind=engine, checkfirst=True)
+            PasskeyCredential.__table__.create(bind=engine, checkfirst=True)
+            PasskeyChallenge.__table__.create(bind=engine, checkfirst=True)
+            ExternalIdentity.__table__.create(bind=engine, checkfirst=True)
+            OAuthTransaction.__table__.create(bind=engine, checkfirst=True)
+            UnitCondition.__table__.create(bind=engine, checkfirst=True)
+            AccountEntitlement.__table__.create(bind=engine, checkfirst=True)
             UnitCommand.__table__.create(bind=engine, checkfirst=True)
+            MaintenanceSchedule.__table__.create(bind=engine, checkfirst=True)
+            ReportSchedule.__table__.create(bind=engine, checkfirst=True)
+            SaleRecord.__table__.create(bind=engine, checkfirst=True)
+            for column in (
+                "supports_heat",
+                "supports_chill",
+                "supports_water",
+                "useful_heat_kw",
+                "useful_chill_kw",
+                "water_rate_lph",
+                "differential_pressure_bar",
+                "temp_out_hot",
+                "battery_voltage",
+                "flow_rate_inlet",
+                "flow_rate_out_chill",
+                "flow_rate_out_hot",
+            ):
+                if not column_exists(engine, "units", column):
+                    definition = (
+                        "BOOLEAN DEFAULT FALSE"
+                        if column.startswith("supports_")
+                        else "FLOAT"
+                    )
+                    with engine.begin() as connection:
+                        connection.execute(
+                            text(f"ALTER TABLE units ADD COLUMN {column} {definition}"),
+                        )
 
             # Run user profile fields migration (must run before other migrations)
             user_profile_success = add_user_profile_fields(engine)
