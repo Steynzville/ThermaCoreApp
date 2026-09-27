@@ -191,14 +191,16 @@ export const updateUnitControls = async (id, controls) =>
 export async function getPortfolioEvents(range = {}) {
   if (isDemoMode) return [...demoActions];
   const events = [];
-  let page = 1,
-    more = true;
-  while (more) {
-    const result = await apiGetJson(
-      `/api/v1/portfolio/events?${new URLSearchParams({ ...range, page: page++ })}`,
-    );
-    events.push(...(result.data || []));
-    more = result.has_next === true;
+  for (const resource of ["events", "conditions"]) {
+    let page = 1,
+      more = true;
+    while (more) {
+      const result = await apiGetJson(
+        `/api/v1/portfolio/${resource}?${new URLSearchParams({ ...range, page: page++ })}`,
+      );
+      events.push(...(result.data || []));
+      more = result.has_next === true;
+    }
   }
-  return events;
+  return events.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 }

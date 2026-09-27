@@ -659,3 +659,34 @@ class AccountEntitlement(db.Model):
     __tablename__ = "account_entitlements"
     user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
     premium_scada = Column(Boolean, default=False, nullable=False)
+
+
+class UnitCondition(db.Model):
+    """Recorded sensor threshold episodes; acknowledgement never clears the hazard."""
+    __tablename__ = "unit_conditions"
+    id = Column(Integer, primary_key=True)
+    unit_id = Column(String(50), ForeignKey("units.id"), nullable=False, index=True)
+    sensor_id = Column(Integer, ForeignKey("sensors.id"), nullable=False, index=True)
+    category = Column(String(10), nullable=False)
+    title = Column(String(200), nullable=False)
+    message = Column(Text, nullable=False)
+    value = Column(Float, nullable=False)
+    threshold = Column(Float, nullable=False)
+    opened_at = Column(DateTime, nullable=False, index=True)
+    updated_at = Column(DateTime, nullable=False)
+    resolved_at = Column(DateTime)
+    acknowledged_at = Column(DateTime)
+    acknowledged_by = Column(Integer, ForeignKey("users.id"))
+    notes = Column(Text)
+
+    def as_event(self, unit_name=None):
+        def stamp(value):
+            return value.replace(tzinfo=timezone.utc).isoformat() if value else None
+        return {"id": f"condition-{self.id}", "conditionId": self.id, "unitId": self.unit_id,
+                "unitName": unit_name or self.unit_id, "category": self.category,
+                "type": self.category, "severity": "critical" if self.category == "alarm" else "warning",
+                "title": self.title, "message": self.message, "value": self.value, "threshold": self.threshold,
+                "timestamp": stamp(self.opened_at), "updatedAt": stamp(self.updated_at), "resolved_at": stamp(self.resolved_at),
+                "status": "resolved" if self.resolved_at else "acknowledged" if self.acknowledged_at else "open",
+                "acknowledged": self.acknowledged_at is not None, "acknowledgedBy": self.acknowledged_by,
+                "acknowledgedAt": stamp(self.acknowledged_at), "notes": self.notes}

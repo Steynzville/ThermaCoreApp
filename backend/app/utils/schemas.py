@@ -255,6 +255,20 @@ class UnitSchema(SQLAlchemyAutoSchema):
     tenant_id = fields.Int(dump_only=True, allow_none=True)
     client_id = fields.Method("get_client_id")
     tenant_name = fields.Method("get_tenant_name")
+    alerts = fields.Method("get_conditions")
+    has_alert = fields.Method("get_has_alert")
+    has_alarm = fields.Method("get_has_alarm")
+
+    def get_conditions(self, obj):
+        from app.services.unit_conditions import active_conditions
+        return active_conditions(obj)
+
+    def get_has_alert(self, obj):
+        return any(row["category"] == "alert" for row in self.get_conditions(obj))
+
+    def get_has_alarm(self, obj):
+        return any(row["category"] == "alarm" for row in self.get_conditions(obj))
+
     outputs = fields.Method("get_outputs")
     controlCapabilities = fields.Method("get_control_capabilities")
     cameras = fields.Method("get_cameras")

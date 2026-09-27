@@ -401,3 +401,47 @@ def scada_history(unit_id):
         return jsonify({"data": daily_history(unit.id, start, min(end, datetime.now(timezone.utc)), resolution),
                         "aggregation": resolution + " mean", "timezone": "UTC"})
     return query()
+
+
+@portfolio_bp.get("/portfolio/conditions")
+@jwt_required()
+@permission_required("read_units")
+def condition_history():
+    from app.models import UnitCondition
+    units = tenant_filter(Unit.query, Unit)
+    if "unit_ids" in request.args:
+        units = units.filter(Unit.id.in_(request.args["unit_ids"].split(",")))
+    names = {unit.id: unit.name for unit in units.all()}
+    query = UnitCondition.query.filter(UnitCondition.unit_id.in_(names))
+    try:
+        if "from" in request.args:
+            query = query.filter(UnitCondition.opened_at >= datetime.strptime(request.args["from"], "%Y-%m-%d"))
+        if "to" in request.args:
+            query = query.filter(UnitCondition.opened_at < datetime.strptime(request.args["to"], "%Y-%m-%d") + timedelta(days=1))
+    except ValueError:
+        return jsonify({"error": "Use valid UTC dates."}), 400
+    rows = query.order_by(UnitCondition.opened_at.desc(), UnitCondition.id.desc()).paginate(page=max(1, request.args.get("page", 1, type=int)), per_page=250, error_out=False)
+    return jsonify({"data": [row.as_event(names[row.unit_id]) for row in rows.items], "has_next": rows.has_next})
+
+
+@portfolio_bp.post("/units/<unit_id>/conditions/<int:condition_id>/acknowledge")
+@jwt_required()
+@permission_required("remote_control")
+def acknowledge_condition(unit_id, condition_id):
+    from app import db
+    from app.models import UnitCondition
+    from app.utils.helpers import get_current_user_id
+    if tenant_filter(Unit.query, Unit).filter(Unit.id == unit_id).first() is None:
+        return jsonify({"error": "Unit not found"}), 404
+    row = UnitCondition.query.filter_by(unit_id=unit_id, id=condition_id).with_for_update().first()
+    if row is None:
+        return jsonify({"error": "Condition not found"}), 404
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict) or not isinstance(body.get("notes", ""), str) or len(body.get("notes", "")) > 2000:
+        return jsonify({"error": "Notes must be text of at most 2000 characters."}), 400
+    if not row.acknowledged_at:
+        row.acknowledged_at = datetime.now(timezone.utc)
+        row.acknowledged_by, _ = get_current_user_id()
+        row.notes = body.get("notes", "").strip()
+        db.session.commit()
+    return jsonify(row.as_event())

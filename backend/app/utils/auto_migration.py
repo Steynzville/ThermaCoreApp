@@ -1254,7 +1254,8 @@ def run_auto_migrations(app):
                 SaleRecord,
             )
 
-            from app.models import AccountEntitlement
+            from app.models import AccountEntitlement, UnitCondition
+            UnitCondition.__table__.create(bind=engine, checkfirst=True)
             AccountEntitlement.__table__.create(bind=engine, checkfirst=True)
             UnitCommand.__table__.create(bind=engine, checkfirst=True)
             MaintenanceSchedule.__table__.create(bind=engine, checkfirst=True)

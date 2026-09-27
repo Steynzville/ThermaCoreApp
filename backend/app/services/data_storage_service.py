@@ -175,6 +175,7 @@ class DataStorageService:
         """Update the API snapshot from good, newest measurements in known units."""
         if reading.quality != "GOOD":
             return
+        Sensor.query.filter_by(id=sensor.id).with_for_update().first()
         latest = (
             SensorReading.query.filter_by(sensor_id=sensor.id)
             .order_by(SensorReading.timestamp.desc())
@@ -190,6 +191,8 @@ class DataStorageService:
 
         if latest and as_utc(latest.timestamp) > as_utc(reading.timestamp):
             return
+        from app.services.unit_conditions import record_condition
+        record_condition(sensor, reading)
         mapping = {
             "useful_heat_kw": ("useful_heat_kw", {"kw": 1, "w": 0.001}),
             "useful_chill_kw": ("useful_chill_kw", {"kw": 1, "w": 0.001}),
@@ -255,6 +258,8 @@ class DataStorageService:
             # Create new sensor
             sensor_name = f"{sensor_type.title()} Sensor"
             unit_mapping = {
+                "ammonia_ppm": "ppm",
+                "nh3_ppm": "ppm",
                 "temperature": "°C",
                 "pressure": "bar",
                 "flow_rate": "L/min",

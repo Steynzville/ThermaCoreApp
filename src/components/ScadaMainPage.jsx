@@ -3,7 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import ComprehensiveVisualizationDashboard from "./visualization/ComprehensiveVisualizationDashboard";
 import { ScadaProvider } from "../context/ScadaContext";
 import PerformanceDashboard from "./PerformanceDashboard";
-import AlertsView from "./AlertsView";
+import AdvancedAlertDashboard from "./alerts/AdvancedAlertDashboard";
 import TenantSwitcher from "./admin/TenantSwitcher";
 export default function ScadaMainPage() {
   const [params, setParams] = useSearchParams();
@@ -29,7 +29,7 @@ export default function ScadaMainPage() {
             <ComprehensiveVisualizationDashboard />
           </TabsContent>
           <TabsContent value="alerts">
-            <AlertsView />
+            <AdvancedAlertDashboard embedded />
           </TabsContent>
           <TabsContent value="analytics">
             <PerformanceDashboard />
