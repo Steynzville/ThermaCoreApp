@@ -35,3 +35,9 @@ Checkpoint commits are published after each validated stage. This document track
 - Schedule Maintenance creates a database record (operator control permission, ownership checked); demo mode explicitly persists locally per account/tenant/unit. Errors never show success.
 - Manage Remotely supplies an exact unit query parameter, resolved against the permitted portfolio. Foreign route state cannot grant access.
 - Validation: 12 frontend tests and 18 backend tests pass, including five-year history, all 14 graphs, maintenance persistence/errors/permissions and foreign-unit rejection. Production build passes.
+
+## Completed checkpoint 4: Remote Management
+
+Original pre-267 RemoteControl presentation restored: switches and confirmation dialogs, mode/setpoint cards, automatic control, camera panel/fullscreen and control history. Commands retain tenant-scoped gateway acknowledgements; live controls never fabricate success. Setpoints are kW and L/h, not invented percentages. Configure allowed operation_modes and limits in UNIT_CONTROL_GATEWAYS. Only public capabilities are serialized, not gateway URLs/tokens. UNIT_CAMERA_FEEDS maps unit IDs to HTTPS browser-playable descriptors (id/name/url and optional resolution/fps); credential-bearing URLs are rejected. RTSP requires a browser media gateway. Camera status becomes active only after media loads.
+
+Validation: 11 frontend behavior tests and 18 backend tests; production build. This checkpoint was reconstructed after the unpublished local checkpoint was lost during the usage-limit interruption. The first three remotely published checkpoints were recovered intact. Final integrated visual and full-suite validation remains pending.

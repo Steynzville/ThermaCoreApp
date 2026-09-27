@@ -33,6 +33,7 @@ def acknowledged_controls(unit_id):
 
 def execute_control(unit, controls, user_id):
     allowed = {
+        "operationMode",
         "machinePower",
         "waterProductionOn",
         "autoSwitchEnabled",
@@ -42,7 +43,10 @@ def execute_control(unit, controls, user_id):
     if not isinstance(controls, dict) or not controls or set(controls) - allowed:
         raise ControlError("Provide one or more supported control fields.")
     for key, value in controls.items():
-        if key in {"machinePower", "waterProductionOn", "autoSwitchEnabled"}:
+        if key == "operationMode":
+            if not isinstance(value, str) or len(value) > 80:
+                raise ControlError("operationMode must be a supported mode name.")
+        elif key in {"machinePower", "waterProductionOn", "autoSwitchEnabled"}:
             if type(value) is not bool:
                 raise ControlError(f"{key} must be boolean.")
         elif type(value) not in (int, float) or not math.isfinite(value) or value < 0:
@@ -82,6 +86,10 @@ def execute_control(unit, controls, user_id):
             "No HTTPS device control gateway configured for this unit.",
             503,
         )
+    if "operationMode" in controls and controls["operationMode"] not in gateway.get(
+        "operation_modes", []
+    ):
+        raise ControlError("Operation mode is not configured for this device.")
     for key in ("powerSetpoint", "waterSetpoint"):
         if controls.get(key, 0) > 0:
             limit = gateway.get("limits", {}).get(key)
@@ -127,3 +135,40 @@ def execute_control(unit, controls, user_id):
     db.session.add(command)
     db.session.commit()
     return command
+
+
+def public_control_configuration(unit_id):
+    """Expose capabilities without revealing gateway URL or authorization token."""
+    try:
+        gateways = current_app.config.get("UNIT_CONTROL_GATEWAYS")
+        if gateways is None:
+            gateways = json.loads(os.environ.get("UNIT_CONTROL_GATEWAYS", "{}"))
+        gateway = gateways.get(unit_id, {})
+        return {
+            "configured": urlparse(gateway.get("url", "")).scheme == "https",
+            "limits": gateway.get("limits", {}),
+            "operationModes": gateway.get("operation_modes", []),
+            "waterTriggerPercent": gateway.get("water_trigger_percent"),
+        }
+    except (TypeError, ValueError, AttributeError):
+        return {"configured": False, "limits": {}, "operationModes": []}
+
+
+def public_cameras(unit_id):
+    try:
+        cameras = current_app.config.get("UNIT_CAMERA_FEEDS")
+        if cameras is None:
+            cameras = json.loads(os.environ.get("UNIT_CAMERA_FEEDS", "{}"))
+        return [
+            {
+                key: camera[key]
+                for key in ("id", "name", "url", "resolution", "fps")
+                if key in camera
+            }
+            for camera in cameras.get(unit_id, [])
+            if urlparse(camera.get("url", "")).scheme == "https"
+            and not urlparse(camera["url"]).username
+            and not urlparse(camera["url"]).password
+        ]
+    except (TypeError, ValueError, AttributeError):
+        return []

@@ -342,3 +342,32 @@ def test_older_iso_reading_is_stored_without_replacing_newest_snapshot(
     assert db.session.get(Unit, u.id).current_power == 14
     sensor = Sensor.query.filter_by(unit_id=u.id, sensor_type="current_power").one()
     assert SensorReading.query.filter_by(sensor_id=sensor.id).count() == 2
+
+
+def test_control_modes_and_public_capabilities(
+    app, client, portfolio_data, monkeypatch
+):
+    p = portfolio_data
+    unit = p["units"][0]
+    monkeypatch.setitem(
+        app.config,
+        "UNIT_CONTROL_GATEWAYS",
+        {
+            unit.id: {
+                "url": "https://device.example.test/control",
+                "token": "private-gateway-secret",
+                "operation_modes": ["Balanced"],
+                "limits": {"powerSetpoint": 20},
+            }
+        },
+    )
+    response = client.get(f"/api/v1/units/{unit.id}", headers=p["headers"]["operator"])
+    assert response.status_code == 200
+    assert "private-gateway-secret" not in response.get_data(as_text=True)
+    assert "https://device.example.test/control" not in response.get_data(as_text=True)
+    denied = client.post(
+        f"/api/v1/remote-control/units/{unit.id}/controls",
+        headers=p["headers"]["operator"],
+        json={"operationMode": "Imaginary"},
+    )
+    assert denied.status_code == 400

@@ -25,6 +25,9 @@ const { getHistory, apiGet, apiPost, unit, data } = vi.hoisted(() => {
     },
   };
 });
+vi.mock("../context/SettingsContext", () => ({
+  useSettings: () => ({ settings: {} }),
+}));
 vi.mock("../context/UnitContext", () => ({ useUnits: () => data }));
 vi.mock("../context/AuthContext", () => ({
   useAuth: () => ({ user: { id: 1 }, permissions: { canControlUnits: true } }),
@@ -66,7 +69,9 @@ it("opens remote management already scoped to the exact permitted unit", () => {
       <RemoteControl />
     </MemoryRouter>,
   );
-  expect(screen.getByText("Unit Alpha")).toBeInTheDocument();
+  expect(
+    screen.getByRole("heading", { name: "Remote Control - Unit Alpha" }),
+  ).toBeInTheDocument();
   expect(screen.queryByLabelText("Select unit")).not.toBeInTheDocument();
 });
 it("rejects a foreign remote deep link", () => {
@@ -76,7 +81,9 @@ it("rejects a foreign remote deep link", () => {
     </MemoryRouter>,
   );
   expect(screen.queryByText("Unit Alpha")).not.toBeInTheDocument();
-  expect(screen.queryByText("Turn power off")).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("switch", { name: "Machine Power" }),
+  ).not.toBeInTheDocument();
 });
 it("persists maintenance through the backend and presents a returned record", async () => {
   render(<MaintenanceScheduler unit={unit} onClose={() => {}} />);

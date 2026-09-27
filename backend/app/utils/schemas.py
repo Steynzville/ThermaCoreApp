@@ -251,6 +251,18 @@ class UnitSchema(SQLAlchemyAutoSchema):
     client_id = fields.Method("get_client_id")
     tenant_name = fields.Method("get_tenant_name")
     outputs = fields.Method("get_outputs")
+    controlCapabilities = fields.Method("get_control_capabilities")
+    cameras = fields.Method("get_cameras")
+
+    def get_control_capabilities(self, obj):
+        from app.services.unit_controls import public_control_configuration
+
+        return public_control_configuration(obj.id)
+
+    def get_cameras(self, obj):
+        from app.services.unit_controls import public_cameras
+
+        return public_cameras(obj.id)
 
     def get_outputs(self, obj):
         from app.services.unit_outputs import output_states
