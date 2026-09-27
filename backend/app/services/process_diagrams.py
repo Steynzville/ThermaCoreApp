@@ -27,7 +27,8 @@ FIELDS = {
 
 def public_process_diagram(unit_id):
     config = current_app.config.get(
-        "UNIT_PROCESS_DIAGRAMS", os.getenv("UNIT_PROCESS_DIAGRAMS", "{}"),
+        "UNIT_PROCESS_DIAGRAMS",
+        os.getenv("UNIT_PROCESS_DIAGRAMS", "{}"),
     )
     try:
         config = json.loads(config) if isinstance(config, str) else config

@@ -272,7 +272,9 @@ def update_report_schedule(schedule_id):
         return jsonify({"error": "Invalid schedule transition"}), 409
     previous = row.status
     changed = ReportSchedule.query.filter_by(
-        id=row.id, user_id=user_id, status=previous,
+        id=row.id,
+        user_id=user_id,
+        status=previous,
     ).update({"status": status, "claimed_at": now if status == "processing" else None})
     if changed != 1:
         db.session.rollback()
@@ -414,7 +416,10 @@ def scada_history(unit_id):
         return jsonify(
             {
                 "data": daily_history(
-                    unit.id, start, min(end, datetime.now(timezone.utc)), resolution,
+                    unit.id,
+                    start,
+                    min(end, datetime.now(timezone.utc)),
+                    resolution,
                 ),
                 "aggregation": resolution + " mean",
                 "timezone": "UTC",
@@ -449,7 +454,8 @@ def condition_history():
     except ValueError:
         return jsonify({"error": "Use valid UTC dates."}), 400
     rows = query.order_by(
-        UnitCondition.opened_at.desc(), UnitCondition.id.desc(),
+        UnitCondition.opened_at.desc(),
+        UnitCondition.id.desc(),
     ).paginate(
         page=max(1, request.args.get("page", 1, type=int)),
         per_page=250,

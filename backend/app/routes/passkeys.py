@@ -144,7 +144,10 @@ def registration_options():
     return jsonify(
         {
             "transaction": create_challenge(
-                "register", options.challenge, user, handle,
+                "register",
+                options.challenge,
+                user,
+                handle,
             ),
             "options": json.loads(options_to_json(options)),
         },
@@ -200,7 +203,8 @@ def authentication_options():
     except ValueError as error:
         return jsonify({"error": str(error)}), 503
     options = generate_authentication_options(
-        rp_id=rp, user_verification=UserVerificationRequirement.REQUIRED,
+        rp_id=rp,
+        user_verification=UserVerificationRequirement.REQUIRED,
     )
     return jsonify(
         {
@@ -231,7 +235,8 @@ def authentication_verify():
             raise ValueError("Unknown credential")
         handle = credential.get("response", {}).get("userHandle")
         if not isinstance(handle, str) or not hmac.compare_digest(
-            base64url_to_bytes(handle), base64url_to_bytes(row.user_handle),
+            base64url_to_bytes(handle),
+            base64url_to_bytes(row.user_handle),
         ):
             raise ValueError("Account handle mismatch")
         verified = verify_authentication_response(
@@ -301,7 +306,8 @@ def delete_passkey(credential_id):
             {"error": "Confirm your current password to remove a passkey"},
         ), 403
     row = PasskeyCredential.query.filter_by(
-        credential_id=credential_id, user_id=user.id,
+        credential_id=credential_id,
+        user_id=user.id,
     ).first()
     if not row:
         return jsonify({"error": "Passkey not found"}), 404

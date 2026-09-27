@@ -50,7 +50,9 @@ def daily_history(unit_id, start, end, resolution="day"):
             day = func.date_trunc(resolution, SensorReading.timestamp)
         data = (
             db.session.query(
-                day, func.avg(SensorReading.value), func.count(SensorReading.id),
+                day,
+                func.avg(SensorReading.value),
+                func.count(SensorReading.id),
             )
             .filter(
                 SensorReading.sensor_id == sensor.id,

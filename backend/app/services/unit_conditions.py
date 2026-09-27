@@ -28,7 +28,9 @@ def record_condition(sensor, reading):
     )
     if active is None:
         active = UnitCondition(
-            unit_id=sensor.unit_id, sensor_id=sensor.id, opened_at=reading.timestamp,
+            unit_id=sensor.unit_id,
+            sensor_id=sensor.id,
+            opened_at=reading.timestamp,
         )
         db.session.add(active)
     active.category = "alarm" if ammonia else "alert"

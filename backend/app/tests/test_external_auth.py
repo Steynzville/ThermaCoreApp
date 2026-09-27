@@ -13,7 +13,12 @@ from app.routes.external_auth import challenge, verify_identity
 
 @pytest.mark.parametrize("provider", ["google", "apple"])
 def test_oidc_link_login_pkce_and_replay(
-    app, client, admin_token, db_session, provider, monkeypatch,
+    app,
+    client,
+    admin_token,
+    db_session,
+    provider,
+    monkeypatch,
 ):
     monkeypatch.setitem(app.config, "AUTH_FRONTEND_URL", "https://app.example.test")
     for suffix, value in {
@@ -30,7 +35,9 @@ def test_oidc_link_login_pkce_and_replay(
     payload = {"challenge": challenge(verifier), "link": True, "password": "wrong"}
     assert (
         client.post(
-            f"/api/v1/auth/oauth/{provider}/start", headers=headers, json=payload,
+            f"/api/v1/auth/oauth/{provider}/start",
+            headers=headers,
+            json=payload,
         ).status_code
         == 403
     )
@@ -38,7 +45,9 @@ def test_oidc_link_login_pkce_and_replay(
     for linking in (True, False):
         payload["link"] = linking
         response = client.post(
-            f"/api/v1/auth/oauth/{provider}/start", headers=headers, json=payload,
+            f"/api/v1/auth/oauth/{provider}/start",
+            headers=headers,
+            json=payload,
         )
         assert response.status_code == 200
         params = parse_qs(urlparse(response.json["url"]).query)
@@ -62,7 +71,10 @@ def test_oidc_link_login_pkce_and_replay(
             )
             assert callback.status_code == 303
             verify.assert_called_once_with(
-                provider, "signed-provider-token", "test-client", params["nonce"][0],
+                provider,
+                "signed-provider-token",
+                "test-client",
+                params["nonce"][0],
             )
             assert (
                 client.get(
@@ -81,7 +93,8 @@ def test_oidc_link_login_pkce_and_replay(
             == 400
         )
         result = client.post(
-            "/api/v1/auth/oauth/exchange", json={"code": ticket, "verifier": verifier},
+            "/api/v1/auth/oauth/exchange",
+            json={"code": ticket, "verifier": verifier},
         )
         assert result.status_code == 200
         if linking:
@@ -103,7 +116,8 @@ def test_oidc_link_login_pkce_and_replay(
 
 def test_provider_configuration_is_explicit_and_states_fail_closed(client):
     response = client.post(
-        "/api/v1/auth/oauth/google/start", json={"challenge": "A" * 43},
+        "/api/v1/auth/oauth/google/start",
+        json={"challenge": "A" * 43},
     )
     assert response.status_code == 503
     assert "OAUTH_GOOGLE_CLIENT_ID" in response.json["error"]

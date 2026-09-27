@@ -87,7 +87,8 @@ def execute_control(unit, controls, user_id):
             503,
         )
     if "operationMode" in controls and controls["operationMode"] not in gateway.get(
-        "operation_modes", [],
+        "operation_modes",
+        [],
     ):
         raise ControlError("Operation mode is not configured for this device.")
     for key in ("powerSetpoint", "waterSetpoint"):

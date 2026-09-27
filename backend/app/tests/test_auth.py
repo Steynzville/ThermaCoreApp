@@ -1,10 +1,10 @@
 """Unit tests for authentication functionality."""
 
 import json
-import pytest
 import time
 
 import jwt
+import pytest
 
 from app.models import User
 
@@ -913,7 +913,10 @@ class TestSecurityEnhancements:
             assert response.status_code in [401, 422]
 
     def test_forgot_password_valid_email(
-        self, client, db_session, configured_reset_email
+        self,
+        client,
+        db_session,
+        configured_reset_email,
     ):
         """Test forgot password with valid email."""
         response = client.post(
@@ -1567,7 +1570,9 @@ def configured_reset_email(app, monkeypatch):
 
 
 def test_password_reset_unconfigured_is_explicit_and_does_not_enumerate(
-    app, client, monkeypatch
+    app,
+    client,
+    monkeypatch,
 ):
     monkeypatch.setitem(app.config, "SENDGRID_API_KEY", None)
     results = [
