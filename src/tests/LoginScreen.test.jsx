@@ -12,6 +12,10 @@ import { AuthProvider } from "../context/AuthContext";
 import * as authService from "../services/authService";
 
 const providerSignIn = vi.hoisted(() => vi.fn());
+const passkeySignIn = vi.hoisted(() => vi.fn());
+vi.mock("../services/passkeyService", () => ({
+  signInWithPasskey: passkeySignIn,
+}));
 vi.mock("../services/externalAuthService", () => ({
   startProviderSignIn: providerSignIn,
   finishProviderSignIn: vi.fn(),
@@ -562,7 +566,7 @@ describe("LoginScreen", () => {
   // ============================================================
   // PROVIDER DIALOGS ('COMING SOON') TESTS
   // ============================================================
-  describe("Provider dialogs ('coming soon')", () => {
+  describe("Provider authentication", () => {
     it.each(["Google", "Apple"])(
       "starts the configured %s authorization flow",
       async (provider) => {
@@ -578,22 +582,22 @@ describe("LoginScreen", () => {
       },
     );
 
-    // ✅ FIX: Already has proper async handling
-    it("should show a coming-soon dialog for biometric sign-in", async () => {
-      renderComponent({ error: "", setError: vi.fn() });
-
-      const biometricHeading = screen.getByText("Biometric Sign In");
-      const container = biometricHeading.closest("[class*='biometricSection']");
-      const triggerButton = container.querySelector("button");
-      act(() => {
-        fireEvent.click(triggerButton);
-      });
-
-      await waitForInDocument(() => {
-        expect(
-          screen.getByText(/Biometric authentication is coming soon/i),
-        ).toBeInTheDocument();
-      });
+    it("starts a real passkey ceremony and displays cancellation", async () => {
+      const setError = vi.fn();
+      const error = new Error("Cancelled");
+      error.name = "NotAllowedError";
+      passkeySignIn.mockRejectedValue(error);
+      renderComponent({ error: "", setError });
+      fireEvent.click(
+        screen.getByRole("button", { name: "Sign in with a passkey" }),
+      );
+      await waitForInDocument(() => expect(passkeySignIn).toHaveBeenCalled());
+      await waitForInDocument(() =>
+        expect(setError).toHaveBeenCalledWith(
+          expect.stringContaining("cancelled"),
+        ),
+      );
+      expect(screen.queryByText(/coming soon/i)).not.toBeInTheDocument();
     });
 
     it("shows a provider configuration failure without simulating login", async () => {

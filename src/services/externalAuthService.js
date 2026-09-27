@@ -41,6 +41,9 @@ export async function finishProviderSignIn(code) {
     window.location.replace("/settings");
     return;
   }
+  finishAuthSession(result);
+}
+export function finishAuthSession(result) {
   if (!result.access_token)
     throw new Error("Provider sign-in did not return an application session.");
   for (const storage of [localStorage, sessionStorage])

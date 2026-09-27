@@ -3,6 +3,7 @@ import { apiGetJson } from "../../utils/apiFetch";
 import { startProviderSignIn } from "../../services/externalAuthService";
 import { Card, CardHeader, CardContent, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
+import PasskeySettings from "./PasskeySettings";
 export default function ConnectedAccounts() {
   const [password, setPassword] = useState("");
   const [linked, setLinked] = useState([]);
@@ -66,6 +67,7 @@ export default function ConnectedAccounts() {
         </div>
         {linked.length > 0 && <p>Connected: {linked.join(", ")}</p>}
         {error && <p role="alert">{error}</p>}
+        <PasskeySettings password={password} />
       </CardContent>
     </Card>
   );

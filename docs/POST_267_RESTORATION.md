@@ -99,3 +99,11 @@ Required external configuration (not supplied or fabricated): AUTH_FRONTEND_URL 
 Primary provider references: https://developers.google.com/identity/openid-connect/openid-connect ; https://developers.google.com/identity/gsi/web/guides/verify-google-id-token ; https://developer.apple.com/documentation/signinwithapple/verifying-a-user .
 
 Validation: production build, 33 Login tests and 4 backend OAuth tests pass. Tests verify both provider flows, real RSA JWT claim/signature validation, wrong browser verifier, state/ticket replay, required password for linking and missing configuration. Real provider end-to-end sign-in requires the above deployment credentials.
+
+## Completed checkpoint 13: real passkey / biometric sign-in
+
+The existing fingerprint control invokes navigator.credentials.get with mandatory user verification; the browser can use biometrics, device PIN or a security key. Settings registers discoverable passkeys through navigator.credentials.create after password confirmation, lists persisted keys and removes them securely. The backend uses py_webauthn 2.7.1 for origin/RP, challenge, signature and counter verification. Challenges are persisted, expiring and single-use; keys belong to the current account. Revoked keys cannot authenticate. Biometric templates/private keys never reach the application.
+
+Deployment requires WEBAUTHN_RP_ID (frontend relying-party domain, no scheme/path) and WEBAUTHN_ORIGIN (exact frontend HTTPS origin). localhost HTTP is supported for development. A physical browser/device credential ceremony is required for end-to-end deployment validation; no credential or success is simulated when unavailable.
+
+Validation: production build, 33 Login tests and 2 backend integration tests pass. Backend tests construct real ES256 registration/assertion data and verify successful login plus wrong-origin, missing-user-verification, challenge replay, cloned-counter and removed-key rejection. Library reference: https://duo-labs.github.io/py_webauthn/authentication.html .

@@ -16,17 +16,7 @@ import {
   startProviderSignIn,
   finishProviderSignIn,
 } from "../services/externalAuthService";
-import { Button } from "./ui/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "./ui/dialog";
+import { signInWithPasskey } from "../services/passkeyService";
 
 const LoginScreen = ({ error, setError }) => {
   const [formData, setFormData] = useState({
@@ -100,10 +90,22 @@ const LoginScreen = ({ error, setError }) => {
     setFocusedField(null);
   }, []);
 
+  const [passkeyBusy, setPasskeyBusy] = useState(false);
   const handleBiometricLogin = useCallback(async () => {
-    // Here you would implement actual biometric authentication
-    // For now, we'll show a dialog
-  }, []);
+    setPasskeyBusy(true);
+    setError("");
+    try {
+      await signInWithPasskey();
+    } catch (failure) {
+      setError(
+        failure.name === "NotAllowedError"
+          ? "Passkey sign-in was cancelled or no registered passkey was available. Register one in Settings after signing in with your password."
+          : failure.message,
+      );
+    } finally {
+      setPasskeyBusy(false);
+    }
+  }, [setError]);
 
   const handleSubmit = useCallback(
     async (e) => {
@@ -334,32 +336,15 @@ const LoginScreen = ({ error, setError }) => {
         <div className={styles.biometricSection}>
           <h3 className={styles.biometricHeading}>Biometric Sign In</h3>
           <div className={styles.biometricContainer}>
-            <Dialog>
-              <DialogTrigger asChild>
-                <button
-                  type="button"
-                  onClick={handleBiometricLogin}
-                  className={styles.biometricButton}
-                >
-                  <Fingerprint size={24} />
-                </button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Biometric Authentication</DialogTitle>
-                  <DialogDescription>
-                    Biometric authentication is coming soon! We&apos;re working
-                    to bring you secure fingerprint and face recognition login
-                    options.
-                  </DialogDescription>
-                </DialogHeader>
-                <DialogFooter>
-                  <DialogClose asChild>
-                    <Button variant="outline">Close</Button>
-                  </DialogClose>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            <button
+              type="button"
+              aria-label="Sign in with a passkey"
+              disabled={passkeyBusy}
+              onClick={handleBiometricLogin}
+              className={styles.biometricButton}
+            >
+              <Fingerprint size={24} />
+            </button>
           </div>
         </div>
 

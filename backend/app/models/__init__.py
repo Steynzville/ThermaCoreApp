@@ -711,3 +711,25 @@ class OAuthTransaction(db.Model):
     link_user_id = Column(Integer, ForeignKey("users.id"))
     subject = Column(String(255))
     ticket_hash = Column(String(64), unique=True)
+
+
+class PasskeyCredential(db.Model):
+    __tablename__ = "passkey_credentials"
+    credential_id = Column(String(1400), primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    public_key = Column(Text, nullable=False)
+    user_handle = Column(String(128), nullable=False)
+    sign_count = Column(Integer, nullable=False, default=0)
+    name = Column(String(100), nullable=False, default="Passkey")
+    created_at = Column(DateTime, nullable=False, default=utc_now)
+
+
+class PasskeyChallenge(db.Model):
+    __tablename__ = "passkey_challenges"
+    id = Column(String(64), primary_key=True)
+    challenge = Column(String(128), nullable=False)
+    purpose = Column(String(20), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    user_handle = Column(String(128))
+    expires_at = Column(DateTime, nullable=False, index=True)
+    used = Column(Boolean, nullable=False, default=False)
