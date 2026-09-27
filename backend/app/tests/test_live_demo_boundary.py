@@ -5,7 +5,11 @@ from app.utils.data_mode import demo_enabled
 
 
 def test_live_rejects_legacy_simulators_even_if_attached(
-    app, client, admin_token, viewer_token, monkeypatch,
+    app,
+    client,
+    admin_token,
+    viewer_token,
+    monkeypatch,
 ):
     monkeypatch.setitem(app.config, "DEMO_DATA_ENABLED", False)
     monkeypatch.setattr(app, "modbus_service", Mock(), raising=False)

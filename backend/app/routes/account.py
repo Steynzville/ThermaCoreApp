@@ -32,7 +32,8 @@ def account():
 
 def profile_for(user):
     return db.session.get(AccountProfile, user.id) or AccountProfile(
-        user_id=user.id, preferences={},
+        user_id=user.id,
+        preferences={},
     )
 
 
@@ -104,7 +105,9 @@ def save_settings():
                 profile.display_name = value
             else:
                 setattr(
-                    user, "first_name" if key == "firstName" else "last_name", value,
+                    user,
+                    "first_name" if key == "firstName" else "last_name",
+                    value,
                 )
         prefs = body.get("preferences", {})
         if not isinstance(prefs, dict) or set(prefs) - set(DEFAULTS):

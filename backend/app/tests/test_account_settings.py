@@ -47,7 +47,9 @@ def test_own_profile_preferences_and_authorization(client, portfolio_data, db_se
     ]:
         assert (
             client.put(
-                "/api/v1/account/settings", headers=headers, json=body,
+                "/api/v1/account/settings",
+                headers=headers,
+                json=body,
             ).status_code
             == 400
         )
@@ -55,7 +57,9 @@ def test_own_profile_preferences_and_authorization(client, portfolio_data, db_se
 
 
 def test_avatar_decode_reencode_limits_and_own_account(
-    client, portfolio_data, db_session,
+    client,
+    portfolio_data,
+    db_session,
 ):
     p = portfolio_data
     user = p["users"]["viewer"]

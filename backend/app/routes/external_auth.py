@@ -112,7 +112,8 @@ def verify_identity(provider, encoded, audience, nonce):
         options={"require": ["exp", "iat", "iss", "aud", "sub", "nonce"]},
     )
     if not isinstance(claims["nonce"], str) or not hmac.compare_digest(
-        claims["nonce"], nonce,
+        claims["nonce"],
+        nonce,
     ):
         raise ValueError("Identity nonce mismatch")
     if not isinstance(claims["sub"], str) or not 1 <= len(claims["sub"]) <= 255:
@@ -201,7 +202,8 @@ def callback(provider):
     ):
         return jsonify({"error": "Invalid or expired authentication state"}), 400
     claimed = OAuthTransaction.query.filter_by(
-        state_hash=transaction.state_hash, status="pending",
+        state_hash=transaction.state_hash,
+        status="pending",
     ).update({"status": "processing"})
     db.session.commit()
     if claimed != 1:
@@ -227,7 +229,10 @@ def callback(provider):
         )
         response.raise_for_status()
         transaction.subject = verify_identity(
-            provider, response.json()["id_token"], client_id, transaction.nonce,
+            provider,
+            response.json()["id_token"],
+            client_id,
+            transaction.nonce,
         )
         ticket = secrets.token_urlsafe(32)
         transaction.ticket_hash, transaction.status = digest(ticket), "authorized"
@@ -263,7 +268,8 @@ def exchange():
     ):
         return jsonify({"error": "Invalid authentication handoff"}), 400
     transaction = OAuthTransaction.query.filter_by(
-        ticket_hash=digest(body["code"]), status="authorized",
+        ticket_hash=digest(body["code"]),
+        status="authorized",
     ).first()
     if (
         not transaction
@@ -272,13 +278,15 @@ def exchange():
     ):
         return jsonify({"error": "Invalid or expired authentication handoff"}), 400
     claimed = OAuthTransaction.query.filter_by(
-        state_hash=transaction.state_hash, status="authorized",
+        state_hash=transaction.state_hash,
+        status="authorized",
     ).update({"status": "used"})
     db.session.commit()
     if claimed != 1:
         return jsonify({"error": "Authentication handoff already used"}), 400
     identity = db.session.get(
-        ExternalIdentity, (transaction.provider, transaction.subject),
+        ExternalIdentity,
+        (transaction.provider, transaction.subject),
     )
     if transaction.link_user_id:
         user = db.session.get(User, transaction.link_user_id)

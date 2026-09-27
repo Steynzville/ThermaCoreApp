@@ -814,8 +814,8 @@ def forgot_password(data):
             return jsonify(
                 {
                     "error": "Password reset email is not configured: "
-                    + ", ".join(missing)
-                }
+                    + ", ".join(missing),
+                },
             ), 503
         email = data.get("email")
 

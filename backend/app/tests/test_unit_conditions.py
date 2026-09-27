@@ -5,7 +5,9 @@ from app.services.data_storage_service import DataStorageService
 
 
 def test_conditions_describe_persist_acknowledge_and_resolve_without_fake_shutdown(
-    client, portfolio_data, db_session,
+    client,
+    portfolio_data,
+    db_session,
 ):
     p = portfolio_data
     unit = p["units"][0]
@@ -45,7 +47,9 @@ def test_conditions_describe_persist_acknowledge_and_resolve_without_fake_shutdo
     endpoint = f"/api/v1/units/{unit.id}/conditions/{record.id}/acknowledge"
     assert (
         client.post(
-            endpoint, headers=p["headers"]["viewer"], json={"notes": "Read"},
+            endpoint,
+            headers=p["headers"]["viewer"],
+            json={"notes": "Read"},
         ).status_code
         == 403
     )
@@ -87,7 +91,8 @@ def test_conditions_describe_persist_acknowledge_and_resolve_without_fake_shutdo
 
 
 def test_pressure_threshold_is_an_alert_not_an_ammonia_alarm(
-    portfolio_data, db_session,
+    portfolio_data,
+    db_session,
 ):
     unit = portfolio_data["units"][0]
     db_session.add(

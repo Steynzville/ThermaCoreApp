@@ -13,7 +13,11 @@ from app.models import User
 
 
 def test_real_passkey_registration_authentication_and_replay(
-    app, client, admin_token, db_session, monkeypatch,
+    app,
+    client,
+    admin_token,
+    db_session,
+    monkeypatch,
 ):
     monkeypatch.setitem(app.config, "WEBAUTHN_RP_ID", "example.test")
     monkeypatch.setitem(app.config, "WEBAUTHN_ORIGIN", "https://app.example.test")
@@ -81,13 +85,17 @@ def test_real_passkey_registration_authentication_and_replay(
     }
     assert (
         client.post(
-            "/api/v1/auth/passkeys/register/verify", headers=headers, json=body,
+            "/api/v1/auth/passkeys/register/verify",
+            headers=headers,
+            json=body,
         ).status_code
         == 201
     )
     assert (
         client.post(
-            "/api/v1/auth/passkeys/register/verify", headers=headers, json=body,
+            "/api/v1/auth/passkeys/register/verify",
+            headers=headers,
+            json=body,
         ).status_code
         == 400
     )
@@ -107,7 +115,8 @@ def test_real_passkey_registration_authentication_and_replay(
         ).encode()
         auth = rp_hash + bytes([flags]) + count.to_bytes(4, "big")
         signature = private.sign(
-            auth + hashlib.sha256(data).digest(), ec.ECDSA(hashes.SHA256()),
+            auth + hashlib.sha256(data).digest(),
+            ec.ECDSA(hashes.SHA256()),
         )
         return {
             "transaction": login["transaction"],
@@ -133,7 +142,8 @@ def test_real_passkey_registration_authentication_and_replay(
     )
     assert (
         client.post(
-            "/api/v1/auth/passkeys/login/verify", json=assertion(flags=1),
+            "/api/v1/auth/passkeys/login/verify",
+            json=assertion(flags=1),
         ).status_code
         == 401
     )
@@ -146,7 +156,8 @@ def test_real_passkey_registration_authentication_and_replay(
     )
     assert (
         client.post(
-            "/api/v1/auth/passkeys/login/verify", json=assertion(count=1),
+            "/api/v1/auth/passkeys/login/verify",
+            json=assertion(count=1),
         ).status_code
         == 401
     )
@@ -168,7 +179,8 @@ def test_real_passkey_registration_authentication_and_replay(
     )
     assert (
         client.post(
-            "/api/v1/auth/passkeys/login/verify", json=assertion(count=2),
+            "/api/v1/auth/passkeys/login/verify",
+            json=assertion(count=2),
         ).status_code
         == 401
     )

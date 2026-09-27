@@ -6,7 +6,10 @@ from app.utils.schemas import UserSchema
 
 
 def test_premium_grant_revoke_and_installation_boundary(
-    app, client, admin_token, viewer_token,
+    app,
+    client,
+    admin_token,
+    viewer_token,
 ):
     admin = {"Authorization": f"Bearer {admin_token}"}
     viewer = {"Authorization": f"Bearer {viewer_token}"}
@@ -42,7 +45,9 @@ def test_premium_requires_authentication(client):
 
 
 def test_scada_history_resolution_quality_and_tenant_scope(
-    client, portfolio_data, db_session,
+    client,
+    portfolio_data,
+    db_session,
 ):
     from datetime import datetime, timedelta, timezone
 
@@ -91,7 +96,9 @@ def test_scada_history_resolution_quality_and_tenant_scope(
     foreign = f"/api/v1/units/{p['units'][1].id}/scada-history"
     assert (
         client.get(
-            foreign, query_string=query, headers=p["headers"]["viewer"],
+            foreign,
+            query_string=query,
+            headers=p["headers"]["viewer"],
         ).status_code
         == 404
     )
