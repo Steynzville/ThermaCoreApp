@@ -153,6 +153,7 @@ class UserSchema(SQLAlchemyAutoSchema):
 
     def get_premium_scada(self, obj):
         from app.middleware.entitlements import has_scada
+
         return has_scada(obj)
 
     def get_is_active(self, obj):
@@ -261,6 +262,7 @@ class UnitSchema(SQLAlchemyAutoSchema):
 
     def get_conditions(self, obj):
         from app.services.unit_conditions import active_conditions
+
         return active_conditions(obj)
 
     def get_has_alert(self, obj):
@@ -276,6 +278,7 @@ class UnitSchema(SQLAlchemyAutoSchema):
 
     def get_process_diagram(self, obj):
         from app.services.process_diagrams import public_process_diagram
+
         return public_process_diagram(obj.id)
 
     def get_control_capabilities(self, obj):

@@ -1,3 +1,4 @@
+import { isAlarm } from "../utils/conditions";
 import { AlertTriangle, CheckCircle, Filter, User, Zap } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -43,8 +44,8 @@ const GridView = ({ className }) => {
       ...unit,
       serialNumber: unit.serialNumber || `TC-2024-${unit.id}`,
       powerOutput: unit.currentPower,
-      alerts: unit.alerts || [],
-      currentAlert: unit.alerts?.[0] || null,
+      alerts: (unit.alerts || []).filter((event) => !isAlarm(event)),
+      currentAlert: unit.alerts?.find((event) => !isAlarm(event)) || null,
       installDate: unit.installDate,
       lastMaintenance: unit.lastMaintenance,
     }));

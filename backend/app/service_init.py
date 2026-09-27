@@ -76,10 +76,14 @@ def initialize_all_services(app: Any, logger: logging.Logger) -> None:
 
         # Initialize protocol simulator (not critical)
         try:
-            protocol_simulator = ProtocolGatewaySimulator(
-                mqtt_broker_host=app.config.get("MQTT_BROKER_HOST", "localhost"),
-                mqtt_broker_port=app.config.get("MQTT_BROKER_PORT", 1883),
-            ) if demo_enabled(app) else None
+            protocol_simulator = (
+                ProtocolGatewaySimulator(
+                    mqtt_broker_host=app.config.get("MQTT_BROKER_HOST", "localhost"),
+                    mqtt_broker_port=app.config.get("MQTT_BROKER_PORT", 1883),
+                )
+                if demo_enabled(app)
+                else None
+            )
             logger.info("Protocol simulator initialized successfully")
         except Exception:
             logger.exception("Protocol simulator initialization failed")

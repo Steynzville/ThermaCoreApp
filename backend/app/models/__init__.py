@@ -663,6 +663,7 @@ class AccountEntitlement(db.Model):
 
 class UnitCondition(db.Model):
     """Recorded sensor threshold episodes; acknowledgement never clears the hazard."""
+
     __tablename__ = "unit_conditions"
     id = Column(Integer, primary_key=True)
     unit_id = Column(String(50), ForeignKey("units.id"), nullable=False, index=True)
@@ -682,14 +683,32 @@ class UnitCondition(db.Model):
     def as_event(self, unit_name=None):
         def stamp(value):
             return value.replace(tzinfo=timezone.utc).isoformat() if value else None
-        return {"id": f"condition-{self.id}", "conditionId": self.id, "unitId": self.unit_id,
-                "unitName": unit_name or self.unit_id, "category": self.category,
-                "type": self.category, "severity": "critical" if self.category == "alarm" else "warning",
-                "title": self.title, "message": self.message, "value": self.value, "threshold": self.threshold,
-                "timestamp": stamp(self.opened_at), "updatedAt": stamp(self.updated_at), "resolved_at": stamp(self.resolved_at),
-                "status": "resolved" if self.resolved_at else "acknowledged" if self.acknowledged_at else "open",
-                "acknowledged": self.acknowledged_at is not None, "acknowledgedBy": self.acknowledged_by,
-                "acknowledgedAt": stamp(self.acknowledged_at), "notes": self.notes}
+
+        return {
+            "id": f"condition-{self.id}",
+            "conditionId": self.id,
+            "unitId": self.unit_id,
+            "unitName": unit_name or self.unit_id,
+            "category": self.category,
+            "type": self.category,
+            "severity": "critical" if self.category == "alarm" else "warning",
+            "title": self.title,
+            "message": self.message,
+            "value": self.value,
+            "threshold": self.threshold,
+            "timestamp": stamp(self.opened_at),
+            "updatedAt": stamp(self.updated_at),
+            "resolved_at": stamp(self.resolved_at),
+            "status": "resolved"
+            if self.resolved_at
+            else "acknowledged"
+            if self.acknowledged_at
+            else "open",
+            "acknowledged": self.acknowledged_at is not None,
+            "acknowledgedBy": self.acknowledged_by,
+            "acknowledgedAt": stamp(self.acknowledged_at),
+            "notes": self.notes,
+        }
 
 
 class ExternalIdentity(db.Model):

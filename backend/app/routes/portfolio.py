@@ -112,23 +112,23 @@ def unit_history(unit_id):
     now = datetime.now(timezone.utc)
     try:
         start = datetime.strptime(request.args["from"], "%Y-%m-%d").replace(
-            tzinfo=timezone.utc
+            tzinfo=timezone.utc,
         )
         end = datetime.strptime(request.args["to"], "%Y-%m-%d").replace(
-            tzinfo=timezone.utc
+            tzinfo=timezone.utc,
         ) + timedelta(days=1)
         if start >= end or end - start > timedelta(days=3660):
             raise ValueError
     except (KeyError, ValueError):
         return jsonify(
-            {"error": "Choose valid UTC dates spanning at most ten years per query."}
+            {"error": "Choose valid UTC dates spanning at most ten years per query."},
         ), 400
     return jsonify(
         {
             "data": daily_history(unit.id, start, min(end, now)),
             "aggregation": "daily mean",
             "timezone": "UTC",
-        }
+        },
     )
 
 
@@ -173,8 +173,8 @@ def schedule_maintenance(unit_id):
     except (ValueError, TypeError, KeyError, AttributeError):
         return jsonify(
             {
-                "error": "Provide a future date with timezone and a description of 3–2000 characters."
-            }
+                "error": "Provide a future date with timezone and a description of 3–2000 characters.",
+            },
         ), 400
     user_id, _ = get_current_user_id()
     record = MaintenanceSchedule(
@@ -231,8 +231,8 @@ def report_schedules():
     except (TypeError, KeyError, ValueError, AttributeError):
         return jsonify(
             {
-                "error": "Select permitted units, a report format and a future schedule date."
-            }
+                "error": "Select permitted units, a report format and a future schedule date.",
+            },
         ), 400
     row = ReportSchedule(
         user_id=user_id,
@@ -272,7 +272,7 @@ def update_report_schedule(schedule_id):
         return jsonify({"error": "Invalid schedule transition"}), 409
     previous = row.status
     changed = ReportSchedule.query.filter_by(
-        id=row.id, user_id=user_id, status=previous
+        id=row.id, user_id=user_id, status=previous,
     ).update({"status": status, "claimed_at": now if status == "processing" else None})
     if changed != 1:
         db.session.rollback()
@@ -292,7 +292,7 @@ def sales_records():
         units = units.filter(Unit.id.in_(request.args["unit_ids"].split(",")))
     rows = (
         SaleRecord.query.filter(
-            SaleRecord.unit_id.in_([unit.id for unit in units.all()])
+            SaleRecord.unit_id.in_([unit.id for unit in units.all()]),
         )
         .order_by(SaleRecord.sale_date)
         .all()
@@ -305,6 +305,7 @@ def sales_records():
 @role_required("admin")
 def create_sale():
     import math
+
     from app import db
     from app.models import SaleRecord
 
@@ -340,8 +341,8 @@ def create_sale():
     except (ValueError, TypeError, KeyError, AttributeError):
         return jsonify(
             {
-                "error": "Provide a valid unit, date, non-negative AUD revenue, product line and unique reference."
-            }
+                "error": "Provide a valid unit, date, non-negative AUD revenue, product line and unique reference.",
+            },
         ), 400
     if SaleRecord.query.filter_by(reference=body["reference"].strip()).first():
         return jsonify({"error": "Sale reference already exists"}), 409
@@ -362,17 +363,20 @@ def create_sale():
 @role_required("admin")
 def set_scada_entitlement(user_id):
     from app import db
-    from app.models import User, AccountEntitlement
-    if db.session.get(User,user_id) is None:
-        return jsonify({"error":"User not found"}),404
-    body=request.get_json(silent=True)
-    if not isinstance(body,dict) or type(body.get("enabled")) is not bool:
-        return jsonify({"error":"Provide enabled boolean"}),400
-    record=db.session.get(AccountEntitlement,user_id) or AccountEntitlement(user_id=user_id)
-    record.premium_scada=body["enabled"]
+    from app.models import AccountEntitlement, User
+
+    if db.session.get(User, user_id) is None:
+        return jsonify({"error": "User not found"}), 404
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict) or type(body.get("enabled")) is not bool:
+        return jsonify({"error": "Provide enabled boolean"}), 400
+    record = db.session.get(AccountEntitlement, user_id) or AccountEntitlement(
+        user_id=user_id,
+    )
+    record.premium_scada = body["enabled"]
     db.session.add(record)
     db.session.commit()
-    return jsonify({"premium_scada":record.premium_scada})
+    return jsonify({"premium_scada": record.premium_scada})
 
 
 @portfolio_bp.get("/units/<unit_id>/scada-history")
@@ -392,14 +396,31 @@ def scada_history(unit_id):
             start = datetime.fromisoformat(request.args["from"].replace("Z", "+00:00"))
             end = datetime.fromisoformat(request.args["to"].replace("Z", "+00:00"))
             limits = {"minute": 2, "hour": 366, "day": 3660}
-            if (resolution not in limits or start.tzinfo is None or end.tzinfo is None
-                    or start >= end or end - start > timedelta(days=limits[resolution])):
+            if (
+                resolution not in limits
+                or start.tzinfo is None
+                or end.tzinfo is None
+                or start >= end
+                or end - start > timedelta(days=limits[resolution])
+            ):
                 raise ValueError
             start, end = start.astimezone(timezone.utc), end.astimezone(timezone.utc)
         except (KeyError, ValueError, TypeError):
-            return jsonify({"error": "Use UTC timestamps: minute queries up to 2 days, hourly up to 366 days, daily up to ten years."}), 400
-        return jsonify({"data": daily_history(unit.id, start, min(end, datetime.now(timezone.utc)), resolution),
-                        "aggregation": resolution + " mean", "timezone": "UTC"})
+            return jsonify(
+                {
+                    "error": "Use UTC timestamps: minute queries up to 2 days, hourly up to 366 days, daily up to ten years.",
+                },
+            ), 400
+        return jsonify(
+            {
+                "data": daily_history(
+                    unit.id, start, min(end, datetime.now(timezone.utc)), resolution,
+                ),
+                "aggregation": resolution + " mean",
+                "timezone": "UTC",
+            },
+        )
+
     return query()
 
 
@@ -408,6 +429,7 @@ def scada_history(unit_id):
 @permission_required("read_units")
 def condition_history():
     from app.models import UnitCondition
+
     units = tenant_filter(Unit.query, Unit)
     if "unit_ids" in request.args:
         units = units.filter(Unit.id.in_(request.args["unit_ids"].split(",")))
@@ -415,13 +437,30 @@ def condition_history():
     query = UnitCondition.query.filter(UnitCondition.unit_id.in_(names))
     try:
         if "from" in request.args:
-            query = query.filter(UnitCondition.opened_at >= datetime.strptime(request.args["from"], "%Y-%m-%d"))
+            query = query.filter(
+                UnitCondition.opened_at
+                >= datetime.strptime(request.args["from"], "%Y-%m-%d"),
+            )
         if "to" in request.args:
-            query = query.filter(UnitCondition.opened_at < datetime.strptime(request.args["to"], "%Y-%m-%d") + timedelta(days=1))
+            query = query.filter(
+                UnitCondition.opened_at
+                < datetime.strptime(request.args["to"], "%Y-%m-%d") + timedelta(days=1),
+            )
     except ValueError:
         return jsonify({"error": "Use valid UTC dates."}), 400
-    rows = query.order_by(UnitCondition.opened_at.desc(), UnitCondition.id.desc()).paginate(page=max(1, request.args.get("page", 1, type=int)), per_page=250, error_out=False)
-    return jsonify({"data": [row.as_event(names[row.unit_id]) for row in rows.items], "has_next": rows.has_next})
+    rows = query.order_by(
+        UnitCondition.opened_at.desc(), UnitCondition.id.desc(),
+    ).paginate(
+        page=max(1, request.args.get("page", 1, type=int)),
+        per_page=250,
+        error_out=False,
+    )
+    return jsonify(
+        {
+            "data": [row.as_event(names[row.unit_id]) for row in rows.items],
+            "has_next": rows.has_next,
+        },
+    )
 
 
 @portfolio_bp.post("/units/<unit_id>/conditions/<int:condition_id>/acknowledge")
@@ -431,13 +470,22 @@ def acknowledge_condition(unit_id, condition_id):
     from app import db
     from app.models import UnitCondition
     from app.utils.helpers import get_current_user_id
+
     if tenant_filter(Unit.query, Unit).filter(Unit.id == unit_id).first() is None:
         return jsonify({"error": "Unit not found"}), 404
-    row = UnitCondition.query.filter_by(unit_id=unit_id, id=condition_id).with_for_update().first()
+    row = (
+        UnitCondition.query.filter_by(unit_id=unit_id, id=condition_id)
+        .with_for_update()
+        .first()
+    )
     if row is None:
         return jsonify({"error": "Condition not found"}), 404
     body = request.get_json(silent=True)
-    if not isinstance(body, dict) or not isinstance(body.get("notes", ""), str) or len(body.get("notes", "")) > 2000:
+    if (
+        not isinstance(body, dict)
+        or not isinstance(body.get("notes", ""), str)
+        or len(body.get("notes", "")) > 2000
+    ):
         return jsonify({"error": "Notes must be text of at most 2000 characters."}), 400
     if not row.acknowledged_at:
         row.acknowledged_at = datetime.now(timezone.utc)

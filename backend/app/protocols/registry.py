@@ -5,8 +5,9 @@ from datetime import datetime
 
 from flask import current_app
 
-from .base import ProtocolStatus
 from app.utils.data_mode import demo_enabled
+
+from .base import ProtocolStatus
 
 logger = logging.getLogger(__name__)
 

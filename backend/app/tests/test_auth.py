@@ -1,6 +1,7 @@
 """Unit tests for authentication functionality."""
 
 import json
+import pytest
 import time
 
 import jwt
@@ -911,7 +912,9 @@ class TestSecurityEnhancements:
             # Should return 401 or 422
             assert response.status_code in [401, 422]
 
-    def test_forgot_password_valid_email(self, client, db_session):
+    def test_forgot_password_valid_email(
+        self, client, db_session, configured_reset_email
+    ):
         """Test forgot password with valid email."""
         response = client.post(
             "/api/v1/auth/forgot-password",
@@ -943,7 +946,7 @@ class TestSecurityEnhancements:
         # Check message in the nested data structure
         assert "If the email exists" in data.get("data", {}).get("message", "")
 
-    def test_forgot_password_invalid_email(self, client):
+    def test_forgot_password_invalid_email(self, client, configured_reset_email):
         """Test forgot password with invalid email (should still return success for security)."""
         response = client.post(
             "/api/v1/auth/forgot-password",
@@ -1547,3 +1550,30 @@ def test_emergency_admin_idempotent_update(client, db_session):
         # Clean up the emergency_admin user
         User.query.filter_by(username="emergency_admin").delete()
         db.session.commit()
+
+
+@pytest.fixture
+def configured_reset_email(app, monkeypatch):
+    for key, value in {
+        "SENDGRID_API_KEY": "test-only-provider-key",
+        "EMAIL_FROM": "test@example.invalid",
+        "FRONTEND_URL": "https://frontend.example.invalid",
+    }.items():
+        monkeypatch.setitem(app.config, key, value)
+    monkeypatch.setattr(
+        "app.services.email_service.send_password_reset_email",
+        lambda email, token: (True, None),
+    )
+
+
+def test_password_reset_unconfigured_is_explicit_and_does_not_enumerate(
+    app, client, monkeypatch
+):
+    monkeypatch.setitem(app.config, "SENDGRID_API_KEY", None)
+    results = [
+        client.post("/api/v1/auth/forgot-password", json={"email": email})
+        for email in ("admin@test.com", "unknown@example.invalid")
+    ]
+    assert all(result.status_code == 503 for result in results)
+    assert results[0].get_json() == results[1].get_json()
+    assert "SENDGRID_API_KEY" in results[0].get_json()["error"]

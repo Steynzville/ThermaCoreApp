@@ -1,9 +1,10 @@
 from datetime import datetime, timedelta, timezone
-from app.models import Sensor, SensorReading, MaintenanceSchedule
+
+from app.models import MaintenanceSchedule, Sensor, SensorReading
 
 
 def test_long_history_and_maintenance_are_unit_scoped(
-    client, portfolio_data, db_session
+    client, portfolio_data, db_session,
 ):
     p = portfolio_data
     own, foreign = p["units"][:2]
@@ -17,18 +18,18 @@ def test_long_history_and_maintenance_are_unit_scoped(
     db_session.add(sensor)
     db_session.flush()
     db_session.add(
-        SensorReading(sensor_id=sensor.id, timestamp=stamp, value=8, quality="GOOD")
+        SensorReading(sensor_id=sensor.id, timestamp=stamp, value=8, quality="GOOD"),
     )
     db_session.commit()
     query = f"?from={(stamp - timedelta(days=1)).date()}&to={datetime.now(timezone.utc).date()}"
     result = client.get(
-        f"/api/v1/units/{own.id}/history{query}", headers=p["headers"]["viewer"]
+        f"/api/v1/units/{own.id}/history{query}", headers=p["headers"]["viewer"],
     )
     assert result.status_code == 200
     assert result.json["data"][0]["usefulHeat"] == 8
     assert (
         client.get(
-            f"/api/v1/units/{foreign.id}/history{query}", headers=p["headers"]["viewer"]
+            f"/api/v1/units/{foreign.id}/history{query}", headers=p["headers"]["viewer"],
         ).status_code
         == 404
     )
@@ -88,25 +89,25 @@ def test_report_schedule_ownership_and_claims(client, portfolio_data, db_session
     path = f"{endpoint}/{created.json['id']}"
     assert (
         client.patch(
-            path, headers=p["headers"]["operator"], json={"status": "paused"}
+            path, headers=p["headers"]["operator"], json={"status": "paused"},
         ).status_code
         == 404
     )
     assert (
         client.patch(
-            path, headers=p["headers"]["viewer"], json={"status": "paused"}
+            path, headers=p["headers"]["viewer"], json={"status": "paused"},
         ).status_code
         == 200
     )
     assert (
         client.patch(
-            path, headers=p["headers"]["viewer"], json={"status": "scheduled"}
+            path, headers=p["headers"]["viewer"], json={"status": "scheduled"},
         ).status_code
         == 200
     )
     assert (
         client.patch(
-            path, headers=p["headers"]["viewer"], json={"status": "processing"}
+            path, headers=p["headers"]["viewer"], json={"status": "processing"},
         ).status_code
         == 409
     )
@@ -115,13 +116,13 @@ def test_report_schedule_ownership_and_claims(client, portfolio_data, db_session
     db_session.commit()
     assert (
         client.patch(
-            path, headers=p["headers"]["viewer"], json={"status": "processing"}
+            path, headers=p["headers"]["viewer"], json={"status": "processing"},
         ).status_code
         == 200
     )
     assert (
         client.patch(
-            path, headers=p["headers"]["viewer"], json={"status": "processing"}
+            path, headers=p["headers"]["viewer"], json={"status": "processing"},
         ).status_code
         == 409
     )
@@ -136,7 +137,7 @@ def test_report_schedule_ownership_and_claims(client, portfolio_data, db_session
 
 
 def test_sales_records_have_separate_authorization_and_tenant_scope(
-    client, portfolio_data
+    client, portfolio_data,
 ):
     p = portfolio_data
     endpoint = "/api/v1/portfolio/sales"
@@ -156,6 +157,6 @@ def test_sales_records_have_separate_authorization_and_tenant_scope(
     assert client.get(endpoint, headers=p["headers"]["viewer"]).status_code == 403
     assert client.get(endpoint, headers=p["headers"]["operator"]).status_code == 403
     result = client.get(
-        f"{endpoint}?unit_ids={p['units'][0].id}", headers=p["headers"]["admin"]
+        f"{endpoint}?unit_ids={p['units'][0].id}", headers=p["headers"]["admin"],
     )
     assert {row["unitId"] for row in result.json["data"]} == {p["units"][0].id}

@@ -8,10 +8,10 @@ missing columns and creates them via raw SQL when needed.
 import json
 import logging
 import os
-from app.utils.data_mode import demo_enabled
 
 from sqlalchemy import inspect, text
 
+from app.utils.data_mode import demo_enabled
 from app.utils.user_permissions_fix import fix_user_permissions
 
 logger = logging.getLogger(__name__)
@@ -1030,7 +1030,9 @@ def seed_client_admin_data(engine):
         return True
     demo_password = os.getenv("DEMO_CLIENT_ADMIN_PASSWORD")
     if not demo_password or len(demo_password) < 12:
-        logger.error("Demo seeding requires DEMO_CLIENT_ADMIN_PASSWORD of at least 12 characters")
+        logger.error(
+            "Demo seeding requires DEMO_CLIENT_ADMIN_PASSWORD of at least 12 characters",
+        )
         return False
     try:
         with engine.begin() as conn:
@@ -1256,13 +1258,19 @@ def run_auto_migrations(app):
 
             # Additive, idempotent migration; never reassign tenant ownership.
             from app.models import (
-                UnitCommand,
+                AccountEntitlement,
+                AccountProfile,
+                ExternalIdentity,
                 MaintenanceSchedule,
+                OAuthTransaction,
+                PasskeyChallenge,
+                PasskeyCredential,
                 ReportSchedule,
                 SaleRecord,
+                UnitCommand,
+                UnitCondition,
             )
 
-            from app.models import AccountEntitlement, UnitCondition, ExternalIdentity, OAuthTransaction, PasskeyCredential, PasskeyChallenge, AccountProfile
             AccountProfile.__table__.create(bind=engine, checkfirst=True)
             PasskeyCredential.__table__.create(bind=engine, checkfirst=True)
             PasskeyChallenge.__table__.create(bind=engine, checkfirst=True)
@@ -1296,7 +1304,7 @@ def run_auto_migrations(app):
                     )
                     with engine.begin() as connection:
                         connection.execute(
-                            text(f"ALTER TABLE units ADD COLUMN {column} {definition}")
+                            text(f"ALTER TABLE units ADD COLUMN {column} {definition}"),
                         )
 
             # Run user profile fields migration (must run before other migrations)

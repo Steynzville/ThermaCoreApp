@@ -53,3 +53,15 @@ it("never treats absolute ambient pressure as machine differential pressure", ()
     normalizeUnit({ id: "A", pressure: 1013 }).differentialPressure,
   ).toBeNull();
 });
+
+it("counts ordinary alerts separately from alarms, even with critical severity", async () => {
+  const { conditionCounts } = await import("./conditions");
+  expect(
+    conditionCounts([
+      { category: "alert", severity: "critical" },
+      { category: "alarm", severity: "critical", acknowledged: true },
+      { category: "alert", acknowledged: true },
+      { category: "alarm", status: "resolved" },
+    ]),
+  ).toEqual({ alerts: 1, alarms: 1 });
+});

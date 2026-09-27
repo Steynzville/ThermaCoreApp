@@ -499,4 +499,5 @@ def get_alert_patterns(args):
 @analytics_bp.before_request
 def require_premium_analytics():
     from app.middleware.entitlements import premium_required
+
     return premium_required(lambda: None)()

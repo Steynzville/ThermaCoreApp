@@ -180,7 +180,9 @@ const ViewAnalytics = ({ className = "" }) => {
                     Avg Growth
                   </h3>
                   <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                    {summaryData.avgGrowth}
+                    {summaryData.avgGrowth === "Not available"
+                      ? "N/A"
+                      : summaryData.avgGrowth}
                   </p>
                 </div>
               </div>
@@ -211,7 +213,18 @@ const ViewAnalytics = ({ className = "" }) => {
                     dataKey="month"
                     className="text-gray-600 dark:text-gray-400"
                   />
-                  <YAxis className="text-gray-600 dark:text-gray-400" />
+                  <YAxis
+                    yAxisId="units"
+                    allowDecimals={false}
+                    className="text-gray-600 dark:text-gray-400"
+                  />
+                  <YAxis
+                    yAxisId="revenue"
+                    orientation="right"
+                    tickFormatter={formatRevenue}
+                    width={72}
+                    className="text-gray-600 dark:text-gray-400"
+                  />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: "var(--background)",
@@ -219,7 +232,7 @@ const ViewAnalytics = ({ className = "" }) => {
                       borderRadius: "8px",
                     }}
                     formatter={(value, name) => {
-                      if (name === "revenue") {
+                      if (name === "Revenue") {
                         return [formatRevenue(value), "Revenue"];
                       }
                       return [value, "Units"];
@@ -229,6 +242,7 @@ const ViewAnalytics = ({ className = "" }) => {
                   <Line
                     type="monotone"
                     dataKey="units"
+                    yAxisId="units"
                     stroke="#8884d8"
                     activeDot={{ r: 8 }}
                     name="Units"
@@ -236,6 +250,7 @@ const ViewAnalytics = ({ className = "" }) => {
                   <Line
                     type="monotone"
                     dataKey="revenue"
+                    yAxisId="revenue"
                     stroke="#82ca9d"
                     name="Revenue"
                   />
@@ -304,7 +319,11 @@ const ViewAnalytics = ({ className = "" }) => {
                     dataKey="name"
                     className="text-gray-600 dark:text-gray-400"
                   />
-                  <YAxis className="text-gray-600 dark:text-gray-400" />
+                  <YAxis
+                    tickFormatter={formatRevenue}
+                    width={76}
+                    className="text-gray-600 dark:text-gray-400"
+                  />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: "var(--background)",
@@ -341,7 +360,11 @@ const ViewAnalytics = ({ className = "" }) => {
                     dataKey="name"
                     className="text-gray-600 dark:text-gray-400"
                   />
-                  <YAxis className="text-gray-600 dark:text-gray-400" />
+                  <YAxis
+                    tickFormatter={formatRevenue}
+                    width={76}
+                    className="text-gray-600 dark:text-gray-400"
+                  />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: "var(--background)",

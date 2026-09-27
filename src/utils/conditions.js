@@ -9,3 +9,17 @@ export const conditionType = (event) =>
   event.resolved_at || event.status === "resolved"
     ? "success"
     : event.severity || event.type || "info";
+
+export const conditionCounts = (events) => ({
+  alerts: events.filter(
+    (event) =>
+      !isAlarm(event) &&
+      !event.acknowledged &&
+      !event.resolved_at &&
+      event.status !== "resolved",
+  ).length,
+  alarms: events.filter(
+    (event) =>
+      isAlarm(event) && !event.resolved_at && event.status !== "resolved",
+  ).length,
+});

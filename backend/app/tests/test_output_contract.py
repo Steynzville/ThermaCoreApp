@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
+
 from app import db
-from app.models import Unit, Sensor, SensorReading
+from app.models import Sensor, SensorReading, Unit
 from app.services.unit_outputs import output_states
 
 
@@ -37,7 +38,7 @@ def test_outputs_use_each_channels_latest_quality_and_timestamp(app):
                     value=value,
                     quality=quality,
                     timestamp=now - timedelta(seconds=age),
-                )
+                ),
             )
         db.session.commit()
         result = output_states(unit, now)

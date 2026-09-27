@@ -101,7 +101,7 @@ const PerformanceAnalyticsDashboard = ({
     Promise.all([
       getPortfolioHistory([unit], { from, to }),
       isDemoMode
-        ? Promise.resolve(
+        ? Promise.resolve().then(() =>
             JSON.parse(
               localStorage.getItem(
                 `thermacore:demo:maintenance:${user?.id}:${unit.tenantId}:${unit.id}`,
@@ -570,7 +570,7 @@ const PerformanceAnalyticsDashboard = ({
                           <span className="text-gray-600 dark:text-gray-300">
                             {device.predictions.maintenanceDue == null
                               ? "No scheduled maintenance"
-                              : `Maintenance in ${device.predictions.maintenanceDue == null ? "Not scheduled" : `${device.predictions.maintenanceDue} days`}`}
+                              : `Maintenance in ${device.predictions.maintenanceDue} days`}
                           </span>
                         </div>
                       </div>

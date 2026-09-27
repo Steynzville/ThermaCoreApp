@@ -1,3 +1,4 @@
+import { conditionCounts } from "../utils/conditions";
 import {
   Activity,
   AlertTriangle,
@@ -98,8 +99,7 @@ const EnhancedSideNavigation = () => {
 
   const { units, alerts } = useUnits();
   const totalUnits = units.length;
-  const totalAlerts = alerts.filter((a) => !a.acknowledged).length;
-  const totalAlarms = units.filter((unit) => unit.hasAlarm).length;
+  const { alerts: totalAlerts, alarms: totalAlarms } = conditionCounts(alerts);
 
   const navigationItems = [
     {

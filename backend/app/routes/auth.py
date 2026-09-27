@@ -805,6 +805,18 @@ def forgot_password(data):
         description: Rate limit exceeded
     """
     try:
+        missing = [
+            key
+            for key in ("SENDGRID_API_KEY", "EMAIL_FROM", "FRONTEND_URL")
+            if not current_app.config.get(key)
+        ]
+        if missing:
+            return jsonify(
+                {
+                    "error": "Password reset email is not configured: "
+                    + ", ".join(missing)
+                }
+            ), 503
         email = data.get("email")
 
         current_app.logger.info(

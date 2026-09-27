@@ -101,10 +101,9 @@ const mockSignal = {
   removeEventListener: vi.fn(),
   onabort: null,
 };
-const mockAbortController = vi.fn().mockImplementation(() => ({
-  abort: mockAbort,
-  signal: mockSignal,
-}));
+const mockAbortController = vi.fn().mockImplementation(function () {
+  return { abort: mockAbort, signal: mockSignal };
+});
 
 // Store original AbortController to restore after tests
 const originalAbortController = global.AbortController;

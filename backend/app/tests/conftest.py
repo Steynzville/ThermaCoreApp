@@ -962,6 +962,7 @@ def portfolio_data(app, db_session):
 def isolate_rate_limiter_state(app, monkeypatch):
     """Rate-limit tests must opt in and cannot exhaust another test's IP bucket."""
     import importlib
+
     limiter_module = importlib.import_module("app.middleware.rate_limit")
     monkeypatch.setitem(app.config, "RATE_LIMIT_ENABLED", False)
     monkeypatch.setattr(limiter_module, "_rate_limiter", None)

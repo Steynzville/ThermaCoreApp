@@ -192,6 +192,7 @@ class DataStorageService:
         if latest and as_utc(latest.timestamp) > as_utc(reading.timestamp):
             return
         from app.services.unit_conditions import record_condition
+
         record_condition(sensor, reading)
         mapping = {
             "useful_heat_kw": ("useful_heat_kw", {"kw": 1, "w": 0.001}),
@@ -277,7 +278,6 @@ class DataStorageService:
                 "parasitic_load": "kW",
                 "user_load": "kW",
                 "export_power": "kW",
-                "water_flow": "L/h",
                 "temp_in": "°C",
                 "temp_out": "°C",
                 "temp_outside": "°C",

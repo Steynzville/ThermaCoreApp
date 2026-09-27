@@ -1,6 +1,7 @@
 """Bounded daily machine history available to ordinary unit readers, not premium-only."""
 
 from sqlalchemy import func
+
 from app import db
 from app.models import Sensor, SensorReading
 
@@ -41,13 +42,15 @@ def daily_history(unit_id, start, end, resolution="day"):
         if resolution == "day":
             day = func.date(SensorReading.timestamp)
         elif db.engine.dialect.name == "sqlite":
-            pattern = "%Y-%m-%dT%H:00:00" if resolution == "hour" else "%Y-%m-%dT%H:%M:00"
+            pattern = (
+                "%Y-%m-%dT%H:00:00" if resolution == "hour" else "%Y-%m-%dT%H:%M:00"
+            )
             day = func.strftime(pattern, SensorReading.timestamp)
         else:
             day = func.date_trunc(resolution, SensorReading.timestamp)
         data = (
             db.session.query(
-                day, func.avg(SensorReading.value), func.count(SensorReading.id)
+                day, func.avg(SensorReading.value), func.count(SensorReading.id),
             )
             .filter(
                 SensorReading.sensor_id == sensor.id,
@@ -61,7 +64,9 @@ def daily_history(unit_id, start, end, resolution="day"):
         )
         for date, value, count in data:
             if resolution != "day":
-                date = (date.isoformat() if hasattr(date, "isoformat") else str(date)).replace(" ", "T").removesuffix("+00:00") + "Z"
+                date = (
+                    date.isoformat() if hasattr(date, "isoformat") else str(date)
+                ).replace(" ", "T").removesuffix("+00:00") + "Z"
             row = rows.setdefault(
                 str(date),
                 {"date": str(date), "unitId": unit_id, "source": "live", "samples": {}},

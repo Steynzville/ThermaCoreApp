@@ -1,6 +1,6 @@
 """SCADA integration routes for real-time data management."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from flask import Blueprint, current_app, jsonify, request
 from flask_jwt_extended import jwt_required
@@ -70,7 +70,13 @@ def mqtt_connect():
     try:
         if getattr(current_app, "mqtt_client", None) is not None:
             current_app.mqtt_client.connect()
-            return jsonify({"status": "connected" if current_app.mqtt_client.connected is True else "connecting"})
+            return jsonify(
+                {
+                    "status": "connected"
+                    if current_app.mqtt_client.connected is True
+                    else "connecting",
+                },
+            )
         return SecurityAwareErrorHandler.handle_service_unavailable("MQTT client")
     except Exception as e:
         return SecurityAwareErrorHandler.handle_mqtt_error(e, "connection")
@@ -927,25 +933,57 @@ def get_device_status_history():
     device_id = request.args.get("device_id")
     limit = min(request.args.get("limit", 50, type=int), 1000)  # Cap at 1000
 
-    from app.models import Unit, UnitCondition
+    from app.models import UnitCondition
+
     query = UnitCondition.query
     if device_id:
         query = query.filter_by(unit_id=device_id)
     count = query.count()
-    return jsonify({"history": [row.as_event() for row in query.order_by(UnitCondition.opened_at.desc()).limit(max(1, limit)).all()], "total_records": count, "device_id": device_id, "limit": limit})
+    return jsonify(
+        {
+            "history": [
+                row.as_event()
+                for row in query.order_by(UnitCondition.opened_at.desc())
+                .limit(max(1, limit))
+                .all()
+            ],
+            "total_records": count,
+            "device_id": device_id,
+            "limit": limit,
+        },
+    )
 
 
 @scada_bp.before_request
 def restrict_installation_scada():
     from flask import jsonify
-    from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+    from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
+
     from app import db
     from app.models import User
+
     verify_jwt_in_request()
     user = db.session.get(User, get_jwt_identity())
-    if not user or not user.is_active or not user.role or user.role.name.value != "admin":
-        return jsonify({"error": "System administrator access required for installation protocol services"}), 403
+    if (
+        not user
+        or not user.is_active
+        or not user.role
+        or user.role.name.value != "admin"
+    ):
+        return jsonify(
+            {
+                "error": "System administrator access required for installation protocol services",
+            },
+        ), 403
 
     from app.utils.data_mode import demo_enabled
-    if any(part in request.path.split("/") for part in ("modbus", "dnp3", "simulator")) and not demo_enabled():
-        return jsonify({"error": "Legacy protocol simulators are disabled in live mode. Configure a real telemetry or acknowledged control gateway."}), 503
+
+    if (
+        any(part in request.path.split("/") for part in ("modbus", "dnp3", "simulator"))
+        and not demo_enabled()
+    ):
+        return jsonify(
+            {
+                "error": "Legacy protocol simulators are disabled in live mode. Configure a real telemetry or acknowledged control gateway.",
+            },
+        ), 503

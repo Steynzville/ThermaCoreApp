@@ -2,6 +2,7 @@
 
 import math
 from datetime import datetime, timezone
+
 from app.models import Sensor, SensorReading
 
 CONTRACT = {
@@ -40,7 +41,7 @@ def output_states(unit, now=None):
         value, measured, quality, stale = None, None, "UNKNOWN", True
         if row:
             scale = scales.get(
-                (row.sensor.unit_of_measurement or "").lower().replace(" ", "")
+                (row.sensor.unit_of_measurement or "").lower().replace(" ", ""),
             )
             time = (
                 row.timestamp.replace(tzinfo=timezone.utc)

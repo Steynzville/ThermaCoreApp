@@ -416,6 +416,7 @@ const AdvancedAlertDashboard = ({ embedded = false, className = "" }) => {
         onOpenChange={setAcknowledgeDialogOpen}
       >
         <DialogContent>
+          {error && <p role="alert">{error}</p>}
           <DialogHeader>
             <DialogTitle>Acknowledge Alert</DialogTitle>
             <DialogDescription>

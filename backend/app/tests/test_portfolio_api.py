@@ -345,7 +345,7 @@ def test_older_iso_reading_is_stored_without_replacing_newest_snapshot(
 
 
 def test_control_modes_and_public_capabilities(
-    app, client, portfolio_data, monkeypatch
+    app, client, portfolio_data, monkeypatch,
 ):
     p = portfolio_data
     unit = p["units"][0]
@@ -358,7 +358,7 @@ def test_control_modes_and_public_capabilities(
                 "token": "private-gateway-secret",
                 "operation_modes": ["Balanced"],
                 "limits": {"powerSetpoint": 20},
-            }
+            },
         },
     )
     response = client.get(f"/api/v1/units/{unit.id}", headers=p["headers"]["operator"])
