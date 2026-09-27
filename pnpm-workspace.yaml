@@ -2,3 +2,7 @@ packages:
   - .
 overrides:
   uuid: ^11.1.1
+# esbuild installs its platform binary; core-js's optional postinstall is unnecessary.
+allowBuilds:
+  esbuild: true
+  core-js: false

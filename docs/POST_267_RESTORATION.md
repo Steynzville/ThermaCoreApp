@@ -142,3 +142,4 @@ Final full frontend validation at this checkpoint: 1,725 tests pass, with all-so
 The final authentication/email/output-contract regression run passes all 74 tests, including the new configuration failure case. Frozen frontend dependency installation passes.
 
 GitHub PR validation exposed the old CI pnpm 10.4.1 ignoring workspace overrides written by pnpm 11. The package manager is now pinned to 11.25.0 in package.json and CI, preserving frozen-lockfile installation and security overrides rather than bypassing that gate. Node minimum reflects the upgraded toolchain.
+The clean GitHub install additionally required an explicit pnpm 11 build-script policy. Only esbuild's platform-binary installation is allowed; core-js's optional postinstall is explicitly disabled. No blanket build-script permission or frozen-install bypass was added.
