@@ -16,17 +16,17 @@ Login and `/auth/me` supply the authoritative role and ownership. Restored sessi
 
 ## Demo and live modes
 
-Set `VITE_DATA_MODE=demo` or `VITE_DATA_MODE=live` at build time. Demo is the default for Demo-App. The older `VITE_MOCK_MODE=false` also selects live mode if `VITE_DATA_MODE` is absent.
+Set `VITE_DATA_MODE=demo` or `VITE_DATA_MODE=live` at build time. Demo is the default for Demo-App; main defaults to live through `src/config/deployment.json`. Missing configuration defaults to live. `VITE_MOCK_MODE` is not the current mode selector.
 
-Demo mode uses the twenty fixtures in `src/data/mockUnits.js`, with explicit fictional ownership in `src/data/demoPortfolio.js`. Authenticated API units take precedence for identity and ownership. Demonstration daily records are deterministic, span the latest 90 days, and are labelled as estimates. Controls update shared demo session state and action history; they do not contact devices.
+Demo mode uses the twenty fixtures in `src/data/mockUnits.js`, with explicit fictional ownership in `src/data/demoPortfolio.js`. Authenticated API units take precedence for identity and ownership. Demonstration daily records are deterministic and labelled as estimates. The default portfolio window is 90 days; explicitly requested ranges support longer history. Controls update shared demo session state and action history; they do not contact devices.
 
-Live mode uses `VITE_API_BASE_URL` for all relative API calls and Socket.IO's `/socket.io` transport. It never falls back to generated metrics on a network error. The frontend refreshes snapshots on telemetry events and polls every 30 seconds. Missing history, unconfigured controls and unavailable readings are visible as such.
+Live mode uses `VITE_API_BASE_URL` for all relative API calls and Socket.IO's `/socket.io` transport. It never falls back to generated metrics on a network error. The frontend refreshes snapshots on telemetry events and polls at the saved account interval (30 seconds by default). Missing history, unconfigured controls and unavailable readings are visible as such.
 
 Use the single-worker threaded Gunicorn command in `render.yaml`; Socket.IO client authorization/subscription state is process-local. Scale-out needs a shared message/authorization architecture before increasing workers. The service uses JWT auth payloads, rejects refresh/expired/inactive sessions and rechecks ownership at delivery time. No tenant-specific alerts are globally broadcast.
 
 ## Recorded telemetry contract
 
-`GET /api/v1/portfolio/history` defaults to the latest 90 days. `from` and `to` accept UTC `YYYY-MM-DD` dates, inclusive; one request supports up to 366 days. Reports fetch their selected live date range rather than relying on the dashboard cache.
+`GET /api/v1/portfolio/history` defaults to the latest 90 days. `from` and `to` accept UTC `YYYY-MM-DD` dates, inclusive; one request supports up to 366 days. Reports fetch their selected live date range rather than relying on the dashboard cache. The frontend chunks longer ranges into bounded annual requests (up to ten years). Ordinary `/units/{id}/history` provides daily machine/output metric means for up to ten years without premium entitlement; premium history has finer bounded resolutions.
 
 The endpoint integrates adjacent GOOD rate measurements using the trapezoidal rule, splits intervals at UTC midnight, and ignores gaps greater than 900 seconds. `TELEMETRY_MAX_GAP_SECONDS` can be set in Flask config. Invalid, negative, duplicate-time and unknown-unit readings are not extrapolated. Only the first configured active meter for a unit/channel is used; configure one authoritative meter per channel.
 
@@ -37,6 +37,8 @@ The endpoint integrates adjacent GOOD rate measurements using the trapezoidal ru
 | `user_load` | kW, W | `selfConsumedKWh` |
 | `export_power` | kW, W | `exportedKWh` |
 | `water_flow` | L/h, L/min, m3/h | `waterLitres` |
+| `useful_heat_kw` | kW, W | `heatKWh` (useful thermal energy) |
+| `useful_chill_kw` | kW, W | `chillKWh` (useful cooling energy) |
 
 Missing channels remain null, not zero. Net benefit is unavailable without complete energy channels covering matching intervals and readings for every selected unit on each recorded day. API snapshot power/load fields update from newest GOOD measurements; older readings remain in history without replacing the current snapshot. The legacy unit pressure field is expressed in hPa and converted to bar for display; ingestion honors the configured pressure sensor unit. Battery voltage and percentage are not interchangeable.
 
@@ -62,13 +64,13 @@ Recorded totals describe available history, not lifetime production. Forecasts e
 
 Open Reports, select the tenant portfolio, units, UTC date range, sections and **Excel, Word or PDF**. The format has no implicit default. Generation downloads a real `.xlsx`, `.docx` or `.pdf`; errors are shown and retryable. Switching portfolio/unmounting the page cancels a pending download.
 
-Every report includes scope, generation time, source, period summary, assumptions and methodology. Optional sections include current unit inventory/readings, daily production, current alerts and recorded controls. Current snapshots are labelled separately from date-filtered history. Last-maintenance dates are supplied where available; unrecorded repair histories are not manufactured. There is no pretend scheduling or completion dialog.
+Every report includes scope, generation time, source, period summary, assumptions and methodology. Optional sections include current unit inventory/readings, daily production (including useful heat/chill), machine history, current alerts, recorded conditions/controls, maintenance and permitted commercial records. Current snapshots are labelled separately from date-filtered history. Last-maintenance dates are supplied where available; unrecorded repair histories are not manufactured. Report schedules persist per account (backend in live, local storage in demo), with pause/resume and atomic live claims. Downloads execute only while Reports is open and signed in; there is no unattended email worker.
 
-Subset reports require an explicit operating-cost input for the selected units; fleet costs are not silently apportioned. PDF fonts are embedded, Word tables repeat headers across pages, and Excel uses numeric cells, filters, frozen headers and formatted sheets. Export libraries/fonts load only when requested.
+Subset calculations use selected-unit costs; unconfigured subset operating costs are zero assumptions disclosed in methodology, and fleet fixed costs are not silently assigned to a subset. PDF fonts are embedded, Word tables repeat headers across pages, and Excel uses numeric cells, filters, frozen headers and formatted sheets. Export libraries/fonts load only when requested.
 
 ## Live controls
 
-`POST /api/v1/remote-control/units/<id>/controls` accepts `machinePower`, `waterProductionOn`, `autoSwitchEnabled`, `powerSetpoint` (kW) and `waterSetpoint` (L/h). Numeric values must be finite and non-negative; positive setpoints require a configured device limit. Viewers cannot issue commands. Tenant checks happen before dispatch.
+`POST /api/v1/remote-control/units/<id>/controls` accepts configured `operationMode`, `machinePower`, `waterProductionOn`, `autoSwitchEnabled`, `powerSetpoint` (kW) and `waterSetpoint` (L/h). Numeric values must be finite and non-negative; positive setpoints require a configured device limit. Viewers cannot issue commands. Tenant checks happen before dispatch.
 
 Configure `UNIT_CONTROL_GATEWAYS` as a server-side environment JSON object (or Flask configuration dictionary), for example:
 
@@ -84,11 +86,11 @@ Configure `UNIT_CONTROL_GATEWAYS` as a server-side environment JSON object (or F
 
 The gateway must adapt these controls to the actual device protocol and enforce its device interlocks. ThermaCore sends `{command_id, unit_id, controls}` with an `Idempotency-Key` header and expects `{command_id, acknowledged: true, controls}` containing the matching command ID and accepted controls. No redirects are followed and no automatic command retries occur. A timeout has an unknown device outcome: inspect current device state before retrying.
 
-Only acknowledged commands are persisted in the additive `unit_commands` table and exposed through tenant-scoped `/portfolio/events`. The startup auto-migration creates this table idempotently. Telemetry is never overwritten to pretend that a command has already taken physical effect. If the gateway is absent, the API returns 503 and the UI reports the error. Camera links appear only when a unit has an explicitly configured camera URL.
+Only acknowledged commands are persisted in the additive `unit_commands` table and exposed through tenant-scoped `/portfolio/events`. The startup auto-migration creates this table idempotently. Telemetry is never overwritten to pretend that a command has already taken physical effect. If the gateway is absent, the API returns 503 and the UI reports the error. Camera feeds and process diagrams require explicit per-unit configuration; see [Deployment](DEPLOYMENT_GUIDE.md). The gateway token must be configured and required by the gateway; the application supports but does not itself require a token field.
 
 ## Validation
 
-Frontend: `pnpm test`, `pnpm exec vitest run --coverage --coverage.thresholds.lines=60`, `pnpm run build`.
+Frontend: `pnpm test`, `pnpm run test:coverage:frontend`, `pnpm run build`. See [Testing](TESTING.md) for all-source coverage and current CI gates.
 
 Backend: from `backend`, install `requirements.txt` into a virtual environment and run `python -m pytest app/tests`. The tests create isolated fixtures; they do not contact a physical gateway. Regression coverage includes tenant switching, unassigned accounts, cross-tenant reads/commands/streams, stale requests after logout, financial edge cases and actual OOXML/PDF output.
 

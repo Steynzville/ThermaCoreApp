@@ -1,152 +1,29 @@
-# ThermaCore Integrated SCADA: Security Incident Response Plan
-## Operational OT/IT Cybersecurity Incident Response, Isolation, and Mitigation Protocol
+# Security considerations and incident response
 
-This document outlines the Security Incident Response Plan (SIRP) for the ThermaCore SCADA Platform, protecting our modular generator fleet from cyber-physical compromises or data breaches.
+## Implemented boundaries
 
----
+Authentication uses hashed passwords and bearer JWTs, current-account validation, approval checks, rate limiting and role/permission middleware. Browser session/persistent token storage exists; this is not a cookie-only design and does not eliminate XSS risk. Do not claim logout is a global persistent revocation system or that all tokens are short-lived: inspect actual authentication flow lifetimes.
 
-## 1. Incident Classification Framework
+Tenant ownership is enforced in backend queries and Socket.IO subscriptions/delivery as well as shared frontend filtering. Premium SCADA entitlement is checked against current database state. Account settings cannot modify roles or tenant IDs. Google/Apple linking requires current-password confirmation and verified stable provider identity, state/nonce and browser-bound one-use exchange. Passkeys validate origin/RP, challenge, user verification, signatures and counters. Avatar files are decoded, size/pixel constrained, stripped and re-encoded rather than served from user paths.
 
-Events are categorized into 3 severity levels to drive response timelines:
+Remote control requires permission and owning unit before dispatch, configured HTTPS limits/modes and matching acknowledgement. Configure a bearer token and require authentication at the gateway; the token field is currently optional in application configuration. Acknowledgement does not establish physical state. No two-person approval, cryptographically immutable compliance ledger or certified emergency-stop controller is implemented. MQTT/OPC-UA security depends on provisioned certificates, trusted peers and installation configuration. Demo simulators are blocked in live mode.
 
-```
+## Known dependency and quality limitations
 
-┌────────────────────────────────────────────────────────┐
-│  INCIDENT SEVERITY LEVEL CLASSIFICATIONS               │
-├────────────────────────────────────────────────────────┤
-│  🔴 LEVEL 1: CRITICAL  - Rogue command injection,      │
-│                         OT physical loop compromise    │
-├────────────────────────────────────────────────────────┤
-│  🟡 LEVEL 2: MEDIUM    - XSS attempt, brute-force IP,  │
-│                         unauthorized RBAC elevation    │
-├────────────────────────────────────────────────────────┤
-│  🔵 LEVEL 3: LOW       - Failed logins, port scan probes │
-└────────────────────────────────────────────────────────┘
+The optional `opcua==0.98.13` dependency has the outstanding **CVE-2022-25304 / PYSEC-2026-888** unbounded received-chunk denial-of-service advisory. The restoration checkpoint audit listed no patched release. Re-run `pip-audit` for current evidence; do not suppress this finding or claim zero vulnerabilities. Restrict direct OPC-UA peers/network access and resources, or use the supported MQTT/authenticated gateway path where appropriate. Disabling optional integration exposure is not the same as patching its installed dependency.
 
-```
+The Python quality workflow reports some checks without failing the job and can auto-format on protected-branch pushes. A green workflow is not proof of zero lint/security warnings. The prior checkpoint had one low-severity Bandit try/except/continue finding and legacy style debt. Use fresh artifacts, not stale counts. Build artifact scanning is heuristic; tests/coverage do not certify IEC 62443, NERC CIP or any legal compliance.
 
----
+Audit the bootstrap `DEFAULT_ADMIN_PASSWORD`, legacy SQL seeds/diagnostic scripts and emergency-admin recovery mechanism as privileged deployment surfaces. Do not expose recovery credentials or enable historical default accounts. Browser camera URLs are public metadata to permitted users; protect their access at the stream provider and avoid embedded credentials. Backups hold cross-tenant data and credential material and require restricted access.
 
-## 2. Response Roles and Security Contacts
+## Incident handling
 
-Upon a Level 1 or Level 2 incident declaration, the **Cybersecurity Response Team** is mobilized:
+Before deployment, assign verified incident commander, OT/site safety lead, engineering/security lead and communications/legal contacts. No contact addresses or response SLAs are provisioned by this repository.
 
-| Role | Responsibility | Contact Channel |
-| :--- | :--- | :--- |
-| **Incident Commander** | Coordinates overall system isolation and recovery operations | `commander@thermacore.com` |
-| **OT Specialist** | Focuses on physical generator safety, PLC disconnects, and field bypasses | `ot-response@thermacore.com` |
-| **SecOps Analyst** | Audits server logs, rotates JWT key secrets, blocklists adversary IPs | `secops@thermacore.com` |
-| **Legal Counsel** | Manages regulatory disclosures and notification compliance | `legal@thermacore.com` |
+1. **Identify:** record timestamps, request/command IDs, affected account/client/tenant/unit and observed physical state. Preserve sanitized application, gateway and database evidence; do not export unrelated tenant data unnecessarily.
+2. **Contain:** use site-approved physical safety procedures and gateway/network controls when hardware is at risk. Disable compromised accounts/credentials using authorized administration. Revoke provider/passkey access as appropriate. Rotating the signing key invalidates signed sessions across the deployment and requires coordinated rollout. Do not rely solely on hiding a tenant/menu item, or invent a `tenant_isolation_flag` that does not exist.
+3. **Investigate:** establish the entry point and scope; inspect ownership changes, account approvals/entitlements, attempted/acknowledged commands and telemetry provenance. A timed-out command may still have affected a device.
+4. **Recover:** restore verified code/configuration and data using [Backup and recovery](BACKUP_RECOVERY.md), rotate affected secrets, validate tenant denial and actual gateway authentication, then deliberately reconnect hardware. Do not replay commands from restored logs.
+5. **Review:** document root cause, actual impact, communication decisions and owned remediation actions. Determine contractual/regulatory notification requirements with responsible counsel; this repository does not establish a universal notification deadline.
 
----
-
-## 3. Cyber-Physical Incident Response Steps
-
-When a security incident is identified, the response team executes this 4-phase protocol:
-
-### Phase 1: Identification & Triaging
-* Verify the alert validity. Check database audit logs for unauthorized user elevations or cryptographic command mismatches (`TC-303`).
-* Extract IP addresses, target user profiles, and active generator node serial numbers.
-* Identify affected client organization (`client_id`) and facility/tenants (`tenant_id`) associated with compromised accounts or assets.
-
-### Phase 2: Containment and Isolation
-* **Adversary IP Isolation**: Instantly block malicious IPs on Render/Netlify and our gateway firewalls.
-* **Force Session Re-Authentication**: Rotate the `JWT_SECRET_KEY` in Render. This immediately invalidates every active user session and forces complete re-authentication.
-* **Client Admin Delegation & Compromise Response**:
-  1. If a **Client Admin** account is compromised, instantly deactivate the user record (`is_active = False`) and revoke all active JWT tokens for that `client_id`.
-  2. The System Admin can delegate temporary Client Admin credentials to a verified secondary contact within the client organization.
-  3. Client Admins can perform targeted containment within their own organization by disabling compromised local Operator or Viewer accounts without escalating to System Admins.
-* **Hard OT Loop Isolation**: If a physical generator's telemetry shows malicious override attempts (Level 1), the on-site operator must manually shift the unit to **Local/Manual Mode** via the physical toggle. This completely overrides incoming digital web SCADA signals.
-* **Tenant & Client Context Isolation**: If a single customer environment is compromised, use the multi-tenant isolation architecture to restrict or revoke access to that specific `client_id` or `tenant_id` without affecting other client fleets:
-  1. **Revoke Tenant Access**: Immediately disable the compromised tenant's access at the database level by setting a `tenant_isolation_flag` or temporarily revoking the tenant's active status.
-  2. **Force Admin Re-authentication**: All administrative users are automatically redirected to the `/admin` Landing Page upon their next action, requiring them to re-verify secure credentials and context selection before accessing any tenant data.
-  3. **Tenant Switcher Restrictions**: Temporarily remove the compromised tenant from the Tenant Switcher dropdown to prevent accidental re-selection during the incident window.
-  4. **Isolate Tenant Data**: Restrict API access to the compromised `tenant_id` by blocking all queries scoped to that tenant at the application middleware layer.
-  5. **Notify Tenant Administrators**: Alert the affected tenant's designated administrators about the security incident and isolation action taken.
-  6. **Forensic Data Preservation**: Preserve all audit logs and telemetry data for the compromised tenant in a separate secure location for forensic analysis, without exposing other tenants' data.
-
-### Phase 3: Eradication and Mitigation
-* Review logs to locate the entry vector (e.g., an unpatched dependency or compromised operator credentials).
-* Revoke compromised accounts and apply immediate security patches.
-* If the entry vector is specific to a particular tenant (e.g., a compromised tenant-specific API key), rotate or revoke only that tenant's credentials.
-
-### Phase 4: Recovery and Verification
-* Confirm database and container file system integrity.
-* Restore verified, clean configurations from backups if file systems were compromised.
-* Transition generators from manual mode back to web-supervised mode.
-* **Tenant Reinstatement**: After verifying the root cause is fully mitigated, systematically re-enable the isolated tenant:
-  1. Restore tenant access in the database
-  2. Re-add the tenant to the Tenant Switcher dropdown
-  3. Verify all tenant-specific data is intact and accessible
-  4. Force tenant administrators to reset their credentials upon next login
-* **Regression and Integrity Testing**: Before re-opening the production portal, run the full automated test suite to verify code integrity. Ensure the production build achieves our verified baseline test coverage limits (**91.78% Frontend Coverage** under Vitest and **82.91% Backend Coverage** under Pytest) to guarantee no security regressions or syntax errors were introduced during emergency patch deployments.
-
----
-
-## 4. Communication & Regulatory Notifications
-
-ThermaCore adheres to international cybersecurity compliance guidelines (**NIST SP 800-61** and **NERC CIP-008**):
-
-### 4.1 Internal Communication
-* Avoid using compromised networks (e.g., if emails are breached, use pre-established encrypted communication channels).
-* Limit distribution of technical vulnerability information to the immediate response team.
-* If tenant isolation was performed, communicate the status to internal teams without revealing sensitive tenant-specific details.
-
-### 4.2 External & Regulatory Notifications
-* **Clients/Affected Parties**: Notify within **72 hours** of incident verification if personal information or asset integrity was compromised. For tenant-specific incidents, notifications should be limited to the affected tenant only.
-* **OT Infrastructure Authorities**: In the event of a utility-grid control interruption (Level 1), file standard notifications with relevant national infrastructure security agencies.
-* **Tenant-Specific Disclosure**: Provide affected tenants with a tailored incident report detailing the scope of impact, actions taken, and remediation steps completed, while protecting other tenants' data confidentiality.
-
----
-
-## 5. Post-Incident Review & Follow-up Timeline
-
-Continuous improvement is vital for maintaining robust defensive postures. Following any declared Level 1 or Level 2 incident, the Incident Commander will initiate a formal **lessons-learned process** and execute a structured follow-up timeline.
-
-### 5.1 Lessons-Learned Process
-1. **Fact Gathering**: Compile all timeline logs, communication records, and technical forensic artifacts (including PCAP files and database audit trails).
-2. **Debrief Meeting**: Within 5 business days of incident closure, convene a cross-functional debrief with the Security Response Team, engineering, and operations leads.
-3. **Root Cause Analysis (RCA)**: Identify the core technical or procedural vulnerability that allowed the compromise.
-4. **Action Item Tracking**: Document precise remediation actions, assigning explicit owners and completion deadlines to prevent recurrence.
-5. **Report Distribution**: Publish a sanitized, high-level Executive Summary for management and technical-level reports for engineering teams.
-6. **Tenant Impact Assessment**: If a tenant was isolated, document the full impact assessment including:
-   - Duration of isolation
-   - Data integrity verification results
-   - Any data loss or corruption discovered
-   - Recommendations for tenant-specific security enhancements
-
-### 5.2 30/60/90-Day Remediation Timeline
-
-```
-
-┌────────────────────────────────────────────────────────────────────────┐
-│  POST-INCIDENT REMEDIATION TIMELINE                                    │
-├────────────────────────────────────────────────────────────────────────┤
-│  [30 Days]  - Patch vector, verify log preservation, rotate certs.     │
-│  [60 Days]  - Update SIRP playbook, conduct tabletop exercise mock-run.│
-│  [90 Days]  - External independent penetration test & audit sign-off.  │
-└────────────────────────────────────────────────────────────────────────┘
-
-```
-
-#### 30-Day Checklist: Critical Mitigations
-* [ ] Verify that the specific entry vector has been fully patched and verified in production.
-* [ ] Confirm all system secrets, JWT keys, and mTLS certificates involved are rotated.
-* [ ] Audit log preservation configurations to ensure no log manipulation occurred during the incident window.
-* [ ] If tenant isolation was performed, verify tenant data integrity and restore full access with enhanced monitoring.
-
-#### 60-Day Checklist: Process Upgrades
-* [ ] Update the Security Incident Response Plan (SIRP) playbooks with lessons-learned refinements, including enhanced tenant isolation procedures.
-* [ ] Conduct a simulated tabletop security exercise with operators to practice the revised emergency manual overrides and communication flows.
-* [ ] Implement additional automated SIEM monitoring alerts for early warning detection of similar threat vectors.
-* [ ] Review and enhance tenant isolation automation to reduce response time for future incidents.
-
-#### 90-Day Checklist: External Audit & Closeout
-* [ ] Commission an independent, third-party penetration test targeting the patched subsystems.
-* [ ] Complete a full security posture review and present findings to the Executive Compliance Committee.
-* [ ] Obtain formal administrator and OT security authority sign-offs on the closed security incident file.
-* [ ] Provide affected tenant(s) with a final incident closure report and security enhancement recommendations specific to their environment.
-
----
-
-*End of Security Incident Response Plan*
+Use trusted communication channels. Restrict evidence access, retain original logs and document integrity/chain of custody where required. Re-run full suites, builds, dependency/static scans and the relevant real integration checks before closure; do not equate a percentage with absence of security defects.

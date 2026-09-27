@@ -50,4 +50,4 @@ python -m pytest --cov=app --cov-branch --cov-config=.coveragerc
 
 Use fresh workflow artifacts for exact test counts and coverage, not old badges or committed reports. The optional `opcua` dependency has a known outstanding advisory; see the security guide. Automated checks do not certify field hardware, financial outcomes or regulatory compliance.
 
-This repository is proprietary to ThermaCore Renewable Technologies Pty Ltd. See the [copyright notice](docs/Copyright%20(c)%202026%20ThermaCore%20Renewable%20Technologies%20Pty%20Ltd.md).
+This repository is proprietary to ThermaCore Renewable Technologies Pty Ltd. See the [copyright notice](docs/Copyright%20%28c%29%202026%20ThermaCore%20Renewable%20Technologies%20Pty%20Ltd.md).

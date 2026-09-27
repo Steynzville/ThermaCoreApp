@@ -27,7 +27,7 @@ python -m pytest -v --tb=short --cov=app --cov-branch \
   --cov-report=json --cov-report=term --cov-config=.coveragerc
 ```
 
-The backend workflow uses the Python 3.10 Docker image and PostgreSQL/TimescaleDB service. Its branch-aware `coverage.json` total combines statement and branch coverage; a local statement-only percentage is not comparable. Preserve `.coveragerc` and meaningful tests. The backend gate is configured there; do not reduce it to accommodate regressions. Isolated rate-limit fixtures prevent unrelated tests exhausting one shared limiter; rate-limit-specific tests still exercise 429 responses.
+The backend workflow uses the Python 3.10 Docker image and PostgreSQL/TimescaleDB service. Its branch-aware `coverage.json` total combines statement and branch coverage; a local statement-only percentage is not comparable. The workflow enforces `--cov-fail-under=60`; preserve meaningful tests and measurement. It passes the conventional `.coveragerc` filename although no such file is tracked; do not invent additional exclusions. Isolated rate-limit fixtures prevent unrelated tests exhausting one shared limiter; rate-limit-specific tests still exercise 429 responses.
 
 ## Quality and security
 

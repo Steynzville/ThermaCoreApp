@@ -1,68 +1,29 @@
-# ThermaCore Integrated SCADA: FAQ Document
-## Frequently Asked Questions for Operators, Managers, and System Administrators
+# Frequently asked questions
 
-This FAQ provides quick answers to common questions about navigating and managing the ThermaCore SCADA Platform.
+**Is Demo-App connected to real generators?** Its default portfolio/telemetry is explicitly simulated, with deterministic history and local demo controls. It still uses real authentication and tenant isolation. main defaults to real API data and never fills a failed live request with fictional telemetry.
 
----
+**Why is my account pending or my portfolio empty?** Registration does not grant approval or unit ownership. An administrator must approve the account and assign its real tenant/client. A viewer/operator sees only its tenant; a client administrator sees only its client's tenants.
 
-## 1. User & Account Management
+**Why does an installed output icon remain off?** Capability is different from activity. Online status, a positive useful-output reading, GOOD quality and freshness are required. Water tank level is not water production; hot/cold temperature is not useful thermal power.
 
-### Q1: How do I reset my password?
-1. Navigate to the login screen and click **Forgot Password**.
-2. Enter your registered email address and click **Send Link**.
-3. Check your inbox for the password reset email, click the link, and enter a new, secure password.
-4. *Admin note*: If automated email delivery is down, a system administrator can manually reset your credentials through the **System Admin Panel**.
+**Does low pressure prove an ammonia leak?** No. The NH3 alarm uses detector/event evidence. Read the actual condition cause and follow site safety procedures. The web UI does not guarantee pressure-triggered automatic shutdown.
 
-### Q2: Why does my newly registered account say "Pending Approval"?
-To safeguard critical energy infrastructure, all self-registered user accounts are assigned read-only "Viewer" status and marked as **Pending** by default. You cannot view detailed metrics or trigger control actions until an administrator manually verifies and elevates your account permissions.
+**Does acknowledging clear an alarm?** It records acknowledgement, not physical resolution. An active acknowledged alarm remains until its underlying condition resolves.
 
----
+**Do I need premium SCADA for history?** No. Unit History includes ordinary machine metrics and power/heat/chill/water history, selectable up to ten years per bounded query. Premium SCADA adds its separate advanced views and finer bounded queries, subject to entitlement.
 
-## 2. Platform Navigation & Metrics
+**Does Remote Management guarantee a physical change?** It requires a matching gateway acknowledgement. Actual telemetry confirms physical state separately. A timeout can have an unknown outcome; check the device before retrying. Hardware interlocks and authenticated gateways must be commissioned externally.
 
-### Q3: How do I view historical thermodynamic metrics?
-1. Open the sidebar navigation and select **Performance & COP** (`📈`).
-2. Select your target asset node from the top-left dropdown menu.
-3. Choose your desired timeframe (`24h`, `7d`, `30d`, `1y`) and select the metric you wish to plot (e.g., *Temp Out - Chill*, *Temp Out - Hot*, *Differential Pressure*, *Flow Rate Out - Chill*, *Flow Rate Out - Hot*, *AWG Water Level*, *Battery Voltage*).
-4. You can export historical data tables directly to CSV for external analysis.
+**Can I export just one unit?** Yes. Select the unit and Excel, Word or PDF. Every report collection/calculation follows the permitted selection. Current snapshots and historical periods are labelled separately; missing data is not fabricated.
 
-### Q4: What are the primary system safety thresholds and alarm rules?
-* **NH3 Leak Alarm (< 4 bar Differential Pressure)**: Triggers a critical red alarm warning of toxic ammonia refrigerant leakage.
-* **High Differential Pressure Auto-Shutdown (> 6 bar Differential Pressure)**: Automatically shuts down unit operations to protect compressors and piping.
-* **Low Battery Voltage (< 23V)**: Triggers a warning alert to preserve remote telemetry communication backup.
-* **High Battery Voltage (> 27V)**: Triggers a warning alert for battery overcharge protection.
+**Will scheduled reports be emailed while I am offline?** No. Schedules persist, but downloads run while the Reports page is open and signed in. There is no unattended email report worker.
 
-### Q5: What is Coefficient of Performance (COP) and why is it important?
-Coefficient of Performance (COP) measures the thermodynamic efficiency of our generator thermal loops. It calculates the ratio of useful heat transfer to the mechanical energy input. A higher COP indicates a highly optimized, low-cost operation.
+**How do Google, Apple and biometrics work?** Configure providers and link your existing approved account in Settings with password confirmation. Passkeys use browser WebAuthn and a registered authenticator. Biometric/private key material stays with the authenticator. Missing configuration is an error, not a demo sign-in.
 
----
+**How do I reset my password?** Use Forgot Password. Delivery requires SendGrid credentials, a verified sender and the correct frontend link origin. Administrators have separate managed-account capabilities. Own password changes are in Settings.
 
-## 3. Alerts & Control Security
+**What account settings persist?** Username/name/display fields, a validated avatar and sound, volume, temperature, theme and polling preferences persist through own-account APIs. Roles, tenant assignment and managed email are not personal preferences.
 
-### Q5: How do I acknowledge an active system alarm?
-1. Locate the alarm in the **Active Alarms Feed** on the main dashboard.
-2. Click the yellow or red alarm card to open the **Alarm Details** dialog box.
-3. Review the on-site resolution guidelines.
-4. Input your resolution notes in the text box (e.g., *"Pressure leak resolved, replaced copper fitting"*).
-5. Click **Acknowledge Alarm** to clear the visual indicator and log the resolution history.
+**Are Sales, Analytics and SCADA the same page?** No. Sales shows commercial records; ordinary Analytics summarizes the permitted operating portfolio; premium SCADA provides advanced unit views. Current Sales navigation is system-admin-only.
 
-### Q6: What happens if our physical internet connection goes down?
-* **Edge Gateway Resilience**: Our physical modular generators continue to log timeseries telemetry locally on integrated SD card caches.
-* **Automated Sync**: The moment network connectivity is re-established, the gateway automatically uploads the stored log files, populating the historical timeline without telemetry gaps.
-* **Manual Override Safe**: If internet connectivity is interrupted during a critical event, on-site engineers can override the web SCADA system by flipping the generator's physical panel toggle to **Manual Mode** to execute safety controls locally.
-
-### Q7: Why can't I see the Multi-Protocol Manager as an Operator or Viewer?
-The Multi-Protocol Manager provides direct access to manage low-level industrial protocols (MQTT, OPC UA, Modbus TCP, DNP3) and edge gateway configurations. To maintain system security and prevent unauthorized fieldbus configuration changes, this module is strictly reserved for System Administrators. Operators and Viewers are restricted from viewing the sidebar link and will be automatically redirected to `/dashboard` if attempting direct route access.
-
----
-
-## 4. Subscriptions & Billing
-
-### Q8: What are the software subscription tiers?
-We offer three software licensing packages tailored to different operation sizes:
-* **Standard Tier**: Includes real-time read-only dashboards, threshold alarms, and basic email support.
-* **Premium Tier**: Adds bidirectional remote overrides, cryptographically signed commands, custom historical reports, and 24/7 priority support.
-* **Enterprise Optimization Tier**: Unlocks advanced thermodynamic predictive maintenance diagnostics, automated loop tuning recommendations, and multi-tenant management for fleet operators.
-
-### Q9: What is the Client Admin role and how does multi-tenant scoping work?
-The Client Admin (`client_admin`) role allows enterprise client managers to administer all facilities and units belonging to their organization (`client_id`). Client Admins can switch between all facilities under their client scope, manage user roles (Operators and Viewers) within their organization, and configure local facility settings without seeing or affecting other client organizations on the ThermaCore platform.
+**Are efficiency gains, regulatory compliance or uptime guaranteed?** No. Financial assumptions and trend projections are explicitly limited by recorded data. Repository tests do not establish field performance, certification or an SLA. See the [feature matrix](FEATURE_COMPARISON_MATRIX.md) and [security guide](SECURITY_INCIDENT_RESPONSE.md).
