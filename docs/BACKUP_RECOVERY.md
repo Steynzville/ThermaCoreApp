@@ -1,111 +1,32 @@
-# ThermaCore Integrated SCADA: Data Backup & Recovery Guide
-## Disaster Recovery, Timeseries Preservation, and Database Restoration Manual
+# Backup and recovery
 
-This guide describes backup schedules, verification checks, and step-by-step restoration procedures to ensure data integrity and continuous availability of the ThermaCore SCADA database.
+Backups are an operator-owned deployment requirement. This repository does **not** provision nightly cloud snapshots, S3 archives, a PITR retention policy or a scheduled restore-validation workflow. Choose and document an RPO, RTO, retention, encryption, access controls and restore-drill schedule for the deployed database/provider.
 
----
+## Preserve a consistent system
 
-## 1. Backup Strategies & Scheduling
+Back up PostgreSQL with a supported provider snapshot/PITR facility or `pg_dump` consistent snapshot. Include users/roles/permissions, clients/tenants/units, sensors/readings, conditions and acknowledgements, control history, maintenance, sales, report schedules, account profiles/avatars, OAuth identity mappings and passkey credentials. Protect backups as sensitive cross-tenant data. Provider and gateway private secrets/certificates need a separate controlled backup/rotation process; never put them in the frontend or repository.
 
-ThermaCore uses a combination of automated daily snapshots and point-in-time recovery (PITR) to secure historical time-series data.
+Example for a database administrator with an authorized connection environment:
 
-```
-                         BACKUP COLD & HOT PIPELINE
-┌─────────────────────────┐     ┌─────────────────────────┐     ┌─────────────────────────┐
-│  Neon Daily Snapshots   │ ──► │  S3 Offsite Cold Store  │ ──► │  Continuous PITR (WAL)  │
-│  - Automated at 02:00   │     │  - Compressed Tarballs  │     │  - Up to 14 days back   │
-│  - 30-day retention     │     │  - Encrypted (AES-256)  │     │  - Sub-minute precision │
-└─────────────────────────┘     └─────────────────────────┘     └─────────────────────────┘
-```
-
-### Backup Inventory Configuration
-
-| Storage Type | Frequency | Retention Policy | Storage Location |
-| :--- | :--- | :--- | :--- |
-| **Hot Snapshot** | Daily at 02:00 UTC | 30 Days | Neon Cloud Native Snapshots |
-| **PITR Log Files** | Continuous WAL archiving | 14 Days | Neon Serverless Storage |
-| **Cold Archive** | Weekly on Sundays | 365 Days | AWS S3 Bucket (Region: ap-southeast-2) |
-
----
-
-## 2. Automated Snapshot Verification
-
-To ensure backups are functional and free from physical corruption, automated validation tests execute on a separate isolated staging database container:
-1. Every Tuesday, an automated GitHub Action boots a staging container and restores the Sunday snapshot.
-2. The staging script runs query integrity tests:
-   ```sql
-   -- Verify row counts on critical timeseries tables are non-zero
-   SELECT COUNT(*) FROM telemetry_readings WHERE timestamp > NOW() - INTERVAL '7 days';
-   ```
-3. If the staging verify script encounters tables with zero values or corruption, it alerts the on-duty database administrator.
-
----
-
-## 3. Step-by-Step Restoration Protocol
-
-Follow these steps to restore the database in the event of a catastrophic regional failure:
-
-### Step 1: Put the Backend API in Maintenance Mode
-Prevent users from sending updates during restoration:
 ```bash
-# Render Service CLI
-render service scale web-api=0
+pg_dump --format=custom --file=thermacore-backup.dump "$DATABASE_URL"
+# Restore into an isolated, empty, explicitly selected staging database:
+pg_restore --no-owner --dbname="$RESTORE_DATABASE_URL" thermacore-backup.dump
 ```
 
-### Step 2: Restore Neon via SQL Dump
-If rebuilding a specific system database from a Sunday cold-store dump, run:
-```bash
-# Uncompress the archive
-tar -xzvf thermacore-backup-2026-06-21.sql.tar.gz
+Use secure connection handling and do not publish environment values. Test tool/server version compatibility and provider extension availability. Timescale-specific installations need their extension's supported restore procedure. The application does not guarantee a provider includes TimescaleDB.
 
-# Execute restore query
-psql -h pg-thermacore.neon.tech -U admin -d main_db -f thermacore-backup-2026-06-21.sql
-```
+## Recovery procedure
 
-### Step 3: Run Post-Restoration Diagnostics
-Run the following validation scripts before reopening the frontend interface to operators:
-* Confirm database connectivity.
-* Verify user list integrity.
-* Verify timeseries table indices are fully rebuilt.
+1. Stop writes and disable outbound hardware dispatch/email in the recovery environment using deployment controls. Preserve incident evidence first when relevant.
+2. Restore to an isolated database; never rehearse against live equipment. Keep `DEMO_DATA_ENABLED=false` for a live recovery.
+3. Deploy the matching application commit and inspect additive migration logs before reopening service. Do not run historical demo/default-user seed scripts.
+4. Validate relationships from clients → tenants → units → sensors/readings and account ownership/permissions. Verify conditions, acknowledgements, maintenance, sale references, schedules and avatar/profile data.
+5. Test separate viewer/operator/client-admin accounts, cross-tenant denial, premium grant/revoke, long-range history and one-unit reports. Compare record counts/time bounds against the backup manifest.
+6. Rotate compromised secrets if applicable. OAuth/passkey origins and provider callbacks must match the restored deployment; changing RP identity can prevent existing passkey use.
+7. Reconcile device physical state and prior acknowledged commands. **Do not replay historical controls.** Review due report schedules before opening Reports so old downloads do not unexpectedly execute.
+8. Restore traffic and authorized integrations deliberately; document actual data loss, restore duration and outstanding gaps.
 
-### Step 4: Re-enable the Backend API
-```bash
-render service scale web-api=1
-```
+Tenant-specific recovery requires an isolated full restore followed by a reviewed relational import, preserving foreign keys and avoiding duplicate sale/event records. It is not a simple copy of `tenant_id` rows: telemetry belongs through units/sensors, and some account records are user-owned. Administrators live in the same account model, not a separate backup store.
 
----
-
-## 4. Multi-Tenant Backup Considerations
-
-ThermaCore SCADA supports multi-tenant operations where each tenant's data must be isolated and recoverable independently.
-
-### 4.1 Tenant & Client Data Isolation
-
-* Client organization records are stored in the `clients` table (`id`, `name`, `code`, `is_active`).
-* Facility records in `tenants` reference `client_id` foreign keys.
-* User records in `users` reference both `tenant_id` and `client_id` foreign keys.
-* Backups include all client, tenant, user, and telemetry data in a single consolidated database snapshot.
-* Restoration preserves all client and tenant relational boundaries intact.
-
-### 4.2 Client or Tenant-Specific Recovery
-
-In the event of data corruption affecting a single client organization or facility:
-
-1. Identify the affected client ID (`client_id`) or facility ID (`tenant_id`).
-2. Restore from the most recent backup to a staging environment.
-3. Export data filtered by the specific `client_id` or `tenant_id`.
-4. Import the client/tenant data back into production.
-
-### 4.3 Admin Account Recovery
-
-* Admin accounts are not tenant-specific and are stored separately
-* Admin account data is included in all full system backups
-
----
-
-## 5. Disaster Recovery (DR) Audits & Testing Schedule
-
-* **Frequency**: DR drills are conducted **bi-annually** (Q2 and Q4).
-* **Objective**: Complete a full restore of the active timeseries dataset from raw cold-store snapshots to an isolated database region.
-* **Target Recovery Time Objective (RTO)**: $< 4$ Hours.
-* **Target Recovery Point Objective (RPO)**: $< 15$ Minutes (WAL logs must be successfully replayed).
+Demo browser-local maintenance/schedules are not included in backend backups. They are illustrative state and must not be presented as durable production maintenance history. Downloaded reports also require the user's chosen document-retention policy.

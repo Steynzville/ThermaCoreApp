@@ -1,233 +1,28 @@
-# ThermaCore Integrated SCADA: Troubleshooting Guide
-## Operational Diagnostics and Disaster Recovery Manual for Field Engineers
+# Troubleshooting
 
-This guide outlines diagnostic procedures, error resolutions, and mitigation checklists for maintaining the ThermaCore SCADA Platform alongside our deployed Modular Power & Water Generators.
+Diagnose the failing boundary before changing data mode. A live outage must remain an outage; enabling demo data is not a repair.
 
----
+| Symptom | Check and next action |
+|---|---|
+| Empty portfolio | Confirm `/auth/me`, active account, role, `tenant_id` or `client_id`, unit ownership and current selection. Unassigned non-admin accounts legitimately see no units. Do not grant ownership by unit name or client email. |
+| HTTP 401/403 | Check token expiry and current database permission/approval/entitlement. Re-authenticate; never edit stored roles to bypass a guard. |
+| Client admin cannot open User Management or Sales screen | These frontend routes currently require system admin. Client portfolio selection is a separate capability. |
+| Google/Apple unavailable | Check exact client ID/secret/callback and `AUTH_FRONTEND_URL`. Apple needs a valid signed client-secret JWT and form-post callback. Link an existing approved account in Settings first; email matching does not automatically link. |
+| OAuth completion rejected | Start again in the same browser tab; the verifier/ticket is single-use and expires. Check origin, provider nonce/state and clock. Do not paste JWTs into URLs. |
+| Passkey failure | Check HTTPS, browser/device support, exact `WEBAUTHN_RP_ID` and `WEBAUTHN_ORIGIN`, credential registration and user verification. Cancellation is not successful login. |
+| Reset email unavailable | Configure `SENDGRID_API_KEY`, verified `EMAIL_FROM`, and `FRONTEND_URL`; inspect delivery logs without exposing reset tokens. SMTP fields do not configure the current reset route. |
+| Socket disconnected | API and Socket.IO share `VITE_API_BASE_URL`; verify `/socket.io`, proxy upgrade/polling support, exact CORS origins and access JWT. Keep the one-worker threaded deployment. There is no current `VITE_WS_URL` switch or supported `window.socket` console API. |
+| Connected but old readings | Socket connectivity does not prove fresh hardware data. Check broker/server ingestion, sensor IDs, GOOD quality and measurement timestamps. Stale outputs must remain inactive. |
+| Missing historical totals | Verify sensor type/units and selected UTC range. Energy integration rejects bad samples and gaps over the configured maximum; missing channels stay null. Unit History supports longer daily queries independently of premium SCADA. |
+| Premium SCADA denied | Have a system admin verify current `premium_scada` entitlement; navigation hiding is not the only enforcement. Ordinary Unit History remains available with read permission. |
+| Process diagram/camera absent | Configure per-unit `UNIT_PROCESS_DIAGRAMS`/`UNIT_CAMERA_FEEDS`. Check HTTPS playback authorization/CORS and browser format. No actual topology or stream is synthesized in live mode. |
+| Gateway 503 | Configure an HTTPS `UNIT_CONTROL_GATEWAYS` entry, authenticated gateway endpoint, mode names and limits for this exact unit. |
+| Gateway 502/timeout | Inspect the physical device before retrying. An unknown outcome must not be reported as success; require exact command ID, acknowledgement and accepted controls. |
+| Maintenance rejected | Use a future timezone-aware date and 3–2000 character description; check owning unit and `remote_control` permission. A failed save is not persisted. |
+| Report generation fails | Choose permitted units and a format; validate date range, subset assumptions, API availability and PDF font loading. Never broaden the scope to make generation succeed. |
+| Scheduled report does not run | Reports must be open and signed in. Check due time, pause/failure/claim status, browser download restrictions and current unit permissions. There is no background email worker. |
+| Avatar rejected | PNG/JPEG/WebP only, ≤2 MB and ≤4 MP; also check deployment request-size limits. SVG/arbitrary files are not accepted profile images. |
+| Startup/database failure | Check PostgreSQL credentials/TLS, migration logs and expected tables. Rehearse additive startup migrations in staging. Do not blindly run historical seed/fix scripts on a live database. |
+| CI install fails | Use pinned pnpm 11.25.0 and frozen lockfile. Keep explicit esbuild/core-js build policy. Do not bypass the lockfile/security gate. |
 
-## 1. Quick Diagnostic Flowchart
-
-If the SCADA interface displays an outage, follow this triaging order:
-
-```
-[ Web Portal Down? ]                      [ No Telemetry stream? ]
-│                                           │
-Check Render logs,                          Check physical Edge
-Netlify SSL, CDN, CORS                      Gateway, mTLS Certs,
-│                                            and OPC-UA connection
-▼                                           ▼
-[RESOLVED]                                  [RESOLVED]
-```
-
----
-
-## 2. Common API and WebSocket Outages
-
-### 2.1 WebSockets (Socket.io) Disconnections
-* **Symptom**: Sensor graphs freeze, or the status indicator in the top-right corner switches to `🔴 DISCONNECTED`.
-* **Root Causes**:
-  * The reverse proxy dropped the persistent TCP handshake.
-  * HMR or network noise interrupted the local socket lifecycle.
-* **Resolution Steps**:
-  1. Inspect browser console for WebSocket transport errors (`ERR_CONNECTION_REFUSED`).
-  2. Confirm the server binds to host `0.0.0.0` on port `3000` (required for container routing).
-  3. Verify that the client is pointing to the correct secure WebSocket URI (`wss://<domain>`) in `.env` under `VITE_WS_URL`.
-  4. Force a hard socket reconnection in the console:
-     ```javascript
-     window.socket.connect();
-     ```
-
-### 2.2 API Timeout (HTTP `504 Gateway Timeout`)
-* **Symptom**: Operations like loading the user list or unit histories timeout.
-* **Resolution Steps**:
-  1. Check database CPU utilization on Neon. If CPU is at 100%, check for slow un-indexed queries on timeseries hyper-tables.
-  2. Increase the Gunicorn/Uvicorn request timeout limit in the Docker execution command:
-     ```bash
-     gunicorn --timeout 120 -b 0.0.0.0:3000 server:app
-     ```
-
----
-
-## 3. Login, Token, & Authentication Failure
-
-### 3.1 Token Expiry Loop
-* **Symptom**: User logs in but is immediately logged out or receives constant redirection to the landing screen.
-* **Resolution Steps**:
-  1. Open browser DevTools -> Application -> Cookies. Ensure the `refresh_token` cookie is present.
-  2. If missing, verify the cookie flags on the Flask/Express response:
-     * `HttpOnly`: Must be `true`
-     * `Secure`: Must be `true` (in production)
-     * `SameSite`: Must be `Strict` (or `Lax` if crossing domains, but preferred `Strict` to mitigate CSRF).
-  3. Ensure the server system time is synchronized via NTP. Out-of-sync system times will instantly expire freshly issued JWTs.
-
-### 3.2 Password Reset Failures
-* **Symptom**: Reset links are not generating, or the email service returns `500 Internal Server Error`.
-* **Resolution Steps**:
-  1. Confirm the SMTP credentials are set in the environment variables (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`).
-  2. Verify that port 587 (TLS) or 465 (SSL) is open in the security group rules of the hosting VPC.
-
-### 3.3 Admin Landing Page Redirection & Tenant Context Failures
-* **Symptom**: Admin or Client Admin logins succeed, but the user cannot access dashboards, sees empty tenant dropdowns, or encounters redirection errors.
-* **Root Causes**:
-  * The user role is set to `client_admin` but no valid `client_id` is assigned to the user in the database.
-  * The selected `tenant_id` does not belong to the Client Admin's assigned `client_id`, triggering backend tenant filter rejections (`403 Forbidden`).
-  * `getFrontendRole()` is not returning `"admin"` or `"client_admin"`, causing `ProtectedRoute` checks in `routes.js` to block access.
-  * The user is a Client Admin attempting to reach a system-only route (`/analytics`, `/system-health`, `/protocol-manager`) — these intentionally exclude `client_admin` and will correctly redirect even with a valid `client_id`. This is expected behavior, not a bug.
-* **Resolution Steps**:
-  1. Confirm that the user's role is set to `'admin'` or `'client_admin'` in the database.
-  2. For `client_admin` users, verify that `client_id` is non-null and references an active row in the `clients` table.
-  3. Verify that the client organization has registered facilities/tenants in the `tenants` table with matching `client_id`.
-  4. Ensure `ProtectedRoute` permits access by checking the target route's specific `roles` array in `routes.js` — note that `"client_admin"` is only present on `/admin` and `/admin/users`, and is deliberately absent from `/analytics`, `/system-health`, and `/protocol-manager`.
-  5. Check browser local/session storage to verify `selectedTenant` is correctly set and matches an authorized tenant.
-
-### 3.4 Client Admin Shows All Tenants (Not Filtered)
-
-**Symptom**: Client Admin users see all tenants in the Tenant Switcher instead of only their organization's tenants.
-
-**Root Causes**:
-1. User's `client_id` is NULL or not set in the database
-2. Tenants do not have `client_id` matching the user's `client_id`
-3. Frontend `TenantContext` is not properly applying the `client_id` filter
-4. The mock tenant fallback is not filtering by `client_id`
-
-**Diagnostic Queries**:
-```sql
--- Check user's client_id
-SELECT id, username, email, client_id, role_id 
-FROM users 
-WHERE username = 'clientadmin' OR email = 'clientadmin@thermacore.com';
-
--- Check all tenants and their client_id
-SELECT id, name, client_id FROM tenants ORDER BY client_id, name;
-
--- Check clients table
-SELECT id, name FROM clients ORDER BY id;
-```
-
-**Resolution Steps**:
-
-1. Verify user has `client_id` set:
-   ```sql
-   SELECT id, username, client_id FROM users WHERE username = 'clientadmin';
-   ```
-2. Verify tenants have `client_id` set:
-   ```sql
-   SELECT id, name, client_id FROM tenants;
-   ```
-3. Run the fix script:
-   ```bash
-   cd /path/to/your-project-root
-   python backend/migrations/fix_client_admin_migration.py
-   ```
-4. Verify the fix worked:
-   ```sql
-   -- Check the clientadmin user after running the fix
-   SELECT 
-     u.id,
-     u.username,
-     u.email,
-     u.role_id,
-     r.name as role_name,
-     u.client_id,
-     c.name as client_name,
-     u.tenant_id,
-     t.name as tenant_name
-   FROM users u
-   LEFT JOIN roles r ON u.role_id = r.id
-   LEFT JOIN clients c ON u.client_id = c.id
-   LEFT JOIN tenants t ON u.tenant_id = t.id
-   WHERE u.username = 'clientadmin';
-   ```
-5. Clear browser storage and re-login:
-   * Clear localStorage and sessionStorage
-   * Log out and log back in as the Client Admin user
-   * Verify the Tenant Switcher now shows only the filtered tenants
-6. If the issue persists, check the frontend filtering:
-   * Open browser DevTools
-   * In the Console, check what `availableTenants` contains:
-   ```javascript
-   // This will show what tenants the frontend has loaded
-   const tenantContext = React.useContext(require('../context/TenantContext').TenantContext);
-   console.log('Available tenants:', tenantContext.availableTenants);
-   ```
-
----
-
-## 4. Edge Gateways, MQTT, & OPC-UA Connections
-
-### 4.1 mTLS Handshake Failures
-
-* **Symptom**: Edge devices fail to publish telemetry; the gateway reports certificate handshake rejections.
-* **Resolution Steps**:
-  1. Run `scripts/check-security.js` to ensure certificates are valid and not expired.
-  2. Confirm the CA cert (`ca.crt`) matches between the client edge node and the backend MQTT broker:
-     ```bash
-     openssl verify -CAfile ca.crt client.crt
-     ```
-  3. Check the client log for the following cipher mismatch code: `SSL_ERROR_NO_CYPHER_OVERLAP`. Update the edge node to use the required cipher suite: `ECDHE-RSA-AES256-GCM-SHA384`.
-
-### 4.2 OPC-UA Gateway Timeout
-
-* **Symptom**: Modular generator water/power metrics show empty values or state flags remain frozen.
-* **Resolution Steps**:
-  1. Ping the physical PLC address from the Edge Gateway to confirm IP network visibility.
-  2. Check OPC-UA endpoint configuration. Ensure security policy is set to `Basic256Sha256` with message security mode set to `SignAndEncrypt`.
-
----
-
-## 5. Database Connection Failures (TimescaleDB / Neon)
-
-### 5.1 Pool Exhaustion (Too many connections)
-
-* **Symptom**: Application logs show database errors indicating connection pool exhaustion.
-* **Resolution Steps**:
-  1. Verify the maximum connections threshold in Neon.
-  2. Tune the SQLAlchemy/Drizzle connection pool limit in your application settings:
-     ```typescript
-     // For Node/Drizzle:
-     const db = drizzle(pool, { max: 20, idleTimeoutMillis: 30000 });
-     ```
-  3. Ensure all route handlers release their connection buffers back to the pool in a `finally` block or context manager.
-
----
-
-## 6. Container & Deployment Health Checks
-
-### 6.1 Diagnostic Log File Analysis
-
-* **Render Container Logs**: Check standard system logs via the Render dashboard command terminal:
-  ```bash
-  tail -n 200 /var/log/thermacore/app.log
-  ```
-* **Docker Container Inspection**: Run diagnostic commands locally or in the sandbox container to check status:
-  ```bash
-  docker ps -a
-  docker logs --tail 100 <container-id>
-  docker inspect --format='{{json .State.Health}}' <container-id>
-  ```
-
-### 6.2 Local Verification & Regression Checking
-
-Before promoting any troubleshooting patch or hotfix to production, developers must execute automated regression tests to verify overall code health and structural integrity:
-
-* **Frontend Verification (Vitest)**: Ensure the frontend test suite compiles cleanly and maintains our minimum 91.78% Total Coverage gate.
-* **Backend Verification (Pytest)**: Ensure all API endpoints and integration tests pass, maintaining our 82.91% Total Coverage baseline.
-* **Formatting & Linting compliance**: Run Biome formatter and linter to resolve warnings before staging commits:
-  ```bash
-  npx biome format --write ./src
-  npx biome lint --write ./src
-  ```
-
----
-
-## 7. Diagnostic Error Code Reference
-
-| Error Code | Class | Description | Corrective Action |
-| :--- | :--- | :--- | :--- |
-| TC-101 | Auth | Ephemeral JWT expired or corrupt | Re-authenticate; clear local storage cookie caches. |
-| TC-202 | Telemetry | WebSocket handshake failure | Verify CORS origins in `server.ts` and check client `.env`. |
-| TC-303 | Command | Control signature invalid | Ensure the command payload has a valid timestamp and is cryptographically signed. |
-| TC-404 | Ingestion | OPC-UA endpoint unreachable | Confirm physical PLC network routing and security certificates. |
-| TC-505 | Database | TimescaleDB pool limit exceeded | Scale the Neon database connection pool and check for unreleased connections. |
-| TC-601 | Tenant | Client Admin `client_id` not set | Run `fix_client_admin_migration.py` to update user record. |
-| TC-602 | Tenant | Tenant `client_id` mismatch with user | Update tenant `client_id` to match user's `client_id`. |
+Collect the failing request path, status, sanitized response, timestamp, commit and affected unit/tenant IDs. Never include passwords, bearer tokens, provider secrets or camera credentials in an issue. `/health` checks web-service reachability; it does not certify live telemetry, gateways or current test coverage. See [Deployment](DEPLOYMENT_GUIDE.md), [Testing](TESTING.md) and [Security](SECURITY_INCIDENT_RESPONSE.md).

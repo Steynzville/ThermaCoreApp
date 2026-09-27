@@ -16,7 +16,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary --coverage.reportsDirectory=coverage",
-    "test:coverage:frontend": "vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary --coverage.reportsDirectory=coverage --coverage.thresholds.lines=60",
+    "test:coverage:frontend": "vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary --coverage.reportsDirectory=coverage --coverage.thresholds.lines=80",
     "test:coverage:backend": "cd backend && python -m pytest --cov=app --cov-report=term --cov-fail-under=60",
     "test:coverage:ci": "pnpm run test:coverage:frontend && pnpm run test:coverage:backend",
     "test:ci": "pnpm run test:coverage:ci",

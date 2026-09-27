@@ -1,3 +1,17 @@
+# Changelog
+
+## Current documentation/test-quality review
+
+Normal operator/developer/API/deployment and commercial documentation has been audited against the merged application. Corrected obsolete provider, ownership, safety, report, coverage and deployment claims. Added 57 meaningful frontend behavior tests and raised the frontend line gate from 60% to 80% after both complete suites exceeded it, without broadening coverage exclusions; see [Testing](TESTING.md) and review-commit workflow artifacts for the enforced gate and results.
+
+## Current architecture delivered by PR #267/#268/#269
+
+Shared tenant-scoped portfolio, role/permission checks and acknowledged control architecture; four measured output channels; restored operational UI; long-range ordinary history; persisted maintenance; real selected-unit XLSX/DOCX/PDF exports and open-page scheduling; distinct entitled premium SCADA and commercial Sales; verified Google/Apple/passkey flows; persisted own-account profile/preferences; explicit demo versus live defaults. main contains shared current code with live configuration; Demo-App retains identified demonstration data.
+
+## Historical release notes (not current operational instructions)
+
+The entries below are retained as the original historical record, including earlier unverified claims. In particular pressure-based NH3 detection/automatic shutdown, fixed percentage controls, fictional tenant fallback/default accounts, cookie-only sessions, multi-operator command approval and historical coverage figures **do not describe the current implementation**. Do not provision accounts, operate equipment or assess security from these old notes. Current guides above supersede them.
+
 # ThermaCore Integrated SCADA: Change Log
 ## Software Releases, Security Patches, and Operational Updates
 
