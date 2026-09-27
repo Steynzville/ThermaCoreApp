@@ -57,3 +57,17 @@ def test_scada_history_resolution_quality_and_tenant_scope(client, portfolio_dat
     db_session.get(AccountEntitlement, user.id).premium_scada = False
     db_session.commit()
     assert client.get(path, query_string=query, headers=p["headers"]["viewer"]).status_code == 403
+
+
+def test_process_topology_is_explicit_and_exposes_only_public_fields(app):
+    from app.services.process_diagrams import public_process_diagram
+    with app.app_context():
+        assert public_process_diagram("A") == {"nodes": [], "connections": []}
+        app.config["UNIT_PROCESS_DIAGRAMS"] = {"A": {"nodes": [
+            {"id": "meter", "label": "Heat", "field": "usefulHeat", "unit": "kWth", "x": 100, "y": 150, "secret": "not-public"},
+            {"id": "bad", "field": "password", "x": 0, "y": 0},
+        ], "connections": [{"id": "bad-edge", "from": "meter", "to": "missing"}]}}
+        topology = public_process_diagram("A")
+        assert len(topology["nodes"]) == 1
+        assert "secret" not in topology["nodes"][0]
+        assert topology["connections"] == []

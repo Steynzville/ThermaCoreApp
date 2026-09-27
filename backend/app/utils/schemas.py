@@ -258,6 +258,11 @@ class UnitSchema(SQLAlchemyAutoSchema):
     outputs = fields.Method("get_outputs")
     controlCapabilities = fields.Method("get_control_capabilities")
     cameras = fields.Method("get_cameras")
+    processDiagram = fields.Method("get_process_diagram")
+
+    def get_process_diagram(self, obj):
+        from app.services.process_diagrams import public_process_diagram
+        return public_process_diagram(obj.id)
 
     def get_control_capabilities(self, obj):
         from app.services.unit_controls import public_control_configuration
