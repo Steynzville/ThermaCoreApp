@@ -49,3 +49,9 @@ Recovered the original Reports cards, scopes, date popovers, section toggles and
 Schedules persist per authenticated account, recheck unit access at execution, support pause/resume and atomic processing claims. Processing claims expire to failed after ten minutes. Browser downloads execute while the authenticated Reports page is open; unattended email is not configured or simulated.
 
 Validation: 15 frontend report tests pass. Actual files are parsed (ExcelJS, DOCX XML, PDF pdftotext) for one-unit and multi-unit isolation across every format, including histories, alerts, events, maintenance and commercial collections. Backend schedule tests cover ownership, permission, claims and foreign unit rejection. Production build passes. CI installs poppler-utils for real PDF content regression tests.
+
+## Completed checkpoint 6: distinct commercial Sales
+
+Restored ViewAnalytics from the pre-267 Sales source, retaining its summary cards and product/monthly/distribution charts. Removed independent fictional arrays; demo commercial records derive from the shared permitted units. Live SaleRecord records persist via admin POST /portfolio/sales and are read by admins/client admins with tenant and requested-unit scope. Ordinary operators/viewers cannot read commercial records. Sales reports use this same source. Monthly series is cumulative as described by the original UI; growth compares consecutive recorded months and otherwise remains unavailable. Currency is AUD.
+
+Validation: 11 frontend calculation/export tests, 3 backend feature tests and production build pass.

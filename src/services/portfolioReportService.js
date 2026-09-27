@@ -1,3 +1,4 @@
+import { getSales } from "./salesService";
 import { createReport } from "../utils/reportModel";
 import { getPortfolioHistory, getPortfolioEvents } from "./unitService";
 import { getUnitHistory } from "./unitHistoryService";
@@ -91,10 +92,12 @@ export async function generatePortfolioReport(
         )
       : [],
   ]);
+  const sales = sections.includes("sales") ? await getSales(units) : [];
   const report = createReport({
     ...reportInput,
     records,
     events,
+    sales,
     histories: histories.flat(),
     maintenance: maintenance.flat(),
   });

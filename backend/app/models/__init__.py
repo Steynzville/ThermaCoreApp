@@ -633,3 +633,23 @@ class ReportSchedule(db.Model):
             "config": self.config,
             "status": self.status,
         }
+
+
+class SaleRecord(db.Model):
+    __tablename__ = "sale_records"
+    id = Column(Integer, primary_key=True)
+    unit_id = Column(String(50), ForeignKey("units.id"), nullable=False, index=True)
+    sale_date = Column(DateTime, nullable=False)
+    revenue_aud = Column(Float, nullable=False)
+    product_line = Column(String(100), nullable=False)
+    reference = Column(String(120), unique=True, nullable=False)
+
+    def as_dict(self):
+        return {
+            "id": self.id,
+            "unitId": self.unit_id,
+            "date": self.sale_date.date().isoformat(),
+            "revenue": self.revenue_aud,
+            "productLine": self.product_line,
+            "reference": self.reference,
+        }

@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from flask import Blueprint, current_app, jsonify, request
 from flask_jwt_extended import jwt_required
 
-from app.middleware.authorization import permission_required
+from app.middleware.authorization import permission_required, role_required
 from app.middleware.tenant import tenant_filter
 from app.models import Unit, UnitCommand
 from app.services.portfolio_history import get_history
@@ -279,3 +279,79 @@ def update_report_schedule(schedule_id):
         return jsonify({"error": "Schedule already claimed"}), 409
     db.session.commit()
     return jsonify(row.as_dict())
+
+
+@portfolio_bp.get("/portfolio/sales")
+@jwt_required()
+@role_required("admin", "client_admin")
+def sales_records():
+    from app.models import SaleRecord
+
+    units = tenant_filter(Unit.query, Unit)
+    if "unit_ids" in request.args:
+        units = units.filter(Unit.id.in_(request.args["unit_ids"].split(",")))
+    rows = (
+        SaleRecord.query.filter(
+            SaleRecord.unit_id.in_([unit.id for unit in units.all()])
+        )
+        .order_by(SaleRecord.sale_date)
+        .all()
+    )
+    return jsonify({"data": [row.as_dict() for row in rows]})
+
+
+@portfolio_bp.post("/portfolio/sales")
+@jwt_required()
+@role_required("admin")
+def create_sale():
+    import math
+    from app import db
+    from app.models import SaleRecord
+
+    body = request.get_json(silent=True)
+    try:
+        if not isinstance(body, dict) or set(body) != {
+            "unitId",
+            "date",
+            "revenue",
+            "productLine",
+            "reference",
+        }:
+            raise ValueError
+        if (
+            not tenant_filter(Unit.query, Unit)
+            .filter(Unit.id == body["unitId"])
+            .first()
+        ):
+            return jsonify({"error": "Unit not found"}), 404
+        if (
+            type(body["revenue"]) not in (int, float)
+            or not math.isfinite(body["revenue"])
+            or body["revenue"] < 0
+        ):
+            raise ValueError
+        date = datetime.strptime(body["date"], "%Y-%m-%d")
+        if (
+            date > datetime.now()
+            or not 1 <= len(body["productLine"].strip()) <= 100
+            or not 1 <= len(body["reference"].strip()) <= 120
+        ):
+            raise ValueError
+    except (ValueError, TypeError, KeyError, AttributeError):
+        return jsonify(
+            {
+                "error": "Provide a valid unit, date, non-negative AUD revenue, product line and unique reference."
+            }
+        ), 400
+    if SaleRecord.query.filter_by(reference=body["reference"].strip()).first():
+        return jsonify({"error": "Sale reference already exists"}), 409
+    row = SaleRecord(
+        unit_id=body["unitId"],
+        sale_date=date,
+        revenue_aud=body["revenue"],
+        product_line=body["productLine"].strip(),
+        reference=body["reference"].strip(),
+    )
+    db.session.add(row)
+    db.session.commit()
+    return jsonify(row.as_dict()), 201

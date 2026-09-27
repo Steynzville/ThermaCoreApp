@@ -133,3 +133,29 @@ def test_report_schedule_ownership_and_claims(client, portfolio_data, db_session
         ).status_code
         == 400
     )
+
+
+def test_sales_records_have_separate_authorization_and_tenant_scope(
+    client, portfolio_data
+):
+    p = portfolio_data
+    endpoint = "/api/v1/portfolio/sales"
+    for index, unit in enumerate(p["units"][:2]):
+        result = client.post(
+            endpoint,
+            headers=p["headers"]["admin"],
+            json={
+                "unitId": unit.id,
+                "date": "2026-01-01",
+                "revenue": 100 * (index + 1),
+                "productLine": "Power-Box",
+                "reference": f"TEST-SALE-{index}",
+            },
+        )
+        assert result.status_code == 201
+    assert client.get(endpoint, headers=p["headers"]["viewer"]).status_code == 403
+    assert client.get(endpoint, headers=p["headers"]["operator"]).status_code == 403
+    result = client.get(
+        f"{endpoint}?unit_ids={p['units'][0].id}", headers=p["headers"]["admin"]
+    )
+    assert {row["unitId"] for row in result.json["data"]} == {p["units"][0].id}
