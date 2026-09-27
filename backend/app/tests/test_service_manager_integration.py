@@ -1,5 +1,6 @@
 """Integration tests for service manager with production scenarios."""
 
+import importlib
 import os
 from unittest.mock import Mock, patch
 
@@ -156,10 +157,10 @@ class TestProductionScenarios:
         assert health == "degraded"
 
     def test_production_config_values(self):
-        """Test that production config has correct defaults."""
-        from config import ProductionConfig
+        """Test that production config has correct defaults based on environment."""
+        import config
 
-        # Mock environment to avoid actual validation
+        # --- Test case 1: True production (PRODUCTION=true) ---
         with patch.dict(
             os.environ,
             {
@@ -172,19 +173,70 @@ class TestProductionScenarios:
                 "OPCUA_CERT_FILE": "/path/to/opcua.crt",
                 "OPCUA_PRIVATE_KEY_FILE": "/path/to/opcua.key",
                 "OPCUA_TRUST_CERT_FILE": "/path/to/trust.crt",
-                "CI": "true",  # Bypass strict production checks
+                "PRODUCTION": "true",
+                "CI": "true",
+                "CORS_ORIGINS": "https://thermacoreapp.com,https://app.thermacoreapp.com",
+                "WEBSOCKET_CORS_ORIGINS": "https://thermacoreapp.com,https://app.thermacoreapp.com",
             },
             clear=False,
         ):
-            config = ProductionConfig()
+            # RELOAD FIRST: ensure config module reads fresh env vars
+            importlib.reload(config)
 
-        # Verify OPC-UA is optional in production
-        assert config.SERVICE_OPCUA_ENABLED is True
-        assert config.SERVICE_OPCUA_REQUIRED is False
+            # THEN PATCH: apply mock to the newly reloaded class
+            with patch.object(
+                config.ProductionConfig,
+                "_is_true_production",
+                return_value=True,
+            ):
+                ProductionConfig = config.ProductionConfig
+                config_obj = ProductionConfig()
 
-        # Verify MQTT is required in production
-        assert config.SERVICE_MQTT_ENABLED is True
-        assert config.SERVICE_MQTT_REQUIRED is True
+                # In true production, OPC-UA is optional
+                assert config_obj.SERVICE_OPCUA_ENABLED is True
+                assert config_obj.SERVICE_OPCUA_REQUIRED is False
+                # MQTT is always required in production
+                assert config_obj.SERVICE_MQTT_ENABLED is True
+                assert config_obj.SERVICE_MQTT_REQUIRED is True
+
+        # --- Test case 2: Non-production (PRODUCTION=false) ---
+        with patch.dict(
+            os.environ,
+            {
+                "SECRET_KEY": "test-secret",
+                "DATABASE_URL": "postgresql://test",
+                "JWT_SECRET_KEY": "test-jwt",
+                "MQTT_CA_CERTS": "/path/to/ca.crt",
+                "MQTT_CERT_FILE": "/path/to/cert.crt",
+                "MQTT_KEY_FILE": "/path/to/key.pem",
+                "OPCUA_CERT_FILE": "/path/to/opcua.crt",
+                "OPCUA_PRIVATE_KEY_FILE": "/path/to/opcua.key",
+                "OPCUA_TRUST_CERT_FILE": "/path/to/trust.crt",
+                "PRODUCTION": "false",
+                "CI": "true",
+                "CORS_ORIGINS": "http://localhost:3000",
+                "WEBSOCKET_CORS_ORIGINS": "http://localhost:3000",
+            },
+            clear=False,
+        ):
+            # RELOAD FIRST: ensure config module reads fresh env vars
+            importlib.reload(config)
+
+            # THEN PATCH: apply mock to the newly reloaded class
+            with patch.object(
+                config.ProductionConfig,
+                "_is_true_production",
+                return_value=False,
+            ):
+                ProductionConfig = config.ProductionConfig
+                config_obj = ProductionConfig()
+
+                # In non-production, OPC-UA is required (for testing)
+                assert config_obj.SERVICE_OPCUA_ENABLED is True
+                assert config_obj.SERVICE_OPCUA_REQUIRED is True
+                # MQTT is still required
+                assert config_obj.SERVICE_MQTT_ENABLED is True
+                assert config_obj.SERVICE_MQTT_REQUIRED is True
 
 
 class TestServiceManagerHealthReporting:

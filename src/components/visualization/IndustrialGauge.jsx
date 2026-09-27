@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 
 const IndustrialGauge = ({
   title = "Gauge",
-  value = 0,
+  value = null,
   min = 0,
   max = 100,
   unit = "",
@@ -52,7 +52,9 @@ const IndustrialGauge = ({
 
   // Determine status based on thresholds
   useEffect(() => {
-    if (value >= thresholds.high) {
+    if (!Number.isFinite(value) || !showThresholds) {
+      setStatus("normal");
+    } else if (value >= thresholds.high) {
       setStatus("critical");
     } else if (value >= thresholds.normal) {
       setStatus("warning");
@@ -61,12 +63,12 @@ const IndustrialGauge = ({
     } else {
       setStatus("normal");
     }
-  }, [value, thresholds]);
+  }, [value, thresholds, showThresholds]);
 
   // Draw gauge on canvas
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || !Number.isFinite(value)) return;
 
     const ctx = canvas.getContext("2d");
     const centerX = size / 2;
@@ -241,8 +243,9 @@ const IndustrialGauge = ({
         {showValue && (
           <div className="text-center w-full px-2">
             <div className="text-2xl sm:text-3xl font-bold text-foreground dark:text-white break-words">
-              {value.toFixed(precision)}
-              {unit}
+              {Number.isFinite(value)
+                ? `${value.toFixed(precision)}${unit}`
+                : "Unavailable"}
             </div>
             <div className="text-xs sm:text-sm text-muted-foreground dark:text-gray-300 mt-1">
               Range: {min}

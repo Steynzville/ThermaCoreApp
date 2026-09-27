@@ -68,6 +68,7 @@ class TestModbusAtomicWrite:
         assert len(values) == 2
 
         # Verify the values can be converted back to the original float
+        # Note: This assumes big-endian, high-word-first register ordering
         high_word, low_word = values
         combined = (high_word << 16) | low_word
         bytes_val = struct.pack(">I", combined)

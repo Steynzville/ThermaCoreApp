@@ -1,276 +1,45 @@
 import { Bell, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-
-import { useAuth } from "../context/AuthContext";
-import { units } from "../data/mockUnits";
-import { deviceStatusService } from "../services/deviceStatusService";
-import { getAllNotifications } from "../utils/notifications";
+import { useUnits } from "../context/UnitContext";
+import { isAlarm, notificationDestination } from "../utils/conditions";
 
 const NotificationBell = ({ className = "" }) => {
-  const { userRole } = useAuth();
+  const { alerts = [], scopeLabel } = useUnits();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
-  const [viewedNotifications, setViewedNotifications] = useState(new Set());
-  const [allNotifications, setAllNotifications] = useState([]);
-
-  // Update notifications when component mounts or userRole changes
-  useEffect(() => {
-    const updateNotifications = () => {
-      const notifications = getAllNotifications(userRole);
-      setAllNotifications(notifications);
-    };
-
-    // Initial load
-    updateNotifications();
-
-    // Listen for device status changes to update notifications
-    const unsubscribe = deviceStatusService.addStatusChangeListener(() => {
-      updateNotifications();
-    });
-
-    // Cleanup listener on unmount
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
-  }, [userRole]);
-
-  // Mock notifications data (kept for backward compatibility)
-  const alerts = [
-    {
-      id: 1,
-      type: "alert",
-      message: "ThermaCore Unit 001 - Unit Offline",
-      timestamp: "2025-09-09 14:45",
-      alertData: {
-        id: 1,
-        type: "critical",
-        title: "Unit Offline",
-        message:
-          "ThermaCore Unit 001 has gone offline and requires immediate attention",
-        timestamp: "2025-09-09 14:45",
-      },
-    },
-    {
-      id: 2,
-      type: "alert",
-      message: "ThermaCore Unit 002 - Low Water Level",
-      timestamp: "2025-09-09 14:15",
-      alertData: {
-        id: 2,
-        type: "warning",
-        title: "Low Water Level",
-        message: "Water level has dropped below safe operating threshold",
-        timestamp: "2025-09-09 14:15",
-      },
-    },
-    {
-      id: 3,
-      type: "alert",
-      message: "ThermaCore Unit 003 - Maintenance Scheduled",
-      timestamp: "2025-09-09 13:30",
-      status: "completed",
-      alertData: {
-        id: 3,
-        type: "info",
-        title: "Maintenance Scheduled",
-        message: "Routine maintenance has been scheduled for this unit",
-        timestamp: "2025-09-09 13:30",
-      },
-    },
-    {
-      id: 4,
-      type: "alert",
-      message: "ThermaCore Unit 004 - System Restored",
-      timestamp: "2025-09-09 12:00",
-      status: "completed",
-      alertData: {
-        id: 4,
-        type: "success",
-        title: "System Restored",
-        message: "Unit has been successfully restored to normal operation",
-        timestamp: "2025-09-09 12:00",
-      },
-    },
-    {
-      id: 5,
-      type: "alert",
-      message: "ThermaCore Unit 005 - Temperature Alert",
-      timestamp: "2025-09-09 11:30",
-      status: "completed",
-      alertData: {
-        id: 5,
-        type: "warning",
-        title: "Temperature Alert",
-        message: "Operating temperature has exceeded normal range",
-        timestamp: "2025-09-09 11:30",
-      },
-    },
-    {
-      id: 6,
-      type: "alert",
-      message: "ThermaCore Unit 006 - Pressure Drop",
-      timestamp: "2025-09-09 10:15",
-      alertData: {
-        id: 6,
-        type: "warning",
-        title: "Pressure Drop",
-        message: "System pressure has dropped below optimal levels",
-        timestamp: "2025-09-09 10:15",
-      },
-    },
-  ];
-
-  const alarms = [
-    {
-      id: 7,
-      type: "alarm",
-      message: "ThermaCore Unit 003 - NH3 LEAK DETECTED",
-      timestamp: "2025-09-09 15:30",
-      alertData: {
-        id: 7,
-        type: "critical",
-        title: "NH3 LEAK DETECTED",
-        message:
-          "Critical ammonia leak detected - immediate attention required",
-        timestamp: "2025-09-09 15:30",
-      },
-    },
-    {
-      id: 8,
-      type: "alarm",
-      message: "ThermaCore Unit 014 - NH3 LEAK DETECTED",
-      timestamp: "2025-09-09 15:15",
-      alertData: {
-        id: 8,
-        type: "critical",
-        title: "NH3 LEAK DETECTED",
-        message:
-          "Critical ammonia leak detected - immediate attention required",
-        timestamp: "2025-09-09 15:15",
-      },
-    },
-  ];
-
-  // Filter alarms and alerts based on user role - user role only sees first 6 units (TC001-TC006)
-  const _userAlarms =
-    userRole === "admin"
-      ? alarms
-      : alarms.filter((alarm) => {
-          const unitMatch = alarm.message.match(/ThermaCore Unit (\d+)/);
-          return unitMatch && parseInt(unitMatch[1], 10) <= 6;
-        });
-
-  const _userAlerts =
-    userRole === "admin"
-      ? alerts
-      : alerts.filter((alert) => {
-          const unitMatch = alert.message.match(/ThermaCore Unit (\d+)/);
-          return unitMatch && parseInt(unitMatch[1], 10) <= 6;
-        });
-
-  // Use the enhanced notification system
+  const [viewed, setViewed] = useState({ scope: null, ids: new Set() });
+  const allNotifications = alerts.map((event) => ({
+    ...event,
+    type: isAlarm(event) ? "alarm" : "alert",
+  }));
   const unviewedCount = allNotifications.filter(
-    (n) => !viewedNotifications.has(n.id),
+    (event) => viewed.scope !== scopeLabel || !viewed.ids.has(event.id),
   ).length;
-
   const handleBellClick = () => {
-    setIsOpen(!isOpen);
-    if (!isOpen) {
-      // Store notifications in localStorage when bell is clicked (opened)
-      const unresolvedNotifications = allNotifications.map((notification) => {
-        if (
-          notification.id === 3 ||
-          notification.id === 4 ||
-          notification.id === 5
-        ) {
-          return { ...notification, status: "completed" };
-        } else {
-          return { ...notification, status: "unresolved" };
-        }
+    if (!isOpen)
+      setViewed({
+        scope: scopeLabel,
+        ids: new Set(allNotifications.map((event) => event.id)),
       });
-      localStorage.setItem(
-        "unresolvedNotifications",
-        JSON.stringify(unresolvedNotifications),
-      );
-
-      // Mark all notifications as viewed when opening
-      const allIds = new Set(allNotifications.map((n) => n.id));
-      setViewedNotifications(allIds);
-    }
+    setIsOpen(!isOpen);
   };
-
-  const handleClose = () => {
+  const handleClose = () => setIsOpen(false);
+  const handleNotificationClick = (event) => {
     setIsOpen(false);
+    navigate(notificationDestination(event));
   };
-
-  const handleNotificationClick = (notification) => {
-    // Extract unit number from notification message or deviceId
-    let unitMatch = notification.message.match(/ThermaCore Unit (\d+)/);
-    if (!unitMatch && notification.alertData?.deviceId) {
-      unitMatch = notification.alertData.deviceId.match(/TC(\d+)/);
-    }
-
-    if (unitMatch) {
-      const unitNumber = parseInt(unitMatch[1], 10); // Convert to integer to match system
-
-      // Find the actual unit data from mockUnits to ensure it exists
-      const unitId = `TC${unitMatch[1].padStart(3, "0")}`;
-      const unitData = units.find((unit) => unit.id === unitId);
-
-      if (unitData) {
-        // Create enhanced unit data with the current alert from notification
-        const enhancedUnit = {
-          ...unitData,
-          currentAlert: notification.alertData,
-        };
-
-        // Determine which tab to open based on notification type
-        const targetTab = notification.type === "alarm" ? "overview" : "alerts";
-
-        // Navigate based on user role - same logic as AlertsView/AlarmsView
-        setIsOpen(false);
-        if (userRole === "admin") {
-          navigate(`/unit-details/${unitNumber}?tab=${targetTab}`, {
-            state: { unit: enhancedUnit },
-          });
-        } else {
-          navigate(`/unit/${unitNumber}?tab=${targetTab}`, {
-            state: { unit: enhancedUnit },
-          });
-        }
-      } else {
-      }
-    }
-  };
-
   const handleViewAllNotifications = () => {
-    // Store unresolved notifications in localStorage for the history page
-    const unresolvedNotifications = allNotifications.map((notification) => {
-      if (
-        notification.id === 3 ||
-        notification.id === 4 ||
-        notification.id === 5
-      ) {
-        return { ...notification, status: "completed" };
-      } else {
-        return { ...notification, status: "unresolved" };
-      }
-    });
-    localStorage.setItem(
-      "unresolvedNotifications",
-      JSON.stringify(unresolvedNotifications),
-    );
-
     setIsOpen(false);
     navigate("/history");
   };
-
   return (
     <div className={`relative ${className}`}>
       {/* Bell Icon */}
       <button
         type="button"
+        aria-label={`Notifications (${alerts.length})`}
+        aria-expanded={isOpen}
         onClick={handleBellClick}
         className="relative p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
       >
@@ -291,6 +60,7 @@ const NotificationBell = ({ className = "" }) => {
             </h3>
             <button
               type="button"
+              aria-label="Close notifications"
               onClick={handleClose}
               className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
             >

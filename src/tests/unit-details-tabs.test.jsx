@@ -1,3 +1,6 @@
+vi.mock("../context/UnitContext", () => ({
+  useUnits: () => ({ records: [], events: [], alerts: [] }),
+}));
 /**
  * Tests for Unit Details Tab Components
  *

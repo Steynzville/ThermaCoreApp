@@ -1,5 +1,5 @@
 import { Eye, EyeOff, Fingerprint, Volume2, VolumeX } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import appleLogoBlack from "../assets/apple-logo-black.svg";
@@ -12,17 +12,11 @@ import { useTheme } from "../context/ThemeContext";
 import { setAuthToken } from "../services/api";
 import styles from "./LoginScreen.module.css";
 import SocialButton from "./SocialButton";
-import { Button } from "./ui/button";
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "./ui/dialog";
+  startProviderSignIn,
+  finishProviderSignIn,
+} from "../services/externalAuthService";
+import { signInWithPasskey } from "../services/passkeyService";
 
 const LoginScreen = ({ error, setError }) => {
   const [formData, setFormData] = useState({
@@ -96,10 +90,22 @@ const LoginScreen = ({ error, setError }) => {
     setFocusedField(null);
   }, []);
 
+  const [passkeyBusy, setPasskeyBusy] = useState(false);
   const handleBiometricLogin = useCallback(async () => {
-    // Here you would implement actual biometric authentication
-    // For now, we'll show a dialog
-  }, []);
+    setPasskeyBusy(true);
+    setError("");
+    try {
+      await signInWithPasskey();
+    } catch (failure) {
+      setError(
+        failure.name === "NotAllowedError"
+          ? "Passkey sign-in was cancelled or no registered passkey was available. Register one in Settings after signing in with your password."
+          : failure.message,
+      );
+    } finally {
+      setPasskeyBusy(false);
+    }
+  }, [setError]);
 
   const handleSubmit = useCallback(
     async (e) => {
@@ -149,11 +155,32 @@ const LoginScreen = ({ error, setError }) => {
     ],
   );
 
-  const handleSocialLogin = useCallback(async (_provider) => {
-    // Play login sound and wait for it to start
-    // Here you would normally initiate the actual social login
-    // For now, it just shows the dialog
-  }, []);
+  const callbackStarted = useRef(false);
+  useEffect(() => {
+    if (callbackStarted.current) return;
+    const params = new URLSearchParams((window.location.hash || "").slice(1));
+    const code = params.get("auth_code"),
+      failure = params.get("auth_error");
+    if (!code && !failure) return;
+    callbackStarted.current = true;
+    window.history.replaceState(null, "", window.location.pathname);
+    if (failure) {
+      setError(failure);
+      return;
+    }
+    finishProviderSignIn(code).catch((error) => setError(error.message));
+  }, [setError]);
+  const handleSocialLogin = useCallback(
+    async (provider) => {
+      setError("");
+      try {
+        await startProviderSignIn(provider);
+      } catch (error) {
+        setError(error.message);
+      }
+    },
+    [setError],
+  );
 
   const handleForgotPassword = useCallback(
     (e) => {
@@ -290,55 +317,16 @@ const LoginScreen = ({ error, setError }) => {
         </div>
 
         <div className={styles.socialLoginContainer}>
-          <Dialog>
-            <DialogTrigger asChild>
-              <SocialButton
-                provider="Google"
-                icon={googleLogo}
-                onClick={() => handleSocialLogin("Google")}
-              />
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Sign in with Google</DialogTitle>
-                <DialogDescription>
-                  Google sign-in is coming soon! We&apos;re working hard to
-                  bring you this convenient login option. Please use your
-                  username and password for now.
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button variant="outline">Close</Button>
-                </DialogClose>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog>
-            <DialogTrigger asChild>
-              <SocialButton
-                provider="Apple"
-                icon={isDarkMode ? appleLogoWhite : appleLogoBlack}
-                onClick={() => handleSocialLogin("Apple")}
-              />
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Sign in with Apple</DialogTitle>
-                <DialogDescription>
-                  Apple sign-in is coming soon! We&apos;re working hard to bring
-                  you this convenient login option. Please use your username and
-                  password for now.
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button variant="outline">Close</Button>
-                </DialogClose>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <SocialButton
+            provider="Google"
+            icon={googleLogo}
+            onClick={() => handleSocialLogin("Google")}
+          />
+          <SocialButton
+            provider="Apple"
+            icon={isDarkMode ? appleLogoWhite : appleLogoBlack}
+            onClick={() => handleSocialLogin("Apple")}
+          />
         </div>
 
         <div className={styles.divider}>
@@ -348,32 +336,15 @@ const LoginScreen = ({ error, setError }) => {
         <div className={styles.biometricSection}>
           <h3 className={styles.biometricHeading}>Biometric Sign In</h3>
           <div className={styles.biometricContainer}>
-            <Dialog>
-              <DialogTrigger asChild>
-                <button
-                  type="button"
-                  onClick={handleBiometricLogin}
-                  className={styles.biometricButton}
-                >
-                  <Fingerprint size={24} />
-                </button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Biometric Authentication</DialogTitle>
-                  <DialogDescription>
-                    Biometric authentication is coming soon! We&apos;re working
-                    to bring you secure fingerprint and face recognition login
-                    options.
-                  </DialogDescription>
-                </DialogHeader>
-                <DialogFooter>
-                  <DialogClose asChild>
-                    <Button variant="outline">Close</Button>
-                  </DialogClose>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            <button
+              type="button"
+              aria-label="Sign in with a passkey"
+              disabled={passkeyBusy}
+              onClick={handleBiometricLogin}
+              className={styles.biometricButton}
+            >
+              <Fingerprint size={24} />
+            </button>
           </div>
         </div>
 

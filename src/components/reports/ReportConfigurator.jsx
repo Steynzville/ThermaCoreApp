@@ -14,7 +14,7 @@ import {
   Users,
   Wrench,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 import { useSettings } from "../../context/SettingsContext";
 import { cn } from "../../lib/utils";
@@ -39,6 +39,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 
 // Map of allowed sections to their display labels, icons, and colors
 const SECTION_CONFIG = {
+  vitalStatistics: {
+    label: "Vital Statistics",
+    icon: Activity,
+    color: "text-blue-600",
+  },
   energyProduction: {
     label: "Energy Production",
     icon: Activity,
@@ -101,13 +106,23 @@ const ReportConfigurator = ({
     reportTypes: [],
   },
   onGenerate,
+  onSchedule,
+  onPause,
   showScheduling = true,
   showPauseScheduled = true,
   className = "",
 }) => {
   const { settings } = useSettings();
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
   const [selectedReports, setSelectedReports] = useState([]);
   const [reportConfig, setReportConfig] = useState({
+    outputFormat: "",
     reportTypes: [],
     scope: "",
     dateRange: {
@@ -209,7 +224,7 @@ const ReportConfigurator = ({
   const handleClientSelection = (clientId, checked) => {
     // BUG FIX: Guard against undefined clients
     if (!dataProviders.clients) return;
-    
+
     setReportConfig((prev) => ({
       ...prev,
       selectedClients: checked
@@ -286,28 +301,18 @@ const ReportConfigurator = ({
   };
 
   const handleGenerateReport = async () => {
-    playSound("sky.mp3", settings.soundEnabled, settings.volume);
-
     setIsGenerating(true);
     setErrorMessage("");
-
     try {
-      if (onGenerate) {
-        await onGenerate(reportConfig);
-      } else {
-        await new Promise((resolve) => setTimeout(resolve, 3000));
-        alert("Report generated successfully! Download will begin shortly.");
-      }
+      if (!onGenerate) throw new Error("Report generation is unavailable.");
+      await onGenerate(reportConfig);
+      if (alive.current)
+        playSound("sky.mp3", settings.soundEnabled, settings.volume);
     } catch (error) {
-      // BUG FIX: Don't re-throw from an onClick handler — it causes
-      // unhandled promise rejections. Show the error to the user and
-      // log it, but keep the UI stable.
-      const msg = error.message || "Failed to generate report";
-      setErrorMessage(msg);
-      alert(`Failed to generate report: ${msg}`);
-      console.error("Report generation failed:", error);
+      if (alive.current)
+        setErrorMessage(error.message || "Report generation failed.");
     } finally {
-      setIsGenerating(false);
+      if (alive.current) setIsGenerating(false);
     }
   };
 
@@ -328,6 +333,7 @@ const ReportConfigurator = ({
       reportConfig.selectedClients.length > 0;
 
     return (
+      Boolean(reportConfig.outputFormat) &&
       isScopeSelected &&
       hasValidDateRange &&
       hasSelectedSections &&
@@ -356,7 +362,10 @@ const ReportConfigurator = ({
   return (
     <div className={`space-y-6 ${className}`}>
       {errorMessage && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-800 dark:text-red-200">
+        <div
+          role="alert"
+          className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-800 dark:text-red-200"
+        >
           {errorMessage}
         </div>
       )}
@@ -529,6 +538,7 @@ const ReportConfigurator = ({
                       className="flex items-center space-x-3 py-2"
                     >
                       <input
+                        aria-label={`Select ${unit.name}`}
                         type={
                           reportConfig.scope === "single" ? "radio" : "checkbox"
                         }
@@ -565,40 +575,43 @@ const ReportConfigurator = ({
             )}
 
           {/* Client Selection - Guard against missing clients array */}
-          {reportConfig.scope === "client" && 
-           dataProviders.clients && 
-           dataProviders.clients.length > 0 && (
-            <div className="mt-4">
-              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
-                Select Clients
-              </Label>
-              <div className="max-h-48 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-                {dataProviders.clients.map((client) => (
-                  <div
-                    key={client.id}
-                    className="flex items-center space-x-3 py-2"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={reportConfig.selectedClients.includes(client.id)}
-                      onChange={(e) =>
-                        handleClientSelection(client.id, e.target.checked)
-                      }
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <div className="flex-1">
-                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {client.name}
-                      </div>
-                      <div className="text-xs text-gray-600 dark:text-gray-400">
-                        {client.units} unit(s)
+          {reportConfig.scope === "client" &&
+            dataProviders.clients &&
+            dataProviders.clients.length > 0 && (
+              <div className="mt-4">
+                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                  Select Clients
+                </Label>
+                <div className="max-h-48 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                  {dataProviders.clients.map((client) => (
+                    <div
+                      key={client.id}
+                      className="flex items-center space-x-3 py-2"
+                    >
+                      <input
+                        aria-label={`Select client ${client.name}`}
+                        type="checkbox"
+                        checked={reportConfig.selectedClients.includes(
+                          client.id,
+                        )}
+                        onChange={(e) =>
+                          handleClientSelection(client.id, e.target.checked)
+                        }
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          {client.name}
+                        </div>
+                        <div className="text-xs text-gray-600 dark:text-gray-400">
+                          {client.units} unit(s)
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
         </CardContent>
       </Card>
 
@@ -780,6 +793,45 @@ const ReportConfigurator = ({
         </CardContent>
       </Card>
 
+      <Card className="bg-white dark:bg-gray-900">
+        <CardHeader>
+          <h3 className="text-lg font-semibold">Output Format</h3>
+        </CardHeader>
+        <CardContent>
+          <div
+            className="grid grid-cols-1 sm:grid-cols-3 gap-4"
+            role="group"
+            aria-label="Report format"
+          >
+            {[
+              ["xlsx", "Excel"],
+              ["docx", "Word"],
+              ["pdf", "PDF"],
+            ].map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                aria-pressed={reportConfig.outputFormat === key}
+                className={cn(
+                  "p-4 border-2 rounded-lg text-left",
+                  reportConfig.outputFormat === key
+                    ? "border-blue-500 bg-blue-50 dark:bg-blue-950"
+                    : "border-gray-200 dark:border-gray-700",
+                )}
+                onClick={() =>
+                  setReportConfig((previous) => ({
+                    ...previous,
+                    outputFormat: key,
+                  }))
+                }
+              >
+                <FileText className="h-5 w-5 text-blue-600 mb-2" />
+                {label}
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
       {/* Report Actions */}
       <Card className="bg-white dark:bg-gray-900">
         <CardHeader>
@@ -827,7 +879,14 @@ const ReportConfigurator = ({
                 <CalendarComponent
                   mode="single"
                   selected={scheduledDate}
-                  onSelect={(date) => {
+                  onSelect={async (date) => {
+                    if (!date) return;
+                    try {
+                      await onSchedule(reportConfig, date);
+                    } catch (error) {
+                      setErrorMessage(error.message);
+                      return;
+                    }
                     setScheduledDate(date);
                     setIsSchedulePopoverOpen(false);
                     setScheduledReportMessage(
@@ -871,7 +930,13 @@ const ReportConfigurator = ({
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={() =>
-                      alert("All scheduled reports have been paused.")
+                      onPause()
+                        .then(() =>
+                          setScheduledReportMessage(
+                            "Scheduled reports paused.",
+                          ),
+                        )
+                        .catch((error) => setErrorMessage(error.message))
                     }
                   >
                     Pause

@@ -1,6 +1,6 @@
 # Use an official Python runtime as a parent image
 # Updated to Python 3.10+ for modern type hints and syntax support
-FROM python:3.10-slim-bullseye
+FROM python:3.10-slim-bookworm
 
 # Set the working directory in the container
 WORKDIR /app
@@ -39,4 +39,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 EXPOSE 5000
 
 # Run Gunicorn to serve the Flask application
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "run:app"]
+# Socket.IO authorization/subscriptions are process-local, as on Render.
+CMD ["gunicorn", "--worker-class", "gthread", "--workers", "1", "--threads", "20", "-b", "0.0.0.0:5000", "run:app"]

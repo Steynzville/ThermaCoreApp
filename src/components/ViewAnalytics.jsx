@@ -1,3 +1,6 @@
+import { useEffect, useState } from "react";
+import { useUnits } from "../context/UnitContext";
+import { getSales, salesAnalytics } from "../services/salesService";
 import { Activity, BarChart3, TrendingUp, Zap } from "lucide-react";
 import {
   Bar,
@@ -33,56 +36,6 @@ export const formatRevenue = (amount) => {
   return `$${roundedAmount}`;
 };
 
-// REALISTIC SALES DATA BASED ON ACTUAL 20 UNITS
-const analyticsData = [
-  {
-    name: "Power-Box",
-    sales: 8,
-    revenue: 360000,
-    avgPrice: 45000,
-    fill: "#3B82F6",
-  },
-  {
-    name: "Power-Plus",
-    sales: 7,
-    revenue: 4097688,
-    avgPrice: 585384,
-    fill: "#10B981",
-  },
-  {
-    name: "Titan",
-    sales: 5,
-    revenue: 7317300,
-    avgPrice: 1463460,
-    fill: "#F59E0B",
-  },
-];
-
-// Update summary metrics
-const summaryData = {
-  totalSales: 20,
-  totalRevenue: 11774988,
-  activeUnits: 17,
-  avgGrowth: "+8.5%",
-};
-
-// Update category distribution
-const categoryData = [
-  { name: "Power-Box", value: 8 },
-  { name: "Power-Plus", value: 7 },
-  { name: "Titan", value: 5 },
-];
-
-// Update monthly trend to show realistic growth
-const monthlyTrend = [
-  { month: "Jan", units: 3, revenue: 1766248 },
-  { month: "Feb", units: 5, revenue: 2943746 },
-  { month: "Mar", units: 8, revenue: 4709994 },
-  { month: "Apr", units: 12, revenue: 7064991 },
-  { month: "May", units: 16, revenue: 9419988 },
-  { month: "Jun", units: 20, revenue: 11774988 },
-];
-
 const COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6"];
 
 export const renderCustomizedLabel = ({
@@ -117,11 +70,44 @@ export const renderCustomizedLabel = ({
 
 // ✅ FIX: Add default className to prevent "undefined" in DOM
 const ViewAnalytics = ({ className = "" }) => {
+  const { units, scopeKey, isDemoMode } = useUnits();
+  const [records, setRecords] = useState([]),
+    [error, setError] = useState(""),
+    [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let active = true;
+    setRecords([]);
+    setLoading(true);
+    setError("");
+    getSales(units)
+      .then((rows) => {
+        if (active) setRecords(rows);
+      })
+      .catch((error) => {
+        if (active) setError(error.message);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [scopeKey, units]);
+  const { analyticsData, summaryData, categoryData, monthlyTrend } =
+    salesAnalytics(units, records);
   return (
     <div
       className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-6 ${className}`}
     >
       <div className="max-w-6xl mx-auto">
+        {loading && <p role="status">Loading commercial records…</p>}
+        {error && <p role="alert">{error}</p>}
+        <p className="text-sm text-muted-foreground">
+          {isDemoMode
+            ? "Demonstration commercial records"
+            : "Recorded commercial sales"}{" "}
+          · AUD
+        </p>
         <PageHeader
           title="Sales Analytics"
           subtitle="Detailed performance metrics and trends"
@@ -194,7 +180,9 @@ const ViewAnalytics = ({ className = "" }) => {
                     Avg Growth
                   </h3>
                   <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                    {summaryData.avgGrowth}
+                    {summaryData.avgGrowth === "Not available"
+                      ? "N/A"
+                      : summaryData.avgGrowth}
                   </p>
                 </div>
               </div>
@@ -225,7 +213,18 @@ const ViewAnalytics = ({ className = "" }) => {
                     dataKey="month"
                     className="text-gray-600 dark:text-gray-400"
                   />
-                  <YAxis className="text-gray-600 dark:text-gray-400" />
+                  <YAxis
+                    yAxisId="units"
+                    allowDecimals={false}
+                    className="text-gray-600 dark:text-gray-400"
+                  />
+                  <YAxis
+                    yAxisId="revenue"
+                    orientation="right"
+                    tickFormatter={formatRevenue}
+                    width={72}
+                    className="text-gray-600 dark:text-gray-400"
+                  />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: "var(--background)",
@@ -233,7 +232,7 @@ const ViewAnalytics = ({ className = "" }) => {
                       borderRadius: "8px",
                     }}
                     formatter={(value, name) => {
-                      if (name === "revenue") {
+                      if (name === "Revenue") {
                         return [formatRevenue(value), "Revenue"];
                       }
                       return [value, "Units"];
@@ -243,6 +242,7 @@ const ViewAnalytics = ({ className = "" }) => {
                   <Line
                     type="monotone"
                     dataKey="units"
+                    yAxisId="units"
                     stroke="#8884d8"
                     activeDot={{ r: 8 }}
                     name="Units"
@@ -250,6 +250,7 @@ const ViewAnalytics = ({ className = "" }) => {
                   <Line
                     type="monotone"
                     dataKey="revenue"
+                    yAxisId="revenue"
                     stroke="#82ca9d"
                     name="Revenue"
                   />
@@ -318,7 +319,11 @@ const ViewAnalytics = ({ className = "" }) => {
                     dataKey="name"
                     className="text-gray-600 dark:text-gray-400"
                   />
-                  <YAxis className="text-gray-600 dark:text-gray-400" />
+                  <YAxis
+                    tickFormatter={formatRevenue}
+                    width={76}
+                    className="text-gray-600 dark:text-gray-400"
+                  />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: "var(--background)",
@@ -355,7 +360,11 @@ const ViewAnalytics = ({ className = "" }) => {
                     dataKey="name"
                     className="text-gray-600 dark:text-gray-400"
                   />
-                  <YAxis className="text-gray-600 dark:text-gray-400" />
+                  <YAxis
+                    tickFormatter={formatRevenue}
+                    width={76}
+                    className="text-gray-600 dark:text-gray-400"
+                  />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: "var(--background)",

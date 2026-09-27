@@ -66,7 +66,7 @@ class CriticalPathBenchmark:
 
         times: list[float] = []
 
-        for i in range(iterations):
+        for _i in range(iterations):
             start = time.perf_counter()
             func()
             end = time.perf_counter()
@@ -125,7 +125,7 @@ class CriticalPathBenchmark:
                     a, b = b, a + b
                 return a
 
-            result = cpu_bound_work(10000)  # Simulate computational work
+            cpu_bound_work(10000)  # Simulate computational work
             # Simulate token generation
             token_data = {
                 "user_id": "user_123",
@@ -185,7 +185,7 @@ class CriticalPathBenchmark:
             }
 
             # Simulate database write (just json serialization)
-            serialized = json.dumps(processed)
+            json.dumps(processed)
 
             return processed
 
@@ -267,7 +267,7 @@ class CriticalPathBenchmark:
 
             if alert:
                 # Serialize alert for notification
-                alert_json = json.dumps(alert)
+                json.dumps(alert)
                 return alert
 
             return None

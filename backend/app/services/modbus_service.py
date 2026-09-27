@@ -71,8 +71,8 @@ class ModbusClient:
             # Simulate connection
             self.connected = True
             return True
-        except Exception as e:
-            logger.exception(f"Failed to connect to Modbus device: {e}")
+        except Exception:
+            logger.exception("Failed to connect to Modbus device")
             return False
 
     def disconnect(self):
@@ -152,7 +152,7 @@ class ModbusClient:
         """Read discrete input status."""
         return self.read_coils(address, count, unit_id)
 
-    def write_single_coil(self, address: int, _value: bool, _unit_id: int = 1) -> bool:
+    def write_single_coil(self, address: int, _value: bool, unit_id: int = 1) -> bool:
         """Write single coil."""
         if not self.connected:
             raise ConnectionError("Not connected to Modbus device")
@@ -396,33 +396,33 @@ class ModbusService:
         timeout: float = 5.0,
     ) -> bool:
         """Add Modbus device configuration."""
-        try:
-            device = ModbusDevice(
-                device_id=device_id,
-                unit_id=unit_id,
-                host=host,
-                port=port,
-                device_type=device_type,
-                timeout=timeout,
-            )
+        # Create device first
+        device = ModbusDevice(
+            device_id=device_id,
+            unit_id=unit_id,
+            host=host,
+            port=port,
+            device_type=device_type,
+            timeout=timeout,
+        )
 
-            self._devices[device_id] = device
-
-            # Create client
-            if device_type == "tcp":
+        # Create client based on device type
+        if device_type == "tcp":
+            try:
                 client = ModbusClient(host, port, timeout)
                 self._clients[device_id] = client
-            else:
-                # For RTU/ASCII, you would use different client types
-                logger.warning(f"Device type {device_type} not fully implemented")
+            except Exception:
+                logger.exception(f"Failed to add Modbus device {device_id}")
                 return False
-
-            logger.info(f"Added Modbus device: {device_id} at {host}:{port}")
-            return True
-
-        except Exception as e:
-            logger.exception(f"Failed to add Modbus device {device_id}: {e}")
+        else:
+            # For RTU/ASCII, you would use different client types
+            logger.warning(f"Device type {device_type} not fully implemented")
             return False
+
+        # Only store device after successful client creation
+        self._devices[device_id] = device
+        logger.info(f"Added Modbus device: {device_id} at {host}:{port}")
+        return True
 
     def remove_device(self, device_id: str) -> bool:
         """Remove Modbus device."""
@@ -443,8 +443,8 @@ class ModbusService:
             logger.info(f"Removed Modbus device: {device_id}")
             return True
 
-        except Exception as e:
-            logger.exception(f"Failed to remove Modbus device {device_id}: {e}")
+        except Exception:
+            logger.exception(f"Failed to remove Modbus device {device_id}")
             return False
 
     def connect_device(self, device_id: str) -> bool:
@@ -467,8 +467,8 @@ class ModbusService:
 
             return success
 
-        except Exception as e:
-            logger.exception(f"Failed to connect to Modbus device {device_id}: {e}")
+        except Exception:
+            logger.exception(f"Failed to connect to Modbus device {device_id}")
             return False
 
     def disconnect_device(self, device_id: str) -> bool:
@@ -483,10 +483,8 @@ class ModbusService:
             logger.info(f"Disconnected from Modbus device: {device_id}")
             return True
 
-        except Exception as e:
-            logger.exception(
-                f"Failed to disconnect from Modbus device {device_id}: {e}",
-            )
+        except Exception:
+            logger.exception(f"Failed to disconnect from Modbus device {device_id}")
             return False
 
     def add_register_config(
@@ -519,9 +517,9 @@ class ModbusService:
             )
             return True
 
-        except Exception as e:
+        except Exception:
             logger.exception(
-                f"Failed to add register config for device {device_id}: {e}",
+                f"Failed to add register config for device {device_id}",
             )
             return False
 
@@ -627,7 +625,7 @@ class ModbusService:
             }
 
         except Exception as e:
-            logger.exception(f"Failed to read device data for {device_id}: {e}")
+            logger.exception(f"Failed to read device data for {device_id}")
             return {
                 "device_id": device_id,
                 "timestamp": utc_now().isoformat(),
@@ -810,6 +808,8 @@ class ModbusService:
                     if value > 2147483647:
                         value = value - 4294967296
                 else:
+                    # Single register fallback - treat as unsigned 16-bit
+                    # This is a fallback for malformed data; proper int32 reads should return 2 registers
                     value = raw_values[0]
             elif data_type == "float32":
                 # Proper IEEE 754 float32 conversion using struct
@@ -837,8 +837,8 @@ class ModbusService:
             processed_value = (value * scale_factor) + offset
             return processed_value
 
-        except Exception as e:
-            logger.exception(f"Failed to process register value: {e}")
+        except Exception:
+            logger.exception("Failed to process register value")
             return 0.0
 
     def get_status(self) -> dict[str, Any]:

@@ -607,3 +607,10 @@ def clear_dnp3_performance_metrics():
             e,
             "Failed to clear DNP3 performance metrics",
         )
+
+
+@multiprotocol_bp.before_request
+def protect_installation_protocols():
+    from app.routes.scada import restrict_installation_scada
+
+    return restrict_installation_scada()

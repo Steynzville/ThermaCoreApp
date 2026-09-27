@@ -420,7 +420,7 @@ if (!Element.prototype.hasOwnProperty('scrollIntoView')) {
 
 // Mock getBoundingClientRect for various components
 const originalGetBoundingClientRect = Element.prototype.getBoundingClientRect;
-Element.prototype.getBoundingClientRect = vi.fn().mockReturnValue({
+Element.prototype.getBoundingClientRect = () => ({
   width: 100,
   height: 100,
   top: 0,
@@ -556,19 +556,11 @@ if (!window.webkitAudioContext) {
  * FETCH MOCK FOR AUDIO PLAYER
  * -----------------------------
  */
-// Mock fetch for audioPlayer tests
-if (!global.fetch) {
-  global.fetch = vi.fn().mockImplementation(() =>
-    Promise.resolve({
-      arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
-      blob: () => Promise.resolve(new Blob()),
-      text: () => Promise.resolve(""),
-      json: () => Promise.resolve({}),
-      ok: true,
-      status: 200,
-    })
-  );
-}
+// Unit tests must never contact a deployed API. Tests that exercise HTTP provide
+// their own responses; unconfigured requests fail locally and visibly.
+global.fetch = vi.fn(async (url) => {
+  throw new Error(`Unmocked test HTTP request: ${url}`);
+});
 
 // Reset fetch mock before each test
 beforeEach(() => {

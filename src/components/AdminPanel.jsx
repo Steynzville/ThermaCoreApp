@@ -4,7 +4,6 @@ import {
   Eye,
   EyeOff,
   Key,
-  Lock,
   Plus,
   Settings,
   Shield,
@@ -15,8 +14,7 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { useAuth } from "../context/AuthContext";
-import { deleteUser, getAllUsers } from "../services/usersAPI";
+import { deleteUser, getAllUsers, updateUser } from "../services/usersAPI";
 import { apiGet, apiPost } from "../utils/apiFetch";
 import { formatRoleName, formatUserName } from "../utils/userUtils";
 import PageHeader from "./PageHeader";
@@ -24,26 +22,19 @@ import UserApprovalPanel from "./UserApprovalPanel";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader } from "./ui/card";
 
-const systemStats = [
-  { label: "Total Devices", value: "4", icon: Database },
-  { label: "Active Users", value: "2", icon: Users },
-  { label: "System Uptime", value: "99.9%", icon: Shield },
-  { label: "Data Points", value: "1.2M", icon: Settings },
-];
+// Shared role label formatter - converts "client_admin" to "Client Admin"
+const formatRoleLabel = (roleName) =>
+  roleName
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 
 const AdminPanel = ({ className }) => {
-  const { user: currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState("users");
   const [users, setUsers] = useState([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [usersError, setUsersError] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
-  const [systemSettings, setSystemSettings] = useState({
-    emailNotifications: true,
-    autoBackup: true,
-    maintenanceMode: false,
-  });
-
   // User Creation Modal State
   const [createUserModal, setCreateUserModal] = useState(false);
   const [newUserFormData, setNewUserFormData] = useState({
@@ -57,8 +48,10 @@ const AdminPanel = ({ className }) => {
     department: "",
     position: "",
     roleId: "",
+    clientId: "",
   });
   const [availableRoles, setAvailableRoles] = useState([]);
+  const [clients, setClients] = useState([]);
   const [showCreatePassword, setShowCreatePassword] = useState(false);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [rolesLoadError, setRolesLoadError] = useState(false);
@@ -78,7 +71,17 @@ const AdminPanel = ({ className }) => {
     isValidLength: false,
     passwordsMatch: false,
     isSubmitting: false,
+    apiError: null,
   });
+
+  // Compute system stats from users data
+  const activeUsersCount = users.filter((u) => u.status === "Active").length;
+  const systemStats = [
+    { label: "Total Devices", value: "4", icon: Database },
+    { label: "Active Users", value: activeUsersCount.toString(), icon: Users },
+    { label: "System Uptime", value: "99.9%", icon: Shield },
+    { label: "Data Points", value: "1.2M", icon: Settings },
+  ];
 
   // Fetch users from backend
   const fetchUsers = useCallback(async () => {
@@ -91,6 +94,7 @@ const AdminPanel = ({ className }) => {
       // Map backend response to frontend format
       const mappedUsers = result.data.map((user) => ({
         id: user.id,
+        username: user.username,
         name: formatUserName(user),
         email: user.email,
         company: user.company || "N/A",
@@ -99,6 +103,15 @@ const AdminPanel = ({ className }) => {
         position: user.position || "N/A",
         role: formatRoleName(user.role),
         status: user.is_active ? "Active" : "Inactive",
+        // Raw values needed for editing/PUT
+        firstName: user.first_name || "",
+        lastName: user.last_name || "",
+        companyRaw: user.company || "",
+        phoneRaw: user.phone_number || "",
+        departmentRaw: user.department || "",
+        positionRaw: user.position || "",
+        roleId: user.role?.id ?? "",
+        isActive: user.is_active,
       }));
 
       setUsers(mappedUsers);
@@ -109,13 +122,6 @@ const AdminPanel = ({ className }) => {
       setIsLoadingUsers(false);
     }
   }, []);
-
-  // Fallback roles with proper format
-  const _fallbackRoles = [
-    { value: "admin", label: "Admin" },
-    { value: "operator", label: "Operator" },
-    { value: "viewer", label: "Viewer" },
-  ];
 
   // Fetch available roles from backend
   const fetchRoles = async () => {
@@ -160,10 +166,29 @@ const AdminPanel = ({ className }) => {
     }
   };
 
-  // Fetch users on component mount
+  // Fetch clients from backend - memoized to prevent unnecessary re-renders
+  const fetchClients = useCallback(async () => {
+    try {
+      const API_BASE_URL =
+        import.meta.env.VITE_API_BASE_URL ||
+        "https://thermacoreapp.onrender.com";
+      const response = await apiGet(`${API_BASE_URL}/api/v1/clients`, {
+        showToastOnError: false,
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setClients(Array.isArray(data) ? data : data.data || []);
+      }
+    } catch (_err) {
+      setClients([]);
+    }
+  }, []);
+
+  // Fetch users and clients on component mount
   useEffect(() => {
     fetchUsers();
-  }, [fetchUsers]);
+    fetchClients();
+  }, [fetchUsers, fetchClients]);
 
   const handleAddUser = () => {
     // Open the create user modal
@@ -178,6 +203,7 @@ const AdminPanel = ({ className }) => {
       department: "",
       position: "",
       roleId: "",
+      clientId: "",
     });
     setShowCreatePassword(false);
     setCreateUserModal(true);
@@ -273,13 +299,43 @@ const AdminPanel = ({ className }) => {
 
   const handleEditUser = (user) => {
     setEditingUser(user);
+    if (availableRoles.length === 0 || rolesLoadError) {
+      fetchRoles();
+    }
   };
 
-  const handleSaveUser = (updatedUser) => {
-    setUsers(
-      users.map((user) => (user.id === updatedUser.id ? updatedUser : user)),
-    );
-    setEditingUser(null);
+  const handleSaveUser = async (updatedUser) => {
+    if (rolesLoadError) {
+      toast.error(
+        "Unable to update user. Please refresh the page and try again.",
+      );
+      return;
+    }
+
+    const payload = {
+      username: updatedUser.username,
+      email: updatedUser.email,
+      first_name: updatedUser.firstName,
+      last_name: updatedUser.lastName,
+      phone_number: updatedUser.phoneRaw,
+      company: updatedUser.companyRaw,
+      department: updatedUser.departmentRaw,
+      position: updatedUser.positionRaw,
+      role_id: parseInt(updatedUser.roleId, 10),
+      is_active: updatedUser.isActive,
+    };
+
+    try {
+      await updateUser(updatedUser.id, payload);
+      toast.success("User updated successfully");
+      setEditingUser(null);
+      await fetchUsers();
+    } catch (error) {
+      toast.error(
+        error.message ||
+          "Failed to update user. Please check backend connection.",
+      );
+    }
   };
 
   const handleDeleteUser = async (userId) => {
@@ -295,13 +351,6 @@ const AdminPanel = ({ className }) => {
     }
   };
 
-  const handleToggleSetting = (setting) => {
-    setSystemSettings((prev) => ({
-      ...prev,
-      [setting]: !prev[setting],
-    }));
-  };
-
   // Real-time validation function that updates on every keystroke
   const validateInRealTime = (newPass, confirmPass) => {
     const isValidLength = newPass.length >= 6;
@@ -311,6 +360,7 @@ const AdminPanel = ({ className }) => {
       ...prev,
       isValidLength,
       passwordsMatch,
+      apiError: null, // Clear stale API error on any user input
     }));
   };
 
@@ -342,6 +392,7 @@ const AdminPanel = ({ className }) => {
       isValidLength: false,
       passwordsMatch: false,
       isSubmitting: false,
+      apiError: null,
     });
     setPasswordResetModal(true);
   };
@@ -356,6 +407,7 @@ const AdminPanel = ({ className }) => {
       isValidLength: false,
       passwordsMatch: false,
       isSubmitting: false,
+      apiError: null,
     });
   };
 
@@ -432,30 +484,12 @@ const AdminPanel = ({ className }) => {
     }
   };
 
-  const handleSelfPasswordReset = () => {
-    if (currentUser) {
-      // Create a user object for self-password reset
-      const selfUser = {
-        id: currentUser.id || 1, // Fallback to 1 if id not available
-        name:
-          currentUser.firstName && currentUser.lastName
-            ? `${currentUser.firstName} ${currentUser.lastName}`
-            : currentUser.username,
-        email: currentUser.email || "",
-      };
-      openPasswordResetModal(selfUser);
-    }
-  };
-
   return (
     <div
       className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-6 ${className}`}
     >
       <div className="max-w-6xl mx-auto">
-        <PageHeader
-          title="Admin Panel"
-          subtitle="Manage users, devices, and system settings"
-        />
+        <PageHeader title="Admin Panel" subtitle="Manage users and devices" />
 
         {/* System Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -499,7 +533,6 @@ const AdminPanel = ({ className }) => {
                   label: "Password Management",
                   icon: Key,
                 },
-                { id: "settings", label: "Settings", icon: Settings },
               ].map((tab) => {
                 const IconComponent = tab.icon;
                 return (
@@ -529,6 +562,7 @@ const AdminPanel = ({ className }) => {
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 User Management
               </h3>
+              {/* Restored to original blue button with Add User text */}
               <button
                 type="button"
                 onClick={handleAddUser}
@@ -671,24 +705,11 @@ const AdminPanel = ({ className }) => {
                   Password Management
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  Reset passwords for users or update your own password
+                  Reset passwords for managed users. Change your own password in
+                  Settings.
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
-                  <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
-                    Your Account
-                  </h4>
-                  <button
-                    type="button"
-                    onClick={handleSelfPasswordReset}
-                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    <Lock className="h-4 w-4" />
-                    <span>Change My Password</span>
-                  </button>
-                </div>
-
                 <div>
                   <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
                     User Password Reset
@@ -751,12 +772,23 @@ const AdminPanel = ({ className }) => {
 
         {/* Create User Modal */}
         {createUserModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-md">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                Create New User
-              </h3>
-              <div className="space-y-4">
+          <div className="modal-overlay fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 p-4 sm:p-6">
+            <div className="bg-white dark:bg-gray-900 rounded-xl rounded-b-none sm:rounded-xl p-6 w-full max-w-lg max-h-[95vh] flex flex-col my-auto shadow-2xl border border-gray-200 dark:border-gray-800">
+              <div className="flex items-center justify-between pb-3 mb-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  Create New User
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setCreateUserModal(false)}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-md transition-colors"
+                  aria-label="Close modal"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-4 overflow-y-auto pr-2 flex-1">
                 <div>
                   <label
                     htmlFor="newUserUsername"
@@ -990,15 +1022,15 @@ const AdminPanel = ({ className }) => {
                       </option>
                       {availableRoles.map((role) => (
                         <option key={role.id} value={role.id}>
-                          {role.name.charAt(0).toUpperCase() +
-                            role.name.slice(1)}
+                          {formatRoleLabel(role.name)}
                         </option>
                       ))}
                     </select>
                   )}
                 </div>
               </div>
-              <div className="flex justify-end space-x-3 mt-6">
+
+              <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-800 shrink-0 bg-white dark:bg-gray-900">
                 <button
                   type="button"
                   onClick={() => setCreateUserModal(false)}
@@ -1029,38 +1061,92 @@ const AdminPanel = ({ className }) => {
 
         {/* Edit User Modal */}
         {editingUser && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-md">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                Edit User
-              </h3>
-              <div className="space-y-4">
+          <div className="modal-overlay fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 p-4 sm:p-6">
+            <div className="bg-white dark:bg-gray-900 rounded-xl rounded-b-none sm:rounded-xl p-6 w-full max-w-lg max-h-[95vh] flex flex-col my-auto shadow-2xl border border-gray-200 dark:border-gray-800">
+              <div className="flex items-center justify-between pb-3 mb-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  Edit User
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setEditingUser(null)}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-md transition-colors"
+                  aria-label="Close modal"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-4 overflow-y-auto pr-2 flex-1">
                 <div>
                   <label
-                    htmlFor="name"
+                    htmlFor="editUsername"
                     className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                   >
-                    Name
+                    Username
                   </label>
                   <input
-                    id="name"
+                    id="editUsername"
                     type="text"
-                    value={editingUser.name}
+                    value={editingUser.username}
                     onChange={(e) =>
-                      setEditingUser({ ...editingUser, name: e.target.value })
+                      setEditingUser({
+                        ...editingUser,
+                        username: e.target.value,
+                      })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   />
                 </div>
                 <div>
                   <label
-                    htmlFor="email"
+                    htmlFor="editFirstName"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >
+                    First Name
+                  </label>
+                  <input
+                    id="editFirstName"
+                    type="text"
+                    value={editingUser.firstName}
+                    onChange={(e) =>
+                      setEditingUser({
+                        ...editingUser,
+                        firstName: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="editLastName"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >
+                    Last Name
+                  </label>
+                  <input
+                    id="editLastName"
+                    type="text"
+                    value={editingUser.lastName}
+                    onChange={(e) =>
+                      setEditingUser({
+                        ...editingUser,
+                        lastName: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="editEmail"
                     className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                   >
                     Email
                   </label>
                   <input
-                    id="email"
+                    id="editEmail"
                     type="email"
                     value={editingUser.email}
                     onChange={(e) =>
@@ -1071,19 +1157,19 @@ const AdminPanel = ({ className }) => {
                 </div>
                 <div>
                   <label
-                    htmlFor="company"
+                    htmlFor="editCompany"
                     className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                   >
                     Company
                   </label>
                   <input
-                    id="company"
+                    id="editCompany"
                     type="text"
-                    value={editingUser.company}
+                    value={editingUser.companyRaw}
                     onChange={(e) =>
                       setEditingUser({
                         ...editingUser,
-                        company: e.target.value,
+                        companyRaw: e.target.value,
                       })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
@@ -1091,62 +1177,81 @@ const AdminPanel = ({ className }) => {
                 </div>
                 <div>
                   <label
-                    htmlFor="phone"
+                    htmlFor="editPhone"
                     className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                   >
                     Phone
                   </label>
                   <input
-                    id="phone"
+                    id="editPhone"
                     type="tel"
-                    value={editingUser.phone}
+                    value={editingUser.phoneRaw}
                     onChange={(e) =>
-                      setEditingUser({ ...editingUser, phone: e.target.value })
+                      setEditingUser({
+                        ...editingUser,
+                        phoneRaw: e.target.value,
+                      })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   />
                 </div>
                 <div>
                   <label
-                    htmlFor="role"
+                    htmlFor="editRole"
                     className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                   >
                     Role
                   </label>
-                  <select
-                    id="role"
-                    value={editingUser.role}
-                    onChange={(e) =>
-                      setEditingUser({ ...editingUser, role: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                  >
-                    <option value="Admin">Admin</option>
-                    <option value="Operator">Operator</option>
-                    <option value="Viewer">Viewer</option>
-                  </select>
+                  {rolesLoadError ? (
+                    <div className="w-full px-3 py-2 border border-red-300 dark:border-red-600 rounded-md bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400">
+                      Unable to load roles. Please refresh the page.
+                    </div>
+                  ) : (
+                    <select
+                      id="editRole"
+                      value={editingUser.roleId}
+                      onChange={(e) =>
+                        setEditingUser({
+                          ...editingUser,
+                          roleId: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                      disabled={availableRoles.length === 0}
+                    >
+                      {availableRoles.map((role) => (
+                        <option key={role.id} value={role.id}>
+                          {formatRoleLabel(role.name)}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
                 <div>
                   <label
-                    htmlFor="status"
+                    htmlFor="editStatus"
                     className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                   >
                     Status
                   </label>
                   <select
-                    id="status"
-                    value={editingUser.status}
+                    id="editStatus"
+                    value={editingUser.isActive ? "true" : "false"}
                     onChange={(e) =>
-                      setEditingUser({ ...editingUser, status: e.target.value })
+                      setEditingUser({
+                        ...editingUser,
+                        isActive: e.target.value === "true",
+                      })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   >
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
+                    <option value="true">Active</option>
+                    <option value="false">Inactive</option>
                   </select>
                 </div>
               </div>
-              <div className="flex justify-end space-x-3 mt-6">
+
+              <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-800 shrink-0 bg-white dark:bg-gray-900">
                 <button
                   type="button"
                   onClick={() => setEditingUser(null)}
@@ -1157,7 +1262,8 @@ const AdminPanel = ({ className }) => {
                 <button
                   type="button"
                   onClick={() => handleSaveUser(editingUser)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  disabled={rolesLoadError || availableRoles.length === 0}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Save
                 </button>
@@ -1168,21 +1274,34 @@ const AdminPanel = ({ className }) => {
 
         {/* Password Reset Modal */}
         {passwordResetModal && selectedUserForReset && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="modal-overlay fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 p-4 sm:p-6">
             <div
-              className="bg-white dark:bg-gray-900 rounded-lg p-6 w-full max-w-md"
+              className="bg-white dark:bg-gray-900 rounded-xl rounded-b-none sm:rounded-xl p-6 w-full max-w-lg max-h-[95vh] flex flex-col my-auto shadow-2xl border border-gray-200 dark:border-gray-800"
               data-testid="password-reset-modal"
             >
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                Reset Password
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Resetting password for:{" "}
-                <span className="font-medium text-gray-900 dark:text-gray-100">
-                  {selectedUserForReset.name}
-                </span>
-              </p>
-              <div className="space-y-4">
+              <div className="flex items-center justify-between pb-3 mb-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    Reset Password
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Resetting password for:{" "}
+                    <span className="font-medium text-gray-900 dark:text-gray-100">
+                      {selectedUserForReset.name}
+                    </span>
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={closePasswordResetModal}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-md transition-colors"
+                  aria-label="Close modal"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-4 overflow-y-auto pr-2 flex-1">
                 <div>
                   <label
                     htmlFor="resetNewPassword"
@@ -1201,7 +1320,6 @@ const AdminPanel = ({ className }) => {
                           ...passwordFormData,
                           newPassword,
                         });
-                        // Update validation in real-time on every keystroke
                         validateInRealTime(
                           newPassword,
                           passwordFormData.confirmPassword,
@@ -1242,7 +1360,6 @@ const AdminPanel = ({ className }) => {
                           ...passwordFormData,
                           confirmPassword: newConfirmPassword,
                         });
-                        // Update validation in real-time on every keystroke
                         validateInRealTime(
                           passwordFormData.newPassword,
                           newConfirmPassword,
@@ -1267,14 +1384,9 @@ const AdminPanel = ({ className }) => {
                   </div>
                 </div>
 
-                {/* Single error/warning display with priority:
-                    1. API errors (only after validation passes)
-                    2. Password length validation (only when typing)
-                    3. Password match validation (only when typing confirm)
-                */}
                 {validation.apiError && (
                   <div
-                    className="error-message p-3 bg-red-50 dark:bg-red-900/20 rounded-md"
+                    className="p-3 bg-red-50 dark:bg-red-900/20 rounded-md"
                     data-testid="password-error"
                     role="alert"
                   >
@@ -1286,7 +1398,7 @@ const AdminPanel = ({ className }) => {
 
                 {shouldShowLengthError() && (
                   <div
-                    className="password-warning p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-md"
+                    className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-md"
                     role="alert"
                     aria-live="polite"
                   >
@@ -1298,7 +1410,7 @@ const AdminPanel = ({ className }) => {
 
                 {shouldShowMismatchError() && (
                   <div
-                    className="password-warning p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-md"
+                    className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-md"
                     role="alert"
                     aria-live="polite"
                   >
@@ -1307,10 +1419,9 @@ const AdminPanel = ({ className }) => {
                     </p>
                   </div>
                 )}
-
-                {/* Static info banner removed as it was causing confusion - validation is now shown dynamically only */}
               </div>
-              <div className="flex justify-end space-x-3 mt-6">
+
+              <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-800 shrink-0 bg-white dark:bg-gray-900">
                 <button
                   type="button"
                   onClick={closePasswordResetModal}
@@ -1331,7 +1442,7 @@ const AdminPanel = ({ className }) => {
                     validation.isValidLength &&
                     validation.passwordsMatch &&
                     !validation.isSubmitting
-                      ? "bg-blue-600 text-white hover:bg-blue-700 active"
+                      ? "bg-blue-600 text-white hover:bg-blue-700"
                       : "bg-gray-400 text-gray-200"
                   }`}
                 >
@@ -1346,71 +1457,6 @@ const AdminPanel = ({ className }) => {
                 </button>
               </div>
             </div>
-          </div>
-        )}
-
-        {/* Settings Tab */}
-        {activeTab === "settings" && (
-          <div className="space-y-6">
-            <Card className="bg-white dark:bg-gray-900">
-              <CardHeader>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  System Settings
-                </h3>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      Email Notifications
-                    </h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Send email alerts for critical events
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => handleToggleSetting("emailNotifications")}
-                    className="ml-4"
-                  >
-                    {systemSettings.emailNotifications ? "Disable" : "Enable"}
-                  </Button>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      Auto Backup
-                    </h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Automatically backup system data daily
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => handleToggleSetting("autoBackup")}
-                    className="ml-4"
-                  >
-                    {systemSettings.autoBackup ? "Disable" : "Enable"}
-                  </Button>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      Maintenance Mode
-                    </h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Enable maintenance mode for system updates
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => handleToggleSetting("maintenanceMode")}
-                    className="ml-4"
-                  >
-                    {systemSettings.maintenanceMode ? "Disable" : "Enable"}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         )}
       </div>

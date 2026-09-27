@@ -26,7 +26,11 @@ def register_all_blueprints(app: Any, logger: logging.Logger) -> tuple[int, int]
     # Define all blueprints to register
     blueprints = [
         ("app.routes.auth", "auth_bp", "auth"),
+        ("app.routes.external_auth", "external_auth_bp", "external_auth"),
+        ("app.routes.passkeys", "passkeys_bp", "passkeys"),
+        ("app.routes.account", "account_bp", "account"),
         ("app.routes.units", "units_bp", "units"),
+        ("app.routes.portfolio", "portfolio_bp", "portfolio"),
         ("app.routes.users", "users_bp", "users"),
         ("app.routes.tenants", "tenants_bp", "tenants"),
         ("app.routes.scada", "scada_bp", "scada"),
@@ -61,8 +65,8 @@ def register_all_blueprints(app: Any, logger: logging.Logger) -> tuple[int, int]
         app.register_blueprint(example_bp)
         logger.info("Registered examples routes")
         blueprints_registered += 1
-    except Exception as e:
-        logger.exception(f"Failed to register examples routes: {e}")
+    except Exception:
+        logger.exception("Failed to register examples routes")
         blueprints_failed += 1
 
     # Register OPC-UA monitoring (special case - uses init function)
@@ -96,11 +100,11 @@ def _register_opcua_monitoring(app: Any, logger: logging.Logger) -> bool:
         init_opcua_monitoring(app)
         logger.info("Initialized OPC-UA monitoring endpoints")
         return True
-    except ImportError as e:
-        logger.exception(f"Failed to import opcua_monitoring routes: {e}")
+    except ImportError:
+        logger.exception("Failed to import opcua_monitoring routes")
         return False
-    except Exception as e:
-        logger.exception(f"Failed to initialize opcua_monitoring routes: {e}")
+    except Exception:
+        logger.exception("Failed to initialize opcua_monitoring routes")
         return False
 
 

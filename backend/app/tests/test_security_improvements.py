@@ -55,7 +55,7 @@ class TestSecurityImprovements:
                 "MQTT broker credentials: user=admin, pass=secret123",
             )
 
-            response, status_code = SecurityAwareErrorHandler.handle_mqtt_error(
+            response, _status_code = SecurityAwareErrorHandler.handle_mqtt_error(
                 sensitive_error,
                 "connection",
             )
@@ -79,7 +79,7 @@ class TestSecurityImprovements:
                 "OPC UA server internal path: /etc/opcua/private/keys",
             )
 
-            response, status_code = SecurityAwareErrorHandler.handle_opcua_error(
+            response, _status_code = SecurityAwareErrorHandler.handle_opcua_error(
                 sensitive_error,
                 "connection",
             )

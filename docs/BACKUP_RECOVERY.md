@@ -75,7 +75,35 @@ render service scale web-api=1
 
 ---
 
-## 4. Disaster Recovery (DR) Audits & Testing Schedule
+## 4. Multi-Tenant Backup Considerations
+
+ThermaCore SCADA supports multi-tenant operations where each tenant's data must be isolated and recoverable independently.
+
+### 4.1 Tenant & Client Data Isolation
+
+* Client organization records are stored in the `clients` table (`id`, `name`, `code`, `is_active`).
+* Facility records in `tenants` reference `client_id` foreign keys.
+* User records in `users` reference both `tenant_id` and `client_id` foreign keys.
+* Backups include all client, tenant, user, and telemetry data in a single consolidated database snapshot.
+* Restoration preserves all client and tenant relational boundaries intact.
+
+### 4.2 Client or Tenant-Specific Recovery
+
+In the event of data corruption affecting a single client organization or facility:
+
+1. Identify the affected client ID (`client_id`) or facility ID (`tenant_id`).
+2. Restore from the most recent backup to a staging environment.
+3. Export data filtered by the specific `client_id` or `tenant_id`.
+4. Import the client/tenant data back into production.
+
+### 4.3 Admin Account Recovery
+
+* Admin accounts are not tenant-specific and are stored separately
+* Admin account data is included in all full system backups
+
+---
+
+## 5. Disaster Recovery (DR) Audits & Testing Schedule
 
 * **Frequency**: DR drills are conducted **bi-annually** (Q2 and Q4).
 * **Objective**: Complete a full restore of the active timeseries dataset from raw cold-store snapshots to an isolated database region.

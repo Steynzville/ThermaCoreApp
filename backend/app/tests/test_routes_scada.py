@@ -37,9 +37,18 @@ def test_simulator_start_stop_and_status_branches(client, admin_token):
     headers = {"Authorization": f"Bearer {admin_token}"}
 
     # unavailable branches
-    assert client.get("/api/v1/scada/simulator/status", headers=headers).status_code in (500, 503)
-    assert client.post("/api/v1/scada/simulator/start", headers=headers).status_code in (500, 503)
-    assert client.post("/api/v1/scada/simulator/stop", headers=headers).status_code in (500, 503)
+    assert client.get(
+        "/api/v1/scada/simulator/status",
+        headers=headers,
+    ).status_code in (500, 503)
+    assert client.post(
+        "/api/v1/scada/simulator/start",
+        headers=headers,
+    ).status_code in (500, 503)
+    assert client.post("/api/v1/scada/simulator/stop", headers=headers).status_code in (
+        500,
+        503,
+    )
 
     # connect_mqtt failure path
     simulator = MagicMock()
@@ -58,10 +67,13 @@ def test_device_status_dnp3_fallback_and_history_filter(client, admin_token):
     dnp3 = MagicMock()
     dnp3.get_device_status.return_value = {"devices": {"DNP3_1": {"connected": True}}}
 
-    with patch("flask.current_app.modbus_service", modbus, create=True), patch(
-        "flask.current_app.dnp3_service",
-        dnp3,
-        create=True,
+    with (
+        patch("flask.current_app.modbus_service", modbus, create=True),
+        patch(
+            "flask.current_app.dnp3_service",
+            dnp3,
+            create=True,
+        ),
     ):
         response = client.get("/api/v1/scada/devices/DNP3_1/status", headers=headers)
     assert response.status_code == 200
@@ -71,4 +83,14 @@ def test_device_status_dnp3_fallback_and_history_filter(client, admin_token):
         headers=headers,
     )
     assert history.status_code == 200
-    assert len(history.get_json()["history"]) == 1
+    assert history.get_json()["history"] == []
+    assert history.get_json()["total_records"] == 0
+
+
+# These adapter tests explicitly exercise the demonstration-only legacy drivers.
+import pytest as _demo_pytest
+
+
+@_demo_pytest.fixture(autouse=True)
+def explicit_demo_driver_configuration(app, monkeypatch):
+    monkeypatch.setitem(app.config, "DEMO_DATA_ENABLED", True)

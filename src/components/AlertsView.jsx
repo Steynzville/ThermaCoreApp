@@ -7,111 +7,34 @@ import {
   Info,
 } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
-import { units } from "../data/mockUnits";
+import { useUnits } from "../context/UnitContext";
+import { isAlarm, conditionType } from "../utils/conditions";
 import PageHeader from "./PageHeader";
 import { Card, CardContent } from "./ui/card";
 
-const alerts = [
-  {
-    id: 1,
-    type: "critical",
-    title: "Unit Offline",
-    message:
-      "ThermaCore Unit 001 has gone offline and requires immediate attention",
-    device: "ThermaCore Unit 001",
-    timestamp: "2025-09-09 14:45",
-    acknowledged: false,
-  },
-  {
-    id: 2,
-    type: "warning",
-    title: "Low Water Level",
-    message: "ThermaCore Unit 002 water level has dropped below 10%",
-    device: "ThermaCore Unit 002",
-    timestamp: "2025-09-09 14:15",
-    acknowledged: false,
-  },
-  {
-    id: 3,
-    type: "info",
-    title: "Maintenance Scheduled",
-    message: "ThermaCore Unit 003 scheduled for routine maintenance tomorrow",
-    device: "ThermaCore Unit 003",
-    timestamp: "2025-09-09 13:30",
-    acknowledged: true,
-  },
-  {
-    id: 4,
-    type: "success",
-    title: "System Restored",
-    message:
-      "ThermaCore Unit 004 has been successfully restored to normal operation",
-    device: "ThermaCore Unit 004",
-    timestamp: "2025-09-09 12:00",
-    acknowledged: true,
-  },
-  {
-    id: 5,
-    type: "warning",
-    title: "Temperature Alert",
-    message:
-      "ThermaCore Unit 005 temperature has exceeded normal operating range",
-    device: "ThermaCore Unit 005",
-    timestamp: "2025-09-09 11:30",
-    acknowledged: false,
-  },
-  {
-    id: 6,
-    type: "critical",
-    title: "Pressure Drop",
-    message: "ThermaCore Unit 006 experiencing significant pressure drop",
-    device: "ThermaCore Unit 006",
-    timestamp: "2025-09-09 10:15",
-    acknowledged: false,
-  },
-];
-
-const AlertsView = ({ className, userRole }) => {
+const AlertsView = ({ className = "" }) => {
   const [alertFilter, setAlertFilter] = useState("all");
   const navigate = useNavigate();
-
-  const handleAlertClick = (alert) => {
-    // Extract unit number from device name (e.g., "ThermaCore Unit 001" -> 1)
-    const unitMatch = alert.device.match(/Unit (\d+)/);
-    if (unitMatch) {
-      const unitNumber = unitMatch[1].padStart(3, "0"); // Convert to 3-digit format (e.g., "001")
-      const unitId = `TC${unitNumber}`;
-
-      // Find the actual unit data from mockUnits
-      const unitData = units.find((unit) => unit.id === unitId);
-
-      if (unitData) {
-        // Add the specific alert information to the unit data
-        const unitWithAlert = {
-          ...unitData,
-          currentAlert: {
-            type: alert.type,
-            title: alert.title,
-            message: alert.message,
-            timestamp: alert.timestamp,
-            acknowledged: alert.acknowledged,
-          },
-        };
-
-        if (userRole === "admin") {
-          navigate(`/unit-details/${parseInt(unitMatch[1], 10)}?tab=alerts`, {
-            state: { unit: unitWithAlert },
-          });
-        } else {
-          navigate(`/unit/${parseInt(unitMatch[1], 10)}?tab=alerts`, {
-            state: { unit: unitWithAlert },
-          });
-        }
-      }
-    }
-  };
+  const [query] = useSearchParams();
+  const { alerts: conditions = [], loading, error } = useUnits();
+  const alerts = conditions
+    .filter(
+      (event) =>
+        !isAlarm(event) &&
+        (!query.get("unit") || String(event.unitId) === query.get("unit")),
+    )
+    .map((event) => ({
+      ...event,
+      type: conditionType(event),
+      device: event.unitName,
+      title: event.title || event.message,
+    }));
+  const handleAlertClick = (event) =>
+    navigate(
+      `/unit-details/${encodeURIComponent(event.unitId)}?tab=alerts&event=${encodeURIComponent(event.id)}`,
+    );
 
   const getAlertIcon = (type) => {
     switch (type) {
@@ -164,6 +87,8 @@ const AlertsView = ({ className, userRole }) => {
           description="Manage system alerts and notifications"
         />
 
+        {loading && <p role="status">Loading conditions…</p>}
+        {error && <p role="alert">{error}</p>}
         {/* Alert Summary Cards - Optimized for laptop screens */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-6 lg:mb-8">
           <Card
@@ -252,6 +177,7 @@ const AlertsView = ({ className, userRole }) => {
           <div className="flex items-center space-x-2">
             <Filter className="h-4 w-4 text-gray-400" />
             <select
+              aria-label="Severity"
               value={alertFilter}
               onChange={(e) => setAlertFilter(e.target.value)}
               className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -270,6 +196,24 @@ const AlertsView = ({ className, userRole }) => {
           {filteredAlerts.map((alert) => (
             <Card
               key={alert.id}
+              id={`event-${alert.id}`}
+              role="button"
+              tabIndex={0}
+              aria-current={
+                query.get("event") === String(alert.id) ? "true" : undefined
+              }
+              style={{
+                outline:
+                  query.get("event") === String(alert.id)
+                    ? "2px solid #2563eb"
+                    : undefined,
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  handleAlertClick(alert);
+                }
+              }}
               className={`border-l-4 ${getAlertColor(alert.type)} cursor-pointer hover:shadow-md transition-shadow`}
               onClick={() => handleAlertClick(alert)}
             >

@@ -1,6 +1,7 @@
 """Unit tests for authentication functionality."""
 
 import json
+import pytest
 import time
 
 import jwt
@@ -911,7 +912,9 @@ class TestSecurityEnhancements:
             # Should return 401 or 422
             assert response.status_code in [401, 422]
 
-    def test_forgot_password_valid_email(self, client, db_session):
+    def test_forgot_password_valid_email(
+        self, client, db_session, configured_reset_email
+    ):
         """Test forgot password with valid email."""
         response = client.post(
             "/api/v1/auth/forgot-password",
@@ -943,7 +946,7 @@ class TestSecurityEnhancements:
         # Check message in the nested data structure
         assert "If the email exists" in data.get("data", {}).get("message", "")
 
-    def test_forgot_password_invalid_email(self, client):
+    def test_forgot_password_invalid_email(self, client, configured_reset_email):
         """Test forgot password with invalid email (should still return success for security)."""
         response = client.post(
             "/api/v1/auth/forgot-password",
@@ -1202,6 +1205,7 @@ class TestSecurityEnhancements:
 # SELF-REGISTER TESTS
 # ============================================================
 
+
 class TestSelfRegister:
     """Public self-registration flow."""
 
@@ -1225,6 +1229,7 @@ class TestSelfRegister:
         assert data["username"] == "selfregtest"
 
         from app.models import User
+
         user = User.query.filter_by(username="selfregtest").first()
         assert user.role.name.value == "viewer"
         assert user.permissions is None
@@ -1288,12 +1293,19 @@ class TestSelfRegister:
 # REGISTER CLIENT SCOPING TESTS
 # ============================================================
 
+
 class TestRegisterClientScoping:
     """Client-admin restrictions on the /auth/register endpoint."""
 
-    def test_client_admin_register_forces_own_client(self, client, client_admin_token, db_session):
+    def test_client_admin_register_forces_own_client(
+        self,
+        client,
+        client_admin_token,
+        db_session,
+    ):
         token, own_client_id = client_admin_token
         from app.models import Role
+
         viewer_role = Role.query.filter_by(name="viewer").first()
 
         response = client.post(
@@ -1312,9 +1324,15 @@ class TestRegisterClientScoping:
         assert error["code"] == "AUTHORIZATION_ERROR"
         assert error["details"]["context"] == "Client assignment"
 
-    def test_client_admin_register_defaults_to_own_client(self, client, client_admin_token, db_session):
+    def test_client_admin_register_defaults_to_own_client(
+        self,
+        client,
+        client_admin_token,
+        db_session,
+    ):
         token, own_client_id = client_admin_token
         from app.models import Role, User
+
         viewer_role = Role.query.filter_by(name="viewer").first()
 
         response = client.post(
@@ -1331,9 +1349,15 @@ class TestRegisterClientScoping:
         created = User.query.filter_by(username="defaultclientuser").first()
         assert created.client_id == own_client_id
 
-    def test_client_admin_register_disallowed_admin_role(self, client, client_admin_token, db_session):
+    def test_client_admin_register_disallowed_admin_role(
+        self,
+        client,
+        client_admin_token,
+        db_session,
+    ):
         token, _ = client_admin_token
         from app.models import Role
+
         admin_role = Role.query.filter_by(name="admin").first()
 
         response = client.post(
@@ -1351,9 +1375,15 @@ class TestRegisterClientScoping:
         assert error["code"] == "AUTHORIZATION_ERROR"
         assert error["details"]["context"] == "Role assignment"
 
-    def test_client_admin_register_allowed_viewer_role(self, client, client_admin_token, db_session):
+    def test_client_admin_register_allowed_viewer_role(
+        self,
+        client,
+        client_admin_token,
+        db_session,
+    ):
         token, _ = client_admin_token
         from app.models import Role
+
         viewer_role = Role.query.filter_by(name="viewer").first()
 
         response = client.post(
@@ -1368,9 +1398,15 @@ class TestRegisterClientScoping:
         )
         assert response.status_code == 201
 
-    def test_client_admin_register_allowed_operator_role(self, client, client_admin_token, db_session):
+    def test_client_admin_register_allowed_operator_role(
+        self,
+        client,
+        client_admin_token,
+        db_session,
+    ):
         token, _ = client_admin_token
         from app.models import Role
+
         operator_role = Role.query.filter_by(name="operator").first()
 
         response = client.post(
@@ -1385,8 +1421,14 @@ class TestRegisterClientScoping:
         )
         assert response.status_code == 201
 
-    def test_client_admin_register_no_client_assigned(self, client, client_admin_no_client_token, db_session):
+    def test_client_admin_register_no_client_assigned(
+        self,
+        client,
+        client_admin_no_client_token,
+        db_session,
+    ):
         from app.models import Role
+
         viewer_role = Role.query.filter_by(name="viewer").first()
 
         response = client.post(
@@ -1409,17 +1451,35 @@ class TestRegisterClientScoping:
 # EMERGENCY ADMIN TESTS
 # ============================================================
 
+
+def get_admin_token(client):
+    """Helper to get an admin token with admin_panel permission."""
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"username": "admin", "password": "admin123"},
+        headers={"Content-Type": "application/json"},
+    )
+    assert response.status_code == 200
+    data = unwrap_response(response)
+    return data["access_token"]
+
+
 def test_emergency_admin_creates_account(client, db_session):
-    """Emergency admin endpoint creates an account via raw SQL."""
-    from app.models import User
+    """Emergency admin endpoint creates an account via raw SQL (requires admin_panel permission)."""
     from app import db
+    from app.models import User
+
+    admin_token = get_admin_token(client)
 
     # Ensure user is deleted before test
     User.query.filter_by(username="emergency_admin").delete()
     db.session.commit()
 
     try:
-        response = client.post("/api/v1/auth/emergency-admin")
+        response = client.post(
+            "/api/v1/auth/emergency-admin",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
         assert response.status_code == 200
         data = response.get_json()["data"]
         assert data["username"] == "emergency_admin"
@@ -1438,18 +1498,50 @@ def test_emergency_admin_creates_account(client, db_session):
         db.session.commit()
 
 
+def test_emergency_admin_requires_authentication(client, db_session):
+    """Emergency admin endpoint must reject unauthenticated requests."""
+    response = client.post("/api/v1/auth/emergency-admin")
+    assert response.status_code == 401
+
+
+def test_emergency_admin_requires_admin_panel_permission(client, db_session):
+    """Emergency admin endpoint must reject callers without admin_panel permission."""
+    from flask_jwt_extended import create_access_token
+
+    from app.models import Role, User
+
+    viewer_role = Role.query.filter_by(name="viewer").first()
+    viewer_user = User.query.filter_by(username="viewer").first()
+    token = create_access_token(
+        identity=str(viewer_user.id),
+        additional_claims={
+            "role": "viewer",
+            "permissions": viewer_user.permissions or [],
+        },
+    )
+
+    response = client.post(
+        "/api/v1/auth/emergency-admin",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 403
+
+
 def test_emergency_admin_idempotent_update(client, db_session):
     """Calling it twice should update, not duplicate, the user."""
-    from app.models import User
     from app import db
+    from app.models import User
+
+    admin_token = get_admin_token(client)
 
     # Ensure user is deleted before test
     User.query.filter_by(username="emergency_admin").delete()
     db.session.commit()
 
     try:
-        client.post("/api/v1/auth/emergency-admin")
-        client.post("/api/v1/auth/emergency-admin")
+        headers = {"Authorization": f"Bearer {admin_token}"}
+        client.post("/api/v1/auth/emergency-admin", headers=headers)
+        client.post("/api/v1/auth/emergency-admin", headers=headers)
 
         matches = User.query.filter_by(username="emergency_admin").all()
         assert len(matches) == 1
@@ -1458,3 +1550,30 @@ def test_emergency_admin_idempotent_update(client, db_session):
         # Clean up the emergency_admin user
         User.query.filter_by(username="emergency_admin").delete()
         db.session.commit()
+
+
+@pytest.fixture
+def configured_reset_email(app, monkeypatch):
+    for key, value in {
+        "SENDGRID_API_KEY": "test-only-provider-key",
+        "EMAIL_FROM": "test@example.invalid",
+        "FRONTEND_URL": "https://frontend.example.invalid",
+    }.items():
+        monkeypatch.setitem(app.config, key, value)
+    monkeypatch.setattr(
+        "app.services.email_service.send_password_reset_email",
+        lambda email, token: (True, None),
+    )
+
+
+def test_password_reset_unconfigured_is_explicit_and_does_not_enumerate(
+    app, client, monkeypatch
+):
+    monkeypatch.setitem(app.config, "SENDGRID_API_KEY", None)
+    results = [
+        client.post("/api/v1/auth/forgot-password", json={"email": email})
+        for email in ("admin@test.com", "unknown@example.invalid")
+    ]
+    assert all(result.status_code == 503 for result in results)
+    assert results[0].get_json() == results[1].get_json()
+    assert "SENDGRID_API_KEY" in results[0].get_json()["error"]

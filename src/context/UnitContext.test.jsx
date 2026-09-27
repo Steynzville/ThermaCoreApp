@@ -1,796 +1,224 @@
-// src/context/UnitContext.test.jsx
-
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, act, waitFor } from "@testing-library/react";
-
 import {
-  getAllUnits,
-  updateUnitGPS as serviceUpdateUnitGPS,
-  updateUnitLocation as serviceUpdateUnitLocation,
-  updateUnitName as serviceUpdateUnitName,
-} from "../services/unitService";
-
-// Mock the service layer only
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { AuthProvider } from "./AuthContext";
+import { TenantProvider, useTenant } from "./TenantContext";
+import { UnitProvider, useUnits } from "./UnitContext";
+import { AnalyticsProvider, useAnalytics } from "./AnalyticsContext";
+import { getPermissions } from "../utils/permissions";
+import * as service from "../services/unitService";
+import { apiGetJson } from "../utils/apiFetch";
 vi.mock("../services/unitService", () => ({
   getAllUnits: vi.fn(),
-  updateUnitName: vi.fn(),
-  updateUnitLocation: vi.fn(),
-  updateUnitGPS: vi.fn(),
+  getPortfolioHistory: vi.fn(),
+  getPortfolioEvents: vi.fn(),
+  resetDemoState: vi.fn(),
+  controlUnit: vi.fn(),
+  updateUnitFields: vi.fn(),
 }));
-
-import { UnitProvider, useUnits } from "./UnitContext";
-
-const baseUnits = [
+vi.mock("../utils/apiFetch", () => ({ apiGetJson: vi.fn() }));
+const source = [
   {
-    id: "TC001",
-    name: "ThermaCore Unit 001",
-    client: "Client A",
-    location: "Site Alpha",
+    id: "B",
+    name: "Beta Unit",
+    tenantId: 2,
+    clientId: 20,
     status: "online",
-    tempIn: 22.5,
-    tempOut: 18.2,
-    gpsCoordinates: "34.0522,-118.2437",
+    currentPower: 90,
   },
   {
-    id: "TC002",
-    name: "ThermaCore Unit 002",
-    client: "Client A",
-    location: "Site Beta",
-    status: "offline",
-    tempIn: 0.0,
-    tempOut: 0.0,
-    gpsCoordinates: "36.1699,-115.1398",
+    id: "A",
+    name: "Alpha Unit",
+    tenantId: 1,
+    clientId: 10,
+    status: "online",
+    currentPower: 10,
   },
 ];
-
-const wrapper = ({ children }) => <UnitProvider>{children}</UnitProvider>;
-
-describe("UnitContext", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.useRealTimers();
-    getAllUnits.mockResolvedValue(structuredClone(baseUnits));
-    serviceUpdateUnitName.mockResolvedValue();
-    serviceUpdateUnitLocation.mockResolvedValue();
-    serviceUpdateUnitGPS.mockResolvedValue();
+const records = source.map((u) => ({
+  unitId: u.id,
+  date: new Date().toISOString().slice(0, 10),
+  grossKWh: u.currentPower * 2,
+  parasiticKWh: 0,
+  selfConsumedKWh: u.currentPower,
+  exportedKWh: u.currentPower,
+  waterLitres: 0,
+  observedHours: 2,
+  operatingHours: 2,
+}));
+let state, analytics, unitAnalytics;
+function Probe() {
+  state = useUnits();
+  analytics = useAnalytics();
+  const tenant = useTenant();
+  unitAnalytics = useAnalytics("A");
+  return (
+    <>
+      <span data-testid="ids">{state.units.map((u) => u.id).join(",")}</span>
+      <span data-testid="energy">
+        {analytics.analytics.periods.recorded.grossKWh}
+      </span>
+      <span data-testid="status">
+        {state.units.map((u) => u.status).join(",")}
+      </span>
+      <span data-testid="scope">{state.scopeLabel}</span>
+      <span data-testid="loading">{String(state.loading)}</span>
+      <button onClick={() => tenant.switchTenant(1)}>Alpha</button>
+      <button onClick={() => tenant.switchTenant(2)}>Beta</button>
+      <button onClick={() => tenant.switchTenant(null)}>All</button>
+    </>
+  );
+}
+const auth = (role, tenant = 1, client = 10, id = 1) => ({
+  user: { id, tenantId: tenant, clientId: client },
+  userRole: role === "viewer" || role === "operator" ? "user" : role,
+  backendRole: role,
+  permissions: getPermissions(role),
+  isLoading: false,
+  isAuthenticated: true,
+});
+const tree = (value) => (
+  <AuthProvider value={value}>
+    <TenantProvider>
+      <UnitProvider>
+        <AnalyticsProvider>
+          <Probe />
+        </AnalyticsProvider>
+      </UnitProvider>
+    </TenantProvider>
+  </AuthProvider>
+);
+beforeEach(() => {
+  vi.clearAllMocks();
+  service.getAllUnits.mockResolvedValue(source);
+  service.getPortfolioHistory.mockResolvedValue(records);
+  service.getPortfolioEvents.mockResolvedValue([]);
+  apiGetJson.mockImplementation(async (url) => ({
+    data: url.includes("current")
+      ? { id: 1, name: "Alpha", client_id: 10 }
+      : [
+          { id: 1, name: "Alpha", client_id: 10 },
+          { id: 2, name: "Beta", client_id: 20 },
+        ],
+  }));
+});
+describe("Shared tenant portfolio", () => {
+  it("keeps individual unit costs separate from the portfolio's fixed costs", async () => {
+    render(tree(auth("admin")));
+    await waitFor(() => expect(state.loading).toBe(false));
+    act(() =>
+      analytics.setAssumptions({
+        operatingCostMonthly: 1000,
+        initialInvestment: 20000,
+        electricityCost: 0.5,
+      }),
+    );
+    expect(unitAnalytics.assumptions.operatingCostMonthly).toBe(0);
+    expect(unitAnalytics.assumptions.initialInvestment).toBe(0);
+    expect(unitAnalytics.assumptions.electricityCost).toBe(0.5);
+    act(() =>
+      unitAnalytics.setAssumptions({
+        operatingCostMonthly: 75,
+        initialInvestment: 5000,
+      }),
+    );
+    expect(unitAnalytics.assumptions.operatingCostMonthly).toBe(75);
+    expect(analytics.assumptions.operatingCostMonthly).toBe(1000);
   });
-
-  afterEach(() => {
-    vi.useRealTimers();
+  it("recalculates all analytics when an admin switches tenant", async () => {
+    render(tree(auth("admin")));
+    await waitFor(() =>
+      expect(screen.getByTestId("ids")).toHaveTextContent("B,A"),
+    );
+    expect(screen.getByTestId("energy")).toHaveTextContent("200");
+    fireEvent.click(screen.getByText("Alpha"));
+    expect(screen.getByTestId("ids")).toHaveTextContent(/^A$/);
+    expect(screen.getByTestId("energy")).toHaveTextContent(/^20$/);
+    fireEvent.click(screen.getByText("Beta"));
+    expect(screen.getByTestId("ids")).toHaveTextContent(/^B$/);
+    expect(screen.getByTestId("energy")).toHaveTextContent(/^180$/);
+    fireEvent.click(screen.getByText("All"));
+    expect(state.units).toHaveLength(2);
   });
-
-  // ============ SECTION 1: useUnits Hook Tests ============
-
-  describe("useUnits hook", () => {
-    it("should throw error when used outside provider", () => {
-      const spy = vi.spyOn(console, "error").mockImplementation(() => {});
-      expect(() => renderHook(() => useUnits())).toThrow(
-        "useUnits must be used within a UnitProvider"
+  it.each(["viewer", "operator", "client_admin"])(
+    "%s never sees another tenant's portfolio",
+    async (role) => {
+      render(tree(auth(role)));
+      await waitFor(() =>
+        expect(screen.getByTestId("loading")).toHaveTextContent("false"),
       );
-      spy.mockRestore();
-    });
+      expect(state.units.map((u) => u.id)).toEqual(["A"]);
+      fireEvent.click(screen.getByText("Beta"));
+      expect(state.units.map((u) => u.id)).toEqual(["A"]);
+      expect(state.getUnit("B")).toBeUndefined();
+      expect(state.records).toHaveLength(1);
+    },
+  );
+  it("does not broaden an unassigned viewer to the fleet", async () => {
+    apiGetJson.mockResolvedValue({ data: null });
+    render(tree(auth("viewer", null)));
+    await waitFor(() => expect(state.loading).toBe(false));
+    expect(state.units).toEqual([]);
   });
-
-  // ============ SECTION 2: Initialization Tests ============
-
-  describe("UnitProvider initialization", () => {
-    it("should start loading then load units on mount", async () => {
-      const { result } = renderHook(() => useUnits(), { wrapper });
-      
-      // Should be loading initially
-      expect(result.current.loading).toBe(true);
-      expect(result.current.units).toHaveLength(0);
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
-
-      expect(result.current.units).toHaveLength(2);
-      expect(result.current.error).toBeNull();
-      expect(getAllUnits).toHaveBeenCalledTimes(1);
-    });
-
-    it("should handle loading error", async () => {
-      getAllUnits.mockRejectedValueOnce(new Error("Failed to load units"));
-      
-      const { result } = renderHook(() => useUnits(), { wrapper });
-
-      await waitFor(() => {
-        expect(result.current.error).toBe("Failed to load units");
-        expect(result.current.loading).toBe(false);
-      });
-
-      expect(result.current.units).toHaveLength(0);
-      expect(getAllUnits).toHaveBeenCalledTimes(1);
-    });
-
-    it("should provide all context values", async () => {
-      const { result } = renderHook(() => useUnits(), { wrapper });
-      
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
-
-      expect(result.current.units).toBeDefined();
-      expect(result.current.loading).toBeDefined();
-      expect(result.current.error).toBeDefined();
-      expect(result.current.getUnit).toBeDefined();
-      expect(result.current.updateUnitName).toBeDefined();
-      expect(result.current.updateUnitLocation).toBeDefined();
-      expect(result.current.updateUnitGPS).toBeDefined();
-      expect(result.current.updateUnit).toBeDefined();
-      expect(result.current.refreshUnits).toBeDefined();
-    });
-
-    it("should cleanup on unmount and not update state or warn", async () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-      
-      getAllUnits.mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve(baseUnits), 100))
-      );
-
-      const { unmount } = renderHook(() => useUnits(), { wrapper });
-      unmount();
-
-      await new Promise((resolve) => setTimeout(resolve, 150));
-
-      const unmountWarnings = consoleSpy.mock.calls.filter((call) =>
-        String(call[0]).includes("unmounted component")
-      );
-      expect(unmountWarnings).toHaveLength(0);
-
-      consoleSpy.mockRestore();
-    });
+  it("keeps assumption overrides separate per tenant", async () => {
+    render(tree(auth("admin")));
+    await waitFor(() => expect(state.loading).toBe(false));
+    fireEvent.click(screen.getByText("Alpha"));
+    act(() => analytics.setAssumptions({ electricityCost: 1 }));
+    fireEvent.click(screen.getByText("Beta"));
+    expect(analytics.assumptions.electricityCost).toBe(0.4);
+    fireEvent.click(screen.getByText("Alpha"));
+    expect(analytics.assumptions.electricityCost).toBe(1);
   });
-
-  // ============ SECTION 3: updateUnit Tests ============
-
-  describe("updateUnit", () => {
-    it("should update a specific unit", async () => {
-      const { result } = renderHook(() => useUnits(), { wrapper });
-      
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
-
-      act(() => {
-        result.current.updateUnit("TC001", { status: "offline", tempIn: 25.0 });
-      });
-
-      const updated = result.current.getUnit("TC001");
-      expect(updated.status).toBe("offline");
-      expect(updated.tempIn).toBe(25.0);
+  it("updates shared state only after a successful control and records history", async () => {
+    render(tree(auth("operator")));
+    await waitFor(() => expect(state.loading).toBe(false));
+    service.controlUnit.mockResolvedValue({
+      unit: { ...source[1], status: "offline" },
+      action: { id: "action", unitId: "A" },
     });
-
-    it("should not update units that don't match the ID", async () => {
-      const { result } = renderHook(() => useUnits(), { wrapper });
-      
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
-
-      act(() => {
-        result.current.updateUnit("TC999", { name: "Should not update" });
-      });
-
-      expect(result.current.getUnit("TC001").name).toBe("ThermaCore Unit 001");
-      expect(result.current.getUnit("TC002").name).toBe("ThermaCore Unit 002");
-    });
-
-    it("should handle multiple updates to the same unit", async () => {
-      const { result } = renderHook(() => useUnits(), { wrapper });
-      
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
-
-      act(() => {
-        result.current.updateUnit("TC001", { status: "offline" });
-      });
-      
-      act(() => {
-        result.current.updateUnit("TC001", { tempIn: 30.0 });
-      });
-
-      const updated = result.current.getUnit("TC001");
-      expect(updated.status).toBe("offline");
-      expect(updated.tempIn).toBe(30.0);
-    });
+    await act(() => state.controlUnit("A", { machinePower: false }));
+    expect(screen.getByTestId("status")).toHaveTextContent("offline");
+    expect(state.events).toHaveLength(1);
+    service.controlUnit.mockRejectedValue(new Error("No acknowledgement"));
+    await expect(
+      state.controlUnit("A", { machinePower: true }),
+    ).rejects.toThrow("acknowledgement");
+    expect(state.units[0].status).toBe("offline");
   });
-
-  // ============ SECTION 4: updateUnitName Tests ============
-
-  describe("updateUnitName", () => {
-    it("should update unit name and call the service", async () => {
-      const { result } = renderHook(() => useUnits(), { wrapper });
-      
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
-
-      await act(async () => {
-        await result.current.updateUnitName("TC001", "Updated Name");
-      });
-
-      expect(serviceUpdateUnitName).toHaveBeenCalledWith("TC001", "Updated Name");
-      expect(result.current.getUnit("TC001").name).toBe("Updated Name");
-      expect(result.current.error).toBeNull();
-    });
-
-    it("should handle service error and set error state (no re-throw)", async () => {
-      const errorMessage = "Failed to update name";
-      serviceUpdateUnitName.mockRejectedValueOnce(new Error(errorMessage));
-      
-      const { result } = renderHook(() => useUnits(), { wrapper });
-      
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
-
-      await act(async () => {
-        await result.current.updateUnitName("TC001", "New Name");
-      });
-
-      expect(result.current.error).toBe(errorMessage);
-      expect(serviceUpdateUnitName).toHaveBeenCalledWith("TC001", "New Name");
-      expect(result.current.getUnit("TC001").name).toBe("ThermaCore Unit 001");
-    });
-
-    // FIXED: Clear error from a failed update, not from failed initial load
-    it("should clear previous error on success", async () => {
-      const { result } = renderHook(() => useUnits(), { wrapper });
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
-
-      // Cause an error via a failed update (units are already loaded normally)
-      serviceUpdateUnitName.mockRejectedValueOnce(new Error("Update failed"));
-      await act(async () => {
-        await result.current.updateUnitName("TC001", "Bad Name");
-      });
-      expect(result.current.error).toBe("Update failed");
-
-      // Now a successful update should clear the error
-      await act(async () => {
-        await result.current.updateUnitName("TC001", "Updated Name");
-      });
-
-      expect(result.current.error).toBeNull();
-      expect(result.current.getUnit("TC001").name).toBe("Updated Name");
-    });
+  it("blocks viewer controls and cross-portfolio control attempts before API calls", async () => {
+    const { rerender } = render(tree(auth("viewer")));
+    await waitFor(() => expect(state.loading).toBe(false));
+    await expect(state.controlUnit("A", {})).rejects.toThrow("permission");
+    rerender(tree(auth("operator")));
+    await waitFor(() => expect(state.loading).toBe(false));
+    await expect(state.controlUnit("B", {})).rejects.toThrow("outside");
+    expect(service.controlUnit).not.toHaveBeenCalled();
   });
-
-  // ============ SECTION 5: updateUnitLocation Tests ============
-
-  describe("updateUnitLocation", () => {
-    it("should update unit location and call the service", async () => {
-      const { result } = renderHook(() => useUnits(), { wrapper });
-      
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
-
-      await act(async () => {
-        await result.current.updateUnitLocation("TC001", "New Site");
-      });
-
-      expect(serviceUpdateUnitLocation).toHaveBeenCalledWith("TC001", "New Site");
-      expect(result.current.getUnit("TC001").location).toBe("New Site");
-      expect(result.current.error).toBeNull();
-    });
-
-    it("should handle service error and set error state (no re-throw)", async () => {
-      const errorMessage = "Failed to update location";
-      serviceUpdateUnitLocation.mockRejectedValueOnce(new Error(errorMessage));
-      
-      const { result } = renderHook(() => useUnits(), { wrapper });
-      
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
-
-      await act(async () => {
-        await result.current.updateUnitLocation("TC001", "New Site");
-      });
-
-      expect(result.current.error).toBe(errorMessage);
-      expect(serviceUpdateUnitLocation).toHaveBeenCalledWith("TC001", "New Site");
-      expect(result.current.getUnit("TC001").location).toBe("Site Alpha");
-    });
-
-    // FIXED: Clear error from a failed update, not from failed initial load
-    it("should clear previous error on success", async () => {
-      const { result } = renderHook(() => useUnits(), { wrapper });
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
-
-      serviceUpdateUnitLocation.mockRejectedValueOnce(new Error("Update failed"));
-      await act(async () => {
-        await result.current.updateUnitLocation("TC001", "Bad Site");
-      });
-      expect(result.current.error).toBe("Update failed");
-
-      await act(async () => {
-        await result.current.updateUnitLocation("TC001", "New Site");
-      });
-
-      expect(result.current.error).toBeNull();
-      expect(result.current.getUnit("TC001").location).toBe("New Site");
-    });
+  it("discards an old user's pending portfolio response on logout", async () => {
+    let complete;
+    service.getAllUnits.mockImplementationOnce(
+      () =>
+        new Promise((r) => {
+          complete = r;
+        }),
+    );
+    const { rerender } = render(tree(auth("admin")));
+    await waitFor(() => expect(service.getAllUnits).toHaveBeenCalled());
+    rerender(tree({ user: null, backendRole: null }));
+    await act(async () => complete(source));
+    expect(state.units).toEqual([]);
+    expect(state.records).toEqual([]);
   });
-
-  // ============ SECTION 6: updateUnitGPS Tests ============
-
-  describe("updateUnitGPS", () => {
-    it("should update unit GPS coordinates and call the service", async () => {
-      const { result } = renderHook(() => useUnits(), { wrapper });
-      
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
-
-      await act(async () => {
-        await result.current.updateUnitGPS("TC001", "12.3456,78.9012");
-      });
-
-      expect(serviceUpdateUnitGPS).toHaveBeenCalledWith("TC001", "12.3456,78.9012");
-      expect(result.current.getUnit("TC001").gpsCoordinates).toBe("12.3456,78.9012");
-      expect(result.current.error).toBeNull();
-    });
-
-    it("should handle service error and set error state (no re-throw)", async () => {
-      const errorMessage = "Failed to update GPS";
-      serviceUpdateUnitGPS.mockRejectedValueOnce(new Error(errorMessage));
-      
-      const { result } = renderHook(() => useUnits(), { wrapper });
-      
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
-
-      await act(async () => {
-        await result.current.updateUnitGPS("TC001", "12.3456,78.9012");
-      });
-
-      expect(result.current.error).toBe(errorMessage);
-      expect(serviceUpdateUnitGPS).toHaveBeenCalledWith("TC001", "12.3456,78.9012");
-      expect(result.current.getUnit("TC001").gpsCoordinates).toBe("34.0522,-118.2437");
-    });
-
-    // FIXED: Clear error from a failed update, not from failed initial load
-    it("should clear previous error on success", async () => {
-      const { result } = renderHook(() => useUnits(), { wrapper });
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
-
-      serviceUpdateUnitGPS.mockRejectedValueOnce(new Error("Update failed"));
-      await act(async () => {
-        await result.current.updateUnitGPS("TC001", "0,0");
-      });
-      expect(result.current.error).toBe("Update failed");
-
-      await act(async () => {
-        await result.current.updateUnitGPS("TC001", "12.3456,78.9012");
-      });
-
-      expect(result.current.error).toBeNull();
-      expect(result.current.getUnit("TC001").gpsCoordinates).toBe("12.3456,78.9012");
-    });
-  });
-
-  // ============ SECTION 7: getUnit Tests ============
-
-  describe("getUnit", () => {
-    it("should get unit by ID", async () => {
-      const { result } = renderHook(() => useUnits(), { wrapper });
-      
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
-
-      const unit = result.current.getUnit("TC001");
-      expect(unit).toBeDefined();
-      expect(unit.id).toBe("TC001");
-      expect(unit.name).toBe("ThermaCore Unit 001");
-    });
-
-    it("should return undefined for non-existent unit ID", async () => {
-      const { result } = renderHook(() => useUnits(), { wrapper });
-      
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
-
-      expect(result.current.getUnit("TC999")).toBeUndefined();
-    });
-
-    it("should return correct unit for each ID", async () => {
-      const { result } = renderHook(() => useUnits(), { wrapper });
-      
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
-
-      const unit1 = result.current.getUnit("TC001");
-      const unit2 = result.current.getUnit("TC002");
-      
-      expect(unit1.id).toBe("TC001");
-      expect(unit2.id).toBe("TC002");
-    });
-  });
-
-  // ============ SECTION 8: refreshUnits Tests ============
-
-  describe("refreshUnits", () => {
-    it("should refresh units data", async () => {
-      const { result } = renderHook(() => useUnits(), { wrapper });
-      
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-        expect(result.current.units).toHaveLength(2);
-      });
-      
-      expect(getAllUnits).toHaveBeenCalledTimes(1);
-
-      const newUnits = [
-        {
-          id: "TC003",
-          name: "ThermaCore Unit 003",
-          client: "Client B",
-          location: "Site Gamma",
-          status: "online",
-          tempIn: 23.0,
-          tempOut: 19.0,
-          gpsCoordinates: "40.7128,-74.0060",
-        },
-      ];
-
-      getAllUnits.mockResolvedValueOnce(newUnits);
-
-      let refreshPromise;
-      act(() => {
-        refreshPromise = result.current.refreshUnits();
-      });
-      
-      expect(result.current.loading).toBe(true);
-
-      await act(async () => {
-        await refreshPromise;
-      });
-
-      expect(result.current.units).toHaveLength(1);
-      expect(result.current.loading).toBe(false);
-      expect(result.current.error).toBeNull();
-      expect(getAllUnits).toHaveBeenCalledTimes(2);
-    });
-
-    it("should clear existing error on successful refresh", async () => {
-      // First load fails
-      getAllUnits
-        .mockRejectedValueOnce(new Error("Initial error"))
-        .mockResolvedValueOnce(baseUnits);
-
-      const { result } = renderHook(() => useUnits(), { wrapper });
-      
-      await waitFor(() => {
-        expect(result.current.error).toBe("Initial error");
-      });
-
-      // Refresh should clear the error
-      await act(async () => {
-        await result.current.refreshUnits();
-      });
-
-      expect(result.current.error).toBeNull();
-      expect(result.current.units).toHaveLength(2);
-    });
-
-    it("should handle refresh error", async () => {
-      const { result } = renderHook(() => useUnits(), { wrapper });
-      
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-        expect(result.current.units).toHaveLength(2);
-      });
-
-      const errorMessage = "Failed to refresh";
-      getAllUnits.mockRejectedValueOnce(new Error(errorMessage));
-
-      await act(async () => {
-        await result.current.refreshUnits();
-      });
-
-      expect(result.current.error).toBe(errorMessage);
-      expect(result.current.loading).toBe(false);
-      expect(result.current.units).toHaveLength(2);
-      expect(getAllUnits).toHaveBeenCalledTimes(2);
-    });
-
-    it("should set loading state during refresh with fake timers", async () => {
-      vi.useFakeTimers();
-      
-      getAllUnits
-        .mockResolvedValueOnce(baseUnits)
-        .mockImplementationOnce(
-          () => new Promise((resolve) => setTimeout(() => resolve(baseUnits), 100))
-        );
-
-      const { result } = renderHook(() => useUnits(), { wrapper });
-      
-      await act(async () => { 
-        await vi.runAllTimersAsync(); 
-      });
-
-      expect(result.current.loading).toBe(false);
-
-      let refreshPromise;
-      act(() => { 
-        refreshPromise = result.current.refreshUnits(); 
-      });
-      expect(result.current.loading).toBe(true);
-
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(100);
-        await refreshPromise;
-      });
-      
-      expect(result.current.loading).toBe(false);
-      
-      vi.useRealTimers();
-    });
-  });
-
-  // ============ SECTION 9: Error Handling Tests ============
-
-  describe("Error handling", () => {
-    it("should set error when getAllUnits fails during initial load", async () => {
-      const errorMessage = "Network error";
-      getAllUnits.mockRejectedValueOnce(new Error(errorMessage));
-
-      const { result } = renderHook(() => useUnits(), { wrapper });
-
-      await waitFor(() => {
-        expect(result.current.error).toBe(errorMessage);
-        expect(result.current.loading).toBe(false);
-      });
-    });
-
-    it("should not update units when refresh fails", async () => {
-      const { result } = renderHook(() => useUnits(), { wrapper });
-      
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-        expect(result.current.units).toHaveLength(2);
-      });
-
-      const originalUnits = result.current.units;
-      getAllUnits.mockRejectedValueOnce(new Error("Refresh failed"));
-
-      await act(async () => {
-        await result.current.refreshUnits();
-      });
-
-      expect(result.current.units).toEqual(originalUnits);
-      expect(result.current.error).toBe("Refresh failed");
-    });
-
-    it("should clear error on successful refresh", async () => {
-      // Initial load fails
-      getAllUnits
-        .mockRejectedValueOnce(new Error("Initial error"))
-        .mockResolvedValueOnce(baseUnits);
-
-      const { result } = renderHook(() => useUnits(), { wrapper });
-      
-      await waitFor(() => {
-        expect(result.current.error).toBe("Initial error");
-      });
-
-      // Refresh succeeds
-      await act(async () => {
-        await result.current.refreshUnits();
-      });
-
-      expect(result.current.error).toBeNull();
-    });
-
-    it("should chain errors correctly (error persists until success)", async () => {
-      const { result } = renderHook(() => useUnits(), { wrapper });
-      
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
-
-      const errorMessage = "Update failed";
-      serviceUpdateUnitName.mockRejectedValueOnce(new Error(errorMessage));
-
-      // First update fails
-      await act(async () => {
-        await result.current.updateUnitName("TC001", "New Name");
-      });
-
-      expect(result.current.error).toBe(errorMessage);
-
-      // Second update succeeds (should clear error)
-      await act(async () => {
-        await result.current.updateUnitName("TC001", "Final Name");
-      });
-
-      expect(result.current.error).toBeNull();
-      expect(result.current.getUnit("TC001").name).toBe("Final Name");
-    });
-  });
-
-  // ============ SECTION 10: UseMemo Dependency Tests ============
-
-  describe("Memoization", () => {
-    it("should memoize context value dependencies correctly", async () => {
-      const { result, rerender } = renderHook(() => useUnits(), { wrapper });
-      
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
-
-      const initialUnits = result.current.units;
-      const initialGetUnit = result.current.getUnit;
-      const initialUpdateUnit = result.current.updateUnit;
-
-      rerender();
-
-      expect(result.current.units).toBe(initialUnits);
-      expect(result.current.getUnit).toBe(initialGetUnit);
-      expect(result.current.updateUnit).toBe(initialUpdateUnit);
-    });
-
-    it("should update memoized values when units change", async () => {
-      const { result } = renderHook(() => useUnits(), { wrapper });
-      
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
-
-      const initialGetUnit = result.current.getUnit;
-
-      await act(async () => {
-        await result.current.updateUnitName("TC001", "New Name");
-      });
-
-      const newGetUnit = result.current.getUnit;
-      expect(newGetUnit).not.toBe(initialGetUnit);
-    });
-  });
-
-  // ============ SECTION 11: Edge Cases ============
-
-  describe("Edge cases", () => {
-    it("should handle empty units array", async () => {
-      getAllUnits.mockResolvedValueOnce([]);
-
-      const { result } = renderHook(() => useUnits(), { wrapper });
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-        expect(result.current.units).toHaveLength(0);
-      });
-
-      expect(result.current.getUnit("TC001")).toBeUndefined();
-    });
-
-    it("should handle null/undefined values in updateUnit", async () => {
-      const { result } = renderHook(() => useUnits(), { wrapper });
-      
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
-
-      act(() => {
-        result.current.updateUnit("TC001", { 
-          status: null,
-          tempIn: undefined 
-        });
-      });
-
-      const updated = result.current.getUnit("TC001");
-      expect(updated.status).toBeNull();
-      expect(updated.tempIn).toBeUndefined();
-    });
-
-    it("should handle multiple simultaneous updates", async () => {
-      const { result } = renderHook(() => useUnits(), { wrapper });
-      
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
-
-      act(() => {
-        result.current.updateUnit("TC001", { status: "offline" });
-        result.current.updateUnit("TC002", { status: "online" });
-      });
-
-      const unit1 = result.current.getUnit("TC001");
-      const unit2 = result.current.getUnit("TC002");
-      
-      expect(unit1.status).toBe("offline");
-      expect(unit2.status).toBe("online");
-    });
-  });
-
-  // ============ SECTION 12: Integration-Style Tests ============
-
-  describe("Integration scenarios", () => {
-    it("should update unit name and then refresh to get latest data", async () => {
-      const { result } = renderHook(() => useUnits(), { wrapper });
-      
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
-
-      await act(async () => {
-        await result.current.updateUnitName("TC001", "Temporary Name");
-      });
-
-      expect(result.current.getUnit("TC001").name).toBe("Temporary Name");
-
-      const freshUnits = [
-        {
-          id: "TC001",
-          name: "Server Name",
-          client: "Client A",
-          location: "Site Alpha",
-          status: "online",
-          tempIn: 22.5,
-          tempOut: 18.2,
-          gpsCoordinates: "34.0522,-118.2437",
-        },
-        {
-          id: "TC002",
-          name: "ThermaCore Unit 002",
-          client: "Client A",
-          location: "Site Beta",
-          status: "offline",
-          tempIn: 0.0,
-          tempOut: 0.0,
-          gpsCoordinates: "36.1699,-115.1398",
-        },
-      ];
-      
-      getAllUnits.mockResolvedValueOnce(freshUnits);
-      
-      await act(async () => {
-        await result.current.refreshUnits();
-      });
-
-      expect(result.current.getUnit("TC001").name).toBe("Server Name");
-    });
-
-    it("should maintain other unit properties when updating one field", async () => {
-      const { result } = renderHook(() => useUnits(), { wrapper });
-      
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
-
-      const originalUnit = result.current.getUnit("TC001");
-      
-      await act(async () => {
-        await result.current.updateUnitName("TC001", "New Name Only");
-      });
-
-      const updatedUnit = result.current.getUnit("TC001");
-      
-      expect(updatedUnit.name).toBe("New Name Only");
-      expect(updatedUnit.id).toBe(originalUnit.id);
-      expect(updatedUnit.client).toBe(originalUnit.client);
-      expect(updatedUnit.location).toBe(originalUnit.location);
-      expect(updatedUnit.status).toBe(originalUnit.status);
-      expect(updatedUnit.tempIn).toBe(originalUnit.tempIn);
-      expect(updatedUnit.tempOut).toBe(originalUnit.tempOut);
-      expect(updatedUnit.gpsCoordinates).toBe(originalUnit.gpsCoordinates);
-    });
+  it("surfaces load errors without substituting unscoped data", async () => {
+    service.getAllUnits.mockRejectedValue(new Error("Telemetry unavailable"));
+    render(tree(auth("admin")));
+    await waitFor(() => expect(state.error).toBe("Telemetry unavailable"));
+    expect(state.units).toEqual([]);
   });
 });

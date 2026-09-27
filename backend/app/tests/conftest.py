@@ -101,7 +101,9 @@ def _init_database():
                 ),
             )
             db.session.execute(
-                text("CREATE INDEX IF NOT EXISTS idx_users_tenant_id ON users(tenant_id)"),
+                text(
+                    "CREATE INDEX IF NOT EXISTS idx_users_tenant_id ON users(tenant_id)",
+                ),
             )
             db.session.execute(
                 text(
@@ -110,7 +112,9 @@ def _init_database():
                 ),
             )
             db.session.execute(
-                text("CREATE INDEX IF NOT EXISTS idx_units_tenant_id ON units(tenant_id)"),
+                text(
+                    "CREATE INDEX IF NOT EXISTS idx_units_tenant_id ON units(tenant_id)",
+                ),
             )
 
             db.session.commit()
@@ -246,31 +250,46 @@ def client(app):
 def db_session(app):
     """Create database session for tests with proper transaction isolation.
 
-    This fixture uses nested transactions (SAVEPOINT) to ensure that all database
-    operations within a test are isolated and rolled back after the test completes.
-    The event listener restarts the savepoint after each nested transaction ends,
-    ensuring isolation is maintained across multiple commits within a single test.
+    This fixture uses a connection-level transaction with SAVEPOINT support
+    to ensure that all database operations within a test are isolated and
+    rolled back after the test completes.
 
-    Note: This relies on TestingConfig using SQLite with StaticPool so all sessions
-    share the same connection and SAVEPOINTs work across session boundaries.
+    Unlike the previous SAVEPOINT-only approach, this binds the session to
+    a connection with an explicit outer transaction, so any commit() inside
+    the test will only commit within the outer transaction, which is then
+    rolled back at the end.
     """
     with app.app_context():
-        # Start a nested transaction (SAVEPOINT)
-        db.session.begin_nested()
+        # Get a connection and start a transaction
+        connection = db.engine.connect()
+        transaction = connection.begin()
+
+        # Bind the session to this connection
+        db.session.configure(bind=connection)
+
         yield db.session
-        # Rollback the entire transaction to clean up
+
+        # Rollback the transaction and close connection
         try:
-            if db.session.is_active:
-                db.session.rollback()
+            transaction.rollback()
         except Exception:
-            # If rollback fails (e.g., savepoint doesn't exist), close the session
-            db.session.close()
+            pass
+        try:
+            connection.close()
+        except Exception:
+            pass
+
+        # Restore default bind
+        try:
+            db.session.configure(bind=db.engine)
+        except Exception:
+            pass
 
 
 @pytest.fixture
 def reset_service_manager():
     """Reset service_manager state before and after test."""
-    from app.utils.service_manager import service_manager
+    from app.utils.service_manager import ServiceType, service_manager
 
     # Save current state
     saved_services = {}
@@ -379,6 +398,7 @@ def _create_test_data():
     admin_role = Role(name=RoleEnum.ADMIN, description="Administrator")
     operator_role = Role(name=RoleEnum.OPERATOR, description="Operator")
     viewer_role = Role(name=RoleEnum.VIEWER, description="Viewer")
+    client_admin_role = Role(name=RoleEnum.CLIENT_ADMIN, description="Client Admin")
 
     # Assign permissions to roles
     admin_role.permissions = permissions  # All permissions - ThermaCore staff only
@@ -386,10 +406,14 @@ def _create_test_data():
         permissions[0:1] + permissions[3:4] + permissions[7:8]
     )  # read units + read users + remote control
     viewer_role.permissions = permissions[0:1] + permissions[3:4]  # read only
+    client_admin_role.permissions = (
+        permissions[0:3] + permissions[3:5] + permissions[6:8]
+    )  # read/write/delete units, read/write users, admin_panel, remote_control
 
     db.session.add(admin_role)
     db.session.add(operator_role)
     db.session.add(viewer_role)
+    db.session.add(client_admin_role)
     db.session.commit()
 
     # Create test users
@@ -513,6 +537,126 @@ def viewer_token(app, db_session):
             additional_claims={
                 "role": viewer_user.role.name.value,
                 "permissions": viewer_user.permissions or [],
+            },
+        )
+        return token
+
+
+# ============================================================
+# CLIENT ADMIN FIXTURES
+# ============================================================
+
+
+@pytest.fixture
+def client_admin_token(app, db_session):
+    """JWT for a client_admin user scoped to a specific client."""
+    from flask_jwt_extended import create_access_token
+
+    from app.models import Client, Role, User
+
+    with app.app_context():
+        # Role now exists from seed data - just look it up
+        client_admin_role = Role.query.filter_by(name="client_admin").first()
+        if not client_admin_role:
+            # Fallback - should not happen if seed runs
+            client_admin_role = Role(name="client_admin", description="Client Admin")
+            db_session.add(client_admin_role)
+            db_session.commit()
+
+        # Ensure a client exists
+        client_obj = Client.query.first()
+        if not client_obj:
+            client_obj = Client(name="TestClient")
+            db_session.add(client_obj)
+            db_session.commit()
+
+        # Remove existing test user if present
+        existing_user = User.query.filter_by(username="clientadmin_test").first()
+        if existing_user:
+            db_session.delete(existing_user)
+            db_session.commit()
+
+        # Create client_admin user
+        user = User(
+            username="clientadmin_test",
+            email="clientadmin_test@test.com",
+            role_id=client_admin_role.id,
+            client_id=client_obj.id,
+            is_active=True,
+            registration_status="approved",
+            permissions=[
+                "read_units",
+                "write_units",
+                "delete_units",
+                "read_users",
+                "write_users",
+                "admin_panel",
+                "remote_control",
+            ],
+        )
+        user.set_password("password123")
+        db_session.add(user)
+        db_session.commit()
+
+        token = create_access_token(
+            identity=str(user.id),
+            additional_claims={
+                "role": "client_admin",
+                "permissions": user.permissions or [],
+            },
+        )
+        return token, client_obj.id
+
+
+@pytest.fixture
+def client_admin_no_client_token(app, db_session):
+    """JWT for a client_admin user with NO client assigned."""
+    from flask_jwt_extended import create_access_token
+
+    from app.models import Role, User
+
+    with app.app_context():
+        # Role now exists from seed data - just look it up
+        client_admin_role = Role.query.filter_by(name="client_admin").first()
+        if not client_admin_role:
+            # Fallback - should not happen if seed runs
+            client_admin_role = Role(name="client_admin", description="Client Admin")
+            db_session.add(client_admin_role)
+            db_session.commit()
+
+        # Remove existing test user if present
+        existing_user = User.query.filter_by(username="orphan_admin").first()
+        if existing_user:
+            db_session.delete(existing_user)
+            db_session.commit()
+
+        # Create client_admin user with no client
+        user = User(
+            username="orphan_admin",
+            email="orphan_admin@test.com",
+            role_id=client_admin_role.id,
+            client_id=None,
+            is_active=True,
+            registration_status="approved",
+            permissions=[
+                "read_units",
+                "write_units",
+                "delete_units",
+                "read_users",
+                "write_users",
+                "admin_panel",
+                "remote_control",
+            ],
+        )
+        user.set_password("password123")
+        db_session.add(user)
+        db_session.commit()
+
+        token = create_access_token(
+            identity=str(user.id),
+            additional_claims={
+                "role": "client_admin",
+                "permissions": user.permissions or [],
             },
         )
         return token
@@ -738,3 +882,87 @@ def test_data(db_session):
     db_session.flush()
 
     return {"unit": unit, "sensor": sensor}
+
+
+@pytest.fixture
+def portfolio_data(app, db_session):
+    """Two distinct clients/tenants, with actual ownership for isolation tests."""
+    import uuid
+
+    from flask_jwt_extended import create_access_token
+
+    from app.models import Client, RoleEnum, Tenant
+
+    suffix = uuid.uuid4().hex[:8]
+    clients = [Client(name=f"Portfolio client {i}-{suffix}") for i in range(2)]
+    db_session.add_all(clients)
+    db_session.flush()
+    tenants = [
+        Tenant(
+            name=f"Portfolio site {i}-{suffix}",
+            slug=f"portfolio-{i}-{suffix}",
+            client_id=clients[i].id,
+        )
+        for i in range(2)
+    ]
+    db_session.add_all(tenants)
+    db_session.flush()
+    units = [
+        Unit(
+            id=f"PORT-{i}-{suffix}",
+            name=f"Portfolio unit {i}",
+            serial_number=f"PS-{i}-{suffix}",
+            tenant_id=tenants[i].id,
+            status="online",
+            current_power=10,
+            water_generation=True,
+        )
+        for i in range(2)
+    ]
+    db_session.add_all(units)
+    users, tokens = {}, {}
+    for role_name in ("admin", "client_admin", "operator", "viewer"):
+        role = Role.query.filter_by(name=RoleEnum(role_name)).first()
+        if not role:
+            role = Role(name=RoleEnum(role_name))
+            db_session.add(role)
+            db_session.flush()
+        role.permissions = (
+            Permission.query.all()
+            if role_name in ("admin", "client_admin")
+            else role.permissions
+        )
+        user = User(
+            username=f"{role_name}-{suffix}",
+            email=f"{role_name}-{suffix}@example.test",
+            role_id=role.id,
+            tenant_id=tenants[0].id,
+            client_id=clients[0].id,
+            is_active=True,
+        )
+        user.set_password("portfolio-test-password")
+        db_session.add(user)
+        db_session.flush()
+        users[role_name] = user
+        tokens[role_name] = create_access_token(identity=str(user.id))
+    db_session.commit()
+    return {
+        "units": units,
+        "tenants": tenants,
+        "clients": clients,
+        "users": users,
+        "tokens": tokens,
+        "headers": {
+            role: {"Authorization": f"Bearer {token}"} for role, token in tokens.items()
+        },
+    }
+
+
+@pytest.fixture(autouse=True)
+def isolate_rate_limiter_state(app, monkeypatch):
+    """Rate-limit tests must opt in and cannot exhaust another test's IP bucket."""
+    import importlib
+
+    limiter_module = importlib.import_module("app.middleware.rate_limit")
+    monkeypatch.setitem(app.config, "RATE_LIMIT_ENABLED", False)
+    monkeypatch.setattr(limiter_module, "_rate_limiter", None)

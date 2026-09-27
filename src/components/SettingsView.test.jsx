@@ -1,116 +1,84 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
-import SettingsView from "./SettingsView";
-
-// Mock the ThemeContext
-const mockSetTheme = vi.fn();
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+const mocks = vi.hoisted(() => ({
+  save: vi.fn(),
+  update: vi.fn(),
+  theme: vi.fn(),
+  settings: {
+    soundEnabled: true,
+    volume: 0.35,
+    refreshInterval: 30000,
+    temperatureUnit: "celsius",
+  },
+}));
+vi.mock("../utils/apiFetch", () => ({ apiPutJson: mocks.save }));
 vi.mock("../context/ThemeContext", () => ({
-  useTheme: () => ({
-    theme: "dark",
-    setTheme: mockSetTheme,
+  useTheme: () => ({ theme: "dark", setTheme: mocks.theme }),
+}));
+vi.mock("../context/SettingsContext", () => ({
+  useSettings: () => ({
+    settings: mocks.settings,
+    updateSettings: mocks.update,
   }),
 }));
-
-// Mock child components to isolate testing
-vi.mock("./PageHeader", () => ({
-  default: ({ title }) => <div data-testid="page-header">{title}</div>,
-}));
-
-vi.mock("./settings/AlertSettings", () => ({
-  default: () => <div data-testid="alert-settings">Alert Settings</div>,
-}));
-
-vi.mock("./settings/AudioSettings", () => ({
-  default: () => <div data-testid="audio-settings">Audio Settings</div>,
-}));
-
-vi.mock("./settings/DataRefreshSettings", () => ({
-  default: () => (
-    <div data-testid="data-refresh-settings">Data Refresh Settings</div>
-  ),
-}));
-
-vi.mock("./settings/DisplaySettings", () => ({
-  default: () => <div data-testid="display-settings">Display Settings</div>,
-}));
-
-vi.mock("./settings/NotificationSettings", () => ({
-  default: () => (
-    <div data-testid="notification-settings">Notification Settings</div>
-  ),
-}));
-
+vi.mock("./PageHeader", () => ({ default: ({ title }) => <h1>{title}</h1> }));
 vi.mock("./settings/ProfileSettings", () => ({
-  default: () => <div data-testid="profile-settings">Profile Settings</div>,
+  default: () => <div>Account profile</div>,
 }));
-
-vi.mock("./ui/button", () => ({
-  Button: ({ children, onClick, variant, ...props }) => (
-    <button onClick={onClick} data-variant={variant} {...props}>
-      {children}
-    </button>
-  ),
+vi.mock("./settings/ConnectedAccounts", () => ({
+  default: () => <div>Connected accounts</div>,
 }));
-
-describe("SettingsView", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    // Mock window.alert
-    global.alert = vi.fn();
-  });
-
-  it("should render the settings view with all sections", () => {
+vi.mock("./settings/AudioSettings", () => ({
+  default: () => <div>Audio settings</div>,
+}));
+vi.mock("./settings/PasswordSettings", () => ({
+  default: () => <div>Password settings</div>,
+}));
+import SettingsView from "./SettingsView";
+describe("persisted account settings", () => {
+  beforeEach(() => vi.clearAllMocks());
+  it("persists supported preferences before reporting success", async () => {
+    mocks.save.mockResolvedValue({
+      preferences: { ...mocks.settings, theme: "light" },
+    });
     render(<SettingsView />);
-
-    expect(screen.getByTestId("page-header")).toBeInTheDocument();
-    expect(screen.getByTestId("profile-settings")).toBeInTheDocument();
-    expect(screen.getByTestId("notification-settings")).toBeInTheDocument();
-    expect(screen.getByTestId("display-settings")).toBeInTheDocument();
-    expect(screen.getByTestId("data-refresh-settings")).toBeInTheDocument();
-    expect(screen.getByTestId("alert-settings")).toBeInTheDocument();
-    expect(screen.getByTestId("audio-settings")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Theme"), {
+      target: { value: "light" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+    await screen.findByText("Account preferences saved.");
+    expect(mocks.save).toHaveBeenCalledWith("/api/v1/account/settings", {
+      preferences: { ...mocks.settings, theme: "light" },
+    });
+    expect(mocks.theme).toHaveBeenCalledWith("light");
+    expect(screen.queryByText("Auto Backup")).not.toBeInTheDocument();
   });
-
-  it("should render save and reset buttons", () => {
+  it("does not claim a successful save when persistence fails", async () => {
+    mocks.save.mockRejectedValue(new Error("Backend unavailable"));
     render(<SettingsView />);
-
-    expect(screen.getByText("Save Changes")).toBeInTheDocument();
-    expect(screen.getByText(/Reset to Default/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Backend unavailable",
+    );
+    expect(
+      screen.queryByText("Account preferences saved."),
+    ).not.toBeInTheDocument();
+    expect(mocks.theme).not.toHaveBeenCalled();
   });
-
-  it("should save settings and show alert", () => {
+  it("resets server preferences and changes the actual monitoring preference", async () => {
+    mocks.save.mockResolvedValue({
+      preferences: { ...mocks.settings, theme: "auto" },
+    });
     render(<SettingsView />);
-
-    const saveButton = screen.getByText("Save Changes");
-    fireEvent.click(saveButton);
-
-    expect(global.alert).toHaveBeenCalledWith("Settings saved successfully!");
-  });
-
-  it("should reset settings to defaults", () => {
-    render(<SettingsView />);
-
-    const resetButton = screen.getByText(/Reset to Default/i);
-    fireEvent.click(resetButton);
-
-    // Settings should be reset (verified by no errors)
-    expect(resetButton).toBeInTheDocument();
-  });
-
-  it("should apply custom className", () => {
-    const { container } = render(<SettingsView className="custom-class" />);
-    const mainDiv = container.firstChild;
-    expect(mainDiv).toHaveClass("custom-class");
-  });
-
-  it("should initialize with default settings", () => {
-    const { container } = render(<SettingsView />);
-    // Just verify it renders without errors
-    expect(container).toBeInTheDocument();
-  });
-
-  it("should render page header with Settings title", () => {
-    render(<SettingsView />);
-    expect(screen.getByTestId("page-header")).toHaveTextContent("Settings");
+    fireEvent.change(screen.getByLabelText("Portfolio refresh interval"), {
+      target: { value: "60000" },
+    });
+    expect(mocks.update).toHaveBeenCalledWith({ refreshInterval: 60000 });
+    fireEvent.click(screen.getByRole("button", { name: "Reset to Default" }));
+    await waitFor(() =>
+      expect(mocks.save).toHaveBeenCalledWith("/api/v1/account/settings", {
+        preferences: { ...mocks.settings, theme: "auto" },
+      }),
+    );
   });
 });

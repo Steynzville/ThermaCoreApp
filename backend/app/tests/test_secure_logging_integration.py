@@ -22,11 +22,13 @@ class TestSecureLoggingIntegration:
             error = Exception("Database error: password=secret123")
 
             with patch("app.utils.error_handler.logger") as mock_logger:
-                response, status_code = SecurityAwareErrorHandler.handle_service_error(
-                    error,
-                    "database_error",
-                    "Test operation",
-                    500,
+                _response, _status_code = (
+                    SecurityAwareErrorHandler.handle_service_error(
+                        error,
+                        "database_error",
+                        "Test operation",
+                        500,
+                    )
                 )
 
                 # Verify logger was called
@@ -45,11 +47,13 @@ class TestSecureLoggingIntegration:
             error = ValueError("Invalid input value")
 
             with patch("app.utils.error_handler.logger") as mock_logger:
-                response, status_code = SecurityAwareErrorHandler.handle_service_error(
-                    error,
-                    "validation_error",
-                    "Input validation",
-                    400,
+                _response, _status_code = (
+                    SecurityAwareErrorHandler.handle_service_error(
+                        error,
+                        "validation_error",
+                        "Input validation",
+                        400,
+                    )
                 )
 
                 # Verify logger was called
@@ -72,11 +76,13 @@ class TestSecureLoggingIntegration:
             error = Exception("API call failed with token=abc123xyz")
 
             with patch("app.utils.error_handler.logger") as mock_logger:
-                response, status_code = SecurityAwareErrorHandler.handle_service_error(
-                    error,
-                    "internal_error",
-                    "API call",
-                    500,
+                _response, _status_code = (
+                    SecurityAwareErrorHandler.handle_service_error(
+                        error,
+                        "internal_error",
+                        "API call",
+                        500,
+                    )
                 )
 
                 # Should be logged as error (internal_error)
@@ -91,9 +97,11 @@ class TestSecureLoggingIntegration:
     def test_domain_exception_includes_error_class(self, app):
         """Test that domain exception handler includes error class in logs."""
         with app.app_context():
-            from app.exceptions import ThermaCoreException
+            from app.exceptions import (
+                ThermaCoreError,  # Changed from ThermaCoreException
+            )
 
-            exception = ThermaCoreException(
+            exception = ThermaCoreError(  # Changed from ThermaCoreException
                 error_type="database_error",
                 message="Database connection failed with password=secret",
                 context="user_creation",
@@ -101,7 +109,7 @@ class TestSecureLoggingIntegration:
             )
 
             with patch("app.utils.error_handler.logger") as mock_logger:
-                response, status_code = (
+                _response, _status_code = (
                     SecurityAwareErrorHandler.handle_thermacore_exception(exception)
                 )
 
@@ -113,11 +121,15 @@ class TestSecureLoggingIntegration:
                 log_message = call_args[0][0] if call_args[0] else ""
 
                 # Should contain error class name
-                assert "ThermaCoreException" in log_message
+                assert (
+                    "ThermaCoreError" in log_message
+                )  # Changed from ThermaCoreException
 
                 # Check extra data includes error_class
                 if "extra" in call_args[1]:
-                    assert call_args[1]["extra"]["error_class"] == "ThermaCoreException"
+                    assert (
+                        call_args[1]["extra"]["error_class"] == "ThermaCoreError"
+                    )  # Changed from ThermaCoreException
 
     def test_error_handler_provides_debug_context(self, app):
         """Test that error handler provides sufficient debug context."""
@@ -125,11 +137,13 @@ class TestSecureLoggingIntegration:
             error = RuntimeError("Unexpected runtime error")
 
             with patch("app.utils.error_handler.logger") as mock_logger:
-                response, status_code = SecurityAwareErrorHandler.handle_service_error(
-                    error,
-                    "internal_error",
-                    "background_task",
-                    500,
+                _response, _status_code = (
+                    SecurityAwareErrorHandler.handle_service_error(
+                        error,
+                        "internal_error",
+                        "background_task",
+                        500,
+                    )
                 )
 
                 assert mock_logger.error.called
@@ -154,7 +168,7 @@ class TestSecureLoggingIntegration:
             )
 
             with patch("app.utils.error_handler.logger"):
-                response, status_code = SecurityAwareErrorHandler.handle_service_error(
+                response, _status_code = SecurityAwareErrorHandler.handle_service_error(
                     error,
                     "authentication_error",
                     "login",
@@ -177,11 +191,13 @@ class TestSecureLoggingIntegration:
             )
 
             with patch("app.utils.error_handler.logger") as mock_logger:
-                response, status_code = SecurityAwareErrorHandler.handle_service_error(
-                    error,
-                    "authentication_error",
-                    "user_login",
-                    401,
+                _response, _status_code = (
+                    SecurityAwareErrorHandler.handle_service_error(
+                        error,
+                        "authentication_error",
+                        "user_login",
+                        401,
+                    )
                 )
 
                 assert mock_logger.warning.called

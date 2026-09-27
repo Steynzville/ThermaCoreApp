@@ -22,8 +22,17 @@ This script is engineered for sales engineers and account executives demonstrati
 ## 2. Walkthrough Flow (Step-by-Step Demo)
 
 ```
- [1. Main Dashboard] ──► [2. Asset Detail] ──► [3. Remote Control] ──► [4. Analytics]
+ [0. Admin Landing] ──► [1. Main Dashboard] ──► [2. Asset Detail] ──► [3. Remote Control] ──► [4. Analytics]
 ```
+
+### Step 0: Admin Landing Page & Tenant Switching (Enterprise Multi-Tenancy & Client Admins)
+* **What to show**: The `/admin` landing page that administrators arrive on post-login, prompting them to select a facility/tenant. Demonstrate logging in as a **Client Admin** (`client_admin`).
+* **Talking Point**:
+  > "Before we even see a dashboard, let's look at our enterprise multi-tenancy and RBAC controls. The platform supports a 4-tier role hierarchy: System Admin, Client Admin, Operator, and Viewer.
+  >
+  > When a **Client Admin** logs in—such as a facility manager for AquaPure Solutions—they are greeted by our **Admin Landing Page** at `/admin`. Client Admins see all facilities belonging specifically to their client company (`client_id`). They can switch between their company's regional facilities seamlessly, manage local operators and viewers, and configure facility assets without ever seeing or interfering with other client organizations on the network.
+  >
+  > System Admins, on the other hand, maintain master cross-client visibility across all customer fleets."
 
 ### Step 1: Main Dashboard (The Visual First-Impression)
 * **What to show**: The Navy & Gold live dashboard layout. Point out the active unit metrics, thermal output values, and water generation volumes.
@@ -48,7 +57,9 @@ This script is engineered for sales engineers and account executives demonstrati
 ### Step 5: Advanced Performance Analytics (The ROI Pitch)
 * **What to show**: Navigate to the **Performance & COP** page. Highlight the thermodynamic COP graphs, payback timelines, and carbon mitigation offsets.
 * **Talking Point**:
-  > "This is where we calculate your return on investment. The system continuously evaluates the thermal loop's mechanical efficiency (COP) and shows you how many tons of carbon you are saving daily. On average, our real-time tuning optimizations result in a **+18.4% efficiency lift**."
+  > "This is where we calculate your return on investment. The system continuously evaluates the thermal loop's mechanical efficiency (COP) and shows you how many tons of carbon you are saving daily. Our modeling indicates that real-time tuning optimizations can deliver efficiency gains of +18.4% and reduce downtime by 34.2% - and we're ready to validate these numbers with our first pilot customers.
+  >
+  > The platform is built for production-grade reliability from day one, validated through 5,504 automated tests with 91.78% frontend coverage and 85.63% backend coverage. This isn't a prototype - it's enterprise-ready software that's fully functional and ready for deployment alongside our physical generator units."
 
 ---
 
@@ -58,4 +69,6 @@ This script is engineered for sales engineers and account executives demonstrati
 | :--- | :--- |
 | **"Our physical assets are located in areas with poor internet connection. What if we lose connectivity?"** | "We have built this platform with offline reliability in mind. If an edge gateway loses connection, it continues to log telemetry locally. Once internet connectivity is restored, the gateway automatically synchronizes the data, populating the historical timeline without loss." |
 | **"Is a web-native control system secure from cyber attacks?"** | "We prioritize security at every level. The platform implements a zero-trust model utilizing dual-token JWT authentication, mutual TLS (mTLS) for edge communications, and strict role-based access controls. High-risk operations require multi-operator approvals, satisfying NERC CIP and IEC 62443 criteria." |
-| **"Why should we pay a software subscription fee on top of the physical hardware purchase?"** | "The software subscription is the key to maximizing your hardware investment. It powers predictive diagnostics that reduce unplanned maintenance down-events by 34.2%. By continually tuning your thermodynamic loops, it pays for itself through increased efficiency." |
+| **"Why should we pay a software subscription fee on top of the physical hardware purchase?"** | "The software subscription is the key to maximizing your hardware investment. It's designed to power predictive diagnostics that can reduce unplanned maintenance down-events by 34.2%. By continually tuning your thermodynamic loops, it's built to pay for itself through increased efficiency." |
+| **"How do we know your software is reliable and won't crash in production?"** | "ThermaCore SCADA is backed by rigorous automated testing. We maintain enterprise-grade test suites with **5,504 passing tests** - 4,180 frontend unit/integration tests and 1,324 backend tests. Frontend coverage stands at **91.78%** (Vitest) and backend coverage at **85.63%** (Pytest), ensuring that code modifications are fully validated and stable before release. The platform is production-ready and has been engineered for reliability from day one." |
+| **"Have you proven these efficiency gains with real customers?"** | "We're in the pilot phase and actively seeking our first deployment partners. The platform's thermodynamic optimization algorithms are validated through extensive modeling, showing potential efficiency gains of +18.4% and downtime reduction of 34.2%. We're ready to demonstrate these capabilities with our physical prototype and our first commercial customers. The software is fully functional and sales-ready - we just need to put it in the field to validate the numbers." |

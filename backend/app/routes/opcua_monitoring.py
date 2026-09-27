@@ -45,8 +45,8 @@ def get_opcua_security_status():
         logger.info("OPC-UA security status requested")
         return jsonify(status), 200
 
-    except Exception as e:
-        logger.exception(f"Error retrieving OPC-UA security status: {e}")
+    except Exception:
+        logger.exception("Error retrieving OPC-UA security status")
         return (
             jsonify(
                 {
@@ -100,8 +100,8 @@ def get_opcua_security_events():
             200,
         )
 
-    except Exception as e:
-        logger.exception(f"Error retrieving OPC-UA security events: {e}")
+    except Exception:
+        logger.exception("Error retrieving OPC-UA security events")
         return (
             jsonify(
                 {
@@ -145,7 +145,7 @@ def get_opcua_connection_status():
         return (
             jsonify(
                 {
-                    "connected": status.get("connected", False),
+                    "connected": status.get("connected"),
                     "available": status.get("available", False),
                     "server_url": status.get("server_url"),
                     "subscribed_nodes": status.get("subscribed_nodes", 0),
@@ -155,8 +155,8 @@ def get_opcua_connection_status():
             200,
         )
 
-    except Exception as e:
-        logger.exception(f"Error retrieving OPC-UA connection status: {e}")
+    except Exception:
+        logger.exception("Error retrieving OPC-UA connection status")
         return (
             jsonify(
                 {
@@ -222,8 +222,8 @@ def get_opcua_nodes():
             200,
         )
 
-    except Exception as e:
-        logger.exception(f"Error retrieving OPC-UA nodes: {e}")
+    except Exception:
+        logger.exception("Error retrieving OPC-UA nodes")
         return (
             jsonify(
                 {

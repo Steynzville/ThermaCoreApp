@@ -12,6 +12,9 @@ from sqlalchemy.orm import Query
 
 from app.models import RoleEnum, SensorReading
 
+# Roles a Client Admin is allowed to assign (shared across auth.py and users.py)
+CLIENT_ADMIN_ASSIGNABLE_ROLES = {"client_admin", "operator", "viewer"}
+
 
 def get_current_user_id() -> tuple[int | None, bool]:
     """Safely convert JWT identity to integer user ID with error handling.
@@ -30,6 +33,21 @@ def get_current_user_id() -> tuple[int | None, bool]:
         return int(identity), True
     except (ValueError, TypeError, AttributeError):
         return None, False
+
+
+def get_current_user():
+    """Fetch the full current User object based on the JWT identity.
+
+    Returns:
+        User | None: The current user, or None if the token is invalid
+        or the user no longer exists.
+    """
+    from app.models import User  # noqa: PLC0415 - avoid circular import
+
+    user_id, success = get_current_user_id()
+    if not success or user_id is None:
+        return None
+    return User.query.get(user_id)
 
 
 def get_role_permissions(role: str) -> list[str]:
@@ -75,6 +93,15 @@ def get_role_permissions(role: str) -> list[str]:
             "read_users",
             "write_users",
             "delete_users",
+            "admin_panel",
+            "remote_control",
+        ],
+        RoleEnum.CLIENT_ADMIN: [
+            "read_units",
+            "write_units",
+            "delete_units",
+            "read_users",
+            "write_users",
             "admin_panel",
             "remote_control",
         ],

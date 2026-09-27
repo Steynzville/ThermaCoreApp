@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from typing import Any, ClassVar
 
 from flask import g, jsonify
+from werkzeug.exceptions import BadRequest
 
 from app.utils.input_validator import InputValidator
 from app.utils.secure_logger import SecureLogger
@@ -41,9 +42,9 @@ class SecurityAwareErrorHandler:
 
         """
         # Import here to avoid circular imports
-        from app.exceptions import ThermaCoreException
+        from app.exceptions import ThermaCoreError
 
-        if not isinstance(exception, ThermaCoreException):
+        if not isinstance(exception, ThermaCoreError):
             # Fallback for non-domain exceptions
             return SecurityAwareErrorHandler.handle_service_error(
                 exception,
@@ -503,9 +504,9 @@ class SecurityAwareErrorHandler:
         def handle_exception(e):
             """Global exception handler for all uncaught exceptions."""
             # Import domain exception to check type
-            from app.exceptions import ThermaCoreException
+            from app.exceptions import ThermaCoreError
 
-            if isinstance(e, ThermaCoreException):
+            if isinstance(e, ThermaCoreError):
                 # Handle domain exceptions with proper correlation
                 return SecurityAwareErrorHandler.handle_thermacore_exception(e)
             # Handle generic exceptions
@@ -539,6 +540,33 @@ class SecurityAwareErrorHandler:
                 "service_unavailable",
                 "Service unavailable",
                 503,
+            )
+
+        @app.errorhandler(BadRequest)
+        def handle_bad_request(e):
+            """Handle BadRequest exceptions (including malformed JSON from webargs)."""
+            request_id = getattr(g, "request_id", str(uuid.uuid4()))
+            logger.warning(
+                f"BadRequest [{request_id}]: {e!s}",
+                extra={
+                    "request_id": request_id,
+                    "error_type": "bad_request",
+                },
+            )
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": {
+                            "code": "INVALID_JSON",
+                            "message": "Request body must contain valid JSON",
+                            "details": {"error": str(e), "correlation_id": request_id},
+                        },
+                        "request_id": request_id,
+                        "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
+                    },
+                ),
+                400,
             )
 
         # Helper method for JWT error responses

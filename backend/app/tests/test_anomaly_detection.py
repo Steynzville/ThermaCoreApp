@@ -1,16 +1,15 @@
 """Tests for Machine Learning Anomaly Detection Service."""
 
-from datetime import datetime, timezone, timedelta
-import pytest
-from app.models import Unit, Sensor, SensorReading, db
+from datetime import datetime, timedelta, timezone
+
+from app.models import Sensor, SensorReading, Unit, db
 from app.services.anomaly_detection import (
-    mean,
-    std_dev,
-    percentile,
-    StatisticalAnomalyDetector,
-    MovingAverageAnomalyDetector,
     AnomalyDetectionService,
-    AnomalyResult,
+    MovingAverageAnomalyDetector,
+    StatisticalAnomalyDetector,
+    mean,
+    percentile,
+    std_dev,
 )
 
 
@@ -51,7 +50,7 @@ def test_statistical_anomaly_detector_z_score():
     assert is_anom is False
 
     # Anomaly value
-    is_anom, score, stats = detector.detect_z_score_anomalies(values, 15.0)
+    is_anom, score, _stats = detector.detect_z_score_anomalies(values, 15.0)
     assert is_anom is True
     assert score > 2.0
 
@@ -80,7 +79,7 @@ def test_statistical_anomaly_detector_iqr():
     assert score > 0.0
 
     # Zero IQR
-    is_anom, score, stats = detector.detect_iqr_anomalies([1.0, 1.0, 1.0, 1.0], 5.0)
+    is_anom, score, _stats = detector.detect_iqr_anomalies([1.0, 1.0, 1.0, 1.0], 5.0)
     assert is_anom is True
 
 
@@ -102,7 +101,7 @@ def test_moving_average_anomaly_detector():
     assert is_anom is False
 
     # Anomaly
-    is_anom, score, stats = detector.detect_anomalies(values, 15.0)
+    is_anom, _score, _stats = detector.detect_anomalies(values, 15.0)
     assert is_anom is True
 
 
@@ -110,7 +109,7 @@ def test_anomaly_detection_service_init(app):
     """Test initialization of anomaly detection service."""
     service = AnomalyDetectionService(app)
     assert service._app == app
-    
+
     status = service.get_status()
     assert status["status"] == "active"
     assert "z_score" in status["detection_methods"]
@@ -119,7 +118,7 @@ def test_anomaly_detection_service_init(app):
 def test_analyze_sensor_reading_insufficient_data(app, db_session):
     """Test analyzing reading with insufficient data (less than 10 historical values)."""
     service = AnomalyDetectionService(app)
-    
+
     # Create test sensor
     unit = Unit.query.get("TEST001")
     sensor = Sensor(
@@ -140,7 +139,7 @@ def test_analyze_sensor_reading_insufficient_data(app, db_session):
 def test_analyze_sensor_reading_ensemble(app, db_session):
     """Test analyzing reading using ensemble of methods."""
     service = AnomalyDetectionService(app)
-    
+
     # Create test sensor
     unit = Unit.query.get("TEST001")
     sensor = Sensor(
@@ -153,7 +152,7 @@ def test_analyze_sensor_reading_ensemble(app, db_session):
     db.session.commit()
 
     # Seed 12 historical normal readings
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     for i in range(12):
         reading = SensorReading(
             sensor_id=sensor.id,
@@ -182,7 +181,7 @@ def test_analyze_sensor_reading_ensemble(app, db_session):
 def test_analyze_sensor_reading_exceptions(app):
     """Test handling of exceptions gracefully in analyze_sensor_reading."""
     service = AnomalyDetectionService(app)
-    
+
     # Non-existent sensor triggers ValueError
     result = service.analyze_sensor_reading("NONEXIST", "TEST001", 100.0)
     assert result.is_anomaly is False
@@ -195,10 +194,13 @@ def test_analyze_unit_anomalies(app, db_session):
     unit_id = "TEST001"
 
     # Create multiple sensors for unit
-    sensor_temp = Sensor.query.filter_by(unit_id=unit_id, sensor_type="temperature").first()
-    
+    sensor_temp = Sensor.query.filter_by(
+        unit_id=unit_id,
+        sensor_type="temperature",
+    ).first()
+
     # Seed historical readings for sensor_temp to have sufficient data
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     for i in range(15):
         reading = SensorReading(
             sensor_id=sensor_temp.id,

@@ -15,7 +15,7 @@ import {
   TrendingUp,
   Zap,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -31,8 +31,20 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { useTenant } from "../../context/TenantContext";
-import analyticsService from "../../services/analyticsService";
+import { useScada } from "../../context/ScadaContext";
+import { useUnits } from "../../context/UnitContext";
+import { useAuth } from "../../context/AuthContext";
+import { useAnalytics } from "../../context/AnalyticsContext";
+import { getPortfolioHistory } from "../../services/unitService";
+import { generatePortfolioReport } from "../../services/portfolioReportService";
+import { apiGetJson } from "../../utils/apiFetch";
+import { isDemoMode } from "../../config/runtime";
+import {
+  scadaAnalytics,
+  thresholdProjections,
+  scadaPercent,
+  scadaDate,
+} from "../../utils/scadaAnalytics";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
@@ -58,32 +70,76 @@ const PerformanceAnalyticsDashboard = ({
   embedded = false,
   defaultTab = "performance",
 }) => {
-  const { currentTenant } = useTenant();
+  const { unit, data: machineHistory } = useScada();
+  const portfolio = useUnits();
+  const { user } = useAuth();
+  const { assumptions } = useAnalytics();
   const [loading, setLoading] = useState(true);
   const [selectedTimeframe, setSelectedTimeframe] = useState("7d");
-  const [performanceMetrics, setPerformanceMetrics] = useState(null);
-  const [equipmentHealth, setEquipmentHealth] = useState(null);
-  const [energyData, setEnergyData] = useState(null);
   const [activeTab, setActiveTab] = useState(defaultTab);
-
-  const loadAnalyticsData = useCallback(async () => {
-    setLoading(true);
-
-    // Load mock data for development
-    setPerformanceMetrics(analyticsService.generateMockPerformanceMetrics());
-    setEquipmentHealth(analyticsService.generateMockEquipmentHealth());
-    setEnergyData(
-      analyticsService.generateMockEnergyConsumption(
-        selectedTimeframe === "30d" ? 30 : 7,
-      ),
-    );
-
-    setLoading(false);
-  }, [selectedTimeframe]);
-
+  const [dataset, setDataset] = useState({
+    id: null,
+    records: [],
+    schedules: [],
+  });
+  const [error, setError] = useState(null);
+  const [exporting, setExporting] = useState(false);
+  const to = new Date().toISOString().slice(0, 10);
+  const from = new Date(
+    Date.now() - (selectedTimeframe === "30d" ? 29 : 6) * 86400000,
+  )
+    .toISOString()
+    .slice(0, 10);
   useEffect(() => {
-    loadAnalyticsData();
-  }, [loadAnalyticsData]);
+    let alive = true;
+    setLoading(true);
+    setError(null);
+    if (!unit) {
+      setLoading(false);
+      return;
+    }
+    Promise.all([
+      getPortfolioHistory([unit], { from, to }),
+      isDemoMode
+        ? Promise.resolve().then(() =>
+            JSON.parse(
+              localStorage.getItem(
+                `thermacore:demo:maintenance:${user?.id}:${unit.tenantId}:${unit.id}`,
+              ) || "[]",
+            ),
+          )
+        : apiGetJson(
+            `/api/v1/units/${encodeURIComponent(unit.id)}/maintenance`,
+          ).then((result) => result.data || []),
+    ])
+      .then(([records, schedules]) => {
+        if (alive) setDataset({ id: unit.id, records, schedules });
+      })
+      .catch((failure) => {
+        if (alive) {
+          setError(failure.message);
+          setDataset({ id: unit.id, records: [], schedules: [] });
+        }
+      })
+      .finally(() => {
+        if (alive) setLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [unit?.id, portfolio.scopeKey, from, to, user?.id]);
+  const { performanceMetrics, equipmentHealth, energyData } = useMemo(
+    () =>
+      scadaAnalytics(
+        unit,
+        dataset.id === unit?.id ? dataset.records : [],
+        dataset.id === unit?.id ? dataset.schedules : [],
+        from,
+        to,
+      ),
+    [unit, dataset, from, to],
+  );
+  const projections = thresholdProjections(unit, machineHistory);
 
   // Sync active tab only when the defaultTab prop itself changes externally —
   // not whenever it merely differs from the user's current tab selection.
@@ -97,33 +153,45 @@ const PerformanceAnalyticsDashboard = ({
     }
   }, [defaultTab]);
 
-  const handleExportReport = async (reportType, format) => {
-    const result = await analyticsService.generateReport({
-      tenantId: currentTenant?.id,
-      reportType,
-      format,
-      startTime: new Date(Date.now() - 7 * 86400000).toISOString(),
-      endTime: new Date().toISOString(),
-    });
-
-    if (result.success && result.type === "blob") {
-      // Download the blob
-      const url = window.URL.createObjectURL(result.data);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${reportType}-report-${new Date().toISOString().split("T")[0]}.${format}`;
-      a.click();
-      window.URL.revokeObjectURL(url);
+  const handleExportReport = async () => {
+    if (!unit) return;
+    setExporting(true);
+    setError(null);
+    try {
+      await generatePortfolioReport(
+        portfolio,
+        assumptions,
+        {
+          scope: "single",
+          selectedUnits: [unit.id],
+          dateRange: { startDate: from, endDate: to },
+          reportSections: {
+            vitalStatistics: true,
+            energyProduction: true,
+            waterProduction: true,
+            maintenance: true,
+            alertsAlarms: true,
+          },
+          outputFormat: "xlsx",
+        },
+        user?.id,
+      );
+    } catch (failure) {
+      setError(failure.message);
+    } finally {
+      setExporting(false);
     }
   };
 
   const getHealthColor = (score) => {
+    if (!Number.isFinite(score)) return "text-muted-foreground";
     if (score >= 85) return "text-green-600 dark:text-green-400";
     if (score >= 70) return "text-yellow-600 dark:text-yellow-400";
     return "text-red-600 dark:text-red-400";
   };
 
   const getHealthStatus = (score) => {
+    if (!Number.isFinite(score)) return unit?.healthStatus || "Unknown";
     if (score >= 85) return "Healthy";
     if (score >= 70) return "Warning";
     return "Critical";
@@ -170,7 +238,8 @@ const PerformanceAnalyticsDashboard = ({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => handleExportReport("performance", "csv")}
+                onClick={handleExportReport}
+                disabled={exporting || !unit}
               >
                 <Download className="h-4 w-4 mr-2" />
                 Export
@@ -179,6 +248,30 @@ const PerformanceAnalyticsDashboard = ({
           </div>
         )}
 
+        {embedded && (
+          <div className="flex items-center gap-3">
+            <select
+              aria-label="SCADA analysis period"
+              className="border rounded p-2 bg-background"
+              value={selectedTimeframe}
+              onChange={(event) => setSelectedTimeframe(event.target.value)}
+            >
+              <option value="7d">Last 7 Days</option>
+              <option value="30d">Last 30 Days</option>
+            </select>
+            <Button onClick={handleExportReport} disabled={exporting || !unit}>
+              Export Excel
+            </Button>
+          </div>
+        )}
+        {error && <p role="alert">{error}</p>}
+        <p className="text-sm text-muted-foreground">
+          Production availability uses measured operating hours / observed
+          hours. Coverage uses observed hours / selected calendar hours. Energy
+          totals cover measured intervals only. Efficiency needs an input-energy
+          meter; quality and health scores need validated source data. No
+          lifetime model or savings baseline is configured.
+        </p>
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           {!embedded && (
@@ -202,7 +295,7 @@ const PerformanceAnalyticsDashboard = ({
                         Efficiency
                       </p>
                       <p className="text-2xl font-bold text-foreground dark:text-white">
-                        {performanceMetrics?.overall.efficiency}%
+                        {scadaPercent(performanceMetrics?.overall.efficiency)}
                       </p>
                     </div>
                     <TrendingUp className="h-8 w-8 text-green-500" />
@@ -215,10 +308,10 @@ const PerformanceAnalyticsDashboard = ({
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-gray-600 dark:text-gray-300">
-                        Uptime
+                        Production Availability
                       </p>
                       <p className="text-2xl font-bold text-foreground dark:text-white">
-                        {performanceMetrics?.overall.uptime}%
+                        {scadaPercent(performanceMetrics?.overall.uptime)}
                       </p>
                     </div>
                     <Activity className="h-8 w-8 text-blue-500" />
@@ -231,10 +324,10 @@ const PerformanceAnalyticsDashboard = ({
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-gray-600 dark:text-gray-300">
-                        Availability
+                        Observed Coverage
                       </p>
                       <p className="text-2xl font-bold text-foreground dark:text-white">
-                        {performanceMetrics?.overall.availability}%
+                        {scadaPercent(performanceMetrics?.overall.availability)}
                       </p>
                     </div>
                     <Shield className="h-8 w-8 text-green-500" />
@@ -250,7 +343,7 @@ const PerformanceAnalyticsDashboard = ({
                         Quality
                       </p>
                       <p className="text-2xl font-bold text-foreground dark:text-white">
-                        {performanceMetrics?.overall.quality}%
+                        {scadaPercent(performanceMetrics?.overall.quality)}
                       </p>
                     </div>
                     <BarChart3 className="h-8 w-8 text-purple-500" />
@@ -295,7 +388,7 @@ const PerformanceAnalyticsDashboard = ({
                     <Area
                       type="monotone"
                       dataKey="value"
-                      name="Efficiency %"
+                      name="Production availability %"
                       stroke="#3b82f6"
                       fill="#3b82f6"
                       fillOpacity={0.3}
@@ -342,15 +435,15 @@ const PerformanceAnalyticsDashboard = ({
                             Efficiency
                           </p>
                           <p className="text-lg font-bold text-foreground dark:text-white">
-                            {device.efficiency}%
+                            {scadaPercent(device.efficiency)}
                           </p>
                         </div>
                         <div>
                           <p className="text-xs text-gray-600 dark:text-gray-300">
-                            Uptime
+                            Production Availability
                           </p>
                           <p className="text-lg font-bold text-foreground dark:text-white">
-                            {device.uptime}%
+                            {scadaPercent(device.uptime)}
                           </p>
                         </div>
                       </div>
@@ -376,7 +469,7 @@ const PerformanceAnalyticsDashboard = ({
                     <p
                       className={`text-4xl font-bold ${getHealthColor(equipmentHealth?.overall.score)}`}
                     >
-                      {equipmentHealth?.overall.score}
+                      {equipmentHealth?.overall.score ?? "Unavailable"}
                     </p>
                     <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
                       Status: {getHealthStatus(equipmentHealth?.overall.score)}
@@ -387,17 +480,13 @@ const PerformanceAnalyticsDashboard = ({
                       Last Maintenance
                     </p>
                     <p className="text-sm font-medium text-foreground dark:text-white">
-                      {new Date(
-                        equipmentHealth?.overall.lastMaintenance,
-                      ).toLocaleDateString()}
+                      {scadaDate(equipmentHealth?.overall.lastMaintenance)}
                     </p>
                     <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
                       Next Maintenance
                     </p>
                     <p className="text-sm font-medium text-foreground dark:text-white">
-                      {new Date(
-                        equipmentHealth?.overall.nextMaintenance,
-                      ).toLocaleDateString()}
+                      {scadaDate(equipmentHealth?.overall.nextMaintenance)}
                     </p>
                   </div>
                 </div>
@@ -479,8 +568,9 @@ const PerformanceAnalyticsDashboard = ({
                         <div className="flex items-center gap-1">
                           <Calendar className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                           <span className="text-gray-600 dark:text-gray-300">
-                            Maintenance in {device.predictions.maintenanceDue}{" "}
-                            days
+                            {device.predictions.maintenanceDue == null
+                              ? "No scheduled maintenance"
+                              : `Maintenance in ${device.predictions.maintenanceDue} days`}
                           </span>
                         </div>
                       </div>
@@ -553,7 +643,7 @@ const PerformanceAnalyticsDashboard = ({
                       Savings
                     </p>
                     <p className="text-2xl font-bold text-green-700 dark:text-green-300">
-                      {energyData?.savings}%
+                      {scadaPercent(energyData?.savings)}
                     </p>
                     <p className="text-xs text-green-600 dark:text-green-400">
                       vs. last period
@@ -563,11 +653,11 @@ const PerformanceAnalyticsDashboard = ({
               </Card>
             </div>
 
-            {/* Energy Consumption Trend */}
+            {/* Electrical Production Trend */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-foreground dark:text-white">
-                  Energy Consumption Trend
+                  Electrical Production Trend
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -597,7 +687,7 @@ const PerformanceAnalyticsDashboard = ({
                     <Legend />
                     <Bar
                       dataKey="consumption"
-                      name="Consumption (kWh)"
+                      name="Production (kWh)"
                       fill="#3b82f6"
                     />
                   </BarChart>
@@ -610,7 +700,7 @@ const PerformanceAnalyticsDashboard = ({
               <Card>
                 <CardHeader>
                   <CardTitle className="text-foreground dark:text-white">
-                    Consumption by Device
+                    Production by Device
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -690,11 +780,19 @@ const PerformanceAnalyticsDashboard = ({
                     <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
                     <div>
                       <h4 className="font-medium text-yellow-900 dark:text-yellow-100">
-                        Maintenance Recommended
+                        Maintenance Outlook
                       </h4>
                       <p className="text-sm text-yellow-800 dark:text-yellow-200 mt-1">
-                        TC003 shows increased vibration patterns. Schedule
-                        inspection within 15 days.
+                        {projections.length
+                          ? projections
+                              .map(
+                                (item) =>
+                                  `${item.sensor}: linear trend reaches ${item.threshold} ${item.unit} in approximately ${item.days} days (R² ${item.r2}).`,
+                              )
+                              .join(" ")
+                          : "No supported threshold projection is available for the selected unit. A validated remaining-life model is not configured."}{" "}
+                        Trend extrapolation is advisory and does not replace
+                        alarms or the maintenance schedule.
                       </p>
                     </div>
                   </div>
@@ -714,14 +812,16 @@ const PerformanceAnalyticsDashboard = ({
                               Remaining Lifetime
                             </span>
                             <span className="text-sm font-medium text-foreground dark:text-white">
-                              {device.predictions.remainingLifetime}%
+                              {scadaPercent(
+                                device.predictions.remainingLifetime,
+                              )}
                             </span>
                           </div>
                           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                             <div
                               className="bg-green-500 h-2 rounded-full"
                               style={{
-                                width: `${device.predictions.remainingLifetime}%`,
+                                width: `${device.predictions.remainingLifetime ?? 0}%`,
                               }}
                             />
                           </div>
@@ -730,7 +830,9 @@ const PerformanceAnalyticsDashboard = ({
                               Next Maintenance
                             </span>
                             <span className="font-medium text-foreground dark:text-white">
-                              {device.predictions.maintenanceDue} days
+                              {device.predictions.maintenanceDue == null
+                                ? "Not scheduled"
+                                : `${device.predictions.maintenanceDue} days`}
                             </span>
                           </div>
                         </div>

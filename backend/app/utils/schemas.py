@@ -62,15 +62,15 @@ class DateTimeField(fields.DateTime):
                 # Return None instead of malformed string to prevent client-side errors
                 return None
 
-        # If value is not a string or datetime, try to handle gracefully
-        if not hasattr(value, "isoformat") and not hasattr(value, "strftime"):
-            logger.warning(
-                f"Invalid datetime value type '{type(value).__name__}' in field '{attr}': {value}",
-            )
-            return None
-
         # If it's already a datetime object, use the parent method directly
-        return super()._serialize(value, attr, obj, **kwargs)
+        if isinstance(value, datetime):
+            return super()._serialize(value, attr, obj, **kwargs)
+
+        # Anything else (including unconfigured mocks) isn't a valid datetime
+        logger.warning(
+            f"Invalid datetime value type '{type(value).__name__}' in field '{attr}': {value}",
+        )
+        return None
 
 
 class EnumField(fields.Field):
@@ -146,6 +146,18 @@ class UserSchema(SQLAlchemyAutoSchema):
     username = fields.Str(required=True, validate=validate.Length(min=3, max=80))
     password = fields.Str(load_only=True, validate=validate.Length(min=6))
     role = fields.Nested(RoleSchema, dump_only=True)
+    client_id = fields.Int(dump_only=True, allow_none=True)
+    tenant_id = fields.Int(dump_only=True, allow_none=True)
+    is_active = fields.Method("get_is_active")
+    premium_scada = fields.Method("get_premium_scada")
+
+    def get_premium_scada(self, obj):
+        from app.middleware.entitlements import has_scada
+
+        return has_scada(obj)
+
+    def get_is_active(self, obj):
+        return getattr(obj, "is_active", True)
 
     # Override datetime fields with custom field
     created_at = DateTimeField(dump_only=True)
@@ -177,6 +189,7 @@ class UserCreateSchema(Schema):
     department = fields.Str(validate=validate.Length(max=100))
     position = fields.Str(validate=validate.Length(max=100))
     role_id = fields.Int(required=True)
+    client_id = fields.Int(allow_none=True)
 
 
 class UserSelfRegisterSchema(Schema):
@@ -207,6 +220,7 @@ class UserUpdateSchema(Schema):
     position = fields.Str(validate=validate.Length(max=100))
     role_id = fields.Int()
     is_active = fields.Bool()
+    client_id = fields.Int(allow_none=True)
 
 
 class LoginSchema(Schema):
@@ -221,6 +235,13 @@ class LoginSchema(Schema):
 class UnitSchema(SQLAlchemyAutoSchema):
     """Unit serialization schema."""
 
+    controls = fields.Method("get_controls")
+
+    def get_controls(self, obj):
+        from app.services.unit_controls import acknowledged_controls
+
+        return acknowledged_controls(obj.id)
+
     class Meta:
         model = Unit
         load_instance = True
@@ -232,6 +253,54 @@ class UnitSchema(SQLAlchemyAutoSchema):
     install_date = DateTimeField(required=True)
     status = EnumField(UnitStatusEnum)
     health_status = EnumField(HealthStatusEnum)
+    tenant_id = fields.Int(dump_only=True, allow_none=True)
+    client_id = fields.Method("get_client_id")
+    tenant_name = fields.Method("get_tenant_name")
+    alerts = fields.Method("get_conditions")
+    has_alert = fields.Method("get_has_alert")
+    has_alarm = fields.Method("get_has_alarm")
+
+    def get_conditions(self, obj):
+        from app.services.unit_conditions import active_conditions
+
+        return active_conditions(obj)
+
+    def get_has_alert(self, obj):
+        return any(row["category"] == "alert" for row in self.get_conditions(obj))
+
+    def get_has_alarm(self, obj):
+        return any(row["category"] == "alarm" for row in self.get_conditions(obj))
+
+    outputs = fields.Method("get_outputs")
+    controlCapabilities = fields.Method("get_control_capabilities")
+    cameras = fields.Method("get_cameras")
+    processDiagram = fields.Method("get_process_diagram")
+
+    def get_process_diagram(self, obj):
+        from app.services.process_diagrams import public_process_diagram
+
+        return public_process_diagram(obj.id)
+
+    def get_control_capabilities(self, obj):
+        from app.services.unit_controls import public_control_configuration
+
+        return public_control_configuration(obj.id)
+
+    def get_cameras(self, obj):
+        from app.services.unit_controls import public_cameras
+
+        return public_cameras(obj.id)
+
+    def get_outputs(self, obj):
+        from app.services.unit_outputs import output_states
+
+        return output_states(obj)
+
+    def get_client_id(self, obj):
+        return obj.tenant.client_id if obj.tenant else None
+
+    def get_tenant_name(self, obj):
+        return obj.tenant.name if obj.tenant else None
 
     # Override timestamp fields
     created_at = DateTimeField(dump_only=True)
@@ -271,6 +340,10 @@ class UnitCreateSchema(Schema):
     status = EnumField(UnitStatusEnum, load_default="offline")
     health_status = EnumField(HealthStatusEnum, load_default="warning")
 
+    supports_heat = fields.Bool()
+    supports_chill = fields.Bool()
+    supports_water = fields.Bool()
+
     # Client information
     client_name = fields.Str(validate=validate.Length(max=200))
     client_contact = fields.Str(validate=validate.Length(max=200))
@@ -289,6 +362,10 @@ class UnitUpdateSchema(Schema):
     has_alert = fields.Bool()
     has_alarm = fields.Bool()
     last_maintenance = DateTimeField()
+
+    supports_heat = fields.Bool()
+    supports_chill = fields.Bool()
+    supports_water = fields.Bool()
 
     # Client information
     client_name = fields.Str(validate=validate.Length(max=200))

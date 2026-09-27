@@ -8,11 +8,22 @@
  * - Tab rendering & switching (Users, User Approvals, Password Management, Settings)
  * - User list: loading / error / empty / populated states, retry
  * - Create User modal: validation, role loading (all response shapes), success/failure/exception
- * - Edit User modal: open, edit fields (Name, Email, Company, Phone, Role), save, cancel
+ * - Edit User modal: open, edit fields (Username, First Name, Last Name, Email, Company, Phone, Role, Status), save, cancel
  * - Delete User: confirm true/false, success, error
  * - Password reset (self + per-user): validation, all error-message branches, success, cancel
  * - Password visibility toggles (new password + confirm password)
  * - Settings tab: toggle each setting both directions
+ *
+ * Note on apiGet mocking: AdminPanel now fires TWO apiGet calls on mount
+ * (fetchUsers -> getAllUsers, which is separately mocked, and fetchClients ->
+ * apiGet("/api/v1/clients")), plus a THIRD apiGet call when the Create User
+ * modal opens (fetchRoles -> apiGet("/api/v1/roles")). Because both
+ * fetchClients and fetchRoles go through the same apiGet mock,
+ * mockResolvedValueOnce/mockRejectedValueOnce queue by call order, not by
+ * URL - so a value intended for the roles call can be silently consumed by
+ * the mount-time clients call instead. To avoid that, every test that needs
+ * to control the roles response uses mockRoles()/mockRolesRejected() below,
+ * which branch on the requested URL instead of call order.
  */
 
 import { render, screen, waitFor, within } from "@testing-library/react";
@@ -23,7 +34,7 @@ import { toast } from "sonner";
 
 import AdminPanel from "../components/AdminPanel";
 import { useAuth } from "../context/AuthContext";
-import { deleteUser, getAllUsers } from "../services/usersAPI";
+import { deleteUser, getAllUsers, updateUser } from "../services/usersAPI";
 import { apiGet, apiPost } from "../utils/apiFetch";
 
 // ---------------------------------------------------------------------------
@@ -44,6 +55,7 @@ vi.mock("../context/AuthContext", () => ({
 vi.mock("../services/usersAPI", () => ({
   getAllUsers: vi.fn(),
   deleteUser: vi.fn(),
+  updateUser: vi.fn(),
 }));
 
 vi.mock("../utils/apiFetch", () => ({
@@ -56,7 +68,12 @@ vi.mock("../utils/userUtils", () => ({
     const full = `${user.first_name || ""} ${user.last_name || ""}`.trim();
     return full || user.username || "Unknown";
   },
-  formatRoleName: (role) => (role && role.name ? role.name : "N/A"),
+  formatRoleName: (role) => {
+    if (!role || !role.name) return "N/A";
+    const name = role.name;
+    if (name === "client_admin") return "Client Admin";
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  },
 }));
 
 vi.mock("../components/PageHeader", () => ({
@@ -69,12 +86,20 @@ vi.mock("../components/PageHeader", () => ({
 }));
 
 vi.mock("../components/UserApprovalPanel", () => ({
-  default: () => <div data-testid="user-approval-panel">User Approvals Panel</div>,
+  default: () => (
+    <div data-testid="user-approval-panel">User Approvals Panel</div>
+  ),
 }));
 
 vi.mock("../components/ui/button", () => ({
   Button: ({ children, onClick, className, disabled }) => (
-    <button data-testid="button" className={className} onClick={onClick} type="button" disabled={disabled}>
+    <button
+      data-testid="button"
+      className={className}
+      onClick={onClick}
+      type="button"
+      disabled={disabled}
+    >
       {children}
     </button>
   ),
@@ -102,10 +127,14 @@ vi.mock("lucide-react", () => ({
   Database: () => <span data-testid="icon-database" />,
   Edit: () => <span data-testid="icon-edit" />,
   Eye: (props) => (
-    <span data-testid="eye-icon" {...props}>Eye</span>
+    <span data-testid="eye-icon" {...props}>
+      Eye
+    </span>
   ),
   EyeOff: (props) => (
-    <span data-testid="eye-off-icon" {...props}>EyeOff</span>
+    <span data-testid="eye-off-icon" {...props}>
+      EyeOff
+    </span>
   ),
   Key: () => <span data-testid="icon-key" />,
   Lock: () => <span data-testid="icon-lock" />,
@@ -141,7 +170,7 @@ const twoUsersResponse = {
       phone_number: "555-1111",
       department: "Engineering",
       position: "Lead",
-      role: { name: "admin" },
+      role: { id: 1, name: "admin" },
       is_active: true,
     },
     {
@@ -150,7 +179,11 @@ const twoUsersResponse = {
       email: "jane@thermacore.com",
       first_name: "Jane",
       last_name: "Smith",
-      role: { name: "operator" },
+      company: "Acme",
+      phone_number: "555-2222",
+      department: "Sales",
+      position: "Manager",
+      role: { id: 2, name: "operator" },
       is_active: false,
     },
   ],
@@ -160,6 +193,7 @@ const rolesArrayFormat = [
   { id: 1, name: "admin" },
   { id: 2, name: "operator" },
   { id: 3, name: "viewer" },
+  { id: 4, name: "client_admin" },
 ];
 
 function jsonResponse(ok, body) {
@@ -169,11 +203,40 @@ function jsonResponse(ok, body) {
   });
 }
 
+// Any apiGet call to /clients gets this benign response unless a test
+// overrides mockClientsResponse below. Kept separate from the roles mock so
+// that setting up a roles scenario never has to think about the clients call.
+function defaultClientsResponse() {
+  return jsonResponse(true, { data: [] });
+}
+
+// Route apiGet by URL so that mount-time fetchClients() and the Create User
+// modal's fetchRoles() never fight over a shared mockResolvedValueOnce queue.
+// `rolesFn` receives no args and must return a Promise (from jsonResponse or
+// Promise.reject) — a function (not a static value) so re-fetch tests can
+// swap the behavior of the *next* call without re-mocking the clients side.
+function mockApiGetByUrl(rolesFn) {
+  apiGet.mockImplementation((url) => {
+    if (url.includes("/clients")) {
+      return defaultClientsResponse();
+    }
+    return rolesFn();
+  });
+}
+
+function mockRoles(response) {
+  mockApiGetByUrl(() => response);
+}
+
+function mockRolesRejected(error) {
+  mockApiGetByUrl(() => Promise.reject(error));
+}
+
 function renderPanel() {
   return render(
     <BrowserRouter>
       <AdminPanel />
-    </BrowserRouter>
+    </BrowserRouter>,
   );
 }
 
@@ -197,16 +260,22 @@ async function openCreateUserModal(user) {
   await user.click(addUserBtn);
 }
 
-async function fillCreateUserRequiredFields(user, { username = "newuser", email = "new@x.com", password = "password1" } = {}) {
+async function fillCreateUserRequiredFields(
+  user,
+  { username = "newuser", email = "new@x.com", password = "password1" } = {},
+) {
   await user.type(screen.getByLabelText(/Username/i), username);
   await user.type(screen.getByLabelText(/^Email/i), email);
   await user.type(screen.getByLabelText(/^Password/i), password);
 }
 
 function resetSubmitButton() {
-  return within(screen.getByTestId("password-reset-modal")).getByRole("button", {
-    name: /Reset Password|Resetting/i,
-  });
+  return within(screen.getByTestId("password-reset-modal")).getByRole(
+    "button",
+    {
+      name: /Reset Password|Resetting/i,
+    },
+  );
 }
 
 function createUserSubmitButton() {
@@ -224,7 +293,8 @@ beforeEach(() => {
   useAuth.mockReturnValue({ user: mockCurrentUser });
   getAllUsers.mockResolvedValue(twoUsersResponse);
   deleteUser.mockResolvedValue({ ok: true, status: 204 });
-  apiGet.mockResolvedValue(jsonResponse(true, { roles: rolesArrayFormat }));
+  updateUser.mockResolvedValue({ ok: true, status: 200 });
+  mockRoles(jsonResponse(true, { roles: rolesArrayFormat }));
   apiPost.mockResolvedValue(jsonResponse(true, { success: true }));
 });
 
@@ -237,15 +307,19 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe("Tab rendering", () => {
-  it("renders all four tabs and defaults to Users tab content", async () => {
+  it("renders administrative tabs and defaults to Users tab content", async () => {
     renderPanel();
 
     await waitFor(() => {
       expect(screen.getAllByText("Users").length).toBeGreaterThan(0);
     });
     expect(screen.getAllByText("User Approvals").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Password Management").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Settings").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Password Management").length).toBeGreaterThan(
+      0,
+    );
+    expect(
+      screen.queryByRole("button", { name: "Settings" }),
+    ).not.toBeInTheDocument();
 
     expect(await screen.findByText("User Management")).toBeInTheDocument();
     expect(screen.getByText("Add User")).toBeInTheDocument();
@@ -267,7 +341,9 @@ describe("Tab rendering", () => {
     await waitFor(() => screen.getByText("User Management"));
 
     await user.click(screen.getByText("User Approvals"));
-    expect(await screen.findByTestId("user-approval-panel")).toBeInTheDocument();
+    expect(
+      await screen.findByTestId("user-approval-panel"),
+    ).toBeInTheDocument();
   });
 
   it("switches to Password Management tab", async () => {
@@ -276,20 +352,17 @@ describe("Tab rendering", () => {
     await waitFor(() => screen.getByText("User Management"));
 
     await goToPasswordTab(user);
-    expect(await screen.findByText("Change My Password")).toBeInTheDocument();
+    expect(screen.queryByText("Change My Password")).not.toBeInTheDocument();
     expect(screen.getByText("User Password Reset")).toBeInTheDocument();
   });
 
-  it("switches to Settings tab", async () => {
-    const user = userEvent.setup();
+  it("keeps personal settings outside User Management", async () => {
     renderPanel();
     await waitFor(() => screen.getByText("User Management"));
-
-    await goToSettingsTab(user);
-    expect(await screen.findByText("System Settings")).toBeInTheDocument();
-    expect(screen.getByText("Email Notifications")).toBeInTheDocument();
-    expect(screen.getByText("Auto Backup")).toBeInTheDocument();
-    expect(screen.getByText("Maintenance Mode")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Settings" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Auto Backup")).not.toBeInTheDocument();
   });
 });
 
@@ -303,14 +376,16 @@ describe("User list states", () => {
     getAllUsers.mockReturnValue(
       new Promise((resolve) => {
         resolveFn = resolve;
-      })
+      }),
     );
 
     renderPanel();
     expect(screen.getByText("Loading users...")).toBeInTheDocument();
 
     resolveFn(twoUsersResponse);
-    await waitFor(() => expect(screen.queryByText("Loading users...")).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.queryByText("Loading users...")).not.toBeInTheDocument(),
+    );
   });
 
   it("shows an error state and retries on 'Try Again'", async () => {
@@ -319,13 +394,17 @@ describe("User list states", () => {
 
     renderPanel();
 
-    expect(await screen.findByText("Failed to load users. Please try again.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Failed to load users. Please try again."),
+    ).toBeInTheDocument();
     expect(toast.error).toHaveBeenCalledWith("Failed to load users");
 
     getAllUsers.mockResolvedValueOnce(twoUsersResponse);
     await user.click(screen.getByText("Try Again"));
 
-    await waitFor(() => expect(screen.getByText("John Doe")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText("John Doe")).toBeInTheDocument(),
+    );
   });
 
   it("shows an empty state when there are no users", async () => {
@@ -340,8 +419,9 @@ describe("User list states", () => {
     expect(await screen.findByText("John Doe")).toBeInTheDocument();
     expect(screen.getByText("Jane Smith")).toBeInTheDocument();
 
+    // Jane Smith should have N/A for company (since we didn't provide one in the mock)
     const janeRow = screen.getByText("Jane Smith").closest("tr");
-    expect(within(janeRow).getAllByText("N/A").length).toBeGreaterThan(0);
+    expect(within(janeRow).getByText("Acme")).toBeInTheDocument();
 
     const johnRow = screen.getByText("John Doe").closest("tr");
     expect(within(johnRow).getByText("Active")).toBeInTheDocument();
@@ -356,7 +436,7 @@ describe("User list states", () => {
 describe("Create User modal", () => {
   it("opens the modal and fetches roles (array-wrapped format)", async () => {
     const user = userEvent.setup();
-    apiGet.mockResolvedValueOnce(jsonResponse(true, { roles: rolesArrayFormat }));
+    mockRoles(jsonResponse(true, { roles: rolesArrayFormat }));
 
     renderPanel();
     await waitFor(() => screen.getByText("User Management"));
@@ -366,12 +446,15 @@ describe("Create User modal", () => {
     await waitFor(() => {
       const roleSelect = screen.getByLabelText(/Role/i);
       expect(roleSelect).toBeInTheDocument();
+      expect(
+        within(roleSelect).getByRole("option", { name: "Admin" }),
+      ).toBeInTheDocument();
     });
   });
 
   it("fetches roles when response is a bare array", async () => {
     const user = userEvent.setup();
-    apiGet.mockResolvedValueOnce(jsonResponse(true, rolesArrayFormat));
+    mockRoles(jsonResponse(true, rolesArrayFormat));
 
     renderPanel();
     await waitFor(() => screen.getByText("User Management"));
@@ -379,71 +462,86 @@ describe("Create User modal", () => {
 
     await waitFor(() => {
       const roleSelect = screen.getByLabelText(/Role/i);
-      expect(roleSelect).toBeInTheDocument();
+      expect(
+        within(roleSelect).getByRole("option", { name: "Operator" }),
+      ).toBeInTheDocument();
     });
   });
 
   it("shows a roles error banner when the roles payload shape is invalid", async () => {
     const user = userEvent.setup();
-    apiGet.mockResolvedValueOnce(jsonResponse(true, { unexpected: "shape" }));
+    mockRoles(jsonResponse(true, { unexpected: "shape" }));
 
     renderPanel();
     await waitFor(() => screen.getByText("User Management"));
     await openCreateUserModal(user);
 
-    expect(await screen.findByText("Unable to load roles. Please refresh the page.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Unable to load roles. Please refresh the page."),
+    ).toBeInTheDocument();
   });
 
   it("shows a roles error banner when the roles array is empty", async () => {
     const user = userEvent.setup();
-    apiGet.mockResolvedValueOnce(jsonResponse(true, { roles: [] }));
+    mockRoles(jsonResponse(true, { roles: [] }));
 
     renderPanel();
     await waitFor(() => screen.getByText("User Management"));
     await openCreateUserModal(user);
 
-    expect(await screen.findByText("Unable to load roles. Please refresh the page.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Unable to load roles. Please refresh the page."),
+    ).toBeInTheDocument();
   });
 
   it("shows a roles error banner when the roles fetch response is not ok", async () => {
     const user = userEvent.setup();
-    apiGet.mockResolvedValueOnce(jsonResponse(false, {}));
+    mockRoles(jsonResponse(false, {}));
 
     renderPanel();
     await waitFor(() => screen.getByText("User Management"));
     await openCreateUserModal(user);
 
-    expect(await screen.findByText("Unable to load roles. Please refresh the page.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Unable to load roles. Please refresh the page."),
+    ).toBeInTheDocument();
   });
 
   it("shows a roles error banner when the roles fetch throws", async () => {
     const user = userEvent.setup();
-    apiGet.mockRejectedValueOnce(new Error("boom"));
+    mockRolesRejected(new Error("boom"));
 
     renderPanel();
     await waitFor(() => screen.getByText("User Management"));
     await openCreateUserModal(user);
 
-    expect(await screen.findByText("Unable to load roles. Please refresh the page.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Unable to load roles. Please refresh the page."),
+    ).toBeInTheDocument();
   });
 
   it("re-fetches roles on reopening the modal after a prior roles error", async () => {
     const user = userEvent.setup();
-    apiGet.mockResolvedValueOnce(jsonResponse(false, {}));
+    mockRoles(jsonResponse(false, {}));
 
     renderPanel();
     await waitFor(() => screen.getByText("User Management"));
     await openCreateUserModal(user);
-    expect(await screen.findByText("Unable to load roles. Please refresh the page.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Unable to load roles. Please refresh the page."),
+    ).toBeInTheDocument();
 
     await user.click(screen.getByText("Cancel"));
 
-    apiGet.mockResolvedValueOnce(jsonResponse(true, { roles: rolesArrayFormat }));
+    // Swap the roles behavior for the *next* fetchRoles call only
+    mockRoles(jsonResponse(true, { roles: rolesArrayFormat }));
     await openCreateUserModal(user);
 
     await waitFor(() => {
       const roleSelect = screen.getByLabelText(/Role/i);
-      expect(roleSelect).toBeInTheDocument();
+      expect(
+        within(roleSelect).getByRole("option", { name: "Admin" }),
+      ).toBeInTheDocument();
     });
   });
 
@@ -481,7 +579,9 @@ describe("Create User modal", () => {
     await user.selectOptions(screen.getByLabelText(/Role/i), "1");
     await user.click(screen.getByText("Create User"));
 
-    expect(toast.error).toHaveBeenCalledWith("Password must be at least 6 characters long");
+    expect(toast.error).toHaveBeenCalledWith(
+      "Password must be at least 6 characters long",
+    );
   });
 
   it("toggles the create-password visibility", async () => {
@@ -514,7 +614,9 @@ describe("Create User modal", () => {
     await user.click(screen.getByText("Create User"));
 
     await waitFor(() => {
-      expect(toast.success).toHaveBeenCalledWith("User newuser created successfully");
+      expect(toast.success).toHaveBeenCalledWith(
+        "User newuser created successfully",
+      );
     });
     expect(screen.queryByText("Create New User")).not.toBeInTheDocument();
     expect(getAllUsers).toHaveBeenCalledTimes(2);
@@ -522,7 +624,9 @@ describe("Create User modal", () => {
 
   it("shows a server error message on failed creation (result.error)", async () => {
     const user = userEvent.setup();
-    apiPost.mockResolvedValueOnce(jsonResponse(false, { error: "Username taken" }));
+    apiPost.mockResolvedValueOnce(
+      jsonResponse(false, { error: "Username taken" }),
+    );
 
     renderPanel();
     await waitFor(() => screen.getByText("User Management"));
@@ -533,12 +637,16 @@ describe("Create User modal", () => {
     await user.selectOptions(screen.getByLabelText(/Role/i), "1");
     await user.click(screen.getByText("Create User"));
 
-    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Username taken"));
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("Username taken"),
+    );
   });
 
   it("falls back to result.message when result.error is absent", async () => {
     const user = userEvent.setup();
-    apiPost.mockResolvedValueOnce(jsonResponse(false, { message: "Server exploded" }));
+    apiPost.mockResolvedValueOnce(
+      jsonResponse(false, { message: "Server exploded" }),
+    );
 
     renderPanel();
     await waitFor(() => screen.getByText("User Management"));
@@ -549,7 +657,9 @@ describe("Create User modal", () => {
     await user.selectOptions(screen.getByLabelText(/Role/i), "1");
     await user.click(screen.getByText("Create User"));
 
-    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Server exploded"));
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("Server exploded"),
+    );
   });
 
   it("falls back to the generic message when the server returns nothing useful", async () => {
@@ -565,7 +675,9 @@ describe("Create User modal", () => {
     await user.selectOptions(screen.getByLabelText(/Role/i), "1");
     await user.click(screen.getByText("Create User"));
 
-    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Failed to create user"));
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("Failed to create user"),
+    );
   });
 
   it("shows the exception message when apiPost throws", async () => {
@@ -581,17 +693,21 @@ describe("Create User modal", () => {
     await user.selectOptions(screen.getByLabelText(/Role/i), "1");
     await user.click(screen.getByText("Create User"));
 
-    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("connection refused"));
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("connection refused"),
+    );
   });
 
   it("blocks submission when roles failed to load even if fields are filled", async () => {
     const user = userEvent.setup();
-    apiGet.mockResolvedValueOnce(jsonResponse(false, {}));
+    mockRoles(jsonResponse(false, {}));
 
     renderPanel();
     await waitFor(() => screen.getByText("User Management"));
     await openCreateUserModal(user);
-    expect(await screen.findByText("Unable to load roles. Please refresh the page.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Unable to load roles. Please refresh the page."),
+    ).toBeInTheDocument();
 
     expect(createUserSubmitButton()).toBeDisabled();
   });
@@ -627,7 +743,7 @@ describe("Create User modal", () => {
         position: "Tech",
         role_id: 2,
       }),
-      expect.any(Object)
+      expect.any(Object),
     );
   });
 
@@ -654,11 +770,17 @@ describe("Edit User modal", () => {
     await screen.findByText("John Doe");
 
     const johnRow = screen.getByText("John Doe").closest("tr");
-    await user.click(within(johnRow).getByTestId("icon-edit").closest("button"));
+    await user.click(
+      within(johnRow).getByTestId("icon-edit").closest("button"),
+    );
 
     expect(screen.getByText("Edit User")).toBeInTheDocument();
-    expect(screen.getByLabelText("Name")).toHaveValue("John Doe");
+    expect(screen.getByLabelText("Username")).toHaveValue("john_doe");
+    expect(screen.getByLabelText("First Name")).toHaveValue("John");
+    expect(screen.getByLabelText("Last Name")).toHaveValue("Doe");
     expect(screen.getByLabelText("Email")).toHaveValue("john@thermacore.com");
+    expect(screen.getByLabelText("Company")).toHaveValue("Thermacore");
+    expect(screen.getByLabelText("Phone")).toHaveValue("555-1111");
   });
 
   it("edits fields and saves, updating the row in place", async () => {
@@ -667,26 +789,46 @@ describe("Edit User modal", () => {
     await screen.findByText("John Doe");
 
     const johnRow = screen.getByText("John Doe").closest("tr");
-    await user.click(within(johnRow).getByTestId("icon-edit").closest("button"));
+    await user.click(
+      within(johnRow).getByTestId("icon-edit").closest("button"),
+    );
 
-    const nameInput = screen.getByLabelText("Name");
-    await user.clear(nameInput);
-    await user.type(nameInput, "Johnathan Doe");
+    const usernameInput = screen.getByLabelText("Username");
+    await user.clear(usernameInput);
+    await user.type(usernameInput, "johnathan_doe");
+
+    const firstNameInput = screen.getByLabelText("First Name");
+    await user.clear(firstNameInput);
+    await user.type(firstNameInput, "Johnathan");
 
     await user.selectOptions(screen.getByLabelText("Status"), "Inactive");
     await user.click(screen.getByText("Save"));
 
+    await waitFor(() => {
+      expect(updateUser).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({
+          username: "johnathan_doe",
+          first_name: "Johnathan",
+          is_active: false,
+        }),
+      );
+    });
+
     expect(screen.queryByText("Edit User")).not.toBeInTheDocument();
-    expect(await screen.findByText("Johnathan Doe")).toBeInTheDocument();
+    // User list refresh will show updated data
+    expect(getAllUsers).toHaveBeenCalledTimes(2);
   });
 
-  it("edits all fields - Email, Company, Phone, and Role", async () => {
+  it("edits all fields - Email, Company, Phone, Role, and Status", async () => {
     const user = userEvent.setup();
     renderPanel();
     await screen.findByText("John Doe");
 
     const johnRow = screen.getByText("John Doe").closest("tr");
-    await user.click(within(johnRow).getByTestId("icon-edit").closest("button"));
+    await user.click(
+      within(johnRow).getByTestId("icon-edit").closest("button"),
+    );
 
     const emailInput = screen.getByLabelText("Email");
     await user.clear(emailInput);
@@ -700,11 +842,52 @@ describe("Edit User modal", () => {
     await user.clear(phoneInput);
     await user.type(phoneInput, "555-9999");
 
-    // The role select uses capitalized option values (e.g., "Operator", not "operator")
-    const roleSelect = screen.getByLabelText("Role");
-    await user.selectOptions(roleSelect, "Operator");
+    // Select role by option name
+    await user.selectOptions(screen.getByLabelText("Role"), "Operator");
 
     await user.click(screen.getByText("Save"));
+
+    await waitFor(() => {
+      expect(updateUser).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({
+          email: "john.updated@thermacore.com",
+          company: "Thermacore Inc.",
+          phone_number: "555-9999",
+          role_id: 2,
+        }),
+      );
+    });
+
+    expect(screen.queryByText("Edit User")).not.toBeInTheDocument();
+  });
+
+  it("supports selecting the Client Admin role", async () => {
+    const user = userEvent.setup();
+    renderPanel();
+    await screen.findByText("John Doe");
+
+    const johnRow = screen.getByText("John Doe").closest("tr");
+    await user.click(
+      within(johnRow).getByTestId("icon-edit").closest("button"),
+    );
+
+    const roleSelect = screen.getByLabelText("Role");
+    expect(
+      within(roleSelect).getByRole("option", { name: "Client Admin" }),
+    ).toBeInTheDocument();
+
+    await user.selectOptions(roleSelect, "Client Admin");
+    await user.click(screen.getByText("Save"));
+
+    await waitFor(() => {
+      expect(updateUser).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({
+          role_id: 4,
+        }),
+      );
+    });
 
     expect(screen.queryByText("Edit User")).not.toBeInTheDocument();
   });
@@ -715,16 +898,18 @@ describe("Edit User modal", () => {
     await screen.findByText("John Doe");
 
     const johnRow = screen.getByText("John Doe").closest("tr");
-    await user.click(within(johnRow).getByTestId("icon-edit").closest("button"));
+    await user.click(
+      within(johnRow).getByTestId("icon-edit").closest("button"),
+    );
 
-    const nameInput = screen.getByLabelText("Name");
-    await user.clear(nameInput);
-    await user.type(nameInput, "Should Not Save");
+    const usernameInput = screen.getByLabelText("Username");
+    await user.clear(usernameInput);
+    await user.type(usernameInput, "should_not_save");
     await user.click(screen.getByText("Cancel"));
 
     expect(screen.queryByText("Edit User")).not.toBeInTheDocument();
     expect(screen.getByText("John Doe")).toBeInTheDocument();
-    expect(screen.queryByText("Should Not Save")).not.toBeInTheDocument();
+    expect(updateUser).not.toHaveBeenCalled();
   });
 });
 
@@ -740,7 +925,9 @@ describe("Delete User", () => {
     renderPanel();
     await screen.findByText("John Doe");
     const johnRow = screen.getByText("John Doe").closest("tr");
-    await user.click(within(johnRow).getByTestId("icon-trash").closest("button"));
+    await user.click(
+      within(johnRow).getByTestId("icon-trash").closest("button"),
+    );
 
     expect(deleteUser).not.toHaveBeenCalled();
   });
@@ -750,10 +937,14 @@ describe("Delete User", () => {
     renderPanel();
     await screen.findByText("John Doe");
     const johnRow = screen.getByText("John Doe").closest("tr");
-    await user.click(within(johnRow).getByTestId("icon-trash").closest("button"));
+    await user.click(
+      within(johnRow).getByTestId("icon-trash").closest("button"),
+    );
 
     await waitFor(() => expect(deleteUser).toHaveBeenCalledWith(1));
-    await waitFor(() => expect(toast.success).toHaveBeenCalledWith("User deleted successfully"));
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith("User deleted successfully"),
+    );
   });
 
   it("shows an error toast when deletion fails", async () => {
@@ -763,78 +954,18 @@ describe("Delete User", () => {
     renderPanel();
     await screen.findByText("John Doe");
     const johnRow = screen.getByText("John Doe").closest("tr");
-    await user.click(within(johnRow).getByTestId("icon-trash").closest("button"));
+    await user.click(
+      within(johnRow).getByTestId("icon-trash").closest("button"),
+    );
 
-    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Failed to delete user"));
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("Failed to delete user"),
+    );
   });
 });
 
 // ---------------------------------------------------------------------------
 // Password reset (self)
-// ---------------------------------------------------------------------------
-
-describe("Self password reset", () => {
-  it("uses firstName/lastName when available", async () => {
-    const user = userEvent.setup();
-    renderPanel();
-    await waitFor(() => screen.getByText("User Management"));
-    await goToPasswordTab(user);
-
-    await user.click(screen.getByText("Change My Password"));
-    expect(await screen.findByTestId("password-reset-modal")).toBeInTheDocument();
-    expect(screen.getByText(/Resetting password for:/)).toHaveTextContent("Admin User");
-  });
-
-  it("falls back to username when first/last name are absent", async () => {
-    const user = userEvent.setup();
-    useAuth.mockReturnValue({ user: { id: 2, username: "plainuser", email: "p@x.com" } });
-
-    renderPanel();
-    await waitFor(() => screen.getByText("User Management"));
-    await goToPasswordTab(user);
-
-    await user.click(screen.getByText("Change My Password"));
-    expect(screen.getByText(/Resetting password for:/)).toHaveTextContent("plainuser");
-  });
-
-  it("falls back to id 1 when currentUser has no id", async () => {
-    const user = userEvent.setup();
-    useAuth.mockReturnValue({ user: { username: "noid" } });
-    apiPost.mockResolvedValueOnce(jsonResponse(true, { success: true }));
-
-    renderPanel();
-    await waitFor(() => screen.getByText("User Management"));
-    await goToPasswordTab(user);
-    await user.click(screen.getByText("Change My Password"));
-
-    await user.type(screen.getByPlaceholderText("Enter new password"), "goodpass1");
-    await user.type(screen.getByPlaceholderText("Confirm new password"), "goodpass1");
-    await user.click(resetSubmitButton());
-
-    await waitFor(() => {
-      expect(apiPost).toHaveBeenCalledWith(
-        expect.stringContaining("/users/1/reset-password"),
-        expect.any(Object),
-        expect.any(Object)
-      );
-    });
-  });
-
-  it("does nothing if currentUser is falsy", async () => {
-    const user = userEvent.setup();
-    useAuth.mockReturnValue({ user: null });
-
-    renderPanel();
-    await waitFor(() => screen.getByText("User Management"));
-    await goToPasswordTab(user);
-    await user.click(screen.getByText("Change My Password"));
-
-    expect(screen.queryByTestId("password-reset-modal")).not.toBeInTheDocument();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Password reset (per-user) + validation + visibility toggles
 // ---------------------------------------------------------------------------
 
 describe("Password reset modal — validation & visibility", () => {
@@ -850,7 +981,9 @@ describe("Password reset modal — validation & visibility", () => {
     renderPanel();
     await screen.findByText("John Doe");
     await openResetForJohn(user);
-    expect(screen.getByText(/Resetting password for:/)).toHaveTextContent("John Doe");
+    expect(screen.getByText(/Resetting password for:/)).toHaveTextContent(
+      "John Doe",
+    );
   });
 
   it("shows a length error while the password is under 6 characters", async () => {
@@ -860,7 +993,9 @@ describe("Password reset modal — validation & visibility", () => {
     await openResetForJohn(user);
 
     await user.type(screen.getByPlaceholderText("Enter new password"), "123");
-    expect(await screen.findByText("Password must be at least 6 characters long")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Password must be at least 6 characters long"),
+    ).toBeInTheDocument();
     expect(resetSubmitButton()).toBeDisabled();
   });
 
@@ -870,10 +1005,18 @@ describe("Password reset modal — validation & visibility", () => {
     await screen.findByText("John Doe");
     await openResetForJohn(user);
 
-    await user.type(screen.getByPlaceholderText("Enter new password"), "password1");
-    await user.type(screen.getByPlaceholderText("Confirm new password"), "password2");
+    await user.type(
+      screen.getByPlaceholderText("Enter new password"),
+      "password1",
+    );
+    await user.type(
+      screen.getByPlaceholderText("Confirm new password"),
+      "password2",
+    );
 
-    expect(await screen.findByText("Passwords do not match")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Passwords do not match"),
+    ).toBeInTheDocument();
     expect(resetSubmitButton()).toBeDisabled();
   });
 
@@ -883,11 +1026,21 @@ describe("Password reset modal — validation & visibility", () => {
     await screen.findByText("John Doe");
     await openResetForJohn(user);
 
-    await user.type(screen.getByPlaceholderText("Enter new password"), "password1");
-    await user.type(screen.getByPlaceholderText("Confirm new password"), "password1");
+    await user.type(
+      screen.getByPlaceholderText("Enter new password"),
+      "password1",
+    );
+    await user.type(
+      screen.getByPlaceholderText("Confirm new password"),
+      "password1",
+    );
 
-    expect(screen.queryByText("Passwords do not match")).not.toBeInTheDocument();
-    expect(screen.queryByText("Password must be at least 6 characters long")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Passwords do not match"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Password must be at least 6 characters long"),
+    ).not.toBeInTheDocument();
     expect(resetSubmitButton()).toBeEnabled();
   });
 
@@ -915,10 +1068,11 @@ describe("Password reset modal — validation & visibility", () => {
     await screen.findByText("John Doe");
     await openResetForJohn(user);
 
-    const confirmPasswordInput = screen.getByPlaceholderText("Confirm new password");
+    const confirmPasswordInput = screen.getByPlaceholderText(
+      "Confirm new password",
+    );
     expect(confirmPasswordInput).toHaveAttribute("type", "password");
 
-    // Get all eye icons - use the last one for confirm password
     const eyeIcons = screen.getAllByTestId("eye-icon");
     await user.click(eyeIcons[eyeIcons.length - 1]);
     expect(confirmPasswordInput).toHaveAttribute("type", "text");
@@ -934,10 +1088,15 @@ describe("Password reset modal — validation & visibility", () => {
     await screen.findByText("John Doe");
     await openResetForJohn(user);
 
-    await user.type(screen.getByPlaceholderText("Enter new password"), "password1");
+    await user.type(
+      screen.getByPlaceholderText("Enter new password"),
+      "password1",
+    );
     await user.click(screen.getByText("Cancel"));
 
-    expect(screen.queryByTestId("password-reset-modal")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("password-reset-modal"),
+    ).not.toBeInTheDocument();
 
     await openResetForJohn(user);
     expect(screen.getByPlaceholderText("Enter new password")).toHaveValue("");
@@ -950,8 +1109,14 @@ describe("Password reset modal — submission outcomes", () => {
     const johnRow = screen.getByText("John Doe").closest("tr");
     await user.click(within(johnRow).getByText("Reset Password"));
     await screen.findByTestId("password-reset-modal");
-    await user.type(screen.getByPlaceholderText("Enter new password"), "password1");
-    await user.type(screen.getByPlaceholderText("Confirm new password"), "password1");
+    await user.type(
+      screen.getByPlaceholderText("Enter new password"),
+      "password1",
+    );
+    await user.type(
+      screen.getByPlaceholderText("Confirm new password"),
+      "password1",
+    );
   }
 
   it("succeeds and closes the modal", async () => {
@@ -964,33 +1129,45 @@ describe("Password reset modal — submission outcomes", () => {
     await user.click(resetSubmitButton());
 
     await waitFor(() => {
-      expect(toast.success).toHaveBeenCalledWith("Password reset successfully for John Doe");
+      expect(toast.success).toHaveBeenCalledWith(
+        "Password reset successfully for John Doe",
+      );
     });
-    expect(screen.queryByTestId("password-reset-modal")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("password-reset-modal"),
+    ).not.toBeInTheDocument();
   });
 
   it("shows the server error message on a non-ok response (result.error)", async () => {
     const user = userEvent.setup();
-    apiPost.mockResolvedValueOnce(jsonResponse(false, { error: "Weak password" }));
+    apiPost.mockResolvedValueOnce(
+      jsonResponse(false, { error: "Weak password" }),
+    );
 
     renderPanel();
     await screen.findByText("John Doe");
     await openResetAndFill(user);
     await user.click(resetSubmitButton());
 
-    expect(await screen.findByTestId("password-error")).toHaveTextContent("Weak password");
+    expect(await screen.findByTestId("password-error")).toHaveTextContent(
+      "Weak password",
+    );
   });
 
   it("falls back to result.message, then the generic message", async () => {
     const user = userEvent.setup();
-    apiPost.mockResolvedValueOnce(jsonResponse(false, { message: "Server said no" }));
+    apiPost.mockResolvedValueOnce(
+      jsonResponse(false, { message: "Server said no" }),
+    );
 
     renderPanel();
     await screen.findByText("John Doe");
     await openResetAndFill(user);
     await user.click(resetSubmitButton());
 
-    expect(await screen.findByTestId("password-error")).toHaveTextContent("Server said no");
+    expect(await screen.findByTestId("password-error")).toHaveTextContent(
+      "Server said no",
+    );
   });
 
   it("falls back to the generic failure message when nothing else is provided", async () => {
@@ -1002,7 +1179,9 @@ describe("Password reset modal — submission outcomes", () => {
     await openResetAndFill(user);
     await user.click(resetSubmitButton());
 
-    expect(await screen.findByTestId("password-error")).toHaveTextContent("Failed to reset password");
+    expect(await screen.findByTestId("password-error")).toHaveTextContent(
+      "Failed to reset password",
+    );
   });
 
   it("shows a connection-specific message for 'Failed to fetch' errors", async () => {
@@ -1014,7 +1193,9 @@ describe("Password reset modal — submission outcomes", () => {
     await openResetAndFill(user);
     await user.click(resetSubmitButton());
 
-    expect(await screen.findByTestId("password-error")).toHaveTextContent(/Unable to connect to backend server/);
+    expect(await screen.findByTestId("password-error")).toHaveTextContent(
+      /Unable to connect to backend server/,
+    );
   });
 
   it("shows a network-specific message for 'network' errors", async () => {
@@ -1026,7 +1207,9 @@ describe("Password reset modal — submission outcomes", () => {
     await openResetAndFill(user);
     await user.click(resetSubmitButton());
 
-    expect(await screen.findByTestId("password-error")).toHaveTextContent(/Network error occurred/);
+    expect(await screen.findByTestId("password-error")).toHaveTextContent(
+      /Network error occurred/,
+    );
   });
 
   it("shows a timeout-specific message for 'timeout' errors", async () => {
@@ -1038,7 +1221,9 @@ describe("Password reset modal — submission outcomes", () => {
     await openResetAndFill(user);
     await user.click(resetSubmitButton());
 
-    expect(await screen.findByTestId("password-error")).toHaveTextContent(/request timed out/);
+    expect(await screen.findByTestId("password-error")).toHaveTextContent(
+      /request timed out/,
+    );
   });
 
   it("shows a CORS-specific message for 'CORS' errors", async () => {
@@ -1050,7 +1235,9 @@ describe("Password reset modal — submission outcomes", () => {
     await openResetAndFill(user);
     await user.click(resetSubmitButton());
 
-    expect(await screen.findByTestId("password-error")).toHaveTextContent(/Cross-origin request blocked/);
+    expect(await screen.findByTestId("password-error")).toHaveTextContent(
+      /Cross-origin request blocked/,
+    );
   });
 
   it("shows the raw error message for unrecognized exceptions", async () => {
@@ -1062,7 +1249,9 @@ describe("Password reset modal — submission outcomes", () => {
     await openResetAndFill(user);
     await user.click(resetSubmitButton());
 
-    expect(await screen.findByTestId("password-error")).toHaveTextContent("something odd happened");
+    expect(await screen.findByTestId("password-error")).toHaveTextContent(
+      "something odd happened",
+    );
   });
 
   it("shows a spinner and disables buttons while submitting", async () => {
@@ -1071,7 +1260,7 @@ describe("Password reset modal — submission outcomes", () => {
     apiPost.mockReturnValueOnce(
       new Promise((resolve) => {
         resolveFn = resolve;
-      })
+      }),
     );
 
     renderPanel();
@@ -1083,57 +1272,14 @@ describe("Password reset modal — submission outcomes", () => {
     expect(screen.getByText("Cancel")).toBeDisabled();
 
     resolveFn(jsonResponse(true, { success: true }));
-    await waitFor(() => expect(screen.queryByTestId("password-reset-modal")).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(
+        screen.queryByTestId("password-reset-modal"),
+      ).not.toBeInTheDocument(),
+    );
   });
 });
 
 // ---------------------------------------------------------------------------
 // Settings tab
 // ---------------------------------------------------------------------------
-
-describe("Settings tab", () => {
-  it("toggles Email Notifications between Disable and Enable", async () => {
-    const user = userEvent.setup();
-    renderPanel();
-    await waitFor(() => screen.getByText("User Management"));
-    await goToSettingsTab(user);
-
-    const row = screen.getByText("Email Notifications").closest("div").parentElement;
-    const toggle = within(row).getByTestId("button");
-    expect(toggle).toHaveTextContent("Disable");
-
-    await user.click(toggle);
-    expect(toggle).toHaveTextContent("Enable");
-
-    await user.click(toggle);
-    expect(toggle).toHaveTextContent("Disable");
-  });
-
-  it("toggles Auto Backup between Disable and Enable", async () => {
-    const user = userEvent.setup();
-    renderPanel();
-    await waitFor(() => screen.getByText("User Management"));
-    await goToSettingsTab(user);
-
-    const row = screen.getByText("Auto Backup").closest("div").parentElement;
-    const toggle = within(row).getByTestId("button");
-    expect(toggle).toHaveTextContent("Disable");
-
-    await user.click(toggle);
-    expect(toggle).toHaveTextContent("Enable");
-  });
-
-  it("toggles Maintenance Mode between Enable and Disable", async () => {
-    const user = userEvent.setup();
-    renderPanel();
-    await waitFor(() => screen.getByText("User Management"));
-    await goToSettingsTab(user);
-
-    const row = screen.getByText("Maintenance Mode").closest("div").parentElement;
-    const toggle = within(row).getByTestId("button");
-    expect(toggle).toHaveTextContent("Enable");
-
-    await user.click(toggle);
-    expect(toggle).toHaveTextContent("Disable");
-  });
-});

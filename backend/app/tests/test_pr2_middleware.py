@@ -86,7 +86,7 @@ class TestRateLimiter:
         limiter = RateLimiter()
 
         # Make requests up to limit
-        for i in range(5):
+        for _i in range(5):
             is_allowed, info = limiter.is_allowed("test_user_block", 5, 60)
             assert is_allowed
 
@@ -95,8 +95,9 @@ class TestRateLimiter:
         assert not is_allowed
         assert info["remaining"] == 0
 
-    def test_rate_limit_decorator(self, app):
+    def test_rate_limit_decorator(self, app, monkeypatch):
         """Test rate limiting decorator."""
+        monkeypatch.setitem(app.config, "RATE_LIMIT_ENABLED", True)
 
         @rate_limit(limit=2, window_seconds=60, per="ip")
         def test_route():
@@ -601,8 +602,9 @@ def app():
     return app
 
 
-def test_integration_middleware_stack(app):
+def test_integration_middleware_stack(app, monkeypatch):
     """Test that all middleware components work together."""
+    monkeypatch.setitem(app.config, "RATE_LIMIT_ENABLED", True)
     from app.middleware.metrics import setup_metrics_middleware
     from app.middleware.request_id import setup_request_id_middleware
 
