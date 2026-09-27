@@ -1,6 +1,12 @@
 // src/context/AuthContext.jsx
 
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 
 import { apiGetJson } from "../utils/apiFetch";
 import * as authService from "../services/authService";
@@ -203,7 +209,23 @@ export const AuthProvider = ({ children, value: customValue }) => {
     setIsLoggingOut(false);
   };
 
+  const updateAccountProfile = useCallback((profile) => {
+    setUser((current) =>
+      current
+        ? {
+            ...current,
+            username: profile.username,
+            firstName: profile.firstName,
+            lastName: profile.lastName,
+            displayName: profile.displayName,
+            avatarDataUrl: profile.avatarDataUrl,
+          }
+        : current,
+    );
+  }, []);
+
   const value = {
+    updateAccountProfile,
     user,
     userRole, // Frontend role (admin/user) for backward compatibility
     backendRole, // Backend role (admin/operator/viewer) for permission checks

@@ -245,6 +245,7 @@ const EnhancedSideNavigation = () => {
   };
 
   const getUserDisplayName = () => {
+    if (user?.displayName) return user.displayName;
     if (user?.firstName && user?.lastName) {
       return `${user.firstName} ${user.lastName}`;
     }
@@ -265,7 +266,8 @@ const EnhancedSideNavigation = () => {
     return name.charAt(0).toUpperCase();
   };
 
-  const avatarUrl = user?.email ? getGravatarUrl(user.email) : null;
+  const avatarUrl =
+    user?.avatarDataUrl || (user?.email ? getGravatarUrl(user.email) : null);
 
   const isAdminLanding = location.pathname === "/admin";
 

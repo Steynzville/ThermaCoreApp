@@ -4,7 +4,6 @@ import {
   Eye,
   EyeOff,
   Key,
-  Lock,
   Plus,
   Settings,
   Shield,
@@ -15,7 +14,6 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { useAuth } from "../context/AuthContext";
 import { deleteUser, getAllUsers, updateUser } from "../services/usersAPI";
 import { apiGet, apiPost } from "../utils/apiFetch";
 import { formatRoleName, formatUserName } from "../utils/userUtils";
@@ -32,19 +30,11 @@ const formatRoleLabel = (roleName) =>
     .join(" ");
 
 const AdminPanel = ({ className }) => {
-  const { user: currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState("users");
   const [users, setUsers] = useState([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [usersError, setUsersError] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
-  const [isTogglingSetting, setIsTogglingSetting] = useState(false);
-  const [systemSettings, setSystemSettings] = useState({
-    emailNotifications: true,
-    autoBackup: true,
-    maintenanceMode: false,
-  });
-
   // User Creation Modal State
   const [createUserModal, setCreateUserModal] = useState(false);
   const [newUserFormData, setNewUserFormData] = useState({
@@ -361,53 +351,6 @@ const AdminPanel = ({ className }) => {
     }
   };
 
-  const handleToggleSetting = async (setting) => {
-    // Prevent double-clicks while a request is in flight
-    if (isTogglingSetting) return;
-    setIsTogglingSetting(true);
-
-    const newValue = !systemSettings[setting];
-
-    // Optimistic update
-    setSystemSettings((prev) => ({
-      ...prev,
-      [setting]: newValue,
-    }));
-
-    try {
-      const API_BASE_URL =
-        import.meta.env.VITE_API_BASE_URL ||
-        "https://thermacoreapp.onrender.com";
-      const response = await apiPost(
-        `${API_BASE_URL}/api/v1/settings`,
-        { [setting]: newValue },
-        { showToastOnError: false, retries: 1, retryDelay: 1000 },
-      );
-
-      if (!response.ok) {
-        let errorMsg = "Failed to update setting";
-        try {
-          const errorData = await response.json();
-          errorMsg = errorData.error || errorData.message || errorMsg;
-        } catch (_e) {
-          // Fallback to default error message
-        }
-        throw new Error(errorMsg);
-      }
-
-      toast.success(`${setting} ${newValue ? "enabled" : "disabled"} successfully`);
-    } catch (error) {
-      // Rollback on error
-      setSystemSettings((prev) => ({
-        ...prev,
-        [setting]: !newValue,
-      }));
-      toast.error(error.message || `Failed to update ${setting}`);
-    } finally {
-      setIsTogglingSetting(false);
-    }
-  };
-
   // Real-time validation function that updates on every keystroke
   const validateInRealTime = (newPass, confirmPass) => {
     const isValidLength = newPass.length >= 6;
@@ -541,30 +484,12 @@ const AdminPanel = ({ className }) => {
     }
   };
 
-  const handleSelfPasswordReset = () => {
-    if (currentUser) {
-      // Create a user object for self-password reset
-      const selfUser = {
-        id: currentUser.id ?? 1, // only fall back when id is null/undefined
-        name:
-          currentUser.firstName && currentUser.lastName
-            ? `${currentUser.firstName} ${currentUser.lastName}`
-            : currentUser.username,
-        email: currentUser.email || "",
-      };
-      openPasswordResetModal(selfUser);
-    }
-  };
-
   return (
     <div
       className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-6 ${className}`}
     >
       <div className="max-w-6xl mx-auto">
-        <PageHeader
-          title="Admin Panel"
-          subtitle="Manage users, devices, and system settings"
-        />
+        <PageHeader title="Admin Panel" subtitle="Manage users and devices" />
 
         {/* System Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -608,7 +533,6 @@ const AdminPanel = ({ className }) => {
                   label: "Password Management",
                   icon: Key,
                 },
-                { id: "settings", label: "Settings", icon: Settings },
               ].map((tab) => {
                 const IconComponent = tab.icon;
                 return (
@@ -781,24 +705,11 @@ const AdminPanel = ({ className }) => {
                   Password Management
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  Reset passwords for users or update your own password
+                  Reset passwords for managed users. Change your own password in
+                  Settings.
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
-                  <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
-                    Your Account
-                  </h4>
-                  <button
-                    type="button"
-                    onClick={handleSelfPasswordReset}
-                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    <Lock className="h-4 w-4" />
-                    <span>Change My Password</span>
-                  </button>
-                </div>
-
                 <div>
                   <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
                     User Password Reset
@@ -1179,7 +1090,10 @@ const AdminPanel = ({ className }) => {
                     type="text"
                     value={editingUser.username}
                     onChange={(e) =>
-                      setEditingUser({ ...editingUser, username: e.target.value })
+                      setEditingUser({
+                        ...editingUser,
+                        username: e.target.value,
+                      })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   />
@@ -1196,7 +1110,10 @@ const AdminPanel = ({ className }) => {
                     type="text"
                     value={editingUser.firstName}
                     onChange={(e) =>
-                      setEditingUser({ ...editingUser, firstName: e.target.value })
+                      setEditingUser({
+                        ...editingUser,
+                        firstName: e.target.value,
+                      })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   />
@@ -1213,7 +1130,10 @@ const AdminPanel = ({ className }) => {
                     type="text"
                     value={editingUser.lastName}
                     onChange={(e) =>
-                      setEditingUser({ ...editingUser, lastName: e.target.value })
+                      setEditingUser({
+                        ...editingUser,
+                        lastName: e.target.value,
+                      })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   />
@@ -1247,7 +1167,10 @@ const AdminPanel = ({ className }) => {
                     type="text"
                     value={editingUser.companyRaw}
                     onChange={(e) =>
-                      setEditingUser({ ...editingUser, companyRaw: e.target.value })
+                      setEditingUser({
+                        ...editingUser,
+                        companyRaw: e.target.value,
+                      })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   />
@@ -1264,7 +1187,10 @@ const AdminPanel = ({ className }) => {
                     type="tel"
                     value={editingUser.phoneRaw}
                     onChange={(e) =>
-                      setEditingUser({ ...editingUser, phoneRaw: e.target.value })
+                      setEditingUser({
+                        ...editingUser,
+                        phoneRaw: e.target.value,
+                      })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   />
@@ -1285,7 +1211,10 @@ const AdminPanel = ({ className }) => {
                       id="editRole"
                       value={editingUser.roleId}
                       onChange={(e) =>
-                        setEditingUser({ ...editingUser, roleId: e.target.value })
+                        setEditingUser({
+                          ...editingUser,
+                          roleId: e.target.value,
+                        })
                       }
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                       disabled={availableRoles.length === 0}
@@ -1309,7 +1238,10 @@ const AdminPanel = ({ className }) => {
                     id="editStatus"
                     value={editingUser.isActive ? "true" : "false"}
                     onChange={(e) =>
-                      setEditingUser({ ...editingUser, isActive: e.target.value === "true" })
+                      setEditingUser({
+                        ...editingUser,
+                        isActive: e.target.value === "true",
+                      })
                     }
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   >
@@ -1525,74 +1457,6 @@ const AdminPanel = ({ className }) => {
                 </button>
               </div>
             </div>
-          </div>
-        )}
-
-        {/* Settings Tab */}
-        {activeTab === "settings" && (
-          <div className="space-y-6">
-            <Card className="bg-white dark:bg-gray-900">
-              <CardHeader>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  System Settings
-                </h3>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      Email Notifications
-                    </h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Send email alerts for critical events
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => handleToggleSetting("emailNotifications")}
-                    disabled={isTogglingSetting}
-                    className="ml-4"
-                  >
-                    {systemSettings.emailNotifications ? "Disable" : "Enable"}
-                  </Button>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      Auto Backup
-                    </h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Automatically backup system data daily
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => handleToggleSetting("autoBackup")}
-                    disabled={isTogglingSetting}
-                    className="ml-4"
-                  >
-                    {systemSettings.autoBackup ? "Disable" : "Enable"}
-                  </Button>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      Maintenance Mode
-                    </h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Enable maintenance mode for system updates
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => handleToggleSetting("maintenanceMode")}
-                    disabled={isTogglingSetting}
-                    className="ml-4"
-                  >
-                    {systemSettings.maintenanceMode ? "Disable" : "Enable"}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         )}
       </div>

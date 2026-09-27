@@ -1,3 +1,4 @@
+import AccountPreferencesBridge from "./components/settings/AccountPreferencesBridge";
 import { reloadApplication } from "./utils/reloadApplication";
 // src/App.jsx
 
@@ -251,6 +252,7 @@ const App = () => {
     <ThemeProvider>
       <SettingsProvider>
         <AuthProvider>
+          <AccountPreferencesBridge />
           <TenantProvider>
             <UnitProvider>
               <AnalyticsProvider>

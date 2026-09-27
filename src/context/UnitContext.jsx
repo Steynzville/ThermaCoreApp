@@ -1,3 +1,4 @@
+import { useOptionalSettings } from "./SettingsContext";
 import {
   createContext,
   useCallback,
@@ -22,6 +23,7 @@ export const useUnits = () => {
 };
 
 export const UnitProvider = ({ children }) => {
+  const preferences = useOptionalSettings()?.settings;
   const { user, backendRole, permissions } = useAuth();
   const {
     currentTenant,
@@ -197,7 +199,12 @@ export const UnitProvider = ({ children }) => {
       if (active) scheduleRefresh();
     });
     websocketService.connect(currentTenant?.id ?? null).catch(() => {});
-    const timer = setInterval(refreshUnits, 30000);
+    const timer = setInterval(
+      refreshUnits,
+      [5000, 15000, 30000, 60000].includes(preferences?.refreshInterval)
+        ? preferences.refreshInterval
+        : 30000,
+    );
     return () => {
       active = false;
       unsubscribe();
@@ -206,7 +213,7 @@ export const UnitProvider = ({ children }) => {
       clearTimeout(refreshTimer);
       websocketService.disconnect();
     };
-  }, [owner, currentTenant?.id, tenantLoading]);
+  }, [owner, currentTenant?.id, tenantLoading, preferences?.refreshInterval]);
   const value = useMemo(
     () => ({
       units,

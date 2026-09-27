@@ -1254,7 +1254,8 @@ def run_auto_migrations(app):
                 SaleRecord,
             )
 
-            from app.models import AccountEntitlement, UnitCondition, ExternalIdentity, OAuthTransaction, PasskeyCredential, PasskeyChallenge
+            from app.models import AccountEntitlement, UnitCondition, ExternalIdentity, OAuthTransaction, PasskeyCredential, PasskeyChallenge, AccountProfile
+            AccountProfile.__table__.create(bind=engine, checkfirst=True)
             PasskeyCredential.__table__.create(bind=engine, checkfirst=True)
             PasskeyChallenge.__table__.create(bind=engine, checkfirst=True)
             ExternalIdentity.__table__.create(bind=engine, checkfirst=True)

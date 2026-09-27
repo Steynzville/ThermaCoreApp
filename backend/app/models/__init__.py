@@ -733,3 +733,11 @@ class PasskeyChallenge(db.Model):
     user_handle = Column(String(128))
     expires_at = Column(DateTime, nullable=False, index=True)
     used = Column(Boolean, nullable=False, default=False)
+
+
+class AccountProfile(db.Model):
+    __tablename__ = "account_profiles"
+    user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
+    display_name = Column(String(100))
+    preferences = Column(JSON, nullable=False, default=dict)
+    avatar_png = Column(db.LargeBinary)
