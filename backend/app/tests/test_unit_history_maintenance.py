@@ -67,3 +67,69 @@ def test_long_history_and_maintenance_are_unit_scoped(
         ).status_code
         == 400
     )
+
+
+def test_report_schedule_ownership_and_claims(client, portfolio_data, db_session):
+    from app.models import ReportSchedule
+
+    p = portfolio_data
+    config = {
+        "selectedUnits": [p["units"][0].id],
+        "outputFormat": "pdf",
+        "scope": "multiple",
+    }
+    body = {
+        "config": config,
+        "scheduledAt": (datetime.now(timezone.utc) + timedelta(days=1)).isoformat(),
+    }
+    endpoint = "/api/v1/portfolio/report-schedules"
+    created = client.post(endpoint, headers=p["headers"]["viewer"], json=body)
+    assert created.status_code == 201
+    path = f"{endpoint}/{created.json['id']}"
+    assert (
+        client.patch(
+            path, headers=p["headers"]["operator"], json={"status": "paused"}
+        ).status_code
+        == 404
+    )
+    assert (
+        client.patch(
+            path, headers=p["headers"]["viewer"], json={"status": "paused"}
+        ).status_code
+        == 200
+    )
+    assert (
+        client.patch(
+            path, headers=p["headers"]["viewer"], json={"status": "scheduled"}
+        ).status_code
+        == 200
+    )
+    assert (
+        client.patch(
+            path, headers=p["headers"]["viewer"], json={"status": "processing"}
+        ).status_code
+        == 409
+    )
+    row = db_session.get(ReportSchedule, created.json["id"])
+    row.scheduled_at = datetime.now(timezone.utc) - timedelta(minutes=1)
+    db_session.commit()
+    assert (
+        client.patch(
+            path, headers=p["headers"]["viewer"], json={"status": "processing"}
+        ).status_code
+        == 200
+    )
+    assert (
+        client.patch(
+            path, headers=p["headers"]["viewer"], json={"status": "processing"}
+        ).status_code
+        == 409
+    )
+    assert (
+        client.post(
+            endpoint,
+            headers=p["headers"]["viewer"],
+            json={**body, "config": {**config, "selectedUnits": [p["units"][1].id]}},
+        ).status_code
+        == 400
+    )

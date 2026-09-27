@@ -615,3 +615,21 @@ class MaintenanceSchedule(db.Model):
             "status": self.status,
             "createdAt": self.created_at.isoformat(),
         }
+
+
+class ReportSchedule(db.Model):
+    __tablename__ = "report_schedules"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    scheduled_at = Column(DateTime, nullable=False)
+    config = Column(JSON, nullable=False)
+    status = Column(String(20), default="scheduled", nullable=False)
+    claimed_at = Column(DateTime)
+
+    def as_dict(self):
+        return {
+            "id": self.id,
+            "scheduledAt": self.scheduled_at.isoformat() + "Z",
+            "config": self.config,
+            "status": self.status,
+        }

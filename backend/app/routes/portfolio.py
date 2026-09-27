@@ -186,3 +186,96 @@ def schedule_maintenance(unit_id):
     db.session.add(record)
     db.session.commit()
     return jsonify(record.as_dict()), 201
+
+
+@portfolio_bp.route("/portfolio/report-schedules", methods=["GET", "POST"])
+@jwt_required()
+@permission_required("read_units")
+def report_schedules():
+    from app import db
+    from app.models import ReportSchedule
+    from app.utils.helpers import get_current_user_id
+
+    user_id, _ = get_current_user_id()
+    if request.method == "GET":
+        ReportSchedule.query.filter(
+            ReportSchedule.user_id == user_id,
+            ReportSchedule.status == "processing",
+            ReportSchedule.claimed_at
+            < datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=10),
+        ).update({"status": "failed"})
+        db.session.commit()
+        rows = (
+            ReportSchedule.query.filter_by(user_id=user_id)
+            .order_by(ReportSchedule.scheduled_at)
+            .all()
+        )
+        return jsonify({"data": [row.as_dict() for row in rows]})
+    body = request.get_json(silent=True)
+    try:
+        if not isinstance(body, dict):
+            raise ValueError
+        config = body["config"]
+        ids = config["selectedUnits"]
+        permitted = {unit.id for unit in tenant_filter(Unit.query, Unit).all()}
+        if (
+            not isinstance(ids, list)
+            or not ids
+            or not set(ids) <= permitted
+            or config.get("outputFormat") not in ("pdf", "xlsx", "docx")
+        ):
+            raise ValueError
+        time = datetime.fromisoformat(body["scheduledAt"].replace("Z", "+00:00"))
+        if time.tzinfo is None or time <= datetime.now(timezone.utc):
+            raise ValueError
+    except (TypeError, KeyError, ValueError, AttributeError):
+        return jsonify(
+            {
+                "error": "Select permitted units, a report format and a future schedule date."
+            }
+        ), 400
+    row = ReportSchedule(
+        user_id=user_id,
+        scheduled_at=time.astimezone(timezone.utc).replace(tzinfo=None),
+        config=config,
+    )
+    db.session.add(row)
+    db.session.commit()
+    return jsonify(row.as_dict()), 201
+
+
+@portfolio_bp.patch("/portfolio/report-schedules/<int:schedule_id>")
+@jwt_required()
+@permission_required("read_units")
+def update_report_schedule(schedule_id):
+    from app import db
+    from app.models import ReportSchedule
+    from app.utils.helpers import get_current_user_id
+
+    user_id, _ = get_current_user_id()
+    row = ReportSchedule.query.filter_by(id=schedule_id, user_id=user_id).first()
+    if row is None:
+        return jsonify({"error": "Schedule not found"}), 404
+    body = request.get_json(silent=True)
+    status = body.get("status") if isinstance(body, dict) else None
+    allowed = {
+        "scheduled": {"paused", "processing"},
+        "paused": {"scheduled"},
+        "processing": {"completed", "failed"},
+        "failed": {"scheduled"},
+        "completed": set(),
+    }
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    if status not in allowed.get(row.status, set()) or (
+        status == "processing" and row.scheduled_at > now
+    ):
+        return jsonify({"error": "Invalid schedule transition"}), 409
+    previous = row.status
+    changed = ReportSchedule.query.filter_by(
+        id=row.id, user_id=user_id, status=previous
+    ).update({"status": status, "claimed_at": now if status == "processing" else None})
+    if changed != 1:
+        db.session.rollback()
+        return jsonify({"error": "Schedule already claimed"}), 409
+    db.session.commit()
+    return jsonify(row.as_dict())

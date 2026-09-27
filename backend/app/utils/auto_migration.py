@@ -1247,10 +1247,11 @@ def run_auto_migrations(app):
             engine = db.engine
 
             # Additive, idempotent migration; never reassign tenant ownership.
-            from app.models import UnitCommand, MaintenanceSchedule
+            from app.models import UnitCommand, MaintenanceSchedule, ReportSchedule
 
             UnitCommand.__table__.create(bind=engine, checkfirst=True)
             MaintenanceSchedule.__table__.create(bind=engine, checkfirst=True)
+            ReportSchedule.__table__.create(bind=engine, checkfirst=True)
             for column in (
                 "supports_heat",
                 "supports_chill",

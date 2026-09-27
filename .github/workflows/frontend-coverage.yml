@@ -55,6 +55,9 @@ jobs:
       - name: Install Frontend Dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install PDF text validation tool
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+
       - name: Run Tests
         id: tests
         env:

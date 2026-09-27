@@ -143,3 +143,92 @@ describe("Report contract and actual files", () => {
     ).toContain("/FontFile2");
   });
 });
+
+it.each(["xlsx", "docx", "pdf"])(
+  "isolates one-unit and multi-unit sections in real %s output",
+  async (format) => {
+    const { mkdtempSync, writeFileSync, readFileSync, rmSync } = await import(
+      "node:fs"
+    );
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    const { execFileSync } = await import("node:child_process");
+    const allUnits = [
+      ...input.units,
+      { ...unit, id: "C-002", name: "Charlie Selected" },
+    ];
+    for (const selectedIds of [["A-001"], ["A-001", "C-002"]]) {
+      const report = createReport({
+        ...input,
+        units: allUnits,
+        selectedIds,
+        format,
+        records: [
+          ...input.records,
+          { ...input.records[0], unitId: "C-002", grossKWh: 200 },
+        ],
+        events: allUnits.map((u) => ({
+          id: u.id,
+          unitId: u.id,
+          unitName: u.name,
+          description: `Event ${u.id}`,
+          timestamp: "2026-09-20T10:00:00Z",
+        })),
+        alerts: allUnits.map((u) => ({
+          id: u.id,
+          unitId: u.id,
+          unitName: u.name,
+          message: `Alert ${u.id}`,
+        })),
+        histories: allUnits.map((u) => ({
+          unitId: u.id,
+          date: "2026-09-20",
+          power: 5,
+        })),
+        maintenance: allUnits.map((u) => ({
+          unitId: u.id,
+          scheduledAt: "2026-09-20T10:00:00Z",
+          description: `Maintenance ${u.id}`,
+        })),
+        sales: allUnits.map((u) => ({
+          unitId: u.id,
+          date: "2026-09-20",
+          revenue: 500,
+        })),
+      });
+      expect(report.summary.grossKWh).toBe(
+        selectedIds.length === 1 ? 100 : 300,
+      );
+      const file = await generateReportFile(report),
+        buffer = Buffer.from(await file.blob.arrayBuffer());
+      let content;
+      if (format === "xlsx") {
+        const book = new ExcelJS.Workbook();
+        await book.xlsx.load(buffer);
+        content = JSON.stringify(
+          book.worksheets.map((sheet) => sheet.getSheetValues()),
+        );
+      } else if (format === "docx")
+        content = zipMember(buffer, "word/document.xml");
+      else {
+        const dir = mkdtempSync(join(tmpdir(), "thermacore-report-"));
+        try {
+          writeFileSync(join(dir, "report.pdf"), buffer);
+          execFileSync("pdftotext", [
+            "-layout",
+            join(dir, "report.pdf"),
+            join(dir, "report.txt"),
+          ]);
+          content = readFileSync(join(dir, "report.txt"), "utf8");
+        } finally {
+          rmSync(dir, { recursive: true, force: true });
+        }
+      }
+      expect(content).toContain("A-001");
+      expect(content).not.toContain("B-999");
+      expect(content).not.toContain("Foreign Unit");
+      if (selectedIds.length === 2) expect(content).toContain("C-002");
+      else expect(content).not.toContain("C-002");
+    }
+  },
+);
