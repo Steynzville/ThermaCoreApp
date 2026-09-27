@@ -61,3 +61,9 @@ Validation: 11 frontend calculation/export tests, 3 backend feature tests and pr
 Added persistent account-level SCADA entitlements, administrator-only grant/revoke endpoint, current-database checks on advanced analytics API access, navigation and protected-route enforcement. Installation-wide SCADA protocol administration remains administrator-only even for premium viewers. User serialization includes the current entitlement. Ordinary unit history is unaffected. Advanced SCADA screen restoration is the next stage, not yet complete.
 
 Validation: 19 protected-route tests and 2 backend entitlement tests pass, including grant/revoke with the same JWT, unauthorized grants and installation access denial.
+
+## Completed checkpoint 8: bounded premium trend data
+
+Added tenant-scoped /units/:id/scada-history with minute (up to two days), hourly (up to one year) and daily (up to ten years) good-quality SQL aggregation. Entitlements are enforced independently from ordinary history. UTC timestamps, canonical sensor selection and sample counts are retained. The frontend service uses the exact selected unit and explicit demo configuration; live failures propagate without synthetic data. Added missing shared normalization aliases for hot outlet, battery and flow measurements.
+
+Validation: 21 backend portfolio/SCADA tests and 3 frontend service tests pass, covering quality filtering, ownership, revocation, query bounds and no live fallback. Advanced view restoration remains in progress.

@@ -373,3 +373,31 @@ def set_scada_entitlement(user_id):
     db.session.add(record)
     db.session.commit()
     return jsonify({"premium_scada":record.premium_scada})
+
+
+@portfolio_bp.get("/units/<unit_id>/scada-history")
+@jwt_required()
+@permission_required("read_units")
+def scada_history(unit_id):
+    from app.middleware.entitlements import premium_required
+    from app.services.unit_history import daily_history
+
+    @premium_required
+    def query():
+        unit = tenant_filter(Unit.query, Unit).filter(Unit.id == unit_id).first()
+        if unit is None:
+            return jsonify({"error": "Unit not found"}), 404
+        resolution = request.args.get("resolution", "hour")
+        try:
+            start = datetime.fromisoformat(request.args["from"].replace("Z", "+00:00"))
+            end = datetime.fromisoformat(request.args["to"].replace("Z", "+00:00"))
+            limits = {"minute": 2, "hour": 366, "day": 3660}
+            if (resolution not in limits or start.tzinfo is None or end.tzinfo is None
+                    or start >= end or end - start > timedelta(days=limits[resolution])):
+                raise ValueError
+            start, end = start.astimezone(timezone.utc), end.astimezone(timezone.utc)
+        except (KeyError, ValueError, TypeError):
+            return jsonify({"error": "Use UTC timestamps: minute queries up to 2 days, hourly up to 366 days, daily up to ten years."}), 400
+        return jsonify({"data": daily_history(unit.id, start, min(end, datetime.now(timezone.utc)), resolution),
+                        "aggregation": resolution + " mean", "timezone": "UTC"})
+    return query()

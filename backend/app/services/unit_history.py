@@ -23,7 +23,9 @@ METRICS = {
 }
 
 
-def daily_history(unit_id, start, end):
+def daily_history(unit_id, start, end, resolution="day"):
+    if resolution not in {"day", "hour", "minute"}:
+        raise ValueError("Unsupported history resolution")
     rows, seen = {}, set()
     sensors = Sensor.query.filter_by(unit_id=unit_id).order_by(Sensor.id).all()
     # One canonical sensor per metric prevents double-counting duplicate meter aliases.
@@ -36,7 +38,13 @@ def daily_history(unit_id, start, end):
         if key in seen or scale is None:
             continue
         seen.add(key)
-        day = func.date(SensorReading.timestamp)
+        if resolution == "day":
+            day = func.date(SensorReading.timestamp)
+        elif db.engine.dialect.name == "sqlite":
+            pattern = "%Y-%m-%dT%H:00:00" if resolution == "hour" else "%Y-%m-%dT%H:%M:00"
+            day = func.strftime(pattern, SensorReading.timestamp)
+        else:
+            day = func.date_trunc(resolution, SensorReading.timestamp)
         data = (
             db.session.query(
                 day, func.avg(SensorReading.value), func.count(SensorReading.id)
@@ -52,6 +60,8 @@ def daily_history(unit_id, start, end):
             .all()
         )
         for date, value, count in data:
+            if resolution != "day":
+                date = (date.isoformat() if hasattr(date, "isoformat") else str(date)).replace(" ", "T").removesuffix("+00:00") + "Z"
             row = rows.setdefault(
                 str(date),
                 {"date": str(date), "unitId": unit_id, "source": "live", "samples": {}},

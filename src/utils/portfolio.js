@@ -70,6 +70,11 @@ export function normalizeUnit(raw) {
     userLoad: value("userLoad", "user_load", 0),
     tempIn: value("tempIn", "temp_in"),
     tempOutChill: value("tempOutChill", "temp_out"),
+    tempOutHot: value("tempOutHot", "temp_out_hot"),
+    batteryVoltage: value("batteryVoltage", "battery_voltage"),
+    flowRateInlet: value("flowRateInlet", "flow_rate_inlet"),
+    flowRateOutChill: value("flowRateOutChill", "flow_rate_out_chill"),
+    flowRateOutHot: value("flowRateOutHot", "flow_rate_out_hot"),
     ambientTemp: value("ambientTemp", "temp_outside"),
     ambientHumidity: value("ambientHumidity", "humidity"),
     differentialPressure:
