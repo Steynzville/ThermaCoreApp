@@ -1,3 +1,7 @@
+# Historical restoration record
+
+This is the chronological implementation log for the restoration delivered in merged PR #268 (Demo-App) and #269 (main). Statements such as “remaining”, “next” or “pending” below describe that checkpoint, not the current product. Old validation figures are historical, not current coverage evidence. Start with the [Operator manual](OPERATOR_MANUAL.md), [Architecture](ARCHITECTURE_AND_INTEGRATIONS.md), [Deployment](DEPLOYMENT_GUIDE.md) and [Testing](TESTING.md) for present behavior.
+
 # Post-267 restoration recovery
 
 Baseline: `eb5b69d9aa346d5e7d207636d22c2bbc19d2e7a6` immediately before PR #267.
